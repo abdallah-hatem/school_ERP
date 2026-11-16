@@ -21,11 +21,15 @@ PRs need one developer review (Tamer ↔ Waleed, or Abdallah).
 
 ## Branches
 
-- `production` — what the schools run. Changed only by release PRs.
+Code moves one way: **`dev` → `testing` → `production`**. Each branch deploys its own environment.
+
 - `dev` — default branch, integration, auto-deploys to the **dev** environment.
+- `testing` — release candidate, auto-deploys to the **testing** environment. Changed only by a
+  PR from `dev`.
+- `production` — what the schools run. Changed only by a release PR from `testing`.
 - Work branches cut from `dev`: `feature/<name>`, `fix/<name>`, `chore/<name>`.
 - Commit messages: conventional (`feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`).
-- Never push straight to `dev` or `production`. Branch protection enforces it.
+- Never push straight to `dev`, `testing` or `production`. Branch protection enforces it.
 
 ## Before opening a PR
 
@@ -73,18 +77,20 @@ Hosting).
 - Every merge to `dev` deploys to the **dev** environment. Operations (Hafez / Arousi) test each
   ticket there and report issues as new tickets.
 - A broken dev environment is fixed on a new `fix/` branch and PR, never by pushing to `dev`.
-- **testing** gets the release candidate before each release. It's where full QA, the school's
-  review, and speed/load checks with realistic data happen.
+- Every merge to `testing` deploys to the **testing** environment. It's where full QA, the
+  school's review, and speed/load checks with realistic data happen.
 
 ## Releases
 
 - Fixed rhythm, e.g. **every two weeks**.
-- **Release candidate:** build `dev` as `vX.Y.Z-rc.N` and deploy it to **testing**. Fixes go through
-  `dev` as usual and produce `rc.N+1`.
-- Release PR: `dev` → `production`, title `release: <summary>`, with short release notes for the
-  school. It must contain exactly the commit that passed on testing.
+- **Release candidate:** PR `dev` → `testing`, title `rc: <summary>`. Approved by Abdallah. Merge
+  with a **merge commit**. Problems found on testing are fixed through `dev` as usual, then
+  `dev` → `testing` again.
+- **Release:** PR `testing` → `production`, title `release: <summary>`, with short release notes for
+  the school. It contains exactly what passed on testing.
 - Approvals: **Abdallah** (technical) + **Hafez or Arousi** (QA sign-off on testing).
-- Merge with a **merge commit — never squash** `dev` into `production`.
+- Promotion PRs (`dev` → `testing`, `testing` → `production`) use a **merge commit — never squash**,
+  so the three branches keep the same history.
 - **(team rule)** No Vercel: the merge builds and tags a Docker image (`vX.Y.Z`) in CI, then each
   school's prod deployment is moved to that tag, school by school. Each runs its migrations first,
   and the rollout stops on the first failure.
@@ -92,8 +98,8 @@ Hosting).
 
 ## Hotfixes
 
-Same path, faster: `fix/<name>` → PR into `dev` → check on dev → rc on testing → release PR →
-deploy. Never commit a fix straight to `production`.
+Same path, faster: `fix/<name>` → PR into `dev` → check on dev → `dev` → `testing` → check →
+`testing` → `production`. Never commit a fix straight to `testing` or `production`.
 
 ## Tickets
 

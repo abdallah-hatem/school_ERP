@@ -40,7 +40,7 @@ backups proven by a restore).
 | Environment | Deployed from | Data | Used by |
 |---|---|---|---|
 | **dev** | every merge to the `dev` branch, automatically | seeded fake data, reset freely | developers + operations testing each ticket |
-| **testing** | the release candidate (`vX.Y.Z-rc.N` image) before a release | realistic fake data at real volume (e.g. 2,000 students, a full year of payments) | operations QA, the school's review before a release, speed and load tests |
+| **testing** | every merge to the `testing` branch (a PR from `dev`), automatically | realistic fake data at real volume (e.g. 2,000 students, a full year of payments) | operations QA, the school's review before a release, speed and load tests |
 | **prod** | the `production` branch (`vX.Y.Z` image), one deployment per school | real school data | the schools |
 
 - **Each environment is its own Coolify project** with its own containers, env vars and databases.
