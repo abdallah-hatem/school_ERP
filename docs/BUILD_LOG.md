@@ -10,6 +10,10 @@ phase live in `docs/build-log/`.
 - **Design:** direction "Campus", picked from three mockups (`design/mockups/b-campus.html`, kept
   locally, not committed). Light theme only, responsive (desktop, tablet, phone), EN and AR.
 
+- **Merging (temporary):** the owner allowed Claude to push and merge **verified** task PRs into
+  `dev` until the demo on 2026-11-22 (2026-11-17). This overrides `CLAUDE.md` rule 5 for this build
+  only; `testing` and `production` still need the owner.
+
 ## Stages
 
 | # | Stage | Status |
