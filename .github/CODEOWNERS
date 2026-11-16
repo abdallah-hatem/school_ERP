@@ -1,0 +1,16 @@
+# Shared code needs the lead developer's approval.
+
+/apps/api/src/core/          @abdallah-hatem
+/apps/api/src/common/        @abdallah-hatem
+/apps/api/src/config/        @abdallah-hatem
+/apps/api/src/database/      @abdallah-hatem
+/apps/api/prisma/            @abdallah-hatem
+/apps/web/src/core/          @abdallah-hatem
+/apps/web/src/shared/        @abdallah-hatem
+/apps/web/src/lib/           @abdallah-hatem
+/packages/                   @abdallah-hatem
+/deploy/                     @abdallah-hatem
+/.github/                    @abdallah-hatem
+/docker-compose.yml          @abdallah-hatem
+/package.json                @abdallah-hatem
+/CLAUDE.md                   @abdallah-hatem
