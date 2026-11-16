@@ -142,16 +142,26 @@ services to run), not full DDD (most of the system is well-understood CRUD).
 ```
 common            ← technical helpers (no business)
   ↑
-core              ← auth, users, roles/permissions, settings, flags, audit, notifications, files
-  ↑
-hr                ← employees, departments, contracts, staff attendance, leave, penalties, payroll
-  ↑
+core              ← auth, users, roles/permissions, settings, flags, audit, notifications, files,
+  ↑                  school structure (stages)
+hr                ← employees, departments, job titles, contracts, staff attendance, leave,
+  ↑                  penalties, payroll
 academics         ← years, terms, grades, classes, subjects, teacher assignments (→ hr employees)
   ↑
 students          ← students, guardians, enrolment
   ↑
 admissions · attendance · fees · exams · communication · transport
+  ↑
+accounting        ← journal entries from approved payroll and fee payments (Planned)
 ```
+
+- **Stages** (KG, Primary, Preparatory) are a list in `core/` ("school structure"). HR uses them now
+  and academics and students later, so they sit below all three.
+- **Settings ownership:** `core/settings` holds school-wide values (identity, hours, language). Each
+  module owns its own rule settings (HR: lateness, payroll, penalty catalogue). The one Settings
+  screen shows a section per module.
+- **Accounting (Planned)** sits at the top. It listens to `payroll.approved` and `payment.recorded`
+  and creates its own entries. No module below depends on it.
 
 - A module may depend only on modules **below** it, through their `index.ts`. Lower modules
   never know about higher ones: they emit events, and higher modules react.
@@ -300,7 +310,8 @@ too.
 - **Cross-module writes:** call the other module's service. Use an event for side effects that can
   happen afterwards (notifications, SMS).
 - **Lookup tables** (academic years, grades, classes, subjects) belong to `academics`. Everyone
-  references them; only `academics` changes them.
+  references them; only `academics` changes them. **Stages** belong to `core` (school structure),
+  because HR needs them and sits below academics.
 - **One `schema.prisma` file**, grouped by module under comment headers
   (`// ── fees ──`), so ownership is visible without splitting files. One migration history.
 - **Migration conflicts:** before merging a PR with a migration, rebase on the latest `dev`. If
@@ -374,7 +385,7 @@ apps/api/
 │   │   └── utils/                    ← pure: dates, money, numbers
 │   ├── core/                         ← business foundation
 │   │   ├── auth/  users/  roles/
-│   │   ├── settings/  feature-flags/
+│   │   ├── settings/  feature-flags/  school-structure/
 │   │   ├── audit/  notifications/  files/
 │   │   └── core.module.ts
 │   └── modules/

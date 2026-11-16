@@ -24,6 +24,7 @@ responsive layout.
   insurance, loans, bank accounts.
 - **Reports** for official bodies, the bus department's attendance report.
 - **Roles and permissions** for the whole approval chain (§2).
+- **Accounting:** journal entries created from approved payroll (and later fee payments).
 - **Supervision duty roster.**
 
 ## Left out on purpose

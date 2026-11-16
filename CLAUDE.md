@@ -37,5 +37,12 @@ skills. **Where this file differs from a skill, this file wins.**
   and HR's payroll and penalties.** Other modules keep their logic in services.
 - **Modules talk only through another module's exported service or through events.** Never import
   another module's repository. Reading other modules' tables is allowed; writing them is not.
-- **Module order:** `core` ← `hr` ← `academics` ← `students` ← the rest. Depend only downward, no
-  cycles. HR is built first. An employee is not a user (optional link).
+- **Module order:** `core` ← `hr` ← `academics` ← `students` ← the rest (← `accounting`, Planned).
+  Depend only downward, no cycles. HR is built first. An employee is not a user (optional link).
+  Stages live in `core/school-structure`. Module rule settings live in their module.
+- **Design:** direction "Campus", teal + sunflower palette, **light theme only** (no dark tokens, no
+  theme toggle — overrides the skill's light/dark rule), fully responsive (desktop, tablet, phone),
+  Arabic default with full RTL. Reference mockup: `design/mockups/b-campus.html` (local, not
+  committed).
+- **Client material** (school name, logo, the penalty regulations) is seed data only. It never goes
+  in code or docs.

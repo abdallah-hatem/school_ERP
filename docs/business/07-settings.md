@@ -17,7 +17,8 @@ changed it and when (GUESS: a simple change history in the demo).
 | Part-time percentages | 4 days 80%, 3 days 60%, 2 days 40% | DECIDED |
 | Penalty repetition window | Contract year (1 June – 31 May); alternatives: calendar year, rolling 12 months | GUESS |
 | Penalty catalogue | The school's 4 tables (72 violations) | DECIDED |
-| Departments, job titles | From the seed | DECIDED |
+| Stages (school structure), departments, job titles | From the seed | DECIDED |
+| Brand colours | Teal and sunflower (the "Campus" design), fixed for now | DECIDED |
 | Currency | EGP | DECIDED |
 
 - **DECIDED** — Settings are validated: times in order, percentages 1–100, divisor 1–31, days in
