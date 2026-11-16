@@ -17,8 +17,9 @@ skills. **Where this file differs from a skill, this file wins.**
 5. **PRs into `dev` are not merged by Claude.** Open the PR, then stop: a human approval is required
    (branch protection + `CODEOWNERS`). Merge only after approval and green CI.
 6. **No Vercel. Our own Contabo VPS runs Coolify with three environments: dev, testing and prod.**
-   The `dev` branch auto-deploys to dev. Release candidates go to testing. `production` builds a
-   versioned Docker image in CI that is rolled out per school. Ignore the skill's Vercel preview
+   Three branches, promoted one way: `dev` → `testing` → `production` (merge commits, never squash).
+   `dev` and `testing` auto-deploy their environments. `production` builds a versioned Docker image
+   in CI that is rolled out per school. Release PRs go from `testing` to `production`, not from `dev`. Ignore the skill's Vercel preview
    steps: run the smoke specs against dev, and the full checks against testing. Server setup follows
    `deploying-to-vps`; details are in `docs/ARCHITECTURE.md` → Hosting.
 7. **Never cache pages at Cloudflare.** Only static files. Every page is per-user.
