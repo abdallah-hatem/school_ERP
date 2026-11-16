@@ -18,8 +18,8 @@ phase live in `docs/build-log/`.
 | 2 | Spec + business doc | **approved** by the owner 2026-11-17 |
 | 3 | Contract | done (in the spec) |
 | 4 | Design system | Campus, teal + sunflower, light only; tokens go in code in T3 |
-| 5 | Plan | `docs/plans/2026-11-17-hr-demo-plan.md` (18 tasks, 7 waves); alignment review running |
-| 6 | Build | — |
+| 5 | Plan | `docs/plans/2026-11-17-hr-demo-plan.md` (18 tasks, 7 waves); review CONFLICTS fixed, re-review running |
+| 6 | Build | wave 1: T1 running |
 | 7 | Verify | — |
 | 8 | Ship | local demo; hosting later |
 
@@ -38,6 +38,11 @@ phase live in `docs/build-log/`.
   Planned at the top of the module order.
 - 2026-11-17 — Contract written into the spec; plan written (18 tasks, 7 waves). Alignment review
   on the plan started.
+- 2026-11-17 — Alignment review: CONFLICTS (task classes, wave order, ~60 missing edge cases, 6
+  doc gaps). Fixed: gaps settled as GUESS defaults (see `docs/business/00-recent-changes.md`), plan
+  re-classed and re-ordered, cases added. Re-review started.
+- 2026-11-17 — Wave 1: T1 (scaffold, schema, shared package) dispatched to a background agent on
+  `feature/t1-scaffold`, base b532c32.
 
 ## Next up
 
