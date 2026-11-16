@@ -1,0 +1,13 @@
+{
+  "extraKnownMarketplaces": {
+    "abdallah-hatem": {
+      "source": {
+        "source": "github",
+        "repo": "abdallah-hatem/claude-skills"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "abdallah-skills@abdallah-hatem": true
+  }
+}

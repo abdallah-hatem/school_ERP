@@ -19,6 +19,22 @@ Grey areas:
 **First month or two: Abdallah reviews every PR** while the patterns settle. After that, module
 PRs need one developer review (Tamer ↔ Waleed, or Abdallah).
 
+## Claude Code setup (once per clone)
+
+Everyone uses the same skills, so Claude follows the same rules for all of us.
+
+1. Open the repo in Claude Code and **trust the folder** when asked. That registers the
+   `abdallah-hatem` skills marketplace from `.claude/settings.json`.
+2. Install the skills for this project:
+   ```bash
+   claude plugin install abdallah-skills@abdallah-hatem --scope project
+   ```
+3. Start a new session (or run `/reload-plugins`). The skills then show up as `/abdallah-skills:<skill>`.
+4. Keep the plugin updated, so everyone runs the same version.
+
+The repo's `CLAUDE.md` overrides the skills where they differ, and it reaches everyone through git.
+Personal Claude settings and memory stay personal; anything the team must follow goes in `CLAUDE.md`.
+
 ## Branches
 
 Code moves one way: **`dev` → `testing` → `production`**. Each branch deploys its own environment.
