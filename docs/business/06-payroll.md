@@ -22,8 +22,8 @@ The client's regulations don't define how salaries are calculated. For the demo,
    full-time 100%, part-time 4 days 80%, 3 days 60%, 2 days 40%. (DECIDED: the client's part-time
    rule; the percentages are settings.)
 2. **Day value** = salary for the month ÷ **30**. (GUESS: the divisor is a setting.)
-3. **Penalty deductions** = total days from approved day-deduction penalties dated in the month ×
-   day value.
+3. **Penalty deductions** = total days from approved day-deduction penalties (and investigations
+   with days) dated in the month × day value.
 4. **Lateness deductions** = days from the month's lateness minutes (§5) × day value.
 5. **Adjustments** = sum of the month's one-off additions (e.g. overtime, exam bonus) minus one-off
    deductions, each with a required reason.
@@ -31,6 +31,11 @@ The client's regulations don't define how salaries are calculated. For the demo,
 
 - **DECIDED** — Money is in EGP, kept to the piastre. Each amount is rounded to the nearest piastre,
   half up, after multiplying.
+- **GUESS** — The day value is **not** rounded on its own: a deduction is `round(days × salary for
+  the month ÷ divisor)`. The salary for the month is rounded first. The payslip shows the day value
+  rounded for display only.
+- **DECIDED** — Each line keeps a **snapshot** of the employee's code, names, national ID, basic
+  salary and work system at calculation. Editing an employee later never changes an approved run.
 - **GUESS** — Net never goes below 0. If deductions exceed the salary, net is 0 and the line is
   flagged for review.
 - **GUESS** — No pro-rata for employees who join or leave mid-month in the demo (OPEN for later).

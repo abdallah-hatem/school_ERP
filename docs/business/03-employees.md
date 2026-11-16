@@ -23,7 +23,7 @@
 | Work system | Full-time, or part-time 4, 3 or 2 days a week. DECIDED |
 | Basic salary | Monthly, in EGP, required, greater than 0 |
 | Fingerprint ID | Optional; unique if given (for the device integration later) |
-| Contract start / end | Defaults to 1 June – 31 May of the current contract year. DECIDED (one-year fixed contract) |
+| Contract start / end | Defaults to 1 June – 31 May of the current contract year; end after start. DECIDED (one-year fixed contract) |
 | Uses school bus | Yes / no |
 | Status | Active or inactive |
 
