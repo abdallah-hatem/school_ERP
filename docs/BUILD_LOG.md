@@ -18,7 +18,7 @@ phase live in `docs/build-log/`.
 | 2 | Spec + business doc | **approved** by the owner 2026-11-17 |
 | 3 | Contract | done (in the spec) |
 | 4 | Design system | Campus, teal + sunflower, light only; tokens go in code in T3 |
-| 5 | Plan | `docs/plans/2026-11-17-hr-demo-plan.md` (18 tasks, 7 waves); review CONFLICTS fixed, re-review running |
+| 5 | Plan | `docs/plans/2026-11-17-hr-demo-plan.md` (18 tasks, 7 waves); review CONFLICTS fixed, re-review's 4 remaining items fixed |
 | 6 | Build | wave 1: T1 running |
 | 7 | Verify | — |
 | 8 | Ship | local demo; hosting later |
@@ -43,6 +43,9 @@ phase live in `docs/build-log/`.
   re-classed and re-ordered, cases added. Re-review started.
 - 2026-11-17 — Wave 1: T1 (scaffold, schema, shared package) dispatched to a background agent on
   `feature/t1-scaffold`, base b532c32.
+- 2026-11-17 — Re-review: 4 small items (rounding case, level-order case, month-lock placement →
+  `hr/month-lock`, department snapshot on payroll lines) fixed; T1 told to add the department
+  snapshot columns.
 
 ## Next up
 
