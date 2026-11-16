@@ -34,8 +34,8 @@ The client's regulations don't define how salaries are calculated. For the demo,
 - **GUESS** — The day value is **not** rounded on its own: a deduction is `round(days × salary for
   the month ÷ divisor)`. The salary for the month is rounded first. The payslip shows the day value
   rounded for display only.
-- **DECIDED** — Each line keeps a **snapshot** of the employee's code, names, national ID, basic
-  salary and work system at calculation. Editing an employee later never changes an approved run.
+- **DECIDED** — Each line keeps a **snapshot** of the employee's code, names, national ID,
+  department, basic salary and work system at calculation. Editing an employee later never changes an approved run.
 - **GUESS** — Net never goes below 0. If deductions exceed the salary, net is 0 and the line is
   flagged for review.
 - **GUESS** — No pro-rata for employees who join or leave mid-month in the demo (OPEN for later).

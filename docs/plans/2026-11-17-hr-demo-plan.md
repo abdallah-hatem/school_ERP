@@ -111,8 +111,9 @@ Edge cases:
 - [ ] Pagination: `limit` above 100 → 400   (contract)
 
 ### T6 — HR rule settings + domain rules + month lock (backend · logic)
-`/hr/settings` with §7 defaults and history rows; `PayrollLockService.isMonthLocked(month)` in
-`hr/payroll/lock` reading only the `PayrollRun` table, so T7 and T8 can enforce the lock before T9
+`/hr/settings` with §7 defaults and history rows; `MonthLockService.isMonthLocked(month)` in its own
+folder `hr/month-lock` (read-only over the `PayrollRun` table; penalties, lateness and payroll all
+import it, and it imports none of them, so no cycle), so T7 and T8 can enforce the lock before T9
 exists (they test it by inserting an approved run row). `latenessDays(minutes, rule)` lives in
 `packages/shared/rules` (one implementation, used by the API and by the screens' live preview);
 pure functions in `hr/domain`: re-export of `latenessDays`,
@@ -123,7 +124,7 @@ Edge cases:
 - [ ] Grace 10 min: 10 → 0; 11 → 0.25   (§5)
 - [ ] Penalty level: 0 prior → level 1; 4 prior with 5 levels → level 5; 7 prior → level 5 (last repeats); 3 levels and 5 prior → level 3   (§4 GUESS)
 - [ ] Month salary: full-time 100%, PART_TIME_3 at 60% of 1,000,000 → 600,000   (§6)
-- [ ] Day value 600,000 ÷ 30 = 20,000; ÷ 30 of 1,000,001 rounds half up to the piastre   (§6 rounding)
+- [ ] dayValue is display-only: 1,000,001 ÷ 30 shows 33,333.37 and is never used to multiply; 600,000 ÷ 30 = 20,000   (§6)
 - [ ] Net floors at 0 and returns the `NET_FLOORED` flag   (§6 GUESS)
 - [ ] Settings PATCH: percentages outside 1–100 → 400; divisor outside 1–31 → 400; days not in 0.25 steps → 400   (§7)
 
@@ -207,7 +208,7 @@ Runs list, create run, run page (as the mockup: tiles, table / cards, rules pane
 settings), adjustments dialog, recalculate, approve, payslip print view (EN/AR, print CSS), bank
 sheet download.
 Interaction cases:
-- [ ] Approve blocked with a message when pending penalties exist
+- [ ] Approve with pending penalties → the server's 409 `PENDING_PENALTIES` is shown as a message
 - [ ] After approve: actions hidden, read-only, bank sheet enabled
 - [ ] Payslip prints on one A4 page in both languages
 
@@ -275,7 +276,8 @@ These belong to the task named in each heading and are part of its list.
 ### T7
 - [ ] Record for a retired violation → 400   (§4, §7)
 - [ ] Approve a CANCELLED record → 409; cancel a CANCELLED record → 409   (§4 GUESS)
-- [ ] Two PENDING records for the same violation dated 3 and 10 Nov, approved in either order → levels 1 and 2 by date   (§4 GUESS: earlier = violation date)
+- [ ] PENDING dated 3 Nov and 10 Nov (same violation, same employee): approve 3 Nov then 10 Nov → levels 1, 2; approve 10 Nov then 3 Nov → levels 1, 1, neither recomputed   (§4 GUESS)
+- [ ] Two records with the same violation date: approve one then the other → both level 1 (only strictly earlier dates count)   (§4 GUESS)
 - [ ] Another employee's or another violation's approved record doesn't count   (§4)
 - [ ] CALENDAR_YEAR: approved on 31 Dec doesn't count on 1 Jan; ROLLING_12_MONTHS: approved 2025-11-17 counts on 2026-11-16, not on 2026-11-18   (§7)
 - [ ] "Doubles on repeat" note: level-5 record with 7 prior → level-5 days, not doubled   (§4 GUESS)
@@ -306,6 +308,8 @@ These belong to the task named in each heading and are part of its list.
 - [ ] Bank sheet: employee without a national ID → empty cell; rows = lines; net in EGP with 2 decimals   (§6)
 - [ ] After APPROVE: edit the employee (salary, name, national ID) or deactivate them → line, payslip and bank sheet unchanged   (§6 snapshot)
 - [ ] Change the divisor → a DRAFT run changes only after recalculate; an APPROVED run never changes   (§6, §7)
+- [ ] Move an employee to another department after APPROVE → the approved run's department filter still lists them under the old department   (§6 snapshot)
+- [ ] Cancel an APPROVED penalty in an open month, then recalculate → penaltyDays drops; other penalties' levels unchanged   (§4)
 - [ ] Dashboard: headcount counts ACTIVE only; penalties this month by violation date; currentRun null when there is no run   (spec flow 1)
 
 ### T10, T13
