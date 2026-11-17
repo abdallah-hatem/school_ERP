@@ -11,7 +11,7 @@ import {
 } from '@school-erp/shared';
 import { useId, useRef, type ReactNode } from 'react';
 import { useFieldArray, useForm, useWatch } from 'react-hook-form';
-import { NumberField, SelectField, TextareaField, TextField } from '@/shared/components/form/fields';
+import { NumberField, SelectField, SwitchField, TextareaField, TextField } from '@/shared/components/form/fields';
 import { Form } from '@/shared/components/form/form';
 import { Button } from '@/shared/components/ui/button';
 import { Dialog, DialogClose, DialogContent } from '@/shared/components/ui/dialog';
@@ -20,17 +20,18 @@ import { useTranslation } from '@/shared/providers/i18n-provider';
 import { NAME_MAX, NOTE_MAX, violationSchema, type ViolationFormValues } from '../schemas';
 
 function toForm(v: Violation | null): ViolationFormValues {
-  if (!v) return { nameEn: '', nameAr: '', note: '', levels: [{ action: 'NOTICE', days: null }] };
+  if (!v) return { nameEn: '', nameAr: '', note: '', oncePerDay: true, levels: [{ action: 'NOTICE', days: null }] };
   return {
     nameEn: v.nameEn,
     nameAr: v.nameAr,
     note: v.note ?? '',
+    oncePerDay: v.oncePerDay,
     levels: [...v.levels].sort((a, b) => a.level - b.level).map((l) => ({ action: l.action, days: l.days })),
   };
 }
 
 /**
- * Add or edit a violation: names, note and its 1–5 levels (action + days). Validated live with the
+ * Add or edit a violation: names, note, the "Once per day" switch (§4) and its 1–5 levels (action + days). Validated live with the
  * shared `levelDaysProblem` / `violationLevelsProblem` rules. `onSubmit` resolves `true` to close.
  */
 export function ViolationDialog({
@@ -120,6 +121,12 @@ export function ViolationDialog({
             placeholder={t('settings.catalogue.notePlaceholder')}
             maxLength={NOTE_MAX}
             rows={3}
+          />
+          <SwitchField
+            control={form.control}
+            name="oncePerDay"
+            label={t('settings.catalogue.oncePerDay')}
+            hint={t('settings.catalogue.oncePerDayHint')}
           />
 
           <fieldset className="flex flex-col gap-3">

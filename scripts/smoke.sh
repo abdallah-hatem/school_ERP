@@ -69,7 +69,8 @@ fi
 step "building shared, api and web"
 pnpm --filter @school-erp/shared build >"$logs/build.log" 2>&1 || fail "building shared" "$logs/build.log"
 pnpm --filter api exec nest build >>"$logs/build.log" 2>&1 || fail "building the api" "$logs/build.log"
-(cd "$root/apps/web" && BASE_URL="http://localhost:${api_port}" pnpm exec next build) >>"$logs/build.log" 2>&1 \
+# NEXT_PUBLIC_E2E_HOOKS: test-only hooks (window.__e2eToast) baked into this build, never a real one.
+(cd "$root/apps/web" && BASE_URL="http://localhost:${api_port}" NEXT_PUBLIC_E2E_HOOKS=true pnpm exec next build) >>"$logs/build.log" 2>&1 \
   || fail "building the web app" "$logs/build.log"
 
 uploads="$(mktemp -d)"

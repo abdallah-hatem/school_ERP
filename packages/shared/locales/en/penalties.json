@@ -62,6 +62,8 @@
     "noEmployees": "No active employees. Add one from the Employees screen.",
     "violation": "Violation",
     "violationPlaceholder": "Choose a violation",
+    "violationSearch": "Type a violation or group (English or Arabic)",
+    "noViolationMatches": "No violation in use matches that search.",
     "noViolations": "No violations in use. Add them in Settings → Penalty catalogue.",
     "date": "Date of the violation",
     "datePlaceholder": "Pick the day it happened",

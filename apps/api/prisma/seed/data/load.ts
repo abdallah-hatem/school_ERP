@@ -15,7 +15,8 @@ import {
  *
  *   school.json     { "nameEn": "...", "nameAr": "..." }
  *   catalogue.json  { "groups": [{ nameEn, nameAr, violations: [{ nameEn, nameAr, note?, seedKey?,
- *                     levels: [{ action, days? }] }] }] }
+ *                     oncePerDay?, levels: [{ action, days? }] }] }] }
+ *                   (`oncePerDay` defaults to true — set false on violations that repeat in a day)
  *   logo.png        (or logo.jpg / logo.svg) — optional
  *
  * `SEED_DATA_DIR` points somewhere else (absolute or relative to the working directory).
@@ -45,6 +46,9 @@ export function assertCatalogue(catalogue: SeedCatalogue, source: string): void 
     if (!group.nameEn || !group.nameAr) throw new Error(`seed: ${source} group without a name`);
     for (const v of group.violations) {
       if (!v.nameEn || !v.nameAr) throw new Error(`seed: ${source} violation without a name`);
+      if (v.oncePerDay !== undefined && typeof v.oncePerDay !== 'boolean') {
+        throw new Error(`seed: ${source} "${v.nameEn}" has a non-boolean oncePerDay`);
+      }
       const problem = violationLevelsProblem(levelsOf(v.levels));
       if (problem) throw new Error(`seed: ${source} "${v.nameEn}" has invalid levels (${problem})`);
       if (v.seedKey) {

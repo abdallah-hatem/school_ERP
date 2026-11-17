@@ -187,6 +187,11 @@ export interface Violation extends Names {
   id: Uuid;
   note: string | null;
   isActive: boolean;
+  /**
+   * §4 (owner, 2026-11-18): at most one pending or approved penalty for this violation per
+   * employee per date. Off for violations that genuinely repeat within a day (late to class…).
+   */
+  oncePerDay: boolean;
   levels: ViolationLevel[];
 }
 
@@ -214,11 +219,14 @@ export interface ViolationLevelInput {
 
 export interface CreateViolationRequest extends Names {
   note?: string | null;
+  /** Default true. */
+  oncePerDay?: boolean;
   levels: ViolationLevelInput[];
 }
 
 export interface UpdateViolationRequest extends Partial<Names> {
   note?: string | null;
+  oncePerDay?: boolean;
   isActive?: boolean;
   levels?: ViolationLevelInput[];
 }

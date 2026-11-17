@@ -3,9 +3,8 @@
 import { EmployeeStatus, type Employee } from '@school-erp/shared';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { Button } from '@/shared/components/ui/button';
 import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
-import { DeactivateIcon, ReactivateIcon } from '@/shared/components/ui/icons';
+import { StatusChangeButton } from '@/shared/components/ui/status-change-button';
 import { callApi } from '@/lib/callApi';
 import { localName } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
@@ -25,6 +24,7 @@ export function EmployeeStatusAction({ employee }: { employee: Pick<Employee, 'i
   async function confirm() {
     const res = await callApi(active ? DEACTIVATE_EMPLOYEE(employee.id) : REACTIVATE_EMPLOYEE(employee.id), {
       showSuccessToast: true,
+      successMessage: t(active ? 'employees.status.deactivated' : 'employees.status.reactivated', { name }),
     });
     if (!res.success) return false;
     router.refresh();
@@ -33,10 +33,9 @@ export function EmployeeStatusAction({ employee }: { employee: Pick<Employee, 'i
 
   return (
     <>
-      <Button variant="secondary" onClick={() => setOpen(true)}>
-        {active ? <DeactivateIcon /> : <ReactivateIcon />}
+      <StatusChangeButton change={active ? 'deactivate' : 'reactivate'} onClick={() => setOpen(true)}>
         {active ? t('employees.status.deactivate') : t('employees.status.reactivate')}
-      </Button>
+      </StatusChangeButton>
       <ConfirmDialog
         open={open}
         onOpenChange={setOpen}

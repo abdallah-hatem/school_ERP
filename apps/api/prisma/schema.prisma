@@ -385,16 +385,19 @@ model PenaltyGroup {
 
 /// A catalogue violation. Retired (`isActive: false`), never deleted.
 model Violation {
-  id        String   @id @default(uuid()) @db.Uuid
-  groupId   String   @map("group_id") @db.Uuid
-  nameEn    String   @map("name_en")
-  nameAr    String   @map("name_ar")
+  id         String   @id @default(uuid()) @db.Uuid
+  groupId    String   @map("group_id") @db.Uuid
+  nameEn     String   @map("name_en")
+  nameAr     String   @map("name_ar")
   /// Free text kept for the reviewer, e.g. "doubles on repeat".
-  note      String?
-  sortOrder Int      @default(0) @map("sort_order")
-  isActive  Boolean  @default(true) @map("is_active")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  note       String?
+  sortOrder  Int      @default(0) @map("sort_order")
+  isActive   Boolean  @default(true) @map("is_active")
+  /// §4: at most one pending/approved penalty per employee per date (off for violations that
+  /// repeat within a day, e.g. late to class).
+  oncePerDay Boolean  @default(true) @map("once_per_day")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
   group     PenaltyGroup     @relation(fields: [groupId], references: [id], onDelete: Restrict)
   levels    ViolationLevel[]

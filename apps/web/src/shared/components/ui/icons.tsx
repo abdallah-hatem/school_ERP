@@ -4,6 +4,7 @@ import {
   ArrowClockwiseIcon as ArrowClockwise,
   ArrowCounterClockwiseIcon as ArrowCounterClockwise,
   ArrowsClockwiseIcon as ArrowsClockwise,
+  RepeatIcon as Repeat,
   BuildingsIcon as Buildings,
   CalculatorIcon as Calculator,
   ChalkboardTeacherIcon as ChalkboardTeacher,
@@ -54,6 +55,8 @@ import {
   UsersThreeIcon as UsersThree,
   WalletIcon as Wallet,
   WarningCircleIcon as WarningCircle,
+  WarningIcon as Warning,
+  InfoIcon as Info,
   XIcon as X,
   FunnelIcon as Funnel,
   ArrowSquareOutIcon as ArrowSquareOut,
@@ -119,6 +122,8 @@ export const StageIcon = duotone(ChalkboardTeacher, 'Stage');
 export const WorkSystemIcon = duotone(ClockAfternoon, 'WorkSystem');
 /** A job title whose holders lead other staff (§3 direct managers). */
 export const ManagesPeopleIcon = duotone(Users, 'ManagesPeople');
+/** A catalogue violation that can be recorded several times a day (once per day off, §4). */
+export const RepeatsInDayIcon = duotone(Repeat, 'RepeatsInDay');
 
 // Chrome
 export const MenuIcon = duotone(List, 'Menu');
@@ -191,6 +196,10 @@ export const ErrorIcon = duotone(WarningCircle, 'Error');
 export const ReadyIcon = duotone(CheckCircle, 'Ready');
 export const PendingIcon = duotone(Hourglass, 'Pending');
 export const BlockedIcon = duotone(Prohibit, 'Blocked');
+/** Needs a look (a warning toast). */
+export const WarningIcon = duotone(Warning, 'Warning');
+/** A neutral fact (an info toast). */
+export const InfoIcon = duotone(Info, 'Info');
 
 // Settings sections
 export const SchoolIcon = duotone(Buildings, 'School');
