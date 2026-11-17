@@ -6,6 +6,8 @@ interface HandleResponseProps<R> {
   response: R;
   showErrorToast?: boolean;
   showSuccessToast?: boolean;
+  /** Translated text for the success toast, in place of the API's generic envelope message. */
+  successMessage?: string;
 }
 
 function errorMessageOf(response: { message?: unknown; error?: unknown }): string {
@@ -23,6 +25,7 @@ export async function handleResponse<R extends ApiResult>({
   response,
   showErrorToast = true,
   showSuccessToast = false,
+  successMessage,
 }: HandleResponseProps<R>): Promise<R> {
   // 401 — apiFetch has already cleared the auth cookies; send the user to sign in.
   if (response.unauthorized) {
@@ -38,8 +41,9 @@ export async function handleResponse<R extends ApiResult>({
 
   // Toasts are client-only.
   if (typeof window !== 'undefined') {
-    if (response.success && showSuccessToast && typeof response.message === 'string') {
-      toast.success(response.message);
+    if (response.success && showSuccessToast) {
+      const text = successMessage ?? (typeof response.message === 'string' ? response.message : '');
+      if (text) toast.success(text);
     }
     if (response.success === false && showErrorToast) {
       toast.error(errorMessageOf(response));

@@ -8,3 +8,4 @@ export * from './types/core';
 export * from './types/hr';
 export * from './rules';
 export * from './format';
+export * from './months';

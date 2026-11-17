@@ -4,6 +4,8 @@ import type { ApiResult } from './types';
 interface CallApiOptions {
   showSuccessToast?: boolean;
   showErrorToast?: boolean;
+  /** Translated success toast text (the API's envelope message is generic English). */
+  successMessage?: string;
 }
 
 /**

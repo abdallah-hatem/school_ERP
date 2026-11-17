@@ -31,6 +31,14 @@ describe('handleResponse (client)', () => {
     expect(toast.success).toHaveBeenCalledWith('Saved');
   });
 
+  it('uses the caller\'s translated success text over the generic envelope message', async () => {
+    await callApi(Promise.resolve({ success: true as const, status: 200, message: 'Resource updated successfully' }), {
+      showSuccessToast: true,
+      successMessage: 'Lateness saved',
+    });
+    expect(toast.success).toHaveBeenCalledWith('Lateness saved');
+  });
+
   it('callApi returns the response unchanged after handling it', async () => {
     const response = { success: true as const, status: 200, data: { id: 'a' } };
     await expect(callApi(Promise.resolve(response))).resolves.toBe(response);
