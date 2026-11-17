@@ -6,13 +6,14 @@ import { useRouter } from 'next/navigation';
 import { useRef, useState, useTransition } from 'react';
 import { callApi } from '@/lib/callApi';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-table/data-table';
+import { RowActions, rowActionsColumn } from '@/shared/components/data-table/row-actions';
 import { MonthStepper } from '@/shared/components/form/month-stepper';
 import { EmptyState } from '@/shared/components/layout/empty-state';
 import { PageHeader } from '@/shared/components/layout/page-header';
 import { Button } from '@/shared/components/ui/button';
 import { Dialog, DialogClose, DialogContent } from '@/shared/components/ui/dialog';
 import { Money } from '@/shared/components/ui/figures';
-import { BlockedIcon, NewPeriodIcon, PayrollIcon } from '@/shared/components/ui/icons';
+import { AddIcon, BlockedIcon, OpenIcon, PayrollIcon } from '@/shared/components/ui/icons';
 import { SkeletonPill } from '@/shared/components/ui/skeleton';
 import { apiErrorText } from '@/shared/lib/api-error';
 import { formatCount, formatDate, formatMonth } from '@/shared/lib/format';
@@ -97,11 +98,17 @@ export function RunsList({ basePath, query, runs, total, currentMonth }: RunsLis
           <span className="text-muted-foreground">{t('payroll.list.notApproved')}</span>
         ),
     },
+    rowActionsColumn(t('payroll.table.columns.actions'), (run) => (
+      <RowActions
+        label={t('ui.table.actionsFor', { name: formatMonth(run.month, locale) })}
+        actions={[{ id: 'open', label: t('payroll.profile.openRun'), icon: OpenIcon, href: `${basePath}/${run.id}` }]}
+      />
+    )),
   ];
 
   const createButton = (
     <Button variant="primary" className="cursor-pointer" disabled={runs === undefined} onClick={() => setCreating(true)}>
-      <NewPeriodIcon />
+      <AddIcon />
       {t('payroll.create.action')}
     </Button>
   );

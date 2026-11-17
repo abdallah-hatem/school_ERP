@@ -2,10 +2,11 @@
 
 import { PenaltyStatus, type PenaltyRecord } from '@school-erp/shared';
 import type { ReactNode } from 'react';
+import { rowActionsColumn } from '@/shared/components/data-table/row-actions';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-table/data-table';
 import type { PaginationState } from '@/shared/components/data-table/pagination';
 import { BidiText } from '@/shared/components/ui/bidi-text';
-import { SkeletonButton, SkeletonIdentity, SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
+import { SkeletonIdentity, SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
 import { StatusPill, type StatusTone } from '@/shared/components/ui/status-pill';
 import { formatDate } from '@/shared/lib/format';
 import { nameIn } from '@/shared/lib/i18n';
@@ -125,13 +126,7 @@ export function PenaltiesTable({
         </span>
       ),
     },
-    {
-      id: 'actions',
-      header: t('penalties.columns.actions'),
-      className: 'w-52',
-      skeleton: <SkeletonButton />,
-      cell: (p) => <PenaltyActions record={p} />,
-    },
+    rowActionsColumn(t('penalties.columns.actions'), (p) => <PenaltyActions record={p} />),
   ];
 
   return (

@@ -34,7 +34,7 @@ describe('describeAction', () => {
 
 describe('violationGroups', () => {
   it('orders groups, drops retired violations and every violation of a retired group', () => {
-    expect(violationGroups(groups, 'ar')).toEqual([
+    expect(violationGroups(groups, 'ar')).toMatchObject([
       { key: 'g-a', label: 'الجدول العام أ', options: [{ value: 'v-late', label: 'التأخر دون إخطار' }] },
       { key: 'g-b', label: 'الجدول ب', options: [{ value: 'v-phone', label: 'استخدام الهاتف في الفصل' }] },
     ]);

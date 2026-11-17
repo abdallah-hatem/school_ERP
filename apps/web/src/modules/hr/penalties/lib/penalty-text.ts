@@ -33,7 +33,7 @@ export function violationGroups(groups: PenaltyGroup[], locale: Locale): SelectO
     .map((g) => ({
       key: g.id,
       label: nameIn(g, locale),
-      options: g.violations.filter((v) => v.isActive).map((v) => ({ value: v.id, label: nameIn(v, locale) })),
+      options: g.violations.filter((v) => v.isActive).map((v) => ({ value: v.id, label: nameIn(v, locale), keywords: [v.nameEn, v.nameAr] })),
     }))
     .filter((g) => g.options.length > 0);
 }

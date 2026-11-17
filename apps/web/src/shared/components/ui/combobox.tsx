@@ -16,11 +16,32 @@ export interface ComboboxOption {
   disabled?: boolean;
 }
 
+/** A heading the person can't pick, then its options. It hides while a search leaves it empty. */
+export interface ComboboxGroup {
+  key: string;
+  label: string;
+  options: readonly ComboboxOption[];
+}
+
+/**
+ * Above this many options a picker gets a search box (forms.md → "A picker with many options gets
+ * a search"); at or below it a plain select is faster to scan. `SelectField` and `FilterSelect`
+ * switch by themselves; a `searchable` prop forces either way.
+ */
+export const SEARCH_THRESHOLD = 6;
+
+/** True when a list holding `count` options should be searchable (unless `forced` says otherwise). */
+export function needsSearch(count: number, forced?: boolean): boolean {
+  return forced ?? count > SEARCH_THRESHOLD;
+}
+
 export interface ComboboxProps extends Omit<
   ComponentProps<'button'>,
   'value' | 'onChange' | 'children' | 'placeholder'
 > {
   options: readonly ComboboxOption[];
+  /** Options under headings, after `options` (e.g. violations by catalogue group). */
+  groups?: readonly ComboboxGroup[];
   value: string | null | undefined;
   onValueChange: (value: string) => void;
   /** Trigger text with nothing chosen. */
@@ -43,6 +64,7 @@ export interface ComboboxProps extends Omit<
  */
 export function Combobox({
   options,
+  groups,
   value,
   onValueChange,
   placeholder,
@@ -62,11 +84,22 @@ export function Combobox({
   const searchRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
-  const selected = options.find((o) => o.value === value);
-  const matches = useMemo(
-    () => options.filter((o) => matchesSearch(query, [o.label, ...(o.keywords ?? [])])),
-    [options, query],
-  );
+  const all = useMemo(() => [...options, ...(groups ?? []).flatMap((g) => g.options)], [options, groups]);
+  const selected = all.find((o) => o.value === value);
+  // Sections in display order: the ungrouped options, then each group that still has a match.
+  const sections = useMemo(() => {
+    const filter = (list: readonly ComboboxOption[]) =>
+      list.filter((o) => matchesSearch(query, [o.label, ...(o.keywords ?? [])]));
+    return [
+      { key: '', label: null as string | null, options: filter(options) },
+      ...(groups ?? []).map((g) => ({
+        key: g.key,
+        label: g.label as string | null,
+        options: filter(g.options),
+      })),
+    ].filter((section) => section.options.length > 0);
+  }, [options, groups, query]);
+  const matches = sections.flatMap((section) => section.options);
   const enabled = matches.filter((o) => !o.disabled);
   const activeOption = enabled[Math.min(active, enabled.length - 1)];
   const optionId = (v: string) => `${listId}-${v.replace(/\W/g, '-')}`;
@@ -79,7 +112,7 @@ export function Combobox({
       setActive(
         Math.max(
           0,
-          options.filter((o) => !o.disabled).findIndex((o) => o.value === value),
+          all.filter((o) => !o.disabled).findIndex((o) => o.value === value),
         ),
       );
     } else {
@@ -124,6 +157,37 @@ export function Combobox({
         if (activeOption) pick(activeOption);
         break;
     }
+  }
+
+  function renderOption(option: ComboboxOption) {
+    const isSelected = option.value === value;
+    const isActive = option === activeOption;
+    return (
+      <li
+        key={option.value}
+        id={optionId(option.value)}
+        role="option"
+        aria-selected={isSelected}
+        aria-disabled={option.disabled || undefined}
+        data-active={isActive || undefined}
+        // Keep focus in the search box; a tap or click picks.
+        onPointerDown={(e) => e.preventDefault()}
+        onClick={() => pick(option)}
+        onPointerMove={() => {
+          const index = enabled.indexOf(option);
+          if (index >= 0 && index !== active) setActive(index);
+        }}
+        className={cn(
+          'relative flex min-h-11 cursor-pointer items-center rounded-lg py-2 ps-3 pe-9 text-sm wrap-anywhere select-none',
+          'data-[active]:bg-primary-soft data-[active]:text-primary',
+          isSelected && 'font-semibold',
+          option.disabled && 'pointer-events-none opacity-50',
+        )}
+      >
+        {option.label}
+        {isSelected ? <CheckIcon className="text-primary absolute end-3 size-4" /> : null}
+      </li>
+    );
   }
 
   return (
@@ -185,39 +249,27 @@ export function Combobox({
           aria-label={triggerProps['aria-label'] ?? placeholder}
           className="scrollbar-clean max-h-64 min-h-0 overflow-y-auto overscroll-contain"
         >
-          {matches.map((option) => {
-            const isSelected = option.value === value;
-            const isActive = option === activeOption;
-            return (
-              <li
-                key={option.value}
-                id={optionId(option.value)}
-                role="option"
-                aria-selected={isSelected}
-                aria-disabled={option.disabled || undefined}
-                data-active={isActive || undefined}
-                // Keep focus in the search box; a tap or click picks.
-                onPointerDown={(e) => e.preventDefault()}
-                onClick={() => pick(option)}
-                onPointerMove={() => {
-                  const index = enabled.indexOf(option);
-                  if (index >= 0 && index !== active) setActive(index);
-                }}
-                className={cn(
-                  'relative flex min-h-11 cursor-pointer items-center rounded-lg py-2 ps-3 pe-9 text-sm wrap-anywhere select-none',
-                  'data-[active]:bg-primary-soft data-[active]:text-primary',
-                  isSelected && 'font-semibold',
-                  option.disabled && 'pointer-events-none opacity-50',
-                )}
-              >
-                {option.label}
-                {isSelected ? <CheckIcon className="text-primary absolute end-3 size-4" /> : null}
+          {sections.map((section) =>
+            section.label === null ? (
+              section.options.map(renderOption)
+            ) : (
+              <li key={section.key} role="presentation">
+                <ul role="group" aria-labelledby={`${listId}-g-${section.key}`}>
+                  <li
+                    role="presentation"
+                    id={`${listId}-g-${section.key}`}
+                    className="text-muted-foreground px-3 pt-3 pb-1.5 text-xs font-bold"
+                  >
+                    {section.label}
+                  </li>
+                  {section.options.map(renderOption)}
+                </ul>
               </li>
-            );
-          })}
+            ),
+          )}
           {matches.length === 0 ? (
             <li role="presentation" className="text-muted-foreground px-3 py-2.5 text-sm">
-              {options.length === 0 ? emptyText : noMatchesText}
+              {all.length === 0 ? emptyText : noMatchesText}
             </li>
           ) : null}
         </ul>

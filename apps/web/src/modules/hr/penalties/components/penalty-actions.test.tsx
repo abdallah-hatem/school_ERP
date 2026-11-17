@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import '@/test/dom-polyfills';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -10,6 +11,7 @@ vi.mock('sonner', () => ({ toast }));
 const apis = vi.hoisted(() => ({ APPROVE_PENALTY: vi.fn(), CANCEL_PENALTY: vi.fn() }));
 vi.mock('../apis', () => apis);
 
+import { chooseRowAction, menuItemNames, openRowActions, rowActionsButton } from '@/test/row-actions';
 import { failure, ok, record, renderPenalties } from '../test/fixtures';
 import { PenaltyActions } from './penalty-actions';
 
@@ -27,7 +29,7 @@ describe('PenaltyActions', () => {
     apis.APPROVE_PENALTY.mockResolvedValue(ok(record({ status: 'APPROVED' })));
     renderPenalties(<PenaltyActions record={record()} />);
 
-    await user.click(screen.getByRole('button', { name: 'Approve the penalty of Mona Khalil' }));
+    await chooseRowAction(user, 'Mona Khalil', 'Approve');
     expect(apis.APPROVE_PENALTY).not.toHaveBeenCalled();
     const dialog = await screen.findByRole('dialog', { name: 'Approve this penalty?' });
     expect(dialog.textContent).toContain('Mona Khalil · Late arrival without notice · Deduct 0.5 day');
@@ -42,7 +44,7 @@ describe('PenaltyActions', () => {
   it('closing the approve confirmation sends nothing', async () => {
     const user = userEvent.setup();
     renderPenalties(<PenaltyActions record={record()} />);
-    await user.click(screen.getByRole('button', { name: 'Approve the penalty of Mona Khalil' }));
+    await chooseRowAction(user, 'Mona Khalil', 'Approve');
     await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Cancel' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(apis.APPROVE_PENALTY).not.toHaveBeenCalled();
@@ -53,7 +55,7 @@ describe('PenaltyActions', () => {
     apis.CANCEL_PENALTY.mockResolvedValue(ok(record({ status: 'CANCELLED', cancelReason: 'Wrong employee' })));
     renderPenalties(<PenaltyActions record={record()} />);
 
-    await user.click(screen.getByRole('button', { name: 'Cancel the penalty of Mona Khalil' }));
+    await chooseRowAction(user, 'Mona Khalil', 'Cancel');
     const dialog = await screen.findByRole('dialog', { name: 'Cancel this penalty?' });
     const confirm = within(dialog).getByRole('button', { name: 'Cancel penalty' });
     expect(confirm).toHaveProperty('disabled', true);
@@ -69,13 +71,50 @@ describe('PenaltyActions', () => {
     await waitFor(() => expect(router.refresh).toHaveBeenCalled());
   });
 
-  it('an approved penalty can only be cancelled; a cancelled one has no actions', () => {
-    const { unmount } = renderPenalties(<PenaltyActions record={record({ status: 'APPROVED' })} />);
-    expect(screen.queryByRole('button', { name: /Approve/ })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Cancel the penalty of Mona Khalil' })).toBeTruthy();
+  it('a pending penalty offers Approve then Cancel (red, after a divider); approved only Cancel; cancelled nothing', async () => {
+    const user = userEvent.setup();
+    const { unmount } = renderPenalties(<PenaltyActions record={record()} />);
+    let menu = await openRowActions(user, 'Mona Khalil');
+    expect(menuItemNames(menu)).toEqual(['Approve', 'Cancel']);
+    expect(within(menu).getByRole('separator')).toBeTruthy();
+    // Destructive items sit after the divider.
+    const [approve, cancel] = within(menu).getAllByRole('menuitem');
+    expect(within(menu).getByRole('separator').compareDocumentPosition(cancel!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(approve!.compareDocumentPosition(within(menu).getByRole('separator')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await user.keyboard('{Escape}');
     unmount();
+
+    const approved = renderPenalties(<PenaltyActions record={record({ status: 'APPROVED' })} />);
+    menu = await openRowActions(user, 'Mona Khalil');
+    expect(menuItemNames(menu)).toEqual(['Cancel']);
+    expect(within(menu).queryByRole('separator')).toBeNull();
+    await user.keyboard('{Escape}');
+    approved.unmount();
+
     renderPenalties(<PenaltyActions record={record({ status: 'CANCELLED' })} />);
     expect(screen.queryAllByRole('button')).toHaveLength(0);
+  });
+
+  it('the menu works from the keyboard: Enter opens, arrows move, Escape closes back on the ⋯', async () => {
+    const user = userEvent.setup();
+    renderPenalties(<PenaltyActions record={record()} />);
+    const trigger = rowActionsButton('Mona Khalil');
+    trigger.focus();
+    await user.keyboard('{Enter}');
+    const menu = await screen.findByRole('menu');
+    const [approve, cancel] = within(menu).getAllByRole('menuitem');
+    await waitFor(() => expect(document.activeElement).toBe(approve));
+    await user.keyboard('{ArrowDown}');
+    expect(document.activeElement).toBe(cancel);
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
+    expect(document.activeElement).toBe(trigger);
+
+    // Space opens too; Enter on an item runs it.
+    await user.keyboard(' ');
+    await screen.findByRole('menu');
+    await user.keyboard('{Enter}');
+    expect(await screen.findByRole('dialog', { name: 'Approve this penalty?' })).toBeTruthy();
   });
 
   it('PAYROLL_APPROVED error shown as a clear message (Arabic), and the list refreshes on close', async () => {
@@ -83,7 +122,7 @@ describe('PenaltyActions', () => {
     apis.APPROVE_PENALTY.mockResolvedValue(failure(409, 'PAYROLL_APPROVED'));
     renderPenalties(<PenaltyActions record={record()} />, 'ar');
 
-    await user.click(screen.getByRole('button', { name: 'اعتماد جزاء منى خليل' }));
+    await chooseRowAction(user, /^إجراءات منى خليل/, 'اعتماد');
     const dialog = await screen.findByRole('dialog', { name: 'اعتماد هذا الجزاء؟' });
     await user.click(within(dialog).getByRole('button', { name: 'اعتماد' }));
 
@@ -101,7 +140,7 @@ describe('PenaltyActions', () => {
     apis.CANCEL_PENALTY.mockResolvedValue(failure(409, 'PENALTY_CANCELLED'));
     renderPenalties(<PenaltyActions record={record({ status: 'APPROVED' })} />);
 
-    await user.click(screen.getByRole('button', { name: 'Cancel the penalty of Mona Khalil' }));
+    await chooseRowAction(user, 'Mona Khalil', 'Cancel');
     const dialog = await screen.findByRole('dialog');
     await user.type(within(dialog).getByRole('textbox', { name: /Reason for cancelling/ }), 'Duplicate');
     await user.click(within(dialog).getByRole('button', { name: 'Cancel penalty' }));

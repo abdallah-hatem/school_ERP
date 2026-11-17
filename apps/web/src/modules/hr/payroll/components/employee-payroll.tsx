@@ -1,14 +1,13 @@
 'use client';
 
 import { PayrollStatus, type EmployeePayrollLine } from '@school-erp/shared';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTransition } from 'react';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-table/data-table';
+import { RowActions, rowActionsColumn } from '@/shared/components/data-table/row-actions';
 import { EmptyState } from '@/shared/components/layout/empty-state';
-import { Button } from '@/shared/components/ui/button';
 import { Money } from '@/shared/components/ui/figures';
-import { PayrollIcon, PayslipIcon } from '@/shared/components/ui/icons';
+import { OpenIcon, PayrollIcon, PayslipIcon } from '@/shared/components/ui/icons';
 import { formatMonth } from '@/shared/lib/format';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { runsQueryString } from '../lib/run-query';
@@ -64,32 +63,21 @@ export function EmployeePayroll({ payrollPath, tabPath, rows, total, page, limit
       card: 'highlight',
       cell: ({ net }) => <Money value={net} currency={false} className="font-extrabold" />,
     },
-    {
-      id: 'actions',
-      header: <span className="sr-only">{t('payroll.table.columns.actions')}</span>,
-      cardLabel: t('payroll.table.columns.actions'),
-      align: 'end',
-      className: 'w-40',
-      cell: ({ runId, lineId, status }) =>
-        status === PayrollStatus.APPROVED ? (
-          <Button asChild size="sm" variant="soft" className="cursor-pointer">
-            <Link href={`${payrollPath}/${runId}/payslip/${lineId}`}>
-              <PayslipIcon />
-              {t('payroll.table.payslip')}
-            </Link>
-          </Button>
-        ) : (
-          <span className="inline-flex flex-col items-end gap-0.5">
-            <Link
-              href={`${payrollPath}/${runId}`}
-              className="text-primary cursor-pointer text-sm font-bold hover:underline"
-            >
-              {t('payroll.profile.openRun')}
-            </Link>
-            <span className="text-muted-foreground text-xs">{t('payroll.profile.draftNote')}</span>
-          </span>
-        ),
-    },
+    rowActionsColumn(t('payroll.table.columns.actions'), ({ runId, lineId, status, month }) => (
+      <RowActions
+        label={t('ui.table.actionsFor', { name: formatMonth(month, locale) })}
+        actions={[
+          {
+            id: 'payslip',
+            label: t('payroll.table.payslip'),
+            icon: PayslipIcon,
+            hidden: status !== PayrollStatus.APPROVED,
+            href: `${payrollPath}/${runId}/payslip/${lineId}`,
+          },
+          { id: 'open', label: t('payroll.profile.openRun'), icon: OpenIcon, href: `${payrollPath}/${runId}` },
+        ]}
+      />
+    )),
   ];
 
   return (

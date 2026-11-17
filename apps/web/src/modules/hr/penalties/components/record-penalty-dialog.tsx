@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useId, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { callApi } from '@/lib/callApi';
-import { ComboboxField, DateField, SelectField, TextareaField, type SelectOption, type SelectOptionGroup } from '@/shared/components/form/fields';
+import { DateField, SelectField, TextareaField, type SelectOption, type SelectOptionGroup } from '@/shared/components/form/fields';
 import { Form } from '@/shared/components/form/form';
 import { Button } from '@/shared/components/ui/button';
 import { Dialog, DialogClose, DialogContent } from '@/shared/components/ui/dialog';
@@ -155,7 +155,8 @@ export function RecordPenaltyDialog({ open, onOpenChange, employees, violations,
         }
       >
         <Form id={formId} onSubmit={(e) => void handleSubmit(onSubmit)(e)}>
-          <ComboboxField
+          <SelectField
+            searchable
             control={control}
             name="employeeId"
             label={t('penalties.form.employee')}
@@ -168,6 +169,7 @@ export function RecordPenaltyDialog({ open, onOpenChange, employees, violations,
             noMatchesText={t('penalties.form.noEmployeeMatches')}
           />
           <SelectField
+            searchable
             control={control}
             name="violationId"
             label={t('penalties.form.violation')}

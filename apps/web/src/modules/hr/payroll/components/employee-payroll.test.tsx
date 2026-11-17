@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import '@/test/dom-polyfills';
+import { menuItemNames, openRowActions } from '@/test/row-actions';
 import type { EmployeePayrollLine } from '@school-erp/shared';
 import { cleanup, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -34,19 +36,19 @@ beforeEach(() => vi.clearAllMocks());
 afterEach(cleanup);
 
 describe('EmployeePayroll (profile tab)', () => {
-  it("lists the employee's line per run: payslip link once approved, the run while draft", () => {
+  it("lists the employee's line per run: payslip link once approved, the run while draft", async () => {
+    const user = userEvent.setup();
     renderTab();
     const table = within(document.querySelector<HTMLElement>('[data-view="table"]')!);
     const octRow = table.getByText('October 2026').closest('tr') as HTMLElement;
-    expect(
-      within(octRow)
-        .getByRole('link', { name: /Payslip/ })
-        .getAttribute('href'),
-    ).toBe('/en/payroll/r-oct/payslip/l-oct');
     expect(within(octRow).getByText('14,000.00')).toBeTruthy();
-    const novRow = table.getByText('November 2026').closest('tr') as HTMLElement;
-    expect(within(novRow).queryByRole('link', { name: /Payslip/ })).toBeNull();
-    expect(within(novRow).getByRole('link', { name: 'Open run' }).getAttribute('href')).toBe('/en/payroll/r-nov');
+    let menu = await openRowActions(user, 'October 2026', table);
+    expect(menuItemNames(menu)).toEqual(['Payslip', 'Open run']);
+    expect(within(menu).getByRole('menuitem', { name: 'Payslip' }).getAttribute('href')).toBe('/en/payroll/r-oct/payslip/l-oct');
+    await user.keyboard('{Escape}');
+    menu = await openRowActions(user, 'November 2026', table);
+    expect(menuItemNames(menu)).toEqual(['Open run']);
+    expect(within(menu).getByRole('menuitem', { name: 'Open run' }).getAttribute('href')).toBe('/en/payroll/r-nov');
   });
 
   it('pages through the server: the next page goes into the URL without scrolling', async () => {

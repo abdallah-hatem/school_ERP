@@ -4,7 +4,7 @@ import type { IsoDate, Piastres } from '@school-erp/shared';
 import { useId, useState, type ComponentProps, type ReactNode } from 'react';
 import { useController, type Control, type FieldPath, type FieldValues } from 'react-hook-form';
 import { Calendar } from '@/shared/components/ui/calendar';
-import { Combobox } from '@/shared/components/ui/combobox';
+import { Combobox, needsSearch } from '@/shared/components/ui/combobox';
 import { CalendarIcon } from '@/shared/components/ui/icons';
 import { GroupedNumberInput } from '@/shared/components/ui/grouped-number-input';
 import { Input, controlClasses } from '@/shared/components/ui/input';
@@ -353,7 +353,7 @@ export function MoneyField<T extends FieldValues>({
 export interface SelectOption {
   value: string;
   label: string;
-  /** Extra text a searchable picker (`ComboboxField`) matches but doesn't show. */
+  /** Extra text the searchable version matches but doesn't show (other-language name, a code). */
   keywords?: readonly string[];
   disabled?: boolean;
 }
@@ -366,6 +366,11 @@ export interface SelectOptionGroup {
   options: SelectOption[];
 }
 
+/**
+ * A select. Above `SEARCH_THRESHOLD` options (grouped ones included) it becomes the searchable
+ * `Combobox` by itself; `searchable` forces either way — set it on lists of records (employees,
+ * departments, violations) that will outgrow today's seed.
+ */
 export function SelectField<T extends FieldValues>({
   control,
   name,
@@ -378,6 +383,9 @@ export function SelectField<T extends FieldValues>({
   options = [],
   groups,
   emptyText,
+  searchable,
+  searchPlaceholder,
+  noMatchesText,
 }: BaseFieldProps<T> & {
   options?: SelectOption[];
   /** Options under headings, shown after `options` (e.g. violations by catalogue group). */
@@ -386,98 +394,72 @@ export function SelectField<T extends FieldValues>({
   placeholder?: string;
   /** What to show when there are no options (and where the first one is made). */
   emptyText?: string;
-}) {
-  const { t } = useTranslation();
-  const id = useFieldId(name);
-  const { field, fieldState } = useController({ control, name });
-  return (
-    <FieldShell id={id} label={label} required={required} hint={hint} error={fieldState.error?.message} className={className}>
-      {(a11y) => (
-        <Select
-          name={field.name}
-          value={(field.value as string | null | undefined) ?? ''}
-          onValueChange={field.onChange}
-          disabled={disabled}
-          required={required}
-          onOpenChange={(open) => {
-            if (!open) field.onBlur();
-          }}
-        >
-          <SelectTrigger {...a11y} ref={field.ref}>
-            <SelectValue placeholder={placeholder ?? t('ui.form.chooseOption')} />
-          </SelectTrigger>
-          <SelectContent emptyText={emptyText ?? t('ui.form.noOptions')}>
-            {options.map((option) => (
-              <SelectItem key={option.value} value={option.value} disabled={option.disabled}>
-                {option.label}
-              </SelectItem>
-            ))}
-            {groups?.map((group) => (
-              <SelectGroup key={group.key}>
-                <SelectLabel>{group.label}</SelectLabel>
-                {group.options.map((option) => (
-                  <SelectItem key={option.value} value={option.value} disabled={option.disabled}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            ))}
-          </SelectContent>
-        </Select>
-      )}
-    </FieldShell>
-  );
-}
-
-// ── Searchable select ────────────────────────────────────────────────────────
-
-/**
- * A select with a search box (`Combobox`) for lists long enough to need typing — employees by name
- * in either language or by code. Same field contract as `SelectField`.
- */
-export function ComboboxField<T extends FieldValues>({
-  control,
-  name,
-  label,
-  required,
-  hint,
-  disabled,
-  className,
-  placeholder,
-  searchPlaceholder,
-  options,
-  emptyText,
-  noMatchesText,
-}: BaseFieldProps<T> & {
-  options: SelectOption[];
-  placeholder?: string;
+  /** Force the search box on (lists of records) or off; by default it shows above 6 options. */
+  searchable?: boolean;
   /** The search box's placeholder, e.g. "Type a name or code". */
   searchPlaceholder?: string;
-  emptyText?: string;
+  /** Shown when the search matches nothing. */
   noMatchesText?: string;
 }) {
   const { t } = useTranslation();
   const id = useFieldId(name);
   const { field, fieldState } = useController({ control, name });
+  const count = options.length + (groups ?? []).reduce((n, g) => n + g.options.length, 0);
+  const value = (field.value as string | null | undefined) ?? '';
   return (
     <FieldShell id={id} label={label} required={required} hint={hint} error={fieldState.error?.message} className={className}>
-      {(a11y) => (
-        <Combobox
-          {...a11y}
-          ref={field.ref}
-          name={field.name}
-          aria-required={required || undefined}
-          disabled={disabled}
-          options={options}
-          value={(field.value as string | null | undefined) ?? ''}
-          onValueChange={field.onChange}
-          onClose={field.onBlur}
-          placeholder={placeholder ?? t('ui.form.chooseOption')}
-          searchPlaceholder={searchPlaceholder ?? t('ui.form.searchOptions')}
-          emptyText={emptyText ?? t('ui.form.noOptions')}
-          noMatchesText={noMatchesText ?? t('ui.form.noMatches')}
-        />
-      )}
+      {(a11y) =>
+        needsSearch(count, searchable) ? (
+          <Combobox
+            {...a11y}
+            ref={field.ref}
+            name={field.name}
+            aria-required={required || undefined}
+            disabled={disabled}
+            options={options}
+            groups={groups}
+            value={value}
+            onValueChange={field.onChange}
+            onClose={field.onBlur}
+            placeholder={placeholder ?? t('ui.form.chooseOption')}
+            searchPlaceholder={searchPlaceholder ?? t('ui.form.searchOptions')}
+            emptyText={emptyText ?? t('ui.form.noOptions')}
+            noMatchesText={noMatchesText ?? t('ui.form.noMatches')}
+          />
+        ) : (
+          <Select
+            name={field.name}
+            value={value}
+            onValueChange={field.onChange}
+            disabled={disabled}
+            required={required}
+            onOpenChange={(open) => {
+              if (!open) field.onBlur();
+            }}
+          >
+            <SelectTrigger {...a11y} ref={field.ref}>
+              <SelectValue placeholder={placeholder ?? t('ui.form.chooseOption')} />
+            </SelectTrigger>
+            <SelectContent emptyText={emptyText ?? t('ui.form.noOptions')}>
+              {options.map((option) => (
+                <SelectItem key={option.value} value={option.value} disabled={option.disabled}>
+                  {option.label}
+                </SelectItem>
+              ))}
+              {groups?.map((group) => (
+                <SelectGroup key={group.key}>
+                  <SelectLabel>{group.label}</SelectLabel>
+                  {group.options.map((option) => (
+                    <SelectItem key={option.value} value={option.value} disabled={option.disabled}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              ))}
+            </SelectContent>
+          </Select>
+        )
+      }
     </FieldShell>
   );
 }

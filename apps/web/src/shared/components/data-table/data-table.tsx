@@ -34,9 +34,10 @@ export interface DataTableColumn<Row> {
   /**
    * Its place on a card: `title` (top, start), `status` (top, end), `highlight` (a full-width band,
    * e.g. net pay), `field` (label + value grid — the default), `wide` (a field across the whole
-   * grid), `actions` (a row of buttons under a divider, no label) or `hidden`.
+   * grid), `menu` (the row's ⋯ `RowActions`, in the card's top end corner), `actions` (a row of
+   * buttons under a divider, no label) or `hidden`.
    */
-  card?: 'title' | 'status' | 'highlight' | 'field' | 'wide' | 'actions' | 'hidden';
+  card?: 'title' | 'status' | 'highlight' | 'field' | 'wide' | 'menu' | 'actions' | 'hidden';
   /** Label on the card; defaults to `header` when that is a string. */
   cardLabel?: ReactNode;
   /**
@@ -247,6 +248,7 @@ function Cards<Row>({ columns, rows, getRowId, label, rowTone, viewClass }: Rows
   const highlights = columns.filter((c) => c.card === 'highlight');
   const fields = columns.filter((c) => (c.card ?? 'field') === 'field' || c.card === 'wide');
   const actions = columns.filter((c) => c.card === 'actions');
+  const menus = columns.filter((c) => c.card === 'menu');
 
   return (
     <ul data-view="cards" aria-label={label} className={cn('grid gap-3 px-4 pb-4', viewClass)}>
@@ -261,17 +263,27 @@ function Cards<Row>({ columns, rows, getRowId, label, rowTone, viewClass }: Rows
               tone === 'danger' && 'border-s-4 border-s-destructive',
             )}
           >
-            {titles.length || statuses.length ? (
+            {titles.length || statuses.length || menus.length ? (
               <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 flex-col gap-1 break-words">
                   {titles.map((c) => (
                     <div key={c.id}>{c.cell(row)}</div>
                   ))}
                 </div>
-                {statuses.length ? (
-                  <div className="flex shrink-0 flex-col items-end gap-1">
-                    {statuses.map((c) => (
-                      <div key={c.id}>{c.cell(row)}</div>
+                {statuses.length || menus.length ? (
+                  <div className="flex shrink-0 items-start gap-1">
+                    {statuses.length ? (
+                      <div className="flex flex-col items-end gap-1">
+                        {statuses.map((c) => (
+                          <div key={c.id}>{c.cell(row)}</div>
+                        ))}
+                      </div>
+                    ) : null}
+                    {/* The row's ⋯ in the top end corner, pulled into the padding so it lines up with the edge. */}
+                    {menus.map((c) => (
+                      <div key={c.id} className="-me-1.5 -mt-1.5">
+                        {c.cell(row)}
+                      </div>
                     ))}
                   </div>
                 ) : null}

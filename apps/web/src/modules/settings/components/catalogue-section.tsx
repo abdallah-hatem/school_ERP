@@ -3,6 +3,7 @@
 import type { PenaltyGroup, Violation } from '@school-erp/shared';
 import { useState } from 'react';
 import { callApi } from '@/lib/callApi';
+import { RowActions, RowActionsSkeleton } from '@/shared/components/data-table/row-actions';
 import { EmptyState, ErrorState } from '@/shared/components/layout/empty-state';
 import { BidiText } from '@/shared/components/ui/bidi-text';
 import { Button } from '@/shared/components/ui/button';
@@ -168,34 +169,22 @@ export function CatalogueSection() {
                   </span>
                 </button>
                 {group.isActive ? null : <StatusPill tone="neutral">{t('settings.catalogue.retired')}</StatusPill>}
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    aria-label={t('settings.catalogue.renameGroup', { name })}
-                    onClick={() => setGroupDialog({ mode: 'rename', group })}
-                  >
-                    <EditIcon />
-                    {t('settings.lists.rename')}
-                  </Button>
-                  {group.isActive ? (
-                    <Button size="sm" variant="ghost" aria-label={t('settings.catalogue.retireGroup', { name })} onClick={() => setRetiring(group)}>
-                      <RetireIcon />
-                      {t('settings.catalogue.retire')}
-                    </Button>
-                  ) : (
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      loading={busyId === group.id}
-                      aria-label={t('settings.catalogue.restoreGroup', { name })}
-                      onClick={() => void setGroupActive(group, true)}
-                    >
-                      {busyId === group.id ? null : <RestoreIcon />}
-                      {t('settings.catalogue.restore')}
-                    </Button>
-                  )}
-                </div>
+                <RowActions
+                  label={t('ui.table.actionsFor', { name })}
+                  busy={busyId === group.id}
+                  disabled={busyId !== null && busyId !== group.id}
+                  actions={[
+                    {
+                      id: 'rename',
+                      label: t('settings.lists.rename'),
+                      icon: EditIcon,
+                      onSelect: () => setGroupDialog({ mode: 'rename', group }),
+                    },
+                    group.isActive
+                      ? { id: 'retire', label: t('settings.catalogue.retire'), icon: RetireIcon, destructive: true, onSelect: () => setRetiring(group) }
+                      : { id: 'restore', label: t('settings.catalogue.restore'), icon: RestoreIcon, onSelect: () => void setGroupActive(group, true) },
+                  ]}
+                />
               </div>
               {expanded ? (
                 <div id={panelId} className="flex flex-col gap-3 p-3 sm:p-4">
@@ -301,7 +290,7 @@ function ViolationRow({
   const name = localName(violation, locale);
   const levels = [...violation.levels].sort((a, b) => a.level - b.level);
   return (
-    <li className="flex flex-col gap-3 py-3 first:pt-0 last:pb-0 md:flex-row md:items-start">
+    <li className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
       <div className="flex min-w-0 flex-1 flex-col gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-semibold break-words">{name}</span>
@@ -328,22 +317,18 @@ function ViolationRow({
         ) : null}
       </div>
       {groupActive ? (
-        <div className="flex shrink-0 flex-wrap gap-2">
-          <Button size="sm" variant="ghost" aria-label={t('settings.catalogue.editViolation', { name })} onClick={onEdit}>
-            <EditIcon />
-            {t('common.actions.edit')}
-          </Button>
-          <Button
-            size="sm"
-            variant="secondary"
-            loading={busy}
+        <div className="-mt-1.5 shrink-0">
+          <RowActions
+            label={t('ui.table.actionsFor', { name })}
+            busy={busy}
             disabled={locked}
-            aria-label={t(violation.isActive ? 'settings.catalogue.retireViolation' : 'settings.catalogue.restoreViolation', { name })}
-            onClick={onToggle}
-          >
-            {busy ? null : violation.isActive ? <RetireIcon /> : <RestoreIcon />}
-            {violation.isActive ? t('settings.catalogue.retire') : t('settings.catalogue.restore')}
-          </Button>
+            actions={[
+              { id: 'edit', label: t('common.actions.edit'), icon: EditIcon, onSelect: onEdit },
+              violation.isActive
+                ? { id: 'retire', label: t('settings.catalogue.retire'), icon: RetireIcon, destructive: true, onSelect: onToggle }
+                : { id: 'restore', label: t('settings.catalogue.restore'), icon: RestoreIcon, onSelect: onToggle },
+            ]}
+          />
         </div>
       ) : null}
     </li>
@@ -364,10 +349,7 @@ function CatalogueSkeleton() {
           <SkeletonText className="text-xs" width="w-20" />
         </span>
       </div>
-      <div className="flex flex-wrap gap-2">
-        <SkeletonButton />
-        <SkeletonButton />
-      </div>
+      <RowActionsSkeleton />
     </div>
   );
   return (
@@ -379,7 +361,7 @@ function CatalogueSkeleton() {
             <div className="flex flex-col gap-3 p-3 sm:p-4">
               <ul className="flex flex-col divide-y divide-border">
                 {[0, 1].map((v) => (
-                  <li key={v} className="flex flex-col gap-3 py-3 first:pt-0 last:pb-0 md:flex-row md:items-start">
+                  <li key={v} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
                     <div className="flex min-w-0 flex-1 flex-col gap-2">
                       <SkeletonText className="font-semibold" width="w-64" />
                       <SkeletonText className="text-xs" width="w-40" />
@@ -389,9 +371,8 @@ function CatalogueSkeleton() {
                         ))}
                       </div>
                     </div>
-                    <div className="flex shrink-0 flex-wrap gap-2">
-                      <SkeletonButton className="w-20" />
-                      <SkeletonButton />
+                    <div className="-mt-1.5 shrink-0">
+                      <RowActionsSkeleton />
                     </div>
                   </li>
                 ))}

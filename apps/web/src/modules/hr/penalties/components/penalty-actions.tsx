@@ -4,9 +4,9 @@ import { PenaltyStatus, type PenaltyRecord } from '@school-erp/shared';
 import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
 import { callApi } from '@/lib/callApi';
-import { Button } from '@/shared/components/ui/button';
+import { RowActions } from '@/shared/components/data-table/row-actions';
 import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
-import { CheckIcon, CloseIcon } from '@/shared/components/ui/icons';
+import { ApproveIcon, CloseIcon } from '@/shared/components/ui/icons';
 import { nameIn } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { APPROVE_PENALTY, CANCEL_PENALTY } from '../apis';
@@ -15,7 +15,7 @@ import { describeAction, errorMessage } from '../lib/penalty-text';
 type Pending = 'approve' | 'cancel' | null;
 
 /**
- * A row's actions: approve (pending only) behind a confirmation, cancel (pending or approved) with
+ * A row's ⋯ menu: approve (pending only) behind a confirmation, cancel (pending or approved) with
  * a required reason. A cancelled penalty has none (§4). When the server refuses — the month's
  * payroll is approved, it was cancelled meanwhile — the dialog stays open with the translated
  * reason and the list refreshes to show the record as it now is.
@@ -68,17 +68,26 @@ export function PenaltyActions({ record }: { record: PenaltyRecord }) {
   ) : null;
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      {record.status === PenaltyStatus.PENDING ? (
-        <Button size="sm" variant="secondary" className="cursor-pointer" aria-label={t('penalties.approve.buttonFor', { name })} onClick={() => show('approve')}>
-          <CheckIcon />
-          {t('penalties.approve.button')}
-        </Button>
-      ) : null}
-      <Button size="sm" variant="ghost" className="cursor-pointer" aria-label={t('penalties.cancel.buttonFor', { name })} onClick={() => show('cancel')}>
-        <CloseIcon />
-        {t('penalties.cancel.button')}
-      </Button>
+    <>
+      <RowActions
+        label={t('ui.table.actionsFor', { name: `${name} · ${violation}` })}
+        actions={[
+          {
+            id: 'approve',
+            label: t('penalties.approve.button'),
+            icon: ApproveIcon,
+            hidden: record.status !== PenaltyStatus.PENDING,
+            onSelect: () => show('approve'),
+          },
+          {
+            id: 'cancel',
+            label: t('penalties.cancel.button'),
+            icon: CloseIcon,
+            destructive: true,
+            onSelect: () => show('cancel'),
+          },
+        ]}
+      />
       <ConfirmDialog
         open={open === 'approve'}
         onOpenChange={(next) => (next ? show('approve') : close())}
@@ -109,6 +118,6 @@ export function PenaltyActions({ record }: { record: PenaltyRecord }) {
         reasonPlaceholder={t('penalties.cancel.reasonPlaceholder')}
         onConfirm={(reason) => run(CANCEL_PENALTY(record.id, reason ?? ''), t('penalties.cancel.done'))}
       />
-    </div>
+    </>
   );
 }

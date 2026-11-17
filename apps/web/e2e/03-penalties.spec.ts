@@ -12,7 +12,7 @@ import {
 import { Api } from './support/api';
 import { todayIso } from './support/dates';
 import { prefixOf, t } from './support/i18n';
-import { shoot, signIn } from './support/ui';
+import { settle, shoot, signIn } from './support/ui';
 
 interface Target {
   employee: EmployeeSummary;
@@ -122,11 +122,17 @@ test('penalties: a repeat is previewed as level 2 → saved → approved → lis
   await expect(dialog).toBeHidden();
 
   await page.goto(filtered(PenaltyStatus.PENDING));
+  // Row actions sit behind the row's ⋯ menu.
   await page
     .getByRole('button', {
-      name: t('en', 'penalties.approve.buttonFor', { name: employee.nameEn }),
+      name: t('en', 'ui.table.actionsFor', { name: `${employee.nameEn} · ${violation.nameEn}` }),
     })
+    .first()
     .click();
+  await expect(page.getByRole('menu')).toBeVisible();
+  await settle(page);
+  await shoot(page, info, 'penalty-row-menu');
+  await page.getByRole('menuitem', { name: t('en', 'penalties.approve.button'), exact: true }).click();
   const confirm = page.getByRole('dialog', {
     name: t('en', 'penalties.approve.title'),
   });
