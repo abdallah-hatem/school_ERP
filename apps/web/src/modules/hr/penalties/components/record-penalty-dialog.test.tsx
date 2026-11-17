@@ -229,4 +229,48 @@ describe('RecordPenaltyDialog', () => {
     await user.click(screen.getByRole('button', { name: 'Save as pending' }));
     await waitFor(() => expect(screen.getAllByText("This violation is retired and can't be used.").length).toBe(2));
   });
+
+  it('the violation picker searches English and Arabic names and group names', async () => {
+    const user = userEvent.setup();
+    renderDialog(vi.fn(), 'ar');
+    await user.click(screen.getByRole('combobox', { name: /المخالفة/ }));
+    const search = screen.getByRole('searchbox', { name: /اكتب اسم المخالفة/ });
+    const shown = () => screen.queryAllByRole('option').map((o) => o.textContent);
+    // Arabic name.
+    await user.type(search, 'الهاتف');
+    expect(shown()).toEqual(['استخدام الهاتف في الفصل']);
+    // English name, on the Arabic screen.
+    await user.clear(search);
+    await user.type(search, 'late arrival');
+    expect(shown()).toEqual(['التأخر دون إخطار']);
+    // A group's name (either language) finds its violations.
+    await user.clear(search);
+    await user.type(search, 'General');
+    expect(shown()).toEqual(['التأخر دون إخطار']);
+    await user.clear(search);
+    await user.type(search, 'الجدول ب');
+    expect(shown()).toEqual(['استخدام الهاتف في الفصل']);
+    await user.clear(search);
+    await user.type(search, 'zzz');
+    expect(screen.getByText('لا توجد مخالفة مستخدمة تطابق البحث.')).toBeTruthy();
+  });
+
+  it('once per day (§4): the preview says so before saving, and a refused save lands under the date', async () => {
+    const user = userEvent.setup();
+    apis.GET_PENALTY_PREVIEW.mockResolvedValue(failure(409, 'VIOLATION_ONCE_PER_DAY'));
+    apis.CREATE_PENALTY.mockResolvedValue(failure(409, 'VIOLATION_ONCE_PER_DAY'));
+    const onOpenChange = renderDialog();
+    await choose(user, /Employee/, 'Mona Khalil · EMP-0001');
+    await choose(user, /Violation/, 'Late arrival without notice');
+    const message = 'This violation counts once per day, and this employee already has one on this date.';
+    await waitFor(() => expect(previewLine()).toBe(message));
+
+    await user.click(screen.getByRole('button', { name: 'Save as pending' }));
+    await waitFor(() => expect(screen.getAllByText(message)).toHaveLength(2));
+    // Under the date field (its error is tied to the date's trigger), not the form-level alert.
+    const date = screen.getByRole('button', { name: /Date of the violation/ });
+    expect(date.getAttribute('aria-invalid')).toBe('true');
+    expect(screen.queryByRole('alert')?.textContent ?? '').not.toBe(message);
+    expect(onOpenChange).not.toHaveBeenCalledWith(false);
+  });
 });

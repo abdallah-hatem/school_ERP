@@ -22,6 +22,7 @@ export const EMPLOYEE_SUMMARY_SELECT = {
   basicSalary: true,
   status: true,
   photoUrl: true,
+  gender: true,
   // For the scope and salary checks (R5, R7); not part of the response.
   managerId: true,
 } satisfies Prisma.EmployeeSelect;
@@ -65,6 +66,7 @@ export const EMPLOYEE_DETAIL_SELECT = {
       nameEn: true,
       nameAr: true,
       photoUrl: true,
+      gender: true,
       jobTitle: { select: { managesPeople: true } },
     },
   },

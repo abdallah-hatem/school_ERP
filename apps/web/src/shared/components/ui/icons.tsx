@@ -4,6 +4,7 @@ import {
   ArrowClockwiseIcon as ArrowClockwise,
   ArrowCounterClockwiseIcon as ArrowCounterClockwise,
   ArrowsClockwiseIcon as ArrowsClockwise,
+  RepeatIcon as Repeat,
   BuildingsIcon as Buildings,
   CalculatorIcon as Calculator,
   ChalkboardTeacherIcon as ChalkboardTeacher,
@@ -54,6 +55,8 @@ import {
   UsersThreeIcon as UsersThree,
   WalletIcon as Wallet,
   WarningCircleIcon as WarningCircle,
+  WarningIcon as Warning,
+  InfoIcon as Info,
   XIcon as X,
   FunnelIcon as Funnel,
   ArrowSquareOutIcon as ArrowSquareOut,
@@ -78,7 +81,7 @@ import {
   UserCircleDashedIcon as UserCircleDashed,
   EraserIcon as Eraser,
 } from '@phosphor-icons/react/ssr';
-import type { ComponentType } from 'react';
+import type { ComponentType, SVGProps } from 'react';
 import { cn } from '@/shared/lib/utils';
 
 /*
@@ -119,6 +122,8 @@ export const StageIcon = duotone(ChalkboardTeacher, 'Stage');
 export const WorkSystemIcon = duotone(ClockAfternoon, 'WorkSystem');
 /** A job title whose holders lead other staff (§3 direct managers). */
 export const ManagesPeopleIcon = duotone(Users, 'ManagesPeople');
+/** A catalogue violation that can be recorded several times a day (once per day off, §4). */
+export const RepeatsInDayIcon = duotone(Repeat, 'RepeatsInDay');
 
 // Chrome
 export const MenuIcon = duotone(List, 'Menu');
@@ -191,6 +196,10 @@ export const ErrorIcon = duotone(WarningCircle, 'Error');
 export const ReadyIcon = duotone(CheckCircle, 'Ready');
 export const PendingIcon = duotone(Hourglass, 'Pending');
 export const BlockedIcon = duotone(Prohibit, 'Blocked');
+/** Needs a look (a warning toast). */
+export const WarningIcon = duotone(Warning, 'Warning');
+/** A neutral fact (an info toast). */
+export const InfoIcon = duotone(Info, 'Info');
 
 // Settings sections
 export const SchoolIcon = duotone(Buildings, 'School');
@@ -218,6 +227,40 @@ export const PersonIcon = duotone(UserCircle, 'Person');
  */
 export function SilhouetteIcon(props: IconProps) {
   return <User weight="fill" aria-hidden="true" focusable="false" {...props} />;
+}
+
+/*
+ * The gendered avatars of an employee without a photo (owner, 2026-11-18). Drawn here because
+ * Phosphor has no such pair; one family with the neutral one above: flat `currentColor`, the
+ * face (and the man's neck) in a 35% tint like Phosphor duotone's lighter layer, hair / headscarf
+ * and shoulders solid. Both share the same frame (the crop of the 256 grid below) and the same
+ * shoulder line, so they sit identically in the tile and read apart at 36px by the head: short
+ * hair over an open face, or a simple headscarf framing the face and falling to the shoulders.
+ */
+type SilhouetteProps = SVGProps<SVGSVGElement>;
+const SILHOUETTE_FRAME = { viewBox: '24 30 208 208', fill: 'currentColor', 'aria-hidden': true, focusable: false } as const;
+
+export function MaleSilhouetteIcon(props: SilhouetteProps) {
+  return (
+    <svg {...SILHOUETTE_FRAME} data-silhouette="male" {...props}>
+      <circle cx="128" cy="100" r="46" opacity=".35" />
+      <rect x="110" y="132" width="36" height="40" rx="12" opacity=".35" />
+      <path d="M78 108C72 64 96 40 128 40c34 0 56 22 50 68-4-16-12-26-24-30-16 8-42 10-62 6-8 6-12 14-14 24z" />
+      <path d="M40 256c0-52 38-88 88-88s88 36 88 88z" />
+    </svg>
+  );
+}
+
+export function FemaleSilhouetteIcon(props: SilhouetteProps) {
+  return (
+    <svg {...SILHOUETTE_FRAME} data-silhouette="female" {...props}>
+      <ellipse cx="128" cy="106" rx="32" ry="38" opacity=".35" />
+      <path
+        fillRule="evenodd"
+        d="M128 44c32 0 56 26 56 60 0 22-8 42-20 56 32 8 52 40 52 96H40c0-56 20-88 52-96-12-14-20-34-20-56 0-34 24-60 56-60zm0 24c-18 0-32 17-32 38s14 38 32 38 32-17 32-38-14-38-32-38z"
+      />
+    </svg>
+  );
 }
 export const AnyoneIcon = duotone(Users, 'Anyone');
 export const MoneyIcon = duotone(Coins, 'Money');

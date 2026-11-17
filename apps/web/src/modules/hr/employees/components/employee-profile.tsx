@@ -109,7 +109,7 @@ export function EmployeeProfileShell({
       <div className="flex flex-col gap-6">
         <PageHeader
           title={localName(employee, locale)}
-          leading={<EmployeeAvatar photoUrl={employee.photoUrl} size="lg" muted={employee.status !== EmployeeStatus.ACTIVE} />}
+          leading={<EmployeeAvatar photoUrl={employee.photoUrl} gender={employee.gender} size="lg" muted={employee.status !== EmployeeStatus.ACTIVE} />}
           status={<EmployeeStatusPill status={employee.status} />}
           description={
             <span className="flex flex-wrap items-center gap-x-2">

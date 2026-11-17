@@ -143,6 +143,7 @@
     "groupId": "Penalty group",
     "note": "Note",
     "levels": "Levels",
+    "oncePerDay": "Once per day",
     "employeeId": "Employee",
     "violationId": "Violation",
     "date": "Date",

@@ -33,6 +33,8 @@ export async function SetPasswordPage({ locale, next }: { locale: Locale; next?:
     <I18nProvider messages={{ auth, errors: ERRORS[locale] } as unknown as MessageTree}>
       <SchoolBrandingProvider initial={branding}>
         <main className="relative flex min-h-dvh flex-col items-center justify-center bg-background px-4 py-16">
+          {/* Same place as on the sign-in page: the top corner at the inline end. */}
+          <LocaleSwitch className="absolute end-4 top-4" />
           <div className="w-full max-w-md">
             <SchoolBrand className="mb-6 justify-center" />
             <section className="rounded-2xl border border-border bg-card p-6 shadow-card sm:p-8">
@@ -45,9 +47,6 @@ export async function SetPasswordPage({ locale, next }: { locale: Locale; next?:
               </p>
               <SetPasswordForm email={user.email} destination={destination} />
             </section>
-            <div className="mt-5 flex justify-center">
-              <LocaleSwitch />
-            </div>
           </div>
         </main>
       </SchoolBrandingProvider>

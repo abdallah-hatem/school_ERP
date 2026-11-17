@@ -88,6 +88,8 @@ export const violationSchema = z
     nameEn: name('violation'),
     nameAr: name('violation'),
     note: z.string().max(NOTE_MAX, 'settings.errors.max.note'),
+    /** §4: at most one pending/approved penalty per employee per date. */
+    oncePerDay: z.boolean(),
     /** Level `i` is level `i + 1`; numbered on save, so the list is always 1..n. */
     levels: z
       .array(z.object({ action: z.enum(PenaltyAction, { error: required }), days: z.number().nullable() }))

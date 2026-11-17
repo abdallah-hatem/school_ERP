@@ -20,6 +20,12 @@ export const buttonVariants = cva(
         ghost: 'text-muted-foreground hover:bg-muted hover:text-foreground',
         destructive:
           'bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:outline-destructive/50',
+        /** Takes something away but isn't the dialog's final say (Deactivate on a header). */
+        'destructive-outline':
+          'border border-destructive/30 bg-card text-destructive-ink shadow-xs hover:border-destructive/45 hover:bg-destructive-soft focus-visible:outline-destructive/50',
+        /** Gives something back (Reactivate): a soft success tone. */
+        'success-soft':
+          'border border-success/25 bg-success-soft text-success-ink hover:border-success/45 hover:bg-success-soft/70 focus-visible:outline-success/50',
       },
       size: {
         sm: 'h-9 px-3 text-sm',
@@ -79,10 +85,10 @@ export function Button({
   );
 }
 
-/** The only spinner in the app: inside a button that is mid-submit. */
-function Spinner() {
+/** The only spinner in the app: inside a button that is mid-submit (and a loading toast's badge). */
+export function Spinner({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" className="size-4 animate-spin" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" className={cn('size-4 animate-spin', className)} aria-hidden="true">
       <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity="0.25" strokeWidth="3" />
       <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
     </svg>

@@ -23,6 +23,11 @@ export interface SeedViolation {
   note?: string | null;
   levels: SeedLevel[];
   /**
+   * §4 once per day: at most one penalty per employee per date. Default true; false for the
+   * violations that genuinely repeat within a day (late to class, leaving a task early…).
+   */
+  oncePerDay?: boolean;
+  /**
    * Seed-only handle the November demo penalties use to find this violation (see
    * `DEMO_VIOLATION_KEYS`). Not stored.
    */

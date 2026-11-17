@@ -11,6 +11,7 @@ const violationRow = (over: Record<string, unknown> = {}) => ({
   nameAr: 'تأخر',
   note: null,
   isActive: true,
+  oncePerDay: true,
   levels: [{ level: 1, action: 'DEDUCT_DAYS', days: '1.5' }],
   ...over,
 });
@@ -32,6 +33,33 @@ function makeService(repo: Partial<Record<keyof PenaltyCatalogueRepository, jest
 }
 
 describe('PenaltyCatalogueService', () => {
+  it('once per day (§4): stored only when given (the schema defaults it on), and a change is history', async () => {
+    const { service, repository, events } = makeService({
+      updateViolation: jest.fn().mockResolvedValue(violationRow({ oncePerDay: false })),
+    });
+    const levels = [{ level: 1, action: 'NOTICE' as const }];
+    await service.createViolation('g1', { nameEn: 'x', nameAr: 'y', levels }, null);
+    expect(repository.createViolation.mock.calls[0][1]).not.toHaveProperty('oncePerDay');
+    await service.createViolation('g1', { nameEn: 'x', nameAr: 'y', oncePerDay: false, levels }, null);
+    expect(repository.createViolation.mock.calls[1][1]).toMatchObject({ oncePerDay: false });
+
+    events.emit.mockClear();
+    const after = await service.updateViolation('v1', { oncePerDay: false }, 'u1');
+    expect(after.oncePerDay).toBe(false);
+    expect(repository.updateViolation).toHaveBeenCalledWith('v1', { oncePerDay: false }, undefined);
+    expect(events.emit.mock.calls[0][1]).toMatchObject({
+      oldValue: { oncePerDay: true },
+      newValue: { oncePerDay: false },
+    });
+  });
+
+  it('getUsable carries the flag for recording', async () => {
+    const { service } = makeService({
+      findViolation: jest.fn().mockResolvedValue({ ...violationRow({ oncePerDay: false }), group: { isActive: true } }),
+    });
+    await expect(service.getUsable('v1')).resolves.toMatchObject({ oncePerDay: false });
+  });
+
   it('rejects invalid levels with INVALID_LEVELS and writes nothing', async () => {
     const { service, repository } = makeService();
     await expect(

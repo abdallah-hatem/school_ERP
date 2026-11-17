@@ -78,6 +78,7 @@ const summary = (id: string, stageId: string): EmployeeSummaryRow => ({
   status: 'ACTIVE',
   photoUrl: null,
   managerId: null,
+  gender: 'MALE',
 });
 
 function makeService(scopes: Parameters<typeof fakeAccess>[0], repo: Record<string, jest.Mock> = {}) {

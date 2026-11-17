@@ -18,6 +18,7 @@ export function StatusPill({
   tone = 'neutral',
   icon: Icon,
   hollow = false,
+  title,
   children,
   className,
 }: {
@@ -26,11 +27,14 @@ export function StatusPill({
   icon?: AppIcon;
   /** A hollow dot (an "off" state such as inactive), so it differs by shape too, not only colour. */
   hollow?: boolean;
+  /** Longer wording for a tooltip and screen readers, when the pill's text is short. */
+  title?: string;
   children: ReactNode;
   className?: string;
 }) {
   return (
     <span
+      title={title}
       className={cn(
         'inline-flex items-center gap-1.5 rounded-full py-1 ps-2 pe-2.5 text-xs font-bold whitespace-nowrap',
         tones[tone],

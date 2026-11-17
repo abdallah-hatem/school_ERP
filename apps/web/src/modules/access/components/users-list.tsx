@@ -160,14 +160,24 @@ export function UsersList({ basePath, query, rows, total, roles, lastAdminId, no
       id: 'status',
       header: t('access.users.columns.status'),
       card: 'status',
-      className: 'w-28',
+      className: 'w-52',
       skeleton: <SkeletonPill />,
-      cell: (u) =>
-        u.isActive ? (
-          <StatusPill tone="success">{t('access.users.statuses.active')}</StatusPill>
-        ) : (
-          <StatusPill tone="neutral" hollow>{t('access.users.statuses.inactive')}</StatusPill>
-        ),
+      // The account's whole state in one place: active/inactive, and a temporary password still to
+      // be replaced (one line each, never wrapped).
+      cell: (u) => (
+        <span className="flex flex-wrap items-center gap-1.5">
+          {u.isActive ? (
+            <StatusPill tone="success">{t('access.users.statuses.active')}</StatusPill>
+          ) : (
+            <StatusPill tone="neutral" hollow>{t('access.users.statuses.inactive')}</StatusPill>
+          )}
+          {u.mustChangePassword && u.isActive ? (
+            <StatusPill tone="warning" icon={TemporaryPasswordIcon} title={t('access.users.mustChange')}>
+              {t('access.users.temporaryPassword')}
+            </StatusPill>
+          ) : null}
+        </span>
+      ),
     },
     {
       id: 'lastSignIn',
@@ -175,15 +185,7 @@ export function UsersList({ basePath, query, rows, total, roles, lastAdminId, no
       className: 'w-44',
       skeleton: <SkeletonText className="text-sm" width="w-24" />,
       cell: (u) => (
-        <span className="flex flex-col items-start gap-1">
-          <span className="tabular">{formatSignIn(u.lastSignInAt, now, locale, t)}</span>
-          {u.mustChangePassword && u.isActive ? (
-            <StatusPill tone="warning" icon={TemporaryPasswordIcon} className="max-w-full whitespace-normal">
-
-              {t('access.users.mustChange')}
-            </StatusPill>
-          ) : null}
-        </span>
+        <span className="tabular">{formatSignIn(u.lastSignInAt, now, locale, t)}</span>
       ),
     },
     rowActionsColumn<UserAccount>(t('access.users.columns.actions'), (u) => (
@@ -215,6 +217,7 @@ export function UsersList({ basePath, query, rows, total, roles, lastAdminId, no
             id: 'reactivate',
             label: t('access.users.actions.reactivate'),
             icon: ReactivateIcon,
+            positive: true,
             hidden: !canManage || u.isActive,
             onSelect: () => actions.reactivate(u),
           },

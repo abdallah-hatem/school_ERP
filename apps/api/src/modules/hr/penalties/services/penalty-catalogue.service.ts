@@ -47,6 +47,7 @@ function toViolation(row: ViolationRow): ViolationSnapshot {
     nameAr: row.nameAr,
     note: row.note,
     isActive: row.isActive,
+    oncePerDay: row.oncePerDay,
     levels: row.levels.map(toLevel),
   };
 }
@@ -75,6 +76,8 @@ const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
 export interface UsableViolation {
   id: Uuid;
   levels: CatalogueLevel[];
+  /** §4: at most one pending/approved penalty per employee per date. */
+  oncePerDay: boolean;
 }
 
 /**
@@ -136,7 +139,12 @@ export class PenaltyCatalogueService {
     const violation = toViolation(
       await this.repository.createViolation(
         groupId,
-        { nameEn: dto.nameEn, nameAr: dto.nameAr, note: dto.note ?? null },
+        {
+          nameEn: dto.nameEn,
+          nameAr: dto.nameAr,
+          note: dto.note ?? null,
+          ...(dto.oncePerDay !== undefined ? { oncePerDay: dto.oncePerDay } : {}),
+        },
         levels,
       ),
     );
@@ -170,7 +178,7 @@ export class PenaltyCatalogueService {
     if (!row.isActive || !row.group.isActive) {
       throw new CodedException(HttpStatus.BAD_REQUEST, ErrorCode.VIOLATION_RETIRED);
     }
-    return { id: row.id, levels: row.levels.map(toLevel) };
+    return { id: row.id, levels: row.levels.map(toLevel), oncePerDay: row.oncePerDay };
   }
 
   private checkedLevels(levels: readonly ViolationLevelDto[]): LevelData[] {

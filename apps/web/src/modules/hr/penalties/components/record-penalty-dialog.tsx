@@ -176,8 +176,10 @@ export function RecordPenaltyDialog({ open, onOpenChange, employees, violations,
             required
             disabled={busy}
             placeholder={t('penalties.form.violationPlaceholder')}
+            searchPlaceholder={t('penalties.form.violationSearch')}
             groups={violations}
             emptyText={t('penalties.form.noViolations')}
+            noMatchesText={t('penalties.form.noViolationMatches')}
           />
           <DateField
             control={control}

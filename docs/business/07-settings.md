@@ -29,6 +29,7 @@ affects only **draft** payroll runs (approved runs never change).
 | Part-time percentages | 4 days 80%, 3 days 60%, 2 days 40% | DECIDED |
 | Penalty repetition window | Contract year (1 June – 31 May); alternatives: calendar year, rolling 12 months | GUESS |
 | Penalty catalogue | The school's 4 tables (72 violations) | DECIDED |
+| Violation "Once per day" (§4) | On, except violations that repeat within a day (late to class, leaving a task early…) | DECIDED (owner, 2026-11-18) |
 | Stages (school structure), departments, job titles | From the seed | DECIDED |
 | Brand colours | Teal and sunflower (the "Campus" design), fixed for now | DECIDED |
 | Currency | EGP | DECIDED |
@@ -44,3 +45,14 @@ affects only **draft** payroll runs (approved runs never change).
   shown in the screen's language; a time off the boundary is refused. Times already saved on a
   boundary stay valid.
 - **DECIDED** — A violation used by an approved penalty can't be deleted, only retired from new use.
+- **DECIDED** (owner, 2026-11-18) — The violation dialog in Settings → Penalty catalogue has a
+  **Once per day** switch with a one-line explanation (§4). Violations with it **off** show a small
+  "Can repeat in a day" badge in the catalogue (the exception is the one marked). Changing it is
+  recorded in the change history like any catalogue change, and never changes recorded penalties.
+- **DECIDED** (owner, 2026-11-18) — The penalty catalogue has a **search box**: it matches a
+  violation's English or Arabic name and a group's English or Arabic name (ignoring case, accents and
+  Arabic letter variants). While searching, groups with a match open by themselves and show only the
+  matching violations (a group whose own name matches shows all of its violations); the matching
+  text is marked. Nothing matching → "No violations match" with **Clear filters**. Pressing `/`
+  puts the cursor in the search. The record-penalty dialog's violation picker searches the same
+  way (violation and group names, both languages).

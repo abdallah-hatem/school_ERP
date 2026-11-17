@@ -93,6 +93,13 @@ Motion explains a change and never delays it.
 - **Error:** says what happened and offers a retry; never a blank area.
 - **Confirmations:** destructive or irreversible actions go through `ConfirmDialog`; cancelling a
   penalty or deactivating someone requires a reason.
+- **Toasts:** the shared `Toaster` only — a `card` surface with the `raised` shadow, the tone icon
+  in a soft round badge (success, destructive, warning; info in primary-soft), the title in the
+  display face, a close button; top inline-end corner, stacked with gaps. Always in the screen's
+  language (pass a translated `successMessage`, never the API's English).
+- **Take away / give back:** Deactivate is a destructive outline (red in ⋯ menus), Reactivate a
+  soft success button (green in ⋯ menus) — `StatusChangeButton`, different icons, never the same
+  neutral button with different words.
 
 ## Avoid
 

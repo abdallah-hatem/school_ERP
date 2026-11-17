@@ -79,6 +79,8 @@ export interface EmployeeSummary extends Names, SalaryVisibility {
   status: EmployeeStatus;
   /** Signed-in-only image URL; null → the silhouette avatar. */
   photoUrl: string | null;
+  /** Picks the male or female silhouette when there is no photo. */
+  gender: Gender;
 }
 
 /** All §3 fields a client sends (everything except `code` and `status`). */
@@ -158,7 +160,7 @@ export interface Employee extends Names, SalaryVisibility {
    * `managesPeople`: the manager's job title still manages people. `false` means they no longer
    * qualify — the employee keeps them, and the form flags it (§3).
    */
-  manager: (NamedRef & { code: string; managesPeople: boolean; photoUrl: string | null }) | null;
+  manager: (NamedRef & { code: string; managesPeople: boolean; photoUrl: string | null; gender: Gender }) | null;
   grade: string | null;
   workSystem: WorkSystem;
   basicSalary?: Piastres;
@@ -192,6 +194,8 @@ export interface EmployeeRef extends NamedRef {
   code: string;
   /** Present where the response shows the employee's avatar (e.g. penalties). */
   photoUrl?: string | null;
+  /** Present with `photoUrl`: picks the male or female silhouette. */
+  gender?: Gender;
 }
 
 // ── Penalty catalogue ──────────────────────────────────────────────────────
@@ -208,6 +212,11 @@ export interface Violation extends Names {
   id: Uuid;
   note: string | null;
   isActive: boolean;
+  /**
+   * §4 (owner, 2026-11-18): at most one pending or approved penalty for this violation per
+   * employee per date. Off for violations that genuinely repeat within a day (late to class…).
+   */
+  oncePerDay: boolean;
   levels: ViolationLevel[];
 }
 
@@ -235,11 +244,14 @@ export interface ViolationLevelInput {
 
 export interface CreateViolationRequest extends Names {
   note?: string | null;
+  /** Default true. */
+  oncePerDay?: boolean;
   levels: ViolationLevelInput[];
 }
 
 export interface UpdateViolationRequest extends Partial<Names> {
   note?: string | null;
+  oncePerDay?: boolean;
   isActive?: boolean;
   levels?: ViolationLevelInput[];
 }
