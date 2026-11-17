@@ -35,6 +35,9 @@
   /* Status */
   /* Neutral states (inactive, hidden, retired): a true grey, never mint — it must not read as success. */
   --neutral-soft: #eceef0;
+  /* Default employee avatar (no photo): white figure on this light grey. */
+  --avatar-tile: #d6dadd;
+  --avatar-figure: #ffffff;
   --neutral-ink: #4f5a60;
   --success: #1f9a62;
   --success-soft: #ddf4e7;
@@ -102,6 +105,8 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-accent-soft: var(--accent-soft);
   --color-neutral-soft: var(--neutral-soft);
+  --color-avatar-tile: var(--avatar-tile);
+  --color-avatar-figure: var(--avatar-figure);
   --color-neutral-ink: var(--neutral-ink);
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);

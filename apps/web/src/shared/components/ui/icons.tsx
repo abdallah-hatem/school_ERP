@@ -230,23 +230,18 @@ export function SilhouetteIcon(props: IconProps) {
 }
 
 /*
- * The gendered avatars of an employee without a photo (owner, 2026-11-18). Drawn here because
- * Phosphor has no such pair; one family with the neutral one above: flat `currentColor`, the
- * face (and the man's neck) in a 35% tint like Phosphor duotone's lighter layer, hair / headscarf
- * and shoulders solid. Both share the same frame (the crop of the 256 grid below) and the same
- * shoulder line, so they sit identically in the tile and read apart at 36px by the head: short
- * hair over an open face, or a simple headscarf framing the face and falling to the shoulders.
+ * The gendered avatars of an employee without a photo (owner, 2026-11-18): the classic default
+ * silhouette — a plain head-and-shoulders figure, the man with short hair and ears, the woman with
+ * a bob. Drawn on a 64 grid to fill the whole avatar tile (`size-full`); one flat `currentColor`
+ * shape each (the avatar paints it white on a light grey tile). Mockup: `design/mockups/avatars-basic.html`.
  */
 type SilhouetteProps = SVGProps<SVGSVGElement>;
-const SILHOUETTE_FRAME = { viewBox: '24 30 208 208', fill: 'currentColor', 'aria-hidden': true, focusable: false } as const;
+const SILHOUETTE_FRAME = { viewBox: '0 0 64 64', fill: 'currentColor', 'aria-hidden': true, focusable: false } as const;
 
 export function MaleSilhouetteIcon(props: SilhouetteProps) {
   return (
     <svg {...SILHOUETTE_FRAME} data-silhouette="male" {...props}>
-      <circle cx="128" cy="100" r="46" opacity=".35" />
-      <rect x="110" y="132" width="36" height="40" rx="12" opacity=".35" />
-      <path d="M78 108C72 64 96 40 128 40c34 0 56 22 50 68-4-16-12-26-24-30-16 8-42 10-62 6-8 6-12 14-14 24z" />
-      <path d="M40 256c0-52 38-88 88-88s88 36 88 88z" />
+      <path d="M7 64c2-9 9-12.5 17-15.5V42c-3.5-2.5-5.6-6.6-6.6-10.4-1.9-.1-3.1-1.8-3.1-3.9 0-1.6.7-2.8 1.8-3.3-.7-5.1-.3-10.5 3.6-14C23.3 7.1 28 6 32.5 6.2c2.6.1 4.6.6 6 1.4 1.4-.4 3 .1 3.8 1.6 2.8 1.4 4 4.5 3.9 8.2 0 2.4-.4 4.6-.9 6.7 1.2.4 2 1.7 2 3.4 0 2.2-1.3 3.9-3.2 4-1 3.9-3.1 7.9-6.6 10.4v6.5c8 3 15 6.5 17 15.5z" />
     </svg>
   );
 }
@@ -254,11 +249,7 @@ export function MaleSilhouetteIcon(props: SilhouetteProps) {
 export function FemaleSilhouetteIcon(props: SilhouetteProps) {
   return (
     <svg {...SILHOUETTE_FRAME} data-silhouette="female" {...props}>
-      <ellipse cx="128" cy="106" rx="32" ry="38" opacity=".35" />
-      <path
-        fillRule="evenodd"
-        d="M128 44c32 0 56 26 56 60 0 22-8 42-20 56 32 8 52 40 52 96H40c0-56 20-88 52-96-12-14-20-34-20-56 0-34 24-60 56-60zm0 24c-18 0-32 17-32 38s14 38 32 38 32-17 32-38-14-38-32-38z"
-      />
+      <path d="M8 64c2-8 9.5-11.5 17-14v-9.4c-3.6.2-7.4-.5-10.4-2.2 2.4-2.6 2.9-6.2 2.9-9.9 0-5.6 1.9-10 5.6-12.8 2.6-2 5.6-2.9 8.9-2.9s6.3.9 8.9 2.9c3.7 2.8 5.6 7.2 5.6 12.8 0 3.7.5 7.3 2.9 9.9-3 1.7-6.8 2.4-10.4 2.2v9.4C46.5 52.5 54 56 56 64z" />
     </svg>
   );
 }
