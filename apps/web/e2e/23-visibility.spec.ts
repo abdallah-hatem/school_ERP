@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { sidebarLink } from './support/access';
 import { t } from './support/i18n';
 import { settle, shoot, signIn } from './support/ui';
-import { expectNotFound, makeStageHead, signInAsStageHead } from './support/visibility';
+import { expectNotFound, makeStageHead, salaryInContract, signInAsStageHead } from './support/visibility';
 
 /**
  * Runs in the `desktop-en` project (1440×900). P4 — what each role can see: a Stage head linked to
@@ -74,7 +74,7 @@ test('a Stage head sees only their stage, no salary, no Payroll or History; the 
   await page.goto(`/en/employees/${setup.own.id}`);
   const tabs = page.getByRole('navigation', { name: t('en', 'employees.profile.tabs') }).getByRole('link');
   await expect(tabs).toHaveCount(4);
-  await expect(page.getByText(t('en', 'employees.fields.basicSalary'))).toBeVisible();
+  await expect(salaryInContract(page, 'en')).toBeVisible();
   await settle(page);
   await shoot(page, info, 'p4-hr-manager-profile-en-desktop');
   await page.goto('/en/employees');

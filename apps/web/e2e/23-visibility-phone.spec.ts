@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { t } from './support/i18n';
 import { expectNoHorizontalScroll, settle, shoot, signIn } from './support/ui';
-import { expectNotFound, makeStageHead, signInAsStageHead } from './support/visibility';
+import { expectNotFound, makeStageHead, salaryInContract, signInAsStageHead } from './support/visibility';
 
 /**
  * Runs in the `phone-ar` project only (390×844, touch). P4 on a phone: the Stage head's employees,
@@ -34,7 +34,8 @@ for (const locale of ['ar', 'en'] as const) {
 
     await signIn(page, locale);
     await page.goto(`/${locale}/employees/${setup.own.id}`);
-    await expect(page.getByText(t(locale, 'employees.fields.basicSalary'))).toBeVisible();
+    // Exactly once, in the Pay and contract card (the Stage head's checks above count it anywhere: 0).
+    await expect(salaryInContract(page, locale)).toBeVisible();
     await settle(page);
     await shoot(page, info, `p4-hr-manager-profile-${locale}-phone`);
   });

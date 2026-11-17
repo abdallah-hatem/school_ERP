@@ -1,4 +1,4 @@
-import { expect, type Browser, type Page } from '@playwright/test';
+import { expect, type Browser, type Locator, type Page } from '@playwright/test';
 import type { EmployeeOption, EmployeeSummary, Language, UserAccount } from '@school-erp/shared';
 import { Api, rolesByKey, signInAs, uniqueEmail } from './access';
 import { t } from './i18n';
@@ -78,6 +78,19 @@ export async function signInAsStageHead(
     setup.passwordChosen = true;
   }
   return page;
+}
+
+/**
+ * The basic salary's label in the profile's Pay and contract card — one element (exact text, inside
+ * that card). The label's words also appear elsewhere on the page (hints, other labels), so a bare
+ * `getByText` matches several.
+ */
+export function salaryInContract(page: Page, locale: Language): Locator {
+  return page
+    // The card itself (its own <h2>), never a section that merely contains it.
+    .locator('section:has(> h2)')
+    .filter({ has: page.locator(':scope > h2', { hasText: t(locale, 'employees.sections.contract') }) })
+    .getByText(t(locale, 'employees.fields.basicSalary'), { exact: true });
 }
 
 /** The app's not-found screen inside the shell (a page or record the viewer can't open). */
