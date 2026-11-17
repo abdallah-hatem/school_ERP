@@ -180,6 +180,11 @@
       "penalties": {
         "repetitionWindow": "Penalty repetition window"
       },
+      "tax": {
+        "brackets": "Income-tax brackets",
+        "martyrPercent": "Martyrs' fund rate",
+        "insurancePercent": "Employee insurance share"
+      },
       "departments": "Department",
       "jobTitles": "Job title",
       "penaltyGroups": "Penalty group",

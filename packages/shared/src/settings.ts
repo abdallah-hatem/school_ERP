@@ -1,4 +1,5 @@
 import type { Language, PartTimeWorkSystem, RepetitionWindow, Weekday } from './enums';
+import type { Piastres } from './types/common';
 
 /**
  * Setting keys. Each key is one row in `SchoolSetting` (value stored as JSON) and one row per
@@ -23,6 +24,9 @@ export const HrSettingKey = {
   PAYROLL_DAY_DIVISOR: 'hr.payroll.dayDivisor',
   PAYROLL_PART_TIME: 'hr.payroll.partTime',
   PENALTIES_REPETITION_WINDOW: 'hr.penalties.repetitionWindow',
+  TAX_BRACKETS: 'hr.tax.brackets',
+  TAX_MARTYR_PERCENT: 'hr.tax.martyrPercent',
+  TAX_INSURANCE_PERCENT: 'hr.tax.insurancePercent',
 } as const;
 export type HrSettingKey = (typeof HrSettingKey)[keyof typeof HrSettingKey];
 
@@ -55,6 +59,15 @@ export interface LatenessStep {
   days: number;
 }
 
+/**
+ * One monthly income-tax slice (§6): the next `width` piastres of taxable pay are taxed at
+ * `percent` (0–100, up to 2 decimals). Only the last slice is open-ended (`width` null).
+ */
+export interface TaxBracket {
+  width: Piastres | null;
+  percent: number;
+}
+
 /** Value type stored under each key. */
 export interface SettingValueMap {
   'school.nameEn': string;
@@ -70,6 +83,9 @@ export interface SettingValueMap {
   'hr.payroll.dayDivisor': number;
   'hr.payroll.partTime': Record<PartTimeWorkSystem, number>;
   'hr.penalties.repetitionWindow': RepetitionWindow;
+  'hr.tax.brackets': TaxBracket[];
+  'hr.tax.martyrPercent': number;
+  'hr.tax.insurancePercent': number;
 }
 
 /**
@@ -93,6 +109,18 @@ export const SETTING_DEFAULTS: { [K in SettingKey]: SettingValueMap[K] } = {
   'hr.payroll.dayDivisor': 30,
   'hr.payroll.partTime': { PART_TIME_4: 80, PART_TIME_3: 60, PART_TIME_2: 40 },
   'hr.penalties.repetitionWindow': 'CONTRACT_YEAR',
+  // §6 GUESS (to confirm with the school's accountant): Egypt's annual scale ÷ 12 — 60,000 at 0%,
+  // 15,000 at 10%, 15,000 at 15%, 130,000 at 20%, 200,000 at 22.5%, the rest at 25%.
+  'hr.tax.brackets': [
+    { width: 500_000, percent: 0 },
+    { width: 125_000, percent: 10 },
+    { width: 125_000, percent: 15 },
+    { width: 1_083_333, percent: 20 },
+    { width: 1_666_667, percent: 22.5 },
+    { width: null, percent: 25 },
+  ],
+  'hr.tax.martyrPercent': 0.05,
+  'hr.tax.insurancePercent': 11,
 };
 
 /** Validation bounds from §7. */

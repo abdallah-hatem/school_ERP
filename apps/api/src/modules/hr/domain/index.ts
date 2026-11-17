@@ -30,6 +30,7 @@ export {
   calculateLine,
   deductedDays,
   lineNetWithFlags,
+  lineTax,
   penaltyShare,
   sumAdjustments,
   sumDays,

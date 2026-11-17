@@ -180,6 +180,11 @@
       "penalties": {
         "repetitionWindow": "فترة تكرار الجزاءات"
       },
+      "tax": {
+        "brackets": "شرائح ضريبة كسب العمل",
+        "martyrPercent": "نسبة صندوق الشهداء",
+        "insurancePercent": "حصة العامل في التأمينات"
+      },
       "departments": "القسم",
       "jobTitles": "المسمى الوظيفي",
       "penaltyGroups": "مجموعة الجزاءات",

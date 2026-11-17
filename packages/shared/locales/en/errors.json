@@ -14,6 +14,7 @@
   "INVALID_CREDENTIALS": "Email or password is incorrect.",
   "INVALID_REFRESH_TOKEN": "Your session has expired. Please sign in again.",
   "INVALID_WORK_HOURS": "Work end must be after work start.",
+  "INVALID_TAX_RULE": "The tax rule isn't valid: only the last bracket is open-ended, widths are above 0, and each bracket's rate plus the martyrs' fund stays under 100%.",
   "INVALID_FILE_TYPE": "Only PNG, JPG or SVG files are allowed.",
   "FILE_TOO_LARGE": "The file must be 2 MB or smaller.",
   "LIST_ITEM_HIDDEN": "This item is hidden and can't be chosen.",
