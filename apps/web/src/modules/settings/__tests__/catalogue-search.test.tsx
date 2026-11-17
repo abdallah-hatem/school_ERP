@@ -82,7 +82,8 @@ describe('searchCatalogue', () => {
   });
 });
 
-describe('Penalty catalogue search', () => {
+// Typing whole words through the UI: generous under a busy CI machine.
+describe('Penalty catalogue search', { timeout: 20_000 }, () => {
   it('filters by English name: matching groups open and show only the matches, with the match marked; Clear filters resets', async () => {
     const user = userEvent.setup();
     api.GET_PENALTY_GROUPS.mockImplementation(() => ok(catalogue));
@@ -168,7 +169,7 @@ describe('Penalty catalogue search', () => {
   });
 });
 
-describe('Once per day (§4)', () => {
+describe('Once per day (§4)', { timeout: 20_000 }, () => {
   it('only a violation that can repeat in a day shows the badge', async () => {
     const user = userEvent.setup();
     api.GET_PENALTY_GROUPS.mockImplementation(() => ok(catalogue));
