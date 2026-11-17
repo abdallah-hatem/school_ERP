@@ -66,7 +66,7 @@ Edge cases:
 - [ ] Missing / malformed body → 400   (contract)
 - [ ] Any non-public route without a cookie → 401   (§2: every action needs a signed-in user)
 - [ ] Expired access token + valid refresh → refreshed transparently   (checklist)
-- [ ] Reused (rotated) refresh token → 401   (checklist)
+- [ ] Reused (rotated) refresh token after a 30-second grace window → 401 and the whole sign-in is revoked; inside the window parallel refreshes get a fresh pair (so simultaneous page loads don't sign the user out)   (checklist; grace window decided 2026-11-17)
 - [ ] Signed-in visitor opening `/login` → redirected to the dashboard; signed-out visitor opening
       any page → redirected to `/login`   (§2)
 

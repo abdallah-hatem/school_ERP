@@ -10,9 +10,10 @@ import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { ErrorCode } from '@school-erp/shared';
 import type { Request, Response } from 'express';
+import { resolveLanguage, translateError } from '../i18n/i18n';
 import { ResponseUtil } from '../utils/response.util';
 
-type Normalized = { status: number; message: string; error: string };
+type Normalized = { status: number; message: string; error: string; details?: string[] };
 
 const STABLE_CODE = /^[A-Z][A-Z0-9_]+$/;
 
@@ -28,7 +29,10 @@ function codeForStatus(status: number, isValidation: boolean): ErrorCode {
   return ErrorCode.BAD_REQUEST;
 }
 
-/** Turns every failure into the envelope, with a stable `error` code. */
+/**
+ * Turns every failure into the envelope, with a stable `error` code and a `message` translated
+ * from that code by `Accept-Language` (same code in every language; message EN or AR).
+ */
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
@@ -40,7 +44,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const res = ctx.getResponse<Response>();
     const req = ctx.getRequest<Request>();
 
-    const { status, message, error } = this.normalize(exception);
+    const { status, message, error, details } = this.normalize(exception);
+    const translated = translateError(error, resolveLanguage(req.headers?.['accept-language']));
 
     // Only 5xx is our bug — 4xx is the caller's and would just be noise.
     if (status >= 500) {
@@ -50,7 +55,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
       );
     }
 
-    res.status(status).json(ResponseUtil.error(message, status, error, req.url));
+    res
+      .status(status)
+      .json(ResponseUtil.error(translated ?? message, status, error, req.url, details));
   }
 
   private normalize(exception: unknown): Normalized {
@@ -72,7 +79,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
           typeof b.error === 'string' && STABLE_CODE.test(b.error)
             ? b.error
             : codeForStatus(status, isValidation);
-        return { status, message, error };
+        return isValidation
+          ? { status, message, error, details: (raw as unknown[]).map(String) }
+          : { status, message, error };
       }
       return { status, message: exception.message, error: codeForStatus(status, false) };
     }
@@ -130,7 +139,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
           error: ErrorCode.RELATION_VIOLATION,
         };
       default:
-        return { status: HttpStatus.BAD_REQUEST, message: 'Database request failed', error: e.code };
+        return {
+          status: HttpStatus.BAD_REQUEST,
+          message: 'Database request failed',
+          error: e.code,
+        };
     }
   }
 }

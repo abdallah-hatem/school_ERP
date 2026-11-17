@@ -38,6 +38,12 @@ export interface SchoolSettings {
 /** `PATCH /settings/school` — any subset, no `logoUrl`. */
 export type UpdateSchoolSettingsRequest = Partial<Omit<SchoolSettings, 'logoUrl'>>;
 
+/** `GET /settings/school/public` — what a signed-out visitor (the sign-in page) may see. */
+export type PublicSchoolSettings = Pick<
+  SchoolSettings,
+  'nameEn' | 'nameAr' | 'logoUrl' | 'defaultLanguage'
+>;
+
 export interface UploadLogoResponse {
   logoUrl: string;
 }

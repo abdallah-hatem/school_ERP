@@ -5,13 +5,13 @@ import { ErrorCode } from '@school-erp/shared';
 import { CodedException } from '../errors/coded.exception';
 import { AllExceptionsFilter } from './all-exceptions.filter';
 
-function run(exception: unknown, nodeEnv = 'development') {
+function run(exception: unknown, nodeEnv = 'development', lang = 'en') {
   const json = jest.fn();
   const status = jest.fn().mockReturnValue({ json });
   const host = {
     switchToHttp: () => ({
       getResponse: () => ({ status }),
-      getRequest: () => ({ method: 'GET', url: '/x' }),
+      getRequest: () => ({ method: 'GET', url: '/x', headers: { 'accept-language': lang } }),
     }),
   } as unknown as ArgumentsHost;
   const config = { get: jest.fn().mockReturnValue(nodeEnv) } as unknown as ConfigService;
@@ -21,15 +21,26 @@ function run(exception: unknown, nodeEnv = 'development') {
 
 describe('AllExceptionsFilter', () => {
   it('keeps a stable code from a CodedException', () => {
-    const { status, body } = run(new CodedException(HttpStatus.CONFLICT, ErrorCode.PAYROLL_APPROVED));
+    const { status, body } = run(
+      new CodedException(HttpStatus.CONFLICT, ErrorCode.PAYROLL_APPROVED),
+    );
     expect(status).toBe(409);
-    expect(body).toMatchObject({ success: false, statusCode: 409, error: 'PAYROLL_APPROVED', path: '/x' });
+    expect(body).toMatchObject({
+      success: false,
+      statusCode: 409,
+      error: 'PAYROLL_APPROVED',
+      path: '/x',
+    });
   });
 
   it('joins ValidationPipe messages and codes them VALIDATION_FAILED', () => {
     const { status, body } = run(new BadRequestException(['a is required', 'b must be a number']));
     expect(status).toBe(400);
-    expect(body).toMatchObject({ message: 'a is required, b must be a number', error: 'VALIDATION_FAILED' });
+    expect(body).toMatchObject({
+      message: 'Some fields are invalid.',
+      error: 'VALIDATION_FAILED',
+      details: ['a is required', 'b must be a number'],
+    });
   });
 
   it('replaces a human error label with the status code', () => {
@@ -45,12 +56,33 @@ describe('AllExceptionsFilter', () => {
     });
     const { status, body } = run(e);
     expect(status).toBe(409);
-    expect(body).toMatchObject({ error: 'UNIQUE_VIOLATION', message: 'national_id already exists' });
+    expect(body).toMatchObject({
+      error: 'UNIQUE_VIOLATION',
+      message: 'This value is already in use.',
+    });
   });
 
   it('hides an unknown error message in production', () => {
-    const { status, body } = run(new Error('connect ECONNREFUSED 10.0.0.7:5432 (internal detail)'), 'production');
+    const { status, body } = run(
+      new Error('connect ECONNREFUSED 10.0.0.7:5432 (internal detail)'),
+      'production',
+    );
     expect(status).toBe(500);
-    expect(body).toMatchObject({ message: 'Internal server error', error: 'INTERNAL_ERROR' });
+    expect(body).toMatchObject({ error: 'INTERNAL_ERROR' });
+    expect(body.message).not.toContain('10.0.0.7');
+  });
+
+  it('translates the message by Accept-Language and keeps the same code', () => {
+    const e = () => new CodedException(HttpStatus.CONFLICT, ErrorCode.PAYROLL_APPROVED);
+    const en = run(e(), 'development', 'en').body;
+    const ar = run(e(), 'development', 'ar').body;
+    expect(en.error).toBe(ar.error);
+    expect(en.message).toBe("This month's payroll is approved and locked.");
+    expect(ar.message).toBe('رواتب هذا الشهر معتمدة ومقفلة.');
+  });
+
+  it('keeps the raw message for a code that has no translation', () => {
+    const e = new Prisma.PrismaClientKnownRequestError('x', { code: 'P2034', clientVersion: 'x' });
+    expect(run(e).body).toMatchObject({ error: 'P2034', message: 'Database request failed' });
   });
 });

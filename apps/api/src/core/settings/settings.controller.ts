@@ -13,12 +13,14 @@ import {
   PAGINATION,
   type ApiResponse,
   type AuthUser,
+  type PublicSchoolSettings,
   type SchoolSettings,
   type SettingChangeItem,
   type UploadLogoResponse,
 } from '@school-erp/shared';
 import type { Request } from 'express';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { ResponseUtil } from '../../common/utils/response.util';
 import { UpdateSchoolSettingsDto } from './dto/update-school-settings.dto';
@@ -28,6 +30,13 @@ import { SettingsService, type UploadedFileLike } from './settings.service';
 @Controller('settings')
 export class SettingsController {
   constructor(private readonly settings: SettingsService) {}
+
+  /** Public: the sign-in page shows the school's name and logo before anyone signs in. */
+  @Public()
+  @Get('school/public')
+  getPublicSchool(): Promise<PublicSchoolSettings> {
+    return this.settings.getPublicSchoolSettings();
+  }
 
   @Get('school')
   getSchool(): Promise<SchoolSettings> {
