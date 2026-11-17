@@ -70,6 +70,11 @@ export class CreateViolationDto implements CreateViolationRequest {
   @MaxLength(1000)
   note?: string | null;
 
+  /** §4: at most one pending/approved penalty per employee per date. Default true. */
+  @IsOptionalNotNull()
+  @IsBoolean()
+  oncePerDay?: boolean;
+
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ViolationLevelDto)
@@ -101,6 +106,11 @@ export class UpdateViolationDto implements UpdateViolationRequest {
   @IsOptionalNotNull()
   @IsBoolean()
   isActive?: boolean;
+
+  /** §4: turning it on or off never changes penalties already recorded. */
+  @IsOptionalNotNull()
+  @IsBoolean()
+  oncePerDay?: boolean;
 
   @IsOptionalNotNull()
   @IsArray()

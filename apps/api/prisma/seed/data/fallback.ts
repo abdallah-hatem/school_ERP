@@ -73,6 +73,8 @@ export const FALLBACK_CATALOGUE: SeedCatalogue = {
           nameEn: 'Late to class',
           nameAr: 'التأخر عن الحصة',
           levels: [days(0.25), days(0.5), days(1)],
+          // Several classes a day: each late arrival is its own penalty (§4).
+          oncePerDay: false,
         },
         {
           seedKey: 'phone-in-class',

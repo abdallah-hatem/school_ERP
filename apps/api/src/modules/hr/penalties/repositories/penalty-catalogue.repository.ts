@@ -16,6 +16,7 @@ export const VIOLATION_SELECT = {
   nameAr: true,
   note: true,
   isActive: true,
+  oncePerDay: true,
   levels: { select: LEVEL_SELECT, orderBy: { level: 'asc' } },
 } satisfies Prisma.ViolationSelect;
 
@@ -61,6 +62,8 @@ export interface ViolationData {
   nameEn: string;
   nameAr: string;
   note: string | null;
+  /** Defaults to true in the schema. */
+  oncePerDay?: boolean;
 }
 export type ViolationUpdateData = Partial<ViolationData> & { isActive?: boolean };
 

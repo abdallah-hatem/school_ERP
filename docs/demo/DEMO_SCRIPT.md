@@ -23,6 +23,13 @@ catalogue, a month of penalties (some pending) and lateness, and a DRAFT payroll
   (e.g. "4th time — 2 days"). ✔ It matches the regulation table.
 - Save (pending) → approve it from the list. Approve any other pending penalties of the month
   (payroll can't be approved while any are pending).
+- Open **Record a penalty** again with the same employee, violation and date. ✔ The preview says
+  this violation counts once per day and the employee already has one on this date; Save shows the
+  same message under the date. (Late to class is different: it can be recorded several times a day.)
+- Settings → Penalty catalogue: type part of a violation's name in the search (Arabic, then
+  English). ✔ Only matching violations show, their groups open, the match is marked; a word nothing
+  has → "No violations match" with **Clear filters**. Violations that can repeat in a day carry a
+  "Can repeat in a day" badge; their Edit dialog has the **Once per day** switch off.
 
 ## 4. Lateness
 - Open the month. Type minutes for one employee (e.g. 90) — the days update while typing from the
