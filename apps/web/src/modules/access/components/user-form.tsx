@@ -304,7 +304,8 @@ export function UserForm({ basePath, user, roles, lastAdmin = false, now }: User
         : t('access.userForm.noChanges')}
     </p>
   ) : (
-    <p role="status" className="flex items-center gap-1.5 text-muted-foreground">
+    // On a phone the two buttons need the whole bar; the hint stays for screen readers.
+    <p role="status" className="flex items-center gap-1.5 text-muted-foreground max-sm:sr-only">
       <ReadyIcon className={nameAndEmail ? 'size-4 text-success' : 'size-4'} />
       {nameAndEmail ? t('access.userForm.requiredFilled') : t('access.userForm.requiredMissing')}
     </p>

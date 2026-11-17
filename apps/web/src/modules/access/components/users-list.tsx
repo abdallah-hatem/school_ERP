@@ -178,7 +178,8 @@ export function UsersList({ basePath, query, rows, total, roles, lastAdminId, no
         <span className="flex flex-col items-start gap-1">
           <span className="tabular">{formatSignIn(u.lastSignInAt, now, locale, t)}</span>
           {u.mustChangePassword && u.isActive ? (
-            <StatusPill tone="warning" icon={TemporaryPasswordIcon}>
+            <StatusPill tone="warning" icon={TemporaryPasswordIcon} className="max-w-full whitespace-normal">
+
               {t('access.users.mustChange')}
             </StatusPill>
           ) : null}

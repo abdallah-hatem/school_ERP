@@ -7,6 +7,8 @@ import { expectNoHorizontalScroll, settle, shoot, signIn } from './support/ui';
 
 for (const locale of ['ar', 'en'] as const) {
   test(`access screens on a phone (${locale}): no sideways scroll, every screen shot`, async ({ page, browser }, info) => {
+    // Eight full-page phone screenshots (3× pixels) and a second session: more than the default.
+    test.setTimeout(240_000);
     const api = await Api.asAdmin();
     const admin = await adminAccount(api);
     const roles = await rolesByKey(api);
