@@ -48,6 +48,7 @@ import { SlotText, TEXT_SLOT } from '@/shared/components/ui/slot-text';
 import { StatTile, StatTileSubSkeleton } from '@/shared/components/ui/stat-tile';
 import { StatusPill } from '@/shared/components/ui/status-pill';
 import { Switch } from '@/shared/components/ui/switch';
+import { useNewestServerState } from '@/shared/hooks/use-newest-server-state';
 import { apiErrorText } from '@/shared/lib/api-error';
 import { saveDownloadedFile } from '@/shared/lib/download';
 import { formatCount, formatDate, formatMoney, formatMonth, sumMoney } from '@/shared/lib/format';
@@ -70,6 +71,8 @@ export interface RunPageProps {
   /** `/ar/penalties` — the pending-penalties notice links to this month's pending ones. */
   penaltiesHref: string;
   run: PayrollRun;
+  /** The server's clock before `run` was read (`loadRun`): a newer mutation result wins over it. */
+  asOf: number;
   departments: Department[];
   settings: HrSettings | null;
   query: PayrollRunQuery;
@@ -85,7 +88,8 @@ export function RunPage({
   basePath,
   settingsHref,
   penaltiesHref,
-  run: initialRun,
+  run: serverRun,
+  asOf: serverAsOf,
   departments,
   settings,
   query,
@@ -94,13 +98,13 @@ export function RunPage({
   const router = useRouter();
   const [navigating, startNavigation] = useTransition();
 
-  // Server data, replaced by each mutation's response until the next server render brings new props.
-  const [run, setRun] = useState(initialRun);
-  const [prevRun, setPrevRun] = useState(initialRun);
-  if (prevRun !== initialRun) {
-    setPrevRun(initialRun);
-    setRun(initialRun);
-  }
+  // Server data, replaced by each mutation's response. Props read before the latest mutation (a
+  // search or filter navigation still in flight when it answered) never replace it: the page re-reads
+  // the current URL instead, so the run can't fall back to Draft after Approve.
+  const { value: run, apply: setRun, staleCount } = useNewestServerState(serverRun, serverAsOf);
+  useEffect(() => {
+    if (staleCount > 0) startNavigation(() => router.refresh());
+  }, [staleCount, router]);
 
   const [search, setSearch] = useState(query.search ?? '');
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -114,12 +118,34 @@ export function RunPage({
   const limit = PAGINATION.defaultLimit;
 
   const [recalculating, setRecalculating] = useState(false);
+  /** Recalculate / Approve is in flight: search and filters wait, so no navigation overlaps it. */
+  const [mutating, setMutating] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [approveOpen, setApproveOpen] = useState(false);
   const [approveError, setApproveError] = useState<string | null>(null);
   const [adjusting, setAdjusting] = useState<AdjustmentsTarget | null>(null);
   const canAdjust = useCan()('hr.payroll.adjust');
   const busyRef = useRef(false);
+
+  /**
+   * Runs one run write at a time. A search still waiting for its debounce is held until the write
+   * answers (then sent), so its navigation can't start mid-write.
+   */
+  async function mutate(work: () => Promise<void>) {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setMutating(true);
+    const heldSearch = searchTimer.current !== null;
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    searchTimer.current = null;
+    try {
+      await work();
+    } finally {
+      busyRef.current = false;
+      setMutating(false);
+      if (heldSearch) go({ ...query, search: search.trim() || undefined });
+    }
+  }
 
   const draft = run.status === PayrollStatus.DRAFT;
   const monthLabel = formatMonth(run.month, locale);
@@ -150,48 +176,52 @@ export function RunPage({
   function onSearchChange(text: string) {
     setSearch(text);
     if (searchTimer.current) clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(() => go({ ...query, search: text.trim() || undefined }), SEARCH_DEBOUNCE_MS);
+    searchTimer.current = setTimeout(() => {
+      searchTimer.current = null;
+      go({ ...query, search: text.trim() || undefined });
+    }, SEARCH_DEBOUNCE_MS);
   }
   /** Search, both filters and the page, in one URL update. */
   function clearFilters() {
     if (searchTimer.current) clearTimeout(searchTimer.current);
+    searchTimer.current = null;
     setSearch('');
     go({});
   }
 
-  /** A mutation returned the whole (unfiltered) run: show it, then refetch the filtered lines. */
-  function applyRun(next: PayrollRun) {
+  /**
+   * A mutation returned the whole (unfiltered) run, stamped `asOf`: show it, then refetch the
+   * filtered lines (the refetch is read after the write, so it replaces this).
+   */
+  function applyRun(next: PayrollRun, asOf: number) {
     if (filtered) {
-      setRun({ ...next, lines: run.lines });
+      setRun({ ...next, lines: run.lines }, asOf);
       startNavigation(() => router.refresh());
     } else {
-      setRun(next);
+      setRun(next, asOf);
     }
   }
 
-  async function recalculate() {
-    if (busyRef.current) return;
-    busyRef.current = true;
-    setRecalculating(true);
-    try {
-      const res = await callApi(RECALCULATE_PAYROLL_RUN(run.id), {
-        showSuccessToast: true,
-        successMessage: t('payroll.actions.recalculated'),
-      });
-      if (res.unauthorized) return;
-      if (res.success && res.data) applyRun(res.data);
-      else if (res.success === false && res.status === 409) startNavigation(() => router.refresh());
-    } finally {
-      busyRef.current = false;
-      setRecalculating(false);
-    }
+  function recalculate() {
+    return mutate(async () => {
+      setRecalculating(true);
+      try {
+        const res = await callApi(RECALCULATE_PAYROLL_RUN(run.id), {
+          showSuccessToast: true,
+          successMessage: t('payroll.actions.recalculated'),
+        });
+        if (res.unauthorized) return;
+        if (res.success && res.data) applyRun(res.data, res.asOf);
+        else if (res.success === false && res.status === 409) startNavigation(() => router.refresh());
+      } finally {
+        setRecalculating(false);
+      }
+    });
   }
 
-  async function approve() {
-    if (busyRef.current) return;
-    busyRef.current = true;
-    setApproveError(null);
-    try {
+  function approve() {
+    return mutate(async () => {
+      setApproveError(null);
       // The server's message is shown on the page (e.g. 409 PENDING_PENALTIES), not as a toast.
       const res = await callApi(APPROVE_PAYROLL_RUN(run.id), {
         showErrorToast: false,
@@ -199,11 +229,9 @@ export function RunPage({
         successMessage: t('payroll.actions.approved'),
       });
       if (res.unauthorized) return;
-      if (res.success && res.data) applyRun(res.data);
+      if (res.success && res.data) applyRun(res.data, res.asOf);
       else if (res.success === false) setApproveError(apiErrorText(res, { t, has }));
-    } finally {
-      busyRef.current = false;
-    }
+    });
   }
 
   async function exportBankSheet() {
@@ -426,7 +454,7 @@ export function RunPage({
                   icon={SearchIcon}
                   title={t('payroll.noResults.title')}
                   description={t('payroll.noResults.body')}
-                  action={<ClearFilters placement="empty" count={filterCount} onClear={clearFilters} />}
+                  action={<ClearFilters placement="empty" count={filterCount} onClear={clearFilters} disabled={mutating} />}
                 />
               ) : (
                 <EmptyState icon={PayrollIcon} title={t('payroll.empty.title')} description={t('payroll.empty.body')} />
@@ -445,6 +473,7 @@ export function RunPage({
                 onFilter={go}
                 onClear={clearFilters}
                 busy={navigating}
+                disabled={mutating}
               />
             }
             pagination={{

@@ -29,6 +29,8 @@ export async function loadRuns(query: RunsListQuery): Promise<RunsListData> {
 
 export interface RunPageData {
   run: PayrollRun;
+  /** This server's clock before the run was read: the run page keeps a newer mutation result over it. */
+  asOf: number;
   /** Every department, hidden ones too (a line keeps the department it had). */
   departments: Department[];
   /** `null` when the HR settings failed to load (the rules panel says so). */
@@ -37,6 +39,7 @@ export interface RunPageData {
 
 /** An unknown or malformed run id is the not-found page; any other failure throws to the boundary. */
 export async function loadRun(id: Uuid, query: PayrollRunQuery): Promise<RunPageData> {
+  const asOf = Date.now();
   const [res, departments, settings] = await Promise.all([
     GET_PAYROLL_RUN(id, query),
     GET_DEPARTMENTS(true),
@@ -46,6 +49,7 @@ export async function loadRun(id: Uuid, query: PayrollRunQuery): Promise<RunPage
   if (!res.success || !res.data) throw new Error(res.message ?? 'Payroll run failed to load');
   return {
     run: res.data,
+    asOf,
     departments: departments.success && Array.isArray(departments.data) ? departments.data : [],
     settings: settings.success && settings.data ? settings.data : null,
   };
