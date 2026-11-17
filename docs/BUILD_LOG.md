@@ -23,8 +23,8 @@ phase live in `docs/build-log/`.
 | 3 | Contract | done (in the spec) |
 | 4 | Design system | Campus, teal + sunflower, light only; tokens go in code in T3 |
 | 5 | Plan | `docs/plans/2026-11-17-hr-demo-plan.md` (18 tasks, 7 waves); review CONFLICTS fixed, re-review's 4 remaining items fixed |
-| 6 | Build | merged: T1–T13, T8b, T15 (#4–#21). Running: T14 payroll screens, T16 seed. Next: T17 smoke specs, then Verify |
-| 7 | Verify | — |
+| 6 | Build | **done** — T1–T17, T8b, T19 merged (#4–#26) |
+| 7 | Verify | full suite green on dev (lint, typecheck, api 189 unit + 189 e2e, web 35 files, deps:check, smoke 6/6); UI audit running |
 | 8 | Ship | local demo; hosting later |
 
 ## Log
@@ -86,12 +86,24 @@ phase live in `docs/build-log/`.
 - 2026-11-17 — T10 settings screen merged #19 (Arabic labels switched to Western digits per
   DESIGN.md). T15 dashboard merged #20. T12 penalties screens merged #21 (format.ts conflict: both
   helpers kept).
+- 2026-11-17 — T16 seed: review ALIGNED; the 72-violation catalogue's Arabic now copied verbatim from
+  the scanned regulations (69 names, 2 level corrections); seed updates names on re-run; client
+  material only in git-ignored `apps/api/prisma/seed-data.local/` → merged #23. Local dev DB seeded;
+  admin login in `CREDENTIALS.local.md` (git-ignored).
+- 2026-11-17 — T14 payroll screens merged #24 (live-checked: 409 messages, approve block, xlsx, one-page
+  A4 payslips EN/AR, no horizontal scroll).
+- 2026-11-17 — T17 smoke specs (`pnpm smoke`: own DB, seed, API + web, 6 Playwright flows, servers
+  stopped) — 6/6 re-run by the main thread → merged #25.
+- 2026-11-17 — T19 polish (error language from the page locale, dashboard → run link, employee payroll
+  history endpoint, adjustment `applied`, approved-run rules label, "All" selects, penalties table
+  width, language switch guard) → smoke 6/6 on top → merged #26.
+- 2026-11-17 — Verify: dev green end to end (see Stages). UI audit dispatched over every screen, light
+  only, EN/AR, phone/tablet/desktop, against the seeded dev DB (writes only on a copy).
 
 ## Next up
 
-- UI audit fixes already known: "All" options in some selects show blank until opened; penalties
-  table scrolls sideways at ~800px; language switch doesn't trigger the unsaved-changes guard;
-  dashboard links to the runs list because `/hr/dashboard` returns the run without its id.
+- `pnpm smoke` in CI (needs Postgres + Chromium in the workflow).
+- The client should check the Arabic penalty catalogue against the printed regulations (copied from the scans).
 
 - Login rate limiting (T2 left it out; security baseline).
 - Write the settings history in the same transaction as the change (outbox), instead of right after.
