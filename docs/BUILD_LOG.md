@@ -23,7 +23,7 @@ phase live in `docs/build-log/`.
 | 3 | Contract | done (in the spec) |
 | 4 | Design system | Campus, teal + sunflower, light only; tokens go in code in T3 |
 | 5 | Plan | `docs/plans/2026-11-17-hr-demo-plan.md` (18 tasks, 7 waves); review CONFLICTS fixed, re-review's 4 remaining items fixed |
-| 6 | Build | merged: T1 #4, T6 #6, T5 #7, T3 #9, T4 #10, T8 #11, T2 #12, T7 #13. Running: T9 payroll, T10 settings screen, T11 employees screens, T13 lateness screen |
+| 6 | Build | merged: T1–T13, T8b, T15 (#4–#21). Running: T14 payroll screens, T16 seed. Next: T17 smoke specs, then Verify |
 | 7 | Verify | — |
 | 8 | Ship | local demo; hosting later |
 
@@ -76,8 +76,22 @@ phase live in `docs/build-log/`.
 - 2026-11-17 — T7 (penalties) review DOC OUT OF DATE → §4 updated (retired groups, approving pending
   after retirement/deactivation, preview ignores the lock, rolling window boundary); e2e 148 green →
   merged #13. T9 (payroll) and T10 (settings screen) dispatched (base 6f9132c).
+- 2026-11-17 — T13 lateness screen merged #15; T8b follow-up (lateness returns `locked` + departments,
+  one month helper) merged #16.
+- 2026-11-17 — T11 employees screens: sent back once for a year dropdown in the date picker and a
+  phone rule as lenient as the API → merged #17.
+- 2026-11-17 — T9 payroll: e2e 179 green; review DOC OUT OF DATE → §6 updated (approve recalculates
+  before locking, payslip shares and zero-amount penalties, adjustments for removed employees not
+  applied, dashboard) → merged #18. Wave 5 dispatched: T14, T15, T16.
+- 2026-11-17 — T10 settings screen merged #19 (Arabic labels switched to Western digits per
+  DESIGN.md). T15 dashboard merged #20. T12 penalties screens merged #21 (format.ts conflict: both
+  helpers kept).
 
 ## Next up
+
+- UI audit fixes already known: "All" options in some selects show blank until opened; penalties
+  table scrolls sideways at ~800px; language switch doesn't trigger the unsaved-changes guard;
+  dashboard links to the runs list because `/hr/dashboard` returns the run without its id.
 
 - Login rate limiting (T2 left it out; security baseline).
 - Write the settings history in the same transaction as the change (outbox), instead of right after.
