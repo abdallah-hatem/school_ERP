@@ -28,6 +28,16 @@ const DASHBOARD_TAG = 'hr-dashboard';
 
 const runPath = (id: Uuid) => `/hr/payroll-runs/${encodeURIComponent(id)}`;
 
+/**
+ * A run write's result, stamped with this server's clock once the API has answered. The run page
+ * compares it with its props' `asOf` (`loadRun`), so a render read before the write can't replace
+ * it (`useNewestServerState`).
+ */
+async function stamped<R extends object>(response: Promise<R>): Promise<R & { asOf: number }> {
+  const result = await response;
+  return { ...result, asOf: Date.now() };
+}
+
 /** `GET /hr/payroll-runs?page&limit` — newest month first, with totals. */
 export async function GET_PAYROLL_RUNS(query: { page?: number; limit?: number } = {}) {
   const response = await apiFetch<PayrollRunSummary[]>('/hr/payroll-runs', {
@@ -93,7 +103,7 @@ export async function RECALCULATE_PAYROLL_RUN(id: Uuid) {
     method: 'POST',
     revalidateTags: [RUNS_TAG, runTag(id), DASHBOARD_TAG],
   });
-  return handleResponse({ response });
+  return stamped(handleResponse({ response }));
 }
 
 /** `POST /hr/payroll-runs/:id/approve` — recalculates, then locks; 409 `PENDING_PENALTIES`. */
@@ -102,7 +112,7 @@ export async function APPROVE_PAYROLL_RUN(id: Uuid) {
     method: 'POST',
     revalidateTags: [RUNS_TAG, runTag(id), LATENESS_TAG, DASHBOARD_TAG],
   });
-  return handleResponse({ response });
+  return stamped(handleResponse({ response }));
 }
 
 /** `POST /hr/payroll-runs/:id/adjustments` — a one-off addition or deduction (draft only). */
@@ -117,7 +127,7 @@ export async function ADD_PAYROLL_ADJUSTMENT(id: Uuid, body: CreateAdjustmentReq
     },
     revalidateTags: [RUNS_TAG, runTag(id), DASHBOARD_TAG],
   });
-  return handleResponse({ response });
+  return stamped(handleResponse({ response }));
 }
 
 /** `DELETE /hr/payroll-runs/:id/adjustments/:adjId` (draft only). */
@@ -126,7 +136,7 @@ export async function REMOVE_PAYROLL_ADJUSTMENT(id: Uuid, adjustmentId: Uuid) {
     method: 'DELETE',
     revalidateTags: [RUNS_TAG, runTag(id), DASHBOARD_TAG],
   });
-  return handleResponse({ response });
+  return stamped(handleResponse({ response }));
 }
 
 /** `GET /hr/payroll-runs/:id/lines/:lineId` — payslip data; 409 `PAYROLL_NOT_APPROVED` on a draft. */
