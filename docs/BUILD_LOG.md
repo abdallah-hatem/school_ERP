@@ -124,6 +124,8 @@ phase live in `docs/build-log/`.
 - 2026-11-17 — Local CI: `pnpm ci:local` on every push (pre-push hook), CI runs the same script → #43.
 - 2026-11-17 — Audit log: spec approved, layout option B (timeline) picked; business §9 added; plan
   `docs/plans/2026-11-17-audit-log-plan.md` (T27–T31). T27 started.
+- 2026-11-17 — Penalty catalogue groups start folded → #45. Employee profile: shared layout, header
+  stays across tabs → #46. Roles/permissions spec written with GUESS answers.
 
 ## Next up
 
@@ -134,7 +136,8 @@ phase live in `docs/build-log/`.
 - Write the settings history in the same transaction as the change (outbox), instead of right after.
 
 - Hosting the demo on the Contabo server (owner: later; local demo is the fallback).
-- Roles, permissions and security section for `docs/ARCHITECTURE.md` (drafted in chat, not yet approved).
+- Roles and permissions: spec `docs/specs/2026-11-17-roles-permissions.md` (GUESS answers). P1 skeleton
+  right after T27, before Tamer and Waleed start HR work; P2–P4 in core in parallel.
 - Add required CI status checks to the branch protection once CI exists (code-owner review is on).
 - Optional: server-side paging for lateness (loads the whole month today) and column sorting.
 - Employee profile shows the list's skeleton while loading (`employees/loading.tsx` wraps `[id]`).
