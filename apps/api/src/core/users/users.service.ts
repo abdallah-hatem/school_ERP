@@ -26,4 +26,9 @@ export class UsersService {
   findActiveAuthUser(id: string): Promise<AuthUser | null> {
     return this.users.findActiveAuthUser(id);
   }
+
+  /** A user's current name (any status), or null when there is no such user. */
+  findName(id: string): Promise<string | null> {
+    return this.users.findName(id);
+  }
 }

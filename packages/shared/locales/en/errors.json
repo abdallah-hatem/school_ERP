@@ -30,5 +30,6 @@
   "PAYROLL_NOT_APPROVED": "Available only after the payroll is approved.",
   "PAYROLL_RUN_EXISTS": "A payroll run already exists for this month.",
   "PENDING_PENALTIES": "Approve or cancel this month's pending penalties first.",
-  "EMPLOYEE_NOT_IN_RUN": "This employee is not in this payroll run."
+  "EMPLOYEE_NOT_IN_RUN": "This employee is not in this payroll run.",
+  "AUDIT_NOT_RECORDED": "The change could not be recorded in the activity log, so it was not saved. Please try again."
 }

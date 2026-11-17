@@ -45,4 +45,9 @@ export class UsersRepository extends BaseRepository<
       select: AUTH_USER_SELECT,
     });
   }
+
+  async findName(id: string): Promise<string | null> {
+    const row = await this.databaseService.user.findUnique({ where: { id }, select: { name: true } });
+    return row?.name ?? null;
+  }
 }

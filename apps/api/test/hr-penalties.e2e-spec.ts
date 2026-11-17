@@ -11,6 +11,7 @@ import { todayIsoDate } from '../src/common/utils/dates.util';
 import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
 import { createAppAsTestUser } from './helpers/as-test-user';
+import { historyMark, historyRows, waitForCount } from './helpers/history';
 
 const LEVELS_5: ViolationLevelInput[] = [
   { level: 1, action: 'NOTICE' },
@@ -93,9 +94,13 @@ describe('HR penalty catalogue and records (e2e)', () => {
     return todayIsoDate(d);
   };
 
+  // History is read from the append-only audit log: only what this suite wrote.
+  let mark = BigInt(0);
+
   beforeAll(async () => {
     ({ app, user: { id: userId } } = await createAppAsTestUser());
     db = app.get(DatabaseService);
+    mark = await historyMark(db);
     stageId = (await db.stage.create({ data: { nameEn: 'Primary', nameAr: 'ابتدائي' } })).id;
     const mk = async (path: string) =>
       (await http(app).post(path).send({ nameEn: unique('x'), nameAr: unique('س') }).expect(201))
@@ -125,7 +130,6 @@ describe('HR penalty catalogue and records (e2e)', () => {
     await db.jobTitle.deleteMany({});
     await db.stage.deleteMany({});
     await db.schoolSetting.deleteMany({ where: { key: { startsWith: 'hr.' } } });
-    await db.settingChange.deleteMany({});
     await app.close();
   });
 
@@ -222,34 +226,21 @@ describe('HR penalty catalogue and records (e2e)', () => {
       .send({ levels: [{ level: 1, action: 'WARNING' }] })
       .expect(200);
 
-    const waitFor = async (count: () => Promise<number>, n: number) => {
-      for (let i = 0; i < 50 && (await count()) < n; i++) {
-        await new Promise((r) => setTimeout(r, 20));
-      }
-      return count();
-    };
-    const groupRows = () =>
-      db.settingChange.count({
-        where: {
-          scope: 'CATALOGUE',
-          key: HrCatalogueKey.PENALTY_GROUPS,
-          changedById: userId,
-          newValue: { path: ['id'], equals: g.id },
-        },
-      });
-    expect(await waitFor(groupRows, 2)).toBe(2);
-    const violationRows = () =>
-      db.settingChange.count({
-        where: {
-          scope: 'CATALOGUE',
-          key: HrCatalogueKey.VIOLATIONS,
-          newValue: { path: ['id'], equals: v },
-        },
-      });
-    expect(await waitFor(violationRows, 2)).toBe(2);
-    const edit = await db.settingChange.findFirst({
-      where: { key: HrCatalogueKey.VIOLATIONS, oldValue: { path: ['id'], equals: v } },
-    });
+    const idOf = (value: unknown) => (value as { id?: string } | null)?.id;
+    const groupRows = async () =>
+      (await historyRows(db, mark, HrCatalogueKey.PENALTY_GROUPS)).filter(
+        (r) => r.scope === 'CATALOGUE' && r.changedById === userId && idOf(r.newValue) === g.id,
+      ).length;
+    expect(await waitForCount(groupRows, 2)).toBe(2);
+    const violationRows = async () =>
+      (await historyRows(db, mark, HrCatalogueKey.VIOLATIONS)).filter(
+        (r) => r.scope === 'CATALOGUE' && idOf(r.newValue) === v,
+      ).length;
+    expect(await waitForCount(violationRows, 2)).toBe(2);
+    const edit = (await historyRows(db, mark, HrCatalogueKey.VIOLATIONS)).find(
+      (r) => idOf(r.oldValue) === v,
+    );
+    expect(edit?.action).toBe('hr.violation.update');
     expect(edit?.newValue).toMatchObject({ levels: [{ level: 1, action: 'WARNING', days: null }] });
   });
 

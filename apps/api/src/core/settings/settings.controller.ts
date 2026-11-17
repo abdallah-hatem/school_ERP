@@ -23,6 +23,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { ResponseUtil } from '../../common/utils/response.util';
+import { Audited } from '../audit';
 import { UpdateSchoolSettingsDto } from './dto/update-school-settings.dto';
 import { LogoUploadInterceptor } from './files/logo-upload.interceptor';
 import { SettingsService, type UploadedFileLike } from './settings.service';
@@ -44,6 +45,7 @@ export class SettingsController {
   }
 
   @Patch('school')
+  @Audited('core.settings.update')
   updateSchool(
     @Body() dto: UpdateSchoolSettingsDto,
     @CurrentUser() user: AuthUser | undefined,
@@ -52,6 +54,7 @@ export class SettingsController {
   }
 
   @Post('school/logo')
+  @Audited('core.settings.logo_change')
   @UseInterceptors(LogoUploadInterceptor)
   uploadLogo(
     @UploadedFile() file: UploadedFileLike | undefined,

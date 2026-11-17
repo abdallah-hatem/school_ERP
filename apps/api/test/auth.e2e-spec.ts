@@ -101,7 +101,6 @@ describe('auth (e2e)', () => {
   });
 
   afterAll(async () => {
-    await db.settingChange.deleteMany({ where: { changedById: { in: userIds } } });
     await db.schoolSetting.deleteMany({ where: { updatedById: { in: userIds } } });
     await db.user.deleteMany({ where: { id: { in: userIds } } }); // tokens cascade
     await app.close();

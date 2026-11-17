@@ -19,6 +19,7 @@ import {
   PenaltyPreviewQueryDto,
 } from '../dto/penalty.dto';
 import { PenaltyRecordsService } from '../services/penalty-records.service';
+import { NotAudited } from '../../../../core/audit';
 
 /**
  * Penalty records (contract: "Penalty records — hr"). No DELETE route: a penalty is cancelled with
@@ -44,17 +45,20 @@ export class PenaltiesController {
     return this.penalties.get(id);
   }
 
+  @NotAudited('wired in T29')
   @Post()
   create(@Body() dto: CreatePenaltyDto, @CurrentUser() user?: AuthUser) {
     return this.penalties.create(dto, user?.id ?? null);
   }
 
+  @NotAudited('wired in T29')
   @Post(':id/approve')
   @HttpCode(HttpStatus.OK)
   approve(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user?: AuthUser) {
     return this.penalties.approve(id, user?.id ?? null);
   }
 
+  @NotAudited('wired in T29')
   @Post(':id/cancel')
   @HttpCode(HttpStatus.OK)
   cancel(

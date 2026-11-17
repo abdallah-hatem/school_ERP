@@ -1,4 +1,4 @@
-import { ExecutionContext, INestApplication } from '@nestjs/common';
+import { ExecutionContext, INestApplication, type Type } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModuleBuilder } from '@nestjs/testing';
 import type { AuthUser } from '@school-erp/shared';
@@ -20,14 +20,21 @@ export const ANONYMOUS_HEADER = 'x-test-anonymous';
  *
  * The guard is registered as `APP_GUARD` with `useClass`, which `overrideGuard` can't reach, so
  * its `canActivate` is replaced on the prototype instead (jest isolates modules per test file).
- * `customize` can add further overrides before compiling.
+ * `customize` can add further overrides before compiling; `extraImports` adds test-only modules
+ * (e.g. a controller exercising a framework rule) next to AppModule.
  *
  * @example const { app, user } = await createAppAsTestUser();
  */
 export async function createAppAsTestUser(
   customize: (builder: TestingModuleBuilder) => TestingModuleBuilder = (b) => b,
+  extraImports: Type[] = [],
 ): Promise<{ app: INestApplication; user: AuthUser }> {
-  const user: AuthUser = { id: '', email: TEST_USER_EMAIL, name: 'E2E Test User', role: 'HR_ADMIN' };
+  const user: AuthUser = {
+    id: '',
+    email: TEST_USER_EMAIL,
+    name: 'E2E Test User',
+    role: 'HR_ADMIN',
+  };
   // Called with the guard as `this` below.
   const realCanActivate = JwtAuthGuard.prototype.canActivate;
   jest.spyOn(JwtAuthGuard.prototype, 'canActivate').mockImplementation(function (
@@ -41,7 +48,9 @@ export async function createAppAsTestUser(
     return true;
   });
 
-  const moduleRef = await customize(Test.createTestingModule({ imports: [AppModule] })).compile();
+  const moduleRef = await customize(
+    Test.createTestingModule({ imports: [AppModule, ...extraImports] }),
+  ).compile();
 
   const app = moduleRef.createNestApplication();
   configureApp(app);

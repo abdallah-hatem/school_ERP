@@ -1,10 +1,15 @@
 import { randomUUID } from 'node:crypto';
 import { BadRequestException, HttpStatus, Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { TransactionHost } from '@nestjs-cls/transactional';
 import {
+  AuditEntityType,
+  SETTINGS_HISTORY_ACTION_KEYS,
+  SETTINGS_HISTORY_ACTIONS,
   SettingsEvent,
   ErrorCode,
   LOGO_UPLOAD,
+  type AuditAction,
   type Paginated,
   type PublicSchoolSettings,
   type SchoolSettings,
@@ -16,10 +21,11 @@ import {
   type UploadLogoResponse,
 } from '@school-erp/shared';
 import { CodedException } from '../../common/errors/coded.exception';
+import { AfterCommit, type DbAdapter } from '../../database/transactions';
+import { AuditService } from '../audit';
 import type { UpdateSchoolSettingsDto } from './dto/update-school-settings.dto';
 import { FileStorageService } from './files/file-storage.service';
 import { SchoolSettingRepository } from './repositories/school-setting.repository';
-import { SettingChangeRepository } from './repositories/setting-change.repository';
 import {
   IMAGE_MIME,
   LOGO_FOLDER,
@@ -41,18 +47,33 @@ export interface UploadedFileLike {
 const SCHOOL_FIELDS = Object.keys(SCHOOL_FIELD_KEYS) as (keyof SchoolSettings)[];
 const SCHOOL_KEYS = Object.values(SCHOOL_FIELD_KEYS);
 
+/** Who owns the keys a `setValues` call writes: core's school settings or HR's rules. */
+export type SettingsOwner = Extract<SettingsChangeScope, 'school' | 'hr'>;
+
+const OWNER_RECORD = {
+  school: { type: AuditEntityType.SCHOOL_SETTINGS, id: 'school', label: '' },
+  hr: { type: AuditEntityType.HR_SETTINGS, id: 'hr', label: '' },
+} as const;
+
+const OWNER_ACTION: Record<SettingsOwner, AuditAction> = {
+  school: 'core.settings.update',
+  hr: 'hr.settings.update',
+};
+
 /**
  * Typed settings over the `SchoolSetting` table. Every key falls back to its §7 default. Other
  * modules read and write their own keys through `getValues` / `setValues` (exported), so the
- * history and the after-commit event come for free.
+ * audit entry (in the same transaction, D2) and the after-commit event come for free.
  */
 @Injectable()
 export class SettingsService {
   constructor(
     private readonly settings: SchoolSettingRepository,
-    private readonly changes: SettingChangeRepository,
     private readonly files: FileStorageService,
     private readonly events: EventEmitter2,
+    private readonly audit: AuditService,
+    private readonly txHost: TransactionHost<DbAdapter>,
+    private readonly afterCommit: AfterCommit,
   ) {}
 
   /** Current values of `keys`, defaults filled in. */
@@ -61,36 +82,53 @@ export class SettingsService {
   }
 
   /**
-   * Writes the keys whose value changed — all in one transaction — then, after the commit, emits
-   * one `settings.changed` per changed key. Validate before calling. Returns what changed.
+   * Writes the keys whose value changed and records one audit entry listing them, all in one
+   * transaction (joining the caller's, if any). After the commit, emits one `settings.changed`
+   * per changed key. Validate before calling. Returns what changed.
    */
-  async setValues(
-    scope: SettingsChangeScope,
+  setValues(
+    owner: SettingsOwner,
+    values: Partial<SettingValueMap>,
+    changedById: string | null,
+  ): Promise<SettingKey[]> {
+    return this.writeValues(OWNER_ACTION[owner], owner, values, changedById);
+  }
+
+  private async writeValues(
+    action: AuditAction,
+    owner: SettingsOwner,
     values: Partial<SettingValueMap>,
     changedById: string | null,
   ): Promise<SettingKey[]> {
     const keys = Object.keys(values) as SettingKey[];
-    if (keys.length === 0) return [];
-    const current = await this.getValues(keys);
-    const diff = diffValues(current, values);
-    if (diff.length === 0) return [];
-
-    await this.settings.upsertMany(
-      diff.map(({ key, newValue }) => ({ key, value: newValue })),
-      changedById,
-    );
+    const diff = await this.txHost.withTransaction(async () => {
+      const changed = keys.length > 0 ? diffValues(await this.getValues(keys), values) : [];
+      if (changed.length > 0) {
+        await this.settings.upsertMany(
+          changed.map(({ key, newValue }) => ({ key, value: newValue })),
+          changedById,
+        );
+      }
+      // Always called: an unchanged save records nothing but still answers `@Audited` (D6b).
+      await this.audit.record({
+        action,
+        entity: OWNER_RECORD[owner],
+        changes: changed.map((d) => ({ field: d.key, before: d.oldValue, after: d.newValue })),
+      });
+      return changed;
+    });
 
     const changedAt = new Date().toISOString();
     for (const { key, oldValue, newValue } of diff) {
       const event: SettingsChangedEvent = {
-        scope,
+        scope: owner,
         key,
         oldValue,
         newValue,
         changedById,
         changedAt,
       };
-      await this.events.emitAsync(SettingsEvent.CHANGED, event);
+      await this.afterCommit.run(() => this.events.emitAsync(SettingsEvent.CHANGED, event));
     }
     return diff.map((d) => d.key);
   }
@@ -151,22 +189,32 @@ export class SettingsService {
     }
 
     const logoUrl = await this.files.save(LOGO_FOLDER, `logo-${randomUUID()}.${type}`, file.buffer);
-    await this.setValues('school', { 'school.logoUrl': logoUrl }, changedById);
+    await this.writeValues(
+      'core.settings.logo_change',
+      'school',
+      { 'school.logoUrl': logoUrl },
+      changedById,
+    );
     return { logoUrl };
   }
 
+  /**
+   * Settings → Change history (§7), read from the audit log (D9): one item per changed key,
+   * newest first — the same shape as before the move.
+   */
   async listHistory(page: number, limit: number): Promise<Paginated<SettingChangeItem>> {
-    const result = await this.changes.findPage(page, limit);
+    const result = await this.audit.listChanges(SETTINGS_HISTORY_ACTION_KEYS, page, limit);
     return {
       ...result,
       data: result.data.map((row) => ({
-        id: row.id,
-        scope: row.scope.toLowerCase() as SettingsChangeScope,
-        key: row.key,
-        oldValue: row.oldValue,
-        newValue: row.newValue,
-        changedBy: row.changedBy,
-        changedAt: row.changedAt.toISOString(),
+        // One entry may list several keys; the first keeps the entry's id.
+        id: row.ord === 1 ? row.id : `${row.id}:${row.ord}`,
+        scope: SETTINGS_HISTORY_ACTIONS[row.action as keyof typeof SETTINGS_HISTORY_ACTIONS],
+        key: row.change.field,
+        oldValue: row.change.before,
+        newValue: row.change.after,
+        changedBy: row.actorId ? { id: row.actorId, name: row.actorName ?? '' } : null,
+        changedAt: row.at.toISOString(),
       })),
     };
   }

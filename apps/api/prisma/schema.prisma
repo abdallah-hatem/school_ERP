@@ -20,13 +20,6 @@ enum UserRole {
   HR_ADMIN
 }
 
-enum SettingScope {
-  SCHOOL
-  HR
-  LISTS
-  CATALOGUE
-}
-
 /// A person who signs in. Not the same as an employee (an employee may optionally link to one).
 model User {
   id           String   @id @default(uuid()) @db.Uuid
@@ -38,17 +31,16 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  refreshTokens        RefreshToken[]
-  employee             Employee?
-  settingChanges       SettingChange[]
-  settingsUpdated      SchoolSetting[]
-  penaltiesCreated     PenaltyRecord[]     @relation("PenaltyCreatedBy")
-  penaltiesApproved    PenaltyRecord[]     @relation("PenaltyApprovedBy")
-  penaltiesCancelled   PenaltyRecord[]     @relation("PenaltyCancelledBy")
-  latenessUpdated      LatenessEntry[]
-  payrollRunsCreated   PayrollRun[]        @relation("PayrollRunCreatedBy")
-  payrollRunsApproved  PayrollRun[]        @relation("PayrollRunApprovedBy")
-  adjustmentsCreated   PayrollAdjustment[]
+  refreshTokens       RefreshToken[]
+  employee            Employee?
+  settingsUpdated     SchoolSetting[]
+  penaltiesCreated    PenaltyRecord[]     @relation("PenaltyCreatedBy")
+  penaltiesApproved   PenaltyRecord[]     @relation("PenaltyApprovedBy")
+  penaltiesCancelled  PenaltyRecord[]     @relation("PenaltyCancelledBy")
+  latenessUpdated     LatenessEntry[]
+  payrollRunsCreated  PayrollRun[]        @relation("PayrollRunCreatedBy")
+  payrollRunsApproved PayrollRun[]        @relation("PayrollRunApprovedBy")
+  adjustmentsCreated  PayrollAdjustment[]
 
   @@index([isActive])
   @@map("users")
@@ -97,23 +89,32 @@ model SchoolSetting {
   @@map("school_settings")
 }
 
-/// Change history for settings and catalogue edits (§7). One row per changed key.
-model SettingChange {
-  id          String       @id @default(uuid()) @db.Uuid
-  key         String
-  scope       SettingScope
-  oldValue    Json?        @map("old_value")
-  newValue    Json?        @map("new_value")
-  changedById String?      @map("changed_by_id") @db.Uuid
-  changedAt   DateTime     @default(now()) @map("changed_at")
+/// The audit log (§9, core/audit): one row per action that changed data or access, written in the
+/// same transaction as the change. Append-only — a trigger refuses UPDATE, DELETE and TRUNCATE.
+/// `actorId` is deliberately not a foreign key: users may be renamed or deleted later, and the
+/// entry keeps `actorName` as it was (edge case 4). `changes` holds only the changed fields
+/// (`[{ field, before, after }]`, money in piastres, no secrets); `meta` holds ip, user agent and
+/// request id. `seq` orders entries written in the same millisecond.
+model AuditEntry {
+  id          String   @id @default(uuid()) @db.Uuid
+  seq         BigInt   @default(autoincrement())
+  action      String
+  module      String
+  entityType  String   @map("entity_type")
+  entityId    String   @map("entity_id")
+  entityLabel String   @map("entity_label")
+  actorId     String?  @map("actor_id") @db.Uuid
+  actorName   String?  @map("actor_name")
+  changes     Json     @default("[]")
+  meta        Json     @default("{}")
+  at          DateTime @default(now())
 
-  changedBy User? @relation(fields: [changedById], references: [id], onDelete: SetNull)
-
-  @@index([key])
-  @@index([scope])
-  @@index([changedById])
-  @@index([changedAt])
-  @@map("setting_changes")
+  @@index([at(sort: Desc)])
+  @@index([entityType, entityId, at])
+  @@index([actorId, at])
+  @@index([module, at])
+  @@index([action, at])
+  @@map("audit_entries")
 }
 
 /// School structure (core/school-structure): Kindergarten, Primary, Preparatory, None…

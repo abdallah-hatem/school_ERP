@@ -36,7 +36,6 @@ async function wipe(db: DatabaseService): Promise<void> {
   await db.jobTitle.deleteMany({});
   await db.stage.deleteMany({});
   await db.schoolSetting.deleteMany({});
-  await db.settingChange.deleteMany({});
   await db.user.deleteMany({ where: { email: SEED_ADMIN_EMAIL } });
 }
 
