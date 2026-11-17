@@ -102,7 +102,9 @@ describe('UsersList', () => {
 
   it('shows who must change their password and who never signed in', () => {
     renderList();
-    expect(screen.getAllByText('Must change password').length).toBeGreaterThan(0);
+    // A short one-line pill in the status column; the full wording is its tooltip.
+    expect(screen.getAllByText('Temporary password').length).toBeGreaterThan(0);
+    expect(screen.getAllByTitle('Must change password').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Never').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Today, 09:12').length).toBeGreaterThan(0);
   });
