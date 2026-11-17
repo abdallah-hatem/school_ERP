@@ -133,8 +133,8 @@ describe('auth routing (proxy)', () => {
     }
   });
 
-  it('a path without a locale gets the visitor language (cookie), else Arabic', async () => {
-    expect(location(await authProxy(request('/employees')))).toBe('/ar/employees');
+  it('a path without a locale gets the visitor language (cookie), else English', async () => {
+    expect(location(await authProxy(request('/employees')))).toBe('/en/employees');
     expect(location(await authProxy(request('/login?next=%2Fen', { lang: 'en' })))).toBe(
       '/en/login?next=%2Fen',
     );

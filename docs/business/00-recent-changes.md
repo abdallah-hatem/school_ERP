@@ -21,3 +21,4 @@
   zero-amount penalties and shows each penalty's share of the deduction; adjustments for employees
   no longer in the run are not applied (GUESS); dashboard defined; approval is announced for a future
   accounting module.
+- 2026-11-17 — Default language is English (owner); a school can switch it to Arabic in Settings.
