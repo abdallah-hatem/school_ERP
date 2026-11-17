@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import type {
   LatenessMonth,
   LatenessRow,
@@ -63,10 +63,9 @@ export class LatenessService {
   async put(month: Month, body: PutLatenessRequest, userId: string | null): Promise<LatenessMonth> {
     await this.monthLock.assertMonthOpen(month);
     const ids = body.entries.map((e) => e.employeeId);
+    // Scope first (edge case 3): an employee outside `hr.lateness.edit` → 404, nothing written.
+    await this.employees.assertScopeFirst('hr.lateness.edit', ids);
     await this.employees.assertActive(ids);
-    // An employee outside the user's `hr.lateness.edit` scope → 404, nothing written (R5).
-    const editable = await this.employees.filterInScope('hr.lateness.edit', ids);
-    if (ids.some((id) => !editable.has(id))) throw new NotFoundException();
     await this.repository.upsertMany(
       month,
       body.entries.map(({ employeeId, minutes }) => ({ employeeId, minutes })),

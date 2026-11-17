@@ -351,8 +351,11 @@ Roles are rows, not code (spec P2, R2 / R5 / R8 / R9). A school changes them thr
   none) as a Prisma filter (`employeeWhere`) or a check (`inScope`); `HrAccessService` reads the
   request's user from the request context (outside a request — seed, listeners — everything is
   covered). HR services pass the filter to their repositories on every row-scoped read and check
-  the action's own key on writes keyed by an employee; outside → 404 (edge case 3). School-wide
-  work (calculating payroll, the month lock) is never scoped.
+  the action's own key on writes keyed by an employee; outside → 404 (edge case 3). On those writes
+  the scope check runs **before** the other checks (`EmployeesService.assertScopeFirst`), so a scoped
+  user never gets a 400 / 409 that tells them an employee outside their scope exists; an edit also
+  can't point at a manager the user can't see or move the employee out of the editor's scope.
+  School-wide work (calculating payroll, the month lock) is never scoped.
 - **Salary (R7, P4).** Without `hr.employees.view_salary` covering the employee, HR leaves the
   salary-type fields out (`EMPLOYEE_SALARY_FIELDS`, `PAYROLL_LINE_MONEY_FIELDS`, adjustment amounts)
   and sets `salaryVisible: false` (shared `SalaryVisibility`); the fields are optional in the shared
@@ -360,8 +363,11 @@ Roles are rows, not code (spec P2, R2 / R5 / R8 / R9). A school changes them thr
   see `PayrollRunSummary` in shared. The audit log hides salary-type values (`AUDIT_SALARY_FIELDS`,
   `hidden: true`) unless the viewer holds the key at scope `all`.
 - **Audit entries about scoped records.** Core can't know HR's scopes, so `core/audit` exposes
-  `AuditRecordAccess`: HR registers, per entity type (employee, penalty), which ids the viewer may
-  see; Activity leaves the rest out and a record's History answers 404.
+  `AuditRecordAccess`: HR registers, per entity type, which ids the viewer may see (employees and
+  penalties by scope; lateness months and payroll runs, whose entries carry several employees'
+  figures, only at scope `all`). Activity, its day totals, the people picker and "Today at a glance"
+  leave the rest out, and a record's History answers 404. A payroll run's `totals` stay visible to
+  an `hr.payroll.view` holder at scope `all`, as on the Payroll screen.
 - **Linked employee.** `users.employee_id` (unique, core-owned) is the link (R9). HR's older
   `employees.user_id` was copied into it by the migration and was dropped in P4.
 - **The `users.role` enum column is gone** (P3 migration `users_drop_role_add_sign_in`): access

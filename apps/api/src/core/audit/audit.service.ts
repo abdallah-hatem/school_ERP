@@ -5,7 +5,7 @@ import {
   type AuditAction,
   type AuditActor,
   type AuditChange,
-  type AuditEntityType,
+  AuditEntityType,
   type AuditEntry,
   type AuditLabel,
   type AuditModule,
@@ -127,9 +127,9 @@ export class AuditService {
     page: number,
     limit: number,
   ): Promise<Paginated<AuditEntry>> {
-    const [restricted, salaryVisible] = await Promise.all([
+    const [restricted, values] = await Promise.all([
       this.recordAccess.restrictions(),
-      this.salaryVisible(),
+      this.valueVisibility(),
     ]);
     const result = await this.entries.findPage({ ...filter, restricted }, page, limit);
     const actorIds = [...new Set(result.data.flatMap((row) => (row.actorId ? [row.actorId] : [])))];
@@ -138,7 +138,10 @@ export class AuditService {
       ...result,
       data: result.data.map((row) => {
         const entry = toAuditEntry(row, linked);
-        return salaryVisible ? entry : { ...entry, changes: hideSalaryValues(entry.changes) };
+        if (values.salary) return entry;
+        // A payroll run's totals follow the Payroll screen (P4): shown to a whole-school payroll viewer.
+        const keepTotals = values.payrollTotals && entry.entityType === AuditEntityType.PAYROLL_RUN;
+        return { ...entry, changes: hideSalaryValues(entry.changes, { keepTotals }) };
       }),
     };
   }
@@ -158,10 +161,13 @@ export class AuditService {
     return this.list({ entityType, entityId, ...filter }, page, limit);
   }
 
-  /** The people in the log (or on one record — 404 outside the viewer's scope), most recent first. */
+  /**
+   * The people in the log (or on one record — 404 outside the viewer's scope), most recent first —
+   * only people with an entry the viewer may see (P4).
+   */
   async listActors(record?: { entityType: AuditEntityType; entityId: string }): Promise<AuditActor[]> {
     if (record) await this.assertCanSee(record.entityType, record.entityId);
-    return this.entries.findActors(record ?? {});
+    return this.entries.findActors(record ?? {}, await this.recordAccess.restrictions());
   }
 
   /** The fields a record's entries changed (its History field filter). 404 outside the scope. */
@@ -179,9 +185,9 @@ export class AuditService {
     return this.entries.countPerPeriod({ ...filter, restricted }, periods);
   }
 
-  /** "Today at a glance" for `[from, to)`. */
-  summary(from: Date, to: Date): Promise<AuditSummary> {
-    return this.entries.summary(from, to);
+  /** "Today at a glance" for `[from, to)` — counting only what `list` would show the viewer (P4). */
+  async summary(from: Date, to: Date): Promise<AuditSummary> {
+    return this.entries.summary(from, to, await this.recordAccess.restrictions());
   }
 
   private async assertCanSee(entityType: AuditEntityType, entityId: string): Promise<void> {
@@ -189,15 +195,22 @@ export class AuditService {
   }
 
   /**
-   * Whether the viewer sees salary-type values (R7): only with `hr.employees.view_salary` at scope
-   * `all` — the log is school-wide, so a narrower salary scope still hides them. No request user
-   * (scripts): shown.
+   * Which values the viewer sees (R7, P4): salary-type values only with `hr.employees.view_salary`
+   * at scope `all` — the log is school-wide, so a narrower salary scope still hides them; a payroll
+   * run's totals with `hr.payroll.view` at scope `all`, like the Payroll screen. No request user
+   * (scripts): everything.
    */
-  private async salaryVisible(): Promise<boolean> {
+  private async valueVisibility(): Promise<{ salary: boolean; payrollTotals: boolean }> {
     const user = this.request()?.user;
-    if (!user) return true;
-    const scope = await this.permissions.scopeFor(user, 'hr.employees.view_salary');
-    return scope?.scope === PermissionScope.ALL;
+    if (!user) return { salary: true, payrollTotals: true };
+    const [salary, payroll] = await Promise.all([
+      this.permissions.scopeFor(user, 'hr.employees.view_salary'),
+      this.permissions.scopeFor(user, 'hr.payroll.view'),
+    ]);
+    return {
+      salary: salary?.scope === PermissionScope.ALL,
+      payrollTotals: payroll?.scope === PermissionScope.ALL,
+    };
   }
 
   private request(): RequestWithUser | undefined {

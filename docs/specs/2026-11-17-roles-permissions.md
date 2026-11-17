@@ -128,7 +128,15 @@ The seeded `admin@school.local` becomes **System admin** + **HR manager**.
   the salary key at scope `all` (403 otherwise); an **edit** sending a salary field for an employee
   whose salary the user can't see → 403; the **activity log** shows salary-type values only with
   the salary key at scope `all` (the log is school-wide) — otherwise the change reads "changed"
-  (`hidden: true`, no values); the **dashboard** widgets are null without their view key. Pages a
+  (`hidden: true`, no values) — except a payroll run's `totals`, shown with `hr.payroll.view` at
+  scope `all` like the Payroll screen; Activity, its day totals, its people picker and "Today at a
+  glance" all leave out entries about records outside the scope, and lateness-month and payroll-run
+  entries (which carry several employees' figures) need `hr.lateness.view` / `hr.payroll.view` at
+  scope `all`; on writes keyed by employees the **scope is checked first** (`assertScopeFirst`), so a
+  scoped user gets 404 before any 400 / 409 that would reveal the employee exists; an edit can't set
+  a direct manager the user can't see (400 `INVALID_MANAGER`) nor move the employee out of the
+  editor's scope (another stage → 400 `FOREIGN_KEY_VIOLATION`, another team → 400
+  `INVALID_MANAGER`); the **dashboard** widgets are null without their view key. Pages a
   role can't open render the app's not-found screen (`requirePermission`).
   **Salary-type fields (2026-11-18):** R7's salary filtering covers the employee's `insuredSalary`
   and bank details (`bankName`, `bankAccountNumber`, `iban`) as well as `basicSalary` — a role

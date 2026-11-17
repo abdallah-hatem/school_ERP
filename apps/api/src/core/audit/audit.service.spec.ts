@@ -22,9 +22,18 @@ function makeService(
     salaryScope?: string | null;
     /** The employees whose entries the viewer may read (P4); absent: every one. */
     visibleEmployees?: readonly string[];
+    /** The viewer's `hr.payroll.view` scope; null: not held. */
+    payrollScope?: string | null;
   } = {},
 ) {
-  const { inTx = true, user = USER, clsActive = true, salaryScope = 'all', visibleEmployees } = opts;
+  const {
+    inTx = true,
+    user = USER,
+    clsActive = true,
+    salaryScope = 'all',
+    visibleEmployees,
+    payrollScope = 'all',
+  } = opts;
   const created: NewAuditEntry[] = [];
   const entries = {
     create: jest.fn((e: NewAuditEntry) => {
@@ -32,6 +41,8 @@ function makeService(
       return Promise.resolve();
     }),
     findPage: jest.fn(),
+    findActors: jest.fn().mockResolvedValue([]),
+    summary: jest.fn().mockResolvedValue({ actions: 0, people: 0, money: 0, failedSignIns: 0 }),
     findLinkedEmployees: jest.fn((ids: readonly string[]) =>
       Promise.resolve(new Map(ids.includes('u1') ? [['u1', 'emp-1']] : [])),
     ),
@@ -60,7 +71,9 @@ function makeService(
       Promise.resolve(
         key === 'hr.employees.view_salary' && salaryScope
           ? { scope: salaryScope, employeeId: null, stageId: null }
-          : null,
+          : key === 'hr.payroll.view' && payrollScope
+            ? { scope: payrollScope, employeeId: null, stageId: null }
+            : null,
       ),
     ),
   };
@@ -377,6 +390,41 @@ describe('AuditService reads', () => {
       await expect(
         service.listActors({ entityType: 'employee', entityId: 'e2' }),
       ).rejects.toMatchObject({ status: 404 });
+    });
+
+    it('"Today at a glance" and the people picker count only entries in the scope', async () => {
+      const { service, entries } = makeService({ visibleEmployees: ['e1'] });
+      const from = new Date('2026-11-17T00:00:00Z');
+      const to = new Date('2026-11-18T00:00:00Z');
+      await service.summary(from, to);
+      expect(entries.summary).toHaveBeenCalledWith(from, to, [{ entityType: 'employee', ids: ['e1'] }]);
+      await service.listActors();
+      expect(entries.findActors).toHaveBeenCalledWith({}, [{ entityType: 'employee', ids: ['e1'] }]);
+    });
+
+    it('…and are unrestricted for a whole-school viewer', async () => {
+      const { service, entries } = makeService();
+      await service.listActors();
+      expect(entries.findActors).toHaveBeenCalledWith({}, []);
+    });
+
+    it('a payroll run’s totals follow the Payroll screen: shown to the principal (payroll at all, no salary)', async () => {
+      const { service, entries } = makeService({ salaryScope: null, payrollScope: 'all' });
+      const changes = [
+        { field: 'totals', before: { net: 1 }, after: { net: 2 } },
+        { field: 'amount', before: null, after: 5000 },
+      ];
+      entries.findPage.mockResolvedValueOnce(pageOf([row({ entityType: 'payroll_run', action: 'hr.payroll.recalculate', changes })]));
+      const page = await service.list({}, 1, 10);
+      expect(page.data[0].changes).toEqual([changes[0], { field: 'amount', hidden: true }]);
+    });
+
+    it('…and hidden without payroll at scope all, or on another kind of record', async () => {
+      const { service, entries } = makeService({ salaryScope: null, payrollScope: 'own_stage' });
+      entries.findPage.mockResolvedValueOnce(
+        pageOf([row({ entityType: 'payroll_run', changes: [{ field: 'totals', before: 1, after: 2 }] })]),
+      );
+      expect((await service.list({}, 1, 10)).data[0].changes).toEqual([{ field: 'totals', hidden: true }]);
     });
 
     it('the History of an employee inside the scope reads as before', async () => {

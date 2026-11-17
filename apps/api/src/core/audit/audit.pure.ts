@@ -83,11 +83,17 @@ export function cleanChanges(changes: readonly AuditChange[]): AuditChange[] {
 
 /**
  * The changes as a viewer without salaries sees them (R7, P4): each salary-type field
- * (`AUDIT_SALARY_FIELDS`) keeps its name — "changed" — but loses its values.
+ * (`AUDIT_SALARY_FIELDS`) keeps its name — "changed" — but loses its values. `keepTotals`: a
+ * payroll run's `totals` stay (the viewer sees the whole school's payroll totals on screen too).
  */
-export function hideSalaryValues(changes: readonly AuditChange[]): AuditChange[] {
+export function hideSalaryValues(
+  changes: readonly AuditChange[],
+  { keepTotals = false }: { keepTotals?: boolean } = {},
+): AuditChange[] {
   return changes.map((c) =>
-    isSalaryField(c.field) ? ({ field: c.field, hidden: true } as AuditChange) : c,
+    isSalaryField(c.field) && !(keepTotals && c.field === 'totals')
+      ? ({ field: c.field, hidden: true } as AuditChange)
+      : c,
   );
 }
 

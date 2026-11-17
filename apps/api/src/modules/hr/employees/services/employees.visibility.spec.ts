@@ -97,6 +97,9 @@ function makeService(scopes: Parameters<typeof fakeAccess>[0], repo: Record<stri
     updateEmployee: jest.fn().mockResolvedValue(detail()),
     countActiveByStage: jest.fn().mockResolvedValue([]),
     findIdsInScope: jest.fn().mockResolvedValue(['e1']),
+    findIdByInsuranceNumber: jest.fn().mockResolvedValue(null),
+    findIdByNationalId: jest.fn().mockResolvedValue(null),
+    findIdByFingerprintId: jest.fn().mockResolvedValue(null),
     ...repo,
   };
   const service = new EmployeesService(
@@ -237,5 +240,54 @@ describe('employees — salary (R7)', () => {
         basicSalary: 100,
       }),
     ).rejects.toMatchObject({ status: 403 });
+  });
+});
+
+describe('employees — edits stay inside the scope (R5)', () => {
+  const EDITOR = { ...STAGE_HEAD, 'hr.employees.edit': PRIMARY } as const;
+  const inKg = jest.fn((id: string) =>
+    Promise.resolve(id === 'kg-boss' ? { id, stageId: 'kg', managerId: null } : { id, stageId: 'primary', managerId: null }),
+  );
+
+  it('a manager the user can’t see reads as unknown: 400 INVALID_MANAGER, nothing written', async () => {
+    const { service, repository } = makeService(EDITOR, { findScopeFields: inKg });
+    await expect(service.update('e1', { managerId: 'kg-boss' })).rejects.toMatchObject({
+      status: 400,
+      code: 'INVALID_MANAGER',
+    });
+    expect(repository.updateEmployee).not.toHaveBeenCalled();
+  });
+
+  it('moving the employee to another stage (out of the editor’s scope) → 400 FOREIGN_KEY_VIOLATION', async () => {
+    const { service, repository } = makeService(EDITOR);
+    await expect(service.update('e1', { stageId: 'kg' })).rejects.toMatchObject({
+      status: 400,
+      code: 'FOREIGN_KEY_VIOLATION',
+    });
+    expect(repository.updateEmployee).not.toHaveBeenCalled();
+  });
+
+  it('a team editor can’t hand the employee to another manager’s team → 400 INVALID_MANAGER', async () => {
+    const team = { kind: 'team', managerId: 'me' } as const;
+    const { service } = makeService(
+      { 'hr.employees.view': { kind: 'all' }, 'hr.employees.edit': team, 'hr.employees.view_salary': null },
+      { findDetail: jest.fn().mockResolvedValue(detail({ manager: { id: 'me', code: 'M', nameEn: 'M', nameAr: 'M', photoUrl: null, jobTitle: { managesPeople: true } } as never })) },
+    );
+    await expect(service.update('e1', { managerId: 'other' })).rejects.toMatchObject({ code: 'INVALID_MANAGER' });
+  });
+
+  it('an unrelated edit inside the scope goes through', async () => {
+    const { service, repository } = makeService(EDITOR);
+    await service.update('e1', { grade: 'B' });
+    expect(repository.updateEmployee).toHaveBeenCalled();
+  });
+
+  it('assertScopeFirst: a scoped user gets 404 for any id outside (unknown included); scope all lets it through', async () => {
+    const { service } = makeService(STAGE_HEAD, {
+      findScopeFieldsMany: jest.fn().mockResolvedValue([{ id: 'e1', stageId: 'primary', managerId: null }]),
+    });
+    await expect(service.assertScopeFirst('hr.employees.view', ['e1'])).resolves.toBeUndefined();
+    await expect(service.assertScopeFirst('hr.employees.view', ['e1', 'unknown'])).rejects.toMatchObject({ status: 404 });
+    await expect(makeService({}).service.assertScopeFirst('hr.employees.view', ['unknown'])).resolves.toBeUndefined();
   });
 });

@@ -25,8 +25,10 @@
 - **GUESS** (enforced, P4) — Salaries are seen only by System admin, HR manager, HR officer and
   Accountant. "Salaries" includes the employee's insured salary and bank details (§3). Anyone else
   gets no salary at all — not on employee cards, the profile, the employee form, payroll lines,
-  payslips or the activity log (which says "changed" without the amounts). The principal still sees
-  payroll **totals** for the whole school, never one person's pay. Adding an employee needs to see
+  payslips or the activity log (which says "changed" without the amounts). The principal sees the
+  payroll lines — names, codes, departments, days deducted, lateness minutes and flags — without any
+  money, plus the run **totals** for the whole school (on the Payroll screen, the dashboard and the
+  activity log alike), never one person's pay. Adding an employee needs to see
   every salary (the pay is set when adding); the bank sheet too.
 - **GUESS** (enforced, P4) — A stage head sees only their stage's employees; a direct manager only
   the employees they directly manage. That covers every list, count, search, picker and dashboard

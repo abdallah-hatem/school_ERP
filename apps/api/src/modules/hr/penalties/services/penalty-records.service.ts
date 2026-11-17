@@ -271,9 +271,10 @@ export class PenaltyRecordsService {
    * `hr.penalties.record` scope covers (else 404, edge case 3).
    */
   private async assertRecordable(employeeId: Uuid, violationId: Uuid) {
+    // Scope first (edge case 3): outside `hr.penalties.record` → 404, whatever else is wrong.
+    await this.employees.assertScopeFirst('hr.penalties.record', [employeeId]);
     // Unknown → 400 FOREIGN_KEY_VIOLATION; inactive → 409 EMPLOYEE_INACTIVE.
     await this.employees.assertActive([employeeId]);
-    await this.employees.assertInScope('hr.penalties.record', employeeId);
     return this.catalogue.getUsable(violationId);
   }
 

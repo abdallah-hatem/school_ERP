@@ -41,7 +41,7 @@ const approvedAt = (id: string, iso: string) => ({
   recordedAt: new Date(iso),
 });
 
-function makeService(repo: Record<string, jest.Mock> = {}, oncePerDay = true) {
+function makeService(repo: Record<string, jest.Mock> = {}, oncePerDay = true, access = fakeAccess(), employees: Record<string, jest.Mock> = {}) {
   const repository = {
     findOne: jest.fn().mockResolvedValue(row()),
     findStatus: jest.fn().mockResolvedValue({ status: 'PENDING', date: '2025-11-10' }),
@@ -61,10 +61,10 @@ function makeService(repo: Record<string, jest.Mock> = {}, oncePerDay = true) {
     {
       getUsable: jest.fn().mockResolvedValue({ id: 'v1', levels: LEVELS.map((l) => ({ ...l, days: l.days && Number(l.days) })), oncePerDay }),
     } as unknown as PenaltyCatalogueService,
-    { assertActive: jest.fn(), assertInScope: jest.fn() } as unknown as EmployeesService,
+    { assertActive: jest.fn(), assertInScope: jest.fn(), assertScopeFirst: jest.fn(), ...employees } as unknown as EmployeesService,
     settings as unknown as HrSettingsService,
     monthLock as unknown as MonthLockService,
-    fakeAccess(),
+    access,
   );
   return { service, repository, monthLock };
 }
@@ -183,5 +183,54 @@ describe('PenaltyRecordsService', () => {
       await service.approve('r1', 'u1');
       expect(refuseOf(repository.approve, 5)(['APPROVED'])).toBe(false);
     });
+  });
+});
+
+describe('PenaltyRecordsService — scopes (R5, edge case 3)', () => {
+  const PRIMARY = { kind: 'stage', stageId: 'primary' } as const;
+  const STAGE_HEAD = fakeAccess({
+    'hr.penalties.view': PRIMARY,
+    'hr.penalties.record': PRIMARY,
+    'hr.penalties.approve': PRIMARY,
+    'hr.penalties.cancel': PRIMARY,
+  });
+
+  it('approve: the record is looked up inside the approve scope; outside → 404, nothing approved', async () => {
+    const { service, repository } = makeService({ findOne: jest.fn().mockResolvedValue(null) }, true, STAGE_HEAD);
+    await expect(service.approve('r9', 'u1')).rejects.toMatchObject({ status: 404 });
+    expect(repository.findOne).toHaveBeenCalledWith('r9', { stageId: 'primary' });
+    expect(repository.approve).not.toHaveBeenCalled();
+  });
+
+  it('cancel: outside the cancel scope → 404, nothing cancelled', async () => {
+    const { service, repository } = makeService({ findStatus: jest.fn().mockResolvedValue(null) }, true, STAGE_HEAD);
+    await expect(service.cancel('r9', { reason: 'x' }, 'u1')).rejects.toMatchObject({ status: 404 });
+    expect(repository.findStatus).toHaveBeenCalledWith('r9', { stageId: 'primary' });
+    expect(repository.cancel).not.toHaveBeenCalled();
+  });
+
+  it('get and list read inside the view scope', async () => {
+    const { service, repository } = makeService(
+      {
+        list: jest.fn().mockResolvedValue({ data: [], total: 0, page: 1, limit: 10, hasNextPage: false, hasPreviousPage: false }),
+        findOne: jest.fn().mockResolvedValue(null),
+      },
+      true,
+      STAGE_HEAD,
+    );
+    await service.list({});
+    expect((repository as unknown as { list: jest.Mock }).list.mock.calls[0][3]).toEqual({ stageId: 'primary' });
+    await expect(service.get('r9')).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('recording: the scope is checked first — outside → 404 even for an inactive employee', async () => {
+    const assertScopeFirst = jest.fn().mockRejectedValue(Object.assign(new Error('nf'), { status: 404 }));
+    const assertActive = jest.fn();
+    const { service } = makeService({}, true, STAGE_HEAD, { assertScopeFirst, assertActive });
+    await expect(
+      service.create({ employeeId: 'e9', violationId: 'v1', date: '2025-11-10' }, 'u1'),
+    ).rejects.toMatchObject({ status: 404 });
+    expect(assertScopeFirst).toHaveBeenCalledWith('hr.penalties.record', ['e9']);
+    expect(assertActive).not.toHaveBeenCalled();
   });
 });

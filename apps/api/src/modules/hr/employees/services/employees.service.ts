@@ -178,6 +178,21 @@ export class EmployeesService {
     return this.repository.findIdsInScope(await this.access.where('hr.employees.view'));
   }
 
+  /**
+   * The scope check that comes before any other check on a write keyed by employees (edge case 3):
+   * a scoped user gets 404 for any id `key` doesn't cover — unknown, inactive or someone else's alike
+   * — so no other answer tells them the employee exists. At scope `all` it lets every id through, and
+   * the usual checks answer (unknown → 400, inactive → 409).
+   */
+  async assertScopeFirst(key: PermissionKey, ids: readonly Uuid[]): Promise<void> {
+    const scope = await this.access.scope(key);
+    if (scope.kind === 'all') return;
+    const unique = [...new Set(ids)];
+    const rows = await this.repository.findScopeFieldsMany(unique);
+    const covered = new Set(rows.filter((row) => inScope(scope, row)).map((row) => row.id));
+    if (unique.some((id) => !covered.has(id))) throw new NotFoundException();
+  }
+
   /** Which of `ids` `key` covers for the user (unknown ids are left out). */
   async filterInScope(key: PermissionKey, ids: readonly Uuid[]): Promise<Set<Uuid>> {
     const [scope, rows] = await Promise.all([
@@ -244,7 +259,10 @@ export class EmployeesService {
     await this.assertSelectable(dto);
     const insurance = this.resolveInsurance(dto, null);
     await this.assertUnique({ ...dto, insuranceNumber: insurance.insuranceNumber }, null);
-    if (dto.managerId) await this.assertManager(null, dto.managerId, true);
+    if (dto.managerId) {
+      await this.assertManagerVisible(dto.managerId);
+      await this.assertManager(null, dto.managerId, true);
+    }
     const contract = this.resolveContract(dto.contractStart, dto.contractEnd);
 
     const row = await this.repository.createWithCode({
@@ -298,6 +316,7 @@ export class EmployeesService {
 
     const cleared = REQUIRED_FIELDS.filter((f) => dto[f] === null);
     if (cleared.length) throw new BadRequestException(`${cleared.join(', ')} cannot be empty`);
+    await this.assertStaysInScope(current, dto);
 
     // Only a newly chosen list item must be selectable — an item hidden after the employee got it
     // stays valid on unrelated edits.
@@ -386,6 +405,34 @@ export class EmployeesService {
 
   private salaryVisible(salary: EmployeeScope, row: EmployeeDetailRow): boolean {
     return inScope(salary, detailScopeFields(row));
+  }
+
+  /**
+   * R5 on edits: a new direct manager must be someone the user may see (else 400
+   * `INVALID_MANAGER`, the answer an unknown manager gets), and a scoped editor can't move the
+   * employee out of their own edit scope — to another stage (400 `FOREIGN_KEY_VIOLATION`, like an
+   * unknown stage) or another manager's team (400 `INVALID_MANAGER`).
+   */
+  private async assertStaysInScope(current: EmployeeDetailRow, dto: UpdateEmployeeDto): Promise<void> {
+    const managerChanges = dto.managerId !== undefined && dto.managerId !== (current.manager?.id ?? null);
+    if (managerChanges && dto.managerId) await this.assertManagerVisible(dto.managerId);
+    const edit = await this.access.scope('hr.employees.edit');
+    if (edit.kind === 'all') return;
+    const after = {
+      id: current.id,
+      stageId: dto.stageId ?? current.stage.id,
+      managerId: dto.managerId !== undefined ? dto.managerId : (current.manager?.id ?? null),
+    };
+    if (inScope(edit, after)) return;
+    throw bad(after.stageId !== current.stage.id ? ErrorCode.FOREIGN_KEY_VIOLATION : ErrorCode.INVALID_MANAGER);
+  }
+
+  /** A manager outside the user's `hr.employees.view` scope reads as unknown: 400 `INVALID_MANAGER`. */
+  private async assertManagerVisible(managerId: Uuid): Promise<void> {
+    const view = await this.access.scope('hr.employees.view');
+    if (view.kind === 'all') return;
+    const manager = await this.repository.findScopeFields(managerId);
+    if (!manager || !inScope(view, manager)) throw bad(ErrorCode.INVALID_MANAGER);
   }
 
   private async assertSelectable(ids: {
