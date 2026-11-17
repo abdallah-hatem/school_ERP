@@ -29,7 +29,7 @@ test('a new HR officer: created on Add user, forced to set a password, sees no U
   await expect(page).toHaveURL(/\/en\/users$/);
   const row = page.getByRole('row', { name: /Rana Mostafa/ });
   await expect(row).toBeVisible();
-  await expect(row.getByText(t(locale, 'access.users.mustChange'))).toBeVisible();
+  await expect(row.getByText(t(locale, 'access.users.temporaryPassword'))).toBeVisible();
 
   // Signed in with the temporary password → straight to "Set a new password", nothing else.
   const context = await browser.newContext({ locale: 'en-US', viewport: page.viewportSize() });
