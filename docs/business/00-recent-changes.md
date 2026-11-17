@@ -17,3 +17,7 @@
 - 2026-11-17 — Penalties (T7 review): retiring a group retires its violations; pending penalties can
   still be approved or cancelled after retirement or deactivation; preview ignores the month lock;
   rolling window boundary stated.
+- 2026-11-17 — Payroll (T9 review): approve recalculates once more before locking; payslip lists
+  zero-amount penalties and shows each penalty's share of the deduction; adjustments for employees
+  no longer in the run are not applied (GUESS); dashboard defined; approval is announced for a future
+  accounting module.
