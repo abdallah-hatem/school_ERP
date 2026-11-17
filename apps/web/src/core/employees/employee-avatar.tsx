@@ -49,7 +49,8 @@ export function EmployeeAvatar({ photoUrl, gender, size = 'sm', muted = false, c
       className={cn(
         'relative grid shrink-0 place-items-center overflow-hidden',
         s.box,
-        photo ? 'bg-muted' : muted ? 'bg-secondary text-muted-foreground/70' : 'bg-secondary text-muted-foreground',
+        // No photo: the classic default avatar — a white figure on a light grey tile.
+        photo ? 'bg-muted' : cn('bg-avatar-tile text-avatar-figure', muted && 'opacity-70'),
         className,
       )}
     >
@@ -64,13 +65,19 @@ export function EmployeeAvatar({ photoUrl, gender, size = 'sm', muted = false, c
           className={cn('size-full object-cover', muted && 'opacity-70 grayscale')}
         />
       ) : (
-        <Silhouette gender={gender} className={cn(s.icon, 'translate-y-[12%]')} />
+        <Silhouette gender={gender} iconClass={s.icon} />
       )}
     </span>
   );
 }
 
-function Silhouette({ gender, className }: { gender?: Gender | null; className: string }) {
+function Silhouette({ gender, iconClass }: { gender?: Gender | null; iconClass: string }) {
   const Gendered = gender ? SILHOUETTES[gender] : undefined;
-  return Gendered ? <Gendered className={className} /> : <SilhouetteIcon className={className} />;
+  // The gendered figures fill the tile edge to edge (shoulders at the bottom); the neutral one is an
+  // icon, centred a little low so its shoulders meet the bottom edge too.
+  return Gendered ? (
+    <Gendered className="size-full" />
+  ) : (
+    <SilhouetteIcon className={cn(iconClass, 'translate-y-[12%]')} />
+  );
 }
