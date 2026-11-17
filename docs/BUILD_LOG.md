@@ -104,6 +104,20 @@ phase live in `docs/build-log/`.
   and payslip tables, RTL calendar chevrons, selects forced LTR. T20 fixed all 14 items (+ Arabic
   seed reasons), Playwright checks for the date picker, smoke 10/10 → merged #28. After-screenshots
   in `design/audit/after/`. The dev DB's four seeded reasons were switched to the Arabic text.
+- 2026-11-17 — Demo dry run on a copy of the demo DB (`docs/demo/dry-runs/2026-11-17.md`): every
+  figure matched by hand; six findings → fixed in T21 (Arabic "خصم يومين" dual and others). The dry
+  run became part of the team flow (`CLAUDE.md` rule 8, `docs/CONVENTIONS.md`) → #29, #30.
+- 2026-11-17 — Owner: mockups first for layout and navigation changes, unasked (`CLAUDE.md` rule 9,
+  `CONVENTIONS.md`, skill design gate) → #31.
+- 2026-11-17 — T22 option B (picked from mockups): module sidebar (full height) and employee
+  profile cards, 12 per page → #33. English is the default language → #34.
+- 2026-11-17 — T23: 10 per page with no rows-per-page control, toasts top-right, skeletons match
+  the real layout, work times as 30-minute dropdowns; flaky payroll smoke fixed → #35.
+- 2026-11-17 — T24 live comma grouping in money and minutes inputs, caret kept, real-browser spec
+  → #36. T25 searchable pickers above 6 options, row actions in a ⋯ menu, add button plus in a soft
+  badge (picked from mockups) → #37.
+- 2026-11-17 — T26 clicking a number field selects the whole figure; a second click places the
+  caret → smoke 21/21 → merged #38. Skill rules synced (abdallah-skills 1.62.3 → 1.62.9).
 
 ## Next up
 
@@ -116,3 +130,6 @@ phase live in `docs/build-log/`.
 - Hosting the demo on the Contabo server (owner: later; local demo is the fallback).
 - Roles, permissions and security section for `docs/ARCHITECTURE.md` (drafted in chat, not yet approved).
 - Branch protection on `dev`, `testing` and `production` once CI exists.
+- Optional: server-side paging for lateness (loads the whole month today) and column sorting.
+- Employee profile shows the list's skeleton while loading (`employees/loading.tsx` wraps `[id]`).
+- The stage "None" band is detected by its English name; key it by an id instead.
