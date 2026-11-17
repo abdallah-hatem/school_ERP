@@ -137,27 +137,45 @@ phase live in `docs/build-log/`.
   users/roles API; review made §2 honest about P3/P4 gaps). T30 Activity page + employee History
   tab (option B) merged → #54; Settings → Change history replaced by a link to Activity.
 
+- 2026-11-17 — Activity UI audit fixes (24 findings; calendar keeps 16px from edges) → #57. PRs must
+  start from the latest dev (GitHub requires up-to-date branches; `ci:local` warns) → #56. Sticky
+  Save/Cancel bar → #58; Save disabled until something changes → #59. Clickable employee names → #61.
+  Paging scrolls to the list top → #63. Releases dev → testing → #60, #62.
+- 2026-11-18 — "Manages people" job titles + managers-only Direct manager picker → #64. Cancelled
+  penalties red → #65. Clear filters on every filtered list → #66. P3 Users / Roles / My account +
+  forced new password (option A) → #67. Employee insurance, bank, emergency contact, qualification,
+  photo → #68. Same-day penalty levels ordered by recording time → #69. Inactive pills grey → #70.
+  Campus toasts + distinct Deactivate/Reactivate → #71. Once-per-day violations + searchable
+  catalogue → #73. Set-password language switch + temporary-password pill → #74. Male/female
+  avatars → #75, replaced by the classic default silhouettes → #77.
+- 2026-11-18 — GitHub CI runs API e2e and desktop/phone smoke on every PR → #72; all four checks are
+  required on dev, testing and production (owner). The desktop failures were Linux's 15px scrollbar.
+- 2026-11-18 — P4 visibility merged → #76: scopes (own stage / own team / self) in HR, salary-type data
+  hidden without `hr.employees.view_salary`, tabs/sections gated, out-of-scope → 404; review fixes
+  included. Payroll run-page race (a stale navigation undid Approve) fixed in the app → #80.
+- 2026-11-18 — Team rules: every write is audited — a T28/T29 placeholder is wired in the same PR as
+  any change to it (CLAUDE.md, CONVENTIONS) → #79. A new module needs a plan in `docs/plans/` (CI) → #81.
+  Tamer owns payroll and accounting decisions (owner). His #78 (payroll tax → new accounting module)
+  is open: needs an accounting plan, the T29 payroll audit wiring and CLAUDE.md's module line.
+
 ## Next up
 
-- `pnpm smoke` in CI (needs Postgres + Chromium in the workflow).
 - The client should check the Arabic penalty catalogue against the printed regulations (copied from the scans).
 
 - Login rate limiting (T2 left it out; security baseline).
 - Write the settings history in the same transaction as the change (outbox), instead of right after.
 
 - Hosting the demo on the Contabo server (owner: later; local demo is the fallback).
-- Roles and permissions P2–P4 (spec `docs/specs/2026-11-17-roles-permissions.md`, GUESS answers): roles
-  stored in the database replacing `permissionsFor`; scopes + `scopeFor`; salary filtering on
-  `hr.employees.view_salary`; Users, Roles and My account screens (mockups first); read-only settings
-  for view-only users; gate payroll adjust on `hr.payroll.adjust`; what Home shows without
-  `hr.dashboard.view`.
-- Audit log T28 (Tamer) and T29 (Waleed), then T31 verify. Follow-ups from T30: entries keep one
+- Roles leftovers: read-only settings for view-only users; gate payroll adjust on `hr.payroll.adjust`;
+  what Home shows without `hr.dashboard.view`.
+- Audit log T28 (Waleed: auth, settings, employees, lists) and T29 (Tamer: penalties, lateness,
+  payroll), then T31 verify. Optional CI ratchet that forbids touching an unwired endpoint (owner: docs only for now). Follow-ups from T30: entries keep one
   name snapshot, so list/catalogue names show in English inside Arabic sentences; id fields
   (`departmentId`) show raw ids unless T28 stores names; penalties don't appear on the employee's
   History; payroll run page has no History tab yet; smoke History check still asserts the empty
   state (`TODO(T28)`).
-- Flaky smoke `05-payroll`: Save stays disabled after editing grace minutes (seen in two agent runs
-  today, passes on rerun). Fix the race properly.
+
 - Optional: server-side paging for lateness (loads the whole month today) and column sorting.
-- Employee profile shows the list's skeleton while loading (`employees/loading.tsx` wraps `[id]`).
 - The stage "None" band is detected by its English name; key it by an id instead.
+- Skeletons match their components + the layout spec that enforces it (agent paused mid-way; its
+  worktree `fix/skeletons-match` has uncommitted work to resume).
