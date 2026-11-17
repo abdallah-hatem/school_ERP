@@ -9,7 +9,17 @@
     "penalties": "Penalties",
     "lateness": "Lateness",
     "payroll": "Payroll",
-    "settings": "Settings"
+    "settings": "Settings",
+    "modules": {
+      "home": "Home",
+      "hr": "HR",
+      "accounting": "Accounting",
+      "inventory": "Inventory",
+      "students": "Students"
+    },
+    "soon": "Soon",
+    "soonTitle": "{name} — coming soon",
+    "modulePages": "{name} pages"
   },
   "actions": {
     "save": "Save",
@@ -91,6 +101,9 @@
       "THURSDAY": "Thursday",
       "FRIDAY": "Friday",
       "SATURDAY": "Saturday"
+    },
+    "userRole": {
+      "HR_ADMIN": "HR officer"
     }
   }
 }

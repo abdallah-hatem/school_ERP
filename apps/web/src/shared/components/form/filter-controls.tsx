@@ -44,7 +44,11 @@ export function FilterSelect({
   const selected = value === undefined ? allLabel : (options.find((o) => o.value === value)?.label ?? allLabel);
   return (
     <Select value={value ?? ALL} onValueChange={(v) => onChange(v === ALL ? undefined : v)} disabled={disabled}>
-      <SelectTrigger aria-label={label} className={cn('w-full sm:w-48', className)}>
+      <SelectTrigger
+        aria-label={label}
+        // A filter in use is tinted, so a narrowed list is visible at a glance.
+        className={cn('w-full sm:w-48', value !== undefined && 'border-primary bg-primary-soft text-primary', className)}
+      >
         <SelectValue placeholder={allLabel}>{selected}</SelectValue>
       </SelectTrigger>
       <SelectContent>

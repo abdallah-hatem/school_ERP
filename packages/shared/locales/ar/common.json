@@ -9,7 +9,17 @@
     "penalties": "الجزاءات",
     "lateness": "التأخير",
     "payroll": "الرواتب",
-    "settings": "الإعدادات"
+    "settings": "الإعدادات",
+    "modules": {
+      "home": "الرئيسية",
+      "hr": "الموارد البشرية",
+      "accounting": "الحسابات",
+      "inventory": "المخازن",
+      "students": "الطلاب"
+    },
+    "soon": "قريبًا",
+    "soonTitle": "{name} — قريبًا",
+    "modulePages": "صفحات {name}"
   },
   "actions": {
     "save": "حفظ",
@@ -91,6 +101,9 @@
       "THURSDAY": "الخميس",
       "FRIDAY": "الجمعة",
       "SATURDAY": "السبت"
+    },
+    "userRole": {
+      "HR_ADMIN": "مسؤول الموارد البشرية"
     }
   }
 }

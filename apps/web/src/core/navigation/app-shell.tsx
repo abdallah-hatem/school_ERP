@@ -1,5 +1,6 @@
 'use client';
 
+import type { AuthUser } from '@school-erp/shared';
 import { useState, type ReactNode } from 'react';
 import { SchoolBrand } from '@/core/settings/school-brand';
 import { useSchoolBranding } from '@/core/settings/branding-provider';
@@ -9,30 +10,34 @@ import { CloseIcon, MenuIcon } from '@/shared/components/ui/icons';
 import { Sheet, SheetClose, SheetContent, SheetTrigger } from '@/shared/components/ui/sheet';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { SidebarNav } from './sidebar-nav';
+import { UserChip } from './user-chip';
 
 /**
  * The signed-in frame.
- * - ≥1280px: sidebar with labels.
- * - 768–1279px: icon rail.
- * - <768px: top bar with the school name and a menu button opening a drawer from the start edge.
- *   Esc, the backdrop, ✕ or choosing a link closes it, and focus returns to the menu button.
- * `account` is the slot for the signed-in user's card (auth, T2).
+ * - ≥1280px: sidebar grouped by module, Settings and the signed-in user at the bottom.
+ * - 768–1279px: icon rail, one icon per module.
+ * - <768px: top bar with the school name and a menu button opening a drawer from the start edge
+ *   (the same grouped menu). Esc, the backdrop, ✕ or choosing a link closes it, and focus returns
+ *   to the menu button.
+ * `user` is the signed-in person, read by the layout on the server so the first paint shows them.
  */
-export function AppShell({ children, account }: { children: ReactNode; account?: ReactNode }) {
+export function AppShell({ children, user }: { children: ReactNode; user?: AuthUser | null }) {
   const { t, locale } = useTranslation();
   const { branding } = useSchoolBranding();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const schoolName = locale === 'ar' ? branding.nameAr : branding.nameEn;
 
   return (
-    <div className="min-h-dvh md:grid md:grid-cols-[5.25rem_minmax(0,1fr)] xl:grid-cols-[16.5rem_minmax(0,1fr)] print:block">
+    <div className="min-h-dvh md:grid md:grid-cols-[5.25rem_minmax(0,1fr)] xl:grid-cols-[17rem_minmax(0,1fr)] print:block">
       {/* Sidebar / icon rail (never printed: a printout is the page's content only) */}
-      <aside className="no-print sticky top-0 hidden h-dvh flex-col gap-7 border-e border-border bg-card px-3 py-6 md:flex xl:px-4.5">
+      <aside className="no-print sticky top-0 hidden h-dvh flex-col gap-6 border-e border-border bg-card px-3 py-5.5 md:flex xl:px-3.5">
         <SchoolBrand collapse="below-xl" className="max-xl:justify-center xl:px-1.5" />
-        <div className="scrollbar-clean -mx-1 min-h-0 flex-1 overflow-y-auto px-1">
-          <SidebarNav variant="responsive" />
+        <div className="hidden min-h-0 flex-1 flex-col xl:flex">
+          <SidebarNav variant="full" footer={user ? <UserChip user={user} /> : null} />
         </div>
-        {account ? <div className="mt-auto">{account}</div> : null}
+        <div className="flex min-h-0 flex-1 flex-col xl:hidden">
+          <SidebarNav variant="rail" footer={user ? <UserChip user={user} compact /> : null} />
+        </div>
       </aside>
 
       <div className="flex min-w-0 flex-col">
@@ -53,10 +58,11 @@ export function AppShell({ children, account }: { children: ReactNode; account?:
                   </Button>
                 </SheetClose>
               </div>
-              <div className="scrollbar-clean -mx-1 min-h-0 flex-1 overflow-y-auto px-1">
-                <SidebarNav variant="drawer" onNavigate={() => setDrawerOpen(false)} />
-              </div>
-              {account ? <div>{account}</div> : null}
+              <SidebarNav
+                variant="full"
+                onNavigate={() => setDrawerOpen(false)}
+                footer={user ? <UserChip user={user} /> : null}
+              />
             </SheetContent>
           </Sheet>
           {/* Up to two lines: a long English name is cut only past the second line. */}

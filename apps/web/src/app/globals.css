@@ -47,6 +47,23 @@
   --info-soft: #e0eefb;
   --info-ink: #24578e;
 
+  /*
+   * Stage bands — the header band of an employee card, one colour per stage (by the stage's
+   * order, cycling), a neutral one for staff with no stage and a washed-out one when inactive.
+   */
+  --band-1: #cfe4f8;
+  --band-1-ink: #24578e;
+  --band-2: #bfe6db;
+  --band-2-ink: #0a5d4f;
+  --band-3: #ffe4a8;
+  --band-3-ink: #6b4b00;
+  --band-4: #f8d9cf;
+  --band-4-ink: #8a3b22;
+  --band-neutral: #e3ece9;
+  --band-neutral-ink: #41605a;
+  --band-inactive: #eef1f0;
+  --band-inactive-ink: #587069;
+
   /* Lines and focus */
   --border: #dce9e5;
   --input: #cfe0db;
@@ -94,6 +111,18 @@
   --color-info: var(--info);
   --color-info-soft: var(--info-soft);
   --color-info-ink: var(--info-ink);
+  --color-band-1: var(--band-1);
+  --color-band-1-ink: var(--band-1-ink);
+  --color-band-2: var(--band-2);
+  --color-band-2-ink: var(--band-2-ink);
+  --color-band-3: var(--band-3);
+  --color-band-3-ink: var(--band-3-ink);
+  --color-band-4: var(--band-4);
+  --color-band-4-ink: var(--band-4-ink);
+  --color-band-neutral: var(--band-neutral);
+  --color-band-neutral-ink: var(--band-neutral-ink);
+  --color-band-inactive: var(--band-inactive);
+  --color-band-inactive-ink: var(--band-inactive-ink);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
