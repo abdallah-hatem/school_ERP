@@ -15,7 +15,8 @@
     "deps:graph": "depcruise apps/api/src --config .dependency-cruiser.cjs --ts-config tsconfig.depcruise-api.json --output-type dot > deps-graph.dot",
     "smoke": "bash scripts/smoke.sh",
     "ci:local": "bash scripts/ci-local.sh",
-    "prepare": "simple-git-hooks"
+    "prepare": "simple-git-hooks",
+    "plans:check": "bash scripts/check-module-plans.sh"
   },
   "devDependencies": {
     "dependency-cruiser": "16.10.4",

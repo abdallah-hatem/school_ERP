@@ -70,6 +70,7 @@ GitHub also runs API e2e and the smoke specs (desktop-en and phone-ar shards) on
 - [ ] **Your branch has the latest `dev` merged in** (owner, 2026-11-17): `git fetch origin && git
       merge origin/dev`, resolve conflicts, re-run the checks, then open the PR. GitHub refuses to
       merge a branch that is behind, and `pnpm ci:local` warns when it is.
+- [ ] A new module? Its plan is in `docs/plans/` (see Plans below).
 - [ ] One task per PR, small — aim for under ~400 changed lines. Split big features.
 - [ ] The push went through the local CI hook (and `pnpm ci:local --full` for API, DB or UI changes).
 - [ ] Every new user-facing string exists in both `en` and `ar`.
@@ -81,8 +82,19 @@ GitHub also runs API e2e and the smoke specs (desktop-en and phone-ar shards) on
   `@SignedIn()` / `@Public()`) — see Permissions below.
 - [ ] Every new write endpoint (POST / PATCH / PUT / DELETE) is `@Audited('<action>')` and calls
   `audit.record()` for that action in its service, or is `@NotAudited('<reason>')` (see below).
+- [ ] Changed an **existing** write endpoint, or the service method behind it, that is still marked
+  `@NotAudited('wired in T28')` / `('wired in T29')`? Wire its audit in this PR (see below).
 - [ ] `docs/BUSINESS_LOGIC.md` updated in the same PR if a business rule changed.
 - [ ] UI changes: screenshots. New or visually changed screens: EN/AR × phone/desktop (light only).
+
+## Plans: a new module starts with one
+
+A PR that adds a new module — a folder under `apps/api/src/modules/` or `apps/web/src/modules/` that
+`dev` doesn't have — must include (or find on `dev`) a plan in `docs/plans/` whose file name contains
+the module's name, e.g. `docs/plans/2026-11-18-accounting-plan.md`, with its **Spec** (link the spec
+and the business section), its **Tasks** (with classes) and the **Edge cases** of the logic tasks —
+the shape of `docs/plans/2026-11-17-audit-log-plan.md`. `pnpm ci:local` (push hook and CI) runs
+`scripts/check-module-plans.sh` and fails without it. The check doesn't judge the plan; review does.
 
 ## Audit log: every write is an action
 
@@ -105,6 +117,13 @@ Transactions and the audit log). For a new write endpoint:
 
 A write that is deliberately not recorded (e.g. a token refresh) gets `@NotAudited('<why>')`. A
 handler with neither fails the controller scan in CI.
+
+**Existing writes too (owner, 2026-11-18).** Some endpoints still carry the temporary
+`@NotAudited('wired in T28')` / `('wired in T29')` placeholders from the audit foundation. Whoever
+changes one of them — the handler or the service method behind it, for any reason (a new rule, a new
+field, a fix) — wires its audit in the same PR: replace the placeholder with `@Audited('<action>')`,
+call `audit.record()` in the service (both names: `label: { en, ar }`), add the test that the entry is
+written. The placeholders are a to-do list for T28/T29, not a permission to skip.
 
 ## Permissions: every endpoint declares who may use it
 
