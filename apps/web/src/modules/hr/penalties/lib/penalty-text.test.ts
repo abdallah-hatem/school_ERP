@@ -69,7 +69,7 @@ describe('penalties list query', () => {
       status: undefined,
       search: undefined,
       page: 1,
-      limit: 20,
+      limit: 10,
     });
     const q = parsePenaltiesQuery({ month: '2026-09', status: 'PENDING', search: ' Mona ' }, '2026-11');
     expect(penaltiesQueryString(q, '2026-11')).toBe('?month=2026-09&status=PENDING&search=Mona');

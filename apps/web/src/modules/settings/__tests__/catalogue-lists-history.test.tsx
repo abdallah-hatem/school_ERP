@@ -242,21 +242,21 @@ describe('Change history', () => {
   it('lists what changed, old → new, who; the next page is requested with page 2', async () => {
     const user = userEvent.setup();
     api.GET_SETTINGS_HISTORY.mockImplementation(({ page }: { page: number }) =>
-      ok(page === 1 ? rows : [], { total: 25, page, limit: 20 }),
+      ok(page === 1 ? rows : [], { total: 25, page, limit: 10 }),
     );
     renderSettings(<HistorySection />);
     expect((await screen.findAllByText('Day value divisor'))[0]).toBeTruthy();
     expect(screen.getAllByText('Rania Saeed')[0]).toBeTruthy();
     expect(screen.getAllByText('Sunday, Monday')[0]).toBeTruthy();
     expect(screen.getAllByText('System')[0]).toBeTruthy();
-    expect(api.GET_SETTINGS_HISTORY).toHaveBeenCalledWith({ page: 1, limit: 20 });
+    expect(api.GET_SETTINGS_HISTORY).toHaveBeenCalledWith({ page: 1, limit: 10 });
 
     await user.click(screen.getAllByRole('button', { name: 'Next page' })[0]!);
-    await waitFor(() => expect(api.GET_SETTINGS_HISTORY).toHaveBeenLastCalledWith({ page: 2, limit: 20 }));
+    await waitFor(() => expect(api.GET_SETTINGS_HISTORY).toHaveBeenLastCalledWith({ page: 2, limit: 10 }));
   });
 
   it('no changes yet shows the empty state', async () => {
-    api.GET_SETTINGS_HISTORY.mockImplementation(() => ok([], { total: 0, page: 1, limit: 20 }));
+    api.GET_SETTINGS_HISTORY.mockImplementation(() => ok([], { total: 0, page: 1, limit: 10 }));
     renderSettings(<HistorySection />, 'ar');
     expect((await screen.findAllByText('لا توجد تغييرات بعد'))[0]).toBeTruthy();
   });

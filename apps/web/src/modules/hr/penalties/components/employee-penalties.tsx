@@ -75,7 +75,6 @@ export function EmployeePenalties({ employeesPath, employee, rows, total, page, 
           limit,
           total,
           onPageChange: (p) => go(p, limit),
-          onLimitChange: (l) => go(PAGINATION.defaultPage, l),
         }}
         toolbar={recordButton ? <div className="flex w-full justify-end">{recordButton}</div> : undefined}
       />

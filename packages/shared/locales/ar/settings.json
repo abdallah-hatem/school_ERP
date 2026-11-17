@@ -56,7 +56,7 @@
       "violation": "استخدم 300 حرف أو أقل.",
       "note": "استخدم 1,000 حرف أو أقل."
     },
-    "time": "أدخل وقتًا بنظام 24 ساعة مثل 07:30.",
+    "time": "اختر وقتًا على رأس الساعة أو نصفها.",
     "workHoursOrder": "يجب أن تكون نهاية العمل بعد بدايته.",
     "workingDays": "اختر يوم عمل واحدًا على الأقل.",
     "days": "استخدم أرباع الأيام من 0 إلى 30، مثل 0.25 أو 0.5 أو 1.25.",
@@ -73,10 +73,10 @@
     "defaultLanguage": "اللغة الافتراضية",
     "defaultLanguageHint": "ما تعرضه صفحة تسجيل الدخول والزوار الجدد أولًا.",
     "workStart": "بداية العمل",
-    "workStartPlaceholder": "07:30",
+    "workStartPlaceholder": "اختر وقتًا",
     "workEnd": "نهاية العمل",
-    "workEndPlaceholder": "15:00",
-    "timeHint": "بنظام 24 ساعة.",
+    "workEndPlaceholder": "اختر وقتًا",
+    "timeHint": "كل نصف ساعة.",
     "workingDays": "أيام العمل"
   },
   "logo": {

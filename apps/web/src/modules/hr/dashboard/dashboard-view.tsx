@@ -20,8 +20,8 @@ import {
   SettingsIcon,
   type AppIcon,
 } from '@/shared/components/ui/icons';
-import { Skeleton } from '@/shared/components/ui/skeleton';
-import { StatTile } from '@/shared/components/ui/stat-tile';
+import { Skeleton, SkeletonText } from '@/shared/components/ui/skeleton';
+import { StatTile, StatTileSubSkeleton } from '@/shared/components/ui/stat-tile';
 import { StatusPill } from '@/shared/components/ui/status-pill';
 import { formatCount, formatMoney, formatMonth } from '@/shared/lib/format';
 import { nameIn } from '@/shared/lib/i18n';
@@ -206,18 +206,51 @@ export function DashboardView({ data, month }: DashboardViewProps) {
 export function DashboardSkeleton() {
   const { t } = useTranslation();
   return (
-    <>
+    // `contents`: the tiles and quick links stay direct items of the screen's column, as loaded.
+    <div aria-busy="true" className="contents">
+      <span role="status" className="sr-only">
+        {t('ui.states.loading')}
+      </span>
       <div className={TILE_GRID}>
-        <StatTile tone="feature" icon={EmployeesIcon} label={t('dashboard.headcount.label')} value={null} loading />
-        <StatTile tone="primary" icon={PayrollIcon} label={<Skeleton className="h-4 w-28" />} value={null} loading />
-        <StatTile tone="info" icon={PenaltiesIcon} label={t('dashboard.penalties.pending')} value={null} loading />
-        <StatTile tone="info" icon={PenaltiesIcon} label={t('dashboard.penalties.approved')} value={null} loading />
+        <StatTile
+          tone="feature"
+          icon={EmployeesIcon}
+          label={t('dashboard.headcount.label')}
+          value={null}
+          loading
+          // Stages over two lines (four in a half-width phone tile); the row stretches to the tallest.
+          sub={<StatTileSubSkeleton lines={2} narrowLines={4} gapped feature />}
+        />
+        <StatTile
+          tone="primary"
+          icon={PayrollIcon}
+          label={<SkeletonText width="w-36" />}
+          value={null}
+          loading
+          sub={<Skeleton className="h-6 w-36 rounded-full" />}
+        />
+        <StatTile
+          tone="info"
+          icon={PenaltiesIcon}
+          label={t('dashboard.penalties.pending')}
+          value={null}
+          loading
+          sub={<StatTileSubSkeleton narrowLines={2} />}
+        />
+        <StatTile
+          tone="info"
+          icon={PenaltiesIcon}
+          label={t('dashboard.penalties.approved')}
+          value={null}
+          loading
+          sub={<StatTileSubSkeleton narrowLines={2} />}
+        />
       </div>
       <QuickLinksFrame>
         {QUICK_LINKS.map(({ key }) => (
           <Skeleton key={key} className="h-12 rounded-lg" />
         ))}
       </QuickLinksFrame>
-    </>
+    </div>
   );
 }

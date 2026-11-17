@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-table/data-table';
 import type { PaginationState } from '@/shared/components/data-table/pagination';
 import { BidiText } from '@/shared/components/ui/bidi-text';
+import { SkeletonButton, SkeletonIdentity, SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
 import { StatusPill, type StatusTone } from '@/shared/components/ui/status-pill';
 import { formatDate } from '@/shared/lib/format';
 import { nameIn } from '@/shared/lib/i18n';
@@ -45,7 +46,8 @@ export function PenaltiesTable({
   toolbar,
 }: {
   label: string;
-  rows: PenaltyRecord[];
+  /** `undefined` while the first page loads: skeleton rows of the same shape. */
+  rows: PenaltyRecord[] | undefined;
   /** `/ar/employees` — the employee cell links to the profile. */
   employeesPath: string;
   showEmployee?: boolean;
@@ -79,6 +81,7 @@ export function PenaltiesTable({
             className: 'min-w-40 whitespace-normal',
             card: 'title' as const,
             cell: (p: PenaltyRecord) => <EmployeeIdentity employee={p.employee} href={`${employeesPath}/${p.employee.id}`} />,
+            skeleton: <SkeletonIdentity />,
           },
         ]
       : []),
@@ -92,6 +95,12 @@ export function PenaltiesTable({
       id: 'action',
       header: t('penalties.columns.levelAction'),
       className: 'min-w-36 whitespace-normal',
+      skeleton: (
+        <span className="flex flex-col gap-0.5">
+          <SkeletonText className="text-xs" width="w-14" />
+          <SkeletonText width="w-28" />
+        </span>
+      ),
       cell: (p) => (
         <span className="flex flex-col gap-0.5">
           <span className="text-xs text-muted-foreground">{t('penalties.levelValue', { level: p.level })}</span>
@@ -104,6 +113,7 @@ export function PenaltiesTable({
       header: t('penalties.columns.status'),
       className: 'w-32 whitespace-normal',
       card: 'status',
+      skeleton: <SkeletonPill />,
       cell: (p) => (
         <span className="flex flex-col items-start gap-1">
           <PenaltyStatusPill status={p.status} />
@@ -119,6 +129,7 @@ export function PenaltiesTable({
       id: 'actions',
       header: t('penalties.columns.actions'),
       className: 'w-52',
+      skeleton: <SkeletonButton />,
       cell: (p) => <PenaltyActions record={p} />,
     },
   ];
@@ -128,6 +139,7 @@ export function PenaltiesTable({
       label={label}
       columns={columns}
       rows={rows}
+      loading={rows === undefined}
       getRowId={(p) => p.id}
       refreshing={refreshing}
       error={error}

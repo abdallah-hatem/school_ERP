@@ -9,7 +9,6 @@
   },
   "table": {
     "showing": "Showing {from}–{to} of {total}",
-    "rowsPerPage": "Rows per page",
     "pagination": "Pagination",
     "firstPage": "First page",
     "previousPage": "Previous page",

@@ -1,4 +1,5 @@
 import {
+  isOnWorkTimeStep,
   isValidDays,
   Language,
   levelDaysProblem,
@@ -17,9 +18,6 @@ import { z } from 'zod';
  * Form schemas. Messages are translation keys so one schema serves both languages (FieldShell
  * translates them). Business limits come from `@school-erp/shared` — never restated here.
  */
-
-/** `HH:mm`, 24-hour, zero-padded — the API's format (two times then compare as text). */
-export const TIME_OF_DAY = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 /** Name lengths from §7 / the API's DTOs. */
 export const NAME_MAX = { school: 200, list: 100, group: 200, violation: 300 } as const;
@@ -50,11 +48,11 @@ export const schoolSchema = z
     nameEn: name('school'),
     nameAr: name('school'),
     defaultLanguage: z.enum(Language, { error: required }),
-    workStart: z.string().trim().regex(TIME_OF_DAY, 'settings.errors.time'),
-    workEnd: z.string().trim().regex(TIME_OF_DAY, 'settings.errors.time'),
+    workStart: z.string().refine(isOnWorkTimeStep, 'settings.errors.time'),
+    workEnd: z.string().refine(isOnWorkTimeStep, 'settings.errors.time'),
     workingDays: z.array(z.enum(Weekday)).min(1, 'settings.errors.workingDays'),
   })
-  .refine((v) => !TIME_OF_DAY.test(v.workStart) || !TIME_OF_DAY.test(v.workEnd) || v.workEnd > v.workStart, { path: ['workEnd'], error: 'settings.errors.workHoursOrder' });
+  .refine((v) => !isOnWorkTimeStep(v.workStart) || !isOnWorkTimeStep(v.workEnd) || v.workEnd > v.workStart, { path: ['workEnd'], error: 'settings.errors.workHoursOrder' });
 export type SchoolFormValues = z.infer<typeof schoolSchema>;
 
 // ── Lists (stages, departments, job titles) and catalogue groups ─────────────

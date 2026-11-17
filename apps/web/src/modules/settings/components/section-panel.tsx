@@ -2,7 +2,6 @@
 
 import type { ReactNode } from 'react';
 import { Button } from '@/shared/components/ui/button';
-import { Skeleton } from '@/shared/components/ui/skeleton';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 
@@ -76,24 +75,6 @@ export function SaveBar({
       <Button type="submit" variant="primary" disabled={!dirty || !valid} loading={saving}>
         {t('common.actions.save')}
       </Button>
-    </div>
-  );
-}
-
-/** Skeleton in the shape of a settings form card. */
-export function FormSkeleton({ fields }: { fields: number }) {
-  return (
-    <div className="flex flex-col gap-5 rounded-3xl bg-card p-5 shadow-card sm:p-6" aria-hidden="true">
-      <Skeleton className="h-6 w-48" />
-      <Skeleton className="h-4 w-72 max-w-full" />
-      <div className="grid gap-5 md:grid-cols-2">
-        {Array.from({ length: fields }, (_, i) => (
-          <div key={i} className="flex flex-col gap-2">
-            <Skeleton className="h-4 w-28" />
-            <Skeleton className="h-11 w-full" />
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

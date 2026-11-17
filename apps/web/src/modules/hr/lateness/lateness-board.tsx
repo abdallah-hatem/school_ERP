@@ -1,6 +1,6 @@
 'use client';
 
-import { ErrorCode, type LatenessRule, type LatenessRow, type Month } from '@school-erp/shared';
+import { ErrorCode, PAGINATION, type LatenessRule, type LatenessRow, type Month } from '@school-erp/shared';
 import { useRouter } from 'next/navigation';
 import { useId, useMemo, useRef, useState, useTransition } from 'react';
 import { callApi } from '@/lib/callApi';
@@ -15,6 +15,7 @@ import { Days } from '@/shared/components/ui/figures';
 import { BlockedIcon, ErrorIcon, LatenessIcon, RetryIcon, SearchIcon } from '@/shared/components/ui/icons';
 import { Input } from '@/shared/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover';
+import { Skeleton, SkeletonText } from '@/shared/components/ui/skeleton';
 import { StatusPill } from '@/shared/components/ui/status-pill';
 import { formatCount, formatDayCount, formatMonth } from '@/shared/lib/format';
 import { nameIn } from '@/shared/lib/i18n';
@@ -23,16 +24,14 @@ import { PUT_LATENESS } from './apis';
 import { describeLatenessRule } from './describe-rule';
 import { gridState, matchesSearch, MINUTES_MAX, viewEntry, type Drafts } from './lateness-entries';
 
-const PAGE_SIZES = [20, 50, 100];
-
 export interface LatenessBoardProps {
   month: Month;
   /** Latest month that can be picked (this month). */
   maxMonth: Month;
-  /** `null` when the list failed to load. */
-  rows: LatenessRow[] | null;
-  /** `null` when the HR settings failed to load. */
-  rule: LatenessRule | null;
+  /** `null` when the list failed to load; `undefined` on first load (the route's skeleton). */
+  rows: LatenessRow[] | null | undefined;
+  /** `null` when the HR settings failed to load; `undefined` on first load. */
+  rule: LatenessRule | null | undefined;
   /** The month's payroll is approved: open read-only. */
   locked: boolean;
 }
@@ -48,17 +47,18 @@ export function LatenessBoard({ month, maxMonth, rows: initialRows, rule, locked
   const [navigating, startNavigation] = useTransition();
   const [retrying, startRetry] = useTransition();
 
-  const [rows, setRows] = useState<LatenessRow[] | null>(initialRows);
+  const [rows, setRows] = useState<LatenessRow[] | null | undefined>(initialRows);
+  const loading = rows === undefined;
   const [drafts, setDrafts] = useState<Drafts>({});
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(PAGE_SIZES[0] ?? 20);
+  const limit = PAGINATION.defaultLimit;
   const [locked, setLocked] = useState(initialLocked);
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
   const [pendingMonth, setPendingMonth] = useState<Month | null>(null);
 
-  const state = useMemo(() => gridState(rows ?? [], drafts, rule), [rows, drafts, rule]);
+  const state = useMemo(() => gridState(rows ?? [], drafts, rule ?? null), [rows, drafts, rule]);
   const filtered = useMemo(() => (rows ?? []).filter((row) => matchesSearch(row, search)), [rows, search]);
   const pageCount = Math.max(1, Math.ceil(filtered.length / limit));
   const currentPage = Math.min(page, pageCount);
@@ -112,6 +112,7 @@ export function LatenessBoard({ month, maxMonth, rows: initialRows, rule, locked
       header: t('lateness.columns.code'),
       className: 'w-28',
       card: 'hidden',
+      skeleton: <SkeletonText width="w-16" />,
       cell: (row) => <bdi className="tabular text-muted-foreground">{row.employee.code}</bdi>,
     },
     {
@@ -119,6 +120,12 @@ export function LatenessBoard({ month, maxMonth, rows: initialRows, rule, locked
       header: t('lateness.columns.employee'),
       className: 'min-w-48 whitespace-normal',
       card: 'title',
+      skeleton: (
+        <span className="flex min-w-0 flex-col">
+          <SkeletonText className="font-bold" width="w-32" />
+          <SkeletonText className="text-xs @min-[740px]:hidden" width="w-16" />
+        </span>
+      ),
       cell: (row) => (
         <span className="flex min-w-0 flex-col">
           <span className="font-bold break-words">{nameIn(row.employee, locale)}</span>
@@ -136,6 +143,7 @@ export function LatenessBoard({ month, maxMonth, rows: initialRows, rule, locked
       id: 'minutes',
       header: t('lateness.columns.minutes'),
       className: 'w-44',
+      skeleton: <Skeleton className="h-10 w-28 rounded-lg" />,
       cell: (row) => (
         <MinutesInput
           row={row}
@@ -151,7 +159,7 @@ export function LatenessBoard({ month, maxMonth, rows: initialRows, rule, locked
       align: 'end',
       className: 'w-32',
       cell: (row) => {
-        const view = viewEntry(row, drafts[row.employee.id], rule);
+        const view = viewEntry(row, drafts[row.employee.id], rule ?? null);
         return (
           <span data-testid={`days-${row.employee.id}`} aria-live="polite">
             {view.days === null ? '—' : <Days value={view.days} />}
@@ -181,7 +189,7 @@ export function LatenessBoard({ month, maxMonth, rows: initialRows, rule, locked
               month={month}
               max={maxMonth}
               onChange={requestMonth}
-              disabled={navigating || saving}
+              disabled={navigating || saving || loading}
               label={t('lateness.month')}
             />
             {locked ? null : (
@@ -189,7 +197,7 @@ export function LatenessBoard({ month, maxMonth, rows: initialRows, rule, locked
                 variant="primary"
                 className="cursor-pointer"
                 loading={saving}
-                disabled={state.invalidCount > 0 || state.entries.length === 0 || navigating || rows === null}
+                disabled={state.invalidCount > 0 || state.entries.length === 0 || navigating || !rows}
                 onClick={() => void saveAll()}
               >
                 {state.entries.length > 0
@@ -211,7 +219,7 @@ export function LatenessBoard({ month, maxMonth, rows: initialRows, rule, locked
         </div>
       ) : null}
 
-      {rule === null && rows !== null ? (
+      {rule === null && rows ? (
         <div role="alert" className="flex flex-wrap items-center gap-3 rounded-2xl bg-warning-soft px-4 py-3 text-warning-ink">
           <ErrorIcon className="size-5 shrink-0" />
           <p className="min-w-0 flex-1 text-sm">{t('lateness.settingsError')}</p>
@@ -225,13 +233,14 @@ export function LatenessBoard({ month, maxMonth, rows: initialRows, rule, locked
       <DataTable
         label={t('lateness.tableLabel', { month: monthLabel })}
         columns={columns}
-        rows={rows === null ? undefined : pageRows}
+        rows={rows ? pageRows : undefined}
+        loading={loading}
         getRowId={(row) => row.employee.id}
         error={rows === null}
         onRetry={retry}
         retrying={retrying}
         refreshing={navigating}
-        rowTone={(row) => (viewEntry(row, drafts[row.employee.id], rule).invalid ? 'danger' : undefined)}
+        rowTone={(row) => (viewEntry(row, drafts[row.employee.id], rule ?? null).invalid ? 'danger' : undefined)}
         empty={
           searching ? (
             <EmptyState icon={SearchIcon} title={t('lateness.noResults.title')} description={t('lateness.noResults.body')} />
@@ -247,19 +256,31 @@ export function LatenessBoard({ month, maxMonth, rows: initialRows, rule, locked
                 aria-label={t('lateness.search.label')}
                 placeholder={t('lateness.search.placeholder')}
                 value={search}
+                disabled={loading}
                 onChange={(e) => {
                   setSearch(e.target.value);
                   setPage(1);
                 }}
               />
-              <p data-testid="lateness-summary" className="ms-auto text-sm font-semibold text-muted-foreground">
-                {t('lateness.summary', {
-                  employees: formatCount(rows.length),
-                  minutes: formatCount(state.totalMinutes),
-                  days: state.totalDays === null ? '—' : formatDayCount(state.totalDays, locale),
-                })}
-              </p>
+              {rows ? (
+                <p data-testid="lateness-summary" className="ms-auto text-sm font-semibold text-muted-foreground">
+                  {t('lateness.summary', {
+                    employees: formatCount(rows.length),
+                    minutes: formatCount(state.totalMinutes),
+                    days: state.totalDays === null ? '—' : formatDayCount(state.totalDays, locale),
+                  })}
+                </p>
+              ) : (
+                <SkeletonText className="ms-auto text-sm" width="w-56" />
+              )}
               {rule ? <p className="w-full text-xs text-muted-foreground">{t('lateness.rule', { rule: describeLatenessRule(rule, t, locale) })}</p> : null}
+              {rule === undefined ? (
+                // The rule sentence: one line on a wide table, two on a phone.
+                <span className="flex w-full flex-col text-xs">
+                  <SkeletonText width="w-96" />
+                  <SkeletonText className="@min-[600px]:hidden" width="w-40" />
+                </span>
+              ) : null}
             </>
           )
         }
@@ -271,11 +292,6 @@ export function LatenessBoard({ month, maxMonth, rows: initialRows, rule, locked
                 limit,
                 total: filtered.length,
                 onPageChange: setPage,
-                onLimitChange: (next) => {
-                  setLimit(next);
-                  setPage(1);
-                },
-                limitOptions: PAGE_SIZES,
               }
         }
       />

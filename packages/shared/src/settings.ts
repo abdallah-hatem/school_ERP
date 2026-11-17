@@ -107,10 +107,20 @@ export const SETTING_LIMITS = {
   latenessMinutesMax: 6000,
 } as const;
 
+/**
+ * Work start / end (§7, DECIDED owner 2026-11-17): times sit on a 30-minute boundary. The screen
+ * offers `earliest` … `latest` in `stepMinutes` steps; the API checks only the boundary.
+ */
+export const WORK_TIME = {
+  stepMinutes: 30,
+  earliest: '05:00',
+  latest: '20:00',
+} as const;
+
 /** Pagination bounds from the contract. */
 export const PAGINATION = {
   defaultPage: 1,
-  defaultLimit: 20,
+  defaultLimit: 10,
   maxLimit: 100,
 } as const;
 

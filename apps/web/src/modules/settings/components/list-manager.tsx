@@ -1,12 +1,13 @@
 'use client';
 
-import type { ListItem } from '@school-erp/shared';
+import { PAGINATION, type ListItem } from '@school-erp/shared';
 import { useState } from 'react';
 import { callApi } from '@/lib/callApi';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-table/data-table';
 import { EmptyState } from '@/shared/components/layout/empty-state';
 import { Button } from '@/shared/components/ui/button';
 import { AddIcon, EditIcon, HideIcon, ShowIcon } from '@/shared/components/ui/icons';
+import { SkeletonButton, SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
 import { StatusPill } from '@/shared/components/ui/status-pill';
 import { localName, otherName } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
@@ -14,8 +15,6 @@ import { CREATE_LIST_ITEM, GET_LIST_ITEMS, UPDATE_LIST_ITEM, type ListKind } fro
 import { useResource } from '../hooks/use-resource';
 import { NamesDialog } from './names-dialog';
 import { SectionPanel } from './section-panel';
-
-const PAGE_SIZES = [10, 20, 50];
 
 /**
  * One managed list — stages, departments or job titles (§3, §7): add, rename, hide / show. No
@@ -26,7 +25,7 @@ export function ListManager({ kind }: { kind: ListKind }) {
   const { t, locale } = useTranslation();
   const list = useResource(kind, () => GET_LIST_ITEMS(kind));
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(PAGE_SIZES[0] ?? 10);
+  const limit = PAGINATION.defaultLimit;
   const [editing, setEditing] = useState<ListItem | 'new' | null>(null);
   const [toggling, setToggling] = useState<string | null>(null);
 
@@ -73,6 +72,12 @@ export function ListManager({ kind }: { kind: ListKind }) {
       id: 'name',
       header: t('settings.names.name'),
       card: 'title',
+      skeleton: (
+        <span className="flex min-w-0 flex-col">
+          <SkeletonText className="font-semibold" width="w-32" />
+          <SkeletonText className="text-xs" width="w-20" />
+        </span>
+      ),
       cell: (item) => (
         <div className="flex min-w-0 flex-col">
           <span className="font-semibold break-words">{localName(item, locale)}</span>
@@ -85,6 +90,7 @@ export function ListManager({ kind }: { kind: ListKind }) {
       header: t('settings.lists.status'),
       card: 'status',
       className: 'w-32',
+      skeleton: <SkeletonPill />,
       cell: (item) =>
         item.isActive ? (
           <StatusPill tone="success">{t('settings.lists.shown')}</StatusPill>
@@ -97,11 +103,17 @@ export function ListManager({ kind }: { kind: ListKind }) {
       header: <span className="sr-only">{t('settings.lists.actions')}</span>,
       card: 'actions',
       align: 'end',
-      className: 'w-56',
+      className: 'w-60',
+      skeleton: (
+        <span className="flex justify-end gap-2">
+          <SkeletonButton />
+          <SkeletonButton className="w-20" />
+        </span>
+      ),
       cell: (item) => {
         const label = localName(item, locale);
         return (
-          <div className="flex flex-wrap justify-end gap-2">
+          <div className="flex justify-end gap-2">
             <Button size="sm" variant="ghost" aria-label={t('settings.lists.renameItem', { name: label })} onClick={() => setEditing(item)}>
               <EditIcon />
               {t('settings.lists.rename')}
@@ -142,21 +154,8 @@ export function ListManager({ kind }: { kind: ListKind }) {
         onRetry={list.retry}
         retrying={list.retrying}
         empty={<EmptyState title={copy('emptyTitle')} description={copy('emptyBody')} action={addButton} />}
-        pagination={
-          all
-            ? {
-                page: current,
-                limit,
-                total: all.length,
-                onPageChange: setPage,
-                onLimitChange: (next) => {
-                  setLimit(next);
-                  setPage(1);
-                },
-                limitOptions: PAGE_SIZES,
-              }
-            : undefined
-        }
+        // Always there (total 0 while loading), so the skeleton has the bar the list will have.
+        pagination={{ page: current, limit, total: all?.length ?? 0, onPageChange: setPage }}
       />
       {editing ? (
         <NamesDialog

@@ -44,13 +44,13 @@ describe('core settings and school structure (e2e)', () => {
   });
 
   describe('/settings/school', () => {
-    it('fresh database: school defaults = Arabic, 07:30 / 15:00, Sunday–Thursday', async () => {
+    it('fresh database: school defaults = English, 07:30 / 15:00, Sunday–Thursday', async () => {
       const res = await http(app).get('/settings/school').expect(200);
       expect(res.body.data).toEqual({
         nameEn: '',
         nameAr: '',
         logoUrl: null,
-        defaultLanguage: 'ar',
+        defaultLanguage: 'en',
         workStart: '07:30',
         workEnd: '15:00',
         workingDays: ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY'],
@@ -91,6 +91,8 @@ describe('core settings and school structure (e2e)', () => {
       ['duplicate workingDays', { workingDays: ['SUNDAY', 'SUNDAY'] }],
       ['malformed time', { workStart: '7:30' }],
       ['out-of-range time', { workEnd: '24:00' }],
+      ['work start off the 30-minute boundary', { workStart: '07:15' }],
+      ['work end off the 30-minute boundary', { workEnd: '15:45' }],
       ['blank name', { nameAr: '   ' }],
     ])(
       'invalid defaultLanguage, empty or unknown workingDays, malformed time → 400 (%s)',
@@ -100,12 +102,26 @@ describe('core settings and school structure (e2e)', () => {
       },
     );
 
+    it('work times on a 30-minute boundary are accepted; an off-boundary one saves nothing', async () => {
+      const res = await http(app)
+        .patch('/settings/school')
+        .send({ workStart: '06:30', workEnd: '19:30' })
+        .expect(200);
+      expect(res.body.data).toMatchObject({ workStart: '06:30', workEnd: '19:30' });
+      await http(app).patch('/settings/school').send({ workStart: '06:30', workEnd: '19:20' }).expect(400);
+      const after = await http(app).get('/settings/school').expect(200);
+      expect(after.body.data).toMatchObject({ workStart: '06:30', workEnd: '19:30' });
+      // Back to the §7 defaults with no history, as the next tests assume.
+      await db.settingChange.deleteMany();
+      await db.schoolSetting.deleteMany();
+    });
+
     it('every successful change writes one history row with old and new value and the user', async () => {
       const res = await http(app)
         .patch('/settings/school')
-        .send({ workStart: '08:00', defaultLanguage: 'ar' /* unchanged: no row */ })
+        .send({ workStart: '08:00', defaultLanguage: 'en' /* unchanged: no row */ })
         .expect(200);
-      expect(res.body.data).toMatchObject({ workStart: '08:00', defaultLanguage: 'ar' });
+      expect(res.body.data).toMatchObject({ workStart: '08:00', defaultLanguage: 'en' });
 
       const rows = await historyFor('school.workStart');
       expect(rows).toHaveLength(1);

@@ -14,6 +14,7 @@ import {
   SettingsIcon,
   type AppIcon,
 } from '@/shared/components/ui/icons';
+import { SkeletonText } from '@/shared/components/ui/skeleton';
 import { formatCount, formatDateTime } from '@/shared/lib/format';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { describeLatenessRule } from '../../lateness/describe-rule';
@@ -29,7 +30,8 @@ export function RulesPanel({
   settingsHref,
   approvedAt = null,
 }: {
-  settings: HrSettings | null;
+  /** `null` when they failed to load; `undefined` while the run loads (bars in the rules' place). */
+  settings: HrSettings | null | undefined;
   settingsHref: string;
   /** Set for an APPROVED run. */
   approvedAt?: IsoDateTime | null;
@@ -56,7 +58,19 @@ export function RulesPanel({
           </p>
         </div>
       </div>
-      {settings ? (
+      {settings === undefined ? (
+        <ul aria-hidden="true" className="grid gap-2.5 @min-[640px]:grid-cols-2 @min-[960px]:grid-cols-3">
+          {RULE_SKELETONS.map(({ icon, title, lines }) => (
+            <Rule key={title} icon={icon} title={t(`payroll.rules.${title}`)}>
+              <span className="flex flex-col">
+                {Array.from({ length: lines }, (_, i) => (
+                  <SkeletonText key={i} width={i === lines - 1 ? 'w-28' : 'w-44'} />
+                ))}
+              </span>
+            </Rule>
+          ))}
+        </ul>
+      ) : settings ? (
         <ul className="grid gap-2.5 @min-[640px]:grid-cols-2 @min-[960px]:grid-cols-3">
           <Rule icon={DeductionsIcon} title={t('payroll.rules.dayValue')}>
             {t('payroll.rules.dayValueRule', {
@@ -100,6 +114,15 @@ export function RulesPanel({
     </aside>
   );
 }
+
+/** The five rules with the lines their text usually takes (the panel's loading shape). */
+const RULE_SKELETONS: { icon: AppIcon; title: string; lines: number }[] = [
+  { icon: DeductionsIcon, title: 'dayValue', lines: 2 },
+  { icon: EmployeesIcon, title: 'workSystem', lines: 2 },
+  { icon: LatenessIcon, title: 'lateness', lines: 3 },
+  { icon: PenaltiesIcon, title: 'penalties', lines: 2 },
+  { icon: BlockedIcon, title: 'netFloor', lines: 2 },
+];
 
 function Rule({ icon: Icon, title, children }: { icon: AppIcon; title: string; children: ReactNode }) {
   return (

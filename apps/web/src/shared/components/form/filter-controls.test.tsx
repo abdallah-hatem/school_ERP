@@ -4,8 +4,6 @@ import { cleanup, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { getBaseMessages } from '@/shared/lib/i18n';
-import { I18nProvider } from '@/shared/providers/i18n-provider';
 import { renderWithI18n } from '@/test/render';
 import { Pagination } from '../data-table/pagination';
 import { FilterSelect } from './filter-controls';
@@ -41,17 +39,9 @@ describe('Selects show their choice while closed', () => {
     expect(onChange).toHaveBeenCalledWith(undefined);
   });
 
-  it('rows-per-page shows the current size while closed, server render included', () => {
-    const pager = (
-      <Pagination page={1} limit={20} total={45} onPageChange={vi.fn()} onLimitChange={vi.fn()} />
-    );
-    renderWithI18n(pager);
-    expect(screen.getByRole('combobox', { name: 'Rows per page' }).textContent).toBe('20');
-    const html = renderToStaticMarkup(
-      <I18nProvider locale="en" messages={getBaseMessages('en')}>
-        {pager}
-      </I18nProvider>,
-    );
-    expect(html).toMatch(/role="combobox"[^>]*>(<[^>]+>)*20</);
+  it('pagination has no rows-per-page control (fixed page size)', () => {
+    renderWithI18n(<Pagination page={1} limit={10} total={45} onPageChange={vi.fn()} />);
+    expect(screen.queryByRole('combobox')).toBeNull();
+    expect(screen.getByText('Showing 1–10 of 45')).toBeTruthy();
   });
 });

@@ -1,26 +1,12 @@
-import { isMonth, monthOf, type Month } from '@school-erp/shared';
-import ar from '@school-erp/shared/locales/ar/lateness.json';
-import en from '@school-erp/shared/locales/en/lateness.json';
-import type { Locale, MessageTree } from '@/shared/lib/i18n';
+import { monthOf } from '@school-erp/shared';
+import type { Locale } from '@/shared/lib/i18n';
 import { I18nProvider } from '@/shared/providers/i18n-provider';
 import { LatenessBoard } from './lateness-board';
+import { resolveMonth } from './lateness-month';
 import { loadLateness } from './load-lateness';
+import { latenessMessages } from './messages';
 
-const MESSAGES: Record<Locale, MessageTree> = {
-  en: { lateness: en } as unknown as MessageTree,
-  ar: { lateness: ar } as unknown as MessageTree,
-};
-
-/** The lateness namespace for a locale (screens and tests nest it over the base messages). */
-export function latenessMessages(locale: Locale): MessageTree {
-  return MESSAGES[locale];
-}
-
-/** `?month=` when valid and not in the future, else this month. */
-export function resolveMonth(requested: string | string[] | undefined, current: Month): Month {
-  const value = Array.isArray(requested) ? requested[0] : requested;
-  return isMonth(value) && value <= current ? value : current;
-}
+export { latenessMessages, resolveMonth };
 
 /** Server: loads the month's list (with departments and its lock) and the live rule for the grid. */
 export async function LatenessScreen({ locale, month: requested }: { locale: Locale; month?: string | string[] }) {

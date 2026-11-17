@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { EmptyState, ErrorState } from '@/shared/components/layout/empty-state';
-import { Skeleton } from '@/shared/components/ui/skeleton';
+import { SkeletonText } from '@/shared/components/ui/skeleton';
 import { useScrollEdges } from '@/shared/hooks/use-scroll-edges';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
@@ -39,6 +39,11 @@ export interface DataTableColumn<Row> {
   card?: 'title' | 'status' | 'highlight' | 'field' | 'wide' | 'actions' | 'hidden';
   /** Label on the card; defaults to `header` when that is a string. */
   cardLabel?: ReactNode;
+  /**
+   * The cell while the table loads. Defaults to one line of text in the cell's own line box; pass
+   * one when the loaded cell is taller (a pill, a name over a code) so skeleton rows are as tall.
+   */
+  skeleton?: ReactNode;
 }
 
 export type RowTone = 'warning' | 'danger' | undefined;
@@ -105,13 +110,22 @@ export function DataTable<Row>({
   if (error) {
     body = <ErrorState onRetry={onRetry} retrying={retrying} />;
   } else if (showSkeleton) {
+    // The real table and cards with placeholder cells: same header, widths, paddings and row
+    // heights as the loaded rows, so nothing moves when they arrive.
+    const placeholders = Array.from({ length: skeletonCount }, (_, i) => i);
+    const skeletonColumns: DataTableColumn<number>[] = columns.map((column) => ({
+      ...column,
+      cell: () => column.skeleton ?? <SkeletonText />,
+    }));
     body = (
       <div aria-busy="true">
         <span role="status" className="sr-only">
           {t('ui.states.loading')}
         </span>
-        <TableSkeleton columns={columns} count={skeletonCount} viewClass={view.table} />
-        <CardsSkeleton count={Math.min(skeletonCount, 4)} viewClass={view.cards} />
+        <div aria-hidden="true">
+          <Table columns={skeletonColumns} rows={placeholders} getRowId={String} label={label} viewClass={view.table} />
+          <Cards columns={skeletonColumns} rows={placeholders} getRowId={String} label={label} viewClass={view.cards} />
+        </div>
       </div>
     );
   } else if (isEmpty) {
@@ -136,7 +150,7 @@ export function DataTable<Row>({
     >
       {toolbar ? <div className="flex flex-wrap items-center gap-3 px-5 pt-5 pb-4">{toolbar}</div> : null}
       {body}
-      {pagination && !error ? <Pagination {...pagination} disabled={loading || refreshing} /> : null}
+      {pagination && !error ? <Pagination {...pagination} disabled={loading || refreshing} loading={showSkeleton} /> : null}
     </section>
   );
 }
@@ -297,53 +311,5 @@ function Cards<Row>({ columns, rows, getRowId, label, rowTone, viewClass }: Rows
         );
       })}
     </ul>
-  );
-}
-
-// ── Skeletons: same rows, same heights ───────────────────────────────────────
-
-function TableSkeleton<Row>({
-  columns,
-  count,
-  viewClass,
-}: {
-  columns: DataTableColumn<Row>[];
-  count: number;
-  viewClass: string;
-}) {
-  return (
-    <div data-view="table" className={viewClass}>
-      <div className="mx-0 flex h-9 items-center gap-6 rounded-xl bg-muted px-5">
-        {columns.map((c) => (
-          <Skeleton key={c.id} className="h-3 flex-1 bg-border" />
-        ))}
-      </div>
-      {Array.from({ length: count }, (_, i) => (
-        <div key={i} data-skeleton-row="" className="flex h-[3.75rem] items-center gap-6 border-b border-border px-5 last:border-b-0">
-          {columns.map((c, j) => (
-            <Skeleton key={c.id} className={cn('h-4 flex-1', j === 0 && 'h-8')} />
-          ))}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function CardsSkeleton({ count, viewClass }: { count: number; viewClass: string }) {
-  return (
-    <div data-view="cards" className={cn('grid gap-3 px-4 pb-4', viewClass)}>
-      {Array.from({ length: count }, (_, i) => (
-        <div key={i} className="flex flex-col gap-2.5 rounded-2xl border border-border p-3.5">
-          <div className="flex items-start justify-between gap-3">
-            <Skeleton className="h-9 w-40" />
-            <Skeleton className="h-6 w-16 rounded-full" />
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <Skeleton className="h-13 rounded-xl" />
-            <Skeleton className="h-13 rounded-xl" />
-          </div>
-        </div>
-      ))}
-    </div>
   );
 }

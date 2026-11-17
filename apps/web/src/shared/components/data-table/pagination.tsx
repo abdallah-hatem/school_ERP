@@ -1,6 +1,5 @@
 'use client';
 
-import { useId } from 'react';
 import { Button } from '@/shared/components/ui/button';
 import {
   ChevronEndIcon,
@@ -8,7 +7,7 @@ import {
   ChevronLastIcon,
   ChevronStartIcon,
 } from '@/shared/components/ui/icons';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select';
+import { SkeletonText } from '@/shared/components/ui/skeleton';
 import { formatCount } from '@/shared/lib/format';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
@@ -18,8 +17,6 @@ export interface PaginationState {
   limit: number;
   total: number;
   onPageChange: (page: number) => void;
-  onLimitChange?: (limit: number) => void;
-  limitOptions?: number[];
 }
 
 /** Up to five page numbers around the current one. */
@@ -32,20 +29,23 @@ export function pageWindow(page: number, pageCount: number, size = 5): number[] 
 
 /**
  * Always visible, even when everything fits on one page: summary, first / previous / numbers /
- * next / last, and rows per page. Callers update the URL with `scroll: false` so the list stays put.
+ * next / last. No rows-per-page control: the page size is fixed by the caller. Callers update the URL with `scroll: false` so the list stays put.
  */
 export function Pagination({
   page,
   limit,
   total,
   onPageChange,
-  onLimitChange,
-  limitOptions = [10, 20, 50, 100],
   disabled = false,
+  loading = false,
   className,
-}: PaginationState & { disabled?: boolean; className?: string }) {
+}: PaginationState & {
+  disabled?: boolean;
+  /** First load: the summary is a bar (no "0 of 0" before the count is known). */
+  loading?: boolean;
+  className?: string;
+}) {
   const { t } = useTranslation();
-  const limitLabelId = useId();
   const pageCount = Math.max(1, Math.ceil(total / limit));
   const current = Math.min(Math.max(1, page), pageCount);
   const from = total === 0 ? 0 : (current - 1) * limit + 1;
@@ -73,27 +73,13 @@ export function Pagination({
         className,
       )}
     >
-      <p className="tabular" aria-live="polite">
-        {t('ui.table.showing', { from: formatCount(from), to: formatCount(to), total: formatCount(total) })}
-      </p>
-      {onLimitChange ? (
-        <div className="flex items-center gap-2">
-          <span id={limitLabelId}>{t('ui.table.rowsPerPage')}</span>
-          <Select value={String(limit)} onValueChange={(v) => onLimitChange(Number(v))} disabled={disabled}>
-            <SelectTrigger aria-labelledby={limitLabelId} className="tabular h-9 w-20">
-              {/* Named here, not left to Radix, so the closed trigger shows it from the first paint. */}
-              <SelectValue>{limit}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {limitOptions.map((option) => (
-                <SelectItem key={option} value={String(option)}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      ) : null}
+      {loading ? (
+        <SkeletonText width="w-32" />
+      ) : (
+        <p className="tabular" aria-live="polite">
+          {t('ui.table.showing', { from: formatCount(from), to: formatCount(to), total: formatCount(total) })}
+        </p>
+      )}
       {/*
         Phones (< 768px): previous · "Page X of Y" · next across the whole row — nine buttons don't
         fit a 326px card. From 768px: first / previous / page numbers / next / last.

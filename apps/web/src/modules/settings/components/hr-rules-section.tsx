@@ -2,10 +2,12 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
+  HrSettingKey,
   isValidDays,
   latenessDays,
   PART_TIME_WORK_SYSTEMS,
   REPETITION_WINDOWS,
+  SETTING_DEFAULTS,
   SETTING_LIMITS,
   type HrSettings,
   type LatenessRule,
@@ -15,6 +17,7 @@ import { useId, useRef, useState } from 'react';
 import { useFieldArray, useForm, useWatch, type Control } from 'react-hook-form';
 import { callApi } from '@/lib/callApi';
 import { NumberField, SelectField } from '@/shared/components/form/fields';
+import { SkeletonMask } from '@/shared/components/ui/skeleton';
 import { Form } from '@/shared/components/form/form';
 import { ErrorState } from '@/shared/components/layout/empty-state';
 import { Button } from '@/shared/components/ui/button';
@@ -27,7 +30,20 @@ import { GET_HR_SETTINGS, UPDATE_HR_SETTINGS } from '../apis';
 import { useReportDirty } from '../hooks/unsaved-changes';
 import { useResource } from '../hooks/use-resource';
 import { hrRulesSchema, type HrRulesFormValues } from '../schemas';
-import { FormSkeleton, SaveBar, SectionPanel } from './section-panel';
+import { SaveBar, SectionPanel } from './section-panel';
+
+const PLACEHOLDER: HrSettings = {
+  lateness: {
+    graceMinutes: SETTING_DEFAULTS[HrSettingKey.LATENESS_GRACE_MINUTES],
+    steps: SETTING_DEFAULTS[HrSettingKey.LATENESS_STEPS],
+    extraHourDays: SETTING_DEFAULTS[HrSettingKey.LATENESS_EXTRA_HOUR_DAYS],
+  },
+  payroll: {
+    dayDivisor: SETTING_DEFAULTS[HrSettingKey.PAYROLL_DAY_DIVISOR],
+    partTime: SETTING_DEFAULTS[HrSettingKey.PAYROLL_PART_TIME],
+  },
+  penalties: { repetitionWindow: SETTING_DEFAULTS[HrSettingKey.PENALTIES_REPETITION_WINDOW] },
+};
 
 /** Hours of a month's maximum minutes (6,000 → 100) — the API's cap on steps. */
 const MAX_STEPS = Math.ceil(SETTING_LIMITS.latenessMinutesMax / 60);
@@ -72,7 +88,14 @@ export function HrRulesSection() {
       </SectionPanel>
     );
   }
-  if (!settings.data) return <FormSkeleton fields={6} />;
+  if (!settings.data) {
+    // The form itself as its skeleton (the §7 defaults as placeholders): every field in place.
+    return (
+      <SkeletonMask>
+        <HrRulesForm initial={PLACEHOLDER} onSaved={() => undefined} />
+      </SkeletonMask>
+    );
+  }
   return <HrRulesForm initial={settings.data} onSaved={(next) => settings.setData(() => next)} />;
 }
 

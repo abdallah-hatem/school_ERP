@@ -230,6 +230,36 @@ html body[data-scroll-locked] {
   }
 }
 
+/*
+ * A form drawn as its own skeleton (`SkeletonMask`): the real layout with its labels, every control
+ * a pulsing block of the same size, values and icons hidden. Nothing in it can be used.
+ */
+@utility skeleton-mask {
+  pointer-events: none;
+  user-select: none;
+  & :is(input, textarea, button, [role="combobox"]) {
+    color: transparent !important;
+    border-color: transparent !important;
+    background: var(--secondary) !important;
+    box-shadow: none !important;
+    opacity: 1 !important;
+  }
+  & :is(input, textarea)::placeholder {
+    color: transparent !important;
+  }
+  & :is(button, [role="combobox"]) * {
+    visibility: hidden;
+  }
+  & [role="status"] {
+    visibility: hidden;
+  }
+  & :is(input, textarea, button, [role="combobox"]) {
+    @media (prefers-reduced-motion: no-preference) {
+      animation: pulse 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+  }
+}
+
 /* Directional icons (chevrons, arrows) mirror in Arabic. */
 @utility flip-rtl {
   [dir="rtl"] & {

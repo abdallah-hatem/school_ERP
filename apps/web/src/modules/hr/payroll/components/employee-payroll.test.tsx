@@ -50,7 +50,7 @@ describe('EmployeePayroll (profile tab)', () => {
   });
 
   it('pages through the server: the next page goes into the URL without scrolling', async () => {
-    renderTab({ total: 45, limit: 20 });
+    renderTab({ total: 45, limit: 10 });
     await userEvent.click(screen.getAllByRole('button', { name: /next/i })[0]!);
     expect(router.push).toHaveBeenCalledWith('/en/employees/e-mona/payroll?page=2', { scroll: false });
   });

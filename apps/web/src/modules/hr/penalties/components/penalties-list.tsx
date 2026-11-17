@@ -27,7 +27,8 @@ export interface PenaltiesListProps {
   query: PenaltiesListQuery;
   /** This month: the default and the latest month the stepper reaches. */
   currentMonth: Month;
-  rows: PenaltyRecord[];
+  /** `undefined` on first load (the route's skeleton): skeleton rows, controls disabled. */
+  rows: PenaltyRecord[] | undefined;
   total: number;
   error?: boolean;
   /** For the record dialog: active employees and the violations in use. */
@@ -81,8 +82,9 @@ export function PenaltiesList({
   }
 
   const filtered = Boolean(query.search || query.status);
+  const loading = rows === undefined;
   const recordButton = (
-    <Button variant="primary" className="cursor-pointer" onClick={() => setRecording(true)}>
+    <Button variant="primary" className="cursor-pointer" disabled={loading} onClick={() => setRecording(true)}>
       <AddIcon />
       {t('penalties.record')}
     </Button>
@@ -99,7 +101,7 @@ export function PenaltiesList({
               month={query.month}
               max={currentMonth}
               onChange={(month) => go({ ...query, month, page: PAGINATION.defaultPage })}
-              disabled={pending}
+              disabled={pending || loading}
               label={t('penalties.month')}
             />
             {recordButton}
@@ -136,7 +138,6 @@ export function PenaltiesList({
           limit: query.limit,
           total,
           onPageChange: (page) => go({ ...query, page }),
-          onLimitChange: (limit) => go({ ...query, limit, page: PAGINATION.defaultPage }),
         }}
         toolbar={
           <div role="search" className="flex w-full flex-wrap items-center gap-2.5">
@@ -147,6 +148,7 @@ export function PenaltiesList({
                 placeholder={t('penalties.filters.searchPlaceholder')}
                 value={search}
                 onChange={(e) => onSearchChange(e.target.value)}
+                disabled={loading}
                 className="ps-11"
               />
             </div>
@@ -156,6 +158,7 @@ export function PenaltiesList({
               value={query.status}
               options={PENALTY_STATUSES.map((s) => ({ value: s, label: t(`common.enums.penaltyStatus.${s}`) }))}
               onChange={(v) => go({ ...query, status: v as PenaltyStatus | undefined, page: PAGINATION.defaultPage })}
+              disabled={loading}
             />
           </div>
         }

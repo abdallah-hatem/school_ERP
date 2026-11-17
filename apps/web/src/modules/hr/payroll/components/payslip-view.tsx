@@ -9,6 +9,7 @@ import { BidiText } from '@/shared/components/ui/bidi-text';
 import { Button } from '@/shared/components/ui/button';
 import { Days, Money } from '@/shared/components/ui/figures';
 import { ChevronStartIcon, PayslipIcon, PrintIcon } from '@/shared/components/ui/icons';
+import { Skeleton, SkeletonText } from '@/shared/components/ui/skeleton';
 import { apiErrorText } from '@/shared/lib/api-error';
 import { formatCount, formatDate, formatDayCount, formatMonth } from '@/shared/lib/format';
 import { localName, nameIn } from '@/shared/lib/i18n';
@@ -261,6 +262,71 @@ export function PayslipView({ payslip, backHref }: { payslip: Payslip; backHref:
         ) : null}
         <p className="text-muted-foreground hidden text-xs print:block">{t('payroll.payslip.printNote')}</p>
       </article>
+    </div>
+  );
+}
+
+/**
+ * The payslip while it loads: the same buttons, A4 card, header, employee fields, sections and net
+ * band (the usual case — no penalties, no adjustments), with bars in place of the figures.
+ */
+export function PayslipSkeleton() {
+  const { t } = useTranslation();
+  const amount = <SkeletonText className="font-bold" width="w-24" />;
+  return (
+    <div className="flex flex-col gap-5" aria-busy="true">
+      <span role="status" className="sr-only">
+        {t('ui.states.loading')}
+      </span>
+      <div aria-hidden="true" className="flex flex-wrap items-center justify-between gap-3">
+        <Skeleton className="h-11 w-36 rounded-lg" />
+        <Skeleton className="h-11 w-28 rounded-lg" />
+      </div>
+      <div
+        aria-hidden="true"
+        className="bg-card shadow-card mx-auto flex w-full max-w-[210mm] flex-col gap-4 rounded-3xl p-5 text-sm md:p-8"
+      >
+        <div className="border-border flex flex-wrap items-start justify-between gap-4 border-b pb-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <Skeleton className="size-12 shrink-0 rounded-xl" />
+            <div className="min-w-0">
+              <SkeletonText className="font-display text-lg leading-tight font-extrabold" width="w-44" />
+              <p className="text-muted-foreground">{t('payroll.payslip.title')}</p>
+            </div>
+          </div>
+          <div className="text-end">
+            <p className="text-muted-foreground text-xs">{t('payroll.payslip.month')}</p>
+            <SkeletonText className="font-display text-lg font-extrabold" width="w-32" />
+          </div>
+        </div>
+        <section className="flex flex-col gap-2">
+          <SkeletonText className="font-display text-xl leading-tight font-extrabold" width="w-56" />
+          <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {(['code', 'nationalId', 'department', 'workSystem', 'basicSalary', 'dayValue'] as const).map((key) => (
+              <Field key={key} label={t(`payroll.payslip.${key}`)}>
+                <SkeletonText width="w-24" />
+              </Field>
+            ))}
+          </dl>
+        </section>
+        <Section title={t('payroll.payslip.salary')}>
+          <Row label={t('payroll.payslip.monthSalary')}>{amount}</Row>
+        </Section>
+        <Section title={t('payroll.payslip.penalties')}>
+          <SkeletonText width="w-40" />
+          <Row label={t('payroll.payslip.totalPenalties')}>{amount}</Row>
+        </Section>
+        <Section title={t('payroll.payslip.lateness')}>
+          <Row label={t('payroll.payslip.lateness')}>{amount}</Row>
+        </Section>
+        <Section title={t('payroll.payslip.adjustments')}>
+          <SkeletonText width="w-40" />
+        </Section>
+        <div className="bg-primary text-primary-foreground flex flex-wrap items-baseline justify-between gap-2 rounded-2xl px-5 py-4">
+          <span className="font-display text-lg font-extrabold">{t('payroll.payslip.net')}</span>
+          <SkeletonText className="text-2xl font-extrabold" width="w-40" barClassName="bg-primary-foreground/20" />
+        </div>
+      </div>
     </div>
   );
 }

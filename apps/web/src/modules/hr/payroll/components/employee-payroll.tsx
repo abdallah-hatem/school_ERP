@@ -117,7 +117,6 @@ export function EmployeePayroll({ payrollPath, tabPath, rows, total, page, limit
               limit,
               total,
               onPageChange: (p) => go(p, limit),
-              onLimitChange: (l) => go(1, l),
             }
       }
     />

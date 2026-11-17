@@ -81,6 +81,6 @@ describe('payroll loaders', () => {
 
   it('the profile tab is an error state (null rows) when the history fails', async () => {
     apis.GET_EMPLOYEE_PAYROLL_LINES.mockResolvedValue({ success: false, status: 502, message: 'x' });
-    expect(await loadEmployeePayroll('e-mona', { page: 1, limit: 20 })).toEqual({ rows: null, total: 0 });
+    expect(await loadEmployeePayroll('e-mona', { page: 1, limit: 10 })).toEqual({ rows: null, total: 0 });
   });
 });
