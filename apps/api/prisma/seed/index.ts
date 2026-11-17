@@ -1,11 +1,18 @@
 /**
- * Seed entry point (`pnpm --filter api db:seed`). Does nothing yet.
- * T2 adds `seed/admin.ts` (the HR admin); T16 composes the full demo seed here.
+ * Seed entry point (`pnpm --filter api db:seed`). T16 composes the full demo seed here.
  * Client material (school name, logo, catalogue text) lives in `prisma/seed-data.local/`
  * (git-ignored) — never in tracked files.
  */
+import { PrismaClient } from '@prisma/client';
+import { seedAdmin } from './admin';
+
 async function main(): Promise<void> {
-  // Intentionally empty until T2 / T16.
+  const prisma = new PrismaClient();
+  try {
+    await seedAdmin(prisma);
+  } finally {
+    await prisma.$disconnect();
+  }
 }
 
 main().catch((err: unknown) => {

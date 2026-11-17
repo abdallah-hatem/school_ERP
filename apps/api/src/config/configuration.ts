@@ -7,6 +7,13 @@ export interface AppConfig {
   databaseUrl: string;
   corsOrigin: string;
   uploadsDir: string;
+  auth: {
+    accessSecret: string;
+    accessTtlSeconds: number;
+    refreshTtlDays: number;
+    refreshReuseGraceSeconds: number;
+    cookieSecure: boolean;
+  };
 }
 
 export const configuration = (): AppConfig => {
@@ -17,5 +24,12 @@ export const configuration = (): AppConfig => {
     databaseUrl: env.DATABASE_URL,
     corsOrigin: env.CORS_ORIGIN,
     uploadsDir: env.UPLOADS_DIR,
+    auth: {
+      accessSecret: env.JWT_ACCESS_SECRET,
+      accessTtlSeconds: env.JWT_ACCESS_TTL_SECONDS,
+      refreshTtlDays: env.REFRESH_TOKEN_TTL_DAYS,
+      refreshReuseGraceSeconds: env.REFRESH_REUSE_GRACE_SECONDS,
+      cookieSecure: env.COOKIE_SECURE ?? env.NODE_ENV === 'production',
+    },
   };
 };

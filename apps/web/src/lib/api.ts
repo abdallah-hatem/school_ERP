@@ -3,7 +3,14 @@
 import { revalidateTag } from 'next/cache';
 import { cookies, headers as nextHeaders } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { refreshTokens } from '@/lib/middlewareFunctions';
+import {
+  ACCESS_TOKEN_KEY,
+  parseAuthSetCookies,
+  REFRESH_TOKEN_KEY,
+  refreshTokens,
+  sessionCookies,
+  authCookie,
+} from '@/lib/middlewareFunctions';
 import type { ApiResult } from '@/lib/types';
 
 /*
@@ -11,9 +18,6 @@ import type { ApiResult } from '@/lib/types';
  * `src/modules/<name>/apis.ts` ("use server"), one SCREAMING_CASE function per route, each calling
  * apiFetch then handleResponse. Nothing else calls fetch() against the API.
  */
-
-const ACCESS_TOKEN_KEY = process.env.NEXT_PUBLIC_AUTH_TOKEN_KEY || 'auth_token';
-const REFRESH_TOKEN_KEY = process.env.NEXT_PUBLIC_REFRESH_TOKEN_KEY || 'refresh_token';
 
 // Retry read-only requests on transient network failures. Off by default.
 const API_RETRY_ENABLED = process.env.ENABLE_API_RETRY === 'true';
@@ -27,6 +31,11 @@ type ApiFetchOptions = Omit<RequestInit, 'body'> & {
   params?: Record<string, string | string[] | undefined>;
   revalidateTags?: string[];
   ignore401Redirect?: boolean;
+  /**
+   * Copy the session cookies the API sets (login) or clears (logout) onto this app's origin.
+   * Server Actions and Route Handlers only — a render can't write cookies.
+   */
+  forwardAuthCookies?: boolean;
   /** Internal: prevents recursion when the refresh attempt itself returns 401. */
   _skipRefresh?: boolean;
 };
@@ -38,7 +47,9 @@ interface UnauthorizedSignal {
 }
 
 function isUnauthorizedSignal(err: unknown): err is UnauthorizedSignal {
-  return typeof err === 'object' && err !== null && (err as UnauthorizedSignal).unauthorized === true;
+  return (
+    typeof err === 'object' && err !== null && (err as UnauthorizedSignal).unauthorized === true
+  );
 }
 
 function isNextControlFlow(err: unknown): boolean {
@@ -142,6 +153,7 @@ async function executeRequest<T>(
     const res = await fetchWithRetry(fullUrl, { ...options, headers, body }, attempts);
 
     options.revalidateTags?.forEach((tag) => revalidateTag(tag, 'default'));
+    if (options.forwardAuthCookies) await forwardAuthCookies(res);
 
     if (
       res.status === 401 &&
@@ -160,27 +172,7 @@ async function executeRequest<T>(
           const refreshToken = cookieStore.get(REFRESH_TOKEN_KEY)?.value;
           const tokens = refreshToken ? await refreshTokens(refreshToken) : null;
           if (tokens) {
-            const secure = process.env.NODE_ENV === 'production';
-            cookieStore.set({
-              name: ACCESS_TOKEN_KEY,
-              value: tokens.access_token,
-              httpOnly: true,
-              secure,
-              sameSite: 'strict',
-              path: '/',
-              maxAge: 60 * 60 * 24,
-            });
-            if (tokens.refresh_token) {
-              cookieStore.set({
-                name: REFRESH_TOKEN_KEY,
-                value: tokens.refresh_token,
-                httpOnly: true,
-                secure,
-                sameSite: 'strict',
-                path: '/',
-                maxAge: 60 * 60 * 24 * 14,
-              });
-            }
+            sessionCookies(tokens).forEach((c) => cookieStore.set(c));
             return executeRequest<T>(
               fullUrl,
               { ...options, _skipRefresh: true },
@@ -221,12 +213,36 @@ async function executeRequest<T>(
     return await parseResponse<T>(res);
   } catch (err: unknown) {
     if (isUnauthorizedSignal(err)) {
-      return { unauthorized: true, redirect: err.redirect, message: err.message };
+      return {
+        unauthorized: true,
+        redirect: err.redirect,
+        message: err.message,
+      };
     }
     if (isNextControlFlow(err)) throw err;
     const message = err instanceof Error ? err.message : 'Network error';
     console.error('[apiFetch] network error:', message);
-    return { success: false, status: 0, message, data: null, networkError: true };
+    return {
+      success: false,
+      status: 0,
+      message,
+      data: null,
+      networkError: true,
+    };
+  }
+}
+
+/** Mirrors the API's session cookies onto this origin (set when present, delete when cleared). */
+async function forwardAuthCookies(res: Response): Promise<void> {
+  const { access, refresh } = parseAuthSetCookies(res.headers.getSetCookie());
+  const cookieStore = await cookies();
+  for (const [name, cookie] of [
+    [ACCESS_TOKEN_KEY, access],
+    [REFRESH_TOKEN_KEY, refresh],
+  ] as const) {
+    if (!cookie) continue;
+    if (!cookie.value || cookie.maxAge === 0) cookieStore.delete(name);
+    else cookieStore.set(authCookie(name, cookie.value, cookie.maxAge ?? 60 * 15));
   }
 }
 

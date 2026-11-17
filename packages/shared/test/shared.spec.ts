@@ -35,7 +35,7 @@ describe('locales', () => {
   });
 
   it('every error code has a translated message', () => {
-    const errorKeys = Object.keys(load('en', 'common.json').errors as Tree);
+    const errorKeys = Object.keys(load('en', 'errors.json'));
     expect(errorKeys.sort()).toEqual([...ERROR_CODES].sort());
   });
 

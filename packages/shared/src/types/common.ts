@@ -29,6 +29,8 @@ export interface ApiResponse<T = unknown> {
   data?: T;
   /** Stable machine code (see `ErrorCode`) on failures. */
   error?: string;
+  /** Per-field validation messages (400 `VALIDATION_FAILED` only), untranslated, for debugging. */
+  details?: string[];
   timestamp: string;
   path?: string;
   meta?: Meta;

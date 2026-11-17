@@ -26,12 +26,14 @@ export class ResponseUtil {
     statusCode: number = HttpStatus.INTERNAL_SERVER_ERROR,
     error?: string,
     path?: string,
+    details?: string[],
   ): ApiResponse {
     return {
       success: false,
       message,
       statusCode,
       error,
+      ...(details ? { details } : {}),
       timestamp: new Date().toISOString(),
       path,
     };
