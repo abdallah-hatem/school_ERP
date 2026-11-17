@@ -14,3 +14,6 @@
 - 2026-11-17 — Settings (T4 review): the logo is public for the sign-in page; logo limits (PNG/JPG/SVG,
   2 MB) and name lengths; the change history covers school settings, HR rules, lists and the
   catalogue and can be viewed; history is written just after the change (GUESS).
+- 2026-11-17 — Penalties (T7 review): retiring a group retires its violations; pending penalties can
+  still be approved or cancelled after retirement or deactivation; preview ignores the month lock;
+  rolling window boundary stated.

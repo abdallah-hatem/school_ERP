@@ -26,6 +26,7 @@
 - **GUESS** — "Earlier" means an earlier **violation date**, not an earlier approval: only approved
   penalties dated before this one count. The level is computed again at approval and then fixed.
 - **GUESS** — The repetition window is the **contract year** (1 June – 31 May). It's a setting (§7).
+  The rolling-12-months option starts on the same date one year earlier, inclusive.
 - **DECIDED** — A new penalty starts as **pending**. HR **approves** it, or **cancels** it with a
   required reason. Penalties are never deleted.
 - **GUESS** — An **approved** penalty can also be cancelled with a reason while its month's payroll
@@ -40,7 +41,12 @@
   are **recorded only**. They don't change pay in this version (Planned).
 - **DECIDED** — A penalty can't be recorded, approved or cancelled once the payroll of the month it
   is dated in is approved. Corrections go into the next month as adjustments (§6).
-- **DECIDED** — A retired violation can't be used for new penalties.
+- **DECIDED** — A retired violation can't be used for new penalties. Retiring a **group** retires
+  every violation in it.
+- **DECIDED** — Retiring a violation or deactivating an employee blocks only *new* penalties. A
+  penalty already pending can still be approved or cancelled.
+- **DECIDED** — The preview (level and action before saving) saves nothing, so it ignores the month
+  lock; recording, approving and cancelling respect it.
 - **DECIDED** — Pending penalties show the level, action and days the catalogue gives today. Editing
   the catalogue changes pending penalties, never approved ones.
 - **OPEN** — Who approves penalties, and whether an investigation is needed before a deduction.

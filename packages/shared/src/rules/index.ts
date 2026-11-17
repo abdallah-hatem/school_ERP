@@ -4,3 +4,4 @@
 export * from './days';
 export * from './employees';
 export * from './lateness';
+export * from './penalties';

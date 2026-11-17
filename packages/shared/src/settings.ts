@@ -38,6 +38,17 @@ export const HrListKey = {
 } as const;
 export type HrListKey = (typeof HrListKey)[keyof typeof HrListKey];
 
+/**
+ * History keys for penalty catalogue edits (§7: catalogue edits write history, scope `catalogue`).
+ * Old / new values are snapshots: a group `{ id, nameEn, nameAr, sortOrder, isActive }`, a
+ * violation `{ id, groupId, nameEn, nameAr, note, isActive, levels }`. `null` old value = created.
+ */
+export const HrCatalogueKey = {
+  PENALTY_GROUPS: 'hr.penaltyGroups',
+  VIOLATIONS: 'hr.violations',
+} as const;
+export type HrCatalogueKey = (typeof HrCatalogueKey)[keyof typeof HrCatalogueKey];
+
 /** One lateness hour step: the `hour`-th accumulated hour costs `days`. */
 export interface LatenessStep {
   hour: number;
