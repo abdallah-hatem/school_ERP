@@ -3,7 +3,7 @@ import type { AuthUser, LatenessMonth } from '@school-erp/shared';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
 import { LatenessMonthParamDto, LatenessMonthQueryDto, PutLatenessDto } from '../dto/lateness.dto';
 import { LatenessService } from '../services/lateness.service';
-import { NotAudited } from '../../../../core/audit';
+import { Audited } from '../../../../core/audit';
 import { Permission } from '../../../../core/permissions';
 
 /**
@@ -21,7 +21,7 @@ export class LatenessController {
     return this.lateness.month(query.month);
   }
 
-  @NotAudited('wired in T29')
+  @Audited('hr.lateness.save')
   @Put(':month')
   @Permission('hr.lateness.edit')
   put(

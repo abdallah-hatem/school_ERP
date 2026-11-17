@@ -1,11 +1,15 @@
 import { Injectable } from '@nestjs/common';
-import type {
-  LatenessMonth,
-  LatenessRow,
-  Month,
-  PermissionKey,
-  PutLatenessRequest,
+import {
+  AuditEntityType,
+  type AuditChange,
+  type LatenessMonth,
+  type LatenessRow,
+  type Month,
+  type PermissionKey,
+  type PutLatenessRequest,
 } from '@school-erp/shared';
+import { AuditService } from '../../../../core/audit';
+import { AfterCommit } from '../../../../database/transactions';
 import { latenessDays } from '../../domain';
 import { EmployeesService } from '../../employees/services/employees.service';
 import { MonthLockService } from '../../month-lock/month-lock.service';
@@ -23,6 +27,8 @@ export class LatenessService {
     private readonly employees: EmployeesService,
     private readonly settings: HrSettingsService,
     private readonly monthLock: MonthLockService,
+    private readonly audit: AuditService,
+    private readonly tx: AfterCommit,
   ) {}
 
   /**
@@ -61,16 +67,40 @@ export class LatenessService {
    * employees — nothing is written unless every entry is valid.
    */
   async put(month: Month, body: PutLatenessRequest, userId: string | null): Promise<LatenessMonth> {
-    await this.monthLock.assertMonthOpen(month);
-    const ids = body.entries.map((e) => e.employeeId);
-    // Scope first (edge case 3): an employee outside `hr.lateness.edit` → 404, nothing written.
-    await this.employees.assertScopeFirst('hr.lateness.edit', ids);
-    await this.employees.assertActive(ids);
-    await this.repository.upsertMany(
-      month,
-      body.entries.map(({ employeeId, minutes }) => ({ employeeId, minutes })),
-      userId,
-    );
-    return this.month(month);
+    // The month's minutes and its audit entry commit together (audit D2).
+    return this.tx.inTransaction(async () => {
+      await this.monthLock.assertMonthOpen(month);
+      const ids = body.entries.map((e) => e.employeeId);
+      // Scope first (edge case 3): an employee outside `hr.lateness.edit` → 404, nothing written.
+      await this.employees.assertScopeFirst('hr.lateness.edit', ids);
+      await this.employees.assertActive(ids);
+      const before = new Map(
+        (await this.repository.findByMonth(month)).map((e) => [e.employeeId, e.minutes]),
+      );
+      await this.repository.upsertMany(
+        month,
+        body.entries.map(({ employeeId, minutes }) => ({ employeeId, minutes })),
+        userId,
+      );
+      // One entry for the month (spec edge case 7): a line per employee whose minutes changed.
+      const names = new Map((await this.employees.listActiveRefs()).map((e) => [e.id, e]));
+      const changes: AuditChange[] = body.entries
+        .filter(({ employeeId, minutes }) => (before.get(employeeId) ?? 0) !== minutes)
+        .map(({ employeeId, minutes }) => {
+          const employee = names.get(employeeId);
+          return {
+            field: 'minutes',
+            before: before.get(employeeId) ?? 0,
+            after: minutes,
+            subject: { en: employee?.nameEn ?? employeeId, ar: employee?.nameAr ?? employeeId },
+          };
+        });
+      await this.audit.record({
+        action: 'hr.lateness.save',
+        entity: { type: AuditEntityType.LATENESS_MONTH, id: month, label: month },
+        changes,
+      });
+      return this.month(month);
+    });
   }
 }

@@ -1,5 +1,8 @@
 # Recent changes
 
+- 2026-11-18 — Audit log (§9, T29): penalties (record, approve, cancel), monthly lateness (one entry
+  per saved month, a line per changed employee) and payroll runs (create, recalculate, approve with
+  the totals; adjustments added and removed) are now recorded, together with the change.
 - 2026-11-18 — What each role sees (§2, P4, owner: "I still see salaries, all employees, every
   detail"): stage and team limits and salary visibility are now enforced. A stage head sees only
   their stage's employees, a direct manager only their team — in every list, count, picker,
