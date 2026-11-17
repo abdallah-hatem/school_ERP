@@ -142,13 +142,15 @@
   "create": {
     "title": "Add employee",
     "description": "The employee code is assigned automatically when you save.",
-    "submit": "Save employee"
+    "submit": "Save employee",
+    "done": "{name} was added."
   },
   "edit": {
     "title": "Edit employee",
     "submit": "Save changes",
     "unsaved": "You have unsaved changes.",
-    "noChanges": "No changes yet."
+    "noChanges": "No changes yet.",
+    "done": "Changes to {name} were saved."
   },
   "profile": {
     "tabs": "Employee sections",
@@ -163,7 +165,9 @@
     "deactivateTitle": "Deactivate {name}?",
     "deactivateBody": "Their record and history are kept. They won't be included in new payroll runs and can't get new penalties or lateness entries.",
     "reactivateTitle": "Reactivate {name}?",
-    "reactivateBody": "They will be included in new payroll runs again and can get penalties and lateness entries."
+    "reactivateBody": "They will be included in new payroll runs again and can get penalties and lateness entries.",
+    "deactivated": "{name} was deactivated.",
+    "reactivated": "{name} was reactivated."
   },
   "card": {
     "view": "View",

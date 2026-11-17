@@ -42,6 +42,14 @@ describe('EmployeeStatusAction', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 
+  it('draws Deactivate as destructive for an active employee and Reactivate as positive for an inactive one', () => {
+    const { unmount } = renderEmployees(<EmployeeStatusAction employee={employee} />);
+    expect(screen.getByRole('button', { name: 'Deactivate' }).dataset.variant).toBe('destructive-outline');
+    unmount();
+    renderEmployees(<EmployeeStatusAction employee={{ ...employee, status: 'INACTIVE' }} />);
+    expect(screen.getByRole('button', { name: 'Reactivate' }).dataset.variant).toBe('success-soft');
+  });
+
   it('keeps the dialog open when the request fails', async () => {
     const user = userEvent.setup();
     reactivate.mockResolvedValue({ success: false, status: 500, message: 'Server error' } as never);
