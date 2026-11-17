@@ -1,7 +1,7 @@
 'use client';
 
 import { Dialog as DialogPrimitive } from 'radix-ui';
-import type { ComponentProps, ReactNode } from 'react';
+import { useRef, type ComponentProps, type ReactNode } from 'react';
 import { cn } from '@/shared/lib/utils';
 import { CloseIcon } from './icons';
 
@@ -45,6 +45,8 @@ export function DialogContent({
   footer,
   closeLabel,
   children,
+  onOpenAutoFocus,
+  onCloseAutoFocus,
   ...props
 }: Omit<ComponentProps<typeof DialogPrimitive.Content>, 'title'> & {
   size?: DialogSize;
@@ -54,6 +56,9 @@ export function DialogContent({
   /** Accessible name of the ✕ button; omit to hide it. */
   closeLabel?: string;
 }) {
+  // Radix returns focus to a `DialogTrigger` only; most dialogs here open from state (a row's ⋯
+  // menu, a button elsewhere), so remember what had focus and go back to it on close.
+  const returnTo = useRef<HTMLElement | null>(null);
   return (
     <DialogPrimitive.Portal>
       <DialogOverlay />
@@ -68,6 +73,19 @@ export function DialogContent({
           className,
         )}
         {...(description ? {} : { 'aria-describedby': undefined })}
+        onOpenAutoFocus={(event) => {
+          returnTo.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+          onOpenAutoFocus?.(event);
+        }}
+        onCloseAutoFocus={(event) => {
+          onCloseAutoFocus?.(event);
+          const target = returnTo.current;
+          returnTo.current = null;
+          if (!event.defaultPrevented && target?.isConnected) {
+            event.preventDefault();
+            target.focus();
+          }
+        }}
         {...props}
       >
         <div className={cn('flex shrink-0 items-start gap-3 px-6 py-5', children ? 'border-b border-border' : null)}>

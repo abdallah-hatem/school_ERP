@@ -4,10 +4,11 @@ import { PAGINATION, type ListItem } from '@school-erp/shared';
 import { useState } from 'react';
 import { callApi } from '@/lib/callApi';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-table/data-table';
+import { RowActions, rowActionsColumn } from '@/shared/components/data-table/row-actions';
 import { EmptyState } from '@/shared/components/layout/empty-state';
 import { Button } from '@/shared/components/ui/button';
 import { AddIcon, EditIcon, HideIcon, ShowIcon } from '@/shared/components/ui/icons';
-import { SkeletonButton, SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
+import { SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
 import { StatusPill } from '@/shared/components/ui/status-pill';
 import { localName, otherName } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
@@ -98,41 +99,19 @@ export function ListManager({ kind }: { kind: ListKind }) {
           <StatusPill tone="neutral">{t('settings.lists.hidden')}</StatusPill>
         ),
     },
-    {
-      id: 'actions',
-      header: <span className="sr-only">{t('settings.lists.actions')}</span>,
-      card: 'actions',
-      align: 'end',
-      className: 'w-60',
-      skeleton: (
-        <span className="flex justify-end gap-2">
-          <SkeletonButton />
-          <SkeletonButton className="w-20" />
-        </span>
-      ),
-      cell: (item) => {
-        const label = localName(item, locale);
-        return (
-          <div className="flex justify-end gap-2">
-            <Button size="sm" variant="ghost" aria-label={t('settings.lists.renameItem', { name: label })} onClick={() => setEditing(item)}>
-              <EditIcon />
-              {t('settings.lists.rename')}
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              loading={toggling === item.id}
-              disabled={toggling !== null && toggling !== item.id}
-              aria-label={t(item.isActive ? 'settings.lists.hideItem' : 'settings.lists.showItem', { name: label })}
-              onClick={() => void toggle(item)}
-            >
-              {toggling === item.id ? null : item.isActive ? <HideIcon /> : <ShowIcon />}
-              {item.isActive ? t('settings.lists.hide') : t('settings.lists.show')}
-            </Button>
-          </div>
-        );
-      },
-    },
+    rowActionsColumn(t('settings.lists.actions'), (item) => (
+      <RowActions
+        label={t('ui.table.actionsFor', { name: localName(item, locale) })}
+        busy={toggling === item.id}
+        disabled={toggling !== null && toggling !== item.id}
+        actions={[
+          { id: 'rename', label: t('settings.lists.rename'), icon: EditIcon, onSelect: () => setEditing(item) },
+          item.isActive
+            ? { id: 'hide', label: t('settings.lists.hide'), icon: HideIcon, destructive: true, onSelect: () => void toggle(item) }
+            : { id: 'show', label: t('settings.lists.show'), icon: ShowIcon, onSelect: () => void toggle(item) },
+        ]}
+      />
+    )),
   ];
 
   const addButton = (

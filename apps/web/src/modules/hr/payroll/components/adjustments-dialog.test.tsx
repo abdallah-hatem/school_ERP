@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import '@/test/dom-polyfills';
+import { chooseRowAction } from '@/test/row-actions';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -45,7 +46,7 @@ function renderRun(r = run()) {
 async function openFor(name: string) {
   const user = userEvent.setup();
   const tableEl = document.querySelector<HTMLElement>('[data-view="table"]')!;
-  await user.click(within(tableEl).getByRole('button', { name: `Adjustments for ${name}` }));
+  await chooseRowAction(user, name, /^Adjust/, within(tableEl));
   return { user, dialog: await screen.findByRole('dialog') };
 }
 

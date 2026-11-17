@@ -16,6 +16,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useId, useMemo, useRef, useState, useTransition } from 'react';
 import { callApi } from '@/lib/callApi';
+import { RowActions, RowActionsSkeleton } from '@/shared/components/data-table/row-actions';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-table/data-table';
 import { FilterSelect, SearchInput } from '@/shared/components/form/filter-controls';
 import { EmptyState } from '@/shared/components/layout/empty-state';
@@ -40,7 +41,7 @@ import {
   RecalculateIcon,
   SearchIcon,
 } from '@/shared/components/ui/icons';
-import { SkeletonButton, SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
+import { SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
 import { StatTile, StatTileSubSkeleton } from '@/shared/components/ui/stat-tile';
 import { StatusPill } from '@/shared/components/ui/status-pill';
 import { Switch } from '@/shared/components/ui/switch';
@@ -256,37 +257,27 @@ export function RunPage({
         const name = localName(line, locale);
         const count = adjustmentsOf(run.adjustments, line.employeeId).length;
         return (
-          <span className="inline-flex items-center justify-end gap-1.5">
-            {/* Approved: the payslip is the action; recorded adjustments stay viewable (icon only). */}
-            {draft || count > 0 ? (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="cursor-pointer"
-                aria-label={t('payroll.table.adjustFor', { name })}
-                onClick={() => setAdjusting({ employeeId: line.employeeId, name })}
-              >
-                <AdjustIcon />
-                {draft ? t('payroll.table.adjust') : null}
-                {count > 0 ? (
-                  <span className="tabular bg-primary-soft text-primary grid min-w-5 place-items-center rounded-full px-1.5 text-xs">
-                    {formatCount(count)}
-                  </span>
-                ) : null}
-              </Button>
-            ) : null}
-            {draft ? null : (
-              <Button asChild size="sm" variant="soft" className="cursor-pointer">
-                <Link
-                  href={`${basePath}/${run.id}/payslip/${line.id}`}
-                  aria-label={t('payroll.table.payslipFor', { name })}
-                >
-                  <PayslipIcon />
-                  {t('payroll.table.payslip')}
-                </Link>
-              </Button>
-            )}
-          </span>
+          <RowActions
+            label={t('ui.table.actionsFor', { name })}
+            actions={[
+              // Draft: adjust. Approved: recorded adjustments stay viewable; with none, nothing to show.
+              {
+                id: 'adjust',
+                label: draft ? t('payroll.table.adjust') : t('payroll.table.columns.adjustments'),
+                icon: AdjustIcon,
+                count,
+                hidden: !draft && count === 0,
+                onSelect: () => setAdjusting({ employeeId: line.employeeId, name }),
+              },
+              {
+                id: 'payslip',
+                label: t('payroll.table.payslip'),
+                icon: PayslipIcon,
+                hidden: draft,
+                href: `${basePath}/${run.id}/payslip/${line.id}`,
+              },
+            ]}
+          />
         );
       },
     },
@@ -546,7 +537,7 @@ const RUN_COLUMN_LAYOUT: Record<RunColumnId, Omit<DataTableColumn<PayrollLine>, 
   adjustments: { align: 'end', className: 'w-28' },
   net: { align: 'end', className: 'w-32', card: 'highlight' },
   status: { className: 'w-36', card: 'status', skeleton: <SkeletonPill /> },
-  actions: { align: 'end', className: 'w-44', skeleton: <SkeletonButton /> },
+  actions: { align: 'end', className: 'w-16', card: 'menu', skeleton: <RowActionsSkeleton /> },
 };
 
 /** A line column's id, header and layout (the cell is the caller's). */
@@ -677,7 +668,9 @@ export function RunLinesToolbar({
             .map((d) => ({
               value: d.id,
               label: localName(d, locale),
+              keywords: [d.nameEn, d.nameAr],
             }))}
+          searchable
           onChange={(departmentId) => onFilter({ ...query, departmentId })}
         />
         <label className="flex h-11 cursor-pointer items-center gap-2.5 rounded-lg px-1 text-sm font-semibold">

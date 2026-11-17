@@ -15,7 +15,9 @@ import {
   CalendarBlankIcon as CalendarBlank,
   CalendarPlusIcon as CalendarPlus,
   CoinsIcon as Coins,
+  DotsThreeIcon as DotsThree,
   FileArrowDownIcon as FileArrowDown,
+  FolderOpenIcon as FolderOpen,
   HandCoinsIcon as HandCoins,
   PlusMinusIcon as PlusMinus,
   PrinterIcon as Printer,
@@ -55,6 +57,7 @@ import {
   XIcon as X,
 } from '@phosphor-icons/react/ssr';
 import type { ComponentType } from 'react';
+import { cn } from '@/shared/lib/utils';
 
 /*
  * The one place the icon set lives (DESIGN.md → Icons): Phosphor, duotone by default. Screens
@@ -106,8 +109,34 @@ export const SearchIcon = duotone(MagnifyingGlass, 'Search');
 export const CalendarIcon = duotone(CalendarBlank, 'Calendar');
 export const RetryIcon = duotone(ArrowClockwise, 'Retry');
 
+/**
+ * The "add" mark on every Add / Create / Record button: a bold plus in a small soft rounded badge
+ * (owner's pick, design/mockups/add-icons.html option 2). On a primary button the badge is a light
+ * wash of the button's text colour; elsewhere a primary-soft tint.
+ */
+function AddBadge({ className, ...props }: IconProps) {
+  return (
+    <span
+      aria-hidden="true"
+      data-slot="add-badge"
+      className={cn(
+        'inline-grid size-6 shrink-0 place-items-center rounded-lg bg-primary-soft text-primary',
+        '[[data-variant=primary]_&]:bg-primary-foreground/18 [[data-variant=primary]_&]:text-current',
+        className,
+      )}
+    >
+      <Plus weight="bold" focusable="false" {...props} className="size-4" />
+    </span>
+  );
+}
+AddBadge.displayName = 'AddIcon';
+
 // Actions
-export const AddIcon = duotone(Plus, 'Add');
+export const AddIcon: AppIcon = AddBadge;
+/** The ⋯ that opens a row's actions. */
+export const MoreIcon: AppIcon = function MoreIcon(props: IconProps) {
+  return <DotsThree weight="bold" aria-hidden="true" focusable="false" {...props} />;
+};
 export const EditIcon = duotone(PencilSimple, 'Edit');
 export const DeactivateIcon = duotone(UserMinus, 'Deactivate');
 export const ReactivateIcon = duotone(UserCheck, 'Reactivate');
@@ -129,6 +158,8 @@ export const GrossIcon = duotone(Coins, 'Gross');
 export const DeductionsIcon = duotone(Receipt, 'Deductions');
 export const NetPayIcon = duotone(HandCoins, 'NetPay');
 export const PayslipIcon = duotone(Receipt, 'Payslip');
+/** Open a record (a payroll run). */
+export const OpenIcon = duotone(FolderOpen, 'Open');
 
 // States
 export const EmptyIcon = duotone(Tray, 'Empty');

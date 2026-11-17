@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import '@/test/dom-polyfills';
+import { menuItemNames, openRowActions } from '@/test/row-actions';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -44,11 +45,12 @@ describe('EmployeePenalties (profile tab)', () => {
   });
   afterEach(cleanup);
 
-  it('lists the penalties of every month with the row actions, without an employee column', () => {
+  it('lists the penalties of every month with the row actions, without an employee column', async () => {
+    const user = userEvent.setup();
     renderTab();
     expect(table().queryByRole('columnheader', { name: 'Employee' })).toBeNull();
     expect(table().getAllByRole('row')).toHaveLength(3);
-    expect(table().getByRole('button', { name: 'Approve the penalty of Mona Khalil' })).toBeTruthy();
+    expect(menuItemNames(await openRowActions(user, 'Mona Khalil', table()))).toContain('Approve');
   });
 
   it('pages through the URL without scrolling', async () => {

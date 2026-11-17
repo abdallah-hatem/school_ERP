@@ -77,7 +77,7 @@ export function EmployeesList({ basePath, query, rows, total, departments, stage
 
   const filtered = hasActiveFilters(query);
   const itemOptions = (items: ListItem[]) =>
-    [...items].sort((a, b) => a.sortOrder - b.sortOrder).map((i) => ({ value: i.id, label: localName(i, locale) }));
+    [...items].sort((a, b) => a.sortOrder - b.sortOrder).map((i) => ({ value: i.id, label: localName(i, locale), keywords: [i.nameEn, i.nameAr] }));
 
   const addButton = (
     <Button asChild variant="primary">
@@ -154,6 +154,7 @@ export function EmployeesList({ basePath, query, rows, total, departments, stage
                 allLabel={t('employees.list.allDepartments')}
                 value={query.departmentId}
                 options={itemOptions(departments)}
+                searchable
                 onChange={(v) => setFilter('departmentId', v)}
                 className="w-full sm:w-full @min-[1000px]:w-44"
               />
@@ -162,6 +163,7 @@ export function EmployeesList({ basePath, query, rows, total, departments, stage
                 allLabel={t('employees.list.allStages')}
                 value={query.stageId}
                 options={itemOptions(stages)}
+                searchable
                 onChange={(v) => setFilter('stageId', v)}
                 className="w-full sm:w-full @min-[1000px]:w-44"
               />

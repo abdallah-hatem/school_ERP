@@ -214,9 +214,9 @@ export function listOptions(
   const options = items
     .filter((item) => item.isActive)
     .sort((a, b) => a.sortOrder - b.sortOrder)
-    .map((item) => ({ value: item.id, label: localName(item, locale) }));
+    .map((item) => ({ value: item.id, label: localName(item, locale), keywords: [item.nameEn, item.nameAr] }));
   const currentHidden = Boolean(current && !options.some((o) => o.value === current.id));
-  if (current && currentHidden) options.push({ value: current.id, label: localName(current, locale) });
+  if (current && currentHidden) options.push({ value: current.id, label: localName(current, locale), keywords: [current.nameEn, current.nameAr] });
   return { options, currentHidden };
 }
 
@@ -234,9 +234,9 @@ export function managerOptions(
   const label = (e: NamedRef & { code: string }) => `${localName(e, locale)} · ${e.code}`;
   const options = candidates
     .filter((e) => e.status === EmployeeStatus.ACTIVE && e.id !== selfId)
-    .map((e) => ({ value: e.id, label: label(e) }));
+    .map((e) => ({ value: e.id, label: label(e), keywords: [e.nameEn, e.nameAr, e.code] }));
   if (current && current.id !== selfId && !options.some((o) => o.value === current.id)) {
-    options.push({ value: current.id, label: label(current) });
+    options.push({ value: current.id, label: label(current), keywords: [current.nameEn, current.nameAr, current.code] });
   }
   return [{ value: NO_MANAGER, label: noneLabel }, ...options];
 }

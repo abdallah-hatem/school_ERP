@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import '@/test/dom-polyfills';
+import { chooseRowAction, menuItemNames, openRowActions } from '@/test/row-actions';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -202,7 +203,9 @@ describe('RunPage — approve', () => {
       name: 'Export bank sheet',
     }) as HTMLButtonElement;
     expect(bankSheet.disabled).toBe(true);
-    expect(table().queryByRole('link', { name: /^Payslip for/ })).toBeNull();
+    // Draft: the ⋯ offers Adjust only (no payslip yet).
+    expect(menuItemNames(await openRowActions(user, 'Mona Khalil', table()))).toEqual(['Adjust']);
+    await user.keyboard('{Escape}');
 
     await user.click(approveButton());
     await user.click(
@@ -215,12 +218,16 @@ describe('RunPage — approve', () => {
     expect(toast.success).toHaveBeenCalledWith('Payroll approved.');
     expect(screen.queryByRole('button', { name: 'Approve payroll' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Recalculate' })).toBeNull();
-    expect(table().getByRole('link', { name: 'Payslip for Mona Khalil' }).getAttribute('href')).toBe(
+    // Approved: no Adjust; the recorded adjustments stay viewable, and the payslip is linked.
+    const menu = await openRowActions(user, 'Mona Khalil', table());
+    expect(menuItemNames(menu)).toEqual(['Adjustments', 'Payslip']);
+    expect(within(menu).getByRole('menuitem', { name: 'Payslip' }).getAttribute('href')).toBe(
       `/en/payroll/${RUN_ID}/payslip/${MONA.id}`,
     );
+    await user.keyboard('{Escape}');
 
     // Read-only adjustments: the dialog lists them without add or remove.
-    await user.click(table().getByRole('button', { name: 'Adjustments for Mona Khalil' }));
+    await chooseRowAction(user, 'Mona Khalil', /^Adjustments/, table());
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('Exam supervision')).toBeTruthy();
     expect(within(dialog).getByText("The run is approved: adjustments can't change.")).toBeTruthy();

@@ -154,10 +154,12 @@ test('payroll: run → penalty deduction → grace change → recalculate → ap
   if (!line) throw new Error('smoke: the penalised employee left the run');
   await lineRow(page, line);
   await page
-    .getByRole('link', {
-      name: t('en', 'payroll.table.payslipFor', { name: line.nameEn }),
+    .getByRole('button', {
+      name: t('en', 'ui.table.actionsFor', { name: line.nameEn }),
+      exact: true,
     })
     .click();
+  await page.getByRole('menuitem', { name: t('en', 'payroll.table.payslip'), exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/payslip/${line.id}$`));
   const payslip = page.getByRole('article', {
     name: t('en', 'payroll.payslip.title'),

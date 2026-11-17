@@ -15,7 +15,9 @@
     "nextPage": "Next page",
     "lastPage": "Last page",
     "page": "Page {page}",
-    "pageOf": "Page {page} of {count}"
+    "pageOf": "Page {page} of {count}",
+    "actions": "Actions",
+    "actionsFor": "Actions for {name}"
   },
   "states": {
     "emptyTitle": "Nothing here yet",

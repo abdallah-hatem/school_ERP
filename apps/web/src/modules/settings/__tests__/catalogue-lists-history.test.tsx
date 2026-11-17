@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import '@/test/dom-polyfills';
 import type { ListItem, PenaltyGroup, SettingChangeItem } from '@school-erp/shared';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -16,6 +17,7 @@ const api = vi.hoisted(() => ({
   UPDATE_VIOLATION: vi.fn(),
 }));
 vi.mock('../apis', () => api);
+import { chooseRowAction, menuItemNames, openRowActions, rowActionsButton } from '@/test/row-actions';
 vi.mock('next/navigation', () => ({ redirect: vi.fn() }));
 
 import { CatalogueSection } from '../components/catalogue-section';
@@ -59,7 +61,8 @@ describe('Penalty catalogue editor', () => {
     api.UPDATE_VIOLATION.mockImplementation((_id: string, body: object) => ok({ ...catalogue[0]!.violations[0]!, ...body }));
     renderSettings(<CatalogueSection />);
 
-    await user.click(await screen.findByRole('button', { name: 'Edit Late arrival' }));
+    await screen.findByText('Late arrival');
+    await chooseRowAction(user, 'Late arrival', 'Edit');
     const dialog = await screen.findByRole('dialog', { name: 'Edit violation' });
     // The short title stays one line on a phone; the violation's name follows underneath.
     expect(dialog.getAttribute('aria-describedby')).toBeTruthy();
@@ -103,7 +106,8 @@ describe('Penalty catalogue editor', () => {
     const user = userEvent.setup();
     api.GET_PENALTY_GROUPS.mockImplementation(() => ok(catalogue));
     renderSettings(<CatalogueSection />);
-    await user.click(await screen.findByRole('button', { name: 'Edit Late arrival' }));
+    await screen.findByText('Late arrival');
+    await chooseRowAction(user, 'Late arrival', 'Edit');
     const dialog = await screen.findByRole('dialog');
     const add = within(dialog).getByRole('button', { name: 'Add a level' });
     await user.click(add);
@@ -125,16 +129,21 @@ describe('Penalty catalogue editor', () => {
       ok({ ...catalogue.find((g) => g.id === id)!, ...body }),
     );
     renderSettings(<CatalogueSection />);
-    await user.click(await screen.findByRole('button', { name: 'Retire General table A' }));
+    await screen.findByText('General table A');
+    await chooseRowAction(user, 'General table A', 'Retire');
     expect(await screen.findByRole('dialog', { name: 'Retire General table A?' })).toBeTruthy();
     expect(api.UPDATE_PENALTY_GROUP).not.toHaveBeenCalled();
     await user.click(screen.getByRole('button', { name: 'Retire' }));
 
     await waitFor(() => expect(api.UPDATE_PENALTY_GROUP).toHaveBeenCalledWith('g1', { isActive: false }));
-    expect(await screen.findByRole('button', { name: 'Restore General table A' })).toBeTruthy();
-    expect(screen.getByText(/This group is retired/)).toBeTruthy();
+    expect(await screen.findByText(/This group is retired/)).toBeTruthy();
+    // A retired group offers Restore (not red) in place of Retire.
+    const menu = await openRowActions(user, 'General table A');
+    expect(menuItemNames(menu)).toEqual(['Rename', 'Restore']);
+    expect(within(menu).queryByRole('separator')).toBeNull();
+    await user.keyboard('{Escape}');
     // Violations of a retired group can't be edited or used.
-    expect(screen.queryByRole('button', { name: 'Edit Late arrival' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Actions for Late arrival/ })).toBeNull();
   });
 
   it('retiring a violation sends isActive false once, even when clicked twice', async () => {
@@ -143,13 +152,17 @@ describe('Penalty catalogue editor', () => {
     const pending = deferred<{ success: true; status: number; data: unknown }>();
     api.UPDATE_VIOLATION.mockReturnValue(pending.promise);
     renderSettings(<CatalogueSection />);
-    const retire = await screen.findByRole('button', { name: 'Retire Late arrival' });
-    await user.click(retire);
-    await user.click(retire);
+    await screen.findByText('Late arrival');
+    await chooseRowAction(user, 'Late arrival', 'Retire');
+    // While it saves the ⋯ is busy and can't open again, so a second Retire can't be sent.
+    await waitFor(() => expect(rowActionsButton('Late arrival')).toHaveProperty('disabled', true));
+    await user.click(rowActionsButton('Late arrival'));
+    expect(screen.queryByRole('menu')).toBeNull();
     expect(api.UPDATE_VIOLATION).toHaveBeenCalledTimes(1);
     expect(api.UPDATE_VIOLATION).toHaveBeenCalledWith('v1', { isActive: false });
     pending.resolve({ success: true, status: 200, data: { ...catalogue[0]!.violations[0]!, isActive: false } });
-    expect(await screen.findByRole('button', { name: 'Restore Late arrival' })).toBeTruthy();
+    await waitFor(() => expect(rowActionsButton('Late arrival')).toHaveProperty('disabled', false));
+    expect(menuItemNames(await openRowActions(user, 'Late arrival'))).toEqual(['Edit', 'Restore']);
   });
 
   it('a failed load shows the error state with a retry', async () => {
@@ -178,10 +191,16 @@ describe('Managed lists (stages, departments, job titles)', () => {
     expect((await screen.findAllByText('Science'))[0]).toBeTruthy();
     expect(api.GET_LIST_ITEMS).toHaveBeenCalledWith('departments');
 
-    await user.click(screen.getAllByRole('button', { name: 'Hide Mathematics' })[0]!);
+    // A shown item: Rename, then Hide in red after the divider.
+    const menu = await openRowActions(user, 'Mathematics');
+    expect(menuItemNames(menu)).toEqual(['Rename', 'Hide']);
+    expect(within(menu).getByRole('separator')).toBeTruthy();
+    await user.click(within(menu).getByRole('menuitem', { name: 'Hide' }));
     await waitFor(() => expect(api.UPDATE_LIST_ITEM).toHaveBeenCalledWith('departments', 'd1', { isActive: false }));
-    expect((await screen.findAllByRole('button', { name: 'Show Mathematics' }))[0]).toBeTruthy();
-    await user.click(screen.getAllByRole('button', { name: 'Show Science' })[0]!);
+    await waitFor(() => expect(rowActionsButton('Mathematics')).toHaveProperty('disabled', false));
+    expect(menuItemNames(await openRowActions(user, 'Mathematics'))).toEqual(['Rename', 'Show']);
+    await user.keyboard('{Escape}');
+    await chooseRowAction(user, 'Science', 'Show');
     await waitFor(() => expect(api.UPDATE_LIST_ITEM).toHaveBeenCalledWith('departments', 'd2', { isActive: true }));
   });
 

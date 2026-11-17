@@ -30,6 +30,11 @@ export async function expectNoHorizontalScroll(page: Page): Promise<void> {
     .toBe(0);
 }
 
+/** Lets open animations finish, so a screenshot shows the settled popover or menu. */
+export async function settle(page: Page): Promise<void> {
+  await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running'));
+}
+
 /** A search field by its accessible name, whether it is drawn as `type="search"` or a plain input. */
 export function searchField(page: Page, name: string): Locator {
   return page.getByRole('searchbox', { name, exact: true }).or(page.getByRole('textbox', { name, exact: true }));

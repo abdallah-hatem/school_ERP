@@ -177,10 +177,10 @@ export function EmployeeForm({ basePath, employee, departments, stages, jobTitle
             options={WORK_SYSTEMS.map((w) => ({ value: w, label: t(`common.enums.workSystem.${w}`) }))}
             required
           />
-          <SelectField control={control} name="stageId" label={t('employees.fields.stage')} placeholder={t('employees.placeholders.stage')} options={stage.options} emptyText={t('employees.noStages')} hint={stage.currentHidden ? hiddenHint : undefined} required />
-          <SelectField control={control} name="departmentId" label={t('employees.fields.department')} placeholder={t('employees.placeholders.department')} options={department.options} emptyText={t('employees.noDepartments')} hint={department.currentHidden ? hiddenHint : undefined} required />
-          <SelectField control={control} name="jobTitleId" label={t('employees.fields.jobTitle')} placeholder={t('employees.placeholders.jobTitle')} options={jobTitle.options} emptyText={t('employees.noJobTitles')} hint={jobTitle.currentHidden ? hiddenHint : undefined} required />
-          <SelectField control={control} name="managerId" label={t('employees.fields.manager')} placeholder={t('employees.placeholders.manager')} options={managers} />
+          <SelectField searchable control={control} name="stageId" label={t('employees.fields.stage')} placeholder={t('employees.placeholders.stage')} options={stage.options} emptyText={t('employees.noStages')} hint={stage.currentHidden ? hiddenHint : undefined} required />
+          <SelectField searchable control={control} name="departmentId" label={t('employees.fields.department')} placeholder={t('employees.placeholders.department')} options={department.options} emptyText={t('employees.noDepartments')} hint={department.currentHidden ? hiddenHint : undefined} required />
+          <SelectField searchable control={control} name="jobTitleId" label={t('employees.fields.jobTitle')} placeholder={t('employees.placeholders.jobTitle')} options={jobTitle.options} emptyText={t('employees.noJobTitles')} hint={jobTitle.currentHidden ? hiddenHint : undefined} required />
+          <SelectField searchable control={control} name="managerId" label={t('employees.fields.manager')} placeholder={t('employees.placeholders.manager')} options={managers} />
           <TextField control={control} name="grade" label={t('employees.fields.grade')} placeholder={t('employees.placeholders.grade')} maxLength={50} />
           <TextField control={control} name="fingerprintId" label={t('employees.fields.fingerprintId')} placeholder={t('employees.placeholders.fingerprintId')} dir="ltr" maxLength={50} />
         </Section>
