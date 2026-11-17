@@ -113,17 +113,23 @@ test('payroll: run → penalty deduction → grace change → recalculate → ap
   // Change the lateness rule in Settings.
   await page.goto('/en/settings?section=hrRules');
   const graceField = page.getByLabel(t('en', 'settings.hrRules.lateness.grace'));
-  // Wait for the form to load the saved rule first — typing earlier gets overwritten by the
-  // form's reset, leaving Save disabled (no change).
-  // The saved grace is often the default 0, so the value alone can't tell the load has finished:
-  // type again until the change sticks (Save enabled).
+  // Until the saved rule loads, the section shows the form itself as an inert skeleton
+  // (`SkeletonMask`, aria-busy) holding the defaults, and the saved grace is often the default 0, so
+  // the value alone can't tell the load has finished. Typing into the skeleton is lost when the real
+  // form replaces it, leaving Save disabled. Wait for the skeleton to go first.
+  await expect(
+    page.locator('[aria-busy="true"]').filter({ has: page.locator('input[name="graceMinutes"]') }),
+  ).toHaveCount(0);
   await expect(graceField).toHaveValue(String(settings.lateness.graceMinutes));
+  // Clear before each try: the field keeps the typed text as a draft until blur, so re-filling the
+  // same text after a lost change fires no input event and Save would stay disabled for good.
   await expect(async () => {
+    await graceField.fill('');
     await graceField.fill(String(rule.graceMinutes));
     await expect(page.getByRole('button', { name: t('en', 'common.actions.save'), exact: true })).toBeEnabled({
       timeout: 2_000,
     });
-  }).toPass();
+  }).toPass({ timeout: 20_000 });
   restoreGrace = settings.lateness.graceMinutes;
   await page.getByRole('button', { name: t('en', 'common.actions.save'), exact: true }).click();
   await expect(page.getByText(t('en', 'settings.save.saved'))).toBeVisible();

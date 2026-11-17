@@ -15,7 +15,8 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   timeout: 120_000,
   expect: { timeout: 15_000 },
-  reporter: [['list']],
+  // CI also writes the HTML report, uploaded as an artifact when a run fails.
+  reporter: process.env.CI ? [['list'], ['html', { outputFolder: 'e2e/.report', open: 'never' }]] : [['list']],
   use: {
     baseURL: process.env.BASE_URL ?? 'http://localhost:4181',
     trace: 'retain-on-failure',
