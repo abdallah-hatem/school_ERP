@@ -115,8 +115,12 @@ describe('Activity page', () => {
     renderView({ person: AHMED.id, module: 'hr', q: 'zzz' }, []);
     expect(screen.getByText('No activity matches these filters')).toBeTruthy();
     const section = screen.getByRole('region', { name: 'Activity' });
-    await user.click(within(section).getByRole('button', { name: 'Clear filters' }));
+    // Search + person + module: the count covers the search too, and one click resets all three.
+    push.mockClear();
+    await user.click(within(section).getByRole('button', { name: 'Clear filters · 3' }));
+    expect(push).toHaveBeenCalledTimes(1);
     expect(push).toHaveBeenLastCalledWith('/en/activity', { scroll: false });
+    expect((screen.getByRole('searchbox', { name: 'Search the record' }) as HTMLInputElement).value).toBe('');
   });
 
   it('a failed load offers a retry; today at a glance shows the counts', async () => {

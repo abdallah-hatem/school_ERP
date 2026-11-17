@@ -91,10 +91,29 @@ The seeded `admin@school.local` becomes **System admin** + **HR manager**.
   `users.employee_id` (HR's `employees.user_id` deprecated); the `users.role` column is kept,
   deprecated, until P3. **Salary filtering moved to P4** (it is an HR change); until then the
   principal, stage head, direct manager and accountant see what HR endpoints return today.
-- [ ] **P3 screens** (`ui`, mockups first): Users, Roles, My account; sidebar items by `can()`; ask for
-  a new password at sign-in when `must_change_password` is set.
+- [x] **P3 screens** (`ui`, mockups first) — done, **option A** of `design/mockups/access.html`
+  (owner's pick): Users and Roles in the Administration group (`can()` on every item and button),
+  Users list (search, role and status filters, 10 per page, ⋯ menu), Add user / user page as full
+  pages (searchable role checklist, last System admin locked with the reason, searchable
+  linked-employee picker), Roles list and role page (switch + inline scope per permission, holders,
+  System admin read-only), My account (from the user chip), and the forced **Set a new password**
+  page. Decisions taken while building: the temporary password is **generated in the browser**
+  (`Kite-4827-Moss`, shown once with Copy / Another one) and sent like any other; a user with
+  `must_change_password` gets **403 `PASSWORD_CHANGE_REQUIRED`** from the guard on everything but
+  `/auth/me`, sign-out and `POST /account/password`, which then needs only the new password (it must
+  differ from the temporary one, `SAME_PASSWORD`); only the row-level permissions
+  (`ROW_SCOPED_PERMISSIONS`) take a scope — the API refuses another (`INVALID_SCOPE`); the users list
+  hides Deactivate for the last active System admin (its page shows it disabled with the reason); the
+  linked-employee picker uses a new `GET /users/employee-options` (`core.users.manage`, server
+  search) so linking doesn't need HR's `hr.employees.view`; `users.last_sign_in_at` and
+  `password_changed_at` were added; the deprecated `users.role` column was dropped (the chip shows
+  role names, everyone's home is the dashboard). The Roles list is not paged (a school has about
+  ten roles; the mockup shows none).
 - [ ] **P4 scopes in HR** (`logic`): apply `own_stage` / `own_team` in HR repositories with
   `scopeFor`; salary filtering (R7, edge case 4); drop HR's deprecated `employees.user_id`.
   **Open until P4:** edge case 3 (outside-team → 404) and edge case 4 (no salary fields) — today
   every role that can view employees, penalties or payroll sees all rows and salaries; a test that
   the employee link stays consistent while both `users.employee_id` and `employees.user_id` exist.
+  **Salary-type fields (2026-11-18):** R7's salary filtering covers the employee's `insuredSalary`
+  and bank details (`bankName`, `bankAccountNumber`, `iban`) as well as `basicSalary` — a role
+  without `hr.employees.view_salary` gets none of them.

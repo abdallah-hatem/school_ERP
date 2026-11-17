@@ -34,7 +34,8 @@ test('employees: list → open a profile → edit the phone → saved', async ({
 
   await page.getByRole('link', { name: t('en', 'employees.profile.edit') }).click();
   await expect(page).toHaveURL(new RegExp(`/en/employees/${employee.id}/edit$`));
-  const phoneInput = page.getByLabel(t('en', 'employees.fields.phone'));
+  // Anchored: the emergency contact's "Contact phone" must not match.
+  const phoneInput = page.getByRole('textbox', { name: new RegExp(`^${t('en', 'employees.fields.phone')}`) });
   await phoneInput.fill(phone);
   await shoot(page, info, 'employee-edit');
   await page.getByRole('button', { name: t('en', 'employees.edit.submit') }).click();

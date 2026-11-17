@@ -6,9 +6,9 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import type { AppConfig } from '../../../config';
 import { RefreshTokensRepository } from '../repositories/refresh-tokens.repository';
 
+/** What an access token carries: only who it is. Everything else is read fresh per request. */
 export interface AccessPayload {
   sub: string;
-  role: AuthUser['role'];
 }
 
 export interface TokenPair {
@@ -52,8 +52,8 @@ export class TokensService {
     return this.auth.refreshTtlDays * 24 * 60 * 60;
   }
 
-  signAccess(user: Pick<AuthUser, 'id' | 'role'>): Promise<string> {
-    const payload: AccessPayload = { sub: user.id, role: user.role };
+  signAccess(user: Pick<AuthUser, 'id'>): Promise<string> {
+    const payload: AccessPayload = { sub: user.id };
     return this.jwt.signAsync(payload);
   }
 

@@ -91,6 +91,31 @@ export async function UPDATE_EMPLOYEE(id: Uuid, body: UpdateEmployeeRequest) {
   return handleResponse({ response });
 }
 
+/**
+ * The tags whose screens show the employee's photo: the list, the employee, and the penalties
+ * list (its rows show the avatar).
+ */
+const photoTags = (id: Uuid) => [EMPLOYEES_TAG, employeeTag(id), 'hr-penalties'];
+
+/** `POST /hr/employees/:id/photo` — multipart `file` (PNG / JPG / WebP, ≤ 2 MB — checked on the client too). */
+export async function UPLOAD_EMPLOYEE_PHOTO(id: Uuid, form: FormData) {
+  const response = await apiFetch<Employee>(`/hr/employees/${encodeURIComponent(id)}/photo`, {
+    method: 'POST',
+    body: form,
+    revalidateTags: photoTags(id),
+  });
+  return handleResponse({ response });
+}
+
+/** `DELETE /hr/employees/:id/photo` — back to the silhouette. */
+export async function REMOVE_EMPLOYEE_PHOTO(id: Uuid) {
+  const response = await apiFetch<Employee>(`/hr/employees/${encodeURIComponent(id)}/photo`, {
+    method: 'DELETE',
+    revalidateTags: photoTags(id),
+  });
+  return handleResponse({ response });
+}
+
 /** `POST /hr/employees/:id/deactivate` — idempotent; the record and its history are kept. */
 export async function DEACTIVATE_EMPLOYEE(id: Uuid) {
   const response = await apiFetch<Employee>(`/hr/employees/${encodeURIComponent(id)}/deactivate`, {

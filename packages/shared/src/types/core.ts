@@ -1,4 +1,4 @@
-import type { Language, UserRole, Weekday } from '../enums';
+import type { Language, Weekday } from '../enums';
 import type { PermissionKey, PermissionScope } from '../permissions';
 import type { IsoDateTime, Names, PaginationQuery, TimeOfDay, Uuid } from './common';
 
@@ -15,18 +15,21 @@ export interface AuthUser {
   email: string;
   name: string;
   /**
-   * @deprecated Since P2 access comes from roles as data (`user_roles`), never from this field;
-   * it is kept only until the web app stops reading it (P3). Use `SessionUser.permissions`.
+   * Signed in with a temporary password (R9, spec P3): until they choose their own, the API answers
+   * only `/auth/me`, sign-out and `POST /account/password` (403 `PASSWORD_CHANGE_REQUIRED`), and the
+   * web app sends them to the "Set a new password" page.
    */
-  role: UserRole;
+  mustChangePassword: boolean;
 }
 
 /**
- * `GET /auth/me`: the signed-in user with the permission keys they hold (R6). The web app hides
- * what the user can't do with them; the API's guard is the protection.
+ * `GET /auth/me`: the signed-in user with the permission keys they hold (R6) and the roles that
+ * grant them (the name under the user chip). The web app hides what the user can't do with the
+ * keys; the API's guard is the protection.
  */
 export interface SessionUser extends AuthUser {
   permissions: PermissionKey[];
+  roles: RoleRef[];
 }
 
 export interface LoginResponse {
@@ -131,6 +134,30 @@ export interface UserAccount {
   /** The linked employee (R9: at most one), or null. */
   employee: { id: Uuid; code: string; nameEn: string; nameAr: string } | null;
   createdAt: IsoDateTime;
+  /** Their last successful sign-in, or null (never signed in). */
+  lastSignInAt: IsoDateTime | null;
+  /** When the password was last set (by an admin, or changed by the user); null before P3. */
+  passwordChangedAt: IsoDateTime | null;
+}
+
+/**
+ * `GET /users/employee-options` — the linked-employee picker on the user form: employees matching
+ * the search, each with the account already linked to it (one employee, at most one account).
+ */
+export interface EmployeeOption {
+  id: Uuid;
+  code: string;
+  nameEn: string;
+  nameAr: string;
+  jobTitle: Names;
+  isActive: boolean;
+  /** The account linked to this employee, or null. */
+  linkedUser: { id: Uuid; name: string } | null;
+}
+
+/** `GET /users/employee-options` — `search` matches the name (either language) or the code. */
+export interface EmployeeOptionsQuery extends PaginationQuery {
+  search?: string;
 }
 
 /** `POST /users` — the password is temporary: the user is asked to change it. */
@@ -155,13 +182,18 @@ export interface SetTemporaryPasswordRequest {
   password: string;
 }
 
-/** `POST /account/password` — the signed-in user changes their own password. */
+/**
+ * `POST /account/password` — the signed-in user changes their own password. `currentPassword` is
+ * required, except right after signing in with a temporary password (`mustChangePassword`): that
+ * sign-in just proved it. The new one must differ from the current one either way.
+ */
 export interface ChangePasswordRequest {
-  currentPassword: string;
+  currentPassword?: string;
   newPassword: string;
 }
 
-/** `GET /users` — `search` matches name or email. */
+/** `GET /users` — `search` matches name or email; `roleId` keeps the holders of one role. */
 export interface ListUsersQuery extends PaginationQuery {
   status?: 'active' | 'inactive';
+  roleId?: Uuid;
 }

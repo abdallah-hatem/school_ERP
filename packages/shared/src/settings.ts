@@ -130,6 +130,12 @@ export const LOGO_UPLOAD = {
   mimeTypes: ['image/png', 'image/jpeg', 'image/svg+xml'],
 } as const;
 
+/** Employee photo upload rules (§3): PNG, JPG or WebP, up to 2 MB. Served signed-in only. */
+export const EMPLOYEE_PHOTO_UPLOAD = {
+  maxBytes: 2 * 1024 * 1024,
+  mimeTypes: ['image/png', 'image/jpeg', 'image/webp'],
+} as const;
+
 /** Employee code format (§3): EMP-0001. */
 export const EMPLOYEE_CODE_PREFIX = 'EMP-';
 export const EMPLOYEE_CODE_DIGITS = 4;

@@ -11,7 +11,6 @@
     "allStages": "كل المراحل",
     "allStatuses": "كل الحالات",
     "allWorkSystems": "كل أنظمة العمل",
-    "clearFilters": "مسح عوامل التصفية",
     "emptyTitle": "لا يوجد موظفون بعد",
     "emptyBody": "أضف أول موظف لتبدأ قائمة العاملين.",
     "noResultsTitle": "لا يوجد موظفون مطابقون",
@@ -30,7 +29,12 @@
   "sections": {
     "personal": "البيانات الشخصية",
     "job": "الوظيفة",
-    "contract": "الراتب والعقد"
+    "contract": "الراتب والعقد",
+    "insurance": "التأمينات الاجتماعية",
+    "bank": "الحساب البنكي",
+    "emergency": "جهة الاتصال للطوارئ",
+    "qualification": "المؤهل الدراسي",
+    "photo": "الصورة"
   },
   "fields": {
     "code": "كود الموظف",
@@ -54,7 +58,21 @@
     "contractStart": "بداية العقد",
     "contractEnd": "نهاية العقد",
     "usesBus": "يستخدم أتوبيس المدرسة",
-    "status": "الحالة"
+    "status": "الحالة",
+    "insuranceStatus": "حالة التأمين",
+    "insuranceNumber": "الرقم التأميني",
+    "insuranceRegistrationDate": "تاريخ التسجيل",
+    "insuredSalary": "الأجر التأميني",
+    "bankName": "اسم البنك",
+    "bankAccountNumber": "رقم الحساب",
+    "iban": "رقم الآيبان (IBAN)",
+    "emergencyContactName": "اسم جهة الاتصال",
+    "emergencyContactRelationship": "صلة القرابة",
+    "emergencyContactPhone": "هاتف جهة الاتصال",
+    "highestDegree": "أعلى مؤهل",
+    "major": "التخصص",
+    "university": "الجامعة",
+    "graduationYear": "سنة التخرج"
   },
   "placeholders": {
     "nameEn": "Mona Ahmed Khalil",
@@ -71,7 +89,20 @@
     "department": "اختر القسم",
     "jobTitle": "اختر المسمى الوظيفي",
     "manager": "بدون مدير مباشر",
-    "workSystem": "اختر نظام العمل"
+    "workSystem": "اختر نظام العمل",
+    "insuranceStatus": "اختر حالة التأمين",
+    "insuranceNumber": "123456789",
+    "insuredSalary": "9,000.00",
+    "bankName": "البنك الأهلي المصري",
+    "bankAccountNumber": "0123456789012",
+    "iban": "EG380019000500000000263180002",
+    "emergencyContactName": "أحمد خليل",
+    "emergencyContactRelationship": "الزوج",
+    "emergencyContactPhone": "01112345678",
+    "highestDegree": "اختر المؤهل",
+    "major": "اللغة الإنجليزية",
+    "university": "جامعة القاهرة",
+    "graduationYear": "اختر السنة"
   },
   "hints": {
     "nationalId": "اختياري. 14 رقمًا.",
@@ -80,6 +111,10 @@
     "contract": "الافتراضي من 1 يونيو إلى 31 مايو. تغيير البداية ينقل النهاية إلى سنة بعدها.",
     "usesBus": "فعّله إذا كان الموظف يركب أتوبيس المدرسة.",
     "hiddenItem": "مخفي من الاختيارات الجديدة؛ يبقى لهذا الموظف.",
+    "insuranceNumber": "أرقام فقط.",
+    "insuredSalary": "شهريًا، بالجنيه المصري.",
+    "iban": "اختياري. EG ثم 27 رقمًا.",
+    "insuranceStatus": "اختيار «غير مؤمَّن عليه» يمسح الرقم التأميني والتاريخ والأجر.",
     "managerNotManaging": "لم يعد في منصب إداري؛ يبقى مديرًا لهذا الموظف.",
     "noManagers": "لا يوجد من يمكن اختياره بعد. فعّل «يدير موظفين» لمسمى وظيفي من الإعدادات ← قوائم الموارد البشرية."
   },
@@ -97,7 +132,12 @@
     "salaryTooLarge": "هذا الراتب كبير جدًا.",
     "contractOrder": "نهاية العقد يجب أن تكون بعد بدايته.",
     "tooLong": "النص طويل جدًا.",
-    "saveFailed": "تعذّر حفظ الموظف."
+    "saveFailed": "تعذّر حفظ الموظف.",
+    "insuranceNumber": "الرقم التأميني يجب أن يكون أرقامًا فقط (حتى 20 رقمًا).",
+    "registrationDateFuture": "تاريخ التسجيل لا يمكن أن يكون في المستقبل.",
+    "insuredSalaryPositive": "الأجر التأميني يجب أن يكون أكبر من صفر.",
+    "iban": "اكتب رقم آيبان مصريًا: EG ثم 27 رقمًا.",
+    "graduationYear": "اختر سنة من 1950 حتى السنة الحالية."
   },
   "create": {
     "title": "إضافة موظف",
@@ -130,5 +170,21 @@
     "edit": "تعديل",
     "viewLabel": "عرض {name}",
     "editLabel": "تعديل {name}"
+  },
+  "photo": {
+    "description": "تظهر على بطاقة الموظف وفي ملفه. PNG أو JPG أو WebP، حتى {max} ميجابايت. تُقص على شكل مربع.",
+    "current": "هذه هي الصورة المستخدمة.",
+    "none": "لا توجد صورة بعد. تظهر صورة رمزية محايدة حتى تضيف صورة.",
+    "ready": "معاينة {name}. ارفعها لاستخدامها.",
+    "readyOnSave": "معاينة {name}. تُضاف عند حفظ الموظف.",
+    "choose": "اختر صورة",
+    "upload": "رفع الصورة",
+    "remove": "حذف الصورة",
+    "uploaded": "تم تحديث الصورة.",
+    "removed": "تم حذف الصورة.",
+    "problems": {
+      "type": "يمكن استخدام ملفات PNG أو JPG أو WebP فقط.",
+      "size": "يجب ألا يزيد حجم الملف عن {max} ميجابايت."
+    }
   }
 }

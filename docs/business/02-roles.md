@@ -8,8 +8,10 @@
 - **DECIDED** — Users sign in with email and password. Accounts are created by a System admin (the
   first one by the system's setup); there is no self sign-up. A System admin can give a temporary
   password, which the user is asked to change; anyone can change their own password.
-  *Interim (until P3): the temporary password is recorded as "must change", but nothing asks the
-  user to change it yet.*
+- **DECIDED** (enforced, P3) — Someone who signs in with a temporary password is taken straight to
+  "Set a new password" and can do nothing else (except sign out) until they choose their own. The
+  new password must be different from the temporary one. Changing it later from My account needs
+  the current password.
 - **DECIDED** — Deactivating a user, or giving them a temporary password, signs them out everywhere
   at once.
 - **GUESS** (Claude's answers until the owner and client confirm; spec
@@ -21,6 +23,7 @@
   the HR manager or principal**. Payroll is prepared by an HR officer and **approved by the HR
   manager**; the accountant views and exports it. Leave (Planned): direct manager, then HR manager.
 - **GUESS** — Salaries are seen only by System admin, HR manager, HR officer and Accountant.
+  "Salaries" includes the employee's insured salary and bank details (§3).
 - **GUESS** — A stage head sees only their stage's employees; a direct manager only their team.
   *Interim (until P4): the salary and stage/team limits above are not enforced in HR yet — every
   role that can view employees, penalties or payroll sees all of them, salaries included. Until P4,

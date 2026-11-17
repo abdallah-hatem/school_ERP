@@ -134,6 +134,32 @@ export function isPermissionScope(value: unknown): value is PermissionScope {
   return typeof value === 'string' && (PERMISSION_SCOPES as readonly string[]).includes(value);
 }
 
+/**
+ * The permissions whose rows a scope can narrow: the ones about particular employees (their
+ * record, salary, penalties, lateness and pay). Every other permission is about the school as a
+ * whole (settings, lists, rules, the catalogue, running payroll) and is only ever granted with
+ * scope `all` — the roles screen shows "Whole school" for them and the API refuses another scope
+ * (`INVALID_SCOPE`).
+ */
+export const ROW_SCOPED_PERMISSIONS: ReadonlySet<PermissionKey> = new Set<PermissionKey>([
+  'hr.employees.view',
+  'hr.employees.view_salary',
+  'hr.employees.edit',
+  'hr.employees.change_status',
+  'hr.penalties.view',
+  'hr.penalties.record',
+  'hr.penalties.approve',
+  'hr.penalties.cancel',
+  'hr.lateness.view',
+  'hr.lateness.edit',
+  'hr.payroll.view',
+]);
+
+/** Whether a scope other than `all` may be granted for `key`. */
+export function isRowScoped(key: PermissionKey): boolean {
+  return ROW_SCOPED_PERMISSIONS.has(key);
+}
+
 /** The wider of two scopes (edge case 2: with two roles, the widest scope wins per key). */
 export function widerScope(a: PermissionScope, b: PermissionScope): PermissionScope {
   return PERMISSION_SCOPES.indexOf(a) <= PERMISSION_SCOPES.indexOf(b) ? a : b;

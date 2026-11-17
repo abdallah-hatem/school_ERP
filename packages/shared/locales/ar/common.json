@@ -11,6 +11,9 @@
     "payroll": "الرواتب",
     "settings": "الإعدادات",
     "activity": "سجل النشاط",
+    "users": "المستخدمون",
+    "roles": "الأدوار",
+    "account": "حسابي",
     "modules": {
       "home": "الرئيسية",
       "hr": "الموارد البشرية",
@@ -21,7 +24,11 @@
     },
     "soon": "قريبًا",
     "soonTitle": "{name} — قريبًا",
-    "modulePages": "صفحات {name}"
+    "modulePages": "صفحات {name}",
+    "myAccount": "حسابي",
+    "myAccountOf": "حسابي — {name}",
+    "noRoles": "بلا أدوار",
+    "roleSeparator": " · "
   },
   "actions": {
     "save": "حفظ",
@@ -104,8 +111,17 @@
       "FRIDAY": "الجمعة",
       "SATURDAY": "السبت"
     },
-    "userRole": {
-      "HR_ADMIN": "مسؤول الموارد البشرية"
+    "insuranceStatus": {
+      "INSURED": "مؤمَّن عليه",
+      "NOT_INSURED": "غير مؤمَّن عليه"
+    },
+    "degree": {
+      "NONE": "بدون مؤهل",
+      "SECONDARY": "ثانوية عامة",
+      "DIPLOMA": "دبلوم",
+      "BACHELOR": "بكالوريوس / ليسانس",
+      "MASTER": "ماجستير",
+      "DOCTORATE": "دكتوراه"
     }
   }
 }

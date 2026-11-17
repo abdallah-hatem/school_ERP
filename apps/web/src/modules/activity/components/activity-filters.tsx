@@ -14,6 +14,7 @@ import {
   SignInIcon,
   type AppIcon,
 } from '@/shared/components/ui/icons';
+import { ClearFilters } from '@/shared/components/form/filter-controls';
 import { controlClasses } from '@/shared/components/ui/input';
 import { formatCount } from '@/shared/lib/format';
 import { initialsOf } from '@/shared/lib/initials';
@@ -23,7 +24,6 @@ import { useTranslation } from '@/shared/providers/i18n-provider';
 import {
   ACTIVITY_MODULES,
   ACTIVITY_TYPES,
-  activeFilterCount,
   type ActivityModule,
   type ActivityQuery,
   type ActivityType,
@@ -255,6 +255,8 @@ export function ActivityFilters({
   summary,
   today,
   onChange,
+  onClear,
+  clearCount = 0,
   disabled,
   title = true,
 }: {
@@ -264,13 +266,16 @@ export function ActivityFilters({
   /** Today in the school's calendar. */
   today: IsoDate;
   onChange: (next: ActivityQuery) => void;
+  /** The panel heading's "Clear filters · n": the search and every filter, in one URL update. */
+  onClear?: () => void;
+  /** The search (when it has text) plus each filter in use. */
+  clearCount?: number;
   disabled?: boolean;
   /** The panel's own heading (the sheet has its own). */
   title?: boolean;
 }) {
   const { t } = useTranslation();
   const set = (patch: Partial<ActivityQuery>) => onChange({ ...query, ...patch, page: 1 });
-  const active = activeFilterCount(query) > 0;
   return (
     <div className="flex flex-col gap-4.5">
       {title ? (
@@ -279,14 +284,8 @@ export function ActivityFilters({
             <FilterIcon className="size-5 text-muted-foreground" />
             {t('audit.filters.title')}
           </h2>
-          {active ? (
-            <button
-              type="button"
-              onClick={() => onChange({ page: 1, types: [], ...(query.q ? { q: query.q } : {}) })}
-              className="tap-target ms-auto cursor-pointer rounded-sm text-[0.8125rem] font-bold text-primary hover:underline focus-visible:outline-3 focus-visible:outline-ring/55"
-            >
-              {t('audit.filters.clear')}
-            </button>
+          {onClear ? (
+            <ClearFilters count={clearCount} onClear={onClear} disabled={disabled} className="ms-auto h-9 px-2.5" />
           ) : null}
         </div>
       ) : null}

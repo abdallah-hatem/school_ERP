@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY } from '@/lib/middlewareFunctions';
 import { DEFAULT_LOCALE, isLocale } from '@/shared/lib/i18n';
 import { LOGIN, LOGOUT } from './apis';
-import { homeFor, loginPathFor, safeNextPath } from './paths';
+import { homeFor, loginPathFor, safeNextPath, setPasswordPathFor } from './paths';
 
 export interface SignInInput {
   email: string;
@@ -21,7 +21,8 @@ export interface SignInResult {
 
 /**
  * Signs in at the API (which sets the session cookies, mirrored onto this origin), then goes back
- * to `next` or the role's home. Returns only on failure.
+ * to `next` or home — or, after a temporary password, to "Set a new password" first. Returns only
+ * on failure.
  */
 export async function signIn(input: SignInInput): Promise<SignInResult> {
   const locale = isLocale(input.locale) ? input.locale : DEFAULT_LOCALE;
@@ -32,7 +33,10 @@ export async function signIn(input: SignInInput): Promise<SignInResult> {
   if (!res.success) {
     return { error: typeof res.message === 'string' ? res.message : '' };
   }
-  redirect(safeNextPath(input.next) ?? homeFor(res.data?.user.role, locale));
+  const next = safeNextPath(input.next);
+  // A temporary password: choose your own first (R9, P3), then on to where you were going.
+  if (res.data?.user.mustChangePassword) redirect(setPasswordPathFor(locale, next));
+  redirect(next ?? homeFor(locale));
 }
 
 /**

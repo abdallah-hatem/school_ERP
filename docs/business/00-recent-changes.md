@@ -4,6 +4,17 @@
   penalty was recorded, so repeats on one day climb levels (1, 2, 3…) instead of all being level 1.
   The preview counts every approved penalty already on that date.
 
+- 2026-11-18 — Employees (§3, owner): new groups on the employee record — social insurance (status,
+  number, registration date, insured salary; required when insured, cleared when not), bank account
+  (bank, account number, Egyptian IBAN), emergency contact and qualification. Payroll's use of
+  insurance and bank details stays Planned and is Tamer's (§6). Employees can have a photo (PNG, JPG
+  or WebP, up to 2 MB, signed-in only); without one they show a neutral silhouette, not initials.
+- 2026-11-18 — Users, Roles and My account screens (§2, P3): Administration → **Users** (add, edit,
+  give roles, link an employee, set a temporary password, deactivate) and **Roles** (each role's
+  permissions, and for permissions about employees whose records they cover); **My account** for
+  everyone. A temporary password is now enforced: the person must choose their own before using the
+  app. The last System admin still can't lose the role or be deactivated — the screen says why.
+  Permissions about the whole school (settings, lists, running payroll) always cover everyone.
 - 2026-11-18 — Direct managers (§3, §7, owner): job titles get a **Manages people** switch in
   Settings; the Direct manager picker lists only active employees with such a title; an employee
   whose manager no longer qualifies keeps them (flagged "No longer in a managing role"); choosing a

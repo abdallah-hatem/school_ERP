@@ -1,7 +1,9 @@
 import type {
   AdjustmentType,
+  Degree,
   EmployeeStatus,
   Gender,
+  InsuranceStatus,
   PartTimeWorkSystem,
   PayrollFlag,
   PayrollStatus,
@@ -66,6 +68,8 @@ export interface EmployeeSummary extends Names {
   workSystem: WorkSystem;
   basicSalary: Piastres;
   status: EmployeeStatus;
+  /** Signed-in-only image URL; null → the silhouette avatar. */
+  photoUrl: string | null;
 }
 
 /** All §3 fields a client sends (everything except `code` and `status`). */
@@ -90,6 +94,26 @@ export interface CreateEmployeeRequest extends Names {
   /** Defaults to 31 May of the next year. */
   contractEnd?: IsoDate;
   usesBus?: boolean;
+  /** Defaults to NOT_INSURED, which clears the three insurance fields below. */
+  insuranceStatus?: InsuranceStatus;
+  /** Digits only, unique; required when insured. */
+  insuranceNumber?: string | null;
+  /** Required when insured; not in the future. */
+  insuranceRegistrationDate?: IsoDate | null;
+  /** Monthly, > 0; required when insured. */
+  insuredSalary?: Piastres | null;
+  bankName?: string | null;
+  bankAccountNumber?: string | null;
+  /** `EG` + 27 digits. */
+  iban?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactRelationship?: string | null;
+  emergencyContactPhone?: string | null;
+  highestDegree?: Degree | null;
+  major?: string | null;
+  university?: string | null;
+  /** 1950 … the current year. */
+  graduationYear?: number | null;
 }
 
 export type UpdateEmployeeRequest = Partial<CreateEmployeeRequest>;
@@ -112,7 +136,7 @@ export interface Employee extends Names {
    * `managesPeople`: the manager's job title still manages people. `false` means they no longer
    * qualify — the employee keeps them, and the form flags it (§3).
    */
-  manager: (NamedRef & { code: string; managesPeople: boolean }) | null;
+  manager: (NamedRef & { code: string; managesPeople: boolean; photoUrl: string | null }) | null;
   grade: string | null;
   workSystem: WorkSystem;
   basicSalary: Piastres;
@@ -120,6 +144,22 @@ export interface Employee extends Names {
   contractStart: IsoDate;
   contractEnd: IsoDate;
   usesBus: boolean;
+  /** Signed-in-only image URL; null → the silhouette avatar. */
+  photoUrl: string | null;
+  insuranceStatus: InsuranceStatus;
+  insuranceNumber: string | null;
+  insuranceRegistrationDate: IsoDate | null;
+  insuredSalary: Piastres | null;
+  bankName: string | null;
+  bankAccountNumber: string | null;
+  iban: string | null;
+  emergencyContactName: string | null;
+  emergencyContactRelationship: string | null;
+  emergencyContactPhone: string | null;
+  highestDegree: Degree | null;
+  major: string | null;
+  university: string | null;
+  graduationYear: number | null;
   status: EmployeeStatus;
   userId: Uuid | null;
   createdAt: IsoDateTime;
@@ -129,6 +169,8 @@ export interface Employee extends Names {
 /** Compact employee reference used inside penalties, lateness and payroll responses. */
 export interface EmployeeRef extends NamedRef {
   code: string;
+  /** Present where the response shows the employee's avatar (e.g. penalties). */
+  photoUrl?: string | null;
 }
 
 // ── Penalty catalogue ──────────────────────────────────────────────────────

@@ -20,7 +20,7 @@ import { EmployeeLink } from '@/core/employees';
 import { callApi } from '@/lib/callApi';
 import { RowActions, RowActionsSkeleton } from '@/shared/components/data-table/row-actions';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-table/data-table';
-import { FilterSelect, SearchInput } from '@/shared/components/form/filter-controls';
+import { ClearFilters, FilterSelect, SearchInput } from '@/shared/components/form/filter-controls';
 import { EmptyState } from '@/shared/components/layout/empty-state';
 import { PageHeader } from '@/shared/components/layout/page-header';
 import { BidiText } from '@/shared/components/ui/bidi-text';
@@ -55,7 +55,7 @@ import { localName, nameIn } from '@/shared/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { APPROVE_PAYROLL_RUN, GET_BANK_SHEET, RECALCULATE_PAYROLL_RUN } from '../apis';
-import { adjustmentNet, adjustmentsOf, hasRunFilters, notAppliedAdjustments, runQueryString } from '../lib/run-query';
+import { adjustmentNet, adjustmentsOf, notAppliedAdjustments, runFilterCount, runQueryString } from '../lib/run-query';
 import { AdjustmentsDialog, type AdjustmentsTarget } from './adjustments-dialog';
 import { DeductionAmount, LineStatus, RunStatusPill, SignedAmount } from './payroll-bits';
 import { RulesPanel } from './rules-panel';
@@ -122,7 +122,8 @@ export function RunPage({
 
   const draft = run.status === PayrollStatus.DRAFT;
   const monthLabel = formatMonth(run.month, locale);
-  const filtered = hasRunFilters(query);
+  const filterCount = runFilterCount(query);
+  const filtered = filterCount > 0;
   const notApplied = useMemo(() => notAppliedAdjustments(run.adjustments), [run.adjustments]);
   // The live count comes from the server; the lines' flags only reflect the last calculation.
   const staleFlags = useMemo(
@@ -150,7 +151,9 @@ export function RunPage({
     if (searchTimer.current) clearTimeout(searchTimer.current);
     searchTimer.current = setTimeout(() => go({ ...query, search: text.trim() || undefined }), SEARCH_DEBOUNCE_MS);
   }
+  /** Search, both filters and the page, in one URL update. */
   function clearFilters() {
+    if (searchTimer.current) clearTimeout(searchTimer.current);
     setSearch('');
     go({});
   }
@@ -421,12 +424,7 @@ export function RunPage({
                   icon={SearchIcon}
                   title={t('payroll.noResults.title')}
                   description={t('payroll.noResults.body')}
-                  action={
-                    <Button className="cursor-pointer" onClick={clearFilters}>
-                      <CloseIcon />
-                      {t('payroll.filters.clear')}
-                    </Button>
-                  }
+                  action={<ClearFilters placement="empty" count={filterCount} onClear={clearFilters} />}
                 />
               ) : (
                 <EmptyState icon={PayrollIcon} title={t('payroll.empty.title')} description={t('payroll.empty.body')} />
@@ -443,6 +441,8 @@ export function RunPage({
                 departments={departments}
                 query={query}
                 onFilter={go}
+                onClear={clearFilters}
+                busy={navigating}
               />
             }
             pagination={{
@@ -635,6 +635,8 @@ export function RunLinesToolbar({
   departments,
   query,
   onFilter,
+  onClear,
+  busy = false,
   disabled = false,
 }: {
   /** "Showing x of y"; `null` while loading. */
@@ -644,6 +646,10 @@ export function RunLinesToolbar({
   departments: Department[];
   query: PayrollRunQuery;
   onFilter: (next: PayrollRunQuery) => void;
+  /** "Clear filters · n": search and both filters at once (absent while loading). */
+  onClear?: () => void;
+  /** The filtered lines are loading: "Clear filters" waits. */
+  busy?: boolean;
   disabled?: boolean;
 }) {
   const { t, locale } = useTranslation();
@@ -690,6 +696,9 @@ export function RunLinesToolbar({
           />
           {t('payroll.filters.needsReview')}
         </label>
+        {onClear ? (
+          <ClearFilters count={runFilterCount(query)} onClear={onClear} disabled={disabled || busy} className="ms-auto" />
+        ) : null}
       </div>
     </>
   );

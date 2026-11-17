@@ -63,7 +63,20 @@ import {
   GearSixIcon as GearSix,
   ListMagnifyingGlassIcon as ListMagnifyingGlass,
   UserCircleIcon as UserCircle,
+  UserIcon as User,
   XCircleIcon as XCircle,
+  UserCircleGearIcon as UserCircleGear,
+  ShieldCheckIcon as ShieldCheck,
+  ShieldStarIcon as ShieldStar,
+  KeyIcon as Key,
+  LockSimpleIcon as LockSimple,
+  CopyIcon as Copy,
+  IdentificationCardIcon as IdentificationCard,
+  SparkleIcon as Sparkle,
+  EnvelopeSimpleIcon as EnvelopeSimple,
+  UserPlusIcon as UserPlus,
+  UserCircleDashedIcon as UserCircleDashed,
+  EraserIcon as Eraser,
 } from '@phosphor-icons/react/ssr';
 import type { ComponentType } from 'react';
 import { cn } from '@/shared/lib/utils';
@@ -190,6 +203,7 @@ export const HistoryIcon = duotone(ClockCounterClockwise, 'History');
 export const AdministrationModuleIcon = duotone(Buildings, 'AdministrationModule');
 export const ActivityIcon = duotone(ClockCounterClockwise, 'Activity');
 export const FilterIcon = duotone(Funnel, 'Filter');
+export const ClearFiltersIcon = duotone(Eraser, 'ClearFilters');
 export const OpenRecordIcon = duotone(ArrowSquareOut, 'OpenRecord');
 export const SignInIcon = duotone(SignIn, 'SignIn');
 export const FailedSignInIcon = duotone(LockKey, 'FailedSignIn');
@@ -198,6 +212,27 @@ export const CancelledIcon = duotone(XCircle, 'Cancelled');
 export const CoreModuleIcon = duotone(GearSix, 'CoreModule');
 export const FieldIcon = duotone(ListMagnifyingGlass, 'Field');
 export const PersonIcon = duotone(UserCircle, 'Person');
+/**
+ * The neutral avatar of an employee without a photo — never initials (owner, 2026-11-18). Filled,
+ * not duotone: it reads as a person's silhouette inside the avatar tile.
+ */
+export function SilhouetteIcon(props: IconProps) {
+  return <User weight="fill" aria-hidden="true" focusable="false" {...props} />;
+}
 export const AnyoneIcon = duotone(Users, 'Anyone');
 export const MoneyIcon = duotone(Coins, 'Money');
+
+// Users, roles and My account (spec roles-permissions, P3)
+export const UsersIcon = duotone(UserCircleGear, 'Users');
+export const RolesIcon = duotone(ShieldCheck, 'Roles');
+export const SystemAdminIcon = duotone(ShieldStar, 'SystemAdmin');
+export const CustomRoleIcon = duotone(Sparkle, 'CustomRole');
+export const TemporaryPasswordIcon = duotone(Key, 'TemporaryPassword');
+export const PasswordIcon = duotone(LockKey, 'Password');
+export const LockedIcon = duotone(LockSimple, 'Locked');
+export const CopyIcon = duotone(Copy, 'Copy');
+export const LinkedEmployeeIcon = duotone(IdentificationCard, 'LinkedEmployee');
+export const EmailIcon = duotone(EnvelopeSimple, 'Email');
+export const AddUserIcon = duotone(UserPlus, 'AddUser');
+export const NoUserIcon = duotone(UserCircleDashed, 'NoUser');
 

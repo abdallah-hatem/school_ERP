@@ -36,6 +36,26 @@ export const EmployeeStatus = {
 export type EmployeeStatus = (typeof EmployeeStatus)[keyof typeof EmployeeStatus];
 export const EMPLOYEE_STATUSES = values(EmployeeStatus);
 
+/** §3 social insurance status. Not insured clears the number, registration date and salary. */
+export const InsuranceStatus = {
+  INSURED: 'INSURED',
+  NOT_INSURED: 'NOT_INSURED',
+} as const;
+export type InsuranceStatus = (typeof InsuranceStatus)[keyof typeof InsuranceStatus];
+export const INSURANCE_STATUSES = values(InsuranceStatus);
+
+/** §3 highest qualification, lowest first (the order the picker shows). */
+export const Degree = {
+  NONE: 'NONE',
+  SECONDARY: 'SECONDARY',
+  DIPLOMA: 'DIPLOMA',
+  BACHELOR: 'BACHELOR',
+  MASTER: 'MASTER',
+  DOCTORATE: 'DOCTORATE',
+} as const;
+export type Degree = (typeof Degree)[keyof typeof Degree];
+export const DEGREES = values(Degree);
+
 export const PenaltyAction = {
   NOTICE: 'NOTICE',
   WARNING: 'WARNING',
@@ -127,9 +147,3 @@ export const SettingScope = {
 export type SettingScope = (typeof SettingScope)[keyof typeof SettingScope];
 export const SETTING_SCOPES = values(SettingScope);
 
-/** The single demo role (§2). The roles system comes later. */
-export const UserRole = {
-  HR_ADMIN: 'HR_ADMIN',
-} as const;
-export type UserRole = (typeof UserRole)[keyof typeof UserRole];
-export const USER_ROLES = values(UserRole);

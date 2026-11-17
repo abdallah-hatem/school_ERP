@@ -59,5 +59,8 @@ The client's regulations don't define how salaries are calculated. For the demo,
 - **DECIDED** — Approving a run announces it (`payroll approved`, with the totals) for a future
   accounting module; nothing listens to it yet.
 - **DECIDED** — **Bank sheet** export of an approved run (Excel): employee code, name, national ID,
-  net. Bank account fields are Planned.
+  net. The employee's bank details are recorded (§3); adding them to the sheet is Planned.
 - **Planned** — tax, social insurance, allowances, the annual raise, the exam bonus rules, loans.
+- **Planned** (owner of payroll: Tamer) — **social insurance deductions** from the insured salary
+  and **bank transfer** of net pay using the employee's bank account. The employee fields exist
+  (§3, 2026-11-18); how payroll uses them is decided and built by the payroll owner.

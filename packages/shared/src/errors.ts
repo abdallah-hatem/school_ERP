@@ -33,6 +33,12 @@ export const ErrorCode = {
   ROLE_IN_USE: 'ROLE_IN_USE',
   SYSTEM_ADMIN_FIXED: 'SYSTEM_ADMIN_FIXED',
   DUPLICATE_PERMISSION: 'DUPLICATE_PERMISSION',
+  /** A scope other than `all` on a permission that is about the whole school (P3). */
+  INVALID_SCOPE: 'INVALID_SCOPE',
+  /** Signed in with a temporary password: only `/auth/me`, sign-out and a new password (P3). */
+  PASSWORD_CHANGE_REQUIRED: 'PASSWORD_CHANGE_REQUIRED',
+  /** The new password is the one already in use (the temporary one, after a reset). */
+  SAME_PASSWORD: 'SAME_PASSWORD',
 
   // settings and files
   INVALID_WORK_HOURS: 'INVALID_WORK_HOURS',
@@ -46,6 +52,7 @@ export const ErrorCode = {
   EMPLOYEE_INACTIVE: 'EMPLOYEE_INACTIVE',
   DUPLICATE_NATIONAL_ID: 'DUPLICATE_NATIONAL_ID',
   DUPLICATE_FINGERPRINT_ID: 'DUPLICATE_FINGERPRINT_ID',
+  DUPLICATE_INSURANCE_NUMBER: 'DUPLICATE_INSURANCE_NUMBER',
   INVALID_MANAGER: 'INVALID_MANAGER',
   MANAGER_LOOP: 'MANAGER_LOOP',
   MANAGER_NOT_MANAGING: 'MANAGER_NOT_MANAGING',

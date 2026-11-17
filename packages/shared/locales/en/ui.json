@@ -50,6 +50,10 @@
     "searchOptions": "Type to search",
     "noMatches": "Nothing matches that search."
   },
+  "filters": {
+    "clear": "Clear filters",
+    "clearCount": "Clear filters · {count}"
+  },
   "units": {
     "currency": "EGP",
     "days": "days"

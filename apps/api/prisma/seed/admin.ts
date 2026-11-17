@@ -1,4 +1,4 @@
-import { UserRole, type PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@prisma/client';
 import { SEED_ADMIN_EMAIL, SEED_ADMIN_ROLES } from '@school-erp/shared';
 import { hashPassword, normalizeEmail } from '../../src/common/utils/password.util';
 
@@ -23,8 +23,8 @@ export async function seedAdmin(prisma: PrismaClient): Promise<void> {
   const passwordHash = await hashPassword(password);
   const admin = await prisma.user.upsert({
     where: { email },
-    create: { email, passwordHash, name: 'HR Admin', role: UserRole.HR_ADMIN },
-    update: { passwordHash, isActive: true, role: UserRole.HR_ADMIN },
+    create: { email, passwordHash, name: 'HR Admin' },
+    update: { passwordHash, isActive: true, mustChangePassword: false },
     select: { id: true },
   });
   const roles = await prisma.role.findMany({

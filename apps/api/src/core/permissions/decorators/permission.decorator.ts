@@ -22,6 +22,21 @@ export const Permission = (...keys: [PermissionKey, ...PermissionKey[]]) =>
  */
 export const SignedIn = () => SetMetadata(SIGNED_IN_KEY, true);
 
+export const BEFORE_PASSWORD_CHANGE_KEY = 'permissions:beforePasswordChange';
+
+/**
+ * One of the few routes a user who signed in with a temporary password may call before choosing
+ * their own (R9, spec P3): `/auth/me`, sign-out and `POST /account/password`. Every other route
+ * answers 403 `PASSWORD_CHANGE_REQUIRED` to them. Only on `@SignedIn()` routes.
+ */
+export const AllowedBeforePasswordChange = () => SetMetadata(BEFORE_PASSWORD_CHANGE_KEY, true);
+
+/** Whether a route carries `@AllowedBeforePasswordChange()` (on the handler only). */
+// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type -- a route handler
+export function allowedBeforePasswordChange(handler: Function): boolean {
+  return Reflect.getMetadata(BEFORE_PASSWORD_CHANGE_KEY, handler) === true;
+}
+
 /** What a route declared. `none` and `conflict` are refused (closed by default). */
 export type PermissionDeclaration =
   | { kind: 'public' }

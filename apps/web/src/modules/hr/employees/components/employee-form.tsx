@@ -3,7 +3,10 @@
 import { FormActionBar } from '@/shared/components/form/form-action-bar';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
+  DEGREES,
   GENDERS,
+  INSURANCE_STATUSES,
+  InsuranceStatus,
   oneYearContractEnd,
   WORK_SYSTEMS,
   type Employee,
@@ -32,17 +35,20 @@ import { localName } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { CREATE_EMPLOYEE, UPDATE_EMPLOYEE } from '../apis';
 import {
+  CLEARED_INSURANCE,
   emptyEmployeeForm,
   employeeFormSchema,
   employeeToForm,
   fieldForError,
   formToRequest,
   formToUpdate,
+  graduationYears,
   listOptions,
   managerOptions,
   todayIso,
   type EmployeeFormValues,
 } from '../lib/employee-form';
+import { EmployeePhotoField, uploadEmployeePhoto } from './employee-photo-field';
 
 export interface EmployeeFormProps {
   /** `/ar/employees`. */
@@ -68,7 +74,9 @@ export function EmployeeForm({ basePath, employee, departments, stages, jobTitle
   // original value counts as unchanged). Adding: always enabled — submitting shows what's missing.
   const { isDirty } = form.formState;
   const nothingToSave = Boolean(employee) && !isDirty;
-  const { control, setError, setValue, getFieldState } = form;
+  const { control, setError, setValue, getFieldState, clearErrors } = form;
+  // Adding: a chosen photo is uploaded right after the employee is saved.
+  const pendingPhoto = useRef<File | null>(null);
 
   // One request at a time, and the button stays busy through the navigation after a save.
   const inFlight = useRef(false);
@@ -86,6 +94,20 @@ export function EmployeeForm({ basePath, employee, departments, stages, jobTitle
     }
   }, [isEdit, contractStart, getFieldState, setValue]);
 
+  // §3: "Not insured" hides the three insurance details and clears them.
+  const insuranceStatus = useWatch({ control, name: 'insuranceStatus' });
+  const insured = insuranceStatus === InsuranceStatus.INSURED;
+  const previousInsurance = useRef(insuranceStatus);
+  useEffect(() => {
+    if (insuranceStatus === previousInsurance.current) return;
+    previousInsurance.current = insuranceStatus;
+    if (insuranceStatus === InsuranceStatus.INSURED) return;
+    for (const [name, value] of Object.entries(CLEARED_INSURANCE)) {
+      setValue(name as keyof typeof CLEARED_INSURANCE, value, { shouldDirty: true });
+    }
+    clearErrors(Object.keys(CLEARED_INSURANCE) as (keyof typeof CLEARED_INSURANCE)[]);
+  }, [insuranceStatus, setValue, clearErrors]);
+
   const stage = listOptions(stages, locale, employee?.stage);
   const department = listOptions(departments, locale, employee?.department);
   const jobTitle = listOptions(jobTitles, locale, employee?.jobTitle);
@@ -101,6 +123,7 @@ export function EmployeeForm({ basePath, employee, departments, stages, jobTitle
         : t('employees.hints.noManagers');
   // Date of birth and hire date can't be in the future (§3).
   const today = todayIso();
+  const years = useMemo(() => graduationYears(today).map((y) => ({ value: String(y), label: String(y) })), [today]);
 
   async function onSubmit(values: EmployeeFormValues) {
     if (inFlight.current) return;
@@ -119,7 +142,14 @@ export function EmployeeForm({ basePath, employee, departments, stages, jobTitle
       if (res.success) {
         saved = true;
         const id = res.data?.id ?? employee?.id;
-        router.push(id ? `${basePath}/${id}` : basePath);
+        let target = id ? `${basePath}/${id}` : basePath;
+        if (!employee && id && pendingPhoto.current) {
+          // The employee is saved either way; a failed photo (its error toast shows) is retried
+          // from their edit page.
+          const photo = await uploadEmployeePhoto(id, pendingPhoto.current);
+          if (!photo.success && !photo.unauthorized) target = `${basePath}/${id}/edit`;
+        }
+        router.push(target);
         router.refresh();
         return;
       }
@@ -154,6 +184,10 @@ export function EmployeeForm({ basePath, employee, departments, stages, jobTitle
         breadcrumbsLabel={t('ui.shell.breadcrumbs')}
       />
       <Form onSubmit={(e) => void form.handleSubmit(onSubmit)(e)} aria-label={title}>
+        <Section title={t('employees.sections.photo')}>
+          <EmployeePhotoField employee={employee} onPendingChange={(file) => (pendingPhoto.current = file)} />
+        </Section>
+
         <Section title={t('employees.sections.personal')}>
           <TextField control={control} name="nameEn" label={t('employees.fields.nameEn')} placeholder={t('employees.placeholders.nameEn')} required dir="ltr" maxLength={200} />
           <TextField control={control} name="nameAr" label={t('employees.fields.nameAr')} placeholder={t('employees.placeholders.nameAr')} required dir="rtl" maxLength={200} />
@@ -204,6 +238,77 @@ export function EmployeeForm({ basePath, employee, departments, stages, jobTitle
           <DateField control={control} name="contractStart" label={t('employees.fields.contractStart')} hint={isEdit ? undefined : t('employees.hints.contract')} required />
           <DateField control={control} name="contractEnd" label={t('employees.fields.contractEnd')} required />
           <SwitchField control={control} name="usesBus" label={t('employees.fields.usesBus')} hint={t('employees.hints.usesBus')} className="sm:col-span-2" />
+        </Section>
+
+        <Section title={t('employees.sections.insurance')}>
+          <SelectField
+            control={control}
+            name="insuranceStatus"
+            label={t('employees.fields.insuranceStatus')}
+            placeholder={t('employees.placeholders.insuranceStatus')}
+            options={INSURANCE_STATUSES.map((s) => ({ value: s, label: t(`common.enums.insuranceStatus.${s}`) }))}
+            hint={t('employees.hints.insuranceStatus')}
+            required
+          />
+          {insured ? (
+            <>
+              <TextField
+                control={control}
+                name="insuranceNumber"
+                label={t('employees.fields.insuranceNumber')}
+                placeholder={t('employees.placeholders.insuranceNumber')}
+                hint={t('employees.hints.insuranceNumber')}
+                inputMode="numeric"
+                dir="ltr"
+                maxLength={20}
+                required
+              />
+              <DateField control={control} name="insuranceRegistrationDate" label={t('employees.fields.insuranceRegistrationDate')} max={today} required />
+              <MoneyField control={control} name="insuredSalary" label={t('employees.fields.insuredSalary')} placeholder={t('employees.placeholders.insuredSalary')} hint={t('employees.hints.insuredSalary')} required />
+            </>
+          ) : null}
+        </Section>
+
+        <Section title={t('employees.sections.bank')}>
+          <TextField control={control} name="bankName" label={t('employees.fields.bankName')} placeholder={t('employees.placeholders.bankName')} maxLength={100} />
+          <TextField control={control} name="bankAccountNumber" label={t('employees.fields.bankAccountNumber')} placeholder={t('employees.placeholders.bankAccountNumber')} inputMode="numeric" dir="ltr" maxLength={50} />
+          <TextField
+            control={control}
+            name="iban"
+            label={t('employees.fields.iban')}
+            placeholder={t('employees.placeholders.iban')}
+            hint={t('employees.hints.iban')}
+            dir="ltr"
+            autoComplete="off"
+            maxLength={40}
+            className="sm:col-span-2"
+          />
+        </Section>
+
+        <Section title={t('employees.sections.emergency')}>
+          <TextField control={control} name="emergencyContactName" label={t('employees.fields.emergencyContactName')} placeholder={t('employees.placeholders.emergencyContactName')} maxLength={200} />
+          <TextField control={control} name="emergencyContactRelationship" label={t('employees.fields.emergencyContactRelationship')} placeholder={t('employees.placeholders.emergencyContactRelationship')} maxLength={100} />
+          <PhoneField control={control} name="emergencyContactPhone" label={t('employees.fields.emergencyContactPhone')} placeholder={t('employees.placeholders.emergencyContactPhone')} hint={t('employees.hints.phone')} />
+        </Section>
+
+        <Section title={t('employees.sections.qualification')}>
+          <SelectField
+            control={control}
+            name="highestDegree"
+            label={t('employees.fields.highestDegree')}
+            placeholder={t('employees.placeholders.highestDegree')}
+            options={DEGREES.map((d) => ({ value: d, label: t(`common.enums.degree.${d}`) }))}
+          />
+          <SelectField
+            searchable
+            control={control}
+            name="graduationYear"
+            label={t('employees.fields.graduationYear')}
+            placeholder={t('employees.placeholders.graduationYear')}
+            options={years}
+          />
+          <TextField control={control} name="major" label={t('employees.fields.major')} placeholder={t('employees.placeholders.major')} maxLength={200} />
+          <TextField control={control} name="university" label={t('employees.fields.university')} placeholder={t('employees.placeholders.university')} maxLength={200} />
         </Section>
 
         {formError ? (

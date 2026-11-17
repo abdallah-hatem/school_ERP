@@ -1,11 +1,16 @@
 import { Controller, ForbiddenException, Get, UnauthorizedException } from '@nestjs/common';
 import type { ExecutionContext } from '@nestjs/common';
 import { PERMISSION_KEYS, type AuthUser, type PermissionKey } from '@school-erp/shared';
-import { Permission, Public, SignedIn } from '../decorators/permission.decorator';
+import {
+  AllowedBeforePasswordChange,
+  Permission,
+  Public,
+  SignedIn,
+} from '../decorators/permission.decorator';
 import type { PermissionsService } from '../permissions.service';
 import { PermissionGuard } from './permission.guard';
 
-const admin: AuthUser = { id: 'u-1', email: 'a@school.test', name: 'Admin', role: 'HR_ADMIN' };
+const admin: AuthUser = { id: 'u-1', email: 'a@school.test', name: 'Admin', mustChangePassword: false };
 /** A user whose roles grant nothing. */
 const nobody: AuthUser = { ...admin, id: 'u-2' };
 /** Can view penalties, can't approve them. */
@@ -21,6 +26,7 @@ const HELD: Record<string, readonly PermissionKey[]> = {
 class ThingsController {
   @Get('open') @Public() open(): void {}
   @Get('me') @SignedIn() me(): void {}
+  @Get('password') @SignedIn() @AllowedBeforePasswordChange() password(): void {}
   @Get() @Permission('hr.penalties.view') list(): void {}
   @Get('approve') @Permission('hr.penalties.view', 'hr.penalties.approve') approve(): void {}
   @Get('forgot') forgot(): void {}
@@ -91,6 +97,30 @@ describe('PermissionGuard (R3, closed by default)', () => {
     await expect(run('list')).rejects.toThrow(UnauthorizedException);
     await expect(run('me')).rejects.toThrow(UnauthorizedException);
     await expect(run('forgot')).rejects.toThrow(UnauthorizedException);
+  });
+
+  describe('a temporary password (mustChangePassword, P3)', () => {
+    const fresh: AuthUser = { ...admin, mustChangePassword: true };
+    const refusal = { response: { error: 'PASSWORD_CHANGE_REQUIRED', statusCode: 403 } };
+
+    it('reaches only the routes marked @AllowedBeforePasswordChange', async () => {
+      await expect(run('password', fresh)).resolves.toBe(true);
+    });
+
+    it('anything else → 403 PASSWORD_CHANGE_REQUIRED, even a key they hold or a @SignedIn route', async () => {
+      await expect(run('list', fresh)).rejects.toMatchObject(refusal);
+      await expect(run('me', fresh)).rejects.toMatchObject(refusal);
+      await expect(run('own', fresh, GuardedController)).rejects.toMatchObject(refusal);
+    });
+
+    it('still 401 when signed out, and @Public still passes', async () => {
+      await expect(run('password')).rejects.toThrow(UnauthorizedException);
+      await expect(run('open', fresh)).resolves.toBe(true);
+    });
+
+    it('once the password is changed the same user is back to normal', async () => {
+      await expect(run('list', { ...fresh, mustChangePassword: false })).resolves.toBe(true);
+    });
   });
 
   it('a class-level @Permission covers handlers that declare nothing; the handler’s own wins', async () => {

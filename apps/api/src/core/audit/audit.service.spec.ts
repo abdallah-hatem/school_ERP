@@ -9,7 +9,7 @@ import type {
   NewAuditEntry,
 } from './repositories/audit-entry.repository';
 
-const USER: AuthUser = { id: 'u1', email: 'mona@x.test', name: 'Mona', role: 'HR_ADMIN' };
+const USER: AuthUser = { id: 'u1', email: 'mona@x.test', name: 'Mona', mustChangePassword: false };
 
 function makeService(opts: { inTx?: boolean; user?: AuthUser | null; clsActive?: boolean } = {}) {
   const { inTx = true, user = USER, clsActive = true } = opts;

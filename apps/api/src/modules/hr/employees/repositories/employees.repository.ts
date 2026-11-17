@@ -21,6 +21,7 @@ export const EMPLOYEE_SUMMARY_SELECT = {
   workSystem: true,
   basicSalary: true,
   status: true,
+  photoUrl: true,
 } satisfies Prisma.EmployeeSelect;
 
 /** The employee fields a payroll line snapshots at calculation (§6). */
@@ -61,6 +62,7 @@ export const EMPLOYEE_DETAIL_SELECT = {
       code: true,
       nameEn: true,
       nameAr: true,
+      photoUrl: true,
       jobTitle: { select: { managesPeople: true } },
     },
   },
@@ -71,6 +73,21 @@ export const EMPLOYEE_DETAIL_SELECT = {
   contractStart: true,
   contractEnd: true,
   usesBus: true,
+  photoUrl: true,
+  insuranceStatus: true,
+  insuranceNumber: true,
+  insuranceRegistrationDate: true,
+  insuredSalary: true,
+  bankName: true,
+  bankAccountNumber: true,
+  iban: true,
+  emergencyContactName: true,
+  emergencyContactRelationship: true,
+  emergencyContactPhone: true,
+  highestDegree: true,
+  major: true,
+  university: true,
+  graduationYear: true,
   status: true,
   userId: true,
   createdAt: true,
@@ -111,6 +128,9 @@ function rethrowUnique(e: unknown): never {
     }
     if (/fingerprint/i.test(target)) {
       throw new CodedException(HttpStatus.CONFLICT, ErrorCode.DUPLICATE_FINGERPRINT_ID);
+    }
+    if (/insurance/i.test(target)) {
+      throw new CodedException(HttpStatus.CONFLICT, ErrorCode.DUPLICATE_INSURANCE_NUMBER);
     }
   }
   throw e;
@@ -266,6 +286,23 @@ export class EmployeesRepository extends BaseRepository<
       select: { id: true },
     });
     return row?.id ?? null;
+  }
+
+  async findIdByInsuranceNumber(insuranceNumber: string): Promise<string | null> {
+    const row = await this.databaseService.employee.findUnique({
+      where: { insuranceNumber },
+      select: { id: true },
+    });
+    return row?.id ?? null;
+  }
+
+  /** The employee's current photo URL (null when none), or `undefined` when there is no such employee. */
+  async findPhotoUrl(id: string): Promise<string | null | undefined> {
+    const row = await this.databaseService.employee.findUnique({
+      where: { id },
+      select: { photoUrl: true },
+    });
+    return row ? row.photoUrl : undefined;
   }
 
   /**

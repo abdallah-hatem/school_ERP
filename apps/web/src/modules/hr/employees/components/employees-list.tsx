@@ -15,16 +15,16 @@ import { Pagination } from '@/shared/components/data-table/pagination';
 import { EmptyState, ErrorState } from '@/shared/components/layout/empty-state';
 import { PageHeader } from '@/shared/components/layout/page-header';
 import { Button } from '@/shared/components/ui/button';
-import { AddIcon, CloseIcon, SearchIcon } from '@/shared/components/ui/icons';
+import { AddIcon, SearchIcon } from '@/shared/components/ui/icons';
 import { Input } from '@/shared/components/ui/input';
-import { FilterSelect } from '@/shared/components/form/filter-controls';
+import { ClearFilters, FilterSelect } from '@/shared/components/form/filter-controls';
 import { formatCount } from '@/shared/lib/format';
 import { localName } from '@/shared/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import {
+  activeFilterCount,
   employeesQueryString,
-  hasActiveFilters,
   type EmployeesFilterKey,
   type EmployeesListQuery,
 } from '../lib/list-query';
@@ -71,12 +71,15 @@ export function EmployeesList({ basePath, query, rows, total, departments, stage
     searchTimer.current = setTimeout(() => setFilter('search', text.trim()), SEARCH_DEBOUNCE_MS);
   }
 
+  /** Search, every filter and the page, in one URL update. */
   function clearFilters() {
+    if (searchTimer.current) clearTimeout(searchTimer.current);
     setSearch('');
     go({ page: PAGINATION.defaultPage, limit: query.limit });
   }
 
-  const filtered = hasActiveFilters(query);
+  const filterCount = activeFilterCount(query);
+  const filtered = filterCount > 0;
   const itemOptions = (items: ListItem[]) =>
     [...items].sort((a, b) => a.sortOrder - b.sortOrder).map((i) => ({ value: i.id, label: localName(i, locale), keywords: [i.nameEn, i.nameAr] }));
 
@@ -96,12 +99,7 @@ export function EmployeesList({ basePath, query, rows, total, departments, stage
       icon={SearchIcon}
       title={t('employees.list.noResultsTitle')}
       description={t('employees.list.noResultsBody')}
-      action={
-        <Button variant="secondary" onClick={clearFilters}>
-          <CloseIcon />
-          {t('employees.list.clearFilters')}
-        </Button>
-      }
+      action={<ClearFilters placement="empty" count={filterCount} onClear={clearFilters} />}
     />
   ) : (
     <EmptyState title={t('employees.list.emptyTitle')} description={t('employees.list.emptyBody')} action={addButton} />
@@ -188,10 +186,16 @@ export function EmployeesList({ basePath, query, rows, total, departments, stage
               />
             </div>
           </div>
-          {error ? null : (
-            <p aria-live="polite" data-testid="employees-count" className="px-1 text-[0.8rem] text-muted-foreground">
-              {t('employees.list.count', { count: formatCount(total) })}
-            </p>
+          {/* The count, and "Clear filters · n" at the inline end — its own line, so a phone keeps it in view. */}
+          {error && !filtered ? null : (
+            <div className="flex min-h-9 flex-wrap items-center gap-x-3 gap-y-1">
+              {error ? null : (
+                <p aria-live="polite" data-testid="employees-count" className="px-1 text-[0.8rem] text-muted-foreground">
+                  {t('employees.list.count', { count: formatCount(total) })}
+                </p>
+              )}
+              <ClearFilters count={filterCount} onClear={clearFilters} disabled={pending} className="ms-auto h-9" />
+            </div>
           )}
         </div>
         {body}

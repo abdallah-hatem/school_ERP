@@ -9,15 +9,26 @@ import {
   LatenessIcon,
   PayrollIcon,
   PenaltiesIcon,
+  RolesIcon,
   SettingsIcon,
   StaffIcon,
   StudentsModuleIcon,
+  UsersIcon,
   type AppIcon,
 } from '@/shared/components/ui/icons';
 
 export interface NavItem {
   /** Key under `common.nav` for the label. */
-  key: 'dashboard' | 'employees' | 'penalties' | 'lateness' | 'payroll' | 'settings' | 'activity';
+  key:
+    | 'dashboard'
+    | 'employees'
+    | 'penalties'
+    | 'lateness'
+    | 'payroll'
+    | 'settings'
+    | 'activity'
+    | 'users'
+    | 'roles';
   /** Path after the locale segment; `''` is the dashboard. */
   path: string;
   icon: AppIcon;
@@ -81,7 +92,7 @@ export const NAV_MODULES: readonly NavModule[] = [
   { key: 'inventory', nameKey: 'common.nav.modules.inventory', icon: InventoryModuleIcon, tone: 'neutral', items: [], status: 'soon' },
   { key: 'students', nameKey: 'common.nav.modules.students', icon: StudentsModuleIcon, tone: 'neutral', items: [], status: 'soon' },
   {
-    // Settings and the activity log (audit spec → Screens): the school's own administration.
+    // Settings, the activity log, users and roles: the school's own administration.
     key: 'administration',
     nameKey: 'common.nav.modules.administration',
     icon: AdministrationModuleIcon,
@@ -95,6 +106,9 @@ export const NAV_MODULES: readonly NavModule[] = [
         'hr.penalty_catalogue.view',
       ]),
       page('activity', '/activity', ActivityIcon, ['core.audit.view']),
+      // Who can sign in and what each role may do (spec roles-permissions, P3).
+      page('users', '/users', UsersIcon, ['core.users.view']),
+      page('roles', '/roles', RolesIcon, ['core.roles.view']),
     ],
     status: 'live',
   },
