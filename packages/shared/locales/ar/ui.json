@@ -50,6 +50,10 @@
     "searchOptions": "اكتب للبحث",
     "noMatches": "لا توجد نتائج مطابقة."
   },
+  "filters": {
+    "clear": "مسح عوامل التصفية",
+    "clearCount": "مسح عوامل التصفية · {count}"
+  },
   "units": {
     "currency": "ج.م",
     "days": "يوم"

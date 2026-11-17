@@ -4,12 +4,12 @@ import { PAGINATION, PENALTY_STATUSES, type Month, type PenaltyRecord, type Pena
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import type { SelectOption, SelectOptionGroup } from '@/shared/components/form/fields';
-import { FilterSelect } from '@/shared/components/form/filter-controls';
+import { ClearFilters, FilterSelect } from '@/shared/components/form/filter-controls';
 import { MonthStepper } from '@/shared/components/form/month-stepper';
 import { EmptyState } from '@/shared/components/layout/empty-state';
 import { PageHeader } from '@/shared/components/layout/page-header';
 import { Button } from '@/shared/components/ui/button';
-import { AddIcon, CloseIcon, SearchIcon } from '@/shared/components/ui/icons';
+import { AddIcon, SearchIcon } from '@/shared/components/ui/icons';
 import { Input } from '@/shared/components/ui/input';
 import { formatMonth } from '@/shared/lib/format';
 import { useTranslation } from '@/shared/providers/i18n-provider';
@@ -73,12 +73,15 @@ export function PenaltiesList({
     );
   }
 
+  /** Search, status and the page in one URL update; the month is the period, not a filter. */
   function clearFilters() {
+    if (searchTimer.current) clearTimeout(searchTimer.current);
     setSearch('');
     go({ month: query.month, page: PAGINATION.defaultPage, limit: query.limit });
   }
 
-  const filtered = Boolean(query.search || query.status);
+  const filterCount = (query.search ? 1 : 0) + (query.status ? 1 : 0);
+  const filtered = filterCount > 0;
   const loading = rows === undefined;
   const recordButton = (
     <Button variant="primary" className="cursor-pointer" disabled={loading} onClick={() => setRecording(true)}>
@@ -118,12 +121,7 @@ export function PenaltiesList({
               icon={SearchIcon}
               title={t('penalties.list.noResultsTitle')}
               description={t('penalties.list.noResultsBody')}
-              action={
-                <Button variant="secondary" className="cursor-pointer" onClick={clearFilters}>
-                  <CloseIcon />
-                  {t('penalties.list.clearFilters')}
-                </Button>
-              }
+              action={<ClearFilters placement="empty" count={filterCount} onClear={clearFilters} />}
             />
           ) : (
             <EmptyState title={t('penalties.list.emptyTitle')} description={t('penalties.list.emptyBody')} action={recordButton} />
@@ -156,6 +154,7 @@ export function PenaltiesList({
               onChange={(v) => go({ ...query, status: v as PenaltyStatus | undefined, page: PAGINATION.defaultPage })}
               disabled={loading}
             />
+            <ClearFilters count={filterCount} onClear={clearFilters} disabled={loading || pending} className="ms-auto" />
           </div>
         }
       />

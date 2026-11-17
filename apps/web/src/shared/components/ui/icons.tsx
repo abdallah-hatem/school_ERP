@@ -64,6 +64,7 @@ import {
   ListMagnifyingGlassIcon as ListMagnifyingGlass,
   UserCircleIcon as UserCircle,
   XCircleIcon as XCircle,
+  EraserIcon as Eraser,
 } from '@phosphor-icons/react/ssr';
 import type { ComponentType } from 'react';
 import { cn } from '@/shared/lib/utils';
@@ -188,6 +189,7 @@ export const HistoryIcon = duotone(ClockCounterClockwise, 'History');
 export const AdministrationModuleIcon = duotone(Buildings, 'AdministrationModule');
 export const ActivityIcon = duotone(ClockCounterClockwise, 'Activity');
 export const FilterIcon = duotone(Funnel, 'Filter');
+export const ClearFiltersIcon = duotone(Eraser, 'ClearFilters');
 export const OpenRecordIcon = duotone(ArrowSquareOut, 'OpenRecord');
 export const SignInIcon = duotone(SignIn, 'SignIn');
 export const FailedSignInIcon = duotone(LockKey, 'FailedSignIn');

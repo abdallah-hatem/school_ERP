@@ -277,6 +277,13 @@ describe('LatenessBoard', () => {
     await user.clear(search);
     await user.type(search, 'nobody');
     expect(screen.getByText('No employees match')).toBeTruthy();
+    // The toolbar's and the "No results" "Clear filters · 1": either brings every row back.
+    const clears = screen.getAllByRole('button', { name: 'Clear filters · 1' });
+    expect(clears).toHaveLength(2);
+    await user.click(clears[1]!);
+    expect((search as HTMLInputElement).value).toBe('');
+    expect(minutesInput('Mona Adel')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Clear filters/ })).toBeNull();
   });
 
   it('an edit survives filtering it out of view and is still saved', async () => {

@@ -6,7 +6,7 @@ import { useId, useMemo, useRef, useState, useTransition } from 'react';
 import { EmployeeLink } from '@/core/employees';
 import { callApi } from '@/lib/callApi';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-table/data-table';
-import { SearchInput } from '@/shared/components/form/filter-controls';
+import { ClearFilters, SearchInput } from '@/shared/components/form/filter-controls';
 import { MonthStepper } from '@/shared/components/form/month-stepper';
 import { EmptyState } from '@/shared/components/layout/empty-state';
 import { PageHeader } from '@/shared/components/layout/page-header';
@@ -171,6 +171,11 @@ export function LatenessBoard({ month, maxMonth, rows: initialRows, rule, locked
   ];
 
   const searching = search.trim().length > 0;
+  /** The grid's search is local (typed minutes stay in memory), so clearing it is too. */
+  function clearSearch() {
+    setSearch('');
+    setPage(1);
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -244,7 +249,12 @@ export function LatenessBoard({ month, maxMonth, rows: initialRows, rule, locked
         rowTone={(row) => (viewEntry(row, drafts[row.employee.id], rule ?? null).invalid ? 'danger' : undefined)}
         empty={
           searching ? (
-            <EmptyState icon={SearchIcon} title={t('lateness.noResults.title')} description={t('lateness.noResults.body')} />
+            <EmptyState
+              icon={SearchIcon}
+              title={t('lateness.noResults.title')}
+              description={t('lateness.noResults.body')}
+              action={<ClearFilters placement="empty" count={1} onClear={clearSearch} />}
+            />
           ) : (
             <EmptyState icon={LatenessIcon} title={t('lateness.empty.title')} description={t('lateness.empty.body')} />
           )
@@ -263,6 +273,7 @@ export function LatenessBoard({ month, maxMonth, rows: initialRows, rule, locked
                   setPage(1);
                 }}
               />
+              <ClearFilters count={searching ? 1 : 0} onClear={clearSearch} disabled={loading} />
               {rows ? (
                 <p data-testid="lateness-summary" className="ms-auto text-sm font-semibold text-muted-foreground">
                   {t('lateness.summary', {

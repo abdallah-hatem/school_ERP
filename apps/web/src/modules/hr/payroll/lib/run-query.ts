@@ -47,8 +47,13 @@ export function parseRunQuery(params: SearchParamsRecord): PayrollRunQuery {
   };
 }
 
+/** The search (when it has text) plus each filter in use — the "Clear filters · n" count. */
+export function runFilterCount(query: PayrollRunQuery): number {
+  return [query.search, query.departmentId, query.flagged].filter(Boolean).length;
+}
+
 export function hasRunFilters(query: PayrollRunQuery): boolean {
-  return Boolean(query.search || query.departmentId || query.flagged);
+  return runFilterCount(query) > 0;
 }
 
 export function runQueryString(query: PayrollRunQuery): string {
