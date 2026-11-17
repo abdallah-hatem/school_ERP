@@ -6,6 +6,15 @@ import { defineConfig, devices } from '@playwright/test';
  * The flows build on each other (a penalty recorded in 03 shows in the payroll of 05), so they run
  * in file order on one worker. Light theme only (CLAUDE.md), so no colour-scheme projects.
  */
+/*
+ * Desktop Chromium on Linux (CI) has classic scrollbars, and `scrollbar-gutter: stable` on <html>
+ * reserves their 15px even when hidden; macOS's overlay scrollbars reserve nothing. Widen the Linux
+ * desktop viewport by the gutter so the page gets the same 1440px of content as on a Mac — otherwise
+ * container queries (table → cards, tile lines) land on the other side of their breakpoints.
+ * Phone projects emulate a mobile device, which already has overlay scrollbars.
+ */
+const DESKTOP_WIDTH = 1440 + (process.platform === 'linux' ? 15 : 0);
+
 export default defineConfig({
   testDir: 'e2e',
   outputDir: 'e2e/.results',
@@ -24,13 +33,7 @@ export default defineConfig({
     acceptDownloads: true,
     actionTimeout: 15_000,
     navigationTimeout: 30_000,
-    // Linux Chromium has classic scrollbars: `scrollbar-gutter: stable` on <html> then reserves 15px
-    // even when they're hidden, so a 1440px desktop crosses table→cards breakpoints. Overlay
-    // scrollbars reserve nothing — the macOS layout the specs were written against.
-    launchOptions:
-      process.platform === 'linux'
-        ? { args: ['--font-render-hinting=none', '--enable-features=OverlayScrollbar'] }
-        : undefined,
+    launchOptions: process.platform === 'linux' ? { args: ['--font-render-hinting=none'] } : undefined,
   },
   projects: [
     {
@@ -38,7 +41,7 @@ export default defineConfig({
       testIgnore: /phone/,
       use: {
         ...devices['Desktop Chrome'],
-        viewport: { width: 1440, height: 900 },
+        viewport: { width: DESKTOP_WIDTH, height: 900 },
         locale: 'en-US',
       },
     },
