@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { cn } from '@/shared/lib/utils';
 import type { AppIcon } from './icons';
@@ -24,6 +25,7 @@ export function StatTile({
   icon: Icon,
   tone = 'primary',
   loading = false,
+  href,
   className,
 }: {
   label: ReactNode;
@@ -34,17 +36,20 @@ export function StatTile({
   icon?: AppIcon;
   tone?: StatTone;
   loading?: boolean;
+  /** The whole tile links to the screen behind the figure (e.g. the filtered list). */
+  href?: string;
   className?: string;
 }) {
   const feature = tone === 'feature';
-  return (
-    <div
-      className={cn(
-        'relative isolate flex min-w-0 flex-col gap-3 overflow-hidden rounded-2xl bg-card px-5 pt-4.5 pb-5 shadow-card',
-        tones[tone].tile,
-        className,
-      )}
-    >
+  const classes = cn(
+    'relative isolate flex min-w-0 flex-col gap-3 overflow-hidden rounded-2xl bg-card px-5 pt-4.5 pb-5 shadow-card',
+    tones[tone].tile,
+    href &&
+      'cursor-pointer transition-shadow duration-150 ease-snappy hover:shadow-raised focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring/55',
+    className,
+  );
+  const body = (
+    <>
       {feature ? (
         <>
           <span aria-hidden="true" className="absolute -end-12 -top-16 -z-10 size-36 rounded-full bg-accent/85" />
@@ -79,6 +84,13 @@ export function StatTile({
           {sub}
         </div>
       ) : null}
-    </div>
+    </>
+  );
+  return href ? (
+    <Link href={href} className={classes}>
+      {body}
+    </Link>
+  ) : (
+    <div className={classes}>{body}</div>
   );
 }
