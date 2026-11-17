@@ -1,4 +1,4 @@
-import type { Month } from './types/common';
+import type { IsoDate, Month } from './types/common';
 
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 
@@ -7,8 +7,12 @@ export function isMonth(value: unknown): value is Month {
   return typeof value === 'string' && MONTH.test(value);
 }
 
-/** `YYYY-MM` of a date in its local calendar (the screens' "this month"). */
-export function monthOf(date: Date): Month {
+/**
+ * The `YYYY-MM` month of a day. A `YYYY-MM-DD` string gives the month it is written in (a day's
+ * payroll month); a `Date` gives its month in the local calendar (the screens' "this month").
+ */
+export function monthOf(date: Date | IsoDate): Month {
+  if (typeof date === 'string') return date.slice(0, 7);
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
 

@@ -25,10 +25,12 @@ const DEFAULT_RULE: LatenessRule = {
 };
 
 const DEPARTMENT = { id: 'd1', nameEn: 'Science', nameAr: 'العلوم' };
+const OTHER_DEPARTMENT = { id: 'd2', nameEn: 'Languages', nameAr: 'اللغات' };
 
-function row(id: string, code: string, nameEn: string, nameAr: string, minutes = 0): LatenessRow {
+function row(id: string, code: string, nameEn: string, nameAr: string, minutes = 0, department = DEPARTMENT): LatenessRow {
   return {
     employee: { id, code, nameEn, nameAr },
+    department,
     minutes,
     days: latenessDays(minutes, DEFAULT_RULE),
   };
@@ -36,7 +38,7 @@ function row(id: string, code: string, nameEn: string, nameAr: string, minutes =
 
 const ROWS = [
   row('e1', 'EMP-0001', 'Mona Adel', 'منى عادل', 30),
-  row('e2', 'EMP-0002', 'Karim Fawzy', 'كريم فوزي'),
+  row('e2', 'EMP-0002', 'Karim Fawzy', 'كريم فوزي', 0, OTHER_DEPARTMENT),
   row('e3', 'EMP-0003', 'Salma Nour', 'سلمى نور', 90),
 ];
 
@@ -48,7 +50,7 @@ function renderBoard(props: Partial<LatenessBoardProps> = {}, locale: Locale = '
         maxMonth="2026-11"
         rows={ROWS}
         rule={DEFAULT_RULE}
-        departments={{ e1: DEPARTMENT }}
+        locked={false}
         {...props}
       />
     </I18nProvider>
@@ -131,7 +133,7 @@ describe('LatenessBoard', () => {
   it('Save all sends only the changed rows and shows a translated success toast', async () => {
     const user = userEvent.setup();
     const saved = [ROWS[0]!, row('e2', 'EMP-0002', 'Karim Fawzy', 'كريم فوزي', 45), ROWS[2]!];
-    apis.PUT_LATENESS.mockResolvedValue({ success: true, status: 200, message: 'Resource updated successfully', data: saved });
+    apis.PUT_LATENESS.mockResolvedValue({ success: true, status: 200, message: 'Resource updated successfully', data: { locked: false, rows: saved } });
     renderBoard();
     expect((saveButton() as HTMLButtonElement | HTMLInputElement).disabled).toBe(true);
 
@@ -159,7 +161,7 @@ describe('LatenessBoard', () => {
     await user.dblClick(button);
     expect(apis.PUT_LATENESS).toHaveBeenCalledTimes(1);
     expect((button as HTMLButtonElement | HTMLInputElement).disabled).toBe(true);
-    resolve({ success: true, status: 200, data: ROWS });
+    resolve({ success: true, status: 200, data: { locked: false, rows: ROWS } });
     await waitFor(() => expect(toast.success).toHaveBeenCalled());
   });
 
@@ -184,6 +186,29 @@ describe('LatenessBoard', () => {
     expect((minutesInput('Karim Fawzy') as HTMLInputElement).value).toBe('0');
     expect(screen.queryByRole('button', { name: /^Save all/ })).toBeNull();
     expect(toast.error).toHaveBeenCalledWith("This month's payroll is approved and locked.");
+  });
+
+  it('a month that loads locked opens read-only with the banner, before any save', () => {
+    renderBoard({ locked: true });
+    const banner = screen.getByRole('alert');
+    expect(within(banner).getByText('This month is locked')).toBeTruthy();
+    expect(within(banner).getByText(/November 2026/)).toBeTruthy();
+    expect((minutesInput('Karim Fawzy') as HTMLButtonElement | HTMLInputElement).disabled).toBe(true);
+    expect(screen.queryByRole('button', { name: /^Save all/ })).toBeNull();
+    expect(apis.PUT_LATENESS).not.toHaveBeenCalled();
+  });
+
+  it('an open month shows no lock banner and stays editable', () => {
+    renderBoard({ locked: false });
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect((minutesInput('Karim Fawzy') as HTMLButtonElement | HTMLInputElement).disabled).toBe(false);
+  });
+
+  it('each row shows its own department from the lateness row (no separate lookup)', () => {
+    renderBoard();
+    const rowOf = (name: string) => minutesInput(name).closest('tr') as HTMLElement;
+    expect(within(rowOf('Mona Adel')).getByText('Science')).toBeTruthy();
+    expect(within(rowOf('Karim Fawzy')).getByText('Languages')).toBeTruthy();
   });
 
   it('another save error keeps the edits and the page editable', async () => {
@@ -227,7 +252,7 @@ describe('LatenessBoard', () => {
 
   it('an edit survives filtering it out of view and is still saved', async () => {
     const user = userEvent.setup();
-    apis.PUT_LATENESS.mockResolvedValue({ success: true, status: 200, data: ROWS });
+    apis.PUT_LATENESS.mockResolvedValue({ success: true, status: 200, data: { locked: false, rows: ROWS } });
     renderBoard();
     await user.type(minutesInput('Karim Fawzy'), '9');
     await user.type(screen.getByRole('searchbox', { name: 'Search employees' }), 'Salma');
@@ -275,7 +300,8 @@ describe('LatenessBoard', () => {
     renderBoard({}, 'ar');
     expect(document.documentElement.dir).toBe('rtl');
     expect(table().getByRole('textbox', { name: 'دقائق كريم فوزي' })).toBeTruthy();
-    expect(table().getByText('العلوم')).toBeTruthy();
+    expect(table().getAllByText('العلوم')).toHaveLength(2);
+    expect(table().getByText('اللغات')).toBeTruthy();
     expect((screen.getByRole('button', { name: 'حفظ الكل' }) as HTMLButtonElement | HTMLInputElement).disabled).toBe(true);
   });
 });

@@ -12,9 +12,10 @@ const RULE: LatenessRule = {
   extraHourDays: SETTING_DEFAULTS['hr.lateness.extraHourDays'],
 };
 
+const department = { id: 'd', nameEn: 'D', nameAr: 'د' };
 const rows: LatenessRow[] = [
-  { employee: { id: 'a', code: 'EMP-0001', nameEn: 'A', nameAr: 'أ' }, minutes: 10, days: 0.25 },
-  { employee: { id: 'b', code: 'EMP-0002', nameEn: 'B', nameAr: 'ب' }, minutes: 0, days: 0 },
+  { employee: { id: 'a', code: 'EMP-0001', nameEn: 'A', nameAr: 'أ' }, department, minutes: 10, days: 0.25 },
+  { employee: { id: 'b', code: 'EMP-0002', nameEn: 'B', nameAr: 'ب' }, department, minutes: 0, days: 0 },
 ];
 
 describe('lateness entries', () => {

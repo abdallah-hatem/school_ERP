@@ -22,7 +22,7 @@ export function resolveMonth(requested: string | string[] | undefined, current: 
   return isMonth(value) && value <= current ? value : current;
 }
 
-/** Server: loads the month's list, the live rule and departments, then hands them to the grid. */
+/** Server: loads the month's list (with departments and its lock) and the live rule for the grid. */
 export async function LatenessScreen({ locale, month: requested }: { locale: Locale; month?: string | string[] }) {
   const current = monthOf(new Date());
   const month = resolveMonth(requested, current);

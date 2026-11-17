@@ -14,7 +14,6 @@
   "minutesPlaceholder": "0",
   "invalidMinutes": "Whole minutes from 0 to {max}.",
   "changed": "Changed",
-  "noDepartment": "—",
   "search": {
     "label": "Search employees",
     "placeholder": "Name or code, like EMP-0012"

@@ -14,7 +14,6 @@
   "minutesPlaceholder": "0",
   "invalidMinutes": "دقائق صحيحة من 0 إلى {max}.",
   "changed": "معدَّل",
-  "noDepartment": "—",
   "search": {
     "label": "البحث عن موظف",
     "placeholder": "الاسم أو الكود، مثل EMP-0012"

@@ -9,6 +9,7 @@ import {
   EmployeeSummary,
   ErrorCode,
   HrEvent,
+  NamedRef,
   oneYearContractEnd,
   Paginated,
   Uuid,
@@ -95,6 +96,12 @@ export class EmployeesService {
   /** Every active employee, ordered by code — for month-wide lists (lateness, payroll). */
   listActiveRefs(): Promise<EmployeeRef[]> {
     return this.repository.findActiveRefs();
+  }
+
+  /** Every active employee with their department, ordered by code (the lateness month). */
+  async listActiveWithDepartments(): Promise<{ employee: EmployeeRef; department: NamedRef }[]> {
+    const rows = await this.repository.findActiveWithDepartments();
+    return rows.map(({ department, ...employee }) => ({ employee, department }));
   }
 
   /**

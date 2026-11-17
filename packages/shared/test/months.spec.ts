@@ -15,4 +15,9 @@ describe('month helpers', () => {
     expect(shiftMonth('2026-05', 0)).toBe('2026-05');
     expect(monthOf(new Date(2026, 10, 17))).toBe('2026-11');
   });
+
+  it('gives a YYYY-MM-DD day the month it is written in', () => {
+    expect(monthOf('2026-11-01')).toBe('2026-11');
+    expect(monthOf('2026-12-31')).toBe('2026-12');
+  });
 });

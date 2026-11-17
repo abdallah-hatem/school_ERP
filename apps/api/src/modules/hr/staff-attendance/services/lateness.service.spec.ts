@@ -8,6 +8,7 @@ import type { LatenessRepository } from '../repositories/lateness.repository';
 import { LatenessService } from './lateness.service';
 
 const emp = (id: string) => ({ id, code: `EMP-${id}`, nameEn: id, nameAr: id });
+const DEPT = { id: 'd1', nameEn: 'Science', nameAr: 'العلوم' };
 
 const RULE = {
   graceMinutes: 0,
@@ -33,7 +34,10 @@ function makeService(over: {
     }),
   };
   const employees = {
-    listActiveRefs: jest.fn().mockResolvedValue([emp('1'), emp('2')]),
+    listActiveWithDepartments: jest.fn().mockResolvedValue([
+      { employee: emp('1'), department: DEPT },
+      { employee: emp('2'), department: DEPT },
+    ]),
     assertActive:
       over.assertActive ??
       jest.fn().mockImplementation(() => {
@@ -43,6 +47,7 @@ function makeService(over: {
   };
   const settings = { get: jest.fn().mockResolvedValue({ lateness: over.rule ?? RULE }) };
   const monthLock = {
+    isMonthLocked: jest.fn().mockResolvedValue(over.locked ?? false),
     assertMonthOpen: jest.fn().mockImplementation(() => {
       calls.push('lock');
       return over.locked
@@ -63,9 +68,17 @@ describe('LatenessService', () => {
   it('list: every active employee, 0 minutes when nothing stored, days from the rule', async () => {
     const { service } = makeService({ stored: [{ employeeId: '2', minutes: 61 }] });
     await expect(service.list('2026-11')).resolves.toEqual([
-      { employee: emp('1'), minutes: 0, days: 0 },
-      { employee: emp('2'), minutes: 61, days: 0.75 },
+      { employee: emp('1'), department: DEPT, minutes: 0, days: 0 },
+      { employee: emp('2'), department: DEPT, minutes: 61, days: 0.75 },
     ]);
+  });
+
+  it('month: the rows plus the month lock (locked false / true)', async () => {
+    const open = makeService();
+    await expect(open.service.month('2026-11')).resolves.toMatchObject({ locked: false });
+    expect((await open.service.month('2026-11')).rows).toHaveLength(2);
+    const locked = makeService({ locked: true });
+    await expect(locked.service.month('2026-11')).resolves.toMatchObject({ locked: true });
   });
 
   it('list: a stored row for an employee no longer active is not shown', async () => {

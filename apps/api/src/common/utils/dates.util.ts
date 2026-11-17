@@ -1,17 +1,9 @@
 import type { IsoDate, Month } from '@school-erp/shared';
 
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
-const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 
-/** True for a calendar month written `YYYY-MM` (`2026-11`; rejects `2026-13`, `2026-1`). */
-export function isMonth(value: unknown): value is Month {
-  return typeof value === 'string' && MONTH.test(value);
-}
-
-/** The `YYYY-MM` month a `YYYY-MM-DD` day falls in (its payroll month). */
-export function monthOf(date: IsoDate): Month {
-  return date.slice(0, 7);
-}
+/** Month helpers have one home, `@school-erp/shared`; re-exported so api callers keep one import. */
+export { isMonth, monthOf } from '@school-erp/shared';
 
 /** A `YYYY-MM` month as a `@db.Date` range: `{ gte: 1st of month, lt: 1st of next month }`. */
 export function monthDateRange(month: Month): { gte: Date; lt: Date } {

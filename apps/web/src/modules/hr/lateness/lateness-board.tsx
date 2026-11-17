@@ -1,6 +1,6 @@
 'use client';
 
-import { ErrorCode, type LatenessRule, type LatenessRow, type Month, type NamedRef, type Uuid } from '@school-erp/shared';
+import { ErrorCode, type LatenessRule, type LatenessRow, type Month } from '@school-erp/shared';
 import { useRouter } from 'next/navigation';
 import { useId, useMemo, useRef, useState, useTransition } from 'react';
 import { callApi } from '@/lib/callApi';
@@ -30,15 +30,16 @@ export interface LatenessBoardProps {
   rows: LatenessRow[] | null;
   /** `null` when the HR settings failed to load. */
   rule: LatenessRule | null;
-  departments: Record<Uuid, NamedRef>;
+  /** The month's payroll is approved: open read-only. */
+  locked: boolean;
 }
 
 /**
  * The month's lateness grid: minutes per active employee, days computed live from the shared rule
- * while typing, "Save all" sends only the changed rows. A 409 `PAYROLL_APPROVED` turns the month
- * read-only.
+ * while typing, "Save all" sends only the changed rows. A locked month (approved payroll) opens
+ * read-only; a 409 `PAYROLL_APPROVED` on save turns it read-only too.
  */
-export function LatenessBoard({ month, maxMonth, rows: initialRows, rule, departments }: LatenessBoardProps) {
+export function LatenessBoard({ month, maxMonth, rows: initialRows, rule, locked: initialLocked }: LatenessBoardProps) {
   const { t, locale } = useTranslation();
   const router = useRouter();
   const [navigating, startNavigation] = useTransition();
@@ -49,7 +50,7 @@ export function LatenessBoard({ month, maxMonth, rows: initialRows, rule, depart
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(PAGE_SIZES[0] ?? 20);
-  const [locked, setLocked] = useState(false);
+  const [locked, setLocked] = useState(initialLocked);
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
   const [pendingMonth, setPendingMonth] = useState<Month | null>(null);
@@ -87,7 +88,10 @@ export function LatenessBoard({ month, maxMonth, rows: initialRows, rule, depart
       // A 401 is handled by callApi (sign-in redirect); check it before `success`.
       if (res.unauthorized) return;
       if (res.success) {
-        if (Array.isArray(res.data)) setRows(res.data);
+        if (res.data && Array.isArray(res.data.rows)) {
+          setRows(res.data.rows);
+          setLocked(res.data.locked);
+        }
         setDrafts({});
       } else if (res.status === 409 && res.error === ErrorCode.PAYROLL_APPROVED) {
         setLocked(true);
@@ -123,10 +127,7 @@ export function LatenessBoard({ month, maxMonth, rows: initialRows, rule, depart
       id: 'department',
       header: t('lateness.columns.department'),
       className: 'min-w-36 whitespace-normal',
-      cell: (row) => {
-        const department = departments[row.employee.id];
-        return department ? nameIn(department, locale) : t('lateness.noDepartment');
-      },
+      cell: (row) => nameIn(row.department, locale),
     },
     {
       id: 'minutes',
