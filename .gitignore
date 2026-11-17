@@ -26,6 +26,12 @@ uploads/
 # agent worktrees
 .claude/worktrees/
 
+# smoke specs (pnpm smoke): screenshots, logs, traces
+apps/web/e2e/screenshots/
+apps/web/e2e/.logs/
+apps/web/e2e/.results/
+apps/web/playwright-report/
+
 # generated
 deps-graph.*
 *.tsbuildinfo
