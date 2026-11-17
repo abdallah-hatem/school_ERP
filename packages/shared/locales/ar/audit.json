@@ -13,6 +13,7 @@
   },
   "entities": {
     "user": "مستخدم",
+    "role": "دور",
     "school_settings": "إعدادات المدرسة",
     "stage": "مرحلة",
     "employee": "موظف",
@@ -39,6 +40,19 @@
       "stage": {
         "create": "إضافة المرحلة {entity}",
         "update": "تعديل المرحلة {entity}"
+      },
+      "user": {
+        "create": "إضافة المستخدم {entity}",
+        "update": "تعديل بيانات المستخدم {entity}",
+        "deactivate": "إيقاف المستخدم {entity}",
+        "reactivate": "إعادة تفعيل المستخدم {entity}",
+        "set_password": "تعيين كلمة مرور مؤقتة للمستخدم {entity}",
+        "change_password": "تغيير كلمة مرور المستخدم {entity}"
+      },
+      "role": {
+        "create": "إضافة الدور {entity}",
+        "update": "تعديل الدور {entity}",
+        "delete": "حذف الدور {entity}"
       }
     },
     "hr": {
@@ -156,6 +170,9 @@
     },
     "lists": {
       "stages": "المرحلة"
-    }
+    },
+    "name": "الاسم",
+    "roles": "الأدوار",
+    "permissions": "الصلاحيات"
   }
 }

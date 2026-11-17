@@ -80,7 +80,17 @@ The seeded `admin@school.local` becomes **System admin** + **HR manager**.
   permissions in the session, `can()`; HR admin = all keys; every existing endpoint declared.
   Added in P1: a third declaration, `@SignedIn()` (any signed-in user, no key), for `/auth/me`,
   sign-out and opening an uploaded file — so a user holding no permission can still sign out.
-- [ ] **P2 roles as data** (`logic`): roles / role_permissions / user_roles tables, seed the starting
-  roles, scopes + `scopeFor`, salary filtering, last-admin rule, audit actions.
+- [x] **P2 roles as data** (`logic`) — done: roles / role_permissions / user_roles tables; the
+  migration seeds the starting roles (`BUILT_IN_ROLES` in shared, the table above as exact keys and
+  scopes) and makes every HR admin System admin + HR manager; `permissionsFor` reads roles from the
+  database per request; scopes + `scopeFor` (not applied in HR yet); users and roles API; last-admin
+  rule; audit actions `core.user.*` / `core.role.*`; keys `core.users.view/manage`,
+  `core.roles.view/manage`. Decisions taken while building: the System admin always holds every key
+  and its list can't be edited; `own_stage` counts as wider than `own_team`; custom roles get a
+  generated key and can be deleted once nobody holds them; the employee link moved to
+  `users.employee_id` (HR's `employees.user_id` deprecated); the `users.role` column is kept,
+  deprecated, until P3. **Salary filtering moved to P4** (it is an HR change); until then the
+  accountant and principal see what HR endpoints return today.
 - [ ] **P3 screens** (`ui`, mockups first): Users, Roles, My account; sidebar items by `can()`.
-- [ ] **P4 scopes in HR** (`logic`): apply `own_stage` / `own_team` in HR repositories.
+- [ ] **P4 scopes in HR** (`logic`): apply `own_stage` / `own_team` in HR repositories with
+  `scopeFor`; salary filtering (R7, edge case 4); drop HR's deprecated `employees.user_id`.

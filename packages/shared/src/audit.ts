@@ -19,6 +19,7 @@ export type AuditModule = (typeof AUDIT_MODULES)[number];
 /** The kind of record an entry is about — `GET /audit/records/:entityType/:entityId`. */
 export const AuditEntityType = {
   USER: 'user',
+  ROLE: 'role',
   SCHOOL_SETTINGS: 'school_settings',
   STAGE: 'stage',
   EMPLOYEE: 'employee',
@@ -69,6 +70,32 @@ export const AUDIT_ACTIONS = {
   },
   'core.stage.create': { module: 'core', entityType: E.STAGE, kind: 'create' },
   'core.stage.update': { module: 'core', entityType: E.STAGE, kind: 'update' },
+  // core — user accounts and roles (R8: every access change is traceable)
+  'core.user.create': { module: 'core', entityType: E.USER, kind: 'create' },
+  'core.user.update': { module: 'core', entityType: E.USER, kind: 'update' },
+  'core.user.deactivate': {
+    module: 'core',
+    entityType: E.USER,
+    kind: 'status',
+  },
+  'core.user.reactivate': {
+    module: 'core',
+    entityType: E.USER,
+    kind: 'status',
+  },
+  'core.user.set_password': {
+    module: 'core',
+    entityType: E.USER,
+    kind: 'access',
+  },
+  'core.user.change_password': {
+    module: 'core',
+    entityType: E.USER,
+    kind: 'access',
+  },
+  'core.role.create': { module: 'core', entityType: E.ROLE, kind: 'create' },
+  'core.role.update': { module: 'core', entityType: E.ROLE, kind: 'update' },
+  'core.role.delete': { module: 'core', entityType: E.ROLE, kind: 'status' },
   // hr — employees
   'hr.employee.create': {
     module: 'hr',

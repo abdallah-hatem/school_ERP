@@ -1,19 +1,21 @@
 import { Controller, ForbiddenException, Get, UnauthorizedException } from '@nestjs/common';
 import type { ExecutionContext } from '@nestjs/common';
-import { PERMISSION_KEYS, type AuthUser } from '@school-erp/shared';
+import { PERMISSION_KEYS, type AuthUser, type PermissionKey } from '@school-erp/shared';
 import { Permission, Public, SignedIn } from '../decorators/permission.decorator';
-import { permissionsFor } from '../permissions-for';
+import type { PermissionsService } from '../permissions.service';
 import { PermissionGuard } from './permission.guard';
 
-// The real rule by default; a test can hand one user a chosen set of keys.
-jest.mock('../permissions-for', () => {
-  const actual = jest.requireActual<typeof import('../permissions-for')>('../permissions-for');
-  return { permissionsFor: jest.fn(actual.permissionsFor) };
-});
-
 const admin: AuthUser = { id: 'u-1', email: 'a@school.test', name: 'Admin', role: 'HR_ADMIN' };
-/** A role P1 grants nothing to (P2 brings real roles); stands in for "a user without the key". */
-const nobody = { ...admin, id: 'u-2', role: 'SOMEONE_ELSE' } as unknown as AuthUser;
+/** A user whose roles grant nothing. */
+const nobody: AuthUser = { ...admin, id: 'u-2' };
+/** Can view penalties, can't approve them. */
+const viewer: AuthUser = { ...admin, id: 'u-3' };
+
+const HELD: Record<string, readonly PermissionKey[]> = {
+  'u-1': PERMISSION_KEYS,
+  'u-2': [],
+  'u-3': PERMISSION_KEYS.filter((k) => k !== 'hr.penalties.approve'),
+};
 
 @Controller('things')
 class ThingsController {
@@ -44,54 +46,56 @@ function context(handler: Handler, user?: AuthUser, controller: object = ThingsC
 }
 
 describe('PermissionGuard (R3, closed by default)', () => {
-  const guard = new PermissionGuard();
+  const permissions = {
+    permissionsFor: jest.fn((u: Pick<AuthUser, 'id'>) => Promise.resolve([...(HELD[u.id] ?? [])])),
+  };
+  const guard = new PermissionGuard(permissions as unknown as PermissionsService);
   const run = (handler: Handler, user?: AuthUser, controller?: object) =>
     guard.canActivate(context(handler, user, controller));
 
-  it('declared and held → passes', () => {
-    expect(run('list', admin)).toBe(true);
-    expect(run('approve', admin)).toBe(true);
+  it('declared and held → passes', async () => {
+    await expect(run('list', admin)).resolves.toBe(true);
+    await expect(run('approve', admin)).resolves.toBe(true);
   });
 
-  it('declared and not held → 403', () => {
-    expect(() => run('list', nobody)).toThrow(ForbiddenException);
+  it('declared and not held → 403', async () => {
+    await expect(run('list', nobody)).rejects.toThrow(ForbiddenException);
   });
 
-  it('several keys are all required — can view, can’t approve → 403 (edge case 9)', () => {
-    const viewer = { ...admin, role: 'VIEWER' } as unknown as AuthUser;
-    const keys = PERMISSION_KEYS.filter((k) => k !== 'hr.penalties.approve');
-    jest.mocked(permissionsFor).mockReturnValueOnce(keys).mockReturnValueOnce(keys);
-    expect(run('list', viewer)).toBe(true);
-    expect(() => run('approve', viewer)).toThrow(ForbiddenException);
+  it('several keys are all required — can view, can’t approve → 403 (edge case 9)', async () => {
+    await expect(run('list', viewer)).resolves.toBe(true);
+    await expect(run('approve', viewer)).rejects.toThrow(ForbiddenException);
   });
 
-  it('edge case 1 — no declaration → 403, even for the HR admin', () => {
-    expect(() => run('forgot', admin)).toThrow(ForbiddenException);
+  it('edge case 1 — no declaration → 403, even for the System admin', async () => {
+    await expect(run('forgot', admin)).rejects.toThrow(ForbiddenException);
   });
 
-  it('conflicting declarations → 403', () => {
-    expect(() => run('both', admin)).toThrow(ForbiddenException);
+  it('conflicting declarations → 403', async () => {
+    await expect(run('both', admin)).rejects.toThrow(ForbiddenException);
   });
 
-  it('@Public → passes with or without a user', () => {
-    expect(run('open')).toBe(true);
-    expect(run('open', nobody)).toBe(true);
+  it('@Public → passes with or without a user, without reading permissions', async () => {
+    permissions.permissionsFor.mockClear();
+    await expect(run('open')).resolves.toBe(true);
+    await expect(run('open', nobody)).resolves.toBe(true);
+    expect(permissions.permissionsFor).not.toHaveBeenCalled();
   });
 
-  it('@SignedIn → any signed-in user, whatever they hold', () => {
-    expect(run('me', nobody)).toBe(true);
-    expect(run('me', admin)).toBe(true);
+  it('@SignedIn → any signed-in user, whatever they hold', async () => {
+    await expect(run('me', nobody)).resolves.toBe(true);
+    await expect(run('me', admin)).resolves.toBe(true);
   });
 
-  it('signed out → 401 before any 403 (declared, signed-in-only and undeclared alike)', () => {
-    expect(() => run('list')).toThrow(UnauthorizedException);
-    expect(() => run('me')).toThrow(UnauthorizedException);
-    expect(() => run('forgot')).toThrow(UnauthorizedException);
+  it('signed out → 401 before any 403 (declared, signed-in-only and undeclared alike)', async () => {
+    await expect(run('list')).rejects.toThrow(UnauthorizedException);
+    await expect(run('me')).rejects.toThrow(UnauthorizedException);
+    await expect(run('forgot')).rejects.toThrow(UnauthorizedException);
   });
 
-  it('a class-level @Permission covers handlers that declare nothing; the handler’s own wins', () => {
-    expect(run('list', admin, GuardedController)).toBe(true);
-    expect(() => run('list', nobody, GuardedController)).toThrow(ForbiddenException);
-    expect(run('own', admin, GuardedController)).toBe(true);
+  it('a class-level @Permission covers handlers that declare nothing; the handler’s own wins', async () => {
+    await expect(run('list', admin, GuardedController)).resolves.toBe(true);
+    await expect(run('list', nobody, GuardedController)).rejects.toThrow(ForbiddenException);
+    await expect(run('own', admin, GuardedController)).resolves.toBe(true);
   });
 });

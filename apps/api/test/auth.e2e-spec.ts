@@ -4,7 +4,13 @@ import { ConfigService } from '@nestjs/config';
 import { DiscoveryModule, DiscoveryService, Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
-import { AUTH_COOKIES, ErrorCode, PERMISSION_KEYS, PUBLIC_FILES_PREFIX } from '@school-erp/shared';
+import {
+  AUTH_COOKIES,
+  ErrorCode,
+  PERMISSION_KEYS,
+  PUBLIC_FILES_PREFIX,
+  SEED_ADMIN_ROLES,
+} from '@school-erp/shared';
 import { createHash } from 'node:crypto';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
@@ -12,6 +18,7 @@ import { IS_PUBLIC_KEY } from '../src/common/decorators/public.decorator';
 import { hashPassword } from '../src/common/utils/password.util';
 import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
+import { giveRoles } from './helpers/as-test-user';
 
 /** A minimal PNG (signature + padding) for the logo upload. */
 const PNG = Buffer.concat([
@@ -57,6 +64,8 @@ describe('auth (e2e)', () => {
       },
     });
     userIds.push(user.id);
+    // Like the seeded admin (P2: access comes from roles).
+    await giveRoles(db, user.id, SEED_ADMIN_ROLES);
     return user;
   }
 
@@ -205,7 +214,7 @@ describe('auth (e2e)', () => {
       email: user.email,
       name: user.name,
       role: user.role,
-      // The HR admin holds every key (P1); the web app's can() reads them.
+      // System admin + HR manager hold every key (P2); the web app's can() reads them.
       permissions: PERMISSION_KEYS,
     });
 
@@ -265,10 +274,15 @@ describe('auth (e2e)', () => {
   });
 
   it('POST /auth/register (or any sign-up route) → 404', async () => {
-    for (const path of ['/auth/register', '/auth/signup', '/users', '/auth/sign-up']) {
+    for (const path of ['/auth/register', '/auth/signup', '/auth/sign-up']) {
       const res = await http(app).post(path).send({ email: 'x@y.co', password: 'secret-secret' });
       expect([path, res.status]).toEqual([path, 404]);
     }
+    // R9 — accounts are created by a System admin (POST /users), never by the visitor.
+    await http(app)
+      .post('/users')
+      .send({ name: 'X', email: 'x@y.co', password: 'secret-secret', roleIds: [] })
+      .expect(401);
   });
 
   it('A 400/409 error has the same error code in both languages; message is Arabic with ar, English with en', async () => {

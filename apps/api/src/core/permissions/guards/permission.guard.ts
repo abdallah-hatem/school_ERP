@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { hasPermissions, type AuthUser } from '@school-erp/shared';
 import { permissionDeclarationOf } from '../decorators/permission.decorator';
-import { permissionsFor } from '../permissions-for';
+import { PermissionsService } from '../permissions.service';
 
 /**
  * The global permission check (R3), registered as `APP_GUARD` right after `JwtAuthGuard`, so a
@@ -15,13 +15,15 @@ import { permissionsFor } from '../permissions-for';
  * - `@Public()` → passes;
  * - no user on the request → 401;
  * - `@SignedIn()` → passes;
- * - `@Permission(...keys)` → passes only if the user holds every key, else 403;
+ * - `@Permission(...keys)` → passes only if the user holds every key (through their roles), else 403;
  * - no declaration (or conflicting ones) → 403 (edge case 1). CI also fails on it
  *   (`permission-declarations.spec.ts`).
  */
 @Injectable()
 export class PermissionGuard implements CanActivate {
-  canActivate(context: ExecutionContext): boolean {
+  constructor(private readonly permissions: PermissionsService) {}
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const declaration = permissionDeclarationOf(context.getHandler(), context.getClass());
     if (declaration.kind === 'public') return true;
 
@@ -30,7 +32,7 @@ export class PermissionGuard implements CanActivate {
     if (declaration.kind === 'signed-in') return true;
     if (
       declaration.kind === 'permission' &&
-      hasPermissions(permissionsFor(user), declaration.keys)
+      hasPermissions(await this.permissions.permissionsFor(user), declaration.keys)
     ) {
       return true;
     }

@@ -31,5 +31,15 @@
   "PAYROLL_RUN_EXISTS": "A payroll run already exists for this month.",
   "PENDING_PENALTIES": "Approve or cancel this month's pending penalties first.",
   "EMPLOYEE_NOT_IN_RUN": "This employee is not in this payroll run.",
-  "AUDIT_NOT_RECORDED": "The change could not be recorded in the activity log, so it was not saved. Please try again."
+  "AUDIT_NOT_RECORDED": "The change could not be recorded in the activity log, so it was not saved. Please try again.",
+  "LAST_SYSTEM_ADMIN": "This is the last active System admin. Give the role to another user first.",
+  "EMAIL_TAKEN": "Another user already has this email.",
+  "WRONG_PASSWORD": "The current password is not right.",
+  "UNKNOWN_ROLE": "One of the chosen roles does not exist.",
+  "UNKNOWN_EMPLOYEE": "The chosen employee does not exist.",
+  "EMPLOYEE_ALREADY_LINKED": "This employee is already linked to another user.",
+  "BUILT_IN_ROLE": "A starting role can be edited but not deleted.",
+  "ROLE_IN_USE": "Users still hold this role. Take it away from them first.",
+  "SYSTEM_ADMIN_FIXED": "The System admin always holds every permission; its permissions can't be changed.",
+  "DUPLICATE_PERMISSION": "A permission is listed more than once."
 }

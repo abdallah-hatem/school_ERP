@@ -1,5 +1,6 @@
 import { Controller, Get, INestApplication, Module, Post } from '@nestjs/common';
 import { ErrorCode, PERMISSION_KEYS, type AuthUser } from '@school-erp/shared';
+import { DatabaseService } from '../src/database/database.service';
 import { Permission, SignedIn } from '../src/core/permissions';
 import { http } from './helpers';
 import { ANONYMOUS_HEADER, createAppAsTestUser } from './helpers/as-test-user';
@@ -46,23 +47,33 @@ class PermissionProbeModule {}
 describe('permissions (e2e)', () => {
   let app: INestApplication;
   let user: AuthUser;
+  let roleless: string;
 
   beforeAll(async () => {
     ({ app, user } = await createAppAsTestUser(undefined, [PermissionProbeModule]));
+    roleless = (
+      await app.get(DatabaseService).user.upsert({
+        where: { email: 'e2e-roleless@example.test' },
+        create: { email: 'e2e-roleless@example.test', name: 'No Roles', passwordHash: 'x' },
+        update: {},
+        select: { id: true },
+      })
+    ).id;
   });
 
   afterAll(async () => {
+    await app.get(DatabaseService).user.deleteMany({ where: { id: roleless } });
     await app.close();
   });
 
-  /** Runs `fn` as a user whose role P1 grants nothing (the test user's role, swapped). */
+  /** Runs `fn` signed in as a user who holds no role (the test user's id, swapped). */
   async function asRoleWithoutPermissions(fn: () => Promise<void>) {
-    const role = user.role;
-    user.role = 'NO_PERMISSIONS' as AuthUser['role'];
+    const id = user.id;
+    user.id = roleless;
     try {
       await fn();
     } finally {
-      user.role = role;
+      user.id = id;
     }
   }
 
@@ -82,7 +93,7 @@ describe('permissions (e2e)', () => {
     }
   });
 
-  it('the HR admin holds every key: declared endpoints pass, behaviour unchanged', async () => {
+  it('System admin + HR manager hold every key: declared endpoints pass, behaviour unchanged', async () => {
     await http(app).get('/__permission-probe/record').expect(200);
     await http(app).get('/__permission-probe/approve').expect(200);
     await http(app).get('/hr/penalties').expect(200);

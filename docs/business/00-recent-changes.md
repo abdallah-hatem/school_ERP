@@ -1,5 +1,10 @@
 # Recent changes
 
+- 2026-11-17 — Roles as data (§2, P2): the starting roles now exist and can be changed without code;
+  the HR admin became **System admin + HR manager**; a user can hold several roles; only the System
+  admin manages users and roles; the last System admin can't lose the role or be deactivated;
+  deactivating a user (or giving them a temporary password) signs them out everywhere at once.
+  Screens come next (P3); stage and team limits in HR after that (P4).
 - 2026-11-17 — Audit log foundation (T27): Settings → Change history now reads the audit log; every
   earlier change is kept as it was. School settings, the logo and HR rules are saved together with
   their history entry (if the entry can't be saved, the change is refused); stages, lists and the

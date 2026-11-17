@@ -81,7 +81,13 @@ describe('every endpoint declares its permission (R4)', () => {
   it('signed-in-only is kept to what every account needs', () => {
     const routes = kinds(found, 'signed-in').map((r) => r.replace(/ \(.*\)$/, ''));
     expect(routes.sort()).toEqual(
-      ['GET /auth/me', 'POST /auth/logout', 'GET /files/:folder/:name'].sort(),
+      [
+        'GET /auth/me',
+        'POST /auth/logout',
+        'GET /files/:folder/:name',
+        // My account: change your own password (R9).
+        'POST /account/password',
+      ].sort(),
     );
   });
 
@@ -95,6 +101,32 @@ describe('every endpoint declares its permission (R4)', () => {
     expect(keysOf(/^GET \/audit/)).toEqual([['core.audit.view'], ['core.audit.view']]);
     expect(keysOf(/^POST \/hr\/penalties\/:id\/approve /)).toEqual([['hr.penalties.approve']]);
     expect(keysOf(/^POST \/hr\/payroll-runs\/:id\/approve /)).toEqual([['hr.payroll.approve']]);
+  });
+
+  it('users and roles: reading needs .view, every write needs .manage (P2)', () => {
+    const declared = (pattern: RegExp) =>
+      found
+        .filter((d) => pattern.test(d.route))
+        .map((d) => [
+          d.route.replace(/ \(.*\)$/, ''),
+          d.declaration.kind === 'permission' ? d.declaration.keys : d.declaration.kind,
+        ]);
+    expect(declared(/^\w+ \/users/)).toEqual([
+      ['GET /users', ['core.users.view']],
+      ['GET /users/:id', ['core.users.view']],
+      ['POST /users', ['core.users.manage']],
+      ['PATCH /users/:id', ['core.users.manage']],
+      ['POST /users/:id/deactivate', ['core.users.manage']],
+      ['POST /users/:id/reactivate', ['core.users.manage']],
+      ['POST /users/:id/password', ['core.users.manage']],
+    ]);
+    expect(declared(/^\w+ \/roles/)).toEqual([
+      ['GET /roles', ['core.roles.view']],
+      ['GET /roles/:id', ['core.roles.view']],
+      ['POST /roles', ['core.roles.manage']],
+      ['PATCH /roles/:id', ['core.roles.manage']],
+      ['DELETE /roles/:id', ['core.roles.manage']],
+    ]);
   });
 
   it('the scanner itself catches an undeclared handler, of any method', () => {

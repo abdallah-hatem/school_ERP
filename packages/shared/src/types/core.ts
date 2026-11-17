@@ -1,7 +1,7 @@
 import type { Language, UserRole, Weekday } from '../enums';
 import type { SettingsChangeScope } from '../events';
-import type { PermissionKey } from '../permissions';
-import type { IsoDateTime, Names, TimeOfDay, Uuid } from './common';
+import type { PermissionKey, PermissionScope } from '../permissions';
+import type { IsoDateTime, Names, PaginationQuery, TimeOfDay, Uuid } from './common';
 
 // ── Auth — core/auth ───────────────────────────────────────────────────────
 
@@ -15,6 +15,10 @@ export interface AuthUser {
   id: Uuid;
   email: string;
   name: string;
+  /**
+   * @deprecated Since P2 access comes from roles as data (`user_roles`), never from this field;
+   * it is kept only until the web app stops reading it (P3). Use `SessionUser.permissions`.
+   */
   role: UserRole;
 }
 
@@ -91,4 +95,86 @@ export interface UpdateListItemRequest extends Partial<Names> {
 
 export interface ListStagesQuery {
   includeHidden?: boolean;
+}
+
+// ── Users and roles — core/users, core/roles (spec roles-permissions, P2) ──
+
+/** A role as it appears on a user. */
+export interface RoleRef {
+  id: Uuid;
+  key: string;
+  nameEn: string;
+  nameAr: string;
+}
+
+/** One permission a role grants, with the rows it covers (R5). */
+export interface RoleGrant {
+  key: PermissionKey;
+  scope: PermissionScope;
+}
+
+/** `GET /roles` item and `GET /roles/:id`. Permissions in registry order. */
+export interface Role extends RoleRef {
+  /** A starting role: can be edited, never deleted. */
+  builtIn: boolean;
+  permissions: RoleGrant[];
+  /** Users holding the role (active or not). */
+  userCount: number;
+}
+
+/** `POST /roles` — a custom role. Its key is generated. */
+export interface CreateRoleRequest {
+  nameEn: string;
+  nameAr: string;
+  permissions: RoleGrant[];
+}
+
+/** `PATCH /roles/:id` — `permissions`, when sent, replaces the whole set. */
+export type UpdateRoleRequest = Partial<CreateRoleRequest>;
+
+/** A user account, as the Users screen shows it. Never the password hash. */
+export interface UserAccount {
+  id: Uuid;
+  name: string;
+  email: string;
+  isActive: boolean;
+  /** Set when an admin gave a temporary password; cleared when the user changes it. */
+  mustChangePassword: boolean;
+  roles: RoleRef[];
+  /** The linked employee (R9: at most one), or null. */
+  employee: { id: Uuid; code: string; nameEn: string; nameAr: string } | null;
+  createdAt: IsoDateTime;
+}
+
+/** `POST /users` — the password is temporary: the user is asked to change it. */
+export interface CreateUserRequest {
+  name: string;
+  email: string;
+  password: string;
+  roleIds: Uuid[];
+  employeeId?: Uuid | null;
+}
+
+/** `PATCH /users/:id` — `roleIds`, when sent, replaces the user's roles. */
+export interface UpdateUserRequest {
+  name?: string;
+  email?: string;
+  roleIds?: Uuid[];
+  employeeId?: Uuid | null;
+}
+
+/** `POST /users/:id/password` — an admin sets a temporary password; the user's sessions end. */
+export interface SetTemporaryPasswordRequest {
+  password: string;
+}
+
+/** `POST /account/password` — the signed-in user changes their own password. */
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
+/** `GET /users` — `search` matches name or email. */
+export interface ListUsersQuery extends PaginationQuery {
+  status?: 'active' | 'inactive';
 }

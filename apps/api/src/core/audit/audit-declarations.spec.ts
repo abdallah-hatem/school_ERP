@@ -78,6 +78,26 @@ describe('every write endpoint declares its audit (D6)', () => {
     expect(pending.length).toBeGreaterThan(0);
   });
 
+  it('every user and role write records its core.user.* / core.role.* action (R8, P2)', () => {
+    const declared = writes
+      .filter((w) => /^\w+ \/(users|roles|account)\b/.test(w.route))
+      .map((w) => [
+        w.route.replace(/ \(.*\)$/, ''),
+        w.declaration.kind === 'audited' ? w.declaration.action : w.declaration.kind,
+      ]);
+    expect(declared).toEqual([
+      ['POST /roles', 'core.role.create'],
+      ['PATCH /roles/:id', 'core.role.update'],
+      ['DELETE /roles/:id', 'core.role.delete'],
+      ['POST /users', 'core.user.create'],
+      ['PATCH /users/:id', 'core.user.update'],
+      ['POST /users/:id/deactivate', 'core.user.deactivate'],
+      ['POST /users/:id/reactivate', 'core.user.reactivate'],
+      ['POST /users/:id/password', 'core.user.set_password'],
+      ['POST /account/password', 'core.user.change_password'],
+    ]);
+  });
+
   it('the scanner itself catches an undeclared write and ignores reads', () => {
     @Controller('things')
     class ThingsController {

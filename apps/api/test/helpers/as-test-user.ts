@@ -1,7 +1,7 @@
 import { ExecutionContext, INestApplication, type Type } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModuleBuilder } from '@nestjs/testing';
-import type { AuthUser } from '@school-erp/shared';
+import { SEED_ADMIN_ROLES, type AuthUser } from '@school-erp/shared';
 import type { Request } from 'express';
 import { AppModule } from '../../src/app.module';
 import { configureApp } from '../../src/app.setup';
@@ -56,14 +56,34 @@ export async function createAppAsTestUser(
   configureApp(app);
   await app.init();
 
-  const row = await app.get(DatabaseService).user.upsert({
+  const db = app.get(DatabaseService);
+  const row = await db.user.upsert({
     where: { email: TEST_USER_EMAIL },
     create: { email: TEST_USER_EMAIL, name: user.name, passwordHash: 'not-a-real-hash' },
-    update: {},
+    update: { isActive: true },
     select: { id: true },
   });
   user.id = row.id;
+  // Like the seeded admin: System admin + HR manager, so the test user holds every key (P2).
+  await giveRoles(db, row.id, SEED_ADMIN_ROLES);
 
   await app.listen(app.get(ConfigService).getOrThrow<number>('port'));
   return { app, user };
+}
+
+/** Adds the roles with these keys to a user (keeps the ones they hold). Test setup only. */
+export async function giveRoles(
+  db: DatabaseService,
+  userId: string,
+  roleKeys: readonly string[],
+): Promise<void> {
+  const roles = await db.role.findMany({
+    where: { key: { in: [...roleKeys] } },
+    select: { id: true },
+  });
+  if (roles.length !== roleKeys.length) throw new Error(`e2e: missing roles ${roleKeys.join()}`);
+  await db.userRoleAssignment.createMany({
+    data: roles.map((r) => ({ userId, roleId: r.id })),
+    skipDuplicates: true,
+  });
 }
