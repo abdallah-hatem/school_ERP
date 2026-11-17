@@ -431,8 +431,10 @@ The first module built, and the first demo for the client (payroll and penalties
   feeds penalties and payroll; student attendance feeds parent alerts and reports. They change for
   different reasons, so they stay apart.
 - **Payroll and penalties are heavy rules:** they go in HR's `domain/` folder as pure, unit-tested
-  functions. Insurance and tax rules are confirmed with the school's accountant before they are
-  built.
+  functions. Insurance and tax rules are HR settings (brackets, fund rate, insurance
+  rate) defaulting to the school's previous HR system, and the pure maths lives in
+  `packages/shared/src/rules/payroll-tax.ts` so the settings screen previews with the same code; the
+  defaults are confirmed with the school's accountant.
 - **Known pressure point: payroll inputs from academics.** If teachers are paid for extra classes,
   substitutions or teaching load, payroll needs timetable data, which points upward. Handle it
   without a cycle, simplest first:

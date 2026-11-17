@@ -15,6 +15,7 @@ import {
   type PayrollRunSummary,
   type EmployeePayrollLine,
   type Payslip,
+  type TaxRule,
   type Uuid,
 } from '@school-erp/shared';
 import { SettingsService } from '../../../../core/settings';
@@ -24,6 +25,7 @@ import {
   calculateLine,
   deductedDays,
   lineNetWithFlags,
+  lineTax,
   penaltyShare,
   sumAdjustments,
 } from '../../domain';
@@ -65,8 +67,12 @@ function toAdjustment(row: AdjustmentRow, inRun: ReadonlySet<string>): PayrollAd
   };
 }
 
-/** A line's adjustment sums, net and flags after its adjustments changed (rest unchanged). */
-function withAdjustments(line: LineRow, adjustments: readonly AdjustmentRow[]) {
+/**
+ * A line's adjustment sums, net, flags, tax and gross after its adjustments changed. The rest of
+ * the line keeps its last calculation (the insurance share included); the net changed, so the tax
+ * is grossed up again under today's tax rule.
+ */
+const withAdjustments = (tax: TaxRule) => (line: LineRow, adjustments: readonly AdjustmentRow[]) => {
   const { additions, deductions } = sumAdjustments(adjustments);
   const { net, flags } = lineNetWithFlags(
     {
@@ -78,8 +84,17 @@ function withAdjustments(line: LineRow, adjustments: readonly AdjustmentRow[]) {
     },
     line.flags.includes(PayrollFlag.PENDING_PENALTIES),
   );
-  return { adjustmentAdditions: additions, adjustmentDeductions: deductions, net, flags };
-}
+  const { incomeTax, martyrTax, gross } = lineTax(net, line.insuranceAmount, tax);
+  return {
+    adjustmentAdditions: additions,
+    adjustmentDeductions: deductions,
+    net,
+    incomeTax,
+    martyrTax,
+    gross,
+    flags,
+  };
+};
 
 /**
  * Monthly payroll runs (§6). One run per month, DRAFT until approved. Lines snapshot the
@@ -213,7 +228,7 @@ export class PayrollService {
       id,
       { employeeId: dto.employeeId, type: dto.type, amount: dto.amount, reason: dto.reason },
       createdById,
-      withAdjustments,
+      withAdjustments((await this.hrSettings.get()).tax),
     );
     if (!added) throw conflict(ErrorCode.PAYROLL_APPROVED);
     return this.get(id);
@@ -223,7 +238,8 @@ export class PayrollService {
     await this.findDraft(id);
     const adjustment = await this.repository.findAdjustment(id, adjustmentId);
     if (!adjustment) throw new NotFoundException();
-    if (!(await this.repository.deleteAdjustment(id, adjustment, withAdjustments))) {
+    const recompute = withAdjustments((await this.hrSettings.get()).tax);
+    if (!(await this.repository.deleteAdjustment(id, adjustment, recompute))) {
       throw conflict(ErrorCode.PAYROLL_APPROVED);
     }
     return this.get(id);
@@ -288,8 +304,11 @@ export class PayrollService {
           latenessDays: late?.days ?? 0,
           adjustments: adjustments.filter((a) => a.employeeId === e.id),
           pendingPenalties: penalties.pending.get(e.id) ?? 0,
+          insuranceStatus: e.insuranceStatus,
+          insuredSalary: e.insuredSalary,
         },
         settings.payroll,
+        settings.tax,
       );
       return {
         employeeId: e.id,
@@ -302,6 +321,8 @@ export class PayrollService {
         departmentNameAr: e.department.nameAr,
         basicSalary: e.basicSalary,
         workSystem: e.workSystem,
+        insuranceStatus: e.insuranceStatus,
+        insuredSalary: e.insuredSalary,
         latenessMinutes: late?.minutes ?? 0,
         ...amounts,
       };

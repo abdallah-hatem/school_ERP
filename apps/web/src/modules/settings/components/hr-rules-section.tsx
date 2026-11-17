@@ -2,6 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
+  DEFAULT_TAX_RULE,
   HrSettingKey,
   isValidDays,
   latenessDays,
@@ -44,6 +45,7 @@ const PLACEHOLDER: HrSettings = {
     partTime: SETTING_DEFAULTS[HrSettingKey.PAYROLL_PART_TIME],
   },
   penalties: { repetitionWindow: SETTING_DEFAULTS[HrSettingKey.PENALTIES_REPETITION_WINDOW] },
+  tax: DEFAULT_TAX_RULE,
 };
 
 /** Hours of a month's maximum minutes (6,000 → 100) — the API's cap on steps. */

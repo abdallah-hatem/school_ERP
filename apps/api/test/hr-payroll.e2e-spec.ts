@@ -608,6 +608,105 @@ describe('HR payroll and dashboard (e2e)', () => {
     expect(lineOf(after, emp)).toMatchObject({ net: 30_000, flags: [] });
   });
 
+  // ── tax, martyrs' fund, insurance (§6: salaries are net — grossed up) ─────────
+
+  const insured = (insuredSalary: number) =>
+    employee({
+      insuranceStatus: 'INSURED',
+      insuranceNumber: String(Date.now()).slice(-9) + String(Math.floor(Math.random() * 1000)),
+      insuranceRegistrationDate: '2015-01-01',
+      insuredSalary,
+    });
+
+  it('Tax (default rule): net 12,000 not insured → tax 1,517.32, fund 6.76, gross 13,524.08; insured on 5,000 → insurance 550, gross 14,074.42', async () => {
+    const month = nextMonth();
+    const plain = await employee();
+    const withInsurance = await insured(500_000);
+    const run = await createRun(month);
+    // Values worked out independently with exact fractions (gross-up, rounded half up).
+    expect(lineOf(run, plain)).toMatchObject({
+      net: 1_200_000,
+      insuranceStatus: 'NOT_INSURED',
+      insuredSalary: null,
+      insuranceAmount: 0,
+      incomeTax: 151_732,
+      martyrTax: 676,
+      gross: 1_352_408,
+    });
+    const line = lineOf(run, withInsurance);
+    expect(line).toMatchObject({
+      net: 1_200_000,
+      insuranceStatus: 'INSURED',
+      insuredSalary: 500_000,
+      insuranceAmount: 55_000,
+      incomeTax: 151_738,
+      martyrTax: 704,
+      gross: 1_407_442,
+    });
+    expect(line.gross - line.insuranceAmount - line.incomeTax - line.martyrTax).toBe(line.net);
+  });
+
+  it('Tax: an adjustment changes the net, so tax and gross are grossed up again; removing it restores them', async () => {
+    const month = nextMonth();
+    const emp = await employee();
+    const run = await createRun(month);
+    const before = lineOf(run, emp);
+    const added = (
+      await addAdjustment(run.id, { employeeId: emp, type: 'ADDITION', amount: 20_000, reason: 'Exam bonus' }).expect(201)
+    ).body.data as PayrollRun;
+    expect(lineOf(added, emp)).toMatchObject({ net: 1_220_000, incomeTax: 156_735, martyrTax: 689, gross: 1_377_424 });
+    const adjustment = added.adjustments.find((a) => a.employeeId === emp)!;
+    const removed = (
+      await http(app).delete(`/hr/payroll-runs/${run.id}/adjustments/${adjustment.id}`).expect(200)
+    ).body.data as PayrollRun;
+    expect(lineOf(removed, emp)).toMatchObject({
+      net: before.net,
+      incomeTax: before.incomeTax,
+      martyrTax: before.martyrTax,
+      gross: before.gross,
+    });
+  });
+
+  it('Tax settings change → a DRAFT changes on recalculate; an APPROVED run keeps its tax', async () => {
+    const approvedMonth = nextMonth();
+    const draftMonth = nextMonth();
+    const emp = await insured(500_000);
+    const approved = await createRun(approvedMonth);
+    await approveOk(approved.id);
+    const draft = await createRun(draftMonth);
+    const approvedLine = lineOf(approved, emp);
+
+    await http(app)
+      .patch('/hr/settings')
+      .send({ tax: { brackets: [{ width: null, percent: 0 }], martyrPercent: 0, insurancePercent: 10 } })
+      .expect(200);
+    expect(lineOf(await getRun(draft.id), emp).gross).toBe(lineOf(draft, emp).gross); // not yet
+    await recalculate(draft.id).expect(200);
+    // No tax and no fund: gross = net + insurance (10% of 5,000).
+    expect(lineOf(await getRun(draft.id), emp)).toMatchObject({
+      net: 1_200_000,
+      insuranceAmount: 50_000,
+      incomeTax: 0,
+      martyrTax: 0,
+      gross: 1_250_000,
+    });
+    expect(lineOf(await getRun(approved.id), emp)).toMatchObject({
+      insuranceAmount: approvedLine.insuranceAmount,
+      incomeTax: approvedLine.incomeTax,
+      martyrTax: approvedLine.martyrTax,
+      gross: approvedLine.gross,
+    });
+  });
+
+  it('Tax: net floored at 0, insured → the school still pays the insurance share and its fund', async () => {
+    const month = nextMonth();
+    const emp = await insured(500_000);
+    await approvedPenalty(emp, day(month, 1), DEDUCT(30));
+    await approvedPenalty(emp, day(month, 2), DEDUCT(5));
+    const line = lineOf(await createRun(month), emp);
+    expect(line).toMatchObject({ net: 0, insuranceAmount: 55_000, incomeTax: 0, martyrTax: 28, gross: 55_028 });
+  });
+
   it('Totals equal the sum of the lines; `flagged` counts both flag types', async () => {
     const month = nextMonth();
     const floored = await employee({ basicSalary: 100_000 });
@@ -623,6 +722,10 @@ describe('HR payroll and dashboard (e2e)', () => {
       'adjustmentAdditions',
       'adjustmentDeductions',
       'net',
+      'insuranceAmount',
+      'incomeTax',
+      'martyrTax',
+      'gross',
     ] as const) {
       expect(run.totals[key]).toBe(sumOf(run.lines, key));
     }

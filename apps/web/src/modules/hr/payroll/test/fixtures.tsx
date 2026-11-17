@@ -1,4 +1,5 @@
 import {
+  DEFAULT_TAX_RULE,
   SETTING_DEFAULTS,
   type HrSettings,
   type PayrollAdjustment,
@@ -37,6 +38,12 @@ export function line(
     adjustmentAdditions: 0,
     adjustmentDeductions: 0,
     net: 1_400_000,
+    insuranceStatus: 'NOT_INSURED',
+    insuredSalary: null,
+    insuranceAmount: 0,
+    incomeTax: 0,
+    martyrTax: 0,
+    gross: 1_400_000,
     flags: [],
     ...overrides,
   };
@@ -89,6 +96,10 @@ export function run(overrides: Partial<PayrollRun> = {}): PayrollRun {
       adjustmentAdditions: 0,
       adjustmentDeductions: 0,
       net: lines.reduce((s, l) => s + l.net, 0),
+      insuranceAmount: lines.reduce((s, l) => s + l.insuranceAmount, 0),
+      incomeTax: lines.reduce((s, l) => s + l.incomeTax, 0),
+      martyrTax: lines.reduce((s, l) => s + l.martyrTax, 0),
+      gross: lines.reduce((s, l) => s + l.gross, 0),
       flagged: lines.filter((l) => l.flags.length > 0).length,
     },
     adjustments: [],
@@ -120,6 +131,7 @@ export const SETTINGS: HrSettings = {
     partTime: { PART_TIME_4: 80, PART_TIME_3: 60, PART_TIME_2: 40 },
   },
   penalties: { repetitionWindow: 'CONTRACT_YEAR' },
+  tax: DEFAULT_TAX_RULE,
 };
 
 export const PAYSLIP: Payslip = {

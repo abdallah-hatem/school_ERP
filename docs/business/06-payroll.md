@@ -1,8 +1,10 @@
 # §6 Payroll
 
-The client's regulations don't define how salaries are calculated. For the demo, payroll is the
-**basic salary adjusted for work system, minus deductions, plus or minus one-off adjustments**
-(owner's decision, 2026-11-17).
+The client's regulations don't define how salaries are calculated. Payroll is the **basic salary
+adjusted for work system, minus deductions, plus or minus one-off adjustments** (owner's decision,
+2026-11-17). That is the **net** the employee is paid. **Salaries are net — grossed up** (owner,
+2026-11-17): the school pays the employee's social-insurance share, the income tax and the
+martyrs' fund on top of it.
 
 ## The monthly run
 
@@ -30,14 +32,34 @@ The client's regulations don't define how salaries are calculated. For the demo,
 5. **Adjustments** = sum of the month's one-off additions (e.g. overtime, exam bonus) minus one-off
    deductions, each with a required reason.
 6. **Net** = salary for the month − penalty deductions − lateness deductions + adjustments.
+   This is what the employee is paid.
+7. **Insurance share** = insured salary × the insurance rate (default 11%), for employees who are
+   **insured** (§3); 0 otherwise. The school pays it.
+8. **Taxable amount** = the amount that, after its income tax and the martyrs' fund, leaves exactly
+   the net: `taxable − income tax(taxable) − fund rate × (taxable + insurance share) = net`.
+9. **Income tax** = the taxable amount taxed slice by slice (monthly brackets, §7); **martyrs'
+   fund** = (taxable + insurance share) × the fund rate (default 0.05%).
+10. **Gross** = net + insurance share + income tax + martyrs' fund — what the line costs the school.
 
 - **DECIDED** — Money is in EGP, kept to the piastre. Each amount is rounded to the nearest piastre,
   half up, after multiplying.
 - **GUESS** — The day value is **not** rounded on its own: a deduction is `round(days × salary for
   the month ÷ divisor)`. The salary for the month is rounded first. The payslip shows the day value
   rounded for display only.
+- **GUESS** (to confirm with the school's accountant) — tax, fund and insurance follow the school's
+  previous HR system: monthly brackets with no annual averaging, no separate personal exemption
+  (it is the 0% slice), no "high income loses the lower slices" rule, no minimum or maximum insured
+  salary, and the insurance share is not pro-rated for part-time work or a part month.
+- **GUESS** — The taxable amount is solved exactly and rounded once to the piastre; income tax and
+  the fund are each rounded once, half up. Gross is the exact sum of its parts, so a line always
+  balances to the piastre (it can differ from the unrounded solution by a piastre or two).
+- **DECIDED** — The net is never changed by tax: a net floored at 0 has no income tax, but an
+  insured employee's insurance share and its fund are still paid by the school.
+- **DECIDED** — Adding or removing an adjustment on a draft changes the net, so its tax, fund and
+  gross are worked out again (with today's tax rule); the insurance share keeps the line's last
+  calculation until the next recalculate.
 - **DECIDED** — Each line keeps a **snapshot** of the employee's code, names, national ID,
-  department, basic salary and work system at calculation. Editing an employee later never changes an approved run.
+  department, basic salary, work system, insurance status and insured salary at calculation. Editing an employee later never changes an approved run.
 - **GUESS** — Net never goes below 0. If deductions exceed the salary, net is 0 and the line is
   flagged for review.
 - **GUESS** — No pro-rata for employees who join or leave mid-month in the demo (OPEN for later).
@@ -60,7 +82,8 @@ The client's regulations don't define how salaries are calculated. For the demo,
   accounting module; nothing listens to it yet.
 - **DECIDED** — **Bank sheet** export of an approved run (Excel): employee code, name, national ID,
   net. The employee's bank details are recorded (§3); adding them to the sheet is Planned.
-- **Planned** — tax, social insurance, allowances, the annual raise, the exam bonus rules, loans.
+- **Planned** — allowances, the annual raise, the exam bonus rules, loans, the employer's insurance
+  share.
 - **Planned** (owner of payroll: Tamer) — **social insurance deductions** from the insured salary
   and **bank transfer** of net pay using the employee's bank account. The employee fields exist
   (§3, 2026-11-18); how payroll uses them is decided and built by the payroll owner.

@@ -46,7 +46,7 @@ describe('HR rule settings — /hr/settings (e2e)', () => {
     await app.close();
   });
 
-  it('Fresh database: HR settings = grace 0, steps 1→0.25 and 2→0.5, extra 0.5, divisor 30, 80/60/40, CONTRACT_YEAR', async () => {
+  it('Fresh database: HR settings = grace 0, steps 1→0.25 and 2→0.5, extra 0.5, divisor 30, 80/60/40, CONTRACT_YEAR, HR-system tax rule', async () => {
     const res = await http(app).get('/hr/settings').expect(200);
     expect(res.body).toMatchObject({ success: true, statusCode: 200 });
     expect(res.body.data).toEqual({
@@ -60,6 +60,18 @@ describe('HR rule settings — /hr/settings (e2e)', () => {
       },
       payroll: { dayDivisor: 30, partTime: { PART_TIME_4: 80, PART_TIME_3: 60, PART_TIME_2: 40 } },
       penalties: { repetitionWindow: 'CONTRACT_YEAR' },
+      tax: {
+        brackets: [
+          { width: 500_000, percent: 0 },
+          { width: 125_000, percent: 10 },
+          { width: 125_000, percent: 15 },
+          { width: 1_083_333, percent: 20 },
+          { width: 1_666_667, percent: 22.5 },
+          { width: null, percent: 25 },
+        ],
+        martyrPercent: 0.05,
+        insurancePercent: 11,
+      },
     });
   });
 
@@ -118,7 +130,19 @@ describe('HR rule settings — /hr/settings (e2e)', () => {
       ['invalid repetitionWindow', { penalties: { repetitionWindow: 'WEEKLY' } }],
       ['part-time key other than 4/3/2', { payroll: { partTime: { PART_TIME_5: 50 } } }],
       ['FULL_TIME part-time key', { payroll: { partTime: { FULL_TIME: 90 } } }],
-      ['unknown top-level key', { tax: { rate: 10 } }],
+      ['unknown top-level key', { pension: { rate: 10 } }],
+      ['unknown tax key', { tax: { rate: 10 } }],
+      ['tax: no brackets', { tax: { brackets: [] } }],
+      ['tax: width 0', { tax: { brackets: [{ width: 0, percent: 0 }, { width: null, percent: 10 }] } }],
+      ['tax: width with piastre fractions', { tax: { brackets: [{ width: 1.5, percent: 0 }, { width: null, percent: 10 }] } }],
+      ['tax: percent 100', { tax: { brackets: [{ width: null, percent: 100 }] } }],
+      ['tax: percent with 3 decimals', { tax: { brackets: [{ width: null, percent: 10.125 }] } }],
+      ['tax: an open-ended bracket that is not last', { tax: { brackets: [{ width: null, percent: 0 }, { width: 100, percent: 10 }] } }],
+      ['tax: a last bracket with a width', { tax: { brackets: [{ width: 100, percent: 10 }] } }],
+      ['tax: bracket % + fund reach 100', { tax: { brackets: [{ width: null, percent: 99.99 }] } }],
+      ['tax: negative fund', { tax: { martyrPercent: -0.05 } }],
+      ['tax: insurance 100', { tax: { insurancePercent: 100 } }],
+      ['tax: 11 brackets', { tax: { brackets: [...Array.from({ length: 10 }, () => ({ width: 100, percent: 0 })), { width: null, percent: 0 }] } }],
       ['unknown nested key', { lateness: { graceMinutes: 5, hours: 3 } }],
       ['null value', { payroll: { dayDivisor: null } }],
       ['null section', { lateness: null }],
@@ -211,6 +235,14 @@ describe('HR rule settings — /hr/settings (e2e)', () => {
       },
       payroll: { dayDivisor: 26, partTime: { PART_TIME_4: 75 } },
       penalties: { repetitionWindow: 'ROLLING_12_MONTHS' },
+      tax: {
+        brackets: [
+          { width: 300_000, percent: 0 },
+          { width: null, percent: 12.5 },
+        ],
+        martyrPercent: 0.1,
+        insurancePercent: 11.25,
+      },
     }).expect(200);
 
     const after = await getSettings();
@@ -226,6 +258,14 @@ describe('HR rule settings — /hr/settings (e2e)', () => {
       },
       payroll: { dayDivisor: 26, partTime: { PART_TIME_4: 75, PART_TIME_3: 60, PART_TIME_2: 40 } },
       penalties: { repetitionWindow: 'ROLLING_12_MONTHS' },
+      tax: {
+        brackets: [
+          { width: 300_000, percent: 0 },
+          { width: null, percent: 12.5 },
+        ],
+        martyrPercent: 0.1,
+        insurancePercent: 11.25,
+      },
     });
     // 90 min − 10 grace = 80 → 2nd hour → 0.5 + 1.
     expect(latenessDays(90, after.lateness)).toBe(1.5);

@@ -20,8 +20,9 @@ responsive layout.
 - **Contracts:** renewal and non-renewal deadlines, early termination, deemed resignation after
   unexcused absence.
 - **Medical and legal:** sick-leave approval by the clinic, investigations.
-- **Payroll:** annual raise and the raise-related penalties, exam bonus, overtime rate, tax, social
-  insurance, loans, bank accounts.
+- **Payroll:** annual raise and the raise-related penalties, exam bonus, overtime rate, the employer's
+  insurance share, loans, bank accounts. (Income tax, the martyrs' fund and the employee's
+  insurance share are built — §6.)
 - **Reports** for official bodies, the bus department's attendance report.
 - **Roles and permissions** for the whole approval chain (§2).
 - **Accounting:** journal entries created from approved payroll (and later fee payments).

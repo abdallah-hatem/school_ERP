@@ -36,6 +36,8 @@ export const PAYROLL_SNAPSHOT_SELECT = {
   department: { select: { nameEn: true, nameAr: true } },
   basicSalary: true,
   workSystem: true,
+  insuranceStatus: true,
+  insuredSalary: true,
 } satisfies Prisma.EmployeeSelect;
 
 export type PayrollSnapshotRow = Prisma.EmployeeGetPayload<{

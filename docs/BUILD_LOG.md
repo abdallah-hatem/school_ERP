@@ -136,8 +136,18 @@ phase live in `docs/build-log/`.
 - 2026-11-17 — P2 roles as data merged → #53 (7 starting roles; admin = System admin + HR manager;
   users/roles API; review made §2 honest about P3/P4 gaps). T30 Activity page + employee History
   tab (option B) merged → #54; Settings → Change history replaced by a link to Activity.
+- 2026-11-18 — Payroll tax feature started (feature mode; skills updated to bdd34b6). Defaults
+  copied from `../HR-system` (`payslipMath.js`). Owner: tax + fund + insurance (insurance fields
+  already on employees), salaries net → grossed up. PR 1 built: shared `payroll-tax` rules (gross-up
+  in integers, values checked against an exact-fraction reference), API settings + payroll lines,
+  migration `20261118160000_payroll_tax` (gross = net backfill), docs §3/§6/§7/§8.
 
 ## Next up
+
+- **Payroll tax** (spec `docs/specs/2026-11-18-payroll-tax.md`, owner 2026-11-18: tax + martyrs'
+  fund + insurance, salaries net → grossed up, defaults from the previous HR system). PR 1 (shared
+  rules, API, migration, docs) in review; PR 2 (Settings → HR rules panel, run page, payslip,
+  rules panel, smoke) next. Defaults are GUESS until the accountant confirms.
 
 - `pnpm smoke` in CI (needs Postgres + Chromium in the workflow).
 - The client should check the Arabic penalty catalogue against the printed regulations (copied from the scans).

@@ -512,34 +512,44 @@ model PayrollRun {
 /// One employee's line in a run. Every employee and department field is a SNAPSHOT taken at
 /// calculation — editing the employee later never changes it.
 model PayrollLine {
-  id                   String     @id @default(uuid()) @db.Uuid
-  runId                String     @map("run_id") @db.Uuid
-  employeeId           String     @map("employee_id") @db.Uuid
-  employeeCode         String     @map("employee_code")
-  nameEn               String     @map("name_en")
-  nameAr               String     @map("name_ar")
-  nationalId           String?    @map("national_id")
+  id                   String          @id @default(uuid()) @db.Uuid
+  runId                String          @map("run_id") @db.Uuid
+  employeeId           String          @map("employee_id") @db.Uuid
+  employeeCode         String          @map("employee_code")
+  nameEn               String          @map("name_en")
+  nameAr               String          @map("name_ar")
+  nationalId           String?         @map("national_id")
   /// Snapshot of the employee's department id (plain column, not a relation).
-  departmentId         String     @map("department_id") @db.Uuid
-  departmentNameEn     String     @map("department_name_en")
-  departmentNameAr     String     @map("department_name_ar")
-  basicSalary          Int        @map("basic_salary")
-  workSystem           WorkSystem @map("work_system")
-  monthSalary          Int        @map("month_salary")
+  departmentId         String          @map("department_id") @db.Uuid
+  departmentNameEn     String          @map("department_name_en")
+  departmentNameAr     String          @map("department_name_ar")
+  basicSalary          Int             @map("basic_salary")
+  workSystem           WorkSystem      @map("work_system")
+  monthSalary          Int             @map("month_salary")
   /// Rounded for display; deductions use monthSalary ÷ divisor unrounded.
-  dayValue             Int        @map("day_value")
-  penaltyDays          Decimal    @default(0) @map("penalty_days") @db.Decimal(5, 2)
-  penaltyAmount        Int        @default(0) @map("penalty_amount")
-  latenessMinutes      Int        @default(0) @map("lateness_minutes")
-  latenessDays         Decimal    @default(0) @map("lateness_days") @db.Decimal(5, 2)
-  latenessAmount       Int        @default(0) @map("lateness_amount")
-  adjustmentAdditions  Int        @default(0) @map("adjustment_additions")
-  adjustmentDeductions Int        @default(0) @map("adjustment_deductions")
+  dayValue             Int             @map("day_value")
+  penaltyDays          Decimal         @default(0) @map("penalty_days") @db.Decimal(5, 2)
+  penaltyAmount        Int             @default(0) @map("penalty_amount")
+  latenessMinutes      Int             @default(0) @map("lateness_minutes")
+  latenessDays         Decimal         @default(0) @map("lateness_days") @db.Decimal(5, 2)
+  latenessAmount       Int             @default(0) @map("lateness_amount")
+  adjustmentAdditions  Int             @default(0) @map("adjustment_additions")
+  adjustmentDeductions Int             @default(0) @map("adjustment_deductions")
+  /// What the employee is paid (guaranteed; §6 salaries are net — grossed up).
   net                  Int
+  /// Insurance snapshot taken at calculation (§3).
+  insuranceStatus      InsuranceStatus @default(NOT_INSURED) @map("insurance_status")
+  insuredSalary        Int?            @map("insured_salary")
+  /// Paid by the school on top of net (§6): insurance share, income tax, martyrs' fund.
+  insuranceAmount      Int             @default(0) @map("insurance_amount")
+  incomeTax            Int             @default(0) @map("income_tax")
+  martyrTax            Int             @default(0) @map("martyr_tax")
+  /// net + insuranceAmount + incomeTax + martyrTax.
+  gross                Int             @default(0)
   /// `PayrollFlag` values: NET_FLOORED, PENDING_PENALTIES.
-  flags                String[]   @default([])
-  createdAt            DateTime   @default(now()) @map("created_at")
-  updatedAt            DateTime   @updatedAt @map("updated_at")
+  flags                String[]        @default([])
+  createdAt            DateTime        @default(now()) @map("created_at")
+  updatedAt            DateTime        @updatedAt @map("updated_at")
 
   run      PayrollRun @relation(fields: [runId], references: [id], onDelete: Cascade)
   employee Employee   @relation(fields: [employeeId], references: [id], onDelete: Restrict)

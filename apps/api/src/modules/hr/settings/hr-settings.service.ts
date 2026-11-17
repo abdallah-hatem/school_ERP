@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import {
+  ErrorCode,
   HrSettingKey,
   PART_TIME_WORK_SYSTEMS,
   SETTING_DEFAULTS,
@@ -7,7 +8,10 @@ import {
   type LatenessStep,
   type PartTimeWorkSystem,
   type SettingValueMap,
+  type TaxBracket,
+  taxRuleIssues,
 } from '@school-erp/shared';
+import { CodedException } from '../../../common/errors/coded.exception';
 import { SettingsService } from '../../../core/settings';
 import { UpdateHrSettingsDto } from './dto/update-hr-settings.dto';
 
@@ -24,12 +28,16 @@ function canonical(value: unknown): string {
   );
 }
 
+function cleanBrackets(brackets: readonly TaxBracket[]): TaxBracket[] {
+  return brackets.map(({ width, percent }) => ({ width, percent }));
+}
+
 function sortSteps(steps: readonly LatenessStep[]): LatenessStep[] {
   return [...steps].map(({ hour, days }) => ({ hour, days })).sort((a, b) => a.hour - b.hour);
 }
 
 /**
- * HR rule settings (§5, §6, §7): lateness rule, payroll rule, penalty repetition window. Stored one
+ * HR rule settings (§5, §6, §7): lateness rule, payroll rule, penalty repetition window, tax rule. Stored one
  * row per key with the §7 defaults behind them, through core's `SettingsService` (HR never writes
  * core's table). Every changed key emits one `settings.changed` after the write commits; core's
  * listener records the history row.
@@ -46,7 +54,7 @@ export class HrSettingsService {
     const old = await this.load();
     const next: HrValues = { ...old };
 
-    const { lateness, payroll, penalties } = dto;
+    const { lateness, payroll, penalties, tax } = dto;
     if (lateness?.graceMinutes !== undefined) {
       next[HrSettingKey.LATENESS_GRACE_MINUTES] = lateness.graceMinutes;
     }
@@ -68,6 +76,16 @@ export class HrSettingsService {
     }
     if (penalties?.repetitionWindow !== undefined) {
       next[HrSettingKey.PENALTIES_REPETITION_WINDOW] = penalties.repetitionWindow;
+    }
+
+    if (tax?.brackets !== undefined) next[HrSettingKey.TAX_BRACKETS] = cleanBrackets(tax.brackets);
+    if (tax?.martyrPercent !== undefined) next[HrSettingKey.TAX_MARTYR_PERCENT] = tax.martyrPercent;
+    if (tax?.insurancePercent !== undefined) {
+      next[HrSettingKey.TAX_INSURANCE_PERCENT] = tax.insurancePercent;
+    }
+    // The tax rule is checked as a whole: a bracket's rate plus the fund must stay under 100%.
+    if (tax && taxRuleIssues(this.toResponse(next).tax).length > 0) {
+      throw new CodedException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_TAX_RULE);
     }
 
     const changed = HR_KEYS.filter((key) => canonical(old[key]) !== canonical(next[key]));
@@ -104,6 +122,9 @@ export class HrSettingsService {
         ]),
       ) as Record<PartTimeWorkSystem, number>,
       [HrSettingKey.PENALTIES_REPETITION_WINDOW]: pick(HrSettingKey.PENALTIES_REPETITION_WINDOW),
+      [HrSettingKey.TAX_BRACKETS]: pick(HrSettingKey.TAX_BRACKETS),
+      [HrSettingKey.TAX_MARTYR_PERCENT]: pick(HrSettingKey.TAX_MARTYR_PERCENT),
+      [HrSettingKey.TAX_INSURANCE_PERCENT]: pick(HrSettingKey.TAX_INSURANCE_PERCENT),
     };
   }
 
@@ -119,6 +140,11 @@ export class HrSettingsService {
         partTime: v[HrSettingKey.PAYROLL_PART_TIME],
       },
       penalties: { repetitionWindow: v[HrSettingKey.PENALTIES_REPETITION_WINDOW] },
+      tax: {
+        brackets: v[HrSettingKey.TAX_BRACKETS],
+        martyrPercent: v[HrSettingKey.TAX_MARTYR_PERCENT],
+        insurancePercent: v[HrSettingKey.TAX_INSURANCE_PERCENT],
+      },
     };
   }
 }
