@@ -1,5 +1,10 @@
 # Recent changes
 
+- 2026-11-18 — Employees (§3, owner): new groups on the employee record — social insurance (status,
+  number, registration date, insured salary; required when insured, cleared when not), bank account
+  (bank, account number, Egyptian IBAN), emergency contact and qualification. Payroll's use of
+  insurance and bank details stays Planned and is Tamer's (§6). Employees can have a photo (PNG, JPG
+  or WebP, up to 2 MB, signed-in only); without one they show a neutral silhouette, not initials.
 - 2026-11-18 — Direct managers (§3, §7, owner): job titles get a **Manages people** switch in
   Settings; the Direct manager picker lists only active employees with such a title; an employee
   whose manager no longer qualifies keeps them (flagged "No longer in a managing role"); choosing a

@@ -1,20 +1,27 @@
+import { randomUUID } from 'node:crypto';
 import { BadRequestException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
+  applyInsuranceStatus,
   contractYearFor,
   Employee,
+  EMPLOYEE_PHOTO_UPLOAD,
   EmployeeHiredEvent,
   EmployeeRef,
   EmployeeStatus,
   EmployeeSummary,
   ErrorCode,
   HrEvent,
+  InsuranceStatus,
   NamedRef,
   oneYearContractEnd,
   Paginated,
+  socialInsuranceIssues,
+  type SocialInsurance,
   Uuid,
 } from '@school-erp/shared';
 import { CodedException } from '../../../../common/errors/coded.exception';
+import { checkImageUpload, FileStorageService, type UploadedFileLike } from '../../../../core/settings';
 import { fromIsoDate, todayIsoDate, toIsoDate } from '../../../../common/utils/dates.util';
 import { DepartmentsService } from '../../lists/services/departments.service';
 import { JobTitlesService } from '../../lists/services/job-titles.service';
@@ -43,9 +50,13 @@ const REQUIRED_FIELDS = [
   'contractStart',
   'contractEnd',
   'usesBus',
+  'insuranceStatus',
 ] as const satisfies readonly (keyof UpdateEmployeeDto)[];
 
 const DATE_FIELDS = ['dateOfBirth', 'hireDate', 'contractStart', 'contractEnd'] as const;
+
+/** Folder under UPLOADS_DIR (and `/files/…`) holding employee photos — signed-in only. */
+export const EMPLOYEE_PHOTO_FOLDER = 'employee-photos';
 
 const bad = (code: ErrorCode) => new CodedException(HttpStatus.BAD_REQUEST, code);
 
@@ -63,6 +74,7 @@ export function toEmployee(row: EmployeeDetailRow): Employee {
           code: manager.code,
           nameEn: manager.nameEn,
           nameAr: manager.nameAr,
+          photoUrl: manager.photoUrl,
           managesPeople: manager.jobTitle.managesPeople,
         }
       : null,
@@ -70,6 +82,9 @@ export function toEmployee(row: EmployeeDetailRow): Employee {
     hireDate: toIsoDate(row.hireDate),
     contractStart: toIsoDate(row.contractStart),
     contractEnd: toIsoDate(row.contractEnd),
+    insuranceRegistrationDate: row.insuranceRegistrationDate
+      ? toIsoDate(row.insuranceRegistrationDate)
+      : null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -86,6 +101,7 @@ export class EmployeesService {
     private readonly departments: DepartmentsService,
     private readonly jobTitles: JobTitlesService,
     private readonly events: EventEmitter2,
+    private readonly files: FileStorageService,
   ) {}
 
   async list(query: ListEmployeesQueryDto): Promise<Paginated<EmployeeSummary>> {
@@ -147,7 +163,8 @@ export class EmployeesService {
 
   async create(dto: CreateEmployeeDto): Promise<Employee> {
     await this.assertSelectable(dto);
-    await this.assertUnique(dto, null);
+    const insurance = this.resolveInsurance(dto, null);
+    await this.assertUnique({ ...dto, insuranceNumber: insurance.insuranceNumber }, null);
     if (dto.managerId) await this.assertManager(null, dto.managerId, true);
     const contract = this.resolveContract(dto.contractStart, dto.contractEnd);
 
@@ -172,6 +189,17 @@ export class EmployeesService {
       contractStart: fromIsoDate(contract.start),
       contractEnd: fromIsoDate(contract.end),
       usesBus: dto.usesBus ?? false,
+      ...this.insuranceData(insurance),
+      bankName: dto.bankName ?? null,
+      bankAccountNumber: dto.bankAccountNumber ?? null,
+      iban: dto.iban ?? null,
+      emergencyContactName: dto.emergencyContactName ?? null,
+      emergencyContactRelationship: dto.emergencyContactRelationship ?? null,
+      emergencyContactPhone: dto.emergencyContactPhone ?? null,
+      highestDegree: dto.highestDegree ?? null,
+      major: dto.major ?? null,
+      university: dto.university ?? null,
+      graduationYear: dto.graduationYear ?? null,
     });
     this.emit(HrEvent.EMPLOYEE_HIRED, row.id);
     return toEmployee(row);
@@ -191,7 +219,8 @@ export class EmployeesService {
       departmentId: dto.departmentId !== current.department.id ? dto.departmentId : undefined,
       jobTitleId: dto.jobTitleId !== current.jobTitle.id ? dto.jobTitleId : undefined,
     });
-    await this.assertUnique(dto, id);
+    const insurance = this.resolveInsurance(dto, current);
+    await this.assertUnique({ ...dto, insuranceNumber: insurance.insuranceNumber }, id);
     // The existing manager left unchanged is kept even if they no longer manage people (§3).
     if (dto.managerId) {
       await this.assertManager(id, dto.managerId, dto.managerId !== current.manager?.id);
@@ -208,7 +237,34 @@ export class EmployeesService {
       const v = dto[f];
       if (v) data[f] = fromIsoDate(v);
     }
+    Object.assign(data, this.insuranceData(insurance));
     const row = await this.repository.updateEmployee(id, data);
+    this.emit(HrEvent.EMPLOYEE_UPDATED, id);
+    return toEmployee(row);
+  }
+
+  /**
+   * Replaces the employee's photo (§3): PNG, JPG or WebP up to 2 MB, checked by its bytes. The old
+   * file is deleted once the record points at the new one.
+   */
+  async setPhoto(id: Uuid, file: UploadedFileLike | undefined): Promise<Employee> {
+    const previous = await this.repository.findPhotoUrl(id);
+    if (previous === undefined) throw new NotFoundException();
+    const { type, buffer } = checkImageUpload(file, EMPLOYEE_PHOTO_UPLOAD);
+    const photoUrl = await this.files.save(EMPLOYEE_PHOTO_FOLDER, `${id}-${randomUUID()}.${type}`, buffer);
+    const row = await this.repository.updateEmployee(id, { photoUrl });
+    if (previous) await this.files.remove(previous);
+    this.emit(HrEvent.EMPLOYEE_UPDATED, id);
+    return toEmployee(row);
+  }
+
+  /** Removes the photo; the employee shows the silhouette again. No photo → nothing changes. */
+  async removePhoto(id: Uuid): Promise<Employee> {
+    const previous = await this.repository.findPhotoUrl(id);
+    if (previous === undefined) throw new NotFoundException();
+    if (!previous) return this.get(id);
+    const row = await this.repository.updateEmployee(id, { photoUrl: null });
+    await this.files.remove(previous);
     this.emit(HrEvent.EMPLOYEE_UPDATED, id);
     return toEmployee(row);
   }
@@ -249,7 +305,7 @@ export class EmployeesService {
 
   /** National ID and fingerprint ID are unique when given; keeping your own is fine. */
   private async assertUnique(
-    dto: { nationalId?: string | null; fingerprintId?: string | null },
+    dto: { nationalId?: string | null; fingerprintId?: string | null; insuranceNumber?: string | null },
     selfId: Uuid | null,
   ): Promise<void> {
     if (dto.nationalId) {
@@ -264,6 +320,54 @@ export class EmployeesService {
         throw new CodedException(HttpStatus.CONFLICT, ErrorCode.DUPLICATE_FINGERPRINT_ID);
       }
     }
+    if (dto.insuranceNumber) {
+      const owner = await this.repository.findIdByInsuranceNumber(dto.insuranceNumber);
+      if (owner && owner !== selfId) {
+        throw new CodedException(HttpStatus.CONFLICT, ErrorCode.DUPLICATE_INSURANCE_NUMBER);
+      }
+    }
+  }
+
+  /**
+   * The insurance fields after this request (§3): the request's values over the saved ones. While
+   * insured, the number, registration date and insured salary are required (400 naming the first
+   * missing one); not insured clears all three.
+   */
+  private resolveInsurance(
+    dto: UpdateEmployeeDto,
+    current: EmployeeDetailRow | null,
+  ): SocialInsurance {
+    const pick = <K extends keyof SocialInsurance>(key: K, saved: SocialInsurance[K]): SocialInsurance[K] =>
+      dto[key] !== undefined ? (dto[key] as SocialInsurance[K]) : saved;
+    const merged: SocialInsurance = {
+      insuranceStatus: pick('insuranceStatus', current?.insuranceStatus ?? InsuranceStatus.NOT_INSURED),
+      insuranceNumber: pick('insuranceNumber', current?.insuranceNumber ?? null),
+      insuranceRegistrationDate: pick(
+        'insuranceRegistrationDate',
+        current?.insuranceRegistrationDate ? toIsoDate(current.insuranceRegistrationDate) : null,
+      ),
+      insuredSalary: pick('insuredSalary', current?.insuredSalary ?? null),
+    };
+    const [issue] = socialInsuranceIssues(merged, todayIsoDate());
+    if (issue) {
+      throw new BadRequestException(
+        issue.issue === 'required'
+          ? `${issue.field} is required when insured`
+          : `${issue.field} is invalid (${issue.issue})`,
+      );
+    }
+    return applyInsuranceStatus(merged);
+  }
+
+  private insuranceData(v: SocialInsurance) {
+    return {
+      insuranceStatus: v.insuranceStatus,
+      insuranceNumber: v.insuranceNumber,
+      insuranceRegistrationDate: v.insuranceRegistrationDate
+        ? fromIsoDate(v.insuranceRegistrationDate)
+        : null,
+      insuredSalary: v.insuredSalary,
+    };
   }
 
   /**

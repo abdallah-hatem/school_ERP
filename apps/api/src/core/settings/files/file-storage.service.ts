@@ -1,5 +1,5 @@
 import { createReadStream } from 'node:fs';
-import { mkdir, stat, writeFile } from 'node:fs/promises';
+import { mkdir, rm, stat, writeFile } from 'node:fs/promises';
 import { extname, join, resolve, sep } from 'node:path';
 import { Injectable, NotFoundException, StreamableFile } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -12,6 +12,7 @@ const CONTENT_TYPES: Record<string, string> = {
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
   '.svg': 'image/svg+xml',
   '.pdf': 'application/pdf',
 };
@@ -38,6 +39,20 @@ export class FileStorageService {
     await mkdir(join(this.root, folder), { recursive: true });
     await writeFile(path, data);
     return FileStorageService.urlFor(folder, name);
+  }
+
+  /**
+   * Deletes the file a `urlFor` path points at. Best effort: an unknown, malformed or already
+   * missing file is ignored (the record that pointed at it has already moved on).
+   */
+  async remove(url: string): Promise<void> {
+    const match = /^\/files\/([^/]+)\/([^/]+)$/.exec(url);
+    if (!match) return;
+    try {
+      await rm(this.pathFor(match[1], match[2]), { force: true });
+    } catch {
+      // A name the safe-path rules refuse was never ours to delete.
+    }
   }
 
   /** The stored file as a download, or 404 for a bad or missing name. */

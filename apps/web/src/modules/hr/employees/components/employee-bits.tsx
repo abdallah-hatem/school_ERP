@@ -1,21 +1,18 @@
 'use client';
 
 import { EmployeeStatus, type Names } from '@school-erp/shared';
-import { EmployeeLink } from '@/core/employees';
+import { EmployeeAvatar, EmployeeLink } from '@/core/employees';
 import { StatusPill } from '@/shared/components/ui/status-pill';
 import { localName } from '@/shared/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
-import { initialsOf } from '@/shared/lib/initials';
 
-export { initialsOf };
-
-/** Sunflower initials tile + name + code, as in the Campus tables. The name opens the profile. */
+/** Avatar (photo or silhouette) + name + code, as in the Campus tables. The name opens the profile. */
 export function EmployeeIdentity({
   employee,
   size = 'sm',
 }: {
-  employee: Names & { id: string; code: string };
+  employee: Names & { id: string; code: string; photoUrl?: string | null };
   size?: 'sm' | 'lg';
 }) {
   const { locale } = useTranslation();
@@ -23,15 +20,7 @@ export function EmployeeIdentity({
   const nameClass = cn('font-bold break-words', size === 'lg' ? 'text-base' : 'text-sm');
   return (
     <div className="flex min-w-0 items-center gap-3">
-      <span
-        aria-hidden="true"
-        className={cn(
-          'grid shrink-0 place-items-center bg-accent font-display font-extrabold text-accent-foreground',
-          size === 'lg' ? 'size-14 rounded-2xl text-lg' : 'size-9 rounded-xl text-xs',
-        )}
-      >
-        {initialsOf(name)}
-      </span>
+      <EmployeeAvatar photoUrl={employee.photoUrl} size={size === 'lg' ? 'md' : 'sm'} />
       <EmployeeLink
         employeeId={employee.id}
         name={name}

@@ -12,11 +12,12 @@ import { localName } from '@/shared/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import type { StageBand } from '../lib/stage-band';
-import { EmployeeStatusPill, initialsOf } from './employee-bits';
+import { EmployeeAvatar } from '@/core/employees';
+import { EmployeeStatusPill } from './employee-bits';
 
 /*
  * The employee profile card (owner's pick, option B): a band coloured by stage with the stage and
- * code, a large initials tile over the band, name and job title, department and work system,
+ * code, a large avatar (photo, or the silhouette) over the band, name and job title, department and work system,
  * basic salary, and View / Edit. The skeleton below is built from the same frame so nothing moves
  * when the cards land.
  */
@@ -118,15 +119,7 @@ export function EmployeeCard({
       }
       avatar={
         <>
-          <span
-            aria-hidden="true"
-            className={cn(
-              'grid size-16 shrink-0 place-items-center rounded-[1.25rem] font-display text-[1.3rem] font-extrabold ring-4 ring-card',
-              inactive ? 'bg-secondary text-muted-foreground' : 'bg-accent text-accent-foreground',
-            )}
-          >
-            {initialsOf(name)}
-          </span>
+          <EmployeeAvatar photoUrl={employee.photoUrl} size="lg" muted={inactive} className="ring-4 ring-card" />
           <span className="ms-auto mb-1">
             <EmployeeStatusPill status={employee.status} />
           </span>

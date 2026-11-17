@@ -70,6 +70,8 @@ describe('detectImageType', () => {
   });
 
   it('refuses anything else, including HTML pretending to be an image', () => {
+    expect(detectImageType(Buffer.from('RIFF\x10\x00\x00\x00WEBPVP8 ', 'latin1'))).toBe('webp');
+    expect(detectImageType(Buffer.from('RIFF\x10\x00\x00\x00WAVEfmt ', 'latin1'))).toBeNull();
     expect(detectImageType(Buffer.from('hello'))).toBeNull();
     expect(detectImageType(Buffer.from('<html><svg></svg></html>'))).toBeNull();
     expect(detectImageType(Buffer.from('GIF89a'))).toBeNull();

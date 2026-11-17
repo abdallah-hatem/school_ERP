@@ -98,3 +98,6 @@ The seeded `admin@school.local` becomes **System admin** + **HR manager**.
   **Open until P4:** edge case 3 (outside-team → 404) and edge case 4 (no salary fields) — today
   every role that can view employees, penalties or payroll sees all rows and salaries; a test that
   the employee link stays consistent while both `users.employee_id` and `employees.user_id` exist.
+  **Salary-type fields (2026-11-18):** R7's salary filtering covers the employee's `insuredSalary`
+  and bank details (`bankName`, `bankAccountNumber`, `iban`) as well as `basicSalary` — a role
+  without `hr.employees.view_salary` gets none of them.

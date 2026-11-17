@@ -114,6 +114,19 @@ describe('Seed (e2e)', () => {
     expect(new Set(second.codes).size).toBe(second.codes.length);
   }, 120_000);
 
+  it('Exactly one seeded employee (no. 1, a man) has the portrait photo; re-seeding keeps it', async () => {
+    const withPhoto = await db.employee.findMany({
+      where: { photoUrl: { not: null } },
+      select: { nameEn: true, gender: true, photoUrl: true },
+    });
+    expect(withPhoto).toHaveLength(1);
+    expect(withPhoto[0]).toMatchObject({ nameEn: EMPLOYEES[0].nameEn, gender: 'MALE' });
+    expect(withPhoto[0].photoUrl).toMatch(/^\/files\/employee-photos\/.+\.jpg$/);
+    await runSeed({ app });
+    const again = await db.employee.findMany({ where: { photoUrl: { not: null } }, select: { photoUrl: true } });
+    expect(again).toEqual([{ photoUrl: withPhoto[0].photoUrl }]);
+  }, 120_000);
+
   it('Re-seeding after the catalogue data changed updates groups and violations by English name, creating nothing', async () => {
     const catalogue = app.get(PenaltyCatalogueService);
     const seedGroup = data.catalogue.groups[1];

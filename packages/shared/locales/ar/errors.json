@@ -20,6 +20,7 @@
   "EMPLOYEE_INACTIVE": "هذا الموظف غير نشط.",
   "DUPLICATE_NATIONAL_ID": "الرقم القومي مسجل لموظف آخر.",
   "DUPLICATE_FINGERPRINT_ID": "رقم البصمة مسجل لموظف آخر.",
+  "DUPLICATE_INSURANCE_NUMBER": "رقم التأمين مسجل لموظف آخر.",
   "INVALID_MANAGER": "يجب أن يكون المدير المباشر موظفًا آخر نشطًا.",
   "MANAGER_LOOP": "اختيار هذا المدير ينشئ حلقة في التسلسل الإداري.",
   "MANAGER_NOT_MANAGING": "يجب أن يشغل المدير المباشر مسمى وظيفيًا يدير موظفين.",

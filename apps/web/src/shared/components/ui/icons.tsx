@@ -63,6 +63,7 @@ import {
   GearSixIcon as GearSix,
   ListMagnifyingGlassIcon as ListMagnifyingGlass,
   UserCircleIcon as UserCircle,
+  UserIcon as User,
   XCircleIcon as XCircle,
 } from '@phosphor-icons/react/ssr';
 import type { ComponentType } from 'react';
@@ -198,6 +199,13 @@ export const CancelledIcon = duotone(XCircle, 'Cancelled');
 export const CoreModuleIcon = duotone(GearSix, 'CoreModule');
 export const FieldIcon = duotone(ListMagnifyingGlass, 'Field');
 export const PersonIcon = duotone(UserCircle, 'Person');
+/**
+ * The neutral avatar of an employee without a photo — never initials (owner, 2026-11-18). Filled,
+ * not duotone: it reads as a person's silhouette inside the avatar tile.
+ */
+export function SilhouetteIcon(props: IconProps) {
+  return <User weight="fill" aria-hidden="true" focusable="false" {...props} />;
+}
 export const AnyoneIcon = duotone(Users, 'Anyone');
 export const MoneyIcon = duotone(Coins, 'Money');
 

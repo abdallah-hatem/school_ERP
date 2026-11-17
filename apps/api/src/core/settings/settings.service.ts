@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { BadRequestException, HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import {
@@ -21,24 +21,18 @@ import { AfterCommit, type DbAdapter } from '../../database/transactions';
 import { AuditService } from '../audit';
 import type { UpdateSchoolSettingsDto } from './dto/update-school-settings.dto';
 import { FileStorageService } from './files/file-storage.service';
+import { checkImageUpload, type UploadedFileLike } from './files/image-upload';
 import { SchoolSettingRepository } from './repositories/school-setting.repository';
 import {
-  IMAGE_MIME,
   LOGO_FOLDER,
   SCHOOL_FIELD_KEYS,
-  detectImageType,
   diffValues,
   isWorkHoursOrdered,
   resolveValues,
   type SettingValues,
 } from './settings.pure';
 
-/** The uploaded file as multer hands it over (memory storage). */
-export interface UploadedFileLike {
-  mimetype: string;
-  size: number;
-  buffer: Buffer;
-}
+export type { UploadedFileLike };
 
 const SCHOOL_FIELDS = Object.keys(SCHOOL_FIELD_KEYS) as (keyof SchoolSettings)[];
 const SCHOOL_KEYS = Object.values(SCHOOL_FIELD_KEYS);
@@ -174,17 +168,9 @@ export class SettingsService {
     file: UploadedFileLike | undefined,
     changedById: string | null,
   ): Promise<UploadLogoResponse> {
-    if (!file) throw new BadRequestException('file is required');
-    if (file.size > LOGO_UPLOAD.maxBytes) {
-      throw new CodedException(HttpStatus.PAYLOAD_TOO_LARGE, ErrorCode.FILE_TOO_LARGE);
-    }
-    const type = detectImageType(file.buffer);
-    // Both the declared type and the real bytes must be an allowed image, and agree.
-    if (!type || IMAGE_MIME[type] !== file.mimetype) {
-      throw new CodedException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_FILE_TYPE);
-    }
+    const { type, buffer } = checkImageUpload(file, LOGO_UPLOAD);
 
-    const logoUrl = await this.files.save(LOGO_FOLDER, `logo-${randomUUID()}.${type}`, file.buffer);
+    const logoUrl = await this.files.save(LOGO_FOLDER, `logo-${randomUUID()}.${type}`, buffer);
     await this.writeValues(
       'core.settings.logo_change',
       'school',

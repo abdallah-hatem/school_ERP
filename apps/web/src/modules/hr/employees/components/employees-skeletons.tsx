@@ -90,6 +90,20 @@ const DETAILS_SKELETON: { title: string; className?: string; fields: { key: stri
     title: 'employees.sections.contract',
     fields: [{ key: 'basicSalary', wide: true, tall: true }, { key: 'contractStart' }, { key: 'contractEnd' }, { key: 'usesBus' }],
   },
+  // Most employees are not insured: the status alone, across the card.
+  { title: 'employees.sections.insurance', fields: [{ key: 'insuranceStatus', wide: true }] },
+  {
+    title: 'employees.sections.bank',
+    fields: [{ key: 'bankName' }, { key: 'bankAccountNumber' }, { key: 'iban', wide: true }],
+  },
+  {
+    title: 'employees.sections.emergency',
+    fields: [{ key: 'emergencyContactName' }, { key: 'emergencyContactRelationship' }, { key: 'emergencyContactPhone', wide: true }],
+  },
+  {
+    title: 'employees.sections.qualification',
+    fields: [{ key: 'highestDegree' }, { key: 'graduationYear' }, { key: 'major' }, { key: 'university' }],
+  },
 ];
 
 /** The Details tab while it loads: the real cards and labels, each value a bar in its line box. */
@@ -138,6 +152,7 @@ function ProfileSkeleton() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title={<SkeletonText width="w-56" />}
+        leading={<Skeleton className="size-16 shrink-0 rounded-[1.25rem]" />}
         status={<SkeletonPill />}
         description={<SkeletonText width="w-72" />}
         breadcrumbs={[{ label: t('employees.title'), href: basePath }, { label: ' ' }]}
@@ -155,7 +170,7 @@ function ProfileSkeleton() {
   );
 }
 
-/** Form pages (new, edit): header with actions and the three section cards. */
+/** Form pages (new, edit): header with actions, the photo card and the section cards. */
 export function EmployeePageSkeleton() {
   const { t } = useTranslation();
   return (
@@ -164,7 +179,20 @@ export function EmployeePageSkeleton() {
         {t('ui.states.loading')}
       </span>
       <HeaderSkeleton actions={2} />
-      {[6, 6, 4].map((fields, i) => (
+      {/* Photo: the avatar beside its text and buttons. */}
+      <div className="flex flex-col gap-4 rounded-3xl bg-card p-5 shadow-card md:p-6">
+        <Skeleton className="h-6 w-24" />
+        <div className="flex flex-wrap items-center gap-5">
+          <Skeleton className="size-24 shrink-0 rounded-3xl" />
+          <div className="flex min-w-0 flex-1 basis-56 flex-col gap-3">
+            <Skeleton className="h-4 w-full max-w-md" />
+            <Skeleton className="h-4 w-48" />
+            <Skeleton className="h-11 w-40 rounded-lg" />
+          </div>
+        </div>
+      </div>
+      {/* Personal, job, pay and contract, insurance, bank, emergency contact, qualification. */}
+      {[6, 6, 4, 1, 3, 3, 4].map((fields, i) => (
         <div key={i} className="flex flex-col gap-4 rounded-3xl bg-card p-5 shadow-card md:p-6">
           <Skeleton className="h-6 w-40" />
           <div className="grid gap-3 sm:grid-cols-2">

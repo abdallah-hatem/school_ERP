@@ -106,6 +106,18 @@
     },
     "userRole": {
       "HR_ADMIN": "مسؤول الموارد البشرية"
+    },
+    "insuranceStatus": {
+      "INSURED": "مؤمَّن عليه",
+      "NOT_INSURED": "غير مؤمَّن عليه"
+    },
+    "degree": {
+      "NONE": "بدون مؤهل",
+      "SECONDARY": "ثانوية عامة",
+      "DIPLOMA": "دبلوم",
+      "BACHELOR": "بكالوريوس / ليسانس",
+      "MASTER": "ماجستير",
+      "DOCTORATE": "دكتوراه"
     }
   }
 }

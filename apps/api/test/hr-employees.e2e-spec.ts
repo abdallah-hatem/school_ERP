@@ -767,6 +767,7 @@ describe('HR lists and employees (e2e)', () => {
       workSystem: 'FULL_TIME',
       basicSalary: 1000000,
       status: 'ACTIVE',
+      photoUrl: null,
     });
 
     await http(app).post(`/hr/employees/${e.id}/deactivate`).expect(200);

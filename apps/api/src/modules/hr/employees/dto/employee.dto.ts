@@ -1,9 +1,18 @@
 import { PartialType } from '@nestjs/mapped-types';
 import {
+  DEGREES,
+  Degree,
   EMPLOYEE_STATUSES,
   EmployeeStatus,
   GENDERS,
   Gender,
+  INSURANCE_STATUSES,
+  InsuranceStatus,
+  isValidEgyptianIban,
+  isValidGraduationYear,
+  isValidInsuranceNumber,
+  MAX_PIASTRES,
+  normalizeIban,
   WORK_SYSTEMS,
   WorkSystem,
 } from '@school-erp/shared';
@@ -25,15 +34,20 @@ import {
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../../common/dto/pagination-query.dto';
 import { IsIsoDate, IsNotFutureDate } from '../../../../common/validators/iso-date.validator';
-
-/** Postgres `integer` upper bound — salaries above it can't be stored. */
-const MAX_PIASTRES = 2_147_483_647;
+import { Satisfies } from '../../../../common/validators/satisfies.decorator';
+import { todayIsoDate } from '../../../../common/utils/dates.util';
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 /** Optional text: trimmed, and an empty string means "not given" (stored as null). */
 const trimToNull = ({ value }: { value: unknown }) => {
   if (typeof value !== 'string') return value;
   const t = value.trim();
+  return t === '' ? null : t;
+};
+/** IBAN as stored: no spaces, upper case; empty means "not given". */
+const ibanToNull = ({ value }: { value: unknown }) => {
+  if (typeof value !== 'string') return value;
+  const t = normalizeIban(value);
   return t === '' ? null : t;
 };
 
@@ -132,6 +146,98 @@ export class CreateEmployeeDto implements CreateEmployeeRequest {
   @IsOptional()
   @IsBoolean()
   usesBus?: boolean;
+
+  // ── Social insurance (§3): the three details are required when insured (service check) ──
+
+  /** Defaults to NOT_INSURED, which clears the three details. */
+  @IsOptional()
+  @IsIn(INSURANCE_STATUSES)
+  insuranceStatus?: InsuranceStatus;
+
+  /** Digits only, unique. */
+  @IsOptional()
+  @Transform(trimToNull)
+  @IsString()
+  @Satisfies<string>(isValidInsuranceNumber, 'must be digits only (up to 20)')
+  insuranceNumber?: string | null;
+
+  /** Not in the future. */
+  @IsOptional()
+  @IsIsoDate()
+  @IsNotFutureDate()
+  insuranceRegistrationDate?: string | null;
+
+  /** Monthly, integer piastres, > 0. */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(MAX_PIASTRES)
+  insuredSalary?: number | null;
+
+  // ── Bank account ──
+
+  @IsOptional()
+  @Transform(trimToNull)
+  @IsString()
+  @MaxLength(100)
+  bankName?: string | null;
+
+  @IsOptional()
+  @Transform(trimToNull)
+  @IsString()
+  @MaxLength(50)
+  bankAccountNumber?: string | null;
+
+  /** Egyptian IBAN: `EG` + 27 digits (spaces and case are normalised first). */
+  @IsOptional()
+  @Transform(ibanToNull)
+  @IsString()
+  @Satisfies<string>(isValidEgyptianIban, 'must be EG followed by 27 digits')
+  iban?: string | null;
+
+  // ── Emergency contact (phone: the same rules as the employee phone) ──
+
+  @IsOptional()
+  @Transform(trimToNull)
+  @IsString()
+  @MaxLength(200)
+  emergencyContactName?: string | null;
+
+  @IsOptional()
+  @Transform(trimToNull)
+  @IsString()
+  @MaxLength(100)
+  emergencyContactRelationship?: string | null;
+
+  @IsOptional()
+  @Transform(trimToNull)
+  @IsString()
+  @MaxLength(30)
+  emergencyContactPhone?: string | null;
+
+  // ── Qualification ──
+
+  @IsOptional()
+  @IsIn(DEGREES)
+  highestDegree?: Degree | null;
+
+  @IsOptional()
+  @Transform(trimToNull)
+  @IsString()
+  @MaxLength(200)
+  major?: string | null;
+
+  @IsOptional()
+  @Transform(trimToNull)
+  @IsString()
+  @MaxLength(200)
+  university?: string | null;
+
+  /** 1950 … the current year (server clock). */
+  @IsOptional()
+  @IsInt()
+  @Satisfies<number>((y) => isValidGraduationYear(y, todayIsoDate()), 'must be from 1950 to the current year')
+  graduationYear?: number | null;
 }
 
 /** `PATCH /hr/employees/:id` — any subset. Required fields can't be cleared (service check). */

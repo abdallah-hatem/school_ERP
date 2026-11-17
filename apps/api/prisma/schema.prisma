@@ -161,21 +161,21 @@ model SchoolSetting {
 /// (`[{ field, before, after }]`, money in piastres, no secrets); `meta` holds ip, user agent and
 /// request id. `seq` orders entries written in the same millisecond.
 model AuditEntry {
-  id          String   @id @default(uuid()) @db.Uuid
-  seq         BigInt   @default(autoincrement())
-  action      String
-  module      String
-  entityType  String   @map("entity_type")
-  entityId    String   @map("entity_id")
+  id            String   @id @default(uuid()) @db.Uuid
+  seq           BigInt   @default(autoincrement())
+  action        String
+  module        String
+  entityType    String   @map("entity_type")
+  entityId      String   @map("entity_id")
   /// The record's name when the entry was written: English (or its only name)…
-  entityLabel String   @map("entity_label")
+  entityLabel   String   @map("entity_label")
   /// …and Arabic, when the record has one. Null on one-name records and on older entries.
-  entityLabelAr String? @map("entity_label_ar")
-  actorId    String?  @map("actor_id") @db.Uuid
-  actorName   String?  @map("actor_name")
-  changes     Json     @default("[]")
-  meta        Json     @default("{}")
-  at          DateTime @default(now())
+  entityLabelAr String?  @map("entity_label_ar")
+  actorId       String?  @map("actor_id") @db.Uuid
+  actorName     String?  @map("actor_name")
+  changes       Json     @default("[]")
+  meta          Json     @default("{}")
+  at            DateTime @default(now())
 
   @@index([at(sort: Desc)])
   @@index([entityType, entityId, at])
@@ -219,6 +219,20 @@ enum Gender {
 enum EmployeeStatus {
   ACTIVE
   INACTIVE
+}
+
+enum InsuranceStatus {
+  INSURED
+  NOT_INSURED
+}
+
+enum Degree {
+  NONE
+  SECONDARY
+  DIPLOMA
+  BACHELOR
+  MASTER
+  DOCTORATE
 }
 
 enum PenaltyAction {
@@ -287,33 +301,51 @@ model JobTitle {
 
 /// §3. Never deleted — deactivated. `code` comes from the 'employee_code' Counter (EMP-0001…).
 model Employee {
-  id            String         @id @default(uuid()) @db.Uuid
-  code          String         @unique
-  nameEn        String         @map("name_en")
-  nameAr        String         @map("name_ar")
-  nationalId    String?        @unique @map("national_id")
-  gender        Gender
-  dateOfBirth   DateTime       @map("date_of_birth") @db.Date
-  phone         String
-  email         String?
-  address       String?
-  hireDate      DateTime       @map("hire_date") @db.Date
-  stageId       String         @map("stage_id") @db.Uuid
-  departmentId  String         @map("department_id") @db.Uuid
-  jobTitleId    String         @map("job_title_id") @db.Uuid
-  managerId     String?        @map("manager_id") @db.Uuid
-  grade         String?
-  workSystem    WorkSystem     @map("work_system")
+  id                           String          @id @default(uuid()) @db.Uuid
+  code                         String          @unique
+  nameEn                       String          @map("name_en")
+  nameAr                       String          @map("name_ar")
+  nationalId                   String?         @unique @map("national_id")
+  gender                       Gender
+  dateOfBirth                  DateTime        @map("date_of_birth") @db.Date
+  phone                        String
+  email                        String?
+  address                      String?
+  hireDate                     DateTime        @map("hire_date") @db.Date
+  stageId                      String          @map("stage_id") @db.Uuid
+  departmentId                 String          @map("department_id") @db.Uuid
+  jobTitleId                   String          @map("job_title_id") @db.Uuid
+  managerId                    String?         @map("manager_id") @db.Uuid
+  grade                        String?
+  workSystem                   WorkSystem      @map("work_system")
   /// Monthly, piastres.
-  basicSalary   Int            @map("basic_salary")
-  fingerprintId String?        @unique @map("fingerprint_id")
-  contractStart DateTime       @map("contract_start") @db.Date
-  contractEnd   DateTime       @map("contract_end") @db.Date
-  usesBus       Boolean        @default(false) @map("uses_bus")
-  status        EmployeeStatus @default(ACTIVE)
-  userId        String?        @unique @map("user_id") @db.Uuid
-  createdAt     DateTime       @default(now()) @map("created_at")
-  updatedAt     DateTime       @updatedAt @map("updated_at")
+  basicSalary                  Int             @map("basic_salary")
+  fingerprintId                String?         @unique @map("fingerprint_id")
+  contractStart                DateTime        @map("contract_start") @db.Date
+  contractEnd                  DateTime        @map("contract_end") @db.Date
+  usesBus                      Boolean         @default(false) @map("uses_bus")
+  /// `/files/employee-photos/<name>`, signed-in only. Null shows the silhouette.
+  photoUrl                     String?         @map("photo_url")
+  /// Social insurance (§3). Not insured → the three fields below are null.
+  insuranceStatus              InsuranceStatus @default(NOT_INSURED) @map("insurance_status")
+  insuranceNumber              String?         @unique @map("insurance_number")
+  insuranceRegistrationDate    DateTime?       @map("insurance_registration_date") @db.Date
+  /// Monthly, piastres.
+  insuredSalary                Int?            @map("insured_salary")
+  bankName                     String?         @map("bank_name")
+  bankAccountNumber            String?         @map("bank_account_number")
+  iban                         String?
+  emergencyContactName         String?         @map("emergency_contact_name")
+  emergencyContactRelationship String?         @map("emergency_contact_relationship")
+  emergencyContactPhone        String?         @map("emergency_contact_phone")
+  highestDegree                Degree?         @map("highest_degree")
+  major                        String?
+  university                   String?
+  graduationYear               Int?            @map("graduation_year")
+  status                       EmployeeStatus  @default(ACTIVE)
+  userId                       String?         @unique @map("user_id") @db.Uuid
+  createdAt                    DateTime        @default(now()) @map("created_at")
+  updatedAt                    DateTime        @updatedAt @map("updated_at")
 
   stage      Stage      @relation(fields: [stageId], references: [id], onDelete: Restrict)
   department Department @relation(fields: [departmentId], references: [id], onDelete: Restrict)
