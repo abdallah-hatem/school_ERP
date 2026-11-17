@@ -118,6 +118,9 @@ phase live in `docs/build-log/`.
   badge (picked from mockups) → #37.
 - 2026-11-17 — T26 clicking a number field selects the whole figure; a second click places the
   caret → smoke 21/21 → merged #38. Skill rules synced (abdallah-skills 1.62.3 → 1.62.9).
+- 2026-11-17 — Mockups shared in `design/mockups/` (client name replaced by a placeholder); audit,
+  logo and mockup screenshots stay local. `/design/` and `docs/DESIGN.md` are lead-owned; branch
+  protection on dev, testing and production requires code-owner review → #41.
 
 ## Next up
 
@@ -129,7 +132,7 @@ phase live in `docs/build-log/`.
 
 - Hosting the demo on the Contabo server (owner: later; local demo is the fallback).
 - Roles, permissions and security section for `docs/ARCHITECTURE.md` (drafted in chat, not yet approved).
-- Branch protection on `dev`, `testing` and `production` once CI exists.
+- Add required CI status checks to the branch protection once CI exists (code-owner review is on).
 - Optional: server-side paging for lateness (loads the whole month today) and column sorting.
 - Employee profile shows the list's skeleton while loading (`employees/loading.tsx` wraps `[id]`).
 - The stage "None" band is detected by its English name; key it by an id instead.
