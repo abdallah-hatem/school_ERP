@@ -264,7 +264,7 @@ These belong to the task named in each heading and are part of its list.
 - [ ] List create / PATCH writes a history row   (§7)
 
 ### T6
-- [ ] Custom steps (1st hour 0.5, 2nd 1, 3rd 1.5) + extra 0.25: 61 → 1.5; 181 → 3.0; 241 → 3.25   (§5, §7)
+- [ ] Custom steps (1st hour 0.5, 2nd 1, 3rd 1.5) + extra 0.25: 61 → 1.5; 181 → 3.25; 241 → 3.5   (§5, §7; corrected 2026-11-17: any minute in an hour counts as that hour)
 - [ ] Grace 10 with 70 minutes → 60 after grace → 0.25   (§5 GUESS: grace subtracted first)
 - [ ] Rounding: month salary 1,000,001 at PART_TIME_3 60% → 600,001 (half up); penalty 1.25 days on month salary 1,000,001 ÷ 30 → round(41,666.71) = 41,667   (§6 GUESS: day value not rounded on its own)
 - [ ] Settings: step days 0.3 / −0.25 / 30.25 → 400; extra-hour days likewise; duplicate or non-sequential hours or negative grace → 400; invalid repetitionWindow → 400; a part-time key other than 4/3/2 → 400   (§5, §7)
