@@ -62,3 +62,21 @@ export interface SettingsChangedEvent {
   /** ISO 8601 timestamp. */
   changedAt: string;
 }
+
+// ── User accounts (core/users, P2) ─────────────────────────────────────────
+
+export const CoreEvent = {
+  /**
+   * A user's sessions must end now (deactivated, or given a temporary password — R9, edge
+   * case 6). core/auth revokes their refresh tokens; the access token is refused already because
+   * every request re-reads the user.
+   */
+  USER_SESSIONS_ENDED: 'core.user.sessions_ended',
+} as const;
+export type CoreEvent = (typeof CoreEvent)[keyof typeof CoreEvent];
+
+export interface UserSessionsEndedEvent {
+  userId: Uuid;
+  reason: 'deactivated' | 'temporary_password';
+  at: string;
+}

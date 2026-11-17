@@ -16,7 +16,7 @@ is its own file; "§N" means the file listed for N below. Dated changes go in
 | § | File | Covers |
 |---|---|---|
 | 1 | [business/01-business.md](business/01-business.md) | What the product is, for whom, how it earns money |
-| 2 | [business/02-roles.md](business/02-roles.md) | Who can do what (HR admin for the demo; roles later) |
+| 2 | [business/02-roles.md](business/02-roles.md) | Who can do what: roles as data, starting roles (GUESS), last System admin |
 | 3 | [business/03-employees.md](business/03-employees.md) | Employee records, departments, stages, job titles, work system |
 | 4 | [business/04-penalties.md](business/04-penalties.md) | Penalty catalogue, repeat levels, recording, approval, cancelling |
 | 5 | [business/05-lateness.md](business/05-lateness.md) | Monthly lateness and early-leave minutes and the days they cost |

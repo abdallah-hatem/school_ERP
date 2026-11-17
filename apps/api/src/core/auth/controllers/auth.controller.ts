@@ -8,13 +8,16 @@ import { AuthCookiesInterceptor } from '../interceptors/auth-cookies.interceptor
 import { AuthService } from '../services/auth.service';
 import { ClearedSession, type IssuedSession } from '../session';
 import { NotAudited } from '../../audit';
-import { SignedIn, permissionsFor } from '../../permissions';
+import { PermissionsService, SignedIn } from '../../permissions';
 
 /** There is no sign-up route (§2: accounts come from the seed). */
 @Controller('auth')
 @UseInterceptors(AuthCookiesInterceptor)
 export class AuthController {
-  constructor(private readonly auth: AuthService) {}
+  constructor(
+    private readonly auth: AuthService,
+    private readonly permissions: PermissionsService,
+  ) {}
 
   @Public()
   @NotAudited('wired in T28')
@@ -44,10 +47,13 @@ export class AuthController {
     return new ClearedSession();
   }
 
-  /** The signed-in user with their permission keys — the web app's `can()` reads them (R6). */
+  /**
+   * The signed-in user with the permission keys their roles grant now — the web app's `can()`
+   * reads them (R6). Read fresh on every request, so a role change shows without a new sign-in.
+   */
   @Get('me')
   @SignedIn()
-  me(@CurrentUser() user: AuthUser): SessionUser {
-    return { ...user, permissions: [...permissionsFor(user)] };
+  async me(@CurrentUser() user: AuthUser): Promise<SessionUser> {
+    return { ...user, permissions: await this.permissions.permissionsFor(user) };
   }
 }

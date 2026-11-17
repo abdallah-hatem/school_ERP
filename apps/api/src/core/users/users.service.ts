@@ -9,7 +9,10 @@ import { UsersRepository } from './repositories/users.repository';
  */
 const DUMMY_HASH = '$2b$12$edctwMe9HrzXaup3Mmm8COox2N3fLKv5.RTRazEEqVm3MF5rKbD8q';
 
-/** core/users — the people who sign in. Accounts come from the seed (§2: no self sign-up). */
+/**
+ * core/users — the people who sign in. Accounts are created by a System admin (R9: no self
+ * sign-up) through `UserAccountsService`; this service is what sign-in needs.
+ */
 @Injectable()
 export class UsersService {
   constructor(private readonly users: UsersRepository) {}
@@ -25,10 +28,5 @@ export class UsersService {
   /** The active user behind a token's subject, or null (deleted or deactivated since). */
   findActiveAuthUser(id: string): Promise<AuthUser | null> {
     return this.users.findActiveAuthUser(id);
-  }
-
-  /** A user's current name (any status), or null when there is no such user. */
-  findName(id: string): Promise<string | null> {
-    return this.users.findName(id);
   }
 }

@@ -16,34 +16,99 @@ datasource db {
 
 // ── core ──────────────────────────────────────────────────────────────────────
 
+/// Deprecated since P2: access comes from `user_roles`. Kept until the web app stops reading
+/// `AuthUser.role` (P3); nothing decides access with it.
 enum UserRole {
   HR_ADMIN
 }
 
-/// A person who signs in. Not the same as an employee (an employee may optionally link to one).
+/// A person who signs in. Not the same as an employee (R9: a user may be linked to one).
 model User {
-  id           String   @id @default(uuid()) @db.Uuid
-  email        String   @unique
-  passwordHash String   @map("password_hash")
-  name         String
-  role         UserRole @default(HR_ADMIN)
-  isActive     Boolean  @default(true) @map("is_active")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id                 String   @id @default(uuid()) @db.Uuid
+  email              String   @unique
+  passwordHash       String   @map("password_hash")
+  name               String
+  /// Deprecated (P2) — see `UserRole`.
+  role               UserRole @default(HR_ADMIN)
+  isActive           Boolean  @default(true) @map("is_active")
+  /// Set by an admin's temporary password; cleared when the user changes it (R9).
+  mustChangePassword Boolean  @default(false) @map("must_change_password")
+  /// The linked employee (core-owned link, P2). Scopes (`own_stage`, `own_team`, `self`) read it.
+  employeeId         String?  @unique @map("employee_id") @db.Uuid
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
 
+  linkedEmployee      Employee?            @relation("UserLinkedEmployee", fields: [employeeId], references: [id], onDelete: SetNull)
+  roles               UserRoleAssignment[]
   refreshTokens       RefreshToken[]
-  employee            Employee?
+  /// Deprecated (P2): HR's old `employees.user_id` link, copied into `employeeId`.
+  employee            Employee?            @relation("EmployeeUser")
   settingsUpdated     SchoolSetting[]
-  penaltiesCreated    PenaltyRecord[]     @relation("PenaltyCreatedBy")
-  penaltiesApproved   PenaltyRecord[]     @relation("PenaltyApprovedBy")
-  penaltiesCancelled  PenaltyRecord[]     @relation("PenaltyCancelledBy")
+  penaltiesCreated    PenaltyRecord[]      @relation("PenaltyCreatedBy")
+  penaltiesApproved   PenaltyRecord[]      @relation("PenaltyApprovedBy")
+  penaltiesCancelled  PenaltyRecord[]      @relation("PenaltyCancelledBy")
   latenessUpdated     LatenessEntry[]
-  payrollRunsCreated  PayrollRun[]        @relation("PayrollRunCreatedBy")
-  payrollRunsApproved PayrollRun[]        @relation("PayrollRunApprovedBy")
+  payrollRunsCreated  PayrollRun[]         @relation("PayrollRunCreatedBy")
+  payrollRunsApproved PayrollRun[]         @relation("PayrollRunApprovedBy")
   adjustmentsCreated  PayrollAdjustment[]
 
   @@index([isActive])
   @@map("users")
+}
+
+/// Grants of a role (R5): which rows each permission covers.
+enum PermissionScope {
+  all
+  own_stage
+  own_team
+  self
+}
+
+/// A named set of permissions (R2). Built-in roles are the spec's starting roles: editable,
+/// never deleted. Custom roles get a generated key.
+model Role {
+  id        String   @id @default(uuid()) @db.Uuid
+  key       String   @unique
+  nameEn    String   @map("name_en")
+  nameAr    String   @map("name_ar")
+  builtIn   Boolean  @default(false) @map("built_in")
+  /// Listing order: built-in roles in the spec's order; custom roles keep 0 and sort by name.
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  permissions RolePermission[]
+  users       UserRoleAssignment[]
+
+  @@map("roles")
+}
+
+/// One permission of a role. `permissionKey` is text, not an enum: a key removed from the code
+/// stays here until edited, and is ignored (and logged) when read (edge case 8).
+model RolePermission {
+  roleId        String          @map("role_id") @db.Uuid
+  permissionKey String          @map("permission_key")
+  scope         PermissionScope @default(all)
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionKey])
+  @@index([permissionKey])
+  @@map("role_permissions")
+}
+
+/// Which roles a user holds (R2: several; permissions are the union).
+model UserRoleAssignment {
+  userId    String   @map("user_id") @db.Uuid
+  roleId    String   @map("role_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  @@id([userId, roleId])
+  @@index([roleId])
+  @@map("user_roles")
 }
 
 /// Refresh tokens, stored hashed. Rotation keeps a family; reuse after the grace window revokes it.
@@ -249,7 +314,8 @@ model Employee {
   jobTitle   JobTitle   @relation(fields: [jobTitleId], references: [id], onDelete: Restrict)
   manager    Employee?  @relation("EmployeeManager", fields: [managerId], references: [id], onDelete: Restrict)
   reports    Employee[] @relation("EmployeeManager")
-  user       User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user       User?      @relation("EmployeeUser", fields: [userId], references: [id], onDelete: SetNull)
+  linkedUser User?      @relation("UserLinkedEmployee")
 
   penalties    PenaltyRecord[]
   lateness     LatenessEntry[]

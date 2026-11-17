@@ -33,6 +33,12 @@ export const PERMISSIONS = {
   'core.stages.manage': core,
   // core — the Activity log (§9)
   'core.audit.view': core,
+  // core — user accounts (Administration → Users)
+  'core.users.view': core,
+  'core.users.manage': core,
+  // core — roles (Administration → Roles)
+  'core.roles.view': core,
+  'core.roles.manage': core,
 
   // hr — dashboard
   'hr.dashboard.view': hr,
@@ -96,4 +102,39 @@ export function hasPermissions(
   const set = granted instanceof Set ? granted : new Set(granted as readonly string[]);
   const keys: readonly PermissionKey[] = typeof required === 'string' ? [required] : required;
   return keys.every((key) => set.has(key));
+}
+
+/*
+ * Scopes (R5) limit which rows a permission covers. A role grants each permission with one scope;
+ * a user holding the same key through several roles gets the widest (edge case 2). The module
+ * that owns the data applies the scope in its repository query, with `scopeFor(user, key)` from
+ * core/permissions.
+ */
+export const PermissionScope = {
+  /** Every row. */
+  ALL: 'all',
+  /** The rows of the user's own stage (their linked employee's stage). */
+  OWN_STAGE: 'own_stage',
+  /** The employees whose direct manager is the user's linked employee. */
+  OWN_TEAM: 'own_team',
+  /** Only the user's own linked employee. */
+  SELF: 'self',
+} as const;
+export type PermissionScope = (typeof PermissionScope)[keyof typeof PermissionScope];
+
+/** Widest first. `own_stage` counts as wider than `own_team`: a stage holds many teams. */
+export const PERMISSION_SCOPES: readonly PermissionScope[] = [
+  PermissionScope.ALL,
+  PermissionScope.OWN_STAGE,
+  PermissionScope.OWN_TEAM,
+  PermissionScope.SELF,
+];
+
+export function isPermissionScope(value: unknown): value is PermissionScope {
+  return typeof value === 'string' && (PERMISSION_SCOPES as readonly string[]).includes(value);
+}
+
+/** The wider of two scopes (edge case 2: with two roles, the widest scope wins per key). */
+export function widerScope(a: PermissionScope, b: PermissionScope): PermissionScope {
+  return PERMISSION_SCOPES.indexOf(a) <= PERMISSION_SCOPES.indexOf(b) ? a : b;
 }

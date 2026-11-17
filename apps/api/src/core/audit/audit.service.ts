@@ -13,7 +13,6 @@ import {
 import type { Request } from 'express';
 import { CLS_REQ, ClsService } from 'nestjs-cls';
 import type { DbAdapter } from '../../database/transactions';
-import { UsersService } from '../users';
 import { cleanChanges, diffChanges } from './audit.pure';
 import {
   AuditEntryRepository,
@@ -61,7 +60,6 @@ export class AuditService {
     private readonly entries: AuditEntryRepository,
     private readonly txHost: TransactionHost<DbAdapter>,
     private readonly cls: ClsService,
-    private readonly users: UsersService,
   ) {}
 
   /**
@@ -147,7 +145,7 @@ export class AuditService {
     if (given === undefined) return signedIn ? { id: signedIn.id, name: signedIn.name } : null;
     if (given.name !== undefined) return { id: given.id, name: given.name };
     if (signedIn?.id === given.id) return { id: given.id, name: signedIn.name };
-    return { id: given.id, name: (await this.users.findName(given.id)) ?? '' };
+    return { id: given.id, name: (await this.entries.findUserName(given.id)) ?? '' };
   }
 
   private markRecorded(action: AuditAction): void {

@@ -90,6 +90,12 @@ export class AuditEntryRepository {
     });
   }
 
+  /** A user's current name (any status), or null — for an entry recorded on someone's behalf. */
+  async findUserName(id: string): Promise<string | null> {
+    const row = await this.txHost.tx.user.findUnique({ where: { id }, select: { name: true } });
+    return row?.name ?? null;
+  }
+
   /** Newest first (`at`, then insertion order). `limit` capped at the contract max. */
   async findPage(
     filter: AuditEntryFilter,

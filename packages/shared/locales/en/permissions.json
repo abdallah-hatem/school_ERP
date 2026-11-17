@@ -31,6 +31,26 @@
           "label": "View the activity log",
           "description": "See who did what and when, across the system and in each record's history."
         }
+      },
+      "users": {
+        "view": {
+          "label": "View users",
+          "description": "See the user accounts, their roles and linked employees."
+        },
+        "manage": {
+          "label": "Manage users",
+          "description": "Add and edit user accounts, give them roles, deactivate them and set temporary passwords."
+        }
+      },
+      "roles": {
+        "view": {
+          "label": "View roles",
+          "description": "See the roles and the permissions each one grants."
+        },
+        "manage": {
+          "label": "Manage roles",
+          "description": "Add custom roles and change which permissions a role grants, and for which rows."
+        }
       }
     },
     "hr": {
@@ -147,5 +167,11 @@
         }
       }
     }
+  },
+  "scopes": {
+    "all": "Everyone",
+    "own_stage": "Their stage",
+    "own_team": "Their team",
+    "self": "Themselves only"
   }
 }

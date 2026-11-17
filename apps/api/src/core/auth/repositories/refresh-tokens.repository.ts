@@ -50,4 +50,13 @@ export class RefreshTokensRepository extends BaseRepository<
       data: { revokedAt: at },
     });
   }
+
+  /** Ends every sign-in of a user (deactivated, or given a temporary password). */
+  async revokeAllOf(userId: string, at: Date): Promise<number> {
+    const { count } = await this.databaseService.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: at },
+    });
+    return count;
+  }
 }

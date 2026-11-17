@@ -292,10 +292,56 @@ scan and a run-time check.
   than one, → 403. `src/core/permissions/permission-declarations.spec.ts` scans every controller
   (with `common/testing/controller-scan.ts`, shared with the audit scan) and fails CI on the same
   handlers.
-- **What a user holds** comes from one function, `permissionsFor(user)` in `core/permissions`. For
-  now the HR admin holds every key and any other role none, so nothing changed for users. P2
-  replaces it with roles as data (the union of the user's roles); the guard and `/auth/me` only
-  call it.
+- **What a user holds** comes from one place, `PermissionsService.permissionsFor(user)` in
+  `core/permissions`; the guard and `/auth/me` only call it. See Roles as data below.
+
+### Roles as data
+
+Roles are rows, not code (spec P2, R2 / R5 / R8 / R9). A school changes them through the Roles API
+(screens in P3); nothing in the code names a school's roles.
+
+- **Tables** (owned by `core/roles`): `roles` (key, name EN / AR, `built_in`, `sort_order`),
+  `role_permissions` (role, permission key, scope) and `user_roles`. The permission key is text,
+  not an enum: a key removed from the code stays stored, and is ignored and logged when read
+  (edge case 8).
+- **Starting roles** are `BUILT_IN_ROLES` in `packages/shared/src/roles.ts` (the spec's table, GUESS):
+  System admin, HR manager, HR officer, Accountant, Principal, Stage head, Direct manager. The P2
+  migration copied them into the tables once and gave every HR admin **System admin + HR manager**;
+  from then on they are data. Built-in roles can be edited (names, permissions) but not deleted.
+  The **System admin always holds every key** with scope `all`, whatever its rows say — a key added
+  later reaches it without a migration, and its permission list can't be edited (no lock-out).
+- **Union and scopes.** A user's permissions are the union of their roles' (edge case 2). Each grant
+  has a **scope**: `all`, `own_stage` (the user's linked employee's stage), `own_team` (employees
+  whose direct manager is the user's linked employee), `self`. Per key the widest scope wins, in
+  that order (`widerScope` in shared; `own_stage` counts as wider than `own_team`).
+- **Per request.** `PermissionsService` reads the user's roles once per request and caches them in
+  the request context (CLS), so a change to a role or to a user's roles applies from the next
+  request, with no new sign-in (edge case 7).
+- **`scopeFor(user, key)`** (same service, exported from `core/permissions`) returns
+  `{ scope, employeeId, stageId }` — the widest scope the user holds `key` with, plus their linked
+  employee and its stage — or `null` when they don't hold it. The module that owns the data applies
+  it in its repository query; a scoped user with no linked employee matches no rows. Core only
+  answers the question; HR applies it in P4.
+- **Linked employee.** `users.employee_id` (unique, core-owned) is the link (R9). HR's older
+  `employees.user_id` was copied into it by the migration and is deprecated (HR drops it).
+- **The `users.role` enum column** (`UserRole`, `AuthUser.role`) is kept **deprecated**: nothing
+  decides access with it; it stays until the web app stops reading it (P3).
+- **Users API** (`core/users`, `core.users.view` / `core.users.manage`): list (paged, search on name
+  or email, status), get, create (temporary password, roles, linked employee), edit, deactivate /
+  reactivate, set a temporary password; `POST /account/password` (`@SignedIn`) changes your own.
+  Deactivating or setting a temporary password emits `core.user.sessions_ended` after the commit;
+  `core/auth` revokes the user's refresh tokens. The access token is refused at once anyway, since
+  every request re-reads the user (edge case 6).
+- **Roles API** (`core/roles`, `core.roles.view` / `core.roles.manage`): list (paged), get, create a
+  custom role (generated key `custom_<hex>`), edit names and permissions (the set is replaced),
+  delete a custom role nobody holds.
+- **Last System admin** (R8, edge case 5): removing the role from, or deactivating, the last active
+  System admin is refused (`LAST_SYSTEM_ADMIN`, 409). The check locks the System admin role row for
+  the rest of the transaction, so two such changes at once can't both pass.
+- Every user and role write is `@Audited` (`core.user.*`, `core.role.*`); passwords are never in the
+  log (the entry says only that one was set or changed).
+- Area order inside core: `audit` ← `permissions` ← `roles` ← `users` ← `auth`. `core/audit` reads
+  an actor's name from `users` itself, so it depends on no other core area.
 - **The web app** gets the keys with the session: `GET /auth/me` returns `SessionUser`
   (`AuthUser` + `permissions`). The dashboard layout reads it on the server and passes it to
   `SessionProvider`; `can(user, key)`, `useCan()` and `<Can permission="…">` in
