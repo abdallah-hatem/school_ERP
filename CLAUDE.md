@@ -17,7 +17,9 @@ skills. **Where this file differs from a skill, this file wins.**
 5. **Into `dev`: a PR with green CI, no approval needed** (owner, 2026-11-17). Anyone — Claude
    included — merges their own PR once CI passes; direct pushes to `dev` are blocked. **Into
    `testing` and `production`: green CI and the owner's approval** (branch protection + `CODEOWNERS`
-   `*`). Claude never merges into `testing` or `production`.
+   `*`). Claude never merges into `testing` or `production`. **Before opening any PR, merge the latest
+   `origin/dev` into the branch** and resolve conflicts there (GitHub refuses branches that are
+   behind). Every agent brief says so.
 6. **No Vercel. Our own Contabo VPS runs Coolify with three environments: dev, testing and prod.**
    Three branches, promoted one way: `dev` → `testing` → `production` (merge commits, never squash).
    `dev` and `testing` auto-deploy their environments. `production` builds a versioned Docker image

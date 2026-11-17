@@ -12,6 +12,15 @@ mkdir -p "$logs"
 full=false
 [[ "${1:-}" == "--full" ]] && full=true
 
+# Behind dev? A PR must start from the latest dev (CONVENTIONS → Before opening a PR); GitHub also
+# refuses to merge a branch that is behind. Warn here so it's fixed before the PR, not after.
+if [[ -z "${GITHUB_ACTIONS:-}" ]] && git fetch -q origin dev 2>/dev/null; then
+  behind=$(git rev-list --count HEAD..origin/dev 2>/dev/null || echo 0)
+  if [[ "$behind" -gt 0 ]]; then
+    printf '  ! your branch is %s commit(s) behind origin/dev — run: git merge origin/dev (then re-run the checks)\n' "$behind"
+  fi
+fi
+
 steps=("lint" "typecheck" "test" "deps:check")
 $full && steps+=("test:e2e" "smoke")
 
