@@ -27,7 +27,8 @@ export async function shoot(page: Page, info: TestInfo, name: string): Promise<v
 export async function expectNoHorizontalScroll(page: Page): Promise<void> {
   await expect
     .poll(() => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth))
-    .toBe(0);
+    // ≤ 0, not 0: a reserved scrollbar gutter (`scrollbar-gutter: stable`) makes it negative.
+    .toBeLessThanOrEqual(0);
 }
 
 /** Lets open animations finish, so a screenshot shows the settled popover or menu. */

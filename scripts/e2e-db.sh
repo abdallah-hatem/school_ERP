@@ -2,6 +2,9 @@
 # Creates (if missing) and migrates one e2e database on the local docker-compose Postgres (5442),
 # so parallel agents never share a database.
 #
+# E2E_PG_URL points at another Postgres server instead of the docker-compose container (CI uses a
+# service container): the server URL without a database, e.g. postgresql://postgres:postgres@localhost:5432
+#
 #   scripts/e2e-db.sh 3
 #   DATABASE_URL=postgresql://postgres:postgres@localhost:5442/school_erp_e2e_3?schema=public \
 #     PORT=4103 pnpm --filter api test:e2e
@@ -15,17 +18,23 @@ fi
 
 container="school-erp-db"
 db="school_erp_e2e_${n}"
-url="postgresql://postgres:postgres@localhost:5442/${db}?schema=public"
+server="${E2E_PG_URL:-postgresql://postgres:postgres@localhost:5442}"
+url="${server}/${db}?schema=public"
 root="$(cd "$(dirname "$0")/.." && pwd)"
 
-if ! docker ps --format '{{.Names}}' | grep -qx "$container"; then
-  echo "Postgres container '$container' is not running — run: docker compose up -d" >&2
-  exit 1
+if [[ -n "${E2E_PG_URL:-}" ]]; then
+  pg() { psql "${E2E_PG_URL}/postgres" "$@"; }
+else
+  if ! docker ps --format '{{.Names}}' | grep -qx "$container"; then
+    echo "Postgres container '$container' is not running — run: docker compose up -d" >&2
+    exit 1
+  fi
+  pg() { docker exec "$container" psql -U postgres "$@"; }
 fi
 
-exists="$(docker exec "$container" psql -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '${db}'")"
+exists="$(pg -tAc "SELECT 1 FROM pg_database WHERE datname = '${db}'")"
 if [[ "$exists" != "1" ]]; then
-  docker exec "$container" psql -U postgres -c "CREATE DATABASE ${db}" >/dev/null
+  pg -c "CREATE DATABASE ${db}" >/dev/null
   echo "created ${db}"
 fi
 
