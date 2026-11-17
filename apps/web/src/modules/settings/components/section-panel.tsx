@@ -1,5 +1,6 @@
 'use client';
 
+import { FormActionBar } from '@/shared/components/form/form-action-bar';
 import type { ReactNode } from 'react';
 import { Button } from '@/shared/components/ui/button';
 import { cn } from '@/shared/lib/utils';
@@ -57,24 +58,20 @@ export function SaveBar({
   const { t } = useTranslation();
   const status = dirty ? (valid ? t('settings.save.unsaved') : t('settings.save.fixErrors')) : saved ? t('settings.save.saved') : null;
   return (
-    <div
-      data-sticky={dirty || undefined}
-      className={cn(
-        'flex flex-wrap items-center justify-end gap-x-3 gap-y-2',
-        dirty
-          ? 'sticky bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 rounded-2xl border border-border bg-card px-4 py-3 shadow-raised'
-          : 'border-t border-border pt-5',
-      )}
+    <FormActionBar
+      sticky={dirty}
+      status={
+        <p role="status" className={cn(dirty && !valid ? 'text-destructive-ink' : 'text-muted-foreground')}>
+          {status}
+        </p>
+      }
     >
-      <p role="status" className={cn('me-auto min-w-0 text-sm', dirty && !valid ? 'text-destructive-ink' : 'text-muted-foreground')}>
-        {status}
-      </p>
       <Button variant="ghost" disabled={!dirty || saving} onClick={onDiscard}>
         {t('settings.save.discard')}
       </Button>
       <Button type="submit" variant="primary" disabled={!dirty || !valid} loading={saving}>
         {t('common.actions.save')}
       </Button>
-    </div>
+    </FormActionBar>
   );
 }
