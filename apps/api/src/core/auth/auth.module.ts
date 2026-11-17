@@ -3,10 +3,12 @@ import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import type { AppConfig } from '../../config';
+import { PermissionsModule } from '../permissions';
 import { UsersModule } from '../users';
 import { AuthController } from './controllers/auth.controller';
 import { AuthCookiesInterceptor } from './interceptors/auth-cookies.interceptor';
 import { FilesAccessMiddleware } from './middleware/files-access.middleware';
+import { SessionsEndedListener } from './listeners/sessions-ended.listener';
 import { RefreshTokensRepository } from './repositories/refresh-tokens.repository';
 import { AuthService } from './services/auth.service';
 import { TokensService } from './services/tokens.service';
@@ -17,6 +19,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
   imports: [
     PassportModule,
     UsersModule,
+    PermissionsModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
@@ -37,6 +40,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     JwtStrategy,
     AuthCookiesInterceptor,
     FilesAccessMiddleware,
+    SessionsEndedListener,
   ],
 })
 export class AuthModule implements NestModule {

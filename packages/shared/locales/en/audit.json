@@ -13,6 +13,7 @@
   },
   "entities": {
     "user": "User",
+    "role": "Role",
     "school_settings": "School settings",
     "stage": "Stage",
     "employee": "Employee",
@@ -39,6 +40,19 @@
       "stage": {
         "create": "Added the stage {entity}",
         "update": "Edited the stage {entity}"
+      },
+      "user": {
+        "create": "Added the user {entity}",
+        "update": "Edited the user {entity}",
+        "deactivate": "Deactivated the user {entity}",
+        "reactivate": "Reactivated the user {entity}",
+        "set_password": "Set a temporary password for {entity}",
+        "change_password": "Changed the password of {entity}"
+      },
+      "role": {
+        "create": "Added the role {entity}",
+        "update": "Edited the role {entity}",
+        "delete": "Deleted the role {entity}"
       }
     },
     "hr": {
@@ -156,7 +170,10 @@
     },
     "lists": {
       "stages": "Stage"
-    }
+    },
+    "name": "Name",
+    "roles": "Roles",
+    "permissions": "Permissions"
   },
   "activity": {
     "description": "Every change and sign-in across the school, newest first. Entries can't be edited or deleted.",

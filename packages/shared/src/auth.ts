@@ -22,6 +22,9 @@ export const FILES_PREFIX = '/files/';
 /** Seeded HR admin (§2: accounts come from the seed; no self sign-up). */
 export const SEED_ADMIN_EMAIL = 'admin@school.local';
 
+/** Shortest password an admin or a user may set (R9). */
+export const PASSWORD_MIN_LENGTH = 10;
+
 /** Each role's home page, relative to the locale (`/ar` + home). One role for the demo (§2). */
 export const ROLE_HOME: Record<UserRole, string> = {
   HR_ADMIN: '',

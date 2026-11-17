@@ -33,7 +33,7 @@ export const TYPE_ACTIONS: Record<ActivityType, readonly AuditAction[]> = {
   create: ofKind('create'),
   update: ofKind('update'),
   status: ofKind('status'),
-  signIn: ofKind('access').filter((key) => key !== AUDIT_FAILED_SIGN_IN),
+  signIn: ofKind('access').filter((key) => key.startsWith('core.auth.') && key !== AUDIT_FAILED_SIGN_IN),
   failed: [AUDIT_FAILED_SIGN_IN],
 };
 

@@ -2,7 +2,6 @@ import type { TransactionHost } from '@nestjs-cls/transactional';
 import type { AuthUser } from '@school-erp/shared';
 import { CLS_REQ, type ClsService } from 'nestjs-cls';
 import type { DbAdapter } from '../../database/transactions';
-import type { UsersService } from '../users';
 import { AUDIT_RECORDED, AuditOutsideTransactionError, AuditService } from './audit.service';
 import type {
   AuditEntryRepository,
@@ -21,6 +20,7 @@ function makeService(opts: { inTx?: boolean; user?: AuthUser | null; clsActive?:
       return Promise.resolve();
     }),
     findPage: jest.fn(),
+    findUserName: jest.fn((id: string) => Promise.resolve(id === 'u9' ? 'Karim' : null)),
   };
   const recorded: string[] = [];
   const req = {
@@ -38,14 +38,12 @@ function makeService(opts: { inTx?: boolean; user?: AuthUser | null; clsActive?:
     getId: () => 'req-123',
   };
   const txHost = { isTransactionActive: () => inTx };
-  const users = {
-    findName: jest.fn((id: string) => Promise.resolve(id === 'u9' ? 'Karim' : null)),
-  };
+  // The actor's name is read through the entries repository (no dependency on core/users).
+  const users = { findName: entries.findUserName };
   const service = new AuditService(
     entries as unknown as AuditEntryRepository,
     txHost as unknown as TransactionHost<DbAdapter>,
     cls as unknown as ClsService,
-    users as unknown as UsersService,
   );
   return { service, entries, created, recorded, users };
 }
