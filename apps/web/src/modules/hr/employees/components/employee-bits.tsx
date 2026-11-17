@@ -6,17 +6,9 @@ import { StatusPill } from '@/shared/components/ui/status-pill';
 import { localName } from '@/shared/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
+import { initialsOf } from '@/shared/lib/initials';
 
-/** Up to two initials from the name in the screen's language. */
-export function initialsOf(name: string): string {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part.charAt(0))
-    .join('')
-    .toUpperCase();
-}
+export { initialsOf };
 
 /** Sunflower initials tile + name + code, as in the Campus tables. A link when `href` is given. */
 export function EmployeeIdentity({

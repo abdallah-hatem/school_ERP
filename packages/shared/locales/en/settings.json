@@ -3,6 +3,7 @@
   "description": "The school's rules live here. A change applies at once and reaches draft payroll runs only; approved runs never change.",
   "sectionsLabel": "Settings sections",
   "allSections": "All settings",
+  "viewHistory": "View change history",
   "sections": {
     "school": {
       "title": "School",
@@ -23,10 +24,6 @@
     "catalogue": {
       "title": "Penalty catalogue",
       "description": "Violations and what each repeat costs"
-    },
-    "history": {
-      "title": "Change history",
-      "description": "Who changed what, and when"
     }
   },
   "save": {
@@ -216,38 +213,6 @@
       "DAYS_REQUIRED": "Enter the days to deduct.",
       "DAYS_NOT_ALLOWED": "This action deducts no days.",
       "DAYS_INVALID": "Use quarter days above 0 and up to 30, like 0.25, 1 or 1.5."
-    }
-  },
-  "history": {
-    "what": "Setting",
-    "change": "Change",
-    "to": "changed to",
-    "who": "Changed by",
-    "when": "When",
-    "system": "System",
-    "step": "hour {hour}: {days}",
-    "hiddenItem": "{name} (hidden)",
-    "emptyTitle": "No changes yet",
-    "emptyBody": "Changes to settings, lists and the catalogue will be listed here.",
-    "keys": {
-      "nameEn": "School name (English)",
-      "nameAr": "School name (Arabic)",
-      "logo": "School logo",
-      "defaultLanguage": "Default language",
-      "workStart": "Work start",
-      "workEnd": "Work end",
-      "workingDays": "Working days",
-      "graceMinutes": "Lateness grace minutes",
-      "latenessSteps": "Lateness hour steps",
-      "extraHourDays": "Lateness cost per extra hour",
-      "dayDivisor": "Day value divisor",
-      "partTime": "Part-time percentages",
-      "repetitionWindow": "Penalty repetition window",
-      "stage": "Stage",
-      "department": "Department",
-      "jobTitle": "Job title",
-      "penaltyGroup": "Penalty group",
-      "violation": "Violation"
     }
   }
 }

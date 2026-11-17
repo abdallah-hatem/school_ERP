@@ -11,10 +11,8 @@ import { useTranslation } from '@/shared/providers/i18n-provider';
 import { useGroupOpen } from './group-state';
 import {
   isActive,
-  itemIsVisible,
   moduleIsActive,
   NAV_MODULES,
-  SETTINGS_ITEM,
   visibleModules,
   type NavItem,
   type NavModule,
@@ -24,8 +22,8 @@ import {
  * The menu, grouped by module (docs/ARCHITECTURE.md → core/navigation).
  * - `full` (≥1280px sidebar and the phone drawer): Home's one page as a link, each live module a
  *   collapsible group (open by default and whenever one of its pages is current; the choice is
- *   remembered per group), coming modules locked with a "Soon" tag. Settings and `footer` (the
- *   signed-in user) sit at the bottom.
+ *   remembered per group), coming modules locked with a "Soon" tag. Administration (Settings and
+ *   Activity) is the last group; `footer` (the signed-in user) sits at the bottom.
  * - Only the pages the user may see (`can()`, view only — the API still refuses); a module with
  *   none left is not drawn.
  * - `rail` (768–1279px): one icon per module with its name as tooltip; a module with several pages
@@ -56,12 +54,7 @@ export function SidebarNav({
           ))}
         </ul>
       </div>
-      <div className={cn('flex flex-col gap-2.5', rail && 'items-center')}>
-        {itemIsVisible(SETTINGS_ITEM, can) ? (
-          <PageLink item={SETTINGS_ITEM} onNavigate={onNavigate} iconOnly={rail} />
-        ) : null}
-        {footer}
-      </div>
+      {footer ? <div className={cn('flex flex-col gap-2.5', rail && 'items-center')}>{footer}</div> : null}
     </nav>
   );
 }
@@ -71,6 +64,7 @@ export function SidebarNav({
 const TONE_CLASSES: Record<NavModule['tone'], string> = {
   primary: 'bg-primary-soft text-primary',
   neutral: 'bg-secondary text-muted-foreground',
+  accent: 'bg-accent-soft text-accent-foreground',
 };
 
 /** A module's coloured icon tile. */

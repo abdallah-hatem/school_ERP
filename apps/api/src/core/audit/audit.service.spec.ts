@@ -20,7 +20,6 @@ function makeService(opts: { inTx?: boolean; user?: AuthUser | null; clsActive?:
       return Promise.resolve();
     }),
     findPage: jest.fn(),
-    findChangesPage: jest.fn(),
     findUserName: jest.fn((id: string) => Promise.resolve(id === 'u9' ? 'Karim' : null)),
   };
   const recorded: string[] = [];

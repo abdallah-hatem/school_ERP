@@ -1,7 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { Prisma } from '@prisma/client';
-import { PAGINATION, type AuditChange, type Paginated } from '@school-erp/shared';
+import {
+  AUDIT_FAILED_SIGN_IN,
+  AUDIT_MONEY_ACTIONS,
+  AUDIT_MONEY_FIELDS,
+  PAGINATION,
+  type AuditActor,
+  type AuditChange,
+  type AuditSummary,
+  type Paginated,
+} from '@school-erp/shared';
 import type { DbAdapter } from '../../../database/transactions';
 
 export interface NewAuditEntry {
@@ -20,12 +29,15 @@ export interface NewAuditEntry {
 export interface AuditEntryFilter {
   actorId?: string;
   module?: string;
-  action?: string;
+  /** Any of these actions. */
+  actions?: readonly string[];
   from?: Date;
   to?: Date;
   q?: string;
   entityType?: string;
   entityId?: string;
+  /** Only entries that changed this field. */
+  field?: string;
 }
 
 const entrySelect = {
@@ -44,16 +56,8 @@ const entrySelect = {
 
 export type AuditEntryRow = Prisma.AuditEntryGetPayload<{ select: typeof entrySelect }>;
 
-/** One changed field of a settings-history entry, flattened (one row per change). */
-export interface SettingsHistoryRow {
-  id: string;
-  action: string;
-  actorId: string | null;
-  actorName: string | null;
-  at: Date;
-  ord: number;
-  change: AuditChange;
-}
+/** How many people a picker lists at most (newest first). */
+const ACTORS_CAP = 200;
 
 const page = (p: number, limit: number) => {
   const take = Math.min(Math.max(1, limit), PAGINATION.maxLimit);
@@ -69,6 +73,27 @@ const paginated = <T>(data: T[], total: number, current: number, take: number): 
   hasNextPage: current * take < total,
   hasPreviousPage: current > 1,
 });
+
+function whereOf(filter: AuditEntryFilter): Prisma.AuditEntryWhereInput {
+  return {
+    ...(filter.actorId ? { actorId: filter.actorId } : {}),
+    ...(filter.module ? { module: filter.module } : {}),
+    ...(filter.actions ? { action: { in: [...filter.actions] } } : {}),
+    ...(filter.entityType ? { entityType: filter.entityType } : {}),
+    ...(filter.entityId ? { entityId: filter.entityId } : {}),
+    ...(filter.from || filter.to
+      ? {
+          at: {
+            ...(filter.from ? { gte: filter.from } : {}),
+            ...(filter.to ? { lt: filter.to } : {}),
+          },
+        }
+      : {}),
+    ...(filter.q ? { entityLabel: { contains: filter.q, mode: 'insensitive' } } : {}),
+    // jsonb containment: the changes array holds an element with this field.
+    ...(filter.field ? { changes: { array_contains: [{ field: filter.field }] } } : {}),
+  };
+}
 
 /**
  * `audit_entries` (core/audit). Only ever INSERTs — the table refuses UPDATE and DELETE (D8).
@@ -103,22 +128,7 @@ export class AuditEntryRepository {
     limit: number,
   ): Promise<Paginated<AuditEntryRow>> {
     const { take, current, skip } = page(p, limit);
-    const where: Prisma.AuditEntryWhereInput = {
-      ...(filter.actorId ? { actorId: filter.actorId } : {}),
-      ...(filter.module ? { module: filter.module } : {}),
-      ...(filter.action ? { action: filter.action } : {}),
-      ...(filter.entityType ? { entityType: filter.entityType } : {}),
-      ...(filter.entityId ? { entityId: filter.entityId } : {}),
-      ...(filter.from || filter.to
-        ? {
-            at: {
-              ...(filter.from ? { gte: filter.from } : {}),
-              ...(filter.to ? { lt: filter.to } : {}),
-            },
-          }
-        : {}),
-      ...(filter.q ? { entityLabel: { contains: filter.q, mode: 'insensitive' } } : {}),
-    };
+    const where = whereOf(filter);
     const db = this.txHost.tx;
     const [data, total] = await Promise.all([
       db.auditEntry.findMany({
@@ -134,48 +144,63 @@ export class AuditEntryRepository {
   }
 
   /**
-   * Settings → Change history (D9): the changes of `actions`' entries, one row per changed field,
-   * newest entry first, in the order the fields were recorded. Paged by change, not by entry.
+   * The people in the log (or on one record), each once with the name of their latest entry,
+   * most recently active first. People who were never signed in (failed sign-ins) are not people.
    */
-  async findChangesPage(
-    actions: readonly string[],
-    p: number,
-    limit: number,
-  ): Promise<Paginated<SettingsHistoryRow>> {
-    const { take, current, skip } = page(p, limit);
-    const inActions = Prisma.join([...actions]);
-    const db = this.txHost.tx;
-    const [rows, counted] = await Promise.all([
-      db.$queryRaw<
-        {
-          id: string;
-          action: string;
-          actor_id: string | null;
-          actor_name: string | null;
-          at: Date;
-          ord: bigint;
-          change: AuditChange;
-        }[]
-      >`
-        SELECT e."id", e."action", e."actor_id", e."actor_name", e."at", c.ord, c.value AS change
-        FROM "audit_entries" e
-        CROSS JOIN LATERAL jsonb_array_elements(e."changes") WITH ORDINALITY AS c(value, ord)
-        WHERE e."action" IN (${inActions})
-        ORDER BY e."at" DESC, e."seq" DESC, c.ord ASC
-        LIMIT ${take} OFFSET ${skip}`,
-      db.$queryRaw<{ total: number }[]>`
-        SELECT COALESCE(SUM(jsonb_array_length("changes")), 0)::int AS total
-        FROM "audit_entries" WHERE "action" IN (${inActions})`,
-    ]);
-    const data = rows.map((r) => ({
-      id: r.id,
-      action: r.action,
-      actorId: r.actor_id,
-      actorName: r.actor_name,
-      at: r.at,
-      ord: Number(r.ord),
-      change: r.change,
-    }));
-    return paginated(data, counted[0]?.total ?? 0, current, take);
+  async findActors(filter: { entityType?: string; entityId?: string }): Promise<AuditActor[]> {
+    const record =
+      filter.entityType && filter.entityId
+        ? Prisma.sql`AND "entity_type" = ${filter.entityType} AND "entity_id" = ${filter.entityId}`
+        : Prisma.empty;
+    const rows = await this.txHost.tx.$queryRaw<{ id: string; name: string | null }[]>`
+      SELECT id, name FROM (
+        SELECT DISTINCT ON ("actor_id") "actor_id"::text AS id, "actor_name" AS name, "at", "seq"
+        FROM "audit_entries"
+        WHERE "actor_id" IS NOT NULL ${record}
+        ORDER BY "actor_id", "at" DESC, "seq" DESC
+      ) latest
+      ORDER BY "at" DESC, "seq" DESC
+      LIMIT ${ACTORS_CAP}`;
+    return rows.map((r) => ({ id: r.id, name: r.name ?? '' }));
+  }
+
+  /** The fields one record's entries changed, alphabetically (the History tab's field filter). */
+  async findFields(entityType: string, entityId: string): Promise<string[]> {
+    const rows = await this.txHost.tx.$queryRaw<{ field: string }[]>`
+      SELECT DISTINCT c.value->>'field' AS field
+      FROM "audit_entries" e
+      CROSS JOIN LATERAL jsonb_array_elements(e."changes") AS c(value)
+      WHERE e."entity_type" = ${entityType} AND e."entity_id" = ${entityId}
+        AND c.value->>'field' IS NOT NULL
+      ORDER BY field`;
+    return rows.map((r) => r.field);
+  }
+
+  /** Counts for "today at a glance": entries, people, money entries and failed sign-ins in a period. */
+  async summary(from: Date, to: Date): Promise<AuditSummary> {
+    const moneyActions = Prisma.join([...AUDIT_MONEY_ACTIONS]);
+    const moneyFields = Prisma.join([...AUDIT_MONEY_FIELDS]);
+    const [row] = await this.txHost.tx.$queryRaw<
+      { actions: number; people: number; money: number; failed: number }[]
+    >`
+      SELECT
+        COUNT(*)::int AS actions,
+        COUNT(DISTINCT e."actor_id")::int AS people,
+        COUNT(*) FILTER (
+          WHERE e."action" IN (${moneyActions})
+             OR EXISTS (
+               SELECT 1 FROM jsonb_array_elements(e."changes") AS c(value)
+               WHERE c.value->>'field' IN (${moneyFields})
+             )
+        )::int AS money,
+        COUNT(*) FILTER (WHERE e."action" = ${AUDIT_FAILED_SIGN_IN})::int AS failed
+      FROM "audit_entries" e
+      WHERE e."at" >= ${from} AND e."at" < ${to}`;
+    return {
+      actions: row?.actions ?? 0,
+      people: row?.people ?? 0,
+      money: row?.money ?? 0,
+      failedSignIns: row?.failed ?? 0,
+    };
   }
 }

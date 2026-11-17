@@ -109,6 +109,11 @@ describe('permissions (e2e)', () => {
         .post('/hr/penalties/00000000-0000-4000-8000-000000000000/approve')
         .expect(403);
       await http(app).get('/audit').expect(403);
+      await http(app).get('/audit/actors').expect(403);
+      await http(app)
+        .get('/audit/summary?from=2026-11-17T00:00:00Z&to=2026-11-18T00:00:00Z')
+        .expect(403);
+      await http(app).get('/audit/records/employee/x/fields').expect(403);
       const me = await http(app).get('/auth/me').expect(200);
       expect(me.body.data.permissions).toEqual([]);
     });

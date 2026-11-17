@@ -19,7 +19,7 @@ import { UserChip } from "./user-chip";
 
 /**
  * The signed-in frame.
- * - ≥1280px: sidebar grouped by module, Settings and the signed-in user at the bottom.
+ * - ≥1280px: sidebar grouped by module (Administration last), the signed-in user at the bottom.
  * - 768–1279px: icon rail, one icon per module.
  * - <768px: top bar with the school name and a menu button opening a drawer from the start edge
  *   (the same grouped menu). Esc, the backdrop, ✕ or choosing a link closes it, and focus returns

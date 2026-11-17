@@ -41,9 +41,11 @@ import Link from 'next/link';
 import { SchoolBrand } from '@/core/settings/school-brand';
 import { LocaleSwitch } from '@/shared/components/layout/locale-switch';
 import { SettingsScreen } from '../components/settings-screen';
+import type { SessionUser } from '@school-erp/shared';
+import { sessionWithout, TEST_SESSION } from '@/test/render';
 import { deferred, hrSettings, ok, renderSettings, school } from './helpers';
 
-function renderScreen(locale: 'en' | 'ar' = 'en') {
+function renderScreen(locale: 'en' | 'ar' = 'en', session: SessionUser = TEST_SESSION) {
   return renderSettings(
     <>
       <header data-testid="shell">
@@ -54,6 +56,7 @@ function renderScreen(locale: 'en' | 'ar' = 'en') {
       <SettingsScreen initialSection="school" />
     </>,
     locale,
+    session,
   );
 }
 
@@ -264,5 +267,32 @@ describe('Settings screen — unsaved changes warning', () => {
     const dirty = new Event('beforeunload', { cancelable: true });
     window.dispatchEvent(dirty);
     expect(dirty.defaultPrevented).toBe(true);
+  });
+});
+
+describe('Settings screen — change history (owner, 2026-11-17)', () => {
+  beforeEach(() => {
+    api.GET_SCHOOL_SETTINGS_FOR_EDIT.mockImplementation(() => ok(school));
+  });
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  it('has no Change history section; "View change history" opens Activity filtered to settings', () => {
+    renderScreen();
+    const sections = screen.getByRole('navigation', { name: 'Settings sections' });
+    expect(sections.textContent).not.toContain('Change history');
+    expect(screen.getByRole('link', { name: 'View change history' }).getAttribute('href')).toBe(
+      '/en/activity?module=settings',
+    );
+  });
+
+  it('the link is hidden from someone who may not read the activity log (can(), view only)', () => {
+    renderScreen('en', sessionWithout('core.audit.view'));
+    expect(screen.queryByRole('link', { name: 'View change history' })).toBeNull();
+    cleanup();
+    renderScreen('ar');
+    expect(screen.getByRole('link', { name: 'عرض سجل التغييرات' }).getAttribute('href')).toBe('/ar/activity?module=settings');
   });
 });

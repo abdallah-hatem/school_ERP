@@ -1,10 +1,10 @@
 'use client';
 
-import type { Employee } from '@school-erp/shared';
+import type { Employee, PermissionKey } from '@school-erp/shared';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { createContext, useContext, type ReactNode } from 'react';
-import { Can } from '@/core/auth';
+import { Can, useCan } from '@/core/auth';
 import { PageHeader } from '@/shared/components/layout/page-header';
 import { Button } from '@/shared/components/ui/button';
 import { Money } from '@/shared/components/ui/figures';
@@ -24,10 +24,13 @@ export const PROFILE_TABS = [
   { key: 'details', labelKey: 'employees.profile.details', segment: '' },
   { key: 'penalties', labelKey: 'common.nav.penalties', segment: 'penalties' },
   { key: 'payroll', labelKey: 'common.nav.payroll', segment: 'payroll' },
+  // Who changed what on this employee (audit log, T30); only for people who may read the log.
+  { key: 'history', labelKey: 'employees.profile.history', segment: 'history', permission: 'core.audit.view' },
 ] as const satisfies readonly {
   key: string;
   labelKey: string;
   segment: string;
+  permission?: PermissionKey;
 }[];
 export type ProfileTabKey = (typeof PROFILE_TABS)[number]['key'];
 
@@ -54,11 +57,13 @@ export function activeProfileTab(pathname: string, profileHref: string): Profile
 /** The section tabs. Each link prefetches its tab; the current one comes from the URL. */
 export function ProfileTabs({ profileHref }: { profileHref: string }) {
   const { t } = useTranslation();
+  const can = useCan();
   const active = activeProfileTab(usePathname(), profileHref);
+  const tabs = PROFILE_TABS.filter((tab) => !('permission' in tab) || can(tab.permission));
   return (
     <nav aria-label={t('employees.profile.tabs')} className="scrollbar-clean -mb-2 overflow-x-auto">
       <ul className="flex gap-1.5 border-b border-border">
-        {PROFILE_TABS.map((tab) => {
+        {tabs.map((tab) => {
           const current = tab.key === active;
           return (
             <li key={tab.key}>

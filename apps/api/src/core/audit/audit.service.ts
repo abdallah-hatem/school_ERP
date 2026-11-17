@@ -3,10 +3,12 @@ import { TransactionHost } from '@nestjs-cls/transactional';
 import {
   AUDIT_ACTIONS,
   type AuditAction,
+  type AuditActor,
   type AuditChange,
   type AuditEntityType,
   type AuditEntry,
   type AuditModule,
+  type AuditSummary,
   type AuthUser,
   type Paginated,
 } from '@school-erp/shared';
@@ -18,7 +20,6 @@ import {
   AuditEntryRepository,
   type AuditEntryFilter,
   type AuditEntryRow,
-  type SettingsHistoryRow,
 } from './repositories/audit-entry.repository';
 
 /** CLS key: the actions recorded in the current `@Audited` request (D6b). */
@@ -115,22 +116,30 @@ export class AuditService {
     return { ...result, data: result.data.map(toAuditEntry) };
   }
 
+  /** A record's History, optionally narrowed to one person or one changed field. */
   listForRecord(
     entityType: AuditEntityType,
     entityId: string,
     page: number,
     limit: number,
+    filter: { actorId?: string; field?: string } = {},
   ): Promise<Paginated<AuditEntry>> {
-    return this.list({ entityType, entityId }, page, limit);
+    return this.list({ entityType, entityId, ...filter }, page, limit);
   }
 
-  /** The changes recorded by `actions`, one row per changed field (Settings → Change history). */
-  listChanges(
-    actions: readonly AuditAction[],
-    page: number,
-    limit: number,
-  ): Promise<Paginated<SettingsHistoryRow>> {
-    return this.entries.findChangesPage(actions, page, limit);
+  /** The people in the log (or on one record), latest name, most recently active first. */
+  listActors(record?: { entityType: AuditEntityType; entityId: string }): Promise<AuditActor[]> {
+    return this.entries.findActors(record ?? {});
+  }
+
+  /** The fields a record's entries changed (its History field filter). */
+  listFields(entityType: AuditEntityType, entityId: string): Promise<string[]> {
+    return this.entries.findFields(entityType, entityId);
+  }
+
+  /** "Today at a glance" for `[from, to)`. */
+  summary(from: Date, to: Date): Promise<AuditSummary> {
+    return this.entries.summary(from, to);
   }
 
   private request(): RequestWithUser | undefined {

@@ -1,6 +1,8 @@
 import type { PermissionRequirement } from '@/core/auth/permissions';
 import {
   AccountingModuleIcon,
+  ActivityIcon,
+  AdministrationModuleIcon,
   DashboardIcon,
   HrModuleIcon,
   InventoryModuleIcon,
@@ -15,7 +17,7 @@ import {
 
 export interface NavItem {
   /** Key under `common.nav` for the label. */
-  key: 'dashboard' | 'employees' | 'penalties' | 'lateness' | 'payroll' | 'settings';
+  key: 'dashboard' | 'employees' | 'penalties' | 'lateness' | 'payroll' | 'settings' | 'activity';
   /** Path after the locale segment; `''` is the dashboard. */
   path: string;
   icon: AppIcon;
@@ -27,10 +29,10 @@ export interface NavItem {
 }
 
 /** How a module's icon tile is coloured (token pairs, so the palette stays in globals.css). */
-export type ModuleTone = 'neutral' | 'primary';
+export type ModuleTone = 'neutral' | 'primary' | 'accent';
 
 export interface NavModule {
-  key: 'home' | 'hr' | 'accounting' | 'inventory' | 'students';
+  key: 'home' | 'hr' | 'accounting' | 'inventory' | 'students' | 'administration';
   /** Translation key of the module's name. */
   nameKey: `common.nav.modules.${string}`;
   icon: AppIcon;
@@ -78,16 +80,25 @@ export const NAV_MODULES: readonly NavModule[] = [
   { key: 'accounting', nameKey: 'common.nav.modules.accounting', icon: AccountingModuleIcon, tone: 'neutral', items: [], status: 'soon' },
   { key: 'inventory', nameKey: 'common.nav.modules.inventory', icon: InventoryModuleIcon, tone: 'neutral', items: [], status: 'soon' },
   { key: 'students', nameKey: 'common.nav.modules.students', icon: StudentsModuleIcon, tone: 'neutral', items: [], status: 'soon' },
+  {
+    // Settings and the activity log (audit spec → Screens): the school's own administration.
+    key: 'administration',
+    nameKey: 'common.nav.modules.administration',
+    icon: AdministrationModuleIcon,
+    tone: 'accent',
+    items: [
+      page('settings', '/settings', SettingsIcon, [
+        'core.settings.view',
+        'hr.settings.view',
+        'hr.lists.view',
+        'core.stages.view',
+        'hr.penalty_catalogue.view',
+      ]),
+      page('activity', '/activity', ActivityIcon, ['core.audit.view']),
+    ],
+    status: 'live',
+  },
 ];
-
-/** Settings sits apart, at the bottom of the menu above the user. */
-export const SETTINGS_ITEM: NavItem = page('settings', '/settings', SettingsIcon, [
-  'core.settings.view',
-  'hr.settings.view',
-  'hr.lists.view',
-  'core.stages.view',
-  'hr.penalty_catalogue.view',
-]);
 
 /** Whether the user may see `item` (`can` for the signed-in user). */
 export function itemIsVisible(item: NavItem, can: (required: PermissionRequirement) => boolean): boolean {
@@ -110,7 +121,7 @@ export function visibleModules(
 }
 
 /** Every page in the menu, in order. */
-export const NAV_ITEMS: readonly NavItem[] = [...NAV_MODULES.flatMap((m) => m.items), SETTINGS_ITEM];
+export const NAV_ITEMS: readonly NavItem[] = NAV_MODULES.flatMap((m) => m.items);
 
 /** Whether `item` is the current section for `pathname` (`/ar/payroll/2026-11` → payroll). */
 export function isActive(item: NavItem, pathname: string, locale: string): boolean {

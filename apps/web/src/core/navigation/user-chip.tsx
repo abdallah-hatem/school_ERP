@@ -3,19 +3,9 @@
 import type { AuthUser } from '@school-erp/shared';
 import { signOut } from '@/core/auth';
 import { SignOutIcon } from '@/shared/components/ui/icons';
+import { initialsOf as initials } from '@/shared/lib/initials';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
-
-/** Up to two initials of a name. */
-function initials(name: string): string {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part.charAt(0))
-    .join('')
-    .toUpperCase();
-}
 
 /**
  * The signed-in person at the bottom of the menu: initials, name, role and a sign-out button.

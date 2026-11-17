@@ -1,5 +1,9 @@
 # Recent changes
 
+- 2026-11-17 — Audit log screens (T30): Administration → **Activity** (everything, by day, with
+  filters) and a **History** tab on each employee. Settings → Change history moved to Activity: the
+  Settings screen links to it, filtered to settings.
+
 - 2026-11-17 — Roles as data (§2, P2): the starting roles now exist and can be changed without code;
   the HR admin became **System admin + HR manager**; a user can hold several roles; only the System
   admin manages users and roles; the last System admin can't lose the role or be deactivated;

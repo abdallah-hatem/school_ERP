@@ -4,16 +4,12 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import {
   AuditEntityType,
-  SETTINGS_HISTORY_ACTION_KEYS,
-  SETTINGS_HISTORY_ACTIONS,
   SettingsEvent,
   ErrorCode,
   LOGO_UPLOAD,
   type AuditAction,
-  type Paginated,
   type PublicSchoolSettings,
   type SchoolSettings,
-  type SettingChangeItem,
   type SettingKey,
   type SettingsChangeScope,
   type SettingsChangedEvent,
@@ -196,26 +192,5 @@ export class SettingsService {
       changedById,
     );
     return { logoUrl };
-  }
-
-  /**
-   * Settings → Change history (§7), read from the audit log (D9): one item per changed key,
-   * newest first — the same shape as before the move.
-   */
-  async listHistory(page: number, limit: number): Promise<Paginated<SettingChangeItem>> {
-    const result = await this.audit.listChanges(SETTINGS_HISTORY_ACTION_KEYS, page, limit);
-    return {
-      ...result,
-      data: result.data.map((row) => ({
-        // One entry may list several keys; the first keeps the entry's id.
-        id: row.ord === 1 ? row.id : `${row.id}:${row.ord}`,
-        scope: SETTINGS_HISTORY_ACTIONS[row.action as keyof typeof SETTINGS_HISTORY_ACTIONS],
-        key: row.change.field,
-        oldValue: row.change.before,
-        newValue: row.change.after,
-        changedBy: row.actorId ? { id: row.actorId, name: row.actorName ?? '' } : null,
-        changedAt: row.at.toISOString(),
-      })),
-    };
   }
 }

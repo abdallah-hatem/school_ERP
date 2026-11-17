@@ -12,7 +12,9 @@ import {
   HrSettingKey,
   SchoolSettingKey,
   SETTINGS_HISTORY_ACTION_KEYS,
+  AUDIT_MONEY_ACTIONS,
   isAuditAction,
+  isMoneyEntry,
 } from '../src';
 
 type Tree = { [k: string]: string | Tree };
@@ -94,5 +96,25 @@ describe('audit action registry (D5)', () => {
     expect(isAuditAction('hr.employee.delete')).toBe(false);
     expect(isAuditAction('toString')).toBe(false);
     expect(isAuditAction(42)).toBe(false);
+  });
+});
+
+describe('money entries (Activity tag and summary)', () => {
+  it('a payroll action or a change to a money field is a money entry; anything else is not', () => {
+    expect(isMoneyEntry({ action: 'hr.payroll.approve', changes: [] })).toBe(true);
+    expect(
+      isMoneyEntry({
+        action: 'hr.employee.update',
+        changes: [{ field: 'basicSalary', before: 1200000, after: 1300000 }],
+      }),
+    ).toBe(true);
+    expect(
+      isMoneyEntry({
+        action: 'hr.employee.update',
+        changes: [{ field: 'phone', before: '010', after: '011' }],
+      }),
+    ).toBe(false);
+    expect(AUDIT_MONEY_ACTIONS.length).toBeGreaterThan(0);
+    expect(AUDIT_MONEY_ACTIONS.every((a) => a.startsWith('hr.payroll.'))).toBe(true);
   });
 });
