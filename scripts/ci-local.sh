@@ -21,7 +21,7 @@ if [[ -z "${GITHUB_ACTIONS:-}" ]] && git fetch -q origin dev 2>/dev/null; then
   fi
 fi
 
-steps=("lint" "typecheck" "test" "deps:check")
+steps=("lint" "typecheck" "test" "deps:check" "plans:check")
 $full && steps+=("test:e2e" "smoke")
 
 start_all=$SECONDS
