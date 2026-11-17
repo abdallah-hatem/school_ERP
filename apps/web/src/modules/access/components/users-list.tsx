@@ -217,6 +217,7 @@ export function UsersList({ basePath, query, rows, total, roles, lastAdminId, no
             id: 'reactivate',
             label: t('access.users.actions.reactivate'),
             icon: ReactivateIcon,
+            positive: true,
             hidden: !canManage || u.isActive,
             onSelect: () => actions.reactivate(u),
           },
