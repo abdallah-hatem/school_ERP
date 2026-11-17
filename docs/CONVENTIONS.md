@@ -59,6 +59,14 @@ Code moves one way: **`dev` → `testing` → `production`**. Each branch deploy
 - [ ] `docs/BUSINESS_LOGIC.md` updated in the same PR if a business rule changed.
 - [ ] UI changes: screenshots. New or visually changed screens: light/dark × EN/AR.
 
+## Design changes: mockup first
+
+- **Small** (a new field, a tweak inside the existing design system): build it, show screenshots.
+- **Big** (a new screen type, a restyle, or changing how a screen lays out its content — a table
+  becoming cards — or the navigation structure): make **three mockups** first (Arabic + English,
+  phone + desktop), get the owner's pick, then build only that. Mockups live in `design/mockups/`.
+- Whoever builds it — a developer or Claude — shows the mockups without being asked.
+
 ## The PR
 
 - Targets `dev`. Title: `feat: <what it does>` (or `fix:` / `chore:`).

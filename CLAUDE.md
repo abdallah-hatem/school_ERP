@@ -28,6 +28,10 @@ skills. **Where this file differs from a skill, this file wins.**
    (`docs/demo/DRY_RUN.md`), Arabic then English then phone width, checking money by hand. Record it
    in `docs/demo/dry-runs/YYYY-MM-DD.md` and turn findings into fixes or Next-up items. Update the
    script in the same PR as any change to a screen it covers.
+9. **Mockups first for layout and navigation changes.** Changing how a screen lays out its content
+   (table → cards, list → board) or the navigation (sidebar groups/order) is a big design change:
+   show mockups (three options, AR + EN, phone + desktop) **before** building, without being asked,
+   and build only the picked option.
 
 ## Facts the skill cannot know
 
