@@ -1,5 +1,5 @@
 import type { Language, UserRole, Weekday } from '../enums';
-import type { SettingKey } from '../settings';
+import type { SettingsChangeScope } from '../events';
 import type { IsoDateTime, Names, TimeOfDay, Uuid } from './common';
 
 // ── Auth — core/auth ───────────────────────────────────────────────────────
@@ -44,7 +44,10 @@ export interface UploadLogoResponse {
 
 /** `GET /settings/history` item. */
 export interface SettingChangeItem {
-  key: SettingKey;
+  id: Uuid;
+  scope: SettingsChangeScope;
+  /** A `SettingKey` for rule settings; list and catalogue edits use their own keys. */
+  key: string;
   oldValue: unknown;
   newValue: unknown;
   changedBy: { id: Uuid; name: string } | null;
