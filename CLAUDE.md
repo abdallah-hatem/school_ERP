@@ -23,6 +23,11 @@ skills. **Where this file differs from a skill, this file wins.**
    steps: run the smoke specs against dev, and the full checks against testing. Server setup follows
    `deploying-to-vps`; details are in `docs/ARCHITECTURE.md` → Hosting.
 7. **Never cache pages at Cloudflare.** Only static files. Every page is per-user.
+8. **A demo dry run is part of Verify and of every release.** Before a client demo or a release PR
+   `testing` → `production`, walk `docs/demo/DEMO_SCRIPT.md` on a **copy** of the database
+   (`docs/demo/DRY_RUN.md`), Arabic then English then phone width, checking money by hand. Record it
+   in `docs/demo/dry-runs/YYYY-MM-DD.md` and turn findings into fixes or Next-up items. Update the
+   script in the same PR as any change to a screen it covers.
 
 ## Facts the skill cannot know
 

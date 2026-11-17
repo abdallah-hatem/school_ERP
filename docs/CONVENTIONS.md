@@ -111,6 +111,39 @@ Hosting).
   school's prod deployment is moved to that tag, school by school. Each runs its migrations first,
   and the rollout stops on the first failure.
 - Record which version each school runs.
+- **A release PR into `production` needs a passed dry run** (below) on the exact build being
+  released. Link its record in the PR.
+
+## Demo dry run (before every client demo and every release)
+
+Automated tests prove the pieces work; a dry run proves the **story** works in front of a person.
+It finds what tests don't: a warning that's out of date until you press another button, a picker
+with no search, wrong Arabic grammar, a Save button nobody finds.
+
+**When**
+- Before every client demo (at least one day before, so there's time to fix).
+- Before every release PR `testing` → `production`.
+- After any change to a screen that is part of the demo script.
+
+**Who:** the lead developer drives; one operations person (Hafez or Arousi) watches as "the
+client" and notes anything confusing. Either can run it alone if needed.
+
+**How**
+1. Use a **copy** of the demo/testing database — never the real data you'll demo from or a school's
+   production data. `docs/demo/DRY_RUN.md` has the commands.
+2. Run the built app (production build, not dev mode), signed in as a normal user.
+3. Walk the script in `docs/demo/DEMO_SCRIPT.md` step by step, **in Arabic first, then English**,
+   then the key screens **on a phone width**.
+4. **Check the numbers by hand** at each money step (day value, deductions, net, payslip totals).
+5. Note every finding, however small, with the screen and what felt wrong.
+6. Afterwards: delete the copy, stop the servers.
+
+**Output**
+- A record in `docs/demo/dry-runs/YYYY-MM-DD.md`: build (commit), who, what passed, findings.
+- Each finding becomes a ticket (or an item in `docs/BUILD_LOG.md` → Next up) marked
+  **must fix before the demo** or **later**. Must-fix items are fixed, then the affected steps are
+  walked again.
+- Update the script when the product changes, in the same PR as the change.
 
 ## Hotfixes
 
