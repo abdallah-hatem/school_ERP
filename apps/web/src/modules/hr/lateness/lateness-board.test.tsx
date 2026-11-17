@@ -130,6 +130,20 @@ describe('LatenessBoard', () => {
     expect((saveButton() as HTMLButtonElement | HTMLInputElement).disabled).toBe(false);
   });
 
+  it('an invalid-minutes error stays beside the input: the field names it, and its icon opens the message', async () => {
+    const user = userEvent.setup();
+    renderBoard();
+    const input = minutesInput('Karim Fawzy');
+    await user.clear(input);
+    await user.type(input, '12a');
+    const describedBy = document.getElementById(input.getAttribute('aria-describedby') ?? '');
+    expect(describedBy?.textContent).toBe('Whole minutes from 0 to 6,000.');
+    // No message block under the input (the row keeps its height); the icon opens it instead.
+    expect(input.closest('td')?.querySelectorAll('p')).toHaveLength(0);
+    await user.click(table().getByRole('button', { name: 'Whole minutes from 0 to 6,000.' }));
+    expect((await screen.findByRole('dialog')).textContent).toBe('Whole minutes from 0 to 6,000.');
+  });
+
   it('Save all sends only the changed rows and shows a translated success toast', async () => {
     const user = userEvent.setup();
     const saved = [ROWS[0]!, row('e2', 'EMP-0002', 'Karim Fawzy', 'كريم فوزي', 45), ROWS[2]!];

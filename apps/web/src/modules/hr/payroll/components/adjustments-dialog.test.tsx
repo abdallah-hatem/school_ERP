@@ -33,6 +33,7 @@ function renderRun(r = run()) {
     <RunPage
       basePath="/en/payroll"
       settingsHref="/en/settings"
+      penaltiesHref="/en/penalties"
       run={r}
       departments={[]}
       settings={SETTINGS}

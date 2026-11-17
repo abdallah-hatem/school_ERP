@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { EmptyState } from '@/shared/components/layout/empty-state';
+import { BidiText } from '@/shared/components/ui/bidi-text';
 import { Button } from '@/shared/components/ui/button';
 import { Days, Money } from '@/shared/components/ui/figures';
 import { ChevronStartIcon, PayslipIcon, PrintIcon } from '@/shared/components/ui/icons';
@@ -124,7 +125,41 @@ export function PayslipView({ payslip, backHref }: { payslip: Payslip; backHref:
             <p className="text-muted-foreground">{t('payroll.payslip.noPenalties')}</p>
           ) : (
             <>
-              <div className="scrollbar-clean overflow-x-auto">
+              {/* Phones: one stacked block per penalty. From `sm` up, and always in print: the table. */}
+              <ul data-penalty-list="" className="flex flex-col gap-2 sm:hidden print:hidden">
+                {payslip.penalties.map((p, i) => (
+                  <li
+                    key={`${p.date}-${i}`}
+                    data-testid="payslip-penalty-stacked"
+                    className="bg-muted flex flex-col gap-1.5 rounded-xl px-3 py-2.5"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="min-w-0 font-semibold break-words">
+                        {locale === 'ar' ? p.violationNameAr : p.violationNameEn}
+                      </span>
+                      <Money
+                        value={p.amount}
+                        currency={false}
+                        className={cn('shrink-0 font-bold', p.amount > 0 ? 'text-destructive-ink' : 'text-muted-foreground')}
+                      />
+                    </div>
+                    <p className="text-muted-foreground flex flex-wrap gap-x-2 text-xs">
+                      <bdi className="tabular">{formatDate(p.date, locale)}</bdi>
+                      <span aria-hidden="true">·</span>
+                      <span>{t('payroll.payslip.level', { level: p.level })}</span>
+                      <span aria-hidden="true">·</span>
+                      <span>{t(`common.enums.penaltyAction.${p.action}`)}</span>
+                      {p.days === null ? null : (
+                        <>
+                          <span aria-hidden="true">·</span>
+                          <Days value={p.days} />
+                        </>
+                      )}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+              <div className="scrollbar-clean hidden overflow-x-auto sm:block print:block">
                 <table className="w-full border-separate border-spacing-0" aria-label={t('payroll.payslip.penalties')}>
                   <thead>
                     <tr className="text-muted-foreground text-xs">
@@ -140,7 +175,7 @@ export function PayslipView({ payslip, backHref }: { payslip: Payslip; backHref:
                     {payslip.penalties.map((p, i) => (
                       <tr key={`${p.date}-${i}`} data-testid="payslip-penalty">
                         <Td>
-                          <bdi dir="ltr" className="tabular">
+                          <bdi className="tabular">
                             {formatDate(p.date, locale)}
                           </bdi>
                         </Td>
@@ -195,7 +230,7 @@ export function PayslipView({ payslip, backHref }: { payslip: Payslip; backHref:
                   <span className="min-w-0 break-words">
                     <span className="font-semibold">{t(`common.enums.adjustmentType.${a.type}`)}</span>
                     <span aria-hidden="true"> · </span>
-                    <span className="text-muted-foreground">{a.reason}</span>
+                    <BidiText className="text-muted-foreground">{a.reason}</BidiText>
                   </span>
                   <Money
                     value={a.type === AdjustmentType.DEDUCTION ? -a.amount : a.amount}

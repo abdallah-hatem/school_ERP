@@ -81,4 +81,25 @@ describe('DateField month / year pickers', () => {
     expect(years[0]).toBe(String(thisYear + 2));
     expect(years.at(-1)).toBe('1940');
   });
+
+  it.each([
+    ['en', 'Previous month', 'Next month', 'left', 'right'],
+    ['ar', 'الشهر السابق', 'الشهر التالي', 'right', 'left'],
+  ] as const)('%s: "previous" points to the start edge and "next" to the end edge', async (locale, prev, next, prevPoints, nextPoints) => {
+    const user = userEvent.setup();
+    renderWithI18n(<BirthForm onSubmit={vi.fn()} />, { locale });
+    await user.click(screen.getByRole('button', { name: /Date of birth/ }));
+    const dialog = await screen.findByRole('dialog');
+    const arrow = (name: string) => within(dialog).getByRole('button', { name }).querySelector('svg')?.getAttribute('data-points');
+    expect(arrow(prev)).toBe(prevPoints);
+    expect(arrow(next)).toBe(nextPoints);
+  });
+
+  it('the month and year pickers take the direction of the page (Arabic → RTL)', async () => {
+    const user = userEvent.setup();
+    renderWithI18n(<BirthForm onSubmit={vi.fn()} />, { locale: 'ar' });
+    await user.click(screen.getByRole('button', { name: /Date of birth/ }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('combobox', { name: 'السنة' }).getAttribute('dir')).toBe('rtl');
+  });
 });

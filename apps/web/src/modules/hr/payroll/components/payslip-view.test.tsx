@@ -101,3 +101,20 @@ describe('PayslipView', () => {
     expect(screen.getByRole('link', { name: 'Back to the run' }).getAttribute('href')).toBe('/en/payroll/r1');
   });
 });
+
+describe('PayslipView on a phone', () => {
+  it.each(['en', 'ar'] as const)(
+    '%s: every penalty also has a stacked entry (violation, level) for narrow screens; the printed table stays',
+    (locale) => {
+      renderPayroll(<PayslipView payslip={PAYSLIP} backHref="/x" />, locale);
+      const stacked = screen.getAllByTestId('payslip-penalty-stacked');
+      expect(stacked).toHaveLength(PAYSLIP.penalties.length);
+      PAYSLIP.penalties.forEach((p, i) => {
+        const entry = within(stacked[i] as HTMLElement);
+        expect(entry.getByText(locale === 'ar' ? p.violationNameAr : p.violationNameEn)).toBeTruthy();
+        expect(entry.getByText(locale === 'ar' ? `المرة ${p.level}` : `Level ${p.level}`)).toBeTruthy();
+      });
+      expect(penaltyRows()).toHaveLength(PAYSLIP.penalties.length);
+    },
+  );
+});

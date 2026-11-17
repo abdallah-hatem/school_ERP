@@ -317,7 +317,7 @@ async function seedMonth(
     if (p.status === 'APPROVED' && record.status === 'PENDING') {
       await penalties.approve(record.id, adminId);
     } else if (p.status === 'CANCELLED' && record.status !== 'CANCELLED') {
-      await penalties.cancel(record.id, { reason: p.cancelReason ?? 'Cancelled' }, adminId);
+      await penalties.cancel(record.id, { reason: p.cancelReason ?? 'أُلغيت' }, adminId);
     }
   }
 

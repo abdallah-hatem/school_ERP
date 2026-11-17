@@ -47,7 +47,7 @@ export const PENALTIES: SeedPenalty[] = [
     violation: 'dress',
     date: '2026-11-08',
     status: 'CANCELLED',
-    cancelReason: 'Recorded for the wrong employee',
+    cancelReason: 'سُجّلت على موظف آخر بالخطأ',
   },
   { employee: 21, violation: 'dress', date: '2026-11-09', status: 'APPROVED' },
   { employee: 14, violation: 'unexcused-absence', date: '2026-11-10', status: 'APPROVED' },
@@ -58,7 +58,7 @@ export const PENALTIES: SeedPenalty[] = [
     violation: 'late-to-class',
     date: '2026-11-15',
     status: 'PENDING',
-    note: 'Third time this month',
+    note: 'المرة الثالثة هذا الشهر',
   },
   { employee: 14, violation: 'unexcused-absence', date: '2026-11-16', status: 'APPROVED' },
 ];
@@ -72,6 +72,6 @@ export interface SeedAdjustment {
 }
 
 export const ADJUSTMENTS: SeedAdjustment[] = [
-  { employee: 8, type: 'ADDITION', amount: 75_000, reason: 'Covered extra classes in November' },
-  { employee: 22, type: 'DEDUCTION', amount: 30_000, reason: 'Salary advance repayment' },
+  { employee: 8, type: 'ADDITION', amount: 75_000, reason: 'تغطية حصص إضافية في نوفمبر' },
+  { employee: 22, type: 'DEDUCTION', amount: 30_000, reason: 'سداد سلفة على الراتب' },
 ];

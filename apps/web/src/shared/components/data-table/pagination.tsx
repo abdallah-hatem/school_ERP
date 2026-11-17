@@ -53,10 +53,11 @@ export function Pagination({
   const atStart = current <= 1 || disabled;
   const atEnd = current >= pageCount || disabled;
 
-  const nav = (label: string, target: number, blocked: boolean, Icon: typeof ChevronStartIcon) => (
+  const nav = (label: string, target: number, blocked: boolean, Icon: typeof ChevronStartIcon, className?: string) => (
     <Button
       variant="secondary"
       size="icon-sm"
+      className={className}
       aria-label={label}
       disabled={blocked}
       onClick={() => onPageChange(target)}
@@ -68,7 +69,7 @@ export function Pagination({
   return (
     <div
       className={cn(
-        'flex flex-wrap items-center gap-x-4 gap-y-3 border-t border-border px-5 py-3.5 text-sm text-muted-foreground',
+        'flex min-w-0 flex-wrap items-center gap-x-4 gap-y-3 border-t border-border px-4 py-3.5 text-sm text-muted-foreground sm:px-5',
         className,
       )}
     >
@@ -93,8 +94,15 @@ export function Pagination({
           </Select>
         </div>
       ) : null}
-      <nav aria-label={t('ui.table.pagination')} className="ms-auto flex items-center gap-1.5">
-        {nav(t('ui.table.firstPage'), 1, atStart, ChevronFirstIcon)}
+      {/*
+        Phones (< 768px): previous · "Page X of Y" · next across the whole row — nine buttons don't
+        fit a 326px card. From 768px: first / previous / page numbers / next / last.
+      */}
+      <nav
+        aria-label={t('ui.table.pagination')}
+        className="flex w-full items-center justify-between gap-1.5 md:ms-auto md:w-auto md:justify-start"
+      >
+        {nav(t('ui.table.firstPage'), 1, atStart, ChevronFirstIcon, 'hidden md:inline-flex')}
         {nav(t('ui.table.previousPage'), current - 1, atStart, ChevronStartIcon)}
         {pageWindow(current, pageCount).map((n) => (
           <Button
@@ -105,13 +113,16 @@ export function Pagination({
             aria-label={t('ui.table.page', { page: n })}
             disabled={disabled}
             onClick={() => onPageChange(n)}
-            className={cn('tabular text-sm', n === current && 'shadow-none')}
+            className={cn('tabular hidden text-sm md:inline-flex', n === current && 'shadow-none')}
           >
             {n}
           </Button>
         ))}
+        <p data-page-of="" className="tabular min-w-0 text-center font-semibold text-foreground md:hidden">
+          {t('ui.table.pageOf', { page: formatCount(current), count: formatCount(pageCount) })}
+        </p>
         {nav(t('ui.table.nextPage'), current + 1, atEnd, ChevronEndIcon)}
-        {nav(t('ui.table.lastPage'), pageCount, atEnd, ChevronLastIcon)}
+        {nav(t('ui.table.lastPage'), pageCount, atEnd, ChevronLastIcon, 'hidden md:inline-flex')}
       </nav>
     </div>
   );

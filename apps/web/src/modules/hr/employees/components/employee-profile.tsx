@@ -114,7 +114,7 @@ export function EmployeeDetails({ basePath, employee }: { basePath: string; empl
       notSet
     );
   const date = (v: string) => (
-    <bdi dir="ltr" className="tabular">
+    <bdi className="tabular">
       {formatDate(v, locale)}
     </bdi>
   );

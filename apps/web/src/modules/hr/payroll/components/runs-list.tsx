@@ -88,7 +88,7 @@ export function RunsList({ basePath, query, runs, total, currentMonth }: RunsLis
       className: 'w-40',
       cell: (run) =>
         run.approvedAt ? (
-          <bdi dir="ltr" className="tabular">
+          <bdi className="tabular">
             {formatDate(run.approvedAt.slice(0, 10), locale)}
           </bdi>
         ) : (

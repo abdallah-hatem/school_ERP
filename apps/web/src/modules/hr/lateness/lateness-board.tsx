@@ -14,6 +14,7 @@ import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { Days } from '@/shared/components/ui/figures';
 import { BlockedIcon, ErrorIcon, LatenessIcon, RetryIcon, SearchIcon } from '@/shared/components/ui/icons';
 import { Input } from '@/shared/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover';
 import { StatusPill } from '@/shared/components/ui/status-pill';
 import { formatCount, formatDays, formatMonth } from '@/shared/lib/format';
 import { nameIn } from '@/shared/lib/i18n';
@@ -314,34 +315,51 @@ function MinutesInput({
   const { t, locale } = useTranslation();
   const view = viewEntry(row, draft, null);
   const errorId = useId();
+  const errorText = t('lateness.invalidMinutes', { max: formatCount(MINUTES_MAX) });
+  // The error stays beside the input (an icon that opens the message), so an invalid row keeps
+  // the height of the others and the Days column stays in line.
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex items-center gap-2">
-        <Input
-          type="text"
-          inputMode="numeric"
-          autoComplete="off"
-          aria-label={t('lateness.minutesLabel', { name: nameIn(row.employee, locale) })}
-          aria-invalid={view.invalid || undefined}
-          aria-describedby={view.invalid ? errorId : undefined}
-          placeholder={t('lateness.minutesPlaceholder')}
-          value={draft ?? String(row.minutes)}
-          readOnly={readOnly}
-          disabled={readOnly}
-          onChange={(e) => onChange(e.target.value)}
-          className="tabular h-10 w-28 text-end"
-          dir="ltr"
-        />
-        {view.changed ? (
-          <span className="size-2 shrink-0 rounded-full bg-accent" title={t('lateness.changed')}>
-            <span className="sr-only">{t('lateness.changed')}</span>
-          </span>
-        ) : null}
-      </div>
+    <div className="flex items-center gap-2">
+      <Input
+        type="text"
+        inputMode="numeric"
+        autoComplete="off"
+        aria-label={t('lateness.minutesLabel', { name: nameIn(row.employee, locale) })}
+        aria-invalid={view.invalid || undefined}
+        aria-describedby={view.invalid ? errorId : undefined}
+        placeholder={t('lateness.minutesPlaceholder')}
+        value={draft ?? String(row.minutes)}
+        readOnly={readOnly}
+        disabled={readOnly}
+        onChange={(e) => onChange(e.target.value)}
+        className="tabular h-10 w-28 text-end"
+        dir="ltr"
+      />
       {view.invalid ? (
-        <p id={errorId} className="text-xs whitespace-normal text-destructive-ink">
-          {t('lateness.invalidMinutes', { max: formatCount(MINUTES_MAX) })}
-        </p>
+        <>
+          <span id={errorId} className="sr-only">
+            {errorText}
+          </span>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                title={errorText}
+                aria-label={errorText}
+                className="grid size-8 shrink-0 cursor-pointer place-items-center rounded-lg text-destructive-ink transition-colors duration-150 hover:bg-destructive-soft"
+              >
+                <ErrorIcon className="size-5" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent side="top" className="max-w-60 text-xs text-destructive-ink" data-minutes-error="">
+              {errorText}
+            </PopoverContent>
+          </Popover>
+        </>
+      ) : view.changed ? (
+        <span className="size-2 shrink-0 rounded-full bg-accent" title={t('lateness.changed')}>
+          <span className="sr-only">{t('lateness.changed')}</span>
+        </span>
       ) : null}
     </div>
   );

@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import '@/test/dom-polyfills';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { cleanup, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -6,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { renderWithI18n } from '@/test/render';
-import { MoneyField, TextField } from './fields';
+import { MoneyField, SelectField, TextField } from './fields';
 import { Form } from './form';
 
 const schema = z.object({
@@ -57,5 +58,33 @@ describe('form fields', () => {
     expect(await screen.findAllByText('هذا الحقل مطلوب.')).toHaveLength(2);
     expect(screen.getByRole('textbox', { name: /Name/ }).getAttribute('aria-invalid')).toBe('true');
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+});
+
+function GroupForm() {
+  const form = useForm<{ group: string }>({ defaultValues: { group: '' } });
+  return (
+    <SelectField
+      control={form.control}
+      name="group"
+      label="Group"
+      options={[{ value: 'a', label: 'المجموعة الأولى' }]}
+    />
+  );
+}
+
+describe('select field direction', () => {
+  afterEach(cleanup);
+
+  it.each([
+    ['ar', 'rtl'],
+    ['en', 'ltr'],
+  ] as const)('%s: the trigger and its list follow the page direction (%s), never a forced LTR', async (locale, dir) => {
+    const user = userEvent.setup();
+    renderWithI18n(<GroupForm />, { locale });
+    const trigger = screen.getByRole('combobox', { name: /Group/ });
+    expect(trigger.getAttribute('dir')).toBe(dir);
+    await user.click(trigger);
+    expect((await screen.findByRole('listbox')).closest('[dir]')?.getAttribute('dir')).toBe(dir);
   });
 });

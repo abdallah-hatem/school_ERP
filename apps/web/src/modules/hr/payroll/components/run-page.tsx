@@ -2,7 +2,9 @@
 
 import {
   AdjustmentType,
+  PayrollFlag,
   PayrollStatus,
+  PenaltyStatus,
   type Department,
   type HrSettings,
   type PayrollLine,
@@ -11,12 +13,13 @@ import {
 } from '@school-erp/shared';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, useTransition } from 'react';
 import { callApi } from '@/lib/callApi';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-table/data-table';
 import { FilterSelect, SearchInput } from '@/shared/components/form/filter-controls';
 import { EmptyState } from '@/shared/components/layout/empty-state';
 import { PageHeader } from '@/shared/components/layout/page-header';
+import { BidiText } from '@/shared/components/ui/bidi-text';
 import { Button } from '@/shared/components/ui/button';
 import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { Money } from '@/shared/components/ui/figures';
@@ -32,6 +35,7 @@ import {
   NetPayIcon,
   PayrollIcon,
   PayslipIcon,
+  PendingIcon,
   RecalculateIcon,
   SearchIcon,
 } from '@/shared/components/ui/icons';
@@ -58,6 +62,8 @@ export interface RunPageProps {
   basePath: string;
   /** `/ar/settings` — the rules panel links there. */
   settingsHref: string;
+  /** `/ar/penalties` — the pending-penalties notice links to this month's pending ones. */
+  penaltiesHref: string;
   run: PayrollRun;
   departments: Department[];
   settings: HrSettings | null;
@@ -73,6 +79,7 @@ export interface RunPageProps {
 export function RunPage({
   basePath,
   settingsHref,
+  penaltiesHref,
   run: initialRun,
   departments,
   settings,
@@ -112,6 +119,11 @@ export function RunPage({
   const monthLabel = formatMonth(run.month, locale);
   const filtered = hasRunFilters(query);
   const notApplied = useMemo(() => notAppliedAdjustments(run.adjustments), [run.adjustments]);
+  const pendingPenaltyLines = useMemo(
+    () => run.lines.filter((line) => line.flags.includes(PayrollFlag.PENDING_PENALTIES)).length,
+    [run.lines],
+  );
+  const pendingTitleId = useId();
 
   const pageCount = Math.max(1, Math.ceil(run.lines.length / limit));
   const currentPage = Math.min(page, pageCount);
@@ -349,6 +361,28 @@ export function RunPage({
         }
       />
 
+      {draft && !approveError && pendingPenaltyLines > 0 ? (
+        // Told before Approve is pressed; the button still sends (the server decides, 409).
+        <div
+          role="note"
+          aria-labelledby={pendingTitleId}
+          className="bg-warning-soft text-warning-ink flex flex-wrap items-start gap-3 rounded-2xl px-4 py-3.5"
+        >
+          <PendingIcon className="mt-0.5 size-5 shrink-0" />
+          <div className="flex min-w-0 flex-1 basis-56 flex-col gap-0.5">
+            <p id={pendingTitleId} className="font-bold">
+              {t('payroll.approve.pendingTitle')}
+            </p>
+            <p className="text-sm">{t('payroll.approve.pendingBody', { count: formatCount(pendingPenaltyLines) })}</p>
+          </div>
+          <Button asChild size="sm" variant="secondary" className="cursor-pointer">
+            <Link href={`${penaltiesHref}?${new URLSearchParams({ month: run.month, status: PenaltyStatus.PENDING }).toString()}`}>
+              {t('payroll.approve.pendingLink')}
+            </Link>
+          </Button>
+        </div>
+      ) : null}
+
       {approveError && draft ? (
         <div
           role="alert"
@@ -522,7 +556,7 @@ export function RunPage({
                       )}
                     />
                     <span className="text-muted-foreground min-w-0 flex-1 basis-48 text-sm break-words">
-                      {a.reason}
+                      <BidiText>{a.reason}</BidiText>
                     </span>
                     <span className="text-muted-foreground text-xs">
                       {t('payroll.notApplied.employee', { name: `${nameIn(a, locale)} (${a.employeeCode})` })}

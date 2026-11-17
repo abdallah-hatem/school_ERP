@@ -55,6 +55,7 @@ function renderRun(props: Partial<RunPageProps> = {}, locale: Locale = 'en') {
     <RunPage
       basePath={`/${locale}/payroll`}
       settingsHref={`/${locale}/settings`}
+      penaltiesHref={`/${locale}/penalties`}
       run={r}
       departments={DEPARTMENTS}
       settings={SETTINGS}
@@ -125,6 +126,32 @@ describe('RunPage — approve', () => {
       }),
     );
     expect(apis.APPROVE_PAYROLL_RUN).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['en', 'ar'] as const)(
+    '%s: pending penalties are announced before Approve is pressed, with a link to the filtered penalties list',
+    (locale) => {
+      renderRun({ run: run({ lines: [MONA, SALMA] }) }, locale);
+      const notice = screen.getByRole('note');
+      expect(notice.textContent).toContain(
+        locale === 'en' ? 'Employees with pending penalties: 1.' : 'موظفون لديهم جزاءات معلّقة: 1.',
+      );
+      const link = within(notice).getByRole('link');
+      expect(link.getAttribute('href')).toBe(`/${locale}/penalties?month=2026-11&status=PENDING`);
+      // A notice, not a block: the button is still there to press.
+      expect(
+        (screen.getByRole('button', { name: locale === 'en' ? 'Approve payroll' : /اعتماد الرواتب/ }) as HTMLButtonElement)
+          .disabled,
+      ).toBe(false);
+    },
+  );
+
+  it('no pending-penalties notice when no line is flagged, nor on an approved run', () => {
+    const { unmount } = renderRun({ run: run({ lines: [MONA] }) });
+    expect(screen.queryByRole('note')).toBeNull();
+    unmount();
+    renderRun({ run: run({ lines: [SALMA], status: 'APPROVED', approvedAt: '2026-11-30T10:00:00.000Z' }) });
+    expect(screen.queryByRole('note')).toBeNull();
   });
 
   it('after approve: actions hidden, read-only, bank sheet enabled and payslips linked', async () => {

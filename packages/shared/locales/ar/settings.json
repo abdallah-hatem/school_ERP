@@ -189,6 +189,7 @@
     "emptyBody": "أضف مجموعة، ثم المخالفات التي تضمها.",
     "addViolation": "إضافة مخالفة",
     "editViolation": "تعديل {name}",
+    "editViolationTitle": "تعديل مخالفة",
     "retireViolation": "إيقاف {name}",
     "restoreViolation": "استعادة {name}",
     "retire": "إيقاف",
