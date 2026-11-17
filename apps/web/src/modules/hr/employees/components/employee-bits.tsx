@@ -35,7 +35,7 @@ export function EmployeeIdentity({
 export function EmployeeStatusPill({ status }: { status: EmployeeStatus }) {
   const { t } = useTranslation();
   return (
-    <StatusPill tone={status === EmployeeStatus.ACTIVE ? 'success' : 'neutral'}>
+    <StatusPill tone={status === EmployeeStatus.ACTIVE ? 'success' : 'neutral'} hollow={status !== EmployeeStatus.ACTIVE}>
       {t(`common.enums.employeeStatus.${status}`)}
     </StatusPill>
   );
