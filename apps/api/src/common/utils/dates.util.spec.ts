@@ -1,4 +1,12 @@
-import { fromIsoDate, isIsoDate, isMonth, todayIsoDate, toIsoDate } from './dates.util';
+import {
+  fromIsoDate,
+  isIsoDate,
+  isMonth,
+  monthDateRange,
+  monthOf,
+  todayIsoDate,
+  toIsoDate,
+} from './dates.util';
 
 describe('dates.util', () => {
   it('isIsoDate accepts real YYYY-MM-DD days only', () => {
@@ -19,6 +27,14 @@ describe('dates.util', () => {
     expect(isMonth('2026-1')).toBe(false);
     expect(isMonth('2026-11-01')).toBe(false);
     expect(isMonth(202611)).toBe(false);
+  });
+
+  it('monthOf gives the day’s month; monthDateRange spans it (December rolls the year)', () => {
+    expect(monthOf('2026-11-17')).toBe('2026-11');
+    expect(monthDateRange('2026-12')).toEqual({
+      gte: new Date('2026-12-01T00:00:00.000Z'),
+      lt: new Date('2027-01-01T00:00:00.000Z'),
+    });
   });
 
   it('round-trips through a UTC-midnight Date', () => {

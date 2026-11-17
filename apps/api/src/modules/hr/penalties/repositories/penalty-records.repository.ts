@@ -1,0 +1,204 @@
+import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { PenaltyStatus, type IsoDate } from '@school-erp/shared';
+import { BaseRepository } from '../../../../common/repositories/base.repository';
+import { fromIsoDate, monthDateRange, toIsoDate } from '../../../../common/utils/dates.util';
+import { DatabaseService } from '../../../../database/database.service';
+import { LEVEL_SELECT, type LevelData } from './penalty-catalogue.repository';
+
+const USER_REF = { select: { id: true, name: true } } as const;
+
+export const RECORD_SELECT = {
+  id: true,
+  employeeId: true,
+  violationId: true,
+  date: true,
+  status: true,
+  level: true,
+  action: true,
+  days: true,
+  note: true,
+  cancelReason: true,
+  createdAt: true,
+  employee: { select: { id: true, code: true, nameEn: true, nameAr: true } },
+  // The catalogue's current levels: a PENDING record is shown with them (§4).
+  violation: {
+    select: {
+      id: true,
+      nameEn: true,
+      nameAr: true,
+      levels: { select: LEVEL_SELECT, orderBy: { level: 'asc' } },
+    },
+  },
+  createdBy: USER_REF,
+  approvedBy: USER_REF,
+} satisfies Prisma.PenaltyRecordSelect;
+
+export type RecordRow = Prisma.PenaltyRecordGetPayload<{ select: typeof RECORD_SELECT }>;
+
+export interface RecordCreateData extends LevelData {
+  employeeId: string;
+  violationId: string;
+  date: IsoDate;
+  note: string | null;
+  createdById: string | null;
+}
+
+export interface RecordListFilter {
+  employeeId?: string;
+  /** `YYYY-MM`: records dated in that month. */
+  month?: string;
+  status?: PenaltyStatus;
+  search?: string;
+}
+
+/** One (employee, violation) pair whose approved records count toward a level. */
+export interface RepeatKey {
+  employeeId: string;
+  violationId: string;
+}
+
+export interface ApprovedDate extends RepeatKey {
+  date: IsoDate;
+}
+
+/**
+ * Recorded penalties (§4). Never deleted. Status changes are conditional updates
+ * (`where status = …`), so two concurrent approvals or cancels can't both succeed.
+ */
+@Injectable()
+export class PenaltyRecordsRepository extends BaseRepository<
+  RecordRow,
+  RecordCreateData,
+  Prisma.PenaltyRecordUncheckedUpdateInput
+> {
+  constructor(databaseService: DatabaseService) {
+    super(databaseService, 'penaltyRecord');
+  }
+
+  private get db(): DatabaseService {
+    return this.databaseService;
+  }
+
+  list(page: number | undefined, limit: number | undefined, filter: RecordListFilter) {
+    const where: Prisma.PenaltyRecordWhereInput = {};
+    if (filter.employeeId) where.employeeId = filter.employeeId;
+    if (filter.status) where.status = filter.status;
+    if (filter.month) where.date = monthDateRange(filter.month);
+    if (filter.search) {
+      const contains = { contains: filter.search, mode: 'insensitive' as const };
+      where.OR = [
+        { employee: { code: contains } },
+        { employee: { nameEn: contains } },
+        { employee: { nameAr: contains } },
+        { violation: { nameEn: contains } },
+        { violation: { nameAr: contains } },
+      ];
+    }
+    return this.findAllWithPagination(page, limit, undefined, undefined, where, {
+      select: RECORD_SELECT,
+      orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+    });
+  }
+
+  findOne(id: string): Promise<RecordRow | null> {
+    return this.db.penaltyRecord.findUnique({ where: { id }, select: RECORD_SELECT });
+  }
+
+  /** Status only, for deciding which error a failed status change gets. */
+  async findStatus(id: string): Promise<{ status: PenaltyStatus; date: IsoDate } | null> {
+    const row = await this.db.penaltyRecord.findUnique({
+      where: { id },
+      select: { status: true, date: true },
+    });
+    return row && { status: row.status, date: toIsoDate(row.date) };
+  }
+
+  createRecord(data: RecordCreateData): Promise<RecordRow> {
+    return this.db.penaltyRecord.create({
+      data: { ...data, date: fromIsoDate(data.date), status: PenaltyStatus.PENDING },
+      select: RECORD_SELECT,
+    });
+  }
+
+  /** Dates of APPROVED records for one pair with `from <= date < before`. */
+  async approvedDates(key: RepeatKey, from: IsoDate, before: IsoDate): Promise<IsoDate[]> {
+    const rows = await this.db.penaltyRecord.findMany({
+      where: {
+        employeeId: key.employeeId,
+        violationId: key.violationId,
+        status: PenaltyStatus.APPROVED,
+        date: { gte: fromIsoDate(from), lt: fromIsoDate(before) },
+      },
+      select: { date: true },
+    });
+    return rows.map((r) => toIsoDate(r.date));
+  }
+
+  /** APPROVED records for several pairs dated before `before` (one query for a page of rows). */
+  async approvedDatesForKeys(keys: readonly RepeatKey[], before: IsoDate): Promise<ApprovedDate[]> {
+    if (keys.length === 0) return [];
+    const rows = await this.db.penaltyRecord.findMany({
+      where: {
+        status: PenaltyStatus.APPROVED,
+        date: { lt: fromIsoDate(before) },
+        OR: keys.map((k) => ({ employeeId: k.employeeId, violationId: k.violationId })),
+      },
+      select: { employeeId: true, violationId: true, date: true },
+    });
+    return rows.map((r) => ({ ...r, date: toIsoDate(r.date) }));
+  }
+
+  /**
+   * Approves a PENDING record, fixing the level `resolve` computes from the prior approved count.
+   * Approvals of the same employee + violation are serialised with a transaction-level advisory
+   * lock, so two approvals can't both read the same count. Returns false when the record was no
+   * longer PENDING.
+   */
+  async approve(
+    id: string,
+    key: RepeatKey,
+    window: { from: IsoDate; before: IsoDate },
+    approvedById: string | null,
+    resolve: (priorCount: number) => LevelData,
+  ): Promise<boolean> {
+    return this.db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`penalty:${key.employeeId}:${key.violationId}`}))`;
+      const priorCount = await tx.penaltyRecord.count({
+        where: {
+          employeeId: key.employeeId,
+          violationId: key.violationId,
+          status: PenaltyStatus.APPROVED,
+          date: { gte: fromIsoDate(window.from), lt: fromIsoDate(window.before) },
+        },
+      });
+      const fixed = resolve(priorCount);
+      const { count } = await tx.penaltyRecord.updateMany({
+        where: { id, status: PenaltyStatus.PENDING },
+        data: {
+          level: fixed.level,
+          action: fixed.action,
+          days: fixed.days,
+          status: PenaltyStatus.APPROVED,
+          approvedById,
+          approvedAt: new Date(),
+        },
+      });
+      return count === 1;
+    });
+  }
+
+  /** Cancels a PENDING or APPROVED record. Returns false when it was already CANCELLED. */
+  async cancel(id: string, reason: string, cancelledById: string | null): Promise<boolean> {
+    const { count } = await this.db.penaltyRecord.updateMany({
+      where: { id, status: { in: [PenaltyStatus.PENDING, PenaltyStatus.APPROVED] } },
+      data: {
+        status: PenaltyStatus.CANCELLED,
+        cancelReason: reason,
+        cancelledById,
+        cancelledAt: new Date(),
+      },
+    });
+    return count === 1;
+  }
+}

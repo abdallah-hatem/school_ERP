@@ -11,6 +11,12 @@ import { DepartmentsService } from './lists/services/departments.service';
 import { JobTitlesService } from './lists/services/job-titles.service';
 import { MonthLockService } from './month-lock/month-lock.service';
 import { MonthLockRepository } from './month-lock/repositories/month-lock.repository';
+import { PenaltiesController } from './penalties/controllers/penalties.controller';
+import { PenaltyCatalogueController } from './penalties/controllers/penalty-catalogue.controller';
+import { PenaltyCatalogueRepository } from './penalties/repositories/penalty-catalogue.repository';
+import { PenaltyRecordsRepository } from './penalties/repositories/penalty-records.repository';
+import { PenaltyCatalogueService } from './penalties/services/penalty-catalogue.service';
+import { PenaltyRecordsService } from './penalties/services/penalty-records.service';
 import { HrSettingsController } from './settings/hr-settings.controller';
 import { HrSettingsService } from './settings/hr-settings.service';
 import { LatenessController } from './staff-attendance/controllers/lateness.controller';
@@ -32,6 +38,9 @@ import { LatenessService } from './staff-attendance/services/lateness.service';
     EmployeesController,
     // staff attendance — monthly lateness (T8)
     LatenessController,
+    // penalties (T7)
+    PenaltyCatalogueController,
+    PenaltiesController,
   ],
   providers: [
     // settings (T6)
@@ -49,6 +58,11 @@ import { LatenessService } from './staff-attendance/services/lateness.service';
     // staff attendance — monthly lateness (T8)
     LatenessRepository,
     LatenessService,
+    // penalties (T7)
+    PenaltyCatalogueRepository,
+    PenaltyCatalogueService,
+    PenaltyRecordsRepository,
+    PenaltyRecordsService,
   ],
   exports: [
     // lists + employees (T5)

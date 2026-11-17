@@ -8,6 +8,17 @@ export function isMonth(value: unknown): value is Month {
   return typeof value === 'string' && MONTH.test(value);
 }
 
+/** The `YYYY-MM` month a `YYYY-MM-DD` day falls in (its payroll month). */
+export function monthOf(date: IsoDate): Month {
+  return date.slice(0, 7);
+}
+
+/** A `YYYY-MM` month as a `@db.Date` range: `{ gte: 1st of month, lt: 1st of next month }`. */
+export function monthDateRange(month: Month): { gte: Date; lt: Date } {
+  const [y, m] = month.split('-').map(Number) as [number, number];
+  return { gte: new Date(Date.UTC(y, m - 1, 1)), lt: new Date(Date.UTC(y, m, 1)) };
+}
+
 /** True for a real calendar day written `YYYY-MM-DD` (rejects `2026-02-30`). */
 export function isIsoDate(value: unknown): value is IsoDate {
   if (typeof value !== 'string') return false;
