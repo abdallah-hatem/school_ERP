@@ -129,6 +129,9 @@ phase live in `docs/build-log/`.
 - 2026-11-17 — T27 audit foundation merged → #48. Branch rules (owner): `dev` takes PRs with green CI
   and no approval; `testing` and `production` need green CI and the owner's approval. P1 permissions
   skeleton started; Tamer and Waleed are invited once P1 is merged.
+- 2026-11-17 — P1 permissions skeleton merged → #50: 29 typed keys, `@Permission` / `@Public` /
+  `@SignedIn`, a closed-by-default guard, CI scan, `can()` in the web app; HR admin holds every key.
+  Ready for Tamer and Waleed (T28/T29).
 
 ## Next up
 
@@ -139,8 +142,13 @@ phase live in `docs/build-log/`.
 - Write the settings history in the same transaction as the change (outbox), instead of right after.
 
 - Hosting the demo on the Contabo server (owner: later; local demo is the fallback).
-- Roles and permissions: spec `docs/specs/2026-11-17-roles-permissions.md` (GUESS answers). P1 skeleton
-  right after T27, before Tamer and Waleed start HR work; P2–P4 in core in parallel.
+- Roles and permissions P2–P4 (spec `docs/specs/2026-11-17-roles-permissions.md`, GUESS answers): roles
+  stored in the database replacing `permissionsFor`; scopes + `scopeFor`; salary filtering on
+  `hr.employees.view_salary`; Users, Roles and My account screens (mockups first); read-only settings
+  for view-only users; gate payroll adjust on `hr.payroll.adjust`; what Home shows without
+  `hr.dashboard.view`.
+- Audit log T28 (core + HR people) and T29 (penalties, lateness, payroll): first tasks for Tamer and
+  Waleed. Then T30 screens (option B; Settings history becomes a link to Activity) and T31 verify.
 - Optional: server-side paging for lateness (loads the whole month today) and column sorting.
 - Employee profile shows the list's skeleton while loading (`employees/loading.tsx` wraps `[id]`).
 - The stage "None" band is detected by its English name; key it by an id instead.
