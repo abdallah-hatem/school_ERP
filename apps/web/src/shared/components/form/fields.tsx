@@ -7,7 +7,15 @@ import { Calendar } from '@/shared/components/ui/calendar';
 import { CalendarIcon } from '@/shared/components/ui/icons';
 import { Input, controlClasses } from '@/shared/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/components/ui/select';
 import { Switch } from '@/shared/components/ui/switch';
 import { Textarea } from '@/shared/components/ui/textarea';
 import { formatDate, formatMoney, fromIsoDate, parseMoney, toIsoDate } from '@/shared/lib/format';
@@ -352,6 +360,14 @@ export interface SelectOption {
   disabled?: boolean;
 }
 
+/** A titled section of options (a heading the person can't pick, then its items). */
+export interface SelectOptionGroup {
+  /** Stable key for the group. */
+  key: string;
+  label: string;
+  options: SelectOption[];
+}
+
 export function SelectField<T extends FieldValues>({
   control,
   name,
@@ -361,10 +377,13 @@ export function SelectField<T extends FieldValues>({
   disabled,
   className,
   placeholder,
-  options,
+  options = [],
+  groups,
   emptyText,
 }: BaseFieldProps<T> & {
-  options: SelectOption[];
+  options?: SelectOption[];
+  /** Options under headings, shown after `options` (e.g. violations by catalogue group). */
+  groups?: SelectOptionGroup[];
   /** Trigger text with nothing chosen, e.g. "Choose a department". */
   placeholder?: string;
   /** What to show when there are no options (and where the first one is made). */
@@ -394,6 +413,16 @@ export function SelectField<T extends FieldValues>({
               <SelectItem key={option.value} value={option.value} disabled={option.disabled}>
                 {option.label}
               </SelectItem>
+            ))}
+            {groups?.map((group) => (
+              <SelectGroup key={group.key}>
+                <SelectLabel>{group.label}</SelectLabel>
+                {group.options.map((option) => (
+                  <SelectItem key={option.value} value={option.value} disabled={option.disabled}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
             ))}
           </SelectContent>
         </Select>

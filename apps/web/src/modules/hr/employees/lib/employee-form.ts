@@ -17,7 +17,7 @@ import {
 } from '@school-erp/shared';
 import { z } from 'zod';
 import type { SelectOption } from '@/shared/components/form/fields';
-import { toIsoDate } from '@/shared/lib/format';
+import { todayIso } from '@/shared/lib/format';
 import { localName, type Locale } from '@/shared/lib/i18n';
 import { isValidPhone } from '@/shared/lib/phone';
 
@@ -35,7 +35,7 @@ const MAX_PIASTRES = 2_147_483_647;
 const REQUIRED = 'ui.form.required';
 const TOO_LONG = 'employees.errors.tooLong';
 
-export const todayIso = (): IsoDate => toIsoDate(new Date());
+export { todayIso };
 
 const requiredText = (max: number) =>
   z.string().trim().min(1, 'employees.errors.nameRequired').max(max, TOO_LONG);

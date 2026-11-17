@@ -18,7 +18,10 @@ import { EmployeeStatusAction } from './employee-status-action';
  * The profile's sections. Each is a route under `/employees/[id]` (`''` = details). Penalties (T12)
  * and payroll (T14) add their entries here with their own pages.
  */
-export const PROFILE_TABS = [{ key: 'details', labelKey: 'employees.profile.details', segment: '' }] as const satisfies readonly {
+export const PROFILE_TABS = [
+  { key: 'details', labelKey: 'employees.profile.details', segment: '' },
+  { key: 'penalties', labelKey: 'common.nav.penalties', segment: 'penalties' },
+] as const satisfies readonly {
   key: string;
   labelKey: string;
   segment: string;
