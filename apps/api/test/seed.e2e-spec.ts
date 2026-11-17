@@ -208,12 +208,19 @@ describe('Seed (e2e)', () => {
     });
     const approved = records.filter((r) => r.status === 'APPROVED');
     const iso = (d: Date) => d.toISOString().slice(0, 10);
+    // Every record's place in the repeat order: date, then when recorded, then id (§4).
+    const positions = records.map((r) => ({
+      id: r.id,
+      employeeId: r.employeeId,
+      violationId: r.violationId,
+      status: r.status,
+      date: iso(r.date),
+      recordedAt: r.createdAt,
+    }));
 
     for (const r of approved) {
-      const earlier = approved
-        .filter((o) => o.employeeId === r.employeeId && o.violationId === r.violationId)
-        .map((o) => iso(o.date));
-      const prior = countPriorInWindow(iso(r.date), window, earlier);
+      const target = positions.find((p) => p.id === r.id)!;
+      const prior = countPriorInWindow(target, window, positions);
       expect(r.level).toBe(penaltyLevel(prior, r.violation.levels));
       const catalogueLevel = r.violation.levels.find((l) => l.level === r.level)!;
       expect(r.action).toBe(catalogueLevel.action);
@@ -221,6 +228,19 @@ describe('Seed (e2e)', () => {
     // The demo really repeats: someone reached level 3, someone else level 2.
     expect(Math.max(...approved.map((r) => r.level))).toBe(3);
     expect(approved.filter((r) => r.level === 2).length).toBeGreaterThanOrEqual(2);
+    // Same date, same violation, same employee: the one recorded first is level 1, the next 2.
+    const sameDay = approved
+      .filter((r) =>
+        approved.some(
+          (o) =>
+            o.id !== r.id &&
+            o.employeeId === r.employeeId &&
+            o.violationId === r.violationId &&
+            iso(o.date) === iso(r.date),
+        ),
+      )
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    expect(sameDay.map((r) => r.level)).toEqual([1, 2]);
   });
 
   it('The seeded November run recalculates with penalty, lateness and adjustment lines, and PENDING_PENALTIES where penalties are pending', async () => {

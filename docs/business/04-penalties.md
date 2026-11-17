@@ -23,8 +23,12 @@
   (not in the future), and an optional note.
 - **DECIDED** — The system works out the **level**: 1 + the number of **approved** penalties for the
   same violation and the same employee inside the repetition window.
-- **GUESS** — "Earlier" means an earlier **violation date**, not an earlier approval: only approved
-  penalties dated before this one count. The level is computed again at approval and then fixed.
+- **DECIDED** (owner, 2026-11-18) — "Earlier" follows the **violation date**, then **when the
+  penalty was recorded**: an approved penalty counts if it is dated before this one, or on the same
+  date and recorded before it. So four "Late to class" on one day, recorded and approved in order,
+  are levels 1, 2, 3 and 4. A penalty not recorded yet (the preview) comes after every penalty
+  already on its date. Pending and cancelled penalties never count. The level is computed again at
+  approval and then fixed (approved levels are never recomputed).
 - **GUESS** — The repetition window is the **contract year** (1 June – 31 May). It's a setting (§7).
   The rolling-12-months option starts on the same date one year earlier, inclusive.
 - **DECIDED** — A new penalty starts as **pending**. HR **approves** it, or **cancels** it with a

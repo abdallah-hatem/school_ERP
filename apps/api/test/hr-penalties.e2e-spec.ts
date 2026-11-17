@@ -375,9 +375,10 @@ describe('HR penalty catalogue and records (e2e)', () => {
       level: 1,
       priorCount: 0,
     });
-    expect((await preview(emp, v, '2025-05-31').expect(200)).body.data.priorCount).toBe(0);
-    await approvedOn(emp, v, '2024-06-01');
+    // Same date: a not-yet-recorded penalty comes after the approved one (§4).
     expect((await preview(emp, v, '2025-05-31').expect(200)).body.data.priorCount).toBe(1);
+    await approvedOn(emp, v, '2024-06-01');
+    expect((await preview(emp, v, '2025-05-31').expect(200)).body.data.priorCount).toBe(2);
   });
 
   it('CALENDAR_YEAR: approved on 31 Dec doesn’t count on 1 Jan; ROLLING_12_MONTHS: approved 2025-11-17 counts on 2026-11-16, not on 2026-11-18', async () => {
@@ -386,7 +387,8 @@ describe('HR penalty catalogue and records (e2e)', () => {
     await approvedOn(emp, v, '2024-12-31');
     await setWindow('CALENDAR_YEAR');
     expect((await preview(emp, v, '2025-01-01').expect(200)).body.data.priorCount).toBe(0);
-    expect((await preview(emp, v, '2024-12-31').expect(200)).body.data.priorCount).toBe(0);
+    // Same date: the approved 31 Dec one counts for a new 31 Dec penalty (§4).
+    expect((await preview(emp, v, '2024-12-31').expect(200)).body.data.priorCount).toBe(1);
 
     const emp2 = await employee();
     await approvedOn(emp2, v, '2025-11-17');
@@ -422,13 +424,49 @@ describe('HR penalty catalogue and records (e2e)', () => {
     expect((await getRecord(b10.id)).level).toBe(1);
   });
 
-  it('Two records with the same violation date: approve one then the other → both level 1', async () => {
+  it('Same violation date: record and approve three in order → levels 1, 2, 3; the preview counts them all', async () => {
     const emp = await employee();
     const v = await repeatingViolation();
     const first = await recordOk(emp, v, '2025-11-05');
     const second = await recordOk(emp, v, '2025-11-05');
+    const third = await recordOk(emp, v, '2025-11-05');
     expect((await approveOk(first.id)).level).toBe(1);
+    expect((await approveOk(second.id)).level).toBe(2);
+    expect((await approveOk(third.id)).level).toBe(3);
+    // Not recorded yet: it would come after all three on that date.
+    expect((await preview(emp, v, '2025-11-05').expect(200)).body.data).toMatchObject({
+      level: 4,
+      priorCount: 3,
+    });
+  });
+
+  it('Same violation date, approved out of order: the later-recorded one approved first stays level 1; a pending one shows the count of those recorded before it', async () => {
+    const emp = await employee();
+    const v = await repeatingViolation();
+    const first = await recordOk(emp, v, '2025-11-06');
+    const second = await recordOk(emp, v, '2025-11-06');
+    const third = await recordOk(emp, v, '2025-11-06');
+    // Recorded after `first`, so `first` (still pending) doesn't count either way.
     expect((await approveOk(second.id)).level).toBe(1);
+    // `first` was recorded before `second`: the approved `second` doesn't count for it.
+    expect((await getRecord(first.id)).level).toBe(1);
+    // `third` was recorded after `second`: shown (pending) as level 2.
+    expect((await getRecord(third.id)).level).toBe(2);
+    expect((await approveOk(first.id)).level).toBe(1);
+    expect((await approveOk(third.id)).level).toBe(3);
+    // Fixed at approval: `second` is not recomputed.
+    expect((await getRecord(second.id)).level).toBe(1);
+  });
+
+  it('Same date: a cancelled or another violation’s record recorded earlier doesn’t count', async () => {
+    const emp = await employee();
+    const v = await violation();
+    const otherV = await violation();
+    const cancelled = await approvedOn(emp, v, '2025-11-07');
+    await cancel(cancelled.id, 'entered by mistake').expect(200);
+    await approvedOn(emp, otherV, '2025-11-07');
+    const rec = await recordOk(emp, v, '2025-11-07');
+    expect((await approveOk(rec.id)).level).toBe(1);
   });
 
   it('"Doubles on repeat" note: level-5 record with 7 prior → level-5 days, not doubled', async () => {

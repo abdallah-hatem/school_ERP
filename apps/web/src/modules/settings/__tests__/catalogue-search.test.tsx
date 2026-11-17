@@ -40,7 +40,7 @@ const catalogue: PenaltyGroup[] = [
     nameAr: 'المخالفات العامة',
     sortOrder: 1,
     isActive: true,
-    violations: [v('v-gum', 'Chewing gum', 'مضغ اللبان'), v('v-phone', 'Using a phone in class', 'استخدام الهاتف في الفصل')],
+    violations: [v('v-gum', 'Chewing gum', 'مضغ العلكة'), v('v-phone', 'Using a phone in a lesson', 'استعمال الجوال في الدرس')],
   },
   {
     id: 'g-edu',
@@ -48,7 +48,7 @@ const catalogue: PenaltyGroup[] = [
     nameAr: 'المخالفات التعليمية',
     sortOrder: 2,
     isActive: true,
-    violations: [v('v-late', 'Late to class', 'التأخر عن الحصة', false), v('v-absent', 'Not attending class', 'عدم حضور الحصة')],
+    violations: [v('v-late', 'Late to lesson', 'التأخير عن الدرس', false), v('v-absent', 'Skipping a lesson', 'التغيب عن الدرس')],
   },
 ];
 
@@ -66,9 +66,9 @@ describe('searchCatalogue', () => {
       ['g-gen', ['v-phone']],
     ]);
     // Arabic, typed without the hamza.
-    expect(searchCatalogue(catalogue, 'التاخر').map((m) => m.group.violations.map((x) => x.id))).toEqual([['v-late']]);
-    // "class" is in two violations of one group.
-    expect(searchCatalogue(catalogue, 'CLASS').map((m) => m.group.violations.length)).toEqual([1, 2]);
+    expect(searchCatalogue(catalogue, 'التاخير').map((m) => m.group.violations.map((x) => x.id))).toEqual([['v-late']]);
+    // "lesson" is in one violation of the first group and two of the second.
+    expect(searchCatalogue(catalogue, 'LESSON').map((m) => m.group.violations.length)).toEqual([1, 2]);
     // The group's own name: all its violations.
     expect(searchCatalogue(catalogue, 'التعليمية')).toEqual([{ group: catalogue[1], groupMatched: true }]);
     expect(searchCatalogue(catalogue, 'nothing like this')).toEqual([]);
@@ -76,7 +76,7 @@ describe('searchCatalogue', () => {
   });
 
   it('highlight parts: the first plain occurrence, case-insensitive; none when only folding matched', () => {
-    expect(highlightParts('Late to class', 'CLASS')).toEqual(['Late to ', 'class', '']);
+    expect(highlightParts('Late to lesson', 'LESSON')).toEqual(['Late to ', 'lesson', '']);
     expect(highlightParts('أحمد', 'احمد')).toBeNull();
     expect(highlightParts('anything', '')).toBeNull();
   });
@@ -89,13 +89,13 @@ describe('Penalty catalogue search', () => {
     renderSettings(<CatalogueSection />);
     await screen.findByText('General violations');
 
-    await user.type(search(), 'class');
+    await user.type(search(), 'lesson');
     // Both groups have a match, so both open by themselves.
     expect(groupHeader('General violations').getAttribute('aria-expanded')).toBe('true');
     expect(groupHeader('Educational violations').getAttribute('aria-expanded')).toBe('true');
     expect(screen.queryByText('Chewing gum')).toBeNull();
     expect(screen.getByText('Late to', { exact: false })).toBeTruthy();
-    expect(screen.getAllByText('class', { selector: 'mark' }).length).toBeGreaterThanOrEqual(3);
+    expect(screen.getAllByText('lesson', { selector: 'mark' }).length).toBeGreaterThanOrEqual(3);
     // The header still says how many the group holds, then how many match.
     expect(within(groupHeader('General violations')).getByText(/2 violations · 1 matching/)).toBeTruthy();
     // Adding a violation waits until the search is cleared.
@@ -119,21 +119,21 @@ describe('Penalty catalogue search', () => {
     await screen.findByText('المخالفات العامة');
     const box = search('البحث في المخالفات');
 
-    await user.type(box, 'اللبان');
-    expect(screen.getByText('اللبان', { selector: 'mark' })).toBeTruthy();
-    expect(screen.queryByText('استخدام الهاتف في الفصل')).toBeNull();
+    await user.type(box, 'العلكة');
+    expect(screen.getByText('العلكة', { selector: 'mark' })).toBeTruthy();
+    expect(screen.queryByText('استعمال الجوال في الدرس')).toBeNull();
     expect(screen.queryByText('المخالفات التعليمية')).toBeNull();
 
     // An English name on the Arabic screen finds it too (its English name shows under it).
     await user.clear(box);
     await user.type(box, 'phone');
-    expect(screen.getByText('استخدام الهاتف في الفصل')).toBeTruthy();
+    expect(screen.getByText('استعمال الجوال في الدرس')).toBeTruthy();
 
     // A group's name: the whole group.
     await user.clear(box);
     await user.type(box, 'التعليمية');
-    expect(screen.getByText('التأخر عن الحصة')).toBeTruthy();
-    expect(screen.getByText('عدم حضور الحصة')).toBeTruthy();
+    expect(screen.getByText('التأخير عن الدرس')).toBeTruthy();
+    expect(screen.getByText('التغيب عن الدرس')).toBeTruthy();
 
     await user.clear(box);
     await user.type(box, 'لا شيء يطابق');
@@ -173,7 +173,7 @@ describe('Once per day (§4)', () => {
     const user = userEvent.setup();
     api.GET_PENALTY_GROUPS.mockImplementation(() => ok(catalogue));
     renderSettings(<CatalogueSection />);
-    await user.type(await screen.findByRole('searchbox', { name: 'Search violations' }), 'class');
+    await user.type(await screen.findByRole('searchbox', { name: 'Search violations' }), 'lesson');
     expect(screen.getAllByText('Can repeat in a day')).toHaveLength(1);
     const lateRow = screen.getByText('Late to', { exact: false }).closest('li')!;
     expect(within(lateRow).getByText('Can repeat in a day')).toBeTruthy();
@@ -189,7 +189,7 @@ describe('Once per day (§4)', () => {
     renderSettings(<CatalogueSection />);
     await user.click(await screen.findByRole('button', { name: /^Educational violations/ }));
 
-    await chooseRowAction(user, 'Late to class', 'Edit');
+    await chooseRowAction(user, 'Late to lesson', 'Edit');
     let dialog = await screen.findByRole('dialog', { name: 'Edit violation' });
     const toggle = within(dialog).getByRole('switch', { name: 'Once per day' });
     expect(toggle.getAttribute('aria-checked')).toBe('false');
@@ -213,7 +213,7 @@ describe('Once per day (§4)', () => {
     renderSettings(<CatalogueSection />, 'ar');
     await user.click(await screen.findByRole('button', { name: /^المخالفات التعليمية/ }));
     expect(screen.getByText('قد تتكرر في اليوم')).toBeTruthy();
-    const lateRow = screen.getByText('التأخر عن الحصة').closest('li')!;
+    const lateRow = screen.getByText('التأخير عن الدرس').closest('li')!;
     await user.click(within(lateRow).getByRole('button'));
     await user.click(await screen.findByRole('menuitem', { name: 'تعديل' }));
     const dialog = await screen.findByRole('dialog');
