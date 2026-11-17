@@ -35,7 +35,6 @@ function makeService(stored: Array<{ key: string; value: unknown }> = []) {
       calls.push('audit');
       return Promise.resolve();
     }),
-    listChanges: jest.fn(),
   };
   // The transaction just runs its callback; a thrown error is what rolls it back.
   const txHost = {
@@ -185,67 +184,5 @@ describe('SettingsService', () => {
         changes: [{ field: 'school.logoUrl', before: null, after: logoUrl }],
       }),
     );
-  });
-
-  it('history: one item per changed key, the scope from the action, the first key keeps the entry id', async () => {
-    const { service, audit } = makeService();
-    const at = new Date('2026-11-17T10:00:00.000Z');
-    const row = (ord: number, field: string, action = 'core.settings.update') => ({
-      id: 'e1',
-      action,
-      actorId: 'u1',
-      actorName: 'Mona',
-      at,
-      ord,
-      change: { field, before: 'a', after: 'b' },
-    });
-    audit.listChanges.mockResolvedValueOnce({
-      data: [
-        row(1, 'school.workStart'),
-        row(2, 'school.workEnd'),
-        {
-          ...row(1, 'hr.departments', 'hr.department.update'),
-          id: 'e2',
-          actorId: null,
-          actorName: null,
-        },
-      ],
-      total: 3,
-      page: 1,
-      limit: 20,
-      hasNextPage: false,
-      hasPreviousPage: false,
-    });
-    const page = await service.listHistory(1, 20);
-    expect(page.data).toEqual([
-      {
-        id: 'e1',
-        scope: 'school',
-        key: 'school.workStart',
-        oldValue: 'a',
-        newValue: 'b',
-        changedBy: { id: 'u1', name: 'Mona' },
-        changedAt: at.toISOString(),
-      },
-      {
-        id: 'e1:2',
-        scope: 'school',
-        key: 'school.workEnd',
-        oldValue: 'a',
-        newValue: 'b',
-        changedBy: { id: 'u1', name: 'Mona' },
-        changedAt: at.toISOString(),
-      },
-      {
-        id: 'e2',
-        scope: 'lists',
-        key: 'hr.departments',
-        oldValue: 'a',
-        newValue: 'b',
-        changedBy: null,
-        changedAt: at.toISOString(),
-      },
-    ]);
-    expect(page.total).toBe(3);
   });
 });

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '@/test/dom-polyfills';
-import type { ListItem, PenaltyGroup, SettingChangeItem } from '@school-erp/shared';
+import type { ListItem, PenaltyGroup } from '@school-erp/shared';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -9,7 +9,6 @@ const api = vi.hoisted(() => ({
   GET_LIST_ITEMS: vi.fn(),
   CREATE_LIST_ITEM: vi.fn(),
   UPDATE_LIST_ITEM: vi.fn(),
-  GET_SETTINGS_HISTORY: vi.fn(),
   GET_PENALTY_GROUPS: vi.fn(),
   CREATE_PENALTY_GROUP: vi.fn(),
   UPDATE_PENALTY_GROUP: vi.fn(),
@@ -21,7 +20,6 @@ import { chooseRowAction, menuItemNames, openRowActions, rowActionsButton } from
 vi.mock('next/navigation', () => ({ redirect: vi.fn() }));
 
 import { CatalogueSection } from '../components/catalogue-section';
-import { HistorySection } from '../components/history-section';
 import { ListManager } from '../components/list-manager';
 import { deferred, ok, renderSettings } from './helpers';
 
@@ -252,50 +250,5 @@ describe('Managed lists (stages, departments, job titles)', () => {
     renderSettings(<ListManager kind="stages" />);
     expect((await screen.findAllByText('No stages yet'))[0]).toBeTruthy();
     expect(screen.getAllByRole('button', { name: 'Add stage' }).length).toBeGreaterThan(1);
-  });
-});
-
-describe('Change history', () => {
-  const rows: SettingChangeItem[] = [
-    {
-      id: 'h1',
-      scope: 'hr',
-      key: 'hr.payroll.dayDivisor',
-      oldValue: 30,
-      newValue: 26,
-      changedBy: { id: 'u1', name: 'Rania Saeed' },
-      changedAt: '2026-11-17T09:05:00Z',
-    },
-    {
-      id: 'h2',
-      scope: 'school',
-      key: 'school.workingDays',
-      oldValue: ['SUNDAY', 'MONDAY'],
-      newValue: ['SUNDAY'],
-      changedBy: null,
-      changedAt: '2026-11-16T09:05:00Z',
-    },
-  ];
-
-  it('lists what changed, old → new, who; the next page is requested with page 2', async () => {
-    const user = userEvent.setup();
-    api.GET_SETTINGS_HISTORY.mockImplementation(({ page }: { page: number }) =>
-      ok(page === 1 ? rows : [], { total: 25, page, limit: 10 }),
-    );
-    renderSettings(<HistorySection />);
-    expect((await screen.findAllByText('Day value divisor'))[0]).toBeTruthy();
-    expect(screen.getAllByText('Rania Saeed')[0]).toBeTruthy();
-    expect(screen.getAllByText('Sunday, Monday')[0]).toBeTruthy();
-    expect(screen.getAllByText('System')[0]).toBeTruthy();
-    expect(api.GET_SETTINGS_HISTORY).toHaveBeenCalledWith({ page: 1, limit: 10 });
-
-    await user.click(screen.getAllByRole('button', { name: 'Next page' })[0]!);
-    await waitFor(() => expect(api.GET_SETTINGS_HISTORY).toHaveBeenLastCalledWith({ page: 2, limit: 10 }));
-  });
-
-  it('no changes yet shows the empty state', async () => {
-    api.GET_SETTINGS_HISTORY.mockImplementation(() => ok([], { total: 0, page: 1, limit: 10 }));
-    renderSettings(<HistorySection />, 'ar');
-    expect((await screen.findAllByText('لا توجد تغييرات بعد'))[0]).toBeTruthy();
   });
 });

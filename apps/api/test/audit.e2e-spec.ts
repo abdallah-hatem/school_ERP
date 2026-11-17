@@ -286,6 +286,18 @@ describe('audit log (e2e)', () => {
 
       const byAction = await http(app).get(`/audit?q=${q}&action=hr.employee.create`).expect(200);
       expect(byAction.body.data).toHaveLength(1);
+      // Several actions (any of them): comma-separated or repeated.
+      expect(
+        (await http(app).get(`/audit?q=${q}&action=hr.employee.create,hr.employee.update`).expect(200))
+          .body.meta.total,
+      ).toBe(2);
+      expect(
+        (
+          await http(app)
+            .get(`/audit?q=${q}&action=hr.employee.create&action=core.auth.sign_in`)
+            .expect(200)
+        ).body.meta.total,
+      ).toBe(1);
       expect((await http(app).get(`/audit?q=${q}&module=hr`).expect(200)).body.meta.total).toBe(2);
       expect((await http(app).get(`/audit?q=${q}&module=core`).expect(200)).body.meta.total).toBe(
         0,
@@ -322,6 +334,8 @@ describe('audit log (e2e)', () => {
       ['limit 0', 'limit=0'],
       ['page 0', 'page=0'],
       ['unknown action', 'action=hr.employee.delete'],
+      ['an unknown action among known ones', 'action=hr.employee.create,hr.employee.delete'],
+      ['an empty action list', 'action=,'],
       ['unknown module', 'module=fees'],
       ['actorId not a uuid', 'actorId=abc'],
       ['from not a date', 'from=yesterday'],
@@ -361,6 +375,105 @@ describe('audit log (e2e)', () => {
       const res = await http(app).get(`/audit/records/employee/${a}`).expect(200);
       expect(res.body.data.every((e: AuditEntry) => e.entityId === a)).toBe(true);
       expect(res.body.meta.total).toBe(2);
+    });
+
+    it('filters by changed field and by person; lists the fields the record changed', async () => {
+      const id = `rec-f-${Date.now()}`;
+      await http(app).post(`/__audit-probe/two/${id}?label=F`).expect(201);
+
+      const salary = await http(app).get(`/audit/records/employee/${id}?field=basicSalary`).expect(200);
+      expect(salary.body.data.map((e: AuditEntry) => e.action)).toEqual(['hr.employee.update']);
+      const name = await http(app).get(`/audit/records/employee/${id}?field=nameEn`).expect(200);
+      expect(name.body.data.map((e: AuditEntry) => e.action)).toEqual(['hr.employee.create']);
+      expect(
+        (await http(app).get(`/audit/records/employee/${id}?field=colour`).expect(200)).body.meta
+          .total,
+      ).toBe(0);
+      expect(
+        (await http(app).get(`/audit/records/employee/${id}?actorId=${user.id}`).expect(200)).body
+          .meta.total,
+      ).toBe(2);
+      expect(
+        (
+          await http(app)
+            .get(`/audit/records/employee/${id}?actorId=11111111-1111-4111-8111-111111111111`)
+            .expect(200)
+        ).body.meta.total,
+      ).toBe(0);
+      await http(app).get(`/audit/records/employee/${id}?actorId=abc`).expect(400);
+
+      const fields = await http(app).get(`/audit/records/employee/${id}/fields`).expect(200);
+      expect(fields.body.data).toEqual(['basicSalary', 'nameEn', 'phone']);
+      const none = await http(app).get(`/audit/records/employee/${unique('none')}/fields`).expect(200);
+      expect(none.body.data).toEqual([]);
+    });
+  });
+
+  describe('GET /audit/actors', () => {
+    it('everyone in the log once, with their latest name; or only the people on one record', async () => {
+      const id = `act-${Date.now()}`;
+      await http(app).post(`/__audit-probe/two/${id}?label=Act`).expect(201);
+
+      const all = await http(app).get('/audit/actors').expect(200);
+      const ids = all.body.data.map((a: { id: string }) => a.id);
+      expect(ids).toContain(user.id);
+      expect(new Set(ids).size).toBe(ids.length);
+      // The signed-in user acted last, so they come first.
+      expect(all.body.data[0]).toEqual({ id: user.id, name: user.name });
+
+      const onRecord = await http(app).get(`/audit/actors?entityType=employee&entityId=${id}`).expect(200);
+      expect(onRecord.body.data).toEqual([{ id: user.id, name: user.name }]);
+      const nobody = await http(app)
+        .get(`/audit/actors?entityType=employee&entityId=${unique('none')}`)
+        .expect(200);
+      expect(nobody.body.data).toEqual([]);
+    });
+
+    it('400 when only one of entityType / entityId is given, or the type is unknown', async () => {
+      await http(app).get('/audit/actors?entityType=employee').expect(400);
+      await http(app).get('/audit/actors?entityId=x').expect(400);
+      await http(app).get('/audit/actors?entityType=student&entityId=x').expect(400);
+    });
+  });
+
+  describe('GET /audit/summary', () => {
+    it('counts entries, people, money entries and failed sign-ins in the period', async () => {
+      const from = new Date(Date.now() - 1000);
+      const before = (
+        await http(app)
+          .get(`/audit/summary?from=${from.toISOString()}&to=${new Date(Date.now() + 60_000).toISOString()}`)
+          .expect(200)
+      ).body.data;
+      // Two entries: a create (not money) and an update of basicSalary (money).
+      await http(app).post(`/__audit-probe/two/sum-${Date.now()}?label=Sum`).expect(201);
+      const after = (
+        await http(app)
+          .get(`/audit/summary?from=${from.toISOString()}&to=${new Date(Date.now() + 60_000).toISOString()}`)
+          .expect(200)
+      ).body.data;
+      expect(after.actions - before.actions).toBe(2);
+      expect(after.money - before.money).toBe(1);
+      expect(after.failedSignIns).toBe(before.failedSignIns);
+      expect(after.people).toBeGreaterThanOrEqual(1);
+
+      const empty = await http(app)
+        .get('/audit/summary?from=2001-01-01T00:00:00Z&to=2001-01-02T00:00:00Z')
+        .expect(200);
+      expect(empty.body.data).toEqual({ actions: 0, people: 0, money: 0, failedSignIns: 0 });
+    });
+
+    it('400 without both edges, or when from is not before to', async () => {
+      await http(app).get('/audit/summary').expect(400);
+      await http(app).get('/audit/summary?from=2026-11-17T00:00:00Z').expect(400);
+      await http(app)
+        .get('/audit/summary?from=2026-11-17T10:00:00Z&to=2026-11-17T09:00:00Z')
+        .expect(400);
+    });
+
+    it('needs a session', async () => {
+      await http(app).get('/audit/summary').set(ANONYMOUS_HEADER, '1').expect(401);
+      await http(app).get('/audit/actors').set(ANONYMOUS_HEADER, '1').expect(401);
+      await http(app).get('/audit/records/employee/x/fields').set(ANONYMOUS_HEADER, '1').expect(401);
     });
   });
 });

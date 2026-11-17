@@ -1,10 +1,30 @@
 import { BadRequestException, Controller, Get, Param, Query, Req } from '@nestjs/common';
-import { PAGINATION, type ApiResponse, type AuditEntry } from '@school-erp/shared';
+import {
+  PAGINATION,
+  type ApiResponse,
+  type AuditActor,
+  type AuditEntry,
+  type AuditSummary,
+} from '@school-erp/shared';
 import type { Request } from 'express';
 import { ResponseUtil } from '../../common/utils/response.util';
 import { Permission } from '../permissions';
 import { AuditService } from './audit.service';
-import { AuditListQueryDto, AuditPageQueryDto, AuditRecordParamsDto } from './dto/audit-query.dto';
+import {
+  AuditActorsQueryDto,
+  AuditListQueryDto,
+  AuditRecordParamsDto,
+  AuditRecordQueryDto,
+  AuditSummaryQueryDto,
+} from './dto/audit-query.dto';
+
+/** `[from, to)` as dates; 400 when `from` is not before `to`. */
+function period(from?: string, to?: string): { from?: Date; to?: Date } {
+  const start = from ? new Date(from) : undefined;
+  const end = to ? new Date(to) : undefined;
+  if (start && end && start >= end) throw new BadRequestException('from must be before to');
+  return { from: start, to: end };
+}
 
 /** Read-only (no write endpoints: entries are written by modules through `AuditService`). D10. */
 @Controller('audit')
@@ -18,16 +38,12 @@ export class AuditController {
     @Query() query: AuditListQueryDto,
     @Req() req: Request,
   ): Promise<ApiResponse<AuditEntry[]>> {
-    const from = query.from ? new Date(query.from) : undefined;
-    const to = query.to ? new Date(query.to) : undefined;
-    if (from && to && from >= to) throw new BadRequestException('from must be before to');
     const page = await this.audit.list(
       {
         actorId: query.actorId,
         module: query.module,
-        action: query.action,
-        from,
-        to,
+        actions: query.action,
+        ...period(query.from, query.to),
         q: query.q || undefined,
       },
       query.page ?? PAGINATION.defaultPage,
@@ -36,12 +52,34 @@ export class AuditController {
     return ResponseUtil.paginated(page, undefined, req.url);
   }
 
+  /** Activity's "today at a glance": entries, people, money entries and failed sign-ins. */
+  @Get('summary')
+  @Permission('core.audit.view')
+  summary(@Query() query: AuditSummaryQueryDto): Promise<AuditSummary> {
+    const { from, to } = period(query.from, query.to);
+    return this.audit.summary(from as Date, to as Date);
+  }
+
+  /** The person pickers: everyone in the log, or the people who touched one record. */
+  @Get('actors')
+  @Permission('core.audit.view')
+  actors(@Query() query: AuditActorsQueryDto): Promise<AuditActor[]> {
+    if (Boolean(query.entityType) !== Boolean(query.entityId)) {
+      throw new BadRequestException('entityType and entityId go together');
+    }
+    return this.audit.listActors(
+      query.entityType && query.entityId
+        ? { entityType: query.entityType, entityId: query.entityId }
+        : undefined,
+    );
+  }
+
   /** A record's History (employee profile, payroll run): its entries, newest first. */
   @Get('records/:entityType/:entityId')
   @Permission('core.audit.view')
   async forRecord(
     @Param() params: AuditRecordParamsDto,
-    @Query() query: AuditPageQueryDto,
+    @Query() query: AuditRecordQueryDto,
     @Req() req: Request,
   ): Promise<ApiResponse<AuditEntry[]>> {
     const page = await this.audit.listForRecord(
@@ -49,7 +87,15 @@ export class AuditController {
       params.entityId,
       query.page ?? PAGINATION.defaultPage,
       query.limit ?? PAGINATION.defaultLimit,
+      { actorId: query.actorId, field: query.field },
     );
     return ResponseUtil.paginated(page, undefined, req.url);
+  }
+
+  /** The fields a record's entries changed (its History field filter). */
+  @Get('records/:entityType/:entityId/fields')
+  @Permission('core.audit.view')
+  fields(@Param() params: AuditRecordParamsDto): Promise<string[]> {
+    return this.audit.listFields(params.entityType, params.entityId);
   }
 }

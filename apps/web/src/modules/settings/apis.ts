@@ -8,7 +8,6 @@ import type {
   ListItem,
   PenaltyGroup,
   SchoolSettings,
-  SettingChangeItem,
   UpdateHrSettingsRequest,
   UpdateListItemRequest,
   UpdatePenaltyGroupRequest,
@@ -29,7 +28,6 @@ import { handleResponse } from '@/lib/handleResponse';
 
 const HR_SETTINGS_TAG = 'hr-settings';
 const CATALOGUE_TAG = 'penalty-catalogue';
-const HISTORY_TAG = 'settings-history';
 
 /** Stages, departments and job titles share one shape and one set of routes. */
 export type ListKind = 'stages' | 'departments' | 'jobTitles';
@@ -50,7 +48,7 @@ export async function UPDATE_SCHOOL_SETTINGS(data: UpdateSchoolSettingsRequest) 
   const res = await apiFetch<SchoolSettings>('/settings/school', {
     method: 'PATCH',
     body: { ...data },
-    revalidateTags: [SCHOOL_SETTINGS_TAG, HISTORY_TAG],
+    revalidateTags: [SCHOOL_SETTINGS_TAG],
   });
   return handleResponse({ response: res });
 }
@@ -60,15 +58,7 @@ export async function UPLOAD_SCHOOL_LOGO(form: FormData) {
   const res = await apiFetch<UploadLogoResponse>('/settings/school/logo', {
     method: 'POST',
     body: form,
-    revalidateTags: [SCHOOL_SETTINGS_TAG, HISTORY_TAG],
-  });
-  return handleResponse({ response: res });
-}
-
-export async function GET_SETTINGS_HISTORY({ page, limit }: { page: number; limit: number }) {
-  const res = await apiFetch<SettingChangeItem[]>('/settings/history', {
-    params: { page: String(page), limit: String(limit) },
-    cache: 'no-store',
+    revalidateTags: [SCHOOL_SETTINGS_TAG],
   });
   return handleResponse({ response: res });
 }
@@ -87,7 +77,7 @@ export async function CREATE_LIST_ITEM(kind: ListKind, data: CreateListItemReque
   const res = await apiFetch<ListItem>(LIST_ROUTES[kind].path, {
     method: 'POST',
     body: { ...data },
-    revalidateTags: [LIST_ROUTES[kind].tag, HISTORY_TAG],
+    revalidateTags: [LIST_ROUTES[kind].tag],
   });
   return handleResponse({ response: res });
 }
@@ -96,7 +86,7 @@ export async function UPDATE_LIST_ITEM(kind: ListKind, id: string, data: UpdateL
   const res = await apiFetch<ListItem>(`${LIST_ROUTES[kind].path}/${encodeURIComponent(id)}`, {
     method: 'PATCH',
     body: { ...data },
-    revalidateTags: [LIST_ROUTES[kind].tag, HISTORY_TAG],
+    revalidateTags: [LIST_ROUTES[kind].tag],
   });
   return handleResponse({ response: res });
 }
@@ -112,7 +102,7 @@ export async function UPDATE_HR_SETTINGS(data: UpdateHrSettingsRequest) {
   const res = await apiFetch<HrSettings>('/hr/settings', {
     method: 'PATCH',
     body: { ...data },
-    revalidateTags: [HR_SETTINGS_TAG, HISTORY_TAG],
+    revalidateTags: [HR_SETTINGS_TAG],
   });
   return handleResponse({ response: res });
 }
@@ -128,7 +118,7 @@ export async function CREATE_PENALTY_GROUP(data: CreatePenaltyGroupRequest) {
   const res = await apiFetch<PenaltyGroup>('/hr/penalty-groups', {
     method: 'POST',
     body: { ...data },
-    revalidateTags: [CATALOGUE_TAG, HISTORY_TAG],
+    revalidateTags: [CATALOGUE_TAG],
   });
   return handleResponse({ response: res });
 }
@@ -137,7 +127,7 @@ export async function UPDATE_PENALTY_GROUP(id: string, data: UpdatePenaltyGroupR
   const res = await apiFetch<PenaltyGroup>(`/hr/penalty-groups/${encodeURIComponent(id)}`, {
     method: 'PATCH',
     body: { ...data },
-    revalidateTags: [CATALOGUE_TAG, HISTORY_TAG],
+    revalidateTags: [CATALOGUE_TAG],
   });
   return handleResponse({ response: res });
 }
@@ -146,7 +136,7 @@ export async function CREATE_VIOLATION(groupId: string, data: CreateViolationReq
   const res = await apiFetch<Violation>(`/hr/penalty-groups/${encodeURIComponent(groupId)}/violations`, {
     method: 'POST',
     body: { ...data },
-    revalidateTags: [CATALOGUE_TAG, HISTORY_TAG],
+    revalidateTags: [CATALOGUE_TAG],
   });
   return handleResponse({ response: res });
 }
@@ -155,7 +145,7 @@ export async function UPDATE_VIOLATION(id: string, data: UpdateViolationRequest)
   const res = await apiFetch<Violation>(`/hr/violations/${encodeURIComponent(id)}`, {
     method: 'PATCH',
     body: { ...data },
-    revalidateTags: [CATALOGUE_TAG, HISTORY_TAG],
+    revalidateTags: [CATALOGUE_TAG],
   });
   return handleResponse({ response: res });
 }

@@ -1,5 +1,9 @@
 # Recent changes
 
+- 2026-11-17 — Audit log screens (T30): Administration → **Activity** (everything, by day, with
+  filters) and a **History** tab on each employee. Settings → Change history moved to Activity: the
+  Settings screen links to it, filtered to settings.
+
 - 2026-11-17 — Audit log foundation (T27): Settings → Change history now reads the audit log; every
   earlier change is kept as it was. School settings, the logo and HR rules are saved together with
   their history entry (if the entry can't be saved, the change is refused); stages, lists and the

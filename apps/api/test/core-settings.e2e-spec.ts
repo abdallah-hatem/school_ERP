@@ -3,6 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   LOGO_UPLOAD,
+  SETTINGS_HISTORY_ACTION_KEYS,
   SettingsEvent,
   type AuthUser,
   type SettingsChangedEvent,
@@ -142,18 +143,18 @@ describe('core settings and school structure (e2e)', () => {
       await http(app).patch('/settings/school').send({ workStart: '08:00' }).expect(200);
       expect(await historyFor('school.workStart')).toHaveLength(1);
 
-      const history = await http(app).get('/settings/history?page=1&limit=5').expect(200);
+      // The Settings link opens Activity filtered to the settings actions (T30).
+      const settingsActions = SETTINGS_HISTORY_ACTION_KEYS.join(',');
+      const history = await http(app).get(`/audit?action=${settingsActions}&limit=5`).expect(200);
       expect(history.body.data[0]).toMatchObject({
-        scope: 'school',
-        key: 'school.workStart',
-        oldValue: '07:30',
-        newValue: '08:00',
-        changedBy: { id: TEST_USER.id, name: TEST_USER.name },
+        action: 'core.settings.update',
+        actor: { id: TEST_USER.id, name: TEST_USER.name },
+        changes: [{ field: 'school.workStart', before: '07:30', after: '08:00' }],
       });
       expect(history.body.meta).toMatchObject({ page: 1, limit: 5 });
     });
 
-    it('edge case 11 — an entry copied from the old history reads in Settings history exactly as before', async () => {
+    it('edge case 11 — an entry copied from the old history reads on Activity, filtered to settings', async () => {
       // The shape the T27 migration writes for an old `setting_changes` row (same id and time).
       const id = randomUUID();
       const at = new Date(); // the newest entry, so the first item
@@ -174,20 +175,20 @@ describe('core settings and school structure (e2e)', () => {
         },
       });
       const stored = await db.auditEntry.findUniqueOrThrow({ where: { id }, select: { at: true } });
-      const history = await http(app).get('/settings/history?page=1&limit=1').expect(200);
-      expect(history.body.data[0]).toEqual({
+      const settingsActions = SETTINGS_HISTORY_ACTION_KEYS.join(',');
+      const history = await http(app).get(`/audit?action=${settingsActions}&limit=1`).expect(200);
+      expect(history.body.data[0]).toMatchObject({
         id,
-        scope: 'lists',
-        key: 'hr.departments',
-        oldValue: null,
-        newValue: snapshot,
-        changedBy: { id: TEST_USER.id, name: TEST_USER.name },
-        changedAt: stored.at.toISOString(),
+        action: 'hr.department.create',
+        entityLabel: 'Science',
+        actor: { id: TEST_USER.id, name: TEST_USER.name },
+        changes: [{ field: 'hr.departments', before: null, after: snapshot }],
+        at: stored.at.toISOString(),
       });
     });
 
-    it('history limit above 100 → 400', async () => {
-      await http(app).get('/settings/history?limit=101').expect(400);
+    it('the old Settings → Change history endpoint is gone (T30: Activity replaces it)', async () => {
+      await http(app).get('/settings/history').expect(404);
     });
 
     it('an emitted HR list settings.changed event produces a history row (until T28)', async () => {

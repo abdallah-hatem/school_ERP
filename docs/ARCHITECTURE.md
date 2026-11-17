@@ -263,12 +263,20 @@ module through core's exported `AuditService` — never through its repository.
   the request fails with `AUDIT_NOT_RECORDED` (500) and everything rolls back (D6b). A handler that
   throws keeps its own error and its entries roll back with it. A save with nothing changed still
   calls `record()` (with no changes): nothing is written, the check passes.
-- Read API (`@Permission('core.audit.view')`): `GET /audit` (page, limit ≤ 100, actorId, module, action,
-  from inclusive / to exclusive as ISO instants, q on the record label) and
-  `GET /audit/records/:entityType/:entityId`, newest first, server-paged.
-- **Settings history** (D9) lives in the audit log: `GET /settings/history` flattens the settings
-  actions' changes (one item per key) into its old shape. The old `setting_changes` rows were copied
-  by the T27 migration (same id, value, person, time) before the table was dropped.
+- Read API (`@Permission('core.audit.view')`): `GET /audit` (page, limit ≤ 100, actorId, module,
+  action — one or several, comma-separated — from inclusive / to exclusive as ISO instants, q on the
+  record label) and `GET /audit/records/:entityType/:entityId` (page, limit, actorId, field), newest
+  first, server-paged; plus `GET /audit/summary?from&to` (entries, people, money entries, failed
+  sign-ins — Activity's "today at a glance"), `GET /audit/actors[?entityType&entityId]` (the
+  person pickers) and `GET /audit/records/:entityType/:entityId/fields` (the History field filter).
+  "Money" entries are payroll actions or changes to `AUDIT_MONEY_FIELDS` (`packages/shared`).
+- **Settings history** (D9) lives in the audit log. The screens (T30): Administration → **Activity**
+  (`modules/activity`) and each employee's **History** tab, built on `core/audit` in the web app;
+  Settings has no history section of its own — "View change history" opens Activity with
+  `module=settings` (the settings actions of both modules). `GET /settings/history` was removed.
+  The old `setting_changes` rows were copied by the T27 migration (same id, value, person, time).
+- **Dates** on the audit screens are read in the school's time zone (`SCHOOL_TIME_ZONE`, Cairo, in
+  `core/audit/lib/time.ts`): day headers, times and the date filter's day edges.
 
 ### Permissions
 
@@ -508,7 +516,7 @@ apps/web/src/
 │       ├── (auth)/login/  reset-password/
 │       └── (dashboard)/              ← sidebar + topbar layout
 │           ├── page.tsx
-│           ├── students/  fees/  attendance/  exams/  settings/
+│           ├── students/  fees/  attendance/  exams/  settings/  activity/
 │           └── transport/            ← hidden when the flag is off
 ├── lib/                              ← skill fetch wrapper
 │   ├── api.ts                        ← apiFetch (server only)
@@ -518,6 +526,8 @@ apps/web/src/
 │   ├── auth/                         ← session, current user, <Can permission="…">
 │   ├── settings/                     ← settings, feature flags, branding → CSS variables
 │   ├── navigation/                   ← sidebar menu, filtered by flags + permissions
+│   ├── audit/                        ← activity log pieces: apis.ts (GET /audit…), timeline,
+│   │                                   entry text (sentences, field labels), record History
 │   └── academic-year/                ← year switcher, current-year context
 ├── shared/                           ← shared technical pieces
 │   ├── components/ui/                ← shadcn kit
@@ -530,6 +540,8 @@ apps/web/src/
 ├── modules/
 │   ├── hr/  academics/  students/  admissions/  attendance/
 │   ├── fees/  exams/  communication/  transport/
+│   ├── settings/                     ← the Settings screen
+│   └── activity/                     ← the Activity screen (filters panel, today's counts, paging)
 └── middleware.ts                     ← locale + auth routing
 ```
 

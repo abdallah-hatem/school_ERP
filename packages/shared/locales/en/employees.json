@@ -109,6 +109,7 @@
   "profile": {
     "tabs": "Employee sections",
     "details": "Details",
+    "history": "History",
     "notSet": "Not set",
     "edit": "Edit"
   },

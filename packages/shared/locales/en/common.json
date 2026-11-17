@@ -10,12 +10,14 @@
     "lateness": "Lateness",
     "payroll": "Payroll",
     "settings": "Settings",
+    "activity": "Activity",
     "modules": {
       "home": "Home",
       "hr": "HR",
       "accounting": "Accounting",
       "inventory": "Inventory",
-      "students": "Students"
+      "students": "Students",
+      "administration": "Administration"
     },
     "soon": "Soon",
     "soonTitle": "{name} — coming soon",

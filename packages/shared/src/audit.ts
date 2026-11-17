@@ -237,9 +237,61 @@ export interface AuditListQuery {
   limit?: number;
   actorId?: Uuid;
   module?: AuditModule;
-  action?: AuditAction;
+  /** One action, or several (any of them) — sent comma-separated: `action=a,b`. */
+  action?: AuditAction | readonly AuditAction[];
   from?: IsoDateTime;
   to?: IsoDateTime;
   /** Searches the record's label (employee name or code, payroll month). */
   q?: string;
 }
+
+/** `GET /audit/records/:entityType/:entityId` query: paging, plus who and which field. */
+export interface AuditRecordQuery {
+  page?: number;
+  limit?: number;
+  actorId?: Uuid;
+  /** Only entries that changed this field (`basicSalary`). */
+  field?: string;
+}
+
+/** A person who appears in the log (`GET /audit/actors`), with the latest name recorded for them. */
+export interface AuditActor {
+  id: Uuid;
+  name: string;
+}
+
+/** `GET /audit/actors` query: everyone in the log, or only the people who touched one record. */
+export interface AuditActorsQuery {
+  entityType?: AuditEntityType;
+  entityId?: string;
+}
+
+/** `GET /audit/summary?from&to` — the Activity page's "today at a glance". */
+export interface AuditSummary {
+  /** Entries in the period. */
+  actions: number;
+  /** Distinct people who did something (entries with an actor). */
+  people: number;
+  /** Entries that moved money (`isMoneyEntry`). */
+  money: number;
+  failedSignIns: number;
+}
+
+/**
+ * Fields holding money (piastres). An entry that changed one of them, or any payroll action, is a
+ * "money" entry: the Activity page tags it and the summary counts it.
+ */
+export const AUDIT_MONEY_FIELDS = ['basicSalary', 'amount', 'totals', 'net'] as const;
+export const AUDIT_MONEY_ACTIONS: readonly AuditAction[] = AUDIT_ACTION_KEYS.filter((key) =>
+  key.startsWith('hr.payroll.'),
+);
+
+export function isMoneyEntry(entry: Pick<AuditEntry, 'action' | 'changes'>): boolean {
+  return (
+    AUDIT_MONEY_ACTIONS.includes(entry.action) ||
+    entry.changes.some((c) => (AUDIT_MONEY_FIELDS as readonly string[]).includes(c.field))
+  );
+}
+
+/** A failed sign-in: the Activity page marks it and the summary counts it. */
+export const AUDIT_FAILED_SIGN_IN = 'core.auth.sign_in_failed' satisfies AuditAction;

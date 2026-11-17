@@ -55,6 +55,15 @@ import {
   WalletIcon as Wallet,
   WarningCircleIcon as WarningCircle,
   XIcon as X,
+  FunnelIcon as Funnel,
+  ArrowSquareOutIcon as ArrowSquareOut,
+  SignInIcon as SignIn,
+  LockKeyIcon as LockKey,
+  PlusCircleIcon as PlusCircle,
+  GearSixIcon as GearSix,
+  ListMagnifyingGlassIcon as ListMagnifyingGlass,
+  UserCircleIcon as UserCircle,
+  XCircleIcon as XCircle,
 } from '@phosphor-icons/react/ssr';
 import type { ComponentType } from 'react';
 import { cn } from '@/shared/lib/utils';
@@ -174,4 +183,19 @@ export const StructureIcon = duotone(TreeStructure, 'Structure');
 export const ListsIcon = duotone(ListBullets, 'Lists');
 export const RulesIcon = duotone(Scales, 'Rules');
 export const HistoryIcon = duotone(ClockCounterClockwise, 'History');
+
+// Activity (audit log)
+export const AdministrationModuleIcon = duotone(Buildings, 'AdministrationModule');
+export const ActivityIcon = duotone(ClockCounterClockwise, 'Activity');
+export const FilterIcon = duotone(Funnel, 'Filter');
+export const OpenRecordIcon = duotone(ArrowSquareOut, 'OpenRecord');
+export const SignInIcon = duotone(SignIn, 'SignIn');
+export const FailedSignInIcon = duotone(LockKey, 'FailedSignIn');
+export const CreatedIcon = duotone(PlusCircle, 'Created');
+export const CancelledIcon = duotone(XCircle, 'Cancelled');
+export const CoreModuleIcon = duotone(GearSix, 'CoreModule');
+export const FieldIcon = duotone(ListMagnifyingGlass, 'Field');
+export const PersonIcon = duotone(UserCircle, 'Person');
+export const AnyoneIcon = duotone(Users, 'Anyone');
+export const MoneyIcon = duotone(Coins, 'Money');
 

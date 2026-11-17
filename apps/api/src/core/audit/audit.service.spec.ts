@@ -21,7 +21,6 @@ function makeService(opts: { inTx?: boolean; user?: AuthUser | null; clsActive?:
       return Promise.resolve();
     }),
     findPage: jest.fn(),
-    findChangesPage: jest.fn(),
   };
   const recorded: string[] = [];
   const req = {

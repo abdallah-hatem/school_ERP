@@ -10,12 +10,14 @@
     "lateness": "التأخير",
     "payroll": "الرواتب",
     "settings": "الإعدادات",
+    "activity": "سجل النشاط",
     "modules": {
       "home": "الرئيسية",
       "hr": "الموارد البشرية",
       "accounting": "الحسابات",
       "inventory": "المخازن",
-      "students": "الطلاب"
+      "students": "الطلاب",
+      "administration": "الإدارة"
     },
     "soon": "قريبًا",
     "soonTitle": "{name} — قريبًا",

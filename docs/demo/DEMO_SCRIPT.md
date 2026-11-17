@@ -37,6 +37,8 @@ catalogue, a month of penalties (some pending) and lateness, and a DRAFT payroll
 ## 6. Settings change the numbers (the key moment)
 - Settings → HR rules: change a rule, e.g. grace minutes 0 → 30. The example line updates live
   (90 min → 0.25 day). Save.
+- **View change history** (top of Settings) → Activity, filtered to Settings: ✔ the grace-minutes
+  change is at the top, with who made it and old → new (Administration → Activity shows it too).
 - Back to the run → **Recalculate** → ✔ the same employee's lateness drops (0.25 × 20,000 ÷ 30 =
   166.67) and the totals follow.
 - Put the rule back afterwards if the demo continues on the same data.

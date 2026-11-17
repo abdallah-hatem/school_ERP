@@ -65,7 +65,7 @@ Same tests as T28.
 (penalty records, payroll runs, lateness, employees) must switch to `txHost.withTransaction` so the
 audit entry joins them.
 
-## T30 — screens, option B (`ui`)
+## T30 — screens, option B (`ui`) — ✅ done (PR `feature/t30-audit-screens`)
 
 - Sidebar: new **Administration** group with Settings and **Activity**.
 - Activity page: day-grouped timeline, sentence entries, inline first changes + "n more", filters
@@ -90,3 +90,18 @@ Field labels: `audit.fields.<field>` (stage keys: strip the id, use `fields.list
 `pnpm ci:local --full`; no `@NotAudited('wired in …')` left; `SettingsHistoryListener` and the
 `settings.changed` history path are gone; smoke; `DEMO_SCRIPT.md` updated for the
 Activity page and dry-run on a copy; spot-check 10 entries by hand against what was done.
+
+**From T30:**
+- The smoke's employee History check (`e2e/15-activity`, `16-activity-phone`) asserts the empty
+  state while the employee has no entries (`TODO(T28)`): once T28 records `hr.employee.update`, edit
+  an employee in the spec and assert the entry at the top of the tab.
+- `entityLabel` is one snapshot string: list items and catalogue entries are recorded with their
+  English name, so Arabic sentences show English record names. Decide (T28) whether labels should
+  keep both names.
+- Employee field changes holding ids (`departmentId`, `jobTitleId`, `stageId`, `managerId`) show the
+  raw value unless T28 records `{ nameEn, nameAr }` snapshots (the timeline names those).
+- A penalty's entries are on the penalty, not on the employee: the employee History shows only
+  `entityType=employee`. If penalties should appear there, record them with a link to the employee.
+- "Open record" for a penalty goes to the Penalties list (there is no penalty page).
+- The payroll run page has no History tab yet; `RecordHistoryScreen` (`core/audit/screens.tsx`) is
+  ready for it.

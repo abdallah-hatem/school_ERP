@@ -5,7 +5,9 @@ affects only **draft** payroll runs (approved runs never change).
 
 - **DECIDED** — **Change history:** every change to school settings, HR rules, lists (stages,
   departments, job titles) and the penalty catalogue is recorded: what changed, the old and new
-  value, who changed it and when. The history can be viewed, newest first, page by page.
+  value, who changed it and when. The history is viewed on the Activity page (§9), newest first,
+  page by page: Settings' **View change history** opens it filtered to settings (owner, 2026-11-17 —
+  the separate Change history section was removed).
 - **DECIDED** — The history is part of the audit log (§9): it is saved together with the change, and
   if it can't be saved the change is refused. Built for school settings, the logo and HR rules;
   stages, lists and the catalogue follow when their audit entries are wired (until then their

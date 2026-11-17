@@ -153,6 +153,25 @@ describe('SidebarNav (grouped by module)', () => {
       expect(screen.queryByRole('button', { name: 'HR' })).toBeNull();
     });
 
+    it('Administration holds Settings and Activity; Activity needs core.audit.view', () => {
+      pathname = '/en/activity';
+      renderNav();
+      const admin = screen.getByRole('button', { name: 'Administration' });
+      expect(admin.getAttribute('aria-expanded')).toBe('true');
+      const list = document.getElementById(admin.getAttribute('aria-controls') ?? '') as HTMLElement;
+      expect(within(list).getAllByRole('link').map((l) => l.textContent)).toEqual(['Settings', 'Activity']);
+      expect(within(list).getByRole('link', { name: 'Activity' }).getAttribute('aria-current')).toBe('page');
+      cleanup();
+
+      renderNav('full', 'en', sessionWithout('core.audit.view'));
+      expect(screen.queryByRole('link', { name: 'Activity' })).toBeNull();
+      expect(screen.getByRole('link', { name: 'Settings' })).toBeTruthy();
+      cleanup();
+
+      renderNav('full', 'ar');
+      expect(screen.getByRole('link', { name: 'سجل النشاط' }).getAttribute('href')).toBe('/ar/activity');
+    });
+
     it('Settings shows with any one of its sections, and not with none', () => {
       const settingsKeys = ['core.settings.view', 'hr.settings.view', 'hr.lists.view', 'core.stages.view', 'hr.penalty_catalogue.view'];
       renderNav('full', 'en', sessionWithout(...settingsKeys.filter((k) => k !== 'hr.lists.view')));

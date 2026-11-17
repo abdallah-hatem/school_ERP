@@ -1,7 +1,6 @@
 import type { Language, UserRole, Weekday } from '../enums';
-import type { SettingsChangeScope } from '../events';
 import type { PermissionKey } from '../permissions';
-import type { IsoDateTime, Names, TimeOfDay, Uuid } from './common';
+import type { Names, TimeOfDay, Uuid } from './common';
 
 // ── Auth — core/auth ───────────────────────────────────────────────────────
 
@@ -55,18 +54,6 @@ export type PublicSchoolSettings = Pick<
 
 export interface UploadLogoResponse {
   logoUrl: string;
-}
-
-/** `GET /settings/history` item. */
-export interface SettingChangeItem {
-  id: Uuid;
-  scope: SettingsChangeScope;
-  /** A `SettingKey` for rule settings; list and catalogue edits use their own keys. */
-  key: string;
-  oldValue: unknown;
-  newValue: unknown;
-  changedBy: { id: Uuid; name: string } | null;
-  changedAt: IsoDateTime;
 }
 
 // ── School structure — core/school-structure ───────────────────────────────

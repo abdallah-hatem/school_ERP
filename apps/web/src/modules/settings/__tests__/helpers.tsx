@@ -3,16 +3,17 @@ import type { ReactElement } from 'react';
 import { SchoolBrandingProvider } from '@/core/settings';
 import type { Locale, MessageTree } from '@/shared/lib/i18n';
 import { I18nProvider } from '@/shared/providers/i18n-provider';
-import { renderWithI18n } from '@/test/render';
+import type { SessionUser } from '@school-erp/shared';
+import { renderWithI18n, TEST_SESSION } from '@/test/render';
 import { getSettingsMessages } from '../i18n';
 
 /** Render inside the real translations (base + `settings`) and the shell's branding provider. */
-export function renderSettings(ui: ReactElement, locale: Locale = 'en') {
+export function renderSettings(ui: ReactElement, locale: Locale = 'en', session: SessionUser = TEST_SESSION) {
   return renderWithI18n(
     <I18nProvider messages={{ settings: getSettingsMessages(locale) } as unknown as MessageTree}>
       <SchoolBrandingProvider initial={{ nameEn: school.nameEn, nameAr: school.nameAr, logoUrl: null }}>{ui}</SchoolBrandingProvider>
     </I18nProvider>,
-    { locale },
+    { locale, session },
   );
 }
 

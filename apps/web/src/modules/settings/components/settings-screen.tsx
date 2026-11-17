@@ -1,7 +1,10 @@
 'use client';
 
+import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useState, type ReactNode } from 'react';
+import { settingsActivityHref } from '@/core/audit';
+import { Can } from '@/core/auth';
 import { PageHeader } from '@/shared/components/layout/page-header';
 import { Button } from '@/shared/components/ui/button';
 import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
@@ -21,7 +24,6 @@ import { useTranslation } from '@/shared/providers/i18n-provider';
 import { DirtyReporterProvider, useLeaveGuard } from '../hooks/unsaved-changes';
 import { SETTINGS_SECTIONS, type SettingsSectionId } from '../sections';
 import { CatalogueSection } from './catalogue-section';
-import { HistorySection } from './history-section';
 import { HrRulesSection } from './hr-rules-section';
 import { ListManager } from './list-manager';
 import { SchoolSection } from './school-section';
@@ -32,7 +34,6 @@ const ICONS: Record<SettingsSectionId, AppIcon> = {
   lists: ListsIcon,
   hrRules: RulesIcon,
   catalogue: PenaltiesIcon,
-  history: HistoryIcon,
 };
 
 function SectionBody({ id }: { id: SettingsSectionId }): ReactNode {
@@ -52,8 +53,6 @@ function SectionBody({ id }: { id: SettingsSectionId }): ReactNode {
       return <HrRulesSection />;
     case 'catalogue':
       return <CatalogueSection />;
-    case 'history':
-      return <HistorySection />;
   }
 }
 
@@ -66,7 +65,7 @@ type Leave = { to: SettingsSectionId | null } | { href: string } | { proceed: ()
  * closing the tab — asks first.
  */
 export function SettingsScreen({ initialSection }: { initialSection: SettingsSectionId | null }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const router = useRouter();
   const pathname = usePathname();
   const [section, setSection] = useState<SettingsSectionId | null>(initialSection);
@@ -107,7 +106,21 @@ export function SettingsScreen({ initialSection }: { initialSection: SettingsSec
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title={t('settings.title')} description={t('settings.description')} />
+      <PageHeader
+        title={t('settings.title')}
+        description={t('settings.description')}
+        actions={
+          // Change history lives in the activity log (audit spec D9, owner 2026-11-17).
+          <Can permission="core.audit.view">
+            <Button asChild variant="secondary">
+              <Link href={settingsActivityHref(locale)}>
+                <HistoryIcon />
+                {t('settings.viewHistory')}
+              </Link>
+            </Button>
+          </Can>
+        }
+      />
       <div className="grid items-start gap-6 md:grid-cols-[15rem_minmax(0,1fr)] xl:grid-cols-[17rem_minmax(0,1fr)]">
         <nav aria-label={t('settings.sectionsLabel')} className={cn('md:sticky md:top-6', section && 'max-md:hidden')}>
           <ul className="flex flex-col gap-1 rounded-3xl bg-card p-2 shadow-card">
