@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# The same checks CI runs on every PR (.github/workflows/ci.yml calls this script), so a developer
+# sees a failure before pushing. Runs on `git push` through the pre-push hook, or by hand:
+#   pnpm ci:local          lint, typecheck, unit tests, module rules (what CI runs)
+#   pnpm ci:local --full   the above, then API e2e and the smoke specs (needs Docker)
+# Full output of each step goes to .ci-local/<step>.log; the terminal gets one line per step.
+set -uo pipefail
+cd "$(dirname "$0")/.."
+
+logs=.ci-local
+mkdir -p "$logs"
+full=false
+[[ "${1:-}" == "--full" ]] && full=true
+
+steps=("lint" "typecheck" "test" "deps:check")
+$full && steps+=("test:e2e" "smoke")
+
+start_all=$SECONDS
+for step in "${steps[@]}"; do
+  start=$SECONDS
+  log="$logs/${step//:/-}.log"
+  if pnpm -s "$step" >"$log" 2>&1; then
+    printf '  ✓ %-11s %3ss\n' "$step" $((SECONDS - start))
+  else
+    printf '  ✗ %-11s %3ss  — last lines of %s:\n\n' "$step" $((SECONDS - start)) "$log"
+    tail -n 40 "$log" | sed 's/^/    /'
+    printf '\nci:local FAILED at "%s". Fix it before pushing (full log: %s).\n' "$step" "$log"
+    exit 1
+  fi
+done
+printf 'ci:local passed in %ss.\n' $((SECONDS - start_all))

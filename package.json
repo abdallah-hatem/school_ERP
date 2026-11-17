@@ -13,11 +13,17 @@
     "test:e2e": "turbo run test:e2e --concurrency=1",
     "deps:check": "depcruise apps/api/src --config .dependency-cruiser.cjs --ts-config tsconfig.depcruise-api.json && depcruise apps/web/src --config .dependency-cruiser.cjs --ts-config tsconfig.depcruise-web.json && depcruise packages/shared/src --config .dependency-cruiser.cjs",
     "deps:graph": "depcruise apps/api/src --config .dependency-cruiser.cjs --ts-config tsconfig.depcruise-api.json --output-type dot > deps-graph.dot",
-    "smoke": "bash scripts/smoke.sh"
+    "smoke": "bash scripts/smoke.sh",
+    "ci:local": "bash scripts/ci-local.sh",
+    "prepare": "simple-git-hooks"
   },
   "devDependencies": {
     "dependency-cruiser": "16.10.4",
+    "simple-git-hooks": "2.14.0",
     "turbo": "2.11.11",
     "typescript": "5.9.3"
+  },
+  "simple-git-hooks": {
+    "pre-push": "pnpm ci:local"
   }
 }
