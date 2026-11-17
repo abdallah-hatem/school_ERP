@@ -172,7 +172,7 @@ export interface ChangeRow {
 }
 
 /** The parts of a list item whose change is worth a line of its own; `id` never is. */
-const NAME_PARTS = ['nameEn', 'nameAr', 'isActive', 'sortOrder'] as const;
+const NAME_PARTS = ['nameEn', 'nameAr', 'isActive', 'sortOrder', 'managesPeople'] as const;
 
 /**
  * Before and after are the same item edited in place: the same id (list and catalogue snapshots),

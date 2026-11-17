@@ -263,18 +263,21 @@ model Department {
   @@map("departments")
 }
 
+/// §3. `managesPeople`: holders of this title can be chosen as a direct manager (2026-11-18).
 model JobTitle {
-  id        String   @id @default(uuid()) @db.Uuid
-  nameEn    String   @map("name_en")
-  nameAr    String   @map("name_ar")
-  sortOrder Int      @default(0) @map("sort_order")
-  isActive  Boolean  @default(true) @map("is_active")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id            String   @id @default(uuid()) @db.Uuid
+  nameEn        String   @map("name_en")
+  nameAr        String   @map("name_ar")
+  sortOrder     Int      @default(0) @map("sort_order")
+  isActive      Boolean  @default(true) @map("is_active")
+  managesPeople Boolean  @default(false) @map("manages_people")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
   employees Employee[]
 
   @@index([isActive])
+  @@index([managesPeople])
   @@index([sortOrder])
   @@map("job_titles")
 }

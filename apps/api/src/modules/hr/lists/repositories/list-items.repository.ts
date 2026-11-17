@@ -18,56 +18,59 @@ export const LIST_ITEM_SELECT = {
   isActive: true,
 } as const;
 
+/** A `select` covering at least the `ListItem` columns (job titles add `managesPeople`). */
+export type ListItemSelect = typeof LIST_ITEM_SELECT & Partial<Record<string, true>>;
+
 /** The subset of the Department / JobTitle delegates used here, with `select`. */
-interface ListDelegate {
+interface ListDelegate<T, D, U> {
   findMany(args: {
     where?: { isActive?: boolean };
     orderBy: unknown;
-    select: typeof LIST_ITEM_SELECT;
-  }): Promise<ListItem[]>;
-  findUnique(args: {
-    where: { id: string };
-    select: typeof LIST_ITEM_SELECT;
-  }): Promise<ListItem | null>;
-  create(args: { data: ListItemData; select: typeof LIST_ITEM_SELECT }): Promise<ListItem>;
-  update(args: {
-    where: { id: string };
-    data: ListItemUpdateData;
-    select: typeof LIST_ITEM_SELECT;
-  }): Promise<ListItem>;
+    select: ListItemSelect;
+  }): Promise<T[]>;
+  findUnique(args: { where: { id: string }; select: ListItemSelect }): Promise<T | null>;
+  create(args: { data: D; select: ListItemSelect }): Promise<T>;
+  update(args: { where: { id: string }; data: U; select: ListItemSelect }): Promise<T>;
 }
 
-/** Departments and job titles share one table shape, so one repository class serves both. */
-export abstract class ListItemsRepository extends BaseRepository<
-  ListItem,
-  ListItemData,
-  ListItemUpdateData
-> {
-  protected constructor(databaseService: DatabaseService, modelName: ModelName) {
+/**
+ * Departments and job titles share one table shape, so one repository class serves both. A list
+ * with extra columns (job titles' `managesPeople`) passes its own wider types and `select`.
+ */
+export abstract class ListItemsRepository<
+  T extends ListItem = ListItem,
+  D extends ListItemData = ListItemData,
+  U extends ListItemUpdateData = ListItemUpdateData,
+> extends BaseRepository<T, D, U> {
+  protected constructor(
+    databaseService: DatabaseService,
+    modelName: ModelName,
+    private readonly select: ListItemSelect = LIST_ITEM_SELECT,
+  ) {
     super(databaseService, modelName);
   }
 
-  private get list(): ListDelegate {
-    return this.databaseService[this.modelName] as unknown as ListDelegate;
+  private get list(): ListDelegate<T, D, U> {
+    return this.databaseService[this.modelName] as unknown as ListDelegate<T, D, U>;
   }
 
-  findAllOrdered(includeHidden: boolean): Promise<ListItem[]> {
+  findAllOrdered(includeHidden: boolean): Promise<T[]> {
     return this.list.findMany({
       where: includeHidden ? {} : { isActive: true },
       orderBy: [{ sortOrder: 'asc' }, { nameEn: 'asc' }],
-      select: LIST_ITEM_SELECT,
+      select: this.select,
     });
   }
 
-  findOne(id: string): Promise<ListItem | null> {
-    return this.list.findUnique({ where: { id }, select: LIST_ITEM_SELECT });
+  findOne(id: string): Promise<T | null> {
+    return this.list.findUnique({ where: { id }, select: this.select });
   }
 
-  createItem(data: ListItemData): Promise<ListItem> {
-    return this.list.create({ data, select: LIST_ITEM_SELECT });
+  createItem(data: D): Promise<T> {
+    return this.list.create({ data, select: this.select });
   }
 
-  updateItem(id: string, data: ListItemUpdateData): Promise<ListItem> {
-    return this.list.update({ where: { id }, data, select: LIST_ITEM_SELECT });
+  updateItem(id: string, data: U): Promise<T> {
+    return this.list.update({ where: { id }, data, select: this.select });
   }
 }

@@ -128,7 +128,11 @@
       "emptyTitle": "لا توجد مسميات وظيفية بعد",
       "emptyBody": "أضف أول مسمى وظيفي، مثل معلم.",
       "placeholderEn": "Teacher",
-      "placeholderAr": "معلم"
+      "placeholderAr": "معلم",
+      "managesPeople": "يدير موظفين",
+      "managesPeopleHint": "يمكن اختيار أصحاب هذا المسمى الوظيفي مديرًا مباشرًا.",
+      "edit": "تعديل",
+      "editItem": "تعديل {name}"
     }
   },
   "hrRules": {

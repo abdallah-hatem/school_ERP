@@ -1,11 +1,15 @@
 # Recent changes
 
-- 2026-11-17 — Users, Roles and My account screens (§2, P3): Administration → **Users** (add, edit,
+- 2026-11-18 — Users, Roles and My account screens (§2, P3): Administration → **Users** (add, edit,
   give roles, link an employee, set a temporary password, deactivate) and **Roles** (each role's
   permissions, and for permissions about employees whose records they cover); **My account** for
   everyone. A temporary password is now enforced: the person must choose their own before using the
   app. The last System admin still can't lose the role or be deactivated — the screen says why.
   Permissions about the whole school (settings, lists, running payroll) always cover everyone.
+- 2026-11-18 — Direct managers (§3, §7, owner): job titles get a **Manages people** switch in
+  Settings; the Direct manager picker lists only active employees with such a title; an employee
+  whose manager no longer qualifies keeps them (flagged "No longer in a managing role"); choosing a
+  new non-manager is refused.
 
 - 2026-11-17 — Audit log screens (T30): Administration → **Activity** (everything, by day, with
   filters) and a **History** tab on each employee. Settings → Change history moved to Activity: the

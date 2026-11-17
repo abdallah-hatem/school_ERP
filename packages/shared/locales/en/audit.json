@@ -103,6 +103,7 @@
     "nameAr": "Name (Arabic)",
     "sortOrder": "Order",
     "isActive": "Shown",
+    "managesPeople": "Manages people",
     "email": "Email",
     "code": "Code",
     "nationalId": "National ID",
