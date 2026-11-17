@@ -4,6 +4,7 @@ import {
   contractYearFor,
   Employee,
   EmployeeHiredEvent,
+  EmployeeRef,
   EmployeeStatus,
   EmployeeSummary,
   ErrorCode,
@@ -89,6 +90,25 @@ export class EmployeesService {
     const row = await this.repository.findDetail(id);
     if (!row) throw new NotFoundException();
     return toEmployee(row);
+  }
+
+  /** Every active employee, ordered by code — for month-wide lists (lateness, payroll). */
+  listActiveRefs(): Promise<EmployeeRef[]> {
+    return this.repository.findActiveRefs();
+  }
+
+  /**
+   * Checks that every id is an existing, active employee (§3: inactive employees get no new
+   * penalties or lateness entries). Unknown id → 400 `FOREIGN_KEY_VIOLATION`; inactive → 409
+   * `EMPLOYEE_INACTIVE`. Unknown ids are reported before inactive ones.
+   */
+  async assertActive(ids: Uuid[]): Promise<void> {
+    const unique = [...new Set(ids)];
+    const states = new Map((await this.repository.findStates(unique)).map((s) => [s.id, s.status]));
+    if (unique.some((id) => !states.has(id))) throw bad(ErrorCode.FOREIGN_KEY_VIOLATION);
+    if (unique.some((id) => states.get(id) !== EmployeeStatus.ACTIVE)) {
+      throw new CodedException(HttpStatus.CONFLICT, ErrorCode.EMPLOYEE_INACTIVE);
+    }
   }
 
   async create(dto: CreateEmployeeDto): Promise<Employee> {

@@ -132,6 +132,24 @@ export class EmployeesRepository extends BaseRepository<
     });
   }
 
+  /** Every active employee as a compact reference, by code (lateness and payroll lists). */
+  findActiveRefs(): Promise<{ id: string; code: string; nameEn: string; nameAr: string }[]> {
+    return this.databaseService.employee.findMany({
+      where: { status: EmployeeStatus.ACTIVE },
+      select: { id: true, code: true, nameEn: true, nameAr: true },
+      orderBy: { code: 'asc' },
+    });
+  }
+
+  /** Id and status of each existing employee among `ids` (missing ids are simply absent). */
+  findStates(ids: string[]): Promise<{ id: string; status: EmployeeStatus }[]> {
+    if (!ids.length) return Promise.resolve([]);
+    return this.databaseService.employee.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, status: true },
+    });
+  }
+
   /** Read of core's stages table (allowed: read anything, write only your own). */
   findStage(id: string): Promise<{ id: string; isActive: boolean } | null> {
     return this.databaseService.stage.findUnique({

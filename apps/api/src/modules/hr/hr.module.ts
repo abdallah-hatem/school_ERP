@@ -13,6 +13,9 @@ import { MonthLockService } from './month-lock/month-lock.service';
 import { MonthLockRepository } from './month-lock/repositories/month-lock.repository';
 import { HrSettingsController } from './settings/hr-settings.controller';
 import { HrSettingsService } from './settings/hr-settings.service';
+import { LatenessController } from './staff-attendance/controllers/lateness.controller';
+import { LatenessRepository } from './staff-attendance/repositories/lateness.repository';
+import { LatenessService } from './staff-attendance/services/lateness.service';
 
 /**
  * HR — employees, lists, penalties, staff attendance (lateness), payroll, HR rule settings.
@@ -27,6 +30,8 @@ import { HrSettingsService } from './settings/hr-settings.service';
     DepartmentsController,
     JobTitlesController,
     EmployeesController,
+    // staff attendance — monthly lateness (T8)
+    LatenessController,
   ],
   providers: [
     // settings (T6)
@@ -41,6 +46,9 @@ import { HrSettingsService } from './settings/hr-settings.service';
     JobTitlesService,
     EmployeesRepository,
     EmployeesService,
+    // staff attendance — monthly lateness (T8)
+    LatenessRepository,
+    LatenessService,
   ],
   exports: [
     // lists + employees (T5)

@@ -1,6 +1,12 @@
-import type { IsoDate } from '@school-erp/shared';
+import type { IsoDate, Month } from '@school-erp/shared';
 
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
+const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+/** True for a calendar month written `YYYY-MM` (`2026-11`; rejects `2026-13`, `2026-1`). */
+export function isMonth(value: unknown): value is Month {
+  return typeof value === 'string' && MONTH.test(value);
+}
 
 /** True for a real calendar day written `YYYY-MM-DD` (rejects `2026-02-30`). */
 export function isIsoDate(value: unknown): value is IsoDate {

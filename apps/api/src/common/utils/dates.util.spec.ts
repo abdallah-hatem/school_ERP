@@ -1,4 +1,4 @@
-import { fromIsoDate, isIsoDate, todayIsoDate, toIsoDate } from './dates.util';
+import { fromIsoDate, isIsoDate, isMonth, todayIsoDate, toIsoDate } from './dates.util';
 
 describe('dates.util', () => {
   it('isIsoDate accepts real YYYY-MM-DD days only', () => {
@@ -9,6 +9,16 @@ describe('dates.util', () => {
     expect(isIsoDate('2026-1-01')).toBe(false);
     expect(isIsoDate('2026-01-01T00:00:00Z')).toBe(false);
     expect(isIsoDate(20260101)).toBe(false);
+  });
+
+  it('isMonth accepts YYYY-MM months only', () => {
+    expect(isMonth('2026-11')).toBe(true);
+    expect(isMonth('2026-01')).toBe(true);
+    expect(isMonth('2026-13')).toBe(false);
+    expect(isMonth('2026-00')).toBe(false);
+    expect(isMonth('2026-1')).toBe(false);
+    expect(isMonth('2026-11-01')).toBe(false);
+    expect(isMonth(202611)).toBe(false);
   });
 
   it('round-trips through a UTC-midnight Date', () => {

@@ -1,9 +1,8 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { ErrorCode, type Month } from '@school-erp/shared';
 import { CodedException } from '../../../common/errors/coded.exception';
+import { isMonth } from '../../../common/utils/dates.util';
 import { MonthLockRepository } from './repositories/month-lock.repository';
-
-const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 /**
  * Whether a month is locked: its payroll run is APPROVED (§4, §5, §6). Penalties, lateness and
@@ -15,7 +14,7 @@ export class MonthLockService {
 
   /** `month` is `YYYY-MM`. No run or a DRAFT run → false; an APPROVED run → true. */
   async isMonthLocked(month: Month): Promise<boolean> {
-    if (!MONTH_PATTERN.test(month)) throw new RangeError(`month must be YYYY-MM, got "${month}"`);
+    if (!isMonth(month)) throw new RangeError(`month must be YYYY-MM, got "${month}"`);
     return this.repository.hasApprovedRun(month);
   }
 
