@@ -11,7 +11,7 @@ import {
   sessionCookies,
   authCookie,
 } from '@/lib/middlewareFunctions';
-import type { ApiResult } from '@/lib/types';
+import type { ApiResult, DownloadedFile } from '@/lib/types';
 
 /*
  * The transport layer (building-frontends → fetch-wrapper). Server only. Endpoints live in
@@ -36,6 +36,11 @@ type ApiFetchOptions = Omit<RequestInit, 'body'> & {
    * Server Actions and Route Handlers only — a render can't write cookies.
    */
   forwardAuthCookies?: boolean;
+  /**
+   * `file`: a successful response is a download (xlsx…), returned as `data: DownloadedFile`.
+   * Errors still parse as the JSON envelope.
+   */
+  responseType?: 'json' | 'file';
   /** Internal: prevents recursion when the refresh attempt itself returns 401. */
   _skipRefresh?: boolean;
 };
@@ -210,6 +215,7 @@ async function executeRequest<T>(
       throw signal;
     }
 
+    if (options.responseType === 'file' && res.ok) return (await parseFile(res)) as ApiResult<T>;
     return await parseResponse<T>(res);
   } catch (err: unknown) {
     if (isUnauthorizedSignal(err)) {
@@ -244,6 +250,18 @@ async function forwardAuthCookies(res: Response): Promise<void> {
     if (!cookie.value || cookie.maxAge === 0) cookieStore.delete(name);
     else cookieStore.set(authCookie(name, cookie.value, cookie.maxAge ?? 60 * 15));
   }
+}
+
+/** A file the API sent; the name comes from Content-Disposition. */
+async function parseFile(res: Response): Promise<ApiResult<DownloadedFile>> {
+  const disposition = res.headers.get('content-disposition') ?? '';
+  const match = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition);
+  const data: DownloadedFile = {
+    fileName: match?.[1] ? decodeURIComponent(match[1]) : 'download',
+    contentType: res.headers.get('content-type') ?? 'application/octet-stream',
+    base64: Buffer.from(await res.arrayBuffer()).toString('base64'),
+  };
+  return { success: true, status: res.status, data };
 }
 
 async function parseResponse<T>(res: Response): Promise<ApiResult<T>> {

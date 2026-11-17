@@ -17,7 +17,7 @@ import { Button } from '@/shared/components/ui/button';
 import { Money } from '@/shared/components/ui/figures';
 import { AddIcon, CloseIcon, SearchIcon } from '@/shared/components/ui/icons';
 import { Input } from '@/shared/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select';
+import { FilterSelect } from '@/shared/components/form/filter-controls';
 import { localName } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import {
@@ -29,8 +29,6 @@ import {
 import { EmployeeIdentity, EmployeeStatusPill } from './employee-bits';
 
 const SEARCH_DEBOUNCE_MS = 300;
-/** Radix Select items can't be empty; this one means "no filter". */
-const ALL = '__all__';
 
 export interface EmployeesListProps {
   /** `/ar/employees` — the list's own path, for links and URL updates. */
@@ -205,35 +203,5 @@ export function EmployeesList({ basePath, query, rows, total, departments, stage
         }
       />
     </div>
-  );
-}
-
-function FilterSelect({
-  label,
-  allLabel,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  allLabel: string;
-  value: string | undefined;
-  options: { value: string; label: string }[];
-  onChange: (value: string | undefined) => void;
-}) {
-  return (
-    <Select value={value ?? ALL} onValueChange={(v) => onChange(v === ALL ? undefined : v)}>
-      <SelectTrigger aria-label={label} className="w-full sm:w-48">
-        <SelectValue placeholder={allLabel} />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value={ALL}>{allLabel}</SelectItem>
-        {options.map((o) => (
-          <SelectItem key={o.value} value={o.value}>
-            {o.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
   );
 }

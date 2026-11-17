@@ -3,8 +3,17 @@ import {
   ArchiveIcon as Archive,
   ArrowClockwiseIcon as ArrowClockwise,
   ArrowCounterClockwiseIcon as ArrowCounterClockwise,
+  ArrowsClockwiseIcon as ArrowsClockwise,
   BuildingsIcon as Buildings,
   CalendarBlankIcon as CalendarBlank,
+  CalendarPlusIcon as CalendarPlus,
+  CoinsIcon as Coins,
+  FileArrowDownIcon as FileArrowDown,
+  HandCoinsIcon as HandCoins,
+  PlusMinusIcon as PlusMinus,
+  PrinterIcon as Printer,
+  ReceiptIcon as Receipt,
+  SealCheckIcon as SealCheck,
   CaretDoubleLeftIcon as CaretDoubleLeft,
   CaretDoubleRightIcon as CaretDoubleRight,
   CaretDownIcon as CaretDown,
@@ -87,6 +96,18 @@ export const RemoveIcon = duotone(Trash, 'Remove');
 export const UploadIcon = duotone(UploadSimple, 'Upload');
 export const RetireIcon = duotone(Archive, 'Retire');
 export const RestoreIcon = duotone(ArrowCounterClockwise, 'Restore');
+export const RecalculateIcon = duotone(ArrowsClockwise, 'Recalculate');
+export const ExportIcon = duotone(FileArrowDown, 'Export');
+export const ApproveIcon = duotone(SealCheck, 'Approve');
+export const PrintIcon = duotone(Printer, 'Print');
+export const AdjustIcon = duotone(PlusMinus, 'Adjust');
+export const NewPeriodIcon = duotone(CalendarPlus, 'NewPeriod');
+
+// Figures
+export const GrossIcon = duotone(Coins, 'Gross');
+export const DeductionsIcon = duotone(Receipt, 'Deductions');
+export const NetPayIcon = duotone(HandCoins, 'NetPay');
+export const PayslipIcon = duotone(Receipt, 'Payslip');
 
 // States
 export const EmptyIcon = duotone(Tray, 'Empty');

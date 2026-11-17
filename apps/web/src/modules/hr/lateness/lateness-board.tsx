@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useId, useMemo, useRef, useState, useTransition } from 'react';
 import { callApi } from '@/lib/callApi';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-table/data-table';
+import { SearchInput } from '@/shared/components/form/filter-controls';
 import { MonthStepper } from '@/shared/components/form/month-stepper';
 import { EmptyState } from '@/shared/components/layout/empty-state';
 import { PageHeader } from '@/shared/components/layout/page-header';
@@ -18,6 +19,7 @@ import { formatCount, formatDays, formatMonth } from '@/shared/lib/format';
 import { nameIn } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { PUT_LATENESS } from './apis';
+import { describeLatenessRule } from './describe-rule';
 import { gridState, matchesSearch, MINUTES_MAX, viewEntry, type Drafts } from './lateness-entries';
 
 const PAGE_SIZES = [20, 50, 100];
@@ -239,20 +241,16 @@ export function LatenessBoard({ month, maxMonth, rows: initialRows, rule, locked
         toolbar={
           rows === null ? null : (
             <>
-              <div className="relative w-full max-w-sm min-w-0 flex-1 basis-56">
-                <SearchIcon className="pointer-events-none absolute inset-y-0 start-3.5 my-auto size-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  aria-label={t('lateness.search.label')}
-                  placeholder={t('lateness.search.placeholder')}
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setPage(1);
-                  }}
-                  className="ps-10"
-                />
-              </div>
+              <SearchInput
+                wrapperClassName="w-full max-w-sm basis-56"
+                aria-label={t('lateness.search.label')}
+                placeholder={t('lateness.search.placeholder')}
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+              />
               <p data-testid="lateness-summary" className="ms-auto text-sm font-semibold text-muted-foreground">
                 {t('lateness.summary', {
                   employees: formatCount(rows.length),
@@ -260,7 +258,7 @@ export function LatenessBoard({ month, maxMonth, rows: initialRows, rule, locked
                   days: state.totalDays === null ? '—' : formatDays(state.totalDays),
                 })}
               </p>
-              {rule ? <p className="w-full text-xs text-muted-foreground">{t('lateness.rule', { rule: describeRule(rule, t) })}</p> : null}
+              {rule ? <p className="w-full text-xs text-muted-foreground">{t('lateness.rule', { rule: describeLatenessRule(rule, t) })}</p> : null}
             </>
           )
         }
@@ -300,15 +298,6 @@ export function LatenessBoard({ month, maxMonth, rows: initialRows, rule, locked
       />
     </div>
   );
-}
-
-function describeRule(rule: LatenessRule, t: (key: string, values?: Record<string, string | number>) => string): string {
-  const parts = [...rule.steps]
-    .sort((a, b) => a.hour - b.hour)
-    .map((step) => t('lateness.ruleStep', { hour: step.hour, days: formatDays(step.days) }));
-  parts.push(t('lateness.ruleExtra', { days: formatDays(rule.extraHourDays) }));
-  if (rule.graceMinutes > 0) parts.unshift(t('lateness.ruleGrace', { minutes: formatCount(rule.graceMinutes) }));
-  return parts.join(' · ');
 }
 
 function MinutesInput({
