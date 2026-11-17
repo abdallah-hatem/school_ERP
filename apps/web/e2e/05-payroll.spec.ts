@@ -112,7 +112,12 @@ test('payroll: run → penalty deduction → grace change → recalculate → ap
 
   // Change the lateness rule in Settings.
   await page.goto('/en/settings?section=hrRules');
-  await page.getByLabel(t('en', 'settings.hrRules.lateness.grace')).fill(String(rule.graceMinutes));
+  const graceField = page.getByLabel(t('en', 'settings.hrRules.lateness.grace'));
+  // Wait for the form to load the saved rule first — typing earlier gets overwritten by the
+  // form's reset, leaving Save disabled (no change).
+  await expect(graceField).toHaveValue(String(settings.lateness.graceMinutes));
+  await graceField.fill(String(rule.graceMinutes));
+  await expect(page.getByRole('button', { name: t('en', 'common.actions.save'), exact: true })).toBeEnabled();
   restoreGrace = settings.lateness.graceMinutes;
   await page.getByRole('button', { name: t('en', 'common.actions.save'), exact: true }).click();
   await expect(page.getByText(t('en', 'settings.save.saved'))).toBeVisible();
