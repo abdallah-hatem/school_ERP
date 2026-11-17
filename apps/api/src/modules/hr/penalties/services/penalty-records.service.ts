@@ -1,5 +1,6 @@
 import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import {
+  AuditEntityType,
   ErrorCode,
   PenaltyStatus,
   type Days,
@@ -13,6 +14,8 @@ import {
   type Uuid,
 } from '@school-erp/shared';
 import { CodedException } from '../../../../common/errors/coded.exception';
+import { AuditService } from '../../../../core/audit';
+import { AfterCommit } from '../../../../database/transactions';
 import { monthOf, toIsoDate } from '../../../../common/utils/dates.util';
 import {
   countPriorInWindow,
@@ -73,6 +76,32 @@ function toRecord(row: RecordRow, shown: CatalogueLevel): PenaltyRecord {
   };
 }
 
+/**
+ * A penalty's audit entry (§9, T29): the record, labelled with its employee's two names, and the
+ * fields a reader cares about before → after (the violation by its names).
+ */
+function auditOf(before: PenaltyRecord | undefined, after: PenaltyRecord) {
+  const fields = (r: PenaltyRecord) => ({
+    violationId: { nameEn: r.violation.nameEn, nameAr: r.violation.nameAr },
+    date: r.date,
+    level: r.level,
+    action: r.action,
+    days: r.days,
+    status: r.status,
+    note: r.note,
+    cancelReason: r.cancelReason,
+  });
+  return {
+    entity: {
+      type: AuditEntityType.PENALTY,
+      id: after.id,
+      label: { en: after.employee.nameEn, ar: after.employee.nameAr },
+    },
+    before: before ? fields(before) : undefined,
+    after: fields(after),
+  };
+}
+
 /** A recorded penalty's place in the repeat order (§4): date, then when recorded, then id. */
 const positionOf = (row: RecordRow): PenaltyTarget => ({
   employeeId: row.employeeId,
@@ -104,6 +133,8 @@ export class PenaltyRecordsService {
     private readonly settings: HrSettingsService,
     private readonly monthLock: MonthLockService,
     private readonly access: HrAccessService,
+    private readonly audit: AuditService,
+    private readonly tx: AfterCommit,
   ) {}
 
   /** The records of the employees `hr.penalties.view` covers for the user (R5). */
@@ -144,51 +175,68 @@ export class PenaltyRecordsService {
   }
 
   async create(dto: CreatePenaltyDto, createdById: Uuid | null): Promise<PenaltyRecord> {
-    const { levels, oncePerDay } = await this.assertRecordable(dto.employeeId, dto.violationId);
-    await this.monthLock.assertMonthOpen(monthOf(dto.date));
-    const priorCount = await this.priorCount(dto, dto.date, await this.window());
-    const row = await this.repository.createRecord(
-      {
-        employeeId: dto.employeeId,
-        violationId: dto.violationId,
-        date: dto.date,
-        note: dto.note ?? null,
-        createdById,
-        ...resolvePenalty(priorCount, levels),
-      },
-      (sameDay) => oncePerDayRefuses(oncePerDay, sameDay, 'record'),
-    );
-    if (!row) this.throwOncePerDay();
-    return this.present(row);
+    // The change and its audit entry commit together (audit D2).
+    return this.tx.inTransaction(async () => {
+      const { levels, oncePerDay } = await this.assertRecordable(dto.employeeId, dto.violationId);
+      await this.monthLock.assertMonthOpen(monthOf(dto.date));
+      const priorCount = await this.priorCount(dto, dto.date, await this.window());
+      const row = await this.repository.createRecord(
+        {
+          employeeId: dto.employeeId,
+          violationId: dto.violationId,
+          date: dto.date,
+          note: dto.note ?? null,
+          createdById,
+          ...resolvePenalty(priorCount, levels),
+        },
+        (sameDay) => oncePerDayRefuses(oncePerDay, sameDay, 'record'),
+      );
+      if (!row) this.throwOncePerDay();
+      const record = await this.present(row);
+      await this.audit.record({ action: 'hr.penalty.record', ...auditOf(undefined, record) });
+      return record;
+    });
   }
 
   /** PENDING → APPROVED, fixing level, action and days from today's catalogue and count. */
   async approve(id: Uuid, approvedById: Uuid | null): Promise<PenaltyRecord> {
-    // Outside the user's `hr.penalties.approve` scope → 404, like an unknown record (R5).
-    const current = await this.repository.findOne(id, await this.access.where('hr.penalties.approve'));
-    if (!current) throw new NotFoundException();
-    this.assertNotCancelled(current.status);
-    if (current.status !== PenaltyStatus.PENDING) {
-      throw new CodedException(HttpStatus.CONFLICT, ErrorCode.PENALTY_NOT_PENDING);
-    }
-    const date = toIsoDate(current.date);
-    await this.monthLock.assertMonthOpen(monthOf(date));
+    // The change and its audit entry commit together (audit D2).
+    return this.tx.inTransaction(async () => {
+      // Outside the user's `hr.penalties.approve` scope → 404, like an unknown record (R5).
+      const current = await this.repository.findOne(
+        id,
+        await this.access.where('hr.penalties.approve'),
+      );
+      if (!current) throw new NotFoundException();
+      this.assertNotCancelled(current.status);
+      if (current.status !== PenaltyStatus.PENDING) {
+        throw new CodedException(HttpStatus.CONFLICT, ErrorCode.PENALTY_NOT_PENDING);
+      }
+      const date = toIsoDate(current.date);
+      await this.monthLock.assertMonthOpen(monthOf(date));
 
-    const levels = current.violation.levels.map(toLevel);
-    const window = await this.window();
-    const oncePerDay = current.violation.oncePerDay;
-    const outcome = await this.repository.approve(
-      id,
-      current,
-      { from: repetitionWindowStart(date, window), upTo: date },
-      approvedById,
-      (approved) => resolvePenalty(countPriorInWindow(positionOf(current), window, approved), levels),
-      // §4: re-checked at approval, in the same transaction.
-      (sameDay) => oncePerDayRefuses(oncePerDay, sameDay, 'approve'),
-    );
-    if (outcome === 'ONCE_PER_DAY') this.throwOncePerDay();
-    if (outcome === 'NOT_PENDING') await this.throwStatusConflict(id);
-    return this.get(id);
+      const levels = current.violation.levels.map(toLevel);
+      const window = await this.window();
+      const oncePerDay = current.violation.oncePerDay;
+      const outcome = await this.repository.approve(
+        id,
+        current,
+        { from: repetitionWindowStart(date, window), upTo: date },
+        approvedById,
+        (approved) =>
+          resolvePenalty(countPriorInWindow(positionOf(current), window, approved), levels),
+        // §4: re-checked at approval, in the same transaction.
+        (sameDay) => oncePerDayRefuses(oncePerDay, sameDay, 'approve'),
+      );
+      if (outcome === 'ONCE_PER_DAY') this.throwOncePerDay();
+      if (outcome === 'NOT_PENDING') await this.throwStatusConflict(id);
+      const before = await this.present(current);
+      await this.audit.record({
+        action: 'hr.penalty.approve',
+        ...auditOf(before, await this.snapshot(id)),
+      });
+      return this.get(id);
+    });
   }
 
   /** PENDING or APPROVED → CANCELLED with a reason. Other approved levels are not recomputed. */
@@ -197,15 +245,26 @@ export class PenaltyRecordsService {
     dto: CancelPenaltyDto,
     cancelledById: Uuid | null,
   ): Promise<PenaltyRecord> {
-    // Outside the user's `hr.penalties.cancel` scope → 404, like an unknown record (R5).
-    const current = await this.repository.findStatus(id, await this.access.where('hr.penalties.cancel'));
-    if (!current) throw new NotFoundException();
-    this.assertNotCancelled(current.status);
-    await this.monthLock.assertMonthOpen(monthOf(current.date));
-    if (!(await this.repository.cancel(id, dto.reason, cancelledById))) {
-      await this.throwStatusConflict(id);
-    }
-    return this.get(id);
+    // The change and its audit entry commit together (audit D2).
+    return this.tx.inTransaction(async () => {
+      // Outside the user's `hr.penalties.cancel` scope → 404, like an unknown record (R5).
+      const current = await this.repository.findStatus(
+        id,
+        await this.access.where('hr.penalties.cancel'),
+      );
+      if (!current) throw new NotFoundException();
+      this.assertNotCancelled(current.status);
+      await this.monthLock.assertMonthOpen(monthOf(current.date));
+      const before = await this.snapshot(id);
+      if (!(await this.repository.cancel(id, dto.reason, cancelledById))) {
+        await this.throwStatusConflict(id);
+      }
+      await this.audit.record({
+        action: 'hr.penalty.cancel',
+        ...auditOf(before, await this.snapshot(id)),
+      });
+      return this.get(id);
+    });
   }
 
   /**
@@ -313,6 +372,13 @@ export class PenaltyRecordsService {
       repetitionWindowStart(date, window),
     );
     return countPriorInWindow({ ...key, date }, window, approved);
+  }
+
+  /** The record as it stands, whatever the user may view — what its audit entry snapshots. */
+  private async snapshot(id: Uuid): Promise<PenaltyRecord> {
+    const row = await this.repository.findOne(id);
+    if (!row) throw new NotFoundException();
+    return this.present(row);
   }
 
   private async present(row: RecordRow): Promise<PenaltyRecord> {

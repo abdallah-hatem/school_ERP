@@ -19,7 +19,7 @@ import {
   PenaltyPreviewQueryDto,
 } from '../dto/penalty.dto';
 import { PenaltyRecordsService } from '../services/penalty-records.service';
-import { NotAudited } from '../../../../core/audit';
+import { Audited } from '../../../../core/audit';
 import { Permission } from '../../../../core/permissions';
 
 /**
@@ -49,14 +49,14 @@ export class PenaltiesController {
     return this.penalties.get(id);
   }
 
-  @NotAudited('wired in T29')
+  @Audited('hr.penalty.record')
   @Post()
   @Permission('hr.penalties.record')
   create(@Body() dto: CreatePenaltyDto, @CurrentUser() user?: AuthUser) {
     return this.penalties.create(dto, user?.id ?? null);
   }
 
-  @NotAudited('wired in T29')
+  @Audited('hr.penalty.approve')
   @Post(':id/approve')
   @Permission('hr.penalties.approve')
   @HttpCode(HttpStatus.OK)
@@ -64,7 +64,7 @@ export class PenaltiesController {
     return this.penalties.approve(id, user?.id ?? null);
   }
 
-  @NotAudited('wired in T29')
+  @Audited('hr.penalty.cancel')
   @Post(':id/cancel')
   @Permission('hr.penalties.cancel')
   @HttpCode(HttpStatus.OK)

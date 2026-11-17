@@ -53,6 +53,7 @@ function makeService(repo: Record<string, jest.Mock> = {}, oncePerDay = true, ac
     ...repo,
   };
   const monthLock = { assertMonthOpen: jest.fn().mockResolvedValue(undefined) };
+  const audit = { record: jest.fn().mockResolvedValue(undefined) };
   const settings = {
     get: jest.fn().mockResolvedValue({ penalties: { repetitionWindow: 'CONTRACT_YEAR' } }),
   };
@@ -65,8 +66,10 @@ function makeService(repo: Record<string, jest.Mock> = {}, oncePerDay = true, ac
     settings as unknown as HrSettingsService,
     monthLock as unknown as MonthLockService,
     access,
+    audit as never,
+    { inTransaction: (fn: () => unknown) => fn(), run: (fn: () => unknown) => Promise.resolve(fn()) } as never,
   );
-  return { service, repository, monthLock };
+  return { service, repository, monthLock, audit };
 }
 
 describe('PenaltyRecordsService', () => {
