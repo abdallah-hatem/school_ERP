@@ -9,12 +9,13 @@ import { nameIn, type Locale, type Translate } from '@/shared/lib/i18n';
  */
 
 /**
- * `DEDUCT_DAYS` + 0.5 → "Deduct 0.5 day" / "خصم 0.5 يوم", + 2 → "خصم يومان" (the noun agrees with
- * the number, `formatDayCount`); an investigation with days says both; others by name.
+ * `DEDUCT_DAYS` + 0.5 → "Deduct 0.5 day" / "خصم 0.5 يوم", + 2 → "خصم يومين" (the noun agrees with
+ * the number and follows خصم, `formatDayCount` oblique); an investigation with days says both; others by name.
  */
 export function describeAction(t: Translate, locale: Locale, action: PenaltyAction, days: Days | null): string {
   if (days != null && days > 0) {
-    const value = formatDayCount(days, locale);
+    // The count follows خصم, so the Arabic dual is oblique: "خصم يومين".
+    const value = formatDayCount(days, locale, { case: 'oblique' });
     if (action === PenaltyAction.DEDUCT_DAYS) return t('penalties.action.deduct', { days: value });
     if (action === PenaltyAction.INVESTIGATION) return t('penalties.action.investigation', { days: value });
   }

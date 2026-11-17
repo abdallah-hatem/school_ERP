@@ -60,14 +60,23 @@ export function formatDays(days: Days): string {
  * - English: `"1 day"`, `"0.5 day"`, `"2 days"`, `"1.25 days"`.
  * - Arabic: 1 → `"يوم واحد"`, 2 → `"يومان"`, 3–10 → `"3 أيام"`, 11–99 → `"11 يومًا"`, a fraction →
  *   `"0.5 يوم"`; from 100 the last two digits decide (`"100 يوم"`, `"103 أيام"`, `"111 يومًا"`).
+ *
+ * `case`: `'nominative'` (default) for a count that stands alone — a total, a column, "المدة: يومان";
+ * `'oblique'` where it follows a verb or verbal noun such as خصم — "خصم يومين". Only the dual changes.
  */
-export function formatDayCount(days: Days, lang: Language): string {
+export type DayCountCase = 'nominative' | 'oblique';
+
+export function formatDayCount(
+  days: Days,
+  lang: Language,
+  options: { case?: DayCountCase } = {},
+): string {
   const number = formatDays(days);
   const abs = Math.abs(days);
   if (lang === 'en') return `${number} ${abs > 0 && abs <= 1 ? 'day' : 'days'}`;
   if (!Number.isInteger(abs)) return `${number} يوم`;
   if (abs === 1) return 'يوم واحد';
-  if (abs === 2) return 'يومان';
+  if (abs === 2) return options.case === 'oblique' ? 'يومين' : 'يومان';
   const rest = abs >= 100 ? abs % 100 : abs;
   if (rest >= 3 && rest <= 10) return `${number} أيام`;
   if (rest >= 11) return `${number} يومًا`;

@@ -20,12 +20,12 @@ describe('describeAction', () => {
     expect(describeAction(t, 'en', 'WARNING', null)).toBe('Warning');
   });
 
-  it('Arabic: the noun agrees with the day count (يومان, not 2 أيام)', () => {
+  it('Arabic: the noun agrees with the day count and follows خصم (يومين, not 2 أيام or يومان)', () => {
     const tAr = createTranslator(
       mergeMessages(getBaseMessages('ar'), { penalties: ar } as unknown as MessageTree),
     );
     expect(describeAction(tAr, 'ar', 'DEDUCT_DAYS', 1)).toBe('خصم يوم واحد');
-    expect(describeAction(tAr, 'ar', 'DEDUCT_DAYS', 2)).toBe('خصم يومان');
+    expect(describeAction(tAr, 'ar', 'DEDUCT_DAYS', 2)).toBe('خصم يومين');
     expect(describeAction(tAr, 'ar', 'DEDUCT_DAYS', 3)).toBe('خصم 3 أيام');
     expect(describeAction(tAr, 'ar', 'DEDUCT_DAYS', 0.5)).toBe('خصم 0.5 يوم');
     expect(describeAction(tAr, 'ar', 'INVESTIGATION', 15)).toBe('إحالة للتحقيق مع خصم 15 يومًا');

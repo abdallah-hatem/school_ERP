@@ -58,6 +58,20 @@ describe('formatDayCount: the noun agrees with the number', () => {
   });
 
   it.each([
+    [1, 'يوم واحد'],
+    [2, 'يومين'],
+    [3, '3 أيام'],
+    [11, '11 يومًا'],
+    [0.5, '0.5 يوم'],
+  ])('Arabic after a verbal noun (oblique, "خصم …") %s → %s', (days, text) => {
+    expect(formatDayCount(days, 'ar', { case: 'oblique' })).toBe(text);
+  });
+
+  it('English ignores the case', () => {
+    expect(formatDayCount(2, 'en', { case: 'oblique' })).toBe('2 days');
+  });
+
+  it.each([
     [1, '1 day'],
     [0.5, '0.5 day'],
     [0.25, '0.25 day'],
