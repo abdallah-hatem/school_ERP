@@ -49,15 +49,22 @@ Code moves one way: **`dev` → `testing` → `production`**. Each branch deploy
 
 ## Before opening a PR
 
+**Local CI runs on every `git push`.** `pnpm install` sets up a pre-push hook that runs
+`pnpm ci:local` — the exact checks CI runs (lint, typecheck, unit tests, module rules; ~1 minute,
+faster when Turbo's cache hits). A failure stops the push and prints the error; full logs are in
+`.ci-local/`. CI calls the same script, so passing locally means passing in CI. Before a PR that
+touches the API, the database or a screen, also run `pnpm ci:local --full` (adds API e2e and the
+smoke specs; needs Docker). Don't skip the hook with `--no-verify`; if it's wrong, fix the hook.
+
 - [ ] One task per PR, small — aim for under ~400 changed lines. Split big features.
-- [ ] `lint`, `typecheck` and tests pass locally.
+- [ ] The push went through the local CI hook (and `pnpm ci:local --full` for API, DB or UI changes).
 - [ ] Every new user-facing string exists in both `en` and `ar`.
 - [ ] Schema changes include their migration. Never edit a migration that has been applied.
 - [ ] No school name, school-specific rule or hardcoded setting in code.
 - [ ] Nothing duplicated that already exists in `common/`, `shared/` or another module.
 - [ ] Events emitted only after the write is committed; listeners are idempotent.
 - [ ] `docs/BUSINESS_LOGIC.md` updated in the same PR if a business rule changed.
-- [ ] UI changes: screenshots. New or visually changed screens: light/dark × EN/AR.
+- [ ] UI changes: screenshots. New or visually changed screens: EN/AR × phone/desktop (light only).
 
 ## Design changes: mockup first
 

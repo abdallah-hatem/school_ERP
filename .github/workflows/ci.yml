@@ -29,17 +29,9 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      - name: Lint
-        run: pnpm lint
-
-      - name: Typecheck
-        run: pnpm typecheck
-
-      - name: Unit tests
-        run: pnpm test
-
-      - name: Module rules (dependency-cruiser)
-        run: pnpm deps:check
+      # The same script developers run locally (and the pre-push hook runs), so the two can't drift.
+      - name: Lint, typecheck, unit tests, module rules
+        run: pnpm ci:local
 
       - name: Module dependency graph
         if: always()

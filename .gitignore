@@ -52,3 +52,6 @@ apps/web/AGENTS.md
 design/audit/
 design/assets/
 design/mockups/screenshots/
+
+# Local CI logs
+.ci-local/
