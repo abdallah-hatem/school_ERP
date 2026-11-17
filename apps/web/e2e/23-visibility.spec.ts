@@ -31,17 +31,18 @@ test('a Stage head sees only their stage, no salary, no Payroll or History; the 
 
     // Employees: only their stage; no salary on any card.
     await head.goto(`/${locale}/employees`);
-    const cards = head.getByRole('article');
+    // The loading skeleton draws a full page (12) of nameless card frames, also <article>s: wait for
+    // it to go, then read only the real cards — each named by its employee (aria-labelledby).
+    await expect(head.locator('[aria-busy="true"]')).toHaveCount(0);
+    const cards = head.getByRole('article', { name: /\S/ });
     await expect(cards.first()).toBeVisible();
-    const shown = await cards.count();
-    // First that every card is someone of their stage (the scope), then the count: a full page, or
-    // the whole stage when it fits on one.
+    const shownNames = (await cards.locator('h3').allTextContents()).map((n) => n.trim());
+    // Every card is someone of their stage (the scope), and the page holds all of them that fit.
     const names = setup.inStage.map((e) => (locale === 'ar' ? e.nameAr : e.nameEn));
-    for (let i = 0; i < shown; i++) {
-      const name = (await cards.nth(i).getAttribute('aria-label')) ?? (await cards.nth(i).getByRole('heading').textContent());
-      expect(names).toContain(name?.trim());
-    }
-    expect(shown).toBe(Math.min(setup.inStage.length, 12));
+    for (const name of shownNames) expect(names).toContain(name);
+    expect(shownNames).toHaveLength(Math.min(setup.inStage.length, 12));
+    const outsideName = locale === 'ar' ? setup.outside.nameAr : setup.outside.nameEn;
+    expect(shownNames).not.toContain(outsideName);
     await expect(head.getByText(t(locale, 'employees.columns.basicSalary'))).toHaveCount(0);
     await settle(head);
     await shoot(head, info, `p4-stage-head-employees-${locale}-desktop`);
