@@ -154,4 +154,17 @@ export class ListEmployeesQueryDto extends PaginationQueryDto implements ListEmp
   @IsOptional()
   @IsIn(WORK_SYSTEMS)
   workSystem?: WorkSystem;
+
+  /** `?managesPeople=true` — only employees whose job title manages people (§3 picker). */
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    value === 'true' ? true : value === 'false' ? false : value,
+  )
+  @IsBoolean()
+  managesPeople?: boolean;
+
+  /** Leave this employee out (the one being edited). */
+  @IsOptional()
+  @IsUUID()
+  excludeId?: string;
 }

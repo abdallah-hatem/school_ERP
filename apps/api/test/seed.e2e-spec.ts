@@ -257,6 +257,13 @@ describe('Seed (e2e)', () => {
     expect(await db.jobTitle.count()).toBeGreaterThanOrEqual(15);
     expect(await db.employee.count({ where: { status: 'INACTIVE' } })).toBe(2);
     expect(await db.employee.count({ where: { managerId: { not: null } } })).toBeGreaterThan(5);
+    // §3: the leading titles manage people, and every seeded manager holds one.
+    expect(await db.jobTitle.count({ where: { managesPeople: true } })).toBeGreaterThanOrEqual(3);
+    expect(
+      await db.employee.count({
+        where: { managerId: { not: null }, manager: { jobTitle: { managesPeople: false } } },
+      }),
+    ).toBe(0);
     const workSystems = await db.employee.groupBy({ by: ['workSystem'], _count: true });
     expect(workSystems).toHaveLength(4);
     const salaries = await db.employee.aggregate({

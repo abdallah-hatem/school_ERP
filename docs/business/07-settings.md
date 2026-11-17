@@ -33,6 +33,10 @@ affects only **draft** payroll runs (approved runs never change).
 | Brand colours | Teal and sunflower (the "Campus" design), fixed for now | DECIDED |
 | Currency | EGP | DECIDED |
 
+- **DECIDED** (owner, 2026-11-18) — Each job title in the job-titles list has a **Manages people**
+  switch (set when adding or editing the title; the list shows a "Manages people" badge on those
+  that do). It decides who can be chosen as a direct manager (§3). Changing it is recorded in the
+  change history like any list change.
 - **DECIDED** — Settings are validated: times in order, percentages 1–100, divisor 1–31, days in
   quarter steps (0.25) from 0 to 30.
 - **DECIDED** (owner, 2026-11-17) — Work start and work end are on a 30-minute boundary (07:00,

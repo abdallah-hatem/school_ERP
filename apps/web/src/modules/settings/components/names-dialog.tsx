@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useId, useRef, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
-import { TextField } from '@/shared/components/form/fields';
+import { SwitchField, TextField } from '@/shared/components/form/fields';
 import { Form } from '@/shared/components/form/form';
 import { Button } from '@/shared/components/ui/button';
 import { Dialog, DialogClose, DialogContent } from '@/shared/components/ui/dialog';
@@ -13,7 +13,8 @@ import { NAME_MAX, namesSchema, type NamesFormValues } from '../schemas';
 /**
  * Add or rename a named item (stage, department, job title, catalogue group): English and Arabic
  * names, both required. Mount it with a `key` per item so its fields start from that item.
- * `onSubmit` resolves `true` to close.
+ * `onSubmit` resolves `true` to close. `toggle` adds a switch below the names (job titles'
+ * "Manages people", §3) — its value is `managesPeople`.
  */
 export function NamesDialog({
   open,
@@ -23,6 +24,7 @@ export function NamesDialog({
   initial,
   placeholders,
   submitLabel,
+  toggle,
   onSubmit,
 }: {
   open: boolean;
@@ -32,6 +34,7 @@ export function NamesDialog({
   initial?: NamesFormValues;
   placeholders: { en: string; ar: string };
   submitLabel: string;
+  toggle?: { label: string; hint: string };
   onSubmit: (values: NamesFormValues) => Promise<boolean>;
 }) {
   const { t } = useTranslation();
@@ -40,7 +43,7 @@ export function NamesDialog({
   const form = useForm<NamesFormValues>({
     resolver: zodResolver(namesSchema(max)),
     mode: 'onChange',
-    defaultValues: initial ?? { nameEn: '', nameAr: '' },
+    defaultValues: { nameEn: '', nameAr: '', ...(toggle ? { managesPeople: false } : {}), ...initial },
   });
   const { isDirty, isValid, isSubmitting } = form.formState;
 
@@ -91,6 +94,7 @@ export function NamesDialog({
             dir="rtl"
             required
           />
+          {toggle ? <SwitchField control={form.control} name="managesPeople" label={toggle.label} hint={toggle.hint} /> : null}
         </Form>
       </DialogContent>
     </Dialog>

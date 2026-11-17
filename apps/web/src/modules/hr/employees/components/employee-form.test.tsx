@@ -110,6 +110,59 @@ describe('EmployeeForm', () => {
     expect(names).toEqual(['No direct manager', 'Omar Fathy · EMP-0002']);
   });
 
+  it('Manager picker: a kept manager who no longer manages people is listed and flagged; search finds by code', async () => {
+    const user = userEvent.setup();
+    const candidates = [summary({ id: 'e-omar', code: 'EMP-0002', nameEn: 'Omar Fathy', nameAr: 'عمر فتحي' })];
+    const kept = { id: 'e-hany', code: 'EMP-0007', nameEn: 'Hany Said', nameAr: 'هاني سعيد', managesPeople: false };
+    renderForm({ editing: { ...employee, manager: kept }, candidates });
+
+    const trigger = screen.getByRole('combobox', { name: /Direct manager/ });
+    expect(trigger.textContent).toContain('Hany Said · EMP-0007');
+    expect(screen.getByText('No longer in a managing role; kept for this employee.')).toBeTruthy();
+
+    await user.click(trigger);
+    const listbox = await screen.findByRole('listbox');
+    expect(within(listbox).getAllByRole('option').map((o) => o.textContent)).toEqual([
+      'No direct manager',
+      'Omar Fathy · EMP-0002',
+      'Hany Said · EMP-0007',
+    ]);
+    await user.keyboard('EMP-0002');
+    await waitFor(() =>
+      expect(within(screen.getByRole('listbox')).getAllByRole('option').map((o) => o.textContent)).toEqual(['Omar Fathy · EMP-0002']),
+    );
+    await user.keyboard('{Enter}');
+    // Another manager chosen: the note goes away.
+    await waitFor(() => expect(screen.queryByText('No longer in a managing role; kept for this employee.')).toBeNull());
+  });
+
+  it('Manager picker in Arabic: the kept-manager note and the no-managers hint are translated', () => {
+    const kept = { id: 'e-hany', code: 'EMP-0007', nameEn: 'Hany Said', nameAr: 'هاني سعيد', managesPeople: false };
+    renderForm({ editing: { ...employee, manager: kept }, locale: 'ar' });
+    expect(screen.getByText('لم يعد في منصب إداري؛ يبقى مديرًا لهذا الموظف.')).toBeTruthy();
+    cleanup();
+    renderForm({ locale: 'ar' });
+    expect(screen.getByText(/فعّل «يدير موظفين»/)).toBeTruthy();
+  });
+
+  it('a refused non-manager (MANAGER_NOT_MANAGING) lands on the Direct manager field', async () => {
+    const user = userEvent.setup();
+    update.mockResolvedValue({
+      success: false,
+      status: 400,
+      error: 'MANAGER_NOT_MANAGING',
+      message: 'The direct manager must hold a job title that manages people.',
+    } as never);
+    const candidates = [summary({ id: 'e-omar', code: 'EMP-0002', nameEn: 'Omar Fathy', nameAr: 'عمر فتحي' })];
+    renderForm({ editing: employee, candidates });
+    await user.click(screen.getByRole('combobox', { name: /Direct manager/ }));
+    await user.click(await screen.findByRole('option', { name: 'Omar Fathy · EMP-0002' }));
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => expect(update).toHaveBeenCalledWith('e-mona', { managerId: 'e-omar' }));
+    expect(await screen.findByText('The direct manager must hold a job title that manages people.')).toBeTruthy();
+    expect(screen.getByRole('combobox', { name: /Direct manager/ }).getAttribute('aria-invalid')).toBe('true');
+  });
+
   it('edit: Save stays disabled until something changes, and again once it is changed back', async () => {
     const user = userEvent.setup();
     renderForm({ editing: employee });

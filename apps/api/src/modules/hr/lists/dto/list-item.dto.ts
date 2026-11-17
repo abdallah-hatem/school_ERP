@@ -1,5 +1,10 @@
 import { PartialType } from '@nestjs/mapped-types';
-import type { CreateListItemRequest, UpdateListItemRequest } from '@school-erp/shared';
+import type {
+  CreateJobTitleRequest,
+  CreateListItemRequest,
+  UpdateJobTitleRequest,
+  UpdateListItemRequest,
+} from '@school-erp/shared';
 import { Transform } from 'class-transformer';
 import {
   IsBoolean,
@@ -43,6 +48,19 @@ export class UpdateListItemDto
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+}
+
+/** A job title: the list fields plus `managesPeople` (§3 direct managers; defaults to false). */
+export class CreateJobTitleDto extends CreateListItemDto implements CreateJobTitleRequest {
+  @IsOptional()
+  @IsBoolean()
+  managesPeople?: boolean;
+}
+
+export class UpdateJobTitleDto extends UpdateListItemDto implements UpdateJobTitleRequest {
+  @IsOptional()
+  @IsBoolean()
+  managesPeople?: boolean;
 }
 
 /** `?includeHidden=true` also returns hidden items (for the Settings screen). */

@@ -60,6 +60,9 @@ function makeService(repo: Record<string, jest.Mock> = {}) {
   const repository = {
     findDetail: jest.fn().mockResolvedValue(row()),
     findState: jest.fn().mockResolvedValue({ id: 'm1', status: 'ACTIVE' }),
+    findManagerState: jest
+      .fn()
+      .mockResolvedValue({ id: 'm1', status: 'ACTIVE', jobTitle: { managesPeople: true } }),
     findStage: jest.fn().mockResolvedValue({ id: 's1', isActive: true }),
     findIdByNationalId: jest.fn().mockResolvedValue(null),
     findIdByFingerprintId: jest.fn().mockResolvedValue(null),
@@ -128,14 +131,87 @@ describe('EmployeesService', () => {
 
   it('inactive or missing manager → INVALID_MANAGER', async () => {
     const inactive = makeService({
-      findState: jest.fn().mockResolvedValue({ id: 'm1', status: 'INACTIVE' }),
+      findManagerState: jest
+        .fn()
+        .mockResolvedValue({ id: 'm1', status: 'INACTIVE', jobTitle: { managesPeople: true } }),
     });
     await expect(inactive.service.create(dto({ managerId: 'm1' }))).rejects.toMatchObject({
       code: ErrorCode.INVALID_MANAGER,
     });
-    const missing = makeService({ findState: jest.fn().mockResolvedValue(null) });
+    const missing = makeService({ findManagerState: jest.fn().mockResolvedValue(null) });
     await expect(missing.service.create(dto({ managerId: 'm1' }))).rejects.toMatchObject({
       code: ErrorCode.INVALID_MANAGER,
+    });
+  });
+
+  describe('managers must manage people (§3, 2026-11-18)', () => {
+    const notManaging = () =>
+      jest
+        .fn()
+        .mockResolvedValue({ id: 'm1', status: 'ACTIVE', jobTitle: { managesPeople: false } });
+    const managerRef = {
+      id: 'm1',
+      code: 'EMP-0009',
+      nameEn: 'M',
+      nameAr: 'م',
+      jobTitle: { managesPeople: false },
+    };
+
+    it('create with a manager whose job title does not manage people → MANAGER_NOT_MANAGING', async () => {
+      const { service, repository } = makeService({ findManagerState: notManaging() });
+      await expect(service.create(dto({ managerId: 'm1' }))).rejects.toMatchObject({
+        status: 400,
+        code: ErrorCode.MANAGER_NOT_MANAGING,
+      });
+      expect(repository.createWithCode).not.toHaveBeenCalled();
+    });
+
+    it('update choosing a new non-manager → MANAGER_NOT_MANAGING, nothing written', async () => {
+      const { service, repository } = makeService({ findManagerState: notManaging() });
+      await expect(service.update('e1', { managerId: 'm1' })).rejects.toMatchObject({
+        code: ErrorCode.MANAGER_NOT_MANAGING,
+      });
+      expect(repository.updateEmployee).not.toHaveBeenCalled();
+    });
+
+    it('the existing manager who no longer qualifies is kept on unrelated edits', async () => {
+      const { service, repository } = makeService({
+        findManagerState: notManaging(),
+        findDetail: jest.fn().mockResolvedValue(row({ manager: managerRef })),
+      });
+      // The whole form is sent back: the same manager, plus an unrelated change.
+      await expect(service.update('e1', { managerId: 'm1', grade: 'B' })).resolves.toBeDefined();
+      await expect(service.update('e1', { grade: 'C' })).resolves.toBeDefined();
+      expect(repository.updateEmployee).toHaveBeenCalledTimes(2);
+    });
+
+    it('get reports whether the manager still manages people', async () => {
+      const { service } = makeService({
+        findDetail: jest.fn().mockResolvedValue(row({ manager: managerRef })),
+      });
+      await expect(service.get('e1')).resolves.toMatchObject({
+        manager: { id: 'm1', code: 'EMP-0009', nameEn: 'M', nameAr: 'م', managesPeople: false },
+      });
+    });
+
+    it('list passes the picker filters to the repository', async () => {
+      const list = jest
+        .fn()
+        .mockResolvedValue({
+          data: [],
+          total: 0,
+          page: 1,
+          limit: 20,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        });
+      const { service } = makeService({ list });
+      await service.list({ status: 'ACTIVE', managesPeople: true, excludeId: 'e1' });
+      expect(list.mock.calls[0]![3]).toMatchObject({
+        status: 'ACTIVE',
+        managesPeople: true,
+        excludeId: 'e1',
+      });
     });
   });
 

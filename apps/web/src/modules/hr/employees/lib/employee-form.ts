@@ -196,6 +196,7 @@ const FIELD_BY_ERROR: Partial<Record<string, keyof EmployeeFormValues>> = {
   [ErrorCode.DUPLICATE_FINGERPRINT_ID]: 'fingerprintId',
   [ErrorCode.INVALID_MANAGER]: 'managerId',
   [ErrorCode.MANAGER_LOOP]: 'managerId',
+  [ErrorCode.MANAGER_NOT_MANAGING]: 'managerId',
 };
 
 export function fieldForError(code: unknown): keyof EmployeeFormValues | undefined {
@@ -221,22 +222,30 @@ export function listOptions(
 }
 
 /**
- * Direct-manager options (§3): another active employee — never the employee being edited and
- * never an inactive one. The current manager stays listed so an unrelated edit doesn't blank it.
+ * Direct-manager options (§3): active employees whose job title manages people (the API filters
+ * them) — never the employee being edited and never an inactive one. The current manager stays
+ * listed so an unrelated edit doesn't blank it, even when they no longer manage people:
+ * `currentNotManaging` then says so, for the field's note.
  */
 export function managerOptions(
   candidates: EmployeeSummary[],
   locale: Locale,
   noneLabel: string,
   selfId?: Uuid,
-  current?: (NamedRef & { code: string }) | null,
-): SelectOption[] {
+  current?: (NamedRef & { code: string; managesPeople?: boolean }) | null,
+): { options: SelectOption[]; currentNotManaging: boolean; hasCandidates: boolean } {
   const label = (e: NamedRef & { code: string }) => `${localName(e, locale)} · ${e.code}`;
   const options = candidates
     .filter((e) => e.status === EmployeeStatus.ACTIVE && e.id !== selfId)
     .map((e) => ({ value: e.id, label: label(e), keywords: [e.nameEn, e.nameAr, e.code] }));
-  if (current && current.id !== selfId && !options.some((o) => o.value === current.id)) {
+  const hasCandidates = options.length > 0;
+  const kept = Boolean(current && current.id !== selfId);
+  if (current && kept && !options.some((o) => o.value === current.id)) {
     options.push({ value: current.id, label: label(current), keywords: [current.nameEn, current.nameAr, current.code] });
   }
-  return [{ value: NO_MANAGER, label: noneLabel }, ...options];
+  return {
+    options: [{ value: NO_MANAGER, label: noneLabel }, ...options],
+    currentNotManaging: kept && current?.managesPeople === false,
+    hasCandidates,
+  };
 }

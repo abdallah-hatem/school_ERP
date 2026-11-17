@@ -22,6 +22,7 @@
   "DUPLICATE_FINGERPRINT_ID": "Another employee already has this fingerprint ID.",
   "INVALID_MANAGER": "The direct manager must be another active employee.",
   "MANAGER_LOOP": "This manager would create a reporting loop.",
+  "MANAGER_NOT_MANAGING": "The direct manager must hold a job title that manages people.",
   "VIOLATION_RETIRED": "This violation is retired and can't be used.",
   "INVALID_LEVELS": "Levels must be numbered 1 to 5 with no gaps.",
   "PENALTY_NOT_PENDING": "Only a pending penalty can be approved.",

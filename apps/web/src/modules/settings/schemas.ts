@@ -57,9 +57,12 @@ export type SchoolFormValues = z.infer<typeof schoolSchema>;
 
 // ── Lists (stages, departments, job titles) and catalogue groups ─────────────
 
-/** A name pair: both required, at most 100 (lists) or 200 (catalogue groups) characters. */
+/**
+ * A name pair: both required, at most 100 (lists) or 200 (catalogue groups) characters. Job titles
+ * also carry the "Manages people" switch (§3); the other lists leave it out.
+ */
 export function namesSchema(max: 'list' | 'group') {
-  return z.object({ nameEn: name(max), nameAr: name(max) });
+  return z.object({ nameEn: name(max), nameAr: name(max), managesPeople: z.boolean().optional() });
 }
 export type NamesFormValues = z.infer<ReturnType<typeof namesSchema>>;
 

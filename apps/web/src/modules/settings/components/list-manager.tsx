@@ -1,6 +1,6 @@
 'use client';
 
-import { PAGINATION, type ListItem, type PermissionKey } from '@school-erp/shared';
+import { PAGINATION, type PermissionKey } from '@school-erp/shared';
 import { useState } from 'react';
 import { useCan } from '@/core/auth';
 import { callApi } from '@/lib/callApi';
@@ -8,21 +8,16 @@ import { DataTable, type DataTableColumn } from '@/shared/components/data-table/
 import { RowActions, rowActionsColumn } from '@/shared/components/data-table/row-actions';
 import { EmptyState } from '@/shared/components/layout/empty-state';
 import { Button } from '@/shared/components/ui/button';
-import { AddIcon, EditIcon, HideIcon, ShowIcon } from '@/shared/components/ui/icons';
+import { AddIcon, EditIcon, HideIcon, ManagesPeopleIcon, ShowIcon } from '@/shared/components/ui/icons';
 import { SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
 import { StatusPill } from '@/shared/components/ui/status-pill';
 import { localName, otherName } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
-import { CREATE_LIST_ITEM, GET_LIST_ITEMS, UPDATE_LIST_ITEM, type ListKind } from '../apis';
+import { CREATE_LIST_ITEM, GET_LIST_ITEMS, UPDATE_LIST_ITEM, type ListKind, type ManagedListItem } from '../apis';
 import { useResource } from '../hooks/use-resource';
 import { NamesDialog } from './names-dialog';
 import { SectionPanel } from './section-panel';
 
-/**
- * One managed list — stages, departments or job titles (§3, §7): add, rename, hide / show. No
- * delete: an item in use is hidden from new choices. The API returns the whole (short) list, so
- * it is paged here.
- */
 /** Who may add, rename and hide each list's items (view only — the API decides). */
 const MANAGE_PERMISSION: Record<ListKind, PermissionKey> = {
   stages: 'core.stages.manage',
@@ -30,13 +25,20 @@ const MANAGE_PERMISSION: Record<ListKind, PermissionKey> = {
   jobTitles: 'hr.lists.manage',
 };
 
+/**
+ * One managed list — stages, departments or job titles (§3, §7): add, rename, hide / show. No
+ * delete: an item in use is hidden from new choices. The API returns the whole (short) list, so
+ * it is paged here. Job titles also have the "Manages people" switch (in the add / edit dialog)
+ * and a badge on the titles that have it.
+ */
 export function ListManager({ kind }: { kind: ListKind }) {
   const { t, locale } = useTranslation();
   const canManage = useCan()(MANAGE_PERMISSION[kind]);
   const list = useResource(kind, () => GET_LIST_ITEMS(kind));
   const [page, setPage] = useState(1);
   const limit = PAGINATION.defaultLimit;
-  const [editing, setEditing] = useState<ListItem | 'new' | null>(null);
+  const [editing, setEditing] = useState<ManagedListItem | 'new' | null>(null);
+  const withManaging = kind === 'jobTitles';
   const [toggling, setToggling] = useState<string | null>(null);
 
   const all = list.data ? [...list.data].sort((a, b) => a.sortOrder - b.sortOrder) : undefined;
@@ -45,11 +47,11 @@ export function ListManager({ kind }: { kind: ListKind }) {
   const rows = all?.slice((current - 1) * limit, current * limit);
   const copy = (key: string, values?: Record<string, string | number>) => t(`settings.lists.${kind}.${key}`, values);
 
-  function replace(item: ListItem) {
+  function replace(item: ManagedListItem) {
     list.setData((items) => items.map((i) => (i.id === item.id ? item : i)));
   }
 
-  async function toggle(item: ListItem) {
+  async function toggle(item: ManagedListItem) {
     if (toggling) return;
     setToggling(item.id);
     try {
@@ -60,7 +62,11 @@ export function ListManager({ kind }: { kind: ListKind }) {
     }
   }
 
-  async function save(values: { nameEn: string; nameAr: string }): Promise<boolean> {
+  async function save(form: { nameEn: string; nameAr: string; managesPeople?: boolean }): Promise<boolean> {
+    // Only job titles have the switch; the other lists refuse the field.
+    const values = withManaging
+      ? { nameEn: form.nameEn, nameAr: form.nameAr, managesPeople: Boolean(form.managesPeople) }
+      : { nameEn: form.nameEn, nameAr: form.nameAr };
     if (editing === 'new') {
       const nextOrder = (all ?? []).reduce((max, i) => Math.max(max, i.sortOrder), 0) + 1;
       const res = await callApi(CREATE_LIST_ITEM(kind, { ...values, sortOrder: nextOrder }));
@@ -77,7 +83,7 @@ export function ListManager({ kind }: { kind: ListKind }) {
     return Boolean(res.success);
   }
 
-  const columns: DataTableColumn<ListItem>[] = [
+  const columns: DataTableColumn<ManagedListItem>[] = [
     {
       id: 'name',
       header: t('settings.names.name'),
@@ -89,9 +95,14 @@ export function ListManager({ kind }: { kind: ListKind }) {
         </span>
       ),
       cell: (item) => (
-        <div className="flex min-w-0 flex-col">
+        <div className="flex min-w-0 flex-col items-start gap-0.5">
           <span className="font-semibold break-words">{localName(item, locale)}</span>
           <span className="text-xs break-words text-muted-foreground">{otherName(item, locale)}</span>
+          {withManaging && item.managesPeople ? (
+            <StatusPill tone="primary" icon={ManagesPeopleIcon} className="mt-1">
+              {copy('managesPeople')}
+            </StatusPill>
+          ) : null}
         </div>
       ),
     },
@@ -114,7 +125,7 @@ export function ListManager({ kind }: { kind: ListKind }) {
         busy={toggling === item.id}
         disabled={toggling !== null && toggling !== item.id}
         actions={[
-          { id: 'rename', label: t('settings.lists.rename'), icon: EditIcon, hidden: !canManage, onSelect: () => setEditing(item) },
+          { id: 'rename', label: withManaging ? copy('edit') : t('settings.lists.rename'), icon: EditIcon, hidden: !canManage, onSelect: () => setEditing(item) },
           item.isActive
             ? { id: 'hide', label: t('settings.lists.hide'), icon: HideIcon, destructive: true, hidden: !canManage, onSelect: () => void toggle(item) }
             : { id: 'show', label: t('settings.lists.show'), icon: ShowIcon, hidden: !canManage, onSelect: () => void toggle(item) },
@@ -150,9 +161,24 @@ export function ListManager({ kind }: { kind: ListKind }) {
           key={editing === 'new' ? 'new' : editing.id}
           open
           onOpenChange={(open) => !open && setEditing(null)}
-          title={editing === 'new' ? copy('add') : t('settings.lists.renameItem', { name: localName(editing, locale) })}
+          title={
+            editing === 'new'
+              ? copy('add')
+              : withManaging
+                ? copy('editItem', { name: localName(editing, locale) })
+                : t('settings.lists.renameItem', { name: localName(editing, locale) })
+          }
           max="list"
-          initial={editing === 'new' ? undefined : { nameEn: editing.nameEn, nameAr: editing.nameAr }}
+          initial={
+            editing === 'new'
+              ? undefined
+              : {
+                  nameEn: editing.nameEn,
+                  nameAr: editing.nameAr,
+                  ...(withManaging ? { managesPeople: Boolean(editing.managesPeople) } : {}),
+                }
+          }
+          toggle={withManaging ? { label: copy('managesPeople'), hint: copy('managesPeopleHint') } : undefined}
           placeholders={{ en: copy('placeholderEn'), ar: copy('placeholderAr') }}
           submitLabel={editing === 'new' ? t('common.actions.create') : t('common.actions.save')}
           onSubmit={save}

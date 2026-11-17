@@ -54,8 +54,18 @@ export function toEmployeeSummary(row: EmployeeSummaryRow): EmployeeSummary {
 }
 
 export function toEmployee(row: EmployeeDetailRow): Employee {
+  const { manager, ...rest } = row;
   return {
-    ...row,
+    ...rest,
+    manager: manager
+      ? {
+          id: manager.id,
+          code: manager.code,
+          nameEn: manager.nameEn,
+          nameAr: manager.nameAr,
+          managesPeople: manager.jobTitle.managesPeople,
+        }
+      : null,
     dateOfBirth: toIsoDate(row.dateOfBirth),
     hireDate: toIsoDate(row.hireDate),
     contractStart: toIsoDate(row.contractStart),
@@ -84,6 +94,8 @@ export class EmployeesService {
       stageId: query.stageId,
       status: query.status,
       workSystem: query.workSystem,
+      managesPeople: query.managesPeople,
+      excludeId: query.excludeId,
     });
     return { ...result, data: result.data.map(toEmployeeSummary) };
   }
@@ -136,7 +148,7 @@ export class EmployeesService {
   async create(dto: CreateEmployeeDto): Promise<Employee> {
     await this.assertSelectable(dto);
     await this.assertUnique(dto, null);
-    if (dto.managerId) await this.assertManager(null, dto.managerId);
+    if (dto.managerId) await this.assertManager(null, dto.managerId, true);
     const contract = this.resolveContract(dto.contractStart, dto.contractEnd);
 
     const row = await this.repository.createWithCode({
@@ -180,7 +192,10 @@ export class EmployeesService {
       jobTitleId: dto.jobTitleId !== current.jobTitle.id ? dto.jobTitleId : undefined,
     });
     await this.assertUnique(dto, id);
-    if (dto.managerId) await this.assertManager(id, dto.managerId);
+    // The existing manager left unchanged is kept even if they no longer manage people (§3).
+    if (dto.managerId) {
+      await this.assertManager(id, dto.managerId, dto.managerId !== current.manager?.id);
+    }
     if (dto.contractStart !== undefined || dto.contractEnd !== undefined) {
       this.assertContractOrder(
         dto.contractStart ?? toIsoDate(current.contractStart),
@@ -253,12 +268,20 @@ export class EmployeesService {
 
   /**
    * The manager is another active employee, and choosing them must not close a loop: walking up
-   * from the new manager must never reach this employee (A→B→A, A→B→C→A…).
+   * from the new manager must never reach this employee (A→B→A, A→B→C→A…). A newly chosen
+   * manager must also hold a job title that manages people (400 `MANAGER_NOT_MANAGING`, §3).
    */
-  private async assertManager(selfId: Uuid | null, managerId: Uuid): Promise<void> {
+  private async assertManager(
+    selfId: Uuid | null,
+    managerId: Uuid,
+    newlyChosen: boolean,
+  ): Promise<void> {
     if (managerId === selfId) throw bad(ErrorCode.INVALID_MANAGER);
-    const manager = await this.repository.findState(managerId);
+    const manager = await this.repository.findManagerState(managerId);
     if (!manager || manager.status !== EmployeeStatus.ACTIVE) throw bad(ErrorCode.INVALID_MANAGER);
+    if (newlyChosen && !manager.jobTitle.managesPeople) {
+      throw bad(ErrorCode.MANAGER_NOT_MANAGING);
+    }
     if (selfId && (await this.repository.managerChainIds(managerId)).includes(selfId)) {
       throw bad(ErrorCode.MANAGER_LOOP);
     }

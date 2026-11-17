@@ -1,15 +1,16 @@
 'use server';
 
 import type {
-  CreateListItemRequest,
+  CreateJobTitleRequest,
   CreatePenaltyGroupRequest,
   CreateViolationRequest,
   HrSettings,
+  JobTitle,
   ListItem,
   PenaltyGroup,
   SchoolSettings,
   UpdateHrSettingsRequest,
-  UpdateListItemRequest,
+  UpdateJobTitleRequest,
   UpdatePenaltyGroupRequest,
   UpdateSchoolSettingsRequest,
   UpdateViolationRequest,
@@ -31,6 +32,8 @@ const CATALOGUE_TAG = 'penalty-catalogue';
 
 /** Stages, departments and job titles share one shape and one set of routes. */
 export type ListKind = 'stages' | 'departments' | 'jobTitles';
+/** A list item as the Settings screen holds it: job titles also carry `managesPeople` (§3). */
+export type ManagedListItem = ListItem & Partial<Pick<JobTitle, 'managesPeople'>>;
 const LIST_ROUTES: Record<ListKind, { path: string; tag: string }> = {
   stages: { path: '/stages', tag: 'stages' },
   departments: { path: '/hr/departments', tag: 'departments' },
@@ -66,15 +69,16 @@ export async function UPLOAD_SCHOOL_LOGO(form: FormData) {
 // ── Lists: stages (core), departments and job titles (hr) ────────────────────
 
 export async function GET_LIST_ITEMS(kind: ListKind) {
-  const res = await apiFetch<ListItem[]>(LIST_ROUTES[kind].path, {
+  const res = await apiFetch<ManagedListItem[]>(LIST_ROUTES[kind].path, {
     params: { includeHidden: 'true' },
     cache: 'no-store',
   });
   return handleResponse({ response: res });
 }
 
-export async function CREATE_LIST_ITEM(kind: ListKind, data: CreateListItemRequest) {
-  const res = await apiFetch<ListItem>(LIST_ROUTES[kind].path, {
+/** `managesPeople` is for job titles only — the other lists refuse it. */
+export async function CREATE_LIST_ITEM(kind: ListKind, data: CreateJobTitleRequest) {
+  const res = await apiFetch<ManagedListItem>(LIST_ROUTES[kind].path, {
     method: 'POST',
     body: { ...data },
     revalidateTags: [LIST_ROUTES[kind].tag],
@@ -82,8 +86,8 @@ export async function CREATE_LIST_ITEM(kind: ListKind, data: CreateListItemReque
   return handleResponse({ response: res });
 }
 
-export async function UPDATE_LIST_ITEM(kind: ListKind, id: string, data: UpdateListItemRequest) {
-  const res = await apiFetch<ListItem>(`${LIST_ROUTES[kind].path}/${encodeURIComponent(id)}`, {
+export async function UPDATE_LIST_ITEM(kind: ListKind, id: string, data: UpdateJobTitleRequest) {
+  const res = await apiFetch<ManagedListItem>(`${LIST_ROUTES[kind].path}/${encodeURIComponent(id)}`, {
     method: 'PATCH',
     body: { ...data },
     revalidateTags: [LIST_ROUTES[kind].tag],
