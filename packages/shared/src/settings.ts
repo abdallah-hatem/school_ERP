@@ -80,7 +80,7 @@ export const SETTING_DEFAULTS: { [K in SettingKey]: SettingValueMap[K] } = {
   'school.nameEn': '',
   'school.nameAr': '',
   'school.logoUrl': null,
-  'school.defaultLanguage': 'ar',
+  'school.defaultLanguage': 'en',
   'school.workStart': '07:30',
   'school.workEnd': '15:00',
   'school.workingDays': ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY'],

@@ -53,7 +53,7 @@ describe('SettingsService', () => {
 
     const changed = await service.setValues(
       'school',
-      { 'school.workStart': '08:00', 'school.defaultLanguage': 'ar' },
+      { 'school.workStart': '08:00', 'school.defaultLanguage': 'en' },
       'user-1',
     );
 

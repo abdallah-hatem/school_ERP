@@ -14,7 +14,7 @@ affects only **draft** payroll runs (approved runs never change).
 | Setting | Default | Source |
 |---|---|---|
 | School name (English, Arabic) and logo | From the seed | DECIDED |
-| Default language | Arabic | GUESS |
+| Default language | English | DECIDED (owner, 2026-11-17) |
 | Work start / end time | 7:30 / 15:00 | DECIDED |
 | Working days | Sunday – Thursday | GUESS |
 | Lateness grace minutes | 0 | GUESS |

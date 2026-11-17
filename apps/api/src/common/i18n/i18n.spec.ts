@@ -8,15 +8,15 @@ describe('resolveLanguage', () => {
     ['en-US,en;q=0.9', 'en'],
     ['ar-EG', 'ar'],
     ['fr-FR, en;q=0.5, ar;q=0.8', 'ar'],
-    ['fr', 'ar'],
-    ['', 'ar'],
+    ['fr', 'en'],
+    ['', 'en'],
     ['en;q=0, ar', 'ar'],
   ])('%j → %s', (header, lang) => {
     expect(resolveLanguage(header)).toBe(lang);
   });
 
-  it('falls back to Arabic with no header', () => {
-    expect(resolveLanguage(undefined)).toBe('ar');
+  it('falls back to English with no header', () => {
+    expect(resolveLanguage(undefined)).toBe('en');
   });
 });
 

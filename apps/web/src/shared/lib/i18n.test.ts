@@ -59,7 +59,7 @@ describe('i18n', () => {
     );
     // No page locale at all → the cookie, then Arabic.
     expect(requestLocale({ pathname: '/api/auth/refresh', cookie: 'en' })).toBe('en');
-    expect(requestLocale({})).toBe('ar');
+    expect(requestLocale({})).toBe('en');
     expect(localeFromPath('/fr/x')).toBeNull();
   });
 });

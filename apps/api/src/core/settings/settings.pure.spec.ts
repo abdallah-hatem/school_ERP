@@ -7,7 +7,7 @@ describe('resolveValues', () => {
       [],
     );
     expect(out).toEqual({
-      'school.defaultLanguage': 'ar',
+      'school.defaultLanguage': 'en',
       'school.workStart': '07:30',
       'school.workEnd': '15:00',
       'school.workingDays': ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY'],
