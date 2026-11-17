@@ -87,8 +87,7 @@
     "searchPlaceholder": "Name, code or national ID",
     "department": "Department",
     "allDepartments": "All departments",
-    "needsReview": "Needs review only",
-    "clear": "Clear filters"
+    "needsReview": "Needs review only"
   },
   "empty": {
     "title": "No employees in this run",

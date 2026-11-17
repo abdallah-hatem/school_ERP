@@ -44,9 +44,14 @@ export function parseEmployeesQuery(params: SearchParamsRecord): EmployeesListQu
   };
 }
 
+/** The search (when it has text) plus each filter in use — the "Clear filters · n" count. */
+export function activeFilterCount(query: EmployeesListQuery): number {
+  return FILTER_KEYS.filter((key) => Boolean(query[key])).length;
+}
+
 /** Whether a search or any filter narrows the list — decides "no results" vs "nothing yet". */
 export function hasActiveFilters(query: EmployeesListQuery): boolean {
-  return FILTER_KEYS.some((key) => Boolean(query[key]));
+  return activeFilterCount(query) > 0;
 }
 
 /** The query string for `query`, leaving out defaults so URLs stay short. */

@@ -71,7 +71,9 @@ describe('RecordHistory (employee History tab)', () => {
       screen.getByText('Nothing matches the field Phone and the person Ahmed Mahmoud. Remove one of them or clear the filters.'),
     ).toBeTruthy();
     expect(screen.queryByText(/Showing/)).toBeNull();
-    await user.click(screen.getAllByRole('button', { name: 'Clear filters' })[0]!);
+    push.mockClear();
+    await user.click(screen.getAllByRole('button', { name: 'Clear filters · 2' })[0]!);
+    expect(push).toHaveBeenCalledTimes(1);
     expect(push).toHaveBeenLastCalledWith(BASE, { scroll: false });
   });
 

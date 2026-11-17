@@ -87,8 +87,7 @@
     "searchPlaceholder": "الاسم أو الكود أو الرقم القومي",
     "department": "القسم",
     "allDepartments": "كل الأقسام",
-    "needsReview": "ما يحتاج مراجعة فقط",
-    "clear": "مسح عوامل التصفية"
+    "needsReview": "ما يحتاج مراجعة فقط"
   },
   "empty": {
     "title": "لا يوجد موظفون في هذا المسيّر",
