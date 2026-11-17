@@ -51,7 +51,7 @@ skills. **Where this file differs from a skill, this file wins.**
   Stages live in `core/school-structure`. Module rule settings live in their module.
 - **Design:** direction "Campus", teal + sunflower palette, **light theme only** (no dark tokens, no
   theme toggle — overrides the skill's light/dark rule), fully responsive (desktop, tablet, phone),
-  English default (owner, 2026-11-17), Arabic fully supported with RTL. Reference mockup: `design/mockups/b-campus.html` (local, not
-  committed).
+  English default (owner, 2026-11-17), Arabic fully supported with RTL. Reference mockup: `design/mockups/b-campus.html` (committed, lead-owned;
+  `design/audit/` and `design/assets/` stay local).
 - **Client material** (school name, logo, the penalty regulations) is seed data only. It never goes
   in code or docs.
