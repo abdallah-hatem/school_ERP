@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Add button icons</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<style>
+  :root { --bg:#EAF4F1; --surface:#fff; --text:#11302B; --muted:#5D7671; --primary:#0B7A68; --primary-soft:#D5EFE8; --accent:#FFC43D; --line:#DCE9E5; }
+  * { box-sizing:border-box }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:"Plus Jakarta Sans",system-ui,sans-serif; padding:32px 16px }
+  main { max-width:1100px; margin:0 auto }
+  h1 { font-size:24px; margin:0 0 4px } p.lead { color:var(--muted); margin:0 0 24px }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:16px }
+  .opt { background:var(--surface); border:1px solid var(--line); border-radius:18px; padding:20px }
+  .tag { font-size:12px; font-weight:700; letter-spacing:.06em; color:var(--muted); text-transform:uppercase }
+  .name { font-size:18px; font-weight:700; margin:4px 0 6px } .desc { color:var(--muted); font-size:14px; margin:0 0 16px; line-height:1.5 }
+  .row { display:flex; flex-wrap:wrap; gap:10px; align-items:center }
+  .btn { display:inline-flex; align-items:center; gap:8px; border:0; border-radius:12px; padding:11px 16px; font:600 15px/1 inherit; cursor:pointer; background:var(--primary); color:#fff; box-shadow:0 6px 16px -8px rgba(11,72,62,.6) }
+  .btn i { font-size:20px }
+  .btn.ghost { background:var(--primary-soft); color:var(--primary); box-shadow:none }
+  .badge { display:inline-grid; place-items:center; width:24px; height:24px; border-radius:8px; background:rgba(255,255,255,.18) }
+  .badge i { font-size:16px }
+  .ar { font-family:"IBM Plex Sans Arabic",sans-serif }
+</style>
+</head>
+<body>
+<main>
+  <h1>Add-button icons — pick one</h1>
+  <p class="lead">Same three buttons in each option: Add employee · Record a penalty · Create payroll run. Top row English, bottom row Arabic.</p>
+  <div class="grid">
+
+    <section class="opt">
+      <div class="tag">Current</div><div class="name">Plus (duotone)</div>
+      <p class="desc">A generic plus on every button.</p>
+      <div class="row"><button class="btn"><i class="ph-duotone ph-plus"></i>Add employee</button><button class="btn"><i class="ph-duotone ph-plus"></i>Record a penalty</button><button class="btn"><i class="ph-duotone ph-plus"></i>Create run</button></div>
+      <div class="row ar" dir="rtl" style="margin-top:10px"><button class="btn"><i class="ph-duotone ph-plus"></i>إضافة موظف</button><button class="btn"><i class="ph-duotone ph-plus"></i>تسجيل جزاء</button><button class="btn"><i class="ph-duotone ph-plus"></i>إنشاء مسير</button></div>
+    </section>
+
+    <section class="opt">
+      <div class="tag">Option 1</div><div class="name">Meaningful icons</div>
+      <p class="desc">Each button shows what it adds: a person, a penalty, a payroll run. No plus at all.</p>
+      <div class="row"><button class="btn"><i class="ph-duotone ph-user-plus"></i>Add employee</button><button class="btn"><i class="ph-duotone ph-gavel"></i>Record a penalty</button><button class="btn"><i class="ph-duotone ph-calendar-plus"></i>Create run</button></div>
+      <div class="row ar" dir="rtl" style="margin-top:10px"><button class="btn"><i class="ph-duotone ph-user-plus"></i>إضافة موظف</button><button class="btn"><i class="ph-duotone ph-gavel"></i>تسجيل جزاء</button><button class="btn"><i class="ph-duotone ph-calendar-plus"></i>إنشاء مسير</button></div>
+    </section>
+
+    <section class="opt">
+      <div class="tag">Option 2</div><div class="name">Plus in a soft badge</div>
+      <p class="desc">One consistent "add" mark, but a small rounded badge instead of a bare plus.</p>
+      <div class="row"><button class="btn"><span class="badge"><i class="ph-bold ph-plus"></i></span>Add employee</button><button class="btn"><span class="badge"><i class="ph-bold ph-plus"></i></span>Record a penalty</button><button class="btn"><span class="badge"><i class="ph-bold ph-plus"></i></span>Create run</button></div>
+      <div class="row ar" dir="rtl" style="margin-top:10px"><button class="btn"><span class="badge"><i class="ph-bold ph-plus"></i></span>إضافة موظف</button><button class="btn"><span class="badge"><i class="ph-bold ph-plus"></i></span>تسجيل جزاء</button><button class="btn"><span class="badge"><i class="ph-bold ph-plus"></i></span>إنشاء مسير</button></div>
+    </section>
+
+    <section class="opt">
+      <div class="tag">Option 3</div><div class="name">Plus circle</div>
+      <p class="desc">A plus inside a circle — reads clearly as "new", softer than a bare plus.</p>
+      <div class="row"><button class="btn"><i class="ph-duotone ph-plus-circle"></i>Add employee</button><button class="btn"><i class="ph-duotone ph-plus-circle"></i>Record a penalty</button><button class="btn"><i class="ph-duotone ph-plus-circle"></i>Create run</button></div>
+      <div class="row ar" dir="rtl" style="margin-top:10px"><button class="btn"><i class="ph-duotone ph-plus-circle"></i>إضافة موظف</button><button class="btn"><i class="ph-duotone ph-plus-circle"></i>تسجيل جزاء</button><button class="btn"><i class="ph-duotone ph-plus-circle"></i>إنشاء مسير</button></div>
+    </section>
+
+    <section class="opt">
+      <div class="tag">Option 4</div><div class="name">Sparkle "new"</div>
+      <p class="desc">A small sparkle — friendly, fits the warm Campus look.</p>
+      <div class="row"><button class="btn"><i class="ph-duotone ph-sparkle"></i>Add employee</button><button class="btn"><i class="ph-duotone ph-sparkle"></i>Record a penalty</button><button class="btn"><i class="ph-duotone ph-sparkle"></i>Create run</button></div>
+      <div class="row ar" dir="rtl" style="margin-top:10px"><button class="btn"><i class="ph-duotone ph-sparkle"></i>إضافة موظف</button><button class="btn"><i class="ph-duotone ph-sparkle"></i>تسجيل جزاء</button><button class="btn"><i class="ph-duotone ph-sparkle"></i>إنشاء مسير</button></div>
+    </section>
+
+    <section class="opt">
+      <div class="tag">Option 5</div><div class="name">Text only</div>
+      <p class="desc">No icon — the label alone, slightly bolder. Cleanest.</p>
+      <div class="row"><button class="btn">Add employee</button><button class="btn">Record a penalty</button><button class="btn">Create run</button></div>
+      <div class="row ar" dir="rtl" style="margin-top:10px"><button class="btn">إضافة موظف</button><button class="btn">تسجيل جزاء</button><button class="btn">إنشاء مسير</button></div>
+    </section>
+
+  </div>
+</main>
+</body>
+</html>

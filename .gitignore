@@ -47,5 +47,8 @@ next-env.d.ts
 !.vscode/extensions.json
 apps/web/AGENTS.md
 
-# Mockups and UI audit screenshots: client material, kept local
-design/
+# UI audit screenshots and the client's logo show client material: kept local.
+# design/mockups/*.html and BRIEF.md are shared (placeholder school name) and owned by the lead (CODEOWNERS).
+design/audit/
+design/assets/
+design/mockups/screenshots/

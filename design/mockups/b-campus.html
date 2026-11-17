@@ -1,0 +1,758 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Campus Payroll Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Tajawal:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/duotone/style.css">
+<style>
+:root{
+  --bg:#EAF4F1;
+  --bg-2:#DDEEE9;
+  --surface:#FFFFFF;
+  --surface-2:#F5FAF8;
+  --line:#DCE9E5;
+  --text:#11302B;
+  --muted:#5D7671;
+  --primary:#0B7A68;
+  --primary-ink:#FFFFFF;
+  --primary-soft:#D5EFE8;
+  --accent:#FFC43D;
+  --accent-ink:#4A3400;
+  --accent-soft:#FFF1C9;
+  --success:#1F9A62;
+  --success-soft:#DDF4E7;
+  --warning:#D9771C;
+  --warning-soft:#FFE8D2;
+  --danger:#D9473A;
+  --danger-soft:#FDE3DF;
+  --sky-soft:#E0EEFB;
+  --sky:#2F6FB3;
+  --shadow:0 1px 2px rgba(11,72,62,.06),0 10px 30px -12px rgba(11,72,62,.18);
+  --shadow-lg:0 2px 4px rgba(11,72,62,.05),0 30px 60px -24px rgba(11,72,62,.28);
+  --bar:#0F2F2A;
+  --bar-ink:#E7F4F0;
+  --font-latin:"Plus Jakarta Sans",system-ui,sans-serif;
+  --font-ar:"IBM Plex Sans Arabic","Plus Jakarta Sans",system-ui,sans-serif;
+  --font-ar-display:"Tajawal","IBM Plex Sans Arabic",system-ui,sans-serif;
+  --font:var(--font-latin);
+  --font-display:var(--font-latin);
+  color-scheme:light;
+}
+:root[lang="ar"]{--font:var(--font-ar);--font-display:var(--font-ar-display)}
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid color-mix(in srgb,var(--primary) 55%,transparent);outline-offset:2px;border-radius:10px}
+.num{font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;font-family:var(--font-latin)}
+[dir="rtl"] .flip{transform:scaleX(-1)}
+.ph-duotone{font-size:1.25em;line-height:1}
+
+/* ---------- mockup bar ---------- */
+.mockbar{background:var(--bar);color:var(--bar-ink);display:flex;align-items:center;gap:20px;padding-block:10px;padding-inline:24px;font-size:13px;position:sticky;inset-block-start:0;z-index:10;flex-wrap:wrap}
+.mockbar strong{font-weight:700;font-size:14px}
+.mockbar .feel{opacity:.72}
+.mockbar .spacer{flex:1}
+.seg{display:inline-flex;background:rgba(255,255,255,.08);border-radius:999px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;color:inherit;padding-block:5px;padding-inline:14px;border-radius:999px;cursor:pointer;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#3A2900}
+.seg .ar-glyph{font-family:var(--font-ar-display);font-size:15px;line-height:1}
+
+/* ---------- stage ---------- */
+.stage{padding-block:36px 28px;padding-inline:24px;background:
+  radial-gradient(900px 420px at 12% -10%, color-mix(in srgb,var(--primary) 14%,transparent), transparent 70%),
+  radial-gradient(700px 360px at 95% 0%, color-mix(in srgb,var(--accent) 18%,transparent), transparent 70%)}
+[dir="rtl"] .stage{background:
+  radial-gradient(900px 420px at 88% -10%, color-mix(in srgb,var(--primary) 14%,transparent), transparent 70%),
+  radial-gradient(700px 360px at 5% 0%, color-mix(in srgb,var(--accent) 18%,transparent), transparent 70%)}
+.app{max-width:1400px;margin-inline:auto;display:grid;grid-template-columns:252px 1fr;background:var(--surface-2);border-radius:30px;box-shadow:var(--shadow-lg);overflow:hidden;min-height:860px;border:1px solid var(--line)}
+
+/* ---------- sidebar ---------- */
+.side{background:var(--surface);padding-block:24px;padding-inline:18px;display:flex;flex-direction:column;gap:28px;border-inline-end:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:12px;padding-inline:6px}
+.brand svg{flex:none}
+.brand-name{font-family:var(--font-display);font-weight:800;font-size:16px;line-height:1.2}
+.brand-sub{font-size:12px;color:var(--muted)}
+.nav{display:flex;flex-direction:column;gap:4px;margin:0;padding:0;list-style:none}
+.nav a{display:flex;align-items:center;gap:12px;min-height:44px;padding-block:10px;padding-inline:12px;border-radius:14px;color:var(--muted);text-decoration:none;font-weight:600;font-size:14.5px;transition:background-color .15s,color .15s}
+.nav a .ph-duotone{font-size:21px}
+.nav a:hover{background:var(--surface-2);color:var(--text)}
+.nav a[aria-current="page"]{background:var(--primary-soft);color:var(--primary)}
+.nav a[aria-current="page"]::after{content:"";margin-inline-start:auto;width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 30%,transparent)}
+.nav .sep{height:1px;background:var(--line);margin-block:10px;margin-inline:12px}
+.userchip{margin-block-start:auto;display:flex;align-items:center;gap:12px;padding:12px;border-radius:18px;background:var(--surface-2);border:1px solid var(--line)}
+.avatar{width:40px;height:40px;border-radius:14px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:800;font-family:var(--font-display);font-size:15px;flex:none}
+.userchip .n{font-weight:700;font-size:14px;line-height:1.25}
+.userchip .r{font-size:12.5px;color:var(--muted)}
+.userchip .ph-duotone{margin-inline-start:auto;color:var(--muted)}
+
+/* ---------- main ---------- */
+.main{padding-block:28px 32px;padding-inline:32px;display:flex;flex-direction:column;gap:24px;min-width:0;container:main / inline-size}
+.crumbs{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+.crumbs .ph-duotone{font-size:14px}
+.head{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.head h1{margin:0;font-family:var(--font-display);font-size:30px;line-height:1.15;font-weight:800;letter-spacing:-.01em}
+:root[lang="ar"] .head h1{letter-spacing:0}
+.titlewrap{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding-block:4px;padding-inline:10px 12px;font-size:13px;font-weight:700;white-space:nowrap}
+.pill .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+.pill-draft{background:var(--accent-soft);color:color-mix(in srgb,var(--accent-ink) 80%,var(--accent))}
+.actions{margin-inline-start:auto;display:flex;gap:10px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:8px;border-radius:14px;padding-block:10px;padding-inline:16px;font-weight:700;font-size:14px;border:1px solid var(--line);background:var(--surface);cursor:pointer;box-shadow:0 1px 2px rgba(11,72,62,.05);transition:transform .12s ease,box-shadow .15s ease}
+.btn:hover{transform:translateY(-1px);box-shadow:var(--shadow)}
+.btn:active{transform:translateY(0)}
+.btn .ph-duotone{font-size:18px}
+.btn-primary{background:var(--primary);color:var(--primary-ink);border-color:transparent;box-shadow:0 8px 20px -8px color-mix(in srgb,var(--primary) 70%,transparent)}
+
+/* tiles */
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.tile{position:relative;border-radius:22px;padding-block:18px 20px;padding-inline:20px;background:var(--surface);box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column;gap:12px}
+.tile .tt{display:flex;align-items:center;gap:12px}
+.tile .ic{flex:none;width:40px;height:40px;border-radius:14px;display:grid;place-items:center;font-size:24px}
+.tile .lbl{font-size:14px;color:var(--muted);font-weight:600}
+.tile .val{font-size:clamp(24px,2.8cqi,30px);flex-wrap:wrap;font-weight:800;line-height:1;letter-spacing:-.02em;display:flex;align-items:baseline;gap:6px}
+.tile .cur{font-size:14px;font-weight:700;color:var(--muted);letter-spacing:0;font-family:var(--font)}
+.tile > *{position:relative;z-index:1}
+.t-emp{background:linear-gradient(180deg,color-mix(in srgb,var(--sky) 7%,var(--surface)),var(--surface) 60%)} .t-emp .ic{background:var(--sky-soft);color:var(--sky)}
+.t-gross{background:linear-gradient(180deg,color-mix(in srgb,var(--primary) 7%,var(--surface)),var(--surface) 60%)} .t-gross .ic{background:var(--primary-soft);color:var(--primary)}
+.t-ded{background:linear-gradient(180deg,color-mix(in srgb,var(--warning) 7%,var(--surface)),var(--surface) 60%)} .t-ded .ic{background:var(--warning-soft);color:var(--warning)}
+.t-net{background:var(--primary);color:var(--primary-ink)}
+.t-net::after{content:"";position:absolute;width:150px;height:150px;inset-block-start:-70px;inset-inline-end:-50px;border-radius:50%;background:color-mix(in srgb,var(--accent) 85%,transparent)}
+.t-net::before{content:"";position:absolute;inset-block-end:-60px;inset-inline-start:30%;width:180px;height:180px;border-radius:50%;background:color-mix(in srgb,var(--primary-ink) 8%,transparent)}
+.t-net .ic{background:color-mix(in srgb,var(--primary-ink) 16%,transparent);color:var(--primary-ink)}
+.t-net .lbl,.t-net .cur{color:color-mix(in srgb,var(--primary-ink) 78%,transparent)}
+.tile .sub{font-size:12.5px;color:var(--muted);margin-block-start:-4px;line-height:1.4}
+.tile .sub .num{font-weight:600;color:var(--text)}
+.t-net .sub{color:color-mix(in srgb,var(--primary-ink) 75%,transparent)}
+.t-net .val{font-size:clamp(26px,3.1cqi,34px)}
+
+/* content grid */
+.grid{display:grid;grid-template-columns:minmax(0,1fr);gap:20px;align-items:start}
+.card{background:var(--surface);border-radius:24px;box-shadow:var(--shadow)}
+.tablecard{padding-block:20px 8px}
+.tbar{display:flex;align-items:center;gap:12px;padding-inline:20px;padding-block-end:16px;flex-wrap:wrap}
+.tbar h2{margin:0;font-family:var(--font-display);font-size:19px;font-weight:800}
+.count{font-size:13px;color:var(--muted);font-weight:600}
+.tbar .tools{margin-inline-start:auto;display:flex;gap:10px;flex-wrap:wrap}
+.field{display:flex;align-items:center;gap:8px;background:var(--surface-2);border:1px solid var(--line);border-radius:14px;padding-block:8px;padding-inline:12px;color:var(--muted)}
+.field input,.field select{border:0;background:transparent;outline:none;min-width:0;color:var(--text);font-size:14px}
+.field input{width:190px}
+.field select{appearance:none;padding-inline-end:4px;cursor:pointer}
+.field select option{background:var(--surface);color:var(--text)}
+.field:focus-within{border-color:var(--primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 20%,transparent)}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:14px}
+thead th{font-weight:600;color:var(--muted);font-size:12.5px;text-align:start;padding-block:10px;padding-inline:12px;background:var(--surface-2);white-space:nowrap}
+thead th:first-child{padding-inline-start:20px;border-start-start-radius:14px;border-end-start-radius:14px}
+thead th:last-child{padding-inline-end:20px;border-start-end-radius:14px;border-end-end-radius:14px}
+thead tr th{border:0}
+th.n,td.n{text-align:end}
+table thead th.n,table tbody td.n{padding-inline:8px}
+table thead th.stc,table tbody td.stc{min-width:138px;padding-inline:14px 16px}
+tbody td{padding-block:12px;padding-inline:12px;border-block-end:1px solid var(--line);white-space:nowrap;vertical-align:middle}
+tbody td:first-child{padding-inline-start:20px}
+tbody td:last-child{padding-inline-end:20px}
+tbody tr:last-child td{border-block-end:0}
+tbody tr{transition:background-color .12s}
+tbody tr:hover td{background:color-mix(in srgb,var(--primary-soft) 45%,transparent)}
+.emp{display:flex;align-items:center;gap:10px}
+.ava{width:34px;height:34px;border-radius:12px;display:grid;place-items:center;font-weight:800;font-size:13px;flex:none;font-family:var(--font-display)}
+.emp .nm{font-weight:700;color:var(--text);line-height:1.25}
+.emp .dp{font-size:12.5px;color:var(--muted)}
+td.money{color:var(--text);font-weight:500}
+td.zero{color:color-mix(in srgb,var(--muted) 70%,transparent)}
+td.pen{color:var(--danger);font-weight:700}
+td.net{font-weight:800;color:var(--text)}
+.st{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding-block:4px;padding-inline:8px 10px;font-size:12.5px;font-weight:700}
+.st .ph-duotone{font-size:15px}
+.st-ready{background:var(--success-soft);color:var(--success)}
+.st-review{background:var(--warning-soft);color:var(--warning)}
+tr.review td:first-child{box-shadow:inset 4px 0 0 var(--warning)}
+[dir="rtl"] tr.review td:first-child{box-shadow:inset -4px 0 0 var(--warning)}
+.tfoot{display:flex;align-items:center;gap:10px;padding-block:14px;padding-inline:20px;color:var(--muted);font-size:13px;border-block-start:1px solid var(--line);flex-wrap:wrap}
+.tfoot .pager{margin-inline-start:auto;display:flex;gap:6px}
+.pg{width:34px;height:34px;border-radius:11px;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;cursor:pointer;color:var(--text)}
+.pg[aria-current="true"]{background:var(--primary);color:var(--primary-ink);border-color:transparent;font-weight:700}
+.empty{padding:28px 20px;text-align:center;color:var(--muted)}
+
+/* rules panel */
+.rules{padding:22px;display:flex;flex-direction:column;gap:16px;position:relative;overflow:hidden}
+.rules::before{content:"";position:absolute;inset-block-start:0;inset-inline:0;height:110px;background:linear-gradient(180deg,var(--accent-soft),transparent)}
+.rules > *{position:relative}
+.rules .top{display:flex;align-items:flex-start;gap:12px}
+.rules .top .ic{width:44px;height:44px;border-radius:14px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-size:24px;flex:none;box-shadow:0 8px 18px -8px color-mix(in srgb,var(--accent) 90%,transparent)}
+.rules h2{margin:0;font-family:var(--font-display);font-size:17px;font-weight:800;line-height:1.25}
+.rules .lead{margin:0;margin-block-start:4px;font-size:13px;color:var(--muted)}
+.rlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.rlist li{display:flex;gap:12px;align-items:flex-start;padding:12px;border-radius:16px;background:var(--surface-2);border:1px solid var(--line)}
+.rlist .ri{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;font-size:19px;flex:none}
+.rlist .rn{font-weight:700;font-size:14px;line-height:1.3}
+.rlist .rv{font-size:13px;color:var(--muted);margin-block-start:2px}
+.rlist .rv b{color:var(--text);font-weight:700}
+.c-p{background:var(--primary-soft);color:var(--primary)}
+.c-s{background:var(--sky-soft);color:var(--sky)}
+.c-w{background:var(--warning-soft);color:var(--warning)}
+.c-d{background:var(--danger-soft);color:var(--danger)}
+.c-a{background:var(--accent-soft);color:color-mix(in srgb,var(--accent-ink) 70%,var(--accent))}
+.editlink{display:flex;align-items:center;justify-content:center;gap:8px;padding-block:12px;border-radius:14px;background:var(--primary-soft);color:var(--primary);font-weight:700;text-decoration:none;font-size:14px}
+.editlink:hover{background:color-mix(in srgb,var(--primary-soft) 70%,var(--primary) 12%)}
+
+/* ---------- design system strip ---------- */
+.ds{max-width:1400px;margin-inline:auto;margin-block:8px 48px;padding-inline:24px;box-sizing:content-box}
+.ds-inner{background:var(--surface);border-radius:26px;padding:28px;box-shadow:var(--shadow);border:1px solid var(--line);display:grid;grid-template-columns:1.1fr 1fr;gap:32px}
+.ds h3{margin:0;margin-block-end:16px;font-family:var(--font-display);font-size:18px;font-weight:800}
+.ds .note{font-size:13px;color:var(--muted);margin-block:-10px 16px}
+.swatches{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.sw{border-radius:16px;border:1px solid var(--line);overflow:hidden;background:var(--surface-2)}
+.sw .chip{height:56px}
+.sw .meta{padding-block:8px;padding-inline:12px}
+.sw .role{font-weight:700;font-size:13px}
+.sw .hex{font-size:12px;color:var(--muted)}
+.scale{display:flex;flex-direction:column;gap:2px}
+.srow{display:grid;grid-template-columns:76px 1fr 1fr;gap:16px;align-items:baseline;padding-block:10px;border-block-end:1px dashed var(--line)}
+.srow:last-child{border-block-end:0}
+.srow .k{font-size:12.5px;color:var(--muted);font-weight:600}
+.srow .k small{display:block;font-weight:500;opacity:.8}
+.lat{font-family:var(--font-latin)}
+.arb{font-family:var(--font-ar)}
+.arb.disp{font-family:var(--font-ar-display)}
+.s-display{font-size:40px;font-weight:800;line-height:1.1;letter-spacing:-.02em}
+.s-h1{font-size:30px;font-weight:800;line-height:1.15}
+.s-h2{font-size:19px;font-weight:800;line-height:1.3}
+.s-body{font-size:15px;line-height:1.5}
+.s-small{font-size:12.5px;color:var(--muted)}
+.s-num{font-size:20px;font-weight:700}
+.arb.s-display,.arb.s-h1{letter-spacing:0}
+
+/* ---------- shared helpers ---------- */
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
+.iconbtn{width:44px;height:44px;border-radius:14px;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;cursor:pointer;color:var(--text);flex:none;font-size:20px}
+.mtop,.scrim,.drawer-close{display:none}
+.ccur{display:none}
+.avatar.sm{width:36px;height:36px;border-radius:12px;font-size:13px}
+body.lock{overflow:hidden}
+
+/* ---------- container: rules beside the table only when the table has room ---------- */
+@container main (min-width:1040px){
+  .grid{grid-template-columns:minmax(0,1fr) 344px}
+}
+@container main (max-width:1039px){
+  .rlist{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .rlist li{min-width:0}
+  .editlink{justify-self:start;padding-inline:20px}
+  .rules{display:grid}
+}
+@container main (max-width:559px){
+  .rlist{grid-template-columns:minmax(0,1fr)}
+  .editlink{justify-self:stretch}
+}
+
+/* ---------- container: table becomes employee cards when narrow ---------- */
+@container main (max-width:739px){
+  .tablewrap{overflow:visible}
+  .tablecard table,.tablecard tbody{display:block}
+  .tablecard thead{display:none}
+  .tablecard tbody{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-inline:16px;padding-block:0 12px}
+  .tablecard tbody tr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"emp st" "net net" "basic allow" "ded pen";gap:8px;padding:14px;border:1px solid var(--line);border-radius:18px;background:var(--surface);box-shadow:0 1px 2px rgba(11,72,62,.04)}
+  .tablecard tbody tr.review{border-inline-start:4px solid var(--warning)}
+  .tablecard tbody tr.emptyrow{display:block}
+  .tablecard table tbody td{padding:0;border:0;white-space:normal;text-align:start;min-width:0}
+  .tablecard tbody tr.review td:first-child{box-shadow:none}
+  .tablecard tbody tr:hover td{background:transparent}
+  .tablecard td.a-emp{grid-area:emp}
+  .tablecard table tbody td.stc{grid-area:st;justify-self:end;align-self:start;padding:0}
+  .tablecard td.a-net{grid-area:net;display:flex;align-items:baseline;gap:8px;padding-block:10px;padding-inline:12px;background:var(--primary-soft);border-radius:12px;font-size:22px;font-weight:800;color:var(--primary);margin-block-start:4px}
+  .tablecard td.a-net::before{content:attr(data-label);font-family:var(--font);font-size:13px;font-weight:700;margin-inline-end:auto}
+  .tablecard .ccur{display:inline;font-family:var(--font);font-size:13px;font-weight:700}
+  .tablecard td.a-sm{display:flex;flex-direction:column;gap:2px;background:var(--surface-2);border-radius:12px;padding-block:8px;padding-inline:10px;font-size:14px}
+  .tablecard td.a-sm::before{content:attr(data-label);font-family:var(--font);font-size:12px;font-weight:500;color:var(--muted)}
+  .tablecard td.a-basic{grid-area:basic} .tablecard td.a-allow{grid-area:allow}
+  .tablecard td.a-ded{grid-area:ded} .tablecard td.a-pen{grid-area:pen}
+  .tablecard td.empty{padding:20px}
+}
+@container main (min-width:500px) and (max-width:739px){
+  .tablecard tbody tr{grid-template-columns:repeat(4,minmax(0,1fr));grid-template-areas:"emp emp emp st" "net net net net" "basic allow ded pen"}
+}
+
+/* ---------- tablet 768-1279: icon rail ---------- */
+@media (min-width:768px) and (max-width:1279px){
+  .stage{padding-inline:16px;padding-block:24px}
+  .app{grid-template-columns:84px minmax(0,1fr)}
+  .side{padding-inline:12px;align-items:center;gap:22px}
+  .brand{padding-inline:0}
+  .brand-txt,.user-txt,.userchip > .ph-duotone,.nav .sep{display:none}
+  .nav{align-items:center}
+  .nav a{width:52px;height:48px;justify-content:center;padding:0}
+  .nav a span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
+  .nav a[aria-current="page"]::after{display:none}
+  .nav a[aria-current="page"]{box-shadow:inset 0 -3px 0 var(--accent)}
+  .userchip{padding:6px;background:transparent;border:0}
+  .main{padding-inline:24px}
+  .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tile .val{font-size:28px}
+  .t-net .val{font-size:30px}
+  .ds{padding-inline:16px}
+  .ds-inner{grid-template-columns:minmax(0,1fr)}
+}
+
+/* ---------- phone <768: drawer, compact header, cards ---------- */
+@media (max-width:767px){
+  .mockbar{position:static;gap:10px;padding-inline:16px}
+  .mockbar .feel{display:none}
+  .seg button{min-height:44px;min-width:44px;justify-content:center}
+  .stage{padding:0;background:none}
+  [dir="rtl"] .stage{background:none}
+  .app{display:block;border-radius:0;border:0;box-shadow:none;min-height:0;background:transparent}
+
+  .mtop{display:flex;align-items:center;gap:10px;padding-block:12px}
+  .mt-name{font-family:var(--font-display);font-weight:800;font-size:16px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .crumbs{display:none}
+
+  .side{position:fixed;inset-block:0;inset-inline-start:0;width:min(300px,86vw);z-index:60;border-inline-end:0;overflow-y:auto;box-shadow:var(--shadow-lg);transform:translateX(-100%);visibility:hidden;transition:transform .25s ease,visibility 0s linear .25s}
+  [dir="rtl"] .side{transform:translateX(100%)}
+  .side.open,[dir="rtl"] .side.open{transform:none;visibility:visible;transition:transform .25s ease}
+  .drawer-close{display:grid;margin-inline-start:auto}
+  .scrim{display:block;position:fixed;inset:0;z-index:55;background:rgba(9,40,35,.42);opacity:0;transition:opacity .25s ease}
+  .scrim[hidden]{display:none}
+  .scrim.show{opacity:1}
+
+  .main{padding-inline:16px;padding-block:0 24px;gap:18px}
+  .head{display:grid;grid-template-columns:minmax(0,1fr) 44px 44px;grid-template-areas:"title recalc export" "approve approve approve";gap:12px 8px;align-items:start}
+  .actions{display:contents}
+  .titlewrap{grid-area:title;gap:8px}
+  .head h1{font-size:23px}
+  .b-recalc{grid-area:recalc}
+  .b-export{grid-area:export}
+  .b-approve{grid-area:approve;justify-content:center}
+  .btn{min-height:44px}
+  .b-recalc,.b-export{width:44px;height:44px;padding:0;justify-content:center}
+  .b-recalc .bl,.b-export .bl{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
+  .btn:hover{transform:none}
+
+  .tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .t-net{order:-1}
+  .tile{padding:14px;gap:8px;border-radius:18px}
+  .tile .tt{gap:8px;align-items:flex-start}
+  .tile .ic{width:32px;height:32px;border-radius:11px;font-size:18px}
+  .tile .lbl{font-size:12.5px;line-height:1.3;padding-block-start:2px}
+  .tile .val{font-size:20px;gap:4px}
+  .t-net .val{font-size:22px}
+  .tile .cur{font-size:11.5px}
+  .tile .sub{font-size:11.5px;margin-block-start:-2px}
+  .t-net::after{width:100px;height:100px;inset-block-start:-50px;inset-inline-end:-40px}
+
+  .tablecard{padding-block:16px 4px;border-radius:20px}
+  .tbar{padding-inline:16px;gap:8px 12px}
+  .tbar .tools{margin-inline-start:0;width:100%;flex-direction:column;gap:8px}
+  .field{min-height:44px;width:100%}
+  .field input{width:auto;flex:1}
+  .field select{flex:1;min-height:40px}
+  .tfoot{padding-inline:16px;align-items:flex-start}
+  .tfoot .pager{margin-inline-start:0;width:100%;justify-content:center}
+  .pg{width:44px;height:44px}
+
+  .rules{padding:16px;border-radius:20px}
+  .rules .top .ic{width:40px;height:40px}
+  .editlink{min-height:48px}
+
+  .ds{padding-inline:16px;margin-block:8px 32px}
+  .ds-inner{grid-template-columns:minmax(0,1fr);padding:18px;gap:24px;border-radius:20px}
+  .swatches{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .srow{grid-template-columns:minmax(0,1fr);gap:4px}
+  .s-display{font-size:32px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<!-- Mockup bar (not part of the app) -->
+<div class="mockbar" role="region" aria-label="Mockup controls">
+  <strong data-i18n="mock.name">Direction B: Campus</strong>
+  <span class="feel" data-i18n="mock.feel">Warm, friendly and optimistic. A school, not a bank.</span>
+  <span class="spacer"></span>
+  <div class="seg" role="group" aria-label="Language">
+    <button type="button" id="langEn" aria-pressed="true">EN</button>
+    <button type="button" id="langAr" aria-pressed="false"><span class="ar-glyph">ع</span></button>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="side" id="sidebar">
+      <div class="brand">
+        <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true">
+          <rect width="44" height="44" rx="14" fill="var(--primary)"/>
+          <circle cx="22" cy="20" r="7.5" fill="var(--accent)"/>
+          <path d="M6 28c4-3 8-3 12 0s8 3 12 0 6-2.6 8-1.2V38H6z" fill="var(--primary-ink)" opacity=".92"/>
+          <path d="M6 33c4-3 8-3 12 0s8 3 12 0 6-2.6 8-1.2" stroke="var(--primary)" stroke-width="2" fill="none" opacity=".55"/>
+        </svg>
+        <div class="brand-txt">
+          <div class="brand-name" data-i18n="school">Green Valley School</div>
+          <div class="brand-sub" data-i18n="erp">School ERP</div>
+        </div>
+        <button class="iconbtn drawer-close" type="button" id="menuClose"><i class="ph-duotone ph-x"></i><span class="sr" data-i18n="menu.close">Close menu</span></button>
+      </div>
+      <nav aria-label="Main">
+        <ul class="nav">
+          <li><a href="#"><i class="ph-duotone ph-squares-four"></i><span data-i18n="nav.dashboard">Dashboard</span></a></li>
+          <li><a href="#"><i class="ph-duotone ph-users-three"></i><span data-i18n="nav.employees">Employees</span></a></li>
+          <li><a href="#"><i class="ph-duotone ph-buildings"></i><span data-i18n="nav.departments">Departments</span></a></li>
+          <li><a href="#" aria-current="page"><i class="ph-duotone ph-wallet"></i><span data-i18n="nav.payroll">Payroll</span></a></li>
+          <li><a href="#"><i class="ph-duotone ph-gavel"></i><span data-i18n="nav.penalties">Penalties</span></a></li>
+          <li><a href="#"><i class="ph-duotone ph-calendar-check"></i><span data-i18n="nav.leave">Leave</span></a></li>
+          <li class="sep" aria-hidden="true"></li>
+          <li><a href="#"><i class="ph-duotone ph-sliders-horizontal"></i><span data-i18n="nav.settings">Settings</span></a></li>
+        </ul>
+      </nav>
+      <div class="userchip">
+        <div class="avatar" data-i18n="user.initials">RS</div>
+        <div class="user-txt">
+          <div class="n" data-i18n="user.name">Rania Saeed</div>
+          <div class="r" data-i18n="user.role">Accountant</div>
+        </div>
+        <i class="ph-duotone ph-caret-up-down"></i>
+      </div>
+    </aside>
+
+    <div class="scrim" id="scrim" hidden></div>
+
+    <!-- Main -->
+    <main class="main">
+      <div class="mtop">
+        <button class="iconbtn" type="button" id="menuBtn" aria-controls="sidebar" aria-expanded="false"><i class="ph-duotone ph-list"></i><span class="sr" data-i18n="menu.open">Open menu</span></button>
+        <svg width="34" height="34" viewBox="0 0 44 44" aria-hidden="true">
+          <rect width="44" height="44" rx="14" fill="var(--primary)"/>
+          <circle cx="22" cy="20" r="7.5" fill="var(--accent)"/>
+          <path d="M6 28c4-3 8-3 12 0s8 3 12 0 6-2.6 8-1.2V38H6z" fill="var(--primary-ink)" opacity=".92"/>
+        </svg>
+        <div class="mt-name" data-i18n="school">Green Valley School</div>
+        <div class="avatar sm" data-i18n="user.initials">RS</div>
+      </div>
+      <div class="crumbs"><span data-i18n="crumb.hr">HR</span><i class="ph-duotone ph-caret-right flip"></i><span data-i18n="nav.payroll">Payroll</span></div>
+      <div class="head">
+        <div class="titlewrap">
+          <h1 data-i18n="title">Payroll · November 2026</h1>
+          <span class="pill pill-draft"><span class="dot"></span><span data-i18n="draft">Draft</span></span>
+        </div>
+        <div class="actions">
+          <button class="btn b-recalc" type="button"><i class="ph-duotone ph-arrows-clockwise"></i><span class="bl" data-i18n="act.recalc">Recalculate</span></button>
+          <button class="btn b-export" type="button"><i class="ph-duotone ph-file-arrow-down"></i><span class="bl" data-i18n="act.export">Export bank sheet</span></button>
+          <button class="btn btn-primary b-approve" type="button"><i class="ph-duotone ph-seal-check"></i><span data-i18n="act.approve">Approve payroll</span></button>
+        </div>
+      </div>
+
+      <section class="tiles" aria-label="Summary">
+        <div class="tile t-emp">
+          <div class="tt"><div class="ic"><i class="ph-duotone ph-users-three"></i></div>
+          <div class="lbl" data-i18n="tile.emp">Employees</div></div>
+          <div class="val num">42</div>
+          <div class="sub" data-i18n-html="tile.empsub"></div>
+        </div>
+        <div class="tile t-gross">
+          <div class="tt"><div class="ic"><i class="ph-duotone ph-coins"></i></div>
+          <div class="lbl" data-i18n="tile.gross">Gross</div></div>
+          <div class="val" data-money="612400"></div>
+          <div class="sub" data-i18n="tile.grosssub">Basic + allowances</div>
+        </div>
+        <div class="tile t-ded">
+          <div class="tt"><div class="ic"><i class="ph-duotone ph-receipt-x"></i></div>
+          <div class="lbl" data-i18n="tile.ded">Deductions &amp; penalties</div></div>
+          <div class="val" data-money="38950"></div>
+          <div class="sub" data-i18n-html="tile.dedsub"></div>
+        </div>
+        <div class="tile t-net">
+          <div class="tt"><div class="ic"><i class="ph-duotone ph-hand-coins"></i></div>
+          <div class="lbl" data-i18n="tile.net">Net to pay</div></div>
+          <div class="val" data-money="573450"></div>
+          <div class="sub" data-i18n="tile.netsub">Gross minus deductions and penalties</div>
+        </div>
+      </section>
+
+      <div class="grid">
+        <section class="card tablecard" aria-labelledby="tblTitle">
+          <div class="tbar">
+            <h2 id="tblTitle" data-i18n="tbl.title">Employees this month</h2>
+            <span class="count" id="countLbl"></span>
+            <div class="tools">
+              <label class="field"><i class="ph-duotone ph-magnifying-glass"></i><input id="search" type="search" data-i18n-ph="tbl.search" placeholder="Search by name"></label>
+              <label class="field"><i class="ph-duotone ph-funnel"></i><select id="dept" aria-label="Department"></select><i class="ph-duotone ph-caret-down"></i></label>
+            </div>
+          </div>
+          <div class="tablewrap">
+            <table>
+              <thead><tr></tr></thead>
+              <tbody id="rows"></tbody>
+            </table>
+          </div>
+          <div class="tfoot">
+            <i class="ph-duotone ph-info"></i><span data-i18n="tbl.foot">Amounts in EGP. Penalties marked for review wait for the principal's approval.</span>
+            <div class="pager">
+              <button class="pg" type="button" aria-label="Previous"><i class="ph-duotone ph-caret-left flip"></i></button>
+              <button class="pg num" type="button" aria-current="true">1</button>
+              <button class="pg num" type="button">2</button>
+              <button class="pg num" type="button">3</button>
+              <button class="pg" type="button" aria-label="Next"><i class="ph-duotone ph-caret-right flip"></i></button>
+            </div>
+          </div>
+        </section>
+
+        <aside class="card rules" aria-labelledby="rulesTitle">
+          <div class="top">
+            <div class="ic"><i class="ph-duotone ph-sliders-horizontal"></i></div>
+            <div>
+              <h2 id="rulesTitle" data-i18n="rules.title">Rules applied this month</h2>
+              <p class="lead" data-i18n="rules.lead">These settings produced every number on this page.</p>
+            </div>
+          </div>
+          <ul class="rlist" id="rules"></ul>
+          <a class="editlink" href="#"><i class="ph-duotone ph-gear-six"></i><span data-i18n="rules.edit">Edit in Settings</span></a>
+        </aside>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Design-system strip -->
+<section class="ds" aria-labelledby="dsTitle">
+  <div class="ds-inner">
+    <div>
+      <h3 id="dsTitle" data-i18n="ds.palette">Palette</h3>
+      <p class="note" id="dsThemeNote"></p>
+      <div class="swatches" id="swatches"></div>
+    </div>
+    <div>
+      <h3 data-i18n="ds.type">Type scale</h3>
+      <p class="note" data-i18n="ds.typenote">Plus Jakarta Sans for Latin, Tajawal for Arabic headings, IBM Plex Sans Arabic for Arabic text and tables.</p>
+      <div class="scale">
+        <div class="srow"><div class="k"><span data-i18n="ds.display">Display</span><small class="num">40 / 800</small></div><div class="lat s-display">Payday</div><div class="arb disp s-display" dir="rtl">يوم الرواتب</div></div>
+        <div class="srow"><div class="k"><span data-i18n="ds.h1">H1</span><small class="num">30 / 800</small></div><div class="lat s-h1">Payroll</div><div class="arb disp s-h1" dir="rtl">الرواتب</div></div>
+        <div class="srow"><div class="k"><span data-i18n="ds.h2">H2</span><small class="num">19 / 800</small></div><div class="lat s-h2">Rules applied</div><div class="arb disp s-h2" dir="rtl">القواعد المطبقة</div></div>
+        <div class="srow"><div class="k"><span data-i18n="ds.body">Body</span><small class="num">15 / 400</small></div><div class="lat s-body">Housing allowance is 10% of basic.</div><div class="arb s-body" dir="rtl">بدل السكن 10% من الأساسي.</div></div>
+        <div class="srow"><div class="k"><span data-i18n="ds.small">Small</span><small class="num">12.5 / 500</small></div><div class="lat s-small">Mathematics</div><div class="arb s-small" dir="rtl">الرياضيات</div></div>
+        <div class="srow"><div class="k"><span data-i18n="ds.numbers">Numbers</span><small class="num">20 / 700 tnum</small></div><div class="lat s-num num">EGP 573,450</div><div class="arb s-num" dir="rtl"><span class="num">573,450</span> ج.م</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+const I18N = {
+  en: {
+    "mock.name":"Direction B: Campus",
+    "mock.feel":"Warm, friendly and optimistic. A school, not a bank.",
+    "school":"Green Valley School","erp":"School ERP",
+    "nav.dashboard":"Dashboard","nav.employees":"Employees","nav.departments":"Departments","nav.payroll":"Payroll",
+    "nav.penalties":"Penalties","nav.leave":"Leave","nav.settings":"Settings",
+    "user.initials":"RS","user.name":"Rania Saeed","user.role":"Accountant",
+    "crumb.hr":"HR",
+    "title":"Payroll · November 2026","draft":"Draft",
+    "act.recalc":"Recalculate","act.export":"Export bank sheet","act.approve":"Approve payroll",
+    "tile.emp":"Employees","tile.gross":"Gross","tile.ded":"Deductions & penalties","tile.net":"Net to pay",
+    "tile.netsub":"Gross minus deductions and penalties",
+    "tile.empsub":"<span class='num'>40</span> ready · <span class='num'>2</span> in review",
+    "tile.grosssub":"Basic + allowances",
+    "tile.dedsub":"Insurance <span class='num'>EGP 35,200</span> · Penalties <span class='num'>EGP 3,750</span>",
+    "tbl.title":"Employees this month","tbl.search":"Search by name","tbl.count":"Showing {n} of 42",
+    "tbl.allDepts":"All departments","tbl.empty":"No employees match this search. Clear the search or pick another department.",
+    "tbl.foot":"Amounts in EGP. Penalties marked for review wait for the principal's approval.",
+    "col.emp":"Employee","col.basic":"Basic","col.allow":"Allowances","col.ded":"Deductions","col.pen":"Penalties","col.net":"Net","col.status":"Status",
+    "st.ready":"Ready","st.review":"Needs review",
+    "rules.title":"Rules applied this month","rules.lead":"These settings produced every number on this page.","rules.edit":"Edit in Settings",
+    "ds.palette":"Palette","ds.type":"Type scale","ds.themeLight":"Light theme. The product ships in light mode only.","menu.open":"Open menu","menu.close":"Close menu",
+    "ds.typenote":"Plus Jakarta Sans for Latin, Tajawal for Arabic headings, IBM Plex Sans Arabic for Arabic text and tables.",
+    "ds.display":"Display","ds.h1":"H1","ds.h2":"H2","ds.body":"Body","ds.small":"Small","ds.numbers":"Numbers",
+    "role.bg":"Background","role.surface":"Surface","role.text":"Text","role.muted":"Muted","role.primary":"Primary","role.accent":"Accent",
+    "role.success":"Success","role.warning":"Warning","role.danger":"Danger",
+    cur:"EGP"
+  },
+  ar: {
+    "mock.name":"الاتجاه ب: كامبس",
+    "mock.feel":"دافئ وودود ومتفائل. مدرسة، لا بنك.",
+    "school":"مدرسة الوادي الأخضر","erp":"نظام إدارة المدرسة",
+    "nav.dashboard":"لوحة التحكم","nav.employees":"الموظفون","nav.departments":"الأقسام","nav.payroll":"الرواتب",
+    "nav.penalties":"الجزاءات","nav.leave":"الإجازات","nav.settings":"الإعدادات",
+    "user.initials":"ر","user.name":"رانيا سعيد","user.role":"محاسبة",
+    "crumb.hr":"الموارد البشرية",
+    "title":"الرواتب · نوفمبر 2026","draft":"مسودة",
+    "act.recalc":"إعادة الحساب","act.export":"تصدير ملف البنك","act.approve":"اعتماد الرواتب",
+    "tile.emp":"الموظفون","tile.gross":"الإجمالي","tile.ded":"الاستقطاعات والجزاءات","tile.net":"الصافي",
+    "tile.netsub":"الإجمالي بعد خصم الاستقطاعات والجزاءات",
+    "tile.empsub":"<span class='num'>40</span> جاهز · <span class='num'>2</span> بحاجة لمراجعة",
+    "tile.grosssub":"الأساسي + البدلات",
+    "tile.dedsub":"تأمينات <span class='num'>35,200</span> ج.م · جزاءات <span class='num'>3,750</span> ج.م",
+    "tbl.title":"موظفو هذا الشهر","tbl.search":"ابحث بالاسم","tbl.count":"عرض {n} من 42",
+    "tbl.allDepts":"كل الأقسام","tbl.empty":"لا يوجد موظفون مطابقون للبحث. امسح البحث أو اختر قسمًا آخر.",
+    "tbl.foot":"المبالغ بالجنيه المصري. الجزاءات التي تحتاج مراجعة بانتظار اعتماد المدير.",
+    "col.emp":"الموظف","col.basic":"الأساسي","col.allow":"البدلات","col.ded":"الاستقطاعات","col.pen":"الجزاءات","col.net":"الصافي","col.status":"الحالة",
+    "st.ready":"جاهز","st.review":"بحاجة لمراجعة",
+    "rules.title":"القواعد المطبقة هذا الشهر","rules.lead":"هذه الإعدادات هي مصدر كل رقم في هذه الصفحة.","rules.edit":"تعديل في الإعدادات",
+    "ds.palette":"الألوان","ds.type":"مقاسات الخط","ds.themeLight":"المظهر الفاتح. يعمل النظام بالمظهر الفاتح فقط.","menu.open":"فتح القائمة","menu.close":"إغلاق القائمة",
+    "ds.typenote":"Plus Jakarta Sans للحروف اللاتينية، و Tajawal للعناوين العربية، و IBM Plex Sans Arabic للنصوص والجداول العربية.",
+    "ds.display":"عرض","ds.h1":"عنوان 1","ds.h2":"عنوان 2","ds.body":"نص","ds.small":"صغير","ds.numbers":"أرقام",
+    "role.bg":"الخلفية","role.surface":"السطح","role.text":"النص","role.muted":"نص ثانوي","role.primary":"الأساسي","role.accent":"المميز",
+    "role.success":"نجاح","role.warning":"تنبيه","role.danger":"خطر",
+    cur:"ج.م"
+  }
+};
+
+const DEPTS = {
+  math:{en:"Mathematics",ar:"الرياضيات"},
+  eng:{en:"English",ar:"اللغة الإنجليزية"},
+  sci:{en:"Science",ar:"العلوم"},
+  arb:{en:"Arabic",ar:"اللغة العربية"},
+  adm:{en:"Administration",ar:"الإدارة"},
+  acc:{en:"Accounting",ar:"الحسابات"},
+  kg:{en:"Kindergarten",ar:"رياض الأطفال"},
+  trn:{en:"Transport",ar:"النقل"}
+};
+
+const EMPLOYEES = [
+  {en:"Ahmed Samir",  ar:"أحمد سمير",  d:"math", basic:14000, allow:2000, ded:1540, pen:0,   net:14460, st:"ready"},
+  {en:"Mona Khalil",  ar:"منى خليل",   d:"eng",  basic:13500, allow:1950, ded:1485, pen:450, net:13515, st:"ready"},
+  {en:"Omar Fathy",   ar:"عمر فتحي",   d:"sci",  basic:12800, allow:1880, ded:1408, pen:0,   net:13272, st:"ready"},
+  {en:"Salma Adel",   ar:"سلمى عادل",  d:"arb",  basic:12000, allow:1800, ded:1320, pen:800, net:11680, st:"review"},
+  {en:"Karim Hassan", ar:"كريم حسن",   d:"adm",  basic:9500,  allow:1550, ded:1045, pen:0,   net:10005, st:"ready"},
+  {en:"Nour El-Din",  ar:"نور الدين",  d:"acc",  basic:11000, allow:1700, ded:1210, pen:0,   net:11490, st:"ready"},
+  {en:"Hala Mostafa", ar:"هالة مصطفى", d:"kg",   basic:10200, allow:1620, ded:1122, pen:340, net:10358, st:"ready"},
+  {en:"Youssef Tarek",ar:"يوسف طارق",  d:"trn",  basic:6500,  allow:1250, ded:715,  pen:217, net:6818,  st:"review"}
+];
+
+const RULES = [
+  {icon:"ph-bus",           c:"c-s", n:{en:"Transport allowance",ar:"بدل انتقال"}, v:{en:"<b class='num'>EGP 600</b> fixed",ar:"<b><span class='num'>600</span> ج.م</b> ثابت"}},
+  {icon:"ph-house-line",    c:"c-p", n:{en:"Housing allowance",ar:"بدل سكن"}, v:{en:"<b class='num'>10%</b> of basic",ar:"<b class='num'>10%</b> من الأساسي"}},
+  {icon:"ph-shield-check",  c:"c-a", n:{en:"Social insurance (employee)",ar:"التأمينات الاجتماعية (حصة الموظف)"}, v:{en:"<b class='num'>11%</b> of basic",ar:"<b class='num'>11%</b> من الأساسي"}},
+  {icon:"ph-alarm",         c:"c-w", n:{en:"Late penalty",ar:"جزاء التأخير"}, v:{en:"<b><span class='num'>3</span> late arrivals = <span class='num'>1</span> day</b> deducted",ar:"<b><span class='num'>3</span> مرات تأخير = خصم يوم <span class='num'>1</span></b>"}},
+  {icon:"ph-user-minus",    c:"c-d", n:{en:"Absence",ar:"الغياب"}, v:{en:"<b><span class='num'>1</span> day = basic ÷ <span class='num'>30</span></b>",ar:"<b>يوم <span class='num'>1</span> = الأساسي ÷ <span class='num'>30</span></b>"}},
+  {icon:"ph-calendar-dots", c:"c-p", n:{en:"Working days",ar:"أيام العمل"}, v:{en:"<b>Sun–Thu</b>",ar:"<b>الأحد–الخميس</b>"}}
+];
+
+const AVA = ["c-p","c-s","c-a","c-w","c-d"];
+const SW = [["bg","--bg"],["surface","--surface"],["text","--text"],["muted","--muted"],["primary","--primary"],["accent","--accent"],["success","--success"],["warning","--warning"],["danger","--danger"]];
+
+let lang = "en";
+const root = document.documentElement;
+const fmt = n => Number(n).toLocaleString("en-US");
+const t = k => I18N[lang][k] ?? k;
+const money = n => lang === "ar"
+  ? `<span class="num">${fmt(n)}</span><span class="cur">${t("cur")}</span>`
+  : `<span class="cur">${t("cur")}</span><span class="num">${fmt(n)}</span>`;
+const initials = s => lang === "ar" ? s.trim()[0] : s.split(/[\s-]/).map(w=>w[0]).slice(0,2).join("");
+
+function renderStatic(){
+  document.querySelectorAll("[data-i18n]").forEach(el => el.textContent = t(el.dataset.i18n));
+  document.querySelectorAll("[data-i18n-html]").forEach(el => el.innerHTML = t(el.dataset.i18nHtml));
+  document.querySelectorAll("[data-i18n-ph]").forEach(el => el.placeholder = t(el.dataset.i18nPh));
+  document.querySelectorAll("[data-money]").forEach(el => el.innerHTML = money(el.dataset.money));
+  document.title = lang === "ar" ? "رواتب كامبس" : "Campus Payroll Mockup";
+  document.querySelectorAll(".nav a").forEach(a => a.title = a.textContent.trim());
+  document.querySelectorAll(".b-recalc,.b-export").forEach(b => b.title = b.textContent.trim());
+}
+
+function renderHead(){
+  const cols = [["col.emp",""],["col.basic","n"],["col.allow","n"],["col.ded","n"],["col.pen","n"],["col.net","n"],["col.status","stc"]];
+  document.querySelector("thead tr").innerHTML = cols.map(([k,c]) => `<th class="${c}" scope="col">${t(k)}</th>`).join("");
+}
+
+function renderDeptSelect(){
+  const sel = document.getElementById("dept"), cur = sel.value || "all";
+  sel.innerHTML = `<option value="all">${t("tbl.allDepts")}</option>` +
+    Object.entries(DEPTS).map(([k,v]) => `<option value="${k}">${v[lang]}</option>`).join("");
+  sel.value = cur;
+}
+
+function renderRows(){
+  const q = document.getElementById("search").value.trim().toLowerCase();
+  const d = document.getElementById("dept").value || "all";
+  const list = EMPLOYEES.filter(e => (d === "all" || e.d === d) && (!q || e.en.toLowerCase().includes(q) || e.ar.includes(q)));
+  const tb = document.getElementById("rows");
+  if(!list.length){
+    tb.innerHTML = `<tr class="emptyrow"><td colspan="7" class="empty">${t("tbl.empty")}</td></tr>`;
+  } else {
+    tb.innerHTML = list.map(e => {
+      const i = EMPLOYEES.indexOf(e);
+      const st = e.st === "ready"
+        ? `<span class="st st-ready"><i class="ph-duotone ph-check-circle"></i>${t("st.ready")}</span>`
+        : `<span class="st st-review"><i class="ph-duotone ph-hourglass-medium"></i>${t("st.review")}</span>`;
+      const L = k => `data-label="${t(k)}"`;
+      const netHtml = lang === "ar"
+        ? `<span class="num">${fmt(e.net)}</span><span class="ccur"> ${t("cur")}</span>`
+        : `<span class="ccur">${t("cur")} </span><span class="num">${fmt(e.net)}</span>`;
+      return `<tr class="${e.st === "review" ? "review" : ""}">
+        <td class="a-emp"><div class="emp"><div class="ava ${AVA[i % AVA.length]}">${initials(e[lang])}</div><div><div class="nm">${e[lang]}</div><div class="dp">${DEPTS[e.d][lang]}</div></div></div></td>
+        <td class="n num money a-sm a-basic" ${L("col.basic")}>${fmt(e.basic)}</td>
+        <td class="n num money a-sm a-allow" ${L("col.allow")}>${fmt(e.allow)}</td>
+        <td class="n num money a-sm a-ded" ${L("col.ded")}>${fmt(e.ded)}</td>
+        <td class="n num a-sm a-pen ${e.pen ? "pen" : "zero"}" ${L("col.pen")}>${fmt(e.pen)}</td>
+        <td class="n net a-net" ${L("col.net")}>${netHtml}</td>
+        <td class="stc">${st}</td>
+      </tr>`;
+    }).join("");
+  }
+  document.getElementById("countLbl").innerHTML = t("tbl.count").replace("{n}", `<span class="num">${list.length}</span>`).replace("42", `<span class="num">42</span>`);
+}
+
+function renderRules(){
+  document.getElementById("rules").innerHTML = RULES.map(r =>
+    `<li><div class="ri ${r.c}"><i class="ph-duotone ${r.icon}"></i></div><div><div class="rn">${r.n[lang]}</div><div class="rv">${r.v[lang]}</div></div></li>`
+  ).join("");
+}
+
+function renderSwatches(){
+  const cs = getComputedStyle(root);
+  document.getElementById("swatches").innerHTML = SW.map(([role, v]) =>
+    `<div class="sw"><div class="chip" style="background:var(${v})"></div><div class="meta"><div class="role">${t("role."+role)}</div><div class="hex num">${cs.getPropertyValue(v).trim().toUpperCase()}</div></div></div>`
+  ).join("");
+  document.getElementById("dsThemeNote").textContent = t("ds.themeLight");
+}
+
+function renderAll(){ renderStatic(); renderHead(); renderDeptSelect(); renderRows(); renderRules(); renderSwatches(); }
+
+function setLang(l){
+  lang = l;
+  root.lang = l; root.dir = l === "ar" ? "rtl" : "ltr";
+  document.getElementById("langEn").setAttribute("aria-pressed", l === "en");
+  document.getElementById("langAr").setAttribute("aria-pressed", l === "ar");
+  renderAll();
+}
+
+document.getElementById("langEn").onclick = () => setLang("en");
+document.getElementById("langAr").onclick = () => setLang("ar");
+document.getElementById("search").addEventListener("input", renderRows);
+
+/* phone drawer */
+const side = document.getElementById("sidebar"), scrim = document.getElementById("scrim");
+const menuBtn = document.getElementById("menuBtn"), menuClose = document.getElementById("menuClose");
+const phone = window.matchMedia("(max-width: 767px)");
+function openDrawer(){
+  scrim.hidden = false;
+  requestAnimationFrame(() => { side.classList.add("open"); scrim.classList.add("show"); });
+  menuBtn.setAttribute("aria-expanded","true");
+  document.body.classList.add("lock");
+  setTimeout(() => menuClose.focus(), 60);
+}
+function closeDrawer(returnFocus = true){
+  if(!side.classList.contains("open")) return;
+  side.classList.remove("open"); scrim.classList.remove("show");
+  menuBtn.setAttribute("aria-expanded","false");
+  document.body.classList.remove("lock");
+  setTimeout(() => { if(!side.classList.contains("open")) scrim.hidden = true; }, 250);
+  if(returnFocus && phone.matches) menuBtn.focus();
+}
+menuBtn.onclick = openDrawer;
+menuClose.onclick = () => closeDrawer();
+scrim.onclick = () => closeDrawer();
+document.addEventListener("keydown", e => { if(e.key === "Escape") closeDrawer(); });
+side.querySelectorAll(".nav a").forEach(a => a.addEventListener("click", () => closeDrawer(false)));
+phone.addEventListener("change", () => closeDrawer(false));
+document.getElementById("dept").addEventListener("change", renderRows);
+renderAll();
+</script>
+</body>
+</html>
