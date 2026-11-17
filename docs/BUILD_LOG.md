@@ -23,7 +23,7 @@ phase live in `docs/build-log/`.
 | 3 | Contract | done (in the spec) |
 | 4 | Design system | Campus, teal + sunflower, light only; tokens go in code in T3 |
 | 5 | Plan | `docs/plans/2026-11-17-hr-demo-plan.md` (18 tasks, 7 waves); review CONFLICTS fixed, re-review's 4 remaining items fixed |
-| 6 | Build | wave 1: T1 running |
+| 6 | Build | wave 1 done (T1 merged, #4); wave 2 running: T2, T3, T4, T5, T6 |
 | 7 | Verify | — |
 | 8 | Ship | local demo; hosting later |
 
@@ -50,6 +50,11 @@ phase live in `docs/build-log/`.
 - 2026-11-17 — Re-review: 4 small items (rounding case, level-order case, month-lock placement →
   `hr/month-lock`, department snapshot on payroll lines) fixed; T1 told to add the department
   snapshot columns.
+- 2026-11-17 — T1 verified by the main thread (lint 4/4, typecheck 4/4, tests green, deps:check
+  clean; no client name, no `src/domains`, no dark tokens), rebased onto dev, merged as #4.
+- 2026-11-17 — Wave 2 dispatched (base d9ee427): T2 auth, T3 design system + shell, T4 core settings
+  + stages, T5 employees, T6 HR rules + domain + month lock. Settings history is event-driven
+  (`settings.changed`, written by core's listener) so T4/T5/T6 run in parallel.
 
 ## Next up
 
