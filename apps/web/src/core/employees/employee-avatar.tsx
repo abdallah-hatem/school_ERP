@@ -1,8 +1,9 @@
 'use client';
 
+import { Gender } from '@school-erp/shared';
 import Image from 'next/image';
 import { useState } from 'react';
-import { SilhouetteIcon } from '@/shared/components/ui/icons';
+import { FemaleSilhouetteIcon, MaleSilhouetteIcon, SilhouetteIcon } from '@/shared/components/ui/icons';
 import { cn } from '@/shared/lib/utils';
 
 /** Avatar sizes: `sm` in table rows, `md` in headers, `lg` on cards, `xl` in the photo picker. */
@@ -17,18 +18,26 @@ export type EmployeeAvatarSize = keyof typeof SIZES;
 export interface EmployeeAvatarProps {
   /** The employee's photo (`/files/employee-photos/…`, signed-in only); null → the silhouette. */
   photoUrl?: string | null;
+  /** Picks the male or female silhouette when there is no photo; unknown → the neutral one. */
+  gender?: Gender | null;
   size?: EmployeeAvatarSize;
   /** Greyed out (an inactive employee's card). */
   muted?: boolean;
   className?: string;
 }
 
+const SILHOUETTES = {
+  [Gender.MALE]: MaleSilhouetteIcon,
+  [Gender.FEMALE]: FemaleSilhouetteIcon,
+} as const;
+
 /**
- * An employee's avatar: their photo, square-cropped (`object-cover`), or a neutral person
- * silhouette when there is none or it fails to load — never initials (owner, 2026-11-18).
+ * An employee's avatar: their photo, square-cropped (`object-cover`), or a person silhouette when
+ * there is none or it fails to load — male or female by `gender`, neutral when it is unknown;
+ * never initials (owner, 2026-11-18). The background stays the same neutral tile for all three.
  * Decorative: the name next to it is what screen readers read.
  */
-export function EmployeeAvatar({ photoUrl, size = 'sm', muted = false, className }: EmployeeAvatarProps) {
+export function EmployeeAvatar({ photoUrl, gender, size = 'sm', muted = false, className }: EmployeeAvatarProps) {
   const s = SIZES[size];
   // A photo that can't be loaded (deleted, signed out) falls back to the silhouette.
   const [failed, setFailed] = useState<string | null>(null);
@@ -55,8 +64,13 @@ export function EmployeeAvatar({ photoUrl, size = 'sm', muted = false, className
           className={cn('size-full object-cover', muted && 'opacity-70 grayscale')}
         />
       ) : (
-        <SilhouetteIcon className={cn(s.icon, 'translate-y-[12%]')} />
+        <Silhouette gender={gender} className={cn(s.icon, 'translate-y-[12%]')} />
       )}
     </span>
   );
+}
+
+function Silhouette({ gender, className }: { gender?: Gender | null; className: string }) {
+  const Gendered = gender ? SILHOUETTES[gender] : undefined;
+  return Gendered ? <Gendered className={className} /> : <SilhouetteIcon className={className} />;
 }

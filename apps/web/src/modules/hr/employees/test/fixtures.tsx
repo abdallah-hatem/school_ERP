@@ -76,6 +76,7 @@ export const summary = (overrides: Partial<EmployeeSummary> & Pick<EmployeeSumma
   basicSalary: 1200000,
   status: 'ACTIVE',
   photoUrl: null,
+  gender: 'MALE',
   ...overrides,
 });
 

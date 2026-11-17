@@ -514,6 +514,8 @@ describe('HR penalty catalogue and records (e2e)', () => {
 
     const list = await http(app).get('/hr/penalties').query({ employeeId: emp }).expect(200);
     expect((list.body.data as PenaltyRecord[]).map((r) => r.days)).toEqual([1]);
+    // Each row's employee carries the avatar fields (photo, else a gendered silhouette).
+    expect((list.body.data as PenaltyRecord[])[0].employee).toMatchObject({ id: emp, photoUrl: null, gender: 'MALE' });
     // Approval fixes the catalogue's current days.
     expect((await approveOk(pending.id)).days).toBe(2.5);
   });

@@ -11,6 +11,7 @@ import {
   WORK_SYSTEMS,
   type Employee,
   type EmployeeSummary,
+  type Gender,
   type ListItem,
 } from '@school-erp/shared';
 import Link from 'next/link';
@@ -115,6 +116,7 @@ export function EmployeeForm({ basePath, employee, departments, stages, jobTitle
   const hiddenHint = t('employees.hints.hiddenItem');
   // §3: a manager who no longer manages people is kept — noted while they are still the choice.
   const managerId = useWatch({ control, name: 'managerId' });
+  const gender = useWatch({ control, name: 'gender' });
   const managerHint =
     managers.currentNotManaging && managerId === employee?.manager?.id
       ? t('employees.hints.managerNotManaging')
@@ -192,7 +194,7 @@ export function EmployeeForm({ basePath, employee, departments, stages, jobTitle
       />
       <Form onSubmit={(e) => void form.handleSubmit(onSubmit)(e)} aria-label={title}>
         <Section title={t('employees.sections.photo')}>
-          <EmployeePhotoField employee={employee} onPendingChange={(file) => (pendingPhoto.current = file)} />
+          <EmployeePhotoField employee={employee} gender={(gender || null) as Gender | null} onPendingChange={(file) => (pendingPhoto.current = file)} />
         </Section>
 
         <Section title={t('employees.sections.personal')}>
