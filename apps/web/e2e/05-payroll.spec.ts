@@ -151,6 +151,9 @@ test('payroll: run → penalty deduction → grace change → recalculate → ap
 
   // Approve.
   await searchField(page, t('en', 'payroll.filters.searchLabel')).fill('');
+  // Clearing the search navigates after a debounce. Wait for it to land: a navigation still in
+  // flight when Approve answers re-renders the page with the run as it was (Draft).
+  await expect(page).not.toHaveURL(/[?&]search=/);
   await page.getByRole('button', { name: t('en', 'payroll.actions.approve') }).click();
   const confirm = page.getByRole('dialog');
   await confirm.getByRole('button', { name: t('en', 'payroll.approve.confirm') }).click();
