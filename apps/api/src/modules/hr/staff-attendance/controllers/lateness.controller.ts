@@ -3,6 +3,7 @@ import type { AuthUser, LatenessMonth } from '@school-erp/shared';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
 import { LatenessMonthParamDto, LatenessMonthQueryDto, PutLatenessDto } from '../dto/lateness.dto';
 import { LatenessService } from '../services/lateness.service';
+import { NotAudited } from '../../../../core/audit';
 
 /**
  * `/hr/lateness` (contract: "Monthly lateness — hr"). The month's list is one row per active
@@ -18,6 +19,7 @@ export class LatenessController {
     return this.lateness.month(query.month);
   }
 
+  @NotAudited('wired in T29')
   @Put(':month')
   put(
     @Param() params: LatenessMonthParamDto,

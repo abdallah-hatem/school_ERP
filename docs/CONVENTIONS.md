@@ -63,8 +63,32 @@ smoke specs; needs Docker). Don't skip the hook with `--no-verify`; if it's wron
 - [ ] No school name, school-specific rule or hardcoded setting in code.
 - [ ] Nothing duplicated that already exists in `common/`, `shared/` or another module.
 - [ ] Events emitted only after the write is committed; listeners are idempotent.
+- [ ] Every new write endpoint (POST / PATCH / PUT / DELETE) is `@Audited('<action>')` and calls
+  `audit.record()` for that action in its service, or is `@NotAudited('<reason>')` (see below).
 - [ ] `docs/BUSINESS_LOGIC.md` updated in the same PR if a business rule changed.
 - [ ] UI changes: screenshots. New or visually changed screens: EN/AR × phone/desktop (light only).
+
+## Audit log: every write is an action
+
+Every action that changes data or access is recorded in the audit log (§9, `docs/ARCHITECTURE.md` →
+Transactions and the audit log). For a new write endpoint:
+
+1. Pick its action key in `packages/shared/src/audit.ts` (`AUDIT_ACTIONS`). A new action: add the key
+   (`<module>.<record>.<verb>`, e.g. `hr.employee.update`) with its module, entity type and kind,
+   then its sentence under `actions.<key path>` in **both** `locales/en/audit.json` and
+   `locales/ar/audit.json` (Arabic in the verbal-noun form, e.g. "تعديل بيانات الموظف {entity}"), and a
+   label under `fields.` for any new field. The shared tests fail on a key without a sentence in either
+   language, or a sentence without a key.
+2. Put `@Audited('<action>')` on the controller handler.
+3. In the service, inside the handler's transaction, call
+   `audit.record({ action, entity: { type, id, label }, before, after })` — the repositories it
+   writes with must use `TransactionHost` (`txHost.tx`) so the change and the entry commit together.
+   Call it on the no-change path too (it writes nothing then).
+4. Tests: the entry exists with the right action, record, actor and changed fields; a rolled-back
+   change leaves none.
+
+A write that is deliberately not recorded (e.g. a token refresh) gets `@NotAudited('<why>')`. A
+handler with neither fails the controller scan in CI.
 
 ## Design changes: mockup first
 

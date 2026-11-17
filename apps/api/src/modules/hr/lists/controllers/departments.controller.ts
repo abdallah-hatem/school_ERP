@@ -3,6 +3,7 @@ import type { AuthUser } from '@school-erp/shared';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
 import { CreateListItemDto, ListItemsQueryDto, UpdateListItemDto } from '../dto/list-item.dto';
 import { DepartmentsService } from '../services/departments.service';
+import { NotAudited } from '../../../../core/audit';
 
 /** `/hr/departments` — GET, POST, PATCH :id. No DELETE: hide with `isActive: false` (§3). */
 @Controller('hr/departments')
@@ -14,11 +15,13 @@ export class DepartmentsController {
     return this.departments.list(query.includeHidden);
   }
 
+  @NotAudited('wired in T28')
   @Post()
   create(@Body() dto: CreateListItemDto, @CurrentUser() user?: AuthUser) {
     return this.departments.create(dto, user?.id ?? null);
   }
 
+  @NotAudited('wired in T28')
   @Patch(':id')
   update(
     @Param('id', ParseUUIDPipe) id: string,

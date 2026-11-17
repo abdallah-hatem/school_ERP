@@ -1,0 +1,161 @@
+{
+  "title": "سجل النشاط",
+  "system": "النظام",
+  "modules": {
+    "core": "المدرسة",
+    "hr": "الموارد البشرية"
+  },
+  "kinds": {
+    "access": "الدخول والخروج",
+    "create": "الإضافة",
+    "update": "التعديل",
+    "status": "تغيير الحالة"
+  },
+  "entities": {
+    "user": "مستخدم",
+    "school_settings": "إعدادات المدرسة",
+    "stage": "مرحلة",
+    "employee": "موظف",
+    "department": "قسم",
+    "job_title": "مسمى وظيفي",
+    "hr_settings": "قواعد الموارد البشرية",
+    "penalty_group": "مجموعة جزاءات",
+    "violation": "مخالفة",
+    "penalty": "جزاء",
+    "lateness_month": "تأخير الشهر",
+    "payroll_run": "مسيّر رواتب"
+  },
+  "actions": {
+    "core": {
+      "auth": {
+        "sign_in": "تسجيل الدخول",
+        "sign_out": "تسجيل الخروج",
+        "sign_in_failed": "محاولة دخول فاشلة بالبريد {entity}"
+      },
+      "settings": {
+        "update": "تعديل إعدادات المدرسة",
+        "logo_change": "تغيير شعار المدرسة"
+      },
+      "stage": {
+        "create": "إضافة المرحلة {entity}",
+        "update": "تعديل المرحلة {entity}"
+      }
+    },
+    "hr": {
+      "employee": {
+        "create": "إضافة الموظف {entity}",
+        "update": "تعديل بيانات الموظف {entity}",
+        "deactivate": "إيقاف الموظف {entity}",
+        "reactivate": "إعادة تفعيل الموظف {entity}"
+      },
+      "department": {
+        "create": "إضافة القسم {entity}",
+        "update": "تعديل القسم {entity}"
+      },
+      "job_title": {
+        "create": "إضافة المسمى الوظيفي {entity}",
+        "update": "تعديل المسمى الوظيفي {entity}"
+      },
+      "settings": {
+        "update": "تعديل قواعد الموارد البشرية"
+      },
+      "penalty_group": {
+        "create": "إضافة مجموعة الجزاءات {entity}",
+        "update": "تعديل مجموعة الجزاءات {entity}"
+      },
+      "violation": {
+        "create": "إضافة المخالفة {entity}",
+        "update": "تعديل المخالفة {entity}"
+      },
+      "penalty": {
+        "record": "تسجيل جزاء على {entity}",
+        "approve": "اعتماد جزاء {entity}",
+        "cancel": "إلغاء جزاء {entity}"
+      },
+      "lateness": {
+        "save": "حفظ تأخير شهر {entity}"
+      },
+      "payroll": {
+        "create": "إنشاء مسيّر رواتب {entity}",
+        "recalculate": "إعادة حساب مسيّر رواتب {entity}",
+        "approve": "اعتماد مسيّر رواتب {entity}",
+        "adjustment_add": "إضافة تسوية إلى مسيّر رواتب {entity}",
+        "adjustment_remove": "حذف تسوية من مسيّر رواتب {entity}"
+      }
+    }
+  },
+  "fields": {
+    "nameEn": "الاسم بالإنجليزية",
+    "nameAr": "الاسم بالعربية",
+    "sortOrder": "الترتيب",
+    "isActive": "ظاهر",
+    "email": "البريد الإلكتروني",
+    "code": "الكود",
+    "nationalId": "الرقم القومي",
+    "gender": "النوع",
+    "dateOfBirth": "تاريخ الميلاد",
+    "phone": "رقم الهاتف",
+    "address": "العنوان",
+    "hireDate": "تاريخ التعيين",
+    "stageId": "المرحلة",
+    "departmentId": "القسم",
+    "jobTitleId": "المسمى الوظيفي",
+    "managerId": "المدير المباشر",
+    "grade": "الدرجة",
+    "workSystem": "نظام العمل",
+    "basicSalary": "الراتب الأساسي",
+    "fingerprintId": "رقم البصمة",
+    "contractStart": "بداية العقد",
+    "contractEnd": "نهاية العقد",
+    "usesBus": "يستخدم أتوبيس المدرسة",
+    "status": "الحالة",
+    "userId": "حساب المستخدم",
+    "groupId": "مجموعة الجزاءات",
+    "note": "ملاحظة",
+    "levels": "المستويات",
+    "employeeId": "الموظف",
+    "violationId": "المخالفة",
+    "date": "التاريخ",
+    "level": "المرة",
+    "action": "الجزاء",
+    "days": "الأيام",
+    "cancelReason": "سبب الإلغاء",
+    "minutes": "الدقائق",
+    "month": "الشهر",
+    "type": "النوع",
+    "amount": "المبلغ",
+    "reason": "السبب",
+    "totals": "الإجماليات",
+    "net": "الصافي",
+    "school": {
+      "nameEn": "اسم المدرسة بالإنجليزية",
+      "nameAr": "اسم المدرسة بالعربية",
+      "logoUrl": "شعار المدرسة",
+      "defaultLanguage": "اللغة الافتراضية",
+      "workStart": "بداية العمل",
+      "workEnd": "نهاية العمل",
+      "workingDays": "أيام العمل"
+    },
+    "hr": {
+      "lateness": {
+        "graceMinutes": "دقائق السماح في التأخير",
+        "steps": "شرائح ساعات التأخير",
+        "extraHourDays": "تكلفة كل ساعة تأخير إضافية"
+      },
+      "payroll": {
+        "dayDivisor": "مقسوم قيمة اليوم",
+        "partTime": "نسب الدوام الجزئي"
+      },
+      "penalties": {
+        "repetitionWindow": "فترة تكرار الجزاءات"
+      },
+      "departments": "القسم",
+      "jobTitles": "المسمى الوظيفي",
+      "penaltyGroups": "مجموعة الجزاءات",
+      "violations": "المخالفة"
+    },
+    "lists": {
+      "stages": "المرحلة"
+    }
+  }
+}

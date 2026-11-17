@@ -176,7 +176,6 @@ describe('HR payroll and dashboard (e2e)', () => {
     await db.jobTitle.deleteMany({});
     await db.stage.deleteMany({});
     await db.schoolSetting.deleteMany({ where: { key: { startsWith: 'hr.' } } });
-    await db.settingChange.deleteMany({});
     await app.close();
   });
 

@@ -1,0 +1,161 @@
+{
+  "title": "Activity",
+  "system": "System",
+  "modules": {
+    "core": "School",
+    "hr": "HR"
+  },
+  "kinds": {
+    "access": "Sign-ins",
+    "create": "Added",
+    "update": "Edited",
+    "status": "Status changes"
+  },
+  "entities": {
+    "user": "User",
+    "school_settings": "School settings",
+    "stage": "Stage",
+    "employee": "Employee",
+    "department": "Department",
+    "job_title": "Job title",
+    "hr_settings": "HR rules",
+    "penalty_group": "Penalty group",
+    "violation": "Violation",
+    "penalty": "Penalty",
+    "lateness_month": "Monthly lateness",
+    "payroll_run": "Payroll run"
+  },
+  "actions": {
+    "core": {
+      "auth": {
+        "sign_in": "Signed in",
+        "sign_out": "Signed out",
+        "sign_in_failed": "Failed sign-in attempt for {entity}"
+      },
+      "settings": {
+        "update": "Changed the school settings",
+        "logo_change": "Changed the school logo"
+      },
+      "stage": {
+        "create": "Added the stage {entity}",
+        "update": "Edited the stage {entity}"
+      }
+    },
+    "hr": {
+      "employee": {
+        "create": "Added the employee {entity}",
+        "update": "Edited the employee {entity}",
+        "deactivate": "Deactivated the employee {entity}",
+        "reactivate": "Reactivated the employee {entity}"
+      },
+      "department": {
+        "create": "Added the department {entity}",
+        "update": "Edited the department {entity}"
+      },
+      "job_title": {
+        "create": "Added the job title {entity}",
+        "update": "Edited the job title {entity}"
+      },
+      "settings": {
+        "update": "Changed the HR rules"
+      },
+      "penalty_group": {
+        "create": "Added the penalty group {entity}",
+        "update": "Edited the penalty group {entity}"
+      },
+      "violation": {
+        "create": "Added the violation {entity}",
+        "update": "Edited the violation {entity}"
+      },
+      "penalty": {
+        "record": "Recorded a penalty for {entity}",
+        "approve": "Approved the penalty for {entity}",
+        "cancel": "Cancelled the penalty for {entity}"
+      },
+      "lateness": {
+        "save": "Saved the lateness for {entity}"
+      },
+      "payroll": {
+        "create": "Created the payroll run for {entity}",
+        "recalculate": "Recalculated the payroll run for {entity}",
+        "approve": "Approved the payroll run for {entity}",
+        "adjustment_add": "Added an adjustment to the payroll run for {entity}",
+        "adjustment_remove": "Removed an adjustment from the payroll run for {entity}"
+      }
+    }
+  },
+  "fields": {
+    "nameEn": "Name (English)",
+    "nameAr": "Name (Arabic)",
+    "sortOrder": "Order",
+    "isActive": "Shown",
+    "email": "Email",
+    "code": "Code",
+    "nationalId": "National ID",
+    "gender": "Gender",
+    "dateOfBirth": "Date of birth",
+    "phone": "Phone",
+    "address": "Address",
+    "hireDate": "Hire date",
+    "stageId": "Stage",
+    "departmentId": "Department",
+    "jobTitleId": "Job title",
+    "managerId": "Direct manager",
+    "grade": "Grade",
+    "workSystem": "Work system",
+    "basicSalary": "Basic salary",
+    "fingerprintId": "Fingerprint ID",
+    "contractStart": "Contract start",
+    "contractEnd": "Contract end",
+    "usesBus": "Uses the bus",
+    "status": "Status",
+    "userId": "User account",
+    "groupId": "Penalty group",
+    "note": "Note",
+    "levels": "Levels",
+    "employeeId": "Employee",
+    "violationId": "Violation",
+    "date": "Date",
+    "level": "Occurrence",
+    "action": "Penalty",
+    "days": "Days",
+    "cancelReason": "Cancellation reason",
+    "minutes": "Minutes",
+    "month": "Month",
+    "type": "Type",
+    "amount": "Amount",
+    "reason": "Reason",
+    "totals": "Totals",
+    "net": "Net",
+    "school": {
+      "nameEn": "School name (English)",
+      "nameAr": "School name (Arabic)",
+      "logoUrl": "School logo",
+      "defaultLanguage": "Default language",
+      "workStart": "Work start",
+      "workEnd": "Work end",
+      "workingDays": "Working days"
+    },
+    "hr": {
+      "lateness": {
+        "graceMinutes": "Lateness grace minutes",
+        "steps": "Lateness hour steps",
+        "extraHourDays": "Lateness cost per extra hour"
+      },
+      "payroll": {
+        "dayDivisor": "Day value divisor",
+        "partTime": "Part-time percentages"
+      },
+      "penalties": {
+        "repetitionWindow": "Penalty repetition window"
+      },
+      "departments": "Department",
+      "jobTitles": "Job title",
+      "penaltyGroups": "Penalty group",
+      "violations": "Violation"
+    },
+    "lists": {
+      "stages": "Stage"
+    }
+  }
+}

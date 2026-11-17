@@ -11,6 +11,7 @@ import {
 import { DatabaseService } from '../src/database/database.service';
 import { http } from './helpers';
 import { createAppAsTestUser } from './helpers/as-test-user';
+import { historyMark, historyRows } from './helpers/history';
 
 const HR_KEYS = Object.values(HrSettingKey);
 
@@ -19,6 +20,7 @@ describe('HR rule settings — /hr/settings (e2e)', () => {
   let user: AuthUser;
   let db: DatabaseService;
   let events: SettingsChangedEvent[];
+  let mark = BigInt(0);
 
   const patch = (body: unknown) =>
     http(app)
@@ -35,7 +37,7 @@ describe('HR rule settings — /hr/settings (e2e)', () => {
 
   beforeEach(async () => {
     await db.schoolSetting.deleteMany({ where: { key: { in: HR_KEYS } } });
-    await db.settingChange.deleteMany({ where: { key: { in: HR_KEYS } } });
+    mark = await historyMark(db);
     events = [];
   });
 
@@ -171,16 +173,20 @@ describe('HR rule settings — /hr/settings (e2e)', () => {
     expect(rows.map((r) => r.key).sort()).toEqual(Object.keys(byKey).sort());
     for (const r of rows) expect(r.updatedById).toBe(user.id);
 
-    // Exactly ONE history row per changed key (core writes history only from the event).
-    const history = await db.settingChange.findMany({ where: { key: { in: HR_KEYS } } });
+    // Exactly ONE history row per changed key, all in one hr.settings.update entry written in
+    // the same transaction as the change (audit D2).
+    const history = await historyRows(db, mark, HR_KEYS);
     expect(history.map((h) => h.key).sort()).toEqual(Object.keys(byKey).sort());
-    for (const h of history) expect(h).toMatchObject({ scope: 'HR', changedById: user.id });
+    for (const h of history) {
+      expect(h).toMatchObject({ scope: 'HR', action: 'hr.settings.update', changedById: user.id });
+    }
+    expect(new Set(history.map((h) => h.entryId)).size).toBe(1);
 
     // The same PATCH again changes nothing → no events.
     events = [];
     await patch({ lateness: { graceMinutes: 10 }, payroll: { dayDivisor: 26 } }).expect(200);
     expect(events).toHaveLength(0);
-    expect(await db.settingChange.count({ where: { key: { in: HR_KEYS } } })).toBe(3);
+    expect(await historyRows(db, mark, HR_KEYS)).toHaveLength(3);
   });
 
   it('empty PATCH → 200 with the current settings, no changes', async () => {

@@ -8,6 +8,7 @@ import {
   UpdateViolationDto,
 } from '../dto/catalogue.dto';
 import { PenaltyCatalogueService } from '../services/penalty-catalogue.service';
+import { NotAudited } from '../../../../core/audit';
 
 /**
  * Penalty catalogue (contract: "Penalty catalogue — hr"). No DELETE routes: groups and violations
@@ -22,11 +23,13 @@ export class PenaltyCatalogueController {
     return this.catalogue.list();
   }
 
+  @NotAudited('wired in T28')
   @Post('penalty-groups')
   createGroup(@Body() dto: CreatePenaltyGroupDto, @CurrentUser() user?: AuthUser) {
     return this.catalogue.createGroup(dto, user?.id ?? null);
   }
 
+  @NotAudited('wired in T28')
   @Patch('penalty-groups/:id')
   updateGroup(
     @Param('id', ParseUUIDPipe) id: string,
@@ -36,6 +39,7 @@ export class PenaltyCatalogueController {
     return this.catalogue.updateGroup(id, dto, user?.id ?? null);
   }
 
+  @NotAudited('wired in T28')
   @Post('penalty-groups/:groupId/violations')
   createViolation(
     @Param('groupId', ParseUUIDPipe) groupId: string,
@@ -45,6 +49,7 @@ export class PenaltyCatalogueController {
     return this.catalogue.createViolation(groupId, dto, user?.id ?? null);
   }
 
+  @NotAudited('wired in T28')
   @Patch('violations/:id')
   updateViolation(
     @Param('id', ParseUUIDPipe) id: string,

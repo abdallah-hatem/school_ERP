@@ -7,6 +7,7 @@ import { LoginDto } from '../dto/login.dto';
 import { AuthCookiesInterceptor } from '../interceptors/auth-cookies.interceptor';
 import { AuthService } from '../services/auth.service';
 import { ClearedSession, type IssuedSession } from '../session';
+import { NotAudited } from '../../audit';
 
 /** There is no sign-up route (§2: accounts come from the seed). */
 @Controller('auth')
@@ -15,6 +16,7 @@ export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
   @Public()
+  @NotAudited('wired in T28')
   @Post('login')
   @HttpCode(HttpStatus.OK)
   login(@Body() dto: LoginDto): Promise<IssuedSession> {
@@ -22,12 +24,14 @@ export class AuthController {
   }
 
   @Public()
+  @NotAudited('token refresh rotates the session; not an audited action in v1')
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   refresh(@RefreshTokenValue() refreshToken: string | undefined): Promise<IssuedSession> {
     return this.auth.refresh(refreshToken);
   }
 
+  @NotAudited('wired in T28')
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   async logout(

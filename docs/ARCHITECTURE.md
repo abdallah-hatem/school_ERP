@@ -205,8 +205,8 @@ this.events.emit('employee.deactivated', { employeeId, at: new Date() });
 async handle(e: EmployeeDeactivatedEvent) { await this.assignments.unassignAll(e.employeeId); }
 ```
 
-- Emit **after the write is committed**. Inside a `$transaction`, emit after it commits, never
-  inside it. The foundation provides a helper for this.
+- Emit **after the write is committed**. Inside a transaction, emit after it commits, never
+  inside it: `AfterCommit.run(() => this.events.emit(...))` (see Transactions and the audit log).
 - Names: `<module>.<thing>.<past-tense>`. Payload types live in `packages/shared`.
 - Listeners are **idempotent** (safe to run twice) and log their failures.
 - Events are in memory: fine for notifications and side effects. Side effects that must never be
@@ -222,6 +222,53 @@ display and reports. **Never for writes.**
 | Something happened; others may react | Event |
 | Lower module must trigger a higher one | Event |
 | Show or report another module's data | Read in your repository |
+
+### Transactions and the audit log
+
+**Request-scoped transactions** (`apps/api/src/database/transactions.ts`, audit spec D3).
+`nestjs-cls` keeps one context per request (with a request id: the incoming `x-request-id`, or a new
+UUID) and `@nestjs-cls/transactional` with the Prisma adapter keeps the open transaction in it.
+
+- A repository that must join its caller's transaction injects `TransactionHost<DbAdapter>` and
+  uses `txHost.tx` (the transaction client inside one, the plain client outside). Its multi-row
+  writes use `txHost.withTransaction(...)`, which joins an open transaction or opens one.
+  Repositories still on `DatabaseService` keep working but always run outside any transaction —
+  move a repository over when its writes must be audited (T28 / T29 move HR's).
+- Never pass options to a nested `withTransaction`; only the request transaction sets them.
+- **After-commit work** (events): `AfterCommit.run(fn)` queues `fn` until the open request
+  transaction commits (dropped on rollback), or runs it at once when none is open.
+
+**The audit log** (`core/audit`, §9). One append-only table, `audit_entries`, written by every
+module through core's exported `AuditService` — never through its repository.
+
+- `audit.record({ action, entity: { type, id, label }, before?, after?, changes? })` writes **in the
+  current transaction** and throws outside one (D2): the entry commits or rolls back with the change.
+- Who (id + name snapshot), IP, user agent and request id come from the request (D4). `actor` is
+  passed only where the request has no user yet (a successful sign-in) or none applies (`null`).
+- Only changed fields are stored, each `{ field, before, after }`; secrets (password hashes,
+  tokens, anything matching the deny list in `audit.pure.ts`) are dropped at any depth; money stays
+  in piastres; `id` / `createdAt` / `updatedAt` are ignored (D7). Equal before and after write
+  nothing.
+- Append-only in the database: a trigger refuses `UPDATE`, `DELETE` and `TRUNCATE` (D8). Tests can't
+  clean the table up — they read entries after a mark (`test/helpers/history.ts`).
+- `actor_id` is not a foreign key, so deleting a user never touches the log (edge case 4).
+- Actions are typed keys in `packages/shared/src/audit.ts` (`AUDIT_ACTIONS`: module, entity type,
+  kind); their EN / AR sentences and field labels are in `locales/<lang>/audit.json` (D5). Entries
+  store keys and values, never sentences.
+- **Every write endpoint declares its audit** (D6): `@Audited('<action>')` or
+  `@NotAudited('<reason>')`. `src/core/audit/audit-declarations.spec.ts` scans every controller and
+  fails when a POST / PATCH / PUT / DELETE handler has neither.
+- `@Audited` handlers run — validation included — in one transaction opened by the global
+  `AuditedInterceptor`. If the handler succeeds without having called `record()` for that action,
+  the request fails with `AUDIT_NOT_RECORDED` (500) and everything rolls back (D6b). A handler that
+  throws keeps its own error and its entries roll back with it. A save with nothing changed still
+  calls `record()` (with no changes): nothing is written, the check passes.
+- Read API (HR admin, `RolesGuard`): `GET /audit` (page, limit ≤ 100, actorId, module, action,
+  from inclusive / to exclusive as ISO instants, q on the record label) and
+  `GET /audit/records/:entityType/:entityId`, newest first, server-paged.
+- **Settings history** (D9) lives in the audit log: `GET /settings/history` flattens the settings
+  actions' changes (one item per key) into its old shape. The old `setting_changes` rows were copied
+  by the T27 migration (same id, value, person, time) before the table was dropped.
 
 ### Deliberate shortcuts
 

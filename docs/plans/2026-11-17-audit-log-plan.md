@@ -17,7 +17,7 @@ commit touching only the registry and say so in the PR).
 | 2 | T28 wire core + HR people (`logic`) · T29 wire HR penalties, lateness, payroll (`logic`) · T30 screens (`ui`) | T27 (T30 also the employee-profile layout fix) |
 | 3 | T31 verify: full suite, smoke, demo dry run on a copy, entries checked by hand | all |
 
-## T27 — core audit foundation (`logic`)
+## T27 — core audit foundation (`logic`) — ✅ done (PR `feature/t27-audit-core`)
 
 - `audit_entries` table + migration + trigger rejecting UPDATE/DELETE (D8); indexes from the spec.
 - Request-scoped transactions: `nestjs-cls` + `@nestjs-cls/transactional` (Prisma adapter) (D3);
@@ -47,11 +47,23 @@ edit, deactivate, reactivate), departments, job titles, HR settings, penalty cat
 action: the entry exists with the right action, record, actor and changed fields; a rolled-back
 change leaves none.
 
+**From T27:** HR settings are already recorded (`hr.settings.update`) by core's
+`SettingsService.setValues`, in the write's transaction; to switch the handler to `@Audited`, make
+the no-change path call `setValues` too (or `record()` with no changes). Stages, lists and the
+catalogue still reach the log through core's temporary `SettingsHistoryListener` (after commit, own
+transaction, history-key + whole-snapshot change, so Settings history reads as before): record them
+in the write's transaction instead, then delete the listener and its `settings.changed` emits.
+Repositories written to in an audited request must move to `TransactionHost` (`txHost.tx`).
+
 ## T29 — wire HR penalties, lateness, payroll (`logic`)
 
 Penalties (record, approve, cancel); lateness month save (one entry, changed employees only — spec
 7); payroll run create, recalculate, approve (one entry with totals — spec 6), adjustment add/remove.
 Same tests as T28.
+
+**From T27:** same repository move as T28. The HR repositories that open their own `$transaction`
+(penalty records, payroll runs, lateness, employees) must switch to `txHost.withTransaction` so the
+audit entry joins them.
 
 ## T30 — screens, option B (`ui`)
 
@@ -64,6 +76,11 @@ Same tests as T28.
   by month, field and person filters.
 - Settings → Change history unchanged for the user, on the audit API.
 - EN/AR, RTL, phone + desktop. Smoke spec: make a change, see it on Activity and on the History tab.
+
+**From T27:** entries of the settings actions keep the old history format — one change per key, the
+field being the setting key (`school.workStart`) or the history key (`hr.departments`,
+`lists.stages.<id>`) with whole snapshots — and `GET /settings/history` returns the old shape.
+Field labels: `audit.fields.<field>` (stage keys: strip the id, use `fields.lists.stages`).
 
 ## T31 — verify
 

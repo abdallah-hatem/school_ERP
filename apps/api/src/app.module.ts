@@ -7,6 +7,7 @@ import { ResponseInterceptor } from './common/interceptors/response.interceptor'
 import { AppConfigModule } from './config';
 import { CoreModule } from './core';
 import { DatabaseModule } from './database/database.module';
+import { TransactionsModule } from './database/transactions';
 import { HealthModule } from './health/health.module';
 import { HrModule } from './modules/hr';
 
@@ -14,6 +15,8 @@ import { HrModule } from './modules/hr';
   imports: [
     AppConfigModule,
     DatabaseModule,
+    // Request context + request-scoped transactions (audit spec D3).
+    TransactionsModule,
     // In-memory domain events (docs/ARCHITECTURE.md → How modules talk). Emit after commit.
     EventEmitterModule.forRoot(),
     HealthModule,

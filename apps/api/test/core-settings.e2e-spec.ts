@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { INestApplication } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
@@ -9,6 +10,7 @@ import {
 import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
 import { ANONYMOUS_HEADER, createAppAsTestUser } from './helpers/as-test-user';
+import { historyMark, historyRows, waitForCount } from './helpers/history';
 
 const PNG = Buffer.concat([
   Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
@@ -23,14 +25,18 @@ describe('core settings and school structure (e2e)', () => {
   const createdStageIds: string[] = [];
   const cleanup: Array<() => Promise<unknown>> = [];
 
-  const historyFor = (key: string) =>
-    db.settingChange.findMany({ where: { key }, orderBy: { changedAt: 'asc' } });
+  // The audit log is append-only: read the history written after `mark` (reset = a new mark).
+  let mark = BigInt(0);
+  const historyFor = (key: string) => historyRows(db, mark, key);
+  const resetHistory = async () => {
+    mark = await historyMark(db);
+  };
 
   beforeAll(async () => {
     ({ app, user: TEST_USER } = await createAppAsTestUser());
     db = app.get(DatabaseService);
     // A fresh settings state: no rows means every key is at its §7 default.
-    await db.settingChange.deleteMany();
+    await resetHistory();
     await db.schoolSetting.deleteMany();
   });
 
@@ -38,7 +44,6 @@ describe('core settings and school structure (e2e)', () => {
     // In the order pushed: an employee goes before its department and job title.
     for (const fn of cleanup) await fn();
     await db.stage.deleteMany({ where: { id: { in: createdStageIds } } });
-    await db.settingChange.deleteMany();
     await db.schoolSetting.deleteMany();
     await app.close();
   });
@@ -58,7 +63,7 @@ describe('core settings and school structure (e2e)', () => {
     });
 
     it('PATCH workEnd earlier than workStart → 400, nothing saved', async () => {
-      const before = await db.settingChange.count();
+      const before = (await historyRows(db, mark)).length;
       const res = await http(app)
         .patch('/settings/school')
         .send({ workStart: '09:00', workEnd: '08:00', nameEn: 'Ignored' })
@@ -70,7 +75,7 @@ describe('core settings and school structure (e2e)', () => {
 
       const after = await http(app).get('/settings/school').expect(200);
       expect(after.body.data).toMatchObject({ workStart: '07:30', workEnd: '15:00', nameEn: '' });
-      expect(await db.settingChange.count()).toBe(before);
+      expect((await historyRows(db, mark)).length).toBe(before);
       expect(await db.schoolSetting.count({ where: { key: { startsWith: 'school.' } } })).toBe(0);
     });
 
@@ -112,7 +117,7 @@ describe('core settings and school structure (e2e)', () => {
       const after = await http(app).get('/settings/school').expect(200);
       expect(after.body.data).toMatchObject({ workStart: '06:30', workEnd: '19:30' });
       // Back to the §7 defaults with no history, as the next tests assume.
-      await db.settingChange.deleteMany();
+      await resetHistory();
       await db.schoolSetting.deleteMany();
     });
 
@@ -148,11 +153,69 @@ describe('core settings and school structure (e2e)', () => {
       expect(history.body.meta).toMatchObject({ page: 1, limit: 5 });
     });
 
+    it('edge case 11 — an entry copied from the old history reads in Settings history exactly as before', async () => {
+      // The shape the T27 migration writes for an old `setting_changes` row (same id and time).
+      const id = randomUUID();
+      const at = new Date(); // the newest entry, so the first item
+      const snapshot = { id: 'd1', nameEn: 'Science', nameAr: 'العلوم', sortOrder: 1, isActive: true };
+      await db.auditEntry.create({
+        data: {
+          id,
+          action: 'hr.department.create',
+          module: 'hr',
+          entityType: 'department',
+          entityId: 'd1',
+          entityLabel: 'Science',
+          actorId: TEST_USER.id,
+          actorName: TEST_USER.name,
+          changes: [{ field: 'hr.departments', before: null, after: snapshot }],
+          meta: { ip: null, userAgent: null, requestId: null, source: 'setting_changes' },
+          at,
+        },
+      });
+      const stored = await db.auditEntry.findUniqueOrThrow({ where: { id }, select: { at: true } });
+      const history = await http(app).get('/settings/history?page=1&limit=1').expect(200);
+      expect(history.body.data[0]).toEqual({
+        id,
+        scope: 'lists',
+        key: 'hr.departments',
+        oldValue: null,
+        newValue: snapshot,
+        changedBy: { id: TEST_USER.id, name: TEST_USER.name },
+        changedAt: stored.at.toISOString(),
+      });
+    });
+
     it('history limit above 100 → 400', async () => {
       await http(app).get('/settings/history?limit=101').expect(400);
     });
 
-    it('an emitted HR settings.changed event produces a history row', async () => {
+    it('an emitted HR list settings.changed event produces a history row (until T28)', async () => {
+      const item = { id: '22222222-2222-4222-8222-222222222222', nameEn: 'Art', nameAr: 'الفنون', sortOrder: 1, isActive: true };
+      const event: SettingsChangedEvent = {
+        scope: 'lists',
+        key: 'hr.departments',
+        oldValue: null,
+        newValue: item,
+        changedById: TEST_USER.id,
+        changedAt: new Date().toISOString(),
+      };
+      await app.get(EventEmitter2).emitAsync(SettingsEvent.CHANGED, event);
+
+      const rows = (await historyFor('hr.departments')).filter(
+        (r) => (r.newValue as { id?: string } | null)?.id === item.id,
+      );
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({
+        action: 'hr.department.create',
+        scope: 'LISTS',
+        oldValue: null,
+        newValue: item,
+        changedById: TEST_USER.id,
+      });
+    });
+
+    it('an HR or school settings.changed event alone writes nothing: those are recorded with their write', async () => {
       const event: SettingsChangedEvent = {
         scope: 'hr',
         key: 'hr.payroll.dayDivisor',
@@ -162,15 +225,7 @@ describe('core settings and school structure (e2e)', () => {
         changedAt: new Date().toISOString(),
       };
       await app.get(EventEmitter2).emitAsync(SettingsEvent.CHANGED, event);
-
-      const rows = await historyFor('hr.payroll.dayDivisor');
-      expect(rows).toHaveLength(1);
-      expect(rows[0]).toMatchObject({
-        scope: 'HR',
-        oldValue: 30,
-        newValue: 26,
-        changedById: TEST_USER.id,
-      });
+      expect(await historyFor('hr.payroll.dayDivisor')).toHaveLength(0);
     });
   });
 
@@ -328,8 +383,16 @@ describe('core settings and school structure (e2e)', () => {
       await http(app).patch(`/stages/${b.id}`).send({ isActive: false }).expect(200);
       await http(app).patch(`/stages/${b.id}`).send({ isActive: true }).expect(200);
 
-      const rows = await historyFor(`lists.stages.${b.id}`);
+      const key = `lists.stages.${b.id}`;
+      expect(await waitForCount(async () => (await historyFor(key)).length, 4)).toBe(4);
+      const rows = await historyFor(key);
       expect(rows.map((r) => r.scope)).toEqual(['LISTS', 'LISTS', 'LISTS', 'LISTS']);
+      expect(rows.map((r) => r.action)).toEqual([
+        'core.stage.create',
+        'core.stage.update',
+        'core.stage.update',
+        'core.stage.update',
+      ]);
       expect(rows[0].oldValue).toBeNull();
       expect(rows[1]).toMatchObject({
         oldValue: expect.objectContaining({ nameAr: 'ب' }),

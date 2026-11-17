@@ -3,6 +3,7 @@ export * from './settings';
 export * from './errors';
 export * from './auth';
 export * from './events';
+export * from './audit';
 export * from './types/common';
 export * from './types/core';
 export * from './types/hr';

@@ -13,6 +13,7 @@ import {
 import { ResponseUtil } from '../../../../common/utils/response.util';
 import { CreateEmployeeDto, ListEmployeesQueryDto, UpdateEmployeeDto } from '../dto/employee.dto';
 import { EmployeesService } from '../services/employees.service';
+import { NotAudited } from '../../../../core/audit';
 
 /** `/hr/employees` (contract). No DELETE: employees are deactivated, never deleted (§3). */
 @Controller('hr/employees')
@@ -29,22 +30,26 @@ export class EmployeesController {
     return this.employees.get(id);
   }
 
+  @NotAudited('wired in T28')
   @Post()
   create(@Body() dto: CreateEmployeeDto) {
     return this.employees.create(dto);
   }
 
+  @NotAudited('wired in T28')
   @Patch(':id')
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateEmployeeDto) {
     return this.employees.update(id, dto);
   }
 
+  @NotAudited('wired in T28')
   @Post(':id/deactivate')
   @HttpCode(HttpStatus.OK)
   deactivate(@Param('id', ParseUUIDPipe) id: string) {
     return this.employees.deactivate(id);
   }
 
+  @NotAudited('wired in T28')
   @Post(':id/reactivate')
   @HttpCode(HttpStatus.OK)
   reactivate(@Param('id', ParseUUIDPipe) id: string) {

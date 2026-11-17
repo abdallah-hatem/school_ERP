@@ -19,6 +19,7 @@ import { resolveLanguage } from '../../../../common/i18n/i18n';
 import { ResponseUtil } from '../../../../common/utils/response.util';
 import { CreateAdjustmentDto, CreatePayrollRunDto, PayrollRunQueryDto } from '../dto/payroll.dto';
 import { PayrollService } from '../services/payroll.service';
+import { NotAudited } from '../../../../core/audit';
 
 const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
@@ -35,6 +36,7 @@ export class PayrollRunsController {
     return ResponseUtil.paginated(await this.payroll.list(query));
   }
 
+  @NotAudited('wired in T29')
   @Post()
   create(@Body() dto: CreatePayrollRunDto, @CurrentUser() user?: AuthUser) {
     return this.payroll.create(dto.month, user?.id ?? null);
@@ -45,12 +47,14 @@ export class PayrollRunsController {
     return this.payroll.get(id, query);
   }
 
+  @NotAudited('wired in T29')
   @Post(':id/recalculate')
   @HttpCode(HttpStatus.OK)
   recalculate(@Param('id', ParseUUIDPipe) id: string) {
     return this.payroll.recalculate(id);
   }
 
+  @NotAudited('wired in T29')
   @Post(':id/approve')
   @HttpCode(HttpStatus.OK)
   approve(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user?: AuthUser) {
@@ -75,6 +79,7 @@ export class PayrollRunsController {
     return this.payroll.payslip(id, lineId);
   }
 
+  @NotAudited('wired in T29')
   @Post(':id/adjustments')
   addAdjustment(
     @Param('id', ParseUUIDPipe) id: string,
@@ -84,6 +89,7 @@ export class PayrollRunsController {
     return this.payroll.addAdjustment(id, dto, user?.id ?? null);
   }
 
+  @NotAudited('wired in T29')
   @Delete(':id/adjustments/:adjustmentId')
   removeAdjustment(
     @Param('id', ParseUUIDPipe) id: string,

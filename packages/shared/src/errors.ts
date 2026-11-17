@@ -48,6 +48,10 @@ export const ErrorCode = {
   PAYROLL_RUN_EXISTS: 'PAYROLL_RUN_EXISTS',
   PENDING_PENALTIES: 'PENDING_PENALTIES',
   EMPLOYEE_NOT_IN_RUN: 'EMPLOYEE_NOT_IN_RUN',
+
+  // audit log
+  /** An `@Audited` handler finished without recording its action (D6b); the change rolled back. */
+  AUDIT_NOT_RECORDED: 'AUDIT_NOT_RECORDED',
 } as const;
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
 export const ERROR_CODES = Object.values(ErrorCode) as ErrorCode[];
