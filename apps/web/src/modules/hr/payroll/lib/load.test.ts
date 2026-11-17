@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const apis = vi.hoisted(() => ({
+  GET_EMPLOYEE_PAYROLL_LINES: vi.fn(),
   GET_PAYROLL_RUN: vi.fn(),
   GET_PAYROLL_RUNS: vi.fn(),
   GET_PAYSLIP: vi.fn(),
@@ -17,7 +18,7 @@ const nav = vi.hoisted(() => ({
 }));
 vi.mock('next/navigation', () => nav);
 
-import { MONA, run, SALMA, SETTINGS, summary as toSummary } from '../test/fixtures';
+import { run, SALMA, SETTINGS } from '../test/fixtures';
 import { loadEmployeePayroll, loadPayslip, loadRun } from './load';
 
 const ok = <T>(data: T) => ({ success: true, status: 200, data });
@@ -29,17 +30,14 @@ beforeEach(() => {
 });
 
 describe('payroll loaders', () => {
-  it('a filtered run also reads the whole run, so "not applied" knows every employee', async () => {
-    apis.GET_PAYROLL_RUN.mockImplementation((_id: string, query?: object) =>
-      Promise.resolve(ok(query ? run({ lines: [SALMA] }) : run())),
-    );
+  it('a filtered run is read once — the API marks which adjustments apply', async () => {
+    apis.GET_PAYROLL_RUN.mockResolvedValue(ok(run({ lines: [SALMA] })));
     const data = await loadRun('r1', { search: 'salma' });
+    expect(apis.GET_PAYROLL_RUN).toHaveBeenCalledTimes(1);
     expect(apis.GET_PAYROLL_RUN).toHaveBeenCalledWith('r1', {
       search: 'salma',
     });
-    expect(apis.GET_PAYROLL_RUN).toHaveBeenCalledWith('r1');
     expect(data.run.lines).toEqual([SALMA]);
-    expect(data.runEmployeeIds).toEqual(['e-mona', 'e-salma']);
     expect(data.settings).toEqual(SETTINGS);
   });
 
@@ -72,21 +70,17 @@ describe('payroll loaders', () => {
     });
   });
 
-  it("the profile tab keeps only the employee's own line (a code search also matches longer codes)", async () => {
-    const summary = toSummary(run());
-    apis.GET_PAYROLL_RUNS.mockResolvedValue(ok([summary, { ...summary, id: 'r-oct', month: '2026-10' }]));
-    const lookalike = {
-      ...SALMA,
-      employeeId: 'e-other',
-      employeeCode: 'EMP-00010',
-    };
-    apis.GET_PAYROLL_RUN.mockImplementation((id: string) =>
-      Promise.resolve(ok(id === 'r-oct' ? run({ lines: [lookalike] }) : run({ lines: [MONA, lookalike] }))),
-    );
-    const rows = await loadEmployeePayroll({ id: 'e-mona', code: 'EMP-0001' });
-    expect(apis.GET_PAYROLL_RUN).toHaveBeenCalledWith(summary.id, {
-      search: 'EMP-0001',
-    });
-    expect(rows).toEqual([{ run: summary, line: MONA }]);
+  it('the profile tab reads one paginated history request — no per-run reads', async () => {
+    const line = { runId: 'r-oct', lineId: 'l-oct', month: '2026-10', status: 'APPROVED', net: 1_400_000 };
+    apis.GET_EMPLOYEE_PAYROLL_LINES.mockResolvedValue({ ...ok([line]), meta: { total: 25 } });
+    expect(await loadEmployeePayroll('e-mona', { page: 2, limit: 12 })).toEqual({ rows: [line], total: 25 });
+    expect(apis.GET_EMPLOYEE_PAYROLL_LINES).toHaveBeenCalledWith('e-mona', { page: 2, limit: 12 });
+    expect(apis.GET_PAYROLL_RUNS).not.toHaveBeenCalled();
+    expect(apis.GET_PAYROLL_RUN).not.toHaveBeenCalled();
+  });
+
+  it('the profile tab is an error state (null rows) when the history fails', async () => {
+    apis.GET_EMPLOYEE_PAYROLL_LINES.mockResolvedValue({ success: false, status: 502, message: 'x' });
+    expect(await loadEmployeePayroll('e-mona', { page: 1, limit: 20 })).toEqual({ rows: null, total: 0 });
   });
 });

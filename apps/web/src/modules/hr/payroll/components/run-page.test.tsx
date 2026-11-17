@@ -56,7 +56,6 @@ function renderRun(props: Partial<RunPageProps> = {}, locale: Locale = 'en') {
       basePath={`/${locale}/payroll`}
       settingsHref={`/${locale}/settings`}
       run={r}
-      runEmployeeIds={r.lines.map((l) => l.employeeId)}
       departments={DEPARTMENTS}
       settings={SETTINGS}
       query={{} as PayrollRunQuery}
@@ -282,7 +281,6 @@ describe('RunPage — draft', () => {
     });
     renderRun({
       run: run({ lines: [SALMA] }),
-      runEmployeeIds: ['e-mona', 'e-salma'],
       query: { search: 'salma' },
     });
     await user.click(screen.getByRole('button', { name: 'Recalculate' }));
@@ -291,21 +289,27 @@ describe('RunPage — draft', () => {
     expect(table().getByText('Salma Adel')).toBeTruthy();
   });
 
-  it('adjustments for employees no longer in the run are listed as "not applied"', () => {
+  it('adjustments the API marks applied: false are listed as "not applied", naming the employee', () => {
     const gone = {
       ...ADJ_MONA,
       id: 'a-gone',
       employeeId: 'e-gone',
+      employeeCode: 'EMP-0042',
+      nameEn: 'Karim Fawzy',
+      nameAr: 'كريم فوزي',
       type: 'DEDUCTION' as const,
       amount: 25_000,
       reason: 'Uniform',
+      applied: false,
     };
-    renderRun({ run: run({ adjustments: [ADJ_MONA, gone] }) });
+    // Filtered to one line: an applied adjustment of an employee outside the filter stays applied.
+    renderRun({ run: run({ lines: [SALMA], adjustments: [ADJ_MONA, gone] }), query: { search: 'salma' } });
     const section = screen.getByRole('region', {
       name: 'Adjustments not applied',
     });
     expect(within(section).getByText('Uniform')).toBeTruthy();
     expect(within(section).getByText('Not applied')).toBeTruthy();
+    expect(within(section).getByText('Not applied — Karim Fawzy (EMP-0042) is no longer in this run')).toBeTruthy();
     expect(within(section).queryByText('Exam supervision')).toBeNull();
   });
 
@@ -322,6 +326,16 @@ describe('RunPage — draft', () => {
     expect(within(screen.getByRole('complementary')).getByRole('alert').textContent).toContain(
       "The HR rules couldn't load",
     );
+  });
+
+  it('on an APPROVED run the rules panel is labelled as today\'s rules, with when the run was calculated', () => {
+    renderRun({
+      run: run({ status: 'APPROVED', approvedAt: '2026-11-30T10:00:00.000Z' }),
+    });
+    expect(screen.queryByRole('complementary', { name: 'Rules applied this month' })).toBeNull();
+    const panel = screen.getByRole('complementary', { name: 'Current rules' });
+    expect(within(panel).getByText(/This run was calculated on 30 Nov 2026/)).toBeTruthy();
+    expect(within(panel).getByText(/may differ from the ones it used/)).toBeTruthy();
   });
 
   it('renders right-to-left in Arabic with Arabic names and labels', () => {

@@ -80,7 +80,8 @@ export function Pagination({
           <span id={limitLabelId}>{t('ui.table.rowsPerPage')}</span>
           <Select value={String(limit)} onValueChange={(v) => onLimitChange(Number(v))} disabled={disabled}>
             <SelectTrigger aria-labelledby={limitLabelId} className="tabular h-9 w-20">
-              <SelectValue />
+              {/* Named here, not left to Radix, so the closed trigger shows it from the first paint. */}
+              <SelectValue>{limit}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {limitOptions.map((option) => (

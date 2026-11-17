@@ -10,9 +10,17 @@ import { Pagination, type PaginationState } from './pagination';
 /*
  * The one table. A page describes its columns; this owns the layout, widths, header, skeleton
  * rows, empty / error states and pagination. It is a table when its container is at least 740px
- * wide and a stack of cards below that (container query, so it follows the space it is given,
- * not the window).
+ * wide (or `cardsBelow` for tables with many columns) and a stack of cards below that (container
+ * query, so it follows the space it is given, not the window).
  */
+
+/** Container widths a table may switch to cards below. Literal classes, so Tailwind sees them. */
+const VIEW_CLASSES = {
+  740: { table: 'hidden @min-[740px]:block', cards: '@min-[740px]:hidden' },
+  960: { table: 'hidden @min-[960px]:block', cards: '@min-[960px]:hidden' },
+  1100: { table: 'hidden @min-[1100px]:block', cards: '@min-[1100px]:hidden' },
+} as const;
+export type CardsBelow = keyof typeof VIEW_CLASSES;
 
 export interface DataTableColumn<Row> {
   id: string;
@@ -53,6 +61,11 @@ export interface DataTableProps<Row> {
   /** Title row above the table: heading, count, search, filters. */
   toolbar?: ReactNode;
   rowTone?: (row: Row) => RowTone;
+  /**
+   * The container width below which rows become cards (default 740). A table whose columns' minimum
+   * widths add up to more than 740px passes a wider one, so it never scrolls sideways.
+   */
+  cardsBelow?: CardsBelow;
   className?: string;
 }
 
@@ -77,8 +90,10 @@ export function DataTable<Row>({
   pagination,
   toolbar,
   rowTone,
+  cardsBelow = 740,
   className,
 }: DataTableProps<Row>) {
+  const view = VIEW_CLASSES[cardsBelow];
   const { t } = useTranslation();
   const skeletonCount = Math.min(pagination?.limit ?? 8, SKELETON_CAP);
   const showSkeleton = loading && !rows?.length && !error;
@@ -93,8 +108,8 @@ export function DataTable<Row>({
         <span role="status" className="sr-only">
           {t('ui.states.loading')}
         </span>
-        <TableSkeleton columns={columns} count={skeletonCount} />
-        <CardsSkeleton count={Math.min(skeletonCount, 4)} />
+        <TableSkeleton columns={columns} count={skeletonCount} viewClass={view.table} />
+        <CardsSkeleton count={Math.min(skeletonCount, 4)} viewClass={view.cards} />
       </div>
     );
   } else if (isEmpty) {
@@ -105,8 +120,8 @@ export function DataTable<Row>({
         aria-busy={refreshing || undefined}
         className={cn('transition-opacity duration-150', refreshing && 'pointer-events-none opacity-55')}
       >
-        <Table columns={columns} rows={rows ?? []} getRowId={getRowId} label={label} rowTone={rowTone} />
-        <Cards columns={columns} rows={rows ?? []} getRowId={getRowId} label={label} rowTone={rowTone} />
+        <Table columns={columns} rows={rows ?? []} getRowId={getRowId} label={label} rowTone={rowTone} viewClass={view.table} />
+        <Cards columns={columns} rows={rows ?? []} getRowId={getRowId} label={label} rowTone={rowTone} viewClass={view.cards} />
       </div>
     );
   }
@@ -114,6 +129,7 @@ export function DataTable<Row>({
   return (
     <section
       aria-label={label}
+      data-cards-below={cardsBelow}
       className={cn('@container overflow-hidden rounded-3xl bg-card shadow-card', className)}
     >
       {toolbar ? <div className="flex flex-wrap items-center gap-3 px-5 pt-5 pb-4">{toolbar}</div> : null}
@@ -131,6 +147,8 @@ interface RowsProps<Row> {
   getRowId: (row: Row) => string;
   label: string;
   rowTone?: (row: Row) => RowTone;
+  /** Which container widths show this view (from `cardsBelow`). */
+  viewClass: string;
 }
 
 const toneBar = {
@@ -138,9 +156,9 @@ const toneBar = {
   danger: 'shadow-[inset_4px_0_0_var(--destructive)] rtl:shadow-[inset_-4px_0_0_var(--destructive)]',
 } as const;
 
-function Table<Row>({ columns, rows, getRowId, label, rowTone }: RowsProps<Row>) {
+function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass }: RowsProps<Row>) {
   return (
-    <div data-view="table" className="scrollbar-clean hidden overflow-x-auto @min-[740px]:block">
+    <div data-view="table" className={cn('scrollbar-clean overflow-x-auto', viewClass)}>
       <table aria-label={label} className="w-full border-separate border-spacing-0 text-sm">
         <thead>
           <tr>
@@ -191,7 +209,7 @@ function Table<Row>({ columns, rows, getRowId, label, rowTone }: RowsProps<Row>)
 
 // ── Cards (container < 740px) ────────────────────────────────────────────────
 
-function Cards<Row>({ columns, rows, getRowId, label, rowTone }: RowsProps<Row>) {
+function Cards<Row>({ columns, rows, getRowId, label, rowTone, viewClass }: RowsProps<Row>) {
   const titles = columns.filter((c) => c.card === 'title');
   const statuses = columns.filter((c) => c.card === 'status');
   const highlights = columns.filter((c) => c.card === 'highlight');
@@ -199,7 +217,7 @@ function Cards<Row>({ columns, rows, getRowId, label, rowTone }: RowsProps<Row>)
   const actions = columns.filter((c) => c.card === 'actions');
 
   return (
-    <ul data-view="cards" aria-label={label} className="grid gap-3 px-4 pb-4 @min-[740px]:hidden">
+    <ul data-view="cards" aria-label={label} className={cn('grid gap-3 px-4 pb-4', viewClass)}>
       {rows.map((row) => {
         const tone = rowTone?.(row);
         return (
@@ -266,9 +284,17 @@ function Cards<Row>({ columns, rows, getRowId, label, rowTone }: RowsProps<Row>)
 
 // ── Skeletons: same rows, same heights ───────────────────────────────────────
 
-function TableSkeleton<Row>({ columns, count }: { columns: DataTableColumn<Row>[]; count: number }) {
+function TableSkeleton<Row>({
+  columns,
+  count,
+  viewClass,
+}: {
+  columns: DataTableColumn<Row>[];
+  count: number;
+  viewClass: string;
+}) {
   return (
-    <div data-view="table" className="hidden @min-[740px]:block">
+    <div data-view="table" className={viewClass}>
       <div className="mx-0 flex h-9 items-center gap-6 rounded-xl bg-muted px-5">
         {columns.map((c) => (
           <Skeleton key={c.id} className="h-3 flex-1 bg-border" />
@@ -285,9 +311,9 @@ function TableSkeleton<Row>({ columns, count }: { columns: DataTableColumn<Row>[
   );
 }
 
-function CardsSkeleton({ count }: { count: number }) {
+function CardsSkeleton({ count, viewClass }: { count: number; viewClass: string }) {
   return (
-    <div data-view="cards" className="grid gap-3 px-4 pb-4 @min-[740px]:hidden">
+    <div data-view="cards" className={cn('grid gap-3 px-4 pb-4', viewClass)}>
       {Array.from({ length: count }, (_, i) => (
         <div key={i} className="flex flex-col gap-2.5 rounded-2xl border border-border p-3.5">
           <div className="flex items-start justify-between gap-3">

@@ -13,6 +13,7 @@ import {
   type PayrollLine,
   type PayrollRun,
   type PayrollRunSummary,
+  type EmployeePayrollLine,
   type Payslip,
   type Uuid,
 } from '@school-erp/shared';
@@ -51,8 +52,17 @@ function toLine(row: LineRow): PayrollLine {
   };
 }
 
-function toAdjustment(row: AdjustmentRow): PayrollAdjustment {
-  return { ...row, createdAt: row.createdAt.toISOString() };
+/** `applied` is false when the adjustment's employee no longer has a line in the run. */
+function toAdjustment(row: AdjustmentRow, inRun: ReadonlySet<string>): PayrollAdjustment {
+  const { employee, ...rest } = row;
+  return {
+    ...rest,
+    employeeCode: employee.code,
+    nameEn: employee.nameEn,
+    nameAr: employee.nameAr,
+    createdAt: row.createdAt.toISOString(),
+    applied: inRun.has(row.employeeId),
+  };
 }
 
 /** A line's adjustment sums, net and flags after its adjustments changed (rest unchanged). */
@@ -98,15 +108,35 @@ export class PayrollService {
   /** A run with its totals (all lines) and the lines matching the filters. */
   async get(id: Uuid, query: PayrollRunQueryDto = {}): Promise<PayrollRun> {
     const run = await this.findRun(id);
-    const [totals, lines, adjustments] = await Promise.all([
+    const [totals, lines, adjustments, inRun] = await Promise.all([
       this.repository.totalsFor([id]),
       this.repository.findLines(id, query),
       this.repository.findAdjustments(id),
+      this.repository.lineEmployeeIds(id),
     ]);
     return {
       ...this.toSummary(run, totals.get(id)!),
       lines: lines.map(toLine),
-      adjustments: adjustments.map(toAdjustment),
+      adjustments: adjustments.map((a) => toAdjustment(a, inRun)),
+    };
+  }
+
+  /** An employee's line in each run, newest month first (profile Payroll tab). 404 if unknown. */
+  async employeeLines(
+    employeeId: Uuid,
+    query: PaginationQueryDto,
+  ): Promise<Paginated<EmployeePayrollLine>> {
+    await this.employees.get(employeeId);
+    const result = await this.repository.listEmployeeLines(employeeId, query.page, query.limit);
+    return {
+      ...result,
+      data: result.data.map((row) => ({
+        runId: row.run.id,
+        lineId: row.id,
+        month: row.run.month,
+        status: row.run.status,
+        net: row.net,
+      })),
     };
   }
 

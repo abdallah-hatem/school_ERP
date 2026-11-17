@@ -8,7 +8,7 @@ export type Locale = Language;
 export const LOCALES: readonly Locale[] = LANGUAGES;
 /** Arabic is the default for this deployment (spec); the school setting overrides it later (T4). */
 export const DEFAULT_LOCALE: Locale = 'ar';
-/** Cookie `apiFetch` reads for `Accept-Language`; the language switch writes it. */
+/** The language switch writes it; the proxy uses it to pick a locale for paths without one. */
 export const LOCALE_COOKIE = 'lang';
 
 export type CommonMessages = typeof en;
@@ -104,4 +104,37 @@ export function swapLocaleInPath(pathname: string, locale: Locale): string {
   else parts.splice(1, 0, locale);
   const joined = parts.join('/');
   return joined.endsWith('/') && joined.length > 1 ? joined.slice(0, -1) : joined;
+}
+
+/** The locale segment of a path or URL (`/en/payroll` → `en`), or `null` when there is none. */
+export function localeFromPath(pathOrUrl: string | null | undefined): Locale | null {
+  if (!pathOrUrl) return null;
+  let pathname = pathOrUrl;
+  if (/^https?:\/\//i.test(pathOrUrl)) {
+    try {
+      pathname = new URL(pathOrUrl).pathname;
+    } catch {
+      return null;
+    }
+  }
+  const first = pathname.split(/[/?#]/)[1] ?? '';
+  return isLocale(first) ? first : null;
+}
+
+/**
+ * The language a server request runs under — the page's `[locale]` segment, so API messages match
+ * the screen even when the `lang` cookie says otherwise (another tab switched it). Order: the page
+ * path the proxy forwards (`x-pathname`, set for renders and Server Actions), the referer, then the
+ * cookie, then the default.
+ */
+export function requestLocale(source: {
+  pathname?: string | null;
+  referer?: string | null;
+  cookie?: string | null;
+}): Locale {
+  return (
+    localeFromPath(source.pathname) ??
+    localeFromPath(source.referer) ??
+    (source.cookie && isLocale(source.cookie) ? source.cookie : DEFAULT_LOCALE)
+  );
 }

@@ -8,7 +8,6 @@ import {
   type PayrollLine,
   type PayrollRun,
   type PayrollRunQuery,
-  type Uuid,
 } from '@school-erp/shared';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -42,7 +41,7 @@ import { Switch } from '@/shared/components/ui/switch';
 import { apiErrorText } from '@/shared/lib/api-error';
 import { saveDownloadedFile } from '@/shared/lib/download';
 import { formatCount, formatDate, formatMoney, formatMonth } from '@/shared/lib/format';
-import { localName } from '@/shared/lib/i18n';
+import { localName, nameIn } from '@/shared/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { APPROVE_PAYROLL_RUN, GET_BANK_SHEET, RECALCULATE_PAYROLL_RUN } from '../apis';
@@ -60,8 +59,6 @@ export interface RunPageProps {
   /** `/ar/settings` — the rules panel links there. */
   settingsHref: string;
   run: PayrollRun;
-  /** Every employee in the run (unfiltered) — decides which adjustments are "not applied". */
-  runEmployeeIds: Uuid[];
   departments: Department[];
   settings: HrSettings | null;
   query: PayrollRunQuery;
@@ -77,7 +74,6 @@ export function RunPage({
   basePath,
   settingsHref,
   run: initialRun,
-  runEmployeeIds: initialIds,
   departments,
   settings,
   query,
@@ -88,12 +84,10 @@ export function RunPage({
 
   // Server data, replaced by each mutation's response until the next server render brings new props.
   const [run, setRun] = useState(initialRun);
-  const [runEmployeeIds, setRunEmployeeIds] = useState(initialIds);
-  const [prevProps, setPrevProps] = useState({ initialRun, initialIds });
-  if (prevProps.initialRun !== initialRun || prevProps.initialIds !== initialIds) {
-    setPrevProps({ initialRun, initialIds });
+  const [prevRun, setPrevRun] = useState(initialRun);
+  if (prevRun !== initialRun) {
+    setPrevRun(initialRun);
     setRun(initialRun);
-    setRunEmployeeIds(initialIds);
   }
 
   const [search, setSearch] = useState(query.search ?? '');
@@ -117,10 +111,7 @@ export function RunPage({
   const draft = run.status === PayrollStatus.DRAFT;
   const monthLabel = formatMonth(run.month, locale);
   const filtered = hasRunFilters(query);
-  const notApplied = useMemo(
-    () => notAppliedAdjustments(run.adjustments, new Set(runEmployeeIds)),
-    [run.adjustments, runEmployeeIds],
-  );
+  const notApplied = useMemo(() => notAppliedAdjustments(run.adjustments), [run.adjustments]);
 
   const pageCount = Math.max(1, Math.ceil(run.lines.length / limit));
   const currentPage = Math.min(page, pageCount);
@@ -147,7 +138,6 @@ export function RunPage({
 
   /** A mutation returned the whole (unfiltered) run: show it, then refetch the filtered lines. */
   function applyRun(next: PayrollRun) {
-    setRunEmployeeIds(next.lines.map((l) => l.employeeId));
     if (filtered) {
       setRun({ ...next, lines: run.lines });
       startNavigation(() => router.refresh());
@@ -534,7 +524,9 @@ export function RunPage({
                     <span className="text-muted-foreground min-w-0 flex-1 basis-48 text-sm break-words">
                       {a.reason}
                     </span>
-                    <span className="text-muted-foreground text-xs">{t('payroll.notApplied.employee')}</span>
+                    <span className="text-muted-foreground text-xs">
+                      {t('payroll.notApplied.employee', { name: `${nameIn(a, locale)} (${a.employeeCode})` })}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -542,7 +534,7 @@ export function RunPage({
           ) : null}
         </div>
 
-        <RulesPanel settings={settings} settingsHref={settingsHref} />
+        <RulesPanel settings={settings} settingsHref={settingsHref} approvedAt={draft ? null : run.approvedAt} />
       </div>
 
       <AdjustmentsDialog

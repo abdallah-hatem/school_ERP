@@ -2,6 +2,7 @@
 
 import type {
   CreateAdjustmentRequest,
+  EmployeePayrollLine,
   Month,
   PayrollRun,
   PayrollRunQuery,
@@ -37,6 +38,25 @@ export async function GET_PAYROLL_RUNS(query: { page?: number; limit?: number } 
     },
     next: { tags: [RUNS_TAG] },
   });
+  return handleResponse({ response, showErrorToast: false });
+}
+
+/**
+ * `GET /hr/employees/:id/payroll-lines?page&limit` — the employee's line in each run, newest month
+ * first (profile Payroll tab). Tagged with the runs so every run write refreshes it.
+ */
+export async function GET_EMPLOYEE_PAYROLL_LINES(employeeId: Uuid, query: { page?: number; limit?: number } = {}) {
+  const response = await apiFetch<EmployeePayrollLine[]>(
+    `/hr/employees/${encodeURIComponent(employeeId)}/payroll-lines`,
+    {
+      method: 'GET',
+      params: {
+        page: query.page ? String(query.page) : undefined,
+        limit: query.limit ? String(query.limit) : undefined,
+      },
+      next: { tags: [RUNS_TAG] },
+    },
+  );
   return handleResponse({ response, showErrorToast: false });
 }
 

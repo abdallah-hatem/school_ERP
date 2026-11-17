@@ -5,7 +5,9 @@ import {
   getBaseMessages,
   getCommonMessages,
   isLocale,
+  localeFromPath,
   mergeMessages,
+  requestLocale,
   swapLocaleInPath,
 } from './i18n';
 
@@ -45,5 +47,19 @@ describe('i18n', () => {
     expect(swapLocaleInPath('/ar', 'en')).toBe('/en');
     expect(swapLocaleInPath('/', 'ar')).toBe('/ar');
     expect(swapLocaleInPath('/employees', 'en')).toBe('/en/employees');
+  });
+
+  it('API language follows the page locale, not the lang cookie', () => {
+    // An English page whose cookie still says Arabic (another tab switched it) asks in English.
+    expect(requestLocale({ pathname: '/en/payroll?month=2026-11', cookie: 'ar' })).toBe('en');
+    expect(requestLocale({ pathname: '/ar/settings', cookie: 'en' })).toBe('ar');
+    // A Server Action with no forwarded path falls back to the page it was called from.
+    expect(requestLocale({ referer: 'http://localhost:3000/en/employees/1', cookie: 'ar' })).toBe(
+      'en',
+    );
+    // No page locale at all → the cookie, then Arabic.
+    expect(requestLocale({ pathname: '/api/auth/refresh', cookie: 'en' })).toBe('en');
+    expect(requestLocale({})).toBe('ar');
+    expect(localeFromPath('/fr/x')).toBeNull();
   });
 });

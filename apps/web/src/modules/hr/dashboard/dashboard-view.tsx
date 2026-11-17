@@ -181,7 +181,7 @@ export function DashboardView({ data, month }: DashboardViewProps) {
   const { t, locale } = useTranslation();
   const router = useRouter();
   const [retrying, startRetry] = useTransition();
-  const links = dashboardLinks(locale, data?.currentRun?.month ?? month);
+  const links = dashboardLinks(locale, data?.currentRun?.month ?? month, data?.currentRun?.id);
 
   return (
     <>

@@ -95,6 +95,8 @@
   "rules": {
     "title": "Rules applied this month",
     "body": "These settings produced every number on this page.",
+    "currentTitle": "Current rules",
+    "currentBody": "This run was calculated on {date}. These are today’s settings and may differ from the ones it used; its numbers don’t change.",
     "dayValue": "Day value",
     "dayValueRule": "1 day = salary for the month ÷ {divisor}",
     "workSystem": "Work system",
@@ -111,7 +113,7 @@
     "title": "Adjustments not applied",
     "body": "These employees left the run (deactivated before the last recalculate). Their adjustments stay on record but don't count.",
     "label": "Not applied",
-    "employee": "Employee no longer in this run"
+    "employee": "Not applied — {name} is no longer in this run"
   },
   "adjustments": {
     "title": "Adjustments · {name}",

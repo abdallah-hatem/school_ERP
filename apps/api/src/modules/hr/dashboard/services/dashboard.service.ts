@@ -26,7 +26,7 @@ export class DashboardService {
     ]);
     return {
       headcount,
-      currentRun: run && { month: run.month, status: run.status, net: run.totals.net },
+      currentRun: run && { id: run.id, month: run.month, status: run.status, net: run.totals.net },
       penaltiesThisMonth,
     };
   }

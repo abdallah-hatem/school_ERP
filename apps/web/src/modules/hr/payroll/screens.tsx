@@ -52,7 +52,6 @@ export async function PayrollRunScreen({
         settingsHref={`/${locale}/settings`}
         query={query}
         run={data.run}
-        runEmployeeIds={data.runEmployeeIds}
         departments={data.departments}
         settings={data.settings}
       />
@@ -78,14 +77,24 @@ export async function PayslipScreen({ locale, id, lineId }: { locale: Locale; id
 export async function EmployeePayrollSection({
   locale,
   employee,
+  searchParams,
 }: {
   locale: Locale;
-  employee: { id: Uuid; code: string };
+  employee: { id: Uuid };
+  searchParams: SearchParamsRecord;
 }) {
-  const rows = await loadEmployeePayroll(employee);
+  const query = parseRunsQuery(searchParams);
+  const { rows, total } = await loadEmployeePayroll(employee.id, query);
   return (
     <PayrollI18n locale={locale}>
-      <EmployeePayroll payrollPath={payrollPath(locale)} rows={rows} />
+      <EmployeePayroll
+        payrollPath={payrollPath(locale)}
+        tabPath={`/${locale}/employees/${employee.id}/payroll`}
+        rows={rows}
+        total={total}
+        page={query.page}
+        limit={query.limit}
+      />
     </PayrollI18n>
   );
 }

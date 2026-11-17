@@ -4,6 +4,7 @@ import {
   ErrorCode,
   HrEvent,
   type CreateEmployeeRequest,
+  type EmployeePayrollLine,
   type HrDashboard,
   type PayrollLine,
   type PayrollRun,
@@ -810,10 +811,95 @@ describe('HR payroll and dashboard (e2e)', () => {
 
     const run = await createRun(current);
     expect((await dashboard()).currentRun).toEqual({
+      id: run.id,
       month: current,
       status: 'DRAFT',
       net: run.totals.net,
     });
+  });
+
+  it('Adjustment whose employee left the run → applied false, with the employee code and names; others applied true', async () => {
+    const month = nextMonth();
+    const stays = await employee();
+    const leaves = await employee();
+    const run = await createRun(month);
+    await addAdjustment(run.id, {
+      employeeId: stays,
+      type: 'ADDITION',
+      amount: 10_000,
+      reason: 'Bonus',
+    }).expect(201);
+    await addAdjustment(run.id, {
+      employeeId: leaves,
+      type: 'DEDUCTION',
+      amount: 5_000,
+      reason: 'Advance',
+    }).expect(201);
+    await http(app).post(`/hr/employees/${leaves}/deactivate`).expect(200);
+    await recalculate(run.id).expect(200);
+
+    // Filtering the lines must not make an adjustment look unapplied.
+    const filtered = await getRun(run.id, { search: 'no-such-employee' });
+    const byEmployee = new Map(filtered.adjustments.map((a) => [a.employeeId, a]));
+    const leaver = await db.employee.findUniqueOrThrow({ where: { id: leaves } });
+    expect(byEmployee.get(stays)?.applied).toBe(true);
+    expect(byEmployee.get(leaves)).toMatchObject({
+      applied: false,
+      employeeCode: leaver.code,
+      nameEn: leaver.nameEn,
+      nameAr: leaver.nameAr,
+    });
+  });
+
+  it('Employee payroll history: one line per run, newest month first, with run id, month, status and the snapshot net; paginated', async () => {
+    const emp = await employee({ basicSalary: 1_000_000 });
+    const older = nextMonth();
+    const newer = nextMonth();
+    const olderRun = await createRun(older);
+    await approveOk(olderRun.id);
+    // A salary change after approval: the approved line keeps its snapshot net.
+    await http(app).patch(`/hr/employees/${emp}`).send({ basicSalary: 2_000_000 }).expect(200);
+    const newerRun = await createRun(newer);
+
+    const list = async (query: Record<string, string | number> = {}) =>
+      (await http(app).get(`/hr/employees/${emp}/payroll-lines`).query(query).expect(200)).body;
+
+    const all = await list();
+    expect(all.data as EmployeePayrollLine[]).toEqual([
+      {
+        runId: newerRun.id,
+        lineId: lineOf(newerRun, emp).id,
+        month: newer,
+        status: 'DRAFT',
+        net: 2_000_000,
+      },
+      {
+        runId: olderRun.id,
+        lineId: lineOf(olderRun, emp).id,
+        month: older,
+        status: 'APPROVED',
+        net: 1_000_000,
+      },
+    ]);
+    expect(all.meta).toMatchObject({ total: 2, page: 1 });
+
+    const page2 = await list({ page: 2, limit: 1 });
+    expect((page2.data as EmployeePayrollLine[]).map((l) => l.month)).toEqual([older]);
+    expect(page2.meta).toMatchObject({ total: 2, hasNextPage: false, hasPreviousPage: true });
+  });
+
+  it('Employee payroll history: no runs → empty list; unknown employee → 404; malformed id → 400; limit over the max → 400', async () => {
+    const fresh = await employee();
+    await http(app).post(`/hr/employees/${fresh}/deactivate`).expect(200);
+    const empty = await http(app).get(`/hr/employees/${fresh}/payroll-lines`).expect(200);
+    expect(empty.body.data).toEqual([]);
+    expect(empty.body.meta).toMatchObject({ total: 0 });
+
+    await http(app)
+      .get('/hr/employees/00000000-0000-4000-8000-000000000000/payroll-lines')
+      .expect(404);
+    await http(app).get('/hr/employees/not-a-uuid/payroll-lines').expect(400);
+    await http(app).get(`/hr/employees/${fresh}/payroll-lines`).query({ limit: 1000 }).expect(400);
   });
 
   // ── full flow ─────────────────────────────────────────────────────────────

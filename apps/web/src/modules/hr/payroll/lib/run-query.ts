@@ -69,13 +69,11 @@ export function adjustmentsOf(adjustments: readonly PayrollAdjustment[], employe
 
 /**
  * Adjustments for employees no longer in the run (deactivated before the last recalculate): kept
- * on record but not counted in any line (§6 GUESS — shown as "not applied").
+ * on record but not counted in any line (§6 GUESS — shown as "not applied"). The API marks them
+ * (`applied: false`), whatever lines the screen's filters show.
  */
-export function notAppliedAdjustments(
-  adjustments: readonly PayrollAdjustment[],
-  runEmployeeIds: ReadonlySet<Uuid>,
-): PayrollAdjustment[] {
-  return adjustments.filter((a) => !runEmployeeIds.has(a.employeeId));
+export function notAppliedAdjustments(adjustments: readonly PayrollAdjustment[]): PayrollAdjustment[] {
+  return adjustments.filter((a) => !a.applied);
 }
 
 /** A line's adjustments as one signed figure: additions − deductions. */

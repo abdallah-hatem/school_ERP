@@ -31,6 +31,16 @@ function redirectTo(req: NextRequest, path: string): NextResponse {
 }
 
 /**
+ * Passes the request on with `x-pathname` (path + query): `apiFetch` takes the page's locale from
+ * it for `Accept-Language`, and a render hands it to the refresh route to come back to.
+ */
+function withPathname(req: NextRequest): NextResponse {
+  const headers = new Headers(req.headers);
+  headers.set('x-pathname', `${req.nextUrl.pathname}${req.nextUrl.search}`);
+  return NextResponse.next({ request: { headers } });
+}
+
+/**
  * Routes every page request by session, before anything renders (building-frontends → Auth
  * routing):
  * - no locale in the path → the visitor's language (`lang` cookie, else Arabic);
@@ -64,7 +74,7 @@ export async function authProxy(req: NextRequest): Promise<NextResponse> {
 
   if (!signedIn) {
     if (guestOnly) {
-      const res = NextResponse.next();
+      const res = withPathname(req);
       return staleSession ? clearSession(res) : res;
     }
     const res = redirectTo(req, loginPathFor(locale, `${pathname}${search}`));
@@ -80,9 +90,7 @@ export async function authProxy(req: NextRequest): Promise<NextResponse> {
   } else {
     // Forward the fresh tokens to this request so the page's API calls use them right away.
     writes.forEach((c) => req.cookies.set(c.name, c.value));
-    const headers = new Headers(req.headers);
-    headers.set('x-pathname', `${pathname}${search}`);
-    res = NextResponse.next({ request: { headers } });
+    res = withPathname(req);
   }
   writes.forEach((c) => res.cookies.set(c));
   return res;
