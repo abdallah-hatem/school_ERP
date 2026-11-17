@@ -15,6 +15,7 @@ import {
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useId, useMemo, useRef, useState, useTransition } from 'react';
+import { Can } from '@/core/auth';
 import { callApi } from '@/lib/callApi';
 import { RowActions, RowActionsSkeleton } from '@/shared/components/data-table/row-actions';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-table/data-table';
@@ -302,26 +303,32 @@ export function RunPage({
         actions={
           <>
             {draft ? (
-              <Button className="cursor-pointer" loading={recalculating} onClick={() => void recalculate()}>
-                {recalculating ? null : <RecalculateIcon />}
-                {t('payroll.actions.recalculate')}
-              </Button>
+              <Can permission="hr.payroll.recalculate">
+                <Button className="cursor-pointer" loading={recalculating} onClick={() => void recalculate()}>
+                  {recalculating ? null : <RecalculateIcon />}
+                  {t('payroll.actions.recalculate')}
+                </Button>
+              </Can>
             ) : null}
-            <Button
-              className={draft ? 'cursor-not-allowed' : 'cursor-pointer'}
-              disabled={draft}
-              title={draft ? t('payroll.actions.bankSheetAfterApproval') : undefined}
-              loading={exporting}
-              onClick={() => void exportBankSheet()}
-            >
-              {exporting ? null : <ExportIcon />}
-              {t('payroll.actions.exportBankSheet')}
-            </Button>
-            {draft ? (
-              <Button variant="primary" className="cursor-pointer" onClick={() => setApproveOpen(true)}>
-                <ApproveIcon />
-                {t('payroll.actions.approve')}
+            <Can permission="hr.payroll.export_bank_sheet">
+              <Button
+                className={draft ? 'cursor-not-allowed' : 'cursor-pointer'}
+                disabled={draft}
+                title={draft ? t('payroll.actions.bankSheetAfterApproval') : undefined}
+                loading={exporting}
+                onClick={() => void exportBankSheet()}
+              >
+                {exporting ? null : <ExportIcon />}
+                {t('payroll.actions.exportBankSheet')}
               </Button>
+            </Can>
+            {draft ? (
+              <Can permission="hr.payroll.approve">
+                <Button variant="primary" className="cursor-pointer" onClick={() => setApproveOpen(true)}>
+                  <ApproveIcon />
+                  {t('payroll.actions.approve')}
+                </Button>
+              </Can>
             ) : null}
           </>
         }

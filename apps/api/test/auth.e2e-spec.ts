@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { DiscoveryModule, DiscoveryService, Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
-import { AUTH_COOKIES, ErrorCode, PUBLIC_FILES_PREFIX } from '@school-erp/shared';
+import { AUTH_COOKIES, ErrorCode, PERMISSION_KEYS, PUBLIC_FILES_PREFIX } from '@school-erp/shared';
 import { createHash } from 'node:crypto';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
@@ -205,6 +205,8 @@ describe('auth (e2e)', () => {
       email: user.email,
       name: user.name,
       role: user.role,
+      // The HR admin holds every key (P1); the web app's can() reads them.
+      permissions: PERMISSION_KEYS,
     });
 
     // The web server forwards tokens as a bearer header; that works the same way.

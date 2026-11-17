@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import type { AuditEntry, AuthUser } from '@school-erp/shared';
 import { Audited, AuditService, NotAudited } from '../src/core/audit';
+import { SignedIn } from '../src/core/permissions';
 import { SettingsService } from '../src/core/settings';
 import { CoreModule } from '../src/core';
 import { DatabaseService } from '../src/database/database.service';
@@ -20,9 +21,10 @@ import { historyMark } from './helpers/history';
 /**
  * Test-only endpoints exercising the audit rules against the real database and transactions:
  * the `@Audited` run-time check (D6b), rollback (edge cases 1 and 2), and `record()` outside a
- * transaction (D2). Not part of the app; the controller scan only covers src/.
+ * transaction (D2). Not part of the app; the controller scans only cover src/.
  */
 @Controller('__audit-probe')
+@SignedIn()
 class AuditProbeController {
   constructor(
     private readonly settings: SettingsService,

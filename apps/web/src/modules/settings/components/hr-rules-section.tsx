@@ -14,6 +14,7 @@ import {
   type UpdateHrSettingsRequest,
 } from '@school-erp/shared';
 import { useId, useRef, useState } from 'react';
+import { Can } from '@/core/auth';
 import { useFieldArray, useForm, useWatch, type Control } from 'react-hook-form';
 import { callApi } from '@/lib/callApi';
 import { NumberField, SelectField } from '@/shared/components/form/fields';
@@ -258,16 +259,18 @@ function HrRulesForm({ initial, onSaved }: { initial: HrSettings; onSaved: (next
         </div>
       </SectionPanel>
       {/* A child of the form, not of the last card, so it can stay in view over the whole form. */}
-      <SaveBar
-        dirty={isDirty}
-        valid={isValid}
-        saving={isSubmitting}
-        saved={saved && !isDirty}
-        onDiscard={() => {
-          form.reset();
-          setSaved(false);
-        }}
-      />
+      <Can permission="hr.settings.edit">
+        <SaveBar
+          dirty={isDirty}
+          valid={isValid}
+          saving={isSubmitting}
+          saved={saved && !isDirty}
+          onDiscard={() => {
+            form.reset();
+            setSaved(false);
+          }}
+        />
+      </Can>
     </Form>
   );
 }

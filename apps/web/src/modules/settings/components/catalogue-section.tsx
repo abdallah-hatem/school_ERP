@@ -2,6 +2,7 @@
 
 import type { PenaltyGroup, Violation } from '@school-erp/shared';
 import { useState } from 'react';
+import { useCan } from '@/core/auth';
 import { callApi } from '@/lib/callApi';
 import { RowActions, RowActionsSkeleton } from '@/shared/components/data-table/row-actions';
 import { EmptyState, ErrorState } from '@/shared/components/layout/empty-state';
@@ -37,6 +38,7 @@ type ViolationEdit = { groupId: string; violation: Violation | null };
  */
 export function CatalogueSection() {
   const { t, locale } = useTranslation();
+  const canManage = useCan()('hr.penalty_catalogue.manage');
   const catalogue = useResource('catalogue', () => GET_PENALTY_GROUPS());
   const [open, setOpen] = useState<Set<string>>(new Set());
   const [groupDialog, setGroupDialog] = useState<GroupDialog | null>(null);
@@ -130,12 +132,12 @@ export function CatalogueSection() {
     return Boolean(res.success);
   }
 
-  const addGroup = (
+  const addGroup = canManage ? (
     <Button variant="primary" disabled={!groups} onClick={() => setGroupDialog({ mode: 'new' })}>
       <AddIcon />
       {t('settings.catalogue.addGroup')}
     </Button>
-  );
+  ) : null;
 
   let body;
   if (catalogue.error) body = <ErrorState onRetry={catalogue.retry} retrying={catalogue.retrying} />;
@@ -177,11 +179,12 @@ export function CatalogueSection() {
                       id: 'rename',
                       label: t('settings.lists.rename'),
                       icon: EditIcon,
+                      hidden: !canManage,
                       onSelect: () => setGroupDialog({ mode: 'rename', group }),
                     },
                     group.isActive
-                      ? { id: 'retire', label: t('settings.catalogue.retire'), icon: RetireIcon, destructive: true, onSelect: () => setRetiring(group) }
-                      : { id: 'restore', label: t('settings.catalogue.restore'), icon: RestoreIcon, onSelect: () => void setGroupActive(group, true) },
+                      ? { id: 'retire', label: t('settings.catalogue.retire'), icon: RetireIcon, destructive: true, hidden: !canManage, onSelect: () => setRetiring(group) }
+                      : { id: 'restore', label: t('settings.catalogue.restore'), icon: RestoreIcon, hidden: !canManage, onSelect: () => void setGroupActive(group, true) },
                   ]}
                 />
               </div>
@@ -205,7 +208,7 @@ export function CatalogueSection() {
                       ))}
                     </ul>
                   )}
-                  {group.isActive ? (
+                  {group.isActive && canManage ? (
                     <div>
                       <Button size="sm" variant="soft" onClick={() => setEditing({ groupId: group.id, violation: null })}>
                         <AddIcon />
@@ -286,6 +289,7 @@ function ViolationRow({
   onToggle: () => void;
 }) {
   const { t, locale } = useTranslation();
+  const canManage = useCan()('hr.penalty_catalogue.manage');
   const name = localName(violation, locale);
   const levels = [...violation.levels].sort((a, b) => a.level - b.level);
   return (
@@ -315,7 +319,7 @@ function ViolationRow({
           </p>
         ) : null}
       </div>
-      {groupActive ? (
+      {groupActive && canManage ? (
         <div className="-mt-1.5 shrink-0">
           <RowActions
             label={t('ui.table.actionsFor', { name })}

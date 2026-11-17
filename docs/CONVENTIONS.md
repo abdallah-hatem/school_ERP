@@ -72,6 +72,8 @@ smoke specs; needs Docker). Don't skip the hook with `--no-verify`; if it's wron
 - [ ] No school name, school-specific rule or hardcoded setting in code.
 - [ ] Nothing duplicated that already exists in `common/`, `shared/` or another module.
 - [ ] Events emitted only after the write is committed; listeners are idempotent.
+- [ ] Every new endpoint declares who may use it: `@Permission('<key>')` (or, rarely,
+  `@SignedIn()` / `@Public()`) — see Permissions below.
 - [ ] Every new write endpoint (POST / PATCH / PUT / DELETE) is `@Audited('<action>')` and calls
   `audit.record()` for that action in its service, or is `@NotAudited('<reason>')` (see below).
 - [ ] `docs/BUSINESS_LOGIC.md` updated in the same PR if a business rule changed.
@@ -98,6 +100,24 @@ Transactions and the audit log). For a new write endpoint:
 
 A write that is deliberately not recorded (e.g. a token refresh) gets `@NotAudited('<why>')`. A
 handler with neither fails the controller scan in CI.
+
+## Permissions: every endpoint declares who may use it
+
+A new endpoint is **`@Permission('<key>')` + `@Audited('<action>')`** (the audit one for writes).
+The API refuses anything undeclared (403) and CI fails on it (`docs/ARCHITECTURE.md` → Permissions).
+
+1. Use an existing key from `packages/shared/src/permissions.ts` (`PERMISSIONS`) when one fits —
+   viewing a list and its records share `<area>.view`.
+2. A new key: add it under its module (`<module>.<area>.<action>`, e.g. `hr.leave.approve`), then its
+   `label` and `description` under `keys.<key path>` in **both** `locales/en/permissions.json` and
+   `locales/ar/permissions.json` (Arabic in the verbal-noun form, e.g. "اعتماد الإجازات"). The shared
+   tests fail on a key without both.
+3. Put `@Permission('<key>')` on the handler (several keys: all are required). Import it from the
+   core front door: `import { Permission } from '../../../../core/permissions'`.
+4. In the web app, hide the action from users who can't use it: `<Can permission="<key>">` or
+   `useCan()`, and give a menu item its `anyOf`. This is only the view — the guard still decides.
+5. `@SignedIn()` (any signed-in user) and `@Public()` (no session) are rare and reviewed: the scan
+   lists them, so adding one changes a test.
 
 ## Design changes: mockup first
 

@@ -2,6 +2,7 @@ import { Controller, Get, Header, Param, StreamableFile } from '@nestjs/common';
 import { Public } from '../../../common/decorators/public.decorator';
 import { LOGO_FOLDER } from '../settings.pure';
 import { FileStorageService } from './file-storage.service';
+import { SignedIn } from '../../permissions';
 
 /** Stops an uploaded SVG from running script or loading anything when opened directly. */
 const FILE_CSP = "default-src 'none'; style-src 'unsafe-inline'; sandbox";
@@ -24,6 +25,7 @@ export class FilesController {
   }
 
   @Get(':folder/:name')
+  @SignedIn()
   @Header('Content-Security-Policy', FILE_CSP)
   @Header('X-Content-Type-Options', 'nosniff')
   @Header('Cache-Control', 'private, no-store')

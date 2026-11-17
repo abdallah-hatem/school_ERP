@@ -4,6 +4,7 @@ import type { Employee } from '@school-erp/shared';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { createContext, useContext, type ReactNode } from 'react';
+import { Can } from '@/core/auth';
 import { PageHeader } from '@/shared/components/layout/page-header';
 import { Button } from '@/shared/components/ui/button';
 import { Money } from '@/shared/components/ui/figures';
@@ -117,13 +118,17 @@ export function EmployeeProfileShell({
           breadcrumbsLabel={t('ui.shell.breadcrumbs')}
           actions={
             <>
-              <Button asChild variant="primary">
-                <Link href={`${href}/edit`}>
-                  <EditIcon />
-                  {t('employees.profile.edit')}
-                </Link>
-              </Button>
-              <EmployeeStatusAction employee={employee} />
+              <Can permission="hr.employees.edit">
+                <Button asChild variant="primary">
+                  <Link href={`${href}/edit`}>
+                    <EditIcon />
+                    {t('employees.profile.edit')}
+                  </Link>
+                </Button>
+              </Can>
+              <Can permission="hr.employees.change_status">
+                <EmployeeStatusAction employee={employee} />
+              </Can>
             </>
           }
         />

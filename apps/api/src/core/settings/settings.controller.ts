@@ -27,6 +27,7 @@ import { Audited } from '../audit';
 import { UpdateSchoolSettingsDto } from './dto/update-school-settings.dto';
 import { LogoUploadInterceptor } from './files/logo-upload.interceptor';
 import { SettingsService, type UploadedFileLike } from './settings.service';
+import { Permission } from '../permissions';
 
 @Controller('settings')
 export class SettingsController {
@@ -40,11 +41,13 @@ export class SettingsController {
   }
 
   @Get('school')
+  @Permission('core.settings.view')
   getSchool(): Promise<SchoolSettings> {
     return this.settings.getSchoolSettings();
   }
 
   @Patch('school')
+  @Permission('core.settings.edit')
   @Audited('core.settings.update')
   updateSchool(
     @Body() dto: UpdateSchoolSettingsDto,
@@ -54,6 +57,7 @@ export class SettingsController {
   }
 
   @Post('school/logo')
+  @Permission('core.settings.edit')
   @Audited('core.settings.logo_change')
   @UseInterceptors(LogoUploadInterceptor)
   uploadLogo(
@@ -64,6 +68,7 @@ export class SettingsController {
   }
 
   @Get('history')
+  @Permission('core.settings.view')
   async history(
     @Query() query: PaginationQueryDto,
     @Req() req: Request,

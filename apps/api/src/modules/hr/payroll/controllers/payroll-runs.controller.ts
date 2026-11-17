@@ -20,6 +20,7 @@ import { ResponseUtil } from '../../../../common/utils/response.util';
 import { CreateAdjustmentDto, CreatePayrollRunDto, PayrollRunQueryDto } from '../dto/payroll.dto';
 import { PayrollService } from '../services/payroll.service';
 import { NotAudited } from '../../../../core/audit';
+import { Permission } from '../../../../core/permissions';
 
 const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
@@ -32,23 +33,27 @@ export class PayrollRunsController {
   constructor(private readonly payroll: PayrollService) {}
 
   @Get()
+  @Permission('hr.payroll.view')
   async list(@Query() query: PaginationQueryDto) {
     return ResponseUtil.paginated(await this.payroll.list(query));
   }
 
   @NotAudited('wired in T29')
   @Post()
+  @Permission('hr.payroll.create')
   create(@Body() dto: CreatePayrollRunDto, @CurrentUser() user?: AuthUser) {
     return this.payroll.create(dto.month, user?.id ?? null);
   }
 
   @Get(':id')
+  @Permission('hr.payroll.view')
   get(@Param('id', ParseUUIDPipe) id: string, @Query() query: PayrollRunQueryDto) {
     return this.payroll.get(id, query);
   }
 
   @NotAudited('wired in T29')
   @Post(':id/recalculate')
+  @Permission('hr.payroll.recalculate')
   @HttpCode(HttpStatus.OK)
   recalculate(@Param('id', ParseUUIDPipe) id: string) {
     return this.payroll.recalculate(id);
@@ -56,12 +61,14 @@ export class PayrollRunsController {
 
   @NotAudited('wired in T29')
   @Post(':id/approve')
+  @Permission('hr.payroll.approve')
   @HttpCode(HttpStatus.OK)
   approve(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user?: AuthUser) {
     return this.payroll.approve(id, user?.id ?? null);
   }
 
   @Get(':id/bank-sheet')
+  @Permission('hr.payroll.export_bank_sheet')
   async bankSheet(
     @Param('id', ParseUUIDPipe) id: string,
     @Headers('accept-language') acceptLanguage?: string,
@@ -75,12 +82,14 @@ export class PayrollRunsController {
   }
 
   @Get(':id/lines/:lineId')
+  @Permission('hr.payroll.view')
   payslip(@Param('id', ParseUUIDPipe) id: string, @Param('lineId', ParseUUIDPipe) lineId: string) {
     return this.payroll.payslip(id, lineId);
   }
 
   @NotAudited('wired in T29')
   @Post(':id/adjustments')
+  @Permission('hr.payroll.adjust')
   addAdjustment(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CreateAdjustmentDto,
@@ -91,6 +100,7 @@ export class PayrollRunsController {
 
   @NotAudited('wired in T29')
   @Delete(':id/adjustments/:adjustmentId')
+  @Permission('hr.payroll.adjust')
   removeAdjustment(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('adjustmentId', ParseUUIDPipe) adjustmentId: string,

@@ -3,6 +3,7 @@
 import { LOGO_UPLOAD } from '@school-erp/shared';
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
+import { Can } from '@/core/auth';
 import { useSchoolBranding } from '@/core/settings';
 import { callApi } from '@/lib/callApi';
 import { Button } from '@/shared/components/ui/button';
@@ -91,27 +92,29 @@ export function LogoCard({ logoUrl, onUploaded }: { logoUrl: string | null; onUp
           <p className="text-sm text-muted-foreground">
             {pending ? t('settings.logo.ready', { name: pending.file.name }) : shown ? t('settings.logo.current') : t('settings.logo.none')}
           </p>
-          <div className="flex flex-wrap gap-2">
-            <FileButton
-              accept={LOGO_UPLOAD.mimeTypes.join(',')}
-              inputLabel={t('settings.logo.choose')}
-              onFile={pick}
-              disabled={uploading}
-            >
-              {t('settings.logo.choose')}
-            </FileButton>
-            {pending ? (
-              <>
-                <Button variant="primary" loading={uploading} onClick={() => void upload()}>
-                  {uploading ? null : <UploadIcon />}
-                  {t('settings.logo.upload')}
-                </Button>
-                <Button variant="ghost" disabled={uploading} onClick={() => setPending(null)}>
-                  {t('common.actions.cancel')}
-                </Button>
-              </>
-            ) : null}
-          </div>
+          <Can permission="core.settings.edit">
+            <div className="flex flex-wrap gap-2">
+              <FileButton
+                accept={LOGO_UPLOAD.mimeTypes.join(',')}
+                inputLabel={t('settings.logo.choose')}
+                onFile={pick}
+                disabled={uploading}
+              >
+                {t('settings.logo.choose')}
+              </FileButton>
+              {pending ? (
+                <>
+                  <Button variant="primary" loading={uploading} onClick={() => void upload()}>
+                    {uploading ? null : <UploadIcon />}
+                    {t('settings.logo.upload')}
+                  </Button>
+                  <Button variant="ghost" disabled={uploading} onClick={() => setPending(null)}>
+                    {t('common.actions.cancel')}
+                  </Button>
+                </>
+              ) : null}
+            </div>
+          </Can>
           {problem ? (
             <p role="alert" className="text-sm font-semibold text-destructive-ink">
               {t(`settings.logo.problems.${problem}`, { max: MAX_MB })}

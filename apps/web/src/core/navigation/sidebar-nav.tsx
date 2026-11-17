@@ -2,13 +2,23 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useId, useState, type ReactNode } from 'react';
+import { useId, useMemo, useState, type ReactNode } from 'react';
+import { useCan } from '@/core/auth/session-context';
 import { ChevronDownIcon } from '@/shared/components/ui/icons';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { useGroupOpen } from './group-state';
-import { isActive, moduleIsActive, NAV_MODULES, SETTINGS_ITEM, type NavItem, type NavModule } from './nav-items';
+import {
+  isActive,
+  itemIsVisible,
+  moduleIsActive,
+  NAV_MODULES,
+  SETTINGS_ITEM,
+  visibleModules,
+  type NavItem,
+  type NavModule,
+} from './nav-items';
 
 /*
  * The menu, grouped by module (docs/ARCHITECTURE.md → core/navigation).
@@ -16,6 +26,8 @@ import { isActive, moduleIsActive, NAV_MODULES, SETTINGS_ITEM, type NavItem, typ
  *   collapsible group (open by default and whenever one of its pages is current; the choice is
  *   remembered per group), coming modules locked with a "Soon" tag. Settings and `footer` (the
  *   signed-in user) sit at the bottom.
+ * - Only the pages the user may see (`can()`, view only — the API still refuses); a module with
+ *   none left is not drawn.
  * - `rail` (768–1279px): one icon per module with its name as tooltip; a module with several pages
  *   opens them in a flyout beside the rail.
  */
@@ -29,13 +41,15 @@ export function SidebarNav({
   footer?: ReactNode;
 }) {
   const { t } = useTranslation();
+  const can = useCan();
+  const modules = useMemo(() => visibleModules(NAV_MODULES, can), [can]);
   const rail = variant === 'rail';
 
   return (
     <nav aria-label={t('ui.shell.mainNav')} className="flex min-h-0 flex-1 flex-col gap-4">
       <div className="scrollbar-clean -mx-1 min-h-0 flex-1 overflow-y-auto px-1">
         <ul className={cn('flex flex-col gap-1.5', rail && 'items-center')}>
-          {NAV_MODULES.map((module) => (
+          {modules.map((module) => (
             <li key={module.key} className={cn(rail && 'w-auto')}>
               {rail ? <RailModule module={module} /> : <FullModule module={module} onNavigate={onNavigate} />}
             </li>
@@ -43,7 +57,9 @@ export function SidebarNav({
         </ul>
       </div>
       <div className={cn('flex flex-col gap-2.5', rail && 'items-center')}>
-        <PageLink item={SETTINGS_ITEM} onNavigate={onNavigate} iconOnly={rail} />
+        {itemIsVisible(SETTINGS_ITEM, can) ? (
+          <PageLink item={SETTINGS_ITEM} onNavigate={onNavigate} iconOnly={rail} />
+        ) : null}
         {footer}
       </div>
     </nav>

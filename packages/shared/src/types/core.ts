@@ -1,5 +1,6 @@
 import type { Language, UserRole, Weekday } from '../enums';
 import type { SettingsChangeScope } from '../events';
+import type { PermissionKey } from '../permissions';
 import type { IsoDateTime, Names, TimeOfDay, Uuid } from './common';
 
 // ── Auth — core/auth ───────────────────────────────────────────────────────
@@ -9,12 +10,20 @@ export interface LoginRequest {
   password: string;
 }
 
-/** `GET /auth/me`, and the `user` in login / refresh responses. */
+/** The signed-in user (`req.user` in the API), and the `user` in login / refresh responses. */
 export interface AuthUser {
   id: Uuid;
   email: string;
   name: string;
   role: UserRole;
+}
+
+/**
+ * `GET /auth/me`: the signed-in user with the permission keys they hold (R6). The web app hides
+ * what the user can't do with them; the API's guard is the protection.
+ */
+export interface SessionUser extends AuthUser {
+  permissions: PermissionKey[];
 }
 
 export interface LoginResponse {

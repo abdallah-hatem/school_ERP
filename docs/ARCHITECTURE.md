@@ -263,12 +263,44 @@ module through core's exported `AuditService` — never through its repository.
   the request fails with `AUDIT_NOT_RECORDED` (500) and everything rolls back (D6b). A handler that
   throws keeps its own error and its entries roll back with it. A save with nothing changed still
   calls `record()` (with no changes): nothing is written, the check passes.
-- Read API (HR admin, `RolesGuard`): `GET /audit` (page, limit ≤ 100, actorId, module, action,
+- Read API (`@Permission('core.audit.view')`): `GET /audit` (page, limit ≤ 100, actorId, module, action,
   from inclusive / to exclusive as ISO instants, q on the record label) and
   `GET /audit/records/:entityType/:entityId`, newest first, server-paged.
 - **Settings history** (D9) lives in the audit log: `GET /settings/history` flattens the settings
   actions' changes (one item per key) into its old shape. The old `setting_changes` rows were copied
   by the T27 migration (same id, value, person, time) before the table was dropped.
+
+### Permissions
+
+Who may call each endpoint (`core/permissions`, spec `docs/specs/2026-11-17-roles-permissions.md`,
+P1). Mirrors the audit log: typed keys in `packages/shared`, a declaration on every handler, a CI
+scan and a run-time check.
+
+- **Keys** are typed in `packages/shared/src/permissions.ts` (`PERMISSIONS`), `<module>.<area>.<action>`
+  (`hr.payroll.approve`), grouped by module. Each has an EN / AR label and description in
+  `locales/<lang>/permissions.json` (`keys.<key>.label` / `.description`); the shared tests fail on a
+  key without both, or a label without a key. A typo in a key fails typecheck.
+- **Every handler declares who may use it**, one of:
+  - `@Permission('key', ...)` — the user must hold **all** the keys;
+  - `@SignedIn()` — any signed-in user, for what every account needs (`/auth/me`, sign-out, opening
+    an uploaded file);
+  - `@Public()` — no session: only sign-in, refresh, the sign-in page's school name and logo, and
+    `/health` (§2).
+  A class-level declaration covers the handlers that declare nothing themselves.
+- **The global `PermissionGuard`** (`APP_GUARD`, registered in `app.module.ts` right after
+  `JwtAuthGuard`, so 401 always comes before 403) is **closed by default**: no declaration, or more
+  than one, → 403. `src/core/permissions/permission-declarations.spec.ts` scans every controller
+  (with `common/testing/controller-scan.ts`, shared with the audit scan) and fails CI on the same
+  handlers.
+- **What a user holds** comes from one function, `permissionsFor(user)` in `core/permissions`. For
+  now the HR admin holds every key and any other role none, so nothing changed for users. P2
+  replaces it with roles as data (the union of the user's roles); the guard and `/auth/me` only
+  call it.
+- **The web app** gets the keys with the session: `GET /auth/me` returns `SessionUser`
+  (`AuthUser` + `permissions`). The dashboard layout reads it on the server and passes it to
+  `SessionProvider`; `can(user, key)`, `useCan()` and `<Can permission="…">` in
+  `apps/web/src/core/auth` hide menu items and action buttons. **`can()` is only the view** — the
+  guard is the protection, and a hidden button's endpoint still refuses the call.
 
 ### Deliberate shortcuts
 
@@ -424,8 +456,8 @@ apps/api/
 │   ├── common/                       ← technical, no business
 │   │   ├── repositories/             ← base.repository.ts
 │   │   ├── interfaces/
-│   │   ├── decorators/               ← @CurrentUser, @RequirePermission, @Public
-│   │   ├── guards/                   ← auth, permission, feature-flag
+│   │   ├── decorators/               ← @CurrentUser, @Public
+│   │   ├── guards/                   ← JWT auth (the permission guard is core/permissions)
 │   │   ├── filters/  interceptors/  pipes/
 │   │   ├── errors/
 │   │   ├── i18n/                     ← server messages (en, ar)

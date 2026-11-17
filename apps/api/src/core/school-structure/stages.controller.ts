@@ -4,6 +4,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { CreateListItemDto, ListItemsQueryDto, UpdateListItemDto } from './dto/list-item.dto';
 import { StagesService } from './stages.service';
 import { NotAudited } from '../audit';
+import { Permission } from '../permissions';
 
 /** No DELETE route on purpose: a stage is hidden, never deleted (§3). */
 @Controller('stages')
@@ -11,12 +12,14 @@ export class StagesController {
   constructor(private readonly stages: StagesService) {}
 
   @Get()
+  @Permission('core.stages.view')
   list(@Query() query: ListItemsQueryDto): Promise<Stage[]> {
     return this.stages.list(query.includeHidden ?? false);
   }
 
   @NotAudited('wired in T28')
   @Post()
+  @Permission('core.stages.manage')
   create(
     @Body() dto: CreateListItemDto,
     @CurrentUser() user: AuthUser | undefined,
@@ -26,6 +29,7 @@ export class StagesController {
 
   @NotAudited('wired in T28')
   @Patch(':id')
+  @Permission('core.stages.manage')
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateListItemDto,

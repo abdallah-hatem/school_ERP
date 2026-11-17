@@ -1,21 +1,19 @@
-import { BadRequestException, Controller, Get, Param, Query, Req, UseGuards } from '@nestjs/common';
-import { PAGINATION, UserRole, type ApiResponse, type AuditEntry } from '@school-erp/shared';
+import { BadRequestException, Controller, Get, Param, Query, Req } from '@nestjs/common';
+import { PAGINATION, type ApiResponse, type AuditEntry } from '@school-erp/shared';
 import type { Request } from 'express';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { RolesGuard } from '../../common/guards/roles.guard';
 import { ResponseUtil } from '../../common/utils/response.util';
+import { Permission } from '../permissions';
 import { AuditService } from './audit.service';
 import { AuditListQueryDto, AuditPageQueryDto, AuditRecordParamsDto } from './dto/audit-query.dto';
 
 /** Read-only (no write endpoints: entries are written by modules through `AuditService`). D10. */
 @Controller('audit')
-@UseGuards(RolesGuard)
-@Roles(UserRole.HR_ADMIN)
 export class AuditController {
   constructor(private readonly audit: AuditService) {}
 
   /** The Activity page: everything, newest first, filtered and paged on the server. */
   @Get()
+  @Permission('core.audit.view')
   async list(
     @Query() query: AuditListQueryDto,
     @Req() req: Request,
@@ -40,6 +38,7 @@ export class AuditController {
 
   /** A record's History (employee profile, payroll run): its entries, newest first. */
   @Get('records/:entityType/:entityId')
+  @Permission('core.audit.view')
   async forRecord(
     @Param() params: AuditRecordParamsDto,
     @Query() query: AuditPageQueryDto,

@@ -1,3 +1,4 @@
+import type { PermissionRequirement } from '@/core/auth/permissions';
 import {
   AccountingModuleIcon,
   DashboardIcon,
@@ -18,6 +19,11 @@ export interface NavItem {
   /** Path after the locale segment; `''` is the dashboard. */
   path: string;
   icon: AppIcon;
+  /**
+   * Shown only to a user holding at least one of these (view only — the API still refuses).
+   * Absent: shown to every signed-in user.
+   */
+  anyOf?: readonly PermissionRequirement[];
 }
 
 /** How a module's icon tile is coloured (token pairs, so the palette stays in globals.css). */
@@ -35,11 +41,17 @@ export interface NavModule {
   status: 'live' | 'soon';
 }
 
-const page = (key: NavItem['key'], path: string, icon: AppIcon): NavItem => ({ key, path, icon });
+const page = (
+  key: NavItem['key'],
+  path: string,
+  icon: AppIcon,
+  anyOf?: readonly PermissionRequirement[],
+): NavItem => (anyOf ? { key, path, icon, anyOf } : { key, path, icon });
 
 /**
  * The menu, one entry per module (docs/ARCHITECTURE.md → core/navigation). Adding a module is one
- * entry here plus its name in `common.nav.modules`. Later: filtered by feature flags and permissions.
+ * entry here plus its name in `common.nav.modules`. Pages are filtered by permission
+ * (`visibleItems`); later also by feature flags.
  */
 export const NAV_MODULES: readonly NavModule[] = [
   {
@@ -56,10 +68,10 @@ export const NAV_MODULES: readonly NavModule[] = [
     icon: HrModuleIcon,
     tone: 'primary',
     items: [
-      page('employees', '/employees', StaffIcon),
-      page('penalties', '/penalties', PenaltiesIcon),
-      page('lateness', '/lateness', LatenessIcon),
-      page('payroll', '/payroll', PayrollIcon),
+      page('employees', '/employees', StaffIcon, ['hr.employees.view']),
+      page('penalties', '/penalties', PenaltiesIcon, ['hr.penalties.view']),
+      page('lateness', '/lateness', LatenessIcon, ['hr.lateness.view']),
+      page('payroll', '/payroll', PayrollIcon, ['hr.payroll.view']),
     ],
     status: 'live',
   },
@@ -69,7 +81,33 @@ export const NAV_MODULES: readonly NavModule[] = [
 ];
 
 /** Settings sits apart, at the bottom of the menu above the user. */
-export const SETTINGS_ITEM: NavItem = page('settings', '/settings', SettingsIcon);
+export const SETTINGS_ITEM: NavItem = page('settings', '/settings', SettingsIcon, [
+  'core.settings.view',
+  'hr.settings.view',
+  'hr.lists.view',
+  'core.stages.view',
+  'hr.penalty_catalogue.view',
+]);
+
+/** Whether the user may see `item` (`can` for the signed-in user). */
+export function itemIsVisible(item: NavItem, can: (required: PermissionRequirement) => boolean): boolean {
+  return !item.anyOf || item.anyOf.some(can);
+}
+
+/**
+ * The menu as the user may see it: each live module keeps only its visible pages and disappears
+ * when none is left; coming modules (`soon`) always show.
+ */
+export function visibleModules(
+  modules: readonly NavModule[],
+  can: (required: PermissionRequirement) => boolean,
+): NavModule[] {
+  return modules.flatMap((module) => {
+    if (module.status === 'soon') return [module];
+    const items = module.items.filter((item) => itemIsVisible(item, can));
+    return items.length > 0 ? [{ ...module, items }] : [];
+  });
+}
 
 /** Every page in the menu, in order. */
 export const NAV_ITEMS: readonly NavItem[] = [...NAV_MODULES.flatMap((m) => m.items), SETTINGS_ITEM];

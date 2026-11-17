@@ -76,9 +76,11 @@ The seeded `admin@school.local` becomes **System admin** + **HR manager**.
 
 ## Plan sketch
 
-- **P1 skeleton** (`logic`, after T27): keys + labels in shared, decorators, guard, CI scan,
+- [x] **P1 skeleton** (`logic`, after T27) — done: keys + labels in shared, decorators, guard, CI scan,
   permissions in the session, `can()`; HR admin = all keys; every existing endpoint declared.
-- **P2 roles as data** (`logic`): roles / role_permissions / user_roles tables, seed the starting
+  Added in P1: a third declaration, `@SignedIn()` (any signed-in user, no key), for `/auth/me`,
+  sign-out and opening an uploaded file — so a user holding no permission can still sign out.
+- [ ] **P2 roles as data** (`logic`): roles / role_permissions / user_roles tables, seed the starting
   roles, scopes + `scopeFor`, salary filtering, last-admin rule, audit actions.
-- **P3 screens** (`ui`, mockups first): Users, Roles, My account; sidebar items by `can()`.
-- **P4 scopes in HR** (`logic`): apply `own_stage` / `own_team` in HR repositories.
+- [ ] **P3 screens** (`ui`, mockups first): Users, Roles, My account; sidebar items by `can()`.
+- [ ] **P4 scopes in HR** (`logic`): apply `own_stage` / `own_team` in HR repositories.

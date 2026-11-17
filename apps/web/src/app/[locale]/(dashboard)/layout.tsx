@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import { getSession } from '@/core/auth';
+import { getSession, SessionProvider } from '@/core/auth';
 import { AppShell } from '@/core/navigation/app-shell';
 import { getSchoolBranding } from '@/core/settings/get-branding';
 import { SchoolBrandingProvider, titleTemplateFor } from '@/core/settings';
@@ -15,13 +15,16 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 
 /**
  * Signed-in screens: sidebar / rail / drawer shell with the school's name and logo, and the
- * signed-in person (read here, so the first paint already shows them).
+ * signed-in person and their permissions (read here, so the first paint already shows them and
+ * only what they may use).
  */
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
   const [branding, user] = await Promise.all([getSchoolBranding(), getSession()]);
   return (
     <SchoolBrandingProvider initial={branding}>
-      <AppShell user={user}>{children}</AppShell>
+      <SessionProvider user={user}>
+        <AppShell user={user}>{children}</AppShell>
+      </SessionProvider>
     </SchoolBrandingProvider>
   );
 }
