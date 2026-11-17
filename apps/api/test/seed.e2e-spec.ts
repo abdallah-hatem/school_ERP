@@ -139,7 +139,12 @@ describe('Seed (e2e)', () => {
     await catalogue.updateGroup(group.id, { nameAr: 'اسم قديم للمجموعة' }, null);
     await catalogue.updateViolation(
       violation.id,
-      { nameAr: 'اسم قديم', note: null, levels: [{ level: 1, action: 'NOTICE' }] },
+      {
+        nameAr: 'اسم قديم',
+        note: null,
+        oncePerDay: !(seedViolation.oncePerDay ?? true),
+        levels: [{ level: 1, action: 'NOTICE' }],
+      },
       null,
     );
 
@@ -152,6 +157,7 @@ describe('Seed (e2e)', () => {
     expect(after.group.nameAr).toBe(seedGroup.nameAr);
     expect(after.nameAr).toBe(seedViolation.nameAr);
     expect(after.note).toBe(seedViolation.note ?? null);
+    expect(after.oncePerDay).toBe(seedViolation.oncePerDay ?? true);
     expect(after.levels.map((l) => [l.action, l.days === null ? null : Number(l.days)])).toEqual(
       seedViolation.levels.map((l) => [l.action, l.days ?? null]),
     );
@@ -176,6 +182,21 @@ describe('Seed (e2e)', () => {
         if (l.action === 'DEDUCT_DAYS') expect(Number(l.days)).toBeGreaterThan(0);
       }
     }
+  });
+
+  it('Seeded once-per-day flags (§4): on unless the data marks the violation as repeating in a day', async () => {
+    const rows = await db.violation.findMany({
+      select: { nameEn: true, oncePerDay: true, group: { select: { nameEn: true } } },
+    });
+    const flag = new Map(rows.map((r) => [`${r.group.nameEn}|${r.nameEn}`, r.oncePerDay]));
+    for (const g of data.catalogue.groups) {
+      for (const v of g.violations) {
+        expect([v.nameEn, flag.get(`${g.nameEn}|${v.nameEn}`)]).toEqual([v.nameEn, v.oncePerDay ?? true]);
+      }
+    }
+    // Late to class happens several times a day: every catalogue lets it repeat.
+    const late = data.catalogue.groups.flatMap((g) => g.violations).find((v) => v.seedKey === 'late-to-class')!;
+    expect(late.oncePerDay).toBe(false);
   });
 
   it('Seeded repeated penalties carry the levels penaltyLevel() gives over earlier approved ones', async () => {

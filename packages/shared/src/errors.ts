@@ -62,6 +62,8 @@ export const ErrorCode = {
   INVALID_LEVELS: 'INVALID_LEVELS',
   PENALTY_NOT_PENDING: 'PENALTY_NOT_PENDING',
   PENALTY_CANCELLED: 'PENALTY_CANCELLED',
+  /** §4: a once-per-day violation already has a pending or approved penalty that day. */
+  VIOLATION_ONCE_PER_DAY: 'VIOLATION_ONCE_PER_DAY',
 
   // payroll
   PAYROLL_APPROVED: 'PAYROLL_APPROVED',

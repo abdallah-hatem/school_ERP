@@ -28,6 +28,7 @@
   "INVALID_LEVELS": "Levels must be numbered 1 to 5 with no gaps.",
   "PENALTY_NOT_PENDING": "Only a pending penalty can be approved.",
   "PENALTY_CANCELLED": "This penalty is already cancelled.",
+  "VIOLATION_ONCE_PER_DAY": "This violation counts once per day, and this employee already has one on this date.",
   "PAYROLL_APPROVED": "This month's payroll is approved and locked.",
   "PAYROLL_NOT_APPROVED": "Available only after the payroll is approved.",
   "PAYROLL_RUN_EXISTS": "A payroll run already exists for this month.",

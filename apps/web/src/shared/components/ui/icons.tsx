@@ -4,6 +4,7 @@ import {
   ArrowClockwiseIcon as ArrowClockwise,
   ArrowCounterClockwiseIcon as ArrowCounterClockwise,
   ArrowsClockwiseIcon as ArrowsClockwise,
+  RepeatIcon as Repeat,
   BuildingsIcon as Buildings,
   CalculatorIcon as Calculator,
   ChalkboardTeacherIcon as ChalkboardTeacher,
@@ -119,6 +120,8 @@ export const StageIcon = duotone(ChalkboardTeacher, 'Stage');
 export const WorkSystemIcon = duotone(ClockAfternoon, 'WorkSystem');
 /** A job title whose holders lead other staff (§3 direct managers). */
 export const ManagesPeopleIcon = duotone(Users, 'ManagesPeople');
+/** A catalogue violation that can be recorded several times a day (once per day off, §4). */
+export const RepeatsInDayIcon = duotone(Repeat, 'RepeatsInDay');
 
 // Chrome
 export const MenuIcon = duotone(List, 'Menu');

@@ -268,9 +268,9 @@ const storedLevels = (levels: { level: number; action: string; days: unknown }[]
 
 /**
  * Groups by English name, violations by group + English name; returns seedKey → id. A missing
- * one is created; an existing one whose Arabic name, note or levels differ from the seed data is
- * updated through the catalogue service (history row included — approved penalties keep their
- * fixed level, §4). Nothing is retired.
+ * one is created; an existing one whose Arabic name, note, once-per-day flag (§4) or levels differ
+ * from the seed data is updated through the catalogue service (history row included — approved
+ * penalties keep their fixed level, §4). Nothing is retired.
  */
 async function seedCatalogue(
   catalogue: PenaltyCatalogueService,
@@ -297,10 +297,15 @@ async function seedCatalogue(
     }
 
     for (const v of group.violations) {
-      const wanted = { nameAr: v.nameAr, note: v.note ?? null, levels: levelsOf(v.levels) };
+      const wanted = {
+        nameAr: v.nameAr,
+        note: v.note ?? null,
+        oncePerDay: v.oncePerDay ?? true,
+        levels: levelsOf(v.levels),
+      };
       const existing = await db.violation.findFirst({
         where: { groupId, nameEn: v.nameEn },
-        select: { id: true, nameAr: true, note: true, levels: true },
+        select: { id: true, nameAr: true, note: true, oncePerDay: true, levels: true },
       });
       let violationId = existing?.id;
       if (!existing) {
@@ -310,6 +315,7 @@ async function seedCatalogue(
       } else if (
         existing.nameAr !== wanted.nameAr ||
         existing.note !== wanted.note ||
+        existing.oncePerDay !== wanted.oncePerDay ||
         JSON.stringify(storedLevels(existing.levels)) !== JSON.stringify(wanted.levels)
       ) {
         await catalogue.updateViolation(existing.id, wanted, adminId);

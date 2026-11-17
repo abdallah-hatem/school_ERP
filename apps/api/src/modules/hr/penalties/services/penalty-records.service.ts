@@ -17,6 +17,7 @@ import { monthOf, toIsoDate } from '../../../../common/utils/dates.util';
 import {
   countPriorInWindow,
   deductedDays,
+  oncePerDayRefuses,
   repetitionWindowStart,
   resolvePenalty,
   type CatalogueLevel,
@@ -78,6 +79,8 @@ const storedLevel = (row: RecordRow): CatalogueLevel => toLevel(row);
  * catalogue and count; approval computes the level again and fixes level, action and days.
  * Recording, approving and cancelling need the record's month to be open (409 PAYROLL_APPROVED).
  * Never deleted: cancelled with a reason instead, and a cancelled record is final.
+ * A "once per day" violation takes at most one pending or approved record per employee per date
+ * (409 VIOLATION_ONCE_PER_DAY at preview, recording and approval; a cancelled one frees the day).
  */
 @Injectable()
 export class PenaltyRecordsService {
@@ -108,24 +111,33 @@ export class PenaltyRecordsService {
 
   /** What recording this penalty now would give. Nothing is saved. */
   async preview(query: PenaltyPreviewQueryDto): Promise<PenaltyPreview> {
-    const { levels } = await this.assertRecordable(query.employeeId, query.violationId);
+    const { levels, oncePerDay } = await this.assertRecordable(query.employeeId, query.violationId);
+    // §4: say before submitting that the day is taken (the same check `create` makes).
+    if (oncePerDay) {
+      const sameDay = await this.repository.sameDayStatuses(query, query.date);
+      if (oncePerDayRefuses(oncePerDay, sameDay, 'record')) this.throwOncePerDay();
+    }
     const priorCount = await this.priorCount(query, query.date, await this.window());
     const { level, action, days } = resolvePenalty(priorCount, levels);
     return { level, action, days, priorCount };
   }
 
   async create(dto: CreatePenaltyDto, createdById: Uuid | null): Promise<PenaltyRecord> {
-    const { levels } = await this.assertRecordable(dto.employeeId, dto.violationId);
+    const { levels, oncePerDay } = await this.assertRecordable(dto.employeeId, dto.violationId);
     await this.monthLock.assertMonthOpen(monthOf(dto.date));
     const priorCount = await this.priorCount(dto, dto.date, await this.window());
-    const row = await this.repository.createRecord({
-      employeeId: dto.employeeId,
-      violationId: dto.violationId,
-      date: dto.date,
-      note: dto.note ?? null,
-      createdById,
-      ...resolvePenalty(priorCount, levels),
-    });
+    const row = await this.repository.createRecord(
+      {
+        employeeId: dto.employeeId,
+        violationId: dto.violationId,
+        date: dto.date,
+        note: dto.note ?? null,
+        createdById,
+        ...resolvePenalty(priorCount, levels),
+      },
+      (sameDay) => oncePerDayRefuses(oncePerDay, sameDay, 'record'),
+    );
+    if (!row) this.throwOncePerDay();
     return this.present(row);
   }
 
@@ -142,14 +154,18 @@ export class PenaltyRecordsService {
 
     const levels = current.violation.levels.map(toLevel);
     const window = await this.window();
-    const approved = await this.repository.approve(
+    const oncePerDay = current.violation.oncePerDay;
+    const outcome = await this.repository.approve(
       id,
       current,
       { from: repetitionWindowStart(date, window), before: date },
       approvedById,
       (priorCount) => resolvePenalty(priorCount, levels),
+      // §4: re-checked at approval, in the same transaction.
+      (sameDay) => oncePerDayRefuses(oncePerDay, sameDay, 'approve'),
     );
-    if (!approved) await this.throwStatusConflict(id);
+    if (outcome === 'ONCE_PER_DAY') this.throwOncePerDay();
+    if (outcome === 'NOT_PENDING') await this.throwStatusConflict(id);
     return this.get(id);
   }
 
@@ -219,6 +235,11 @@ export class PenaltyRecordsService {
     // Unknown → 400 FOREIGN_KEY_VIOLATION; inactive → 409 EMPLOYEE_INACTIVE.
     await this.employees.assertActive([employeeId]);
     return this.catalogue.getUsable(violationId);
+  }
+
+  /** §4: a once-per-day violation already has a pending or approved penalty that day. */
+  private throwOncePerDay(): never {
+    throw new CodedException(HttpStatus.CONFLICT, ErrorCode.VIOLATION_ONCE_PER_DAY);
   }
 
   private assertNotCancelled(status: PenaltyStatus): void {
