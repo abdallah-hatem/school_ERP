@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef } from 'react';
 import { Button } from '@/shared/components/ui/button';
 import {
   ChevronEndIcon,
@@ -31,8 +32,22 @@ export function pageWindow(page: number, pageCount: number, size = 5): number[] 
  * Always visible while there is something to page, even when everything fits on one page: summary,
  * first / previous / numbers / next / last. An empty result has nothing to page and draws nothing
  * (no "Showing 0–0 of 0" under an empty state). No rows-per-page control: the page size is fixed
- * by the caller. Callers update the URL with `scroll: false` so the list stays put.
+ * by the caller. Callers update the URL with `scroll: false`; on a page change this component
+ * brings the top of its list back into view (owner, 2026-11-18): the paged list is the closest
+ * `[data-paged-list]` or `<section>` around it, scrolled to just below the sticky top bar, and only
+ * when its top is above the screen — a short list that's already in view doesn't jump.
  */
+export function scrollListIntoView(from: HTMLElement | null): void {
+  const list = from?.closest<HTMLElement>('[data-paged-list], section') ?? from?.parentElement;
+  if (!list) return;
+  const topBar = document.querySelector<HTMLElement>('[data-app-topbar]');
+  const offset = (topBar && topBar.offsetParent !== null ? topBar.getBoundingClientRect().height : 0) + 16;
+  const top = list.getBoundingClientRect().top;
+  if (top >= offset) return;
+  const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+  window.scrollTo({ top: window.scrollY + top - offset, behavior: reduced ? 'auto' : 'smooth' });
+}
+
 export function Pagination({
   page,
   limit,
@@ -48,6 +63,11 @@ export function Pagination({
   className?: string;
 }) {
   const { t } = useTranslation();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const goTo = (target: number) => {
+    onPageChange(target);
+    scrollListIntoView(rootRef.current);
+  };
   const pageCount = Math.max(1, Math.ceil(total / limit));
   const current = Math.min(Math.max(1, page), pageCount);
   const from = total === 0 ? 0 : (current - 1) * limit + 1;
@@ -63,7 +83,7 @@ export function Pagination({
       className={cn('tap-target', className)}
       aria-label={label}
       disabled={blocked}
-      onClick={() => onPageChange(target)}
+      onClick={() => goTo(target)}
     >
       <Icon className="flip-rtl size-4" />
     </Button>
@@ -71,6 +91,7 @@ export function Pagination({
 
   return (
     <div
+      ref={rootRef}
       className={cn(
         'flex min-w-0 flex-wrap items-center gap-x-4 gap-y-3 border-t border-border px-4 py-3.5 text-sm text-muted-foreground sm:px-5',
         className,
@@ -102,7 +123,7 @@ export function Pagination({
             aria-current={n === current ? 'page' : undefined}
             aria-label={t('ui.table.page', { page: n })}
             disabled={disabled}
-            onClick={() => onPageChange(n)}
+            onClick={() => goTo(n)}
             className={cn('tap-target tabular hidden text-sm md:inline-flex', n === current && 'shadow-none')}
           >
             {n}

@@ -71,7 +71,7 @@ export function AppShell({
 
       <div className="flex min-w-0 flex-col">
         {/* Phone top bar */}
-        <header className="no-print border-border bg-background/90 sticky top-0 z-40 flex items-center gap-2.5 border-b px-4 py-2.5 backdrop-blur md:hidden">
+        <header data-app-topbar className="no-print border-border bg-background/90 sticky top-0 z-40 flex items-center gap-2.5 border-b px-4 py-2.5 backdrop-blur md:hidden">
           <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
             <SheetTrigger asChild>
               <Button
