@@ -19,7 +19,7 @@ import { PenaltyActions } from './penalty-actions';
 const STATUS_TONE: Record<PenaltyStatus, StatusTone> = {
   PENDING: 'warning',
   APPROVED: 'success',
-  CANCELLED: 'neutral',
+  CANCELLED: 'danger',
 };
 
 export function PenaltyStatusPill({ status }: { status: PenaltyStatus }) {
