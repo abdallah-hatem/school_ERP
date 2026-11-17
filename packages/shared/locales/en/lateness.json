@@ -18,7 +18,7 @@
     "label": "Search employees",
     "placeholder": "Name or code, like EMP-0012"
   },
-  "summary": "{employees} employees · {minutes} minutes · {days} days",
+  "summary": "{employees} employees · {minutes} minutes · {days}",
   "rule": "Rule: {rule}",
   "ruleStep": "hour {hour} = {days} d",
   "ruleExtra": "each later hour = {days} d",

@@ -44,8 +44,11 @@
     "confirm": "Approve and lock",
     "failed": "Payroll wasn't approved",
     "pendingTitle": "Pending penalties this month",
-    "pendingBody": "Employees with pending penalties: {count}. Approve or cancel this month's pending penalties first, then approve the payroll.",
-    "pendingLink": "Review pending penalties"
+    "pendingBody": "Pending penalties dated this month: {count}. Approve or cancel them first, then approve the payroll.",
+    "pendingLink": "Review pending penalties",
+    "staleTitle": "Penalties changed since the last calculation",
+    "staleBody": "Some lines still show pending penalties from the last calculation. Recalculate to update them.",
+    "staleAction": "Recalculate now"
   },
   "tiles": {
     "employees": "Employees",
@@ -162,7 +165,7 @@
     "noPenalties": "No penalties this month.",
     "penaltyShareNote": "Each penalty's amount is its share of the penalty deduction; the total is what is deducted.",
     "lateness": "Lateness",
-    "latenessDetail": "{minutes} minutes = {days} days",
+    "latenessDetail": "{minutes} minutes = {days}",
     "adjustments": "Adjustments",
     "noAdjustments": "No adjustments this month.",
     "totalPenalties": "Penalty deductions",

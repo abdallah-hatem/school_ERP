@@ -38,7 +38,8 @@ async function lineRow(page: Page, line: PayrollLine) {
 }
 
 async function recalculate(page: Page) {
-  await page.getByRole('button', { name: t('en', 'payroll.actions.recalculate') }).click();
+  // `exact`: the stale-flags hint has its own "Recalculate now" button.
+  await page.getByRole('button', { name: t('en', 'payroll.actions.recalculate'), exact: true }).click();
   await expect(page.getByText(t('en', 'payroll.actions.recalculated'))).toBeVisible();
 }
 

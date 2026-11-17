@@ -31,10 +31,8 @@
     "profileEmptyBody": "Penalties recorded for this employee show up here, newest first."
   },
   "action": {
-    "deductOne": "Deduct {days} day",
-    "deductMany": "Deduct {days} days",
-    "investigationOne": "Referral to investigation, {days} day deducted",
-    "investigationMany": "Referral to investigation, {days} days deducted"
+    "deduct": "Deduct {days}",
+    "investigation": "Referral to investigation, {days} deducted"
   },
   "cancelledBecause": "Reason: {reason}",
   "approve": {
@@ -60,6 +58,8 @@
     "description": "It is saved as pending. The level comes from the employee's approved penalties for the same violation.",
     "employee": "Employee",
     "employeePlaceholder": "Choose an employee",
+    "employeeSearch": "Type a name (English or Arabic) or code",
+    "noEmployeeMatches": "No active employee matches that search.",
     "noEmployees": "No active employees. Add one from the Employees screen.",
     "violation": "Violation",
     "violationPlaceholder": "Choose a violation",

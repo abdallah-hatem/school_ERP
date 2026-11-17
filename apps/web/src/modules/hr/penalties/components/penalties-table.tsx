@@ -95,7 +95,7 @@ export function PenaltiesTable({
       cell: (p) => (
         <span className="flex flex-col gap-0.5">
           <span className="text-xs text-muted-foreground">{t('penalties.levelValue', { level: p.level })}</span>
-          <span className={p.days ? 'font-semibold text-destructive-ink' : undefined}>{describeAction(t, p.action, p.days)}</span>
+          <span className={p.days ? 'font-semibold text-destructive-ink' : undefined}>{describeAction(t, locale, p.action, p.days)}</span>
         </span>
       ),
     },

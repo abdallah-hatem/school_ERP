@@ -1,3 +1,4 @@
+import type { Language } from './enums';
 import type { Days, Piastres } from './types/common';
 
 /*
@@ -52,4 +53,23 @@ export function formatDays(days: Days): string {
     .replace(/0+$/, '');
   const text = fraction ? `${groupThousands(String(whole))}.${fraction}` : groupThousands(String(whole));
   return negative ? `-${text}` : text;
+}
+
+/**
+ * A day count with its noun, agreeing with the number (Western digits in both languages):
+ * - English: `"1 day"`, `"0.5 day"`, `"2 days"`, `"1.25 days"`.
+ * - Arabic: 1 → `"يوم واحد"`, 2 → `"يومان"`, 3–10 → `"3 أيام"`, 11–99 → `"11 يومًا"`, a fraction →
+ *   `"0.5 يوم"`; from 100 the last two digits decide (`"100 يوم"`, `"103 أيام"`, `"111 يومًا"`).
+ */
+export function formatDayCount(days: Days, lang: Language): string {
+  const number = formatDays(days);
+  const abs = Math.abs(days);
+  if (lang === 'en') return `${number} ${abs > 0 && abs <= 1 ? 'day' : 'days'}`;
+  if (!Number.isInteger(abs)) return `${number} يوم`;
+  if (abs === 1) return 'يوم واحد';
+  if (abs === 2) return 'يومان';
+  const rest = abs >= 100 ? abs % 100 : abs;
+  if (rest >= 3 && rest <= 10) return `${number} أيام`;
+  if (rest >= 11) return `${number} يومًا`;
+  return `${number} يوم`;
 }

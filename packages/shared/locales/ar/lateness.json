@@ -18,10 +18,10 @@
     "label": "البحث عن موظف",
     "placeholder": "الاسم أو الكود، مثل EMP-0012"
   },
-  "summary": "{employees} موظف · {minutes} دقيقة · {days} يوم",
+  "summary": "{employees} موظف · {minutes} دقيقة · {days}",
   "rule": "القاعدة: {rule}",
-  "ruleStep": "الساعة {hour} = {days} يوم",
-  "ruleExtra": "كل ساعة بعدها = {days} يوم",
+  "ruleStep": "الساعة {hour} = {dayCount}",
+  "ruleExtra": "كل ساعة بعدها = {dayCount}",
   "ruleGrace": "تُخصم أولًا {minutes} دقيقة سماح",
   "save": "حفظ الكل",
   "saveCount": "حفظ الكل ({count})",

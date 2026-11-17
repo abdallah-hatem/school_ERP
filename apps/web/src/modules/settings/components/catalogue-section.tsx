@@ -10,7 +10,7 @@ import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { AddIcon, ChevronDownIcon, EditIcon, RestoreIcon, RetireIcon } from '@/shared/components/ui/icons';
 import { Skeleton } from '@/shared/components/ui/skeleton';
 import { StatusPill } from '@/shared/components/ui/status-pill';
-import { formatCount, formatDays } from '@/shared/lib/format';
+import { formatCount, formatDayCount } from '@/shared/lib/format';
 import { localName, otherName } from '@/shared/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
@@ -315,7 +315,7 @@ function ViolationRow({
                 ? t('settings.catalogue.levelWithDays', {
                     level: l.level,
                     action: t(`common.enums.penaltyAction.${l.action}`),
-                    days: formatDays(l.days),
+                    days: formatDayCount(l.days, locale),
                   })
                 : t('settings.catalogue.levelPlain', { level: l.level, action: t(`common.enums.penaltyAction.${l.action}`) })}
             </li>

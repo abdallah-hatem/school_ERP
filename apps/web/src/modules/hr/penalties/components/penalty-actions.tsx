@@ -33,7 +33,7 @@ export function PenaltyActions({ record }: { record: PenaltyRecord }) {
 
   const name = nameIn(record.employee, locale);
   const violation = nameIn(record.violation, locale);
-  const action = describeAction(t, record.action, record.days);
+  const action = describeAction(t, locale, record.action, record.days);
 
   function show(next: Pending) {
     setError(null);

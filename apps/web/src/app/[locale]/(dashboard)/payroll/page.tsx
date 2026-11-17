@@ -1,6 +1,9 @@
+import { sectionMetadata } from '@/core/navigation/section-metadata';
 import { notFound } from 'next/navigation';
 import { PayrollRunsScreen } from '@/modules/hr/payroll';
 import { isLocale } from '@/shared/lib/i18n';
+
+export const generateMetadata = sectionMetadata('payroll');
 
 /** Payroll runs (§6). `?page&limit`. */
 export default async function PayrollPage({

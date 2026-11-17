@@ -1,6 +1,6 @@
 import { EmployeeStatus, PenaltyAction, type Days, type EmployeeSummary, type PenaltyGroup } from '@school-erp/shared';
 import type { SelectOption, SelectOptionGroup } from '@/shared/components/form/fields';
-import { formatDays } from '@/shared/lib/format';
+import { formatDayCount } from '@/shared/lib/format';
 import { nameIn, type Locale, type Translate } from '@/shared/lib/i18n';
 
 /*
@@ -8,17 +8,15 @@ import { nameIn, type Locale, type Translate } from '@/shared/lib/i18n';
  * which server errors have their own translated message.
  */
 
-/** `DEDUCT_DAYS` + 0.5 → "Deduct 0.5 day"; an investigation with days says both; others by name. */
-export function describeAction(t: Translate, action: PenaltyAction, days: Days | null): string {
+/**
+ * `DEDUCT_DAYS` + 0.5 → "Deduct 0.5 day" / "خصم 0.5 يوم", + 2 → "خصم يومان" (the noun agrees with
+ * the number, `formatDayCount`); an investigation with days says both; others by name.
+ */
+export function describeAction(t: Translate, locale: Locale, action: PenaltyAction, days: Days | null): string {
   if (days != null && days > 0) {
-    const value = formatDays(days);
-    const many = days > 1;
-    if (action === PenaltyAction.DEDUCT_DAYS) {
-      return t(many ? 'penalties.action.deductMany' : 'penalties.action.deductOne', { days: value });
-    }
-    if (action === PenaltyAction.INVESTIGATION) {
-      return t(many ? 'penalties.action.investigationMany' : 'penalties.action.investigationOne', { days: value });
-    }
+    const value = formatDayCount(days, locale);
+    if (action === PenaltyAction.DEDUCT_DAYS) return t('penalties.action.deduct', { days: value });
+    if (action === PenaltyAction.INVESTIGATION) return t('penalties.action.investigation', { days: value });
   }
   return t(`common.enums.penaltyAction.${action}`);
 }
@@ -39,11 +37,14 @@ export function violationGroups(groups: PenaltyGroup[], locale: Locale): SelectO
     .filter((g) => g.options.length > 0);
 }
 
-/** Active employees only (§4: a penalty is recorded for an active employee), "Name · code". */
+/**
+ * Active employees only (§4: a penalty is recorded for an active employee), "Name · code",
+ * searchable by either name and the code.
+ */
 export function employeeOptions(employees: Pick<EmployeeSummary, 'id' | 'code' | 'nameEn' | 'nameAr' | 'status'>[], locale: Locale): SelectOption[] {
   return employees
     .filter((e) => e.status === EmployeeStatus.ACTIVE)
-    .map((e) => ({ value: e.id, label: `${nameIn(e, locale)} · ${e.code}` }));
+    .map((e) => ({ value: e.id, label: `${nameIn(e, locale)} · ${e.code}`, keywords: [e.nameEn, e.nameAr, e.code] }));
 }
 
 /**

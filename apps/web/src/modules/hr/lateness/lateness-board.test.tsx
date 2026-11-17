@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { latenessDays, SETTING_DEFAULTS, type LatenessRule, type LatenessRow } from '@school-erp/shared';
+import { formatDayCount, latenessDays, SETTING_DEFAULTS, type LatenessRule, type LatenessRow } from '@school-erp/shared';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactElement } from 'react';
@@ -89,14 +89,14 @@ describe('LatenessBoard', () => {
   it('days column updates while typing', async () => {
     const user = userEvent.setup();
     renderBoard();
-    expect(daysOf('e2')).toBe('0days');
+    expect(daysOf('e2')).toBe('0 days');
     const input = minutesInput('Karim Fawzy');
     await user.clear(input);
     await user.type(input, '61');
-    expect(daysOf('e2')).toBe('0.75days');
+    expect(daysOf('e2')).toBe('0.75 day');
     await user.type(input, '0');
     // 610 minutes → 11 hours: 0.25 + 0.5 + 9 × 0.5
-    expect(daysOf('e2')).toBe('5.25days');
+    expect(daysOf('e2')).toBe('5.25 days');
   });
 
   it('the live "days" preview uses the shared latenessDays with the rule from HR settings (no second copy of the rule)', async () => {
@@ -107,7 +107,7 @@ describe('LatenessBoard', () => {
     for (const minutes of [10, 16, 75, 76, 200]) {
       await user.clear(input);
       await user.type(input, String(minutes));
-      expect(daysOf('e2')).toBe(`${latenessDays(minutes, rule)}days`);
+      expect(daysOf('e2')).toBe(formatDayCount(latenessDays(minutes, rule), 'en'));
     }
   });
 
@@ -126,7 +126,7 @@ describe('LatenessBoard', () => {
     await user.clear(input);
     await user.type(input, '6000');
     expect(input.getAttribute('aria-invalid')).toBeNull();
-    expect(daysOf('e2')).toBe('49.75days');
+    expect(daysOf('e2')).toBe('49.75 days');
     expect((saveButton() as HTMLButtonElement | HTMLInputElement).disabled).toBe(false);
   });
 
@@ -241,7 +241,7 @@ describe('LatenessBoard', () => {
     const user = userEvent.setup();
     renderBoard();
     // 30 → 0.25, 0, 90 → 0.75
-    expect(screen.getByTestId('lateness-summary').textContent).toBe('3 employees · 120 minutes · 1 days');
+    expect(screen.getByTestId('lateness-summary').textContent).toBe('3 employees · 120 minutes · 1 day');
     await user.clear(minutesInput('Karim Fawzy'));
     await user.type(minutesInput('Karim Fawzy'), '1500');
     // + 1,500 → 25 hours: 0.25 + 0.5 + 23 × 0.5 = 12.25
@@ -308,6 +308,25 @@ describe('LatenessBoard', () => {
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Discard and switch' }));
     expect(router.push).toHaveBeenCalledWith('?month=2026-10', { scroll: false });
+  });
+
+  it('Arabic day counts agree with the number (يومان, 3 أيام, 11 يومًا, 0.5 يوم), Western digits', async () => {
+    const user = userEvent.setup();
+    // One day per started hour after a 0-minute grace, half a day for the first.
+    const rule: LatenessRule = { graceMinutes: 0, steps: [{ hour: 1, days: 0.5 }, { hour: 2, days: 1.5 }], extraHourDays: 1 };
+    renderBoard({ rule }, 'ar');
+    const input = table().getByRole('textbox', { name: 'دقائق كريم فوزي' });
+    const expectDays = async (minutes: string, text: string) => {
+      await user.clear(input);
+      await user.type(input, minutes);
+      expect(daysOf('e2')).toBe(text);
+    };
+    await expectDays('30', '0.5 يوم');
+    await expectDays('61', 'يومان');
+    await expectDays('121', '3 أيام');
+    await expectDays('481', '9 أيام');
+    await expectDays('541', '10 أيام');
+    await expectDays('601', '11 يومًا');
   });
 
   it('renders right-to-left in Arabic with Arabic names and departments', () => {

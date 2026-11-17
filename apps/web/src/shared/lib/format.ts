@@ -2,7 +2,7 @@ import type { IsoDate, IsoDateTime, Month } from '@school-erp/shared';
 import type { Locale } from './i18n';
 
 /** Money and day counts are pure and shared with the API: one implementation, in packages/shared. */
-export { formatDays, formatMoney, parseMoney } from '@school-erp/shared';
+export { formatDayCount, formatDays, formatMoney, parseMoney } from '@school-erp/shared';
 
 /** Arabic month and day names, Latin digits — figures stay typable and match the tables. */
 const INTL_LOCALE: Record<Locale, string> = { en: 'en-GB', ar: 'ar-EG-u-nu-latn' };

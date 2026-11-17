@@ -1,7 +1,7 @@
 'use client';
 
 import type { Days as DayCount, Piastres } from '@school-erp/shared';
-import { formatDays, formatMoney } from '@/shared/lib/format';
+import { formatDayCount, formatDays, formatMoney } from '@/shared/lib/format';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 
@@ -31,7 +31,10 @@ export function Money({
   );
 }
 
-/** Day count in steps of 0.25 → `1.25 days`. */
+/**
+ * Day count in steps of 0.25. With its unit the noun agrees with the number in the screen's
+ * language (`formatDayCount`: "2 days", "يومان", "3 أيام", "0.5 يوم"); without it, the bare figure.
+ */
 export function Days({
   value,
   unit = true,
@@ -41,13 +44,16 @@ export function Days({
   unit?: boolean;
   className?: string;
 }) {
-  const { t } = useTranslation();
+  const { locale } = useTranslation();
   return (
     <span className={cn('inline-flex items-baseline gap-1 whitespace-nowrap', className)}>
-      <bdi dir="ltr" className="tabular">
-        {formatDays(value)}
-      </bdi>
-      {unit ? <span className="text-[0.9em] opacity-75">{t('ui.units.days')}</span> : null}
+      {unit ? (
+        <span className="tabular">{formatDayCount(value, locale)}</span>
+      ) : (
+        <bdi dir="ltr" className="tabular">
+          {formatDays(value)}
+        </bdi>
+      )}
     </span>
   );
 }

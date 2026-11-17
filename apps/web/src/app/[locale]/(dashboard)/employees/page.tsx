@@ -1,7 +1,10 @@
+import { sectionMetadata } from '@/core/navigation/section-metadata';
 import { notFound } from 'next/navigation';
 import { EmployeesI18n, EmployeesList, parseEmployeesQuery, type SearchParamsRecord } from '@/modules/hr/employees';
 import { GET_DEPARTMENTS, GET_EMPLOYEES, GET_STAGES } from '@/modules/hr/employees/apis';
 import { isLocale } from '@/shared/lib/i18n';
+
+export const generateMetadata = sectionMetadata('employees');
 
 /** Employees list: search, filters and pages live in the URL; the server fetches with them. */
 export default async function EmployeesPage({

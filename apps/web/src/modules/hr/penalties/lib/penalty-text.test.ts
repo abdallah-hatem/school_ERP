@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import ar from '@school-erp/shared/locales/ar/penalties.json';
 import en from '@school-erp/shared/locales/en/penalties.json';
 import enErrors from '@school-erp/shared/locales/en/errors.json';
 import { createTranslator, getBaseMessages, hasMessage, mergeMessages, type MessageTree } from '@/shared/lib/i18n';
@@ -12,11 +13,22 @@ const has = (key: string) => hasMessage(messages, key);
 
 describe('describeAction', () => {
   it('says the days for a deduction and an investigation with days, the name otherwise', () => {
-    expect(describeAction(t, 'DEDUCT_DAYS', 0.25)).toBe('Deduct 0.25 day');
-    expect(describeAction(t, 'DEDUCT_DAYS', 1.5)).toBe('Deduct 1.5 days');
-    expect(describeAction(t, 'INVESTIGATION', 2)).toBe('Referral to investigation, 2 days deducted');
-    expect(describeAction(t, 'INVESTIGATION', null)).toBe('Referral to investigation');
-    expect(describeAction(t, 'WARNING', null)).toBe('Warning');
+    expect(describeAction(t, 'en', 'DEDUCT_DAYS', 0.25)).toBe('Deduct 0.25 day');
+    expect(describeAction(t, 'en', 'DEDUCT_DAYS', 1.5)).toBe('Deduct 1.5 days');
+    expect(describeAction(t, 'en', 'INVESTIGATION', 2)).toBe('Referral to investigation, 2 days deducted');
+    expect(describeAction(t, 'en', 'INVESTIGATION', null)).toBe('Referral to investigation');
+    expect(describeAction(t, 'en', 'WARNING', null)).toBe('Warning');
+  });
+
+  it('Arabic: the noun agrees with the day count (يومان, not 2 أيام)', () => {
+    const tAr = createTranslator(
+      mergeMessages(getBaseMessages('ar'), { penalties: ar } as unknown as MessageTree),
+    );
+    expect(describeAction(tAr, 'ar', 'DEDUCT_DAYS', 1)).toBe('خصم يوم واحد');
+    expect(describeAction(tAr, 'ar', 'DEDUCT_DAYS', 2)).toBe('خصم يومان');
+    expect(describeAction(tAr, 'ar', 'DEDUCT_DAYS', 3)).toBe('خصم 3 أيام');
+    expect(describeAction(tAr, 'ar', 'DEDUCT_DAYS', 0.5)).toBe('خصم 0.5 يوم');
+    expect(describeAction(tAr, 'ar', 'INVESTIGATION', 15)).toBe('إحالة للتحقيق مع خصم 15 يومًا');
   });
 });
 
@@ -38,7 +50,7 @@ describe('employeeOptions', () => {
       ],
       'en',
     );
-    expect(options).toEqual([{ value: 'a', label: 'A · EMP-1' }]);
+    expect(options).toEqual([{ value: 'a', label: 'A · EMP-1', keywords: ['A', 'أ', 'EMP-1'] }]);
   });
 });
 

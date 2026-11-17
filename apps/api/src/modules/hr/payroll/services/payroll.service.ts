@@ -105,17 +105,22 @@ export class PayrollService {
     return { ...result, data: result.data.map((run) => this.toSummary(run, totals.get(run.id)!)) };
   }
 
-  /** A run with its totals (all lines) and the lines matching the filters. */
+  /**
+   * A run with its totals (all lines), the lines matching the filters and — on a draft — the live
+   * count of PENDING penalties dated in its month (0 on an approved run, whose month is locked).
+   */
   async get(id: Uuid, query: PayrollRunQueryDto = {}): Promise<PayrollRun> {
     const run = await this.findRun(id);
-    const [totals, lines, adjustments, inRun] = await Promise.all([
+    const [totals, lines, adjustments, inRun, pendingPenalties] = await Promise.all([
       this.repository.totalsFor([id]),
       this.repository.findLines(id, query),
       this.repository.findAdjustments(id),
       this.repository.lineEmployeeIds(id),
+      run.status === PayrollStatus.DRAFT ? this.penalties.pendingCountInMonth(run.month) : 0,
     ]);
     return {
       ...this.toSummary(run, totals.get(id)!),
+      pendingPenalties,
       lines: lines.map(toLine),
       adjustments: adjustments.map((a) => toAdjustment(a, inRun)),
     };

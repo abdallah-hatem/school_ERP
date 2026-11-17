@@ -7,7 +7,7 @@ import {
   WEEKDAYS,
   type Names,
 } from '@school-erp/shared';
-import { formatDays } from '@/shared/lib/format';
+import { formatDayCount, formatDays } from '@/shared/lib/format';
 import { localName, type Locale, type Translate } from '@/shared/lib/i18n';
 
 /*
@@ -79,7 +79,7 @@ export function formatChangeValue(key: string, value: unknown, t: Translate, loc
     return value;
   }
   if (typeof value === 'number') {
-    if (key === HrSettingKey.LATENESS_EXTRA_HOUR_DAYS) return `${formatDays(value)} ${t('ui.units.days')}`;
+    if (key === HrSettingKey.LATENESS_EXTRA_HOUR_DAYS) return formatDayCount(value, locale);
     if (key === HrSettingKey.LATENESS_GRACE_MINUTES) return `${value} ${t('settings.units.minutes')}`;
     return String(value);
   }

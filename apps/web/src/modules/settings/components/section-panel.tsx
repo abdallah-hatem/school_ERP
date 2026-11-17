@@ -37,6 +37,9 @@ export function SectionPanel({
 /**
  * Footer of a settings form: what state the edits are in, Discard and Save. Save is disabled while
  * the form is unchanged, invalid or saving (and shows busy while saving, so it can't fire twice).
+ * While there are unsaved changes it sticks to the bottom of the viewport (inside its form, above
+ * the phone's home indicator) so Save is reachable from anywhere in a long form; it is sticky, not
+ * fixed, so it never covers the end of the form. Place it as a direct child of the `<form>`.
  */
 export function SaveBar({
   dirty,
@@ -55,8 +58,16 @@ export function SaveBar({
   const { t } = useTranslation();
   const status = dirty ? (valid ? t('settings.save.unsaved') : t('settings.save.fixErrors')) : saved ? t('settings.save.saved') : null;
   return (
-    <div className="flex flex-wrap items-center justify-end gap-3 border-t border-border pt-5">
-      <p role="status" className={cn('me-auto text-sm', dirty && !valid ? 'text-destructive-ink' : 'text-muted-foreground')}>
+    <div
+      data-sticky={dirty || undefined}
+      className={cn(
+        'flex flex-wrap items-center justify-end gap-x-3 gap-y-2',
+        dirty
+          ? 'sticky bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 rounded-2xl border border-border bg-card px-4 py-3 shadow-raised'
+          : 'border-t border-border pt-5',
+      )}
+    >
+      <p role="status" className={cn('me-auto min-w-0 text-sm', dirty && !valid ? 'text-destructive-ink' : 'text-muted-foreground')}>
         {status}
       </p>
       <Button variant="ghost" disabled={!dirty || saving} onClick={onDiscard}>

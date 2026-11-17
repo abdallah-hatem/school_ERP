@@ -10,7 +10,7 @@ import { Button } from '@/shared/components/ui/button';
 import { Days, Money } from '@/shared/components/ui/figures';
 import { ChevronStartIcon, PayslipIcon, PrintIcon } from '@/shared/components/ui/icons';
 import { apiErrorText } from '@/shared/lib/api-error';
-import { formatCount, formatDate, formatDays, formatMonth } from '@/shared/lib/format';
+import { formatCount, formatDate, formatDayCount, formatMonth } from '@/shared/lib/format';
 import { localName, nameIn } from '@/shared/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
@@ -210,7 +210,7 @@ export function PayslipView({ payslip, backHref }: { payslip: Payslip; backHref:
           <Row
             label={t('payroll.payslip.latenessDetail', {
               minutes: formatCount(payslip.latenessMinutes),
-              days: formatDays(payslip.latenessDays),
+              days: formatDayCount(payslip.latenessDays, locale),
             })}
           >
             <Money

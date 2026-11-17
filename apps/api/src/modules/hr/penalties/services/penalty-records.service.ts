@@ -190,6 +190,11 @@ export class PenaltyRecordsService {
     return { deductingDays, pending };
   }
 
+  /** How many penalties dated in a month are still PENDING right now (blocks payroll approval). */
+  pendingCountInMonth(month: Month): Promise<number> {
+    return this.repository.countPendingInMonth(month);
+  }
+
   /** One employee's APPROVED penalties dated in a month, by date, as fixed at approval. */
   async approvedInMonth(month: Month, employeeId: Uuid): Promise<ApprovedMonthPenalty[]> {
     const rows = await this.repository.findApprovedForPayslip(month, employeeId);
