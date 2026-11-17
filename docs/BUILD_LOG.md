@@ -23,7 +23,7 @@ phase live in `docs/build-log/`.
 | 3 | Contract | done (in the spec) |
 | 4 | Design system | Campus, teal + sunflower, light only; tokens go in code in T3 |
 | 5 | Plan | `docs/plans/2026-11-17-hr-demo-plan.md` (18 tasks, 7 waves); review CONFLICTS fixed, re-review's 4 remaining items fixed |
-| 6 | Build | wave 1 done (T1 merged, #4); wave 2 running: T2, T3, T4, T5, T6 |
+| 6 | Build | merged: T1 (#4), T6 (#6), T5 (#7). Running: T2, T3, T4 (finishing: dedupe + HR-settings fix), T7, T8 |
 | 7 | Verify | — |
 | 8 | Ship | local demo; hosting later |
 
@@ -55,6 +55,14 @@ phase live in `docs/build-log/`.
 - 2026-11-17 — Wave 2 dispatched (base d9ee427): T2 auth, T3 design system + shell, T4 core settings
   + stages, T5 employees, T6 HR rules + domain + month lock. Settings history is event-driven
   (`settings.changed`, written by core's listener) so T4/T5/T6 run in parallel.
+- 2026-11-17 — T6 verified + review ALIGNED → merged #6 (plan's custom-steps lateness case corrected:
+  181 → 3.25, 241 → 3.5, per §5).
+- 2026-11-17 — T5 verified; review DOC OUT OF DATE (4 undocumented behaviours) → §3 updated in the
+  same PR → merged #7.
+- 2026-11-17 — T4 done but holds duplicates of T5's pieces (pagination DTO, user decorator) and
+  revealed that T6's HR settings write core's settings table directly (module-rule break). T4 sent
+  back: rebase, keep T5's copies, route HR settings through core's `SettingsService`.
+- 2026-11-17 — Wave 3 started: T7 penalties, T8 lateness (base f36a72f).
 
 ## Next up
 
