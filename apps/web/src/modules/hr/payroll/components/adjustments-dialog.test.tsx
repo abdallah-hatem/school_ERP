@@ -89,7 +89,7 @@ describe('Adjustments dialog', () => {
           reason: 'Lost book',
         },
       ],
-      lines: [{ ...MONA, adjustmentDeductions: 125_050, net: MONA.net - 125_050 }],
+      lines: [{ ...MONA, adjustmentDeductions: 125_050, net: MONA.net! - 125_050 }],
     });
     apis.ADD_PAYROLL_ADJUSTMENT.mockResolvedValue({
       success: true,

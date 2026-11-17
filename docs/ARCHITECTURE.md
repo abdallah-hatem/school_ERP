@@ -345,9 +345,25 @@ Roles are rows, not code (spec P2, R2 / R5 / R8 / R9). A school changes them thr
   `{ scope, employeeId, stageId }` — the widest scope the user holds `key` with, plus their linked
   employee and its stage — or `null` when they don't hold it. The module that owns the data applies
   it in its repository query; a scoped user with no linked employee matches no rows. Core only
-  answers the question; HR applies it in P4.
+  answers the question.
+- **Scopes in HR (P4).** `modules/hr/access`: `employee-scope.pure.ts` turns a `UserScope` into
+  rows (`own_stage` → `stageId`, `own_team` → `managerId`, `self` → `id`, not held or unlinked →
+  none) as a Prisma filter (`employeeWhere`) or a check (`inScope`); `HrAccessService` reads the
+  request's user from the request context (outside a request — seed, listeners — everything is
+  covered). HR services pass the filter to their repositories on every row-scoped read and check
+  the action's own key on writes keyed by an employee; outside → 404 (edge case 3). School-wide
+  work (calculating payroll, the month lock) is never scoped.
+- **Salary (R7, P4).** Without `hr.employees.view_salary` covering the employee, HR leaves the
+  salary-type fields out (`EMPLOYEE_SALARY_FIELDS`, `PAYROLL_LINE_MONEY_FIELDS`, adjustment amounts)
+  and sets `salaryVisible: false` (shared `SalaryVisibility`); the fields are optional in the shared
+  types, so the web app must handle their absence (`Money` draws `—` for `undefined`). Run totals:
+  see `PayrollRunSummary` in shared. The audit log hides salary-type values (`AUDIT_SALARY_FIELDS`,
+  `hidden: true`) unless the viewer holds the key at scope `all`.
+- **Audit entries about scoped records.** Core can't know HR's scopes, so `core/audit` exposes
+  `AuditRecordAccess`: HR registers, per entity type (employee, penalty), which ids the viewer may
+  see; Activity leaves the rest out and a record's History answers 404.
 - **Linked employee.** `users.employee_id` (unique, core-owned) is the link (R9). HR's older
-  `employees.user_id` was copied into it by the migration and is deprecated (HR drops it).
+  `employees.user_id` was copied into it by the migration and was dropped in P4.
 - **The `users.role` enum column is gone** (P3 migration `users_drop_role_add_sign_in`): access
   comes only from `user_roles`, the access token carries only the user's id, the user chip shows the
   names of their roles and every signed-in user's home is the dashboard (`homeFor(locale)`).
@@ -401,7 +417,11 @@ Roles are rows, not code (spec P2, R2 / R5 / R8 / R9). A school changes them thr
   (`AuthUser` + `permissions` + `roles`). The dashboard layout reads it on the server and passes it to
   `SessionProvider`; `can(user, key)`, `useCan()` and `<Can permission="…">` in
   `apps/web/src/core/auth` hide menu items and action buttons. **`can()` is only the view** — the
-  guard is the protection, and a hidden button's endpoint still refuses the call.
+  guard is the protection, and a hidden button's endpoint still refuses the call. A page the
+  viewer's roles can't open calls `await requirePermission(key, …)` (server; any one of the options
+  opens it) and renders the shell's not-found screen (`(dashboard)/not-found.tsx`) — the same screen
+  as a record outside their scope, so it never tells whether something exists (P4). Tabs, sections,
+  card fields, quick links and dashboard tiles are gated the same way, and their skeletons follow.
 
 ### Deliberate shortcuts
 

@@ -17,6 +17,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
+import { useCan } from '@/core/auth';
 import { Form } from '@/shared/components/form/form';
 import {
   DateField,
@@ -37,7 +38,7 @@ import { CREATE_EMPLOYEE, UPDATE_EMPLOYEE } from '../apis';
 import {
   CLEARED_INSURANCE,
   emptyEmployeeForm,
-  employeeFormSchema,
+  employeeFormSchemaFor,
   employeeToForm,
   fieldForError,
   formToRequest,
@@ -69,7 +70,11 @@ export function EmployeeForm({ basePath, employee, departments, stages, jobTitle
   const router = useRouter();
   const isEdit = Boolean(employee);
   const initial = useMemo(() => (employee ? employeeToForm(employee) : emptyEmployeeForm()), [employee]);
-  const form = useForm<EmployeeFormValues>({ resolver: zodResolver(employeeFormSchema), defaultValues: initial });
+  // Salary-type fields (R7): editing, only when the API sent them; adding, with the salary key.
+  const canSeeSalary = useCan()('hr.employees.view_salary');
+  const salary = employee ? employee.salaryVisible : canSeeSalary;
+  const schema = useMemo(() => employeeFormSchemaFor({ salary }), [salary]);
+  const form = useForm<EmployeeFormValues>({ resolver: zodResolver(schema), defaultValues: initial });
   // Editing: Save stays disabled until something differs from the saved employee (back to the
   // original value counts as unchanged). Adding: always enabled — submitting shows what's missing.
   const { isDirty } = form.formState;
@@ -233,8 +238,12 @@ export function EmployeeForm({ basePath, employee, departments, stages, jobTitle
         </Section>
 
         <Section title={t('employees.sections.contract')}>
-          <MoneyField control={control} name="basicSalary" label={t('employees.fields.basicSalary')} placeholder={t('employees.placeholders.basicSalary')} hint={t('employees.hints.basicSalary')} required />
-          <div aria-hidden="true" className="hidden sm:block" />
+          {salary ? (
+            <>
+              <MoneyField control={control} name="basicSalary" label={t('employees.fields.basicSalary')} placeholder={t('employees.placeholders.basicSalary')} hint={t('employees.hints.basicSalary')} required />
+              <div aria-hidden="true" className="hidden sm:block" />
+            </>
+          ) : null}
           <DateField control={control} name="contractStart" label={t('employees.fields.contractStart')} hint={isEdit ? undefined : t('employees.hints.contract')} required />
           <DateField control={control} name="contractEnd" label={t('employees.fields.contractEnd')} required />
           <SwitchField control={control} name="usesBus" label={t('employees.fields.usesBus')} hint={t('employees.hints.usesBus')} className="sm:col-span-2" />
@@ -264,11 +273,14 @@ export function EmployeeForm({ basePath, employee, departments, stages, jobTitle
                 required
               />
               <DateField control={control} name="insuranceRegistrationDate" label={t('employees.fields.insuranceRegistrationDate')} max={today} required />
-              <MoneyField control={control} name="insuredSalary" label={t('employees.fields.insuredSalary')} placeholder={t('employees.placeholders.insuredSalary')} hint={t('employees.hints.insuredSalary')} required />
+              {salary ? (
+                <MoneyField control={control} name="insuredSalary" label={t('employees.fields.insuredSalary')} placeholder={t('employees.placeholders.insuredSalary')} hint={t('employees.hints.insuredSalary')} required />
+              ) : null}
             </>
           ) : null}
         </Section>
 
+        {salary ? (
         <Section title={t('employees.sections.bank')}>
           <TextField control={control} name="bankName" label={t('employees.fields.bankName')} placeholder={t('employees.placeholders.bankName')} maxLength={100} />
           <TextField control={control} name="bankAccountNumber" label={t('employees.fields.bankAccountNumber')} placeholder={t('employees.placeholders.bankAccountNumber')} inputMode="numeric" dir="ltr" maxLength={50} />
@@ -284,6 +296,7 @@ export function EmployeeForm({ basePath, employee, departments, stages, jobTitle
             className="sm:col-span-2"
           />
         </Section>
+        ) : null}
 
         <Section title={t('employees.sections.emergency')}>
           <TextField control={control} name="emergencyContactName" label={t('employees.fields.emergencyContactName')} placeholder={t('employees.placeholders.emergencyContactName')} maxLength={200} />

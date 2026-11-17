@@ -81,7 +81,8 @@ export function notAppliedAdjustments(adjustments: readonly PayrollAdjustment[])
   return adjustments.filter((a) => !a.applied);
 }
 
-/** A line's adjustments as one signed figure: additions − deductions. */
-export function adjustmentNet(line: Pick<PayrollLine, 'adjustmentAdditions' | 'adjustmentDeductions'>): number {
+/** A line's adjustments as one signed figure: additions − deductions (`undefined` when hidden, R7). */
+export function adjustmentNet(line: Pick<PayrollLine, 'adjustmentAdditions' | 'adjustmentDeductions'>): number | undefined {
+  if (line.adjustmentAdditions === undefined || line.adjustmentDeductions === undefined) return undefined;
   return line.adjustmentAdditions - line.adjustmentDeductions;
 }

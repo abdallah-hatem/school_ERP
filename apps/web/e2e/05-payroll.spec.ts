@@ -95,9 +95,9 @@ test('payroll: run → penalty deduction → grace change → recalculate → ap
   const first = await api.get<PayrollRun>(`/hr/payroll-runs/${runId}`);
   await shoot(page, info, 'payroll-run-draft');
 
-  const penalised = first.lines.find((l) => l.penaltyAmount > 0);
+  const penalised = first.lines.find((l) => (l.penaltyAmount ?? 0) > 0);
   if (!penalised) throw new Error('smoke: no line has a penalty deduction — did 03-penalties run?');
-  await expect(await lineRow(page, penalised)).toContainText(formatMoney(penalised.penaltyAmount));
+  await expect(await lineRow(page, penalised)).toContainText(formatMoney(penalised.penaltyAmount!));
 
   // A line whose lateness days move when the grace grows.
   const settings = await api.get<HrSettings>('/hr/settings');
@@ -137,11 +137,11 @@ test('payroll: run → penalty deduction → grace change → recalculate → ap
     second.lines.find((l) => l.id === late.id) ?? second.lines.find((l) => l.employeeId === late.employeeId);
   if (!after) throw new Error('smoke: the late employee left the run');
   expect(after.latenessDays).toBe(latenessDays(late.latenessMinutes, rule));
-  expect(after.latenessAmount).toBeLessThan(late.latenessAmount);
-  expect(after.net).toBeGreaterThan(late.net);
+  expect(after.latenessAmount).toBeLessThan(late.latenessAmount!);
+  expect(after.net).toBeGreaterThan(late.net!);
   const lateRow = await lineRow(page, after);
-  await expect(lateRow).toContainText(formatMoney(after.latenessAmount));
-  await expect(lateRow).toContainText(formatMoney(after.net));
+  await expect(lateRow).toContainText(formatMoney(after.latenessAmount!));
+  await expect(lateRow).toContainText(formatMoney(after.net!));
 
   // Approve.
   await searchField(page, t('en', 'payroll.filters.searchLabel')).fill('');
@@ -170,7 +170,7 @@ test('payroll: run → penalty deduction → grace change → recalculate → ap
   const payslip = page.getByRole('article', {
     name: t('en', 'payroll.payslip.title'),
   });
-  await expect(payslip).toContainText(formatMoney(line.net));
+  await expect(payslip).toContainText(formatMoney(line.net!));
   await expect(payslip.getByTestId('payslip-penalty').first()).toBeVisible();
   await shoot(page, info, 'payslip');
 

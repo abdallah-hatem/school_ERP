@@ -73,8 +73,7 @@ export function graduationYears(today: IsoDate = todayIso()): number[] {
   return Array.from({ length: max - min + 1 }, (_, i) => max - i);
 }
 
-export const employeeFormSchema = z
-  .object({
+const employeeFields = z.object({
     nameEn: requiredText(200),
     nameAr: requiredText(200),
     nationalId: z
@@ -130,8 +129,16 @@ export const employeeFormSchema = z
     graduationYear: z
       .string()
       .refine((v) => v === '' || isValidGraduationYear(Number(v), todayIso()), 'employees.errors.graduationYear'),
-  })
-  .superRefine((v, ctx) => {
+  });
+
+/**
+ * The form's rules. `salary: false` — someone editing an employee whose salary they may not see
+ * (R7): the salary fields are neither shown nor checked, and are never sent (`formToUpdate` sends
+ * only what changed).
+ */
+export function employeeFormSchemaFor({ salary }: { salary: boolean }) {
+  const fields = salary ? employeeFields : employeeFields.extend({ basicSalary: z.number().nullable() });
+  return fields.superRefine((v, ctx) => {
     if (v.contractStart && v.contractEnd && v.contractEnd <= v.contractStart) {
       ctx.addIssue({ code: 'custom', path: ['contractEnd'], message: 'employees.errors.contractOrder' });
     }
@@ -146,9 +153,13 @@ export const employeeFormSchema = z
       todayIso(),
     );
     for (const { field, issue } of issues) {
+      if (!salary && field === 'insuredSalary') continue;
       ctx.addIssue({ code: 'custom', path: [field], message: INSURANCE_MESSAGES[issue] });
     }
   });
+}
+
+export const employeeFormSchema = employeeFormSchemaFor({ salary: true });
 
 export type EmployeeFormValues = z.input<typeof employeeFormSchema>;
 
@@ -223,7 +234,7 @@ export function employeeToForm(employee: Employee): EmployeeFormValues {
     managerId: employee.manager?.id ?? NO_MANAGER,
     grade: employee.grade ?? '',
     workSystem: employee.workSystem,
-    basicSalary: employee.basicSalary,
+    basicSalary: employee.basicSalary ?? null,
     fingerprintId: employee.fingerprintId ?? '',
     contractStart: employee.contractStart,
     contractEnd: employee.contractEnd,
@@ -231,7 +242,7 @@ export function employeeToForm(employee: Employee): EmployeeFormValues {
     insuranceStatus: employee.insuranceStatus,
     insuranceNumber: employee.insuranceNumber ?? '',
     insuranceRegistrationDate: employee.insuranceRegistrationDate,
-    insuredSalary: employee.insuredSalary,
+    insuredSalary: employee.insuredSalary ?? null,
     bankName: employee.bankName ?? '',
     bankAccountNumber: employee.bankAccountNumber ?? '',
     iban: employee.iban ?? '',

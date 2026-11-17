@@ -1,5 +1,6 @@
 import { sectionMetadata } from '@/core/navigation/section-metadata';
 import { notFound } from 'next/navigation';
+import { requirePermission } from '@/core/auth';
 import type { SearchParamsRecord } from '@/modules/hr/employees';
 // Server-only screen: kept out of the module's index, which client components import.
 import { EmployeeHistoryScreen } from '@/modules/hr/employees/history-screen';
@@ -17,5 +18,7 @@ export default async function EmployeeHistoryPage({
 }) {
   const [{ locale, id }, query] = await Promise.all([params, searchParams]);
   if (!isLocale(locale)) notFound();
+  // R6: a page the viewer's roles can't open is the not-found screen.
+  await requirePermission('core.audit.view');
   return <EmployeeHistoryScreen locale={locale} employeeId={id} searchParams={query} />;
 }

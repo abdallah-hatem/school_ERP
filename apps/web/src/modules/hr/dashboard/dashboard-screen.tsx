@@ -2,6 +2,7 @@ import { monthOf, type Month } from '@school-erp/shared';
 import ar from '@school-erp/shared/locales/ar/dashboard.json';
 import en from '@school-erp/shared/locales/en/dashboard.json';
 import { Suspense } from 'react';
+import { can, getSession } from '@/core/auth';
 import type { Locale, MessageTree } from '@/shared/lib/i18n';
 import { I18nProvider } from '@/shared/providers/i18n-provider';
 import { DashboardHeader, DashboardSkeleton, DashboardView } from './dashboard-view';
@@ -17,8 +18,10 @@ export function dashboardMessages(locale: Locale): MessageTree {
   return MESSAGES[locale];
 }
 
+/** The figures need `hr.dashboard.view` (R6): without it, the greeting and the quick links the viewer may use. */
 async function DashboardFigures({ month }: { month: Month }) {
-  const data = await loadDashboard();
+  const sees = can(await getSession(), 'hr.dashboard.view');
+  const data = sees ? await loadDashboard() : undefined;
   return <DashboardView data={data} month={month} />;
 }
 
