@@ -24,3 +24,5 @@ process.env.PORT = process.env.PORT ?? '0';
 process.env.UPLOADS_DIR = process.env.UPLOADS_DIR ?? join(tmpdir(), `${dbName}-uploads`);
 // A throwaway signing secret for tests only (the real one comes from the deployment's env).
 process.env.JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET ?? 'e2e-only-secret-'.repeat(4);
+// The seed suite's HR admin password (test only; the real one comes from the operator's env).
+process.env.SEED_ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? 'e2e-only-seed-password';
