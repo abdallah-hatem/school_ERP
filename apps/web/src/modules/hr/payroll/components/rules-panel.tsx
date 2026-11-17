@@ -1,6 +1,6 @@
 'use client';
 
-import type { HrSettings } from '@school-erp/shared';
+import type { HrSettings, IsoDateTime } from '@school-erp/shared';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { Button } from '@/shared/components/ui/button';
@@ -14,17 +14,28 @@ import {
   SettingsIcon,
   type AppIcon,
 } from '@/shared/components/ui/icons';
-import { formatCount } from '@/shared/lib/format';
+import { formatCount, formatDateTime } from '@/shared/lib/format';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { describeLatenessRule } from '../../lateness/describe-rule';
 
 /**
- * "Rules applied this month": the live HR settings (GET /hr/settings) behind every figure on the
- * run page, with a link to change them. An approved run keeps the numbers it was approved with;
- * the panel always shows today's settings.
+ * The live HR settings (GET /hr/settings) with a link to change them. On a draft they are the
+ * rules behind every figure ("Rules applied this month"). An approved run keeps the numbers it
+ * was approved with and the run stores no copy of the rules, so for it (`approvedAt` set) the
+ * panel says these are today's rules and when the run was calculated — never that they applied.
  */
-export function RulesPanel({ settings, settingsHref }: { settings: HrSettings | null; settingsHref: string }) {
-  const { t } = useTranslation();
+export function RulesPanel({
+  settings,
+  settingsHref,
+  approvedAt = null,
+}: {
+  settings: HrSettings | null;
+  settingsHref: string;
+  /** Set for an APPROVED run. */
+  approvedAt?: IsoDateTime | null;
+}) {
+  const { t, locale } = useTranslation();
+  const approved = approvedAt !== null;
   return (
     <aside
       aria-labelledby="payroll-rules-title"
@@ -36,9 +47,13 @@ export function RulesPanel({ settings, settingsHref }: { settings: HrSettings | 
         </span>
         <div className="flex min-w-0 flex-col gap-0.5">
           <h2 id="payroll-rules-title" className="font-display text-lg leading-snug font-extrabold">
-            {t('payroll.rules.title')}
+            {approved ? t('payroll.rules.currentTitle') : t('payroll.rules.title')}
           </h2>
-          <p className="text-muted-foreground text-sm">{t('payroll.rules.body')}</p>
+          <p className="text-muted-foreground text-sm">
+            {approved
+              ? t('payroll.rules.currentBody', { date: formatDateTime(approvedAt, locale) })
+              : t('payroll.rules.body')}
+          </p>
         </div>
       </div>
       {settings ? (

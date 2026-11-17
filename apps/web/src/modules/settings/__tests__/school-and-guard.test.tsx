@@ -38,6 +38,7 @@ vi.mock('next/link', () => ({
 
 import Link from 'next/link';
 import { SchoolBrand } from '@/core/settings/school-brand';
+import { LocaleSwitch } from '@/shared/components/layout/locale-switch';
 import { SettingsScreen } from '../components/settings-screen';
 import { deferred, hrSettings, ok, renderSettings, school } from './helpers';
 
@@ -47,6 +48,7 @@ function renderScreen(locale: 'en' | 'ar' = 'en') {
       <header data-testid="shell">
         <SchoolBrand />
         <Link href="/en/payroll">Payroll link</Link>
+        <LocaleSwitch />
       </header>
       <SettingsScreen initialSection="school" />
     </>,
@@ -216,6 +218,35 @@ describe('Settings screen — unsaved changes warning', () => {
     expect(router.push).not.toHaveBeenCalled();
     await user.click(screen.getByRole('button', { name: 'Discard changes' }));
     await waitFor(() => expect(router.push).toHaveBeenCalledWith('/en/payroll'));
+  });
+
+  it('the EN / ع switch with edits asks first; staying keeps the language, discarding switches', async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await user.type(await field(/School name in English/), ' Annex');
+
+    await user.click(screen.getByRole('button', { name: 'العربية' }));
+    expect(await screen.findByRole('dialog', { name: 'Leave without saving?' })).toBeTruthy();
+    expect(router.push).not.toHaveBeenCalled();
+    expect(document.documentElement.lang).toBe('en');
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(router.push).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'العربية' }));
+    await user.click(await screen.findByRole('button', { name: 'Discard changes' }));
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith('/ar/settings', { scroll: false }));
+    expect(document.documentElement.lang).toBe('ar');
+  });
+
+  it('the EN / ع switch without edits switches at once', async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await field(/School name in English/);
+    await user.click(screen.getByRole('button', { name: 'العربية' }));
+    expect(router.push).toHaveBeenCalledWith('/ar/settings', { scroll: false });
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('closing the tab with edits triggers the browser prompt; without edits it does not', async () => {

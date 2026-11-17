@@ -9,7 +9,7 @@
     "date": "Date",
     "employee": "Employee",
     "violation": "Violation",
-    "level": "Level",
+    "levelAction": "Level · action",
     "action": "Action",
     "status": "Status",
     "actions": "Actions"

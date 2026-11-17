@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import {
+  PAGINATION,
   PayrollStatus,
   type AdjustmentType,
+  type Paginated,
   type PayrollFlag,
   type PayrollTotals,
   type WorkSystem,
@@ -53,10 +55,21 @@ export const ADJUSTMENT_SELECT = {
   amount: true,
   reason: true,
   createdAt: true,
+  employee: { select: { code: true, nameEn: true, nameAr: true } },
 } satisfies Prisma.PayrollAdjustmentSelect;
 
 export type AdjustmentRow = Prisma.PayrollAdjustmentGetPayload<{
   select: typeof ADJUSTMENT_SELECT;
+}>;
+
+export const EMPLOYEE_LINE_SELECT = {
+  id: true,
+  net: true,
+  run: { select: { id: true, month: true, status: true } },
+} satisfies Prisma.PayrollLineSelect;
+
+export type EmployeeLineRow = Prisma.PayrollLineGetPayload<{
+  select: typeof EMPLOYEE_LINE_SELECT;
 }>;
 
 /** Everything a line stores: the employee snapshot plus the calculated amounts. */
@@ -213,6 +226,44 @@ export class PayrollRunsRepository extends BaseRepository<
       where: { runId_employeeId: { runId, employeeId } },
       select: LINE_SELECT,
     });
+  }
+
+  /** The employees that have a line in the run (all lines, whatever the screen's filters). */
+  async lineEmployeeIds(runId: string): Promise<Set<string>> {
+    const rows = await this.db.payrollLine.findMany({
+      where: { runId },
+      select: { employeeId: true },
+    });
+    return new Set(rows.map((r) => r.employeeId));
+  }
+
+  /** One employee's lines across runs, newest month first (one query + one count). */
+  async listEmployeeLines(
+    employeeId: string,
+    page: number = PAGINATION.defaultPage,
+    limit: number = PAGINATION.defaultLimit,
+  ): Promise<Paginated<EmployeeLineRow>> {
+    const take = Math.min(Math.max(1, limit), PAGINATION.maxLimit);
+    const current = Math.max(1, page);
+    const where: Prisma.PayrollLineWhereInput = { employeeId };
+    const [data, total] = await Promise.all([
+      this.db.payrollLine.findMany({
+        where,
+        select: EMPLOYEE_LINE_SELECT,
+        orderBy: { run: { month: 'desc' } },
+        skip: (current - 1) * take,
+        take,
+      }),
+      this.db.payrollLine.count({ where }),
+    ]);
+    return {
+      data,
+      total,
+      page: current,
+      limit: take,
+      hasNextPage: current * take < total,
+      hasPreviousPage: current > 1,
+    };
   }
 
   findAdjustments(runId: string, employeeId?: string): Promise<AdjustmentRow[]> {

@@ -5,3 +5,4 @@
 export { EmployeePayrollSection, PayrollRunScreen, PayrollRunsScreen, PayslipScreen } from './screens';
 export { PayslipSkeleton, RunPageSkeleton, RunsListSkeleton } from './components/payroll-skeletons';
 export { PayrollI18n, payrollMessages } from './messages';
+export type { SearchParamsRecord } from './lib/run-query';

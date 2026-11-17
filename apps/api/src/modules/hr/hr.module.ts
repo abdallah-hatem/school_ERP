@@ -13,6 +13,7 @@ import { DepartmentsService } from './lists/services/departments.service';
 import { JobTitlesService } from './lists/services/job-titles.service';
 import { MonthLockService } from './month-lock/month-lock.service';
 import { MonthLockRepository } from './month-lock/repositories/month-lock.repository';
+import { EmployeePayrollController } from './payroll/controllers/employee-payroll.controller';
 import { PayrollRunsController } from './payroll/controllers/payroll-runs.controller';
 import { PayrollRunsRepository } from './payroll/repositories/payroll-runs.repository';
 import { PayrollService } from './payroll/services/payroll.service';
@@ -48,6 +49,7 @@ import { LatenessService } from './staff-attendance/services/lateness.service';
     PenaltiesController,
     // payroll + dashboard (T9)
     PayrollRunsController,
+    EmployeePayrollController,
     DashboardController,
   ],
   providers: [

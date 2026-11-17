@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { applyDocumentLocale } from '@/shared/lib/document-locale';
+import { requestLeave } from '@/shared/lib/leave-guard';
 import { swapLocaleInPath, type Locale } from '@/shared/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
@@ -14,7 +15,7 @@ const FULL_NAME_KEY: Record<Locale, string> = { en: 'common.common.english', ar:
 /**
  * EN / ع. Switches language on the same page, without a full reload: direction and `lang` flip at
  * once, then the router swaps the locale segment (query kept, scroll kept). The choice is stored
- * in the `lang` cookie, which `apiFetch` sends as `Accept-Language`.
+ * in the `lang` cookie. A screen with unsaved edits (Settings) is asked first (`requestLeave`).
  */
 export function LocaleSwitch({ className }: { className?: string }) {
   const { locale, t } = useTranslation();
@@ -23,9 +24,11 @@ export function LocaleSwitch({ className }: { className?: string }) {
 
   function switchTo(next: Locale) {
     if (next === locale) return;
-    applyDocumentLocale(next);
-    const target = swapLocaleInPath(pathname ?? '/', next) + window.location.search + window.location.hash;
-    router.push(target, { scroll: false });
+    requestLeave(() => {
+      applyDocumentLocale(next);
+      const target = swapLocaleInPath(pathname ?? '/', next) + window.location.search + window.location.hash;
+      router.push(target, { scroll: false });
+    });
   }
 
   return (

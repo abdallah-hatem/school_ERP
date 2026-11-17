@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect } from 'react';
+import { setLeaveGuard } from '@/shared/lib/leave-guard';
 
 /**
  * Unsaved-changes tracking for the Settings screen. A section reports whether its form has edits
@@ -25,11 +26,14 @@ export function useReportDirty(source: string, dirty: boolean) {
 
 /**
  * While `dirty`: the browser's own prompt on reload / close, and in-app link clicks are held and
- * handed to `onLeaveAttempt(href)` so the screen can ask first. `onLeaveAttempt` must be stable.
+ * handed to `onLeaveAttempt(href)` so the screen can ask first. Navigations from buttons that go
+ * through `requestLeave` (the language switch) are handed over as a function to run instead.
+ * `onLeaveAttempt` must be stable.
  */
-export function useLeaveGuard(dirty: boolean, onLeaveAttempt: (href: string) => void) {
+export function useLeaveGuard(dirty: boolean, onLeaveAttempt: (target: string | (() => void)) => void) {
   useEffect(() => {
     if (!dirty) return;
+    const unregister = setLeaveGuard((proceed) => onLeaveAttempt(proceed));
 
     function beforeUnload(e: BeforeUnloadEvent) {
       e.preventDefault();
@@ -54,6 +58,7 @@ export function useLeaveGuard(dirty: boolean, onLeaveAttempt: (href: string) => 
     window.addEventListener('beforeunload', beforeUnload);
     document.addEventListener('click', click, true);
     return () => {
+      unregister();
       window.removeEventListener('beforeunload', beforeUnload);
       document.removeEventListener('click', click, true);
     };

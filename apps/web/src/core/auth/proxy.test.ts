@@ -145,4 +145,15 @@ describe('auth routing (proxy)', () => {
     expect(location(res)).toContain('/ar/login');
     expect(res.cookies.get('auth_token')?.value).toBe('');
   });
+
+  it('forwards the page path (its locale) on every page it lets through, signed in or not', async () => {
+    const guest = await authProxy(request('/en/login'));
+    expect(guest.headers.get('x-middleware-request-x-pathname')).toBe('/en/login');
+    const signedIn = await authProxy(
+      request('/en/payroll?month=2026-11', { auth_token: token(600), lang: 'ar' }),
+    );
+    expect(signedIn.headers.get('x-middleware-request-x-pathname')).toBe(
+      '/en/payroll?month=2026-11',
+    );
+  });
 });

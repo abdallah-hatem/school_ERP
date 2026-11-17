@@ -3,15 +3,25 @@ import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { ErrorCode } from '@school-erp/shared';
 import { CodedException } from '../errors/coded.exception';
+import { translateError } from '../i18n/i18n';
 import { AllExceptionsFilter } from './all-exceptions.filter';
 
-function run(exception: unknown, nodeEnv = 'development', lang = 'en') {
+function run(
+  exception: unknown,
+  nodeEnv = 'development',
+  lang = 'en',
+  extraHeaders: Record<string, string> = {},
+) {
   const json = jest.fn();
   const status = jest.fn().mockReturnValue({ json });
   const host = {
     switchToHttp: () => ({
       getResponse: () => ({ status }),
-      getRequest: () => ({ method: 'GET', url: '/x', headers: { 'accept-language': lang } }),
+      getRequest: () => ({
+        method: 'GET',
+        url: '/x',
+        headers: { 'accept-language': lang, ...extraHeaders },
+      }),
     }),
   } as unknown as ArgumentsHost;
   const config = { get: jest.fn().mockReturnValue(nodeEnv) } as unknown as ConfigService;
@@ -20,6 +30,15 @@ function run(exception: unknown, nodeEnv = 'development', lang = 'en') {
 }
 
 describe('AllExceptionsFilter', () => {
+  it('Accept-Language wins over the lang cookie for the message', () => {
+    const exception = new CodedException(HttpStatus.CONFLICT, ErrorCode.PAYROLL_APPROVED);
+    const en = run(exception, 'development', 'en', { cookie: 'lang=ar' }).body.message;
+    const ar = run(exception, 'development', 'ar', { cookie: 'lang=en' }).body.message;
+    expect(en).toBe(translateError(ErrorCode.PAYROLL_APPROVED, 'en'));
+    expect(ar).toBe(translateError(ErrorCode.PAYROLL_APPROVED, 'ar'));
+    expect(en).not.toBe(ar);
+  });
+
   it('keeps a stable code from a CodedException', () => {
     const { status, body } = run(
       new CodedException(HttpStatus.CONFLICT, ErrorCode.PAYROLL_APPROVED),

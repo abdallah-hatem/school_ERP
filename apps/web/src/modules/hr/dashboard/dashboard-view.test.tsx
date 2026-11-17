@@ -30,7 +30,7 @@ const DATA: HrDashboard = {
       { stage: { id: 's2', nameEn: 'Preparatory', nameAr: 'الإعدادية' }, count: 284 },
     ],
   },
-  currentRun: { month: '2026-11', status: PayrollStatus.DRAFT, net: 140_000_00 },
+  currentRun: { id: 'run-11', month: '2026-11', status: PayrollStatus.DRAFT, net: 140_000_00 },
   penaltiesThisMonth: { pending: 3, approved: 7 },
 };
 
@@ -76,6 +76,7 @@ describe('Dashboard', () => {
     const tile = screen.getByRole('link', { name: /No run yet/ });
     expect(within(tile).getByText('Create run')).toBeTruthy();
     expect(tile.getAttribute('href')).toBe('/en/payroll');
+    expect(linkTo(/Run payroll/)).toBe('/en/payroll');
     expect(screen.queryByText('Draft')).toBeNull();
   });
 
@@ -94,11 +95,12 @@ describe('Dashboard', () => {
     expect(linkTo(/Pending penalties/)).toBe('/en/penalties?month=2026-11&status=PENDING');
     expect(linkTo(/Approved penalties/)).toBe('/en/penalties?month=2026-11&status=APPROVED');
     expect(linkTo(/Active employees/)).toBe('/en/employees');
-    expect(linkTo(/Payroll, November 2026/)).toBe('/en/payroll');
+    // The month has a run: the tile and "Run payroll" open it directly.
+    expect(linkTo(/Payroll, November 2026/)).toBe('/en/payroll/run-11');
     expect(linkTo(/Add employee/)).toBe('/en/employees/new');
     expect(linkTo(/Record a penalty/)).toBe('/en/penalties');
     expect(linkTo(/Enter lateness/)).toBe('/en/lateness?month=2026-11');
-    expect(linkTo(/Run payroll/)).toBe('/en/payroll');
+    expect(linkTo(/Run payroll/)).toBe('/en/payroll/run-11');
     expect(linkTo(/Settings/)).toBe('/en/settings');
   });
 

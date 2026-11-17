@@ -57,12 +57,13 @@ function SectionBody({ id }: { id: SettingsSectionId }): ReactNode {
   }
 }
 
-type Leave = { to: SettingsSectionId | null } | { href: string };
+type Leave = { to: SettingsSectionId | null } | { href: string } | { proceed: () => void };
 
 /**
  * The one Settings screen (§7): a section per area. Desktop and tablet show the sections as a side
  * list beside the open one; a phone shows the list first, then the chosen section with a way back.
- * Leaving a section with unsaved edits — another section, a menu link, closing the tab — asks first.
+ * Leaving a section with unsaved edits — another section, a menu link, the language switch,
+ * closing the tab — asks first.
  */
 export function SettingsScreen({ initialSection }: { initialSection: SettingsSectionId | null }) {
   const { t } = useTranslation();
@@ -77,7 +78,11 @@ export function SettingsScreen({ initialSection }: { initialSection: SettingsSec
   const report = useCallback((source: string, isDirty: boolean) => {
     setDirtyBy((prev) => (Boolean(prev[source]) === isDirty ? prev : { ...prev, [source]: isDirty }));
   }, []);
-  const onLeaveAttempt = useCallback((href: string) => setLeaving({ href }), []);
+  const onLeaveAttempt = useCallback(
+    (target: string | (() => void)) =>
+      setLeaving(typeof target === 'string' ? { href: target } : { proceed: target }),
+    [],
+  );
   useLeaveGuard(dirty, onLeaveAttempt);
 
   function open(to: SettingsSectionId | null) {
@@ -96,6 +101,7 @@ export function SettingsScreen({ initialSection }: { initialSection: SettingsSec
     if (!target) return;
     setDirtyBy({});
     if ('href' in target) router.push(target.href);
+    else if ('proceed' in target) target.proceed();
     else open(target.to);
   }
 

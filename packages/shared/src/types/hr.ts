@@ -299,10 +299,16 @@ export interface PayrollRunSummary {
 export interface PayrollAdjustment {
   id: Uuid;
   employeeId: Uuid;
+  /** The employee's code and names, so an adjustment whose employee left the run still reads. */
+  employeeCode: string;
+  nameEn: string;
+  nameAr: string;
   type: AdjustmentType;
   amount: Piastres;
   reason: string;
   createdAt: IsoDateTime;
+  /** False when its employee has no line in the run (deactivated, removed on recalculation). */
+  applied: boolean;
 }
 
 export interface PayrollRun extends PayrollRunSummary {
@@ -345,10 +351,20 @@ export interface Payslip extends PayrollLine {
   school: { nameEn: string; nameAr: string; logoUrl: string | null };
 }
 
+/** `GET /hr/employees/:id/payroll-lines` — one employee's line in each run, newest month first. */
+export interface EmployeePayrollLine {
+  runId: Uuid;
+  lineId: Uuid;
+  month: Month;
+  status: PayrollStatus;
+  /** From the line snapshot. */
+  net: Piastres;
+}
+
 // ── Dashboard ──────────────────────────────────────────────────────────────
 
 export interface HrDashboard {
   headcount: { active: number; byStage: { stage: NamedRef; count: number }[] };
-  currentRun: { month: Month; status: PayrollStatus; net: Piastres } | null;
+  currentRun: { id: Uuid; month: Month; status: PayrollStatus; net: Piastres } | null;
   penaltiesThisMonth: { pending: number; approved: number };
 }

@@ -25,7 +25,9 @@ export function PenaltyStatusPill({ status }: { status: PenaltyStatus }) {
 
 /**
  * Penalty records as the shared table (cards on narrow containers): date, employee, violation,
- * level, action with days, status and the row actions. The profile tab hides the employee column.
+ * level with the action and days (one column), status and the row actions. The profile tab hides
+ * the employee column. Six columns don't fit 740px, so it turns to cards below 1100px (960px on
+ * the profile, without the employee) instead of scrolling sideways.
  * Pending rows carry the warning bar (they need a look before payroll).
  */
 export function PenaltiesTable({
@@ -73,7 +75,7 @@ export function PenaltiesTable({
           {
             id: 'employee',
             header: t('penalties.columns.employee'),
-            className: 'min-w-44 whitespace-normal',
+            className: 'min-w-40 whitespace-normal',
             card: 'title' as const,
             cell: (p: PenaltyRecord) => <EmployeeIdentity employee={p.employee} href={`${employeesPath}/${p.employee.id}`} />,
           },
@@ -82,27 +84,24 @@ export function PenaltiesTable({
     {
       id: 'violation',
       header: t('penalties.columns.violation'),
-      className: 'min-w-48 whitespace-normal',
+      className: 'min-w-40 whitespace-normal',
       cell: (p) => <span className="break-words">{nameIn(p.violation, locale)}</span>,
     },
     {
-      id: 'level',
-      header: t('penalties.columns.level'),
-      className: 'w-24',
-      cell: (p) => t('penalties.levelValue', { level: p.level }),
-    },
-    {
       id: 'action',
-      header: t('penalties.columns.action'),
-      className: 'min-w-44 whitespace-normal',
+      header: t('penalties.columns.levelAction'),
+      className: 'min-w-36 whitespace-normal',
       cell: (p) => (
-        <span className={p.days ? 'font-semibold text-destructive-ink' : undefined}>{describeAction(t, p.action, p.days)}</span>
+        <span className="flex flex-col gap-0.5">
+          <span className="text-xs text-muted-foreground">{t('penalties.levelValue', { level: p.level })}</span>
+          <span className={p.days ? 'font-semibold text-destructive-ink' : undefined}>{describeAction(t, p.action, p.days)}</span>
+        </span>
       ),
     },
     {
       id: 'status',
       header: t('penalties.columns.status'),
-      className: 'w-36 whitespace-normal',
+      className: 'w-32 whitespace-normal',
       card: 'status',
       cell: (p) => (
         <span className="flex flex-col items-start gap-1">
@@ -137,6 +136,7 @@ export function PenaltiesTable({
       pagination={pagination}
       toolbar={toolbar}
       rowTone={(p) => (p.status === PenaltyStatus.PENDING ? 'warning' : undefined)}
+      cardsBelow={showEmployee ? 1100 : 960}
     />
   );
 }

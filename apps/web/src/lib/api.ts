@@ -12,6 +12,7 @@ import {
   authCookie,
 } from '@/lib/middlewareFunctions';
 import type { ApiResult, DownloadedFile } from '@/lib/types';
+import { LOCALE_COOKIE, requestLocale } from '@/shared/lib/i18n';
 
 /*
  * The transport layer (building-frontends → fetch-wrapper). Server only. Endpoints live in
@@ -112,7 +113,13 @@ export async function apiFetch<T = unknown>(
   const cookieStore = await cookies();
   const accessToken = cookieStore.get(ACCESS_TOKEN_KEY)?.value;
   const refreshToken = cookieStore.get(REFRESH_TOKEN_KEY)?.value;
-  const lang = cookieStore.get('lang')?.value || 'ar';
+  // The page's own language, not the cookie: every toast and error matches the screen.
+  const requestHeaders = await nextHeaders();
+  const lang = requestLocale({
+    pathname: requestHeaders.get('x-pathname'),
+    referer: requestHeaders.get('referer'),
+    cookie: cookieStore.get(LOCALE_COOKIE)?.value,
+  });
 
   if (options.useRefreshToken) {
     if (refreshToken) headers.Authorization = `Bearer ${refreshToken}`;

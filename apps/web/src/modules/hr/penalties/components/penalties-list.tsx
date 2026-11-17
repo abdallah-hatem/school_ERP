@@ -4,13 +4,13 @@ import { PAGINATION, PENALTY_STATUSES, type Month, type PenaltyRecord, type Pena
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import type { SelectOption, SelectOptionGroup } from '@/shared/components/form/fields';
+import { FilterSelect } from '@/shared/components/form/filter-controls';
 import { MonthStepper } from '@/shared/components/form/month-stepper';
 import { EmptyState } from '@/shared/components/layout/empty-state';
 import { PageHeader } from '@/shared/components/layout/page-header';
 import { Button } from '@/shared/components/ui/button';
 import { AddIcon, CloseIcon, SearchIcon } from '@/shared/components/ui/icons';
 import { Input } from '@/shared/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select';
 import { formatMonth } from '@/shared/lib/format';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { penaltiesQueryString, type PenaltiesListQuery } from '../lib/list-query';
@@ -18,8 +18,6 @@ import { PenaltiesTable } from './penalties-table';
 import { RecordPenaltyDialog } from './record-penalty-dialog';
 
 const SEARCH_DEBOUNCE_MS = 300;
-/** Radix Select items can't be empty; this one means "every status". */
-const ALL = '__all__';
 
 export interface PenaltiesListProps {
   /** `/ar/penalties`. */
@@ -152,24 +150,13 @@ export function PenaltiesList({
                 className="ps-11"
               />
             </div>
-            <Select
-              value={query.status ?? ALL}
-              onValueChange={(v) =>
-                go({ ...query, status: v === ALL ? undefined : (v as PenaltyStatus), page: PAGINATION.defaultPage })
-              }
-            >
-              <SelectTrigger aria-label={t('penalties.filters.status')} className="w-full sm:w-48">
-                <SelectValue placeholder={t('penalties.filters.allStatuses')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL}>{t('penalties.filters.allStatuses')}</SelectItem>
-                {PENALTY_STATUSES.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {t(`common.enums.penaltyStatus.${s}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <FilterSelect
+              label={t('penalties.filters.status')}
+              allLabel={t('penalties.filters.allStatuses')}
+              value={query.status}
+              options={PENALTY_STATUSES.map((s) => ({ value: s, label: t(`common.enums.penaltyStatus.${s}`) }))}
+              onChange={(v) => go({ ...query, status: v as PenaltyStatus | undefined, page: PAGINATION.defaultPage })}
+            />
           </div>
         }
       />

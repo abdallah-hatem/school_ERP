@@ -34,7 +34,6 @@ function renderRun(r = run()) {
       basePath="/en/payroll"
       settingsHref="/en/settings"
       run={r}
-      runEmployeeIds={r.lines.map((l) => l.employeeId)}
       departments={[]}
       settings={SETTINGS}
       query={{}}

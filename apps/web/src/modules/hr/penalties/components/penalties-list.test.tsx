@@ -64,6 +64,18 @@ describe('PenaltiesList', () => {
     expect(rows[2]?.textContent).toContain('السبب: Wrong day');
   });
 
+  it('fits an ~800px content area: level shares the action column, and rows turn to cards below 1100px', () => {
+    renderList();
+    const headers = table()
+      .getAllByRole('columnheader')
+      .map((h) => h.textContent);
+    expect(headers).toEqual(['Date', 'Employee', 'Violation', 'Level · action', 'Status', 'Actions']);
+    const row = table().getAllByRole('row')[1]!;
+    expect(within(row).getAllByRole('cell')[3]?.textContent).toBe('Level 2Deduct 0.5 day');
+    // Six columns need more than 740px; below 1100px the list is cards, never a sideways scroll.
+    expect(screen.getByRole('region', { name: /penalties/i }).getAttribute('data-cards-below')).toBe('1100');
+  });
+
   it('month, status and search filters update the URL without scrolling, from the first page', async () => {
     const user = userEvent.setup();
     renderList({ query: { ...QUERY, page: 3 } });

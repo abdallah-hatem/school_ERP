@@ -64,10 +64,14 @@ export const SALMA = line({
 export const ADJ_MONA: PayrollAdjustment = {
   id: 'a-1',
   employeeId: 'e-mona',
+  employeeCode: 'EMP-0001',
+  nameEn: 'Mona Khalil',
+  nameAr: 'منى خليل',
   type: 'ADDITION',
   amount: 50_000,
   reason: 'Exam supervision',
   createdAt: '2026-11-10T08:00:00.000Z',
+  applied: true,
 };
 
 export function run(overrides: Partial<PayrollRun> = {}): PayrollRun {
