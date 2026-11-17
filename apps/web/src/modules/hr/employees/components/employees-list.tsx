@@ -9,16 +9,17 @@ import {
 } from '@school-erp/shared';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState, useTransition } from 'react';
-import { DataTable, type DataTableColumn } from '@/shared/components/data-table/data-table';
-import { EmptyState } from '@/shared/components/layout/empty-state';
+import { useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
+import { Pagination } from '@/shared/components/data-table/pagination';
+import { EmptyState, ErrorState } from '@/shared/components/layout/empty-state';
 import { PageHeader } from '@/shared/components/layout/page-header';
 import { Button } from '@/shared/components/ui/button';
-import { Money } from '@/shared/components/ui/figures';
 import { AddIcon, CloseIcon, SearchIcon } from '@/shared/components/ui/icons';
 import { Input } from '@/shared/components/ui/input';
 import { FilterSelect } from '@/shared/components/form/filter-controls';
+import { formatCount } from '@/shared/lib/format';
 import { localName } from '@/shared/lib/i18n';
+import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import {
   employeesQueryString,
@@ -26,7 +27,8 @@ import {
   type EmployeesFilterKey,
   type EmployeesListQuery,
 } from '../lib/list-query';
-import { EmployeeIdentity, EmployeeStatusPill } from './employee-bits';
+import { stageBandOf } from '../lib/stage-band';
+import { EmployeeCard, EmployeeCardGrid } from './employee-card';
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -77,39 +79,6 @@ export function EmployeesList({ basePath, query, rows, total, departments, stage
   const itemOptions = (items: ListItem[]) =>
     [...items].sort((a, b) => a.sortOrder - b.sortOrder).map((i) => ({ value: i.id, label: localName(i, locale) }));
 
-  const columns: DataTableColumn<EmployeeSummary>[] = [
-    {
-      id: 'employee',
-      header: t('employees.columns.employee'),
-      cell: (e) => <EmployeeIdentity employee={e} href={`${basePath}/${e.id}`} />,
-      card: 'title',
-      className: 'min-w-56',
-    },
-    { id: 'department', header: t('employees.columns.department'), cell: (e) => localName(e.department, locale) },
-    { id: 'stage', header: t('employees.columns.stage'), cell: (e) => localName(e.stage, locale) },
-    { id: 'jobTitle', header: t('employees.columns.jobTitle'), cell: (e) => localName(e.jobTitle, locale) },
-    {
-      id: 'workSystem',
-      header: t('employees.columns.workSystem'),
-      cell: (e) => t(`common.enums.workSystem.${e.workSystem}`),
-    },
-    {
-      id: 'basicSalary',
-      header: t('employees.columns.basicSalary'),
-      cell: (e) => <Money value={e.basicSalary} />,
-      align: 'end',
-      // Wide enough for EGP 2,147,483.47 — the largest salary the API stores.
-      className: 'w-40 min-w-40',
-    },
-    {
-      id: 'status',
-      header: t('employees.columns.status'),
-      cell: (e) => <EmployeeStatusPill status={e.status} />,
-      card: 'status',
-      className: 'w-28',
-    },
-  ];
-
   const addButton = (
     <Button asChild variant="primary">
       <Link href={`${basePath}/new`}>
@@ -119,49 +88,57 @@ export function EmployeesList({ basePath, query, rows, total, departments, stage
     </Button>
   );
 
+  const emptyState = filtered ? (
+    <EmptyState
+      icon={SearchIcon}
+      title={t('employees.list.noResultsTitle')}
+      description={t('employees.list.noResultsBody')}
+      action={
+        <Button variant="secondary" onClick={clearFilters}>
+          <CloseIcon />
+          {t('employees.list.clearFilters')}
+        </Button>
+      }
+    />
+  ) : (
+    <EmptyState title={t('employees.list.emptyTitle')} description={t('employees.list.emptyBody')} action={addButton} />
+  );
+
+  let body: ReactNode;
+  if (error) {
+    body = (
+      <div className="rounded-3xl bg-card shadow-card">
+        <ErrorState onRetry={() => startTransition(() => router.refresh())} retrying={pending} />
+      </div>
+    );
+  } else if (rows.length === 0) {
+    body = <div className="rounded-3xl bg-card shadow-card">{emptyState}</div>;
+  } else {
+    body = (
+      // A new page or filter keeps the current cards in place, dimmed, until the next ones land.
+      <div
+        aria-busy={pending || undefined}
+        className={cn('transition-opacity duration-150', pending && 'pointer-events-none opacity-55')}
+      >
+        <EmployeeCardGrid>
+          {rows.map((e) => (
+            <li key={e.id} className="min-w-0">
+              <EmployeeCard employee={e} band={stageBandOf(e.stage.id, stages)} href={`${basePath}/${e.id}`} />
+            </li>
+          ))}
+        </EmployeeCardGrid>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title={t('employees.title')} description={t('employees.description')} actions={addButton} />
-      <DataTable
-        label={t('employees.list.label')}
-        columns={columns}
-        rows={rows}
-        getRowId={(e) => e.id}
-        refreshing={pending}
-        error={error}
-        retrying={pending && error}
-        onRetry={() => startTransition(() => router.refresh())}
-        empty={
-          filtered ? (
-            <EmptyState
-              icon={SearchIcon}
-              title={t('employees.list.noResultsTitle')}
-              description={t('employees.list.noResultsBody')}
-              action={
-                <Button variant="secondary" onClick={clearFilters}>
-                  <CloseIcon />
-                  {t('employees.list.clearFilters')}
-                </Button>
-              }
-            />
-          ) : (
-            <EmptyState
-              title={t('employees.list.emptyTitle')}
-              description={t('employees.list.emptyBody')}
-              action={addButton}
-            />
-          )
-        }
-        pagination={{
-          page: query.page,
-          limit: query.limit,
-          total,
-          onPageChange: (page) => go({ ...query, page }),
-          onLimitChange: (limit) => go({ ...query, limit, page: PAGINATION.defaultPage }),
-        }}
-        toolbar={
-          <div role="search" className="flex w-full flex-wrap items-center gap-2.5">
-            <div className="relative min-w-0 flex-1 basis-64">
+      <section aria-label={t('employees.list.label')} className="flex min-w-0 flex-col gap-4.5">
+        <div className="flex flex-col gap-3 rounded-[1.25rem] bg-card p-3.5 shadow-card">
+          {/* One row on a wide content area; search above a row of four (tablet) or a 2 × 2 grid (phone). */}
+          <div role="search" className="flex w-full flex-col gap-2.5 @min-[1000px]:flex-row @min-[1000px]:items-center">
+            <div className="relative min-w-0 flex-1">
               <SearchIcon className="pointer-events-none absolute inset-y-0 start-3.5 my-auto size-5 text-muted-foreground" />
               <Input
                 aria-label={t('employees.list.searchLabel')}
@@ -171,37 +148,59 @@ export function EmployeesList({ basePath, query, rows, total, departments, stage
                 className="ps-11"
               />
             </div>
-            <FilterSelect
-              label={t('employees.columns.department')}
-              allLabel={t('employees.list.allDepartments')}
-              value={query.departmentId}
-              options={itemOptions(departments)}
-              onChange={(v) => setFilter('departmentId', v)}
-            />
-            <FilterSelect
-              label={t('employees.columns.stage')}
-              allLabel={t('employees.list.allStages')}
-              value={query.stageId}
-              options={itemOptions(stages)}
-              onChange={(v) => setFilter('stageId', v)}
-            />
-            <FilterSelect
-              label={t('employees.columns.status')}
-              allLabel={t('employees.list.allStatuses')}
-              value={query.status}
-              options={EMPLOYEE_STATUSES.map((s) => ({ value: s, label: t(`common.enums.employeeStatus.${s}`) }))}
-              onChange={(v) => setFilter('status', v)}
-            />
-            <FilterSelect
-              label={t('employees.columns.workSystem')}
-              allLabel={t('employees.list.allWorkSystems')}
-              value={query.workSystem}
-              options={WORK_SYSTEMS.map((w) => ({ value: w, label: t(`common.enums.workSystem.${w}`) }))}
-              onChange={(v) => setFilter('workSystem', v)}
-            />
+            <div className="grid grid-cols-2 gap-2.5 @min-[620px]:grid-cols-4 @min-[1000px]:flex">
+              <FilterSelect
+                label={t('employees.columns.department')}
+                allLabel={t('employees.list.allDepartments')}
+                value={query.departmentId}
+                options={itemOptions(departments)}
+                onChange={(v) => setFilter('departmentId', v)}
+                className="w-full sm:w-full @min-[1000px]:w-44"
+              />
+              <FilterSelect
+                label={t('employees.columns.stage')}
+                allLabel={t('employees.list.allStages')}
+                value={query.stageId}
+                options={itemOptions(stages)}
+                onChange={(v) => setFilter('stageId', v)}
+                className="w-full sm:w-full @min-[1000px]:w-44"
+              />
+              <FilterSelect
+                label={t('employees.columns.status')}
+                allLabel={t('employees.list.allStatuses')}
+                value={query.status}
+                options={EMPLOYEE_STATUSES.map((s) => ({ value: s, label: t(`common.enums.employeeStatus.${s}`) }))}
+                onChange={(v) => setFilter('status', v)}
+                className="w-full sm:w-full @min-[1000px]:w-44"
+              />
+              <FilterSelect
+                label={t('employees.columns.workSystem')}
+                allLabel={t('employees.list.allWorkSystems')}
+                value={query.workSystem}
+                options={WORK_SYSTEMS.map((w) => ({ value: w, label: t(`common.enums.workSystem.${w}`) }))}
+                onChange={(v) => setFilter('workSystem', v)}
+                className="w-full sm:w-full @min-[1000px]:w-44"
+              />
+            </div>
           </div>
-        }
-      />
+          {error ? null : (
+            <p aria-live="polite" data-testid="employees-count" className="px-1 text-[0.8rem] text-muted-foreground">
+              {t('employees.list.count', { count: formatCount(total) })}
+            </p>
+          )}
+        </div>
+        {body}
+        {error ? null : (
+          <Pagination
+            page={query.page}
+            limit={query.limit}
+            total={total}
+            onPageChange={(page) => go({ ...query, page })}
+            disabled={pending}
+            className="border-t-0 px-0.5 py-1 sm:px-0.5"
+          />
+        )}
+      </section>
     </div>
   );
 }

@@ -42,9 +42,10 @@ test('Arabic on a phone: dashboard, employees and the payroll run fit the screen
 
   await page.goto('/ar/employees');
   await expect(page.getByRole('heading', { level: 1, name: t('ar', 'employees.title') })).toBeVisible();
-  // Phones get the card list, not the table.
-  await expect(page.locator('[data-view="cards"]').first()).toBeVisible();
-  await expect(page.locator('[data-view="table"]').first()).toBeHidden();
+  // Employees are profile cards at every width.
+  const employees = page.getByRole('region', { name: t('ar', 'employees.list.label') });
+  await expect(employees.getByRole('article').first()).toBeVisible();
+  await expect(employees.getByRole('table')).toHaveCount(0);
   await expectRtlPhoneLayout(page);
   await shoot(page, info, 'employees-list');
 

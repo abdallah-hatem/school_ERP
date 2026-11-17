@@ -1,12 +1,9 @@
 'use client';
 
-import { PAGINATION } from '@school-erp/shared';
-import { DataTable, type DataTableColumn } from '@/shared/components/data-table/data-table';
 import { Skeleton } from '@/shared/components/ui/skeleton';
 import { useTranslation } from '@/shared/providers/i18n-provider';
-
-const COLUMN_IDS = ['employee', 'department', 'stage', 'jobTitle', 'workSystem', 'basicSalary', 'status'];
-const columns: DataTableColumn<never>[] = COLUMN_IDS.map((id) => ({ id, header: '', cell: () => null }));
+import { EMPLOYEES_PAGE_SIZE } from '../lib/list-query';
+import { EmployeeCardGrid, EmployeeCardSkeleton } from './employee-card';
 
 function HeaderSkeleton({ actions = 1 }: { actions?: number }) {
   return (
@@ -24,21 +21,32 @@ function HeaderSkeleton({ actions = 1 }: { actions?: number }) {
   );
 }
 
-/** The list's first load: header, toolbar and a page of skeleton rows (same shape as the table). */
+/**
+ * The list's first load: header, toolbar and a full page of card skeletons in the same grid and
+ * card shape, so nothing moves when the cards land.
+ */
 export function EmployeesListSkeleton() {
   const { t } = useTranslation();
   return (
     <div className="flex flex-col gap-6">
       <HeaderSkeleton />
-      <DataTable
-        label={t('common.nav.employees')}
-        columns={columns}
-        rows={undefined}
-        getRowId={() => ''}
-        loading
-        toolbar={<Skeleton className="h-11 w-full rounded-lg" />}
-        pagination={{ page: 1, limit: PAGINATION.defaultLimit, total: 0, onPageChange: () => undefined }}
-      />
+      <section aria-label={t('common.nav.employees')} aria-busy="true" className="flex min-w-0 flex-col gap-4.5">
+        <span role="status" className="sr-only">
+          {t('ui.states.loading')}
+        </span>
+        <div className="flex flex-col gap-3 rounded-[1.25rem] bg-card p-3.5 shadow-card">
+          <Skeleton className="h-11 w-full rounded-lg" />
+          <Skeleton className="mx-1 h-5 w-24" />
+        </div>
+        <EmployeeCardGrid>
+          {Array.from({ length: EMPLOYEES_PAGE_SIZE }, (_, i) => (
+            <li key={i} className="min-w-0" data-testid="employee-card-skeleton">
+              <EmployeeCardSkeleton />
+            </li>
+          ))}
+        </EmployeeCardGrid>
+        <Skeleton className="h-9 w-full max-w-md" />
+      </section>
     </div>
   );
 }

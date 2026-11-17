@@ -15,7 +15,8 @@
     "emptyTitle": "No employees yet",
     "emptyBody": "Add the first employee to start building the staff list.",
     "noResultsTitle": "No employees match",
-    "noResultsBody": "Try another search, or clear the filters to see everyone."
+    "noResultsBody": "Try another search, or clear the filters to see everyone.",
+    "count": "{count} employees"
   },
   "columns": {
     "employee": "Employee",
@@ -118,5 +119,11 @@
     "deactivateBody": "Their record and history are kept. They won't be included in new payroll runs and can't get new penalties or lateness entries.",
     "reactivateTitle": "Reactivate {name}?",
     "reactivateBody": "They will be included in new payroll runs again and can get penalties and lateness entries."
+  },
+  "card": {
+    "view": "View",
+    "edit": "Edit",
+    "viewLabel": "View {name}",
+    "editLabel": "Edit {name}"
   }
 }

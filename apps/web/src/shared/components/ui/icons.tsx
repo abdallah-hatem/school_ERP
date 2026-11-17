@@ -5,6 +5,13 @@ import {
   ArrowCounterClockwiseIcon as ArrowCounterClockwise,
   ArrowsClockwiseIcon as ArrowsClockwise,
   BuildingsIcon as Buildings,
+  CalculatorIcon as Calculator,
+  ChalkboardTeacherIcon as ChalkboardTeacher,
+  ClockAfternoonIcon as ClockAfternoon,
+  PackageIcon as Package,
+  SignOutIcon as SignOut,
+  StudentIcon as Student,
+  UsersIcon as Users,
   CalendarBlankIcon as CalendarBlank,
   CalendarPlusIcon as CalendarPlus,
   CoinsIcon as Coins,
@@ -71,6 +78,20 @@ export const PenaltiesIcon = duotone(Gavel, 'Penalties');
 export const LatenessIcon = duotone(Clock, 'Lateness');
 export const PayrollIcon = duotone(Wallet, 'Payroll');
 export const SettingsIcon = duotone(SlidersHorizontal, 'Settings');
+/** One person list inside the HR module (the module itself is `HrModuleIcon`). */
+export const StaffIcon = duotone(Users, 'Staff');
+export const SignOutIcon = duotone(SignOut, 'SignOut');
+
+// Modules (sidebar groups)
+export const HrModuleIcon = duotone(UsersThree, 'HrModule');
+export const AccountingModuleIcon = duotone(Calculator, 'AccountingModule');
+export const InventoryModuleIcon = duotone(Package, 'InventoryModule');
+export const StudentsModuleIcon = duotone(Student, 'StudentsModule');
+
+// Employee facts
+export const DepartmentIcon = duotone(Buildings, 'Department');
+export const StageIcon = duotone(ChalkboardTeacher, 'Stage');
+export const WorkSystemIcon = duotone(ClockAfternoon, 'WorkSystem');
 
 // Chrome
 export const MenuIcon = duotone(List, 'Menu');

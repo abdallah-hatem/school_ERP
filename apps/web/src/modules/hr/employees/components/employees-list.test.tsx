@@ -96,12 +96,28 @@ describe('EmployeesList', () => {
     expect(push).toHaveBeenCalledWith('/en/employees?status=ACTIVE&page=2', { scroll: false });
   });
 
-  it('in Arabic shows Arabic names and links each row to its profile', () => {
+  it('in Arabic each card shows the Arabic name and links to the profile and its edit page', () => {
     renderList({}, people, 'ar');
-    const table = screen.getByRole('table', { name: 'الموظفون' });
-    const link = within(table).getByRole('link', { name: 'منى خليل' });
-    expect(link.getAttribute('href')).toBe('/ar/employees/e-1');
-    expect(within(table).getByText('غير نشط')).toBeTruthy();
+    const region = screen.getByRole('region', { name: 'الموظفون' });
+    const card = within(region).getByRole('article', { name: 'منى خليل' });
+    expect(within(card).getByRole('link', { name: 'منى خليل' }).getAttribute('href')).toBe('/ar/employees/e-1');
+    expect(within(card).getByRole('link', { name: 'عرض منى خليل' }).getAttribute('href')).toBe('/ar/employees/e-1');
+    expect(within(card).getByRole('link', { name: 'تعديل منى خليل' }).getAttribute('href')).toBe('/ar/employees/e-1/edit');
+    expect(within(region).getByRole('article', { name: 'عمر فتحي' }).textContent).toContain('غير نشط');
+  });
+
+  it('12 per page: the URL limit is ignored, pages are counted in twelves and never sent as limit', async () => {
+    const user = userEvent.setup();
+    const query = parseEmployeesQuery({ limit: '50', page: '1' });
+    expect(query.limit).toBe(12);
+    renderEmployees(
+      <EmployeesList basePath="/en/employees" query={query} rows={people} total={30} departments={departments} stages={stages} />,
+    );
+    expect(screen.getByText('Showing 1–12 of 30')).toBeTruthy();
+    expect(screen.getByText('30 employees')).toBeTruthy();
+    expect(screen.queryByText('Rows per page')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Page 3' }));
+    expect(push).toHaveBeenCalledWith('/en/employees?page=3', { scroll: false });
   });
 
   it('a failed load shows the error state with a retry', async () => {

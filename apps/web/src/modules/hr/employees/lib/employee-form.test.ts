@@ -88,10 +88,10 @@ describe('employee form rules (§3)', () => {
 });
 
 describe('list query in the URL', () => {
-  it('drops unknown values and caps the page size at the API maximum', () => {
+  it('drops unknown values; the page size is always 12 (the card grid)', () => {
     expect(parseEmployeesQuery({ page: '-2', limit: '500', status: 'GONE', workSystem: 'PART_TIME_3', search: ' mona ' })).toEqual({
       page: 1,
-      limit: 100,
+      limit: 12,
       search: 'mona',
       departmentId: undefined,
       stageId: undefined,
