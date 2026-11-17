@@ -1,0 +1,9 @@
+{
+  "//": "dependency-cruiser resolves tsconfig globs and aliases from the repo root; this wraps the api tsconfig so its @/ alias resolves. Used by `pnpm deps:check` only.",
+  "extends": "./apps/api/tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "./apps/api",
+    "paths": { "@/*": ["./src/*"] }
+  },
+  "include": ["apps/api/src/**/*.ts"]
+}

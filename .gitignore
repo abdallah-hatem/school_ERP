@@ -19,6 +19,18 @@ deploy/schools/*.env
 *.pem
 *.key
 
+# local client data and uploads
+**/seed-data.local/
+uploads/
+
+# agent worktrees
+.claude/worktrees/
+
+# generated
+deps-graph.*
+*.tsbuildinfo
+next-env.d.ts
+
 # logs and OS
 *.log
 .DS_Store

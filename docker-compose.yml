@@ -1,0 +1,24 @@
+# Local infrastructure for school-erp.
+# Host Postgres port 5442 (offset from 5432 so it runs beside other projects' databases).
+# Local-only development values; nothing here is used outside a developer machine.
+services:
+  db:
+    image: postgres:16
+    container_name: school-erp-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: school_erp
+    ports:
+      - '5442:5432'
+    volumes:
+      - school-erp-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  school-erp-pgdata:
+    name: school-erp-pgdata

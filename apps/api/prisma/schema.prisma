@@ -1,0 +1,467 @@
+// School ERP — one schema file, grouped by owning module (docs/ARCHITECTURE.md → Table ownership).
+// Only the owning module writes its tables; any module may read them.
+//
+// Conventions: UUID ids · camelCase fields mapped to snake_case columns · money is Int piastres
+// (EGP × 100) · day counts are Decimal(5,2) in 0.25 steps · every foreign key and filtered
+// column is indexed · dates without time are @db.Date · months are 'YYYY-MM'.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── core ──────────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  HR_ADMIN
+}
+
+enum SettingScope {
+  SCHOOL
+  HR
+}
+
+/// A person who signs in. Not the same as an employee (an employee may optionally link to one).
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String
+  role         UserRole @default(HR_ADMIN)
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  refreshTokens        RefreshToken[]
+  employee             Employee?
+  settingChanges       SettingChange[]
+  settingsUpdated      SchoolSetting[]
+  penaltiesCreated     PenaltyRecord[]     @relation("PenaltyCreatedBy")
+  penaltiesApproved    PenaltyRecord[]     @relation("PenaltyApprovedBy")
+  penaltiesCancelled   PenaltyRecord[]     @relation("PenaltyCancelledBy")
+  latenessUpdated      LatenessEntry[]
+  payrollRunsCreated   PayrollRun[]        @relation("PayrollRunCreatedBy")
+  payrollRunsApproved  PayrollRun[]        @relation("PayrollRunApprovedBy")
+  adjustmentsCreated   PayrollAdjustment[]
+
+  @@index([isActive])
+  @@map("users")
+}
+
+/// Refresh tokens, stored hashed. Rotation keeps a family; reuse after the grace window revokes it.
+model RefreshToken {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @map("user_id") @db.Uuid
+  familyId     String    @map("family_id") @db.Uuid
+  tokenHash    String    @unique @map("token_hash")
+  expiresAt    DateTime  @map("expires_at")
+  usedAt       DateTime? @map("used_at")
+  revokedAt    DateTime? @map("revoked_at")
+  replacedById String?   @map("replaced_by_id") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([familyId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+/// Named monotonic counters (e.g. 'employee_code'). Incremented atomically; values never reused.
+model Counter {
+  name      String   @id
+  value     Int      @default(0)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("counters")
+}
+
+/// One row per setting key (see `SchoolSettingKey` / `HrSettingKey` in @school-erp/shared).
+/// A missing row means the default from `SETTING_DEFAULTS`.
+model SchoolSetting {
+  key         String   @id
+  value       Json
+  updatedById String?  @map("updated_by_id") @db.Uuid
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  updatedBy User? @relation(fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([updatedById])
+  @@map("school_settings")
+}
+
+/// Change history for settings and catalogue edits (§7). One row per changed key.
+model SettingChange {
+  id          String       @id @default(uuid()) @db.Uuid
+  key         String
+  scope       SettingScope
+  oldValue    Json?        @map("old_value")
+  newValue    Json?        @map("new_value")
+  changedById String?      @map("changed_by_id") @db.Uuid
+  changedAt   DateTime     @default(now()) @map("changed_at")
+
+  changedBy User? @relation(fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@index([key])
+  @@index([scope])
+  @@index([changedById])
+  @@index([changedAt])
+  @@map("setting_changes")
+}
+
+/// School structure (core/school-structure): Kindergarten, Primary, Preparatory, None…
+model Stage {
+  id        String   @id @default(uuid()) @db.Uuid
+  nameEn    String   @map("name_en")
+  nameAr    String   @map("name_ar")
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  employees Employee[]
+
+  @@index([isActive])
+  @@index([sortOrder])
+  @@map("stages")
+}
+
+// ── hr ────────────────────────────────────────────────────────────────────────
+
+enum WorkSystem {
+  FULL_TIME
+  PART_TIME_4
+  PART_TIME_3
+  PART_TIME_2
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum PenaltyAction {
+  NOTICE
+  WARNING
+  DEDUCT_DAYS
+  INVESTIGATION
+  RAISE_HALF_LOSS
+  RAISE_LOSS
+  RAISE_DEFER_3M
+  PAY_CUT
+  DEMOTION
+  DISMISSAL
+}
+
+enum PenaltyStatus {
+  PENDING
+  APPROVED
+  CANCELLED
+}
+
+enum PayrollStatus {
+  DRAFT
+  APPROVED
+}
+
+enum AdjustmentType {
+  ADDITION
+  DEDUCTION
+}
+
+model Department {
+  id        String   @id @default(uuid()) @db.Uuid
+  nameEn    String   @map("name_en")
+  nameAr    String   @map("name_ar")
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  employees Employee[]
+
+  @@index([isActive])
+  @@index([sortOrder])
+  @@map("departments")
+}
+
+model JobTitle {
+  id        String   @id @default(uuid()) @db.Uuid
+  nameEn    String   @map("name_en")
+  nameAr    String   @map("name_ar")
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  employees Employee[]
+
+  @@index([isActive])
+  @@index([sortOrder])
+  @@map("job_titles")
+}
+
+/// §3. Never deleted — deactivated. `code` comes from the 'employee_code' Counter (EMP-0001…).
+model Employee {
+  id            String         @id @default(uuid()) @db.Uuid
+  code          String         @unique
+  nameEn        String         @map("name_en")
+  nameAr        String         @map("name_ar")
+  nationalId    String?        @unique @map("national_id")
+  gender        Gender
+  dateOfBirth   DateTime       @map("date_of_birth") @db.Date
+  phone         String
+  email         String?
+  address       String?
+  hireDate      DateTime       @map("hire_date") @db.Date
+  stageId       String         @map("stage_id") @db.Uuid
+  departmentId  String         @map("department_id") @db.Uuid
+  jobTitleId    String         @map("job_title_id") @db.Uuid
+  managerId     String?        @map("manager_id") @db.Uuid
+  grade         String?
+  workSystem    WorkSystem     @map("work_system")
+  /// Monthly, piastres.
+  basicSalary   Int            @map("basic_salary")
+  fingerprintId String?        @unique @map("fingerprint_id")
+  contractStart DateTime       @map("contract_start") @db.Date
+  contractEnd   DateTime       @map("contract_end") @db.Date
+  usesBus       Boolean        @default(false) @map("uses_bus")
+  status        EmployeeStatus @default(ACTIVE)
+  userId        String?        @unique @map("user_id") @db.Uuid
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  stage      Stage      @relation(fields: [stageId], references: [id], onDelete: Restrict)
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  jobTitle   JobTitle   @relation(fields: [jobTitleId], references: [id], onDelete: Restrict)
+  manager    Employee?  @relation("EmployeeManager", fields: [managerId], references: [id], onDelete: Restrict)
+  reports    Employee[] @relation("EmployeeManager")
+  user       User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  penalties    PenaltyRecord[]
+  lateness     LatenessEntry[]
+  payrollLines PayrollLine[]
+  adjustments  PayrollAdjustment[]
+
+  @@index([stageId])
+  @@index([departmentId])
+  @@index([jobTitleId])
+  @@index([managerId])
+  @@index([status])
+  @@index([workSystem])
+  @@map("employees")
+}
+
+/// A table of the penalty regulations (§4), e.g. general table A.
+model PenaltyGroup {
+  id        String   @id @default(uuid()) @db.Uuid
+  nameEn    String   @map("name_en")
+  nameAr    String   @map("name_ar")
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  violations Violation[]
+
+  @@index([isActive])
+  @@index([sortOrder])
+  @@map("penalty_groups")
+}
+
+/// A catalogue violation. Retired (`isActive: false`), never deleted.
+model Violation {
+  id        String   @id @default(uuid()) @db.Uuid
+  groupId   String   @map("group_id") @db.Uuid
+  nameEn    String   @map("name_en")
+  nameAr    String   @map("name_ar")
+  /// Free text kept for the reviewer, e.g. "doubles on repeat".
+  note      String?
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  group     PenaltyGroup     @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  levels    ViolationLevel[]
+  penalties PenaltyRecord[]
+
+  @@index([groupId])
+  @@index([isActive])
+  @@map("violations")
+}
+
+/// Level 1–5 of a violation: the action for the n-th occurrence.
+model ViolationLevel {
+  id          String        @id @default(uuid()) @db.Uuid
+  violationId String        @map("violation_id") @db.Uuid
+  level       Int
+  action      PenaltyAction
+  /// Required (> 0) for DEDUCT_DAYS, optional for INVESTIGATION, null otherwise.
+  days        Decimal?      @db.Decimal(5, 2)
+
+  violation Violation @relation(fields: [violationId], references: [id], onDelete: Cascade)
+
+  @@unique([violationId, level])
+  @@index([violationId])
+  @@map("violation_levels")
+}
+
+/// A recorded penalty. Level, action and days are computed at creation, shown from the catalogue
+/// while PENDING, and fixed at approval. Never deleted.
+model PenaltyRecord {
+  id            String        @id @default(uuid()) @db.Uuid
+  employeeId    String        @map("employee_id") @db.Uuid
+  violationId   String        @map("violation_id") @db.Uuid
+  /// The day the violation happened; its month is the payroll month it affects.
+  date          DateTime      @db.Date
+  status        PenaltyStatus @default(PENDING)
+  level         Int
+  action        PenaltyAction
+  days          Decimal?      @db.Decimal(5, 2)
+  note          String?
+  cancelReason  String?       @map("cancel_reason")
+  createdById   String?       @map("created_by_id") @db.Uuid
+  approvedById  String?       @map("approved_by_id") @db.Uuid
+  approvedAt    DateTime?     @map("approved_at")
+  cancelledById String?       @map("cancelled_by_id") @db.Uuid
+  cancelledAt   DateTime?     @map("cancelled_at")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  violation   Violation @relation(fields: [violationId], references: [id], onDelete: Restrict)
+  createdBy   User?     @relation("PenaltyCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  approvedBy  User?     @relation("PenaltyApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  cancelledBy User?     @relation("PenaltyCancelledBy", fields: [cancelledById], references: [id], onDelete: SetNull)
+
+  @@index([employeeId])
+  @@index([violationId])
+  @@index([date])
+  @@index([status])
+  @@index([createdById])
+  @@index([approvedById])
+  @@index([cancelledById])
+  /// Repeat-level count: approved records of one violation for one employee in a date window.
+  @@index([employeeId, violationId, status, date])
+  @@map("penalty_records")
+}
+
+/// Accumulated late / early-leave minutes for one employee in one month (§5).
+model LatenessEntry {
+  id          String   @id @default(uuid()) @db.Uuid
+  employeeId  String   @map("employee_id") @db.Uuid
+  /// 'YYYY-MM'
+  month       String   @db.Char(7)
+  minutes     Int
+  updatedById String?  @map("updated_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  employee  Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  updatedBy User?    @relation(fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([employeeId, month])
+  @@index([employeeId])
+  @@index([month])
+  @@index([updatedById])
+  @@map("lateness_entries")
+}
+
+/// One run per month (§6). DRAFT until approved; an approved run is never edited.
+model PayrollRun {
+  id           String        @id @default(uuid()) @db.Uuid
+  /// 'YYYY-MM'
+  month        String        @unique @db.Char(7)
+  status       PayrollStatus @default(DRAFT)
+  calculatedAt DateTime      @default(now()) @map("calculated_at")
+  createdById  String?       @map("created_by_id") @db.Uuid
+  approvedById String?       @map("approved_by_id") @db.Uuid
+  approvedAt   DateTime?     @map("approved_at")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  createdBy   User?               @relation("PayrollRunCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  approvedBy  User?               @relation("PayrollRunApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  lines       PayrollLine[]
+  adjustments PayrollAdjustment[]
+
+  @@index([status])
+  @@index([createdById])
+  @@index([approvedById])
+  @@map("payroll_runs")
+}
+
+/// One employee's line in a run. Every employee and department field is a SNAPSHOT taken at
+/// calculation — editing the employee later never changes it.
+model PayrollLine {
+  id                   String     @id @default(uuid()) @db.Uuid
+  runId                String     @map("run_id") @db.Uuid
+  employeeId           String     @map("employee_id") @db.Uuid
+  employeeCode         String     @map("employee_code")
+  nameEn               String     @map("name_en")
+  nameAr               String     @map("name_ar")
+  nationalId           String?    @map("national_id")
+  /// Snapshot of the employee's department id (plain column, not a relation).
+  departmentId         String     @map("department_id") @db.Uuid
+  departmentNameEn     String     @map("department_name_en")
+  departmentNameAr     String     @map("department_name_ar")
+  basicSalary          Int        @map("basic_salary")
+  workSystem           WorkSystem @map("work_system")
+  monthSalary          Int        @map("month_salary")
+  /// Rounded for display; deductions use monthSalary ÷ divisor unrounded.
+  dayValue             Int        @map("day_value")
+  penaltyDays          Decimal    @default(0) @map("penalty_days") @db.Decimal(5, 2)
+  penaltyAmount        Int        @default(0) @map("penalty_amount")
+  latenessMinutes      Int        @default(0) @map("lateness_minutes")
+  latenessDays         Decimal    @default(0) @map("lateness_days") @db.Decimal(5, 2)
+  latenessAmount       Int        @default(0) @map("lateness_amount")
+  adjustmentAdditions  Int        @default(0) @map("adjustment_additions")
+  adjustmentDeductions Int        @default(0) @map("adjustment_deductions")
+  net                  Int
+  /// `PayrollFlag` values: NET_FLOORED, PENDING_PENALTIES.
+  flags                String[]   @default([])
+  createdAt            DateTime   @default(now()) @map("created_at")
+  updatedAt            DateTime   @updatedAt @map("updated_at")
+
+  run      PayrollRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  employee Employee   @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+
+  @@unique([runId, employeeId])
+  @@index([runId])
+  @@index([employeeId])
+  @@index([departmentId])
+  @@map("payroll_lines")
+}
+
+/// A one-off addition or deduction on a draft run, with a required reason (§6).
+model PayrollAdjustment {
+  id          String         @id @default(uuid()) @db.Uuid
+  runId       String         @map("run_id") @db.Uuid
+  employeeId  String         @map("employee_id") @db.Uuid
+  type        AdjustmentType
+  /// Piastres, > 0.
+  amount      Int
+  reason      String
+  createdById String?        @map("created_by_id") @db.Uuid
+  createdAt   DateTime       @default(now()) @map("created_at")
+
+  run       PayrollRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  employee  Employee   @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  createdBy User?      @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([runId])
+  @@index([employeeId])
+  @@index([createdById])
+  @@map("payroll_adjustments")
+}
