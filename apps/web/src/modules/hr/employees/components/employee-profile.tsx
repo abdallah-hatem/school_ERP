@@ -21,6 +21,7 @@ import { EmployeeStatusAction } from './employee-status-action';
 export const PROFILE_TABS = [
   { key: 'details', labelKey: 'employees.profile.details', segment: '' },
   { key: 'penalties', labelKey: 'common.nav.penalties', segment: 'penalties' },
+  { key: 'payroll', labelKey: 'common.nav.payroll', segment: 'payroll' },
 ] as const satisfies readonly {
   key: string;
   labelKey: string;

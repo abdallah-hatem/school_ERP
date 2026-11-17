@@ -25,9 +25,9 @@ export function AppShell({ children, account }: { children: ReactNode; account?:
   const schoolName = locale === 'ar' ? branding.nameAr : branding.nameEn;
 
   return (
-    <div className="min-h-dvh md:grid md:grid-cols-[5.25rem_minmax(0,1fr)] xl:grid-cols-[16.5rem_minmax(0,1fr)]">
-      {/* Sidebar / icon rail */}
-      <aside className="sticky top-0 hidden h-dvh flex-col gap-7 border-e border-border bg-card px-3 py-6 md:flex xl:px-4.5">
+    <div className="min-h-dvh md:grid md:grid-cols-[5.25rem_minmax(0,1fr)] xl:grid-cols-[16.5rem_minmax(0,1fr)] print:block">
+      {/* Sidebar / icon rail (never printed: a printout is the page's content only) */}
+      <aside className="no-print sticky top-0 hidden h-dvh flex-col gap-7 border-e border-border bg-card px-3 py-6 md:flex xl:px-4.5">
         <SchoolBrand collapse="below-xl" className="max-xl:justify-center xl:px-1.5" />
         <div className="scrollbar-clean -mx-1 min-h-0 flex-1 overflow-y-auto px-1">
           <SidebarNav variant="responsive" />
@@ -37,7 +37,7 @@ export function AppShell({ children, account }: { children: ReactNode; account?:
 
       <div className="flex min-w-0 flex-col">
         {/* Phone top bar */}
-        <header className="sticky top-0 z-40 flex items-center gap-2.5 border-b border-border bg-background/90 px-4 py-2.5 backdrop-blur md:hidden">
+        <header className="no-print sticky top-0 z-40 flex items-center gap-2.5 border-b border-border bg-background/90 px-4 py-2.5 backdrop-blur md:hidden">
           <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
             <SheetTrigger asChild>
               <Button variant="secondary" size="icon" aria-label={t('ui.shell.openMenu')}>
@@ -64,7 +64,7 @@ export function AppShell({ children, account }: { children: ReactNode; account?:
         </header>
 
         {/* Tablet and desktop: language switch above the content */}
-        <div className="hidden items-center justify-end px-6 pt-5 md:flex xl:px-8">
+        <div className="no-print hidden items-center justify-end px-6 pt-5 md:flex xl:px-8">
           <LocaleSwitch />
         </div>
 

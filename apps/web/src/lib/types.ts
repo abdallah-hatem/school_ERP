@@ -31,3 +31,10 @@ export type ApiResult<T = unknown> =
       message: string;
       success?: undefined;
     };
+
+/** A file download fetched with `apiFetch(…, { responseType: 'file' })` (base64 crosses the action boundary). */
+export interface DownloadedFile {
+  fileName: string;
+  contentType: string;
+  base64: string;
+}
