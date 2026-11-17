@@ -1,5 +1,9 @@
 # Recent changes
 
+- 2026-11-18 — Same-day penalties (§4, owner): "earlier" is by violation date, then by when the
+  penalty was recorded, so repeats on one day climb levels (1, 2, 3…) instead of all being level 1.
+  The preview counts every approved penalty already on that date.
+
 - 2026-11-18 — Direct managers (§3, §7, owner): job titles get a **Manages people** switch in
   Settings; the Direct manager picker lists only active employees with such a title; an employee
   whose manager no longer qualifies keeps them (flagged "No longer in a managing role"); choosing a

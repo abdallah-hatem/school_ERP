@@ -35,13 +35,22 @@ export interface SeedPenalty {
 /**
  * Recorded in date order and approved through the penalties service, so repeats get their level
  * from the earlier approved ones (employee 14 reaches level 3, employee 16 level 2 plus a pending
- * third). Never hard-coded levels.
+ * third, employee 12 levels 1 and 2 on the same day). Never hard-coded levels.
  */
 export const PENALTIES: SeedPenalty[] = [
   { employee: 33, violation: 'chewing-gum', date: '2026-11-02', status: 'APPROVED' },
   { employee: 14, violation: 'unexcused-absence', date: '2026-11-03', status: 'APPROVED' },
   { employee: 16, violation: 'late-to-class', date: '2026-11-04', status: 'APPROVED' },
   { employee: 20, violation: 'phone-in-class', date: '2026-11-05', status: 'APPROVED' },
+  // Twice on the same day: recorded and approved in this order → levels 1 then 2 (§4).
+  { employee: 12, violation: 'chewing-gum', date: '2026-11-06', status: 'APPROVED' },
+  {
+    employee: 12,
+    violation: 'chewing-gum',
+    date: '2026-11-06',
+    status: 'APPROVED',
+    note: 'المرة الثانية في نفس اليوم',
+  },
   {
     employee: 30,
     violation: 'dress',

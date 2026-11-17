@@ -58,9 +58,48 @@ export interface RepeatKey {
   violationId: string;
 }
 
-export interface ApprovedDate extends RepeatKey {
+/**
+ * An APPROVED record as the repeat count looks at it (§4): its pair, status and place in the
+ * repeat order (violation date, then when recorded, then id). Same shape as the domain's
+ * `RecordedPenalty`.
+ */
+export interface ApprovedCandidate extends RepeatKey {
+  id: string;
   date: IsoDate;
+  recordedAt: Date;
+  status: PenaltyStatus;
 }
+
+const CANDIDATE_SELECT = {
+  id: true,
+  employeeId: true,
+  violationId: true,
+  date: true,
+  createdAt: true,
+  status: true,
+} as const;
+
+const toCandidate = (
+  r: Prisma.PenaltyRecordGetPayload<{ select: typeof CANDIDATE_SELECT }>,
+): ApprovedCandidate => ({
+  id: r.id,
+  employeeId: r.employeeId,
+  violationId: r.violationId,
+  date: toIsoDate(r.date),
+  recordedAt: r.createdAt,
+  status: r.status,
+});
+
+/** APPROVED records of the pairs dated `from <= date <= upTo` (same date included: §4). */
+const candidatesWhere = (
+  keys: readonly RepeatKey[],
+  upTo: IsoDate,
+  from?: IsoDate,
+): Prisma.PenaltyRecordWhereInput => ({
+  status: PenaltyStatus.APPROVED,
+  date: { ...(from ? { gte: fromIsoDate(from) } : {}), lte: fromIsoDate(upTo) },
+  OR: keys.map((k) => ({ employeeId: k.employeeId, violationId: k.violationId })),
+});
 
 /**
  * Recorded penalties (§4). Never deleted. Status changes are conditional updates
@@ -121,58 +160,45 @@ export class PenaltyRecordsRepository extends BaseRepository<
     });
   }
 
-  /** Dates of APPROVED records for one pair with `from <= date < before`. */
-  async approvedDates(key: RepeatKey, from: IsoDate, before: IsoDate): Promise<IsoDate[]> {
-    const rows = await this.db.penaltyRecord.findMany({
-      where: {
-        employeeId: key.employeeId,
-        violationId: key.violationId,
-        status: PenaltyStatus.APPROVED,
-        date: { gte: fromIsoDate(from), lt: fromIsoDate(before) },
-      },
-      select: { date: true },
-    });
-    return rows.map((r) => toIsoDate(r.date));
-  }
-
-  /** APPROVED records for several pairs dated before `before` (one query for a page of rows). */
-  async approvedDatesForKeys(keys: readonly RepeatKey[], before: IsoDate): Promise<ApprovedDate[]> {
+  /**
+   * APPROVED records of the pairs dated up to `upTo` (and from `from`, when given), same date
+   * included: which of them come earlier is the domain's call (`countPriorInWindow`, §4). One
+   * query for a whole page of rows.
+   */
+  async approvedCandidates(
+    keys: readonly RepeatKey[],
+    upTo: IsoDate,
+    from?: IsoDate,
+  ): Promise<ApprovedCandidate[]> {
     if (keys.length === 0) return [];
     const rows = await this.db.penaltyRecord.findMany({
-      where: {
-        status: PenaltyStatus.APPROVED,
-        date: { lt: fromIsoDate(before) },
-        OR: keys.map((k) => ({ employeeId: k.employeeId, violationId: k.violationId })),
-      },
-      select: { employeeId: true, violationId: true, date: true },
+      where: candidatesWhere(keys, upTo, from),
+      select: CANDIDATE_SELECT,
     });
-    return rows.map((r) => ({ ...r, date: toIsoDate(r.date) }));
+    return rows.map(toCandidate);
   }
 
   /**
-   * Approves a PENDING record, fixing the level `resolve` computes from the prior approved count.
+   * Approves a PENDING record, fixing the level `resolve` computes from the pair's APPROVED
+   * records in `window` (same date included; `resolve` decides which come earlier, §4).
    * Approvals of the same employee + violation are serialised with a transaction-level advisory
-   * lock, so two approvals can't both read the same count. Returns false when the record was no
+   * lock, so two approvals can't both read the same records. Returns false when the record was no
    * longer PENDING.
    */
   async approve(
     id: string,
     key: RepeatKey,
-    window: { from: IsoDate; before: IsoDate },
+    window: { from: IsoDate; upTo: IsoDate },
     approvedById: string | null,
-    resolve: (priorCount: number) => LevelData,
+    resolve: (approved: ApprovedCandidate[]) => LevelData,
   ): Promise<boolean> {
     return this.db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`penalty:${key.employeeId}:${key.violationId}`}))`;
-      const priorCount = await tx.penaltyRecord.count({
-        where: {
-          employeeId: key.employeeId,
-          violationId: key.violationId,
-          status: PenaltyStatus.APPROVED,
-          date: { gte: fromIsoDate(window.from), lt: fromIsoDate(window.before) },
-        },
+      const approved = await tx.penaltyRecord.findMany({
+        where: candidatesWhere([key], window.upTo, window.from),
+        select: CANDIDATE_SELECT,
       });
-      const fixed = resolve(priorCount);
+      const fixed = resolve(approved.map(toCandidate));
       const { count } = await tx.penaltyRecord.updateMany({
         where: { id, status: PenaltyStatus.PENDING },
         data: {
