@@ -6,6 +6,7 @@ import { useController, type Control, type FieldPath, type FieldValues } from 'r
 import { Calendar } from '@/shared/components/ui/calendar';
 import { Combobox } from '@/shared/components/ui/combobox';
 import { CalendarIcon } from '@/shared/components/ui/icons';
+import { GroupedNumberInput } from '@/shared/components/ui/grouped-number-input';
 import { Input, controlClasses } from '@/shared/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover';
 import {
@@ -204,8 +205,9 @@ export function TextareaField<T extends FieldValues>({
 const groupFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 4 });
 
 /**
- * Shared engine for number-like fields: raw while focused, formatted on blur (so the caret never
- * jumps), and keystrokes that could never become valid are rejected rather than trimmed.
+ * Shared engine for number-like fields: grouped live while typing (`30000` → `30,000`, caret kept
+ * by digit count, see `GroupedNumberInput`), completed by `format` on blur (`30,000.00` for money).
+ * The form always holds the typed value (a number or integer piastres), never the text.
  */
 function FormattedNumberInput({
   value,
@@ -213,37 +215,33 @@ function FormattedNumberInput({
   onBlur,
   format,
   parse,
-  partial,
-  inputMode,
+  decimals,
+  allowNegative,
   ...props
-}: Omit<ComponentProps<typeof Input>, 'value' | 'onChange' | 'onBlur' | 'type'> & {
+}: Omit<ComponentProps<typeof Input>, 'value' | 'onChange' | 'onBlur' | 'type' | 'inputMode'> & {
   value: number | null | undefined;
   onChange: (value: number | null) => void;
   onBlur: () => void;
   format: (value: number) => string;
   parse: (text: string) => number | null;
-  partial: RegExp;
-  inputMode: 'numeric' | 'decimal';
+  decimals: number;
+  allowNegative: boolean;
 }) {
-  // While focused the person edits a raw draft; otherwise the field shows the formatted value,
-  // derived from the form so a reset or new default shows up without syncing state.
+  // While the person edits, the field shows their draft (which may end in "." or "-"); otherwise
+  // the formatted value, derived from the form so a reset or new default shows up without syncing.
   const [draft, setDraft] = useState<string | null>(null);
   const display = value == null || Number.isNaN(value) ? '' : format(value);
 
   return (
-    <Input
+    <GroupedNumberInput
       {...props}
-      type="text"
-      inputMode={inputMode}
-      dir="ltr"
-      className={cn('tabular text-start rtl:text-end', props.className)}
+      decimals={decimals}
+      allowNegative={allowNegative}
       value={draft ?? display}
-      onFocus={() => setDraft(display.replace(/,/g, ''))}
-      onChange={(e) => {
-        const next = e.target.value.replace(/,/g, '');
-        if (!partial.test(next)) return;
-        setDraft(next);
-        onChange(next === '' ? null : parse(next));
+      onValueChange={(text) => {
+        setDraft(text);
+        const raw = text.replace(/,/g, '');
+        onChange(raw === '' || raw === '-' ? null : parse(raw));
       }}
       onBlur={() => {
         setDraft(null);
@@ -274,8 +272,6 @@ export function NumberField<T extends FieldValues>({
 }) {
   const id = useFieldId(name);
   const { field, fieldState } = useController({ control, name });
-  const sign = allowNegative ? '-?' : '';
-  const partial = new RegExp(decimals > 0 ? `^${sign}\\d*(\\.\\d{0,${decimals}})?$` : `^${sign}\\d*$`);
   return (
     <FieldShell id={id} label={label} required={required} hint={hint} error={fieldState.error?.message} className={className}>
       {(a11y) => (
@@ -287,9 +283,9 @@ export function NumberField<T extends FieldValues>({
             required={required}
             disabled={disabled}
             placeholder={placeholder}
-            inputMode={decimals > 0 ? 'decimal' : 'numeric'}
-            partial={partial}
-            parse={(text) => (text === '-' || text === '.' ? null : Number(text))}
+            decimals={decimals}
+            allowNegative={allowNegative}
+            parse={(text) => Number(text)}
             format={(v) => groupFormatter.format(v)}
             value={field.value as number | null | undefined}
             onChange={field.onChange}
@@ -322,7 +318,6 @@ export function MoneyField<T extends FieldValues>({
   const { t } = useTranslation();
   const id = useFieldId(name);
   const { field, fieldState } = useController({ control, name });
-  const partial = allowNegative ? /^-?\d*(\.\d{0,2})?$/ : /^\d*(\.\d{0,2})?$/;
   return (
     <FieldShell id={id} label={label} required={required} hint={hint} error={fieldState.error?.message} className={className}>
       {(a11y) => (
@@ -338,8 +333,8 @@ export function MoneyField<T extends FieldValues>({
             required={required}
             disabled={disabled}
             placeholder={placeholder}
-            inputMode="decimal"
-            partial={partial}
+            decimals={2}
+            allowNegative={allowNegative}
             parse={(text) => parseMoney(text)}
             format={(v: Piastres) => formatMoney(v)}
             value={field.value as Piastres | null | undefined}

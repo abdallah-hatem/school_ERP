@@ -111,11 +111,11 @@ describe('LatenessBoard', () => {
     }
   });
 
-  it('invalid minutes (negative, decimal, over 6,000) are highlighted and block Save all', async () => {
+  it('minutes over 6,000 are highlighted and block Save all', async () => {
     const user = userEvent.setup();
     renderBoard();
     const input = minutesInput('Karim Fawzy');
-    for (const bad of ['-5', '1.5', '6001', '12a']) {
+    for (const bad of ['6001', '12000']) {
       await user.clear(input);
       await user.type(input, bad);
       expect(input.getAttribute('aria-invalid')).toBe('true');
@@ -130,12 +130,27 @@ describe('LatenessBoard', () => {
     expect((saveButton() as HTMLButtonElement | HTMLInputElement).disabled).toBe(false);
   });
 
+  it('minutes group live while typing; a minus, a dot and letters are ignored, so only whole minutes reach the grid', async () => {
+    const user = userEvent.setup();
+    renderBoard();
+    const input = minutesInput('Karim Fawzy') as HTMLInputElement;
+    await user.clear(input);
+    await user.type(input, '1500');
+    expect(input.value).toBe('1,500');
+    // 1,500 minutes = 25 hours: the live days preview reads the grouped text.
+    expect(daysOf('e2')).toBe(formatDayCount(latenessDays(1500, DEFAULT_RULE), 'en'));
+    await user.clear(input);
+    await user.type(input, '-1.5a');
+    expect(input.value).toBe('15');
+    expect(input.getAttribute('aria-invalid')).toBeNull();
+  });
+
   it('an invalid-minutes error stays beside the input: the field names it, and its icon opens the message', async () => {
     const user = userEvent.setup();
     renderBoard();
     const input = minutesInput('Karim Fawzy');
     await user.clear(input);
-    await user.type(input, '12a');
+    await user.type(input, '6001');
     const describedBy = document.getElementById(input.getAttribute('aria-describedby') ?? '');
     expect(describedBy?.textContent).toBe('Whole minutes from 0 to 6,000.');
     // No message block under the input (the row keeps its height); the icon opens it instead.
@@ -232,7 +247,7 @@ describe('LatenessBoard', () => {
     await user.type(minutesInput('Karim Fawzy'), '7');
     await user.click(saveButton());
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Inactive'));
-    expect((minutesInput('Karim Fawzy') as HTMLInputElement).value).toBe('07');
+    expect((minutesInput('Karim Fawzy') as HTMLInputElement).value).toBe('7');
     expect((minutesInput('Karim Fawzy') as HTMLButtonElement | HTMLInputElement).disabled).toBe(false);
     expect(screen.queryByRole('alert')).toBeNull();
   });

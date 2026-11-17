@@ -12,8 +12,8 @@ import { PageHeader } from '@/shared/components/layout/page-header';
 import { Button } from '@/shared/components/ui/button';
 import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { Days } from '@/shared/components/ui/figures';
+import { GroupedNumberInput } from '@/shared/components/ui/grouped-number-input';
 import { BlockedIcon, ErrorIcon, LatenessIcon, RetryIcon, SearchIcon } from '@/shared/components/ui/icons';
-import { Input } from '@/shared/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover';
 import { Skeleton, SkeletonText } from '@/shared/components/ui/skeleton';
 import { StatusPill } from '@/shared/components/ui/status-pill';
@@ -336,20 +336,16 @@ function MinutesInput({
   // the height of the others and the Days column stays in line.
   return (
     <div className="flex items-center gap-2">
-      <Input
-        type="text"
-        inputMode="numeric"
-        autoComplete="off"
+      <GroupedNumberInput
         aria-label={t('lateness.minutesLabel', { name: nameIn(row.employee, locale) })}
         aria-invalid={view.invalid || undefined}
         aria-describedby={view.invalid ? errorId : undefined}
         placeholder={t('lateness.minutesPlaceholder')}
-        value={draft ?? String(row.minutes)}
+        value={draft ?? formatCount(row.minutes)}
         readOnly={readOnly}
         disabled={readOnly}
-        onChange={(e) => onChange(e.target.value)}
-        className="tabular h-10 w-28 text-end"
-        dir="ltr"
+        onValueChange={onChange}
+        className="h-10 w-28 text-end rtl:text-end"
       />
       {view.invalid ? (
         <>
