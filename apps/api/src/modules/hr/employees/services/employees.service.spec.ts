@@ -101,6 +101,24 @@ describe('EmployeesService', () => {
     expect(repository.createWithCode).not.toHaveBeenCalled();
   });
 
+  it('assertActive: unknown id → 400 FOREIGN_KEY_VIOLATION (before inactive); inactive → 409 EMPLOYEE_INACTIVE', async () => {
+    const findStates = jest.fn().mockResolvedValue([
+      { id: 'a', status: 'ACTIVE' },
+      { id: 'i', status: 'INACTIVE' },
+    ]);
+    const { service } = makeService({ findStates });
+    await expect(service.assertActive(['a', 'a'])).resolves.toBeUndefined();
+    expect(findStates).toHaveBeenLastCalledWith(['a']);
+    await expect(service.assertActive(['a', 'i', 'x'])).rejects.toMatchObject({
+      status: 400,
+      code: ErrorCode.FOREIGN_KEY_VIOLATION,
+    });
+    await expect(service.assertActive(['a', 'i'])).rejects.toMatchObject({
+      status: 409,
+      code: ErrorCode.EMPLOYEE_INACTIVE,
+    });
+  });
+
   it('manager = self → INVALID_MANAGER', async () => {
     const { service } = makeService();
     await expect(service.update('e1', { managerId: 'e1' })).rejects.toMatchObject({
