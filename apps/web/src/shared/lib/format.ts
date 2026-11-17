@@ -56,6 +56,11 @@ export function formatDateTime(value: IsoDateTime, locale: Locale): string {
   }).format(new Date(value));
 }
 
+/** Today as `YYYY-MM-DD` in the person's calendar — the `max` of a date that can't be in the future. */
+export function todayIso(): IsoDate {
+  return toIsoDate(new Date());
+}
+
 /** `YYYY-MM-DD` → a local Date at midnight, for a picker's `selected`. */
 export function fromIsoDate(date: IsoDate): Date {
   const [y = 0, m = 1, d = 1] = date.split('-').map(Number);

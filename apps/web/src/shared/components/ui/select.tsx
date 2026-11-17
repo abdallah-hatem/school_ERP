@@ -10,6 +10,17 @@ export const Select = SelectPrimitive.Root;
 export const SelectGroup = SelectPrimitive.Group;
 export const SelectValue = SelectPrimitive.Value;
 
+/** Heading of a `SelectGroup` (e.g. a catalogue group above its violations). Not selectable. */
+export function SelectLabel({ className, ...props }: ComponentProps<typeof SelectPrimitive.Label>) {
+  return (
+    <SelectPrimitive.Label
+      data-slot="select-label"
+      className={cn('px-3 pt-3 pb-1.5 text-xs font-bold text-muted-foreground first:pt-1.5', className)}
+      {...props}
+    />
+  );
+}
+
 export function SelectTrigger({
   className,
   children,
