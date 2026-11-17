@@ -121,6 +121,9 @@ phase live in `docs/build-log/`.
 - 2026-11-17 — Mockups shared in `design/mockups/` (client name replaced by a placeholder); audit,
   logo and mockup screenshots stay local. `/design/` and `docs/DESIGN.md` are lead-owned; branch
   protection on dev, testing and production requires code-owner review → #41.
+- 2026-11-17 — Local CI: `pnpm ci:local` on every push (pre-push hook), CI runs the same script → #43.
+- 2026-11-17 — Audit log: spec approved, layout option B (timeline) picked; business §9 added; plan
+  `docs/plans/2026-11-17-audit-log-plan.md` (T27–T31). T27 started.
 
 ## Next up
 

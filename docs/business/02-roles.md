@@ -8,3 +8,4 @@
 - **Planned** — Roles and permissions from the client's approval chain: direct manager, stage head,
   administrative director, HR, accounts, legal affairs, medical clinic, security desk, and employees
   (self-service requests). Who approves a penalty is **OPEN** in the client's documents.
+- **Planned** — A permission to view the activity log (§9).

@@ -1,0 +1,829 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audit Log Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Tajawal:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/duotone/style.css">
+<style>
+/* Tokens copied from apps/web/src/app/globals.css (direction "Campus"). Light theme only. */
+:root{
+  --radius:14px;
+  --background:#f2f8f6; --foreground:#11302b; --card:#ffffff;
+  --muted:#f5faf8; --muted-foreground:#587069; --secondary:#eaf4f1;
+  --primary:#0b7a68; --primary-foreground:#ffffff; --primary-soft:#d5efe8; --primary-hover:#096656;
+  --accent:#ffc43d; --accent-foreground:#4a3400; --accent-soft:#fff1c9;
+  --success:#1f9a62; --success-soft:#ddf4e7; --success-ink:#126b42;
+  --warning:#d9771c; --warning-soft:#ffe8d2; --warning-ink:#8f4608;
+  --destructive:#d9473a; --destructive-soft:#fde3df; --destructive-ink:#a82d22;
+  --info:#2f6fb3; --info-soft:#e0eefb; --info-ink:#24578e;
+  --border:#dce9e5; --input:#cfe0db;
+  --overlay:rgb(9 40 35 / .42);
+  --shadow-card:0 1px 2px rgb(11 72 62 / .06),0 10px 30px -12px rgb(11 72 62 / .18);
+  --shadow-raised:0 2px 4px rgb(11 72 62 / .05),0 30px 60px -24px rgb(11 72 62 / .28);
+  --shadow-primary:0 8px 20px -8px rgb(11 122 104 / .7);
+  --ease-snappy:cubic-bezier(.22,1,.36,1);
+  --bar:#0f2f2a; --bar-ink:#e7f4f0;
+  --font-latin:"Plus Jakarta Sans",system-ui,sans-serif;
+  --font-ar:"IBM Plex Sans Arabic","Plus Jakarta Sans",system-ui,sans-serif;
+  --font-ar-display:"Tajawal","IBM Plex Sans Arabic",system-ui,sans-serif;
+  --font:var(--font-latin); --font-display:var(--font-latin);
+  color-scheme:light;
+}
+:root[lang="ar"]{--font:var(--font-ar);--font-display:var(--font-ar-display)}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:#e4efec;color:var(--foreground);font-family:var(--font);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid color-mix(in srgb,var(--primary) 55%,transparent);outline-offset:2px}
+.num{font-family:var(--font-latin);font-variant-numeric:tabular-nums lining-nums}
+[dir="rtl"] .flip{transform:scaleX(-1)}
+.ph-duotone.flip,.ph-duotone.car{display:inline-block}
+.ph-duotone{line-height:1}
+bdi{unicode-bidi:isolate}
+
+/* ---------- mockup bar ---------- */
+.mockbar{background:var(--bar);color:var(--bar-ink);display:flex;align-items:center;gap:16px;padding:10px 24px;position:sticky;top:0;z-index:50;flex-wrap:wrap;font-size:13px}
+.mockbar strong{font-size:14px}
+.mockbar .hint{opacity:.7}
+.mockbar .sp{flex:1}
+.seg{display:inline-flex;background:rgb(255 255 255 / .08);border-radius:999px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;color:inherit;padding:5px 14px;border-radius:999px;font-weight:700;font-size:13px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#3a2900}
+.seg .ar{font-family:var(--font-ar-display);font-size:15px}
+.optnote{padding:18px 24px 0;max-width:1488px;margin-inline:auto;color:var(--muted-foreground);font-size:13.5px}
+.optnote b{color:var(--foreground)}
+.section-title{max-width:1488px;margin:28px auto 10px;padding-inline:24px;font-family:var(--font-display);font-weight:800;font-size:16px}
+body.only-desktop #phoneSec, body.only-phone #deskSec{display:none}
+
+/* ---------- frames ---------- */
+.desk-scroll{overflow-x:auto;padding:6px 24px 8px}
+.desk{width:1440px;margin-inline:auto;position:relative;background:var(--background);border-radius:22px;box-shadow:var(--shadow-raised);overflow:hidden;border:1px solid var(--border);display:flex;min-height:1000px;container:page / inline-size}
+.phones{display:flex;gap:32px;justify-content:center;flex-wrap:wrap;padding:6px 24px 60px;align-items:flex-start}
+.phone-wrap{display:flex;flex-direction:column;gap:8px;align-items:center}
+.phone-cap{font-size:12.5px;color:var(--muted-foreground);font-weight:600}
+.phone{width:390px;height:844px;background:var(--background);border-radius:44px;border:10px solid #1b2e2a;box-shadow:var(--shadow-raised);overflow:hidden;position:relative;container:page / inline-size;display:flex;flex-direction:column}
+.phone .scroll{overflow-y:auto;flex:1;scrollbar-width:none}
+body.full .phone:not(.fixed){height:auto;min-height:844px}
+body.full .phone:not(.fixed) .scroll{overflow:visible}
+
+/* ---------- sidebar (app shell, option B module groups) ---------- */
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:38px;height:38px;flex:none;border-radius:12px;background:var(--primary);color:#fff;display:grid;place-items:center;font-size:22px;position:relative}
+.logo::after{content:"";position:absolute;width:9px;height:9px;border-radius:50%;background:var(--accent);inset-block-start:-2px;inset-inline-end:-2px;box-shadow:0 0 0 2px var(--card)}
+.brand-name{font-family:var(--font-display);font-weight:800;font-size:14.5px;line-height:1.25}
+.brand-sub{font-size:11.5px;color:var(--muted-foreground)}
+.soon{font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--secondary);color:var(--muted-foreground);margin-inline-start:auto;white-space:nowrap}
+.user{display:flex;align-items:center;gap:10px;padding:10px;border-radius:16px;background:var(--muted);border:1px solid var(--border)}
+.user .av{width:36px;height:36px;border-radius:12px;font-size:13px}
+.user .n{font-weight:700;font-size:13px;line-height:1.2}
+.user .r{font-size:11.5px;color:var(--muted-foreground)}
+.user > .ph-duotone{margin-inline-start:auto;color:var(--muted-foreground);font-size:18px}
+.navlink{display:flex;align-items:center;gap:11px;min-height:40px;padding:8px 12px;border-radius:12px;color:var(--muted-foreground);text-decoration:none;font-weight:600;font-size:14px}
+.navlink .ph-duotone{font-size:20px}
+.navlink[aria-current="page"]{background:var(--primary-soft);color:var(--primary)}
+.navlink[aria-current="page"]::after{content:"";margin-inline-start:auto;width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 30%,transparent)}
+.sb{width:272px;flex:none;background:var(--card);border-inline-end:1px solid var(--border);padding:22px 14px;display:flex;flex-direction:column;gap:20px}
+.sb nav{display:flex;flex-direction:column;gap:6px}
+.mod{border-radius:16px}
+.mod[open]{background:var(--muted);box-shadow:inset 0 0 0 1px var(--border)}
+.mod summary{list-style:none;display:flex;align-items:center;gap:11px;min-height:46px;padding:8px 10px;border-radius:14px;font-weight:700;font-size:14.5px;cursor:pointer;color:var(--foreground)}
+.mod summary::-webkit-details-marker{display:none}
+.mi{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;font-size:18px;flex:none}
+.mod summary .car{margin-inline-start:auto;color:var(--muted-foreground);font-size:16px}
+.mod[open] summary .car{transform:rotate(180deg)}
+.mod .kids{display:flex;flex-direction:column;gap:2px;padding:0 10px 10px;margin-inline-start:24px;border-inline-start:2px solid var(--border);padding-inline-start:8px}
+.mod .kids .navlink{min-height:36px;font-size:13.5px;padding:6px 10px}
+.mod.dis summary{cursor:not-allowed;color:var(--muted-foreground);font-weight:600}
+.mod.dis summary .mi{filter:grayscale(1);opacity:.7}
+.sb .single{display:flex;align-items:center;gap:11px;min-height:46px;padding:8px 10px;border-radius:14px;font-weight:700;font-size:14.5px;color:var(--foreground);text-decoration:none}
+.sb .single .mi{background:var(--secondary);color:var(--muted-foreground)}
+.sb .bottom{margin-top:auto;display:flex;flex-direction:column;gap:10px}
+.newdot{font-size:10px;font-weight:800;padding:1px 6px;border-radius:999px;background:var(--accent-soft);color:#6b4b00;margin-inline-start:auto}
+
+/* ---------- main + common controls ---------- */
+.main{flex:1;min-width:0;padding:22px 36px 36px;display:flex;flex-direction:column;gap:18px;position:relative}
+.topline{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted-foreground);min-height:40px}
+.topline .sp{flex:1}
+.lang{display:inline-flex;background:var(--secondary);border-radius:999px;padding:3px}
+.lang span{padding:4px 12px;border-radius:999px;font-weight:700;font-size:12.5px}
+.lang span.on{background:var(--accent);color:var(--accent-foreground)}
+.lang .ar{font-family:var(--font-ar-display);font-size:14px}
+.head{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.head h1{margin:0;font-family:var(--font-display);font-size:30px;font-weight:800;line-height:1.15;letter-spacing:-.01em;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+:root[lang="ar"] .head h1{letter-spacing:0}
+.head p{margin:4px 0 0;color:var(--muted-foreground);font-size:14px;max-width:640px}
+.head .acts{margin-inline-start:auto;display:flex;gap:10px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:var(--radius);padding:10px 16px;font-weight:700;font-size:14px;border:1px solid var(--input);background:var(--card);white-space:nowrap}
+.btn .ph-duotone{font-size:18px}
+.btn-primary{background:var(--primary);color:#fff;border-color:transparent;box-shadow:var(--shadow-primary)}
+.btn-sm{padding:7px 12px;font-size:13px}
+.btn-ghost{border-color:transparent;background:transparent;color:var(--primary)}
+.toolbar{background:var(--card);border-radius:20px;box-shadow:var(--shadow-card);padding:14px;display:flex;flex-direction:column;gap:12px}
+.frow{display:flex;gap:10px;flex-wrap:wrap}
+.search{flex:2.2;min-width:240px;display:flex;align-items:center;gap:8px;border:1px solid var(--input);border-radius:var(--radius);padding:0 12px;height:42px;background:var(--card);color:var(--muted-foreground)}
+.search .ph-duotone{font-size:18px;flex:none}
+.search span{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fsel{flex:1;min-width:150px;display:flex;align-items:center;gap:8px;height:42px;border:1px solid var(--input);border-radius:var(--radius);padding:0 12px;background:var(--card);font-size:13.5px;font-weight:600;color:var(--foreground);white-space:nowrap;position:relative}
+.fsel .ph-duotone{color:var(--muted-foreground);font-size:16px}
+.fsel .ph-caret-down{margin-inline-start:auto}
+.fsel.set{border-color:var(--primary);background:var(--primary-soft);color:var(--primary)}
+.fsel.set .ph-duotone{color:var(--primary)}
+.resline{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted-foreground);padding:0 4px;flex-wrap:wrap}
+.resline b{color:var(--foreground)}
+.resline .sp{flex:1}
+.chipx{display:inline-flex;align-items:center;gap:6px;background:var(--primary-soft);color:var(--primary);border-radius:999px;padding:3px 8px 3px 10px;font-weight:700;font-size:12.5px;white-space:nowrap}
+.linkbtn{border:0;background:transparent;color:var(--primary);font-weight:700;font-size:13px;padding:0;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.card{background:var(--card);border-radius:24px;box-shadow:var(--shadow-card)}
+.av{border-radius:12px;background:var(--accent);color:var(--accent-foreground);display:grid;place-items:center;font-weight:800;flex:none;font-family:var(--font-display);width:34px;height:34px;font-size:12.5px}
+.av.anon{background:var(--secondary);color:var(--muted-foreground)}
+.av.sm{width:28px;height:28px;border-radius:10px;font-size:11px}
+.av.lg{width:42px;height:42px;border-radius:14px;font-size:14px}
+.ibtn{width:34px;height:34px;border-radius:11px;border:1px solid transparent;background:transparent;display:grid;place-items:center;color:var(--muted-foreground);flex:none}
+.ibtn .ph-duotone{font-size:18px}
+.ibtn.on{background:var(--primary-soft);color:var(--primary)}
+.ibtn.bd{border-color:var(--border);background:var(--card)}
+.who{display:flex;align-items:center;gap:10px;min-width:0}
+.who .n{font-weight:700;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.who .r{font-size:12px;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:700;white-space:nowrap}
+.pill .ph-duotone{font-size:14px}
+.pill .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.m-core{background:var(--secondary);color:var(--muted-foreground)}
+.m-hr{background:var(--primary-soft);color:var(--primary)}
+.t-money{background:var(--info-soft);color:var(--info-ink)}
+.t-fail{background:var(--warning-soft);color:var(--warning-ink)}
+.p-active{background:var(--success-soft);color:var(--success-ink)}
+.kic{width:32px;height:32px;border-radius:11px;display:grid;place-items:center;font-size:17px;flex:none;background:var(--secondary);color:var(--muted-foreground)}
+.kic.money{background:var(--info-soft);color:var(--info)}
+.kic.fail{background:var(--warning-soft);color:var(--warning)}
+.kic.ok{background:var(--success-soft);color:var(--success)}
+.sent{line-height:1.45}
+.sent .rec{font-weight:700}
+.chg{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;vertical-align:baseline}
+.old{color:var(--muted-foreground);text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--muted-foreground) 60%,transparent)}
+.new{font-weight:700}
+.arr{font-size:13px;color:var(--muted-foreground)}
+.money{font-weight:700;white-space:nowrap}
+.money .cur{font-weight:600;color:var(--muted-foreground);font-size:.82em}
+.new .money,.money.new{color:var(--info-ink)}
+.time{white-space:nowrap;color:var(--foreground);font-weight:600;font-size:13px;border-bottom:1px dashed var(--input);cursor:help;position:relative}
+.time-sub{font-size:12px;color:var(--muted-foreground)}
+.tip{position:absolute;inset-block-start:calc(100% + 8px);inset-inline-start:-6px;background:var(--foreground);color:#fff;font-size:12px;font-weight:600;padding:6px 10px;border-radius:10px;white-space:nowrap;z-index:5;box-shadow:var(--shadow-raised)}
+.tip::before{content:"";position:absolute;top:-4px;inset-inline-start:16px;width:8px;height:8px;background:inherit;transform:rotate(45deg)}
+
+/* changes table (shared) */
+.ctab{width:100%;border-collapse:collapse;font-size:13px}
+.ctab th{font-size:12px;color:var(--muted-foreground);font-weight:600;text-align:start;padding:6px 12px;border-bottom:1px solid var(--border)}
+.ctab td{padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+.ctab tr:last-child td{border-bottom:0}
+.ctab td.f{color:var(--muted-foreground);font-weight:600;width:30%}
+.ctab td.b{color:var(--muted-foreground)}
+.ctab td.a{font-weight:700}
+.ctab .none{color:var(--muted-foreground);font-weight:500}
+.ctab .arcell{width:24px;color:var(--muted-foreground);padding-inline:0;text-align:center}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.fact{background:var(--muted);border-radius:12px;padding:8px 12px;min-width:0}
+.fact .l{font-size:11.5px;color:var(--muted-foreground)}
+.fact .v{font-size:13px;font-weight:700;overflow-wrap:anywhere}
+
+/* row menu */
+.menu{position:absolute;z-index:6;background:var(--card);border-radius:14px;box-shadow:var(--shadow-raised);border:1px solid var(--border);padding:6px;min-width:230px}
+.menu a{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;font-size:13.5px;font-weight:600;color:var(--foreground);text-decoration:none;white-space:nowrap}
+.menu a .ph-duotone{font-size:18px;color:var(--muted-foreground)}
+.menu a.hl{background:var(--muted)}
+
+/* pagination */
+.pager{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:14px 20px;flex-wrap:wrap;border-top:1px solid var(--border)}
+.pager .info{font-size:13px;color:var(--muted-foreground)}
+.pages{display:flex;gap:6px;align-items:center}
+.pg{min-width:36px;height:36px;border-radius:11px;border:1px solid var(--border);background:var(--card);font-weight:700;font-size:13px;display:grid;place-items:center;padding:0 8px}
+.pg[aria-current="page"]{background:var(--primary);color:#fff;border-color:transparent}
+.pg[disabled]{opacity:.45;cursor:default}
+.pg .ph-duotone{font-size:16px}
+.gap{color:var(--muted-foreground)}
+.mpager{display:flex;flex-direction:column;gap:8px;padding:12px 14px}
+.mpager .info{font-size:12.5px;color:var(--muted-foreground)}
+.mpager .row{display:flex;align-items:center;justify-content:space-between}
+.mpager .row b{font-size:13px}
+
+/* tabs (profile) */
+.crumb{display:flex;align-items:center;gap:6px;font-size:13.5px;color:var(--muted-foreground)}
+.crumb .ph-duotone{font-size:12px}
+.submeta{font-size:14px;color:var(--muted-foreground);margin-top:6px}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
+.tab{padding:10px 16px;font-weight:600;color:var(--muted-foreground);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;display:inline-flex;align-items:center;gap:7px;font-size:14px}
+.tab.on{color:var(--primary);border-color:var(--primary);font-weight:700}
+.tab .cnt{font-size:11px;font-weight:800;background:var(--primary-soft);color:var(--primary);border-radius:999px;padding:0 7px}
+.sec-h{display:flex;align-items:center;gap:12px;padding:20px 24px 14px;flex-wrap:wrap}
+.sec-h h2{margin:0;font-family:var(--font-display);font-size:19px;font-weight:800}
+.sec-h p{margin:2px 0 0;font-size:13px;color:var(--muted-foreground)}
+.sec-h .sp{flex:1}
+
+/* ================= OPTION A: dense table ================= */
+.ta{width:calc(100% - 20px);margin:10px;border-collapse:separate;border-spacing:0}
+.ta>thead th{background:var(--muted);font-size:12.5px;color:var(--muted-foreground);font-weight:600;text-align:start;padding:11px 14px;white-space:nowrap}
+.ta>thead th:first-child{border-start-start-radius:12px;border-end-start-radius:12px}
+.ta>thead th:last-child{border-start-end-radius:12px;border-end-end-radius:12px}
+.ta>tbody>tr>td{padding:12px 14px;border-bottom:1px solid var(--border);vertical-align:middle;position:relative}
+.ta>tbody>tr.fail>td:first-child::before{content:"";position:absolute;inset-inline-start:-10px;top:0;bottom:0;width:4px;background:var(--warning)}
+.ta tr.open > td{background:color-mix(in srgb,var(--primary-soft) 45%,transparent);border-bottom-color:transparent}
+.ta>tbody>tr.exp>td{padding:0 14px 16px;background:color-mix(in srgb,var(--primary-soft) 45%,transparent)}
+.ta .exbox{background:var(--card);border-radius:14px;border:1px solid var(--border);padding:12px 14px;display:grid;grid-template-columns:1.6fr 1fr;gap:18px}
+.ta .exbox h4,.xh{margin:0 0 6px;font-size:12px;color:var(--muted-foreground);font-weight:700}
+.ta .exbox .meta{display:flex;flex-direction:column;gap:8px}
+.ta .act{display:flex;align-items:center;gap:10px}
+.ta .act .tags{display:flex;gap:6px;flex:none}
+.ta .car{color:var(--muted-foreground);font-size:16px}
+.ta tr.open .car{transform:rotate(90deg);color:var(--primary)}
+[dir="rtl"] .ta tr.open .car{transform:rotate(-90deg) scaleX(-1)}
+.ta .hgroup>td{border-bottom-color:transparent;padding-bottom:4px}
+.ta .hfirst>td{padding-top:14px}
+/* A cards for phone */
+.acards{display:flex;flex-direction:column}
+.acard{padding:14px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:9px;position:relative}
+.acard.fail::before{content:"";position:absolute;inset-inline-start:0;top:12px;bottom:12px;width:4px;border-start-end-radius:4px;border-end-end-radius:4px;background:var(--warning)}
+.acard .top{display:flex;align-items:center;gap:10px}
+.acard .top .who{flex:1}
+.acard .bot{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.acard .bot .sp{flex:1}
+.acard.open{background:color-mix(in srgb,var(--primary-soft) 40%,transparent)}
+.mchg{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:4px 12px}
+.mchg .r{padding:8px 0;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:2px;font-size:13px}
+.mchg .r:last-child{border-bottom:0}
+.mchg .r .l{font-size:11.5px;color:var(--muted-foreground);font-weight:600}
+.mchg .meta{font-size:12px;color:var(--muted-foreground);padding:8px 0}
+
+/* picker sheet */
+.scrim{position:absolute;inset:0;background:var(--overlay);z-index:5}
+.sheet{position:absolute;inset-inline:0;bottom:0;z-index:6;background:var(--card);border-radius:24px 24px 0 0;box-shadow:var(--shadow-raised);display:flex;flex-direction:column;max-height:88%}
+.sheet .grab{width:40px;height:5px;border-radius:5px;background:var(--input);margin:10px auto 4px;flex:none}
+.sheet .sh{display:flex;align-items:center;gap:10px;padding:8px 16px 12px;border-bottom:1px solid var(--border)}
+.sheet .sh h3{margin:0;font-family:var(--font-display);font-size:17px;font-weight:800;flex:1;min-width:0}
+.sheet .sbody{overflow:auto;padding:14px 16px 20px;display:flex;flex-direction:column;gap:12px;scrollbar-width:none}
+.plist{display:flex;flex-direction:column;gap:2px}
+.popt{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px}
+.popt.sel{background:var(--primary-soft)}
+.popt .who{flex:1}
+.popt .ck{color:var(--primary);font-size:18px}
+.popt .ico{width:28px;height:28px;border-radius:10px;display:grid;place-items:center;background:var(--secondary);color:var(--muted-foreground);font-size:16px;flex:none}
+.pinput{display:flex;align-items:center;gap:8px;border:1px solid var(--primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 18%,transparent);border-radius:var(--radius);padding:0 12px;height:42px;color:var(--muted-foreground);font-size:13.5px}
+
+/* skeleton */
+.sk{background:var(--secondary);border-radius:8px;animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.55}}
+@media (prefers-reduced-motion:reduce){.sk{animation:none}}
+.skrow{padding:14px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:10px}
+.skrow .l1{display:flex;gap:10px;align-items:center}
+
+/* ================= OPTION B: timeline ================= */
+.bwrap{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px;align-items:start}
+.tl{padding:6px 0 0}
+.dayh{display:flex;align-items:center;gap:10px;padding:16px 24px 8px;font-weight:800;font-family:var(--font-display);font-size:15px}
+.dayh .c{font-family:var(--font);font-weight:600;font-size:12.5px;color:var(--muted-foreground)}
+.dayh::after{content:"";flex:1;height:1px;background:var(--border)}
+.dayh .c{order:2}
+.dayh::after{order:1}
+.ti{display:grid;grid-template-columns:86px 36px minmax(0,1fr);gap:0 12px;padding:0 24px;position:relative}
+.ti .tm{padding-top:8px;text-align:end;display:flex;flex-direction:column;align-items:flex-end;gap:1px}
+.ti .rail{position:relative;display:flex;justify-content:center}
+.ti .rail::before{content:"";position:absolute;top:0;bottom:0;width:2px;background:var(--border)}
+.ti:first-of-type .rail::before{top:14px}
+.ti.last .rail::before{bottom:auto;height:14px}
+.ti .rail .kic{position:relative;margin-top:4px;box-shadow:0 0 0 4px var(--card)}
+.ti .body{padding:6px 0 18px;display:flex;flex-direction:column;gap:7px;min-width:0}
+.ti .line1{font-size:14px}
+.ti .line1 .actor{font-weight:800}
+.ti .meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.ti .diffs{display:flex;flex-direction:column;gap:4px;background:var(--muted);border-radius:12px;padding:8px 12px;font-size:13px}
+.ti .diffs .d{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.ti .diffs .d .l{color:var(--muted-foreground);font-weight:600;min-width:110px}
+.ti.fail .body .line1{color:var(--warning-ink)}
+.ti.sel .body{}
+.bfilt{padding:18px;display:flex;flex-direction:column;gap:18px;position:sticky;top:0}
+.bfilt h3{margin:0;font-family:var(--font-display);font-size:16px;font-weight:800;display:flex;align-items:center;gap:8px}
+.bfilt h3 .linkbtn{margin-inline-start:auto;font-size:12.5px;font-family:var(--font)}
+.fg{display:flex;flex-direction:column;gap:8px}
+.fg .lb{font-size:12px;font-weight:700;color:var(--muted-foreground)}
+.segm{display:flex;background:var(--secondary);border-radius:12px;padding:3px}
+.segm span{flex:1;text-align:center;padding:6px 8px;border-radius:9px;font-size:13px;font-weight:700;color:var(--muted-foreground);white-space:nowrap}
+.segm span.on{background:var(--card);color:var(--primary);box-shadow:0 1px 2px rgb(11 72 62 / .12)}
+.cbs{display:flex;flex-wrap:wrap;gap:6px}
+.cb{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--input);border-radius:999px;padding:4px 10px;font-size:12.5px;font-weight:600;white-space:nowrap}
+.cb.on{background:var(--primary-soft);border-color:transparent;color:var(--primary)}
+.cb .ph-duotone{font-size:14px}
+.pbox{border:1px solid var(--input);border-radius:14px;overflow:hidden}
+.pbox .pinput{border:0;box-shadow:none;border-bottom:1px solid var(--border);border-radius:0}
+.pbox .plist{padding:4px;max-height:226px;overflow:hidden}
+.pbox .popt{padding:6px 8px}
+.glance{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.glance .g{background:var(--muted);border-radius:12px;padding:10px 12px}
+.glance .g .v{font-size:20px;font-weight:800}
+.glance .g .l{font-size:12px;color:var(--muted-foreground)}
+.glance .g.w .v{color:var(--warning-ink)}
+.glance .g.i .v{color:var(--info-ink)}
+.bphone-bar{display:flex;gap:8px}
+.bphone-bar .search{min-width:0;flex:1}
+.fbtn{display:inline-flex;align-items:center;gap:6px;height:42px;padding:0 12px;border-radius:var(--radius);border:1px solid var(--primary);background:var(--primary-soft);color:var(--primary);font-weight:700;font-size:13.5px;white-space:nowrap}
+.fbtn .n{background:var(--primary);color:#fff;border-radius:999px;font-size:11px;padding:0 6px}
+.monthh{padding:16px 24px 6px;font-size:12.5px;font-weight:800;color:var(--muted-foreground);letter-spacing:.02em}
+.empty{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:40px 24px}
+.empty .eic{width:64px;height:64px;border-radius:20px;background:var(--primary-soft);color:var(--primary);display:grid;place-items:center;font-size:32px;margin-bottom:6px}
+.empty h3{margin:0;font-family:var(--font-display);font-size:17px;font-weight:800}
+.empty p{margin:0;color:var(--muted-foreground);font-size:13.5px}
+
+/* ================= OPTION C: split view ================= */
+.csplit{display:grid;grid-template-columns:440px minmax(0,1fr);gap:18px;align-items:start}
+.clist{display:flex;flex-direction:column;overflow:hidden}
+.crow{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;padding:13px 16px;border-bottom:1px solid var(--border);position:relative}
+.crow .kic{grid-row:span 2}
+.crow .l1{display:flex;align-items:center;gap:8px;min-width:0;font-size:12.5px;color:var(--muted-foreground)}
+.crow .l1 .nm{font-weight:700;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.crow .l1 .sp{flex:1}
+.crow .sent{font-size:13.5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.crow.sel{background:var(--primary-soft)}
+.crow.sel::before{content:"";position:absolute;inset-inline-start:0;top:10px;bottom:10px;width:4px;border-start-end-radius:4px;border-end-end-radius:4px;background:var(--primary)}
+.crow.fail .sent{color:var(--warning-ink)}
+.cdet{padding:24px;display:flex;flex-direction:column;gap:20px;position:sticky;top:0}
+.cdet .dh{display:flex;gap:14px;align-items:flex-start}
+.cdet .dh .kic{width:44px;height:44px;border-radius:14px;font-size:22px}
+.cdet .dh h2{margin:0;font-family:var(--font-display);font-size:20px;font-weight:800;line-height:1.35}
+.cdet .dh .tags{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mcell{background:var(--muted);border-radius:14px;padding:10px 14px;min-width:0}
+.mcell .l{font-size:11.5px;color:var(--muted-foreground);margin-bottom:4px}
+.mcell .v{font-weight:700;font-size:13.5px}
+.mcell .v2{font-size:12px;color:var(--muted-foreground)}
+.mcell a{color:var(--primary);text-decoration:none;font-weight:700;display:inline-flex;align-items:center;gap:5px}
+.ctable{border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.ctable .ctab th{background:var(--muted)}
+.earl{display:flex;flex-direction:column}
+.earl .e{display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px dashed var(--border);font-size:13px}
+.earl .e:last-child{border-bottom:0}
+.earl .e .s{flex:1;min-width:0}
+.earl .e .t{font-size:12px;color:var(--muted-foreground);white-space:nowrap}
+.chist{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:18px;align-items:start}
+.pd{padding:20px 24px;display:flex;flex-direction:column;gap:12px}
+.pd h3{margin:0 0 4px;font-family:var(--font-display);font-size:18px;font-weight:800}
+.pdg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pdf{background:var(--muted);border-radius:12px;padding:10px 14px}
+.pdf .l{font-size:12px;color:var(--muted-foreground)}
+.pdf .v{font-weight:600}
+.pdf.hl{background:var(--primary-soft)}
+.pdf.hl .v{color:var(--primary);font-weight:800;font-size:17px}
+.pdf.chg-mark{box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--info) 35%,transparent)}
+.hpanel{display:flex;flex-direction:column;overflow:hidden}
+.hpanel .hh{display:flex;align-items:center;gap:10px;padding:18px 18px 12px;border-bottom:1px solid var(--border)}
+.hpanel .hh h3{margin:0;font-family:var(--font-display);font-size:17px;font-weight:800;flex:1}
+.hitem{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:6px}
+.hitem .l1{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted-foreground)}
+.hitem .l1 b{color:var(--foreground)}
+.hitem .l1 .sp{flex:1}
+.hitem.sel{background:color-mix(in srgb,var(--primary-soft) 55%,transparent)}
+.hitem .mini{font-size:12.5px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:6px 10px;display:flex;flex-direction:column;gap:3px}
+.hitem .mini .d{display:flex;gap:8px;flex-wrap:wrap}
+.hitem .mini .d .l{color:var(--muted-foreground);font-weight:600}
+
+/* ---------- phone chrome ---------- */
+.mbar{display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--card);border-bottom:1px solid var(--border);flex:none}
+.mbar .menub{width:38px;height:38px;border-radius:12px;border:1px solid var(--border);background:var(--card);display:grid;place-items:center;font-size:20px}
+.mbar .brand-name{font-size:14px}
+.mbar .lang{margin-inline-start:auto}
+
+/* ---------- container: phone width ---------- */
+@container page (max-width:720px){
+  .main{padding:16px;gap:14px}
+  .topline{display:none}
+  .head h1{font-size:24px}
+  .head p{font-size:13px}
+  .head .acts{width:100%}
+  .head .acts .btn{flex:1}
+  .toolbar{padding:12px;border-radius:18px}
+  .search{min-width:100%}
+  .fsel{min-width:calc(50% - 5px);flex:1 1 calc(50% - 5px)}
+  .card{border-radius:20px}
+  .sec-h{padding:16px 14px 10px}
+  .sec-h h2{font-size:17px}
+  .ti{grid-template-columns:32px minmax(0,1fr);padding:0 14px;gap:0 10px}
+  .ti .tm{display:none}
+  .ti .rail .kic{width:30px;height:30px;font-size:16px}
+  .ti .body .ptime{font-size:12px;color:var(--muted-foreground)}
+  .ti .diffs .d .l{min-width:0;width:100%}
+  .dayh{padding:14px 14px 6px;font-size:14px}
+  .monthh{padding:14px 14px 4px}
+  .crow{padding:12px 14px}
+  .pdg{grid-template-columns:1fr}
+  .mgrid{grid-template-columns:1fr}
+  .tabs .tab{padding:10px 12px;font-size:13.5px}
+}
+</style>
+</head>
+<body>
+<div class="mockbar" role="toolbar" aria-label="Mockup controls">
+  <strong>Activity (audit log)</strong>
+  <span class="hint">Static mockup · nothing is built yet</span>
+  <span class="sp"></span>
+  <div class="seg" id="optSeg">
+    <button data-opt="A" aria-pressed="true">Option A</button>
+    <button data-opt="B" aria-pressed="false">Option B</button>
+    <button data-opt="C" aria-pressed="false">Option C</button>
+  </div>
+  <div class="seg" id="langSeg">
+    <button data-lang="en" aria-pressed="true">EN</button>
+    <button data-lang="ar" aria-pressed="false" class="ar">ع</button>
+  </div>
+</div>
+<div class="optnote" id="optNote"></div>
+<section id="deskSec">
+  <div class="section-title" id="deskT1"></div>
+  <div class="desk-scroll"><div class="desk" id="desk1"></div></div>
+  <div class="section-title" id="deskT2"></div>
+  <div class="desk-scroll"><div class="desk" id="desk2"></div></div>
+</section>
+<section id="phoneSec">
+  <div class="section-title" id="phoneT"></div>
+  <div class="phones" id="phones"></div>
+</section>
+
+<script>
+const T={
+ en:{school:"Green Valley School",sys:"School ERP",dashboard:"Dashboard",hr:"HR",employees:"Employees",penalties:"Penalties",lateness:"Lateness",payroll:"Payroll",accounting:"Accounting",inventory:"Inventory",students:"Students",soon:"Soon",admin:"Administration",settings:"Settings",activity:"Activity",isNew:"New",
+  title:"Activity",sub:"Every change and sign-in across the school, newest first. Entries can't be edited or deleted.",
+  fPerson:"Anyone",fModule:"All modules",fAction:"All actions",fDate:"1 – 17 Nov 2026",fDateS:"1–17 Nov",search:"Employee name or code, or payroll month",
+  results:'<b class="num">248</b> entries',clear:"Clear filters",dateChip:"1 – 17 Nov 2026",
+  when:"When",who:"Who",action:"Action",module:"Module",core:"Core",tagMoney:"Money",tagFail:"Failed",
+  field:"Field",before:"Before",after:"After",nChanges:n=>n===1?"1 change":`${n} changes`,details:"Details",showCh:"Show changes",hideCh:"Hide changes",
+  ip:"IP address",device:"Device",exact:"Exact time",openRec:"Open record",record:"Record",
+  mOpen:"Open record",mOnly:"Show only this person",mCopy:"Copy link to this entry",
+  showing:'Showing <b class="num">1–10</b> of <b class="num">248</b>',page:'Page <span class="num">1</span> of <span class="num">25</span>',
+  crumbEmp:"Employees",emp:"Omar Fathy",empMeta:'<span class="num">EMP-0031</span> · Mathematics teacher · Mathematics',active:"Active",edit:"Edit",deact:"Deactivate",
+  tDetails:"Details",tPen:"Penalties",tPay:"Payroll",tHist:"History",
+  histT:"Change history",histS:"Who changed what on Omar Fathy's record, newest first.",allFields:"All fields",histShowing:'Showing <b class="num">1–7</b> of <b class="num">7</b>',histPage:'Page <span class="num">1</span> of <span class="num">1</span>',
+  created:"Created",
+  filters:"Filters",people:"Person",searchPeople:"Search people",actionType:"Action type",dateRange:"Date range",modAll:"All",
+  glance:"Today at a glance",gActions:"Actions",gFail:"Failed sign-ins",gMoney:"Money changes",gPeople:"People active",
+  emptyT:"No activity matches these filters",emptyD:"Nothing was done by Hany Saad in HR between 1 and 17 Nov 2026. Try a wider date range or another person.",
+  pd:"Personal details",job:"Job",payc:"Pay and contract",lBasic:"Basic monthly salary",lPhone:"Phone",lDept:"Department",lStage:"Stage",lTitle:"Job title",lHire:"Hire date",lEnd:"Contract end",lCode:"Employee code",
+  earlier:"Earlier on this record",fullHist:"See full history",entry:"Entry details",histBtn:"History",
+  deskT1:"Desktop · 1440 px — Activity page",deskT2:"Desktop · 1440 px — Record history on the employee profile",phoneT:"Phone · 390 px",
+  capList:"Activity",capHist:"Employee profile → History",capPicker:"Person filter (searchable, 8 people)",capSkel:"Loading (same shape as 10 rows)",capEmpty:"No results for these filters",capSheet:"Entry opened as a sheet",capHSheet:"History sheet on the profile",
+  loading:"Loading activity"},
+ ar:{school:"مدرسة الوادي الأخضر",sys:"نظام إدارة المدرسة",dashboard:"لوحة التحكم",hr:"الموارد البشرية",employees:"الموظفون",penalties:"الجزاءات",lateness:"التأخير",payroll:"الرواتب",accounting:"الحسابات",inventory:"المخازن",students:"الطلاب",soon:"قريبًا",admin:"الإدارة",settings:"الإعدادات",activity:"سجل النشاط",isNew:"جديد",
+  title:"سجل النشاط",sub:"كل تعديل وكل تسجيل دخول في المدرسة، الأحدث أولًا. لا يمكن تعديل السجل أو حذفه.",
+  fPerson:"كل الأشخاص",fModule:"كل الوحدات",fAction:"كل الإجراءات",fDate:"1 – 17 نوفمبر 2026",fDateS:"1–17 نوفمبر",search:"اسم الموظف أو كوده، أو شهر الرواتب",
+  results:'<b class="num">248</b> سجلًا',clear:"مسح الفلاتر",dateChip:"1 – 17 نوفمبر 2026",
+  when:"الوقت",who:"بواسطة",action:"الإجراء",module:"الوحدة",core:"النظام",tagMoney:"مبلغ مالي",tagFail:"محاولة فاشلة",
+  field:"الحقل",before:"قبل",after:"بعد",nChanges:n=>n===1?"تغيير واحد":n===2?"تغييران":`${n} تغييرات`,details:"التفاصيل",showCh:"عرض التغييرات",hideCh:"إخفاء التغييرات",
+  ip:"عنوان IP",device:"الجهاز",exact:"الوقت بالتحديد",openRec:"فتح الملف",record:"الملف المعني",
+  mOpen:"فتح الملف المعني",mOnly:"عرض نشاط هذا الشخص فقط",mCopy:"نسخ رابط هذا السجل",
+  showing:'عرض <b class="num">1–10</b> من <b class="num">248</b>',page:'صفحة <span class="num">1</span> من <span class="num">25</span>',
+  crumbEmp:"الموظفون",emp:"عمر فتحي",empMeta:'<span class="num">EMP-0031</span> · معلم رياضيات · الرياضيات',active:"نشط",edit:"تعديل",deact:"إلغاء التفعيل",
+  tDetails:"البيانات",tPen:"الجزاءات",tPay:"الرواتب",tHist:"السجل",
+  histT:"سجل التغييرات",histS:"من غيّر ماذا في ملف عمر فتحي، الأحدث أولًا.",allFields:"كل الحقول",histShowing:'عرض <b class="num">1–7</b> من <b class="num">7</b>',histPage:'صفحة <span class="num">1</span> من <span class="num">1</span>',
+  created:"إنشاء",
+  filters:"الفلاتر",people:"الشخص",searchPeople:"ابحث عن شخص",actionType:"نوع الإجراء",dateRange:"الفترة",modAll:"الكل",
+  glance:"ملخص اليوم",gActions:"إجراءات",gFail:"دخول فاشل",gMoney:"تغييرات مالية",gPeople:"أشخاص نشطون",
+  emptyT:"لا يوجد نشاط يطابق هذه الفلاتر",emptyD:"لم يقم هاني سعد بأي إجراء في الموارد البشرية بين 1 و17 نوفمبر 2026. جرّب فترة أطول أو شخصًا آخر.",
+  pd:"البيانات الشخصية",job:"الوظيفة",payc:"الراتب والعقد",lBasic:"الراتب الأساسي الشهري",lPhone:"الهاتف",lDept:"القسم",lStage:"المرحلة",lTitle:"المسمى الوظيفي",lHire:"تاريخ التعيين",lEnd:"نهاية العقد",lCode:"كود الموظف",
+  earlier:"تغييرات سابقة على نفس الملف",fullHist:"عرض السجل كاملًا",entry:"تفاصيل السجل",histBtn:"السجل",
+  deskT1:"سطح المكتب · 1440 بكسل — صفحة سجل النشاط",deskT2:"سطح المكتب · 1440 بكسل — سجل التغييرات في ملف الموظف",phoneT:"الهاتف · 390 بكسل",
+  capList:"سجل النشاط",capHist:"ملف الموظف ← السجل",capPicker:"فلتر الشخص (قابل للبحث، 8 أشخاص)",capSkel:"جارٍ التحميل (بشكل الصفوف العشرة)",capEmpty:"لا نتائج لهذه الفلاتر",capSheet:"تفاصيل السجل كورقة سفلية",capHSheet:"ورقة السجل في ملف الموظف",
+  loading:"جارٍ تحميل النشاط"}
+};
+let opt="A", lang="en";
+const L=()=>T[lang], ix=()=>lang==="ar"?0:1, AR=()=>lang==="ar";
+const v=x=>x==null?null:Array.isArray(x)?x[ix()]:x;
+const ic=(n,extra="")=>`<i class="ph-duotone ph-${n} ${extra}" aria-hidden="true"></i>`;
+const fmt=n=>n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const money=n=>AR()?`<span class="money"><span class="num">${fmt(n)}</span> <span class="cur">ج.م</span></span>`:`<span class="money"><span class="cur">EGP</span> <span class="num">${fmt(n)}</span></span>`;
+const arrow=()=>ic("arrow-right","arr flip");
+const val=x=>x==null?`<span class="none">—</span>`:(x&&x.m!=null)?money(x.m):`<span class="num-ok">${v(x)}</span>`;
+const chg=(a,b)=>`<span class="chg"><span class="old">${a}</span>${arrow()}<span class="new">${b}</span></span>`;
+const rec=s=>`<span class="rec">${s}</span>`;
+
+/* people */
+const P={
+ mona:{n:["منى إبراهيم","Mona Ibrahim"],i:["مإ","MI"],r:["مسؤولة الموارد البشرية","HR officer"]},
+ ahmed:{n:["أحمد محمود","Ahmed Mahmoud"],i:["أم","AM"],r:["مدير المدرسة","Principal"]},
+ nadia:{n:["نادية فؤاد","Nadia Fouad"],i:["نف","NF"],r:["محاسبة","Accountant"]},
+ khaled:{n:["خالد مصطفى","Khaled Mostafa"],i:["خم","KM"],r:["وكيل المرحلة الثانوية","Secondary vice-principal"]},
+ rania:{n:["رانيا مجدي","Rania Magdy"],i:["رم","RM"],r:["موظفة الرواتب","Payroll clerk"]},
+ hany:{n:["هاني سعد","Hany Saad"],i:["هس","HS"],r:["مسؤول النظام","System admin"]},
+ anon:{n:["غير معروف","Unknown"],i:["؟","?"],r:["لم يسجّل الدخول","Not signed in"],anon:1}
+};
+const av=(p,cls="")=>`<div class="av ${P[p].anon?"anon":""} ${cls}">${P[p].anon?ic("question"):v(P[p].i)}</div>`;
+const whoH=(p,cls="")=>`<div class="who">${av(p,cls)}<div style="min-width:0"><div class="n">${v(P[p].n)}</div><div class="r">${v(P[p].r)}</div></div></div>`;
+const modChip=m=>m==="hr"?`<span class="pill m-hr">${ic("users-three")}${L().hr}</span>`:`<span class="pill m-core">${ic("gear-six")}${L().core}</span>`;
+const tag=e=>e.k==="money"?`<span class="pill t-money">${ic("coins")}${L().tagMoney}</span>`:e.k==="fail"?`<span class="pill t-fail">${ic("lock-key")}${L().tagFail}</span>`:"";
+const kic=e=>`<span class="kic ${e.k==="money"?"money":e.k==="fail"?"fail":e.ok?"ok":""}">${ic(e.ic)}</span>`;
+const em=s=>`<bdi class="num" dir="ltr">${s}</bdi>`;
+const EMAIL=em("admin@greenvalley.school");
+const DEV=[["كروم على ويندوز","Chrome on Windows"],["سفاري على آيفون","Safari on iPhone"]];
+
+/* activity entries (page 1 of 25) */
+const E=[
+ {id:1,who:"mona",m:"hr",k:"money",ic:"wallet",day:0,tm:"14:24",rel:["منذ 12 دقيقة","12 min ago"],ex:["17 نوفمبر 2026، 14:24:08","17 Nov 2026, 14:24:08"],
+  s:()=>AR()?`اعتماد ${rec("رواتب نوفمبر 2026")}`:`Approved ${rec("payroll November 2026")}`,
+  sv:()=>`اعتمدت ${rec("رواتب نوفمبر 2026")}`,
+  rc:["رواتب نوفمبر 2026","Payroll November 2026"],ip:"197.34.12.40",dv:0,
+  c:[[["الحالة","Status"],["مسودة","Draft"],["معتمدة","Approved"]],[["تاريخ الاعتماد","Approved on"],null,["17 نوفمبر 2026","17 Nov 2026"]]]},
+ {id:2,who:"mona",m:"hr",k:"money",ic:"coins",day:0,tm:"13:56",rel:["منذ 40 دقيقة","40 min ago"],ex:["17 نوفمبر 2026، 13:56:41","17 Nov 2026, 13:56:41"],
+  s:()=>AR()?`تعديل الراتب الأساسي ${rec("لعمر فتحي")} ${chg(money(12000),money(13000))}`:`Changed ${rec("Omar Fathy")}'s basic salary ${chg(money(12000),money(13000))}`,
+  sv:()=>`عدّلت الراتب الأساسي ${rec("لعمر فتحي")} ${chg(money(12000),money(13000))}`,
+  rc:[`عمر فتحي · ${em("EMP-0031")}`,`Omar Fathy · ${em("EMP-0031")}`],ip:"197.34.12.40",dv:0,
+  c:[[["الراتب الأساسي","Basic salary"],{m:12000},{m:13000}],[["سبب التعديل","Reason"],null,["زيادة سنوية","Annual raise"]],[["يسري من","Effective from"],null,["1 ديسمبر 2026","1 Dec 2026"]]]},
+ {id:3,who:"mona",m:"hr",k:"",ic:"gavel",day:0,tm:"13:10",rel:["منذ ساعة","1 hour ago"],ex:["17 نوفمبر 2026، 13:10:22","17 Nov 2026, 13:10:22"],
+  s:()=>AR()?`تسجيل جزاء على ${rec("سلمى عادل")}: التأخر في الحضور — المستوى 2`:`Recorded a penalty for ${rec("Salma Adel")}: Late arrival — level 2`,
+  sv:()=>`سجّلت جزاءً على ${rec("سلمى عادل")}: التأخر في الحضور — المستوى 2`,
+  rc:[`سلمى عادل · ${em("EMP-0022")}`,`Salma Adel · ${em("EMP-0022")}`],ip:"197.34.12.40",dv:0,
+  c:[[["المخالفة","Violation"],null,["التأخر في الحضور","Late arrival"]],[["المستوى","Level"],null,"2"],[["الإجراء","Action"],null,["خصم نصف يوم","Deduct 0.5 day"]],[["الحالة","Status"],null,["قيد الاعتماد","Pending"]]]},
+ {id:4,who:"ahmed",m:"core",k:"",ic:"sliders-horizontal",day:0,tm:"12:05",rel:["منذ ساعتين","2 hours ago"],ex:["17 نوفمبر 2026، 12:05:03","17 Nov 2026, 12:05:03"],
+  s:()=>AR()?`تغيير إعداد ${rec("دقائق السماح بالتأخير")} ${chg('<span class="num">10</span>','<span class="num">15</span>')}`:`Changed setting ${rec("Grace minutes")} ${chg('<span class="num">10</span>','<span class="num">15</span>')}`,
+  sv:()=>`غيّر إعداد ${rec("دقائق السماح بالتأخير")} ${chg('<span class="num">10</span>','<span class="num">15</span>')}`,
+  rc:["الإعدادات · قواعد الموارد البشرية","Settings · HR rules"],ip:"156.204.8.17",dv:0,
+  c:[[["دقائق السماح بالتأخير","Grace minutes"],["10 دقائق","10 min"],["15 دقيقة","15 min"]]]},
+ {id:5,who:"anon",m:"core",k:"fail",ic:"lock-key",day:0,tm:"11:32",rel:["منذ 3 ساعات","3 hours ago"],ex:["17 نوفمبر 2026، 11:32:57","17 Nov 2026, 11:32:57"],
+  s:()=>AR()?`محاولة دخول فاشلة إلى ${rec(EMAIL)}`:`Failed sign-in for ${rec(EMAIL)}`,
+  sv:()=>`محاولة دخول فاشلة إلى ${rec(EMAIL)}`,
+  rc:[`الحساب ${EMAIL}`,`Account ${EMAIL}`],ip:"41.233.70.152",dv:0,
+  f:[[["السبب","Reason"],["كلمة مرور خاطئة","Wrong password"]],[["المحاولات المتتالية","Attempts in a row"],["3 من 5","3 of 5"]]]},
+ {id:6,who:"nadia",m:"core",k:"",ic:"sign-in",day:0,tm:"11:30",rel:["منذ 3 ساعات","3 hours ago"],ex:["17 نوفمبر 2026، 11:30:12","17 Nov 2026, 11:30:12"],
+  s:()=>AR()?"تسجيل الدخول":"Signed in",sv:()=>"سجّلت الدخول",rc:null,ip:"197.34.12.51",dv:1,f:[]},
+ {id:7,who:"ahmed",m:"hr",k:"",ok:1,ic:"check-circle",day:1,tm:"16:40",rel:["أمس 16:40","Yesterday 16:40"],ex:["16 نوفمبر 2026، 16:40:30","16 Nov 2026, 16:40:30"],
+  s:()=>AR()?`اعتماد جزاء ${rec("مصطفى رضا")}: غياب بدون إذن — المستوى 3`:`Approved ${rec("Mostafa Reda")}'s penalty: Unexcused absence — level 3`,
+  sv:()=>`اعتمد جزاء ${rec("مصطفى رضا")}: غياب بدون إذن — المستوى 3`,
+  rc:[`مصطفى رضا · ${em("EMP-0016")}`,`Mostafa Reda · ${em("EMP-0016")}`],ip:"156.204.8.17",dv:0,
+  c:[[["الحالة","Status"],["قيد الاعتماد","Pending"],["معتمد","Approved"]]]},
+ {id:8,who:"mona",m:"hr",k:"",ic:"user-plus",day:1,tm:"10:15",rel:["أمس 10:15","Yesterday 10:15"],ex:["16 نوفمبر 2026، 10:15:49","16 Nov 2026, 10:15:49"],
+  s:()=>AR()?`إضافة الموظفة ${rec("ياسمين خالد")} (${em("EMP-0048")})`:`Added employee ${rec("Yasmin Khaled")} (${em("EMP-0048")})`,
+  sv:()=>`أضافت الموظفة ${rec("ياسمين خالد")} (${em("EMP-0048")})`,
+  rc:[`ياسمين خالد · ${em("EMP-0048")}`,`Yasmin Khaled · ${em("EMP-0048")}`],ip:"197.34.12.40",dv:0,
+  c:[[["القسم","Department"],null,["العلوم","Science"]],[["المسمى الوظيفي","Job title"],null,["معلمة علوم","Science teacher"]],[["نظام العمل","Work system"],null,["دوام كامل","Full-time"]],[["الراتب الأساسي","Basic salary"],null,{m:9500}],[["تاريخ التعيين","Hire date"],null,["16 نوفمبر 2026","16 Nov 2026"]]]},
+ {id:9,who:"mona",m:"hr",k:"",ic:"phone",day:2,tm:"09:02",rel:["منذ يومين","2 days ago"],ex:["15 نوفمبر 2026، 09:02:15","15 Nov 2026, 09:02:15"],
+  s:()=>AR()?`تعديل رقم هاتف ${rec("عمر فتحي")}`:`Changed ${rec("Omar Fathy")}'s phone number`,
+  sv:()=>`عدّلت رقم هاتف ${rec("عمر فتحي")}`,
+  rc:[`عمر فتحي · ${em("EMP-0031")}`,`Omar Fathy · ${em("EMP-0031")}`],ip:"197.34.12.40",dv:0,
+  c:[[["الهاتف","Phone"],em("01001234567"),em("01112345678")]]},
+ {id:10,who:"ahmed",m:"hr",k:"",ic:"x-circle",day:2,tm:"08:40",rel:["منذ يومين","2 days ago"],ex:["15 نوفمبر 2026، 08:40:02","15 Nov 2026, 08:40:02"],
+  s:()=>AR()?`إلغاء جزاء ${rec("كريم أيمن")}: مخالفة الزي — المستوى 1`:`Cancelled ${rec("Karim Ayman")}'s penalty: Dress code — level 1`,
+  sv:()=>`ألغى جزاء ${rec("كريم أيمن")}: مخالفة الزي — المستوى 1`,
+  rc:[`كريم أيمن · ${em("EMP-0020")}`,`Karim Ayman · ${em("EMP-0020")}`],ip:"156.204.8.17",dv:0,
+  c:[[["الحالة","Status"],["معتمد","Approved"],["ملغى","Cancelled"]],[["سبب الإلغاء","Cancel reason"],null,["مسجل مرتين","Recorded twice"]]]}
+];
+const DAYS=[["اليوم · الثلاثاء 17 نوفمبر 2026","Today · Tuesday 17 Nov 2026"],["أمس · الإثنين 16 نوفمبر 2026","Yesterday · Monday 16 Nov 2026"],["الأحد 15 نوفمبر 2026","Sunday 15 Nov 2026"]];
+const dayCount=n=>AR()?(n===1?"سجل واحد":n===2?"سجلان":`${n} سجلات`):(n===1?"1 entry":`${n} entries`);
+
+/* employee history (Omar Fathy) */
+const H=[
+ {who:"mona",k:"money",ic:"coins",mo:0,tm:"13:56",rel:["منذ 40 دقيقة","40 min ago"],ex:["17 نوفمبر 2026، 13:56","17 Nov 2026, 13:56"],d:["17 نوفمبر","17 Nov"],
+  s:()=>AR()?`تعديل الراتب الأساسي ${chg(money(12000),money(13000))}`:`Changed basic salary ${chg(money(12000),money(13000))}`,
+  c:E[1].c},
+ {who:"mona",k:"",ic:"phone",mo:0,tm:"09:02",rel:["منذ يومين","2 days ago"],ex:["15 نوفمبر 2026، 09:02","15 Nov 2026, 09:02"],d:["15 نوفمبر","15 Nov"],
+  s:()=>AR()?"تعديل رقم الهاتف":"Changed phone number",c:E[8].c},
+ {who:"ahmed",k:"",ok:1,ic:"check-circle",mo:0,tm:"11:20",rel:["3 نوفمبر","3 Nov"],ex:["3 نوفمبر 2026، 11:20","3 Nov 2026, 11:20"],d:["3 نوفمبر","3 Nov"],
+  s:()=>AR()?"اعتماد جزاء: غياب بدون إذن — المستوى 2":"Approved a penalty: Unexcused absence — level 2",
+  c:[[["حالة الجزاء","Penalty status"],["قيد الاعتماد","Pending"],["معتمد","Approved"]]]},
+ {cr:1,who:"mona",k:"",ic:"gavel",mo:0,tm:"10:05",rel:["1 نوفمبر","1 Nov"],ex:["1 نوفمبر 2026، 10:05","1 Nov 2026, 10:05"],d:["1 نوفمبر","1 Nov"],
+  s:()=>AR()?"تسجيل جزاء: غياب بدون إذن — المستوى 2":"Recorded a penalty: Unexcused absence — level 2",
+  c:[[["المخالفة","Violation"],null,["غياب بدون إذن","Unexcused absence"]],[["الإجراء","Action"],null,["خصم يوم","Deduct 1 day"]]]},
+ {who:"mona",k:"",ic:"briefcase",mo:1,tm:"12:30",rel:["12 أكتوبر","12 Oct"],ex:["12 أكتوبر 2026، 12:30","12 Oct 2026, 12:30"],d:["12 أكتوبر","12 Oct"],
+  s:()=>AR()?"تعديل بيانات الوظيفة":"Changed job details",
+  c:[[["المرحلة","Stage"],["الابتدائية","Primary"],["الإعدادية","Preparatory"]],[["المسمى الوظيفي","Job title"],["معلم","Teacher"],["معلم رياضيات","Mathematics teacher"]]]},
+ {who:"ahmed",k:"",ic:"file-text",mo:2,tm:"09:45",rel:["1 سبتمبر","1 Sep"],ex:["1 سبتمبر 2026، 09:45","1 Sep 2026, 09:45"],d:["1 سبتمبر","1 Sep"],
+  s:()=>AR()?`تجديد العقد حتى 31 أغسطس 2027`:`Renewed the contract to 31 Aug 2027`,
+  c:[[["نهاية العقد","Contract end"],["31 أغسطس 2026","31 Aug 2026"],["31 أغسطس 2027","31 Aug 2027"]]]},
+ {cr:1,who:"mona",k:"",ic:"user-plus",mo:3,tm:"10:00",rel:["14 يونيو","14 Jun"],ex:["14 يونيو 2026، 10:00","14 Jun 2026, 10:00"],d:["14 يونيو","14 Jun"],
+  s:()=>AR()?"إضافة عمر فتحي موظفًا":"Added Omar Fathy as an employee",
+  c:[[["القسم","Department"],null,["الرياضيات","Mathematics"]],[["المسمى الوظيفي","Job title"],null,["معلم","Teacher"]],[["الراتب الأساسي","Basic salary"],null,{m:11000}],[["تاريخ التعيين","Hire date"],null,["14 يونيو 2026","14 Jun 2026"]]]}
+];
+const MONTHS=[["نوفمبر 2026","November 2026"],["أكتوبر 2026","October 2026"],["سبتمبر 2026","September 2026"],["يونيو 2026","June 2026"]];
+
+const NOTE={
+ A:{en:"<b>Option A — Dense table.</b> One row per entry with an expand caret; the open row shows a Field / Before / After table plus IP and device. Failed sign-ins get the orange row bar used for rows to review; money changes get a blue “Money” tag. On the profile, a <b>History tab</b> lists one row per changed field. Phone: stacked cards that expand in place. “Activity” sits in a new <b>Administration</b> group with Settings.",
+    ar:"<b>الخيار A — جدول كثيف.</b> صف لكل سجل مع سهم للتوسيع؛ الصف المفتوح يعرض جدول الحقل / قبل / بعد مع عنوان IP والجهاز. محاولات الدخول الفاشلة تأخذ الشريط البرتقالي المستخدم للصفوف التي تحتاج مراجعة، والتغييرات المالية وسم أزرق «مبلغ مالي». في ملف الموظف <b>تبويب «السجل»</b> بصف لكل حقل تغيّر. على الهاتف بطاقات تتوسع في مكانها. «سجل النشاط» داخل مجموعة جديدة <b>الإدارة</b> مع الإعدادات."},
+ B:{en:"<b>Option B — Timeline by day.</b> Entries read as sentences (“<b>Mona Ibrahim</b> approved payroll…”) on a vertical line, grouped under day headers, with the first changes shown inline. Filters live in a side panel with the person picker open inline and a summary of the day. On the profile, the History tab is the same timeline grouped by month. Phone: filters behind one button; empty state shown.",
+    ar:"<b>الخيار B — خط زمني حسب اليوم.</b> كل سجل جملة («<b>منى إبراهيم</b> اعتمدت رواتب…») على خط رأسي، مجمّعة تحت عناوين الأيام، وأول التغييرات ظاهرة مباشرة. الفلاتر في لوحة جانبية بها منتقي الأشخاص مفتوحًا وملخص لليوم. في ملف الموظف تبويب «السجل» بنفس الخط الزمني مجمّعًا حسب الشهر. على الهاتف الفلاتر خلف زر واحد، مع حالة عدم وجود نتائج."},
+ C:{en:"<b>Option C — Split view.</b> A compact list on one side, the selected entry's full detail on the other: who, exact time, record link, IP and device, the change table and earlier changes to the same record. On the profile, a <b>History</b> button docks a panel beside the details and outlines the field that changed. Phone: the detail and the history open as bottom sheets.",
+    ar:"<b>الخيار C — عرض مقسوم.</b> قائمة مختصرة في جانب، وتفاصيل السجل المختار كاملة في الجانب الآخر: من، والوقت بالتحديد، ورابط الملف، وعنوان IP والجهاز، وجدول التغييرات، والتغييرات السابقة على نفس الملف. في ملف الموظف زر <b>«السجل»</b> يفتح لوحة بجانب البيانات ويحدد الحقل الذي تغيّر. على الهاتف تفتح التفاصيل والسجل كورقة سفلية."}
+};
+
+/* ---------- shell ---------- */
+const link=(icon,label,cur,extra="")=>`<a class="navlink" href="#" ${cur?'aria-current="page"':""}>${ic(icon)}<span>${label}</span>${extra}</a>`;
+const brand=()=>`<div class="brand"><div class="logo">${ic("graduation-cap")}</div><div><div class="brand-name">${L().school}</div><div class="brand-sub">${L().sys}</div></div></div>`;
+const userCard=()=>`<div class="user">${av("mona")}<div><div class="n">${v(P.mona.n)}</div><div class="r">${v(P.mona.r)}</div></div>${ic("sign-out","flip")}</div>`;
+function side(page){const t=L();
+ const mod=(icon,label,bg,fg,kids,open)=>`<details class="mod" ${open?"open":""}><summary><span class="mi" style="background:${bg};color:${fg}">${ic(icon)}</span>${label}${ic("caret-down","car")}</summary><div class="kids">${kids}</div></details>`;
+ const dis=(icon,label)=>`<details class="mod dis"><summary><span class="mi" style="background:var(--secondary)">${ic(icon)}</span>${label}<span class="soon">${t.soon}</span></summary></details>`;
+ const act=page==="activity";
+ return `<aside class="sb">${brand()}<nav>
+ <a class="single" href="#"><span class="mi">${ic("squares-four")}</span>${t.dashboard}</a>
+ ${mod("users-three",t.hr,"var(--primary-soft)","var(--primary)",link("users",t.employees,!act)+link("gavel",t.penalties)+link("clock-countdown",t.lateness)+link("wallet",t.payroll),!act)}
+ ${dis("calculator",t.accounting)}${dis("package",t.inventory)}${dis("student",t.students)}
+ ${mod("buildings",t.admin,"var(--accent-soft)","#6b4b00",link("gear-six",t.settings)+link("clock-counter-clockwise",t.activity,act,act?"":`<span class="newdot">${t.isNew}</span>`),act)}
+ </nav><div class="bottom">${userCard()}</div></aside>`;}
+const langT=()=>`<span class="lang"><span class="${!AR()?"on":""}">EN</span><span class="ar ${AR()?"on":""}">ع</span></span>`;
+const topline=(crumb="")=>`<div class="topline">${crumb}<span class="sp"></span>${langT()}</div>`;
+const mbar=()=>`<div class="mbar"><button class="menub" aria-label="menu">${ic("list")}</button><div class="brand-name">${L().school}</div>${langT()}</div>`;
+const actHead=()=>`<div class="head"><div><h1>${L().title}</h1><p>${L().sub}</p></div></div>`;
+const pager=()=>`<nav class="pager" aria-label="pagination"><span class="info">${L().showing}</span><div class="pages">
+ <button class="pg" disabled>${ic("caret-double-left","flip")}</button><button class="pg" disabled>${ic("caret-left","flip")}</button><button class="pg num" aria-current="page">1</button><button class="pg num">2</button><button class="pg num">3</button><span class="gap">…</span><button class="pg num">25</button><button class="pg">${ic("caret-right","flip")}</button><button class="pg">${ic("caret-double-right","flip")}</button></div></nav>`;
+const mpager=(info=L().showing,pg=L().page,last=false)=>`<div class="mpager"><span class="info">${info}</span><div class="row"><button class="pg" disabled>${ic("caret-left","flip")}</button><b>${pg}</b><button class="pg" ${last?"disabled":""}>${ic("caret-right","flip")}</button></div></div>`;
+const timeH=(e,tip=false)=>`<span class="time num-ok" title="${v(e.ex)}">${v(e.rel)}${tip?`<span class="tip">${v(e.ex)}</span>`:""}</span>`;
+const filtersToolbar=(phone)=>{const t=L();return `<section class="toolbar"><div class="frow"><label class="search">${ic("magnifying-glass")}<span>${t.search}</span></label>
+ <button class="fsel">${ic("user-circle")}${t.fPerson}${ic("caret-down")}</button><button class="fsel">${ic("squares-four")}${t.fModule}${ic("caret-down")}</button><button class="fsel">${ic("lightning")}${t.fAction}${ic("caret-down")}</button><button class="fsel set">${ic("calendar-blank")}<span class="num-ok">${t.fDate}</span>${ic("caret-down")}</button></div>
+ <div class="resline"><span>${t.results}</span><span class="chipx">${ic("calendar-blank")}${t.dateChip}${ic("x")}</span><span class="sp"></span><button class="linkbtn">${t.clear}</button></div></section>`;};
+const changeTable=e=>{const t=L();
+ if(e.f){const rows=[...e.f,[["عنوان IP","IP address"],em(e.ip)],[["الجهاز","Device"],DEV[e.dv]]];
+  return `<div class="facts">${rows.map(r=>`<div class="fact"><div class="l">${v(r[0])}</div><div class="v">${v(r[1])}</div></div>`).join("")}</div>`;}
+ return `<table class="ctab"><thead><tr><th>${t.field}</th><th>${t.before}</th><th></th><th>${t.after}</th></tr></thead><tbody>${e.c.map(r=>`<tr><td class="f">${v(r[0])}</td><td class="b">${r[1]==null?'<span class="none">—</span>':val(r[1])}</td><td class="arcell">${arrow()}</td><td class="a">${val(r[2])}</td></tr>`).join("")}</tbody></table>`;};
+const rowMenu=(style)=>{const t=L();return `<div class="menu" style="${style}"><a href="#" class="hl">${ic("arrow-square-out")}${t.mOpen}</a><a href="#">${ic("user-focus")}${t.mOnly}</a><a href="#">${ic("link-simple")}${t.mCopy}</a></div>`;};
+const nullB=(h,cr)=>cr?`<span class="pill m-core" style="font-size:11px">${L().created}</span>`:`<span class="none">—</span>`;
+const nCh=e=>e.c?e.c.length:(e.f?e.f.length+2:2);
+const profileHead=(extraBtn="")=>{const t=L();return `<div class="crumb">${t.crumbEmp}${ic("caret-right","flip")}<span>${t.emp}</span></div>
+ <div class="head" style="margin-top:-6px"><div><h1>${t.emp}<span class="pill p-active" style="font-size:12.5px;font-family:var(--font)"><span class="dot"></span>${t.active}</span></h1><div class="submeta">${t.empMeta}</div></div>
+ <div class="acts">${extraBtn}<button class="btn btn-primary">${ic("pencil-simple")}${t.edit}</button><button class="btn">${ic("user-minus")}${t.deact}</button></div></div>`;};
+const tabs=(hist=true,noHist=false)=>{const t=L();return `<div class="tabs"><span class="tab ${hist?"":"on"}">${t.tDetails}</span><span class="tab">${t.tPen}</span><span class="tab">${t.tPay}</span>${noHist?"":`<span class="tab ${hist?"on":""}">${ic("clock-counter-clockwise")}${t.tHist}<span class="cnt num">7</span></span>`}</div>`;};
+
+/* ================= OPTION A ================= */
+function A_activity(){const t=L();
+ const rows=E.map(e=>{const open=e.id===2;const menuOpen=e.id===7;
+  return `<tr class="${e.k==="fail"?"fail":""} ${open?"open":""}">
+  <td style="width:36px;padding-inline-end:0"><button class="ibtn" aria-expanded="${open}">${ic("caret-right","car flip")}</button></td>
+  <td style="width:150px">${timeH(e,e.id===3)}</td>
+  <td style="width:210px">${whoH(e.who)}</td>
+  <td><div class="act"><div class="sent">${e.s()}</div></div></td>
+  <td style="width:170px"><div style="display:flex;gap:6px;flex-wrap:wrap">${modChip(e.m)}${tag(e)}</div></td>
+  <td style="width:50px;position:relative"><button class="ibtn ${menuOpen?"on":""}">${ic("dots-three")}</button>${menuOpen?rowMenu("top:46px;inset-inline-end:8px"):""}</td></tr>
+  ${open?`<tr class="exp"><td colspan="6"><div class="exbox"><div><h4>${t.nChanges(e.c.length)}</h4>${changeTable(e)}</div>
+   <div class="meta"><div class="fact"><div class="l">${t.exact}</div><div class="v num">${v(e.ex)}</div></div><div class="fact"><div class="l">${t.ip} · ${t.device}</div><div class="v">${em(e.ip)} · ${v(DEV[e.dv])}</div></div>
+   <button class="btn btn-sm" style="align-self:flex-start">${ic("arrow-square-out")}${t.openRec}: ${v(e.rc)}</button></div></div></td></tr>`:""}`;}).join("");
+ return `<main class="main">${topline()}${actHead()}${filtersToolbar()}
+ <section class="card"><table class="ta"><thead><tr><th></th><th>${t.when}</th><th>${t.who}</th><th>${t.action}</th><th>${t.module}</th><th></th></tr></thead><tbody>${rows}</tbody></table>${pager()}</section></main>`;}
+function A_card(e,open){const t=L();
+ return `<article class="acard ${e.k==="fail"?"fail":""} ${open?"open":""}"><div class="top">${whoH(e.who,"sm")}<span class="time-sub num-ok">${v(e.rel)}</span><button class="ibtn" style="margin-inline-end:-8px">${ic("dots-three")}</button></div>
+ <div class="sent">${e.s()}</div>
+ ${open?`<div class="mchg">${e.c?e.c.map(r=>`<div class="r"><span class="l">${v(r[0])}</span><span>${r[1]==null?"":`<span class="old">${val(r[1])}</span> ${arrow()} `}<span class="new">${val(r[2])}</span></span></div>`).join(""):""}<div class="meta"><span class="num">${v(e.ex)}</span> · ${em(e.ip)} · ${v(DEV[e.dv])}</div></div>`:""}
+ <div class="bot">${modChip(e.m)}${tag(e)}<span class="sp"></span><button class="linkbtn">${open?t.hideCh:e.f?t.details:t.nChanges(nCh(e))}${ic(open?"caret-up":"caret-down")}</button></div></article>`;}
+function A_phoneList(){const t=L();
+ return `<main class="main">${actHead()}<section class="toolbar"><div class="frow"><label class="search">${ic("magnifying-glass")}<span>${t.search}</span></label>
+ <button class="fsel">${ic("user-circle")}${t.fPerson}${ic("caret-down")}</button><button class="fsel">${ic("squares-four")}${t.fModule}${ic("caret-down")}</button><button class="fsel">${ic("lightning")}${t.fAction}${ic("caret-down")}</button><button class="fsel set">${ic("calendar-blank")}<span class="num-ok">${t.fDateS}</span>${ic("caret-down")}</button></div>
+ <div class="resline"><span>${t.results}</span><span class="sp"></span><button class="linkbtn">${t.clear}</button></div></section>
+ <section class="card acards">${E.map(e=>A_card(e,e.id===2)).join("")}${mpager()}</section></main>`;}
+function A_history(){const t=L();
+ const rows=H.map(h=>h.c.map((r,i)=>`<tr class="${i<h.c.length-1?"hgroup":""}">
+  <td style="width:150px">${i===0?timeH(h):""}</td><td style="width:200px">${i===0?whoH(h.who):""}</td>
+  <td style="width:200px;color:var(--muted-foreground);font-weight:600">${v(r[0])}</td><td>${r[1]==null?nullB(h,h.cr):`<span class="old">${val(r[1])}</span>`}</td><td style="width:30px">${arrow()}</td><td class="new" style="font-weight:700">${val(r[2])}</td>
+  <td style="width:50px">${i===0?`<button class="ibtn">${ic("dots-three")}</button>`:""}</td></tr>`).join("")).join("");
+ return `<main class="main">${topline()}${profileHead()}${tabs()}
+ <section class="card"><div class="sec-h"><div><h2>${t.histT}</h2><p>${t.histS}</p></div><span class="sp"></span><button class="fsel" style="flex:none;min-width:190px">${ic("list-magnifying-glass")}${t.allFields}${ic("caret-down")}</button></div>
+ <table class="ta" style="margin-top:0"><thead><tr><th>${t.when}</th><th>${t.who}</th><th>${t.field}</th><th>${t.before}</th><th></th><th>${t.after}</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+ <nav class="pager"><span class="info">${t.histShowing}</span><div class="pages"><button class="pg" disabled>${ic("caret-left","flip")}</button><button class="pg num" aria-current="page">1</button><button class="pg" disabled>${ic("caret-right","flip")}</button></div></nav></section></main>`;}
+function A_phoneHist(){const t=L();
+ return `<main class="main">${profileHead()}${tabs()}
+ <section class="card"><div class="sec-h"><div><h2>${t.histT}</h2><p>${t.histS}</p></div><button class="fsel" style="min-width:100%">${ic("list-magnifying-glass")}${t.allFields}${ic("caret-down")}</button></div>
+ <div class="acards">${H.map((h,i)=>`<article class="acard"><div class="top">${whoH(h.who,"sm")}<span class="time-sub num-ok">${v(h.rel)}</span></div>
+ <div class="mchg">${h.c.map(r=>`<div class="r"><span class="l">${v(r[0])}</span><span>${r[1]==null?(h.cr?nullB(h,1)+" ":""):`<span class="old">${val(r[1])}</span> ${arrow()} `}<span class="new">${val(r[2])}</span></span></div>`).join("")}</div></article>`).join("")}</div>
+ ${mpager(t.histShowing,t.histPage,true)}</section></main>`;}
+const PEOPLE=["mona","ahmed","nadia","khaled","rania","hany","anon"];
+function A_picker(){const t=L();
+ return A_phoneList()+`<div class="scrim"></div><div class="sheet"><div class="grab"></div><div class="sh"><h3>${t.people}</h3><button class="ibtn">${ic("x")}</button></div>
+ <div class="sbody"><div class="pinput">${ic("magnifying-glass")}<span>${t.searchPeople}</span></div><div class="plist">
+ <div class="popt sel"><span class="ico">${ic("users")}</span><div class="who"><div class="n">${t.fPerson}</div></div>${ic("check","ck")}</div>
+ ${PEOPLE.map(p=>`<div class="popt">${whoH(p,"sm")}</div>`).join("")}</div></div></div>`;}
+function A_skeleton(){const t=L();
+ const r=()=>`<div class="skrow"><div class="l1"><div class="sk" style="width:28px;height:28px;border-radius:10px"></div><div class="sk" style="width:120px;height:12px"></div><span style="flex:1"></span><div class="sk" style="width:60px;height:10px"></div></div><div class="sk" style="width:92%;height:12px"></div><div class="l1"><div class="sk" style="width:64px;height:20px;border-radius:999px"></div><span style="flex:1"></span><div class="sk" style="width:70px;height:12px"></div></div></div>`;
+ return `<main class="main" aria-busy="true" aria-label="${t.loading}">${actHead()}<section class="toolbar"><div class="frow"><label class="search">${ic("magnifying-glass")}<span>${t.search}</span></label>
+ <button class="fsel">${ic("user-circle")}${t.fPerson}${ic("caret-down")}</button><button class="fsel">${ic("squares-four")}${t.fModule}${ic("caret-down")}</button></div></section>
+ <section class="card acards">${Array.from({length:10},r).join("")}</section></main>`;}
+
+/* ================= OPTION B ================= */
+function B_sent(e){
+ if(e.k==="fail") return `<span class="sent">${e.s()}</span>`;
+ if(AR()) return `<span class="sent"><span class="actor">${v(P[e.who].n)}</span> ${e.sv()}</span>`;
+ let s=e.s(); s=s.charAt(0).toLowerCase()+s.slice(1);
+ return `<span class="sent"><span class="actor">${v(P[e.who].n)}</span> ${s}</span>`;}
+const B_diffs=(e,max=2,all=false,phone=false)=>{const t=L();if(e.f){return `<div class="diffs">${(phone?e.f.slice(0,1):[...e.f,[["عنوان IP","IP address"],em(e.ip)],[["الجهاز","Device"],DEV[e.dv]]]).map(r=>`<div class="d"><span class="l">${v(r[0])}</span><span>${v(r[1])}</span></div>`).join("")}</div>`;}
+ if(!e.c) return "";const rows=all?e.c:e.c.slice(0,max);
+ return `<div class="diffs">${rows.map(r=>`<div class="d"><span class="l">${v(r[0])}</span><span>${r[1]==null?"":`<span class="old">${val(r[1])}</span> ${arrow()} `}<span class="new">${val(r[2])}</span></span></div>`).join("")}${!all&&e.c.length>max?`<button class="linkbtn" style="align-self:flex-start;font-size:12.5px">${(n=>AR()?(n===1?"+ تغيير آخر":n===2?"+ تغييران آخران":`+ ${n} تغييرات أخرى`):`+ ${n} more`)(e.c.length-max)}</button>`:""}</div>`;};
+function B_item(e,last,phone){
+ return `<div class="ti ${e.k==="fail"?"fail":""} ${last?"last":""}"><div class="tm"><span class="time num-ok" title="${v(e.ex)}">${e.tm}</span>${e.day===0?`<span class="time-sub">${v(e.rel)}</span>`:""}</div><div class="rail">${kic(e)}</div>
+ <div class="body"><div class="line1">${phone?`<div class="ptime num-ok" style="margin-bottom:2px">${e.day===0?v(e.rel)+" · ":""}<span class="num">${e.tm}</span></div>`:""}${B_sent(e)}</div>
+ ${e.id===6?"":B_diffs(e,phone?1:2,!phone&&(e.id===4||e.id===1),phone)}
+ <div class="meta">${modChip(e.m)}${tag(e)}${e.rc?`<button class="linkbtn" style="font-size:12.5px">${ic("arrow-square-out")}${L().openRec}</button>`:""}</div></div></div>`;}
+function B_timeline(phone){
+ let out="";[0,1,2].forEach(d=>{const items=E.filter(e=>e.day===d);out+=`<div class="dayh"><span>${v(DAYS[d])}</span><span class="c">${dayCount(items.length)}</span></div>`+items.map((e,i)=>B_item(e,i===items.length-1,phone)).join("");});
+ return out;}
+function B_filters(){const t=L();
+ const actTypes=[["plus-circle",["إضافة","Created"]],["pencil-simple",["تعديل","Changed"]],["check-circle",["اعتماد","Approved"]],["x-circle",["إلغاء","Cancelled"]],["sign-in",["تسجيل دخول","Signed in"]],["lock-key",["دخول فاشل","Failed sign-in"]]];
+ return `<aside class="card bfilt"><h3>${ic("funnel")}${t.filters}<button class="linkbtn">${t.clear}</button></h3>
+ <div class="fg"><span class="lb">${t.dateRange}</span><button class="fsel set" style="flex:none">${ic("calendar-blank")}<span>${t.fDate}</span>${ic("caret-down")}</button></div>
+ <div class="fg"><span class="lb">${t.module}</span><div class="segm"><span class="on">${t.modAll}</span><span>${t.core}</span><span>${t.hr}</span></div></div>
+ <div class="fg"><span class="lb">${t.actionType}</span><div class="cbs">${actTypes.map((a,i)=>`<span class="cb ${i===4||i===5?"":""}">${ic(a[0])}${v(a[1])}</span>`).join("")}</div></div>
+ <div class="fg"><span class="lb">${t.people}</span><div class="pbox"><div class="pinput">${ic("magnifying-glass")}<span>${t.searchPeople}</span></div><div class="plist">
+ <div class="popt sel"><span class="ico">${ic("users")}</span><div class="who"><div class="n">${t.fPerson}</div></div>${ic("check","ck")}</div>
+ ${PEOPLE.slice(0,5).map(p=>`<div class="popt">${whoH(p,"sm")}</div>`).join("")}</div></div></div>
+ <div class="fg"><span class="lb">${t.glance}</span><div class="glance"><div class="g"><div class="v num">6</div><div class="l">${t.gActions}</div></div><div class="g"><div class="v num">4</div><div class="l">${t.gPeople}</div></div><div class="g i"><div class="v num">2</div><div class="l">${t.gMoney}</div></div><div class="g w"><div class="v num">1</div><div class="l">${t.gFail}</div></div></div></div>
+ </aside>`;}
+function B_activity(){const t=L();
+ return `<main class="main">${topline()}${actHead()}
+ <div class="bwrap"><div style="display:flex;flex-direction:column;gap:14px;min-width:0"><label class="search" style="background:var(--card);box-shadow:var(--shadow-card);border-color:transparent;flex:none">${ic("magnifying-glass")}<span>${t.search}</span></label>
+ <section class="card tl">${B_timeline(false)}${pager()}</section></div>${B_filters()}</div></main>`;}
+function B_phoneList(){const t=L();
+ return `<main class="main">${actHead()}<div class="bphone-bar"><label class="search" style="background:var(--card)">${ic("magnifying-glass")}<span>${t.search}</span></label><button class="fbtn">${ic("funnel")}<span class="n num">1</span></button></div>
+ <div class="resline"><span>${t.results}</span><span class="chipx">${t.dateChip}${ic("x")}</span></div>
+ <section class="card tl">${B_timeline(true)}${mpager()}</section></main>`;}
+function B_histTimeline(phone){
+ let out="";[0,1,2,3].forEach(m=>{const items=H.filter(h=>h.mo===m);out+=`<div class="monthh">${v(MONTHS[m])}</div>`+items.map((h,i)=>`<div class="ti ${i===items.length-1&&m===3?"last":""}"><div class="tm"><span class="time num-ok" title="${v(h.ex)}">${v(h.d)}</span><span class="time-sub num">${h.tm}</span></div><div class="rail">${kic(h)}</div>
+ <div class="body"><div class="line1">${phone?`<div class="ptime num-ok" style="margin-bottom:2px">${v(h.d)} · <span class="num">${h.tm}</span></div>`:""}<span class="sent"><span class="actor">${v(P[h.who].n)}</span> · ${h.s()}</span></div>${B_diffs(h,phone?2:4)}</div></div>`).join("");});
+ return out;}
+function B_history(){const t=L();
+ return `<main class="main">${topline()}${profileHead()}${tabs()}
+ <div class="bwrap"><section class="card tl"><div class="sec-h"><div><h2>${t.histT}</h2><p>${t.histS}</p></div></div>${B_histTimeline(false)}<div style="height:10px"></div></section>
+ <aside class="card bfilt"><h3>${ic("funnel")}${t.filters}</h3>
+ <div class="fg"><span class="lb">${t.field}</span><button class="fsel" style="flex:none">${ic("list-magnifying-glass")}${t.allFields}${ic("caret-down")}</button></div>
+ <div class="fg"><span class="lb">${t.who}</span><button class="fsel" style="flex:none">${ic("user-circle")}${t.fPerson}${ic("caret-down")}</button></div>
+ <div class="fg"><span class="lb">${AR()?"آخر تغيير":"Last change"}</span><div class="fact"><div class="v">${AR()?"منذ 40 دقيقة · منى إبراهيم":"40 min ago · Mona Ibrahim"}</div><div class="l">${AR()?"الراتب الأساسي":"Basic salary"}</div></div></div>
+ </aside></div></main>`;}
+function B_phoneHist(){const t=L();
+ return `<main class="main">${profileHead()}${tabs()}<section class="card tl"><div class="sec-h"><div><h2>${t.histT}</h2><p>${t.histS}</p></div></div>${B_histTimeline(true)}<div style="height:8px"></div></section></main>`;}
+function B_empty(){const t=L();
+ return `<main class="main">${actHead()}<div class="bphone-bar"><label class="search" style="background:var(--card)">${ic("magnifying-glass")}<span>${t.search}</span></label><button class="fbtn">${ic("funnel")}<span class="n num">3</span></button></div>
+ <div class="resline"><span class="chipx">${v(P.hany.n)}${ic("x")}</span><span class="chipx">${t.hr}${ic("x")}</span><span class="chipx">${t.dateChip}${ic("x")}</span></div>
+ <section class="card"><div class="empty"><div class="eic">${ic("magnifying-glass")}</div><h3>${t.emptyT}</h3><p>${t.emptyD}</p><button class="btn" style="margin-top:8px">${ic("arrow-counter-clockwise")}${t.clear}</button></div></section></main>`;}
+
+/* ================= OPTION C ================= */
+function C_row(e,sel){
+ return `<div class="crow ${sel?"sel":""} ${e.k==="fail"?"fail":""}">${kic(e)}<div class="l1"><span class="nm">${v(P[e.who].n)}</span><span class="sp"></span><span class="num-ok" title="${v(e.ex)}" style="white-space:nowrap">${v(e.rel)}</span></div><div class="sent">${e.s()}</div></div>`;}
+function C_detail(e,sheet){const t=L();
+ const earlier=[H[1],H[2],H[4]];
+ return `<div class="dh">${kic(e)}<div style="min-width:0;flex:1"><h2 class="sent">${e.s()}</h2><div class="tags">${modChip(e.m)}${tag(e)}</div></div>${sheet?`<button class="ibtn bd">${ic("x")}</button>`:`<button class="ibtn bd">${ic("dots-three")}</button>`}</div>
+ <div class="mgrid"><div class="mcell"><div class="l">${t.who}</div>${whoH(e.who,"sm")}</div>
+ <div class="mcell"><div class="l">${t.exact}</div><div class="v num">${v(e.ex)}</div><div class="v2">${v(e.rel)}</div></div>
+ <div class="mcell"><div class="l">${t.record}</div><a href="#">${v(e.rc)}${ic("arrow-square-out")}</a></div>
+ <div class="mcell"><div class="l">${t.ip} · ${t.device}</div><div class="v">${em(e.ip)}</div><div class="v2">${v(DEV[e.dv])}</div></div></div>
+ <div><div class="xh">${t.nChanges(e.c.length)}</div><div class="ctable">${changeTable(e)}</div></div>
+ <div><div class="xh" style="display:flex;align-items:center">${t.earlier}<span style="flex:1"></span><button class="linkbtn" style="font-size:12.5px">${t.fullHist}${ic("caret-right","flip")}</button></div><div class="earl">${earlier.map(h=>`<div class="e">${av(h.who,"sm")}<span class="s sent">${h.s()}</span><span class="t num-ok">${v(h.d)}</span></div>`).join("")}</div></div>`;}
+function C_activity(){const t=L();
+ return `<main class="main">${topline()}${actHead()}${filtersToolbar()}
+ <div class="csplit"><section class="card clist">${E.map(e=>C_row(e,e.id===2)).join("")}
+ <nav class="pager" style="padding:12px 14px"><span class="info">${t.showing}</span><div class="pages"><button class="pg" disabled>${ic("caret-left","flip")}</button><button class="pg num" aria-current="page">1</button><button class="pg num">2</button><span class="gap">…</span><button class="pg num">25</button><button class="pg">${ic("caret-right","flip")}</button></div></nav></section>
+ <section class="card cdet">${C_detail(E[1])}</section></div></main>`;}
+function C_phoneList(){const t=L();
+ return `<main class="main">${actHead()}<section class="toolbar"><div class="frow"><label class="search">${ic("magnifying-glass")}<span>${t.search}</span></label>
+ <button class="fsel">${ic("user-circle")}${t.fPerson}${ic("caret-down")}</button><button class="fsel">${ic("squares-four")}${t.fModule}${ic("caret-down")}</button><button class="fsel">${ic("lightning")}${t.fAction}${ic("caret-down")}</button><button class="fsel set">${ic("calendar-blank")}<span>${t.fDateS}</span>${ic("caret-down")}</button></div>
+ <div class="resline"><span>${t.results}</span><span class="sp"></span><button class="linkbtn">${t.clear}</button></div></section>
+ <section class="card clist">${E.map(e=>C_row(e,false)).join("")}${mpager()}</section></main>`;}
+function C_sheet(){const t=L();
+ return C_phoneList()+`<div class="scrim"></div><div class="sheet"><div class="grab"></div><div class="sbody cdet" style="padding:8px 16px 24px;position:static;gap:16px">${C_detail(E[1],true)}</div></div>`;}
+function C_hpanel(sheet){const t=L();
+ return `<div class="hh">${ic("clock-counter-clockwise")}<h3>${t.histT}</h3><button class="ibtn bd">${ic("x")}</button></div>
+ <div style="padding:10px 18px;border-bottom:1px solid var(--border);display:flex;gap:8px"><button class="fsel" style="min-width:0">${ic("list-magnifying-glass")}${t.allFields}${ic("caret-down")}</button></div>
+ ${H.map((h,i)=>`<div class="hitem ${i===0?"sel":""}"><div class="l1">${av(h.who,"sm")}<b>${v(P[h.who].n)}</b><span class="sp"></span><span class="num-ok" title="${v(h.ex)}">${v(h.rel)}</span></div><div class="sent" style="font-size:13.5px">${h.s()}</div>
+ ${i===0||i===4?`<div class="mini">${h.c.map(r=>`<div class="d"><span class="l">${v(r[0])}</span><span>${r[1]==null?"":`<span class="old">${val(r[1])}</span> ${arrow()} `}<span class="new">${val(r[2])}</span></span></div>`).join("")}</div>`:""}</div>`).join("")}`;}
+function C_history(){const t=L();
+ const f=(l,vv,cls="")=>`<div class="pdf ${cls}"><div class="l">${l}</div><div class="v">${vv}</div></div>`;
+ return `<main class="main">${topline()}${profileHead(`<button class="btn" style="border-color:var(--primary);background:var(--primary-soft);color:var(--primary)">${ic("clock-counter-clockwise")}${t.histBtn}</button>`)}${tabs(false,true)}
+ <div class="chist"><div style="display:flex;flex-direction:column;gap:18px">
+ <section class="card pd"><h3>${t.payc}</h3><div class="pdg">${f(t.lBasic,money(13000),"hl chg-mark")}${f(t.lEnd,`<span>${AR()?"31 أغسطس 2027":"31 Aug 2027"}</span>`)}</div></section>
+ <section class="card pd"><h3>${t.job}</h3><div class="pdg">${f(t.lCode,'<span class="num">EMP-0031</span>')}${f(t.lHire,AR()?"14 يونيو 2026":"14 Jun 2026")}${f(t.lStage,AR()?"الإعدادية":"Preparatory")}${f(t.lDept,AR()?"الرياضيات":"Mathematics")}${f(t.lTitle,AR()?"معلم رياضيات":"Mathematics teacher")}</div></section>
+ <section class="card pd"><h3>${t.pd}</h3><div class="pdg">${f(t.lPhone,em("01112345678"))}${f(AR()?"تاريخ الميلاد":"Date of birth",AR()?"3 مارس 1990":"3 Mar 1990")}</div></section>
+ </div><section class="card hpanel">${C_hpanel()}</section></div></main>`;}
+function C_phoneHist(){const t=L();
+ return `<main class="main">${profileHead(`<button class="btn">${ic("clock-counter-clockwise")}${t.histBtn}</button>`)}${tabs(false,true)}<section class="card pd"><h3>${t.payc}</h3></section></main>
+ <div class="scrim"></div><div class="sheet" style="max-height:90%"><div class="grab"></div><div class="hpanel" style="overflow:auto;scrollbar-width:none">${C_hpanel(true)}</div></div>`;}
+
+/* ---------- render ---------- */
+function render(){
+ const t=L();
+ document.documentElement.lang=lang; document.documentElement.dir=AR()?"rtl":"ltr";
+ document.getElementById("optNote").innerHTML=NOTE[opt][lang];
+ document.getElementById("deskT1").textContent=t.deskT1;
+ document.getElementById("deskT2").textContent=t.deskT2;
+ document.getElementById("phoneT").textContent=t.phoneT;
+ const F={A:[A_activity,A_history],B:[B_activity,B_history],C:[C_activity,C_history]}[opt];
+ document.getElementById("desk1").innerHTML=side("activity")+F[0]();
+ document.getElementById("desk2").innerHTML=side("employee")+F[1]();
+ const phones={
+  A:[[t.capList,A_phoneList],[t.capHist,A_phoneHist],[t.capPicker,A_picker,1],[t.capSkel,A_skeleton,1]],
+  B:[[t.capList,B_phoneList],[t.capHist,B_phoneHist],[t.capEmpty,B_empty,1]],
+  C:[[t.capList,C_phoneList],[t.capSheet,C_sheet,1],[t.capHSheet,C_phoneHist,1]]}[opt];
+ document.getElementById("phones").innerHTML=phones.map(([cap,fn,fixed])=>{const html=fn();
+  const i=html.indexOf('<div class="scrim">');const mainPart=i<0?html:html.slice(0,i), over=i<0?"":html.slice(i);
+  return `<div class="phone-wrap"><div class="phone ${fixed?"fixed":""}">${mbar()}<div class="scroll">${mainPart}</div>${over}</div><div class="phone-cap">${cap}</div></div>`;}).join("");
+}
+const q=new URLSearchParams(location.search);
+if(q.get("opt")) opt=q.get("opt"); if(q.get("lang")) lang=q.get("lang");
+if(q.get("view")==="desktop") document.body.classList.add("only-desktop");
+if(q.get("view")==="phone") document.body.classList.add("only-phone");
+if(q.get("full")) document.body.classList.add("full");
+const sync=()=>{document.querySelectorAll("#optSeg button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.opt===opt));document.querySelectorAll("#langSeg button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.lang===lang));};
+document.querySelectorAll("#optSeg button").forEach(b=>b.addEventListener("click",()=>{opt=b.dataset.opt;sync();render();}));
+document.querySelectorAll("#langSeg button").forEach(b=>b.addEventListener("click",()=>{lang=b.dataset.lang;sync();render();}));
+sync();render();
+</script>
+</body>
+</html>
