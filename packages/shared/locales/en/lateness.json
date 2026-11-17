@@ -1,0 +1,48 @@
+{
+  "title": "Lateness",
+  "description": "Each employee's total late-arrival and early-leave minutes for the month. Days follow the lateness rule in HR settings.",
+  "month": "Month",
+  "tableLabel": "Lateness for {month}",
+  "columns": {
+    "code": "Code",
+    "employee": "Employee",
+    "department": "Department",
+    "minutes": "Minutes",
+    "days": "Days"
+  },
+  "minutesLabel": "Minutes for {name}",
+  "minutesPlaceholder": "0",
+  "invalidMinutes": "Whole minutes from 0 to {max}.",
+  "changed": "Changed",
+  "noDepartment": "—",
+  "search": {
+    "label": "Search employees",
+    "placeholder": "Name or code, like EMP-0012"
+  },
+  "summary": "{employees} employees · {minutes} minutes · {days} days",
+  "rule": "Rule: {rule}",
+  "ruleStep": "hour {hour} = {days} d",
+  "ruleExtra": "each later hour = {days} d",
+  "ruleGrace": "{minutes} grace minutes first",
+  "save": "Save all",
+  "saveCount": "Save all ({count})",
+  "saved": "Lateness saved.",
+  "locked": {
+    "title": "This month is locked",
+    "body": "The payroll for {month} is approved, so its lateness can no longer change."
+  },
+  "discard": {
+    "title": "Discard unsaved minutes?",
+    "body": "You changed {count} rows in {month} without saving. Switching month discards them.",
+    "confirm": "Discard and switch"
+  },
+  "empty": {
+    "title": "No active employees",
+    "body": "Lateness is entered for active employees. Add employees first."
+  },
+  "noResults": {
+    "title": "No employees match",
+    "body": "Try another name or code."
+  },
+  "settingsError": "The lateness rule couldn't load, so days can't be shown. Try again."
+}

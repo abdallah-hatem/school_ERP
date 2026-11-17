@@ -21,6 +21,11 @@ export function isLocale(value: string): value is Locale {
   return (LOCALES as readonly string[]).includes(value);
 }
 
+/** The name of a record in the screen's language (`nameAr` in Arabic), falling back to the other. */
+export function nameIn(names: { nameEn: string; nameAr: string }, locale: Locale): string {
+  return locale === 'ar' ? names.nameAr || names.nameEn : names.nameEn || names.nameAr;
+}
+
 export function dirFor(locale: Locale): 'rtl' | 'ltr' {
   return locale === 'ar' ? 'rtl' : 'ltr';
 }
