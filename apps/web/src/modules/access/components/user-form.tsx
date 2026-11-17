@@ -227,7 +227,7 @@ export function UserForm({ basePath, user, roles, lastAdmin = false, now }: User
         {user.isActive ? (
           <StatusPill tone="success">{t('access.users.statuses.active')}</StatusPill>
         ) : (
-          <StatusPill tone="neutral">{t('access.users.statuses.inactive')}</StatusPill>
+          <StatusPill tone="neutral" hollow>{t('access.users.statuses.inactive')}</StatusPill>
         )}
         <span className="text-sm text-muted-foreground">
           {t('access.userForm.lastSignIn', { when: formatSignIn(user.lastSignInAt, now, locale, t) })}

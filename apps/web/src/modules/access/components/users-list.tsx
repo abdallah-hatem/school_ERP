@@ -166,7 +166,7 @@ export function UsersList({ basePath, query, rows, total, roles, lastAdminId, no
         u.isActive ? (
           <StatusPill tone="success">{t('access.users.statuses.active')}</StatusPill>
         ) : (
-          <StatusPill tone="neutral">{t('access.users.statuses.inactive')}</StatusPill>
+          <StatusPill tone="neutral" hollow>{t('access.users.statuses.inactive')}</StatusPill>
         ),
     },
     {
