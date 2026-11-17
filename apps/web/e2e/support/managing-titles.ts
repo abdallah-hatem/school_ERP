@@ -49,7 +49,7 @@ export async function checkManagingTitles(page: Page, info: TestInfo, locale: La
     await shoot(page, info, `managing-switch-${tag}`);
     await dialog.getByRole('button', { name: t(locale, 'common.actions.save'), exact: true }).click();
     await expect(dialog).toBeHidden();
-    await expect(page.getByText(t(locale, 'settings.lists.jobTitles.managesPeople')).first()).toBeVisible();
+    await expect(page.getByText(t(locale, 'settings.lists.jobTitles.managesPeople')).filter({ visible: true }).first()).toBeVisible();
     await expect.poll(async () => (await api.get<JobTitle[]>('/hr/job-titles')).find((jt) => jt.id === title.id)?.managesPeople).toBe(true);
     await settle(page);
     await shoot(page, info, `managing-badge-${tag}`);
