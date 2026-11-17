@@ -75,8 +75,12 @@ describe('UsersList', () => {
     await user.type(screen.getByRole('searchbox', { name: 'Search users' }), 'rania');
     await vi.waitFor(() => expect(push).toHaveBeenLastCalledWith('/en/users?search=rania&status=active', { scroll: false }));
     expect(screen.getByText('Showing 1–10 of 25')).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: 'Page 2' }));
-    expect(push).toHaveBeenLastCalledWith('/en/users?status=active&page=2', { scroll: false });
+    // The search's navigation dims the list and disables paging until it settles; wait for that
+    // (slow CI machines take longer) before paging.
+    const page2 = screen.getByRole('button', { name: 'Page 2' });
+    await vi.waitFor(() => expect(page2).toHaveProperty('disabled', false));
+    await user.click(page2);
+    await vi.waitFor(() => expect(push).toHaveBeenLastCalledWith('/en/users?status=active&page=2', { scroll: false }));
   });
 
   it('the only System admin’s ⋯ has no Deactivate; an inactive user has Reactivate', async () => {
