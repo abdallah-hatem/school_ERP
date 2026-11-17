@@ -4,6 +4,7 @@ import { PAGINATION, type SettingChangeItem } from '@school-erp/shared';
 import { useState } from 'react';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-table/data-table';
 import { EmptyState } from '@/shared/components/layout/empty-state';
+import { BidiText } from '@/shared/components/ui/bidi-text';
 import { HistoryIcon } from '@/shared/components/ui/icons';
 import { formatDateTime } from '@/shared/lib/format';
 import { useTranslation } from '@/shared/providers/i18n-provider';
@@ -24,38 +25,39 @@ export function HistorySection() {
       id: 'what',
       header: t('settings.history.what'),
       card: 'title',
-      className: 'min-w-40',
-      cell: (row) => <span className="font-semibold">{keyLabel(row.key, t, has)}</span>,
+      className: 'w-36 whitespace-normal',
+      cell: (row) => <span className="font-semibold break-words">{keyLabel(row.key, t, has)}</span>,
     },
     {
       id: 'change',
       header: t('settings.history.change'),
       card: 'wide',
-      className: 'min-w-64',
+      // Old → new wraps inside the column instead of widening the table past its card.
+      className: 'min-w-56 whitespace-normal',
       cell: (row) => (
         <span className="flex flex-wrap items-baseline gap-x-2 gap-y-1 break-words">
-          <span className="text-muted-foreground line-through decoration-muted-foreground/50">
+          <BidiText className="text-muted-foreground line-through decoration-muted-foreground/50">
             {formatChangeValue(row.key, row.oldValue, t, locale)}
-          </span>
+          </BidiText>
           <span aria-hidden="true" className="text-muted-foreground">
             {locale === 'ar' ? '←' : '→'}
           </span>
           <span className="sr-only">{t('settings.history.to')}</span>
-          <span className="font-semibold">{formatChangeValue(row.key, row.newValue, t, locale)}</span>
+          <BidiText className="font-semibold">{formatChangeValue(row.key, row.newValue, t, locale)}</BidiText>
         </span>
       ),
     },
     {
       id: 'who',
       header: t('settings.history.who'),
-      className: 'w-44',
-      cell: (row) => row.changedBy?.name ?? t('settings.history.system'),
+      className: 'w-36 whitespace-normal',
+      cell: (row) => <span className="break-words">{row.changedBy?.name ?? t('settings.history.system')}</span>,
     },
     {
       id: 'when',
       header: t('settings.history.when'),
       card: 'status',
-      className: 'w-48',
+      className: 'w-40',
       cell: (row) => <bdi className="tabular text-sm whitespace-nowrap">{formatDateTime(row.changedAt, locale)}</bdi>,
     },
   ];
@@ -67,6 +69,7 @@ export function HistorySection() {
         columns={columns}
         rows={history.data}
         getRowId={(row) => row.id}
+        cardsBelow={900}
         loading={history.loading}
         refreshing={history.refreshing}
         error={history.error}

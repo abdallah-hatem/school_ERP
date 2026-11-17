@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import { EmptyState, ErrorState } from '@/shared/components/layout/empty-state';
 import { Skeleton } from '@/shared/components/ui/skeleton';
+import { useScrollEdges } from '@/shared/hooks/use-scroll-edges';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { Pagination, type PaginationState } from './pagination';
@@ -17,6 +18,7 @@ import { Pagination, type PaginationState } from './pagination';
 /** Container widths a table may switch to cards below. Literal classes, so Tailwind sees them. */
 const VIEW_CLASSES = {
   740: { table: 'hidden @min-[740px]:block', cards: '@min-[740px]:hidden' },
+  900: { table: 'hidden @min-[900px]:block', cards: '@min-[900px]:hidden' },
   960: { table: 'hidden @min-[960px]:block', cards: '@min-[960px]:hidden' },
   1100: { table: 'hidden @min-[1100px]:block', cards: '@min-[1100px]:hidden' },
 } as const;
@@ -130,7 +132,7 @@ export function DataTable<Row>({
     <section
       aria-label={label}
       data-cards-below={cardsBelow}
-      className={cn('@container overflow-hidden rounded-3xl bg-card shadow-card', className)}
+      className={cn('@container min-w-0 overflow-hidden rounded-3xl bg-card shadow-card', className)}
     >
       {toolbar ? <div className="flex flex-wrap items-center gap-3 px-5 pt-5 pb-4">{toolbar}</div> : null}
       {body}
@@ -157,8 +159,23 @@ const toneBar = {
 } as const;
 
 function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass }: RowsProps<Row>) {
+  const { ref, edges } = useScrollEdges<HTMLDivElement>();
   return (
-    <div data-view="table" className={cn('scrollbar-clean overflow-x-auto', viewClass)}>
+    <div data-view="table" className={cn('relative', viewClass)}>
+      {/* Edge fades only on a side that hides columns, so a sideways scroll is never missed. */}
+      <span
+        aria-hidden="true"
+        data-scroll-fade="start"
+        hidden={!edges.start}
+        className="pointer-events-none absolute inset-y-0 start-0 z-10 w-8 from-card to-transparent ltr:bg-linear-to-r rtl:bg-linear-to-l"
+      />
+      <span
+        aria-hidden="true"
+        data-scroll-fade="end"
+        hidden={!edges.end}
+        className="pointer-events-none absolute inset-y-0 end-0 z-10 w-8 from-card to-transparent ltr:bg-linear-to-l rtl:bg-linear-to-r"
+      />
+      <div ref={ref} className="scrollbar-clean overflow-x-auto">
       <table aria-label={label} className="w-full border-separate border-spacing-0 text-sm">
         <thead>
           <tr>
@@ -203,6 +220,7 @@ function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass }: Rows
           })}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

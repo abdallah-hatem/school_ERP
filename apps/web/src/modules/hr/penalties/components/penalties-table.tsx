@@ -4,6 +4,7 @@ import { PenaltyStatus, type PenaltyRecord } from '@school-erp/shared';
 import type { ReactNode } from 'react';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-table/data-table';
 import type { PaginationState } from '@/shared/components/data-table/pagination';
+import { BidiText } from '@/shared/components/ui/bidi-text';
 import { StatusPill, type StatusTone } from '@/shared/components/ui/status-pill';
 import { formatDate } from '@/shared/lib/format';
 import { nameIn } from '@/shared/lib/i18n';
@@ -65,7 +66,7 @@ export function PenaltiesTable({
       className: 'w-32',
       card: showEmployee ? 'field' : 'title',
       cell: (p) => (
-        <bdi dir="ltr" className="tabular">
+        <bdi className="tabular">
           {formatDate(p.date, locale)}
         </bdi>
       ),
@@ -108,7 +109,7 @@ export function PenaltiesTable({
           <PenaltyStatusPill status={p.status} />
           {p.status === PenaltyStatus.CANCELLED && p.cancelReason ? (
             <span className="max-w-48 text-xs break-words text-muted-foreground">
-              {t('penalties.cancelledBecause', { reason: p.cancelReason })}
+              <ReasonText template={t('penalties.cancelledBecause', { reason: REASON_SLOT })} reason={p.cancelReason} />
             </span>
           ) : null}
         </span>
@@ -138,5 +139,19 @@ export function PenaltiesTable({
       rowTone={(p) => (p.status === PenaltyStatus.PENDING ? 'warning' : undefined)}
       cardsBelow={showEmployee ? 1100 : 960}
     />
+  );
+}
+
+const REASON_SLOT = '\u0000';
+
+/** "Reason: …" with the typed reason isolated in its own script (an Arabic reason in English). */
+function ReasonText({ template, reason }: { template: string; reason: string }) {
+  const [before = '', after = ''] = template.split(REASON_SLOT);
+  return (
+    <>
+      {before}
+      <BidiText>{reason}</BidiText>
+      {after}
+    </>
   );
 }

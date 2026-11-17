@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderWithI18n } from '@/test/render';
@@ -114,5 +114,67 @@ describe('DataTable states', () => {
     expect(pageWindow(1, 12)).toEqual([1, 2, 3, 4, 5]);
     expect(pageWindow(7, 12)).toEqual([5, 6, 7, 8, 9]);
     expect(pageWindow(12, 12)).toEqual([8, 9, 10, 11, 12]);
+  });
+});
+
+describe('DataTable sideways scroll cue', () => {
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  function sized(scrollWidth: number, clientWidth: number) {
+    vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockReturnValue(scrollWidth);
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(clientWidth);
+  }
+  function fade(side: 'start' | 'end'): HTMLElement {
+    const el = document.querySelector<HTMLElement>(`[data-scroll-fade="${side}"]`);
+    if (!el) throw new Error(`no ${side} fade`);
+    return el;
+  }
+
+  it('no fade on a table that fits', () => {
+    sized(600, 600);
+    renderWithI18n(<DataTable label="Employees" columns={columns} rows={people} getRowId={(p) => p.id} />);
+    expect(fade('start').hidden).toBe(true);
+    expect(fade('end').hidden).toBe(true);
+  });
+
+  it('fades only the side that hides columns, and follows the scroll (RTL positions are negative)', () => {
+    sized(1200, 600);
+    renderWithI18n(<DataTable label="Employees" columns={columns} rows={people} getRowId={(p) => p.id} />, {
+      locale: 'ar',
+    });
+    expect(fade('start').hidden).toBe(true);
+    expect(fade('end').hidden).toBe(false);
+
+    const scroller = screen.getByRole('table').parentElement as HTMLElement;
+    scroller.scrollLeft = -600;
+    fireEvent.scroll(scroller);
+    expect(fade('start').hidden).toBe(false);
+    expect(fade('end').hidden).toBe(true);
+  });
+});
+
+describe('Pagination on a phone', () => {
+  afterEach(cleanup);
+
+  it.each(['en', 'ar'] as const)('%s: says which page of how many, between previous and next', async (locale) => {
+    const user = userEvent.setup();
+    const paging = pagination({ page: 2, limit: 10, total: 45 });
+    renderWithI18n(
+      <DataTable label="Employees" columns={columns} rows={people} getRowId={(p) => p.id} pagination={paging} />,
+      { locale },
+    );
+    const nav = screen.getByRole('navigation');
+    const pageOf = nav.querySelector('[data-page-of]');
+    expect(pageOf?.textContent).toBe(locale === 'en' ? 'Page 2 of 5' : 'صفحة 2 من 5');
+    const previous = within(nav).getByRole('button', { name: locale === 'en' ? 'Previous page' : 'الصفحة السابقة' });
+    const next = within(nav).getByRole('button', { name: locale === 'en' ? 'Next page' : 'الصفحة التالية' });
+    // Previous · "page X of Y" · next, in that order.
+    expect(previous.compareDocumentPosition(pageOf as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect((pageOf as Node).compareDocumentPosition(next) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await user.click(next);
+    expect(paging.onPageChange).toHaveBeenCalledWith(3);
   });
 });

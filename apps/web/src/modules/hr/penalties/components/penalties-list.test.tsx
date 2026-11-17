@@ -62,6 +62,17 @@ describe('PenaltiesList', () => {
     expect(rows[1]?.textContent).toContain('خصم 0.5 يوم');
     expect(rows[1]?.textContent).toContain('قيد الانتظار');
     expect(rows[2]?.textContent).toContain('السبب: Wrong day');
+    // The English reason keeps its own direction inside the Arabic line.
+    const reason = within(rows[2] as HTMLElement).getByText('Wrong day');
+    expect([reason.tagName, reason.getAttribute('dir'), reason.getAttribute('lang')]).toEqual(['BDI', 'ltr', 'en']);
+  });
+
+  it('an Arabic date reads in Arabic order (day, month, year): it is not forced left-to-right', () => {
+    renderList({}, 'ar');
+    const date = table().getAllByRole('row')[1]?.querySelector('td bdi');
+    expect(date?.textContent).toMatch(/^\d{1,2} \S+ \d{4}$/);
+    // Under a forced LTR the browser lays "16 نوفمبر 2026" out as "16 2026 نوفمبر".
+    expect(date?.closest('[dir="ltr"]')).toBeNull();
   });
 
   it('fits an ~800px content area: level shares the action column, and rows turn to cards below 1100px', () => {

@@ -59,7 +59,10 @@ export function AppShell({ children, account }: { children: ReactNode; account?:
               {account ? <div>{account}</div> : null}
             </SheetContent>
           </Sheet>
-          <p className="font-display min-w-0 flex-1 truncate text-base font-extrabold">{schoolName}</p>
+          {/* Up to two lines: a long English name is cut only past the second line. */}
+          <p className="font-display line-clamp-2 min-w-0 flex-1 text-sm leading-tight font-extrabold break-words min-[400px]:text-base">
+            {schoolName}
+          </p>
           <LocaleSwitch />
         </header>
 

@@ -9,7 +9,7 @@ import {
   PENALTY_ACTIONS_REQUIRING_DAYS,
   type Violation,
 } from '@school-erp/shared';
-import { useId, useRef } from 'react';
+import { useId, useRef, type ReactNode } from 'react';
 import { useFieldArray, useForm, useWatch } from 'react-hook-form';
 import { NumberField, SelectField, TextareaField, TextField } from '@/shared/components/form/fields';
 import { Form } from '@/shared/components/form/form';
@@ -36,11 +36,14 @@ function toForm(v: Violation | null): ViolationFormValues {
 export function ViolationDialog({
   violation,
   title,
+  description,
   onClose,
   onSubmit,
 }: {
   violation: Violation | null;
   title: string;
+  /** Under the title, e.g. the name of the violation being edited. */
+  description?: ReactNode;
   onClose: () => void;
   onSubmit: (values: ViolationFormValues) => Promise<boolean>;
 }) {
@@ -74,6 +77,7 @@ export function ViolationDialog({
       <DialogContent
         size="lg"
         title={title}
+        description={description}
         footer={
           <>
             <DialogClose asChild>

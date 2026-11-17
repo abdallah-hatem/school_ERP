@@ -5,7 +5,7 @@ import { DayPicker, type DropdownProps, type Matcher } from 'react-day-picker';
 import { arEG, enGB } from 'react-day-picker/locale';
 import { cn } from '@/shared/lib/utils';
 import { buttonVariants } from './button';
-import { ChevronEndIcon, ChevronStartIcon } from './icons';
+import { ChevronDownIcon, ChevronEndIcon, ChevronStartIcon } from './icons';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select';
 
 /**
@@ -22,7 +22,8 @@ function CaptionDropdown({ options, value, onChange, disabled, 'aria-label': ari
       <SelectTrigger aria-label={ariaLabel} className={cn('h-9 gap-1 px-2.5 font-display font-bold', className)}>
         <SelectValue />
       </SelectTrigger>
-      <SelectContent>
+      {/* Year and month names are short: let the list size to them rather than to the trigger. */}
+      <SelectContent className="w-auto">
         {options?.map((option) => (
           <SelectItem key={option.value} value={String(option.value)} disabled={option.disabled} className="min-h-9">
             {option.label}
@@ -69,6 +70,7 @@ export function Calendar({
   monthLabel?: string;
   yearLabel?: string;
 }) {
+  const dir = locale === 'ar' ? 'rtl' : 'ltr';
   return (
     <DayPicker
       mode="single"
@@ -87,16 +89,18 @@ export function Calendar({
         ...(yearLabel ? { labelYearDropdown: () => yearLabel } : {}),
       }}
       locale={locale === 'ar' ? arEG : enGB}
-      dir={locale === 'ar' ? 'rtl' : 'ltr'}
+      dir={dir}
       numerals="latn"
       showOutsideDays
       className={cn('tabular w-fit', className)}
       classNames={{
         months: 'relative flex flex-col gap-4',
         month: 'flex flex-col gap-3',
-        nav: 'absolute inset-x-0 top-0 flex items-center justify-between',
-        button_previous: cn(buttonVariants({ variant: 'ghost', size: 'icon-sm' })),
-        button_next: cn(buttonVariants({ variant: 'ghost', size: 'icon-sm' })),
+        // The nav lies over the caption so its buttons flank the month / year pickers; only the
+        // buttons take pointer events, or the nav would swallow every click on the pickers.
+        nav: 'pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center justify-between',
+        button_previous: cn(buttonVariants({ variant: 'ghost', size: 'icon-sm' }), 'pointer-events-auto'),
+        button_next: cn(buttonVariants({ variant: 'ghost', size: 'icon-sm' }), 'pointer-events-auto'),
         month_caption: 'flex h-9 items-center justify-center px-10 font-display text-sm font-bold',
         dropdowns: 'flex min-w-0 items-center gap-1.5',
         months_dropdown: 'min-w-0 flex-1',
@@ -117,12 +121,20 @@ export function Calendar({
       }}
       components={{
         Dropdown: CaptionDropdown,
-        Chevron: ({ orientation, className: chevronClass }) =>
-          orientation === 'left' ? (
-            <ChevronStartIcon className={cn('size-4', chevronClass)} />
+        Chevron: ({ orientation, className: chevronClass }) => {
+          if (orientation === 'down' || orientation === 'up') {
+            return <ChevronDownIcon className={cn('size-4', orientation === 'up' && 'rotate-180', chevronClass)} />;
+          }
+          // DayPicker names the previous button's chevron "left" and the next one's "right" in both
+          // directions. Previous sits at the start edge, so its arrow points to that edge: left in
+          // English, right in Arabic. The icons are physical (no flip-rtl), so pick them here.
+          const pointsLeft = (orientation === 'left') === (dir === 'ltr');
+          return pointsLeft ? (
+            <ChevronStartIcon data-points="left" className={cn('size-4', chevronClass)} />
           ) : (
-            <ChevronEndIcon className={cn('size-4', chevronClass)} />
-          ),
+            <ChevronEndIcon data-points="right" className={cn('size-4', chevronClass)} />
+          );
+        },
       }}
     />
   );

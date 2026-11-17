@@ -42,7 +42,10 @@
     "title": "Approve {month}?",
     "body": "Every line is recalculated one last time, then the run, its penalties, lateness and adjustments are locked. An approved run can't be edited.",
     "confirm": "Approve and lock",
-    "failed": "Payroll wasn't approved"
+    "failed": "Payroll wasn't approved",
+    "pendingTitle": "Pending penalties this month",
+    "pendingBody": "Employees with pending penalties: {count}. Approve or cancel this month's pending penalties first, then approve the payroll.",
+    "pendingLink": "Review pending penalties"
   },
   "tiles": {
     "employees": "Employees",

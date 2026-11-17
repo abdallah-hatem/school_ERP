@@ -50,6 +50,7 @@ export async function PayrollRunScreen({
       <RunPage
         basePath={payrollPath(locale)}
         settingsHref={`/${locale}/settings`}
+        penaltiesHref={`/${locale}/penalties`}
         query={query}
         run={data.run}
         departments={data.departments}

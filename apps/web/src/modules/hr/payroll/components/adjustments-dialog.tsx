@@ -14,6 +14,7 @@ import { useForm } from 'react-hook-form';
 import { callApi } from '@/lib/callApi';
 import { MoneyField, SelectField, TextareaField } from '@/shared/components/form/fields';
 import { Form } from '@/shared/components/form/form';
+import { BidiText } from '@/shared/components/ui/bidi-text';
 import { Button } from '@/shared/components/ui/button';
 import { Dialog, DialogClose, DialogContent } from '@/shared/components/ui/dialog';
 import { Money } from '@/shared/components/ui/figures';
@@ -165,7 +166,9 @@ export function AdjustmentsDialog({
                         </StatusPill>
                         <Money value={a.amount} className="font-bold" />
                       </div>
-                      <p className="text-muted-foreground text-sm break-words">{a.reason}</p>
+                      <p className="text-muted-foreground text-sm break-words">
+                        <BidiText>{a.reason}</BidiText>
+                      </p>
                     </div>
                     {editable ? (
                       <Button

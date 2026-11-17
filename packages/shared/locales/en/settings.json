@@ -189,6 +189,7 @@
     "emptyBody": "Add a group, then the violations it holds.",
     "addViolation": "Add violation",
     "editViolation": "Edit {name}",
+    "editViolationTitle": "Edit violation",
     "retireViolation": "Retire {name}",
     "restoreViolation": "Restore {name}",
     "retire": "Retire",

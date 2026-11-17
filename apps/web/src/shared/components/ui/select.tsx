@@ -62,7 +62,8 @@ export function SelectContent({
         position="popper"
         sideOffset={6}
         className={cn(
-          'relative z-(--z-popover) max-h-(--radix-select-content-available-height) min-w-(--radix-select-trigger-width)',
+          // As wide as its trigger (never wider than the screen); long options wrap instead.
+          'relative z-(--z-popover) max-h-(--radix-select-content-available-height) w-(--radix-select-trigger-width) min-w-(--radix-select-trigger-width) max-w-[calc(100vw-2rem)]',
           'origin-(--radix-select-content-transform-origin) overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-raised',
           'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
           'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
@@ -92,7 +93,7 @@ export function SelectItem({
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        'relative flex min-h-11 cursor-pointer items-center gap-2 rounded-lg ps-3 pe-9 text-sm outline-none select-none',
+        'relative flex min-h-11 cursor-pointer items-center gap-2 rounded-lg py-2 ps-3 pe-9 text-sm whitespace-normal wrap-anywhere outline-none select-none',
         'data-[highlighted]:bg-primary-soft data-[highlighted]:text-primary',
         'data-[state=checked]:font-semibold data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
         className,

@@ -15,7 +15,8 @@
     "previousPage": "الصفحة السابقة",
     "nextPage": "الصفحة التالية",
     "lastPage": "الصفحة الأخيرة",
-    "page": "صفحة {page}"
+    "page": "صفحة {page}",
+    "pageOf": "صفحة {page} من {count}"
   },
   "states": {
     "emptyTitle": "لا يوجد شيء هنا بعد",

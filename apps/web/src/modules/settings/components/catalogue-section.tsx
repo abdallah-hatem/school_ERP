@@ -4,6 +4,7 @@ import type { PenaltyGroup, Violation } from '@school-erp/shared';
 import { useState } from 'react';
 import { callApi } from '@/lib/callApi';
 import { EmptyState, ErrorState } from '@/shared/components/layout/empty-state';
+import { BidiText } from '@/shared/components/ui/bidi-text';
 import { Button } from '@/shared/components/ui/button';
 import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { AddIcon, ChevronDownIcon, EditIcon, RestoreIcon, RetireIcon } from '@/shared/components/ui/icons';
@@ -256,10 +257,13 @@ export function CatalogueSection() {
         <ViolationDialog
           key={editing.violation?.id ?? `new-${editing.groupId}`}
           violation={editing.violation}
-          title={
-            editing.violation
-              ? t('settings.catalogue.editViolation', { name: localName(editing.violation, locale) })
-              : t('settings.catalogue.addViolation')
+          // A short title (a long violation name wrapped to three lines on a phone); the name
+          // follows underneath, clamped to two lines.
+          title={editing.violation ? t('settings.catalogue.editViolationTitle') : t('settings.catalogue.addViolation')}
+          description={
+            editing.violation ? (
+              <span className="line-clamp-2 break-words">{localName(editing.violation, locale)}</span>
+            ) : undefined
           }
           onClose={() => setEditing(null)}
           onSubmit={saveViolation}
@@ -303,7 +307,7 @@ function ViolationRow({
           <span className="font-semibold break-words">{name}</span>
           {violation.isActive ? null : <StatusPill tone="neutral">{t('settings.catalogue.retired')}</StatusPill>}
         </div>
-        <span className="text-xs break-words text-muted-foreground">{otherName(violation, locale)}</span>
+        <BidiText className="text-xs break-words text-muted-foreground">{otherName(violation, locale)}</BidiText>
         <ol className="flex flex-wrap gap-1.5" aria-label={t('settings.catalogue.levels')}>
           {levels.map((l) => (
             <li key={l.level} className="rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold text-secondary-foreground">
@@ -317,7 +321,11 @@ function ViolationRow({
             </li>
           ))}
         </ol>
-        {violation.note ? <p className="text-xs break-words text-muted-foreground">{violation.note}</p> : null}
+        {violation.note ? (
+          <p className="text-xs break-words text-muted-foreground">
+            <BidiText>{violation.note}</BidiText>
+          </p>
+        ) : null}
       </div>
       {groupActive ? (
         <div className="flex shrink-0 flex-wrap gap-2">

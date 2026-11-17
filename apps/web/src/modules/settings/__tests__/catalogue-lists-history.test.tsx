@@ -60,7 +60,13 @@ describe('Penalty catalogue editor', () => {
     renderSettings(<CatalogueSection />);
 
     await user.click(await screen.findByRole('button', { name: 'Edit Late arrival' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Edit Late arrival' });
+    const dialog = await screen.findByRole('dialog', { name: 'Edit violation' });
+    // The short title stays one line on a phone; the violation's name follows underneath.
+    expect(dialog.getAttribute('aria-describedby')).toBeTruthy();
+    expect(document.getElementById(dialog.getAttribute('aria-describedby') ?? '')?.textContent).toBe('Late arrival');
+    // The Arabic name is typed right to left, the English one left to right.
+    expect(within(dialog).getByRole('textbox', { name: /Name in Arabic/ }).getAttribute('dir')).toBe('rtl');
+    expect(within(dialog).getByRole('textbox', { name: /Name in English/ }).getAttribute('dir')).toBe('ltr');
     const days = within(dialog).getByRole('textbox', { name: /Level 2 days/ });
     const save = within(dialog).getByRole('button', { name: 'Save' });
 

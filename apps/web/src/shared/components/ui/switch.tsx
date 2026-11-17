@@ -11,7 +11,7 @@ export function Switch({ className, ...props }: ComponentProps<typeof SwitchPrim
       className={cn(
         'peer inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border border-transparent p-0.5',
         'transition-colors duration-150 ease-snappy',
-        'data-[state=checked]:bg-primary data-[state=unchecked]:bg-input',
+        'data-[state=checked]:bg-primary data-[state=unchecked]:bg-muted-foreground/70',
         'focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring/55',
         'disabled:cursor-not-allowed disabled:opacity-55',
         className,

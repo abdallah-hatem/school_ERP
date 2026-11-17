@@ -1,5 +1,6 @@
 'use client';
 
+import { Direction } from 'radix-ui';
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import {
   createTranslator,
@@ -48,7 +49,12 @@ export function I18nProvider({
     };
   }, [locale, messages, parent]);
 
-  return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
+  // Radix primitives (select, popover, …) default to LTR; they follow the page's direction instead.
+  return (
+    <I18nContext.Provider value={value}>
+      <Direction.DirectionProvider dir={value.dir}>{children}</Direction.DirectionProvider>
+    </I18nContext.Provider>
+  );
 }
 
 export function useTranslation(): I18nValue {
