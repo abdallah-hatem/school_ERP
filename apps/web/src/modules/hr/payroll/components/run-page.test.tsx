@@ -3,6 +3,7 @@ import '@/test/dom-polyfills';
 import { chooseRowAction, menuItemNames, openRowActions } from '@/test/row-actions';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { ReactElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const router = vi.hoisted(() => ({
@@ -31,6 +32,7 @@ vi.mock('@/shared/lib/download', () => download);
 import type { PayrollRunQuery } from '@school-erp/shared';
 import type { Locale } from '@/shared/lib/i18n';
 import { ADJ_MONA, MONA, renderPayroll, run, RUN_ID, SALMA, SETTINGS } from '../test/fixtures';
+import { PayrollI18n } from '../messages';
 import { RunPage, type RunPageProps } from './run-page';
 
 const DEPARTMENTS = [
@@ -50,21 +52,24 @@ const DEPARTMENTS = [
   },
 ];
 
-function renderRun(props: Partial<RunPageProps> = {}, locale: Locale = 'en') {
-  const r = props.run ?? run();
-  return renderPayroll(
+function runElement(props: Partial<RunPageProps> = {}, locale: Locale = 'en') {
+  return (
     <RunPage
       basePath={`/${locale}/payroll`}
       settingsHref={`/${locale}/settings`}
       penaltiesHref={`/${locale}/penalties`}
-      run={r}
+      run={props.run ?? run()}
+      asOf={0}
       departments={DEPARTMENTS}
       settings={SETTINGS}
       query={{} as PayrollRunQuery}
       {...props}
-    />,
-    locale,
+    />
   );
+}
+
+function renderRun(props: Partial<RunPageProps> = {}, locale: Locale = 'en') {
+  return renderPayroll(runElement(props, locale), locale);
 }
 
 function table() {
@@ -152,6 +157,7 @@ describe('RunPage — approve', () => {
     const user = userEvent.setup();
     apis.RECALCULATE_PAYROLL_RUN.mockResolvedValue({
       success: true,
+      asOf: 1,
       data: run({ lines: [MONA, { ...SALMA, flags: [] }], pendingPenalties: 0 }),
     });
     renderRun({ run: run({ lines: [MONA, SALMA], pendingPenalties: 0 }) });
@@ -185,11 +191,13 @@ describe('RunPage — approve', () => {
     });
     apis.APPROVE_PAYROLL_RUN.mockResolvedValue({
       success: true,
+      asOf: 1,
       status: 200,
       data: approved,
     });
     apis.GET_BANK_SHEET.mockResolvedValue({
       success: true,
+      asOf: 1,
       status: 200,
       data: {
         fileName: 'bank-sheet-2026-11.xlsx',
@@ -295,7 +303,7 @@ describe('RunPage — draft', () => {
     const button = screen.getByRole('button', { name: 'Recalculate' });
     await user.dblClick(button);
     expect(apis.RECALCULATE_PAYROLL_RUN).toHaveBeenCalledTimes(1);
-    resolve({ success: true, status: 200, data: run({ lines: [MONA] }) });
+    resolve({ success: true, asOf: 1, status: 200, data: run({ lines: [MONA] }) });
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Payroll recalculated.'));
     expect(table().queryByText('Salma Adel')).toBeNull();
   });
@@ -344,6 +352,7 @@ describe('RunPage — draft', () => {
     const user = userEvent.setup();
     apis.RECALCULATE_PAYROLL_RUN.mockResolvedValue({
       success: true,
+      asOf: 1,
       status: 200,
       data: run(),
     });
@@ -415,5 +424,76 @@ describe('RunPage — draft', () => {
     expect(table().getByText('منى خليل')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'اعتماد الرواتب' })).toBeTruthy();
     expect(screen.getByText('الرواتب · نوفمبر 2026')).toBeTruthy();
+  });
+});
+
+// A navigation started before a mutation (debounced search, "Clear filters") can land after it with
+// props read before the write. The mutation's result must stay on screen.
+describe('RunPage — a navigation landing after a mutation', () => {
+  const APPROVED = run({ status: 'APPROVED', approvedAt: '2026-11-30T10:00:00.000Z' });
+  const rerenderWith = (rerender: (ui: ReactElement) => void, props: Partial<RunPageProps>) =>
+    rerender(<PayrollI18n locale="en">{runElement(props)}</PayrollI18n>);
+
+  it('props read before Approve answered (the run still a draft) never bring Draft and Recalculate back', async () => {
+    const user = userEvent.setup();
+    apis.APPROVE_PAYROLL_RUN.mockResolvedValue({ success: true, status: 200, data: APPROVED, asOf: 200 });
+    const { rerender } = renderRun({ asOf: 100 });
+    await user.click(approveButton());
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Approve and lock' }));
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Recalculate' })).toBeNull());
+
+    // The clear-search navigation lands now: read at 150, before the approve answered at 200.
+    rerenderWith(rerender, { run: run(), asOf: 150 });
+    expect(screen.queryByRole('button', { name: 'Recalculate' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Approve payroll' })).toBeNull();
+    expect(screen.queryByText('Draft')).toBeNull();
+    // The page re-reads the current URL instead of trusting the old render.
+    await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
+
+    // That re-read (after the write) is accepted.
+    rerenderWith(rerender, { run: run({ ...APPROVED, lines: [MONA] }), asOf: 300 });
+    expect(table().queryByText('Salma Adel')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Recalculate' })).toBeNull();
+  });
+
+  it('a recalculation is not undone by a render read before it; a newer render replaces it', async () => {
+    const user = userEvent.setup();
+    apis.RECALCULATE_PAYROLL_RUN.mockResolvedValue({
+      success: true,
+      status: 200,
+      data: run({ lines: [MONA] }),
+      asOf: 200,
+    });
+    const { rerender } = renderRun({ asOf: 100 });
+    await user.click(screen.getByRole('button', { name: 'Recalculate' }));
+    await waitFor(() => expect(table().queryByText('Salma Adel')).toBeNull());
+
+    rerenderWith(rerender, { run: run(), asOf: 199 });
+    expect(table().queryByText('Salma Adel')).toBeNull();
+
+    rerenderWith(rerender, { run: run(), asOf: 201 });
+    expect(table().getByText('Salma Adel')).toBeTruthy();
+  });
+
+  it('a search typed just before Recalculate waits for it, then navigates; the toolbar is locked meanwhile', async () => {
+    const user = userEvent.setup();
+    let resolve: (v: unknown) => void = () => undefined;
+    apis.RECALCULATE_PAYROLL_RUN.mockReturnValue(new Promise((r) => (resolve = r)));
+    renderRun();
+    const searchbox = screen.getByRole('searchbox', { name: 'Search employees' }) as HTMLInputElement;
+    await user.type(searchbox, 'salma');
+    await user.click(screen.getByRole('button', { name: 'Recalculate' }));
+    expect(searchbox.disabled).toBe(true);
+    expect((screen.getByRole('switch', { name: 'Needs review only' }) as HTMLButtonElement).disabled).toBe(true);
+    // Past the debounce: nothing navigates while the write is in flight.
+    await new Promise((r) => setTimeout(r, 400));
+    expect(router.push).not.toHaveBeenCalled();
+
+    resolve({ success: true, status: 200, data: run(), asOf: 1 });
+    await waitFor(() =>
+      expect(router.push).toHaveBeenCalledWith(`/en/payroll/${RUN_ID}?search=salma`, { scroll: false }),
+    );
+    expect(router.push).toHaveBeenCalledTimes(1);
+    expect(searchbox.disabled).toBe(false);
   });
 });

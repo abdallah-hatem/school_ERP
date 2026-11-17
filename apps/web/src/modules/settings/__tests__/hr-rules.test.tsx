@@ -18,6 +18,15 @@ vi.mock('@school-erp/shared', async (importOriginal) => {
 import { HrRulesSection } from '../components/hr-rules-section';
 import { hrSettings, ok, renderSettings } from './helpers';
 
+/**
+ * The loaded form. The title alone isn't enough: the loading skeleton shows the same cards, so a
+ * busy machine would act on the skeleton. Wait for the busy mask to go.
+ */
+async function loaded(title = 'Lateness rule') {
+  await screen.findByText(title);
+  await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
+}
+
 function example() {
   return screen.getByTestId('lateness-example').textContent ?? '';
 }
@@ -34,7 +43,7 @@ describe('HR rules — lateness rule editor', () => {
   it('lateness rule editor shows a live example ("90 minutes → 0.75 day")', async () => {
     const user = userEvent.setup();
     renderSettings(<HrRulesSection />);
-    await screen.findByText('Lateness rule');
+    await loaded();
     expect(example()).toContain('90 minutes → 0.75 day');
 
     // Edit the 2nd hour step: 0.25 + 1 = 1.25.
@@ -59,7 +68,7 @@ describe('HR rules — lateness rule editor', () => {
   it('the Save/Discard bar stays in view over the whole form only while there are unsaved changes', async () => {
     const user = userEvent.setup();
     renderSettings(<HrRulesSection />);
-    await screen.findByText('Lateness rule');
+    await loaded();
     const bar = () => screen.getByRole('button', { name: 'Save' }).parentElement as HTMLElement;
     // A direct child of the form (spanning every card), so it can follow the whole form.
     expect(bar().parentElement?.tagName).toBe('FORM');
@@ -76,7 +85,7 @@ describe('HR rules — lateness rule editor', () => {
 
   it('the live "days" preview uses the shared latenessDays from packages/shared (no second copy of the rule)', async () => {
     renderSettings(<HrRulesSection />);
-    await screen.findByText('Lateness rule');
+    await loaded();
     expect(shared.latenessDays).toHaveBeenCalledWith(90, {
       graceMinutes: 0,
       steps: [
@@ -90,7 +99,7 @@ describe('HR rules — lateness rule editor', () => {
   it('a step of 0.3 days shows the inline error, pauses the example and blocks saving', async () => {
     const user = userEvent.setup();
     renderSettings(<HrRulesSection />);
-    await screen.findByText('Lateness rule');
+    await loaded();
     const hour1 = screen.getByRole('textbox', { name: /Hour 1 costs/ });
     await user.clear(hour1);
     await user.type(hour1, '0.3');
@@ -109,7 +118,7 @@ describe('HR rules — lateness rule editor', () => {
       }),
     );
     renderSettings(<HrRulesSection />);
-    await screen.findByText('Lateness rule');
+    await loaded();
     await user.click(screen.getByRole('button', { name: 'Add an hour step' }));
     expect(screen.getByRole('textbox', { name: /Hour 3 costs/ })).toBeTruthy();
     // 180 minutes = hours 1, 2, 3 → 0.25 + 0.5 + 0.5 (the new 3rd step).
@@ -140,7 +149,7 @@ describe('HR rules — lateness rule editor', () => {
   it('a divisor of 32 or a part-time share of 0 shows its message in Arabic', async () => {
     const user = userEvent.setup();
     renderSettings(<HrRulesSection />, 'ar');
-    await screen.findByText('قاعدة التأخير');
+    await loaded('قاعدة التأخير');
     const divisor = screen.getByRole('textbox', { name: /مقسوم قيمة اليوم/ });
     await user.clear(divisor);
     await user.type(divisor, '32');
