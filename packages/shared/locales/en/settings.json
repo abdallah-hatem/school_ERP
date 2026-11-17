@@ -1,0 +1,252 @@
+{
+  "title": "Settings",
+  "description": "The school's rules live here. A change applies at once and reaches draft payroll runs only; approved runs never change.",
+  "sectionsLabel": "Settings sections",
+  "allSections": "All settings",
+  "sections": {
+    "school": {
+      "title": "School",
+      "description": "Name, language, working hours and days"
+    },
+    "structure": {
+      "title": "School structure",
+      "description": "Stages such as Kindergarten and Primary"
+    },
+    "lists": {
+      "title": "HR lists",
+      "description": "Departments and job titles"
+    },
+    "hrRules": {
+      "title": "HR rules",
+      "description": "Lateness, day value, part-time pay, repeat window"
+    },
+    "catalogue": {
+      "title": "Penalty catalogue",
+      "description": "Violations and what each repeat costs"
+    },
+    "history": {
+      "title": "Change history",
+      "description": "Who changed what, and when"
+    }
+  },
+  "save": {
+    "unsaved": "You have unsaved changes.",
+    "fixErrors": "Fix the highlighted fields to save.",
+    "saved": "Saved.",
+    "discard": "Discard"
+  },
+  "unsaved": {
+    "title": "Leave without saving?",
+    "body": "Your changes in this section haven't been saved. Leaving now discards them.",
+    "discard": "Discard changes"
+  },
+  "units": {
+    "minutes": "min"
+  },
+  "names": {
+    "name": "Name",
+    "nameEn": "Name in English",
+    "nameAr": "Name in Arabic"
+  },
+  "errors": {
+    "max": {
+      "school": "Use 200 characters or fewer.",
+      "list": "Use 100 characters or fewer.",
+      "group": "Use 200 characters or fewer.",
+      "violation": "Use 300 characters or fewer.",
+      "note": "Use 1,000 characters or fewer."
+    },
+    "time": "Enter a 24-hour time like 07:30.",
+    "workHoursOrder": "Work end must be after work start.",
+    "workingDays": "Choose at least one working day.",
+    "days": "Use quarter days from 0 to 30, like 0.25, 0.5 or 1.25.",
+    "grace": "Enter whole minutes from 0 to 6,000.",
+    "divisor": "Enter a whole number from 1 to 31.",
+    "percent": "Enter a whole percentage from 1 to 100.",
+    "stepsMin": "Keep at least one hour step."
+  },
+  "school": {
+    "nameEn": "School name in English",
+    "nameEnPlaceholder": "Green Valley School",
+    "nameAr": "School name in Arabic",
+    "nameArPlaceholder": "مدرسة الوادي الأخضر",
+    "defaultLanguage": "Default language",
+    "defaultLanguageHint": "What the sign-in page and new visitors see first.",
+    "workStart": "Work starts",
+    "workStartPlaceholder": "07:30",
+    "workEnd": "Work ends",
+    "workEndPlaceholder": "15:00",
+    "timeHint": "24-hour time.",
+    "workingDays": "Working days"
+  },
+  "logo": {
+    "title": "School logo",
+    "description": "Shown in the menu, on the sign-in page and on payslips. PNG, JPG or SVG, up to {max} MB.",
+    "current": "This is the logo in use.",
+    "none": "No logo yet. The app shows a plain mark until you upload one.",
+    "ready": "Preview of {name}. Upload it to use it everywhere.",
+    "choose": "Choose a file",
+    "upload": "Upload logo",
+    "uploaded": "Logo updated.",
+    "currentAlt": "Current school logo",
+    "previewAlt": "Preview of the new logo",
+    "problems": {
+      "type": "Only PNG, JPG or SVG files can be used.",
+      "size": "The file must be {max} MB or smaller."
+    }
+  },
+  "lists": {
+    "status": "Status",
+    "actions": "Actions",
+    "shown": "Shown",
+    "hidden": "Hidden",
+    "rename": "Rename",
+    "renameItem": "Rename {name}",
+    "hide": "Hide",
+    "show": "Show",
+    "hideItem": "Hide {name}",
+    "showItem": "Show {name}",
+    "stages": {
+      "title": "Stages",
+      "description": "Hidden stages stay on the employees who have them but can't be chosen for new ones. Stages are never deleted.",
+      "add": "Add stage",
+      "emptyTitle": "No stages yet",
+      "emptyBody": "Add the school's first stage, such as Primary.",
+      "placeholderEn": "Primary",
+      "placeholderAr": "الابتدائي"
+    },
+    "departments": {
+      "title": "Departments",
+      "description": "Hide a department to stop new employees joining it. Departments are never deleted.",
+      "add": "Add department",
+      "emptyTitle": "No departments yet",
+      "emptyBody": "Add the first department, such as Mathematics.",
+      "placeholderEn": "Mathematics",
+      "placeholderAr": "الرياضيات"
+    },
+    "jobTitles": {
+      "title": "Job titles",
+      "description": "Hide a job title to stop new employees getting it. Job titles are never deleted.",
+      "add": "Add job title",
+      "emptyTitle": "No job titles yet",
+      "emptyBody": "Add the first job title, such as Teacher.",
+      "placeholderEn": "Teacher",
+      "placeholderAr": "معلم"
+    }
+  },
+  "hrRules": {
+    "daysPlaceholder": "0.25",
+    "lateness": {
+      "title": "Lateness rule",
+      "description": "A month's late arrival and early leave minutes are added up, then turned into days of pay.",
+      "grace": "Grace minutes",
+      "graceHint": "Taken off the month's total before the hour steps apply.",
+      "gracePlaceholder": "0",
+      "extra": "Each hour beyond the steps",
+      "extraHint": "The cost of every hour after the last step.",
+      "steps": "Hour steps",
+      "stepsHint": "Any minutes inside an hour count as that hour: 1–60 minutes is the 1st hour. The days add up.",
+      "stepLabel": "Hour {hour} costs",
+      "addStep": "Add an hour step",
+      "removeStep": "Remove hour {hour}"
+    },
+    "example": {
+      "label": "Example:",
+      "minutes": "Minutes in a month",
+      "minutesPlaceholder": "90",
+      "line": "{minutes} minutes → {days} days",
+      "enterMinutes": "Enter minutes to see the days they cost.",
+      "invalidRule": "Fix the rule above to see an example."
+    },
+    "payroll": {
+      "title": "Payroll rule",
+      "description": "How a day of pay and part-time salaries are worked out.",
+      "divisor": "Day value divisor",
+      "divisorHint": "A day of pay is the month's salary divided by this number.",
+      "divisorPlaceholder": "30",
+      "percentPlaceholder": "80",
+      "partTimeHint": "Part-time staff are paid this share of their basic salary."
+    },
+    "penalties": {
+      "title": "Penalty repeats",
+      "description": "How far back the system looks when it counts a repeated violation.",
+      "window": "Repetition window"
+    }
+  },
+  "catalogue": {
+    "addGroup": "Add group",
+    "renameGroup": "Rename {name}",
+    "retireGroup": "Retire {name}",
+    "restoreGroup": "Restore {name}",
+    "retireGroupTitle": "Retire {name}?",
+    "retireGroupBody": "Every violation in this group stops being available for new penalties. Penalties already recorded are kept. You can restore the group later.",
+    "groupRetiredNote": "This group is retired, so its violations can't be used for new penalties. Restore the group to use them again.",
+    "groupPlaceholderEn": "General violations",
+    "groupPlaceholderAr": "المخالفات العامة",
+    "violationCount": "{count} violations",
+    "noViolations": "No violations in this group yet.",
+    "emptyTitle": "No penalty groups yet",
+    "emptyBody": "Add a group, then the violations it holds.",
+    "addViolation": "Add violation",
+    "editViolation": "Edit {name}",
+    "retireViolation": "Retire {name}",
+    "restoreViolation": "Restore {name}",
+    "retire": "Retire",
+    "restore": "Restore",
+    "retired": "Retired",
+    "violationPlaceholderEn": "Arriving late without notice",
+    "violationPlaceholderAr": "التأخر دون إذن",
+    "note": "Note",
+    "noteHint": "Kept as written, e.g. \"doubles on repeat\". The system doesn't apply it on its own.",
+    "notePlaceholder": "Doubles on repeat",
+    "levels": "Levels",
+    "levelsHint": "The 1st to the {max}th time it happens ({min} to {max} levels). After the last level, the last one repeats.",
+    "levelAction": "Level {level} action",
+    "levelDays": "Level {level} days",
+    "daysOptional": "Optional for an investigation.",
+    "daysNone": "This action deducts no days.",
+    "addLevel": "Add a level",
+    "removeLevel": "Remove level {level}",
+    "levelPlain": "{level}. {action}",
+    "levelWithDays": "{level}. {action} · {days} days",
+    "problems": {
+      "COUNT": "A violation has 1 to 5 levels.",
+      "NUMBERING": "Levels must be numbered 1 to 5 with no gaps.",
+      "DAYS_REQUIRED": "Enter the days to deduct.",
+      "DAYS_NOT_ALLOWED": "This action deducts no days.",
+      "DAYS_INVALID": "Use quarter days above 0 and up to 30, like 0.25, 1 or 1.5."
+    }
+  },
+  "history": {
+    "what": "Setting",
+    "change": "Change",
+    "to": "changed to",
+    "who": "Changed by",
+    "when": "When",
+    "system": "System",
+    "step": "hour {hour}: {days}",
+    "hiddenItem": "{name} (hidden)",
+    "emptyTitle": "No changes yet",
+    "emptyBody": "Changes to settings, lists and the catalogue will be listed here.",
+    "keys": {
+      "nameEn": "School name (English)",
+      "nameAr": "School name (Arabic)",
+      "logo": "School logo",
+      "defaultLanguage": "Default language",
+      "workStart": "Work start",
+      "workEnd": "Work end",
+      "workingDays": "Working days",
+      "graceMinutes": "Lateness grace minutes",
+      "latenessSteps": "Lateness hour steps",
+      "extraHourDays": "Lateness cost per extra hour",
+      "dayDivisor": "Day value divisor",
+      "partTime": "Part-time percentages",
+      "repetitionWindow": "Penalty repetition window",
+      "stage": "Stage",
+      "department": "Department",
+      "jobTitle": "Job title",
+      "penaltyGroup": "Penalty group",
+      "violation": "Violation"
+    }
+  }
+}

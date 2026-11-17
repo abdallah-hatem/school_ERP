@@ -23,9 +23,10 @@ export interface DataTableColumn<Row> {
   className?: string;
   /**
    * Its place on a card: `title` (top, start), `status` (top, end), `highlight` (a full-width band,
-   * e.g. net pay), `field` (label + value grid — the default) or `hidden`.
+   * e.g. net pay), `field` (label + value grid — the default), `wide` (a field across the whole
+   * grid), `actions` (a row of buttons under a divider, no label) or `hidden`.
    */
-  card?: 'title' | 'status' | 'highlight' | 'field' | 'hidden';
+  card?: 'title' | 'status' | 'highlight' | 'field' | 'wide' | 'actions' | 'hidden';
   /** Label on the card; defaults to `header` when that is a string. */
   cardLabel?: ReactNode;
 }
@@ -194,7 +195,8 @@ function Cards<Row>({ columns, rows, getRowId, label, rowTone }: RowsProps<Row>)
   const titles = columns.filter((c) => c.card === 'title');
   const statuses = columns.filter((c) => c.card === 'status');
   const highlights = columns.filter((c) => c.card === 'highlight');
-  const fields = columns.filter((c) => (c.card ?? 'field') === 'field');
+  const fields = columns.filter((c) => (c.card ?? 'field') === 'field' || c.card === 'wide');
+  const actions = columns.filter((c) => c.card === 'actions');
 
   return (
     <ul data-view="cards" aria-label={label} className="grid gap-3 px-4 pb-4 @min-[740px]:hidden">
@@ -237,13 +239,24 @@ function Cards<Row>({ columns, rows, getRowId, label, rowTone }: RowsProps<Row>)
             {fields.length ? (
               <dl className="grid grid-cols-2 gap-2 @min-[500px]:grid-cols-4">
                 {fields.map((c) => (
-                  <div key={c.id} className="flex min-w-0 flex-col gap-0.5 rounded-xl bg-muted px-2.5 py-2">
+                  <div
+                    key={c.id}
+                    className={cn(
+                      'flex min-w-0 flex-col gap-0.5 rounded-xl bg-muted px-2.5 py-2',
+                      c.card === 'wide' && 'col-span-full',
+                    )}
+                  >
                     <dt className="text-xs text-muted-foreground">{cardLabel(c)}</dt>
                     <dd className="min-w-0 text-sm break-words">{c.cell(row)}</dd>
                   </div>
                 ))}
               </dl>
             ) : null}
+            {actions.map((c) => (
+              <div key={c.id} className="border-t border-border pt-2.5">
+                {c.cell(row)}
+              </div>
+            ))}
           </li>
         );
       })}

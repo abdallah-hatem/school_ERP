@@ -1,0 +1,176 @@
+'use client';
+
+import type { ListItem } from '@school-erp/shared';
+import { useState } from 'react';
+import { callApi } from '@/lib/callApi';
+import { DataTable, type DataTableColumn } from '@/shared/components/data-table/data-table';
+import { EmptyState } from '@/shared/components/layout/empty-state';
+import { Button } from '@/shared/components/ui/button';
+import { AddIcon, EditIcon, HideIcon, ShowIcon } from '@/shared/components/ui/icons';
+import { StatusPill } from '@/shared/components/ui/status-pill';
+import { localName, otherName } from '@/shared/lib/i18n';
+import { useTranslation } from '@/shared/providers/i18n-provider';
+import { CREATE_LIST_ITEM, GET_LIST_ITEMS, UPDATE_LIST_ITEM, type ListKind } from '../apis';
+import { useResource } from '../hooks/use-resource';
+import { NamesDialog } from './names-dialog';
+import { SectionPanel } from './section-panel';
+
+const PAGE_SIZES = [10, 20, 50];
+
+/**
+ * One managed list — stages, departments or job titles (§3, §7): add, rename, hide / show. No
+ * delete: an item in use is hidden from new choices. The API returns the whole (short) list, so
+ * it is paged here.
+ */
+export function ListManager({ kind }: { kind: ListKind }) {
+  const { t, locale } = useTranslation();
+  const list = useResource(kind, () => GET_LIST_ITEMS(kind));
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(PAGE_SIZES[0] ?? 10);
+  const [editing, setEditing] = useState<ListItem | 'new' | null>(null);
+  const [toggling, setToggling] = useState<string | null>(null);
+
+  const all = list.data ? [...list.data].sort((a, b) => a.sortOrder - b.sortOrder) : undefined;
+  const pageCount = Math.max(1, Math.ceil((all?.length ?? 0) / limit));
+  const current = Math.min(page, pageCount);
+  const rows = all?.slice((current - 1) * limit, current * limit);
+  const copy = (key: string, values?: Record<string, string | number>) => t(`settings.lists.${kind}.${key}`, values);
+
+  function replace(item: ListItem) {
+    list.setData((items) => items.map((i) => (i.id === item.id ? item : i)));
+  }
+
+  async function toggle(item: ListItem) {
+    if (toggling) return;
+    setToggling(item.id);
+    try {
+      const res = await callApi(UPDATE_LIST_ITEM(kind, item.id, { isActive: !item.isActive }));
+      if (res.success && res.data) replace(res.data);
+    } finally {
+      setToggling(null);
+    }
+  }
+
+  async function save(values: { nameEn: string; nameAr: string }): Promise<boolean> {
+    if (editing === 'new') {
+      const nextOrder = (all ?? []).reduce((max, i) => Math.max(max, i.sortOrder), 0) + 1;
+      const res = await callApi(CREATE_LIST_ITEM(kind, { ...values, sortOrder: nextOrder }));
+      if (res.success && res.data) {
+        const created = res.data;
+        list.setData((items) => [...items, created]);
+        return true;
+      }
+      return false;
+    }
+    if (!editing) return false;
+    const res = await callApi(UPDATE_LIST_ITEM(kind, editing.id, values));
+    if (res.success && res.data) replace(res.data);
+    return Boolean(res.success);
+  }
+
+  const columns: DataTableColumn<ListItem>[] = [
+    {
+      id: 'name',
+      header: t('settings.names.name'),
+      card: 'title',
+      cell: (item) => (
+        <div className="flex min-w-0 flex-col">
+          <span className="font-semibold break-words">{localName(item, locale)}</span>
+          <span className="text-xs break-words text-muted-foreground">{otherName(item, locale)}</span>
+        </div>
+      ),
+    },
+    {
+      id: 'status',
+      header: t('settings.lists.status'),
+      card: 'status',
+      className: 'w-32',
+      cell: (item) =>
+        item.isActive ? (
+          <StatusPill tone="success">{t('settings.lists.shown')}</StatusPill>
+        ) : (
+          <StatusPill tone="neutral">{t('settings.lists.hidden')}</StatusPill>
+        ),
+    },
+    {
+      id: 'actions',
+      header: <span className="sr-only">{t('settings.lists.actions')}</span>,
+      card: 'actions',
+      align: 'end',
+      className: 'w-56',
+      cell: (item) => {
+        const label = localName(item, locale);
+        return (
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button size="sm" variant="ghost" aria-label={t('settings.lists.renameItem', { name: label })} onClick={() => setEditing(item)}>
+              <EditIcon />
+              {t('settings.lists.rename')}
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              loading={toggling === item.id}
+              disabled={toggling !== null && toggling !== item.id}
+              aria-label={t(item.isActive ? 'settings.lists.hideItem' : 'settings.lists.showItem', { name: label })}
+              onClick={() => void toggle(item)}
+            >
+              {toggling === item.id ? null : item.isActive ? <HideIcon /> : <ShowIcon />}
+              {item.isActive ? t('settings.lists.hide') : t('settings.lists.show')}
+            </Button>
+          </div>
+        );
+      },
+    },
+  ];
+
+  const addButton = (
+    <Button variant="primary" onClick={() => setEditing('new')} disabled={!list.data}>
+      <AddIcon />
+      {copy('add')}
+    </Button>
+  );
+
+  return (
+    <SectionPanel title={copy('title')} description={copy('description')} actions={addButton}>
+      <DataTable
+        label={copy('title')}
+        columns={columns}
+        rows={rows}
+        getRowId={(item) => item.id}
+        loading={list.loading}
+        error={list.error}
+        onRetry={list.retry}
+        retrying={list.retrying}
+        empty={<EmptyState title={copy('emptyTitle')} description={copy('emptyBody')} action={addButton} />}
+        pagination={
+          all
+            ? {
+                page: current,
+                limit,
+                total: all.length,
+                onPageChange: setPage,
+                onLimitChange: (next) => {
+                  setLimit(next);
+                  setPage(1);
+                },
+                limitOptions: PAGE_SIZES,
+              }
+            : undefined
+        }
+      />
+      {editing ? (
+        <NamesDialog
+          key={editing === 'new' ? 'new' : editing.id}
+          open
+          onOpenChange={(open) => !open && setEditing(null)}
+          title={editing === 'new' ? copy('add') : t('settings.lists.renameItem', { name: localName(editing, locale) })}
+          max="list"
+          initial={editing === 'new' ? undefined : { nameEn: editing.nameEn, nameAr: editing.nameAr }}
+          placeholders={{ en: copy('placeholderEn'), ar: copy('placeholderAr') }}
+          submitLabel={editing === 'new' ? t('common.actions.create') : t('common.actions.save')}
+          onSubmit={save}
+        />
+      ) : null}
+    </SectionPanel>
+  );
+}

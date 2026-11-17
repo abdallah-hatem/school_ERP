@@ -1,6 +1,9 @@
 import type { Icon as PhosphorIcon, IconProps } from '@phosphor-icons/react';
 import {
+  ArchiveIcon as Archive,
   ArrowClockwiseIcon as ArrowClockwise,
+  ArrowCounterClockwiseIcon as ArrowCounterClockwise,
+  BuildingsIcon as Buildings,
   CalendarBlankIcon as CalendarBlank,
   CaretDoubleLeftIcon as CaretDoubleLeft,
   CaretDoubleRightIcon as CaretDoubleRight,
@@ -10,16 +13,24 @@ import {
   CheckIcon as Check,
   CheckCircleIcon as CheckCircle,
   ClockIcon as Clock,
+  ClockCounterClockwiseIcon as ClockCounterClockwise,
+  EyeIcon as Eye,
+  EyeSlashIcon as EyeSlash,
   GavelIcon as Gavel,
   HourglassIcon as Hourglass,
   ListIcon as List,
+  ListBulletsIcon as ListBullets,
   MagnifyingGlassIcon as MagnifyingGlass,
   PencilSimpleIcon as PencilSimple,
   PlusIcon as Plus,
   ProhibitIcon as Prohibit,
+  ScalesIcon as Scales,
   SlidersHorizontalIcon as SlidersHorizontal,
   SquaresFourIcon as SquaresFour,
+  TrashIcon as Trash,
   TrayIcon as Tray,
+  TreeStructureIcon as TreeStructure,
+  UploadSimpleIcon as UploadSimple,
   UserCheckIcon as UserCheck,
   UserMinusIcon as UserMinus,
   UsersThreeIcon as UsersThree,
@@ -70,6 +81,12 @@ export const AddIcon = duotone(Plus, 'Add');
 export const EditIcon = duotone(PencilSimple, 'Edit');
 export const DeactivateIcon = duotone(UserMinus, 'Deactivate');
 export const ReactivateIcon = duotone(UserCheck, 'Reactivate');
+export const ShowIcon = duotone(Eye, 'Show');
+export const HideIcon = duotone(EyeSlash, 'Hide');
+export const RemoveIcon = duotone(Trash, 'Remove');
+export const UploadIcon = duotone(UploadSimple, 'Upload');
+export const RetireIcon = duotone(Archive, 'Retire');
+export const RestoreIcon = duotone(ArrowCounterClockwise, 'Restore');
 
 // States
 export const EmptyIcon = duotone(Tray, 'Empty');
@@ -77,3 +94,11 @@ export const ErrorIcon = duotone(WarningCircle, 'Error');
 export const ReadyIcon = duotone(CheckCircle, 'Ready');
 export const PendingIcon = duotone(Hourglass, 'Pending');
 export const BlockedIcon = duotone(Prohibit, 'Blocked');
+
+// Settings sections
+export const SchoolIcon = duotone(Buildings, 'School');
+export const StructureIcon = duotone(TreeStructure, 'Structure');
+export const ListsIcon = duotone(ListBullets, 'Lists');
+export const RulesIcon = duotone(Scales, 'Rules');
+export const HistoryIcon = duotone(ClockCounterClockwise, 'History');
+

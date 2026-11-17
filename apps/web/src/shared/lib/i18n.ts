@@ -35,6 +35,11 @@ export function localName(names: { nameEn: string; nameAr: string }, locale: Loc
   return locale === 'ar' ? names.nameAr : names.nameEn;
 }
 
+/** The name in the other language — shown quietly under the main one. */
+export function otherName(names: { nameEn: string; nameAr: string }, locale: Locale): string {
+  return locale === 'ar' ? names.nameEn : names.nameAr;
+}
+
 /** The shared `common` namespace for a locale. Modules add their own namespaces (T3+). */
 export function getCommonMessages(locale: Locale): CommonMessages {
   return COMMON[locale];

@@ -1,4 +1,4 @@
-import type { IsoDate, Month } from '@school-erp/shared';
+import type { IsoDate, IsoDateTime, Month } from '@school-erp/shared';
 import type { Locale } from './i18n';
 
 /** Money and day counts are pure and shared with the API: one implementation, in packages/shared. */
@@ -42,6 +42,18 @@ export function toIsoDate(date: Date): IsoDate {
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
+}
+
+/** `2026-11-17T09:05:00Z` → `17 Nov 2026, 11:05` / `17 نوفمبر 2026، 11:05` in the viewer's time zone. */
+export function formatDateTime(value: IsoDateTime, locale: Locale): string {
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(new Date(value));
 }
 
 /** `YYYY-MM-DD` → a local Date at midnight, for a picker's `selected`. */
