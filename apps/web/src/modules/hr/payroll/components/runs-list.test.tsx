@@ -35,7 +35,7 @@ function renderList(runs: PayrollRunSummary[] | null = [draft, approved], locale
   return renderPayroll(
     <RunsList
       basePath={`/${locale}/payroll`}
-      query={{ page: 1, limit: 20 }}
+      query={{ page: 1, limit: 10 }}
       runs={runs}
       total={runs?.length ?? 0}
       currentMonth="2026-11"
@@ -117,6 +117,16 @@ describe('RunsList', () => {
     expect(apis.CREATE_PAYROLL_RUN).toHaveBeenCalledTimes(1);
   });
 
+  it('first load (the route skeleton): busy, a page of placeholder rows, nothing clickable', () => {
+    renderPayroll(
+      <RunsList basePath="/en/payroll" query={{ page: 1, limit: 10 }} runs={undefined} total={0} currentMonth="2026-11" />,
+    );
+    expect(screen.getByRole('status').textContent).toBe('Loading…');
+    expect(document.querySelectorAll('[aria-hidden="true"] tbody tr')).toHaveLength(10);
+    expect(screen.getByRole('button', { name: 'Create run' })).toHaveProperty('disabled', true);
+    expect(screen.getByRole('button', { name: 'Next page' })).toHaveProperty('disabled', true);
+  });
+
   it('a failed load shows an error with retry', async () => {
     const user = userEvent.setup();
     renderList(null);
@@ -130,7 +140,7 @@ describe('RunsList', () => {
     renderPayroll(
       <RunsList
         basePath="/en/payroll"
-        query={{ page: 1, limit: 20 }}
+        query={{ page: 1, limit: 10 }}
         runs={[draft]}
         total={45}
         currentMonth="2026-11"

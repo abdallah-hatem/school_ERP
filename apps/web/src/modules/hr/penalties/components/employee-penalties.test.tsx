@@ -28,7 +28,7 @@ function renderTab(overrides: Partial<Parameters<typeof EmployeePenalties>[0]> =
       rows={[record(), record({ id: 'p-0', date: '2026-10-02', status: 'APPROVED' })]}
       total={25}
       page={1}
-      limit={20}
+      limit={10}
       violations={violationGroups(groups, 'en')}
       {...overrides}
     />,

@@ -20,7 +20,10 @@ export function AppProviders({
       {children}
       <Toaster
         dir={dirFor(locale)}
-        position={locale === 'ar' ? 'bottom-left' : 'bottom-right'}
+        position="top-right"
+        // Below the top bar (language switch, phone menu), never over it.
+        offset={{ top: 76 }}
+        mobileOffset={{ top: 72 }}
         toastOptions={{ className: 'font-sans' }}
       />
     </I18nProvider>

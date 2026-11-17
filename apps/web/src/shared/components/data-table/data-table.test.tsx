@@ -23,7 +23,7 @@ const people: Person[] = [
 ];
 
 function pagination(overrides: Partial<{ page: number; limit: number; total: number }> = {}) {
-  return { page: 1, limit: 10, total: 2, onPageChange: vi.fn(), onLimitChange: vi.fn(), ...overrides };
+  return { page: 1, limit: 10, total: 2, onPageChange: vi.fn(), ...overrides };
 }
 
 describe('DataTable states', () => {
@@ -74,8 +74,10 @@ describe('DataTable states', () => {
     );
     expect(screen.getByRole('status').textContent).toBe('Loading…');
     expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
-    // One skeleton row per row the page will hold, so nothing shifts when data lands.
-    expect(container.querySelectorAll('[data-skeleton-row]')).toHaveLength(10);
+    // One skeleton row per row the page will hold — the real table and cards with placeholder
+    // cells, so nothing shifts when data lands — hidden from assistive tech.
+    expect(container.querySelectorAll('[aria-hidden="true"] tbody tr')).toHaveLength(10);
+    expect(container.querySelectorAll('[aria-hidden="true"] [data-view="cards"] > li')).toHaveLength(10);
     expect(screen.queryByRole('table')).toBeNull();
     // Paging is locked while the first page loads.
     expect(screen.getByRole('button', { name: 'Next page' })).toHaveProperty('disabled', true);

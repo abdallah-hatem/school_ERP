@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import '@/test/dom-polyfills';
 import { cleanup, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { AnchorHTMLAttributes, ReactNode } from 'react';
@@ -85,16 +86,18 @@ describe('Settings screen — school section', () => {
     expect(save).toHaveProperty('disabled', true);
 
     await user.type(nameAr, 'مدرسة النيل');
-    const workEnd = await field(/نهاية العمل/);
-    await user.clear(workEnd);
-    await user.type(workEnd, '07:00');
+    // Work end is a dropdown of half hours shown in the locale's time format.
+    const workEnd = screen.getByRole('combobox', { name: /نهاية العمل/ });
+    await user.click(workEnd);
+    expect(screen.queryByRole('option', { name: '7:15 ص' })).toBeNull();
+    await user.click(await screen.findByRole('option', { name: '7:00 ص' }));
     expect(await screen.findByText('يجب أن تكون نهاية العمل بعد بدايته.')).toBeTruthy();
     expect(save).toHaveProperty('disabled', true);
     expect(api.UPDATE_SCHOOL_SETTINGS).not.toHaveBeenCalled();
 
     // Valid again → enabled; while saving it is busy and a second click sends nothing.
-    await user.clear(workEnd);
-    await user.type(workEnd, '14:30');
+    await user.click(workEnd);
+    await user.click(await screen.findByRole('option', { name: '2:30 م' }));
     await waitFor(() => expect(save).toHaveProperty('disabled', false));
     const pending = deferred<{ success: true; status: number; data: typeof school }>();
     api.UPDATE_SCHOOL_SETTINGS.mockReturnValue(pending.promise);

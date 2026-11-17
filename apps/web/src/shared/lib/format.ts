@@ -1,4 +1,4 @@
-import type { IsoDate, IsoDateTime, Month } from '@school-erp/shared';
+import type { IsoDate, IsoDateTime, Month, TimeOfDay } from '@school-erp/shared';
 import type { Locale } from './i18n';
 
 /** Money and day counts are pure and shared with the API: one implementation, in packages/shared. */
@@ -54,6 +54,17 @@ export function formatDateTime(value: IsoDateTime, locale: Locale): string {
     minute: '2-digit',
     hour12: false,
   }).format(new Date(value));
+}
+
+/** `07:30` → `7:30 am` / `7:30 ص` — a time of day in the viewer's language (no time zone). */
+export function formatTimeOfDay(time: TimeOfDay, locale: Locale): string {
+  const [h = 0, m = 0] = time.split(':').map(Number);
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'UTC',
+  }).format(new Date(Date.UTC(2000, 0, 1, h, m)));
 }
 
 /** Today as `YYYY-MM-DD` in the person's calendar — the `max` of a date that can't be in the future. */

@@ -56,7 +56,7 @@
       "violation": "Use 300 characters or fewer.",
       "note": "Use 1,000 characters or fewer."
     },
-    "time": "Enter a 24-hour time like 07:30.",
+    "time": "Choose a time on the hour or half hour.",
     "workHoursOrder": "Work end must be after work start.",
     "workingDays": "Choose at least one working day.",
     "days": "Use quarter days from 0 to 30, like 0.25, 0.5 or 1.25.",
@@ -73,10 +73,10 @@
     "defaultLanguage": "Default language",
     "defaultLanguageHint": "What the sign-in page and new visitors see first.",
     "workStart": "Work starts",
-    "workStartPlaceholder": "07:30",
+    "workStartPlaceholder": "Choose a time",
     "workEnd": "Work ends",
-    "workEndPlaceholder": "15:00",
-    "timeHint": "24-hour time.",
+    "workEndPlaceholder": "Choose a time",
+    "timeHint": "Every half hour.",
     "workingDays": "Working days"
   },
   "logo": {

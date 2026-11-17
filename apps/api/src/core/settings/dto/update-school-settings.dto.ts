@@ -8,7 +8,6 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  Matches,
   MaxLength,
 } from 'class-validator';
 import {
@@ -18,9 +17,7 @@ import {
   type UpdateSchoolSettingsRequest,
   type Weekday,
 } from '@school-erp/shared';
-
-/** `HH:mm`, 24-hour, zero-padded (so two times compare as text). */
-export const TIME_OF_DAY = /^([01]\d|2[0-3]):[0-5]\d$/;
+import { IsWorkTime } from '../../../common/validators/is-work-time.decorator';
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 
@@ -46,12 +43,12 @@ export class UpdateSchoolSettingsDto implements UpdateSchoolSettingsRequest {
 
   @IsOptional()
   @IsString()
-  @Matches(TIME_OF_DAY, { message: 'workStart must be HH:mm' })
+  @IsWorkTime()
   workStart?: string;
 
   @IsOptional()
   @IsString()
-  @Matches(TIME_OF_DAY, { message: 'workEnd must be HH:mm' })
+  @IsWorkTime()
   workEnd?: string;
 
   @IsOptional()

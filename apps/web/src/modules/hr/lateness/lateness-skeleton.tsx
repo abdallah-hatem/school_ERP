@@ -1,31 +1,29 @@
 'use client';
 
-import { DataTable, type DataTableColumn } from '@/shared/components/data-table/data-table';
-import { PageHeader } from '@/shared/components/layout/page-header';
-import { Skeleton } from '@/shared/components/ui/skeleton';
-import { useTranslation } from '@/shared/providers/i18n-provider';
+import { monthOf } from '@school-erp/shared';
+import { useSearchParams } from 'next/navigation';
+import { I18nProvider, useTranslation } from '@/shared/providers/i18n-provider';
+import { LatenessBoard } from './lateness-board';
+import { resolveMonth } from './lateness-month';
+import { latenessMessages } from './messages';
 
-const COLUMNS: DataTableColumn<never>[] = ['code', 'employee', 'department', 'minutes', 'days'].map((id) => ({
-  id,
-  header: '',
-  cell: () => null,
-}));
-
-/** First load of the lateness screen: the header and the grid's shape, nothing that shifts. */
+/**
+ * First load of the lateness screen: the board itself with skeleton rows (same header, toolbar,
+ * columns and row heights), so nothing moves when the month arrives.
+ */
 export function LatenessSkeleton() {
-  const { t } = useTranslation();
+  const { locale } = useTranslation();
+  const params = useSearchParams();
+  const current = monthOf(new Date());
   return (
-    <div className="flex flex-col gap-5">
-      <PageHeader
-        title={t('common.nav.lateness')}
-        actions={
-          <>
-            <Skeleton className="h-11 w-56 rounded-xl" />
-            <Skeleton className="h-11 w-28" />
-          </>
-        }
+    <I18nProvider messages={latenessMessages(locale)}>
+      <LatenessBoard
+        month={resolveMonth(params.get('month') ?? undefined, current)}
+        maxMonth={current}
+        rows={undefined}
+        rule={undefined}
+        locked={false}
       />
-      <DataTable label={t('common.nav.lateness')} columns={COLUMNS} rows={undefined} getRowId={() => ''} loading />
-    </div>
+    </I18nProvider>
   );
 }

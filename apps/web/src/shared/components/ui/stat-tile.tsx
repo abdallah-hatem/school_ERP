@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { cn } from '@/shared/lib/utils';
 import type { AppIcon } from './icons';
-import { Skeleton } from './skeleton';
+import { Skeleton, SkeletonText } from './skeleton';
 
 /*
  * A headline figure with its label. `feature` is the one teal tile per screen that carries the
@@ -16,6 +16,8 @@ const tones = {
   feature: { tile: 'bg-primary text-primary-foreground', icon: 'bg-primary-foreground/15 text-primary-foreground' },
 } as const;
 export type StatTone = keyof typeof tones;
+
+const VALUE_TEXT = 'tabular text-xl font-extrabold tracking-tight @min-[13rem]/tile:text-[clamp(1.5rem,2.4vw,2rem)]';
 
 export function StatTile({
   label,
@@ -68,7 +70,11 @@ export function StatTile({
         </span>
       </div>
       {loading ? (
-        <Skeleton className={cn('h-8 w-32', feature && 'bg-primary-foreground/20')} />
+        // The figure's own line box (an invisible digit) with the bar over it: same height as loaded.
+        <div aria-hidden="true" className="relative flex items-baseline leading-none">
+          <span className={cn(VALUE_TEXT, 'invisible')}>0</span>
+          <Skeleton className={cn('absolute inset-y-0 start-0 w-32', feature && 'bg-primary-foreground/20')} />
+        </div>
       ) : (
         // Unit left of the figure in both languages, like <Money>; aligned to the reading start.
         <div dir="ltr" className="flex flex-wrap items-baseline gap-1.5 leading-none rtl:justify-end">
@@ -77,9 +83,7 @@ export function StatTile({
               {unit}
             </span>
           ) : null}
-          <span className="tabular text-xl font-extrabold tracking-tight @min-[13rem]/tile:text-[clamp(1.5rem,2.4vw,2rem)]">
-            {value}
-          </span>
+          <span className={VALUE_TEXT}>{value}</span>
         </div>
       )}
       {sub ? (
@@ -95,5 +99,35 @@ export function StatTile({
     </Link>
   ) : (
     <div className={classes}>{body}</div>
+  );
+}
+
+/**
+ * A tile's `sub` while it loads: `lines` bars, plus extra bars up to `narrowLines` in a narrow tile
+ * (a half-width phone tile, where the loaded text wraps onto more lines).
+ */
+export function StatTileSubSkeleton({
+  lines = 1,
+  narrowLines = lines,
+  gapped = false,
+  feature = false,
+}: {
+  lines?: number;
+  narrowLines?: number;
+  /** The loaded sub is a wrapped list with `gap-y-1` (e.g. headcount by stage). */
+  gapped?: boolean;
+  feature?: boolean;
+}) {
+  return (
+    <span className={cn('flex flex-col', gapped && 'gap-y-1')}>
+      {Array.from({ length: Math.max(lines, narrowLines) }, (_, i) => (
+        <SkeletonText
+          key={i}
+          width={i === 0 ? 'w-40' : 'w-28'}
+          barClassName={feature ? 'bg-primary-foreground/20' : undefined}
+          className={i >= lines ? '@min-[14rem]/tile:hidden' : undefined}
+        />
+      ))}
+    </span>
   );
 }

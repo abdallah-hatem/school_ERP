@@ -1,21 +1,35 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { WEEKDAYS, type SchoolSettings, type UpdateSchoolSettingsRequest } from '@school-erp/shared';
+import { SchoolSettingKey, SETTING_DEFAULTS, WEEKDAYS, workTimeOptions, type SchoolSettings, type UpdateSchoolSettingsRequest } from '@school-erp/shared';
 import { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { brandingFrom, useSchoolBranding } from '@/core/settings';
 import { SelectField, TextField, ToggleGroupField } from '@/shared/components/form/fields';
 import { Form } from '@/shared/components/form/form';
 import { ErrorState } from '@/shared/components/layout/empty-state';
+import { SkeletonMask } from '@/shared/components/ui/skeleton';
 import { callApi } from '@/lib/callApi';
+import { formatTimeOfDay } from '@/shared/lib/format';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { GET_SCHOOL_SETTINGS_FOR_EDIT, UPDATE_SCHOOL_SETTINGS } from '../apis';
 import { useReportDirty } from '../hooks/unsaved-changes';
 import { useResource } from '../hooks/use-resource';
 import { NAME_MAX, schoolSchema, type SchoolFormValues } from '../schemas';
 import { LogoCard } from './logo-card';
-import { FormSkeleton, SaveBar, SectionPanel } from './section-panel';
+import { SaveBar, SectionPanel } from './section-panel';
+
+const noop = () => undefined;
+
+const PLACEHOLDER: SchoolSettings = {
+  nameEn: '',
+  nameAr: '',
+  logoUrl: null,
+  defaultLanguage: SETTING_DEFAULTS[SchoolSettingKey.DEFAULT_LANGUAGE],
+  workStart: SETTING_DEFAULTS[SchoolSettingKey.WORK_START],
+  workEnd: SETTING_DEFAULTS[SchoolSettingKey.WORK_END],
+  workingDays: SETTING_DEFAULTS[SchoolSettingKey.WORKING_DAYS],
+};
 
 function toForm(s: SchoolSettings): SchoolFormValues {
   return {
@@ -40,7 +54,17 @@ export function SchoolSection() {
       </SectionPanel>
     );
   }
-  if (!school.data) return <FormSkeleton fields={6} />;
+  if (!school.data) {
+    // The form itself as its skeleton (the §7 defaults as placeholders): every field in place.
+    return (
+      <SkeletonMask>
+        <div className="flex flex-col gap-6">
+          <SchoolForm initial={PLACEHOLDER} onSaved={noop} />
+          <LogoCard logoUrl={null} onUploaded={noop} />
+        </div>
+      </SkeletonMask>
+    );
+  }
 
   const data = school.data;
   return (
@@ -52,7 +76,7 @@ export function SchoolSection() {
 }
 
 function SchoolForm({ initial, onSaved }: { initial: SchoolSettings; onSaved: (next: SchoolSettings) => void }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { branding, setBranding } = useSchoolBranding();
   const [saved, setSaved] = useState(false);
   const busy = useRef(false);
@@ -88,6 +112,9 @@ function SchoolForm({ initial, onSaved }: { initial: SchoolSettings; onSaved: (n
   }
 
   const weekdayOptions = WEEKDAYS.map((d) => ({ value: d, label: t(`common.enums.weekday.${d}`) }));
+  // 05:00 … 20:00 every 30 minutes (§7), in the viewer's time format; the stored value always shows.
+  const timeOptions = (current: string) =>
+    workTimeOptions(current).map((time) => ({ value: time, label: formatTimeOfDay(time, locale) }));
   const languageOptions = [
     { value: 'ar', label: t('common.common.arabic') },
     { value: 'en', label: t('common.common.english') },
@@ -129,21 +156,21 @@ function SchoolForm({ initial, onSaved }: { initial: SchoolSettings; onSaved: (n
             required
           />
           <div className="grid grid-cols-2 gap-4">
-            <TextField
+            <SelectField
               control={form.control}
               name="workStart"
               label={t('settings.school.workStart')}
               placeholder={t('settings.school.workStartPlaceholder')}
               hint={t('settings.school.timeHint')}
-              dir="ltr"
+              options={timeOptions(initial.workStart)}
               required
             />
-            <TextField
+            <SelectField
               control={form.control}
               name="workEnd"
               label={t('settings.school.workEnd')}
               placeholder={t('settings.school.workEndPlaceholder')}
-              dir="ltr"
+              options={timeOptions(initial.workEnd)}
               required
             />
           </div>

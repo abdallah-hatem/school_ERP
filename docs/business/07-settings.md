@@ -30,4 +30,8 @@ affects only **draft** payroll runs (approved runs never change).
 
 - **DECIDED** — Settings are validated: times in order, percentages 1–100, divisor 1–31, days in
   quarter steps (0.25) from 0 to 30.
+- **DECIDED** (owner, 2026-11-17) — Work start and work end are on a 30-minute boundary (07:00,
+  07:30 — not 07:15). The Settings screen offers them as a list from 05:00 to 20:00 every half hour,
+  shown in the screen's language; a time off the boundary is refused. Times already saved on a
+  boundary stay valid.
 - **DECIDED** — A violation used by an approved penalty can't be deleted, only retired from new use.

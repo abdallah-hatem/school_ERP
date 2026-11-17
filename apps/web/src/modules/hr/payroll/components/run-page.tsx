@@ -2,6 +2,7 @@
 
 import {
   AdjustmentType,
+  PAGINATION,
   PayrollFlag,
   PayrollStatus,
   PenaltyStatus,
@@ -39,7 +40,8 @@ import {
   RecalculateIcon,
   SearchIcon,
 } from '@/shared/components/ui/icons';
-import { StatTile } from '@/shared/components/ui/stat-tile';
+import { SkeletonButton, SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
+import { StatTile, StatTileSubSkeleton } from '@/shared/components/ui/stat-tile';
 import { StatusPill } from '@/shared/components/ui/status-pill';
 import { Switch } from '@/shared/components/ui/switch';
 import { apiErrorText } from '@/shared/lib/api-error';
@@ -55,7 +57,6 @@ import { DeductionAmount, LineStatus, RunStatusPill, SignedAmount } from './payr
 import { RulesPanel } from './rules-panel';
 
 const SEARCH_DEBOUNCE_MS = 300;
-const PAGE_SIZES = [20, 50, 100];
 
 export interface RunPageProps {
   /** `/ar/payroll`. */
@@ -106,7 +107,7 @@ export function RunPage({
     [],
   );
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(PAGE_SIZES[0] ?? 20);
+  const limit = PAGINATION.defaultLimit;
 
   const [recalculating, setRecalculating] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -211,10 +212,7 @@ export function RunPage({
   // ── Table ─────────────────────────────────────────────────────────────────
   const columns: DataTableColumn<PayrollLine>[] = [
     {
-      id: 'employee',
-      header: t('payroll.table.columns.employee'),
-      className: 'min-w-44 whitespace-normal',
-      card: 'title',
+      ...runColumn('employee', t),
       cell: (line) => (
         <span className="flex min-w-0 flex-col">
           <span className="font-bold break-words">{localName(line, locale)}</span>
@@ -229,59 +227,36 @@ export function RunPage({
       ),
     },
     {
-      id: 'monthSalary',
-      header: t('payroll.table.columns.monthSalary'),
-      align: 'end',
-      className: 'w-28',
+      ...runColumn('monthSalary', t),
       cell: (line) => <Money value={line.monthSalary} currency={false} />,
     },
     {
-      id: 'penalties',
-      header: t('payroll.table.columns.penalties'),
-      align: 'end',
-      className: 'w-28',
+      ...runColumn('penalties', t),
       cell: (line) => <DeductionAmount value={line.penaltyAmount} />,
     },
     {
-      id: 'lateness',
-      header: t('payroll.table.columns.lateness'),
-      align: 'end',
-      className: 'w-28',
+      ...runColumn('lateness', t),
       cell: (line) => <DeductionAmount value={line.latenessAmount} />,
     },
     {
-      id: 'adjustments',
-      header: t('payroll.table.columns.adjustments'),
-      align: 'end',
-      className: 'w-28',
+      ...runColumn('adjustments', t),
       cell: (line) => <SignedAmount value={adjustmentNet(line)} />,
     },
     {
-      id: 'net',
-      header: t('payroll.table.columns.net'),
-      align: 'end',
-      className: 'w-32',
-      card: 'highlight',
+      ...runColumn('net', t),
       cell: (line) => <Money value={line.net} currency={false} className="font-extrabold" />,
     },
     {
-      id: 'status',
-      header: t('payroll.table.columns.status'),
-      className: 'w-36',
-      card: 'status',
+      ...runColumn('status', t),
       cell: (line) => <LineStatus flags={line.flags} />,
     },
     {
-      id: 'actions',
-      header: <span className="sr-only">{t('payroll.table.columns.actions')}</span>,
-      cardLabel: t('payroll.table.columns.actions'),
-      align: 'end',
-      className: 'w-36',
+      ...runColumn('actions', t),
       cell: (line) => {
         const name = localName(line, locale);
         const count = adjustmentsOf(run.adjustments, line.employeeId).length;
         return (
-          <span className="inline-flex flex-wrap items-center justify-end gap-1.5">
+          <span className="inline-flex items-center justify-end gap-1.5">
             {/* Approved: the payslip is the action; recorded adjustments stay viewable (icon only). */}
             {draft || count > 0 ? (
               <Button
@@ -318,8 +293,6 @@ export function RunPage({
   ];
 
   const totals = run.totals;
-  const deductions = totals.penaltyAmount + totals.latenessAmount + totals.adjustmentDeductions;
-  const money = (value: number) => `${t('ui.units.currency')} ${formatMoney(value)}`;
 
   return (
     <div className="flex flex-col gap-6">
@@ -433,50 +406,7 @@ export function RunPage({
         </div>
       ) : null}
 
-      {/* Two by two from phone width (Net first), four across on wide screens — like the dashboard. */}
-      <div className="grid grid-cols-1 gap-3 @min-[320px]:grid-cols-2 @min-[520px]:gap-4 @min-[1080px]:grid-cols-4">
-        <StatTile
-          icon={EmployeesIcon}
-          tone="info"
-          label={t('payroll.tiles.employees')}
-          value={formatCount(totals.employees)}
-          sub={t('payroll.tiles.employeesSub', {
-            ready: formatCount(totals.employees - totals.flagged),
-            review: formatCount(totals.flagged),
-          })}
-        />
-        <StatTile
-          icon={GrossIcon}
-          tone="primary"
-          label={t('payroll.tiles.gross')}
-          unit={t('ui.units.currency')}
-          value={formatMoney(totals.monthSalary)}
-          sub={t('payroll.tiles.grossSub')}
-        />
-        <StatTile
-          icon={DeductionsIcon}
-          tone="danger"
-          label={t('payroll.tiles.deductions')}
-          unit={t('ui.units.currency')}
-          value={formatMoney(deductions)}
-          sub={t('payroll.tiles.deductionsSub', {
-            penalties: money(totals.penaltyAmount),
-            lateness: money(totals.latenessAmount),
-            adjustments: money(totals.adjustmentDeductions),
-          })}
-        />
-        <StatTile
-          icon={NetPayIcon}
-          tone="feature"
-          className="order-first @min-[1080px]:order-none"
-          label={t('payroll.tiles.net')}
-          unit={t('ui.units.currency')}
-          value={formatMoney(totals.net)}
-          sub={t('payroll.tiles.netSub', {
-            additions: money(totals.adjustmentAdditions),
-          })}
-        />
-      </div>
+      <RunTiles totals={totals} />
 
       {/* Rules panel beside the table only when all eight columns still fit next to it; below it otherwise. */}
       <div className="grid items-start gap-5 @min-[1380px]:grid-cols-[minmax(0,1fr)_20rem]">
@@ -506,55 +436,23 @@ export function RunPage({
               )
             }
             toolbar={
-              <>
-                <div className="flex w-full flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <h2 className="font-display text-lg font-extrabold">{t('payroll.table.heading')}</h2>
-                  <p data-testid="lines-count" className="text-muted-foreground text-sm">
-                    {t('payroll.table.count', {
-                      shown: formatCount(run.lines.length),
-                      total: formatCount(totals.employees),
-                    })}
-                  </p>
-                </div>
-                <div role="search" className="flex w-full flex-wrap items-center gap-2.5">
-                  <SearchInput
-                    aria-label={t('payroll.filters.searchLabel')}
-                    placeholder={t('payroll.filters.searchPlaceholder')}
-                    value={search}
-                    onChange={(e) => onSearchChange(e.target.value)}
-                  />
-                  <FilterSelect
-                    label={t('payroll.filters.department')}
-                    allLabel={t('payroll.filters.allDepartments')}
-                    value={query.departmentId}
-                    options={[...departments]
-                      .sort((a, b) => a.sortOrder - b.sortOrder)
-                      .map((d) => ({
-                        value: d.id,
-                        label: localName(d, locale),
-                      }))}
-                    onChange={(departmentId) => go({ ...query, departmentId })}
-                  />
-                  <label className="flex h-11 cursor-pointer items-center gap-2.5 rounded-lg px-1 text-sm font-semibold">
-                    <Switch
-                      checked={Boolean(query.flagged)}
-                      onCheckedChange={(on) => go({ ...query, flagged: on || undefined })}
-                    />
-                    {t('payroll.filters.needsReview')}
-                  </label>
-                </div>
-              </>
+              <RunLinesToolbar
+                count={t('payroll.table.count', {
+                  shown: formatCount(run.lines.length),
+                  total: formatCount(totals.employees),
+                })}
+                search={search}
+                onSearchChange={onSearchChange}
+                departments={departments}
+                query={query}
+                onFilter={go}
+              />
             }
             pagination={{
               page: currentPage,
               limit,
               total: run.lines.length,
               onPageChange: setPage,
-              onLimitChange: (next) => {
-                setLimit(next);
-                setPage(1);
-              },
-              limitOptions: PAGE_SIZES,
             }}
           />
 
@@ -621,5 +519,176 @@ export function RunPage({
         onConfirm={approve}
       />
     </div>
+  );
+}
+
+// ── Pieces shared with the route's skeleton (same markup, so nothing moves on load) ──────────
+
+type RunColumnId = 'employee' | 'monthSalary' | 'penalties' | 'lateness' | 'adjustments' | 'net' | 'status' | 'actions';
+type Translate = ReturnType<typeof useTranslation>['t'];
+
+export const RUN_COLUMN_IDS: RunColumnId[] = ['employee', 'monthSalary', 'penalties', 'lateness', 'adjustments', 'net', 'status', 'actions'];
+
+const RUN_COLUMN_LAYOUT: Record<RunColumnId, Omit<DataTableColumn<PayrollLine>, 'id' | 'header' | 'cell'>> = {
+  employee: {
+    className: 'min-w-44 whitespace-normal',
+    card: 'title',
+    skeleton: (
+      <span className="flex flex-col">
+        <SkeletonText className="font-bold" width="w-32" />
+        <SkeletonText className="text-xs" width="w-24" />
+      </span>
+    ),
+  },
+  monthSalary: { align: 'end', className: 'w-28' },
+  penalties: { align: 'end', className: 'w-28' },
+  lateness: { align: 'end', className: 'w-28' },
+  adjustments: { align: 'end', className: 'w-28' },
+  net: { align: 'end', className: 'w-32', card: 'highlight' },
+  status: { className: 'w-36', card: 'status', skeleton: <SkeletonPill /> },
+  actions: { align: 'end', className: 'w-44', skeleton: <SkeletonButton /> },
+};
+
+/** A line column's id, header and layout (the cell is the caller's). */
+export function runColumn(id: RunColumnId, t: Translate) {
+  const label = t(`payroll.table.columns.${id}`);
+  return {
+    id,
+    ...RUN_COLUMN_LAYOUT[id],
+    ...(id === 'actions' ? { header: <span className="sr-only">{label}</span>, cardLabel: label } : { header: label }),
+  };
+}
+
+/** The four figures (Net first on phones); `undefined` while the run loads. */
+export function RunTiles({ totals }: { totals: PayrollRun['totals'] | undefined }) {
+  const { t } = useTranslation();
+  const money = (value: number) => `${t('ui.units.currency')} ${formatMoney(value)}`;
+  const loading = totals === undefined;
+  /** The sub line, or bars in its place (one per line the loaded text usually takes). */
+  // While loading: as many bars as the text usually takes, more in a half-width phone tile.
+  const sub = (text: (x: PayrollRun['totals']) => string, lines: number, narrowLines: number, feature = false) =>
+    totals ? text(totals) : <StatTileSubSkeleton lines={lines} narrowLines={narrowLines} feature={feature} />;
+  return (
+    // Two by two from phone width (Net first), four across on wide screens — like the dashboard.
+    <div className="grid grid-cols-1 gap-3 @min-[320px]:grid-cols-2 @min-[520px]:gap-4 @min-[1080px]:grid-cols-4">
+      <StatTile
+        icon={EmployeesIcon}
+        tone="info"
+        label={t('payroll.tiles.employees')}
+        value={totals ? formatCount(totals.employees) : null}
+        sub={sub((x) =>
+          t('payroll.tiles.employeesSub', {
+            ready: formatCount(x.employees - x.flagged),
+            review: formatCount(x.flagged),
+          }),
+          1,
+          3,
+        )}
+        loading={loading}
+      />
+      <StatTile
+        icon={GrossIcon}
+        tone="primary"
+        label={t('payroll.tiles.gross')}
+        unit={t('ui.units.currency')}
+        value={totals ? formatMoney(totals.monthSalary) : null}
+        sub={sub(() => t('payroll.tiles.grossSub'), 1, 2)}
+        loading={loading}
+      />
+      <StatTile
+        icon={DeductionsIcon}
+        tone="danger"
+        label={t('payroll.tiles.deductions')}
+        unit={t('ui.units.currency')}
+        value={totals ? formatMoney(totals.penaltyAmount + totals.latenessAmount + totals.adjustmentDeductions) : null}
+        sub={sub(
+          (x) =>
+            t('payroll.tiles.deductionsSub', {
+              penalties: money(x.penaltyAmount),
+              lateness: money(x.latenessAmount),
+              adjustments: money(x.adjustmentDeductions),
+            }),
+          2,
+          3,
+        )}
+        loading={loading}
+      />
+      <StatTile
+        icon={NetPayIcon}
+        tone="feature"
+        className="order-first @min-[1080px]:order-none"
+        label={t('payroll.tiles.net')}
+        unit={t('ui.units.currency')}
+        value={totals ? formatMoney(totals.net) : null}
+        sub={sub((x) => t('payroll.tiles.netSub', { additions: money(x.adjustmentAdditions) }), 1, 3, true)}
+        loading={loading}
+      />
+    </div>
+  );
+}
+
+/** The table's title row and filters. */
+export function RunLinesToolbar({
+  count,
+  search,
+  onSearchChange,
+  departments,
+  query,
+  onFilter,
+  disabled = false,
+}: {
+  /** "Showing x of y"; `null` while loading. */
+  count: string | null;
+  search: string;
+  onSearchChange: (text: string) => void;
+  departments: Department[];
+  query: PayrollRunQuery;
+  onFilter: (next: PayrollRunQuery) => void;
+  disabled?: boolean;
+}) {
+  const { t, locale } = useTranslation();
+  return (
+    <>
+      <div className="flex w-full flex-wrap items-baseline gap-x-3 gap-y-1">
+        <h2 className="font-display text-lg font-extrabold">{t('payroll.table.heading')}</h2>
+        {count === null ? (
+          <SkeletonText className="text-sm" width="w-32" />
+        ) : (
+          <p data-testid="lines-count" className="text-muted-foreground text-sm">
+            {count}
+          </p>
+        )}
+      </div>
+      <div role="search" className="flex w-full flex-wrap items-center gap-2.5">
+        <SearchInput
+          aria-label={t('payroll.filters.searchLabel')}
+          placeholder={t('payroll.filters.searchPlaceholder')}
+          value={search}
+          disabled={disabled}
+          onChange={(e) => onSearchChange(e.target.value)}
+        />
+        <FilterSelect
+          label={t('payroll.filters.department')}
+          allLabel={t('payroll.filters.allDepartments')}
+          value={query.departmentId}
+          disabled={disabled}
+          options={[...departments]
+            .sort((a, b) => a.sortOrder - b.sortOrder)
+            .map((d) => ({
+              value: d.id,
+              label: localName(d, locale),
+            }))}
+          onChange={(departmentId) => onFilter({ ...query, departmentId })}
+        />
+        <label className="flex h-11 cursor-pointer items-center gap-2.5 rounded-lg px-1 text-sm font-semibold">
+          <Switch
+            checked={Boolean(query.flagged)}
+            disabled={disabled}
+            onCheckedChange={(on) => onFilter({ ...query, flagged: on || undefined })}
+          />
+          {t('payroll.filters.needsReview')}
+        </label>
+      </div>
+    </>
   );
 }

@@ -9,7 +9,6 @@
   },
   "table": {
     "showing": "عرض {from}–{to} من {total}",
-    "rowsPerPage": "عدد الصفوف",
     "pagination": "التنقل بين الصفحات",
     "firstPage": "الصفحة الأولى",
     "previousPage": "الصفحة السابقة",

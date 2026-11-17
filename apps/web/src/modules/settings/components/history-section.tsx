@@ -17,7 +17,7 @@ import { SectionPanel } from './section-panel';
 export function HistorySection() {
   const { t, has, locale } = useTranslation();
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState<number>(PAGINATION.defaultLimit);
+  const limit = PAGINATION.defaultLimit;
   const history = useResource(`history:${page}:${limit}`, () => GET_SETTINGS_HISTORY({ page, limit }));
 
   const columns: DataTableColumn<SettingChangeItem>[] = [
@@ -81,10 +81,6 @@ export function HistorySection() {
           limit,
           total: history.meta?.total ?? 0,
           onPageChange: setPage,
-          onLimitChange: (next) => {
-            setLimit(next);
-            setPage(1);
-          },
         }}
       />
     </SectionPanel>

@@ -119,7 +119,8 @@ describe('Dashboard', () => {
       </I18nProvider>,
     );
     expect(screen.queryByRole('link')).toBeNull();
-    expect(screen.queryByRole('status')).toBeNull();
+    // Announced as loading (screen-reader text), never a spinner.
+    expect(screen.getByRole('status').textContent).toBe('Loading…');
     expect(screen.getByText('Active employees')).toBeTruthy();
   });
 

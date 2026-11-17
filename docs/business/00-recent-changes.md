@@ -22,3 +22,6 @@
   no longer in the run are not applied (GUESS); dashboard defined; approval is announced for a future
   accounting module.
 - 2026-11-17 — Default language is English (owner); a school can switch it to Arabic in Settings.
+- 2026-11-17 — Settings (owner): work start and work end move in 30-minute steps (05:00 to 20:00 on
+  the screen; any other minute is refused). Lists show 10 rows a page with no rows-per-page choice
+  (the employees card grid shows 12).

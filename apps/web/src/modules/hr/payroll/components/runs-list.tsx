@@ -13,6 +13,7 @@ import { Button } from '@/shared/components/ui/button';
 import { Dialog, DialogClose, DialogContent } from '@/shared/components/ui/dialog';
 import { Money } from '@/shared/components/ui/figures';
 import { BlockedIcon, NewPeriodIcon, PayrollIcon } from '@/shared/components/ui/icons';
+import { SkeletonPill } from '@/shared/components/ui/skeleton';
 import { apiErrorText } from '@/shared/lib/api-error';
 import { formatCount, formatDate, formatMonth } from '@/shared/lib/format';
 import { useTranslation } from '@/shared/providers/i18n-provider';
@@ -24,8 +25,8 @@ export interface RunsListProps {
   /** `/ar/payroll` — the list's own path. */
   basePath: string;
   query: RunsListQuery;
-  /** `null` when the list failed to load. */
-  runs: PayrollRunSummary[] | null;
+  /** `null` when the list failed to load; `undefined` on first load (skeleton rows). */
+  runs: PayrollRunSummary[] | null | undefined;
   total: number;
   /** This month (the latest a run can be created for). */
   currentMonth: Month;
@@ -65,6 +66,7 @@ export function RunsList({ basePath, query, runs, total, currentMonth }: RunsLis
       header: t('payroll.list.columns.status'),
       className: 'w-36',
       card: 'status',
+      skeleton: <SkeletonPill />,
       cell: (run) => <RunStatusPill status={run.status} />,
     },
     {
@@ -98,7 +100,7 @@ export function RunsList({ basePath, query, runs, total, currentMonth }: RunsLis
   ];
 
   const createButton = (
-    <Button variant="primary" className="cursor-pointer" onClick={() => setCreating(true)}>
+    <Button variant="primary" className="cursor-pointer" disabled={runs === undefined} onClick={() => setCreating(true)}>
       <NewPeriodIcon />
       {t('payroll.create.action')}
     </Button>
@@ -112,6 +114,7 @@ export function RunsList({ basePath, query, runs, total, currentMonth }: RunsLis
         columns={columns}
         rows={runs ?? undefined}
         getRowId={(run) => run.id}
+        loading={runs === undefined}
         error={runs === null}
         onRetry={() => startTransition(() => router.refresh())}
         retrying={pending}
@@ -129,7 +132,6 @@ export function RunsList({ basePath, query, runs, total, currentMonth }: RunsLis
           limit: query.limit,
           total,
           onPageChange: (page) => go({ ...query, page }),
-          onLimitChange: (limit) => go({ page: 1, limit }),
         }}
       />
       <CreateRunDialog
