@@ -2,8 +2,11 @@ import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import {
   ErrorCode,
   PenaltyStatus,
+  type Days,
   type IsoDate,
+  type Month,
   type Paginated,
+  type PayslipPenalty,
   type PenaltyPreview,
   type PenaltyRecord,
   type RepetitionWindow,
@@ -13,6 +16,7 @@ import { CodedException } from '../../../../common/errors/coded.exception';
 import { monthOf, toIsoDate } from '../../../../common/utils/dates.util';
 import {
   countPriorInWindow,
+  deductedDays,
   repetitionWindowStart,
   resolvePenalty,
   type CatalogueLevel,
@@ -34,6 +38,17 @@ import {
 import { PenaltyCatalogueService, toLevel } from './penalty-catalogue.service';
 
 const keyOf = (k: RepeatKey) => `${k.employeeId}:${k.violationId}`;
+
+/** A month's penalties as payroll counts them (see `payrollInputs`). */
+export interface MonthPenaltyInputs {
+  /** Employee → fixed days of each approved deducting penalty dated in the month. */
+  deductingDays: Map<Uuid, Days[]>;
+  /** Employee → number of pending penalties dated in the month. */
+  pending: Map<Uuid, number>;
+}
+
+/** An approved penalty as the payslip itemises it (before its amount is worked out). */
+export type ApprovedMonthPenalty = Omit<PayslipPenalty, 'amount'>;
 
 /** A record row → the contract shape, with `shown` (level / action / days) applied. */
 function toRecord(row: RecordRow, shown: CatalogueLevel): PenaltyRecord {
@@ -139,7 +154,11 @@ export class PenaltyRecordsService {
   }
 
   /** PENDING or APPROVED → CANCELLED with a reason. Other approved levels are not recomputed. */
-  async cancel(id: Uuid, dto: CancelPenaltyDto, cancelledById: Uuid | null): Promise<PenaltyRecord> {
+  async cancel(
+    id: Uuid,
+    dto: CancelPenaltyDto,
+    cancelledById: Uuid | null,
+  ): Promise<PenaltyRecord> {
     const current = await this.repository.findStatus(id);
     if (!current) throw new NotFoundException();
     this.assertNotCancelled(current.status);
@@ -148,6 +167,46 @@ export class PenaltyRecordsService {
       await this.throwStatusConflict(id);
     }
     return this.get(id);
+  }
+
+  /**
+   * What payroll needs from a month's penalties (§4, §6): per employee, the FIXED days of each
+   * APPROVED deducting penalty (day deduction, or investigation with days) dated in the month, and
+   * how many PENDING penalties are dated in it. Cancelled records never count.
+   */
+  async payrollInputs(month: Month): Promise<MonthPenaltyInputs> {
+    const rows = await this.repository.findForPayroll(month);
+    const deductingDays = new Map<Uuid, Days[]>();
+    const pending = new Map<Uuid, number>();
+    for (const row of rows) {
+      if (row.status === PenaltyStatus.PENDING) {
+        pending.set(row.employeeId, (pending.get(row.employeeId) ?? 0) + 1);
+        continue;
+      }
+      const days = deductedDays(row.action, row.days === null ? null : Number(row.days));
+      if (days > 0)
+        deductingDays.set(row.employeeId, [...(deductingDays.get(row.employeeId) ?? []), days]);
+    }
+    return { deductingDays, pending };
+  }
+
+  /** One employee's APPROVED penalties dated in a month, by date, as fixed at approval. */
+  async approvedInMonth(month: Month, employeeId: Uuid): Promise<ApprovedMonthPenalty[]> {
+    const rows = await this.repository.findApprovedForPayslip(month, employeeId);
+    return rows.map((r) => ({
+      date: toIsoDate(r.date),
+      violationNameEn: r.violation.nameEn,
+      violationNameAr: r.violation.nameAr,
+      level: r.level,
+      action: r.action,
+      days: r.days === null ? null : Number(r.days),
+    }));
+  }
+
+  /** Pending and approved records dated in a month (dashboard: by violation date). */
+  async monthCounts(month: Month): Promise<{ pending: number; approved: number }> {
+    const counts = await this.repository.countByStatusInMonth(month);
+    return { pending: counts.PENDING, approved: counts.APPROVED };
   }
 
   /** §3: only an active employee; §4, §7: only a usable violation. */
@@ -177,7 +236,11 @@ export class PenaltyRecordsService {
   }
 
   private async priorCount(key: RepeatKey, date: IsoDate, window: RepetitionWindow) {
-    const dates = await this.repository.approvedDates(key, repetitionWindowStart(date, window), date);
+    const dates = await this.repository.approvedDates(
+      key,
+      repetitionWindowStart(date, window),
+      date,
+    );
     return dates.length;
   }
 
@@ -193,12 +256,17 @@ export class PenaltyRecordsService {
   private async shownLevels(rows: readonly RecordRow[]): Promise<Map<Uuid, CatalogueLevel>> {
     const shown = new Map<Uuid, CatalogueLevel>();
     const pending = rows.filter((r) => r.status === PenaltyStatus.PENDING);
-    for (const row of rows) if (row.status !== PenaltyStatus.PENDING) shown.set(row.id, storedLevel(row));
+    for (const row of rows)
+      if (row.status !== PenaltyStatus.PENDING) shown.set(row.id, storedLevel(row));
     if (pending.length === 0) return shown;
 
     const window = await this.window();
     const latest = pending.map((r) => toIsoDate(r.date)).reduce((a, b) => (a > b ? a : b));
-    const uniqueKeys = [...new Map(pending.map((r) => [keyOf(r), { employeeId: r.employeeId, violationId: r.violationId }])).values()];
+    const uniqueKeys = [
+      ...new Map(
+        pending.map((r) => [keyOf(r), { employeeId: r.employeeId, violationId: r.violationId }]),
+      ).values(),
+    ];
     const approved = await this.repository.approvedDatesForKeys(uniqueKeys, latest);
     const byKey = new Map<string, IsoDate[]>();
     for (const a of approved) {

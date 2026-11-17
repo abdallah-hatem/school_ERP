@@ -1,4 +1,5 @@
 import type { Month, Uuid } from './types/common';
+import type { PayrollTotals } from './types/payroll-totals';
 
 /** Event names: `<module>.<thing>.<past-tense>` (docs/ARCHITECTURE.md). */
 export const HrEvent = {
@@ -21,10 +22,12 @@ export interface EmployeeDeactivatedEvent {
   employeeId: Uuid;
   at: string;
 }
+/** Emitted after an approval commits (§6). No listener yet. */
 export interface PayrollApprovedEvent {
   runId: Uuid;
   month: Month;
-  approvedById: Uuid;
+  totals: PayrollTotals;
+  approvedById: Uuid | null;
   at: string;
 }
 

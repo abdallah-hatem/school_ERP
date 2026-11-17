@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PenaltyStatus, type IsoDate } from '@school-erp/shared';
+import { PenaltyStatus, type IsoDate, type PenaltyAction } from '@school-erp/shared';
 import { BaseRepository } from '../../../../common/repositories/base.repository';
 import { fromIsoDate, monthDateRange, toIsoDate } from '../../../../common/utils/dates.util';
 import { DatabaseService } from '../../../../database/database.service';
@@ -186,6 +186,53 @@ export class PenaltyRecordsRepository extends BaseRepository<
       });
       return count === 1;
     });
+  }
+
+  /** PENDING and APPROVED records dated in a month: what payroll counts and flags (§6). */
+  findForPayroll(
+    month: string,
+  ): Promise<
+    {
+      employeeId: string;
+      status: PenaltyStatus;
+      action: PenaltyAction;
+      days: Prisma.Decimal | null;
+    }[]
+  > {
+    return this.db.penaltyRecord.findMany({
+      where: {
+        date: monthDateRange(month),
+        status: { in: [PenaltyStatus.PENDING, PenaltyStatus.APPROVED] },
+      },
+      select: { employeeId: true, status: true, action: true, days: true },
+    });
+  }
+
+  /** One employee's APPROVED records dated in a month, by date, for the payslip. */
+  findApprovedForPayslip(month: string, employeeId: string) {
+    return this.db.penaltyRecord.findMany({
+      where: { employeeId, status: PenaltyStatus.APPROVED, date: monthDateRange(month) },
+      select: {
+        date: true,
+        level: true,
+        action: true,
+        days: true,
+        violation: { select: { nameEn: true, nameAr: true } },
+      },
+      orderBy: [{ date: 'asc' }, { createdAt: 'asc' }],
+    });
+  }
+
+  /** How many records dated in a month are in each status. */
+  async countByStatusInMonth(month: string): Promise<Record<PenaltyStatus, number>> {
+    const groups = await this.db.penaltyRecord.groupBy({
+      by: ['status'],
+      where: { date: monthDateRange(month) },
+      _count: { _all: true },
+    });
+    const counts: Record<PenaltyStatus, number> = { PENDING: 0, APPROVED: 0, CANCELLED: 0 };
+    for (const g of groups) counts[g.status] = g._count._all;
+    return counts;
   }
 
   /** Cancels a PENDING or APPROVED record. Returns false when it was already CANCELLED. */

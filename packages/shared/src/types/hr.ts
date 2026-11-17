@@ -23,6 +23,7 @@ import type {
   Uuid,
 } from './common';
 import type { ListItem } from './core';
+import type { PayrollTotals } from './payroll-totals';
 
 // ── HR lists ───────────────────────────────────────────────────────────────
 
@@ -259,16 +260,7 @@ export interface UpdateHrSettingsRequest {
 
 // ── Payroll ────────────────────────────────────────────────────────────────
 
-export interface PayrollTotals {
-  employees: number;
-  monthSalary: Piastres;
-  penaltyAmount: Piastres;
-  latenessAmount: Piastres;
-  adjustmentAdditions: Piastres;
-  adjustmentDeductions: Piastres;
-  net: Piastres;
-  flagged: number;
-}
+export type { PayrollTotals } from './payroll-totals';
 
 /** A payroll line. Employee fields are a snapshot taken at calculation. */
 export interface PayrollLine extends Names {
