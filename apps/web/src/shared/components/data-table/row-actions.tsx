@@ -29,6 +29,8 @@ export interface RowAction {
   href?: string;
   /** Red, after the divider: cancel, retire, hide. */
   destructive?: boolean;
+  /** Green, with the regular items: gives something back (reactivate). */
+  positive?: boolean;
   /** Left out of the menu — the action doesn't apply to this row. */
   hidden?: boolean;
   /** A small count after the label (adjustments recorded). */
@@ -77,11 +79,19 @@ export function RowActions({
       'flex min-h-11 cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold outline-none select-none',
       action.destructive
         ? 'text-destructive-ink data-[highlighted]:bg-destructive-soft'
-        : 'text-foreground data-[highlighted]:bg-primary-soft data-[highlighted]:text-primary',
+        : action.positive
+          ? 'text-success-ink data-[highlighted]:bg-success-soft'
+          : 'text-foreground data-[highlighted]:bg-primary-soft data-[highlighted]:text-primary',
     );
     if (action.href) {
       return (
-        <Menu.Item key={action.id} asChild className={itemClass} data-destructive={action.destructive || undefined}>
+        <Menu.Item
+          key={action.id}
+          asChild
+          className={itemClass}
+          data-destructive={action.destructive || undefined}
+          data-positive={action.positive || undefined}
+        >
           <Link href={action.href}>{content}</Link>
         </Menu.Item>
       );
@@ -89,6 +99,7 @@ export function RowActions({
     return (
       <Menu.Item
         data-destructive={action.destructive || undefined}
+        data-positive={action.positive || undefined}
         key={action.id}
         className={itemClass}
         onSelect={() => {
