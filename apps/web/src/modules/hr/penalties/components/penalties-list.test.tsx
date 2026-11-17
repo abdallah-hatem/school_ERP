@@ -34,7 +34,6 @@ function renderList(props: Partial<PenaltiesListProps> = {}, locale: 'en' | 'ar'
   return renderPenalties(
     <PenaltiesList
       basePath="/en/penalties"
-      employeesPath="/en/employees"
       query={QUERY}
       currentMonth="2026-11"
       rows={[record(), record({ id: 'p-2', status: 'CANCELLED', cancelReason: 'Wrong day', action: 'WARNING', days: null, level: 1 })]}

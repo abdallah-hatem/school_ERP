@@ -52,6 +52,27 @@ describe('AuditTimeline', () => {
     );
   });
 
+  it("an employee's name opens their profile, and so does an actor linked to an employee", () => {
+    const EMP = '33333333-3333-4333-8333-333333333333';
+    renderAudit(
+      <AuditTimeline
+        entries={[
+          entry({ actor: { id: '44444444-4444-4444-8444-444444444444', name: 'Hana Said', employeeId: 'emp-hana' } }),
+          entry({ entityType: 'department', entityLabel: { en: 'Science', ar: 'العلوم' } }),
+        ]}
+        grouping="day"
+        now={NOW}
+        label="Activity timeline"
+      />,
+    );
+    const [employeeEdit, departmentEdit] = screen.getAllByTestId('audit-entry');
+    expect(within(employeeEdit!).getByRole('link', { name: 'Omar Fathy' }).getAttribute('href')).toBe(`/en/employees/${EMP}`);
+    expect(within(employeeEdit!).getByRole('link', { name: 'Hana Said' }).getAttribute('href')).toBe('/en/employees/emp-hana');
+    // Not an employee, and an actor with no linked employee: plain text.
+    expect(within(departmentEdit!).queryByRole('link', { name: 'Science' })).toBeNull();
+    expect(within(departmentEdit!).queryByRole('link', { name: 'Mona Ibrahim' })).toBeNull();
+  });
+
   it('shows the first two changes inline and expands "+ n more"', async () => {
     const user = userEvent.setup();
     renderAudit(<AuditTimeline entries={[many]} grouping="day" now={NOW} label="Activity timeline" />);

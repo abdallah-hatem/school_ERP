@@ -16,6 +16,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useId, useMemo, useRef, useState, useTransition } from 'react';
 import { Can } from '@/core/auth';
+import { EmployeeLink } from '@/core/employees';
 import { callApi } from '@/lib/callApi';
 import { RowActions, RowActionsSkeleton } from '@/shared/components/data-table/row-actions';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-table/data-table';
@@ -43,6 +44,7 @@ import {
   SearchIcon,
 } from '@/shared/components/ui/icons';
 import { SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
+import { SlotText, TEXT_SLOT } from '@/shared/components/ui/slot-text';
 import { StatTile, StatTileSubSkeleton } from '@/shared/components/ui/stat-tile';
 import { StatusPill } from '@/shared/components/ui/status-pill';
 import { Switch } from '@/shared/components/ui/switch';
@@ -216,16 +218,13 @@ export function RunPage({
     {
       ...runColumn('employee', t),
       cell: (line) => (
-        <span className="flex min-w-0 flex-col">
-          <span className="font-bold break-words">{localName(line, locale)}</span>
-          <span className="text-muted-foreground text-xs">
-            <bdi dir="ltr" className="tabular">
-              {line.employeeCode}
-            </bdi>
-            <span aria-hidden="true"> · </span>
-            {locale === 'ar' ? line.departmentNameAr : line.departmentNameEn}
-          </span>
-        </span>
+        <EmployeeLink
+          employeeId={line.employeeId}
+          name={localName(line, locale)}
+          code={line.employeeCode}
+          detail={locale === 'ar' ? line.departmentNameAr : line.departmentNameEn}
+          className="font-bold"
+        />
       ),
     },
     {
@@ -484,7 +483,10 @@ export function RunPage({
                       <BidiText>{a.reason}</BidiText>
                     </span>
                     <span className="text-muted-foreground text-xs">
-                      {t('payroll.notApplied.employee', { name: `${nameIn(a, locale)} (${a.employeeCode})` })}
+                      <SlotText
+                        text={t('payroll.notApplied.employee', { name: TEXT_SLOT })}
+                        slot={<EmployeeLink employeeId={a.employeeId} name={`${nameIn(a, locale)} (${a.employeeCode})`} />}
+                      />
                     </span>
                   </li>
                 ))}

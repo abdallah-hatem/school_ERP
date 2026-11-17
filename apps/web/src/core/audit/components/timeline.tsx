@@ -3,6 +3,7 @@
 import { AUDIT_ACTIONS, isMoneyEntry, type AuditEntry, type IsoDate, type IsoDateTime } from '@school-erp/shared';
 import Link from 'next/link';
 import { Fragment, useId, useState, type ReactNode } from 'react';
+import { EmployeeLink } from '@/core/employees';
 import { Money } from '@/shared/components/ui/figures';
 import {
   ApproveIcon,
@@ -22,6 +23,7 @@ import {
   type AppIcon,
 } from '@/shared/components/ui/icons';
 import { Skeleton, SkeletonText } from '@/shared/components/ui/skeleton';
+import { SlotText, TEXT_SLOT } from '@/shared/components/ui/slot-text';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import {
@@ -85,26 +87,42 @@ function entryLook(entry: AuditEntry): { icon: AppIcon; tone: Tone } {
   return { icon: EditIcon, tone: money ? 'money' : 'neutral' };
 }
 
-/** The sentence with the record's label in bold, isolated so a name in the other script reads right. */
-function Sentence({ entry, lowerFirst = false }: { entry: AuditEntry; lowerFirst?: boolean }) {
+/**
+ * The sentence with the record's label in bold, isolated so a name in the other script reads right.
+ * An employee's name opens their profile (`linkRecord`: not on History, where the record is the page).
+ */
+function Sentence({
+  entry,
+  lowerFirst = false,
+  linkRecord = false,
+}: {
+  entry: AuditEntry;
+  lowerFirst?: boolean;
+  linkRecord?: boolean;
+}) {
   const { t, locale } = useTranslation();
-  const MARK = '\u0000';
-  const [text = '', after] = entrySentence({ action: entry.action, entityLabel: MARK }, t, locale).split(MARK);
+  const text = entrySentence({ action: entry.action, entityLabel: TEXT_SLOT }, t, locale);
   // English sentences start with a capital; after the actor's name ("Mona changed…") it is lowered.
-  const before = lowerFirst ? text.charAt(0).toLowerCase() + text.slice(1) : text;
-  if (after === undefined) return <>{before}</>;
+  const sentence = lowerFirst ? text.charAt(0).toLowerCase() + text.slice(1) : text;
+  const label = <bdi className="font-bold">{labelIn(entry.entityLabel, locale)}</bdi>;
   return (
-    <>
-      {before}
-      <bdi className="font-bold">{labelIn(entry.entityLabel, locale)}</bdi>
-      {after}
-    </>
+    <SlotText
+      text={sentence}
+      slot={linkRecord && entry.entityType === 'employee' ? <EmployeeLink employeeId={entry.entityId} name={label} /> : label}
+    />
   );
 }
 
-/** "Mona Ibrahim changed …" in English; "منى إبراهيم · تعديل …" in Arabic (verbal nouns) and on History. */
-function EntryLine({ entry, joined }: { entry: AuditEntry; joined: boolean }) {
+/** Who did it: their name, which opens their profile when their account is linked to an employee. */
+export function ActorName({ entry, className = 'font-extrabold' }: { entry: Pick<AuditEntry, 'actor'>; className?: string }) {
   const { t } = useTranslation();
+  const name = <bdi className={className}>{actorName(entry, t)}</bdi>;
+  const employeeId = entry.actor?.employeeId;
+  return employeeId ? <EmployeeLink employeeId={employeeId} name={name} /> : name;
+}
+
+/** "Mona Ibrahim changed …" in English; "منى إبراهيم · تعديل …" in Arabic (verbal nouns) and on History. */
+function EntryLine({ entry, joined, linkRecord }: { entry: AuditEntry; joined: boolean; linkRecord: boolean }) {
   if (isFailedSignIn(entry)) {
     return (
       <p className="text-sm leading-relaxed text-warning-ink">
@@ -114,9 +132,9 @@ function EntryLine({ entry, joined }: { entry: AuditEntry; joined: boolean }) {
   }
   return (
     <p className="text-sm leading-relaxed">
-      <bdi className="font-extrabold">{actorName(entry, t)}</bdi>
+      <ActorName entry={entry} />
       {joined ? ' ' : <span className="text-muted-foreground"> · </span>}
-      <Sentence entry={entry} lowerFirst={joined} />
+      <Sentence entry={entry} lowerFirst={joined} linkRecord={linkRecord} />
     </p>
   );
 }
@@ -316,7 +334,7 @@ function TimelineItem({
               {sub ? `${sub} · ${time}` : time}
             </time>
           </p>
-          <EntryLine entry={entry} joined={joined} />
+          <EntryLine entry={entry} joined={joined} linkRecord={grouping === 'day'} />
         </div>
         <Changes entry={entry} inline={INLINE_CHANGES[grouping]} />
         {grouping === 'day' ? <EntryMeta entry={entry} /> : null}

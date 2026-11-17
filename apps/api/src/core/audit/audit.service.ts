@@ -118,7 +118,9 @@ export class AuditService {
     limit: number,
   ): Promise<Paginated<AuditEntry>> {
     const result = await this.entries.findPage(filter, page, limit);
-    return { ...result, data: result.data.map(toAuditEntry) };
+    const actorIds = [...new Set(result.data.flatMap((row) => (row.actorId ? [row.actorId] : [])))];
+    const linked = await this.entries.findLinkedEmployees(actorIds);
+    return { ...result, data: result.data.map((row) => toAuditEntry(row, linked)) };
   }
 
   /** A record's History, optionally narrowed to one person or one changed field. */
@@ -173,7 +175,8 @@ export class AuditService {
   }
 }
 
-function toAuditEntry(row: AuditEntryRow): AuditEntry {
+/** `linked`: actor (user) id → the employee that user is linked to today. */
+function toAuditEntry(row: AuditEntryRow, linked: ReadonlyMap<string, string>): AuditEntry {
   const meta = (row.meta ?? {}) as { ip?: string | null; userAgent?: string | null };
   return {
     id: row.id,
@@ -183,7 +186,9 @@ function toAuditEntry(row: AuditEntryRow): AuditEntry {
     entityId: row.entityId,
     // Older entries (and one-name records) have no Arabic label: the same name in both.
     entityLabel: { en: row.entityLabel, ar: row.entityLabelAr ?? row.entityLabel },
-    actor: row.actorId ? { id: row.actorId, name: row.actorName ?? '' } : null,
+    actor: row.actorId
+      ? { id: row.actorId, name: row.actorName ?? '', employeeId: linked.get(row.actorId) ?? null }
+      : null,
     changes: (Array.isArray(row.changes) ? row.changes : []) as unknown as AuditChange[],
     meta: { ip: meta.ip ?? null, userAgent: meta.userAgent ?? null },
     at: row.at.toISOString(),
