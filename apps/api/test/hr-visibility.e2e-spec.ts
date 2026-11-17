@@ -237,14 +237,21 @@ describe('P4 — scopes and salary in HR (e2e)', () => {
     });
 
     it('recording a penalty for another stage’s employee → 404; their own stage → 201', async () => {
+      // A violation nobody has today: the setup's one is once per day (§4) and p1 already has it.
+      const violationId = (
+        await http(app)
+          .post(`/hr/penalty-groups/${groupId}/violations`)
+          .send({ nameEn: unique('V'), nameAr: unique('م'), levels: [{ level: 1, action: 'NOTICE' }] })
+          .expect(201)
+      ).body.data.id as string;
       await asUser(users.stageHead, async () => {
         await http(app)
           .post('/hr/penalties')
-          .send({ employeeId: ids.k2, violationId: penalty.violationId, date: today })
+          .send({ employeeId: ids.k2, violationId, date: today })
           .expect(404);
         const created = await http(app)
           .post('/hr/penalties')
-          .send({ employeeId: ids.p1, violationId: penalty.violationId, date: today })
+          .send({ employeeId: ids.p1, violationId, date: today })
           .expect(201);
         await db.penaltyRecord.deleteMany({ where: { id: created.body.data.id } });
       });
@@ -405,7 +412,9 @@ describe('P4 — scopes and salary in HR (e2e)', () => {
         select: { id: true, key: true },
       });
       scopedAuditRole = role.id;
-      scopedAuditUser = await newUser('stage-audit', ids.head, [role.key]);
+      // Linked to p1 (Primary, like the head): an employee has at most one account, and the
+      // Stage head user already holds `head`.
+      scopedAuditUser = await newUser('stage-audit', ids.p1, [role.key]);
     });
 
     afterAll(async () => {

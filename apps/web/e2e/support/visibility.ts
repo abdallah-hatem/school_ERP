@@ -1,5 +1,5 @@
 import { expect, type Browser, type Page } from '@playwright/test';
-import type { EmployeeSummary, Language, UserAccount } from '@school-erp/shared';
+import type { EmployeeOption, EmployeeSummary, Language, UserAccount } from '@school-erp/shared';
 import { Api, rolesByKey, signInAs, uniqueEmail } from './access';
 import { t } from './i18n';
 
@@ -20,8 +20,12 @@ export interface StageHeadSetup {
 export async function makeStageHead(): Promise<StageHeadSetup> {
   const api = await Api.asAdmin();
   const everyone = await api.get<EmployeeSummary[]>('/hr/employees', { limit: 100 });
-  // A stage with an employee in it and someone outside it.
-  const own = everyone.find((e) => everyone.some((o) => o.stage.id !== e.stage.id));
+  // An employee has at most one account: each run (and each spec) links a Stage head to one nobody
+  // holds yet.
+  const options = await api.get<EmployeeOption[]>('/users/employee-options', { limit: 100 });
+  const linked = new Set(options.filter((o) => o.linkedUser).map((o) => o.id));
+  // A stage with an unlinked employee in it and someone outside it.
+  const own = everyone.find((e) => !linked.has(e.id) && everyone.some((o) => o.stage.id !== e.stage.id));
   if (!own) throw new Error('smoke: the seed needs employees in two stages');
   const inStage = everyone.filter((e) => e.stage.id === own.stage.id);
   const outside = everyone.find((e) => e.stage.id !== own.stage.id)!;
