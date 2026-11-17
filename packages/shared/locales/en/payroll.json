@@ -1,0 +1,190 @@
+{
+  "title": "Payroll",
+  "description": "One run per month: salaries adjusted for work system, minus penalties and lateness, plus or minus one-off adjustments.",
+  "runTitle": "Payroll · {month}",
+  "runDescription": "Draft until approved. Recalculate after changing penalties, lateness or settings.",
+  "runDescriptionApproved": "Approved {date}. Approved runs never change; corrections go into next month as adjustments.",
+  "list": {
+    "tableLabel": "Payroll runs",
+    "columns": {
+      "month": "Month",
+      "status": "Status",
+      "employees": "Employees",
+      "net": "Net (EGP)",
+      "approvedAt": "Approved"
+    },
+    "notApproved": "Not yet",
+    "open": "Open {month}",
+    "empty": {
+      "title": "No payroll runs yet",
+      "body": "Create this month's run to calculate every active employee's salary."
+    }
+  },
+  "create": {
+    "action": "Create run",
+    "title": "Create a payroll run",
+    "body": "A draft run is created with a line for every active employee, calculated from today's penalties, lateness and settings.",
+    "month": "Month",
+    "confirm": "Create {month}",
+    "created": "Payroll run created."
+  },
+  "actions": {
+    "recalculate": "Recalculate",
+    "recalculated": "Payroll recalculated.",
+    "exportBankSheet": "Export bank sheet",
+    "bankSheetAfterApproval": "The bank sheet is available once the run is approved.",
+    "approve": "Approve payroll",
+    "approved": "Payroll approved.",
+    "print": "Print",
+    "backToRun": "Back to the run"
+  },
+  "approve": {
+    "title": "Approve {month}?",
+    "body": "Every line is recalculated one last time, then the run, its penalties, lateness and adjustments are locked. An approved run can't be edited.",
+    "confirm": "Approve and lock",
+    "failed": "Payroll wasn't approved",
+    "pendingTitle": "Pending penalties this month",
+    "pendingBody": "Pending penalties dated this month: {count}. Approve or cancel them first, then approve the payroll.",
+    "pendingLink": "Review pending penalties",
+    "staleTitle": "Penalties changed since the last calculation",
+    "staleBody": "Some lines still show pending penalties from the last calculation. Recalculate to update them.",
+    "staleAction": "Recalculate now"
+  },
+  "tiles": {
+    "employees": "Employees",
+    "employeesSub": "{ready} ready · {review} need review",
+    "gross": "Salaries",
+    "grossSub": "Basic salary × work system",
+    "deductions": "Deductions & penalties",
+    "deductionsSub": "Penalties {penalties} · Lateness {lateness} · Adjustments {adjustments}",
+    "net": "Net to pay",
+    "netSub": "Salaries minus deductions, plus additions {additions}"
+  },
+  "table": {
+    "label": "Employees in {month}",
+    "heading": "Employees this month",
+    "count": "{shown} of {total}",
+    "columns": {
+      "employee": "Employee",
+      "monthSalary": "Salary",
+      "penalties": "Penalties",
+      "lateness": "Lateness",
+      "adjustments": "Adjustments",
+      "net": "Net",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "ready": "Ready",
+    "needsReview": "Needs review",
+    "adjust": "Adjust",
+    "adjustFor": "Adjustments for {name}",
+    "payslip": "Payslip",
+    "payslipFor": "Payslip for {name}",
+    "days": "{days} d"
+  },
+  "filters": {
+    "searchLabel": "Search employees",
+    "searchPlaceholder": "Name, code or national ID",
+    "department": "Department",
+    "allDepartments": "All departments",
+    "needsReview": "Needs review only",
+    "clear": "Clear filters"
+  },
+  "empty": {
+    "title": "No employees in this run",
+    "body": "Runs include every active employee. Add employees, then recalculate."
+  },
+  "noResults": {
+    "title": "No employees match",
+    "body": "Try another name, department or filter."
+  },
+  "rules": {
+    "title": "Rules applied this month",
+    "body": "These settings produced every number on this page.",
+    "currentTitle": "Current rules",
+    "currentBody": "This run was calculated on {date}. These are today’s settings and may differ from the ones it used; its numbers don’t change.",
+    "dayValue": "Day value",
+    "dayValueRule": "1 day = salary for the month ÷ {divisor}",
+    "workSystem": "Work system",
+    "workSystemRule": "Full-time 100% · 4 days {pt4}% · 3 days {pt3}% · 2 days {pt2}% of basic",
+    "lateness": "Lateness",
+    "penalties": "Penalties",
+    "penaltiesRule": "Approved day deductions × day value; repeats counted per {window}",
+    "netFloor": "Net floor",
+    "netFloorRule": "Net never goes below 0; such lines need review",
+    "edit": "Edit in settings",
+    "error": "The HR rules couldn't load. The figures are still the server's."
+  },
+  "notApplied": {
+    "title": "Adjustments not applied",
+    "body": "These employees left the run (deactivated before the last recalculate). Their adjustments stay on record but don't count.",
+    "label": "Not applied",
+    "employee": "Not applied — {name} is no longer in this run"
+  },
+  "adjustments": {
+    "title": "Adjustments · {name}",
+    "description": "One-off additions or deductions for {month}, each with a reason.",
+    "listLabel": "Adjustments recorded",
+    "none": "No adjustments for this employee this month.",
+    "readOnly": "The run is approved: adjustments can't change.",
+    "add": "Add adjustment",
+    "type": "Type",
+    "amount": "Amount",
+    "amountPlaceholder": "500.00",
+    "amountRequired": "Enter an amount above 0.",
+    "amountMax": "The amount is too large.",
+    "reason": "Reason",
+    "reasonPlaceholder": "Exam supervision, 3 sessions",
+    "reasonRequired": "Enter a reason.",
+    "added": "Adjustment added.",
+    "remove": "Remove",
+    "removeLabel": "Remove {type} of {amount}",
+    "removed": "Adjustment removed.",
+    "close": "Close"
+  },
+  "payslip": {
+    "title": "Payslip",
+    "month": "Month",
+    "code": "Employee code",
+    "nationalId": "National ID",
+    "department": "Department",
+    "workSystem": "Work system",
+    "basicSalary": "Basic salary",
+    "salary": "Salary",
+    "monthSalary": "Salary for the month",
+    "dayValue": "Day value",
+    "penalties": "Penalties",
+    "penaltyColumns": {
+      "date": "Date",
+      "violation": "Violation",
+      "level": "Level",
+      "action": "Action",
+      "days": "Days",
+      "amount": "Amount"
+    },
+    "noPenalties": "No penalties this month.",
+    "penaltyShareNote": "Each penalty's amount is its share of the penalty deduction; the total is what is deducted.",
+    "lateness": "Lateness",
+    "latenessDetail": "{minutes} minutes = {days}",
+    "adjustments": "Adjustments",
+    "noAdjustments": "No adjustments this month.",
+    "totalPenalties": "Penalty deductions",
+    "totalLateness": "Lateness deductions",
+    "totalAdditions": "Additions",
+    "totalDeductions": "Other deductions",
+    "net": "Net pay",
+    "netFloored": "Deductions exceeded the salary, so net pay is 0.",
+    "level": "Level {level}",
+    "draftTitle": "No payslip yet",
+    "printNote": "Printed from the payroll system."
+  },
+  "profile": {
+    "tableLabel": "Payroll lines",
+    "empty": {
+      "title": "No payroll yet",
+      "body": "This employee's salary appears here once they are in a payroll run."
+    },
+    "draftNote": "Payslip after approval",
+    "openRun": "Open run"
+  }
+}

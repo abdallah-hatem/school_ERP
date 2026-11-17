@@ -14,14 +14,28 @@ skills. **Where this file differs from a skill, this file wins.**
 3. **`packages/shared` exists even though there is no mobile app.** It holds zod schemas, API
    types, permission / setting / module keys, enums, locale files and tokens.
 4. **Frontend is split into `core/`, `shared/` and `modules/`** — see `docs/ARCHITECTURE.md`.
-5. **PRs into `dev` are not merged by Claude.** Open the PR, then stop: a human approval is required
-   (branch protection + `CODEOWNERS`). Merge only after approval and green CI.
+5. **Into `dev`: a PR with green CI, no approval needed** (owner, 2026-11-17). Anyone — Claude
+   included — merges their own PR once CI passes; direct pushes to `dev` are blocked. **Into
+   `testing` and `production`: green CI and the owner's approval** (branch protection + `CODEOWNERS`
+   `*`). Claude never merges into `testing` or `production`. **Before opening any PR, merge the latest
+   `origin/dev` into the branch** and resolve conflicts there (GitHub refuses branches that are
+   behind). Every agent brief says so.
 6. **No Vercel. Our own Contabo VPS runs Coolify with three environments: dev, testing and prod.**
-   The `dev` branch auto-deploys to dev. Release candidates go to testing. `production` builds a
-   versioned Docker image in CI that is rolled out per school. Ignore the skill's Vercel preview
+   Three branches, promoted one way: `dev` → `testing` → `production` (merge commits, never squash).
+   `dev` and `testing` auto-deploy their environments. `production` builds a versioned Docker image
+   in CI that is rolled out per school. Release PRs go from `testing` to `production`, not from `dev`. Ignore the skill's Vercel preview
    steps: run the smoke specs against dev, and the full checks against testing. Server setup follows
    `deploying-to-vps`; details are in `docs/ARCHITECTURE.md` → Hosting.
 7. **Never cache pages at Cloudflare.** Only static files. Every page is per-user.
+8. **A demo dry run is part of Verify and of every release.** Before a client demo or a release PR
+   `testing` → `production`, walk `docs/demo/DEMO_SCRIPT.md` on a **copy** of the database
+   (`docs/demo/DRY_RUN.md`), Arabic then English then phone width, checking money by hand. Record it
+   in `docs/demo/dry-runs/YYYY-MM-DD.md` and turn findings into fixes or Next-up items. Update the
+   script in the same PR as any change to a screen it covers.
+9. **Mockups first for layout and navigation changes.** Changing how a screen lays out its content
+   (table → cards, list → board) or the navigation (sidebar groups/order) is a big design change:
+   show mockups (three options, AR + EN, phone + desktop) **before** building, without being asked,
+   and build only the picked option.
 
 ## Facts the skill cannot know
 
@@ -36,5 +50,12 @@ skills. **Where this file differs from a skill, this file wins.**
   and HR's payroll and penalties.** Other modules keep their logic in services.
 - **Modules talk only through another module's exported service or through events.** Never import
   another module's repository. Reading other modules' tables is allowed; writing them is not.
-- **Module order:** `core` ← `hr` ← `academics` ← `students` ← the rest. Depend only downward, no
-  cycles. HR is built first. An employee is not a user (optional link).
+- **Module order:** `core` ← `hr` ← `academics` ← `students` ← the rest (← `accounting`, Planned).
+  Depend only downward, no cycles. HR is built first. An employee is not a user (optional link).
+  Stages live in `core/school-structure`. Module rule settings live in their module.
+- **Design:** direction "Campus", teal + sunflower palette, **light theme only** (no dark tokens, no
+  theme toggle — overrides the skill's light/dark rule), fully responsive (desktop, tablet, phone),
+  English default (owner, 2026-11-17), Arabic fully supported with RTL. Reference mockup: `design/mockups/b-campus.html` (committed, lead-owned;
+  `design/audit/` and `design/assets/` stay local).
+- **Client material** (school name, logo, the penalty regulations) is seed data only. It never goes
+  in code or docs.

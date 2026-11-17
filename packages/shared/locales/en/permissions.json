@@ -1,0 +1,177 @@
+{
+  "title": "Permissions",
+  "modules": {
+    "core": "School",
+    "hr": "HR"
+  },
+  "keys": {
+    "core": {
+      "settings": {
+        "view": {
+          "label": "View school settings",
+          "description": "See the school's name, logo, working hours and the settings change history."
+        },
+        "edit": {
+          "label": "Edit school settings",
+          "description": "Change the school's name, logo, language and working hours."
+        }
+      },
+      "stages": {
+        "view": {
+          "label": "View stages",
+          "description": "See the school's stages."
+        },
+        "manage": {
+          "label": "Manage stages",
+          "description": "Add, rename and switch off stages."
+        }
+      },
+      "audit": {
+        "view": {
+          "label": "View the activity log",
+          "description": "See who did what and when, across the system and in each record's history."
+        }
+      },
+      "users": {
+        "view": {
+          "label": "View users",
+          "description": "See the user accounts, their roles and linked employees."
+        },
+        "manage": {
+          "label": "Manage users",
+          "description": "Add and edit user accounts, give them roles, deactivate them and set temporary passwords."
+        }
+      },
+      "roles": {
+        "view": {
+          "label": "View roles",
+          "description": "See the roles and the permissions each one grants."
+        },
+        "manage": {
+          "label": "Manage roles",
+          "description": "Add custom roles and change which permissions a role grants, and for which rows."
+        }
+      }
+    },
+    "hr": {
+      "dashboard": {
+        "view": {
+          "label": "View the HR dashboard",
+          "description": "See the HR summary on the home page."
+        }
+      },
+      "employees": {
+        "view": {
+          "label": "View employees",
+          "description": "See the employee list and profiles."
+        },
+        "view_salary": {
+          "label": "View salaries",
+          "description": "See employees' salaries and pay details."
+        },
+        "create": {
+          "label": "Add employees",
+          "description": "Add new employees."
+        },
+        "edit": {
+          "label": "Edit employees",
+          "description": "Change an employee's details."
+        },
+        "change_status": {
+          "label": "Deactivate and reactivate employees",
+          "description": "Mark an employee as having left, or bring them back."
+        }
+      },
+      "lists": {
+        "view": {
+          "label": "View HR lists",
+          "description": "See departments and job titles."
+        },
+        "manage": {
+          "label": "Manage HR lists",
+          "description": "Add, rename and switch off departments and job titles."
+        }
+      },
+      "settings": {
+        "view": {
+          "label": "View HR rules",
+          "description": "See work days, hours, lateness and penalty rules."
+        },
+        "edit": {
+          "label": "Edit HR rules",
+          "description": "Change work days, hours, lateness and penalty rules."
+        }
+      },
+      "penalty_catalogue": {
+        "view": {
+          "label": "View the penalty catalogue",
+          "description": "See penalty groups and violations."
+        },
+        "manage": {
+          "label": "Manage the penalty catalogue",
+          "description": "Add and edit penalty groups and violations."
+        }
+      },
+      "penalties": {
+        "view": {
+          "label": "View penalties",
+          "description": "See recorded penalties and their status."
+        },
+        "record": {
+          "label": "Record penalties",
+          "description": "Record a penalty for an employee (it waits for approval)."
+        },
+        "approve": {
+          "label": "Approve penalties",
+          "description": "Approve a pending penalty so it counts in payroll."
+        },
+        "cancel": {
+          "label": "Cancel penalties",
+          "description": "Cancel a penalty, giving the reason."
+        }
+      },
+      "lateness": {
+        "view": {
+          "label": "View lateness",
+          "description": "See each month's lateness minutes."
+        },
+        "edit": {
+          "label": "Enter lateness",
+          "description": "Enter and correct each month's lateness minutes."
+        }
+      },
+      "payroll": {
+        "view": {
+          "label": "View payroll",
+          "description": "See payroll runs and payslips."
+        },
+        "create": {
+          "label": "Prepare payroll",
+          "description": "Start a month's payroll run."
+        },
+        "recalculate": {
+          "label": "Recalculate payroll",
+          "description": "Recalculate a draft payroll run after changes."
+        },
+        "adjust": {
+          "label": "Adjust payroll",
+          "description": "Add and remove bonuses and deductions on a draft run."
+        },
+        "approve": {
+          "label": "Approve payroll",
+          "description": "Approve a payroll run; it can no longer change."
+        },
+        "export_bank_sheet": {
+          "label": "Export the bank sheet",
+          "description": "Download the bank transfer sheet of an approved run."
+        }
+      }
+    }
+  },
+  "scopes": {
+    "all": "Everyone",
+    "own_stage": "Their stage",
+    "own_team": "Their team",
+    "self": "Themselves only"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "greeting": "Welcome to {school}",
+  "description": "Your HR at a glance for {month}.",
+  "tilesLabel": "This month",
+  "headcount": {
+    "label": "Active employees",
+    "byStage": "By stage",
+    "none": "No active employees yet. Add the first one."
+  },
+  "payroll": {
+    "label": "Payroll, {month}",
+    "status": "Status",
+    "open": "Open the run",
+    "none": "No run yet",
+    "create": "Create run"
+  },
+  "penalties": {
+    "pending": "Pending penalties",
+    "pendingSub": "Waiting for approval this month",
+    "approved": "Approved penalties",
+    "approvedSub": "Approved this month, by violation date"
+  },
+  "quickLinks": {
+    "title": "Quick links",
+    "addEmployee": "Add employee",
+    "recordPenalty": "Record a penalty",
+    "enterLateness": "Enter lateness",
+    "runPayroll": "Run payroll",
+    "settings": "Settings"
+  },
+  "error": {
+    "title": "The dashboard couldn't load",
+    "body": "The figures didn't arrive. Check your connection and try again."
+  }
+}

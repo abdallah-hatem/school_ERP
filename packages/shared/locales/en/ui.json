@@ -1,0 +1,61 @@
+{
+  "shell": {
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "mainNav": "Main navigation",
+    "language": "Language",
+    "productName": "School ERP",
+    "breadcrumbs": "Breadcrumbs"
+  },
+  "table": {
+    "showing": "Showing {from}–{to} of {total}",
+    "pagination": "Pagination",
+    "firstPage": "First page",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "lastPage": "Last page",
+    "page": "Page {page}",
+    "pageOf": "Page {page} of {count}",
+    "actions": "Actions",
+    "actionsFor": "Actions for {name}"
+  },
+  "states": {
+    "emptyTitle": "Nothing here yet",
+    "emptyBody": "Items you add will show up here.",
+    "errorTitle": "This couldn't load",
+    "errorBody": "Check your connection, then try again.",
+    "retry": "Try again",
+    "loading": "Loading…"
+  },
+  "dialog": {
+    "close": "Close",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "reasonLabel": "Reason",
+    "reasonPlaceholder": "Recorded for the wrong employee",
+    "reasonRequired": "Enter a reason to continue."
+  },
+  "form": {
+    "required": "This field is required.",
+    "invalidNumber": "Enter a number.",
+    "invalidAmount": "Enter an amount with up to two decimals, like 1,250.00.",
+    "pickDate": "Pick a day",
+    "chooseOption": "Choose an option",
+    "noOptions": "Nothing to choose from yet.",
+    "counter": "{count} / {max}",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "month": "Month",
+    "year": "Year",
+    "searchOptions": "Type to search",
+    "noMatches": "Nothing matches that search."
+  },
+  "units": {
+    "currency": "EGP",
+    "days": "days"
+  },
+  "comingSoon": {
+    "title": "This screen is being built",
+    "body": "It arrives in an upcoming update. The rest of the app works as usual."
+  }
+}

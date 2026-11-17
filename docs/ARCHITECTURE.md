@@ -40,7 +40,7 @@ backups proven by a restore).
 | Environment | Deployed from | Data | Used by |
 |---|---|---|---|
 | **dev** | every merge to the `dev` branch, automatically | seeded fake data, reset freely | developers + operations testing each ticket |
-| **testing** | the release candidate (`vX.Y.Z-rc.N` image) before a release | realistic fake data at real volume (e.g. 2,000 students, a full year of payments) | operations QA, the school's review before a release, speed and load tests |
+| **testing** | every merge to the `testing` branch (a PR from `dev`), automatically | realistic fake data at real volume (e.g. 2,000 students, a full year of payments) | operations QA, the school's review before a release, speed and load tests |
 | **prod** | the `production` branch (`vX.Y.Z` image), one deployment per school | real school data | the schools |
 
 - **Each environment is its own Coolify project** with its own containers, env vars and databases.
@@ -142,16 +142,26 @@ services to run), not full DDD (most of the system is well-understood CRUD).
 ```
 common            ← technical helpers (no business)
   ↑
-core              ← auth, users, roles/permissions, settings, flags, audit, notifications, files
-  ↑
-hr                ← employees, departments, contracts, staff attendance, leave, penalties, payroll
-  ↑
+core              ← auth, users, roles/permissions, settings, flags, audit, notifications, files,
+  ↑                  school structure (stages)
+hr                ← employees, departments, job titles, contracts, staff attendance, leave,
+  ↑                  penalties, payroll
 academics         ← years, terms, grades, classes, subjects, teacher assignments (→ hr employees)
   ↑
 students          ← students, guardians, enrolment
   ↑
 admissions · attendance · fees · exams · communication · transport
+  ↑
+accounting        ← journal entries from approved payroll and fee payments (Planned)
 ```
+
+- **Stages** (KG, Primary, Preparatory) are a list in `core/` ("school structure"). HR uses them now
+  and academics and students later, so they sit below all three.
+- **Settings ownership:** `core/settings` holds school-wide values (identity, hours, language). Each
+  module owns its own rule settings (HR: lateness, payroll, penalty catalogue). The one Settings
+  screen shows a section per module.
+- **Accounting (Planned)** sits at the top. It listens to `payroll.approved` and `payment.recorded`
+  and creates its own entries. No module below depends on it.
 
 - A module may depend only on modules **below** it, through their `index.ts`. Lower modules
   never know about higher ones: they emit events, and higher modules react.
@@ -195,8 +205,8 @@ this.events.emit('employee.deactivated', { employeeId, at: new Date() });
 async handle(e: EmployeeDeactivatedEvent) { await this.assignments.unassignAll(e.employeeId); }
 ```
 
-- Emit **after the write is committed**. Inside a `$transaction`, emit after it commits, never
-  inside it. The foundation provides a helper for this.
+- Emit **after the write is committed**. Inside a transaction, emit after it commits, never
+  inside it: `AfterCommit.run(() => this.events.emit(...))` (see Transactions and the audit log).
 - Names: `<module>.<thing>.<past-tense>`. Payload types live in `packages/shared`.
 - Listeners are **idempotent** (safe to run twice) and log their failures.
 - Events are in memory: fine for notifications and side effects. Side effects that must never be
@@ -212,6 +222,155 @@ display and reports. **Never for writes.**
 | Something happened; others may react | Event |
 | Lower module must trigger a higher one | Event |
 | Show or report another module's data | Read in your repository |
+
+### Transactions and the audit log
+
+**Request-scoped transactions** (`apps/api/src/database/transactions.ts`, audit spec D3).
+`nestjs-cls` keeps one context per request (with a request id: the incoming `x-request-id`, or a new
+UUID) and `@nestjs-cls/transactional` with the Prisma adapter keeps the open transaction in it.
+
+- A repository that must join its caller's transaction injects `TransactionHost<DbAdapter>` and
+  uses `txHost.tx` (the transaction client inside one, the plain client outside). Its multi-row
+  writes use `txHost.withTransaction(...)`, which joins an open transaction or opens one.
+  Repositories still on `DatabaseService` keep working but always run outside any transaction —
+  move a repository over when its writes must be audited (T28 / T29 move HR's).
+- Never pass options to a nested `withTransaction`; only the request transaction sets them.
+- **After-commit work** (events): `AfterCommit.run(fn)` queues `fn` until the open request
+  transaction commits (dropped on rollback), or runs it at once when none is open.
+
+**The audit log** (`core/audit`, §9). One append-only table, `audit_entries`, written by every
+module through core's exported `AuditService` — never through its repository.
+
+- `audit.record({ action, entity: { type, id, label }, before?, after?, changes? })` writes **in the
+  current transaction** and throws outside one (D2): the entry commits or rolls back with the change.
+- **`label` keeps both names** when the record has them: `label: { en: nameEn, ar: nameAr }` (stages,
+  departments, job titles, penalty groups, violations, roles, employees). It is stored as
+  `entity_label` (English, or the only name) + `entity_label_ar` (Arabic, null when the same), and the
+  API returns `entityLabel: { en, ar }`; the timeline shows the screen's language. A plain string (a
+  user's name or email, a payroll month) reads the same in both. Entries written before
+  `entity_label_ar` existed have it null and read as their one label in both languages (the table is
+  append-only, so they are never backfilled). Search (`q`) matches either name.
+- Who (id + name snapshot), IP, user agent and request id come from the request (D4). `actor` is
+  passed only where the request has no user yet (a successful sign-in) or none applies (`null`).
+- Only changed fields are stored, each `{ field, before, after }`; secrets (password hashes,
+  tokens, anything matching the deny list in `audit.pure.ts`) are dropped at any depth; money stays
+  in piastres; `id` / `createdAt` / `updatedAt` are ignored (D7). Equal before and after write
+  nothing.
+- Append-only in the database: a trigger refuses `UPDATE`, `DELETE` and `TRUNCATE` (D8). Tests can't
+  clean the table up — they read entries after a mark (`test/helpers/history.ts`).
+- `actor_id` is not a foreign key, so deleting a user never touches the log (edge case 4).
+- Actions are typed keys in `packages/shared/src/audit.ts` (`AUDIT_ACTIONS`: module, entity type,
+  kind); their EN / AR sentences and field labels are in `locales/<lang>/audit.json` (D5). Entries
+  store keys and values, never sentences.
+- **Every write endpoint declares its audit** (D6): `@Audited('<action>')` or
+  `@NotAudited('<reason>')`. `src/core/audit/audit-declarations.spec.ts` scans every controller and
+  fails when a POST / PATCH / PUT / DELETE handler has neither.
+- `@Audited` handlers run — validation included — in one transaction opened by the global
+  `AuditedInterceptor`. If the handler succeeds without having called `record()` for that action,
+  the request fails with `AUDIT_NOT_RECORDED` (500) and everything rolls back (D6b). A handler that
+  throws keeps its own error and its entries roll back with it. A save with nothing changed still
+  calls `record()` (with no changes): nothing is written, the check passes.
+- Read API (`@Permission('core.audit.view')`): `GET /audit` (page, limit ≤ 100, actorId, module,
+  action — one or several, comma-separated — from inclusive / to exclusive as ISO instants, q on the
+  record label) and `GET /audit/records/:entityType/:entityId` (page, limit, actorId, field), newest
+  first, server-paged; plus `GET /audit/summary?from&to` (entries, people, money entries, failed
+  sign-ins — Activity's "today at a glance"), `GET /audit/day-totals?<the GET /audit filters>&periods=
+  <from>/<to>,…` (≤ 31 periods → one count each, in order: Activity's day headers count the whole
+  school day for the filters, not the page), `GET /audit/actors[?entityType&entityId]` (the
+  person pickers) and `GET /audit/records/:entityType/:entityId/fields` (the History field filter).
+  "Money" entries are payroll actions or changes to `AUDIT_MONEY_FIELDS` (`packages/shared`).
+- **Settings history** (D9) lives in the audit log. The screens (T30): Administration → **Activity**
+  (`modules/activity`) and each employee's **History** tab, built on `core/audit` in the web app;
+  Settings has no history section of its own — "View change history" opens Activity with
+  `module=settings` (the settings actions of both modules). `GET /settings/history` was removed.
+  The old `setting_changes` rows were copied by the T27 migration (same id, value, person, time).
+- **Dates** on the audit screens are read in the school's time zone (`SCHOOL_TIME_ZONE`, Cairo, in
+  `core/audit/lib/time.ts`): day headers, times and the date filter's day edges. Calendars start the
+  week on Sunday in both languages (the school's working week, `WEEK_STARTS_ON`).
+- **Change lines** (`changeRows`, `core/audit/lib/entry-text.ts`): a list item edited in place
+  (`{ nameEn, nameAr, isActive, sortOrder }` before and after, same id) shows one line per changed
+  part — "Violation · Name (Arabic)" — never "Strike → Strike"; a different item picked stays one line.
+- **Filters** on both audit screens: a side panel on wide screens (first in the page's tab order,
+  drawn in the second column), else one Filters button opening `AuditFiltersSheet` — from the
+  bottom on a phone, from the inline-end edge on a tablet.
+
+### Permissions
+
+Who may call each endpoint (`core/permissions`, spec `docs/specs/2026-11-17-roles-permissions.md`,
+P1). Mirrors the audit log: typed keys in `packages/shared`, a declaration on every handler, a CI
+scan and a run-time check.
+
+- **Keys** are typed in `packages/shared/src/permissions.ts` (`PERMISSIONS`), `<module>.<area>.<action>`
+  (`hr.payroll.approve`), grouped by module. Each has an EN / AR label and description in
+  `locales/<lang>/permissions.json` (`keys.<key>.label` / `.description`); the shared tests fail on a
+  key without both, or a label without a key. A typo in a key fails typecheck.
+- **Every handler declares who may use it**, one of:
+  - `@Permission('key', ...)` — the user must hold **all** the keys;
+  - `@SignedIn()` — any signed-in user, for what every account needs (`/auth/me`, sign-out, opening
+    an uploaded file);
+  - `@Public()` — no session: only sign-in, refresh, the sign-in page's school name and logo, and
+    `/health` (§2).
+  A class-level declaration covers the handlers that declare nothing themselves.
+- **The global `PermissionGuard`** (`APP_GUARD`, registered in `app.module.ts` right after
+  `JwtAuthGuard`, so 401 always comes before 403) is **closed by default**: no declaration, or more
+  than one, → 403. `src/core/permissions/permission-declarations.spec.ts` scans every controller
+  (with `common/testing/controller-scan.ts`, shared with the audit scan) and fails CI on the same
+  handlers.
+- **What a user holds** comes from one place, `PermissionsService.permissionsFor(user)` in
+  `core/permissions`; the guard and `/auth/me` only call it. See Roles as data below.
+
+### Roles as data
+
+Roles are rows, not code (spec P2, R2 / R5 / R8 / R9). A school changes them through the Roles API
+(screens in P3); nothing in the code names a school's roles.
+
+- **Tables** (owned by `core/roles`): `roles` (key, name EN / AR, `built_in`, `sort_order`),
+  `role_permissions` (role, permission key, scope) and `user_roles`. The permission key is text,
+  not an enum: a key removed from the code stays stored, and is ignored and logged when read
+  (edge case 8).
+- **Starting roles** are `BUILT_IN_ROLES` in `packages/shared/src/roles.ts` (the spec's table, GUESS):
+  System admin, HR manager, HR officer, Accountant, Principal, Stage head, Direct manager. The P2
+  migration copied them into the tables once and gave every HR admin **System admin + HR manager**;
+  from then on they are data. Built-in roles can be edited (names, permissions) but not deleted.
+  The **System admin always holds every key** with scope `all`, whatever its rows say — a key added
+  later reaches it without a migration, and its permission list can't be edited (no lock-out).
+- **Union and scopes.** A user's permissions are the union of their roles' (edge case 2). Each grant
+  has a **scope**: `all`, `own_stage` (the user's linked employee's stage), `own_team` (employees
+  whose direct manager is the user's linked employee), `self`. Per key the widest scope wins, in
+  that order (`widerScope` in shared; `own_stage` counts as wider than `own_team`).
+- **Per request.** `PermissionsService` reads the user's roles once per request and caches them in
+  the request context (CLS), so a change to a role or to a user's roles applies from the next
+  request, with no new sign-in (edge case 7).
+- **`scopeFor(user, key)`** (same service, exported from `core/permissions`) returns
+  `{ scope, employeeId, stageId }` — the widest scope the user holds `key` with, plus their linked
+  employee and its stage — or `null` when they don't hold it. The module that owns the data applies
+  it in its repository query; a scoped user with no linked employee matches no rows. Core only
+  answers the question; HR applies it in P4.
+- **Linked employee.** `users.employee_id` (unique, core-owned) is the link (R9). HR's older
+  `employees.user_id` was copied into it by the migration and is deprecated (HR drops it).
+- **The `users.role` enum column** (`UserRole`, `AuthUser.role`) is kept **deprecated**: nothing
+  decides access with it; it stays until the web app stops reading it (P3).
+- **Users API** (`core/users`, `core.users.view` / `core.users.manage`): list (paged, search on name
+  or email, status), get, create (temporary password, roles, linked employee), edit, deactivate /
+  reactivate, set a temporary password; `POST /account/password` (`@SignedIn`) changes your own.
+  Deactivating or setting a temporary password emits `core.user.sessions_ended` after the commit;
+  `core/auth` revokes the user's refresh tokens. The access token is refused at once anyway, since
+  every request re-reads the user (edge case 6).
+- **Roles API** (`core/roles`, `core.roles.view` / `core.roles.manage`): list (paged), get, create a
+  custom role (generated key `custom_<hex>`), edit names and permissions (the set is replaced),
+  delete a custom role nobody holds.
+- **Last System admin** (R8, edge case 5): removing the role from, or deactivating, the last active
+  System admin is refused (`LAST_SYSTEM_ADMIN`, 409). The check locks the System admin role row for
+  the rest of the transaction, so two such changes at once can't both pass.
+- Every user and role write is `@Audited` (`core.user.*`, `core.role.*`); passwords are never in the
+  log (the entry says only that one was set or changed).
+- Area order inside core: `audit` ← `permissions` ← `roles` ← `users` ← `auth`. `core/audit` reads
+  an actor's name from `users` itself, so it depends on no other core area.
+- **The web app** gets the keys with the session: `GET /auth/me` returns `SessionUser`
+  (`AuthUser` + `permissions`). The dashboard layout reads it on the server and passes it to
+  `SessionProvider`; `can(user, key)`, `useCan()` and `<Can permission="…">` in
+  `apps/web/src/core/auth` hide menu items and action buttons. **`can()` is only the view** — the
+  guard is the protection, and a hidden button's endpoint still refuses the call.
 
 ### Deliberate shortcuts
 
@@ -300,7 +459,8 @@ too.
 - **Cross-module writes:** call the other module's service. Use an event for side effects that can
   happen afterwards (notifications, SMS).
 - **Lookup tables** (academic years, grades, classes, subjects) belong to `academics`. Everyone
-  references them; only `academics` changes them.
+  references them; only `academics` changes them. **Stages** belong to `core` (school structure),
+  because HR needs them and sits below academics.
 - **One `schema.prisma` file**, grouped by module under comment headers
   (`// ── fees ──`), so ownership is visible without splitting files. One migration history.
 - **Migration conflicts:** before merging a PR with a migration, rebase on the latest `dev`. If
@@ -366,15 +526,15 @@ apps/api/
 │   ├── common/                       ← technical, no business
 │   │   ├── repositories/             ← base.repository.ts
 │   │   ├── interfaces/
-│   │   ├── decorators/               ← @CurrentUser, @RequirePermission, @Public
-│   │   ├── guards/                   ← auth, permission, feature-flag
+│   │   ├── decorators/               ← @CurrentUser, @Public
+│   │   ├── guards/                   ← JWT auth (the permission guard is core/permissions)
 │   │   ├── filters/  interceptors/  pipes/
 │   │   ├── errors/
 │   │   ├── i18n/                     ← server messages (en, ar)
 │   │   └── utils/                    ← pure: dates, money, numbers
 │   ├── core/                         ← business foundation
 │   │   ├── auth/  users/  roles/
-│   │   ├── settings/  feature-flags/
+│   │   ├── settings/  feature-flags/  school-structure/
 │   │   ├── audit/  notifications/  files/
 │   │   └── core.module.ts
 │   └── modules/
@@ -418,7 +578,7 @@ apps/web/src/
 │       ├── (auth)/login/  reset-password/
 │       └── (dashboard)/              ← sidebar + topbar layout
 │           ├── page.tsx
-│           ├── students/  fees/  attendance/  exams/  settings/
+│           ├── students/  fees/  attendance/  exams/  settings/  activity/
 │           └── transport/            ← hidden when the flag is off
 ├── lib/                              ← skill fetch wrapper
 │   ├── api.ts                        ← apiFetch (server only)
@@ -428,6 +588,8 @@ apps/web/src/
 │   ├── auth/                         ← session, current user, <Can permission="…">
 │   ├── settings/                     ← settings, feature flags, branding → CSS variables
 │   ├── navigation/                   ← sidebar menu, filtered by flags + permissions
+│   ├── audit/                        ← activity log pieces: apis.ts (GET /audit…), timeline,
+│   │                                   entry text (sentences, field labels), record History
 │   └── academic-year/                ← year switcher, current-year context
 ├── shared/                           ← shared technical pieces
 │   ├── components/ui/                ← shadcn kit
@@ -440,6 +602,8 @@ apps/web/src/
 ├── modules/
 │   ├── hr/  academics/  students/  admissions/  attendance/
 │   ├── fees/  exams/  communication/  transport/
+│   ├── settings/                     ← the Settings screen
+│   └── activity/                     ← the Activity screen (filters panel, today's counts, paging)
 └── middleware.ts                     ← locale + auth routing
 ```
 
@@ -464,6 +628,11 @@ Frontend rules:
   still enforces both.
 - RTL: logical classes only (`ms-`/`me-`, `start`/`end`); transforms and chevrons get explicit
   `[dir="rtl"]` overrides.
+- Counts in text use plural forms: the message is `{ "zero", "one", "two", "few", "many", "other" }`
+  (the same keys in `en` and `ar`; English only reads `one` / `other`) and `t(key, { count })` picks
+  the form by the language's plural rules — "1 entry", "سجلان", "12 سجلًا".
+- Small controls reach 44 × 44px on touch screens and phone widths with the `tap-target` utility (an
+  invisible hit area; desktop density unchanged). Search boxes never show the browser's own "×".
 - Branding (name, logo, colours) loads from settings into CSS variables.
 
 ### `packages/shared`

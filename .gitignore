@@ -19,6 +19,24 @@ deploy/schools/*.env
 *.pem
 *.key
 
+# local client data and uploads
+**/seed-data.local/
+uploads/
+
+# agent worktrees
+.claude/worktrees/
+
+# smoke specs (pnpm smoke): screenshots, logs, traces
+apps/web/e2e/screenshots/
+apps/web/e2e/.logs/
+apps/web/e2e/.results/
+apps/web/playwright-report/
+
+# generated
+deps-graph.*
+*.tsbuildinfo
+next-env.d.ts
+
 # logs and OS
 *.log
 .DS_Store
@@ -27,3 +45,13 @@ deploy/schools/*.env
 .idea/
 .vscode/*
 !.vscode/extensions.json
+apps/web/AGENTS.md
+
+# UI audit screenshots and the client's logo show client material: kept local.
+# design/mockups/*.html and BRIEF.md are shared (placeholder school name) and owned by the lead (CODEOWNERS).
+design/audit/
+design/assets/
+design/mockups/screenshots/
+
+# Local CI logs
+.ci-local/

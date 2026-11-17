@@ -1,4 +1,6 @@
-# Shared code needs the lead developer's approval.
+# Everything reaching testing and production needs the lead's approval (enforced on those branches;
+# dev only requires green CI). The lines below name the shared code he owns.
+*                            @abdallah-hatem
 
 /apps/api/src/core/          @abdallah-hatem
 /apps/api/src/common/        @abdallah-hatem
@@ -14,3 +16,6 @@
 /docker-compose.yml          @abdallah-hatem
 /package.json                @abdallah-hatem
 /CLAUDE.md                   @abdallah-hatem
+/.claude/                    @abdallah-hatem
+/design/                    @abdallah-hatem
+/docs/DESIGN.md             @abdallah-hatem

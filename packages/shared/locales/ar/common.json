@@ -1,0 +1,111 @@
+{
+  "app": {
+    "name": "نظام إدارة المدرسة",
+    "comingSoon": "هذه الشاشة قيد الإنشاء."
+  },
+  "nav": {
+    "dashboard": "لوحة التحكم",
+    "employees": "الموظفون",
+    "penalties": "الجزاءات",
+    "lateness": "التأخير",
+    "payroll": "الرواتب",
+    "settings": "الإعدادات",
+    "activity": "سجل النشاط",
+    "modules": {
+      "home": "الرئيسية",
+      "hr": "الموارد البشرية",
+      "accounting": "الحسابات",
+      "inventory": "المخازن",
+      "students": "الطلاب",
+      "administration": "الإدارة"
+    },
+    "soon": "قريبًا",
+    "soonTitle": "{name} — قريبًا",
+    "modulePages": "صفحات {name}"
+  },
+  "actions": {
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "create": "إنشاء",
+    "edit": "تعديل",
+    "approve": "اعتماد",
+    "recalculate": "إعادة الحساب",
+    "deactivate": "إيقاف",
+    "reactivate": "إعادة تفعيل",
+    "retry": "حاول مرة أخرى",
+    "search": "بحث",
+    "signOut": "تسجيل الخروج"
+  },
+  "common": {
+    "loading": "جارٍ التحميل…",
+    "empty": "لا يوجد شيء بعد.",
+    "noResults": "لا توجد نتائج مطابقة.",
+    "yes": "نعم",
+    "no": "لا",
+    "language": "اللغة",
+    "english": "English",
+    "arabic": "العربية"
+  },
+  "enums": {
+    "workSystem": {
+      "FULL_TIME": "دوام كامل",
+      "PART_TIME_4": "دوام جزئي، 4 أيام",
+      "PART_TIME_3": "دوام جزئي، 3 أيام",
+      "PART_TIME_2": "دوام جزئي، يومان"
+    },
+    "gender": {
+      "MALE": "ذكر",
+      "FEMALE": "أنثى"
+    },
+    "employeeStatus": {
+      "ACTIVE": "نشط",
+      "INACTIVE": "غير نشط"
+    },
+    "penaltyAction": {
+      "NOTICE": "لفت نظر",
+      "WARNING": "إنذار",
+      "DEDUCT_DAYS": "خصم أيام",
+      "INVESTIGATION": "إحالة للتحقيق",
+      "RAISE_HALF_LOSS": "الحرمان من نصف العلاوة السنوية",
+      "RAISE_LOSS": "الحرمان من العلاوة السنوية",
+      "RAISE_DEFER_3M": "تأجيل العلاوة السنوية 3 أشهر",
+      "PAY_CUT": "خفض الأجر بمقدار علاوة",
+      "DEMOTION": "خفض الدرجة",
+      "DISMISSAL": "الفصل"
+    },
+    "penaltyStatus": {
+      "PENDING": "قيد الانتظار",
+      "APPROVED": "معتمد",
+      "CANCELLED": "ملغى"
+    },
+    "payrollStatus": {
+      "DRAFT": "مسودة",
+      "APPROVED": "معتمد"
+    },
+    "adjustmentType": {
+      "ADDITION": "إضافة",
+      "DEDUCTION": "خصم"
+    },
+    "repetitionWindow": {
+      "CONTRACT_YEAR": "سنة العقد (1 يونيو – 31 مايو)",
+      "CALENDAR_YEAR": "السنة الميلادية",
+      "ROLLING_12_MONTHS": "آخر 12 شهرًا"
+    },
+    "payrollFlag": {
+      "NET_FLOORED": "الصافي عند الحد الأدنى صفر",
+      "PENDING_PENALTIES": "جزاءات قيد الانتظار"
+    },
+    "weekday": {
+      "SUNDAY": "الأحد",
+      "MONDAY": "الإثنين",
+      "TUESDAY": "الثلاثاء",
+      "WEDNESDAY": "الأربعاء",
+      "THURSDAY": "الخميس",
+      "FRIDAY": "الجمعة",
+      "SATURDAY": "السبت"
+    },
+    "userRole": {
+      "HR_ADMIN": "مسؤول الموارد البشرية"
+    }
+  }
+}

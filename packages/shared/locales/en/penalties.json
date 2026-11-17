@@ -1,0 +1,88 @@
+{
+  "title": "Penalties",
+  "description": "Violations recorded against employees. A new penalty waits as pending until it is approved; only approved ones count toward repeats and payroll.",
+  "record": "Record a penalty",
+  "month": "Month",
+  "tableLabel": "Penalties for {month}",
+  "profileTableLabel": "Penalties of {name}",
+  "columns": {
+    "date": "Date",
+    "employee": "Employee",
+    "violation": "Violation",
+    "levelAction": "Level · action",
+    "action": "Action",
+    "status": "Status",
+    "actions": "Actions"
+  },
+  "levelValue": "Level {level}",
+  "filters": {
+    "searchLabel": "Search penalties",
+    "searchPlaceholder": "Employee name or code, like EMP-0012",
+    "status": "Status",
+    "allStatuses": "All statuses"
+  },
+  "list": {
+    "emptyTitle": "No penalties this month",
+    "emptyBody": "Penalties recorded for this month show up here.",
+    "noResultsTitle": "No penalties match",
+    "noResultsBody": "Try another name, or clear the filters.",
+    "clearFilters": "Clear filters",
+    "profileEmptyTitle": "No penalties yet",
+    "profileEmptyBody": "Penalties recorded for this employee show up here, newest first."
+  },
+  "action": {
+    "deduct": "Deduct {days}",
+    "investigation": "Referral to investigation, {days} deducted"
+  },
+  "cancelledBecause": "Reason: {reason}",
+  "approve": {
+    "button": "Approve",
+    "buttonFor": "Approve the penalty of {name}",
+    "title": "Approve this penalty?",
+    "body": "{name} · {violation} · {action}. The level and action are fixed once approved.",
+    "confirm": "Approve",
+    "done": "Penalty approved."
+  },
+  "cancel": {
+    "button": "Cancel",
+    "buttonFor": "Cancel the penalty of {name}",
+    "title": "Cancel this penalty?",
+    "body": "{name} · {violation}. The penalty is kept with your reason and no longer counts.",
+    "confirm": "Cancel penalty",
+    "reasonLabel": "Reason for cancelling",
+    "reasonPlaceholder": "Recorded for the wrong employee",
+    "done": "Penalty cancelled."
+  },
+  "form": {
+    "title": "Record a penalty",
+    "description": "It is saved as pending. The level comes from the employee's approved penalties for the same violation.",
+    "employee": "Employee",
+    "employeePlaceholder": "Choose an employee",
+    "employeeSearch": "Type a name (English or Arabic) or code",
+    "noEmployeeMatches": "No active employee matches that search.",
+    "noEmployees": "No active employees. Add one from the Employees screen.",
+    "violation": "Violation",
+    "violationPlaceholder": "Choose a violation",
+    "noViolations": "No violations in use. Add them in Settings → Penalty catalogue.",
+    "date": "Date of the violation",
+    "datePlaceholder": "Pick the day it happened",
+    "dateHint": "Can't be in the future.",
+    "note": "Note",
+    "notePlaceholder": "Arrived 40 minutes late without notice",
+    "save": "Save as pending",
+    "saved": "Penalty recorded as pending.",
+    "saveFailed": "The penalty couldn't be saved. Try again.",
+    "futureDate": "The date can't be in the future.",
+    "tooLong": "Keep it under 1,000 characters."
+  },
+  "preview": {
+    "label": "What this penalty means",
+    "idle": "Choose the employee, violation and date to see the level and action.",
+    "loading": "Working out the level…",
+    "line": "Level {level} — {action}",
+    "priorNone": "No earlier approved penalty for this violation in the repetition window.",
+    "priorOne": "1 earlier approved penalty for this violation in the repetition window.",
+    "priorMany": "{count} earlier approved penalties for this violation in the repetition window.",
+    "failed": "The level couldn't be worked out."
+  }
+}

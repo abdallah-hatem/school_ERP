@@ -1,0 +1,298 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/*
+ * Design tokens — direction "Campus" (docs/DESIGN.md). LIGHT THEME ONLY: CLAUDE.md overrides the
+ * skill's light/dark rule, so there are no dark tokens and no theme toggle.
+ * Components use the semantic names (bg-primary, text-muted-foreground), never raw colours.
+ *
+ * Text tokens on their soft surfaces (`*-ink` on `*-soft`) are tuned to pass WCAG AA at 12.5px.
+ */
+:root {
+  --radius: 0.875rem;
+
+  /* Surfaces */
+  --background: #f2f8f6;
+  --foreground: #11302b;
+  --card: #ffffff;
+  --card-foreground: #11302b;
+  --popover: #ffffff;
+  --popover-foreground: #11302b;
+  --muted: #f5faf8;
+  --muted-foreground: #587069;
+  --secondary: #eaf4f1;
+  --secondary-foreground: #11302b;
+
+  /* Brand: teal for action and place, sunflower for the one warm highlight */
+  --primary: #0b7a68;
+  --primary-foreground: #ffffff;
+  --primary-soft: #d5efe8;
+  --primary-hover: #096656;
+  --accent: #ffc43d;
+  --accent-foreground: #4a3400;
+  --accent-soft: #fff1c9;
+
+  /* Status */
+  --success: #1f9a62;
+  --success-soft: #ddf4e7;
+  --success-ink: #126b42;
+  --warning: #d9771c;
+  --warning-soft: #ffe8d2;
+  --warning-ink: #8f4608;
+  --destructive: #d9473a;
+  --destructive-foreground: #ffffff;
+  --destructive-soft: #fde3df;
+  --destructive-ink: #a82d22;
+  --info: #2f6fb3;
+  --info-soft: #e0eefb;
+  --info-ink: #24578e;
+
+  /*
+   * Stage bands — the header band of an employee card, one colour per stage (by the stage's
+   * order, cycling), a neutral one for staff with no stage and a washed-out one when inactive.
+   */
+  --band-1: #cfe4f8;
+  --band-1-ink: #24578e;
+  --band-2: #bfe6db;
+  --band-2-ink: #0a5d4f;
+  --band-3: #ffe4a8;
+  --band-3-ink: #6b4b00;
+  --band-4: #f8d9cf;
+  --band-4-ink: #8a3b22;
+  --band-neutral: #e3ece9;
+  --band-neutral-ink: #41605a;
+  --band-inactive: #eef1f0;
+  --band-inactive-ink: #587069;
+
+  /* Lines and focus */
+  --border: #dce9e5;
+  --input: #cfe0db;
+  --ring: #0b7a68;
+  --overlay: rgb(9 40 35 / 0.42);
+
+  /* Elevation — one small fixed set */
+  --shadow-card: 0 1px 2px rgb(11 72 62 / 0.06), 0 10px 30px -12px rgb(11 72 62 / 0.18);
+  --shadow-raised: 0 2px 4px rgb(11 72 62 / 0.05), 0 30px 60px -24px rgb(11 72 62 / 0.28);
+  --shadow-primary: 0 8px 20px -8px rgb(11 122 104 / 0.7);
+
+  /* Scrollbar */
+  --scrollbar-thumb: rgb(17 48 43 / 0.18);
+  --scrollbar-thumb-hover: rgb(17 48 43 / 0.32);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-hover: var(--primary-hover);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-soft: var(--accent-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-success-ink: var(--success-ink);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-ink: var(--warning-ink);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-soft: var(--destructive-soft);
+  --color-destructive-ink: var(--destructive-ink);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-info-ink: var(--info-ink);
+  --color-band-1: var(--band-1);
+  --color-band-1-ink: var(--band-1-ink);
+  --color-band-2: var(--band-2);
+  --color-band-2-ink: var(--band-2-ink);
+  --color-band-3: var(--band-3);
+  --color-band-3-ink: var(--band-3-ink);
+  --color-band-4: var(--band-4);
+  --color-band-4-ink: var(--band-4-ink);
+  --color-band-neutral: var(--band-neutral);
+  --color-band-neutral-ink: var(--band-neutral-ink);
+  --color-band-inactive: var(--band-inactive);
+  --color-band-inactive-ink: var(--band-inactive-ink);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-overlay: var(--overlay);
+
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 3px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+
+  --shadow-card: var(--shadow-card);
+  --shadow-raised: var(--shadow-raised);
+  --shadow-primary: var(--shadow-primary);
+
+  /* Latin face first; Arabic glyphs fall through to the Arabic face (fonts.ts sets the fallback). */
+  --font-sans: var(--font-latin), var(--font-arabic), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-latin), var(--font-arabic-display), var(--font-arabic), ui-sans-serif,
+    system-ui, sans-serif;
+  /* Figures always in the Latin face, with tabular digits (see .tabular). */
+  --font-figures: var(--font-latin), ui-sans-serif, system-ui, sans-serif;
+
+  --ease-snappy: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out-strong: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+  --z-popover: 70;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    color-scheme: light;
+    scrollbar-gutter: stable;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-background font-sans text-foreground;
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* Arabic body copy reads best in IBM Plex Sans Arabic, headings in Tajawal. */
+  html[lang="ar"] body {
+    font-family: var(--font-arabic), var(--font-latin), ui-sans-serif, system-ui, sans-serif;
+  }
+  html[lang="ar"] .font-display {
+    font-family: var(--font-arabic-display), var(--font-arabic), var(--font-latin), ui-sans-serif,
+      system-ui, sans-serif;
+    letter-spacing: 0;
+  }
+  :focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--primary) 55%, transparent);
+    outline-offset: 2px;
+  }
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+  /* Search boxes never show the browser's own "×": they all look and clear the same way. */
+  input[type="search"]::-webkit-search-cancel-button,
+  input[type="search"]::-webkit-search-decoration {
+    -webkit-appearance: none;
+    appearance: none;
+    display: none;
+  }
+}
+
+/*
+ * A small control that keeps its look but is at least 44 × 44px to a finger: on touch screens and
+ * phone widths an invisible ::after grows the hit area around it (centred, never smaller than the
+ * control). Desktop density stays as drawn. Needs no positioned child of its own using ::after.
+ */
+@utility tap-target {
+  position: relative;
+  @media (pointer: coarse), (width < 48rem) {
+    &::after {
+      content: "";
+      position: absolute;
+      inset-block: min(0px, calc((100% - 2.75rem) / 2));
+      inset-inline: min(0px, calc((100% - 2.75rem) / 2));
+    }
+  }
+}
+
+/* Opening a Radix overlay never shifts the page (building-frontends → ui-patterns). */
+html body[data-scroll-locked] {
+  overflow: visible !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  --removed-body-scroll-bar-size: 0px !important;
+}
+
+/* Figures: Latin digits, tabular, never reshaped by the Arabic face. */
+@utility tabular {
+  font-family: var(--font-figures);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+@utility scrollbar-clean {
+  scrollbar-gutter: stable;
+  &::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  &::-webkit-scrollbar-button {
+    display: none;
+  }
+  &::-webkit-scrollbar-track,
+  &::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  &:hover::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb-hover);
+  }
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  .scrollbar-clean {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+}
+
+/*
+ * A form drawn as its own skeleton (`SkeletonMask`): the real layout with its labels, every control
+ * a pulsing block of the same size, values and icons hidden. Nothing in it can be used.
+ */
+@utility skeleton-mask {
+  pointer-events: none;
+  user-select: none;
+  & :is(input, textarea, button, [role="combobox"]) {
+    color: transparent !important;
+    border-color: transparent !important;
+    background: var(--secondary) !important;
+    box-shadow: none !important;
+    opacity: 1 !important;
+  }
+  & :is(input, textarea)::placeholder {
+    color: transparent !important;
+  }
+  & :is(button, [role="combobox"]) * {
+    visibility: hidden;
+  }
+  & [role="status"] {
+    visibility: hidden;
+  }
+  & :is(input, textarea, button, [role="combobox"]) {
+    @media (prefers-reduced-motion: no-preference) {
+      animation: pulse 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+  }
+}
+
+/* Directional icons (chevrons, arrows) mirror in Arabic. */
+@utility flip-rtl {
+  [dir="rtl"] & {
+    transform: scaleX(-1);
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}

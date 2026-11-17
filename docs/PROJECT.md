@@ -18,9 +18,9 @@ small per-school adjustments.
 
 | Person | Role | Owns |
 |---|---|---|
-| Abdallah | Lead developer | Architecture, infrastructure, shared code (`core/`, `common/`, `shared/`, `packages/`, schema, deploy), final review on shared code, technical scope calls |
-| Tamer | Developer | Business modules, end to end (backend + frontend + tests) |
-| Waleed | Developer | Business modules, end to end (backend + frontend + tests) |
+| Abdallah (`abdallah-hatem`) | Lead developer | Architecture, infrastructure, shared code (`core/`, `common/`, `shared/`, `packages/`, schema, deploy), final review on shared code, technical scope calls |
+| Tamer (`Fawrama`) | Developer | Business modules, end to end (backend + frontend + tests) |
+| Waleed (`AbdelrahmanHassib`) | Developer | Business modules, end to end (backend + frontend + tests) |
 | Hafez | Operations | Implementation, project management, QA, client training (exact split with Arousi to agree) |
 | Arousi | Operations | Implementation, project management, QA, client training (exact split with Hafez to agree) |
 

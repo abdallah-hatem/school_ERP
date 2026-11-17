@@ -1,0 +1,318 @@
+{
+  "title": "Activity",
+  "system": "System",
+  "modules": {
+    "core": "School",
+    "hr": "HR"
+  },
+  "kinds": {
+    "access": "Sign-ins",
+    "create": "Added",
+    "update": "Edited",
+    "status": "Status changes"
+  },
+  "entities": {
+    "user": "User",
+    "role": "Role",
+    "school_settings": "School settings",
+    "stage": "Stage",
+    "employee": "Employee",
+    "department": "Department",
+    "job_title": "Job title",
+    "hr_settings": "HR rules",
+    "penalty_group": "Penalty group",
+    "violation": "Violation",
+    "penalty": "Penalty",
+    "lateness_month": "Monthly lateness",
+    "payroll_run": "Payroll run"
+  },
+  "actions": {
+    "core": {
+      "auth": {
+        "sign_in": "Signed in",
+        "sign_out": "Signed out",
+        "sign_in_failed": "Failed sign-in attempt for {entity}"
+      },
+      "settings": {
+        "update": "Changed the school settings",
+        "logo_change": "Changed the school logo"
+      },
+      "stage": {
+        "create": "Added the stage {entity}",
+        "update": "Edited the stage {entity}"
+      },
+      "user": {
+        "create": "Added the user {entity}",
+        "update": "Edited the user {entity}",
+        "deactivate": "Deactivated the user {entity}",
+        "reactivate": "Reactivated the user {entity}",
+        "set_password": "Set a temporary password for {entity}",
+        "change_password": "Changed the password of {entity}"
+      },
+      "role": {
+        "create": "Added the role {entity}",
+        "update": "Edited the role {entity}",
+        "delete": "Deleted the role {entity}"
+      }
+    },
+    "hr": {
+      "employee": {
+        "create": "Added the employee {entity}",
+        "update": "Edited the employee {entity}",
+        "deactivate": "Deactivated the employee {entity}",
+        "reactivate": "Reactivated the employee {entity}"
+      },
+      "department": {
+        "create": "Added the department {entity}",
+        "update": "Edited the department {entity}"
+      },
+      "job_title": {
+        "create": "Added the job title {entity}",
+        "update": "Edited the job title {entity}"
+      },
+      "settings": {
+        "update": "Changed the HR rules"
+      },
+      "penalty_group": {
+        "create": "Added the penalty group {entity}",
+        "update": "Edited the penalty group {entity}"
+      },
+      "violation": {
+        "create": "Added the violation {entity}",
+        "update": "Edited the violation {entity}"
+      },
+      "penalty": {
+        "record": "Recorded a penalty for {entity}",
+        "approve": "Approved the penalty for {entity}",
+        "cancel": "Cancelled the penalty for {entity}"
+      },
+      "lateness": {
+        "save": "Saved the lateness for {entity}"
+      },
+      "payroll": {
+        "create": "Created the payroll run for {entity}",
+        "recalculate": "Recalculated the payroll run for {entity}",
+        "approve": "Approved the payroll run for {entity}",
+        "adjustment_add": "Added an adjustment to the payroll run for {entity}",
+        "adjustment_remove": "Removed an adjustment from the payroll run for {entity}"
+      }
+    }
+  },
+  "fields": {
+    "nameEn": "Name (English)",
+    "nameAr": "Name (Arabic)",
+    "sortOrder": "Order",
+    "isActive": "Shown",
+    "email": "Email",
+    "code": "Code",
+    "nationalId": "National ID",
+    "gender": "Gender",
+    "dateOfBirth": "Date of birth",
+    "phone": "Phone",
+    "address": "Address",
+    "hireDate": "Hire date",
+    "stageId": "Stage",
+    "departmentId": "Department",
+    "jobTitleId": "Job title",
+    "managerId": "Direct manager",
+    "grade": "Grade",
+    "workSystem": "Work system",
+    "basicSalary": "Basic salary",
+    "fingerprintId": "Fingerprint ID",
+    "contractStart": "Contract start",
+    "contractEnd": "Contract end",
+    "usesBus": "Uses the bus",
+    "status": "Status",
+    "userId": "User account",
+    "groupId": "Penalty group",
+    "note": "Note",
+    "levels": "Levels",
+    "employeeId": "Employee",
+    "violationId": "Violation",
+    "date": "Date",
+    "level": "Occurrence",
+    "action": "Penalty",
+    "days": "Days",
+    "cancelReason": "Cancellation reason",
+    "minutes": "Minutes",
+    "month": "Month",
+    "type": "Type",
+    "amount": "Amount",
+    "reason": "Reason",
+    "totals": "Totals",
+    "net": "Net",
+    "school": {
+      "nameEn": "School name (English)",
+      "nameAr": "School name (Arabic)",
+      "logoUrl": "School logo",
+      "defaultLanguage": "Default language",
+      "workStart": "Work start",
+      "workEnd": "Work end",
+      "workingDays": "Working days"
+    },
+    "hr": {
+      "lateness": {
+        "graceMinutes": "Lateness grace minutes",
+        "steps": "Lateness hour steps",
+        "extraHourDays": "Lateness cost per extra hour"
+      },
+      "payroll": {
+        "dayDivisor": "Day value divisor",
+        "partTime": "Part-time percentages"
+      },
+      "penalties": {
+        "repetitionWindow": "Penalty repetition window"
+      },
+      "departments": "Department",
+      "jobTitles": "Job title",
+      "penaltyGroups": "Penalty group",
+      "violations": "Violation"
+    },
+    "lists": {
+      "stages": "Stage"
+    },
+    "name": "Name",
+    "roles": "Roles",
+    "permissions": "Permissions"
+  },
+  "activity": {
+    "description": "Every change and sign-in across the school, newest first. Entries can't be edited or deleted.",
+    "label": "Activity timeline",
+    "searchLabel": "Search the record",
+    "searchPlaceholder": "Employee name or code, or payroll month",
+    "results": {
+      "zero": "{count} entries",
+      "one": "{count} entry",
+      "two": "{count} entries",
+      "few": "{count} entries",
+      "many": "{count} entries",
+      "other": "{count} entries"
+    },
+    "emptyTitle": "Nothing recorded yet",
+    "emptyBody": "Changes and sign-ins appear here as people use the system.",
+    "noResultsTitle": "No activity matches these filters",
+    "noResultsBody": "Nothing matches {causes}. Remove one of them or clear all filters.",
+    "noAccessTitle": "You can't see the activity log",
+    "noAccessBody": "Ask the school's admin for access to the activity log.",
+    "searchPlaceholderShort": "Name, code or month",
+    "causes": {
+      "search": "the search “{q}”",
+      "person": "the person {name}",
+      "module": "the module {name}",
+      "types": "the action type {name}",
+      "date": "the dates {range}",
+      "and": " and ",
+      "list": ", "
+    }
+  },
+  "filters": {
+    "title": "Filters",
+    "open": "Filters",
+    "openCount": "Filters, {count} on",
+    "clear": "Clear filters",
+    "remove": "Remove filter: {name}",
+    "done": "Show results",
+    "dateRange": "Date range",
+    "anyDate": "Any date",
+    "today": "Today",
+    "last7": "Last 7 days",
+    "last30": "Last 30 days",
+    "thisMonth": "This month",
+    "pickRange": "Pick the first and last day",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "module": "Module",
+    "allModules": "All",
+    "settings": "Settings",
+    "actionType": "Action type",
+    "chips": {
+      "create": "Added",
+      "update": "Changed",
+      "status": "Status changes",
+      "signIn": "Signed in",
+      "failed": "Failed sign-in"
+    },
+    "person": "Person",
+    "anyone": "Anyone",
+    "searchPeople": "Search people",
+    "noPeople": "Nobody has done anything yet.",
+    "noPeopleMatch": "Nobody matches that name.",
+    "glance": "Today at a glance",
+    "glanceActions": "Actions",
+    "glancePeople": "People active",
+    "glanceMoney": "Money changes",
+    "glanceFailed": "Failed sign-ins",
+    "close": "Close filters"
+  },
+  "timeline": {
+    "today": "Today · {date}",
+    "yesterday": "Yesterday · {date}",
+    "dayCount": {
+      "zero": "{count} entries",
+      "one": "{count} entry",
+      "two": "{count} entries",
+      "few": "{count} entries",
+      "many": "{count} entries",
+      "other": "{count} entries"
+    },
+    "justNow": "Just now",
+    "minutesAgo": {
+      "zero": "{count} min ago",
+      "one": "{count} min ago",
+      "two": "{count} min ago",
+      "few": "{count} min ago",
+      "many": "{count} min ago",
+      "other": "{count} min ago"
+    },
+    "hoursAgo": {
+      "zero": "{count} h ago",
+      "one": "{count} h ago",
+      "two": "{count} h ago",
+      "few": "{count} h ago",
+      "many": "{count} h ago",
+      "other": "{count} h ago"
+    },
+    "more": "+ {count} more",
+    "less": "Show less",
+    "money": "Money",
+    "failed": "Failed",
+    "openRecord": "Open record",
+    "created": "New",
+    "changes": "Changes",
+    "to": "changed to",
+    "noChanges": "No field details",
+    "part": "{field} · {part}"
+  },
+  "history": {
+    "title": "Change history",
+    "description": "Who changed what on {name}'s record, newest first.",
+    "label": "Change history",
+    "field": "Field",
+    "allFields": "All fields",
+    "who": "Who",
+    "anyone": "Anyone",
+    "lastChange": "Last change",
+    "emptyTitle": "No changes recorded yet",
+    "emptyBody": "Edits to this employee will be listed here, with who made them.",
+    "noResultsTitle": "No changes match these filters",
+    "noResultsBody": "Nothing matches {causes}. Remove one of them or clear the filters.",
+    "causes": {
+      "field": "the field {name}",
+      "person": "the person {name}"
+    }
+  },
+  "values": {
+    "step": "hour {hour}: {days}",
+    "hiddenItem": "{name} (hidden)",
+    "minutes": {
+      "zero": "{count} min",
+      "one": "{count} min",
+      "two": "{count} min",
+      "few": "{count} min",
+      "many": "{count} min",
+      "other": "{count} min"
+    },
+    "yes": "Yes",
+    "no": "No"
+  }
+}

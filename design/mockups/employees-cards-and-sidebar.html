@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Employees Cards Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Tajawal:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/duotone/style.css">
+<style>
+/* Tokens copied from apps/web/src/app/globals.css (direction "Campus"). Light theme only. */
+:root{
+  --radius:14px;
+  --background:#f2f8f6; --foreground:#11302b; --card:#ffffff;
+  --muted:#f5faf8; --muted-foreground:#587069; --secondary:#eaf4f1;
+  --primary:#0b7a68; --primary-foreground:#ffffff; --primary-soft:#d5efe8; --primary-hover:#096656;
+  --accent:#ffc43d; --accent-foreground:#4a3400; --accent-soft:#fff1c9;
+  --success:#1f9a62; --success-soft:#ddf4e7; --success-ink:#126b42;
+  --warning:#d9771c; --warning-soft:#ffe8d2; --warning-ink:#8f4608;
+  --destructive:#d9473a; --destructive-soft:#fde3df; --destructive-ink:#a82d22;
+  --info:#2f6fb3; --info-soft:#e0eefb; --info-ink:#24578e;
+  --border:#dce9e5; --input:#cfe0db;
+  --shadow-card:0 1px 2px rgb(11 72 62 / .06),0 10px 30px -12px rgb(11 72 62 / .18);
+  --shadow-raised:0 2px 4px rgb(11 72 62 / .05),0 30px 60px -24px rgb(11 72 62 / .28);
+  --shadow-primary:0 8px 20px -8px rgb(11 122 104 / .7);
+  --ease-snappy:cubic-bezier(.22,1,.36,1);
+  --bar:#0f2f2a; --bar-ink:#e7f4f0;
+  --font-latin:"Plus Jakarta Sans",system-ui,sans-serif;
+  --font-ar:"IBM Plex Sans Arabic","Plus Jakarta Sans",system-ui,sans-serif;
+  --font-ar-display:"Tajawal","IBM Plex Sans Arabic",system-ui,sans-serif;
+  --font:var(--font-latin); --font-display:var(--font-latin);
+  color-scheme:light;
+}
+:root[lang="ar"]{--font:var(--font-ar);--font-display:var(--font-ar-display)}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:#e4efec;color:var(--foreground);font-family:var(--font);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid color-mix(in srgb,var(--primary) 55%,transparent);outline-offset:2px}
+.num{font-family:var(--font-latin);font-variant-numeric:tabular-nums lining-nums}
+[dir="rtl"] .flip{transform:scaleX(-1)}
+.ph-duotone{line-height:1}
+
+/* ---------- mockup bar ---------- */
+.mockbar{background:var(--bar);color:var(--bar-ink);display:flex;align-items:center;gap:16px;padding:10px 24px;position:sticky;top:0;z-index:50;flex-wrap:wrap;font-size:13px}
+.mockbar strong{font-size:14px}
+.mockbar .hint{opacity:.7}
+.mockbar .sp{flex:1}
+.seg{display:inline-flex;background:rgb(255 255 255 / .08);border-radius:999px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;color:inherit;padding:5px 14px;border-radius:999px;font-weight:700;font-size:13px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#3a2900}
+.seg .ar{font-family:var(--font-ar-display);font-size:15px}
+.optnote{padding:18px 24px 0;max-width:1488px;margin-inline:auto;color:var(--muted-foreground);font-size:13.5px}
+.optnote b{color:var(--foreground)}
+.section-title{max-width:1488px;margin:28px auto 10px;padding-inline:24px;font-family:var(--font-display);font-weight:800;font-size:16px}
+
+/* ---------- frames ---------- */
+.desk-scroll{overflow-x:auto;padding:6px 24px 8px}
+.desk{width:1440px;margin-inline:auto;position:relative;background:var(--background);border-radius:22px;box-shadow:var(--shadow-raised);overflow:hidden;border:1px solid var(--border);display:flex;min-height:1080px;container:page / inline-size}
+.phones{display:flex;gap:32px;justify-content:center;flex-wrap:wrap;padding:6px 24px 60px}
+.phone-wrap{display:flex;flex-direction:column;gap:8px;align-items:center}
+.phone-cap{font-size:12.5px;color:var(--muted-foreground);font-weight:600}
+.phone{width:390px;height:844px;background:var(--background);border-radius:44px;border:10px solid #1b2e2a;box-shadow:var(--shadow-raised);overflow:hidden;position:relative;container:page / inline-size;display:flex;flex-direction:column}
+.phone .scroll{overflow-y:auto;flex:1;scrollbar-width:none}
+
+/* ---------- toast (top-right in both languages, by owner's choice) ---------- */
+.toast{position:absolute;top:20px;right:24px;left:auto;z-index:30;display:flex;align-items:flex-start;gap:12px;width:340px;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px 14px 14px 16px;box-shadow:var(--shadow-raised);animation:toastIn .32s var(--ease-snappy) both}
+.phone .toast{top:64px;right:12px;width:auto;left:12px}
+.toast .ic{width:34px;height:34px;flex:none;border-radius:11px;display:grid;place-items:center;background:var(--success-soft);color:var(--success);font-size:20px}
+.toast .t{font-weight:700;font-size:14px}
+.toast .d{font-size:12.5px;color:var(--muted-foreground)}
+.toast .x{margin-inline-start:auto;border:0;background:transparent;color:var(--muted-foreground);font-size:16px;padding:2px;border-radius:8px}
+@keyframes toastIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.toast{animation:none}}
+
+/* ---------- shared sidebar bits ---------- */
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:38px;height:38px;flex:none;border-radius:12px;background:var(--primary);color:#fff;display:grid;place-items:center;font-size:22px;position:relative}
+.logo::after{content:"";position:absolute;width:9px;height:9px;border-radius:50%;background:var(--accent);inset-block-start:-2px;inset-inline-end:-2px;box-shadow:0 0 0 2px var(--card)}
+.brand-name{font-family:var(--font-display);font-weight:800;font-size:14.5px;line-height:1.25}
+.brand-sub{font-size:11.5px;color:var(--muted-foreground)}
+.soon{font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--secondary);color:var(--muted-foreground);margin-inline-start:auto;white-space:nowrap}
+.user{display:flex;align-items:center;gap:10px;padding:10px;border-radius:16px;background:var(--muted);border:1px solid var(--border)}
+.user .av{width:36px;height:36px;border-radius:12px;background:var(--accent);color:var(--accent-foreground);display:grid;place-items:center;font-weight:800;font-size:13px;flex:none}
+.user .n{font-weight:700;font-size:13px;line-height:1.2}
+.user .r{font-size:11.5px;color:var(--muted-foreground)}
+.user .ph-duotone{margin-inline-start:auto;color:var(--muted-foreground);font-size:18px}
+.navlink{display:flex;align-items:center;gap:11px;min-height:40px;padding:8px 12px;border-radius:12px;color:var(--muted-foreground);text-decoration:none;font-weight:600;font-size:14px;transition:background-color .15s,color .15s}
+.navlink .ph-duotone{font-size:20px}
+.navlink:hover{background:var(--muted);color:var(--foreground)}
+.navlink[aria-current="page"]{background:var(--primary-soft);color:var(--primary)}
+.navlink[aria-current="page"]::after{content:"";margin-inline-start:auto;width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 30%,transparent)}
+.navlink[aria-disabled="true"]{opacity:.62;cursor:not-allowed}
+.navlink[aria-disabled="true"]:hover{background:transparent;color:var(--muted-foreground)}
+
+/* Option A: labelled sections */
+.sa{width:264px;flex:none;background:var(--card);border-inline-end:1px solid var(--border);padding:22px 16px;display:flex;flex-direction:column;gap:18px}
+.sa .grp{display:flex;flex-direction:column;gap:2px}
+.sa .gh{font-size:11.5px;font-weight:700;color:var(--muted-foreground);padding:0 12px 4px;font-variant:small-caps;letter-spacing:.06em;text-transform:lowercase;display:flex;align-items:center;gap:8px}
+:root[lang="ar"] .sa .gh{font-variant:normal;letter-spacing:0;text-transform:none;font-family:var(--font-ar-display);font-size:12.5px}
+.sa .gh::after{content:"";flex:1;height:1px;background:var(--border)}
+.sa .later{display:flex;flex-direction:column;gap:2px}
+.sa .bottom{margin-top:auto;display:flex;flex-direction:column;gap:10px}
+
+/* Option B: collapsible module groups */
+.sb{width:272px;flex:none;background:var(--card);border-inline-end:1px solid var(--border);padding:22px 14px;display:flex;flex-direction:column;gap:20px}
+.sb nav{display:flex;flex-direction:column;gap:6px}
+.mod{border-radius:16px}
+.mod[open]{background:var(--muted);box-shadow:inset 0 0 0 1px var(--border)}
+.mod summary{list-style:none;display:flex;align-items:center;gap:11px;min-height:46px;padding:8px 10px;border-radius:14px;font-weight:700;font-size:14.5px;cursor:pointer;color:var(--foreground)}
+.mod summary::-webkit-details-marker{display:none}
+.mod summary .mi{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;font-size:18px;flex:none}
+.mod summary .car{margin-inline-start:auto;color:var(--muted-foreground);transition:transform .2s var(--ease-snappy);font-size:16px}
+.mod[open] summary .car{transform:rotate(180deg)}
+.mod .kids{display:flex;flex-direction:column;gap:2px;padding:0 10px 10px;margin-inline-start:24px;border-inline-start:2px solid var(--border);padding-inline-start:8px}
+.mod .kids .navlink{min-height:36px;font-size:13.5px;padding:6px 10px}
+.mod.dis summary{cursor:not-allowed;color:var(--muted-foreground);font-weight:600}
+.mod.dis summary .mi{filter:grayscale(1);opacity:.7}
+.sb .single{display:flex;align-items:center;gap:11px;min-height:46px;padding:8px 10px;border-radius:14px;font-weight:700;font-size:14.5px;color:var(--foreground);text-decoration:none}
+.sb .single .mi{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;font-size:18px;background:var(--secondary);color:var(--muted-foreground)}
+.sb .bottom{margin-top:auto;display:flex;flex-direction:column;gap:10px}
+
+/* Option C: module rail + page panel */
+.sc{display:flex;flex:none}
+.rail{width:76px;background:var(--primary);display:flex;flex-direction:column;align-items:center;gap:6px;padding:18px 0}
+.rail .logo{background:#fff;color:var(--primary);margin-bottom:14px}
+.rail .logo::after{box-shadow:0 0 0 2px var(--primary)}
+.rbtn{width:56px;border:0;background:transparent;color:rgb(255 255 255 / .78);border-radius:14px;padding:8px 2px 6px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10.5px;font-weight:700;position:relative;transition:background-color .15s}
+.rbtn .ph-duotone{font-size:23px}
+.rbtn:hover{background:rgb(255 255 255 / .1);color:#fff}
+.rbtn[aria-current="true"]{background:#fff;color:var(--primary)}
+.rbtn[aria-current="true"]::before{content:"";position:absolute;inset-inline-start:-10px;top:12px;bottom:12px;width:4px;border-radius:4px;background:var(--accent)}
+.rbtn.dis{color:rgb(255 255 255 / .5)}
+.rbtn.dis .sdot{position:absolute;top:5px;inset-inline-end:10px;width:7px;height:7px;border-radius:50%;background:var(--accent);opacity:.85}
+.rail .rsp{flex:1}
+.rail .me{width:40px;height:40px;border-radius:13px;background:var(--accent);color:var(--accent-foreground);display:grid;place-items:center;font-weight:800;font-size:13px;margin-top:6px}
+.panel{width:224px;background:var(--card);border-inline-end:1px solid var(--border);padding:24px 14px;display:flex;flex-direction:column;gap:6px}
+.panel .ph{font-family:var(--font-display);font-weight:800;font-size:19px;padding:0 10px}
+.panel .ps{font-size:12px;color:var(--muted-foreground);padding:0 10px 12px;border-bottom:1px solid var(--border);margin-bottom:8px}
+.panel .empty{margin:12px 6px;padding:16px;border-radius:14px;background:var(--muted);border:1px dashed var(--input);font-size:13px;color:var(--muted-foreground);text-align:center}
+.panel .empty .ph-duotone{font-size:30px;color:var(--primary);display:block;margin:0 auto 6px}
+.panel .school{margin-top:auto;font-size:11.5px;color:var(--muted-foreground);padding:10px;border-top:1px solid var(--border)}
+.panel .school b{display:block;color:var(--foreground);font-size:12.5px}
+
+/* ---------- main ---------- */
+.main{flex:1;min-width:0;padding:30px 36px 36px;display:flex;flex-direction:column;gap:18px}
+.topline{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted-foreground)}
+.topline .sp{flex:1}
+.lang{display:inline-flex;background:var(--secondary);border-radius:999px;padding:3px}
+.lang span{padding:3px 12px;border-radius:999px;font-weight:700;font-size:12.5px}
+.lang span.on{background:var(--accent);color:var(--accent-foreground)}
+.lang .ar{font-family:var(--font-ar-display);font-size:14px}
+.head{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.head h1{margin:0;font-family:var(--font-display);font-size:30px;font-weight:800;line-height:1.15;letter-spacing:-.01em}
+:root[lang="ar"] .head h1{letter-spacing:0}
+.head p{margin:4px 0 0;color:var(--muted-foreground);font-size:14px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:var(--radius);padding:10px 16px;font-weight:700;font-size:14px;border:1px solid var(--input);background:var(--card);transition:transform .12s,background-color .15s;white-space:nowrap}
+.btn:active{transform:scale(.98)}
+.btn .ph-duotone{font-size:18px}
+.btn-primary{background:var(--primary);color:#fff;border-color:transparent;box-shadow:var(--shadow-primary);margin-inline-start:auto}
+.btn-primary:hover{background:var(--primary-hover)}
+.toolbar{background:var(--card);border-radius:20px;box-shadow:var(--shadow-card);padding:14px;display:flex;flex-direction:column;gap:12px}
+.frow{display:flex;gap:10px;flex-wrap:wrap}
+.search{flex:1.4;min-width:220px;display:flex;align-items:center;gap:8px;border:1px solid var(--input);border-radius:var(--radius);padding:0 12px;height:42px;background:var(--card);color:var(--muted-foreground)}
+.search .ph-duotone{font-size:18px}
+.search span{font-size:13.5px}
+.fsel{flex:1;min-width:150px;display:flex;align-items:center;gap:8px;height:42px;border:1px solid var(--input);border-radius:var(--radius);padding:0 12px;background:var(--card);font-size:13.5px;font-weight:600;color:var(--foreground)}
+.fsel .ph-duotone{color:var(--muted-foreground);font-size:16px}
+.fsel .ph-caret-down{margin-inline-start:auto}
+.fsel.set{border-color:var(--primary);background:var(--primary-soft);color:var(--primary)}
+.fsel.set .ph-duotone{color:var(--primary)}
+.resline{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted-foreground);padding:0 4px;flex-wrap:wrap}
+.resline b{color:var(--foreground)}
+.chipx{display:inline-flex;align-items:center;gap:6px;background:var(--primary-soft);color:var(--primary);border-radius:999px;padding:3px 6px 3px 10px;font-weight:700;font-size:12.5px}
+.chipx i{font-size:13px}
+.resline .clear{border:0;background:transparent;color:var(--primary);font-weight:700;font-size:13px;padding:0}
+.resline .sp{flex:1}
+.resline .sort{display:inline-flex;align-items:center;gap:6px;font-weight:600;color:var(--foreground)}
+
+/* pills */
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;white-space:nowrap}
+.pill .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.p-active{background:var(--success-soft);color:var(--success-ink)}
+.p-inactive{background:var(--secondary);color:var(--muted-foreground)}
+.ws{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:3px 9px;font-size:12px;font-weight:700;white-space:nowrap}
+.ws .ph-duotone{font-size:14px}
+.ws-full{background:var(--info-soft);color:var(--info-ink)}
+.ws-part{background:var(--accent-soft);color:#6b4b00}
+.money{font-weight:800;white-space:nowrap}
+.money .cur{font-weight:700;color:var(--muted-foreground);font-size:.78em}
+.ibtn{width:34px;height:34px;border-radius:11px;border:1px solid var(--border);background:var(--card);display:grid;place-items:center;color:var(--muted-foreground);transition:background-color .15s,color .15s}
+.ibtn .ph-duotone{font-size:17px}
+.ibtn:hover{background:var(--primary-soft);color:var(--primary);border-color:transparent}
+.av{border-radius:14px;background:var(--accent);color:var(--accent-foreground);display:grid;place-items:center;font-weight:800;flex:none;font-family:var(--font-display)}
+.off .av{background:var(--secondary);color:var(--muted-foreground)}
+.name{font-weight:700;line-height:1.3}
+.code{font-size:12px;color:var(--muted-foreground);font-weight:600}
+
+/* ---------- cards: grid shells ---------- */
+.grid{display:grid;gap:14px}
+.grid-a{grid-template-columns:repeat(4,minmax(0,1fr))}
+.grid-b{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.grid-c{grid-template-columns:repeat(2,minmax(0,1fr))}
+
+/* A: compact, info-dense */
+.ca{background:var(--card);border-radius:18px;box-shadow:var(--shadow-card);padding:14px;display:flex;flex-direction:column;gap:10px;border:1px solid transparent;transition:border-color .15s}
+.ca:hover{border-color:var(--primary-soft)}
+.ca .top{display:flex;gap:10px;align-items:center}
+.ca .av{width:40px;height:40px;font-size:14px;border-radius:12px}
+.ca .nm{min-width:0;flex:1}
+.ca .name{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ca .job{font-size:12.5px;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ca dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:12.5px;background:var(--muted);border-radius:12px;padding:8px 10px}
+.ca dt{color:var(--muted-foreground)}
+.ca dd{margin:0;font-weight:600;text-align:end;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ca .badges{display:flex;gap:6px;flex-wrap:wrap}
+.ca .foot{display:flex;align-items:center;gap:6px;border-top:1px solid var(--border);padding-top:10px}
+.ca .foot .money{font-size:15px;flex:1}
+.ca.off{background:color-mix(in srgb,var(--card) 70%,var(--muted))}
+.ca.off .name,.ca.off .money{color:var(--muted-foreground)}
+
+/* B: profile cards with stage band */
+.cb{background:var(--card);border-radius:22px;box-shadow:var(--shadow-card);overflow:hidden;display:flex;flex-direction:column}
+.cb .band{height:74px;position:relative;padding:12px 16px;display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.cb .band .stg{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:12.5px;background:rgb(255 255 255 / .75);border-radius:999px;padding:3px 10px}
+.cb .band::after{content:"";position:absolute;width:120px;height:120px;border-radius:50%;inset-inline-end:-36px;top:-54px;background:rgb(255 255 255 / .28)}
+.st-none{background:#e3ece9;color:#41605a}
+.st-pri{background:#cfe4f8;color:var(--info-ink)}
+.st-prep{background:#bfe6db;color:#0a5d4f}
+.st-sec{background:#ffe4a8;color:#6b4b00}
+.cb .body{padding:0 18px 16px;display:flex;flex-direction:column;gap:12px;flex:1}
+.cb .who{display:flex;align-items:flex-end;gap:12px;margin-top:-30px;position:relative;z-index:1}
+.cb .av{width:64px;height:64px;border-radius:20px;font-size:21px;box-shadow:0 0 0 4px var(--card)}
+.cb .who .pill{margin-inline-start:auto;margin-bottom:4px}
+.cb .name{font-family:var(--font-display);font-size:17.5px;font-weight:800}
+.cb .job{font-size:13px;color:var(--muted-foreground)}
+.cb .facts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cb .fact{background:var(--muted);border-radius:12px;padding:8px 10px;min-width:0}
+.cb .fact .l{font-size:11.5px;color:var(--muted-foreground)}
+.cb .fact .v{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cb .sal{display:flex;align-items:center;justify-content:space-between;background:var(--primary-soft);border-radius:14px;padding:10px 12px}
+.cb .sal .l{font-size:12px;color:var(--primary);font-weight:700}
+.cb .sal .money{font-size:17px;color:var(--primary)}
+.cb .acts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:auto}
+.cb .acts .btn{padding:8px 12px;font-size:13px}
+.cb.off .band{background:#eef1f0;color:var(--muted-foreground)}
+.cb.off .sal{background:var(--secondary)}
+.cb.off .sal .l,.cb.off .sal .money{color:var(--muted-foreground)}
+
+/* C: horizontal contact-card rows */
+.cc{background:var(--card);border-radius:20px;box-shadow:var(--shadow-card);padding:16px;display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;position:relative}
+.cc::before{content:"";position:absolute;inset-inline-start:0;top:18px;bottom:18px;width:4px;border-radius:0 4px 4px 0;background:var(--primary)}
+[dir="rtl"] .cc::before{border-radius:4px 0 0 4px}
+.cc.off::before{background:var(--input)}
+.cc .av{width:56px;height:56px;border-radius:18px;font-size:19px}
+.cc .mid{min-width:0;display:flex;flex-direction:column;gap:6px}
+.cc .ln{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.cc .name{font-size:15.5px}
+.cc .job{font-size:13px;color:var(--muted-foreground);margin-top:-4px}
+.cc .chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--border);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;color:var(--foreground);background:var(--muted);white-space:nowrap}
+.chip .ph-duotone{font-size:14px;color:var(--muted-foreground)}
+.cc .end{display:flex;flex-direction:column;align-items:flex-end;gap:8px;border-inline-start:1px dashed var(--border);padding-inline-start:14px;align-self:stretch;justify-content:center}
+.cc .end .l{font-size:11.5px;color:var(--muted-foreground)}
+.cc .end .money{font-size:16px}
+.cc .end .row{display:flex;gap:6px}
+.cc.off .name,.cc.off .money{color:var(--muted-foreground)}
+
+/* pagination */
+.pager{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:4px 2px;flex-wrap:wrap}
+.pager .info{font-size:13px;color:var(--muted-foreground)}
+.pager .info b{color:var(--foreground)}
+.pages{display:flex;gap:6px;align-items:center}
+.pg{min-width:36px;height:36px;border-radius:11px;border:1px solid var(--border);background:var(--card);font-weight:700;font-size:13px;display:grid;place-items:center;padding:0 8px}
+.pg[aria-current="page"]{background:var(--primary);color:#fff;border-color:transparent}
+.pg[disabled]{opacity:.45;cursor:default}
+.pg .ph-duotone{font-size:16px}
+.gap{color:var(--muted-foreground)}
+
+/* ---------- phone chrome ---------- */
+.mbar{display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--card);border-bottom:1px solid var(--border);flex:none}
+.mbar .menu{width:38px;height:38px;border-radius:12px;border:1px solid var(--border);background:var(--card);display:grid;place-items:center;font-size:20px}
+.mbar .brand-name{font-size:14px}
+.mbar .lang{margin-inline-start:auto}
+.drawer-scrim{position:absolute;inset:0;background:rgb(9 40 35 / .42);z-index:5}
+.drawer{position:absolute;top:0;bottom:0;inset-inline-start:0;z-index:6;display:flex;box-shadow:var(--shadow-raised);max-width:88%}
+.drawer > *{height:100%}
+.drawer .sa,.drawer .sb{width:300px;overflow:auto}
+
+/* ---------- container: collapse at phone width ---------- */
+@container page (max-width:720px){
+  .main{padding:16px;gap:14px}
+  .topline{display:none}
+  .head h1{font-size:24px}
+  .head p{font-size:13px}
+  .head{align-items:center}
+  .btn-primary{width:100%}
+  .toolbar{padding:12px;border-radius:18px}
+  .search{min-width:100%}
+  .fsel{min-width:calc(50% - 5px);flex:1 1 calc(50% - 5px)}
+  .grid-a,.grid-b,.grid-c{grid-template-columns:minmax(0,1fr)}
+  .cc{grid-template-columns:auto 1fr;padding:14px}
+  .cc .end{grid-column:1 / -1;flex-direction:row;align-items:center;border-inline-start:0;border-top:1px dashed var(--border);padding:10px 0 0;justify-content:space-between}
+  .cc .end .l{display:none}
+  .pager{justify-content:center}
+  .pager .info{width:100%;text-align:center}
+  .pages .pg.hide-sm{display:none}
+}
+</style>
+</head>
+<body>
+<div class="mockbar" role="toolbar" aria-label="Mockup controls">
+  <strong>Employees as cards + module sidebar</strong>
+  <span class="hint">Static mockup · nothing is built yet</span>
+  <span class="sp"></span>
+  <div class="seg" id="optSeg">
+    <button data-opt="A" aria-pressed="true">Option A</button>
+    <button data-opt="B" aria-pressed="false">Option B</button>
+    <button data-opt="C" aria-pressed="false">Option C</button>
+  </div>
+  <div class="seg" id="langSeg">
+    <button data-lang="ar" aria-pressed="true" class="ar">ع</button>
+    <button data-lang="en" aria-pressed="false">EN</button>
+  </div>
+</div>
+<div class="optnote" id="optNote"></div>
+<div class="section-title" id="deskTitle"></div>
+<div class="desk-scroll"><div class="desk" id="desk"></div></div>
+<div class="section-title" id="phoneTitle"></div>
+<div class="phones">
+  <div class="phone-wrap"><div class="phone" id="phone1"></div><div class="phone-cap" id="cap1"></div></div>
+  <div class="phone-wrap"><div class="phone" id="phone2"></div><div class="phone-cap" id="cap2"></div></div>
+</div>
+
+<script>
+const T = {
+  ar:{school:"معاهد الوادي الأخضر",sys:"نظام إدارة المدرسة",home:"الرئيسية",dashboard:"لوحة التحكم",hr:"الموارد البشرية",employees:"الموظفون",penalties:"الجزاءات",lateness:"التأخير",payroll:"الرواتب",accounting:"الحسابات",inventory:"المخازن",students:"الطلاب",settings:"الإعدادات",soon:"قريبًا",later:"وحدات قادمة",system:"النظام",user:"منى إبراهيم",role:"مسؤولة الموارد البشرية",
+    title:"الموظفون",sub:"كل العاملين في المدرسة، النشطون وغير النشطين.",add:"إضافة موظف",search:"الاسم أو الكود، مثل EMP-0012",
+    dept:"كل الأقسام",stage:"كل المراحل",status:"الحالة: نشط",ws:"كل أنظمة العمل",
+    results:n=>`<b class="num">${n}</b> موظف`,clear:"مسح الفلاتر",sort:"ترتيب: الكود",
+    active:"نشط",inactive:"غير نشط",full:"دوام كامل",part:d=>`جزئي · <span class="num">${d}</span> أيام`,partShort:d=>`جزئي ${d} أيام`,
+    lDept:"القسم",lStage:"المرحلة",lWs:"نظام العمل",lSal:"الراتب الأساسي",view:"عرض",edit:"تعديل",
+    showing:(a,b,n)=>`عرض <b class="num">${a}–${b}</b> من <b class="num">${n}</b>`,
+    toastT:"تمت إضافة الموظف",toastD:"تمت إضافة ياسمين خالد (EMP-0048) إلى قسم العلوم.",close:"إغلاق",
+    soonPanel:"هذه الوحدة قيد الإعداد وستظهر هنا عند إطلاقها.",
+    deskT:"سطح المكتب · 1440 بكسل",phoneT:"الهاتف · 390 بكسل",cap1:"الصفحة",cap2:"القائمة مفتوحة",hrSub:"الموظفون والرواتب والانضباط"},
+  en:{school:"Green Valley Institutes",sys:"School management",home:"Home",dashboard:"Dashboard",hr:"HR",employees:"Employees",penalties:"Penalties",lateness:"Lateness",payroll:"Payroll",accounting:"Accounting",inventory:"Inventory",students:"Students",settings:"Settings",soon:"Soon",later:"Coming modules",system:"System",user:"Mona Ibrahim",role:"HR officer",
+    title:"Employees",sub:"Everyone who works at the school, active and inactive.",add:"Add employee",search:"Name or code, e.g. EMP-0012",
+    dept:"All departments",stage:"All stages",status:"Status: Active",ws:"All work systems",
+    results:n=>`<b class="num">${n}</b> employees`,clear:"Clear filters",sort:"Sort: Code",
+    active:"Active",inactive:"Inactive",full:"Full-time",part:d=>`Part-time · <span class="num">${d}</span> days`,partShort:d=>`Part-time ${d} days`,
+    lDept:"Department",lStage:"Stage",lWs:"Work system",lSal:"Basic salary",view:"View",edit:"Edit",
+    showing:(a,b,n)=>`Showing <b class="num">${a}–${b}</b> of <b class="num">${n}</b>`,
+    toastT:"Employee added",toastD:"Yasmin Khaled (EMP-0048) was added to Science.",close:"Close",
+    soonPanel:"This module is being prepared and will appear here when it launches.",
+    deskT:"Desktop · 1440 px",phoneT:"Phone · 390 px",cap1:"Page",cap2:"Menu open",hrSub:"Staff, pay and discipline"}
+};
+const DEPT={adm:["الإدارة","Administration"],ar:["اللغة العربية","Arabic"],en:["اللغة الإنجليزية","English"],fin:["الشؤون المالية","Finance"],hr:["الموارد البشرية","Human resources"],math:["الرياضيات","Mathematics"],sci:["العلوم","Science"],rel:["العلوم الشرعية","Islamic studies"]};
+const STAGE={none:["بدون مرحلة","No stage"],pri:["المرحلة الابتدائية","Primary"],prep:["المرحلة الإعدادية","Preparatory"],sec:["المرحلة الثانوية","Secondary"]};
+const EMP=[
+ {c:"0001",ar:"أحمد محمود عبد الرحمن",en:"Ahmed Mahmoud Abdelrahman",ia:"أم",ie:"AM",job:["مدير المدرسة","School principal"],d:"adm",s:"none",w:0,sal:20000,on:1},
+ {c:"0002",ar:"منى إبراهيم السيد",en:"Mona Ibrahim El-Sayed",ia:"مإ",ie:"MI",job:["مسؤولة الموارد البشرية","HR officer"],d:"hr",s:"none",w:0,sal:16500,on:1},
+ {c:"0003",ar:"خالد مصطفى حسن",en:"Khaled Mostafa Hassan",ia:"خم",ie:"KM",job:["وكيل المرحلة الثانوية","Secondary vice-principal"],d:"adm",s:"sec",w:0,sal:17000,on:1},
+ {c:"0006",ar:"نادية فؤاد رمضان",en:"Nadia Fouad Ramadan",ia:"نف",ie:"NF",job:["محاسبة","Accountant"],d:"fin",s:"none",w:0,sal:10500,on:1},
+ {c:"0007",ar:"محمد علي عبد الله",en:"Mohamed Ali Abdallah",ia:"مع",ie:"MA",job:["رئيس قسم","Head of department"],d:"ar",s:"pri",w:0,sal:14000,on:1},
+ {c:"0008",ar:"سارة هشام كمال",en:"Sara Hesham Kamal",ia:"سه",ie:"SH",job:["معلمة لغة إنجليزية","English teacher"],d:"en",s:"pri",w:4,sal:8200,on:1},
+ {c:"0009",ar:"عمرو عادل شوقي",en:"Amr Adel Shawky",ia:"عع",ie:"AA",job:["معلم رياضيات","Mathematics teacher"],d:"math",s:"prep",w:0,sal:12000,on:1},
+ {c:"0010",ar:"رانيا مجدي سليمان",en:"Rania Magdy Soliman",ia:"رم",ie:"RM",job:["معلمة علوم","Science teacher"],d:"sci",s:"prep",w:3,sal:6400,on:1},
+ {c:"0011",ar:"يوسف طارق النجار",en:"Youssef Tarek El-Naggar",ia:"يط",ie:"YT",job:["معلم قرآن كريم","Quran teacher"],d:"rel",s:"sec",w:2,sal:4500,on:1},
+ {c:"0012",ar:"هبة سمير عبد العزيز",en:"Heba Samir Abdelaziz",ia:"هس",ie:"HS",job:["أخصائية اجتماعية","Social worker"],d:"adm",s:"pri",w:0,sal:9000,on:0}
+];
+const NOTE={
+ A:{ar:"<b>الخيار A</b> — قائمة جانبية بعناوين أقسام صغيرة، والموظفون كبطاقات مضغوطة غنية بالمعلومات، 4 في الصف.",en:"<b>Option A</b> — sidebar with small labelled section headers; employees as compact, info-dense cards, 4 per row."},
+ B:{ar:"<b>الخيار B</b> — وحدات قابلة للطي بأيقونات (الموارد البشرية مفتوحة)، وبطاقات ملف شخصي كبيرة بشريط ملون حسب المرحلة، 3 في الصف.",en:"<b>Option B</b> — collapsible module groups with icons (HR expanded); larger profile cards with a colour band per stage, 3 per row."},
+ C:{ar:"<b>الخيار C</b> — شريط وحدات نحيف (أيقونة لكل وحدة) ولوحة ثانية بصفحات الوحدة، وبطاقات أفقية كبطاقة اتصال، 2 في الصف مع رقائق للحقائق.",en:"<b>Option C</b> — slim module rail (one icon per module) plus a panel of that module's pages; horizontal contact-card rows, 2 per row, key facts as chips."}
+};
+let opt="A", lang="ar", railMod="hr";
+const L=()=>T[lang], ix=()=>lang==="ar"?0:1;
+const fmt=n=>n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const money=n=>lang==="ar"?`<span class="money"><span class="num">${fmt(n)}</span> <span class="cur">ج.م</span></span>`:`<span class="money"><span class="cur">EGP</span> <span class="num">${fmt(n)}</span></span>`;
+const ic=(n,extra="")=>`<i class="ph-duotone ph-${n} ${extra}" aria-hidden="true"></i>`;
+const nm=e=>lang==="ar"?e.ar:e.en, ini=e=>lang==="ar"?e.ia:e.ie;
+const code=e=>`<span class="code num">EMP-${e.c}</span>`;
+const stat=e=>e.on?`<span class="pill p-active"><span class="dot"></span>${L().active}</span>`:`<span class="pill p-inactive"><span class="dot"></span>${L().inactive}</span>`;
+const ws=e=>e.w?`<span class="ws ws-part">${ic("clock-afternoon")}${L().part(e.w)}</span>`:`<span class="ws ws-full">${ic("briefcase")}${L().full}</span>`;
+const wsText=e=>e.w?L().partShort(e.w):L().full;
+const acts=e=>`<button class="ibtn" aria-label="${L().view} ${nm(e)}" title="${L().view}">${ic("eye")}</button><button class="ibtn" aria-label="${L().edit} ${nm(e)}" title="${L().edit}">${ic("pencil-simple")}</button>`;
+
+/* ---------- sidebars ---------- */
+const link=(icon,label,cur,dis)=>`<a class="navlink" href="#" ${cur?'aria-current="page"':""} ${dis?'aria-disabled="true" tabindex="-1"':""}>${ic(icon)}<span>${label}</span>${dis?`<span class="soon">${L().soon}</span>`:""}</a>`;
+const brand=()=>`<div class="brand"><div class="logo">${ic("graduation-cap")}</div><div><div class="brand-name">${L().school}</div><div class="brand-sub">${L().sys}</div></div></div>`;
+const user=()=>`<div class="user"><div class="av">${lang==="ar"?"مإ":"MI"}</div><div><div class="n">${L().user}</div><div class="r">${L().role}</div></div>${ic("sign-out","flip")}</div>`;
+
+function sideA(){const t=L();return `<aside class="sa">${brand()}
+ <div class="grp"><div class="gh">${t.home}</div>${link("squares-four",t.dashboard)}</div>
+ <div class="grp"><div class="gh">${t.hr}</div>${link("users",t.employees,1)}${link("gavel",t.penalties)}${link("clock-countdown",t.lateness)}${link("wallet",t.payroll)}</div>
+ <div class="grp"><div class="gh">${t.later}</div>${link("calculator",t.accounting,0,1)}${link("package",t.inventory,0,1)}${link("student",t.students,0,1)}</div>
+ <div class="bottom">${link("gear-six",t.settings)}${user()}</div></aside>`;}
+
+function sideB(){const t=L();
+ const mod=(icon,label,bg,fg,kids,open)=>`<details class="mod" ${open?"open":""}><summary><span class="mi" style="background:${bg};color:${fg}">${ic(icon)}</span>${label}${ic("caret-down","car")}</summary><div class="kids">${kids}</div></details>`;
+ const dis=(icon,label)=>`<details class="mod dis" onclick="event.preventDefault()"><summary aria-disabled="true"><span class="mi" style="background:var(--secondary)">${ic(icon)}</span>${label}<span class="soon">${t.soon}</span></summary></details>`;
+ return `<aside class="sb">${brand()}<nav>
+ <a class="single" href="#"><span class="mi">${ic("squares-four")}</span>${t.dashboard}</a>
+ ${mod("users-three",t.hr,"var(--primary-soft)","var(--primary)",link("users",t.employees,1)+link("gavel",t.penalties)+link("clock-countdown",t.lateness)+link("wallet",t.payroll),true)}
+ ${dis("calculator",t.accounting)}${dis("package",t.inventory)}${dis("student",t.students)}
+ </nav><div class="bottom">${link("gear-six",t.settings)}${user()}</div></aside>`;}
+
+function sideC(withPanel=true){const t=L();
+ const mods=[["home","house",t.home],["hr","users-three",t.hr],["acc","calculator",t.accounting,1],["inv","package",t.inventory,1],["stu","student",t.students,1]];
+ const rb=m=>`<button class="rbtn ${m[3]?"dis":""}" data-mod="${m[0]}" ${railMod===m[0]?'aria-current="true"':""} title="${m[2]}${m[3]?" · "+t.soon:""}">${ic(m[1])}<span>${m[2]}</span>${m[3]?'<span class="sdot"></span>':""}</button>`;
+ let panel="";
+ if(railMod==="hr") panel=`<div class="ph">${t.hr}</div><div class="ps">${t.hrSub}</div>${link("users",t.employees,1)}${link("gavel",t.penalties)}${link("clock-countdown",t.lateness)}${link("wallet",t.payroll)}`;
+ else if(railMod==="home") panel=`<div class="ph">${t.home}</div><div class="ps">${t.school}</div>${link("squares-four",t.dashboard)}`;
+ else if(railMod==="set") panel=`<div class="ph">${t.settings}</div><div class="ps">${t.system}</div>${link("gear-six",t.settings)}`;
+ else {const m=mods.find(x=>x[0]===railMod);panel=`<div class="ph">${m[2]}</div><div class="ps">${t.soon}</div><div class="empty">${ic(m[1])}${t.soonPanel}</div>`;}
+ return `<aside class="sc"><div class="rail"><div class="logo">${ic("graduation-cap")}</div>${mods.map(rb).join("")}<span class="rsp"></span>${rb(["set","gear-six",t.settings])}<div class="me">${lang==="ar"?"مإ":"MI"}</div></div>
+ ${withPanel?`<div class="panel">${panel}<div class="school"><b>${t.school}</b>${t.user} · ${t.role}</div></div>`:""}</aside>`;}
+
+/* ---------- cards ---------- */
+function cardA(e){const t=L();return `<article class="ca ${e.on?"":"off"}"><div class="top"><div class="av">${ini(e)}</div><div class="nm"><div class="name">${nm(e)}</div><div class="job">${e.job[ix()]}</div></div></div>
+ <dl><dt>${t.lDept}</dt><dd>${DEPT[e.d][ix()]}</dd><dt>${t.lStage}</dt><dd>${STAGE[e.s][ix()]}</dd><dt>${t.lWs}</dt><dd>${wsText(e)}</dd></dl>
+ <div class="badges">${code(e)}<span style="flex:1"></span>${stat(e)}</div>
+ <div class="foot">${money(e.sal)}${acts(e)}</div></article>`;}
+function cardB(e){const t=L();return `<article class="cb ${e.on?"":"off"}"><div class="band st-${e.s}"><span class="stg">${ic(e.s==="none"?"buildings":"chalkboard-teacher")}${STAGE[e.s][ix()]}</span>${code(e)}</div>
+ <div class="body"><div class="who"><div class="av">${ini(e)}</div>${stat(e)}</div>
+ <div><div class="name">${nm(e)}</div><div class="job">${e.job[ix()]}</div></div>
+ <div class="facts"><div class="fact"><div class="l">${t.lDept}</div><div class="v">${DEPT[e.d][ix()]}</div></div><div class="fact"><div class="l">${t.lWs}</div><div class="v">${wsText(e)}</div></div></div>
+ <div class="sal"><span class="l">${t.lSal}</span>${money(e.sal)}</div>
+ <div class="acts"><button class="btn">${ic("eye")}${t.view}</button><button class="btn">${ic("pencil-simple")}${t.edit}</button></div></div></article>`;}
+function cardC(e){const t=L();return `<article class="cc ${e.on?"":"off"}"><div class="av">${ini(e)}</div>
+ <div class="mid"><div class="ln"><span class="name">${nm(e)}</span>${code(e)}</div><div class="job">${e.job[ix()]}</div>
+ <div class="chips"><span class="chip">${ic("buildings")}${DEPT[e.d][ix()]}</span><span class="chip">${ic("chalkboard-teacher")}${STAGE[e.s][ix()]}</span>${ws(e)}${stat(e)}</div></div>
+ <div class="end"><span class="l">${t.lSal}</span>${money(e.sal)}<div class="row">${acts(e)}</div></div></article>`;}
+
+function mainHTML(phone){const t=L();
+ const cards=EMP.map(opt==="A"?cardA:opt==="B"?cardB:cardC).join("");
+ return `<main class="main">
+ <div class="topline">${ic("users-three")}<span>${t.hr}</span>${ic("caret-right","flip")}<span>${t.employees}</span><span class="sp"></span><span class="lang"><span class="ar ${lang==="ar"?"on":""}">ع</span><span class="${lang==="en"?"on":""}">EN</span></span></div>
+ <div class="head"><div><h1>${t.title}</h1><p>${t.sub}</p></div><button class="btn btn-primary">${ic("plus")}${t.add}</button></div>
+ <section class="toolbar"><div class="frow"><label class="search">${ic("magnifying-glass")}<span>${t.search}</span></label>
+ <button class="fsel">${ic("buildings")}${t.dept}${ic("caret-down")}</button><button class="fsel">${ic("chalkboard-teacher")}${t.stage}${ic("caret-down")}</button><button class="fsel set">${ic("toggle-right")}${t.status}${ic("caret-down")}</button><button class="fsel">${ic("clock-afternoon")}${t.ws}${ic("caret-down")}</button></div>
+ <div class="resline"><span>${t.results(48)}</span><span class="sp"></span>${phone?"":`<span class="sort">${ic("sort-ascending")}${t.sort}</span>`}</div></section>
+ <section class="grid grid-${opt.toLowerCase()}">${cards}</section>
+ <nav class="pager" aria-label="pagination"><span class="info">${t.showing(1,10,48)}</span><div class="pages">
+ <button class="pg" disabled aria-label="previous">${ic("caret-left","flip")}</button><button class="pg num" aria-current="page">1</button><button class="pg num">2</button><button class="pg num">3</button><button class="pg num hide-sm">4</button><button class="pg num">5</button><button class="pg" aria-label="next">${ic("caret-right","flip")}</button></div></nav>
+ </main>`;}
+const toast=()=>`<div class="toast" role="status">${'<span class="ic">'+ic("check-circle")+"</span>"}<div><div class="t">${L().toastT}</div><div class="d">${L().toastD}</div></div><button class="x" aria-label="${L().close}">${ic("x")}</button></div>`;
+const side=()=>opt==="A"?sideA():opt==="B"?sideB():sideC();
+const mbar=()=>`<div class="mbar"><button class="menu" aria-label="menu">${ic("list")}</button><div class="brand-name">${L().school}</div><span class="lang"><span class="ar ${lang==="ar"?"on":""}">ع</span><span class="${lang==="en"?"on":""}">EN</span></span></div>`;
+
+function render(){
+ const t=L();
+ document.documentElement.lang=lang; document.documentElement.dir=lang==="ar"?"rtl":"ltr";
+ document.getElementById("optNote").innerHTML=NOTE[opt][lang];
+ document.getElementById("deskTitle").textContent=t.deskT;
+ document.getElementById("phoneTitle").textContent=t.phoneT;
+ document.getElementById("cap1").textContent=t.cap1; document.getElementById("cap2").textContent=t.cap2;
+ document.getElementById("desk").innerHTML=side()+mainHTML(false)+toast();
+ document.getElementById("phone1").innerHTML=mbar()+`<div class="scroll">${mainHTML(true)}</div>`+toast();
+ const drawerSide=opt==="C"?sideC(true):side();
+ document.getElementById("phone2").innerHTML=mbar()+`<div class="scroll">${mainHTML(true)}</div><div class="drawer-scrim"></div><div class="drawer">${drawerSide}</div>`;
+ document.querySelectorAll(".rbtn").forEach(b=>b.addEventListener("click",()=>{railMod=b.dataset.mod;render();}));
+}
+document.querySelectorAll("#optSeg button").forEach(b=>b.addEventListener("click",()=>{opt=b.dataset.opt;document.querySelectorAll("#optSeg button").forEach(x=>x.setAttribute("aria-pressed",x===b));railMod="hr";render();}));
+document.querySelectorAll("#langSeg button").forEach(b=>b.addEventListener("click",()=>{lang=b.dataset.lang;document.querySelectorAll("#langSeg button").forEach(x=>x.setAttribute("aria-pressed",x===b));render();}));
+render();
+</script>
+</body>
+</html>

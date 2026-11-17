@@ -1,0 +1,111 @@
+{
+  "app": {
+    "name": "School ERP",
+    "comingSoon": "This screen is being built."
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "employees": "Employees",
+    "penalties": "Penalties",
+    "lateness": "Lateness",
+    "payroll": "Payroll",
+    "settings": "Settings",
+    "activity": "Activity",
+    "modules": {
+      "home": "Home",
+      "hr": "HR",
+      "accounting": "Accounting",
+      "inventory": "Inventory",
+      "students": "Students",
+      "administration": "Administration"
+    },
+    "soon": "Soon",
+    "soonTitle": "{name} — coming soon",
+    "modulePages": "{name} pages"
+  },
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "create": "Create",
+    "edit": "Edit",
+    "approve": "Approve",
+    "recalculate": "Recalculate",
+    "deactivate": "Deactivate",
+    "reactivate": "Reactivate",
+    "retry": "Try again",
+    "search": "Search",
+    "signOut": "Sign out"
+  },
+  "common": {
+    "loading": "Loading…",
+    "empty": "Nothing here yet.",
+    "noResults": "No results match your filters.",
+    "yes": "Yes",
+    "no": "No",
+    "language": "Language",
+    "english": "English",
+    "arabic": "العربية"
+  },
+  "enums": {
+    "workSystem": {
+      "FULL_TIME": "Full-time",
+      "PART_TIME_4": "Part-time, 4 days",
+      "PART_TIME_3": "Part-time, 3 days",
+      "PART_TIME_2": "Part-time, 2 days"
+    },
+    "gender": {
+      "MALE": "Male",
+      "FEMALE": "Female"
+    },
+    "employeeStatus": {
+      "ACTIVE": "Active",
+      "INACTIVE": "Inactive"
+    },
+    "penaltyAction": {
+      "NOTICE": "Notice",
+      "WARNING": "Warning",
+      "DEDUCT_DAYS": "Deduct days",
+      "INVESTIGATION": "Referral to investigation",
+      "RAISE_HALF_LOSS": "Loss of half the annual raise",
+      "RAISE_LOSS": "Loss of the annual raise",
+      "RAISE_DEFER_3M": "Annual raise deferred 3 months",
+      "PAY_CUT": "Pay cut by one annual raise",
+      "DEMOTION": "Demotion",
+      "DISMISSAL": "Dismissal"
+    },
+    "penaltyStatus": {
+      "PENDING": "Pending",
+      "APPROVED": "Approved",
+      "CANCELLED": "Cancelled"
+    },
+    "payrollStatus": {
+      "DRAFT": "Draft",
+      "APPROVED": "Approved"
+    },
+    "adjustmentType": {
+      "ADDITION": "Addition",
+      "DEDUCTION": "Deduction"
+    },
+    "repetitionWindow": {
+      "CONTRACT_YEAR": "Contract year (1 June – 31 May)",
+      "CALENDAR_YEAR": "Calendar year",
+      "ROLLING_12_MONTHS": "Rolling 12 months"
+    },
+    "payrollFlag": {
+      "NET_FLOORED": "Net floored at 0",
+      "PENDING_PENALTIES": "Pending penalties"
+    },
+    "weekday": {
+      "SUNDAY": "Sunday",
+      "MONDAY": "Monday",
+      "TUESDAY": "Tuesday",
+      "WEDNESDAY": "Wednesday",
+      "THURSDAY": "Thursday",
+      "FRIDAY": "Friday",
+      "SATURDAY": "Saturday"
+    },
+    "userRole": {
+      "HR_ADMIN": "HR officer"
+    }
+  }
+}
