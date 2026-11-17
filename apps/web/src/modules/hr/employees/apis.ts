@@ -33,6 +33,8 @@ function toParams(query: ListEmployeesQuery): Record<string, string | undefined>
     stageId: query.stageId,
     status: query.status,
     workSystem: query.workSystem,
+    managesPeople: query.managesPeople === undefined ? undefined : String(query.managesPeople),
+    excludeId: query.excludeId,
   };
 }
 
@@ -47,11 +49,17 @@ export async function GET_EMPLOYEES(query: ListEmployeesQuery = {}) {
 }
 
 /**
- * Candidates for the direct-manager picker: active employees only (§3), one page of the maximum
- * size. The form still drops the employee being edited.
+ * Candidates for the direct-manager picker (§3): active employees whose job title manages people,
+ * never `selfId` (the employee being edited), one page of the maximum size. The form adds back
+ * the employee's current manager if they no longer qualify.
  */
-export async function GET_MANAGER_OPTIONS() {
-  return GET_EMPLOYEES({ status: EmployeeStatus.ACTIVE, limit: PAGINATION.maxLimit });
+export async function GET_MANAGER_OPTIONS(selfId?: Uuid) {
+  return GET_EMPLOYEES({
+    status: EmployeeStatus.ACTIVE,
+    managesPeople: true,
+    excludeId: selfId,
+    limit: PAGINATION.maxLimit,
+  });
 }
 
 /** `GET /hr/employees/:id` — the full record with its list items and manager. */

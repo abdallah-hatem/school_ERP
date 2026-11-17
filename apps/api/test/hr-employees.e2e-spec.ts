@@ -24,7 +24,10 @@ describe('HR lists and employees (e2e)', () => {
   let departmentId: string;
   let otherDepartmentId: string;
   let hiddenDepartmentId: string;
+  /** Manages people — every employee created by default can be a direct manager. */
   let jobTitleId: string;
+  /** Doesn't manage people (§3 direct managers). */
+  let plainTitleId: string;
   let hiddenJobTitleId: string;
 
   const MISSING_ID = '11111111-1111-4111-8111-111111111111';
@@ -61,7 +64,10 @@ describe('HR lists and employees (e2e)', () => {
       .map(([, payload]) => payload);
 
   beforeAll(async () => {
-    ({ app, user: { id: userId } } = await createAppAsTestUser());
+    ({
+      app,
+      user: { id: userId },
+    } = await createAppAsTestUser());
     db = app.get(DatabaseService);
     emitSpy = jest.spyOn(app.get(EventEmitter2), 'emit');
 
@@ -80,7 +86,13 @@ describe('HR lists and employees (e2e)', () => {
     departmentId = await mk('/hr/departments', 'Teaching');
     otherDepartmentId = await mk('/hr/departments', 'Admin');
     hiddenDepartmentId = await mk('/hr/departments', 'Closed');
-    jobTitleId = await mk('/hr/job-titles', 'Teacher');
+    jobTitleId = (
+      await http(app)
+        .post('/hr/job-titles')
+        .send({ nameEn: 'Head of Department', nameAr: 'رئيس القسم', managesPeople: true })
+        .expect(201)
+    ).body.data.id as string;
+    plainTitleId = await mk('/hr/job-titles', 'Teacher');
     hiddenJobTitleId = await mk('/hr/job-titles', 'Retired title');
     await http(app)
       .patch(`/hr/departments/${hiddenDepartmentId}`)
@@ -160,7 +172,14 @@ describe('HR lists and employees (e2e)', () => {
         scope: 'lists',
         key: HrListKey.JOB_TITLES,
         oldValue: null,
-        newValue: { id: item.id, nameEn: 'Driver', nameAr: 'سائق', sortOrder: 3, isActive: true },
+        newValue: {
+          id: item.id,
+          nameEn: 'Driver',
+          nameAr: 'سائق',
+          sortOrder: 3,
+          isActive: true,
+          managesPeople: false,
+        },
         changedById: userId,
         changedAt: expect.any(String),
       });
@@ -376,6 +395,168 @@ describe('HR lists and employees (e2e)', () => {
     });
   });
 
+  describe('managing job titles (§3, 2026-11-18)', () => {
+    it('job-title CRUD carries managesPeople: defaults to false, set on create, toggled by PATCH', async () => {
+      const plain = (
+        await http(app).post('/hr/job-titles').send({ nameEn: 'Clerk', nameAr: 'كاتب' }).expect(201)
+      ).body.data;
+      expect(plain).toMatchObject({ nameEn: 'Clerk', managesPeople: false, isActive: true });
+      const lead = (
+        await http(app)
+          .post('/hr/job-titles')
+          .send({ nameEn: 'Stage Head', nameAr: 'رئيس المرحلة', managesPeople: true })
+          .expect(201)
+      ).body.data;
+      expect(lead.managesPeople).toBe(true);
+
+      emitSpy.mockClear();
+      const on = await http(app)
+        .patch(`/hr/job-titles/${plain.id}`)
+        .send({ managesPeople: true })
+        .expect(200);
+      expect(on.body.data).toMatchObject({ id: plain.id, managesPeople: true, nameEn: 'Clerk' });
+      expect(settingsEvents()).toEqual([
+        expect.objectContaining({
+          key: HrListKey.JOB_TITLES,
+          oldValue: expect.objectContaining({ managesPeople: false }),
+          newValue: expect.objectContaining({ managesPeople: true }),
+        }),
+      ]);
+
+      const listed = (await http(app).get('/hr/job-titles').expect(200)).body.data as {
+        id: string;
+        managesPeople: boolean;
+      }[];
+      expect(listed.find((t) => t.id === plain.id)?.managesPeople).toBe(true);
+      expect(listed.find((t) => t.id === plainTitleId)?.managesPeople).toBe(false);
+
+      await http(app)
+        .patch(`/hr/job-titles/${plain.id}`)
+        .send({ managesPeople: 'yes' })
+        .expect(400);
+      await http(app)
+        .post('/hr/job-titles')
+        .send({ nameEn: 'X', nameAr: 'س', managesPeople: 1 })
+        .expect(400);
+      // Departments don't have the switch.
+      await http(app)
+        .post('/hr/departments')
+        .send({ nameEn: 'Y', nameAr: 'ص', managesPeople: true })
+        .expect(400);
+    });
+
+    it('picker query: managesPeople=true lists only active managers, excludeId leaves one out', async () => {
+      const tag = unique('Picker');
+      const lead = await createOk({ nameEn: `${tag} Lead` });
+      const other = await createOk({ nameEn: `${tag} Other lead` });
+      const plain = await createOk({ nameEn: `${tag} Plain`, jobTitleId: plainTitleId });
+      const gone = await createOk({ nameEn: `${tag} Gone` });
+      await http(app).post(`/hr/employees/${gone.id}/deactivate`).expect(200);
+
+      const ids = async (q: string) =>
+        (
+          (
+            await http(app)
+              .get(`/hr/employees?limit=100&search=${encodeURIComponent(tag)}&${q}`)
+              .expect(200)
+          ).body.data as { id: string }[]
+        ).map((e) => e.id);
+
+      expect(await ids('status=ACTIVE&managesPeople=true')).toEqual([lead.id, other.id]);
+      expect(await ids(`status=ACTIVE&managesPeople=true&excludeId=${lead.id}`)).toEqual([
+        other.id,
+      ]);
+      expect(await ids('managesPeople=false')).toEqual([plain.id]);
+      expect(await ids('')).toEqual([lead.id, other.id, plain.id, gone.id]);
+      // Search by code still works with the filter.
+      const byCode = await http(app)
+        .get(`/hr/employees?search=${other.code}&status=ACTIVE&managesPeople=true`)
+        .expect(200);
+      expect((byCode.body.data as { id: string }[]).map((e) => e.id)).toEqual([other.id]);
+
+      await http(app).get('/hr/employees?managesPeople=maybe').expect(400);
+      await http(app).get('/hr/employees?excludeId=not-a-uuid').expect(400);
+    });
+
+    it('choosing a non-manager is refused (create and PATCH) with a translated message', async () => {
+      const plain = await createOk({ jobTitleId: plainTitleId });
+      const en = await create({ managerId: plain.id }).set('Accept-Language', 'en').expect(400);
+      expect(en.body).toMatchObject({
+        error: ErrorCode.MANAGER_NOT_MANAGING,
+        message: 'The direct manager must hold a job title that manages people.',
+      });
+      const ar = await create({ managerId: plain.id }).set('Accept-Language', 'ar').expect(400);
+      expect(ar.body).toMatchObject({
+        error: ErrorCode.MANAGER_NOT_MANAGING,
+        message: 'يجب أن يشغل المدير المباشر مسمى وظيفيًا يدير موظفين.',
+      });
+
+      const e = await createOk();
+      const patch = await http(app)
+        .patch(`/hr/employees/${e.id}`)
+        .send({ managerId: plain.id })
+        .expect(400);
+      expect(patch.body.error).toBe(ErrorCode.MANAGER_NOT_MANAGING);
+      const view = await http(app).get(`/hr/employees/${e.id}`).expect(200);
+      expect(view.body.data.manager).toBeNull();
+    });
+
+    it('a manager who no longer qualifies is kept on unrelated edits, and flagged', async () => {
+      const title = (
+        await http(app)
+          .post('/hr/job-titles')
+          .send({ nameEn: unique('Coordinator'), nameAr: 'منسق', managesPeople: true })
+          .expect(201)
+      ).body.data;
+      const boss = await createOk({ jobTitleId: title.id });
+      const e = await createOk({ managerId: boss.id });
+      const second = await createOk({ managerId: boss.id });
+      expect(
+        (await http(app).get(`/hr/employees/${e.id}`).expect(200)).body.data.manager,
+      ).toMatchObject({
+        id: boss.id,
+        managesPeople: true,
+      });
+
+      // The title stops managing people → the employee keeps the manager, flagged.
+      await http(app)
+        .patch(`/hr/job-titles/${title.id}`)
+        .send({ managesPeople: false })
+        .expect(200);
+      const kept = await http(app).get(`/hr/employees/${e.id}`).expect(200);
+      expect(kept.body.data.manager).toMatchObject({ id: boss.id, managesPeople: false });
+
+      // Unrelated edit, with and without the unchanged manager in the body.
+      await http(app).patch(`/hr/employees/${e.id}`).send({ grade: 'G1' }).expect(200);
+      const same = await http(app)
+        .patch(`/hr/employees/${e.id}`)
+        .send({ managerId: boss.id, grade: 'G2' })
+        .expect(200);
+      expect(same.body.data).toMatchObject({ grade: 'G2', manager: { id: boss.id } });
+
+      // The manager's own title changed to a non-managing one: same rule.
+      await http(app).patch(`/hr/job-titles/${title.id}`).send({ managesPeople: true }).expect(200);
+      await http(app)
+        .patch(`/hr/employees/${boss.id}`)
+        .send({ jobTitleId: plainTitleId })
+        .expect(200);
+      await http(app).patch(`/hr/employees/${second.id}`).send({ grade: 'G3' }).expect(200);
+
+      // Choosing them anew is refused; clearing works.
+      const fresh = await createOk();
+      const refused = await http(app)
+        .patch(`/hr/employees/${fresh.id}`)
+        .send({ managerId: boss.id })
+        .expect(400);
+      expect(refused.body.error).toBe(ErrorCode.MANAGER_NOT_MANAGING);
+      const cleared = await http(app)
+        .patch(`/hr/employees/${e.id}`)
+        .send({ managerId: null })
+        .expect(200);
+      expect(cleared.body.data.manager).toBeNull();
+    });
+  });
+
   describe('updates and status', () => {
     it('PATCH keeping own national ID / fingerprint → 200; taking another employee’s → 409', async () => {
       const n1 = nationalId();
@@ -512,7 +693,7 @@ describe('HR lists and employees (e2e)', () => {
         .send({ nameEn: 'Lab tech', nameAr: 'فني معمل' })
         .expect(201)
     ).body.data;
-    const boss = await createOk({ departmentId: dept.id, jobTitleId: title.id });
+    const boss = await createOk({ departmentId: dept.id });
 
     emitSpy.mockClear();
     const hired = await http(app)

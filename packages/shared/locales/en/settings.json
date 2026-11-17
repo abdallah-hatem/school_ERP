@@ -128,7 +128,11 @@
       "emptyTitle": "No job titles yet",
       "emptyBody": "Add the first job title, such as Teacher.",
       "placeholderEn": "Teacher",
-      "placeholderAr": "معلم"
+      "placeholderAr": "معلم",
+      "managesPeople": "Manages people",
+      "managesPeopleHint": "People with this job title can be chosen as a direct manager.",
+      "edit": "Edit",
+      "editItem": "Edit {name}"
     }
   },
   "hrRules": {

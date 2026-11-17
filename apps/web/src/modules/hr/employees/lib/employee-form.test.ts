@@ -69,9 +69,22 @@ describe('employee form rules (§3)', () => {
       summary({ id: 'x', code: 'EMP-0002', nameEn: 'Inactive', nameAr: 'غ', status: 'INACTIVE' }),
       summary({ id: 'ok', code: 'EMP-0003', nameEn: 'Active', nameAr: 'ن' }),
     ];
-    expect(managerOptions(candidates, 'en', 'None', 'self').map((o) => o.value)).toEqual([NO_MANAGER, 'ok']);
-    const current = { id: 'boss', code: 'EMP-0009', nameEn: 'Boss', nameAr: 'م' };
-    expect(managerOptions(candidates, 'en', 'None', 'self', current).map((o) => o.value)).toEqual([NO_MANAGER, 'ok', 'boss']);
+    const plain = managerOptions(candidates, 'en', 'None', 'self');
+    expect(plain.options.map((o) => o.value)).toEqual([NO_MANAGER, 'ok']);
+    expect(plain).toMatchObject({ currentNotManaging: false, hasCandidates: true });
+    const current = { id: 'boss', code: 'EMP-0009', nameEn: 'Boss', nameAr: 'م', managesPeople: true };
+    const kept = managerOptions(candidates, 'en', 'None', 'self', current);
+    expect(kept.options.map((o) => o.value)).toEqual([NO_MANAGER, 'ok', 'boss']);
+    expect(kept.currentNotManaging).toBe(false);
+  });
+
+  it('manager options: a current manager who no longer manages people is kept and flagged', () => {
+    const current = { id: 'boss', code: 'EMP-0009', nameEn: 'Boss', nameAr: 'م', managesPeople: false };
+    const result = managerOptions([], 'en', 'None', 'self', current);
+    expect(result.options.map((o) => o.value)).toEqual([NO_MANAGER, 'boss']);
+    expect(result).toMatchObject({ currentNotManaging: true, hasCandidates: false });
+    // Searchable by name and code.
+    expect(result.options[1]).toMatchObject({ label: 'Boss · EMP-0009', keywords: ['Boss', 'م', 'EMP-0009'] });
   });
 
   it('phone: mobiles, landlines and international numbers pass; 7–20 characters', () => {

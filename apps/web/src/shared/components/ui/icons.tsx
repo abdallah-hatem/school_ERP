@@ -104,6 +104,8 @@ export const StudentsModuleIcon = duotone(Student, 'StudentsModule');
 export const DepartmentIcon = duotone(Buildings, 'Department');
 export const StageIcon = duotone(ChalkboardTeacher, 'Stage');
 export const WorkSystemIcon = duotone(ClockAfternoon, 'WorkSystem');
+/** A job title whose holders lead other staff (§3 direct managers). */
+export const ManagesPeopleIcon = duotone(Users, 'ManagesPeople');
 
 // Chrome
 export const MenuIcon = duotone(List, 'Menu');

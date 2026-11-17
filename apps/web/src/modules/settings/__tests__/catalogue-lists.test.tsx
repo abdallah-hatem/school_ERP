@@ -245,6 +245,81 @@ describe('Managed lists (stages, departments, job titles)', () => {
     expect((await screen.findAllByText('اللغة العربية'))[0]).toBeTruthy();
   });
 
+  it('job titles: the Manages people switch is sent on create and edit; the list shows a badge', async () => {
+    const user = userEvent.setup();
+    const titles = [
+      { id: 'j1', nameEn: 'Principal', nameAr: 'مدير المدرسة', sortOrder: 1, isActive: true, managesPeople: true },
+      { id: 'j2', nameEn: 'Teacher', nameAr: 'معلم', sortOrder: 2, isActive: true, managesPeople: false },
+    ];
+    api.GET_LIST_ITEMS.mockImplementation(() => ok(titles));
+    api.CREATE_LIST_ITEM.mockImplementation((_k: string, body: object) => ok({ id: 'j3', isActive: true, ...body }));
+    api.UPDATE_LIST_ITEM.mockImplementation((_k: string, id: string, body: object) =>
+      ok({ ...titles.find((t) => t.id === id)!, ...body }),
+    );
+    renderSettings(<ListManager kind="jobTitles" />);
+    await screen.findAllByText('Teacher');
+    // Only the managing title has the badge (the table and the phone cards each draw it once).
+    const badges = () => screen.getAllByText('Manages people').length;
+    const perLayout = badges();
+    expect(screen.getAllByText('Principal')).toHaveLength(perLayout);
+
+    // Edit (not just rename): turn the switch on for Teacher.
+    const menu = await openRowActions(user, 'Teacher');
+    expect(menuItemNames(menu)).toEqual(['Edit', 'Hide']);
+    await user.click(within(menu).getByRole('menuitem', { name: 'Edit' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Edit Teacher' });
+    const save = within(dialog).getByRole('button', { name: 'Save' });
+    const toggle = within(dialog).getByRole('switch', { name: 'Manages people' });
+    expect(toggle.getAttribute('aria-checked')).toBe('false');
+    expect(save).toHaveProperty('disabled', true);
+    await user.click(toggle);
+    await waitFor(() => expect(save).toHaveProperty('disabled', false));
+    await user.click(save);
+    await waitFor(() =>
+      expect(api.UPDATE_LIST_ITEM).toHaveBeenCalledWith('jobTitles', 'j2', {
+        nameEn: 'Teacher',
+        nameAr: 'معلم',
+        managesPeople: true,
+      }),
+    );
+    await waitFor(() => expect(badges()).toBe(perLayout * 2));
+
+    // Create: off unless switched on.
+    await user.click(screen.getAllByRole('button', { name: 'Add job title' })[0]!);
+    const add = await screen.findByRole('dialog', { name: 'Add job title' });
+    await user.type(within(add).getByRole('textbox', { name: /Name in English/ }), 'Nurse');
+    await user.type(within(add).getByRole('textbox', { name: /Name in Arabic/ }), 'ممرضة');
+    await user.click(within(add).getByRole('button', { name: 'Create' }));
+    await waitFor(() =>
+      expect(api.CREATE_LIST_ITEM).toHaveBeenCalledWith('jobTitles', {
+        nameEn: 'Nurse',
+        nameAr: 'ممرضة',
+        managesPeople: false,
+        sortOrder: 3,
+      }),
+    );
+  });
+
+  it('job titles in Arabic: the switch and badge read natively; departments have no switch', async () => {
+    const user = userEvent.setup();
+    api.GET_LIST_ITEMS.mockImplementation(() =>
+      ok([{ id: 'j1', nameEn: 'Principal', nameAr: 'مدير المدرسة', sortOrder: 1, isActive: true, managesPeople: true }]),
+    );
+    renderSettings(<ListManager kind="jobTitles" />, 'ar');
+    expect((await screen.findAllByText('يدير موظفين')).length).toBeGreaterThan(0);
+    await chooseRowAction(user, /^إجراءات مدير المدرسة/, 'تعديل');
+    const dialog = await screen.findByRole('dialog', { name: 'تعديل مدير المدرسة' });
+    expect(within(dialog).getByRole('switch', { name: 'يدير موظفين' }).getAttribute('aria-checked')).toBe('true');
+    cleanup();
+
+    api.GET_LIST_ITEMS.mockImplementation(() => ok(departments));
+    renderSettings(<ListManager kind="departments" />);
+    await screen.findAllByText('Science');
+    await chooseRowAction(user, 'Mathematics', 'Rename');
+    const rename = await screen.findByRole('dialog', { name: 'Rename Mathematics' });
+    expect(within(rename).queryByRole('switch')).toBeNull();
+  });
+
   it('an empty list says so and offers the add action', async () => {
     api.GET_LIST_ITEMS.mockImplementation(() => ok([]));
     renderSettings(<ListManager kind="stages" />);

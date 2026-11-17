@@ -22,13 +22,26 @@ import type {
   Piastres,
   Uuid,
 } from './common';
-import type { ListItem } from './core';
+import type { CreateListItemRequest, ListItem, UpdateListItemRequest } from './core';
 import type { PayrollTotals } from './payroll-totals';
 
 // ── HR lists ───────────────────────────────────────────────────────────────
 
 export type Department = ListItem;
-export type JobTitle = ListItem;
+
+/** A job title. `managesPeople`: its holders can be chosen as a direct manager (§3). */
+export interface JobTitle extends ListItem {
+  managesPeople: boolean;
+}
+
+export interface CreateJobTitleRequest extends CreateListItemRequest {
+  /** Defaults to `false`. */
+  managesPeople?: boolean;
+}
+
+export interface UpdateJobTitleRequest extends UpdateListItemRequest {
+  managesPeople?: boolean;
+}
 
 // ── Employees ──────────────────────────────────────────────────────────────
 
@@ -37,6 +50,10 @@ export interface ListEmployeesQuery extends PaginationQuery {
   stageId?: Uuid;
   status?: EmployeeStatus;
   workSystem?: WorkSystem;
+  /** `true`: only employees whose job title manages people (the direct-manager picker, §3). */
+  managesPeople?: boolean;
+  /** Leave this employee out (the one being edited, in the direct-manager picker). */
+  excludeId?: Uuid;
 }
 
 /** `GET /hr/employees` item. */
@@ -91,7 +108,11 @@ export interface Employee extends Names {
   stage: NamedRef;
   department: NamedRef;
   jobTitle: NamedRef;
-  manager: (NamedRef & { code: string }) | null;
+  /**
+   * `managesPeople`: the manager's job title still manages people. `false` means they no longer
+   * qualify — the employee keeps them, and the form flags it (§3).
+   */
+  manager: (NamedRef & { code: string; managesPeople: boolean }) | null;
   grade: string | null;
   workSystem: WorkSystem;
   basicSalary: Piastres;
