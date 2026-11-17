@@ -90,7 +90,11 @@ export function salaryInContract(page: Page, locale: Language): Locator {
     // The card itself (its own <h2>), never a section that merely contains it.
     .locator('section:has(> h2)')
     .filter({ has: page.locator(':scope > h2', { hasText: t(locale, 'employees.sections.contract') }) })
-    .getByText(t(locale, 'employees.fields.basicSalary'), { exact: true });
+    .getByText(t(locale, 'employees.fields.basicSalary'), { exact: true })
+    // The phone layout keeps hidden copies of the label (responsive variants); the check is about
+    // the one the person sees.
+    .filter({ visible: true })
+    .first();
 }
 
 /** The app's not-found screen inside the shell (a page or record the viewer can't open). */
