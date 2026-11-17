@@ -37,8 +37,8 @@
   "enums": {
     "workSystem": {
       "FULL_TIME": "دوام كامل",
-      "PART_TIME_4": "دوام جزئي، ٤ أيام",
-      "PART_TIME_3": "دوام جزئي، ٣ أيام",
+      "PART_TIME_4": "دوام جزئي، 4 أيام",
+      "PART_TIME_3": "دوام جزئي، 3 أيام",
       "PART_TIME_2": "دوام جزئي، يومان"
     },
     "gender": {
@@ -56,7 +56,7 @@
       "INVESTIGATION": "إحالة للتحقيق",
       "RAISE_HALF_LOSS": "الحرمان من نصف العلاوة السنوية",
       "RAISE_LOSS": "الحرمان من العلاوة السنوية",
-      "RAISE_DEFER_3M": "تأجيل العلاوة السنوية ٣ أشهر",
+      "RAISE_DEFER_3M": "تأجيل العلاوة السنوية 3 أشهر",
       "PAY_CUT": "خفض الأجر بمقدار علاوة",
       "DEMOTION": "خفض الدرجة",
       "DISMISSAL": "الفصل"
@@ -75,9 +75,9 @@
       "DEDUCTION": "خصم"
     },
     "repetitionWindow": {
-      "CONTRACT_YEAR": "سنة العقد (١ يونيو – ٣١ مايو)",
+      "CONTRACT_YEAR": "سنة العقد (1 يونيو – 31 مايو)",
       "CALENDAR_YEAR": "السنة الميلادية",
-      "ROLLING_12_MONTHS": "آخر ١٢ شهرًا"
+      "ROLLING_12_MONTHS": "آخر 12 شهرًا"
     },
     "payrollFlag": {
       "NET_FLOORED": "الصافي عند الحد الأدنى صفر",

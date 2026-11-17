@@ -127,7 +127,7 @@ describe('HR rules — lateness rule editor', () => {
     await user.clear(divisor);
     await user.type(divisor, '32');
     expect(await screen.findByText('أدخل رقمًا صحيحًا من 1 إلى 31.')).toBeTruthy();
-    const pt3 = screen.getByRole('textbox', { name: /٣ أيام/ });
+    const pt3 = screen.getByRole('textbox', { name: /3 أيام/ });
     await user.clear(pt3);
     await user.type(pt3, '0');
     expect(await screen.findByText('أدخل نسبة صحيحة من 1 إلى 100.')).toBeTruthy();
