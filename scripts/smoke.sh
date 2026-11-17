@@ -3,7 +3,7 @@
 # and stops itself — no developer server is used.
 #
 #   1. recreates the database school_erp_e2e_${SMOKE_DB:-18} on the docker-compose Postgres (5442)
-#      and migrates it (scripts/e2e-db.sh)
+#      and migrates it (scripts/e2e-db.sh); with E2E_PG_URL set (CI) on that server instead
 #   2. seeds it (generic fallback data unless prisma/seed-data.local/ exists), with an HR admin
 #      password generated for this run only
 #   3. builds and starts the API (port ${SMOKE_API_PORT:-4180}) and the web app (${SMOKE_WEB_PORT:-4181})
@@ -18,7 +18,8 @@ n="${SMOKE_DB:-18}"
 api_port="${SMOKE_API_PORT:-4180}"
 web_port="${SMOKE_WEB_PORT:-4181}"
 db="school_erp_e2e_${n}"
-db_url="postgresql://postgres:postgres@localhost:5442/${db}?schema=public"
+pg_server="${E2E_PG_URL:-postgresql://postgres:postgres@localhost:5442}"
+db_url="${pg_server}/${db}?schema=public"
 logs="$root/apps/web/e2e/.logs"
 mkdir -p "$logs"
 
@@ -55,8 +56,14 @@ export SEED_ADMIN_PASSWORD
 jwt_secret="$(openssl rand -hex 32)"
 
 step "database ${db}"
-docker exec -e PGOPTIONS=--client-min-messages=warning school-erp-db psql -U postgres -qc "DROP DATABASE IF EXISTS ${db} WITH (FORCE)" >/dev/null \
-  || fail "dropping ${db} (is the school-erp-db container running? docker compose up -d)" /dev/null
+drop_sql="DROP DATABASE IF EXISTS ${db} WITH (FORCE)"
+if [[ -n "${E2E_PG_URL:-}" ]]; then
+  PGOPTIONS=--client-min-messages=warning psql "${E2E_PG_URL}/postgres" -qc "$drop_sql" >/dev/null \
+    || fail "dropping ${db} (is Postgres at E2E_PG_URL up?)" /dev/null
+else
+  docker exec -e PGOPTIONS=--client-min-messages=warning school-erp-db psql -U postgres -qc "$drop_sql" >/dev/null \
+    || fail "dropping ${db} (is the school-erp-db container running? docker compose up -d)" /dev/null
+fi
 "$root/scripts/e2e-db.sh" "$n" >"$logs/db.log" 2>&1 || fail "creating ${db}" "$logs/db.log"
 
 step "building shared, api and web"
@@ -111,6 +118,8 @@ set -e
 # Summary lines ("6 passed (1.2m)", "1 failed", …) and, on failure, the failures in full.
 grep -E '^\s+[0-9]+ (passed|failed|flaky|skipped|did not run)' "$logs/playwright.log" || true
 if [[ $status -ne 0 ]]; then
+  # Every failing test's title first (the details below are cut at 200 lines).
+  grep -E '^  [0-9]+\) ' "$logs/playwright.log" || true
   sed -n '/^  [0-9]*) /,$p' "$logs/playwright.log" | head -n 200
   echo "smoke: FAILED — full log: apps/web/e2e/.logs/playwright.log" >&2
   exit "$status"

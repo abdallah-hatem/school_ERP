@@ -4,15 +4,21 @@ on:
   pull_request:
     branches: [dev, testing, production]
 
+# A new push to a PR cancels the run it supersedes.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
+env:
+  # Postgres service container (throwaway; nothing here is used outside CI).
+  E2E_PG_URL: postgresql://postgres:postgres@localhost:5432
+
 jobs:
   checks:
+    # Branch protection requires this job by name — don't rename it.
     name: Lint, typecheck, unit tests, module rules
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -25,6 +31,13 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+
+      - name: Turbo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo/cache
+          key: turbo-checks-${{ runner.os }}-${{ github.sha }}
+          restore-keys: turbo-checks-${{ runner.os }}-
 
       - name: Install
         run: pnpm install --frozen-lockfile
@@ -44,3 +57,125 @@ jobs:
           name: module-dependency-graph
           path: deps-graph.dot
           if-no-files-found: ignore
+
+  e2e:
+    name: API e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Turbo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo/cache
+          key: turbo-e2e-${{ runner.os }}-${{ github.sha }}
+          restore-keys: turbo-e2e-${{ runner.os }}-
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Create and migrate school_erp_e2e_ci
+        run: scripts/e2e-db.sh ci
+
+      # setup-env.ts supplies the throwaway JWT secret and seed password; PORT 0 picks a free port.
+      - name: API e2e
+        run: pnpm test:e2e
+        env:
+          DATABASE_URL: ${{ env.E2E_PG_URL }}/school_erp_e2e_ci?schema=public
+
+  smoke:
+    # Sharded by Playwright project: each shard has its own runner, database and servers.
+    name: Smoke (${{ matrix.project }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [desktop-en, phone-ar]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Next.js build cache
+        uses: actions/cache@v4
+        with:
+          path: apps/web/.next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: next-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('./apps/web/node_modules/@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Playwright browser cache
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
+      - name: Install Chromium
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: pnpm --filter web exec playwright install --with-deps chromium
+
+      - name: Install Chromium system dependencies
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: pnpm --filter web exec playwright install-deps chromium
+
+      # Generic seed only: CI has no prisma/seed-data.local/ (git-ignored client data), so nothing in
+      # the screenshots or report is client material. smoke.sh generates the admin password per run.
+      - name: Smoke specs
+        run: bash scripts/smoke.sh --project=${{ matrix.project }}
+        env:
+          SMOKE_DB: ci_${{ matrix.project == 'desktop-en' && 'desktop' || 'phone' }}
+
+      - name: Upload Playwright report, screenshots and logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-${{ matrix.project }}
+          path: |
+            apps/web/e2e/.report/
+            apps/web/e2e/.results/
+            apps/web/e2e/screenshots/
+            apps/web/e2e/.logs/
+          retention-days: 14
+          if-no-files-found: ignore
+          include-hidden-files: true
