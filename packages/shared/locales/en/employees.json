@@ -38,7 +38,7 @@
     "nationalId": "National ID",
     "gender": "Gender",
     "dateOfBirth": "Date of birth",
-    "phone": "Mobile phone",
+    "phone": "Phone",
     "email": "Email",
     "address": "Address",
     "hireDate": "Hire date",
@@ -74,7 +74,7 @@
   },
   "hints": {
     "nationalId": "Optional. 14 digits.",
-    "phone": "11 digits starting with 01.",
+    "phone": "Mobile, landline or international. Digits, spaces, +, - and brackets.",
     "basicSalary": "Monthly, in Egyptian pounds.",
     "contract": "Defaults to 1 June – 31 May. Changing the start moves the end to one year later.",
     "usesBus": "Turn on if the employee rides the school bus.",
@@ -87,7 +87,7 @@
   "errors": {
     "nameRequired": "Enter the full name.",
     "nationalId": "The national ID must be exactly 14 digits.",
-    "phone": "Enter an 11-digit mobile number starting with 01.",
+    "phone": "Enter a phone number of 7 to 20 characters, like 01012345678 or +20 2 2345 6789.",
     "email": "Enter a valid email, like name@example.com.",
     "hireDateFuture": "The hire date can't be in the future.",
     "salaryPositive": "The salary must be more than 0.",

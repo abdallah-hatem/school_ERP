@@ -42,7 +42,9 @@
     "noOptions": "لا توجد خيارات بعد.",
     "counter": "{count} / {max}",
     "previousMonth": "الشهر السابق",
-    "nextMonth": "الشهر التالي"
+    "nextMonth": "الشهر التالي",
+    "month": "الشهر",
+    "year": "السنة"
   },
   "units": {
     "currency": "ج.م",

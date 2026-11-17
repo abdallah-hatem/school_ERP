@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import ar from '@school-erp/shared/locales/ar/employees.json';
 import en from '@school-erp/shared/locales/en/employees.json';
-import { normalizeEgyptianMobile } from '@/shared/lib/phone';
+import { acceptPhoneInput, isValidPhone } from '@/shared/lib/phone';
 import { employee, item, summary } from '../test/fixtures';
 import {
   emptyEmployeeForm,
@@ -74,13 +74,16 @@ describe('employee form rules (§3)', () => {
     expect(managerOptions(candidates, 'en', 'None', 'self', current).map((o) => o.value)).toEqual([NO_MANAGER, 'ok', 'boss']);
   });
 
-  it('Egyptian mobile: +20 normalised, 12th digit and bad prefix rejected', () => {
-    expect(normalizeEgyptianMobile('+20 10 1234 5678')).toBe('01012345678');
-    expect(normalizeEgyptianMobile('00201112345678')).toBe('01112345678');
-    expect(normalizeEgyptianMobile('010123456789')).toBeNull();
-    expect(normalizeEgyptianMobile('013')).toBeNull();
-    expect(normalizeEgyptianMobile('01a')).toBeNull();
-    expect(normalizeEgyptianMobile('')).toBe('');
+  it('phone: mobiles, landlines and international numbers pass; 7–20 characters', () => {
+    for (const ok of ['01012345678', '0223456789', '+20 2 2345 6789', '(02) 2345-6789', '+44 20 7946 0958', '1234567']) {
+      expect(isValidPhone(ok)).toBe(true);
+    }
+    for (const bad of ['123456', '123456789012345678901', '01012x45678', '+-() -----', '']) {
+      expect(isValidPhone(bad)).toBe(false);
+    }
+    expect(acceptPhoneInput('+20 (2) 2345-6789')).toBe('+20 (2) 2345-6789');
+    expect(acceptPhoneInput('0101a')).toBeNull();
+    expect(acceptPhoneInput('1'.repeat(21))).toBeNull();
   });
 });
 

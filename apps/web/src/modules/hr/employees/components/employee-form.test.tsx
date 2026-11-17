@@ -150,17 +150,28 @@ describe('EmployeeForm', () => {
     expect(create).not.toHaveBeenCalled();
   });
 
-  it('phone accepts a pasted +20 number and rejects a 12th digit', async () => {
+  it('phone takes a landline or international number as typed, and rejects letters', async () => {
     const user = userEvent.setup();
-    renderForm();
-    const phone = screen.getByRole('textbox', { name: /Mobile phone/ }) as HTMLInputElement;
-    await user.click(phone);
-    await user.paste('+20 10 1234 5678');
-    expect(phone.value).toBe('01012345678');
-    await user.type(phone, '9');
-    expect(phone.value).toBe('01012345678');
+    update.mockResolvedValue(ok(employee));
+    renderForm({ editing: employee });
+    const phone = screen.getByRole('textbox', { name: /^Phone/ }) as HTMLInputElement;
     await user.clear(phone);
-    await user.type(phone, '03');
-    expect(phone.value).toBe('0');
+    await user.paste('+20 (2) 2345-6789');
+    await user.type(phone, 'x');
+    expect(phone.value).toBe('+20 (2) 2345-6789');
+
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => expect(update).toHaveBeenCalledWith('e-mona', { phone: '+20 (2) 2345-6789' }));
+  });
+
+  it('phone shorter than 7 characters blocks submit', async () => {
+    const user = userEvent.setup();
+    renderForm({ editing: employee });
+    const phone = screen.getByRole('textbox', { name: /^Phone/ });
+    await user.clear(phone);
+    await user.type(phone, '12345');
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    expect(await screen.findByText(/Enter a phone number of 7 to 20 characters/)).toBeTruthy();
+    expect(update).not.toHaveBeenCalled();
   });
 });

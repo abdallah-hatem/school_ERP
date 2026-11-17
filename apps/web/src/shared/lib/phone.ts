@@ -1,25 +1,27 @@
 /*
- * Egyptian mobile numbers: 11 digits, `01` then one of the operator digits 0, 1, 2 or 5.
- * The field keeps the number as a string (never `Number()` — the leading zero matters).
+ * Phone numbers, kept lenient on purpose (§3 says only "phone required"; the API takes any string):
+ * mobiles, landlines and international numbers all pass. 7–20 characters of digits, spaces, `+`,
+ * `-`, `(` and `)`, with at least one digit. Kept as a string — never `Number()`, leading zeros matter.
  */
 
-/** A complete Egyptian mobile number. */
-export const EGYPTIAN_MOBILE = /^01[0125]\d{8}$/;
+export const PHONE_MIN_LENGTH = 7;
+export const PHONE_MAX_LENGTH = 20;
 
-/** Text that can still grow into a valid number: `''`, `0`, `01`, `010`, … up to 11 digits. */
-const PARTIAL_MOBILE = /^(0(1([0125]\d{0,8})?)?)?$/;
+const PHONE_CHARS = /^[\d\s+\-()]*$/;
+
+/** A complete phone number (after trimming). */
+export function isValidPhone(text: string): boolean {
+  const v = text.trim();
+  return (
+    v.length >= PHONE_MIN_LENGTH && v.length <= PHONE_MAX_LENGTH && PHONE_CHARS.test(v) && /\d/.test(v)
+  );
+}
 
 /**
- * Normalises typed or pasted text to local digits — `+20 10 1234 5678`, `0020…` and `20…` become
- * `010…`; spaces, dashes and brackets are dropped. Returns `null` when the text can never become a
- * valid number (a letter, a 12th digit, an impossible prefix), so the field rejects the change
- * instead of trimming it.
+ * Typing / paste filter: returns the text to keep, or `null` to reject the change (a letter or
+ * other character a phone never has, or more than the maximum length). Formatting is left as typed.
  */
-export function normalizeEgyptianMobile(text: string): string | null {
-  let digits = text.replace(/[\s\-().]/g, '');
-  if (digits.startsWith('+')) digits = digits.slice(1);
-  if (!/^\d*$/.test(digits)) return null;
-  if (digits.startsWith('0020')) digits = `0${digits.slice(4)}`;
-  else if (digits.startsWith('201') && digits.length > 3) digits = `0${digits.slice(2)}`;
-  return PARTIAL_MOBILE.test(digits) ? digits : null;
+export function acceptPhoneInput(text: string): string | null {
+  if (!PHONE_CHARS.test(text)) return null;
+  return text.length <= PHONE_MAX_LENGTH ? text : null;
 }

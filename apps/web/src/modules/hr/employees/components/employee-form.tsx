@@ -39,6 +39,7 @@ import {
   formToUpdate,
   listOptions,
   managerOptions,
+  todayIso,
   type EmployeeFormValues,
 } from '../lib/employee-form';
 
@@ -85,6 +86,8 @@ export function EmployeeForm({ basePath, employee, departments, stages, jobTitle
   const jobTitle = listOptions(jobTitles, locale, employee?.jobTitle);
   const managers = managerOptions(managerCandidates, locale, t('employees.noManager'), employee?.id, employee?.manager);
   const hiddenHint = t('employees.hints.hiddenItem');
+  // Date of birth and hire date can't be in the future (§3).
+  const today = todayIso();
 
   async function onSubmit(values: EmployeeFormValues) {
     if (inFlight.current) return;
@@ -158,14 +161,14 @@ export function EmployeeForm({ basePath, employee, departments, stages, jobTitle
             options={GENDERS.map((g) => ({ value: g, label: t(`common.enums.gender.${g}`) }))}
             required
           />
-          <DateField control={control} name="dateOfBirth" label={t('employees.fields.dateOfBirth')} required />
+          <DateField control={control} name="dateOfBirth" label={t('employees.fields.dateOfBirth')} max={today} required />
           <PhoneField control={control} name="phone" label={t('employees.fields.phone')} placeholder={t('employees.placeholders.phone')} hint={t('employees.hints.phone')} required />
           <TextField control={control} name="email" type="email" inputMode="email" autoComplete="off" dir="ltr" label={t('employees.fields.email')} placeholder={t('employees.placeholders.email')} />
           <TextareaField control={control} name="address" rows={3} maxLength={500} label={t('employees.fields.address')} placeholder={t('employees.placeholders.address')} className="sm:col-span-2" />
         </Section>
 
         <Section title={t('employees.sections.job')}>
-          <DateField control={control} name="hireDate" label={t('employees.fields.hireDate')} required />
+          <DateField control={control} name="hireDate" label={t('employees.fields.hireDate')} max={today} required />
           <SelectField
             control={control}
             name="workSystem"

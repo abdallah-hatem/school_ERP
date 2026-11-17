@@ -19,7 +19,7 @@ import { z } from 'zod';
 import type { SelectOption } from '@/shared/components/form/fields';
 import { toIsoDate } from '@/shared/lib/format';
 import { localName, type Locale } from '@/shared/lib/i18n';
-import { EGYPTIAN_MOBILE } from '@/shared/lib/phone';
+import { isValidPhone } from '@/shared/lib/phone';
 
 /*
  * The employee form's rules (§3), its defaults, and how its values become API requests. Error
@@ -58,8 +58,9 @@ export const employeeFormSchema = z
     dateOfBirth: requiredDate,
     phone: z
       .string()
+      .trim()
       .min(1, REQUIRED)
-      .refine((v) => EGYPTIAN_MOBILE.test(v), 'employees.errors.phone'),
+      .refine((v) => isValidPhone(v), 'employees.errors.phone'),
     email: z
       .string()
       .trim()
@@ -157,7 +158,7 @@ export function formToRequest(v: EmployeeFormValues): CreateEmployeeRequest {
     nationalId: orNull(v.nationalId),
     gender: v.gender as Gender,
     dateOfBirth: v.dateOfBirth as IsoDate,
-    phone: v.phone,
+    phone: v.phone.trim(),
     email: orNull(v.email),
     address: orNull(v.address),
     hireDate: v.hireDate as IsoDate,
