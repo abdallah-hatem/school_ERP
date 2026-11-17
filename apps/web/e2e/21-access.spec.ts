@@ -29,10 +29,10 @@ test('a new HR officer: created on Add user, forced to set a password, sees no U
   await expect(page).toHaveURL(/\/en\/users$/);
   const row = page.getByRole('row', { name: /Rana Mostafa/ });
   await expect(row).toBeVisible();
-  await expect(row.getByText(t(locale, 'access.users.mustChange'))).toBeVisible();
+  await expect(row.getByText(t(locale, 'access.users.temporaryPassword'))).toBeVisible();
 
   // Signed in with the temporary password → straight to "Set a new password", nothing else.
-  const context = await browser.newContext({ locale: 'en-US', viewport: { width: 1440, height: 900 } });
+  const context = await browser.newContext({ locale: 'en-US', viewport: page.viewportSize() });
   const officer = await context.newPage();
   await signInAs(officer, locale, email, password);
   await expect(officer).toHaveURL(/\/en\/set-password/);
@@ -82,7 +82,7 @@ test('as admin, editing a custom role’s permission applies to its holder on th
   await api.dispose();
 
   // The holder chooses their password, then sees Activity.
-  const context = await browser.newContext({ locale: 'en-US', viewport: { width: 1440, height: 900 } });
+  const context = await browser.newContext({ locale: 'en-US', viewport: page.viewportSize() });
   const them = await context.newPage();
   await signInAs(them, locale, holder.email, holder.password);
   await them.getByRole('textbox', { name: t(locale, 'auth.password.new'), exact: true }).fill('holder-own-password-1');
