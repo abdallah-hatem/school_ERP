@@ -3,7 +3,7 @@
 import type { AuditActor, AuditEntry, AuditSummary, IsoDate, IsoDateTime } from '@school-erp/shared';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
-import { AUDIT_PAGE_SIZE, AuditFiltersSheet, AuditTimeline, formatFilterRange, schoolDay } from '@/core/audit';
+import { AUDIT_PAGE_SIZE, AuditFiltersSheet, AuditTimeline, AuditTimelineSkeleton, formatFilterRange, schoolDay } from '@/core/audit';
 import { Pagination } from '@/shared/components/data-table/pagination';
 import { ClearFilters, SearchInput } from '@/shared/components/form/filter-controls';
 import { EmptyState, ErrorState } from '@/shared/components/layout/empty-state';
@@ -13,6 +13,7 @@ import { TABLET_UP, useMediaQuery } from '@/shared/hooks/use-media-query';
 import { formatCount } from '@/shared/lib/format';
 import type { Translate } from '@/shared/lib/i18n';
 import { cn } from '@/shared/lib/utils';
+import { SkeletonText } from '@/shared/components/ui/skeleton';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import {
   activeFilterCount,
@@ -28,12 +29,13 @@ export interface ActivityViewProps {
   /** `/en/activity` — the page's own path, for URL updates. */
   basePath: string;
   query: ActivityQuery;
-  entries: AuditEntry[];
+  /** `undefined` while the page loads: the screen draws itself with a skeleton timeline. */
+  entries: AuditEntry[] | undefined;
   total: number;
   /** Everyone in the log (the person picker). */
   actors: AuditActor[];
-  /** Today's counts; null when they couldn't be loaded. */
-  summary: AuditSummary | null;
+  /** Today's counts; null when they couldn't be loaded (undefined while loading). */
+  summary: AuditSummary | null | undefined;
   /** Each day on the page counted whole for these filters (day headers); none → no counts. */
   dayTotals?: Partial<Record<IsoDate, number>>;
   /** The server's clock when it rendered ("12 min ago", "Today"). */
@@ -97,6 +99,7 @@ function FilterChips({
   actors,
   total,
   showTotal,
+  loading = false,
   onChange,
   clearCount,
   onClear,
@@ -106,6 +109,8 @@ function FilterChips({
   actors: AuditActor[];
   total: number;
   showTotal: boolean;
+  /** First load: the count is a bar. */
+  loading?: boolean;
   onChange: (next: ActivityQuery) => void;
   /** The search (when it has text) plus each filter in use: "Clear filters · n" at the row's end. */
   clearCount: number;
@@ -114,9 +119,10 @@ function FilterChips({
 }) {
   const { t, locale } = useTranslation();
   const chips = activeFilters(query, actors, t, locale);
-  if (!showTotal && chips.length === 0 && clearCount === 0) return null;
+  if (!loading && !showTotal && chips.length === 0 && clearCount === 0) return null;
   return (
     <div className="scrollbar-clean -mx-1 flex items-center gap-2 overflow-x-auto px-1 py-1.5 text-[0.8125rem] whitespace-nowrap text-muted-foreground @min-[56rem]/activity:hidden">
+      {loading ? <SkeletonText className="shrink-0 pe-1" width="w-20" /> : null}
       {showTotal ? (
         <span aria-live="polite" data-testid="activity-total" className="tabular shrink-0 pe-1">
           {t('audit.activity.results', { count: formatCount(total) })}
@@ -198,6 +204,7 @@ export function ActivityView({
     go({ page: 1, types: [] });
   }
 
+  const loading = entries === undefined;
   const filterCount = activeFilterCount(query);
   const clearCount = filterCount + (query.q ? 1 : 0);
   const filters = (title: boolean) => (
@@ -209,13 +216,15 @@ export function ActivityView({
       onChange={go}
       onClear={title ? clearAll : undefined}
       clearCount={clearCount}
-      disabled={pending}
+      disabled={pending || loading}
       title={title}
     />
   );
 
   let body: ReactNode;
-  if (error) {
+  if (loading) {
+    body = <AuditTimelineSkeleton grouping="day" />;
+  } else if (error) {
     body = <ErrorState onRetry={() => startTransition(() => router.refresh())} retrying={pending} />;
   } else if (entries.length === 0) {
     body = hasActiveFilters(query) ? (
@@ -249,17 +258,21 @@ export function ActivityView({
           */}
           <aside
             aria-label={t('audit.filters.title')}
+            // Its height follows how many people the picker lists.
+            data-skeleton-block="filters-panel"
+            data-skeleton-measure="width"
             className="hidden rounded-3xl bg-card p-4.5 shadow-card @min-[56rem]/activity:sticky @min-[56rem]/activity:top-6 @min-[56rem]/activity:order-2 @min-[56rem]/activity:block"
           >
             {filters(true)}
           </aside>
           <div className="flex min-w-0 flex-col gap-2 @min-[56rem]/activity:order-1 @min-[56rem]/activity:gap-3.5">
-            <div role="search" className="flex gap-2">
+            <div role="search" data-skeleton-block="search" className="flex gap-2">
               <SearchInput
                 aria-label={t('audit.activity.searchLabel')}
                 placeholder={roomy ? t('audit.activity.searchPlaceholder') : t('audit.activity.searchPlaceholderShort')}
                 value={search}
                 onChange={(e) => onSearchChange(e.target.value)}
+                disabled={loading}
                 className="border-transparent bg-card shadow-card"
               />
               <AuditFiltersSheet count={filterCount} onClear={clearFilters} className="@min-[56rem]/activity:hidden">
@@ -270,13 +283,20 @@ export function ActivityView({
               query={query}
               actors={actors}
               total={total}
-              showTotal={!error && total > 0}
+              showTotal={!loading && !error && total > 0}
+              loading={loading}
               onChange={go}
               clearCount={clearCount}
               onClear={clearAll}
               disabled={pending}
             />
-            <section aria-label={t('audit.title')} className="@container min-w-0 rounded-3xl bg-card shadow-card">
+            <section
+              aria-label={t('audit.title')}
+              // Its height follows the entries (how many changes each shows).
+              data-skeleton-block="timeline"
+              data-skeleton-measure="width"
+              className="@container min-w-0 rounded-3xl bg-card shadow-card"
+            >
               {body}
               {error ? null : (
                 <Pagination
@@ -284,7 +304,8 @@ export function ActivityView({
                   limit={AUDIT_PAGE_SIZE}
                   total={total}
                   onPageChange={(page) => go({ ...query, page })}
-                  disabled={pending}
+                  disabled={pending || loading}
+                  loading={loading}
                 />
               )}
             </section>

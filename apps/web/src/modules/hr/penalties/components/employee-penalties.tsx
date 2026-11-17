@@ -9,7 +9,7 @@ import { Button } from '@/shared/components/ui/button';
 import { AddIcon } from '@/shared/components/ui/icons';
 import { nameIn } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
-import { useProfileEmployee } from '../../employees';
+import { useProfileEmployeeIfLoaded } from '../../employees';
 import { employeeOptions } from '../lib/penalty-text';
 import { PenaltiesTable } from './penalties-table';
 import { RecordPenaltyDialog } from './record-penalty-dialog';
@@ -17,7 +17,8 @@ import { RecordPenaltyDialog } from './record-penalty-dialog';
 export interface EmployeePenaltiesProps {
   /** `/ar/employees`. */
   employeesPath: string;
-  employee: Employee;
+  /** null only in the tab's skeleton on a first visit (the profile layout is still loading it). */
+  employee: Employee | null;
   /** `undefined` while the tab loads: skeleton rows, the record button disabled. */
   rows: PenaltyRecord[] | undefined;
   total: number;
@@ -36,8 +37,9 @@ export function EmployeePenalties({ employeesPath, employee, rows, total, page, 
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [recording, setRecording] = useState(false);
-  const active = employee.status === EmployeeStatus.ACTIVE;
-  const tabPath = `${employeesPath}/${employee.id}/penalties`;
+  // Not loaded yet (the skeleton): drawn as the usual case, an active employee.
+  const active = employee ? employee.status === EmployeeStatus.ACTIVE : true;
+  const tabPath = `${employeesPath}/${employee?.id ?? ''}/penalties`;
 
   function go(nextPage: number, nextLimit: number) {
     const params = new URLSearchParams();
@@ -57,7 +59,7 @@ export function EmployeePenalties({ employeesPath, employee, rows, total, page, 
   return (
     <>
       <PenaltiesTable
-        label={t('penalties.profileTableLabel', { name: nameIn(employee, locale) })}
+        label={employee ? t('penalties.profileTableLabel', { name: nameIn(employee, locale) }) : t('ui.states.loading')}
         rows={rows}
         showEmployee={false}
         refreshing={pending}
@@ -79,7 +81,7 @@ export function EmployeePenalties({ employeesPath, employee, rows, total, page, 
         }}
         toolbar={recordButton ? <div className="flex w-full justify-end">{recordButton}</div> : undefined}
       />
-      {active ? (
+      {employee && active ? (
         <RecordPenaltyDialog
           open={recording}
           onOpenChange={setRecording}
@@ -97,5 +99,5 @@ export function EmployeePenalties({ employeesPath, employee, rows, total, page, 
  * refreshes after deactivate / reactivate), so the tab never fetches it again.
  */
 export function ProfileEmployeePenalties(props: Omit<EmployeePenaltiesProps, 'employee'>) {
-  return <EmployeePenalties {...props} employee={useProfileEmployee()} />;
+  return <EmployeePenalties {...props} employee={useProfileEmployeeIfLoaded()} />;
 }

@@ -33,7 +33,7 @@ export function AccountView({ account, now }: { account: UserAccount; now: IsoDa
       <FormColumns
         main={
           <>
-            <section className="@container flex flex-col gap-5 rounded-3xl bg-card p-5 shadow-card md:p-6">
+            <section data-skeleton-block="account-profile" className="@container flex flex-col gap-5 rounded-3xl bg-card p-5 shadow-card md:p-6">
               <div className="flex min-w-0 items-center gap-4">
                 <span
                   aria-hidden="true"
@@ -133,7 +133,8 @@ function LockedInput(props: { id: string; value: string; dir?: 'ltr'; 'aria-desc
   );
 }
 
-function ChangePasswordCard() {
+/** Change your own password (current, new, confirm). The page's skeleton draws it masked. */
+export function ChangePasswordCard() {
   const { t, has } = useTranslation();
   const currentId = useId();
   const [current, setCurrent] = useState('');

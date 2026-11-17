@@ -570,7 +570,7 @@ export function RunTiles({ totals }: { totals: PayrollRun['totals'] | undefined 
     totals ? text(totals) : <StatTileSubSkeleton lines={lines} narrowLines={narrowLines} feature={feature} />;
   return (
     // Two by two from phone width (Net first), four across on wide screens — like the dashboard.
-    <div className="grid grid-cols-1 gap-3 @min-[320px]:grid-cols-2 @min-[520px]:gap-4 @min-[1080px]:grid-cols-4">
+    <div data-skeleton-block="tiles" className="grid grid-cols-1 gap-3 @min-[320px]:grid-cols-2 @min-[520px]:gap-4 @min-[1080px]:grid-cols-4">
       <StatTile
         icon={EmployeesIcon}
         tone="info"

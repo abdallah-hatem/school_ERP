@@ -57,7 +57,7 @@ function DashboardTiles({ data, month, links }: { data: HrDashboard; month: Mont
   const { headcount, currentRun, penaltiesThisMonth } = data;
   const monthLabel = formatMonth(month, locale);
   return (
-    <section aria-label={t('dashboard.tilesLabel')} className={TILE_GRID}>
+    <section aria-label={t('dashboard.tilesLabel')} data-skeleton-block="tiles" className={TILE_GRID}>
       <StatTile
         tone="feature"
         icon={EmployeesIcon}
@@ -144,7 +144,7 @@ const QUICK_ITEM = 'h-auto min-h-12 justify-start py-3 text-start whitespace-nor
 function QuickLinksFrame({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
   return (
-    <section aria-labelledby="dashboard-quick-links" className="flex flex-col gap-3 rounded-3xl bg-card p-5 shadow-card">
+    <section aria-labelledby="dashboard-quick-links" data-skeleton-block="quick-links" className="flex flex-col gap-3 rounded-3xl bg-card p-5 shadow-card">
       <h2 id="dashboard-quick-links" className="font-display text-base font-extrabold">
         {t('dashboard.quickLinks.title')}
       </h2>
@@ -211,7 +211,7 @@ export function DashboardSkeleton() {
       <span role="status" className="sr-only">
         {t('ui.states.loading')}
       </span>
-      <div className={TILE_GRID}>
+      <div data-skeleton-block="tiles" className={TILE_GRID}>
         <StatTile
           tone="feature"
           icon={EmployeesIcon}

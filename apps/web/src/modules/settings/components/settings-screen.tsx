@@ -123,7 +123,7 @@ export function SettingsScreen({ initialSection }: { initialSection: SettingsSec
       />
       <div className="grid items-start gap-6 md:grid-cols-[15rem_minmax(0,1fr)] xl:grid-cols-[17rem_minmax(0,1fr)]">
         <nav aria-label={t('settings.sectionsLabel')} className={cn('md:sticky md:top-6', section && 'max-md:hidden')}>
-          <ul className="flex flex-col gap-1 rounded-3xl bg-card p-2 shadow-card">
+          <ul data-skeleton-block="settings-nav" className="flex flex-col gap-1 rounded-3xl bg-card p-2 shadow-card">
             {SETTINGS_SECTIONS.map((id) => {
               const Icon = ICONS[id];
               const current = id === shown;

@@ -94,11 +94,13 @@ export function StatTile({
     </>
   );
   return href ? (
-    <Link href={href} className={classes}>
+    <Link href={href} data-skeleton-block="tile" className={classes}>
       {body}
     </Link>
   ) : (
-    <div className={classes}>{body}</div>
+    <div data-skeleton-block="tile" className={classes}>
+      {body}
+    </div>
   );
 }
 

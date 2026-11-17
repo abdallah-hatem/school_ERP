@@ -9,6 +9,7 @@ export {
   PROFILE_TABS,
   ProfileEmployeeDetails,
   useProfileEmployee,
+  useProfileEmployeeIfLoaded,
   type ProfileTabKey,
 } from './components/employee-profile';
 export { EmployeeIdentity, EmployeeStatusPill } from './components/employee-bits';

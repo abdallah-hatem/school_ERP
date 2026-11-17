@@ -1,58 +1,41 @@
 'use client';
 
-import { useParams, usePathname } from 'next/navigation';
-import { RecordHistorySkeleton } from '@/core/audit';
+import { useParams, usePathname, useSearchParams } from 'next/navigation';
+import type { ReactNode } from 'react';
 import { PageHeader } from '@/shared/components/layout/page-header';
-import { Skeleton, SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
+import { Skeleton, SkeletonMask, SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
 import { useTranslation } from '@/shared/providers/i18n-provider';
-import { EMPLOYEES_PAGE_SIZE } from '../lib/list-query';
+import { parseEmployeesQuery } from '../lib/list-query';
 import { EmployeesI18n } from '../messages';
-import { EmployeeCardGrid, EmployeeCardSkeleton } from './employee-card';
+import { EmployeeForm } from './employee-form';
 import { DetailsCard, DetailsItem, ProfileTabs } from './employee-profile';
+import { EmployeesList } from './employees-list';
 
-function HeaderSkeleton({ actions = 1 }: { actions?: number }) {
-  return (
-    <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
-      <div className="flex flex-1 basis-64 flex-col gap-2">
-        <Skeleton className="h-9 w-56" />
-        <Skeleton className="h-4 w-72 max-w-full" />
-      </div>
-      <div className="flex gap-2.5">
-        {Array.from({ length: actions }, (_, i) => (
-          <Skeleton key={i} className="h-11 w-36 rounded-lg" />
-        ))}
-      </div>
-    </div>
-  );
-}
+/*
+ * Route skeletons (`loading.tsx`). Each is built from the screen's own pieces in their loading
+ * state, so it can't drift from the screen: e2e/23-skeletons*.spec.ts compares them block by block.
+ * They render above the pages' messages, so each brings its own.
+ */
 
 /**
- * The list's first load: header, toolbar and a full page of card skeletons in the same grid and
- * card shape, so nothing moves when the cards land.
+ * The list's first load: the list itself in its loading state — the real header, toolbar (search,
+ * filters, count and Clear filters), a full page of card skeletons and the pagination — so nothing
+ * moves when the cards land.
  */
 export function EmployeesListSkeleton() {
-  const { t } = useTranslation();
+  const { locale } = useTranslation();
+  const params = useSearchParams();
   return (
-    <div className="flex flex-col gap-6">
-      <HeaderSkeleton />
-      <section aria-label={t('common.nav.employees')} aria-busy="true" className="flex min-w-0 flex-col gap-4.5">
-        <span role="status" className="sr-only">
-          {t('ui.states.loading')}
-        </span>
-        <div className="flex flex-col gap-3 rounded-[1.25rem] bg-card p-3.5 shadow-card">
-          <Skeleton className="h-11 w-full rounded-lg" />
-          <Skeleton className="mx-1 h-5 w-24" />
-        </div>
-        <EmployeeCardGrid>
-          {Array.from({ length: EMPLOYEES_PAGE_SIZE }, (_, i) => (
-            <li key={i} className="min-w-0" data-testid="employee-card-skeleton">
-              <EmployeeCardSkeleton />
-            </li>
-          ))}
-        </EmployeeCardGrid>
-        <Skeleton className="h-9 w-full max-w-md" />
-      </section>
-    </div>
+    <EmployeesI18n locale={locale}>
+      <EmployeesList
+        basePath={`/${locale}/employees`}
+        query={parseEmployeesQuery(Object.fromEntries(params))}
+        rows={undefined}
+        total={0}
+        departments={[]}
+        stages={[]}
+      />
+    </EmployeesI18n>
   );
 }
 
@@ -129,24 +112,22 @@ export function EmployeeDetailsSkeleton() {
 
 /**
  * First visit to a profile, before its layout has the employee: the header in its real shape
- * (breadcrumbs, title, status, code line, two actions), the real tab bar and the opened tab's body —
- * the History timeline on `/history`, the Details cards otherwise. It renders above the profile
- * layout (no `employees` messages yet), so it brings its own. Tab switches never show it — the
- * profile layout stays mounted and only the tab's skeleton shows.
+ * (breadcrumbs, avatar, title, status, code line, two actions), the real tab bar and the opened
+ * tab's `body` — the Details cards unless the route passes another tab's skeleton. Tab switches
+ * never show it: the profile layout stays mounted and only the tab's own skeleton shows.
  */
-export function EmployeeProfileSkeleton() {
+export function EmployeeProfileSkeleton({ body }: { body?: ReactNode }) {
   const { locale } = useTranslation();
   return (
     <EmployeesI18n locale={locale}>
-      <ProfileSkeleton />
+      <ProfileSkeleton body={body} />
     </EmployeesI18n>
   );
 }
 
-function ProfileSkeleton() {
+function ProfileSkeleton({ body }: { body?: ReactNode }) {
   const { t, locale } = useTranslation();
   const { id } = useParams<{ id: string }>();
-  const history = usePathname()?.endsWith('/history') ?? false;
   const basePath = `/${locale}/employees`;
   return (
     <div className="flex flex-col gap-6">
@@ -165,43 +146,47 @@ function ProfileSkeleton() {
         }
       />
       <ProfileTabs profileHref={`${basePath}/${id}`} />
-      {history ? <RecordHistorySkeleton /> : <EmployeeDetailsSkeleton />}
+      {body ?? <EmployeeDetailsSkeleton />}
     </div>
   );
 }
 
-/** Form pages (new, edit): header with actions, the photo card and the section cards. */
+/**
+ * Form pages (new, edit) while they load: the form itself under a skeleton mask — the photo card,
+ * every section, field and hint, and the sticky Save bar in place, each control a pulsing block —
+ * under a header whose text is a bar (the employee's name isn't known yet).
+ */
 export function EmployeePageSkeleton() {
-  const { t } = useTranslation();
+  const { locale } = useTranslation();
   return (
-    <div aria-busy="true" className="flex flex-col gap-6">
-      <span role="status" className="sr-only">
-        {t('ui.states.loading')}
-      </span>
-      <HeaderSkeleton actions={2} />
-      {/* Photo: the avatar beside its text and buttons. */}
-      <div className="flex flex-col gap-4 rounded-3xl bg-card p-5 shadow-card md:p-6">
-        <Skeleton className="h-6 w-24" />
-        <div className="flex flex-wrap items-center gap-5">
-          <Skeleton className="size-24 shrink-0 rounded-3xl" />
-          <div className="flex min-w-0 flex-1 basis-56 flex-col gap-3">
-            <Skeleton className="h-4 w-full max-w-md" />
-            <Skeleton className="h-4 w-48" />
-            <Skeleton className="h-11 w-40 rounded-lg" />
-          </div>
-        </div>
-      </div>
-      {/* Personal, job, pay and contract, insurance, bank, emergency contact, qualification. */}
-      {[6, 6, 4, 1, 3, 3, 4].map((fields, i) => (
-        <div key={i} className="flex flex-col gap-4 rounded-3xl bg-card p-5 shadow-card md:p-6">
-          <Skeleton className="h-6 w-40" />
-          <div className="grid gap-3 sm:grid-cols-2">
-            {Array.from({ length: fields }, (_, j) => (
-              <Skeleton key={j} className="h-15 rounded-xl" />
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
+    <EmployeesI18n locale={locale}>
+      <FormSkeleton />
+    </EmployeesI18n>
+  );
+}
+
+function FormSkeleton() {
+  const { t, locale } = useTranslation();
+  const basePath = `/${locale}/employees`;
+  const editing = usePathname()?.endsWith('/edit') ?? false;
+  return (
+    <SkeletonMask>
+      <EmployeeForm
+        basePath={basePath}
+        editing={editing}
+        departments={[]}
+        stages={[]}
+        jobTitles={[]}
+        managerCandidates={[]}
+        header={
+          <PageHeader
+            title={<SkeletonText width="w-48" />}
+            description={<SkeletonText width="w-64" />}
+            breadcrumbs={[{ label: t('employees.title'), href: basePath }, { label: ' ' }]}
+            breadcrumbsLabel={t('ui.shell.breadcrumbs')}
+          />
+        }
+      />
+    </SkeletonMask>
   );
 }

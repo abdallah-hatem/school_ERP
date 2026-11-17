@@ -161,7 +161,7 @@ export function UserForm({ basePath, user, roles, lastAdmin = false, now }: User
   );
 
   const rolesCard = (
-    <FormCard title={t('access.userForm.roles')} titleId={rolesTitleId} hint={t('access.userForm.rolesHint')}>
+    <FormCard title={t('access.userForm.roles')} titleId={rolesTitleId} hint={t('access.userForm.rolesHint')} measure="width">
       <Controller
         control={control}
         name="roleIds"

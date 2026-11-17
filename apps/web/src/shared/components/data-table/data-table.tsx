@@ -147,9 +147,12 @@ export function DataTable<Row>({
     <section
       aria-label={label}
       data-cards-below={cardsBelow}
+      // Its height follows the row count; the head, a row and the pagination are measured instead.
+      data-skeleton-block="table"
+      data-skeleton-measure="width"
       className={cn('@container min-w-0 overflow-hidden rounded-3xl bg-card shadow-card', className)}
     >
-      {toolbar ? <div className="flex flex-wrap items-center gap-3 px-5 pt-5 pb-4">{toolbar}</div> : null}
+      {toolbar ? <div data-skeleton-block="table-toolbar" className="flex flex-wrap items-center gap-3 px-5 pt-5 pb-4">{toolbar}</div> : null}
       {body}
       {pagination && !error ? <Pagination {...pagination} disabled={loading || refreshing} loading={showSkeleton} /> : null}
     </section>
@@ -192,7 +195,7 @@ function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass }: Rows
       />
       <div ref={ref} className="scrollbar-clean overflow-x-auto">
       <table aria-label={label} className="w-full border-separate border-spacing-0 text-sm">
-        <thead>
+        <thead data-skeleton-block="table-head">
           <tr>
             {columns.map((column) => (
               <th
@@ -214,7 +217,7 @@ function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass }: Rows
           {rows.map((row) => {
             const tone = rowTone?.(row);
             return (
-              <tr key={getRowId(row)} className="group/row">
+              <tr key={getRowId(row)} data-skeleton-block="table-row" data-skeleton-each className="group/row">
                 {columns.map((column, i) => (
                   <td
                     key={column.id}
@@ -257,6 +260,8 @@ function Cards<Row>({ columns, rows, getRowId, label, rowTone, viewClass }: Rows
         return (
           <li
             key={getRowId(row)}
+            data-skeleton-block="table-card"
+            data-skeleton-each
             className={cn(
               'flex min-w-0 flex-col gap-2.5 rounded-2xl border border-border bg-card p-3.5 shadow-xs',
               tone === 'warning' && 'border-s-4 border-s-warning',

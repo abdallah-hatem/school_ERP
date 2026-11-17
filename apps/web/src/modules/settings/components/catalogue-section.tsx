@@ -152,7 +152,7 @@ export function CatalogueSection() {
           const name = localName(group, locale);
           const panelId = `group-${group.id}`;
           return (
-            <li key={group.id} className="overflow-hidden rounded-2xl border border-border">
+            <li key={group.id} data-skeleton-block="catalogue-group" data-skeleton-each className="overflow-hidden rounded-2xl border border-border">
               <div className={cn('flex flex-wrap items-center gap-3 p-3 sm:p-4', expanded && 'border-b border-border bg-muted')}>
                 <button
                   type="button"
@@ -343,6 +343,7 @@ function ViolationRow({
  * list doesn't jump when it arrives.
  */
 function CatalogueSkeleton() {
+  const { t } = useTranslation();
   const groupHeader = () => (
     <div className="flex flex-wrap items-center gap-3 p-3 sm:p-4">
       <div className="flex min-w-0 flex-1 basis-56 items-center gap-3">
@@ -356,12 +357,17 @@ function CatalogueSkeleton() {
     </div>
   );
   return (
-    <ul className="flex flex-col gap-3" aria-hidden="true">
-      {[0, 1, 2, 3].map((g) => (
-        <li key={g} className="overflow-hidden rounded-2xl border border-border">
-          {groupHeader()}
-        </li>
-      ))}
-    </ul>
+    <div aria-busy="true">
+      <span role="status" className="sr-only">
+        {t('ui.states.loading')}
+      </span>
+      <ul className="flex flex-col gap-3" aria-hidden="true">
+        {[0, 1, 2, 3].map((g) => (
+          <li key={g} data-skeleton-block="catalogue-group" data-skeleton-each className="overflow-hidden rounded-2xl border border-border">
+            {groupHeader()}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

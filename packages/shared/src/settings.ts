@@ -1,4 +1,5 @@
 import type { Language, PartTimeWorkSystem, RepetitionWindow, Weekday } from './enums';
+import type { HrSettings } from './types/hr';
 
 /**
  * Setting keys. Each key is one row in `SchoolSetting` (value stored as JSON) and one row per
@@ -93,6 +94,23 @@ export const SETTING_DEFAULTS: { [K in SettingKey]: SettingValueMap[K] } = {
   'hr.payroll.dayDivisor': 30,
   'hr.payroll.partTime': { PART_TIME_4: 80, PART_TIME_3: 60, PART_TIME_2: 40 },
   'hr.penalties.repetitionWindow': 'CONTRACT_YEAR',
+};
+
+/**
+ * The HR rules as §7's defaults: the shape of the HR settings before a school changes any, which
+ * screens also draw while the real ones load (the settings form, the payroll rules panel).
+ */
+export const HR_SETTINGS_DEFAULTS: HrSettings = {
+  lateness: {
+    graceMinutes: SETTING_DEFAULTS['hr.lateness.graceMinutes'],
+    steps: SETTING_DEFAULTS['hr.lateness.steps'],
+    extraHourDays: SETTING_DEFAULTS['hr.lateness.extraHourDays'],
+  },
+  payroll: {
+    dayDivisor: SETTING_DEFAULTS['hr.payroll.dayDivisor'],
+    partTime: SETTING_DEFAULTS['hr.payroll.partTime'],
+  },
+  penalties: { repetitionWindow: SETTING_DEFAULTS['hr.penalties.repetitionWindow'] },
 };
 
 /** Validation bounds from §7. */

@@ -82,6 +82,10 @@ smoke specs; needs Docker). Don't skip the hook with `--no-verify`; if it's wron
   `audit.record()` for that action in its service, or is `@NotAudited('<reason>')` (see below).
 - [ ] `docs/BUSINESS_LOGIC.md` updated in the same PR if a business rule changed.
 - [ ] UI changes: screenshots. New or visually changed screens: EN/AR × phone/desktop (light only).
+- [ ] Changed a component → updated its skeleton in the same PR, and the skeleton spec passes
+      (`pnpm smoke 23-skeletons`; owner, 2026-11-18). A new main block gets the same
+      `data-skeleton-block` on both sides; a new screen with a skeleton is added to the spec
+      (`docs/ARCHITECTURE.md` → Skeletons match their screens).
 
 ## Audit log: every write is an action
 

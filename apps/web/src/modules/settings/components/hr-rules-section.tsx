@@ -2,12 +2,11 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
-  HrSettingKey,
+  HR_SETTINGS_DEFAULTS,
   isValidDays,
   latenessDays,
   PART_TIME_WORK_SYSTEMS,
   REPETITION_WINDOWS,
-  SETTING_DEFAULTS,
   SETTING_LIMITS,
   type HrSettings,
   type LatenessRule,
@@ -32,19 +31,6 @@ import { useReportDirty } from '../hooks/unsaved-changes';
 import { useResource } from '../hooks/use-resource';
 import { hrRulesSchema, type HrRulesFormValues } from '../schemas';
 import { SaveBar, SectionPanel } from './section-panel';
-
-const PLACEHOLDER: HrSettings = {
-  lateness: {
-    graceMinutes: SETTING_DEFAULTS[HrSettingKey.LATENESS_GRACE_MINUTES],
-    steps: SETTING_DEFAULTS[HrSettingKey.LATENESS_STEPS],
-    extraHourDays: SETTING_DEFAULTS[HrSettingKey.LATENESS_EXTRA_HOUR_DAYS],
-  },
-  payroll: {
-    dayDivisor: SETTING_DEFAULTS[HrSettingKey.PAYROLL_DAY_DIVISOR],
-    partTime: SETTING_DEFAULTS[HrSettingKey.PAYROLL_PART_TIME],
-  },
-  penalties: { repetitionWindow: SETTING_DEFAULTS[HrSettingKey.PENALTIES_REPETITION_WINDOW] },
-};
 
 /** Hours of a month's maximum minutes (6,000 → 100) — the API's cap on steps. */
 const MAX_STEPS = Math.ceil(SETTING_LIMITS.latenessMinutesMax / 60);
@@ -93,7 +79,7 @@ export function HrRulesSection() {
     // The form itself as its skeleton (the §7 defaults as placeholders): every field in place.
     return (
       <SkeletonMask>
-        <HrRulesForm initial={PLACEHOLDER} onSaved={() => undefined} />
+        <HrRulesForm initial={HR_SETTINGS_DEFAULTS} onSaved={() => undefined} />
       </SkeletonMask>
     );
   }
