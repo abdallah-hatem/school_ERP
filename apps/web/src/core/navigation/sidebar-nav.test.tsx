@@ -159,7 +159,7 @@ describe('SidebarNav (grouped by module)', () => {
       const admin = screen.getByRole('button', { name: 'Administration' });
       expect(admin.getAttribute('aria-expanded')).toBe('true');
       const list = document.getElementById(admin.getAttribute('aria-controls') ?? '') as HTMLElement;
-      expect(within(list).getAllByRole('link').map((l) => l.textContent)).toEqual(['Settings', 'Activity']);
+      expect(within(list).getAllByRole('link').map((l) => l.textContent)).toEqual(['Settings', 'Activity', 'Users', 'Roles']);
       expect(within(list).getByRole('link', { name: 'Activity' }).getAttribute('aria-current')).toBe('page');
       cleanup();
 
@@ -170,6 +170,24 @@ describe('SidebarNav (grouped by module)', () => {
 
       renderNav('full', 'ar');
       expect(screen.getByRole('link', { name: 'سجل النشاط' }).getAttribute('href')).toBe('/ar/activity');
+    });
+
+    it('Users needs core.users.view and Roles core.roles.view (P3); an HR officer sees neither', () => {
+      renderNav('full', 'en', sessionWithout('core.users.view'));
+      expect(screen.queryByRole('link', { name: 'Users' })).toBeNull();
+      expect(screen.getByRole('link', { name: 'Roles' }).getAttribute('href')).toBe('/en/roles');
+      cleanup();
+
+      renderNav('full', 'en', sessionWithout('core.roles.view'));
+      expect(screen.getByRole('link', { name: 'Users' }).getAttribute('href')).toBe('/en/users');
+      expect(screen.queryByRole('link', { name: 'Roles' })).toBeNull();
+      cleanup();
+
+      // An HR officer: HR pages only, no Users / Roles / Activity.
+      renderNav('full', 'en', sessionWithout('core.users.view', 'core.roles.view', 'core.audit.view', 'core.settings.view', 'core.stages.view', 'hr.settings.view', 'hr.lists.view', 'hr.penalty_catalogue.view'));
+      for (const name of ['Users', 'Roles', 'Activity', 'Settings']) expect(screen.queryByRole('link', { name })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Administration' })).toBeNull();
+      expect(screen.getByRole('link', { name: 'Employees' })).toBeTruthy();
     });
 
     it('Settings shows with any one of its sections, and not with none', () => {

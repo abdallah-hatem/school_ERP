@@ -1,6 +1,6 @@
 "use client";
 
-import type { AuthUser } from "@school-erp/shared";
+import type { SessionUser } from "@school-erp/shared";
 import { useState, type ReactNode } from "react";
 import { SchoolBrand } from "@/core/settings/school-brand";
 import { useSchoolBranding } from "@/core/settings/branding-provider";
@@ -31,7 +31,7 @@ export function AppShell({
   user,
 }: {
   children: ReactNode;
-  user?: AuthUser | null;
+  user?: SessionUser | null;
 }) {
   const { t, locale } = useTranslation();
   const { branding } = useSchoolBranding();

@@ -42,5 +42,8 @@
   "BUILT_IN_ROLE": "A starting role can be edited but not deleted.",
   "ROLE_IN_USE": "Users still hold this role. Take it away from them first.",
   "SYSTEM_ADMIN_FIXED": "The System admin always holds every permission; its permissions can't be changed.",
-  "DUPLICATE_PERMISSION": "A permission is listed more than once."
+  "DUPLICATE_PERMISSION": "A permission is listed more than once.",
+  "INVALID_SCOPE": "This permission is about the whole school; it can only cover everyone.",
+  "PASSWORD_CHANGE_REQUIRED": "Choose your own password first. You signed in with a temporary one.",
+  "SAME_PASSWORD": "Choose a password different from the one you signed in with."
 }

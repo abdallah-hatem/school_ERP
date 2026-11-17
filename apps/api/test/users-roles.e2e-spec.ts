@@ -5,6 +5,7 @@ import {
   PERMISSION_KEYS,
   type AuditChange,
   type AuthUser,
+  type EmployeeOption,
   type Role,
   type UserAccount,
 } from '@school-erp/shared';
@@ -506,6 +507,169 @@ describe('users and roles (e2e)', () => {
         /temporary-pass|my-own-password/,
       );
       expect(entries.map((e) => e.changes)).toEqual([[], []]);
+    });
+  });
+
+  describe('screens (P3)', () => {
+    /** Signs `email` in for real and returns a request maker carrying that session's cookie. */
+    async function session(email: string, password: string) {
+      const res = await http(app)
+        .post('/auth/login')
+        .set(ANONYMOUS_HEADER, '1')
+        .send({ email, password })
+        .expect(200);
+      const cookies = cookiesOf(res);
+      const cookie = `${AUTH_COOKIES.access}=${cookies[AUTH_COOKIES.access]}`;
+      return {
+        login: res.body.data as { user: AuthUser },
+        get: (path: string) => http(app).get(path).set(ANONYMOUS_HEADER, '1').set('Cookie', cookie),
+        post: (path: string, body: object = {}) =>
+          http(app).post(path).set(ANONYMOUS_HEADER, '1').set('Cookie', cookie).send(body),
+      };
+    }
+
+    it('forced change: with a temporary password only /auth/me, sign-out and a new password answer', async () => {
+      const temp = 'temporary-pass-p3-1';
+      const created = await http(app)
+        .post('/users')
+        .send({
+          name: 'Forced Person',
+          email: `${unique('forced')}@school.test`.toLowerCase(),
+          password: temp,
+          roleIds: [roleId('hr_officer')],
+        })
+        .expect(201);
+      const person = created.body.data as UserAccount;
+      userIds.push(person.id);
+
+      const s = await session(person.email, temp);
+      // The sign-in response says so, and /auth/me too (the web app sends them to the page).
+      expect(s.login.user.mustChangePassword).toBe(true);
+      const me = await s.get('/auth/me').expect(200);
+      expect(me.body.data).toMatchObject({ mustChangePassword: true, roles: [{ key: 'hr_officer' }] });
+
+      // Everything else is refused — even what their role allows, and My account.
+      for (const path of ['/hr/employees', '/account', '/settings/school']) {
+        const refused = await s.get(path).expect(403);
+        expect(refused.body.error).toBe(ErrorCode.PASSWORD_CHANGE_REQUIRED);
+      }
+      // The temporary one can't be reused as the new one.
+      const same = await s.post('/account/password', { newPassword: temp }).expect(400);
+      expect(same.body.error).toBe(ErrorCode.SAME_PASSWORD);
+      // The new one alone is enough: the sign-in just proved the temporary one.
+      await s.post('/account/password', { newPassword: 'my-own-password-p3' }).expect(204);
+
+      // Same session, next request: the app opens up to what the role allows.
+      await s.get('/hr/employees').expect(200);
+      await s.get('/users').expect(403); // HR officer: no core.users.view
+      expect((await s.get('/auth/me').expect(200)).body.data.mustChangePassword).toBe(false);
+      const account = (await s.get('/account').expect(200)).body.data as UserAccount;
+      expect(account).toMatchObject({ id: person.id, mustChangePassword: false });
+      expect(account.passwordChangedAt).not.toBeNull();
+      expect(account.lastSignInAt).not.toBeNull();
+    });
+
+    it('sign-out works while a new password is still owed', async () => {
+      const person = await makeUser(['hr_officer']);
+      await db.user.update({ where: { id: person.id }, data: { mustChangePassword: true } });
+      const s = await session(person.email, PASSWORD);
+      await s.post('/auth/logout').expect(200);
+    });
+
+    it('without a temporary password, changing it still needs the current one', async () => {
+      const person = await makeUser(['hr_officer']);
+      const s = await session(person.email, PASSWORD);
+      const res = await s.post('/account/password', { newPassword: 'my-own-password-p3' }).expect(400);
+      expect(res.body.error).toBe(ErrorCode.WRONG_PASSWORD);
+    });
+
+    it('a sign-in is remembered (Users → Last sign-in)', async () => {
+      const person = await makeUser(['hr_officer']);
+      const before = (await http(app).get(`/users/${person.id}`).expect(200)).body.data as UserAccount;
+      expect(before.lastSignInAt).toBeNull();
+      await session(person.email, PASSWORD);
+      const after = (await http(app).get(`/users/${person.id}`).expect(200)).body.data as UserAccount;
+      expect(after.lastSignInAt).not.toBeNull();
+    });
+
+    it('the users list filters by role (the role filter, a role’s holders)', async () => {
+      const role = (
+        await http(app)
+          .post('/roles')
+          .send({ nameEn: unique('Holders'), nameAr: 'حاملون', permissions: [] })
+          .expect(201)
+      ).body.data as Role;
+      roleIds.push(role.id);
+      const holder = await makeUser();
+      await db.userRoleAssignment.create({ data: { userId: holder.id, roleId: role.id } });
+      await makeUser(['hr_officer']);
+      const res = await http(app).get(`/users?roleId=${role.id}`).expect(200);
+      expect((res.body.data as UserAccount[]).map((u) => u.id)).toEqual([holder.id]);
+      expect(res.body.meta.total).toBe(1);
+      await http(app).get('/users?roleId=not-a-uuid').expect(400);
+    });
+
+    it('employee options: search by name or code, each with the account already linked', async () => {
+      const linked = await makeUser();
+      await db.user.update({ where: { id: linked.id }, data: { employeeId: listRefs.employee } });
+      try {
+        const res = await http(app).get('/users/employee-options?search=Linked%20Person').expect(200);
+        const [option] = res.body.data as EmployeeOption[];
+        expect(option).toMatchObject({
+          id: listRefs.employee,
+          isActive: true,
+          linkedUser: { id: linked.id, name: linked.name },
+        });
+        expect(option?.jobTitle).toEqual({ nameEn: expect.any(String), nameAr: 'و' });
+        const byCode = await http(app)
+          .get(`/users/employee-options?search=${encodeURIComponent(option?.code ?? '')}`)
+          .expect(200);
+        expect((byCode.body.data as EmployeeOption[]).map((o) => o.id)).toEqual([listRefs.employee]);
+      } finally {
+        await db.user.update({ where: { id: linked.id }, data: { employeeId: null } });
+      }
+    });
+
+    it('employee options need core.users.manage (403 for a viewer of users)', async () => {
+      const role = (
+        await http(app)
+          .post('/roles')
+          .send({
+            nameEn: unique('Viewer'),
+            nameAr: 'مطلع',
+            permissions: [{ key: 'core.users.view', scope: 'all' }],
+          })
+          .expect(201)
+      ).body.data as Role;
+      roleIds.push(role.id);
+      const viewer = await makeUser();
+      await db.userRoleAssignment.create({ data: { userId: viewer.id, roleId: role.id } });
+      await as(viewer.id, async () => {
+        await http(app).get('/users').expect(200);
+        await http(app).get('/users/employee-options').expect(403);
+        await http(app).post(`/users/${viewer.id}/deactivate`).expect(403);
+      });
+    });
+
+    it('a whole-school permission can’t be scoped (INVALID_SCOPE); a row-level one can', async () => {
+      const bad = await http(app)
+        .post('/roles')
+        .send({
+          nameEn: unique('Bad'),
+          nameAr: 'خطأ',
+          permissions: [{ key: 'hr.payroll.approve', scope: 'own_stage' }],
+        })
+        .expect(400);
+      expect(bad.body.error).toBe(ErrorCode.INVALID_SCOPE);
+      const good = await http(app)
+        .post('/roles')
+        .send({
+          nameEn: unique('Good'),
+          nameAr: 'جيد',
+          permissions: [{ key: 'hr.penalties.view', scope: 'own_team' }],
+        })
+        .expect(201);
+      roleIds.push((good.body.data as Role).id);
     });
   });
 });

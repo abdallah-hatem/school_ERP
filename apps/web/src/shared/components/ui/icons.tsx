@@ -64,6 +64,17 @@ import {
   ListMagnifyingGlassIcon as ListMagnifyingGlass,
   UserCircleIcon as UserCircle,
   XCircleIcon as XCircle,
+  UserCircleGearIcon as UserCircleGear,
+  ShieldCheckIcon as ShieldCheck,
+  ShieldStarIcon as ShieldStar,
+  KeyIcon as Key,
+  LockSimpleIcon as LockSimple,
+  CopyIcon as Copy,
+  IdentificationCardIcon as IdentificationCard,
+  SparkleIcon as Sparkle,
+  EnvelopeSimpleIcon as EnvelopeSimple,
+  UserPlusIcon as UserPlus,
+  UserCircleDashedIcon as UserCircleDashed,
   EraserIcon as Eraser,
 } from '@phosphor-icons/react/ssr';
 import type { ComponentType } from 'react';
@@ -202,4 +213,18 @@ export const FieldIcon = duotone(ListMagnifyingGlass, 'Field');
 export const PersonIcon = duotone(UserCircle, 'Person');
 export const AnyoneIcon = duotone(Users, 'Anyone');
 export const MoneyIcon = duotone(Coins, 'Money');
+
+// Users, roles and My account (spec roles-permissions, P3)
+export const UsersIcon = duotone(UserCircleGear, 'Users');
+export const RolesIcon = duotone(ShieldCheck, 'Roles');
+export const SystemAdminIcon = duotone(ShieldStar, 'SystemAdmin');
+export const CustomRoleIcon = duotone(Sparkle, 'CustomRole');
+export const TemporaryPasswordIcon = duotone(Key, 'TemporaryPassword');
+export const PasswordIcon = duotone(LockKey, 'Password');
+export const LockedIcon = duotone(LockSimple, 'Locked');
+export const CopyIcon = duotone(Copy, 'Copy');
+export const LinkedEmployeeIcon = duotone(IdentificationCard, 'LinkedEmployee');
+export const EmailIcon = duotone(EnvelopeSimple, 'Email');
+export const AddUserIcon = duotone(UserPlus, 'AddUser');
+export const NoUserIcon = duotone(UserCircleDashed, 'NoUser');
 

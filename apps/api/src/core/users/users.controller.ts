@@ -11,15 +11,16 @@ import {
   Query,
   Req,
 } from '@nestjs/common';
-import type { ApiResponse, AuthUser, UserAccount } from '@school-erp/shared';
+import type { ApiResponse, AuthUser, EmployeeOption, UserAccount } from '@school-erp/shared';
 import type { Request } from 'express';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ResponseUtil } from '../../common/utils/response.util';
 import { Audited } from '../audit';
-import { Permission, SignedIn } from '../permissions';
+import { AllowedBeforePasswordChange, Permission, SignedIn } from '../permissions';
 import {
   ChangePasswordDto,
   CreateUserDto,
+  EmployeeOptionsQueryDto,
   ListUsersQueryDto,
   SetTemporaryPasswordDto,
   UpdateUserDto,
@@ -38,6 +39,20 @@ export class UsersController {
     @Req() req: Request,
   ): Promise<ApiResponse<UserAccount[]>> {
     return ResponseUtil.paginated(await this.accounts.list(query), undefined, req.url);
+  }
+
+  /**
+   * The linked-employee picker on the user form (P3): employees matching the search, each with the
+   * account already linked to it. Needs `core.users.manage`, not HR's `hr.employees.view` — linking
+   * is a user-account decision.
+   */
+  @Get('employee-options')
+  @Permission('core.users.manage')
+  async employeeOptions(
+    @Query() query: EmployeeOptionsQueryDto,
+    @Req() req: Request,
+  ): Promise<ApiResponse<EmployeeOption[]>> {
+    return ResponseUtil.paginated(await this.accounts.employeeOptions(query), undefined, req.url);
   }
 
   @Get(':id')
@@ -95,8 +110,20 @@ export class UsersController {
 export class AccountController {
   constructor(private readonly accounts: UserAccountsService) {}
 
+  /** My account (P3): name, email, roles, linked employee, last sign-in, password changed. */
+  @Get()
+  @SignedIn()
+  get(@CurrentUser() me: AuthUser): Promise<UserAccount> {
+    return this.accounts.myAccount(me);
+  }
+
+  /**
+   * Also the forced "Set a new password" step: a user with a temporary password may call this (and
+   * only `/auth/me` and sign-out) until they have chosen their own (P3).
+   */
   @Post('password')
   @SignedIn()
+  @AllowedBeforePasswordChange()
   @Audited('core.user.change_password')
   @HttpCode(HttpStatus.NO_CONTENT)
   changePassword(@CurrentUser() me: AuthUser, @Body() dto: ChangePasswordDto): Promise<void> {

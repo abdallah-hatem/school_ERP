@@ -12,7 +12,7 @@ import { CodedException } from '../../common/errors/coded.exception';
 import { AuditService } from '../audit';
 import type { CreateRoleDto, UpdateRoleDto } from './dto/role.dto';
 import { RolesRepository, type RoleRow } from './repositories/roles.repository';
-import { duplicateKey, roleSnapshot, storedGrants, toRole } from './roles.pure';
+import { duplicateKey, roleSnapshot, storedGrants, toRole, wronglyScoped } from './roles.pure';
 
 const fromRow = (row: RoleRow): Role =>
   toRole({ ...row, userCount: row._count.users, permissions: row.permissions });
@@ -127,6 +127,10 @@ export class RolesService {
   private assertNoDuplicates(grants: CreateRoleDto['permissions']): void {
     if (duplicateKey(grants)) {
       throw new CodedException(HttpStatus.BAD_REQUEST, ErrorCode.DUPLICATE_PERMISSION);
+    }
+    // A whole-school permission (settings, lists, running payroll) has no rows to narrow (P3).
+    if (wronglyScoped(grants)) {
+      throw new CodedException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_SCOPE);
     }
   }
 

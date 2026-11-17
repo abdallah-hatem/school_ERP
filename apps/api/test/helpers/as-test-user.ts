@@ -33,7 +33,7 @@ export async function createAppAsTestUser(
     id: '',
     email: TEST_USER_EMAIL,
     name: 'E2E Test User',
-    role: 'HR_ADMIN',
+    mustChangePassword: false,
   };
   // Called with the guard as `this` below.
   const realCanActivate = JwtAuthGuard.prototype.canActivate;

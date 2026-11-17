@@ -8,7 +8,8 @@ import { AuthCookiesInterceptor } from '../interceptors/auth-cookies.interceptor
 import { AuthService } from '../services/auth.service';
 import { ClearedSession, type IssuedSession } from '../session';
 import { NotAudited } from '../../audit';
-import { PermissionsService, SignedIn } from '../../permissions';
+import { AllowedBeforePasswordChange, PermissionsService, SignedIn } from '../../permissions';
+import { UsersService } from '../../users';
 
 /** There is no sign-up route (§2: accounts come from the seed). */
 @Controller('auth')
@@ -17,6 +18,7 @@ export class AuthController {
   constructor(
     private readonly auth: AuthService,
     private readonly permissions: PermissionsService,
+    private readonly users: UsersService,
   ) {}
 
   @Public()
@@ -38,6 +40,7 @@ export class AuthController {
   @NotAudited('wired in T28')
   @Post('logout')
   @SignedIn()
+  @AllowedBeforePasswordChange()
   @HttpCode(HttpStatus.OK)
   async logout(
     @CurrentUser() user: AuthUser,
@@ -49,11 +52,18 @@ export class AuthController {
 
   /**
    * The signed-in user with the permission keys their roles grant now — the web app's `can()`
-   * reads them (R6). Read fresh on every request, so a role change shows without a new sign-in.
+   * reads them (R6) — and the roles themselves (the user chip). Read fresh on every request, so a
+   * role change shows without a new sign-in. Also answered while `mustChangePassword` is set: the
+   * web app reads the flag here and sends the user to "Set a new password".
    */
   @Get('me')
   @SignedIn()
+  @AllowedBeforePasswordChange()
   async me(@CurrentUser() user: AuthUser): Promise<SessionUser> {
-    return { ...user, permissions: await this.permissions.permissionsFor(user) };
+    const [permissions, roles] = await Promise.all([
+      this.permissions.permissionsFor(user),
+      this.users.rolesOf(user.id),
+    ]);
+    return { ...user, permissions, roles };
   }
 }

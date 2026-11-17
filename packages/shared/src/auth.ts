@@ -1,5 +1,3 @@
-import type { UserRole } from './enums';
-
 /**
  * Session cookies (core/auth). The API sets them on login / refresh and clears them on logout;
  * the web app keeps them httpOnly and sends the access token back on every API call.
@@ -25,10 +23,17 @@ export const SEED_ADMIN_EMAIL = 'admin@school.local';
 /** Shortest password an admin or a user may set (R9). */
 export const PASSWORD_MIN_LENGTH = 10;
 
-/** Each role's home page, relative to the locale (`/ar` + home). One role for the demo (§2). */
-export const ROLE_HOME: Record<UserRole, string> = {
-  HR_ADMIN: '',
-};
+/**
+ * Every signed-in user's home, relative to the locale (`/ar` + home): the dashboard, which shows
+ * each person only what their permissions allow. Roles are data, so no role has a home of its own.
+ */
+export const HOME_PATH = '';
 
 /** Path segment of the sign-in page under `/<locale>`. */
 export const LOGIN_PATH = '/login';
+
+/**
+ * The forced "Set a new password" page under `/<locale>` (R9, spec P3): a user who signed in with a
+ * temporary password is sent here and can't use the app until they choose their own.
+ */
+export const SET_PASSWORD_PATH = '/set-password';

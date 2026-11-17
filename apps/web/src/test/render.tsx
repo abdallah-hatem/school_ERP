@@ -10,8 +10,12 @@ export const TEST_SESSION: SessionUser = {
   id: '00000000-0000-4000-8000-0000000000aa',
   email: 'admin@school.test',
   name: 'Test Admin',
-  role: 'HR_ADMIN',
+  mustChangePassword: false,
   permissions: [...PERMISSION_KEYS],
+  roles: [
+    { id: '00000000-0000-4000-8000-0000000000r1', key: 'system_admin', nameEn: 'System admin', nameAr: 'مدير النظام' },
+    { id: '00000000-0000-4000-8000-0000000000r2', key: 'hr_manager', nameEn: 'HR manager', nameAr: 'مدير شؤون الموظفين' },
+  ],
 };
 
 /**

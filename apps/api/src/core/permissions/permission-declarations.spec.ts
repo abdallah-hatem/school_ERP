@@ -9,6 +9,7 @@ import {
 } from '../../common/testing/controller-scan';
 import {
   Permission,
+  allowedBeforePasswordChange,
   Public,
   SignedIn,
   permissionDeclarationOf,
@@ -85,10 +86,18 @@ describe('every endpoint declares its permission (R4)', () => {
         'GET /auth/me',
         'POST /auth/logout',
         'GET /files/:folder/:name',
-        // My account: change your own password (R9).
+        // My account: see your own account, change your own password (R9, P3).
+        'GET /account',
         'POST /account/password',
       ].sort(),
     );
+  });
+
+  it('a temporary password reaches only /auth/me, sign-out and a new password (P3)', () => {
+    const allowed = routeHandlers(appControllers(SRC))
+      .filter((h) => allowedBeforePasswordChange(h.handler))
+      .map((h) => h.route.replace(/ \(.*\)$/, ''));
+    expect(allowed.sort()).toEqual(['GET /auth/me', 'POST /account/password', 'POST /auth/logout']);
   });
 
   it('the activity log needs core.audit.view; approvals need their own key', () => {
@@ -113,6 +122,8 @@ describe('every endpoint declares its permission (R4)', () => {
         ]);
     expect(declared(/^\w+ \/users/)).toEqual([
       ['GET /users', ['core.users.view']],
+      // The linked-employee picker belongs to editing a user (P3).
+      ['GET /users/employee-options', ['core.users.manage']],
       ['GET /users/:id', ['core.users.view']],
       ['POST /users', ['core.users.manage']],
       ['PATCH /users/:id', ['core.users.manage']],

@@ -1,4 +1,8 @@
 export { LoginPage } from './components/LoginPage';
+export { SetPasswordPage } from './components/SetPasswordPage';
+export { NewPasswordFields, PasswordInput } from './components/password-fields';
+export { CHANGE_OWN_PASSWORD } from './apis';
+export { checkNewPassword, passwordStrength, type NewPassword } from './password-rules';
 export { signIn, signOut } from './actions';
 export { getSession } from './session';
 export { homeFor, loginPathFor, safeNextPath } from './paths';

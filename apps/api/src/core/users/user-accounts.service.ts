@@ -6,6 +6,7 @@ import {
   ErrorCode,
   SYSTEM_ADMIN_ROLE,
   type AuthUser,
+  type EmployeeOption,
   type Paginated,
   type UserAccount,
   type UserSessionsEndedEvent,
@@ -18,11 +19,12 @@ import { RolesService } from '../roles';
 import type {
   ChangePasswordDto,
   CreateUserDto,
+  EmployeeOptionsQueryDto,
   ListUsersQueryDto,
   UpdateUserDto,
 } from './dto/user.dto';
 import { UsersRepository, type UserAccountRow } from './repositories/users.repository';
-import { accountSnapshot, toUserAccount } from './users.pure';
+import { accountSnapshot, toEmployeeOption, toUserAccount } from './users.pure';
 
 /**
  * Administration → Users (R9, spec P2): a System admin creates accounts (no self sign-up), gives
@@ -45,6 +47,7 @@ export class UserAccountsService {
       {
         search: query.search || undefined,
         isActive: query.status === undefined ? undefined : query.status === 'active',
+        roleId: query.roleId,
       },
       query.page ?? 1,
       query.limit ?? 10,
@@ -131,21 +134,48 @@ export class UserAccountsService {
     await this.users.update(id, {
       passwordHash: await hashPassword(password),
       mustChangePassword: true,
+      passwordChangedAt: new Date(),
     });
     await this.endSessions(id, 'temporary_password');
     // The password itself is never stored in the log (D7): the entry says only that it was set.
     await this.audit.record({ action: 'core.user.set_password', entity: this.entity(user) });
   }
 
-  /** The signed-in user changes their own password; the current one must be right. */
+  /** My account: the signed-in user's own account (roles, linked employee, sign-in facts). */
+  async myAccount(me: AuthUser): Promise<UserAccount> {
+    return this.get(me.id);
+  }
+
+  /** The linked-employee picker: employees matching the search, with who is already linked. */
+  async employeeOptions(query: EmployeeOptionsQueryDto): Promise<Paginated<EmployeeOption>> {
+    const result = await this.users.findEmployeeOptionPage(
+      query.search || undefined,
+      query.page ?? 1,
+      query.limit ?? 10,
+    );
+    return { ...result, data: result.data.map(toEmployeeOption) };
+  }
+
+  /**
+   * The signed-in user changes their own password. The current one must be right — except right
+   * after signing in with a temporary password (`mustChangePassword`), where that sign-in just
+   * proved it (the forced "Set a new password" page asks only for the new one). Either way the new
+   * password must differ from the one in use (`SAME_PASSWORD`), and the flag is cleared.
+   */
   async changeOwnPassword(me: AuthUser, dto: ChangePasswordDto): Promise<void> {
     const hash = await this.users.findPasswordHash(me.id);
-    if (!hash || !(await verifyPassword(dto.currentPassword, hash))) {
+    if (!hash) throw new CodedException(HttpStatus.BAD_REQUEST, ErrorCode.WRONG_PASSWORD);
+    const proven = me.mustChangePassword && dto.currentPassword === undefined;
+    if (!proven && !(await verifyPassword(dto.currentPassword ?? '', hash))) {
       throw new CodedException(HttpStatus.BAD_REQUEST, ErrorCode.WRONG_PASSWORD);
+    }
+    if (await verifyPassword(dto.newPassword, hash)) {
+      throw new CodedException(HttpStatus.BAD_REQUEST, ErrorCode.SAME_PASSWORD);
     }
     await this.users.update(me.id, {
       passwordHash: await hashPassword(dto.newPassword),
       mustChangePassword: false,
+      passwordChangedAt: new Date(),
     });
     await this.audit.record({
       action: 'core.user.change_password',

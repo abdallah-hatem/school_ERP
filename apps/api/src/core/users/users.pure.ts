@@ -1,5 +1,5 @@
-import type { UserAccount } from '@school-erp/shared';
-import type { UserAccountRow } from './repositories/users.repository';
+import { EmployeeStatus, type EmployeeOption, type UserAccount } from '@school-erp/shared';
+import type { EmployeeOptionRow, UserAccountRow } from './repositories/users.repository';
 
 /** A user account as the API returns it. Never the password hash (it is not even selected). */
 export function toUserAccount(row: UserAccountRow): UserAccount {
@@ -12,6 +12,21 @@ export function toUserAccount(row: UserAccountRow): UserAccount {
     roles: row.roles.map((r) => r.role),
     employee: row.linkedEmployee,
     createdAt: row.createdAt.toISOString(),
+    lastSignInAt: row.lastSignInAt?.toISOString() ?? null,
+    passwordChangedAt: row.passwordChangedAt?.toISOString() ?? null,
+  };
+}
+
+/** An employee in the linked-employee picker (P3), with the account already linked to it. */
+export function toEmployeeOption(row: EmployeeOptionRow): EmployeeOption {
+  return {
+    id: row.id,
+    code: row.code,
+    nameEn: row.nameEn,
+    nameAr: row.nameAr,
+    jobTitle: row.jobTitle,
+    isActive: row.status === EmployeeStatus.ACTIVE,
+    linkedUser: row.linkedUser,
   };
 }
 

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { AuthUser } from '@school-erp/shared';
+import type { AuthUser, RoleRef } from '@school-erp/shared';
 import { normalizeEmail, verifyPassword } from '../../common/utils/password.util';
 import { UsersRepository } from './repositories/users.repository';
 
@@ -22,11 +22,26 @@ export class UsersService {
     const found = await this.users.findCredentialsByEmail(normalizeEmail(email));
     const ok = await verifyPassword(password, found?.passwordHash ?? DUMMY_HASH);
     if (!found || !ok || !found.isActive) return null;
-    return { id: found.id, email: found.email, name: found.name, role: found.role };
+    return {
+      id: found.id,
+      email: found.email,
+      name: found.name,
+      mustChangePassword: found.mustChangePassword,
+    };
   }
 
   /** The active user behind a token's subject, or null (deleted or deactivated since). */
   findActiveAuthUser(id: string): Promise<AuthUser | null> {
     return this.users.findActiveAuthUser(id);
+  }
+
+  /** Notes a successful sign-in (the Users screen's "Last sign-in", P3). */
+  async recordSignIn(id: string, at: Date = new Date()): Promise<void> {
+    await this.users.update(id, { lastSignInAt: at });
+  }
+
+  /** The roles a user holds, starting roles first (the user chip under the menu). */
+  rolesOf(id: string): Promise<RoleRef[]> {
+    return this.users.roleRefsOf(id);
   }
 }
