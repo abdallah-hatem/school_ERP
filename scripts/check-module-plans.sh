@@ -10,7 +10,13 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 
 base_branch="${GITHUB_BASE_REF:-dev}"
-git fetch -q --depth=1 origin "$base_branch" 2>/dev/null || true
+# On CI the checkout is shallow anyway; on a developer's clone a --depth fetch would make the whole
+# clone shallow, so locally fetch normally.
+if [[ -n "${GITHUB_ACTIONS:-}" ]]; then
+  git fetch -q --depth=1 origin "$base_branch" 2>/dev/null || true
+else
+  git fetch -q origin "$base_branch" 2>/dev/null || true
+fi
 base="origin/$base_branch"
 if ! git rev-parse -q --verify "$base" >/dev/null; then
   echo "module plans: can't find $base — skipped"
