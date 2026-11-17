@@ -9,6 +9,7 @@ export interface IRepository<T, CreateDto, UpdateDto> {
     search?: string,
     searchFields?: string[],
     where?: Record<string, unknown>,
+    query?: { select?: unknown; orderBy?: unknown },
   ): Promise<Paginated<T>>;
   findById(id: string): Promise<T | null>;
   update(id: string, data: UpdateDto): Promise<T>;

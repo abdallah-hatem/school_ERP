@@ -8,3 +8,6 @@
   month; investigations with days deduct pay; pending penalties follow catalogue edits; grace is
   subtracted before the hour steps; the day value isn't rounded on its own; payroll lines snapshot
   the employee. Times written 07:30 / 15:00.
+- 2026-11-17 — Employees (T5 review): contract end defaults to one year after a given start; uses-bus
+  defaults to no; hidden list items stay on employees who have them; repeated deactivate/reactivate
+  changes nothing; required fields can't be cleared.
