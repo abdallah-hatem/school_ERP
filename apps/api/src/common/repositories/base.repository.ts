@@ -12,11 +12,18 @@ interface ModelDelegate<T> {
     skip?: number;
     take?: number;
     orderBy?: unknown;
+    select?: unknown;
   }): Promise<T[]>;
   findUnique(args: { where: { id: string } }): Promise<T | null>;
   update(args: { where: { id: string }; data: unknown }): Promise<T>;
   delete(args: { where: { id: string } }): Promise<T>;
   count(args?: { where?: Record<string, unknown> }): Promise<number>;
+}
+
+/** Optional `select` (explicit columns for anything reaching a response) and `orderBy`. */
+export interface PaginationShape {
+  select?: unknown;
+  orderBy?: unknown;
 }
 
 /** A Prisma model delegate name on DatabaseService (e.g. 'employee', 'payrollRun'). */
@@ -29,9 +36,11 @@ export type ModelName = {
  * contract's max, 100), so no caller can ask for more by editing a query string.
  */
 @Injectable()
-export abstract class BaseRepository<T, CreateDto, UpdateDto>
-  implements IRepository<T, CreateDto, UpdateDto>
-{
+export abstract class BaseRepository<T, CreateDto, UpdateDto> implements IRepository<
+  T,
+  CreateDto,
+  UpdateDto
+> {
   protected constructor(
     protected readonly databaseService: DatabaseService,
     protected readonly modelName: ModelName,
@@ -63,6 +72,7 @@ export abstract class BaseRepository<T, CreateDto, UpdateDto>
     search?: string,
     searchFields?: string[],
     where?: Record<string, unknown>,
+    query?: PaginationShape,
   ): Promise<Paginated<T>> {
     const take = Math.min(Math.max(1, limit), PAGINATION.maxLimit);
     const current = Math.max(1, page);
@@ -75,7 +85,13 @@ export abstract class BaseRepository<T, CreateDto, UpdateDto>
     }
 
     const [data, total] = await Promise.all([
-      this.model.findMany({ skip: (current - 1) * take, take, where: whereCondition }),
+      this.model.findMany({
+        skip: (current - 1) * take,
+        take,
+        where: whereCondition,
+        ...(query?.select ? { select: query.select } : {}),
+        ...(query?.orderBy ? { orderBy: query.orderBy } : {}),
+      }),
       this.model.count({ where: whereCondition }),
     ]);
 

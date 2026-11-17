@@ -28,6 +28,16 @@ export type HrSettingKey = (typeof HrSettingKey)[keyof typeof HrSettingKey];
 
 export type SettingKey = SchoolSettingKey | HrSettingKey;
 
+/**
+ * History keys for HR list edits (§7: list create / edit writes a history row, scope `lists`).
+ * Old / new values are item snapshots `{ id, nameEn, nameAr, sortOrder, isActive }`.
+ */
+export const HrListKey = {
+  DEPARTMENTS: 'hr.departments',
+  JOB_TITLES: 'hr.jobTitles',
+} as const;
+export type HrListKey = (typeof HrListKey)[keyof typeof HrListKey];
+
 /** One lateness hour step: the `hour`-th accumulated hour costs `days`. */
 export interface LatenessStep {
   hour: number;

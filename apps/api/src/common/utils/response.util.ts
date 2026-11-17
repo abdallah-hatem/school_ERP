@@ -1,5 +1,5 @@
 import { HttpStatus } from '@nestjs/common';
-import type { ApiResponse, Meta } from '../interfaces/api-response.interface';
+import type { ApiResponse, Meta, Paginated } from '../interfaces/api-response.interface';
 
 /** Builders so no route hand-writes the envelope. */
 export class ResponseUtil {
@@ -27,11 +27,28 @@ export class ResponseUtil {
     error?: string,
     path?: string,
   ): ApiResponse {
-    return { success: false, message, statusCode, error, timestamp: new Date().toISOString(), path };
+    return {
+      success: false,
+      message,
+      statusCode,
+      error,
+      timestamp: new Date().toISOString(),
+      path,
+    };
   }
 
   static created<T>(data: T, message = 'Resource created successfully', path?: string) {
     return this.success(data, message, HttpStatus.CREATED, path);
+  }
+
+  /** A repository's `Paginated` result → `data` plus the contract's `meta`. */
+  static paginated<T>(
+    result: Paginated<T>,
+    message = 'Data retrieved successfully',
+    path?: string,
+  ) {
+    const { data, ...meta } = result;
+    return this.success(data, message, HttpStatus.OK, path, meta);
   }
 
   static deleted(message = 'Resource deleted successfully', path?: string) {
