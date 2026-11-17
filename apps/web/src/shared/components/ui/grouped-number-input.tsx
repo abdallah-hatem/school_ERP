@@ -70,6 +70,8 @@ export function GroupedNumberInput({
       value={value}
       onKeyDown={(e) => {
         onKeyDown?.(e);
+        // A caret restore only ever belongs to the edit that queued it; any new key starts clean.
+        pendingCaret.current = null;
         const el = e.currentTarget;
         const across = deleteAcrossComma(el.value, el.selectionStart ?? 0, el.selectionEnd ?? 0, e.key);
         if (!across) return;
