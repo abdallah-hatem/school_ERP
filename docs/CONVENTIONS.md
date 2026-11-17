@@ -66,6 +66,9 @@ faster when Turbo's cache hits). A failure stops the push and prints the error; 
 touches the API, the database or a screen, also run `pnpm ci:local --full` (adds API e2e and the
 smoke specs; needs Docker). Don't skip the hook with `--no-verify`; if it's wrong, fix the hook.
 
+- [ ] **Your branch has the latest `dev` merged in** (owner, 2026-11-17): `git fetch origin && git
+      merge origin/dev`, resolve conflicts, re-run the checks, then open the PR. GitHub refuses to
+      merge a branch that is behind, and `pnpm ci:local` warns when it is.
 - [ ] One task per PR, small — aim for under ~400 changed lines. Split big features.
 - [ ] The push went through the local CI hook (and `pnpm ci:local --full` for API, DB or UI changes).
 - [ ] Every new user-facing string exists in both `en` and `ar`.
