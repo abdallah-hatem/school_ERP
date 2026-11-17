@@ -16,6 +16,7 @@ export interface Breadcrumb {
 export function PageHeader({
   title,
   status,
+  leading,
   description,
   breadcrumbs,
   breadcrumbsLabel,
@@ -24,6 +25,8 @@ export function PageHeader({
 }: {
   title: ReactNode;
   status?: ReactNode;
+  /** Shown before the title block (an employee's avatar on their profile). */
+  leading?: ReactNode;
   description?: ReactNode;
   breadcrumbs?: Breadcrumb[];
   /** Accessible name of the breadcrumb nav (translated by the caller). */
@@ -52,14 +55,17 @@ export function PageHeader({
         </nav>
       ) : null}
       <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
-        <div className="flex min-w-0 flex-1 basis-64 flex-col gap-1">
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="font-display text-2xl leading-tight font-extrabold tracking-tight break-words md:text-3xl">
-              {title}
-            </h1>
-            {status}
+        <div className="flex min-w-0 flex-1 basis-64 items-center gap-4">
+          {leading}
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="font-display text-2xl leading-tight font-extrabold tracking-tight break-words md:text-3xl">
+                {title}
+              </h1>
+              {status}
+            </div>
+            {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
           </div>
-          {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
         </div>
         {actions ? <div className="flex flex-wrap items-center gap-2.5">{actions}</div> : null}
       </div>

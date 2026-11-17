@@ -36,6 +36,21 @@ describe('EmployeeCard', () => {
     expect(within(card).getByRole('link', { name: 'Edit Mona Khalil' }).getAttribute('href')).toBe('/en/employees/e-1/edit');
   });
 
+  it('shows the photo when there is one and the silhouette (not initials) when there is none', () => {
+    renderEmployees(
+      <ul>
+        <EmployeeCard employee={{ ...mona, photoUrl: '/files/employee-photos/e-1-a.jpg' }} band="band-1" href="/en/employees/e-1" />
+        <EmployeeCard employee={{ ...mona, id: 'e-2', nameEn: 'Omar Fathy' }} band="band-1" href="/en/employees/e-2" />
+      </ul>,
+    );
+    const withPhoto = screen.getByRole('article', { name: 'Mona Khalil' });
+    expect(withPhoto.querySelector('[data-avatar]')?.getAttribute('data-avatar')).toBe('photo');
+    expect(withPhoto.querySelector('img')?.getAttribute('src')).toContain('/files/employee-photos/e-1-a.jpg');
+    const without = screen.getByRole('article', { name: 'Omar Fathy' });
+    expect(without.querySelector('[data-avatar]')?.getAttribute('data-avatar')).toBe('silhouette');
+    expect(within(without).queryByText('OF')).toBeNull();
+  });
+
   it('an inactive employee is marked inactive and still opens', () => {
     renderEmployees(<EmployeeCard employee={{ ...mona, status: 'INACTIVE' }} band="band-1" href="/en/employees/e-1" />);
     const card = screen.getByRole('article', { name: 'Mona Khalil' });

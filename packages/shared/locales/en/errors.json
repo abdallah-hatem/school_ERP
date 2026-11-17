@@ -20,6 +20,7 @@
   "EMPLOYEE_INACTIVE": "This employee is inactive.",
   "DUPLICATE_NATIONAL_ID": "Another employee already has this national ID.",
   "DUPLICATE_FINGERPRINT_ID": "Another employee already has this fingerprint ID.",
+  "DUPLICATE_INSURANCE_NUMBER": "Another employee already has this insurance number.",
   "INVALID_MANAGER": "The direct manager must be another active employee.",
   "MANAGER_LOOP": "This manager would create a reporting loop.",
   "MANAGER_NOT_MANAGING": "The direct manager must hold a job title that manages people.",

@@ -64,11 +64,12 @@ export function isWorkHoursOrdered(start: TimeOfDay, end: TimeOfDay): boolean {
 /** Folder under UPLOADS_DIR (and `/files/…`) holding the school logo — the one public folder. */
 export const LOGO_FOLDER = 'logo';
 
-export type ImageType = 'png' | 'jpg' | 'svg';
+export type ImageType = 'png' | 'jpg' | 'webp' | 'svg';
 
 export const IMAGE_MIME: Record<ImageType, string> = {
   png: 'image/png',
   jpg: 'image/jpeg',
+  webp: 'image/webp',
   svg: 'image/svg+xml',
 };
 
@@ -85,6 +86,14 @@ export function detectImageType(buffer: Buffer): ImageType | null {
   }
   if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
     return 'jpg';
+  }
+  // RIFF <size> WEBP
+  if (
+    buffer.length >= 12 &&
+    buffer.subarray(0, 4).toString('latin1') === 'RIFF' &&
+    buffer.subarray(8, 12).toString('latin1') === 'WEBP'
+  ) {
+    return 'webp';
   }
   const head = buffer
     .subarray(0, 1024)

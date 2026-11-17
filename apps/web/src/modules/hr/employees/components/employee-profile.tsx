@@ -1,10 +1,11 @@
 'use client';
 
-import type { Employee, PermissionKey } from '@school-erp/shared';
+import { EmployeeStatus, InsuranceStatus, type Employee, type PermissionKey } from '@school-erp/shared';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { createContext, useContext, type ReactNode } from 'react';
 import { Can, useCan } from '@/core/auth';
+import { EmployeeAvatar } from '@/core/employees';
 import { PageHeader } from '@/shared/components/layout/page-header';
 import { Button } from '@/shared/components/ui/button';
 import { Money } from '@/shared/components/ui/figures';
@@ -107,6 +108,7 @@ export function EmployeeProfileShell({
       <div className="flex flex-col gap-6">
         <PageHeader
           title={localName(employee, locale)}
+          leading={<EmployeeAvatar photoUrl={employee.photoUrl} size="lg" muted={employee.status !== EmployeeStatus.ACTIVE} />}
           status={<EmployeeStatusPill status={employee.status} />}
           description={
             <span className="flex flex-wrap items-center gap-x-2">
@@ -153,6 +155,7 @@ export function ProfileEmployeeDetails() {
 export function EmployeeDetails({ employee }: { employee: Employee }) {
   const { t, locale } = useTranslation();
   const notSet = <span className="text-muted-foreground">{t('employees.profile.notSet')}</span>;
+  const insured = employee.insuranceStatus === InsuranceStatus.INSURED;
   const text = (v: string | null) => (v ? v : notSet);
   const ltr = (v: string | null) =>
     v ? (
@@ -206,6 +209,46 @@ export function EmployeeDetails({ employee }: { employee: Employee }) {
         <DetailsItem label={t('employees.fields.contractStart')}>{date(employee.contractStart)}</DetailsItem>
         <DetailsItem label={t('employees.fields.contractEnd')}>{date(employee.contractEnd)}</DetailsItem>
         <DetailsItem label={t('employees.fields.usesBus')}>{employee.usesBus ? t('common.common.yes') : t('common.common.no')}</DetailsItem>
+      </DetailsCard>
+      <DetailsCard title={t('employees.sections.insurance')}>
+        <DetailsItem label={t('employees.fields.insuranceStatus')} wide={!insured}>
+          {t(`common.enums.insuranceStatus.${employee.insuranceStatus}`)}
+        </DetailsItem>
+        {insured ? (
+          <>
+            <DetailsItem label={t('employees.fields.insuranceNumber')}>{ltr(employee.insuranceNumber)}</DetailsItem>
+            <DetailsItem label={t('employees.fields.insuranceRegistrationDate')}>
+              {employee.insuranceRegistrationDate ? date(employee.insuranceRegistrationDate) : notSet}
+            </DetailsItem>
+            <DetailsItem label={t('employees.fields.insuredSalary')}>
+              {employee.insuredSalary == null ? notSet : <Money value={employee.insuredSalary} />}
+            </DetailsItem>
+          </>
+        ) : null}
+      </DetailsCard>
+      <DetailsCard title={t('employees.sections.bank')}>
+        <DetailsItem label={t('employees.fields.bankName')}>{text(employee.bankName)}</DetailsItem>
+        <DetailsItem label={t('employees.fields.bankAccountNumber')}>{ltr(employee.bankAccountNumber)}</DetailsItem>
+        <DetailsItem label={t('employees.fields.iban')} wide>
+          {ltr(employee.iban)}
+        </DetailsItem>
+      </DetailsCard>
+      <DetailsCard title={t('employees.sections.emergency')}>
+        <DetailsItem label={t('employees.fields.emergencyContactName')}>{text(employee.emergencyContactName)}</DetailsItem>
+        <DetailsItem label={t('employees.fields.emergencyContactRelationship')}>{text(employee.emergencyContactRelationship)}</DetailsItem>
+        <DetailsItem label={t('employees.fields.emergencyContactPhone')} wide>
+          {ltr(employee.emergencyContactPhone)}
+        </DetailsItem>
+      </DetailsCard>
+      <DetailsCard title={t('employees.sections.qualification')}>
+        <DetailsItem label={t('employees.fields.highestDegree')}>
+          {employee.highestDegree ? t(`common.enums.degree.${employee.highestDegree}`) : notSet}
+        </DetailsItem>
+        <DetailsItem label={t('employees.fields.graduationYear')}>
+          {employee.graduationYear == null ? notSet : <bdi className="tabular">{employee.graduationYear}</bdi>}
+        </DetailsItem>
+        <DetailsItem label={t('employees.fields.major')}>{text(employee.major)}</DetailsItem>
+        <DetailsItem label={t('employees.fields.university')}>{text(employee.university)}</DetailsItem>
       </DetailsCard>
     </div>
   );

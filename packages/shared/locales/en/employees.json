@@ -29,7 +29,12 @@
   "sections": {
     "personal": "Personal details",
     "job": "Job",
-    "contract": "Pay and contract"
+    "contract": "Pay and contract",
+    "insurance": "Social insurance",
+    "bank": "Bank account",
+    "emergency": "Emergency contact",
+    "qualification": "Qualification",
+    "photo": "Photo"
   },
   "fields": {
     "code": "Employee code",
@@ -53,7 +58,21 @@
     "contractStart": "Contract start",
     "contractEnd": "Contract end",
     "usesBus": "Uses the school bus",
-    "status": "Status"
+    "status": "Status",
+    "insuranceStatus": "Insurance status",
+    "insuranceNumber": "Insurance number",
+    "insuranceRegistrationDate": "Registration date",
+    "insuredSalary": "Insured salary",
+    "bankName": "Bank name",
+    "bankAccountNumber": "Account number",
+    "iban": "IBAN",
+    "emergencyContactName": "Contact name",
+    "emergencyContactRelationship": "Relationship",
+    "emergencyContactPhone": "Contact phone",
+    "highestDegree": "Highest degree",
+    "major": "Major",
+    "university": "University",
+    "graduationYear": "Graduation year"
   },
   "placeholders": {
     "nameEn": "Mona Ahmed Khalil",
@@ -70,7 +89,20 @@
     "department": "Choose a department",
     "jobTitle": "Choose a job title",
     "manager": "No direct manager",
-    "workSystem": "Choose a work system"
+    "workSystem": "Choose a work system",
+    "insuranceStatus": "Choose insurance status",
+    "insuranceNumber": "123456789",
+    "insuredSalary": "9,000.00",
+    "bankName": "National Bank of Egypt",
+    "bankAccountNumber": "0123456789012",
+    "iban": "EG380019000500000000263180002",
+    "emergencyContactName": "Ahmed Khalil",
+    "emergencyContactRelationship": "Husband",
+    "emergencyContactPhone": "01112345678",
+    "highestDegree": "Choose a degree",
+    "major": "English language",
+    "university": "Cairo University",
+    "graduationYear": "Choose a year"
   },
   "hints": {
     "nationalId": "Optional. 14 digits.",
@@ -79,6 +111,10 @@
     "contract": "Defaults to 1 June – 31 May. Changing the start moves the end to one year later.",
     "usesBus": "Turn on if the employee rides the school bus.",
     "hiddenItem": "Hidden from new choices; kept for this employee.",
+    "insuranceNumber": "Digits only.",
+    "insuredSalary": "Monthly, in Egyptian pounds.",
+    "iban": "Optional. EG followed by 27 digits.",
+    "insuranceStatus": "Choosing “Not insured” clears the insurance number, date and salary.",
     "managerNotManaging": "No longer in a managing role; kept for this employee.",
     "noManagers": "No one can be chosen yet. Turn on “Manages people” for a job title in Settings → HR lists."
   },
@@ -96,7 +132,12 @@
     "salaryTooLarge": "This salary is too large.",
     "contractOrder": "The contract end must be after its start.",
     "tooLong": "This is too long.",
-    "saveFailed": "The employee couldn't be saved."
+    "saveFailed": "The employee couldn't be saved.",
+    "insuranceNumber": "The insurance number must be digits only (up to 20).",
+    "registrationDateFuture": "The registration date can't be in the future.",
+    "insuredSalaryPositive": "The insured salary must be more than 0.",
+    "iban": "Enter an Egyptian IBAN: EG followed by 27 digits.",
+    "graduationYear": "Choose a year from 1950 to this year."
   },
   "create": {
     "title": "Add employee",
@@ -129,5 +170,21 @@
     "edit": "Edit",
     "viewLabel": "View {name}",
     "editLabel": "Edit {name}"
+  },
+  "photo": {
+    "description": "Shown on the employee’s card and profile. PNG, JPG or WebP, up to {max} MB. Cropped to a square.",
+    "current": "This is the photo in use.",
+    "none": "No photo yet. A neutral silhouette is shown until you add one.",
+    "ready": "Preview of {name}. Upload it to use it.",
+    "readyOnSave": "Preview of {name}. It is added when you save the employee.",
+    "choose": "Choose a photo",
+    "upload": "Upload photo",
+    "remove": "Remove photo",
+    "uploaded": "Photo updated.",
+    "removed": "Photo removed.",
+    "problems": {
+      "type": "Only PNG, JPG or WebP files can be used.",
+      "size": "The file must be {max} MB or smaller."
+    }
   }
 }

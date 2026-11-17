@@ -1,9 +1,20 @@
 import {
+  applyInsuranceStatus,
   contractYearFor,
+  DEGREES,
   EmployeeStatus,
   ErrorCode,
   GENDERS,
+  graduationYearRange,
+  INSURANCE_STATUSES,
+  InsuranceStatus,
+  isValidEgyptianIban,
+  isValidGraduationYear,
+  MAX_PIASTRES,
+  normalizeIban,
+  socialInsuranceIssues,
   WORK_SYSTEMS,
+  type Degree,
   type CreateEmployeeRequest,
   type Employee,
   type EmployeeSummary,
@@ -29,9 +40,6 @@ import { isValidPhone } from '@/shared/lib/phone';
 /** The manager picker's "no direct manager" item (Radix Select items can't have an empty value). */
 export const NO_MANAGER = '__none__';
 
-/** Postgres `integer` upper bound — the API rejects larger salaries. */
-const MAX_PIASTRES = 2_147_483_647;
-
 const REQUIRED = 'ui.form.required';
 const TOO_LONG = 'employees.errors.tooLong';
 
@@ -45,6 +53,25 @@ const requiredDate = z
   .string()
   .nullable()
   .refine((v) => Boolean(v), REQUIRED);
+const optionalPhone = z
+  .string()
+  .trim()
+  .refine((v) => v === '' || isValidPhone(v), 'employees.errors.phone');
+
+/** The shared insurance rule's issues (§3) → this form's messages. */
+const INSURANCE_MESSAGES = {
+  required: REQUIRED,
+  insuranceNumberFormat: 'employees.errors.insuranceNumber',
+  registrationDateFuture: 'employees.errors.registrationDateFuture',
+  insuredSalaryPositive: 'employees.errors.insuredSalaryPositive',
+  insuredSalaryTooLarge: 'employees.errors.salaryTooLarge',
+} as const;
+
+/** Graduation years offered, newest first: the current year … 1950 (§3). */
+export function graduationYears(today: IsoDate = todayIso()): number[] {
+  const { min, max } = graduationYearRange(today);
+  return Array.from({ length: max - min + 1 }, (_, i) => max - i);
+}
 
 export const employeeFormSchema = z
   .object({
@@ -86,10 +113,40 @@ export const employeeFormSchema = z
     contractStart: requiredDate,
     contractEnd: requiredDate,
     usesBus: z.boolean(),
+    insuranceStatus: z.string().refine((v) => (INSURANCE_STATUSES as string[]).includes(v), REQUIRED),
+    insuranceNumber: z.string().trim(),
+    insuranceRegistrationDate: z.string().nullable(),
+    insuredSalary: z.number().nullable(),
+    bankName: optionalText(100),
+    bankAccountNumber: optionalText(50),
+    iban: z.string().refine((v) => v.trim() === '' || isValidEgyptianIban(v), 'employees.errors.iban'),
+    emergencyContactName: optionalText(200),
+    emergencyContactRelationship: optionalText(100),
+    emergencyContactPhone: optionalPhone,
+    highestDegree: z.string().refine((v) => v === '' || (DEGREES as string[]).includes(v), REQUIRED),
+    major: optionalText(200),
+    university: optionalText(200),
+    // A year picked from the list is a string ('' = not given).
+    graduationYear: z
+      .string()
+      .refine((v) => v === '' || isValidGraduationYear(Number(v), todayIso()), 'employees.errors.graduationYear'),
   })
   .superRefine((v, ctx) => {
     if (v.contractStart && v.contractEnd && v.contractEnd <= v.contractStart) {
       ctx.addIssue({ code: 'custom', path: ['contractEnd'], message: 'employees.errors.contractOrder' });
+    }
+    // §3: while insured, the number, registration date and insured salary are required (shared rule).
+    const issues = socialInsuranceIssues(
+      {
+        insuranceStatus: v.insuranceStatus as InsuranceStatus,
+        insuranceNumber: v.insuranceNumber.trim() || null,
+        insuranceRegistrationDate: v.insuranceRegistrationDate,
+        insuredSalary: v.insuredSalary,
+      },
+      todayIso(),
+    );
+    for (const { field, issue } of issues) {
+      ctx.addIssue({ code: 'custom', path: [field], message: INSURANCE_MESSAGES[issue] });
     }
   });
 
@@ -119,8 +176,34 @@ export function emptyEmployeeForm(today: IsoDate = todayIso()): EmployeeFormValu
     contractStart: contract.start,
     contractEnd: contract.end,
     usesBus: false,
+    ...EMPTY_DETAILS,
   };
 }
+
+/** The §3 detail groups of an employee with none: not insured, everything else empty. */
+const EMPTY_DETAILS = {
+  insuranceStatus: InsuranceStatus.NOT_INSURED,
+  insuranceNumber: '',
+  insuranceRegistrationDate: null,
+  insuredSalary: null,
+  bankName: '',
+  bankAccountNumber: '',
+  iban: '',
+  emergencyContactName: '',
+  emergencyContactRelationship: '',
+  emergencyContactPhone: '',
+  highestDegree: '',
+  major: '',
+  university: '',
+  graduationYear: '',
+} satisfies Partial<EmployeeFormValues>;
+
+/** What choosing "not insured" resets (§3): the three insurance details, to empty. */
+export const CLEARED_INSURANCE = {
+  insuranceNumber: '',
+  insuranceRegistrationDate: null,
+  insuredSalary: null,
+} as const satisfies Partial<EmployeeFormValues>;
 
 /** The form's starting values for editing `employee`. */
 export function employeeToForm(employee: Employee): EmployeeFormValues {
@@ -145,6 +228,20 @@ export function employeeToForm(employee: Employee): EmployeeFormValues {
     contractStart: employee.contractStart,
     contractEnd: employee.contractEnd,
     usesBus: employee.usesBus,
+    insuranceStatus: employee.insuranceStatus,
+    insuranceNumber: employee.insuranceNumber ?? '',
+    insuranceRegistrationDate: employee.insuranceRegistrationDate,
+    insuredSalary: employee.insuredSalary,
+    bankName: employee.bankName ?? '',
+    bankAccountNumber: employee.bankAccountNumber ?? '',
+    iban: employee.iban ?? '',
+    emergencyContactName: employee.emergencyContactName ?? '',
+    emergencyContactRelationship: employee.emergencyContactRelationship ?? '',
+    emergencyContactPhone: employee.emergencyContactPhone ?? '',
+    highestDegree: employee.highestDegree ?? '',
+    major: employee.major ?? '',
+    university: employee.university ?? '',
+    graduationYear: employee.graduationYear == null ? '' : String(employee.graduationYear),
   };
 }
 
@@ -152,6 +249,12 @@ const orNull = (v: string) => (v.trim() === '' ? null : v.trim());
 
 /** Validated form values → the full request body. Empty optional text is `null`. */
 export function formToRequest(v: EmployeeFormValues): CreateEmployeeRequest {
+  const insurance = applyInsuranceStatus({
+    insuranceStatus: v.insuranceStatus as InsuranceStatus,
+    insuranceNumber: orNull(v.insuranceNumber),
+    insuranceRegistrationDate: v.insuranceRegistrationDate,
+    insuredSalary: v.insuredSalary,
+  });
   return {
     nameEn: v.nameEn.trim(),
     nameAr: v.nameAr.trim(),
@@ -173,6 +276,17 @@ export function formToRequest(v: EmployeeFormValues): CreateEmployeeRequest {
     contractStart: v.contractStart as IsoDate,
     contractEnd: v.contractEnd as IsoDate,
     usesBus: v.usesBus,
+    ...insurance,
+    bankName: orNull(v.bankName),
+    bankAccountNumber: orNull(v.bankAccountNumber),
+    iban: v.iban.trim() === '' ? null : normalizeIban(v.iban),
+    emergencyContactName: orNull(v.emergencyContactName),
+    emergencyContactRelationship: orNull(v.emergencyContactRelationship),
+    emergencyContactPhone: orNull(v.emergencyContactPhone),
+    highestDegree: v.highestDegree === '' ? null : (v.highestDegree as Degree),
+    major: orNull(v.major),
+    university: orNull(v.university),
+    graduationYear: v.graduationYear === '' ? null : Number(v.graduationYear),
   };
 }
 
@@ -194,6 +308,7 @@ export function formToUpdate(values: EmployeeFormValues, initial: EmployeeFormVa
 const FIELD_BY_ERROR: Partial<Record<string, keyof EmployeeFormValues>> = {
   [ErrorCode.DUPLICATE_NATIONAL_ID]: 'nationalId',
   [ErrorCode.DUPLICATE_FINGERPRINT_ID]: 'fingerprintId',
+  [ErrorCode.DUPLICATE_INSURANCE_NUMBER]: 'insuranceNumber',
   [ErrorCode.INVALID_MANAGER]: 'managerId',
   [ErrorCode.MANAGER_LOOP]: 'managerId',
   [ErrorCode.MANAGER_NOT_MANAGING]: 'managerId',

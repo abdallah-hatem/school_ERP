@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { contractYearFor, ErrorCode, HrEvent } from '@school-erp/shared';
 import { todayIsoDate } from '../../../../common/utils/dates.util';
+import type { FileStorageService } from '../../../../core/settings';
 import { DepartmentsService } from '../../lists/services/departments.service';
 import { JobTitlesService } from '../../lists/services/job-titles.service';
 import type { CreateEmployeeDto } from '../dto/employee.dto';
@@ -34,6 +35,21 @@ const row = (over: Partial<EmployeeDetailRow> = {}): EmployeeDetailRow => ({
   contractStart: d('2025-06-01'),
   contractEnd: d('2026-05-31'),
   usesBus: false,
+  photoUrl: null,
+  insuranceStatus: 'NOT_INSURED',
+  insuranceNumber: null,
+  insuranceRegistrationDate: null,
+  insuredSalary: null,
+  bankName: null,
+  bankAccountNumber: null,
+  iban: null,
+  emergencyContactName: null,
+  emergencyContactRelationship: null,
+  emergencyContactPhone: null,
+  highestDegree: null,
+  major: null,
+  university: null,
+  graduationYear: null,
   status: 'ACTIVE',
   userId: null,
   createdAt: new Date(),
@@ -66,6 +82,8 @@ function makeService(repo: Record<string, jest.Mock> = {}) {
     findStage: jest.fn().mockResolvedValue({ id: 's1', isActive: true }),
     findIdByNationalId: jest.fn().mockResolvedValue(null),
     findIdByFingerprintId: jest.fn().mockResolvedValue(null),
+    findIdByInsuranceNumber: jest.fn().mockResolvedValue(null),
+    findPhotoUrl: jest.fn().mockResolvedValue(null),
     managerChainIds: jest.fn().mockResolvedValue([]),
     createWithCode: jest.fn().mockImplementation(() => Promise.resolve(row())),
     updateEmployee: jest.fn().mockImplementation(() => Promise.resolve(row())),
@@ -73,14 +91,157 @@ function makeService(repo: Record<string, jest.Mock> = {}) {
   };
   const lists = { getSelectable: jest.fn().mockResolvedValue({}) };
   const events = { emit: jest.fn() };
+  const files = {
+    save: jest.fn().mockImplementation((folder: string, name: string) => Promise.resolve(`/files/${folder}/${name}`)),
+    remove: jest.fn().mockResolvedValue(undefined),
+  };
   const service = new EmployeesService(
     repository as unknown as EmployeesRepository,
     lists as unknown as DepartmentsService,
     lists as unknown as JobTitlesService,
     events as unknown as EventEmitter2,
+    files as unknown as FileStorageService,
   );
-  return { service, repository, events };
+  return { service, repository, events, files };
 }
+
+const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0]);
+const insured = {
+  insuranceStatus: 'INSURED' as const,
+  insuranceNumber: '123456789',
+  insuranceRegistrationDate: '2020-09-01',
+  insuredSalary: 900_000,
+};
+
+describe('EmployeesService — insurance (§3)', () => {
+  it('create insured writes the three details', async () => {
+    const { service, repository } = makeService();
+    await service.create(dto(insured));
+    const data = repository.createWithCode.mock.calls[0]![0];
+    expect(data).toMatchObject({
+      insuranceStatus: 'INSURED',
+      insuranceNumber: '123456789',
+      insuranceRegistrationDate: d('2020-09-01'),
+      insuredSalary: 900_000,
+    });
+  });
+
+  it('create insured without a number → 400, nothing written', async () => {
+    const { service, repository } = makeService();
+    await expect(service.create(dto({ ...insured, insuranceNumber: null }))).rejects.toThrow(
+      'insuranceNumber is required when insured',
+    );
+    expect(repository.createWithCode).not.toHaveBeenCalled();
+  });
+
+  it('not insured clears the details even when they are sent', async () => {
+    const { service, repository } = makeService();
+    await service.create(dto({ ...insured, insuranceStatus: 'NOT_INSURED' }));
+    expect(repository.createWithCode.mock.calls[0]![0]).toMatchObject({
+      insuranceStatus: 'NOT_INSURED',
+      insuranceNumber: null,
+      insuranceRegistrationDate: null,
+      insuredSalary: null,
+    });
+    // An insurance number that is cleared is never checked for uniqueness.
+    expect(repository.findIdByInsuranceNumber).not.toHaveBeenCalled();
+  });
+
+  it('update merges with the saved values: changing only the salary keeps the number and date', async () => {
+    const saved = row({
+      insuranceStatus: 'INSURED',
+      insuranceNumber: '555',
+      insuranceRegistrationDate: d('2021-01-01'),
+      insuredSalary: 100,
+    });
+    const { service, repository } = makeService({ findDetail: jest.fn().mockResolvedValue(saved) });
+    await service.update('e1', { insuredSalary: 200 });
+    expect(repository.updateEmployee.mock.calls[0]![1]).toMatchObject({
+      insuranceStatus: 'INSURED',
+      insuranceNumber: '555',
+      insuranceRegistrationDate: d('2021-01-01'),
+      insuredSalary: 200,
+    });
+  });
+
+  it('update to insured with nothing saved → 400; update to not insured clears', async () => {
+    const { service } = makeService();
+    await expect(service.update('e1', { insuranceStatus: 'INSURED' })).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    const savedInsured = row({ ...insured, insuranceRegistrationDate: d('2020-09-01') });
+    const second = makeService({ findDetail: jest.fn().mockResolvedValue(savedInsured) });
+    await second.service.update('e1', { insuranceStatus: 'NOT_INSURED' });
+    expect(second.repository.updateEmployee.mock.calls[0]![1]).toMatchObject({
+      insuranceNumber: null,
+      insuranceRegistrationDate: null,
+      insuredSalary: null,
+    });
+  });
+
+  it('insurance status cannot be cleared', async () => {
+    const { service } = makeService();
+    await expect(service.update('e1', { insuranceStatus: null as never })).rejects.toThrow(
+      'insuranceStatus cannot be empty',
+    );
+  });
+
+  it('an insurance number owned by someone else → 409 DUPLICATE_INSURANCE_NUMBER; your own is fine', async () => {
+    const { service } = makeService({ findIdByInsuranceNumber: jest.fn().mockResolvedValue('other') });
+    await expect(service.create(dto(insured))).rejects.toMatchObject({
+      code: ErrorCode.DUPLICATE_INSURANCE_NUMBER,
+    });
+    const own = makeService({ findIdByInsuranceNumber: jest.fn().mockResolvedValue('e1') });
+    await expect(own.service.update('e1', insured)).resolves.toBeDefined();
+  });
+});
+
+describe('EmployeesService — photo (§3)', () => {
+  const file = (over: Partial<{ mimetype: string; size: number; buffer: Buffer }> = {}) => ({
+    mimetype: 'image/png',
+    size: PNG.length,
+    buffer: PNG,
+    ...over,
+  });
+
+  it('stores the photo under employee-photos and deletes the previous one', async () => {
+    const { service, repository, files } = makeService({
+      findPhotoUrl: jest.fn().mockResolvedValue('/files/employee-photos/old.png'),
+    });
+    await service.setPhoto('e1', file());
+    expect(files.save).toHaveBeenCalledWith('employee-photos', expect.stringMatching(/^e1-.+\.png$/), PNG);
+    expect(repository.updateEmployee).toHaveBeenCalledWith('e1', {
+      photoUrl: expect.stringMatching(/^\/files\/employee-photos\/e1-/),
+    });
+    expect(files.remove).toHaveBeenCalledWith('/files/employee-photos/old.png');
+  });
+
+  it('refuses an SVG, a GIF, a mismatched type and anything over 2 MB', async () => {
+    const { service, files } = makeService();
+    await expect(
+      service.setPhoto('e1', file({ mimetype: 'image/svg+xml', buffer: Buffer.from('<svg/>') })),
+    ).rejects.toMatchObject({ code: ErrorCode.INVALID_FILE_TYPE });
+    await expect(
+      service.setPhoto('e1', file({ mimetype: 'image/gif', buffer: Buffer.from('GIF89a') })),
+    ).rejects.toMatchObject({ code: ErrorCode.INVALID_FILE_TYPE });
+    await expect(service.setPhoto('e1', file({ mimetype: 'image/jpeg' }))).rejects.toMatchObject({
+      code: ErrorCode.INVALID_FILE_TYPE,
+    });
+    await expect(service.setPhoto('e1', file({ size: 2 * 1024 * 1024 + 1 }))).rejects.toMatchObject({
+      code: ErrorCode.FILE_TOO_LARGE,
+    });
+    expect(files.save).not.toHaveBeenCalled();
+  });
+
+  it('unknown employee → 404; removing when there is no photo changes nothing', async () => {
+    const missing = makeService({ findPhotoUrl: jest.fn().mockResolvedValue(undefined) });
+    await expect(missing.service.setPhoto('x', file())).rejects.toThrow('Not Found');
+    const { service, repository, files } = makeService();
+    await service.removePhoto('e1');
+    expect(repository.updateEmployee).not.toHaveBeenCalled();
+    expect(files.remove).not.toHaveBeenCalled();
+  });
+});
 
 describe('EmployeesService', () => {
   it('create fills the current contract year and emits employee.hired after the write', async () => {
@@ -154,6 +315,7 @@ describe('EmployeesService', () => {
       code: 'EMP-0009',
       nameEn: 'M',
       nameAr: 'م',
+      photoUrl: null,
       jobTitle: { managesPeople: false },
     };
 

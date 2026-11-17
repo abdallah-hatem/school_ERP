@@ -53,6 +53,13 @@ catalogue, a month of penalties (some pending) and lateness, and a DRAFT payroll
 - Print → one A4 page, in Arabic and in English.
 - Click the employee's name (on the payslip, or in the run's "Employees this month") → ✔ their
   profile opens. Every employee name in the app does this (penalties, lateness, Activity).
+- On the profile, **Details** shows the social insurance, bank account, emergency contact and
+  qualification cards. **Edit** → choose *Insured*: the insurance number, registration date and
+  insured salary appear and are required; choose *Not insured*: they disappear and are cleared.
+  ✔ The insured salary groups as you type (9,000.00). A wrong IBAN is refused with a clear message.
+- The seeded principal (employee 1) shows his photo on his card and profile; every other employee
+  shows a neutral silhouette. On **Edit** you can upload a photo (PNG, JPG or WebP, up to 2 MB)
+  or remove it.
 
 ## 9. Phone
 - Same app at phone width: top bar with the school name and the menu, drawer navigation, cards

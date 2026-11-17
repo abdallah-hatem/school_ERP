@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
-import { readFileSync } from 'node:fs';
-import { extname } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { extname, join } from 'node:path';
 import type { INestApplicationContext } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { SEED_ADMIN_EMAIL, type Month } from '@school-erp/shared';
@@ -24,6 +24,12 @@ import { levelsOf, loadSeedData } from './data/load';
 import { DEPARTMENTS, JOB_TITLES, STAGES, type SeedListItem } from './data/lists';
 import { ADJUSTMENTS, DEMO_MONTH, LATENESS, PENALTIES } from './data/november';
 import type { SeedCatalogue, SeedData } from './data/types';
+
+/**
+ * The one seeded employee with a photo (an AI-generated portrait, not a real person): seed number 1,
+ * a man. Every other employee has none, so the cards show the silhouette.
+ */
+const PORTRAIT = { employee: 1, path: join(__dirname, 'assets', 'portrait-1.jpg') } as const;
 
 /** Every contract runs 1 June – 31 May (§3); the demo employees are on the 2026/27 contract. */
 const CONTRACT = { start: '2026-06-01', end: '2027-05-31' } as const;
@@ -157,6 +163,7 @@ async function seedAll(app: INestApplicationContext): Promise<SeedSummary> {
     if (e.inactive) await employees.deactivate(id);
   }
   log(`employees ready (${EMPLOYEES.length}, ${created} new)`);
+  await seedPortrait(employees, db, employeeIds);
 
   const violationIds = await seedCatalogue(
     get(PenaltyCatalogueService),
@@ -197,6 +204,21 @@ async function seedSchool(settings: SettingsService, data: SeedData, adminId: st
     log('school logo stored');
   }
   log(`school identity set (${data.source})`);
+}
+
+/** Gives the portrait employee their photo once, through the same checks and storage as an upload. */
+async function seedPortrait(
+  employees: EmployeesService,
+  db: DatabaseService,
+  employeeIds: Map<number, string>,
+) {
+  const id = employeeIds.get(PORTRAIT.employee);
+  if (!id || !existsSync(PORTRAIT.path)) return;
+  const current = await db.employee.findUnique({ where: { id }, select: { photoUrl: true } });
+  if (current?.photoUrl) return;
+  const buffer = readFileSync(PORTRAIT.path);
+  await employees.setPhoto(id, { mimetype: 'image/jpeg', size: buffer.length, buffer });
+  log('employee portrait stored');
 }
 
 const listSelect = { id: true, nameEn: true } as const;

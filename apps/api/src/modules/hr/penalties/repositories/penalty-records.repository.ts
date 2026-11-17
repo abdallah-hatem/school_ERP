@@ -20,7 +20,7 @@ export const RECORD_SELECT = {
   note: true,
   cancelReason: true,
   createdAt: true,
-  employee: { select: { id: true, code: true, nameEn: true, nameAr: true } },
+  employee: { select: { id: true, code: true, nameEn: true, nameAr: true, photoUrl: true } },
   // The catalogue's current levels: a PENDING record is shown with them (§4).
   violation: {
     select: {

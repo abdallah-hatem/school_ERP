@@ -115,9 +115,15 @@ test('payroll: run → penalty deduction → grace change → recalculate → ap
   const graceField = page.getByLabel(t('en', 'settings.hrRules.lateness.grace'));
   // Wait for the form to load the saved rule first — typing earlier gets overwritten by the
   // form's reset, leaving Save disabled (no change).
+  // The saved grace is often the default 0, so the value alone can't tell the load has finished:
+  // type again until the change sticks (Save enabled).
   await expect(graceField).toHaveValue(String(settings.lateness.graceMinutes));
-  await graceField.fill(String(rule.graceMinutes));
-  await expect(page.getByRole('button', { name: t('en', 'common.actions.save'), exact: true })).toBeEnabled();
+  await expect(async () => {
+    await graceField.fill(String(rule.graceMinutes));
+    await expect(page.getByRole('button', { name: t('en', 'common.actions.save'), exact: true })).toBeEnabled({
+      timeout: 2_000,
+    });
+  }).toPass();
   restoreGrace = settings.lateness.graceMinutes;
   await page.getByRole('button', { name: t('en', 'common.actions.save'), exact: true }).click();
   await expect(page.getByText(t('en', 'settings.save.saved'))).toBeVisible();

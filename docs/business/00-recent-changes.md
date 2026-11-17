@@ -1,5 +1,10 @@
 # Recent changes
 
+- 2026-11-18 — Employees (§3, owner): new groups on the employee record — social insurance (status,
+  number, registration date, insured salary; required when insured, cleared when not), bank account
+  (bank, account number, Egyptian IBAN), emergency contact and qualification. Payroll's use of
+  insurance and bank details stays Planned and is Tamer's (§6). Employees can have a photo (PNG, JPG
+  or WebP, up to 2 MB, signed-in only); without one they show a neutral silhouette, not initials.
 - 2026-11-18 — Users, Roles and My account screens (§2, P3): Administration → **Users** (add, edit,
   give roles, link an employee, set a temporary password, deactivate) and **Roles** (each role's
   permissions, and for permissions about employees whose records they cover); **My account** for

@@ -45,7 +45,33 @@
 | Fingerprint ID | Optional; unique if given (for the device integration later) |
 | Contract start / end | Required (filled automatically when left empty). Defaults to 1 June – 31 May of the current contract year; if only a start is given, the end is one year later minus a day (e.g. 1 Sep 2026 → 31 Aug 2027). End after start. DECIDED (one-year fixed contract) |
 | Uses school bus | Yes / no, required (defaults to no) |
+| Photo | Optional; PNG, JPG or WebP, up to 2 MB, shown square-cropped. Only signed-in users can open it. Without a photo the employee shows a neutral silhouette, never initials. DECIDED (owner, 2026-11-18) |
 | Status | Active or inactive |
+
+## Insurance, bank, emergency contact and qualification
+
+**DECIDED** (owner, 2026-11-18) — four more groups on the employee record. Data only: how payroll
+uses insurance and bank details is Planned and belongs to the payroll owner (§6).
+
+| Group | Field | Rule |
+|---|---|---|
+| Social insurance | Status | Insured or not insured; required, defaults to not insured |
+| | Insurance number | Digits only (up to 20); unique across employees; required when insured |
+| | Registration date | Required when insured; not in the future |
+| | Insured salary | Monthly, in EGP, kept to the piastre; required when insured, greater than 0 |
+| Bank account | Bank name, account number | Optional |
+| | IBAN | Optional; if given, an Egyptian IBAN: `EG` followed by 27 digits (spaces are ignored) |
+| Emergency contact | Name, relationship | Optional |
+| | Phone | Optional; same rules as the employee's phone |
+| Qualification | Highest degree | Optional; one of none, secondary, diploma, bachelor's, master's, doctorate |
+| | Major, university | Optional |
+| | Graduation year | Optional; from 1950 to the current year |
+
+- **DECIDED** — Choosing **not insured** clears the insurance number, registration date and insured
+  salary; they are not kept for later.
+- **DECIDED** — The employee's address (above) is the only address; the emergency contact has none.
+- **DECIDED** — The insured salary and the bank details are salary-type data: they follow the same
+  visibility rule as the basic salary (§2).
 
 ## Rules
 

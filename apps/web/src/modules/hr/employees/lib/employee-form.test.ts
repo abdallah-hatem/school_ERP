@@ -8,7 +8,9 @@ import {
   employeeFormSchema,
   employeeToForm,
   fieldForError,
+  formToRequest,
   formToUpdate,
+  graduationYears,
   listOptions,
   managerOptions,
   NO_MANAGER,
@@ -119,6 +121,76 @@ describe('list query in the URL', () => {
     expect(employeesQueryString(parseEmployeesQuery({}))).toBe('');
     expect(hasActiveFilters(q)).toBe(true);
     expect(hasActiveFilters(parseEmployeesQuery({ page: '4' }))).toBe(false);
+  });
+});
+
+describe('insurance, bank and qualification on the form (§3)', () => {
+  const base = employeeToForm(employee);
+  const issues = (values: object) =>
+    employeeFormSchema.safeParse({ ...base, ...values }).error?.issues.map((i) => [i.path.join('.'), i.message]) ?? [];
+
+  it('a new employee starts not insured with every detail empty', () => {
+    expect(emptyEmployeeForm('2026-11-17')).toMatchObject({
+      insuranceStatus: 'NOT_INSURED',
+      insuranceNumber: '',
+      insuranceRegistrationDate: null,
+      insuredSalary: null,
+      iban: '',
+      highestDegree: '',
+      graduationYear: '',
+    });
+  });
+
+  it('insured needs the three details; a future registration date and a salary of 0 are refused', () => {
+    expect(issues({ insuranceStatus: 'INSURED' })).toEqual([
+      ['insuranceNumber', 'ui.form.required'],
+      ['insuranceRegistrationDate', 'ui.form.required'],
+      ['insuredSalary', 'ui.form.required'],
+    ]);
+    expect(
+      issues({ insuranceStatus: 'INSURED', insuranceNumber: '1', insuranceRegistrationDate: '2999-01-01', insuredSalary: 0 }),
+    ).toEqual([
+      ['insuranceRegistrationDate', 'employees.errors.registrationDateFuture'],
+      ['insuredSalary', 'employees.errors.insuredSalaryPositive'],
+    ]);
+  });
+
+  it('IBAN, graduation year and the emergency phone use the shared rules', () => {
+    expect(issues({ iban: 'EG1' })).toEqual([['iban', 'employees.errors.iban']]);
+    expect(issues({ iban: 'EG38 0019 0005 0000 0000 2631 8000 2' })).toEqual([]);
+    expect(issues({ graduationYear: '1949' })).toEqual([['graduationYear', 'employees.errors.graduationYear']]);
+    expect(issues({ emergencyContactPhone: 'abc' })).toEqual([['emergencyContactPhone', 'employees.errors.phone']]);
+  });
+
+  it('not insured sends the details as null whatever the form held; text is trimmed, IBAN normalised', () => {
+    const request = formToRequest({
+      ...base,
+      insuranceStatus: 'NOT_INSURED',
+      insuranceNumber: '123',
+      insuredSalary: 5,
+      iban: ' eg38 0019 0005 0000 0000 2631 8000 2 ',
+      bankName: '  CIB ',
+      graduationYear: '2010',
+      highestDegree: 'DIPLOMA',
+    });
+    expect(request).toMatchObject({
+      insuranceNumber: null,
+      insuranceRegistrationDate: null,
+      insuredSalary: null,
+      iban: 'EG380019000500000000263180002',
+      bankName: 'CIB',
+      graduationYear: 2010,
+      highestDegree: 'DIPLOMA',
+      major: null,
+    });
+  });
+
+  it('graduation years run from this year down to 1950; a duplicate insurance number maps to its field', () => {
+    const years = graduationYears('2026-11-18');
+    expect(years[0]).toBe(2026);
+    expect(years.at(-1)).toBe(1950);
+    expect(years).toHaveLength(77);
+    expect(fieldForError('DUPLICATE_INSURANCE_NUMBER')).toBe('insuranceNumber');
   });
 });
 

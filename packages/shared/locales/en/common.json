@@ -110,6 +110,18 @@
       "THURSDAY": "Thursday",
       "FRIDAY": "Friday",
       "SATURDAY": "Saturday"
+    },
+    "insuranceStatus": {
+      "INSURED": "Insured",
+      "NOT_INSURED": "Not insured"
+    },
+    "degree": {
+      "NONE": "None",
+      "SECONDARY": "Secondary school",
+      "DIPLOMA": "Diploma",
+      "BACHELOR": "Bachelor's degree",
+      "MASTER": "Master's degree",
+      "DOCTORATE": "Doctorate"
     }
   }
 }
