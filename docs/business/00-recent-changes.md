@@ -4,6 +4,8 @@
   earlier change is kept as it was. School settings, the logo and HR rules are saved together with
   their history entry (if the entry can't be saved, the change is refused); stages, lists and the
   catalogue follow in the next step.
+- 2026-11-17 — Roles and permissions (§2): starting roles, approvers and salary visibility written as
+  GUESS (owner asked Claude to answer until confirmed).
 - 2026-11-17 — Audit log approved (§9): every change and sign-in recorded with who, when, before and
   after; saved together with the change; can't be edited or deleted; HR admin sees it. Settings
   history becomes part of it (§7).

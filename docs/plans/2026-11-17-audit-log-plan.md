@@ -74,7 +74,10 @@ audit entry joins them.
   behind one button.
 - Employee profile **History** tab (inside the shared `[id]/layout.tsx`): the same timeline grouped
   by month, field and person filters.
-- Settings → Change history unchanged for the user, on the audit API.
+- **Settings → Change history is removed** (owner, 2026-11-17): the section becomes a "View change
+  history" link opening Activity filtered to Settings; delete the section, its API call and its
+  tests (`GET /settings/history` goes too, once nothing uses it).
+- Each entry shows the actor beside the sentence (T27 sentences leave the actor out).
 - EN/AR, RTL, phone + desktop. Smoke spec: make a change, see it on Activity and on the History tab.
 
 **From T27:** entries of the settings actions keep the old history format — one change per key, the
@@ -84,5 +87,6 @@ Field labels: `audit.fields.<field>` (stage keys: strip the id, use `fields.list
 
 ## T31 — verify
 
-`pnpm ci:local --full`; no `@NotAudited('wired in …')` left; smoke; `DEMO_SCRIPT.md` updated for the
+`pnpm ci:local --full`; no `@NotAudited('wired in …')` left; `SettingsHistoryListener` and the
+`settings.changed` history path are gone; smoke; `DEMO_SCRIPT.md` updated for the
 Activity page and dry-run on a copy; spot-check 10 entries by hand against what was done.

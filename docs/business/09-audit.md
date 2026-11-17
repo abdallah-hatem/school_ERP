@@ -12,6 +12,9 @@ Who did what, to which record, and when — for the whole system. Spec:
   device, the record it touched, and only the fields that changed, each with the value before and
   after. Passwords and tokens are never recorded. A failed sign-in keeps the email that was typed.
 - **DECIDED** — An entry is saved together with the change: if one fails, neither is kept.
+  *Interim (until T28): changes to stages, departments, job titles and the penalty catalogue are
+  still recorded right after they are saved, not together with them (§7). Sign-ins and HR records
+  are not recorded yet (T28, T29).*
 - **DECIDED** — Entries can't be edited or deleted by anyone, and are kept forever (for now).
 - **DECIDED** — Opening or reading something (a payslip, a profile) is not recorded.
 - **DECIDED** — The HR admin sees the Activity page (everything) and the History of each employee.

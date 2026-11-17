@@ -1,9 +1,12 @@
 'use client';
 
-import { Skeleton } from '@/shared/components/ui/skeleton';
+import { useParams } from 'next/navigation';
+import { PageHeader } from '@/shared/components/layout/page-header';
+import { Skeleton, SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { EMPLOYEES_PAGE_SIZE } from '../lib/list-query';
 import { EmployeeCardGrid, EmployeeCardSkeleton } from './employee-card';
+import { DetailsCard, DetailsItem, ProfileTabs } from './employee-profile';
 
 function HeaderSkeleton({ actions = 1 }: { actions?: number }) {
   return (
@@ -51,7 +54,94 @@ export function EmployeesListSkeleton() {
   );
 }
 
-/** Profile and form pages: header with actions and the three section cards. */
+/** Each Details card's field labels, in order: `wide` spans both columns, `tall` is the salary line. */
+const DETAILS_SKELETON: { title: string; className?: string; fields: { key: string; wide?: boolean; tall?: boolean }[] }[] = [
+  {
+    title: 'employees.sections.personal',
+    className: 'lg:col-span-2',
+    fields: [
+      { key: 'nameEn' },
+      { key: 'nameAr' },
+      { key: 'nationalId' },
+      { key: 'gender' },
+      { key: 'dateOfBirth' },
+      { key: 'phone' },
+      { key: 'email' },
+      { key: 'address', wide: true },
+    ],
+  },
+  {
+    title: 'employees.sections.job',
+    fields: [
+      { key: 'code' },
+      { key: 'hireDate' },
+      { key: 'stage' },
+      { key: 'department' },
+      { key: 'jobTitle' },
+      { key: 'workSystem' },
+      { key: 'manager', wide: true },
+      { key: 'grade' },
+      { key: 'fingerprintId' },
+    ],
+  },
+  {
+    title: 'employees.sections.contract',
+    fields: [{ key: 'basicSalary', wide: true, tall: true }, { key: 'contractStart' }, { key: 'contractEnd' }, { key: 'usesBus' }],
+  },
+];
+
+/** The Details tab while it loads: the real cards and labels, each value a bar in its line box. */
+export function EmployeeDetailsSkeleton() {
+  const { t } = useTranslation();
+  return (
+    <div aria-busy="true" className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <span role="status" className="sr-only">
+        {t('ui.states.loading')}
+      </span>
+      {DETAILS_SKELETON.map((card) => (
+        <DetailsCard key={card.title} title={t(card.title)} className={card.className}>
+          {card.fields.map((field) => (
+            <DetailsItem key={field.key} label={t(`employees.fields.${field.key}`)} wide={field.wide}>
+              <SkeletonText className={field.tall ? 'text-lg' : 'text-sm'} width={field.wide ? 'w-48' : 'w-28'} />
+            </DetailsItem>
+          ))}
+        </DetailsCard>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * First visit to a profile, before its layout has the employee: the header in its real shape
+ * (breadcrumbs, title, status, code line, two actions), the real tab bar and the Details cards.
+ * Tab switches never show it — the profile layout stays mounted and only the tab's skeleton shows.
+ */
+export function EmployeeProfileSkeleton() {
+  const { t, locale } = useTranslation();
+  const { id } = useParams<{ id: string }>();
+  const basePath = `/${locale}/employees`;
+  return (
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title={<SkeletonText width="w-56" />}
+        status={<SkeletonPill />}
+        description={<SkeletonText width="w-72" />}
+        breadcrumbs={[{ label: t('employees.title'), href: basePath }, { label: ' ' }]}
+        breadcrumbsLabel={t('ui.shell.breadcrumbs')}
+        actions={
+          <>
+            <Skeleton className="h-11 w-28 rounded-lg" />
+            <Skeleton className="h-11 w-36 rounded-lg" />
+          </>
+        }
+      />
+      <ProfileTabs profileHref={`${basePath}/${id}`} />
+      <EmployeeDetailsSkeleton />
+    </div>
+  );
+}
+
+/** Form pages (new, edit): header with actions and the three section cards. */
 export function EmployeePageSkeleton() {
   const { t } = useTranslation();
   return (
