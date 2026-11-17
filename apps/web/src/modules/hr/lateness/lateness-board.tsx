@@ -1,5 +1,6 @@
 'use client';
 
+import { useCan } from '@/core/auth';
 import { ErrorCode, PAGINATION, type LatenessRule, type LatenessRow, type Month } from '@school-erp/shared';
 import { useRouter } from 'next/navigation';
 import { useId, useMemo, useRef, useState, useTransition } from 'react';
@@ -55,6 +56,8 @@ export function LatenessBoard({ month, maxMonth, rows: initialRows, rule, locked
   const [page, setPage] = useState(1);
   const limit = PAGINATION.defaultLimit;
   const [locked, setLocked] = useState(initialLocked);
+  // R6: without `hr.lateness.edit` the month is read-only (no inputs, no Save).
+  const canEdit = useCan()('hr.lateness.edit');
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
   const [pendingMonth, setPendingMonth] = useState<Month | null>(null);
@@ -149,7 +152,7 @@ export function LatenessBoard({ month, maxMonth, rows: initialRows, rule, locked
         <MinutesInput
           row={row}
           draft={drafts[row.employee.id]}
-          readOnly={locked}
+          readOnly={locked || !canEdit}
           onChange={(text) => setDrafts((prev) => ({ ...prev, [row.employee.id]: text }))}
         />
       ),
@@ -198,7 +201,7 @@ export function LatenessBoard({ month, maxMonth, rows: initialRows, rule, locked
               disabled={navigating || saving || loading}
               label={t('lateness.month')}
             />
-            {locked ? null : (
+            {locked || !canEdit ? null : (
               <Button
                 variant="primary"
                 className="cursor-pointer"

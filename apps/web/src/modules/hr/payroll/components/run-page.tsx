@@ -15,7 +15,7 @@ import {
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useId, useMemo, useRef, useState, useTransition } from 'react';
-import { Can } from '@/core/auth';
+import { Can, useCan } from '@/core/auth';
 import { EmployeeLink } from '@/core/employees';
 import { callApi } from '@/lib/callApi';
 import { RowActions, RowActionsSkeleton } from '@/shared/components/data-table/row-actions';
@@ -50,7 +50,7 @@ import { StatusPill } from '@/shared/components/ui/status-pill';
 import { Switch } from '@/shared/components/ui/switch';
 import { apiErrorText } from '@/shared/lib/api-error';
 import { saveDownloadedFile } from '@/shared/lib/download';
-import { formatCount, formatDate, formatMoney, formatMonth } from '@/shared/lib/format';
+import { formatCount, formatDate, formatMoney, formatMonth, sumMoney } from '@/shared/lib/format';
 import { localName, nameIn } from '@/shared/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
@@ -118,6 +118,7 @@ export function RunPage({
   const [approveOpen, setApproveOpen] = useState(false);
   const [approveError, setApproveError] = useState<string | null>(null);
   const [adjusting, setAdjusting] = useState<AdjustmentsTarget | null>(null);
+  const canAdjust = useCan()('hr.payroll.adjust');
   const busyRef = useRef(false);
 
   const draft = run.status === PayrollStatus.DRAFT;
@@ -269,7 +270,8 @@ export function RunPage({
                 label: draft ? t('payroll.table.adjust') : t('payroll.table.columns.adjustments'),
                 icon: AdjustIcon,
                 count,
-                hidden: !draft && count === 0,
+                // R6: adjusting needs `hr.payroll.adjust`; without it a draft's adjustments are only viewable.
+                hidden: (!draft || !canAdjust) && count === 0,
                 onSelect: () => setAdjusting({ employeeId: line.employeeId, name }),
               },
               {
@@ -501,7 +503,7 @@ export function RunPage({
       <AdjustmentsDialog
         runId={run.id}
         month={run.month}
-        editable={draft}
+        editable={draft && canAdjust}
         target={adjusting}
         adjustments={adjusting ? adjustmentsOf(run.adjustments, adjusting.employeeId) : []}
         onOpenChange={(open) => {
@@ -562,7 +564,7 @@ export function runColumn(id: RunColumnId, t: Translate) {
 /** The four figures (Net first on phones); `undefined` while the run loads. */
 export function RunTiles({ totals }: { totals: PayrollRun['totals'] | undefined }) {
   const { t } = useTranslation();
-  const money = (value: number) => `${t('ui.units.currency')} ${formatMoney(value)}`;
+  const money = (value: number | undefined) => (value === undefined ? formatMoney(value) : `${t('ui.units.currency')} ${formatMoney(value)}`);
   const loading = totals === undefined;
   /** The sub line, or bars in its place (one per line the loaded text usually takes). */
   // While loading: as many bars as the text usually takes, more in a half-width phone tile.
@@ -600,7 +602,7 @@ export function RunTiles({ totals }: { totals: PayrollRun['totals'] | undefined 
         tone="danger"
         label={t('payroll.tiles.deductions')}
         unit={t('ui.units.currency')}
-        value={totals ? formatMoney(totals.penaltyAmount + totals.latenessAmount + totals.adjustmentDeductions) : null}
+        value={totals ? formatMoney(sumMoney(totals.penaltyAmount, totals.latenessAmount, totals.adjustmentDeductions)) : null}
         sub={sub(
           (x) =>
             t('payroll.tiles.deductionsSub', {

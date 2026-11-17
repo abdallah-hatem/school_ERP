@@ -1,7 +1,7 @@
-import type { Employee, EmployeeSummary, ListItem } from '@school-erp/shared';
+import type { Employee, EmployeeSummary, ListItem, SessionUser } from '@school-erp/shared';
 import type { AnchorHTMLAttributes, ReactElement, ReactNode } from 'react';
 import type { Locale } from '@/shared/lib/i18n';
-import { renderWithI18n } from '@/test/render';
+import { renderWithI18n, TEST_SESSION } from '@/test/render';
 import { EmployeesI18n } from '../messages';
 
 /** Test data for the employees screens. Ids are fixed UUID-shaped strings. */
@@ -63,7 +63,7 @@ export const employee: Employee = {
   university: null,
   graduationYear: null,
   status: 'ACTIVE',
-  userId: null,
+  salaryVisible: true,
   createdAt: '2026-11-01T08:00:00.000Z',
   updatedAt: '2026-11-01T08:00:00.000Z',
 };
@@ -74,6 +74,7 @@ export const summary = (overrides: Partial<EmployeeSummary> & Pick<EmployeeSumma
   jobTitle: employee.jobTitle,
   workSystem: 'FULL_TIME',
   basicSalary: 1200000,
+  salaryVisible: true,
   status: 'ACTIVE',
   photoUrl: null,
   gender: 'MALE',
@@ -81,8 +82,8 @@ export const summary = (overrides: Partial<EmployeeSummary> & Pick<EmployeeSumma
 });
 
 /** Render an employees screen with the `employees` namespace, like its route does. */
-export function renderEmployees(ui: ReactElement, locale: Locale = 'en') {
-  return renderWithI18n(<EmployeesI18n locale={locale}>{ui}</EmployeesI18n>, { locale });
+export function renderEmployees(ui: ReactElement, locale: Locale = 'en', session: SessionUser | null = TEST_SESSION) {
+  return renderWithI18n(<EmployeesI18n locale={locale}>{ui}</EmployeesI18n>, { locale, session });
 }
 
 /** `next/link` stand-in: a plain anchor (navigation is the router's job, not these tests'). */

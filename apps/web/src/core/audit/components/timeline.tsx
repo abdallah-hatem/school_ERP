@@ -180,6 +180,11 @@ function Changes({ entry, inline }: { entry: AuditEntry; inline: number }) {
           <div key={row.key} className="grid gap-y-0.5 @min-[34rem]:contents">
             <dt className="font-semibold leading-snug text-muted-foreground break-words">{row.label}</dt>
             <dd className="min-w-0 leading-snug break-words [overflow-wrap:anywhere]">
+              {row.hidden ? (
+                // R7: the viewer may not see salaries — the field changed, its values stay out.
+                <span className="text-muted-foreground italic">{t('audit.timeline.valueHidden')}</span>
+              ) : (
+              <>
               {row.created ? null : (
                 <>
                   <span className="text-muted-foreground line-through decoration-muted-foreground/60">
@@ -198,6 +203,8 @@ function Changes({ entry, inline }: { entry: AuditEntry; inline: number }) {
                   <Value row={row} side="after" entry={entry} />
                 </span>
               </span>
+              </>
+              )}
             </dd>
           </div>
         ))}

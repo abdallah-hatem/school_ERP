@@ -1,22 +1,25 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import {
   AUDIT_ACTIONS,
   type AuditAction,
   type AuditActor,
   type AuditChange,
-  type AuditEntityType,
+  AuditEntityType,
   type AuditEntry,
   type AuditLabel,
   type AuditModule,
   type AuditSummary,
   type AuthUser,
   type Paginated,
+  PermissionScope,
 } from '@school-erp/shared';
 import type { Request } from 'express';
 import { CLS_REQ, ClsService } from 'nestjs-cls';
 import type { DbAdapter } from '../../database/transactions';
-import { cleanChanges, diffChanges, labelColumns } from './audit.pure';
+import { PermissionsService } from '../permissions';
+import { cleanChanges, diffChanges, hideSalaryValues, labelColumns } from './audit.pure';
+import { AuditRecordAccess } from './audit-record-access';
 import {
   AuditEntryRepository,
   type AuditEntryFilter,
@@ -66,6 +69,8 @@ export class AuditService {
     private readonly entries: AuditEntryRepository,
     private readonly txHost: TransactionHost<DbAdapter>,
     private readonly cls: ClsService,
+    private readonly permissions: PermissionsService,
+    private readonly recordAccess: AuditRecordAccess,
   ) {}
 
   /**
@@ -112,46 +117,100 @@ export class AuditService {
     this.markRecorded(input.action);
   }
 
+  /**
+   * Entries matching `filter`, newest first — only those about records the viewer may see (P4:
+   * an employee or penalty outside their scope is left out), with salary-type values hidden from a
+   * viewer without every salary (R7).
+   */
   async list(
     filter: AuditEntryFilter,
     page: number,
     limit: number,
   ): Promise<Paginated<AuditEntry>> {
-    const result = await this.entries.findPage(filter, page, limit);
+    const [restricted, values] = await Promise.all([
+      this.recordAccess.restrictions(),
+      this.valueVisibility(),
+    ]);
+    const result = await this.entries.findPage({ ...filter, restricted }, page, limit);
     const actorIds = [...new Set(result.data.flatMap((row) => (row.actorId ? [row.actorId] : [])))];
     const linked = await this.entries.findLinkedEmployees(actorIds);
-    return { ...result, data: result.data.map((row) => toAuditEntry(row, linked)) };
+    return {
+      ...result,
+      data: result.data.map((row) => {
+        const entry = toAuditEntry(row, linked);
+        if (values.salary) return entry;
+        // A payroll run's totals follow the Payroll screen (P4): shown to a whole-school payroll viewer.
+        const keepTotals = values.payrollTotals && entry.entityType === AuditEntityType.PAYROLL_RUN;
+        return { ...entry, changes: hideSalaryValues(entry.changes, { keepTotals }) };
+      }),
+    };
   }
 
-  /** A record's History, optionally narrowed to one person or one changed field. */
-  listForRecord(
+  /**
+   * A record's History, optionally narrowed to one person or one changed field. 404 when the
+   * viewer may not see the record (outside their scope — edge case 3).
+   */
+  async listForRecord(
     entityType: AuditEntityType,
     entityId: string,
     page: number,
     limit: number,
     filter: { actorId?: string; field?: string } = {},
   ): Promise<Paginated<AuditEntry>> {
+    await this.assertCanSee(entityType, entityId);
     return this.list({ entityType, entityId, ...filter }, page, limit);
   }
 
-  /** The people in the log (or on one record), latest name, most recently active first. */
-  listActors(record?: { entityType: AuditEntityType; entityId: string }): Promise<AuditActor[]> {
-    return this.entries.findActors(record ?? {});
+  /**
+   * The people in the log (or on one record — 404 outside the viewer's scope), most recent first —
+   * only people with an entry the viewer may see (P4).
+   */
+  async listActors(record?: { entityType: AuditEntityType; entityId: string }): Promise<AuditActor[]> {
+    if (record) await this.assertCanSee(record.entityType, record.entityId);
+    return this.entries.findActors(record ?? {}, await this.recordAccess.restrictions());
   }
 
-  /** The fields a record's entries changed (its History field filter). */
-  listFields(entityType: AuditEntityType, entityId: string): Promise<string[]> {
+  /** The fields a record's entries changed (its History field filter). 404 outside the scope. */
+  async listFields(entityType: AuditEntityType, entityId: string): Promise<string[]> {
+    await this.assertCanSee(entityType, entityId);
     return this.entries.findFields(entityType, entityId);
   }
 
-  /** The Activity page's day headers: how many entries match `filter` in each period, in order. */
-  countPerPeriod(filter: AuditEntryFilter, periods: readonly { from: Date; to: Date }[]): Promise<number[]> {
-    return this.entries.countPerPeriod(filter, periods);
+  /**
+   * The Activity page's day headers: how many entries match `filter` in each period, in order —
+   * counting only what `list` would show the viewer.
+   */
+  async countPerPeriod(filter: AuditEntryFilter, periods: readonly { from: Date; to: Date }[]): Promise<number[]> {
+    const restricted = await this.recordAccess.restrictions();
+    return this.entries.countPerPeriod({ ...filter, restricted }, periods);
   }
 
-  /** "Today at a glance" for `[from, to)`. */
-  summary(from: Date, to: Date): Promise<AuditSummary> {
-    return this.entries.summary(from, to);
+  /** "Today at a glance" for `[from, to)` — counting only what `list` would show the viewer (P4). */
+  async summary(from: Date, to: Date): Promise<AuditSummary> {
+    return this.entries.summary(from, to, await this.recordAccess.restrictions());
+  }
+
+  private async assertCanSee(entityType: AuditEntityType, entityId: string): Promise<void> {
+    if (!(await this.recordAccess.canSee(entityType, entityId))) throw new NotFoundException();
+  }
+
+  /**
+   * Which values the viewer sees (R7, P4): salary-type values only with `hr.employees.view_salary`
+   * at scope `all` — the log is school-wide, so a narrower salary scope still hides them; a payroll
+   * run's totals with `hr.payroll.view` at scope `all`, like the Payroll screen. No request user
+   * (scripts): everything.
+   */
+  private async valueVisibility(): Promise<{ salary: boolean; payrollTotals: boolean }> {
+    const user = this.request()?.user;
+    if (!user) return { salary: true, payrollTotals: true };
+    const [salary, payroll] = await Promise.all([
+      this.permissions.scopeFor(user, 'hr.employees.view_salary'),
+      this.permissions.scopeFor(user, 'hr.payroll.view'),
+    ]);
+    return {
+      salary: salary?.scope === PermissionScope.ALL,
+      payrollTotals: payroll?.scope === PermissionScope.ALL,
+    };
   }
 
   private request(): RequestWithUser | undefined {

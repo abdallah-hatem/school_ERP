@@ -23,6 +23,7 @@ import {
   type CatalogueLevel,
   type PenaltyTarget,
 } from '../../domain';
+import { HrAccessService } from '../../access/hr-access.service';
 import { EmployeesService } from '../../employees/services/employees.service';
 import { MonthLockService } from '../../month-lock/month-lock.service';
 import { HrSettingsService } from '../../settings/hr-settings.service';
@@ -102,21 +103,29 @@ export class PenaltyRecordsService {
     private readonly employees: EmployeesService,
     private readonly settings: HrSettingsService,
     private readonly monthLock: MonthLockService,
+    private readonly access: HrAccessService,
   ) {}
 
+  /** The records of the employees `hr.penalties.view` covers for the user (R5). */
   async list(query: ListPenaltiesQueryDto): Promise<Paginated<PenaltyRecord>> {
-    const result = await this.repository.list(query.page, query.limit, {
-      employeeId: query.employeeId,
-      month: query.month,
-      status: query.status,
-      search: query.search,
-    });
+    const result = await this.repository.list(
+      query.page,
+      query.limit,
+      {
+        employeeId: query.employeeId,
+        month: query.month,
+        status: query.status,
+        search: query.search,
+      },
+      await this.access.where('hr.penalties.view'),
+    );
     const shown = await this.shownLevels(result.data);
     return { ...result, data: result.data.map((row) => toRecord(row, shown.get(row.id)!)) };
   }
 
+  /** 404 when unknown or its employee is outside the user's `hr.penalties.view` scope (edge case 3). */
   async get(id: Uuid): Promise<PenaltyRecord> {
-    const row = await this.repository.findOne(id);
+    const row = await this.repository.findOne(id, await this.access.where('hr.penalties.view'));
     if (!row) throw new NotFoundException();
     return this.present(row);
   }
@@ -155,7 +164,8 @@ export class PenaltyRecordsService {
 
   /** PENDING → APPROVED, fixing level, action and days from today's catalogue and count. */
   async approve(id: Uuid, approvedById: Uuid | null): Promise<PenaltyRecord> {
-    const current = await this.repository.findOne(id);
+    // Outside the user's `hr.penalties.approve` scope → 404, like an unknown record (R5).
+    const current = await this.repository.findOne(id, await this.access.where('hr.penalties.approve'));
     if (!current) throw new NotFoundException();
     this.assertNotCancelled(current.status);
     if (current.status !== PenaltyStatus.PENDING) {
@@ -187,7 +197,8 @@ export class PenaltyRecordsService {
     dto: CancelPenaltyDto,
     cancelledById: Uuid | null,
   ): Promise<PenaltyRecord> {
-    const current = await this.repository.findStatus(id);
+    // Outside the user's `hr.penalties.cancel` scope → 404, like an unknown record (R5).
+    const current = await this.repository.findStatus(id, await this.access.where('hr.penalties.cancel'));
     if (!current) throw new NotFoundException();
     this.assertNotCancelled(current.status);
     await this.monthLock.assertMonthOpen(monthOf(current.date));
@@ -236,14 +247,32 @@ export class PenaltyRecordsService {
     }));
   }
 
-  /** Pending and approved records dated in a month (dashboard: by violation date). */
+  /**
+   * Pending and approved records dated in a month (dashboard: by violation date), of the employees
+   * `hr.penalties.view` covers for the user (R5).
+   */
   async monthCounts(month: Month): Promise<{ pending: number; approved: number }> {
-    const counts = await this.repository.countByStatusInMonth(month);
+    const counts = await this.repository.countByStatusInMonth(
+      month,
+      await this.access.where('hr.penalties.view'),
+    );
     return { pending: counts.PENDING, approved: counts.APPROVED };
   }
 
-  /** §3: only an active employee; §4, §7: only a usable violation. */
+  /** The ids of the records whose employee `hr.penalties.view` covers (Activity log, R5). */
+  async idsInViewScope(): Promise<Uuid[] | 'all'> {
+    const scope = await this.access.scope('hr.penalties.view');
+    if (scope.kind === 'all') return 'all';
+    return this.repository.findIdsInScope(await this.access.where('hr.penalties.view'));
+  }
+
+  /**
+   * §3: only an active employee; §4, §7: only a usable violation; R5: only an employee the user's
+   * `hr.penalties.record` scope covers (else 404, edge case 3).
+   */
   private async assertRecordable(employeeId: Uuid, violationId: Uuid) {
+    // Scope first (edge case 3): outside `hr.penalties.record` → 404, whatever else is wrong.
+    await this.employees.assertScopeFirst('hr.penalties.record', [employeeId]);
     // Unknown → 400 FOREIGN_KEY_VIOLATION; inactive → 409 EMPLOYEE_INACTIVE.
     await this.employees.assertActive([employeeId]);
     return this.catalogue.getUsable(violationId);

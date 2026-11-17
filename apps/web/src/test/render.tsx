@@ -46,3 +46,17 @@ export function renderWithI18n(
 export function sessionWithout(...keys: string[]): SessionUser {
   return { ...TEST_SESSION, permissions: TEST_SESSION.permissions.filter((k) => !keys.includes(k)) };
 }
+
+/** A session holding only `keys` — e.g. the Stage head of P4 (`STAGE_HEAD_KEYS`). */
+export function sessionWith(...keys: string[]): SessionUser {
+  return { ...TEST_SESSION, roles: [], permissions: TEST_SESSION.permissions.filter((k) => keys.includes(k)) };
+}
+
+/** What the built-in Stage head holds (roles-permissions spec, Starting roles). */
+export const STAGE_HEAD_KEYS = [
+  'hr.employees.view',
+  'hr.penalties.view',
+  'hr.penalties.record',
+  'core.stages.view',
+  'hr.penalty_catalogue.view',
+] as const;

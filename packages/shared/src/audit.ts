@@ -239,6 +239,12 @@ export interface AuditChange {
   field: string;
   before: unknown;
   after: unknown;
+  /**
+   * Set (and `before` / `after` left out) when the viewer may not see this field's values: a
+   * salary-type field (`AUDIT_SALARY_FIELDS`) for someone without `hr.employees.view_salary` (P4).
+   * Never stored — the API adds it when it answers.
+   */
+  hidden?: true;
 }
 
 /** A record's name in both languages; the timeline shows the one matching the screen. */
@@ -344,6 +350,25 @@ export function isMoneyEntry(entry: Pick<AuditEntry, 'action' | 'changes'>): boo
     AUDIT_MONEY_ACTIONS.includes(entry.action) ||
     entry.changes.some((c) => (AUDIT_MONEY_FIELDS as readonly string[]).includes(c.field))
   );
+}
+
+/**
+ * Fields whose values are salary-type (R7): the money fields plus the employee's insured salary and
+ * bank details. A viewer without `hr.employees.view_salary` (scope `all` — the log is school-wide)
+ * gets these changes with `hidden: true` and no `before` / `after`: the timeline says the field
+ * changed, never the values (P4).
+ */
+export const AUDIT_SALARY_FIELDS = [
+  ...AUDIT_MONEY_FIELDS,
+  'insuredSalary',
+  'bankName',
+  'bankAccountNumber',
+  'iban',
+  'monthSalary',
+] as const;
+
+export function isSalaryField(field: string): boolean {
+  return (AUDIT_SALARY_FIELDS as readonly string[]).includes(field);
 }
 
 /** A failed sign-in: the Activity page marks it and the summary counts it. */

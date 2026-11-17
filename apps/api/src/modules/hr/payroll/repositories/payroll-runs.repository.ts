@@ -156,15 +156,21 @@ export class PayrollRunsRepository extends BaseRepository<
     return this.db.payrollRun.findUnique({ where: { month }, select: RUN_SELECT });
   }
 
-  /** Totals of each run from all of its lines (one aggregate query each kind). */
-  async totalsFor(runIds: readonly string[]): Promise<Map<string, PayrollTotals>> {
+  /**
+   * Totals of each run from its lines — all of them, or those of the employees in `scope` (R5) —
+   * one aggregate query each kind.
+   */
+  async totalsFor(
+    runIds: readonly string[],
+    scope: Prisma.EmployeeWhereInput = {},
+  ): Promise<Map<string, PayrollTotals>> {
     const totals = new Map<string, PayrollTotals>(runIds.map((id) => [id, { ...EMPTY_TOTALS }]));
     if (!runIds.length) return totals;
     const ids = [...runIds];
     const [sums, flagged] = await Promise.all([
       this.db.payrollLine.groupBy({
         by: ['runId'],
-        where: { runId: { in: ids } },
+        where: { runId: { in: ids }, employee: scope },
         _count: { _all: true },
         _sum: {
           monthSalary: true,
@@ -177,7 +183,7 @@ export class PayrollRunsRepository extends BaseRepository<
       }),
       this.db.payrollLine.groupBy({
         by: ['runId'],
-        where: { runId: { in: ids }, flags: { isEmpty: false } },
+        where: { runId: { in: ids }, flags: { isEmpty: false }, employee: scope },
         _count: { _all: true },
       }),
     ]);
@@ -197,8 +203,13 @@ export class PayrollRunsRepository extends BaseRepository<
     return totals;
   }
 
-  findLines(runId: string, filter: LineFilter = {}): Promise<LineRow[]> {
-    const where: Prisma.PayrollLineWhereInput = { runId };
+  /** The run's lines matching `filter`, of the employees in `scope` (R5; `{}`: all). */
+  findLines(
+    runId: string,
+    filter: LineFilter = {},
+    scope: Prisma.EmployeeWhereInput = {},
+  ): Promise<LineRow[]> {
+    const where: Prisma.PayrollLineWhereInput = { runId, employee: scope };
     if (filter.departmentId) where.departmentId = filter.departmentId;
     if (filter.flagged !== undefined) where.flags = { isEmpty: !filter.flagged };
     if (filter.search) {
@@ -217,8 +228,16 @@ export class PayrollRunsRepository extends BaseRepository<
     });
   }
 
-  findLine(runId: string, lineId: string): Promise<LineRow | null> {
-    return this.db.payrollLine.findFirst({ where: { id: lineId, runId }, select: LINE_SELECT });
+  /** One line, or null when unknown or its employee is outside `scope` (R5 — the caller 404s). */
+  findLine(
+    runId: string,
+    lineId: string,
+    scope: Prisma.EmployeeWhereInput = {},
+  ): Promise<LineRow | null> {
+    return this.db.payrollLine.findFirst({
+      where: { id: lineId, runId, employee: scope },
+      select: LINE_SELECT,
+    });
   }
 
   findLineByEmployee(runId: string, employeeId: string): Promise<LineRow | null> {
@@ -266,9 +285,14 @@ export class PayrollRunsRepository extends BaseRepository<
     };
   }
 
-  findAdjustments(runId: string, employeeId?: string): Promise<AdjustmentRow[]> {
+  /** The run's adjustments (one employee's, with `employeeId`), of the employees in `scope`. */
+  findAdjustments(
+    runId: string,
+    employeeId?: string,
+    scope: Prisma.EmployeeWhereInput = {},
+  ): Promise<AdjustmentRow[]> {
     return this.db.payrollAdjustment.findMany({
-      where: { runId, ...(employeeId ? { employeeId } : {}) },
+      where: { runId, employee: scope, ...(employeeId ? { employeeId } : {}) },
       select: ADJUSTMENT_SELECT,
       orderBy: { createdAt: 'asc' },
     });

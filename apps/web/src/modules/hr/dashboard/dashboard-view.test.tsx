@@ -30,7 +30,7 @@ const DATA: HrDashboard = {
       { stage: { id: 's2', nameEn: 'Preparatory', nameAr: 'الإعدادية' }, count: 284 },
     ],
   },
-  currentRun: { id: 'run-11', month: '2026-11', status: PayrollStatus.DRAFT, net: 140_000_00 },
+  currentRun: { id: 'run-11', month: '2026-11', status: PayrollStatus.DRAFT, net: 140_000_00, salaryVisible: true },
   penaltiesThisMonth: { pending: 3, approved: 7 },
 };
 

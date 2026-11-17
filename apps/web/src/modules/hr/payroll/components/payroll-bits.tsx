@@ -40,18 +40,20 @@ export function LineStatus({ flags }: { flags: readonly PayrollFlag[] }) {
 }
 
 /** A deduction: red when it costs something, muted at 0. */
-export function DeductionAmount({ value }: { value: number }) {
+export function DeductionAmount({ value }: { value: number | undefined }) {
   return (
     <Money
       value={value}
       currency={false}
-      className={cn(value > 0 ? 'text-destructive-ink font-semibold' : 'text-muted-foreground')}
+      className={cn((value ?? 0) > 0 ? 'text-destructive-ink font-semibold' : 'text-muted-foreground')}
     />
   );
 }
 
 /** Additions − deductions with its sign (`+500.00`, `-250.00`), muted at 0. */
-export function SignedAmount({ value }: { value: number }) {
+export function SignedAmount({ value }: { value: number | undefined }) {
+  // Hidden (R7): the dash alone.
+  if (value === undefined) return <Money value={undefined} currency={false} />;
   return (
     <span
       dir="ltr"

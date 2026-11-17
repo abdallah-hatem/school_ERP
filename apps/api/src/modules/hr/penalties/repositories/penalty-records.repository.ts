@@ -157,8 +157,14 @@ export class PenaltyRecordsRepository extends BaseRepository<
     return this.databaseService;
   }
 
-  list(page: number | undefined, limit: number | undefined, filter: RecordListFilter) {
-    const where: Prisma.PenaltyRecordWhereInput = {};
+  /** `scope`: the employees whose records the viewer may see (R5) — `{}` for all. */
+  list(
+    page: number | undefined,
+    limit: number | undefined,
+    filter: RecordListFilter,
+    scope: Prisma.EmployeeWhereInput = {},
+  ) {
+    const where: Prisma.PenaltyRecordWhereInput = { AND: [{ employee: scope }] };
     if (filter.employeeId) where.employeeId = filter.employeeId;
     if (filter.status) where.status = filter.status;
     if (filter.month) where.date = monthDateRange(filter.month);
@@ -178,17 +184,33 @@ export class PenaltyRecordsRepository extends BaseRepository<
     });
   }
 
-  findOne(id: string): Promise<RecordRow | null> {
-    return this.db.penaltyRecord.findUnique({ where: { id }, select: RECORD_SELECT });
+  /** The record, or null when unknown or its employee is outside `scope` (R5 — the caller 404s). */
+  findOne(id: string, scope: Prisma.EmployeeWhereInput = {}): Promise<RecordRow | null> {
+    return this.db.penaltyRecord.findFirst({
+      where: { id, employee: scope },
+      select: RECORD_SELECT,
+    });
   }
 
   /** Status only, for deciding which error a failed status change gets. */
-  async findStatus(id: string): Promise<{ status: PenaltyStatus; date: IsoDate } | null> {
-    const row = await this.db.penaltyRecord.findUnique({
-      where: { id },
+  async findStatus(
+    id: string,
+    scope: Prisma.EmployeeWhereInput = {},
+  ): Promise<{ status: PenaltyStatus; date: IsoDate } | null> {
+    const row = await this.db.penaltyRecord.findFirst({
+      where: { id, employee: scope },
       select: { status: true, date: true },
     });
     return row && { status: row.status, date: toIsoDate(row.date) };
+  }
+
+  /** The ids of the records whose employee is in `scope` (the Activity log's filter, R5). */
+  async findIdsInScope(scope: Prisma.EmployeeWhereInput): Promise<string[]> {
+    const rows = await this.db.penaltyRecord.findMany({
+      where: { employee: scope },
+      select: { id: true },
+    });
+    return rows.map((r) => r.id);
   }
 
   /** Statuses of the pair's records on `date` (the preview's once-per-day check, §4). */
@@ -312,11 +334,14 @@ export class PenaltyRecordsRepository extends BaseRepository<
     });
   }
 
-  /** How many records dated in a month are in each status. */
-  async countByStatusInMonth(month: string): Promise<Record<PenaltyStatus, number>> {
+  /** How many records dated in a month (of employees in `scope`) are in each status. */
+  async countByStatusInMonth(
+    month: string,
+    scope: Prisma.EmployeeWhereInput = {},
+  ): Promise<Record<PenaltyStatus, number>> {
     const groups = await this.db.penaltyRecord.groupBy({
       by: ['status'],
-      where: { date: monthDateRange(month) },
+      where: { date: monthDateRange(month), employee: scope },
       _count: { _all: true },
     });
     const counts: Record<PenaltyStatus, number> = { PENDING: 0, APPROVED: 0, CANCELLED: 0 };

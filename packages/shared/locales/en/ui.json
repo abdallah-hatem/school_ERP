@@ -25,7 +25,9 @@
     "errorTitle": "This couldn't load",
     "errorBody": "Check your connection, then try again.",
     "retry": "Try again",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "notFoundTitle": "This page isn't here",
+    "notFoundBody": "It may have moved, or your account can't open it. Ask the school's admin if you need it."
   },
   "toast": {
     "region": "Notifications",
@@ -60,6 +62,7 @@
   },
   "units": {
     "currency": "EGP",
+    "amountHidden": "Amount hidden",
     "days": "days"
   },
   "comingSoon": {

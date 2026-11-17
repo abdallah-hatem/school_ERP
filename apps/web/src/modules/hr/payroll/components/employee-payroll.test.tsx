@@ -15,8 +15,8 @@ vi.mock('next/navigation', () => ({
 import { renderPayroll } from '../test/fixtures';
 import { EmployeePayroll, type EmployeePayrollProps } from './employee-payroll';
 
-const NOV: EmployeePayrollLine = { runId: 'r-nov', lineId: 'l-nov', month: '2026-11', status: 'DRAFT', net: 1_350_000 };
-const OCT: EmployeePayrollLine = { runId: 'r-oct', lineId: 'l-oct', month: '2026-10', status: 'APPROVED', net: 1_400_000 };
+const NOV: EmployeePayrollLine = { runId: 'r-nov', lineId: 'l-nov', month: '2026-11', status: 'DRAFT', salaryVisible: true, net: 1_350_000 };
+const OCT: EmployeePayrollLine = { runId: 'r-oct', lineId: 'l-oct', month: '2026-10', status: 'APPROVED', salaryVisible: true, net: 1_400_000 };
 
 function renderTab(props: Partial<EmployeePayrollProps> = {}) {
   return renderPayroll(

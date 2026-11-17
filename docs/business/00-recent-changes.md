@@ -1,5 +1,14 @@
 # Recent changes
 
+- 2026-11-18 — What each role sees (§2, P4, owner: "I still see salaries, all employees, every
+  detail"): stage and team limits and salary visibility are now enforced. A stage head sees only
+  their stage's employees, a direct manager only their team — in every list, count, picker,
+  penalty, lateness and payroll line and in the activity log; anyone else's record shows "This page
+  isn't here". Without the salary permission there is no salary, insured salary or bank detail
+  anywhere (cards, profile, form, payroll lines, payslips, activity log); the principal keeps the
+  school's payroll totals. Tabs, sections, buttons, dashboard tiles and pages show only to those who
+  may use them.
+
 - 2026-11-18 — Penalties, once per day (§4, §7, owner): each violation has a **Once per day**
   setting, on by default; with it on, a second penalty for the same violation, employee and date is
   refused while the first is pending or approved (a cancelled one frees the day), checked at
