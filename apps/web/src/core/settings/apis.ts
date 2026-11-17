@@ -2,9 +2,7 @@
 
 import type { PublicSchoolSettings, SchoolSettings } from '@school-erp/shared';
 import { apiFetch } from '@/lib/api';
-
-/** Cache tag for the school settings; `PATCH /settings/school` (T10) revalidates it. */
-const SCHOOL_SETTINGS_TAG = 'school-settings';
+import { SCHOOL_SETTINGS_TAG } from './tags';
 
 /** `GET /settings/school` — school identity, hours and default language (contract → core/settings). */
 export async function GET_SCHOOL_SETTINGS() {

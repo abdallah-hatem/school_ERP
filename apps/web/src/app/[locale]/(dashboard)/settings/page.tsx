@@ -1,6 +1,15 @@
-import { ComingSoon } from '@/core/navigation/coming-soon';
+import { notFound } from 'next/navigation';
+import { SettingsPage } from '@/modules/settings';
+import { isLocale } from '@/shared/lib/i18n';
 
-/** Placeholder until the settings screen lands; the feature task replaces this with its module page. */
-export default function SettingsPage() {
-  return <ComingSoon section="settings" />;
+export default async function Page({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<{ section?: string | string[] }>;
+}) {
+  const [{ locale }, { section }] = await Promise.all([params, searchParams]);
+  if (!isLocale(locale)) notFound();
+  return <SettingsPage locale={locale} section={section} />;
 }

@@ -525,3 +525,69 @@ export function SwitchField<T extends FieldValues>({
     </div>
   );
 }
+
+// ── Multi-choice toggles ─────────────────────────────────────────────────────
+
+/**
+ * A row of toggle chips for picking several values (working days). The form holds the chosen
+ * values in `options` order. Each chip is a button with `aria-pressed`.
+ */
+export function ToggleGroupField<T extends FieldValues>({
+  control,
+  name,
+  label,
+  required,
+  hint,
+  disabled,
+  className,
+  options,
+}: BaseFieldProps<T> & { options: SelectOption[] }) {
+  const id = useFieldId(name);
+  const { field, fieldState } = useController({ control, name });
+  const chosen = new Set((field.value as string[] | null | undefined) ?? []);
+
+  function toggle(value: string) {
+    const next = new Set(chosen);
+    if (next.has(value)) next.delete(value);
+    else next.add(value);
+    field.onChange(options.map((o) => o.value).filter((v) => next.has(v)));
+    field.onBlur();
+  }
+
+  return (
+    <FieldShell id={id} label={label} required={required} hint={hint} error={fieldState.error?.message} className={className}>
+      {(a11y) => (
+        <div
+          role="group"
+          id={a11y.id}
+          aria-label={typeof label === 'string' ? label : undefined}
+          aria-describedby={a11y['aria-describedby']}
+          className="flex flex-wrap gap-2"
+        >
+          {options.map((option) => {
+            const on = chosen.has(option.value);
+            return (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={on}
+                disabled={disabled || option.disabled}
+                onClick={() => toggle(option.value)}
+                className={cn(
+                  'h-11 cursor-pointer rounded-full border px-4 text-sm font-semibold transition-colors duration-150',
+                  'focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring/55',
+                  'disabled:cursor-not-allowed disabled:opacity-55',
+                  on
+                    ? 'border-primary bg-primary-soft text-primary'
+                    : 'border-input bg-card text-muted-foreground hover:bg-muted hover:text-foreground',
+                )}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </FieldShell>
+  );
+}
