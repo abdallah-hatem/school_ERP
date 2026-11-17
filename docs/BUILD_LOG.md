@@ -132,6 +132,10 @@ phase live in `docs/build-log/`.
 - 2026-11-17 — P1 permissions skeleton merged → #50: 29 typed keys, `@Permission` / `@Public` /
   `@SignedIn`, a closed-by-default guard, CI scan, `can()` in the web app; HR admin holds every key.
   Ready for Tamer and Waleed (T28/T29).
+- 2026-11-17 — Tamer (`Fawrama`) and Waleed (`AbdelrahmanHassib`) invited with Write → #52.
+- 2026-11-17 — P2 roles as data merged → #53 (7 starting roles; admin = System admin + HR manager;
+  users/roles API; review made §2 honest about P3/P4 gaps). T30 Activity page + employee History
+  tab (option B) merged → #54; Settings → Change history replaced by a link to Activity.
 
 ## Next up
 
@@ -147,8 +151,13 @@ phase live in `docs/build-log/`.
   `hr.employees.view_salary`; Users, Roles and My account screens (mockups first); read-only settings
   for view-only users; gate payroll adjust on `hr.payroll.adjust`; what Home shows without
   `hr.dashboard.view`.
-- Audit log T28 (core + HR people) and T29 (penalties, lateness, payroll): first tasks for Tamer and
-  Waleed. Then T30 screens (option B; Settings history becomes a link to Activity) and T31 verify.
+- Audit log T28 (Tamer) and T29 (Waleed), then T31 verify. Follow-ups from T30: entries keep one
+  name snapshot, so list/catalogue names show in English inside Arabic sentences; id fields
+  (`departmentId`) show raw ids unless T28 stores names; penalties don't appear on the employee's
+  History; payroll run page has no History tab yet; smoke History check still asserts the empty
+  state (`TODO(T28)`).
+- Flaky smoke `05-payroll`: Save stays disabled after editing grace minutes (seen in two agent runs
+  today, passes on rerun). Fix the race properly.
 - Optional: server-side paging for lateness (loads the whole month today) and column sorting.
 - Employee profile shows the list's skeleton while loading (`employees/loading.tsx` wraps `[id]`).
 - The stage "None" band is detected by its English name; key it by an id instead.
