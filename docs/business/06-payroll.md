@@ -12,7 +12,9 @@ The client's regulations don't define how salaries are calculated. For the demo,
 - **DECIDED** — **Recalculate** rebuilds every line of a draft run from the current employees,
   penalties, lateness, adjustments and settings. Employees deactivated since are removed; new active
   employees are added.
-- **DECIDED** — **Approve** locks the run, its penalties, lateness and adjustments. An approved run
+- **DECIDED** — **Approve** first recalculates every line one last time (so a penalty approved or
+  cancelled, or a setting changed, since the last recalculate is included), then locks the run, its
+  penalties, lateness and adjustments. An approved run
   is never edited or deleted; corrections go into the next month as adjustments.
 - **DECIDED** — A month can't be approved while it still has **pending** penalties.
 
@@ -45,7 +47,17 @@ The client's regulations don't define how salaries are calculated. For the demo,
 ## Outputs
 
 - **DECIDED** — **Payslip** per employee for an approved run, printable, in Arabic or English: salary,
-  each deduction with its days, adjustments, net.
+  each penalty with its level, action and days, lateness, adjustments, net. Penalties that cost
+  nothing (notice, warning, raise-related…) are listed with amount 0 so the employee sees them.
+- **DECIDED** — A penalty's amount on the payslip is its share of the line's penalty deduction
+  (its days ÷ the line's penalty days × the line's penalty amount). The shares can differ from the
+  line total by a piastre; the line total is what is paid.
+- **GUESS** — An adjustment for an employee who is no longer in the run (deactivated before the last
+  recalculate) stays recorded but doesn't count, and is shown as "not applied".
+- **DECIDED** — **Dashboard:** active headcount (by stage), the current month's payroll run (status
+  and net, or none yet), and this month's penalties (pending and approved, by violation date).
+- **DECIDED** — Approving a run announces it (`payroll approved`, with the totals) for a future
+  accounting module; nothing listens to it yet.
 - **DECIDED** — **Bank sheet** export of an approved run (Excel): employee code, name, national ID,
   net. Bank account fields are Planned.
 - **Planned** — tax, social insurance, allowances, the annual raise, the exam bonus rules, loans.

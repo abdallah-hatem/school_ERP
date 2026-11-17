@@ -20,3 +20,13 @@ export {
   type LineNetInput,
   type LineNetResult,
 } from './payroll';
+export {
+  calculateLine,
+  deductedDays,
+  lineNetWithFlags,
+  penaltyShare,
+  sumAdjustments,
+  sumDays,
+  type LineAmounts,
+  type LineInput,
+} from './payroll-line';

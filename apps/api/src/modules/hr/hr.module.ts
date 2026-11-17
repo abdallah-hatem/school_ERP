@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { SettingsModule } from '../../core/settings';
+import { DashboardController } from './dashboard/controllers/dashboard.controller';
+import { DashboardService } from './dashboard/services/dashboard.service';
 import { EmployeesController } from './employees/controllers/employees.controller';
 import { EmployeesRepository } from './employees/repositories/employees.repository';
 import { EmployeesService } from './employees/services/employees.service';
@@ -11,6 +13,9 @@ import { DepartmentsService } from './lists/services/departments.service';
 import { JobTitlesService } from './lists/services/job-titles.service';
 import { MonthLockService } from './month-lock/month-lock.service';
 import { MonthLockRepository } from './month-lock/repositories/month-lock.repository';
+import { PayrollRunsController } from './payroll/controllers/payroll-runs.controller';
+import { PayrollRunsRepository } from './payroll/repositories/payroll-runs.repository';
+import { PayrollService } from './payroll/services/payroll.service';
 import { PenaltiesController } from './penalties/controllers/penalties.controller';
 import { PenaltyCatalogueController } from './penalties/controllers/penalty-catalogue.controller';
 import { PenaltyCatalogueRepository } from './penalties/repositories/penalty-catalogue.repository';
@@ -41,6 +46,9 @@ import { LatenessService } from './staff-attendance/services/lateness.service';
     // penalties (T7)
     PenaltyCatalogueController,
     PenaltiesController,
+    // payroll + dashboard (T9)
+    PayrollRunsController,
+    DashboardController,
   ],
   providers: [
     // settings (T6)
@@ -63,6 +71,10 @@ import { LatenessService } from './staff-attendance/services/lateness.service';
     PenaltyCatalogueService,
     PenaltyRecordsRepository,
     PenaltyRecordsService,
+    // payroll + dashboard (T9)
+    PayrollRunsRepository,
+    PayrollService,
+    DashboardService,
   ],
   exports: [
     // lists + employees (T5)

@@ -24,6 +24,7 @@ import {
   EmployeesRepository,
   EmployeeSummaryRow,
   EmployeeUpdateData,
+  PayrollSnapshotRow,
 } from '../repositories/employees.repository';
 
 /** Fields a PATCH may change but never clear (§3 "required"). */
@@ -102,6 +103,20 @@ export class EmployeesService {
   async listActiveWithDepartments(): Promise<{ employee: EmployeeRef; department: NamedRef }[]> {
     const rows = await this.repository.findActiveWithDepartments();
     return rows.map(({ department, ...employee }) => ({ employee, department }));
+  }
+
+  /** Every active employee with the fields a payroll line snapshots (§6), by code. */
+  listActiveForPayroll(): Promise<PayrollSnapshotRow[]> {
+    return this.repository.findActiveForPayroll();
+  }
+
+  /** Active headcount, total and per stage (dashboard). Inactive employees never count. */
+  async activeHeadcount(): Promise<{
+    active: number;
+    byStage: { stage: NamedRef; count: number }[];
+  }> {
+    const byStage = await this.repository.countActiveByStage();
+    return { active: byStage.reduce((n, s) => n + s.count, 0), byStage };
   }
 
   /**

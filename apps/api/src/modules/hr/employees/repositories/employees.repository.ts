@@ -23,6 +23,23 @@ export const EMPLOYEE_SUMMARY_SELECT = {
   status: true,
 } satisfies Prisma.EmployeeSelect;
 
+/** The employee fields a payroll line snapshots at calculation (§6). */
+export const PAYROLL_SNAPSHOT_SELECT = {
+  id: true,
+  code: true,
+  nameEn: true,
+  nameAr: true,
+  nationalId: true,
+  departmentId: true,
+  department: { select: { nameEn: true, nameAr: true } },
+  basicSalary: true,
+  workSystem: true,
+} satisfies Prisma.EmployeeSelect;
+
+export type PayrollSnapshotRow = Prisma.EmployeeGetPayload<{
+  select: typeof PAYROLL_SNAPSHOT_SELECT;
+}>;
+
 export const EMPLOYEE_DETAIL_SELECT = {
   id: true,
   code: true,
@@ -156,6 +173,34 @@ export class EmployeesRepository extends BaseRepository<
       },
       orderBy: { code: 'asc' },
     });
+  }
+
+  /** Every active employee with the fields a payroll line snapshots (§6), by code. */
+  findActiveForPayroll(): Promise<PayrollSnapshotRow[]> {
+    return this.databaseService.employee.findMany({
+      where: { status: EmployeeStatus.ACTIVE },
+      select: PAYROLL_SNAPSHOT_SELECT,
+      orderBy: { code: 'asc' },
+    });
+  }
+
+  /** Active employees per stage, with the stage's names, in stage order (dashboard). */
+  async countActiveByStage(): Promise<
+    { stage: { id: string; nameEn: string; nameAr: string }; count: number }[]
+  > {
+    const groups = await this.databaseService.employee.groupBy({
+      by: ['stageId'],
+      where: { status: EmployeeStatus.ACTIVE },
+      _count: { _all: true },
+    });
+    if (!groups.length) return [];
+    const stages = await this.databaseService.stage.findMany({
+      where: { id: { in: groups.map((g) => g.stageId) } },
+      select: { id: true, nameEn: true, nameAr: true },
+      orderBy: [{ sortOrder: 'asc' }, { nameEn: 'asc' }],
+    });
+    const countOf = new Map(groups.map((g) => [g.stageId, g._count._all]));
+    return stages.map((stage) => ({ stage, count: countOf.get(stage.id) ?? 0 }));
   }
 
   /** Id and status of each existing employee among `ids` (missing ids are simply absent). */
