@@ -126,6 +126,9 @@ phase live in `docs/build-log/`.
   `docs/plans/2026-11-17-audit-log-plan.md` (T27–T31). T27 started.
 - 2026-11-17 — Penalty catalogue groups start folded → #45. Employee profile: shared layout, header
   stays across tabs → #46. Roles/permissions spec written with GUESS answers.
+- 2026-11-17 — T27 audit foundation merged → #48. Branch rules (owner): `dev` takes PRs with green CI
+  and no approval; `testing` and `production` need green CI and the owner's approval. P1 permissions
+  skeleton started; Tamer and Waleed are invited once P1 is merged.
 
 ## Next up
 
@@ -138,7 +141,6 @@ phase live in `docs/build-log/`.
 - Hosting the demo on the Contabo server (owner: later; local demo is the fallback).
 - Roles and permissions: spec `docs/specs/2026-11-17-roles-permissions.md` (GUESS answers). P1 skeleton
   right after T27, before Tamer and Waleed start HR work; P2–P4 in core in parallel.
-- Add required CI status checks to the branch protection once CI exists (code-owner review is on).
 - Optional: server-side paging for lateness (loads the whole month today) and column sorting.
 - Employee profile shows the list's skeleton while loading (`employees/loading.tsx` wraps `[id]`).
 - The stage "None" band is detected by its English name; key it by an id instead.
