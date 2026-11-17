@@ -24,11 +24,13 @@ export default defineConfig({
     acceptDownloads: true,
     actionTimeout: 15_000,
     navigationTimeout: 30_000,
-    // Linux Chromium draws classic 15px scrollbars; with `scrollbar-gutter: stable` they narrow the
-    // content by 15px (a 1440px desktop then crosses table→cards breakpoints). Hide them so CI lays
-    // out like macOS's overlay scrollbars, which the specs were written against.
+    // Linux Chromium has classic scrollbars: `scrollbar-gutter: stable` on <html> then reserves 15px
+    // even when they're hidden, so a 1440px desktop crosses table→cards breakpoints. Overlay
+    // scrollbars reserve nothing — the macOS layout the specs were written against.
     launchOptions:
-      process.platform === 'linux' ? { args: ['--font-render-hinting=none', '--hide-scrollbars'] } : undefined,
+      process.platform === 'linux'
+        ? { args: ['--font-render-hinting=none', '--enable-features=OverlayScrollbar'] }
+        : undefined,
   },
   projects: [
     {
