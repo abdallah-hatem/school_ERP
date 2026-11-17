@@ -346,11 +346,19 @@ async function seedMonth(
   );
 
   const penalties = get(PenaltyRecordsService);
+  // The nth seed entry of an employee + violation + date matches the nth such record (in the order
+  // recorded), so same-day repeats are recorded once each and keep their order on re-runs.
+  const seen = new Map<string, number>();
   for (const p of [...PENALTIES].sort((a, b) => a.date.localeCompare(b.date))) {
     const employeeId = emp(p.employee);
     const violationId = violationIds.get(p.violation)!;
+    const sameDayKey = `${p.employee}:${p.violation}:${p.date}`;
+    const nth = seen.get(sameDayKey) ?? 0;
+    seen.set(sameDayKey, nth + 1);
     const existing = await db.penaltyRecord.findFirst({
       where: { employeeId, violationId, date: new Date(`${p.date}T00:00:00Z`) },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      skip: nth,
       select: { id: true, status: true },
     });
     const record =

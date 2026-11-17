@@ -6,11 +6,16 @@ export { latenessDays } from '@school-erp/shared';
 export { divRoundHalfUp, mulDivRoundHalfUp } from './rounding';
 export {
   countPriorInWindow,
+  isEarlierPenalty,
   penaltyLevel,
   repetitionWindowStart,
   resolvePenalty,
   type CatalogueLevel,
   type LevelRef,
+  type PenaltyPair,
+  type PenaltyPosition,
+  type PenaltyTarget,
+  type RecordedPenalty,
 } from './penalties';
 export {
   deductionAmount,

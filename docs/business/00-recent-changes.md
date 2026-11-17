@@ -1,5 +1,9 @@
 # Recent changes
 
+- 2026-11-18 — Same-day penalties (§4, owner): "earlier" is by violation date, then by when the
+  penalty was recorded, so repeats on one day climb levels (1, 2, 3…) instead of all being level 1.
+  The preview counts every approved penalty already on that date.
+
 - 2026-11-18 — Employees (§3, owner): new groups on the employee record — social insurance (status,
   number, registration date, insured salary; required when insured, cleared when not), bank account
   (bank, account number, Egyptian IBAN), emergency contact and qualification. Payroll's use of

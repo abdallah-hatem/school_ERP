@@ -30,12 +30,21 @@ const row = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
+/** An APPROVED record of the same pair, dated and recorded at `iso`. */
+const approvedAt = (id: string, iso: string) => ({
+  id,
+  employeeId: 'e1',
+  violationId: 'v1',
+  status: 'APPROVED',
+  date: iso.slice(0, 10),
+  recordedAt: new Date(iso),
+});
+
 function makeService(repo: Record<string, jest.Mock> = {}) {
   const repository = {
     findOne: jest.fn().mockResolvedValue(row()),
     findStatus: jest.fn().mockResolvedValue({ status: 'PENDING', date: '2025-11-10' }),
-    approvedDates: jest.fn().mockResolvedValue([]),
-    approvedDatesForKeys: jest.fn().mockResolvedValue([]),
+    approvedCandidates: jest.fn().mockResolvedValue([]),
     approve: jest.fn().mockResolvedValue(true),
     cancel: jest.fn().mockResolvedValue(true),
     ...repo,
@@ -58,9 +67,7 @@ describe('PenaltyRecordsService', () => {
   it('a PENDING record is shown with today’s count and catalogue; an APPROVED one with its stored values', async () => {
     const { service } = makeService({
       findOne: jest.fn().mockResolvedValue(row()),
-      approvedDatesForKeys: jest
-        .fn()
-        .mockResolvedValue([{ employeeId: 'e1', violationId: 'v1', date: '2025-11-03' }]),
+      approvedCandidates: jest.fn().mockResolvedValue([approvedAt('r0', '2025-11-03T08:00:00Z')]),
     });
     expect(await service.get('r1')).toMatchObject({ level: 2, action: 'DEDUCT_DAYS', days: 2 });
 
@@ -68,10 +75,10 @@ describe('PenaltyRecordsService', () => {
       findOne: jest.fn().mockResolvedValue(row({ status: 'APPROVED', level: 1, action: 'NOTICE' })),
     });
     expect(await approved.service.get('r1')).toMatchObject({ level: 1, action: 'NOTICE', days: null });
-    expect(approved.repository.approvedDatesForKeys).not.toHaveBeenCalled();
+    expect(approved.repository.approvedCandidates).not.toHaveBeenCalled();
   });
 
-  it('approve passes the window [1 June, record date) and the catalogue mapping to the repository', async () => {
+  it('approve passes the window [1 June, record date] and counts same-date ones recorded earlier', async () => {
     const { service, repository, monthLock } = makeService();
     await service.approve('r1', 'u1');
     expect(monthLock.assertMonthOpen).toHaveBeenCalledWith('2025-11');
@@ -80,12 +87,18 @@ describe('PenaltyRecordsService', () => {
       { employeeId: string },
       unknown,
       string,
-      (n: number) => unknown,
+      (approved: unknown[]) => unknown,
     ];
     expect(key.employeeId).toBe('e1');
-    expect(window).toEqual({ from: '2025-06-01', before: '2025-11-10' });
+    expect(window).toEqual({ from: '2025-06-01', upTo: '2025-11-10' });
     expect(by).toBe('u1');
-    expect(resolve(5)).toEqual({ level: 2, action: 'DEDUCT_DAYS', days: 2 });
+    // The record was recorded at 08:00 on 2025-11-10.
+    expect(resolve([approvedAt('r0', '2025-11-10T07:00:00Z')])).toEqual({
+      level: 2,
+      action: 'DEDUCT_DAYS',
+      days: 2,
+    });
+    expect(resolve([approvedAt('r2', '2025-11-10T09:00:00Z')])).toMatchObject({ level: 1 });
   });
 
   it('approve losing a race to a cancel → 409 PENALTY_CANCELLED', async () => {
