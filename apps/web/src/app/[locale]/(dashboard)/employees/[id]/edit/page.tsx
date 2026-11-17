@@ -17,7 +17,7 @@ export default async function EditEmployeePage({ params }: { params: Promise<{ l
     GET_DEPARTMENTS(),
     GET_STAGES(),
     GET_JOB_TITLES(),
-    GET_MANAGER_OPTIONS(),
+    GET_MANAGER_OPTIONS(id),
   ]);
 
   return (

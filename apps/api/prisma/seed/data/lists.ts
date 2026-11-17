@@ -4,6 +4,8 @@ export interface SeedListItem {
   key: string;
   nameEn: string;
   nameAr: string;
+  /** Job titles only: holders can be chosen as a direct manager (§3). */
+  managesPeople?: boolean;
 }
 
 /** §3 DECIDED: the four stages, "None" for staff not tied to a stage. */
@@ -27,11 +29,13 @@ export const DEPARTMENTS = [
   { key: 'services', nameEn: 'Maintenance and Services', nameAr: 'الصيانة والخدمات' },
 ] as const satisfies readonly SeedListItem[];
 
+/** The leading titles manage people (§3 direct managers): principal, vice principals, heads of
+ * department and senior teachers (who lead their subject's teachers). */
 export const JOB_TITLES = [
-  { key: 'principal', nameEn: 'Principal', nameAr: 'مدير المدرسة' },
-  { key: 'vice', nameEn: 'Vice Principal', nameAr: 'وكيل المدرسة' },
-  { key: 'head', nameEn: 'Head of Department', nameAr: 'رئيس القسم' },
-  { key: 'senior', nameEn: 'Senior Teacher', nameAr: 'معلم أول' },
+  { key: 'principal', nameEn: 'Principal', nameAr: 'مدير المدرسة', managesPeople: true },
+  { key: 'vice', nameEn: 'Vice Principal', nameAr: 'وكيل المدرسة', managesPeople: true },
+  { key: 'head', nameEn: 'Head of Department', nameAr: 'رئيس القسم', managesPeople: true },
+  { key: 'senior', nameEn: 'Senior Teacher', nameAr: 'معلم أول', managesPeople: true },
   { key: 'teacher', nameEn: 'Teacher', nameAr: 'معلم' },
   { key: 'assistant', nameEn: 'Assistant Teacher', nameAr: 'معلم مساعد' },
   { key: 'kgTeacher', nameEn: 'Kindergarten Teacher', nameAr: 'معلمة رياض أطفال' },

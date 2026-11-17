@@ -79,7 +79,9 @@
     "basicSalary": "Monthly, in Egyptian pounds.",
     "contract": "Defaults to 1 June – 31 May. Changing the start moves the end to one year later.",
     "usesBus": "Turn on if the employee rides the school bus.",
-    "hiddenItem": "Hidden from new choices; kept for this employee."
+    "hiddenItem": "Hidden from new choices; kept for this employee.",
+    "managerNotManaging": "No longer in a managing role; kept for this employee.",
+    "noManagers": "No one can be chosen yet. Turn on “Manages people” for a job title in Settings → HR lists."
   },
   "noManager": "No direct manager",
   "noDepartments": "No departments yet. Add them in Settings.",

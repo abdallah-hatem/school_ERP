@@ -71,7 +71,7 @@ const ROWS: Row[] = [
   ['Walid Hamed Saber', 'وليد حامد صابر', 'M', 'none', 'students', 'psych', 'PT3', 6800],
   ['Reham Tarek Mahrous', 'ريهام طارق محروس', 'F', 'none', 'services', 'nurse', 'FT', 6200],
   ['Sherif Osama Habib', 'شريف أسامة حبيب', 'M', 'none', 'admin', 'it', 'FT', 8200],
-  ['Nesma Medhat Ali', 'نسمة مدحت علي', 'F', 'none', 'finance', 'accountant', 'PT4', 7000, 6],
+  ['Nesma Medhat Ali', 'نسمة مدحت علي', 'F', 'none', 'finance', 'accountant', 'PT4', 7000, 1],
   ['Ashraf Kamal Darwish', 'أشرف كمال درويش', 'M', 'none', 'services', 'security', 'FT', 5000],
   ['Eman Yasser Abdelmoneim', 'إيمان ياسر عبد المنعم', 'F', 'primary', 'math', 'assistant', 'FT', 6500],
   ['Bassem Atef Rizk', 'باسم عاطف رزق', 'M', 'prep', 'science', 'assistant', 'FT', 6800, 10],

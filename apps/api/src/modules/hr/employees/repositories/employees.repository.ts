@@ -55,7 +55,15 @@ export const EMPLOYEE_DETAIL_SELECT = {
   stage: REF,
   department: REF,
   jobTitle: REF,
-  manager: { select: { id: true, code: true, nameEn: true, nameAr: true } },
+  manager: {
+    select: {
+      id: true,
+      code: true,
+      nameEn: true,
+      nameAr: true,
+      jobTitle: { select: { managesPeople: true } },
+    },
+  },
   grade: true,
   workSystem: true,
   basicSalary: true,
@@ -88,6 +96,10 @@ export interface EmployeeListFilter {
   stageId?: string;
   status?: EmployeeStatus;
   workSystem?: Prisma.EmployeeWhereInput['workSystem'];
+  /** Only employees whose job title manages people (the direct-manager picker, §3). */
+  managesPeople?: boolean;
+  /** Leave this employee out. */
+  excludeId?: string;
 }
 
 /** A unique-constraint race the service's pre-check missed → the same 409 the pre-check gives. */
@@ -125,6 +137,10 @@ export class EmployeesRepository extends BaseRepository<
     if (filter.stageId) where.stageId = filter.stageId;
     if (filter.status) where.status = filter.status;
     if (filter.workSystem) where.workSystem = filter.workSystem;
+    if (filter.managesPeople !== undefined) {
+      where.jobTitle = { managesPeople: filter.managesPeople };
+    }
+    if (filter.excludeId) where.id = { not: filter.excludeId };
     return this.findAllWithPagination(
       page,
       limit,
@@ -160,7 +176,13 @@ export class EmployeesRepository extends BaseRepository<
 
   /** Every active employee with their department, ordered by code. */
   findActiveWithDepartments(): Promise<
-    { id: string; code: string; nameEn: string; nameAr: string; department: { id: string; nameEn: string; nameAr: string } }[]
+    {
+      id: string;
+      code: string;
+      nameEn: string;
+      nameAr: string;
+      department: { id: string; nameEn: string; nameAr: string };
+    }[]
   > {
     return this.databaseService.employee.findMany({
       where: { status: EmployeeStatus.ACTIVE },
@@ -201,6 +223,16 @@ export class EmployeesRepository extends BaseRepository<
     });
     const countOf = new Map(groups.map((g) => [g.stageId, g._count._all]));
     return stages.map((stage) => ({ stage, count: countOf.get(stage.id) ?? 0 }));
+  }
+
+  /** A would-be direct manager: their status and whether their job title manages people (§3). */
+  findManagerState(
+    id: string,
+  ): Promise<{ id: string; status: EmployeeStatus; jobTitle: { managesPeople: boolean } } | null> {
+    return this.databaseService.employee.findUnique({
+      where: { id },
+      select: { id: true, status: true, jobTitle: { select: { managesPeople: true } } },
+    });
   }
 
   /** Id and status of each existing employee among `ids` (missing ids are simply absent). */

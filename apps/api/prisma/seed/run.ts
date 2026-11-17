@@ -93,18 +93,24 @@ async function seedAll(app: INestApplicationContext): Promise<SeedSummary> {
   await seedSchool(get(SettingsService), data, admin.id);
 
   const stages = await ensureList(STAGES, db.stage.findMany({ select: listSelect }), (item) =>
-    get(StagesService).create(item, admin.id),
+    get(StagesService).create({ nameEn: item.nameEn, nameAr: item.nameAr }, admin.id),
   );
   const departments = await ensureList(
     DEPARTMENTS,
     db.department.findMany({ select: listSelect }),
-    (item) => get(DepartmentsService).create(item, admin.id),
+    (item) =>
+      get(DepartmentsService).create({ nameEn: item.nameEn, nameAr: item.nameAr }, admin.id),
   );
   const jobTitles = await ensureList(
     JOB_TITLES,
     db.jobTitle.findMany({ select: listSelect }),
-    (item) => get(JobTitlesService).create(item, admin.id),
+    (item) =>
+      get(JobTitlesService).create(
+        { nameEn: item.nameEn, nameAr: item.nameAr, managesPeople: item.managesPeople ?? false },
+        admin.id,
+      ),
   );
+  await ensureManagingTitles(get(JobTitlesService), jobTitles, admin.id);
   log(
     `lists ready (${stages.size} stages, ${departments.size} departments, ${jobTitles.size} job titles)`,
   );
@@ -195,17 +201,34 @@ async function seedSchool(settings: SettingsService, data: SeedData, adminId: st
 
 const listSelect = { id: true, nameEn: true } as const;
 
+/**
+ * The seed's managing titles (§3) manage people even in a database seeded before the switch
+ * existed — otherwise its direct-manager picker would be empty. Only turns the switch on, through
+ * the service (so the change history records it); a title the seed doesn't mark is left alone.
+ */
+async function ensureManagingTitles(
+  service: JobTitlesService,
+  ids: Map<string, string>,
+  adminId: string,
+): Promise<void> {
+  const current = new Map((await service.list(true)).map((t) => [t.id, t.managesPeople]));
+  for (const item of JOB_TITLES) {
+    const id = ids.get(item.key);
+    if (!('managesPeople' in item) || !item.managesPeople || !id || current.get(id)) continue;
+    await service.update(id, { managesPeople: true }, adminId);
+  }
+}
+
 /** Creates the items whose English name is missing; returns seed key → id. */
 async function ensureList(
   items: readonly SeedListItem[],
   existingQuery: Promise<{ id: string; nameEn: string }[]>,
-  create: (item: { nameEn: string; nameAr: string }) => Promise<{ id: string }>,
+  create: (item: SeedListItem) => Promise<{ id: string }>,
 ): Promise<Map<string, string>> {
   const existing = new Map((await existingQuery).map((row) => [row.nameEn, row.id]));
   const ids = new Map<string, string>();
   for (const item of items) {
-    const id =
-      existing.get(item.nameEn) ?? (await create({ nameEn: item.nameEn, nameAr: item.nameAr })).id;
+    const id = existing.get(item.nameEn) ?? (await create(item)).id;
     ids.set(item.key, id);
   }
   return ids;
