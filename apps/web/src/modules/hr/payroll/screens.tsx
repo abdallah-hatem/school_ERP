@@ -53,6 +53,7 @@ export async function PayrollRunScreen({
         penaltiesHref={`/${locale}/penalties`}
         query={query}
         run={data.run}
+        asOf={data.asOf}
         departments={data.departments}
         settings={data.settings}
       />

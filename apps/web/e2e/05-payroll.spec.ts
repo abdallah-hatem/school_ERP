@@ -149,16 +149,18 @@ test('payroll: run → penalty deduction → grace change → recalculate → ap
   await expect(lateRow).toContainText(formatMoney(after.latenessAmount!));
   await expect(lateRow).toContainText(formatMoney(after.net!));
 
-  // Approve.
+  // Approve right after clearing the search, without waiting for its debounced navigation: one
+  // still in flight when Approve answers must not bring the run back as a draft.
   await searchField(page, t('en', 'payroll.filters.searchLabel')).fill('');
-  // Clearing the search navigates after a debounce. Wait for it to land: a navigation still in
-  // flight when Approve answers re-renders the page with the run as it was (Draft).
-  await expect(page).not.toHaveURL(/[?&]search=/);
   await page.getByRole('button', { name: t('en', 'payroll.actions.approve') }).click();
   const confirm = page.getByRole('dialog');
   await confirm.getByRole('button', { name: t('en', 'payroll.approve.confirm') }).click();
   await expect(confirm).toBeHidden();
   await expect(page.getByText(t('en', 'payroll.actions.approved'))).toBeVisible();
+  await expect(page.getByRole('button', { name: t('en', 'payroll.actions.recalculate') })).toHaveCount(0);
+  // Once the search navigation has landed too, the run is still approved.
+  await expect(page).not.toHaveURL(/[?&]search=/);
+  await expect(page.getByRole('button', { name: t('en', 'payroll.actions.approve') })).toHaveCount(0);
   await expect(page.getByRole('button', { name: t('en', 'payroll.actions.recalculate') })).toHaveCount(0);
   const approved = await api.get<PayrollRun>(`/hr/payroll-runs/${runId}`);
   expect(approved.status).toBe(PayrollStatus.APPROVED);
