@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/shared/components/ui/switch';
 import { Textarea } from '@/shared/components/ui/textarea';
 import { formatDate, formatMoney, fromIsoDate, parseMoney, toIsoDate } from '@/shared/lib/format';
+import { normalizeEgyptianMobile } from '@/shared/lib/phone';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { FieldShell } from './field-shell';
@@ -89,6 +90,53 @@ export function TextField<T extends FieldValues>({
           placeholder={placeholder}
           value={value}
           onChange={(e) => field.onChange(e.target.value)}
+          onBlur={field.onBlur}
+        />
+      )}
+    </FieldShell>
+  );
+}
+
+// ── Phone ────────────────────────────────────────────────────────────────────
+
+/**
+ * Egyptian mobile number. The form holds local digits (`01012345678`); a pasted `+20` number is
+ * normalised, and a 12th digit, a letter or an impossible prefix is rejected, never trimmed.
+ * No `maxLength` — it would clip a pasted `+20…` before it could be normalised.
+ */
+export function PhoneField<T extends FieldValues>({
+  control,
+  name,
+  label,
+  required,
+  hint,
+  disabled,
+  className,
+  placeholder,
+}: BaseFieldProps<T> & { placeholder: string }) {
+  const id = useFieldId(name);
+  const { field, fieldState } = useController({ control, name });
+  const value = (field.value as string | null | undefined) ?? '';
+  return (
+    <FieldShell id={id} label={label} required={required} hint={hint} error={fieldState.error?.message} className={className}>
+      {(a11y) => (
+        <Input
+          {...a11y}
+          ref={field.ref}
+          name={field.name}
+          type="tel"
+          inputMode="tel"
+          autoComplete="tel-national"
+          dir="ltr"
+          className="tabular text-start rtl:text-end"
+          required={required}
+          disabled={disabled}
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => {
+            const next = normalizeEgyptianMobile(e.target.value);
+            if (next !== null) field.onChange(next);
+          }}
           onBlur={field.onBlur}
         />
       )}

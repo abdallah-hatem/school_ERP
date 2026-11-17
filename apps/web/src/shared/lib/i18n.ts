@@ -30,6 +30,11 @@ export function dirFor(locale: Locale): 'rtl' | 'ltr' {
   return locale === 'ar' ? 'rtl' : 'ltr';
 }
 
+/** The name of a record (`{ nameEn, nameAr }`) in the screen's language. */
+export function localName(names: { nameEn: string; nameAr: string }, locale: Locale): string {
+  return locale === 'ar' ? names.nameAr : names.nameEn;
+}
+
 /** The shared `common` namespace for a locale. Modules add their own namespaces (T3+). */
 export function getCommonMessages(locale: Locale): CommonMessages {
   return COMMON[locale];
