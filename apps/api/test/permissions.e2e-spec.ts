@@ -110,6 +110,11 @@ describe('permissions (e2e)', () => {
         .expect(403);
       await http(app).get('/audit').expect(403);
       await http(app).get('/audit/actors').expect(403);
+      // §10 accounting: the tax rule and the months' payroll taxes need their keys.
+      await http(app).get('/accounting/settings').expect(403);
+      await http(app).patch('/accounting/settings').send({}).expect(403);
+      await http(app).get('/accounting/payroll').expect(403);
+      await http(app).get('/accounting/payroll/2026-11').expect(403);
       await http(app)
         .get('/audit/summary?from=2026-11-17T00:00:00Z&to=2026-11-18T00:00:00Z')
         .expect(403);

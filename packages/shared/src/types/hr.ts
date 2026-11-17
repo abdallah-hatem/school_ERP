@@ -12,7 +12,7 @@ import type {
   RepetitionWindow,
   WorkSystem,
 } from '../enums';
-import type { LatenessStep, TaxBracket } from '../settings';
+import type { LatenessStep } from '../settings';
 import type {
   Days,
   IsoDate,
@@ -321,26 +321,16 @@ export interface PenaltyRule {
   repetitionWindow: RepetitionWindow;
 }
 
-/** §6 tax, martyrs' fund and social insurance. Percents are 0–100 with up to 2 decimals. */
-export interface TaxRule {
-  brackets: TaxBracket[];
-  martyrPercent: number;
-  insurancePercent: number;
-}
-
 export interface HrSettings {
   lateness: LatenessRule;
   payroll: PayrollRule;
   penalties: PenaltyRule;
-  tax: TaxRule;
 }
 
 export interface UpdateHrSettingsRequest {
   lateness?: Partial<LatenessRule>;
   payroll?: { dayDivisor?: number; partTime?: Partial<Record<PartTimeWorkSystem, number>> };
   penalties?: Partial<PenaltyRule>;
-  /** `brackets` replaces the whole table. */
-  tax?: Partial<TaxRule>;
 }
 
 // ── Payroll ────────────────────────────────────────────────────────────────
@@ -369,17 +359,7 @@ export interface PayrollLine extends Names {
   latenessAmount: Piastres;
   adjustmentAdditions: Piastres;
   adjustmentDeductions: Piastres;
-  /** What the employee is paid (guaranteed — the school pays the amounts below on top). */
   net: Piastres;
-  /** Insurance snapshot taken at calculation. */
-  insuranceStatus: InsuranceStatus;
-  insuredSalary: Piastres | null;
-  /** The employee's insurance share, paid by the school. */
-  insuranceAmount: Piastres;
-  incomeTax: Piastres;
-  martyrTax: Piastres;
-  /** net + insurance + income tax + martyrs' fund. */
-  gross: Piastres;
   flags: PayrollFlag[];
 }
 

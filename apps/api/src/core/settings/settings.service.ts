@@ -37,17 +37,19 @@ export type { UploadedFileLike };
 const SCHOOL_FIELDS = Object.keys(SCHOOL_FIELD_KEYS) as (keyof SchoolSettings)[];
 const SCHOOL_KEYS = Object.values(SCHOOL_FIELD_KEYS);
 
-/** Who owns the keys a `setValues` call writes: core's school settings or HR's rules. */
-export type SettingsOwner = Extract<SettingsChangeScope, 'school' | 'hr'>;
+/** Who owns the keys a `setValues` call writes: core's school settings, HR's or accounting's rules. */
+export type SettingsOwner = Extract<SettingsChangeScope, 'school' | 'hr' | 'accounting'>;
 
 const OWNER_RECORD = {
   school: { type: AuditEntityType.SCHOOL_SETTINGS, id: 'school', label: '' },
   hr: { type: AuditEntityType.HR_SETTINGS, id: 'hr', label: '' },
+  accounting: { type: AuditEntityType.ACCOUNTING_SETTINGS, id: 'accounting', label: '' },
 } as const;
 
 const OWNER_ACTION: Record<SettingsOwner, AuditAction> = {
   school: 'core.settings.update',
   hr: 'hr.settings.update',
+  accounting: 'accounting.settings.update',
 };
 
 /**

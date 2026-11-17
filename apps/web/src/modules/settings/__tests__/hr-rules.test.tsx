@@ -22,8 +22,8 @@ import { hrSettings, ok, renderSettings } from './helpers';
  * The loaded form. "Lateness rule" alone isn't enough: the loading skeleton shows the same cards,
  * so a slow machine would act on the skeleton. Wait for the busy mask to go.
  */
-async function loaded(title = 'Lateness rule') {
-  await screen.findByText(title);
+async function loaded() {
+  await screen.findByText('Lateness rule');
   await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
 }
 
@@ -159,86 +159,5 @@ describe('HR rules — lateness rule editor', () => {
     await user.type(pt3, '0');
     expect(await screen.findByText('أدخل نسبة صحيحة من 1 إلى 100.')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'حفظ' })).toHaveProperty('disabled', true);
-  });
-});
-
-describe('HR rules — tax and insurance', () => {
-  beforeEach(() => {
-    api.GET_HR_SETTINGS.mockImplementation(() => ok(hrSettings));
-  });
-  afterEach(() => {
-    cleanup();
-    vi.clearAllMocks();
-  });
-
-  const taxExample = () => screen.getByTestId('tax-example').textContent ?? '';
-
-  it('shows the default slices, fund and insurance share, and a live example from the shared gross-up', async () => {
-    renderSettings(<HrRulesSection />);
-    await loaded();
-    expect(screen.getByText('Tax and insurance')).toBeTruthy();
-    expect((screen.getByRole('textbox', { name: /Slice 1: the next amount/ }) as HTMLInputElement).value).toBe('5,000.00');
-    expect((screen.getByRole('textbox', { name: /Slice 6 rate/ }) as HTMLInputElement).value).toBe('25');
-    expect(screen.queryByRole('textbox', { name: /Slice 6: the next amount/ })).toBeNull(); // "The rest"
-    expect(screen.getByText('The rest')).toBeTruthy();
-    expect((screen.getByRole('textbox', { name: /Martyrs' fund/ }) as HTMLInputElement).value).toBe('0.05');
-    expect((screen.getByRole('textbox', { name: /Employee insurance share/ }) as HTMLInputElement).value).toBe('11');
-    // Net 10,000.00 → 1,017.00 tax, 5.51 fund, 11,022.51 gross (same numbers as the API's tests).
-    expect(taxExample()).toContain('net 10,000.00 → income tax 1,017.00 · martyrs\' fund 5.51 · gross 11,022.51');
-  });
-
-  it('a slice rate plus the fund reaching 100% shows the error, pauses the example and blocks saving', async () => {
-    const user = userEvent.setup();
-    renderSettings(<HrRulesSection />);
-    await loaded();
-    const rate = screen.getByRole('textbox', { name: /Slice 6 rate/ });
-    await user.clear(rate);
-    await user.type(rate, '99.99');
-    expect(await screen.findByText("This rate plus the martyrs' fund must stay under 100%.")).toBeTruthy();
-    expect(taxExample()).toContain('Fix the tax rule above to see an example.');
-    expect(screen.getByRole('button', { name: 'Save' })).toHaveProperty('disabled', true);
-  });
-
-  it('adding a slice puts it before "The rest"; saving sends the whole table (last open-ended) and only the tax keys that changed', async () => {
-    const user = userEvent.setup();
-    api.UPDATE_HR_SETTINGS.mockImplementation(() => ok(hrSettings));
-    renderSettings(<HrRulesSection />);
-    await loaded();
-    await user.click(screen.getByRole('button', { name: 'Add a slice' }));
-    // The new slice is 6th (1,000.00 at 0%); "The rest" moves to 7th.
-    expect((screen.getByRole('textbox', { name: /Slice 6: the next amount/ }) as HTMLInputElement).value).toBe('1,000.00');
-    const rate = screen.getByRole('textbox', { name: /Slice 6 rate/ });
-    await user.clear(rate);
-    await user.type(rate, '24');
-    const fund = screen.getByRole('textbox', { name: /Martyrs' fund/ });
-    await user.clear(fund);
-    await user.type(fund, '0.1');
-    await user.click(screen.getByRole('button', { name: 'Save' }));
-
-    await waitFor(() => expect(api.UPDATE_HR_SETTINGS).toHaveBeenCalledTimes(1));
-    expect(api.UPDATE_HR_SETTINGS).toHaveBeenCalledWith({
-      tax: {
-        brackets: [
-          { width: 500_000, percent: 0 },
-          { width: 125_000, percent: 10 },
-          { width: 125_000, percent: 15 },
-          { width: 1_083_333, percent: 20 },
-          { width: 1_666_667, percent: 22.5 },
-          { width: 100_000, percent: 24 },
-          { width: null, percent: 25 },
-        ],
-        martyrPercent: 0.1,
-      },
-    });
-  });
-
-  it('Arabic: an insurance share of 100% shows its message in Arabic', async () => {
-    const user = userEvent.setup();
-    renderSettings(<HrRulesSection />, 'ar');
-    await loaded('قاعدة التأخير');
-    const insurance = screen.getByRole('textbox', { name: /حصة العامل في التأمينات/ });
-    await user.clear(insurance);
-    await user.type(insurance, '100');
-    expect(await screen.findByText('أدخل نسبة من 0 إلى 99.99، بحد أقصى رقمين عشريين.')).toBeTruthy();
   });
 });

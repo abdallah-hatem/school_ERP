@@ -1,9 +1,4 @@
-import {
-  DEFAULT_TAX_RULE,
-  SETTING_DEFAULTS,
-  type HrSettings,
-  type SchoolSettings,
-} from '@school-erp/shared';
+import { SETTING_DEFAULTS, type HrSettings, type SchoolSettings } from '@school-erp/shared';
 import type { ReactElement } from 'react';
 import { SchoolBrandingProvider } from '@/core/settings';
 import type { Locale, MessageTree } from '@/shared/lib/i18n';
@@ -55,5 +50,4 @@ export const hrSettings: HrSettings = {
     partTime: SETTING_DEFAULTS['hr.payroll.partTime'],
   },
   penalties: { repetitionWindow: SETTING_DEFAULTS['hr.penalties.repetitionWindow'] },
-  tax: DEFAULT_TAX_RULE,
 };

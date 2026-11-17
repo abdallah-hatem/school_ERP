@@ -58,7 +58,7 @@
     "deductions": "Deductions & penalties",
     "deductionsSub": "Penalties {penalties} · Lateness {lateness} · Adjustments {adjustments}",
     "net": "Net to pay",
-    "netSub": "Salaries minus deductions, plus additions {additions}. The school also pays tax & insurance {taxes} (gross {gross})."
+    "netSub": "Salaries minus deductions, plus additions {additions}"
   },
   "table": {
     "label": "Employees in {month}",
@@ -71,8 +71,6 @@
       "lateness": "Lateness",
       "adjustments": "Adjustments",
       "net": "Net",
-      "taxInsurance": "Tax & insurance",
-      "gross": "Gross",
       "status": "Status",
       "actions": "Actions"
     },
@@ -114,9 +112,7 @@
     "netFloor": "Net floor",
     "netFloorRule": "Net never goes below 0; such lines need review",
     "edit": "Edit in settings",
-    "error": "The HR rules couldn't load. The figures are still the server's.",
-    "tax": "Tax & insurance",
-    "taxRule": "Net is grossed up: {slices} monthly tax slices up to {top}% · martyrs' fund {fund}% · insurance share {insurance}% of the insured salary"
+    "error": "The HR rules couldn't load. The figures are still the server's."
   },
   "notApplied": {
     "title": "Adjustments not applied",
@@ -179,12 +175,7 @@
     "netFloored": "Deductions exceeded the salary, so net pay is 0.",
     "level": "Level {level}",
     "draftTitle": "No payslip yet",
-    "printNote": "Printed from the payroll system.",
-    "paidBySchool": "Paid by the school",
-    "insurance": "Social insurance (employee's share)",
-    "incomeTax": "Income tax",
-    "martyrTax": "Martyrs' fund",
-    "gross": "Gross salary"
+    "printNote": "Printed from the payroll system."
   },
   "profile": {
     "tableLabel": "Payroll lines",

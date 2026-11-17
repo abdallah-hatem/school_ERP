@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { InsuranceStatus } from '../enums';
-import { SETTING_DEFAULTS } from '../settings';
-import type { TaxRule } from '../types/hr';
+import type { TaxRule } from '../types/accounting';
 import {
+  DEFAULT_TAX_RULE,
   incomeTax,
   insuranceShare,
   payrollTax,
@@ -15,11 +15,7 @@ import {
  * `t − tax(t) − fund% × (t + I) = net`), then rounded half up — not by running this code.
  */
 
-const DEFAULTS: TaxRule = {
-  brackets: SETTING_DEFAULTS['hr.tax.brackets'],
-  martyrPercent: SETTING_DEFAULTS['hr.tax.martyrPercent'],
-  insurancePercent: SETTING_DEFAULTS['hr.tax.insurancePercent'],
-};
+const DEFAULTS: TaxRule = DEFAULT_TAX_RULE;
 
 describe('default tax rule (HR-system values)', () => {
   it('is the monthly Egyptian scale: 5,000 at 0%, 1,250 at 10%, 1,250 at 15%, 10,833.33 at 20%, 16,666.67 at 22.5%, the rest at 25%', () => {

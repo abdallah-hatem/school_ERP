@@ -115,6 +115,8 @@ describe('money entries (Activity tag and summary)', () => {
       }),
     ).toBe(false);
     expect(AUDIT_MONEY_ACTIONS.length).toBeGreaterThan(0);
-    expect(AUDIT_MONEY_ACTIONS.every((a) => a.startsWith('hr.payroll.'))).toBe(true);
+    expect(AUDIT_MONEY_ACTIONS.every((a) => a.startsWith('hr.payroll.') || a.startsWith('accounting.payroll.'))).toBe(true);
+    // §10: the taxes accounting works out for an approved month are money too.
+    expect(isMoneyEntry({ action: 'accounting.payroll.record', changes: [] })).toBe(true);
   });
 });

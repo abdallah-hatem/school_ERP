@@ -168,16 +168,16 @@ describe('AuditTimeline', () => {
 
   it('a tax rule change reads as slices with amounts and rates, and the fund as a percent', () => {
     const changed = entry({
-      action: 'hr.settings.update',
-      entityType: 'hr_settings',
-      entityLabel: { en: 'HR rules', ar: 'قواعد الموارد البشرية' },
+      action: 'accounting.settings.update',
+      entityType: 'accounting_settings',
+      entityLabel: { en: 'Accounting rules', ar: 'قواعد المحاسبة' },
       changes: [
         {
-          field: 'hr.tax.brackets',
+          field: 'accounting.payroll.taxBrackets',
           before: [{ width: 500_000, percent: 0 }, { width: null, percent: 25 }],
           after: [{ width: 300_000, percent: 0 }, { width: null, percent: 12.5 }],
         },
-        { field: 'hr.tax.martyrPercent', before: 0.05, after: 0.1 },
+        { field: 'accounting.payroll.martyrPercent', before: 0.05, after: 0.1 },
       ],
     });
     renderAudit(<AuditTimeline entries={[changed]} grouping="day" now={NOW} label="Activity timeline" />);

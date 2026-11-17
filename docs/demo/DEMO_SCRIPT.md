@@ -49,12 +49,6 @@ catalogue, a month of penalties (some pending) and lateness, and a DRAFT payroll
 - Back to the run → **Recalculate** → ✔ the same employee's lateness drops (0.25 × 20,000 ÷ 30 =
   166.67) and the totals follow.
 - Put the rule back afterwards if the demo continues on the same data.
-- Settings → HR rules → **Tax and insurance**: the slices, martyrs' fund and insurance share. The
-  example shows net 10,000.00 → income tax 1,017.00 · fund 5.51 · gross 11,022.51. ✔ By hand:
-  taxable 11,022.51 − insured share 0; tax = 125 + 187.50 + (11,022.51 − 7,500) × 20% = 1,017.00;
-  fund = 11,022.51 × 0.05% = 5.51; 11,022.51 − 1,017.00 − 5.51 = 10,000.00 (the net is guaranteed).
-- In the run, the **Tax & insurance** and **Gross** columns: ✔ for any line, gross − tax &
-  insurance = net. An insured employee's tax & insurance includes 11% of their insured salary.
 
 ## 7. Approve
 - **Approve payroll** → confirmation explains it recalculates once more and locks the month.
@@ -63,9 +57,12 @@ catalogue, a month of penalties (some pending) and lateness, and a DRAFT payroll
 ## 8. Payslip
 - Open the payslip of the employee from step 3. ✔ Each penalty is listed with its level, days and
   amount, and they add up to the line's penalty total; lateness, adjustments and net match the line.
-  ✔ **Paid by the school**: insurance share (insured only), income tax, martyrs' fund and gross;
-  gross − the three = net pay.
 - Print → one A4 page, in Arabic and in English.
+- Settings → **Accounting** (signed in as System admin or Accountant): the payroll tax rule —
+  monthly slices, martyrs' fund, insurance share. ✔ The example shows net 10,000.00 → income tax
+  1,017.00 · fund 5.51 · gross 11,022.51. By hand: taxable 11,022.51; tax = 125 + 187.50 +
+  (11,022.51 − 7,500) × 20% = 1,017.00; fund = 11,022.51 × 0.05% = 5.51; 11,022.51 − 1,017.00 −
+  5.51 = 10,000.00 (the net is what the employee is paid; accounting adds the rest on approval).
 - Click the employee's name (on the payslip, or in the run's "Employees this month") → ✔ their
   profile opens. Every employee name in the app does this (penalties, lateness, Activity).
 - On the profile, **Details** shows the social insurance, bank account, emergency contact and

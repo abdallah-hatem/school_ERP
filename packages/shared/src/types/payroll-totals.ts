@@ -13,9 +13,5 @@ export interface PayrollTotals {
   adjustmentAdditions: Piastres;
   adjustmentDeductions: Piastres;
   net: Piastres;
-  insuranceAmount: Piastres;
-  incomeTax: Piastres;
-  martyrTax: Piastres;
-  gross: Piastres;
   flagged: number;
 }

@@ -112,8 +112,17 @@ describe('starting roles (spec table, GUESS)', () => {
         'hr.employees.view_salary',
         'hr.payroll.view',
         'hr.payroll.export_bank_sheet',
+        'accounting.settings.view',
+        'accounting.settings.edit',
+        'accounting.payroll.view',
       ].sort(),
     );
+  });
+
+  it('accounting (§10): the payroll tax rule and the months\' taxes — Accountant and System admin only', () => {
+    for (const key of ['accounting.settings.view', 'accounting.settings.edit', 'accounting.payroll.view'] as const) {
+      expect(holders(key)).toEqual(['accountant', 'system_admin']);
+    }
   });
 
   it('HR officer: no approvals, no rules or catalogue edits', () => {

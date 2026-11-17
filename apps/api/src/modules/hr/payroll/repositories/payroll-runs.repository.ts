@@ -4,7 +4,6 @@ import {
   PAGINATION,
   PayrollStatus,
   type AdjustmentType,
-  type InsuranceStatus,
   type Paginated,
   type PayrollFlag,
   type PayrollTotals,
@@ -44,12 +43,6 @@ export const LINE_SELECT = {
   adjustmentAdditions: true,
   adjustmentDeductions: true,
   net: true,
-  insuranceStatus: true,
-  insuredSalary: true,
-  insuranceAmount: true,
-  incomeTax: true,
-  martyrTax: true,
-  gross: true,
   flags: true,
 } satisfies Prisma.PayrollLineSelect;
 
@@ -101,12 +94,6 @@ export interface LineData {
   adjustmentAdditions: number;
   adjustmentDeductions: number;
   net: number;
-  insuranceStatus: InsuranceStatus;
-  insuredSalary: number | null;
-  insuranceAmount: number;
-  incomeTax: number;
-  martyrTax: number;
-  gross: number;
   flags: PayrollFlag[];
 }
 
@@ -116,16 +103,10 @@ export interface LineFilter {
   flagged?: boolean;
 }
 
-/** A line's new adjustment sums, net, tax, gross and flags after its adjustments changed. */
+/** A line's new adjustment sums, net and flags after its adjustments changed. */
 export type LineAdjustmentUpdate = Pick<
   LineData,
-  | 'adjustmentAdditions'
-  | 'adjustmentDeductions'
-  | 'net'
-  | 'incomeTax'
-  | 'martyrTax'
-  | 'gross'
-  | 'flags'
+  'adjustmentAdditions' | 'adjustmentDeductions' | 'net' | 'flags'
 >;
 
 type Tx = Prisma.TransactionClient;
@@ -138,10 +119,6 @@ const EMPTY_TOTALS: PayrollTotals = {
   adjustmentAdditions: 0,
   adjustmentDeductions: 0,
   net: 0,
-  insuranceAmount: 0,
-  incomeTax: 0,
-  martyrTax: 0,
-  gross: 0,
   flagged: 0,
 };
 
@@ -196,10 +173,6 @@ export class PayrollRunsRepository extends BaseRepository<
           adjustmentAdditions: true,
           adjustmentDeductions: true,
           net: true,
-          insuranceAmount: true,
-          incomeTax: true,
-          martyrTax: true,
-          gross: true,
         },
       }),
       this.db.payrollLine.groupBy({
@@ -217,10 +190,6 @@ export class PayrollRunsRepository extends BaseRepository<
         adjustmentAdditions: s._sum.adjustmentAdditions ?? 0,
         adjustmentDeductions: s._sum.adjustmentDeductions ?? 0,
         net: s._sum.net ?? 0,
-        insuranceAmount: s._sum.insuranceAmount ?? 0,
-        incomeTax: s._sum.incomeTax ?? 0,
-        martyrTax: s._sum.martyrTax ?? 0,
-        gross: s._sum.gross ?? 0,
         flagged: 0,
       });
     }

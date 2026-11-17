@@ -50,9 +50,9 @@
 
 ## Insurance, bank, emergency contact and qualification
 
-**DECIDED** (owner, 2026-11-18) — four more groups on the employee record. Payroll takes the
-employee's insurance share from the insurance status and insured salary (§6); how it uses the bank
-details is Planned.
+**DECIDED** (owner, 2026-11-18) — four more groups on the employee record. Accounting takes the
+employee's insurance share from the insurance status and insured salary when HR approves a month
+(§10); how payroll uses the bank details is Planned (§6).
 
 | Group | Field | Rule |
 |---|---|---|

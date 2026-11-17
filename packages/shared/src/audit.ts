@@ -13,7 +13,7 @@ import type { IsoDateTime, Uuid } from './types/common';
  */
 
 /** Which module an entry belongs to (the Activity page's module filter). */
-export const AUDIT_MODULES = ['core', 'hr'] as const;
+export const AUDIT_MODULES = ['core', 'hr', 'accounting'] as const;
 export type AuditModule = (typeof AUDIT_MODULES)[number];
 
 /** The kind of record an entry is about — `GET /audit/records/:entityType/:entityId`. */
@@ -31,6 +31,8 @@ export const AuditEntityType = {
   PENALTY: 'penalty',
   LATENESS_MONTH: 'lateness_month',
   PAYROLL_RUN: 'payroll_run',
+  ACCOUNTING_SETTINGS: 'accounting_settings',
+  ACCOUNTING_PAYROLL: 'accounting_payroll',
 } as const;
 export type AuditEntityType = (typeof AuditEntityType)[keyof typeof AuditEntityType];
 export const AUDIT_ENTITY_TYPES = Object.values(AuditEntityType) as AuditEntityType[];
@@ -200,6 +202,18 @@ export const AUDIT_ACTIONS = {
     entityType: E.PAYROLL_RUN,
     kind: 'update',
   },
+  // accounting — rules (the payroll tax rule)
+  'accounting.settings.update': {
+    module: 'accounting',
+    entityType: E.ACCOUNTING_SETTINGS,
+    kind: 'update',
+  },
+  // accounting — a month's taxes worked out when HR approved its payroll (by the system, §10)
+  'accounting.payroll.record': {
+    module: 'accounting',
+    entityType: E.ACCOUNTING_PAYROLL,
+    kind: 'create',
+  },
 } as const satisfies Record<string, AuditActionDefinition>;
 
 export type AuditAction = keyof typeof AUDIT_ACTIONS;
@@ -218,6 +232,7 @@ export const SETTINGS_HISTORY_ACTIONS = {
   'core.settings.update': 'school',
   'core.settings.logo_change': 'school',
   'hr.settings.update': 'hr',
+  'accounting.settings.update': 'accounting',
   'core.stage.create': 'lists',
   'core.stage.update': 'lists',
   'hr.department.create': 'lists',
@@ -335,8 +350,8 @@ export interface AuditSummary {
  * "money" entry: the Activity page tags it and the summary counts it.
  */
 export const AUDIT_MONEY_FIELDS = ['basicSalary', 'amount', 'totals', 'net'] as const;
-export const AUDIT_MONEY_ACTIONS: readonly AuditAction[] = AUDIT_ACTION_KEYS.filter((key) =>
-  key.startsWith('hr.payroll.'),
+export const AUDIT_MONEY_ACTIONS: readonly AuditAction[] = AUDIT_ACTION_KEYS.filter(
+  (key) => key.startsWith('hr.payroll.') || key.startsWith('accounting.payroll.'),
 );
 
 export function isMoneyEntry(entry: Pick<AuditEntry, 'action' | 'changes'>): boolean {

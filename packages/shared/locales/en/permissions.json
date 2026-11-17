@@ -2,7 +2,8 @@
   "title": "Permissions",
   "modules": {
     "core": "School",
-    "hr": "HR"
+    "hr": "HR",
+    "accounting": "Accounting"
   },
   "keys": {
     "core": {
@@ -164,6 +165,24 @@
         "export_bank_sheet": {
           "label": "Export the bank sheet",
           "description": "Download the bank transfer sheet of an approved run."
+        }
+      }
+    },
+    "accounting": {
+      "settings": {
+        "view": {
+          "label": "View accounting rules",
+          "description": "See the payroll tax rule: income-tax slices, the martyrs' fund and the insurance share."
+        },
+        "edit": {
+          "label": "Edit accounting rules",
+          "description": "Change the payroll tax rule: income-tax slices, the martyrs' fund and the insurance share."
+        }
+      },
+      "payroll": {
+        "view": {
+          "label": "View payroll taxes",
+          "description": "See each approved month's insurance, income tax, martyrs' fund and gross per employee."
         }
       }
     }

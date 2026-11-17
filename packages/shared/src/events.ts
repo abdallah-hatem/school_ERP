@@ -22,7 +22,7 @@ export interface EmployeeDeactivatedEvent {
   employeeId: Uuid;
   at: string;
 }
-/** Emitted after an approval commits (§6). No listener yet. */
+/** Emitted after an approval commits (§6). Accounting works out the month's taxes from it (§10). */
 export interface PayrollApprovedEvent {
   runId: Uuid;
   month: Month;
@@ -44,11 +44,12 @@ export const SettingsEvent = {
 export type SettingsEvent = (typeof SettingsEvent)[keyof typeof SettingsEvent];
 
 /** Which owner changed the setting. */
-export type SettingsChangeScope = 'school' | 'hr' | 'lists' | 'catalogue';
+export type SettingsChangeScope = 'school' | 'hr' | 'accounting' | 'lists' | 'catalogue';
 /** Every scope, at runtime. Each maps one to one onto `SettingScope` (upper-cased). */
 export const SETTINGS_CHANGE_SCOPES: readonly SettingsChangeScope[] = [
   'school',
   'hr',
+  'accounting',
   'lists',
   'catalogue',
 ];

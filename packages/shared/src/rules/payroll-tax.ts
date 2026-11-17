@@ -1,17 +1,18 @@
 import { InsuranceStatus } from '../enums';
 import { SETTING_DEFAULTS, type TaxBracket } from '../settings';
 import type { Piastres } from '../types/common';
-import type { TaxRule } from '../types/hr';
+import type { TaxRule } from '../types/accounting';
 import { MAX_PIASTRES } from './employee-details';
 
 /*
- * §6 tax, martyrs' fund and social insurance (owner, 2026-11-17: salaries are NET — grossed up).
+ * §10 tax, martyrs' fund and social insurance (owner, 2026-11-17: salaries are NET — grossed up).
  *
  * The line's net is what the employee is paid; the school pays the employee's insurance share,
  * the income tax and the martyrs' fund on top. Everything is monthly, in whole piastres, on
  * integers (BigInt): rates are held as basis points (22.5% → 2250) so nothing drifts.
  *
- * Pure and shared: the API calculates payroll with it, the HR rules screen previews with it.
+ * Pure and shared: accounting works out each approved month with it, Settings → Accounting
+ * previews with it.
  */
 
 /** 100% in basis points. */
@@ -20,11 +21,11 @@ const BP = 10_000n;
 /** The most brackets a tax table may have. */
 export const TAX_BRACKETS_MAX = 10;
 
-/** The §7 default tax rule (HR-system's values), as `HrSettings.tax`. */
+/** The §10 default tax rule (the previous HR system's values), as `AccountingSettings.payroll`. */
 export const DEFAULT_TAX_RULE: TaxRule = {
-  brackets: SETTING_DEFAULTS['hr.tax.brackets'],
-  martyrPercent: SETTING_DEFAULTS['hr.tax.martyrPercent'],
-  insurancePercent: SETTING_DEFAULTS['hr.tax.insurancePercent'],
+  brackets: SETTING_DEFAULTS['accounting.payroll.taxBrackets'],
+  martyrPercent: SETTING_DEFAULTS['accounting.payroll.martyrPercent'],
+  insurancePercent: SETTING_DEFAULTS['accounting.payroll.insurancePercent'],
 };
 
 /** A percent rate as basis points, or null when it isn't 0 ≤ p < 100 with at most 2 decimals. */
@@ -61,7 +62,7 @@ export type TaxRuleIssue =
   | 'insurancePercent';
 
 /**
- * What is wrong with a tax rule (§7), one entry per problem, in field order. `index` points at the
+ * What is wrong with a tax rule (§10), one entry per problem, in field order. `index` points at the
  * bracket. Rules: 1–10 brackets; only the last is open-ended (no width) and it must be; widths are
  * whole piastres > 0; every percent is 0 ≤ p < 100 with ≤ 2 decimals; each bracket's percent plus
  * the martyrs' fund stays under 100 so the gross-up has an answer.
@@ -87,7 +88,7 @@ export function taxRuleIssues(rule: TaxRule): { issue: TaxRuleIssue; index?: num
 }
 
 /**
- * The employee's social-insurance share (§6): insured → `round(insured salary × insurance %)`;
+ * The employee's social-insurance share (§10): insured → `round(insured salary × insurance %)`;
  * not insured, or no insured salary → 0. Not pro-rated for part-time or part months (GUESS).
  *
  * @example insuranceShare('INSURED', 500_000, 11) // 55,000 (550.00 EGP)
@@ -116,7 +117,7 @@ function taxTimesBp(taxable: bigint, brackets: readonly TaxBracket[]): bigint {
 }
 
 /**
- * Monthly income tax on a taxable amount (§6): each slice at its percent, summed exactly, rounded
+ * Monthly income tax on a taxable amount (§10): each slice at its percent, summed exactly, rounded
  * once, half up. Default table: 10,000.00 EGP → 812.50 EGP.
  */
 export function incomeTax(taxable: Piastres, brackets: readonly TaxBracket[]): Piastres {
@@ -125,7 +126,7 @@ export function incomeTax(taxable: Piastres, brackets: readonly TaxBracket[]): P
 }
 
 /**
- * The taxable amount `t` whose take-home is `net` (§6 gross-up):
+ * The taxable amount `t` whose take-home is `net` (§10 gross-up):
  * `t − tax(t) − fund% × (t + insurance) = net`. Walks the slices; in the slice `[lo, hi)` at rate
  * `r`, `t = (net + taxLo − lo·r + m·I) ÷ (1 − r − m)`, solved exactly and rounded half up. A net
  * that lands exactly on a slice's top stays in that slice.
@@ -166,7 +167,7 @@ export interface PayrollTaxAmounts {
 }
 
 /**
- * Tax, fund and insurance for one line (§6 steps 7–10). The net is guaranteed: the taxable amount
+ * Tax, fund and insurance for one line (§10). The net is guaranteed: the taxable amount
  * is grossed up so that, after the insurance share, the income tax and the martyrs' fund, the
  * employee still takes home `net`. Gross is stored as the exact sum of the parts (GUESS: within a
  * couple of piastres of the unrounded solution).

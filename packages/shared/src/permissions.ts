@@ -13,7 +13,7 @@
  */
 
 /** Which module a permission belongs to (the roles screen groups them by module). */
-export const PERMISSION_MODULES = ['core', 'hr'] as const;
+export const PERMISSION_MODULES = ['core', 'hr', 'accounting'] as const;
 export type PermissionModule = (typeof PERMISSION_MODULES)[number];
 
 export interface PermissionDefinition {
@@ -22,6 +22,7 @@ export interface PermissionDefinition {
 
 const core = { module: 'core' } as const;
 const hr = { module: 'hr' } as const;
+const accounting = { module: 'accounting' } as const;
 
 /** Every permission, grouped by module and area, in the order the roles screen lists them. */
 export const PERMISSIONS = {
@@ -72,6 +73,12 @@ export const PERMISSIONS = {
   'hr.payroll.adjust': hr,
   'hr.payroll.approve': hr,
   'hr.payroll.export_bank_sheet': hr,
+
+  // accounting — rules (the payroll tax rule: slices, martyrs' fund, insurance share)
+  'accounting.settings.view': accounting,
+  'accounting.settings.edit': accounting,
+  // accounting — payroll taxes of approved months
+  'accounting.payroll.view': accounting,
 } as const satisfies Record<string, PermissionDefinition>;
 
 export type PermissionKey = keyof typeof PERMISSIONS;

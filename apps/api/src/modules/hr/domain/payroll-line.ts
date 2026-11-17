@@ -1,17 +1,12 @@
 import {
   AdjustmentType,
   daysToQuarters,
-  insuranceShare,
-  payrollTax,
   PayrollFlag,
   PenaltyAction,
   quartersToDays,
   type Days,
-  type InsuranceStatus,
   type PayrollRule,
-  type PayrollTaxAmounts,
   type Piastres,
-  type TaxRule,
   type WorkSystem,
 } from '@school-erp/shared';
 import { deductionAmount, displayDayValue, lineNet, monthSalary } from './payroll';
@@ -28,9 +23,6 @@ export interface LineInput {
   adjustments: readonly { type: AdjustmentType; amount: Piastres }[];
   /** PENDING penalties dated in the month — the line is flagged for review. */
   pendingPenalties: number;
-  /** §3 social insurance: the share is taken from the insured salary while insured. */
-  insuranceStatus: InsuranceStatus;
-  insuredSalary: Piastres | null;
 }
 
 /** The calculated money fields of a line. */
@@ -44,10 +36,6 @@ export interface LineAmounts {
   adjustmentAdditions: Piastres;
   adjustmentDeductions: Piastres;
   net: Piastres;
-  insuranceAmount: Piastres;
-  incomeTax: Piastres;
-  martyrTax: Piastres;
-  gross: Piastres;
   flags: PayrollFlag[];
 }
 
@@ -99,21 +87,11 @@ export function lineNetWithFlags(
 }
 
 /**
- * Tax, martyrs' fund and gross on top of a line's net (§6 steps 7–10; salaries are net — grossed
- * up). Used by `calculateLine` and when only the adjustments change (net changes ⇒ tax changes);
- * the insurance share is kept from the line's last calculation.
- */
-export function lineTax(net: Piastres, insuranceAmount: Piastres, tax: TaxRule): PayrollTaxAmounts {
-  return payrollTax(net, insuranceAmount, tax);
-}
-
-/**
  * One payroll line (§6): month salary from the work system, penalty and lateness deductions each
- * `round(days × month salary ÷ divisor)`, one-off additions and deductions, net floored at 0; then
- * the insurance share, income tax and martyrs' fund the school pays on top, and the gross.
+ * `round(days × month salary ÷ divisor)`, one-off additions and deductions, net floored at 0.
  * Flags: `NET_FLOORED` (net would be negative), `PENDING_PENALTIES` (pending penalties in the month).
  */
-export function calculateLine(input: LineInput, rule: PayrollRule, tax: TaxRule): LineAmounts {
+export function calculateLine(input: LineInput, rule: PayrollRule): LineAmounts {
   const salary = monthSalary(input.basicSalary, input.workSystem, rule.partTime);
   const penaltyDays = sumDays(input.penaltyDays);
   const penaltyAmount = deductionAmount(penaltyDays, salary, rule.dayDivisor);
@@ -126,16 +104,12 @@ export function calculateLine(input: LineInput, rule: PayrollRule, tax: TaxRule)
     adjustmentAdditions: additions,
     adjustmentDeductions: deductions,
   };
-  const { net, flags } = lineNetWithFlags(amounts, input.pendingPenalties > 0);
-  const insurance = insuranceShare(input.insuranceStatus, input.insuredSalary, tax.insurancePercent);
   return {
     ...amounts,
     dayValue: displayDayValue(salary, rule.dayDivisor),
     penaltyDays,
     latenessDays: input.latenessDays,
-    net,
-    flags,
-    ...lineTax(net, insurance, tax),
+    ...lineNetWithFlags(amounts, input.pendingPenalties > 0),
   };
 }
 

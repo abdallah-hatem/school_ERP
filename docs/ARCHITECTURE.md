@@ -152,16 +152,20 @@ students          ← students, guardians, enrolment
   ↑
 admissions · attendance · fees · exams · communication · transport
   ↑
-accounting        ← journal entries from approved payroll and fee payments (Planned)
+accounting        ← payroll taxes of approved months (built); journal entries from approved payroll
+                     and fee payments (Planned)
 ```
 
 - **Stages** (KG, Primary, Preparatory) are a list in `core/` ("school structure"). HR uses them now
   and academics and students later, so they sit below all three.
 - **Settings ownership:** `core/settings` holds school-wide values (identity, hours, language). Each
-  module owns its own rule settings (HR: lateness, payroll, penalty catalogue). The one Settings
-  screen shows a section per module.
-- **Accounting (Planned)** sits at the top. It listens to `payroll.approved` and `payment.recorded`
-  and creates its own entries. No module below depends on it.
+  module owns its own rule settings (HR: lateness, payroll, penalty catalogue; accounting: the payroll
+  tax rule). The one Settings screen shows a section per module.
+- **Accounting** sits at the top. It listens to `payroll.approved` (and later `payment.recorded`)
+  and creates its own records — today each approved month's payroll taxes, worked out with the
+  pure maths in `packages/shared/src/rules/payroll-tax.ts`, which the Settings screen also uses for
+  its live example. It reads HR only through HR's exported services. No module below depends on it
+  (`.dependency-cruiser.cjs` enforces it).
 
 - A module may depend only on modules **below** it, through their `index.ts`. Lower modules
   never know about higher ones: they emit events, and higher modules react.
@@ -431,10 +435,8 @@ The first module built, and the first demo for the client (payroll and penalties
   feeds penalties and payroll; student attendance feeds parent alerts and reports. They change for
   different reasons, so they stay apart.
 - **Payroll and penalties are heavy rules:** they go in HR's `domain/` folder as pure, unit-tested
-  functions. Insurance and tax rules are HR settings (brackets, fund rate, insurance
-  rate) defaulting to the school's previous HR system, and the pure maths lives in
-  `packages/shared/src/rules/payroll-tax.ts` so the settings screen previews with the same code; the
-  defaults are confirmed with the school's accountant.
+  functions. HR payroll ends at the net; insurance, income tax and the martyrs' fund belong to
+  accounting (§10), with defaults to confirm with the school's accountant.
 - **Known pressure point: payroll inputs from academics.** If teachers are paid for extra classes,
   substitutions or teaching load, payroll needs timetable data, which points upward. Handle it
   without a cycle, simplest first:

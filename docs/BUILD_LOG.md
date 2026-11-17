@@ -141,16 +141,20 @@ phase live in `docs/build-log/`.
   already on employees), salaries net → grossed up. PR 1 built: shared `payroll-tax` rules (gross-up
   in integers, values checked against an exact-fraction reference), API settings + payroll lines,
   migration `20261118160000_payroll_tax` (gross = net backfill), docs §3/§6/§7/§8.
+- 2026-11-18 — Owner: HR payroll doesn't own gross and taxes — the accounting payroll submodule
+  does. Reworked on the same branch (nothing had reached `dev`): HR payroll back to net (migration
+  dropped), new `accounting` module (top of the module order) works out each approved month's
+  taxes on `payroll.approved` and freezes them; tax rule moved to Settings → Accounting
+  (`accounting.payroll.*`); keys `accounting.settings.view/edit`, `accounting.payroll.view` for
+  Accountant + System admin; §10 written. Backend only — the months' screen waits for mockups.
 
 ## Next up
 
-- **Payroll tax** (spec `docs/specs/2026-11-18-payroll-tax.md`, owner 2026-11-18: tax + martyrs'
-  fund + insurance, salaries net → grossed up, defaults from the previous HR system). PR 1 (shared
-  rules, API, migration, docs) and the screens (Settings → HR rules tax panel with live example,
-  run page Tax & insurance + Gross columns, payslip "Paid by the school", rules panel, history
-  formatting) on `feature/payroll-tax`; one PR. Left: smoke spec assertions, ui-auditor pass, demo
-  dry run. Defaults are GUESS until the accountant confirms.
-
+- **Accounting payroll taxes screen** — a page per approved month (net, insurance share, income tax,
+  fund, gross per employee) and a sidebar entry: **mockups first** (CLAUDE.md rule 9). The API
+  (`GET /accounting/payroll[/:month]`) is built. Defaults are GUESS until the accountant confirms.
+- `payroll.approved` is emitted after HR's commit but in-process: move it to an outbox with the
+  settings history (accounting already re-works a missed month on first read).
 - `pnpm smoke` in CI (needs Postgres + Chromium in the workflow).
 - The client should check the Arabic penalty catalogue against the printed regulations (copied from the scans).
 

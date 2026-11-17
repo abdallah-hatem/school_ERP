@@ -1,6 +1,7 @@
 import {
   AUDIT_FAILED_SIGN_IN,
   AUDIT_MONEY_FIELDS,
+  AccountingSettingKey,
   HrSettingKey,
   LANGUAGES,
   SchoolSettingKey,
@@ -134,7 +135,7 @@ export function formatAuditValue(
   }
   if (typeof value === 'number') {
     if (field === HrSettingKey.LATENESS_EXTRA_HOUR_DAYS || field === 'days') return formatDayCount(value, locale);
-    if (field === HrSettingKey.TAX_MARTYR_PERCENT || field === HrSettingKey.TAX_INSURANCE_PERCENT) {
+    if (field === AccountingSettingKey.PAYROLL_MARTYR_PERCENT || field === AccountingSettingKey.PAYROLL_INSURANCE_PERCENT) {
       return `${value}%`;
     }
     if (field === HrSettingKey.LATENESS_GRACE_MINUTES || field === 'minutes') {
@@ -149,7 +150,7 @@ export function formatAuditValue(
     if (value.every((v) => typeof v === 'string' && (WEEKDAYS as readonly string[]).includes(v))) {
       return value.map((d: string) => t(`common.enums.weekday.${d}`)).join(list);
     }
-    if (field === HrSettingKey.TAX_BRACKETS && value.every(isBracket)) {
+    if (field === AccountingSettingKey.PAYROLL_TAX_BRACKETS && value.every(isBracket)) {
       return value
         .map((b: { width: number | null; percent: number }) =>
           b.width === null

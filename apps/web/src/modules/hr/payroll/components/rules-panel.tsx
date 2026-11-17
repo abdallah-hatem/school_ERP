@@ -9,7 +9,6 @@ import {
   DeductionsIcon,
   EmployeesIcon,
   ErrorIcon,
-  GrossIcon,
   LatenessIcon,
   PenaltiesIcon,
   SettingsIcon,
@@ -96,14 +95,6 @@ export function RulesPanel({
           <Rule icon={BlockedIcon} title={t('payroll.rules.netFloor')}>
             {t('payroll.rules.netFloorRule')}
           </Rule>
-          <Rule icon={GrossIcon} title={t('payroll.rules.tax')}>
-            {t('payroll.rules.taxRule', {
-              slices: formatCount(settings.tax.brackets.length),
-              top: settings.tax.brackets[settings.tax.brackets.length - 1]?.percent ?? 0,
-              fund: settings.tax.martyrPercent,
-              insurance: settings.tax.insurancePercent,
-            })}
-          </Rule>
         </ul>
       ) : (
         <p
@@ -124,14 +115,13 @@ export function RulesPanel({
   );
 }
 
-/** The six rules with the lines their text usually takes (the panel's loading shape). */
+/** The five rules with the lines their text usually takes (the panel's loading shape). */
 const RULE_SKELETONS: { icon: AppIcon; title: string; lines: number }[] = [
   { icon: DeductionsIcon, title: 'dayValue', lines: 2 },
   { icon: EmployeesIcon, title: 'workSystem', lines: 2 },
   { icon: LatenessIcon, title: 'lateness', lines: 3 },
   { icon: PenaltiesIcon, title: 'penalties', lines: 2 },
   { icon: BlockedIcon, title: 'netFloor', lines: 2 },
-  { icon: GrossIcon, title: 'tax', lines: 3 },
 ];
 
 function Rule({ icon: Icon, title, children }: { icon: AppIcon; title: string; children: ReactNode }) {

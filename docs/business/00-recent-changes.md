@@ -1,11 +1,12 @@
 # Recent changes
 
-- 2026-11-18 — Payroll tax (§6, §7, §3, owner): salaries are **net — grossed up**. Each payroll
-  line now adds the employee's social-insurance share (11% of the insured salary, insured only),
-  income tax on monthly brackets and the martyrs' fund (0.05%), all paid by the school on top of
-  the net, and a **gross**. The tax brackets and the two rates are HR rules in Settings, defaulting
-  to the school's previous HR system (GUESS — to confirm with the accountant). Approved runs keep
-  their numbers; lines calculated before this have gross = net.
+- 2026-11-18 — Payroll taxes in accounting (§10, §6, §3, owner): salaries are **net — grossed
+  up**, and HR payroll ends at the net. When HR approves a month, the new accounting module works
+  out each employee's insurance share (11% of the insured salary, insured only), income tax on
+  monthly slices and the martyrs' fund (0.05%), paid by the school on top of the net, and the
+  gross — frozen for that month. The rule is in Settings → **Accounting**, defaulting to the
+  school's previous HR system (GUESS — to confirm with the accountant). Accountant and System admin
+  hold the new keys. No screen for the months' taxes yet (mockups first).
 - 2026-11-18 — Penalties, once per day (§4, §7, owner): each violation has a **Once per day**
   setting, on by default; with it on, a second penalty for the same violation, employee and date is
   refused while the first is pending or approved (a cancelled one frees the day), checked at

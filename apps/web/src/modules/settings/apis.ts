@@ -1,6 +1,8 @@
 'use server';
 
 import type {
+  AccountingSettings,
+  UpdateAccountingSettingsRequest,
   CreateJobTitleRequest,
   CreatePenaltyGroupRequest,
   CreateViolationRequest,
@@ -28,6 +30,7 @@ import { handleResponse } from '@/lib/handleResponse';
  */
 
 const HR_SETTINGS_TAG = 'hr-settings';
+const ACCOUNTING_SETTINGS_TAG = 'accounting-settings';
 const CATALOGUE_TAG = 'penalty-catalogue';
 
 /** Stages, departments and job titles share one shape and one set of routes. */
@@ -107,6 +110,22 @@ export async function UPDATE_HR_SETTINGS(data: UpdateHrSettingsRequest) {
     method: 'PATCH',
     body: { ...data },
     revalidateTags: [HR_SETTINGS_TAG],
+  });
+  return handleResponse({ response: res });
+}
+
+// ── Accounting rules (§10) ───────────────────────────────────────────────────
+
+export async function GET_ACCOUNTING_SETTINGS() {
+  const res = await apiFetch<AccountingSettings>('/accounting/settings', { cache: 'no-store' });
+  return handleResponse({ response: res });
+}
+
+export async function UPDATE_ACCOUNTING_SETTINGS(data: UpdateAccountingSettingsRequest) {
+  const res = await apiFetch<AccountingSettings>('/accounting/settings', {
+    method: 'PATCH',
+    body: { ...data },
+    revalidateTags: [ACCOUNTING_SETTINGS_TAG],
   });
   return handleResponse({ response: res });
 }

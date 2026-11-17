@@ -24,6 +24,10 @@
     "catalogue": {
       "title": "Penalty catalogue",
       "description": "Violations and what each repeat costs"
+    },
+    "accounting": {
+      "title": "Accounting",
+      "description": "The payroll tax rule: income-tax slices, the martyrs' fund and the insurance share."
     }
   },
   "save": {
@@ -171,38 +175,10 @@
       "percentPlaceholder": "80",
       "partTimeHint": "Part-time staff are paid this share of their basic salary."
     },
-    "tax": {
-      "title": "Tax and insurance",
-      "description": "Salaries are net: the school pays the employee's income tax, martyrs' fund and insurance share on top of what the employee is paid.",
-      "brackets": "Monthly income-tax brackets",
-      "bracketsHint": "Taxable pay is taxed slice by slice: the first slice at its rate, the next slice at the next rate, and so on. The last slice covers the rest.",
-      "widthLabel": "Slice {n}: the next amount",
-      "widthPlaceholder": "5,000.00",
-      "rateLabel": "Slice {n} rate",
-      "ratePlaceholder": "10",
-      "restLabel": "The rest",
-      "restHint": "Everything above the slices before it.",
-      "addBracket": "Add a slice",
-      "removeBracket": "Remove slice {n}",
-      "martyr": "Martyrs' fund",
-      "martyrHint": "A share of the gross, paid by the school.",
-      "martyrPlaceholder": "0.05",
-      "insurance": "Employee insurance share",
-      "insuranceHint": "A share of the insured salary, for insured employees only.",
-      "insurancePlaceholder": "11"
-    },
     "penalties": {
       "title": "Penalty repeats",
       "description": "How far back the system looks when it counts a repeated violation.",
       "window": "Repetition window"
-    },
-    "taxExample": {
-      "net": "Net pay",
-      "netPlaceholder": "10,000.00",
-      "line": "net {net} → income tax {tax} · martyrs' fund {fund} · gross {gross}",
-      "enterNet": "Enter a net amount to see its tax.",
-      "invalidRule": "Fix the tax rule above to see an example.",
-      "hint": "For an employee who isn't insured. An insured employee's share is added to the gross."
     }
   },
   "catalogue": {
@@ -257,6 +233,37 @@
       "DAYS_REQUIRED": "Enter the days to deduct.",
       "DAYS_NOT_ALLOWED": "This action deducts no days.",
       "DAYS_INVALID": "Use quarter days above 0 and up to 30, like 0.25, 1 or 1.5."
+    }
+  },
+  "accounting": {
+    "tax": {
+      "title": "Tax and insurance",
+      "description": "Salaries are net: when HR approves a month, accounting works out the income tax, martyrs' fund and insurance share the school pays on top of what each employee is paid.",
+      "brackets": "Monthly income-tax brackets",
+      "bracketsHint": "Taxable pay is taxed slice by slice: the first slice at its rate, the next slice at the next rate, and so on. The last slice covers the rest.",
+      "widthLabel": "Slice {n}: the next amount",
+      "widthPlaceholder": "5,000.00",
+      "rateLabel": "Slice {n} rate",
+      "ratePlaceholder": "10",
+      "restLabel": "The rest",
+      "restHint": "Everything above the slices before it.",
+      "addBracket": "Add a slice",
+      "removeBracket": "Remove slice {n}",
+      "martyr": "Martyrs' fund",
+      "martyrHint": "A share of the gross, paid by the school.",
+      "martyrPlaceholder": "0.05",
+      "insurance": "Employee insurance share",
+      "insuranceHint": "A share of the insured salary, for insured employees only.",
+      "insurancePlaceholder": "11"
+    },
+    "example": {
+      "net": "Net pay",
+      "netPlaceholder": "10,000.00",
+      "line": "net {net} → income tax {tax} · martyrs' fund {fund} · gross {gross}",
+      "enterNet": "Enter a net amount to see its tax.",
+      "invalidRule": "Fix the tax rule above to see an example.",
+      "hint": "For an employee who isn't insured. An insured employee's share is added to the gross.",
+      "label": "Example:"
     }
   }
 }

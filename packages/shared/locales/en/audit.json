@@ -3,7 +3,8 @@
   "system": "System",
   "modules": {
     "core": "School",
-    "hr": "HR"
+    "hr": "HR",
+    "accounting": "Accounting"
   },
   "kinds": {
     "access": "Sign-ins",
@@ -24,7 +25,9 @@
     "violation": "Violation",
     "penalty": "Penalty",
     "lateness_month": "Monthly lateness",
-    "payroll_run": "Payroll run"
+    "payroll_run": "Payroll run",
+    "accounting_settings": "Accounting rules",
+    "accounting_payroll": "Payroll taxes"
   },
   "actions": {
     "core": {
@@ -95,6 +98,14 @@
         "approve": "Approved the payroll run for {entity}",
         "adjustment_add": "Added an adjustment to the payroll run for {entity}",
         "adjustment_remove": "Removed an adjustment from the payroll run for {entity}"
+      }
+    },
+    "accounting": {
+      "settings": {
+        "update": "Changed the accounting rules"
+      },
+      "payroll": {
+        "record": "Worked out the payroll taxes for {entity}"
       }
     }
   },
@@ -180,11 +191,6 @@
       "penalties": {
         "repetitionWindow": "Penalty repetition window"
       },
-      "tax": {
-        "brackets": "Income-tax brackets",
-        "martyrPercent": "Martyrs' fund rate",
-        "insurancePercent": "Employee insurance share"
-      },
       "departments": "Department",
       "jobTitles": "Job title",
       "penaltyGroups": "Penalty group",
@@ -195,7 +201,14 @@
     },
     "name": "Name",
     "roles": "Roles",
-    "permissions": "Permissions"
+    "permissions": "Permissions",
+    "accounting": {
+      "payroll": {
+        "taxBrackets": "Income-tax slices",
+        "martyrPercent": "Martyrs' fund rate",
+        "insurancePercent": "Employee insurance share"
+      }
+    }
   },
   "activity": {
     "description": "Every change and sign-in across the school, newest first. Entries can't be edited or deleted.",

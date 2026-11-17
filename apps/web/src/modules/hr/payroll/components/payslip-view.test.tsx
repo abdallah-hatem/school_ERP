@@ -64,25 +64,6 @@ describe('PayslipView', () => {
     expect(screen.getByText('Net pay').parentElement?.textContent).toContain('13,350.00');
   });
 
-  it('net pay first, then what the school pays on top: insurance share, income tax, martyrs\' fund and gross', () => {
-    renderPayroll(<PayslipView payslip={PAYSLIP} backHref="/x" />);
-    const block = screen.getByText('Paid by the school').closest('section') as HTMLElement;
-    expect(within(block).getByText("Social insurance (employee's share)").parentElement?.textContent).toContain('550.00');
-    expect(within(block).getByText('Income tax').parentElement?.textContent).toContain('1,900.00');
-    expect(within(block).getByText("Martyrs' fund").parentElement?.textContent).toContain('8.00');
-    expect(within(block).getByText('Gross salary').parentElement?.textContent).toContain('15,808.00');
-  });
-
-  it('not insured: no insurance row; Arabic labels', () => {
-    renderPayroll(
-      <PayslipView payslip={{ ...PAYSLIP, insuranceStatus: 'NOT_INSURED', insuredSalary: null, insuranceAmount: 0 }} backHref="/x" />,
-      'ar',
-    );
-    const block = screen.getByText('تدفعه المدرسة').closest('section') as HTMLElement;
-    expect(within(block).queryByText('التأمينات الاجتماعية (حصة العامل)')).toBeNull();
-    expect(within(block).getByText('ضريبة كسب العمل')).toBeTruthy();
-  });
-
   it('a payslip with nothing deducted says so', () => {
     renderPayroll(
       <PayslipView
