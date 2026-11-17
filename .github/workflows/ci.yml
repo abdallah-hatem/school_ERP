@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [dev, testing, production]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Lint, typecheck, unit tests, module rules
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Module rules (dependency-cruiser)
+        run: pnpm deps:check
+
+      - name: Module dependency graph
+        if: always()
+        run: pnpm deps:graph
+
+      - name: Upload dependency graph
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: module-dependency-graph
+          path: deps-graph.dot
+          if-no-files-found: ignore

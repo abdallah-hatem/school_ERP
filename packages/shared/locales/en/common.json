@@ -1,0 +1,130 @@
+{
+  "app": {
+    "name": "School ERP",
+    "comingSoon": "This screen is being built."
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "employees": "Employees",
+    "penalties": "Penalties",
+    "lateness": "Lateness",
+    "payroll": "Payroll",
+    "settings": "Settings"
+  },
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "create": "Create",
+    "edit": "Edit",
+    "approve": "Approve",
+    "recalculate": "Recalculate",
+    "deactivate": "Deactivate",
+    "reactivate": "Reactivate",
+    "retry": "Try again",
+    "search": "Search",
+    "signOut": "Sign out"
+  },
+  "common": {
+    "loading": "Loading…",
+    "empty": "Nothing here yet.",
+    "noResults": "No results match your filters.",
+    "yes": "Yes",
+    "no": "No",
+    "language": "Language",
+    "english": "English",
+    "arabic": "العربية"
+  },
+  "enums": {
+    "workSystem": {
+      "FULL_TIME": "Full-time",
+      "PART_TIME_4": "Part-time, 4 days",
+      "PART_TIME_3": "Part-time, 3 days",
+      "PART_TIME_2": "Part-time, 2 days"
+    },
+    "gender": {
+      "MALE": "Male",
+      "FEMALE": "Female"
+    },
+    "employeeStatus": {
+      "ACTIVE": "Active",
+      "INACTIVE": "Inactive"
+    },
+    "penaltyAction": {
+      "NOTICE": "Notice",
+      "WARNING": "Warning",
+      "DEDUCT_DAYS": "Deduct days",
+      "INVESTIGATION": "Referral to investigation",
+      "RAISE_HALF_LOSS": "Loss of half the annual raise",
+      "RAISE_LOSS": "Loss of the annual raise",
+      "RAISE_DEFER_3M": "Annual raise deferred 3 months",
+      "PAY_CUT": "Pay cut by one annual raise",
+      "DEMOTION": "Demotion",
+      "DISMISSAL": "Dismissal"
+    },
+    "penaltyStatus": {
+      "PENDING": "Pending",
+      "APPROVED": "Approved",
+      "CANCELLED": "Cancelled"
+    },
+    "payrollStatus": {
+      "DRAFT": "Draft",
+      "APPROVED": "Approved"
+    },
+    "adjustmentType": {
+      "ADDITION": "Addition",
+      "DEDUCTION": "Deduction"
+    },
+    "repetitionWindow": {
+      "CONTRACT_YEAR": "Contract year (1 June – 31 May)",
+      "CALENDAR_YEAR": "Calendar year",
+      "ROLLING_12_MONTHS": "Rolling 12 months"
+    },
+    "payrollFlag": {
+      "NET_FLOORED": "Net floored at 0",
+      "PENDING_PENALTIES": "Pending penalties"
+    },
+    "weekday": {
+      "SUNDAY": "Sunday",
+      "MONDAY": "Monday",
+      "TUESDAY": "Tuesday",
+      "WEDNESDAY": "Wednesday",
+      "THURSDAY": "Thursday",
+      "FRIDAY": "Friday",
+      "SATURDAY": "Saturday"
+    }
+  },
+  "errors": {
+    "VALIDATION_FAILED": "Some fields are invalid.",
+    "BAD_REQUEST": "The request is invalid.",
+    "UNAUTHORIZED": "Please sign in to continue.",
+    "FORBIDDEN": "You don't have permission to do this.",
+    "NOT_FOUND": "Not found.",
+    "CONFLICT": "This conflicts with existing data.",
+    "PAYLOAD_TOO_LARGE": "The upload is too large.",
+    "UNIQUE_VIOLATION": "This value is already in use.",
+    "FOREIGN_KEY_VIOLATION": "A related record does not exist.",
+    "RELATION_VIOLATION": "This would break a required link between records.",
+    "PRISMA_VALIDATION": "The request is invalid.",
+    "INTERNAL_ERROR": "Something went wrong. Please try again.",
+    "INVALID_CREDENTIALS": "Email or password is incorrect.",
+    "INVALID_REFRESH_TOKEN": "Your session has expired. Please sign in again.",
+    "INVALID_WORK_HOURS": "Work end must be after work start.",
+    "INVALID_FILE_TYPE": "Only PNG, JPG or SVG files are allowed.",
+    "FILE_TOO_LARGE": "The file must be 2 MB or smaller.",
+    "LIST_ITEM_HIDDEN": "This item is hidden and can't be chosen.",
+    "EMPLOYEE_INACTIVE": "This employee is inactive.",
+    "DUPLICATE_NATIONAL_ID": "Another employee already has this national ID.",
+    "DUPLICATE_FINGERPRINT_ID": "Another employee already has this fingerprint ID.",
+    "INVALID_MANAGER": "The direct manager must be another active employee.",
+    "MANAGER_LOOP": "This manager would create a reporting loop.",
+    "VIOLATION_RETIRED": "This violation is retired and can't be used.",
+    "INVALID_LEVELS": "Levels must be numbered 1 to 5 with no gaps.",
+    "PENALTY_NOT_PENDING": "Only a pending penalty can be approved.",
+    "PENALTY_CANCELLED": "This penalty is already cancelled.",
+    "PAYROLL_APPROVED": "This month's payroll is approved and locked.",
+    "PAYROLL_NOT_APPROVED": "Available only after the payroll is approved.",
+    "PAYROLL_RUN_EXISTS": "A payroll run already exists for this month.",
+    "PENDING_PENALTIES": "Approve or cancel this month's pending penalties first.",
+    "EMPLOYEE_NOT_IN_RUN": "This employee is not in this payroll run."
+  }
+}
