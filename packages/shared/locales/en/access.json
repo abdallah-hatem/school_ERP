@@ -255,5 +255,12 @@
     "unknown": "Not recorded",
     "signOut": "Sign out",
     "loadFailed": "Your account couldn't load."
+  },
+  "noAccess": {
+    "usersTitle": "You can't see the users",
+    "rolesTitle": "You can't see the roles",
+    "body": "Ask a System admin if you need it.",
+    "notFoundTitle": "This page isn't here",
+    "notFoundBody": "It may have been deleted. Go back to the list."
   }
 }

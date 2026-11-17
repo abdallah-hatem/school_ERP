@@ -348,11 +348,31 @@ Roles are rows, not code (spec P2, R2 / R5 / R8 / R9). A school changes them thr
   answers the question; HR applies it in P4.
 - **Linked employee.** `users.employee_id` (unique, core-owned) is the link (R9). HR's older
   `employees.user_id` was copied into it by the migration and is deprecated (HR drops it).
-- **The `users.role` enum column** (`UserRole`, `AuthUser.role`) is kept **deprecated**: nothing
-  decides access with it; it stays until the web app stops reading it (P3).
+- **The `users.role` enum column is gone** (P3 migration `users_drop_role_add_sign_in`): access
+  comes only from `user_roles`, the access token carries only the user's id, the user chip shows the
+  names of their roles and every signed-in user's home is the dashboard (`homeFor(locale)`).
+- **Forced password change** (R9, P3). A temporary password (set on Add user or by "Set temporary
+  password") sets `users.must_change_password`. `AuthUser.mustChangePassword` comes with the user on
+  every request (and in the sign-in response and `/auth/me`). While it is set, the global
+  `PermissionGuard` answers **403 `PASSWORD_CHANGE_REQUIRED`** to everything except the routes
+  marked `@AllowedBeforePasswordChange()` — `GET /auth/me`, `POST /auth/logout` and
+  `POST /account/password` (a CI scan pins that list). On that call the current password is not
+  asked for (the sign-in just proved the temporary one), but the new one must differ from it
+  (`SAME_PASSWORD`). The web app sends such a user to `/<locale>/set-password` right after sign-in,
+  and the dashboard layout redirects there from any screen, keeping `?next=` to land on afterwards.
+- **Sign-in facts.** `users.last_sign_in_at` is written on each successful sign-in and
+  `users.password_changed_at` whenever a password is set or changed; the Users list and My account
+  show them.
+- **Row-level permissions.** Only the permissions about particular employees
+  (`ROW_SCOPED_PERMISSIONS` in shared: employees, salaries, penalties, lateness, payroll view) take a
+  scope other than `all`; the Roles API refuses the rest (`INVALID_SCOPE`) and the role page shows
+  "Whole school" for them.
 - **Users API** (`core/users`, `core.users.view` / `core.users.manage`): list (paged, search on name
   or email, status), get, create (temporary password, roles, linked employee), edit, deactivate /
   reactivate, set a temporary password; `POST /account/password` (`@SignedIn`) changes your own.
+  P3 added `?roleId=` (the role filter, a role's holders), `GET /users/employee-options`
+  (`core.users.manage`: the linked-employee picker, searched on the server, with the account each
+  employee already has) and `GET /account` (`@SignedIn`: My account).
   Deactivating or setting a temporary password emits `core.user.sessions_ended` after the commit;
   `core/auth` revokes the user's refresh tokens. The access token is refused at once anyway, since
   every request re-reads the user (edge case 6).
@@ -366,8 +386,19 @@ Roles are rows, not code (spec P2, R2 / R5 / R8 / R9). A school changes them thr
   log (the entry says only that one was set or changed).
 - Area order inside core: `audit` ← `permissions` ← `roles` ← `users` ← `auth`. `core/audit` reads
   an actor's name from `users` itself, so it depends on no other core area.
+- **Screens (P3, option A of `design/mockups/access.html`)** — `apps/web/src/modules/access`:
+  Administration → **Users** (`core.users.view`; table with search, role and status filters, 10 per
+  page, ⋯ Edit / Set temporary password / Deactivate / Reactivate), **Add user** and a user's page
+  as full pages (searchable role checklist with the last System admin's role locked and the reason,
+  searchable linked-employee picker, Status and Password cards, sticky Save bar disabled until a
+  change; read-only without `core.users.manage`), **Roles** (`core.roles.view`; kind, permission
+  count, holders; Duplicate, Delete for a custom role nobody holds) and a role's page (names EN/AR,
+  permissions grouped by module with a switch and an inline scope, who holds it; the System admin
+  read-only). **My account** (`/account`, every user, opened from the user chip): name, email,
+  roles, linked employee, sign-in facts and Change password. The forced **Set a new password** page
+  is `core/auth` (`/set-password`).
 - **The web app** gets the keys with the session: `GET /auth/me` returns `SessionUser`
-  (`AuthUser` + `permissions`). The dashboard layout reads it on the server and passes it to
+  (`AuthUser` + `permissions` + `roles`). The dashboard layout reads it on the server and passes it to
   `SessionProvider`; `can(user, key)`, `useCan()` and `<Can permission="…">` in
   `apps/web/src/core/auth` hide menu items and action buttons. **`can()` is only the view** — the
   guard is the protection, and a hidden button's endpoint still refuses the call.
@@ -575,7 +606,7 @@ No `entities/` folder: row types come from `@prisma/client`.
 apps/web/src/
 ├── app/                              ← routes only, thin
 │   └── [locale]/                     ← en | ar; layout sets dir and loads branding
-│       ├── (auth)/login/  reset-password/
+│       ├── (auth)/login/  set-password/   ← sign-in; the forced new password (P3)
 │       └── (dashboard)/              ← sidebar + topbar layout
 │           ├── page.tsx
 │           ├── students/  fees/  attendance/  exams/  settings/  activity/
@@ -605,6 +636,7 @@ apps/web/src/
 │   ├── hr/  academics/  students/  admissions/  attendance/
 │   ├── fees/  exams/  communication/  transport/
 │   ├── settings/                     ← the Settings screen
+│   ├── access/                       ← Users, Roles, My account (P3)
 │   └── activity/                     ← the Activity screen (filters panel, today's counts, paging)
 └── middleware.ts                     ← locale + auth routing
 ```
