@@ -55,6 +55,8 @@ import {
   UsersThreeIcon as UsersThree,
   WalletIcon as Wallet,
   WarningCircleIcon as WarningCircle,
+  WarningIcon as Warning,
+  InfoIcon as Info,
   XIcon as X,
   FunnelIcon as Funnel,
   ArrowSquareOutIcon as ArrowSquareOut,
@@ -194,6 +196,10 @@ export const ErrorIcon = duotone(WarningCircle, 'Error');
 export const ReadyIcon = duotone(CheckCircle, 'Ready');
 export const PendingIcon = duotone(Hourglass, 'Pending');
 export const BlockedIcon = duotone(Prohibit, 'Blocked');
+/** Needs a look (a warning toast). */
+export const WarningIcon = duotone(Warning, 'Warning');
+/** A neutral fact (an info toast). */
+export const InfoIcon = duotone(Info, 'Info');
 
 // Settings sections
 export const SchoolIcon = duotone(Buildings, 'School');

@@ -132,12 +132,19 @@ export function EmployeeForm({ basePath, employee, departments, stages, jobTitle
     setFormError(null);
     let saved = false;
     try {
+      // The toast names them in the screen's language (the API's message is generic English).
+      const name = localName(values, locale);
       const res = employee
         ? await callApi(UPDATE_EMPLOYEE(employee.id, formToUpdate(values, initial)), {
             showErrorToast: false,
             showSuccessToast: true,
+            successMessage: t('employees.edit.done', { name }),
           })
-        : await callApi(CREATE_EMPLOYEE(formToRequest(values)), { showErrorToast: false, showSuccessToast: true });
+        : await callApi(CREATE_EMPLOYEE(formToRequest(values)), {
+            showErrorToast: false,
+            showSuccessToast: true,
+            successMessage: t('employees.create.done', { name }),
+          });
       if (res.unauthorized) return;
       if (res.success) {
         saved = true;
