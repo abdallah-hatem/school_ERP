@@ -3,6 +3,7 @@
 import { EmployeeStatus, type EmployeeSummary } from '@school-erp/shared';
 import Link from 'next/link';
 import { useId, type ReactNode } from 'react';
+import { EmployeeLink } from '@/core/employees';
 import { Button } from '@/shared/components/ui/button';
 import { Money } from '@/shared/components/ui/figures';
 import { EditIcon, ShowIcon, StageIcon } from '@/shared/components/ui/icons';
@@ -135,9 +136,7 @@ export function EmployeeCard({
         <>
           <div className="min-w-0">
             <h3 id={nameId} className="font-display text-[1.1rem] leading-snug font-extrabold break-words">
-              <Link href={href} className="cursor-pointer rounded-sm hover:text-primary hover:underline">
-                {name}
-              </Link>
+              <EmployeeLink employeeId={employee.id} name={name} />
             </h3>
             <p className="truncate text-[0.8rem] text-muted-foreground">{localName(employee.jobTitle, locale)}</p>
           </div>

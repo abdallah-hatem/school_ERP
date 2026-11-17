@@ -20,6 +20,9 @@ function makeService(opts: { inTx?: boolean; user?: AuthUser | null; clsActive?:
       return Promise.resolve();
     }),
     findPage: jest.fn(),
+    findLinkedEmployees: jest.fn((ids: readonly string[]) =>
+      Promise.resolve(new Map(ids.includes('u1') ? [['u1', 'emp-1']] : [])),
+    ),
     findUserName: jest.fn((id: string) => Promise.resolve(id === 'u9' ? 'Karim' : null)),
   };
   const recorded: string[] = [];
@@ -244,8 +247,19 @@ describe('AuditService reads', () => {
     const { service, entries, users } = makeService();
     entries.findPage.mockResolvedValueOnce(pageOf([row()]));
     const page = await service.list({}, 1, 10);
-    expect(page.data[0].actor).toEqual({ id: 'u1', name: 'Mona (then)' });
+    expect(page.data[0].actor).toEqual({ id: 'u1', name: 'Mona (then)', employeeId: 'emp-1' });
     expect(users.findName).not.toHaveBeenCalled();
+  });
+
+  it("gives the actor's linked employee (null when the user has none), read once per page", async () => {
+    const { service, entries } = makeService();
+    entries.findPage.mockResolvedValueOnce(
+      pageOf([row(), row({ id: 'a2', actorId: 'u2', actorName: 'Karim' }), row({ id: 'a3' })]),
+    );
+    const page = await service.list({}, 1, 10);
+    expect(page.data.map((e) => e.actor?.employeeId)).toEqual(['emp-1', null, 'emp-1']);
+    expect(entries.findLinkedEmployees).toHaveBeenCalledTimes(1);
+    expect(entries.findLinkedEmployees).toHaveBeenCalledWith(['u1', 'u2']);
   });
 
   it('maps a row to the AuditEntry contract: meta without the request id, ISO time', async () => {

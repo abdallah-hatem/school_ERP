@@ -21,7 +21,6 @@ export async function PenaltiesScreen({ locale, searchParams }: { locale: Locale
     <PenaltiesI18n locale={locale}>
       <PenaltiesList
         basePath={`/${locale}/penalties`}
-        employeesPath={`/${locale}/employees`}
         query={query}
         currentMonth={currentMonth}
         rows={penalties.success ? (penalties.data ?? []) : []}

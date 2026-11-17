@@ -59,7 +59,6 @@ export function EmployeePenalties({ employeesPath, employee, rows, total, page, 
       <PenaltiesTable
         label={t('penalties.profileTableLabel', { name: nameIn(employee, locale) })}
         rows={rows}
-        employeesPath={employeesPath}
         showEmployee={false}
         refreshing={pending}
         error={error}

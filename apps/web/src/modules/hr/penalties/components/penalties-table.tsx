@@ -7,6 +7,7 @@ import { DataTable, type DataTableColumn } from '@/shared/components/data-table/
 import type { PaginationState } from '@/shared/components/data-table/pagination';
 import { BidiText } from '@/shared/components/ui/bidi-text';
 import { SkeletonIdentity, SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
+import { SlotText, TEXT_SLOT } from '@/shared/components/ui/slot-text';
 import { StatusPill, type StatusTone } from '@/shared/components/ui/status-pill';
 import { formatDate } from '@/shared/lib/format';
 import { nameIn } from '@/shared/lib/i18n';
@@ -36,7 +37,6 @@ export function PenaltyStatusPill({ status }: { status: PenaltyStatus }) {
 export function PenaltiesTable({
   label,
   rows,
-  employeesPath,
   showEmployee = true,
   refreshing,
   error,
@@ -49,8 +49,6 @@ export function PenaltiesTable({
   label: string;
   /** `undefined` while the first page loads: skeleton rows of the same shape. */
   rows: PenaltyRecord[] | undefined;
-  /** `/ar/employees` — the employee cell links to the profile. */
-  employeesPath: string;
   showEmployee?: boolean;
   refreshing?: boolean;
   error?: boolean;
@@ -81,7 +79,7 @@ export function PenaltiesTable({
             header: t('penalties.columns.employee'),
             className: 'min-w-40 whitespace-normal',
             card: 'title' as const,
-            cell: (p: PenaltyRecord) => <EmployeeIdentity employee={p.employee} href={`${employeesPath}/${p.employee.id}`} />,
+            cell: (p: PenaltyRecord) => <EmployeeIdentity employee={p.employee} />,
             skeleton: <SkeletonIdentity />,
           },
         ]
@@ -120,7 +118,8 @@ export function PenaltiesTable({
           <PenaltyStatusPill status={p.status} />
           {p.status === PenaltyStatus.CANCELLED && p.cancelReason ? (
             <span className="max-w-48 text-xs break-words text-muted-foreground">
-              <ReasonText template={t('penalties.cancelledBecause', { reason: REASON_SLOT })} reason={p.cancelReason} />
+              {/* The typed reason isolated in its own script (an Arabic reason in English). */}
+              <SlotText text={t('penalties.cancelledBecause', { reason: TEXT_SLOT })} slot={<BidiText>{p.cancelReason}</BidiText>} />
             </span>
           ) : null}
         </span>
@@ -149,16 +148,3 @@ export function PenaltiesTable({
   );
 }
 
-const REASON_SLOT = '\u0000';
-
-/** "Reason: …" with the typed reason isolated in its own script (an Arabic reason in English). */
-function ReasonText({ template, reason }: { template: string; reason: string }) {
-  const [before = '', after = ''] = template.split(REASON_SLOT);
-  return (
-    <>
-      {before}
-      <BidiText>{reason}</BidiText>
-      {after}
-    </>
-  );
-}

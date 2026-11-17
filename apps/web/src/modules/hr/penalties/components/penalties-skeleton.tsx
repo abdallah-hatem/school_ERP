@@ -20,7 +20,6 @@ export function PenaltiesSkeleton() {
     <PenaltiesI18n locale={locale}>
       <PenaltiesList
         basePath={`/${locale}/penalties`}
-        employeesPath={`/${locale}/employees`}
         query={parsePenaltiesQuery(Object.fromEntries(params), currentMonth)}
         currentMonth={currentMonth}
         rows={undefined}

@@ -51,6 +51,8 @@ catalogue, a month of penalties (some pending) and lateness, and a DRAFT payroll
 - Open the payslip of the employee from step 3. ✔ Each penalty is listed with its level, days and
   amount, and they add up to the line's penalty total; lateness, adjustments and net match the line.
 - Print → one A4 page, in Arabic and in English.
+- Click the employee's name (on the payslip, or in the run's "Employees this month") → ✔ their
+  profile opens. Every employee name in the app does this (penalties, lateness, Activity).
 
 ## 9. Phone
 - Same app at phone width: top bar with the school name and the menu, drawer navigation, cards

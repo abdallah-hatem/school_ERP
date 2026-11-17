@@ -145,12 +145,12 @@ export function EmployeeProfileShell({
 }
 
 /** The Details tab inside the profile layout: the layout's employee, no second fetch. */
-export function ProfileEmployeeDetails({ basePath }: { basePath: string }) {
-  return <EmployeeDetails basePath={basePath} employee={useProfileEmployee()} />;
+export function ProfileEmployeeDetails() {
+  return <EmployeeDetails employee={useProfileEmployee()} />;
 }
 
 /** The "Details" section: every §3 field, grouped like the form. */
-export function EmployeeDetails({ basePath, employee }: { basePath: string; employee: Employee }) {
+export function EmployeeDetails({ employee }: { employee: Employee }) {
   const { t, locale } = useTranslation();
   const notSet = <span className="text-muted-foreground">{t('employees.profile.notSet')}</span>;
   const text = (v: string | null) => (v ? v : notSet);
@@ -194,7 +194,7 @@ export function EmployeeDetails({ basePath, employee }: { basePath: string; empl
         <DetailsItem label={t('employees.fields.jobTitle')}>{localName(employee.jobTitle, locale)}</DetailsItem>
         <DetailsItem label={t('employees.fields.workSystem')}>{t(`common.enums.workSystem.${employee.workSystem}`)}</DetailsItem>
         <DetailsItem label={t('employees.fields.manager')} wide>
-          {employee.manager ? <EmployeeIdentity employee={employee.manager} href={`${basePath}/${employee.manager.id}`} /> : notSet}
+          {employee.manager ? <EmployeeIdentity employee={employee.manager} /> : notSet}
         </DetailsItem>
         <DetailsItem label={t('employees.fields.grade')}>{text(employee.grade)}</DetailsItem>
         <DetailsItem label={t('employees.fields.fingerprintId')}>{ltr(employee.fingerprintId)}</DetailsItem>

@@ -4,6 +4,7 @@ import { AdjustmentType, PayrollFlag, type Payslip } from '@school-erp/shared';
 import Image from 'next/image';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { EmployeeLink } from '@/core/employees';
 import { EmptyState } from '@/shared/components/layout/empty-state';
 import { BidiText } from '@/shared/components/ui/bidi-text';
 import { Button } from '@/shared/components/ui/button';
@@ -89,7 +90,7 @@ export function PayslipView({ payslip, backHref }: { payslip: Payslip; backHref:
 
         <section className="flex flex-col gap-2">
           <h1 className="font-display text-xl leading-tight font-extrabold break-words">
-            {localName(payslip, locale)}
+            <EmployeeLink employeeId={payslip.employeeId} name={localName(payslip, locale)} />
           </h1>
           <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3 print:grid-cols-3">
             <Field label={t('payroll.payslip.code')}>
