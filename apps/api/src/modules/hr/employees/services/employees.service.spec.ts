@@ -8,6 +8,8 @@ import { JobTitlesService } from '../../lists/services/job-titles.service';
 import type { CreateEmployeeDto } from '../dto/employee.dto';
 import { EmployeeDetailRow, EmployeesRepository } from '../repositories/employees.repository';
 import { EmployeesService } from './employees.service';
+import { fakeAccess } from '../../access/hr-access.testing';
+import type { HrAccessService } from '../../access/hr-access.service';
 
 const ref = (id: string) => ({ id, nameEn: id, nameAr: id });
 const d = (s: string) => new Date(`${s}T00:00:00.000Z`);
@@ -51,7 +53,6 @@ const row = (over: Partial<EmployeeDetailRow> = {}): EmployeeDetailRow => ({
   university: null,
   graduationYear: null,
   status: 'ACTIVE',
-  userId: null,
   createdAt: new Date(),
   updatedAt: new Date(),
   ...over,
@@ -72,9 +73,10 @@ const dto = (over: Partial<CreateEmployeeDto> = {}): CreateEmployeeDto => ({
   ...over,
 });
 
-function makeService(repo: Record<string, jest.Mock> = {}) {
+function makeService(repo: Record<string, jest.Mock> = {}, access: HrAccessService = fakeAccess()) {
   const repository = {
     findDetail: jest.fn().mockResolvedValue(row()),
+    findScopeFields: jest.fn().mockResolvedValue({ id: 'e1', stageId: 's1', managerId: null }),
     findState: jest.fn().mockResolvedValue({ id: 'm1', status: 'ACTIVE' }),
     findManagerState: jest
       .fn()
@@ -101,6 +103,7 @@ function makeService(repo: Record<string, jest.Mock> = {}) {
     lists as unknown as JobTitlesService,
     events as unknown as EventEmitter2,
     files as unknown as FileStorageService,
+    access,
   );
   return { service, repository, events, files };
 }

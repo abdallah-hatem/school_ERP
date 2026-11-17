@@ -38,6 +38,7 @@ export function line(
     adjustmentDeductions: 0,
     net: 1_400_000,
     flags: [],
+    salaryVisible: true,
     ...overrides,
   };
 }
@@ -72,6 +73,7 @@ export const ADJ_MONA: PayrollAdjustment = {
   reason: 'Exam supervision',
   createdAt: '2026-11-10T08:00:00.000Z',
   applied: true,
+  salaryVisible: true,
 };
 
 export function run(overrides: Partial<PayrollRun> = {}): PayrollRun {
@@ -83,14 +85,15 @@ export function run(overrides: Partial<PayrollRun> = {}): PayrollRun {
     approvedAt: null,
     totals: {
       employees: lines.length,
-      monthSalary: lines.reduce((s, l) => s + l.monthSalary, 0),
-      penaltyAmount: lines.reduce((s, l) => s + l.penaltyAmount, 0),
+      monthSalary: lines.reduce((s, l) => s + (l.monthSalary ?? 0), 0),
+      penaltyAmount: lines.reduce((s, l) => s + (l.penaltyAmount ?? 0), 0),
       latenessAmount: 0,
       adjustmentAdditions: 0,
       adjustmentDeductions: 0,
-      net: lines.reduce((s, l) => s + l.net, 0),
+      net: lines.reduce((s, l) => s + (l.net ?? 0), 0),
       flagged: lines.filter((l) => l.flags.length > 0).length,
     },
+    salaryVisible: true,
     adjustments: [],
     pendingPenalties: lines.filter((l) => l.flags.includes('PENDING_PENALTIES')).length,
     ...overrides,
@@ -105,6 +108,7 @@ export function summary(r: PayrollRun = run()): PayrollRunSummary {
     month: r.month,
     status: r.status,
     totals: r.totals,
+    salaryVisible: r.salaryVisible,
     approvedAt: r.approvedAt,
   };
 }

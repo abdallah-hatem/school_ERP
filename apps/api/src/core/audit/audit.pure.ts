@@ -1,4 +1,4 @@
-import type { AuditChange, AuditLabel } from '@school-erp/shared';
+import { isSalaryField, type AuditChange, type AuditLabel } from '@school-erp/shared';
 
 /*
  * The changed-fields diff (audit spec D7). Pure: values in, changes out. Only changed fields are
@@ -79,6 +79,22 @@ export function cleanChanges(changes: readonly AuditChange[]): AuditChange[] {
       after: toStoredValue(c.after),
     }))
     .filter((c) => !same(c.before, c.after));
+}
+
+/**
+ * The changes as a viewer without salaries sees them (R7, P4): each salary-type field
+ * (`AUDIT_SALARY_FIELDS`) keeps its name — "changed" — but loses its values. `keepTotals`: a
+ * payroll run's `totals` stay (the viewer sees the whole school's payroll totals on screen too).
+ */
+export function hideSalaryValues(
+  changes: readonly AuditChange[],
+  { keepTotals = false }: { keepTotals?: boolean } = {},
+): AuditChange[] {
+  return changes.map((c) =>
+    isSalaryField(c.field) && !(keepTotals && c.field === 'totals')
+      ? ({ field: c.field, hidden: true } as AuditChange)
+      : c,
+  );
 }
 
 /** A label as stored: English (or the only name) and the Arabic one, when it differs. */

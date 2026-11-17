@@ -4,6 +4,9 @@ The client's regulations don't define how salaries are calculated. For the demo,
 **basic salary adjusted for work system, minus deductions, plus or minus one-off adjustments**
 (owner's decision, 2026-11-17).
 
+Who sees payroll amounts (each line's money, payslips, the bank sheet) and the run totals, and whose
+lines each role sees: §2 Roles (enforced, P4).
+
 ## The monthly run
 
 - **DECIDED** — One payroll run per month. It is **draft** until approved.

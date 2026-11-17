@@ -4,7 +4,6 @@ import type { Prisma } from '@prisma/client';
 import {
   AuditEntityType,
   insuranceShare,
-  PayrollStatus,
   payrollTax,
   type AccountingPayrollMonth,
   type AccountingPayrollMonthSummary,
@@ -50,8 +49,8 @@ export class AccountingPayrollService {
    */
   async recordApprovedRun(hrRunId: Uuid): Promise<AccountingRunRow | null> {
     if (await this.repository.findByHrRun(hrRunId)) return null;
-    const run = await this.hrPayroll.get(hrRunId);
-    if (run.status !== PayrollStatus.APPROVED) return null;
+    const run = await this.hrPayroll.approvedLinesForAccounting(hrRunId);
+    if (!run) return null;
 
     const rule = await this.settings.taxRule();
     const insurance = new Map(

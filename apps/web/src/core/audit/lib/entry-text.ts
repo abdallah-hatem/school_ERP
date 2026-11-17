@@ -191,6 +191,8 @@ export interface ChangeRow {
   after: unknown;
   /** Nothing before: only the new value shows. */
   created: boolean;
+  /** The values were left out for this viewer (salary, R7): the row says "changed" without them. */
+  hidden?: boolean;
 }
 
 /** The parts of a list item whose change is worth a line of its own; `id` never is. */
@@ -221,6 +223,10 @@ export function changeRows(
   const rows: ChangeRow[] = [];
   changes.forEach((change, i) => {
     const label = fieldLabel(change.field, t, has);
+    if (change.hidden) {
+      rows.push({ key: `${change.field}-${i}`, field: change.field, label, before: undefined, after: undefined, created: false, hidden: true });
+      return;
+    }
     const { before, after } = change;
     const created = before === null || before === undefined;
     if (!created && isNames(before) && isNames(after) && editedInPlace(before, after, locale)) {

@@ -1,5 +1,6 @@
 import { sectionMetadata } from '@/core/navigation/section-metadata';
 import { notFound } from 'next/navigation';
+import { requirePermission } from '@/core/auth';
 import { PayslipScreen } from '@/modules/hr/payroll';
 import { isLocale } from '@/shared/lib/i18n';
 
@@ -13,5 +14,7 @@ export default async function PayslipPage({
 }) {
   const { locale, id, lineId } = await params;
   if (!isLocale(locale)) notFound();
+  // R6: a page the viewer's roles can't open is the not-found screen.
+  await requirePermission('hr.payroll.view');
   return <PayslipScreen locale={locale} id={id} lineId={lineId} />;
 }

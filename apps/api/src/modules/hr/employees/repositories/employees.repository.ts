@@ -23,6 +23,8 @@ export const EMPLOYEE_SUMMARY_SELECT = {
   status: true,
   photoUrl: true,
   gender: true,
+  // For the scope and salary checks (R5, R7); not part of the response.
+  managerId: true,
 } satisfies Prisma.EmployeeSelect;
 
 /** The employee fields a payroll line snapshots at calculation (§6). */
@@ -91,7 +93,6 @@ export const EMPLOYEE_DETAIL_SELECT = {
   university: true,
   graduationYear: true,
   status: true,
-  userId: true,
   createdAt: true,
   updatedAt: true,
 } satisfies Prisma.EmployeeSelect;
@@ -120,6 +121,18 @@ export interface EmployeeListFilter {
   /** Leave this employee out. */
   excludeId?: string;
 }
+
+/** A scope's filter on `employees` (R5) — `{}` for every employee. */
+export type EmployeeScopeWhere = Prisma.EmployeeWhereInput;
+
+/** What a scope check reads about an employee (`inScope`). */
+export interface EmployeeScopeFields {
+  id: string;
+  stageId: string;
+  managerId: string | null;
+}
+
+const SCOPE_SELECT = { id: true, stageId: true, managerId: true } as const;
 
 /** A unique-constraint race the service's pre-check missed → the same 409 the pre-check gives. */
 function rethrowUnique(e: unknown): never {
@@ -153,8 +166,9 @@ export class EmployeesRepository extends BaseRepository<
     limit: number | undefined,
     search: string | undefined,
     filter: EmployeeListFilter,
+    scope: EmployeeScopeWhere = {},
   ): Promise<Paginated<EmployeeSummaryRow>> {
-    const where: Prisma.EmployeeWhereInput = {};
+    const where: Prisma.EmployeeWhereInput = { AND: [scope] };
     if (filter.departmentId) where.departmentId = filter.departmentId;
     if (filter.stageId) where.stageId = filter.stageId;
     if (filter.status) where.status = filter.status;
@@ -173,11 +187,32 @@ export class EmployeesRepository extends BaseRepository<
     );
   }
 
-  findDetail(id: string): Promise<EmployeeDetailRow | null> {
-    return this.databaseService.employee.findUnique({
-      where: { id },
+  /** The employee, or null when unknown or outside `scope` (the caller answers 404 either way). */
+  findDetail(id: string, scope: EmployeeScopeWhere = {}): Promise<EmployeeDetailRow | null> {
+    return this.databaseService.employee.findFirst({
+      where: { AND: [{ id }, scope] },
       select: EMPLOYEE_DETAIL_SELECT,
     });
+  }
+
+  /** What a scope check needs about one employee, or null when unknown. */
+  findScopeFields(id: string): Promise<EmployeeScopeFields | null> {
+    return this.databaseService.employee.findUnique({ where: { id }, select: SCOPE_SELECT });
+  }
+
+  /** The same, for several employees (unknown ids are absent). */
+  findScopeFieldsMany(ids: readonly string[]): Promise<EmployeeScopeFields[]> {
+    if (!ids.length) return Promise.resolve([]);
+    return this.databaseService.employee.findMany({
+      where: { id: { in: [...ids] } },
+      select: SCOPE_SELECT,
+    });
+  }
+
+  /** The ids of the employees `scope` covers (any status). */
+  async findIdsInScope(scope: EmployeeScopeWhere): Promise<string[]> {
+    const rows = await this.databaseService.employee.findMany({ where: scope, select: { id: true } });
+    return rows.map((r) => r.id);
   }
 
   findState(id: string): Promise<{ id: string; status: EmployeeStatus } | null> {
@@ -196,8 +231,8 @@ export class EmployeesRepository extends BaseRepository<
     });
   }
 
-  /** Every active employee with their department, ordered by code. */
-  findActiveWithDepartments(): Promise<
+  /** Every active employee (in `scope`) with their department, ordered by code. */
+  findActiveWithDepartments(scope: EmployeeScopeWhere = {}): Promise<
     {
       id: string;
       code: string;
@@ -207,7 +242,7 @@ export class EmployeesRepository extends BaseRepository<
     }[]
   > {
     return this.databaseService.employee.findMany({
-      where: { status: EmployeeStatus.ACTIVE },
+      where: { AND: [{ status: EmployeeStatus.ACTIVE }, scope] },
       select: {
         id: true,
         code: true,
@@ -229,12 +264,12 @@ export class EmployeesRepository extends BaseRepository<
   }
 
   /** Active employees per stage, with the stage's names, in stage order (dashboard). */
-  async countActiveByStage(): Promise<
+  async countActiveByStage(scope: EmployeeScopeWhere = {}): Promise<
     { stage: { id: string; nameEn: string; nameAr: string }; count: number }[]
   > {
     const groups = await this.databaseService.employee.groupBy({
       by: ['stageId'],
-      where: { status: EmployeeStatus.ACTIVE },
+      where: { AND: [{ status: EmployeeStatus.ACTIVE }, scope] },
       _count: { _all: true },
     });
     if (!groups.length) return [];

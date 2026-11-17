@@ -40,6 +40,8 @@ export interface AuditEntryFilter {
   entityId?: string;
   /** Only entries that changed this field. */
   field?: string;
+  /** Leave out entries about records of these types outside their ids (the viewer's scope, P4). */
+  restricted?: readonly { entityType: string; ids: readonly string[] }[];
 }
 
 const entrySelect = {
@@ -103,7 +105,31 @@ function whereOf(filter: AuditEntryFilter): Prisma.AuditEntryWhereInput {
       : {}),
     // jsonb containment: the changes array holds an element with this field.
     ...(filter.field ? { changes: { array_contains: [{ field: filter.field }] } } : {}),
+    ...(filter.restricted?.length
+      ? {
+          AND: filter.restricted.map((r) => ({
+            NOT: { entityType: r.entityType, entityId: { notIn: [...r.ids] } },
+          })),
+        }
+      : {}),
   };
+}
+
+/**
+ * `AND NOT (type = t AND id NOT IN ids)` for each restriction — the raw-SQL twin of `whereOf`'s
+ * `restricted` (an empty id list hides every entry of that type).
+ */
+function restrictionSql(restricted: AuditEntryFilter['restricted'] = [], alias?: string): Prisma.Sql {
+  if (!restricted.length) return Prisma.empty;
+  const col = (name: string) => Prisma.raw(alias ? `${alias}."${name}"` : `"${name}"`);
+  return Prisma.join(
+    restricted.map((r) =>
+      r.ids.length
+        ? Prisma.sql`AND NOT (${col('entity_type')} = ${r.entityType} AND ${col('entity_id')} <> ALL(${[...r.ids]}::text[]))`
+        : Prisma.sql`AND ${col('entity_type')} <> ${r.entityType}`,
+    ),
+    ' ',
+  );
 }
 
 /**
@@ -182,16 +208,20 @@ export class AuditEntryRepository {
    * The people in the log (or on one record), each once with the name of their latest entry,
    * most recently active first. People who were never signed in (failed sign-ins) are not people.
    */
-  async findActors(filter: { entityType?: string; entityId?: string }): Promise<AuditActor[]> {
+  async findActors(
+    filter: { entityType?: string; entityId?: string },
+    restricted: AuditEntryFilter['restricted'] = [],
+  ): Promise<AuditActor[]> {
     const record =
       filter.entityType && filter.entityId
         ? Prisma.sql`AND "entity_type" = ${filter.entityType} AND "entity_id" = ${filter.entityId}`
         : Prisma.empty;
+    const scope = restrictionSql(restricted);
     const rows = await this.txHost.tx.$queryRaw<{ id: string; name: string | null }[]>`
       SELECT id, name FROM (
         SELECT DISTINCT ON ("actor_id") "actor_id"::text AS id, "actor_name" AS name, "at", "seq"
         FROM "audit_entries"
-        WHERE "actor_id" IS NOT NULL ${record}
+        WHERE "actor_id" IS NOT NULL ${record} ${scope}
         ORDER BY "actor_id", "at" DESC, "seq" DESC
       ) latest
       ORDER BY "at" DESC, "seq" DESC
@@ -212,7 +242,13 @@ export class AuditEntryRepository {
   }
 
   /** Counts for "today at a glance": entries, people, money entries and failed sign-ins in a period. */
-  async summary(from: Date, to: Date): Promise<AuditSummary> {
+  /** `restricted`: leave out entries about records outside the viewer's scope (P4), as `findPage` does. */
+  async summary(
+    from: Date,
+    to: Date,
+    restricted: AuditEntryFilter['restricted'] = [],
+  ): Promise<AuditSummary> {
+    const scope = restrictionSql(restricted, 'e');
     const moneyActions = Prisma.join([...AUDIT_MONEY_ACTIONS]);
     const moneyFields = Prisma.join([...AUDIT_MONEY_FIELDS]);
     const [row] = await this.txHost.tx.$queryRaw<
@@ -230,7 +266,7 @@ export class AuditEntryRepository {
         )::int AS money,
         COUNT(*) FILTER (WHERE e."action" = ${AUDIT_FAILED_SIGN_IN})::int AS failed
       FROM "audit_entries" e
-      WHERE e."at" >= ${from} AND e."at" < ${to}`;
+      WHERE e."at" >= ${from} AND e."at" < ${to} ${scope}`;
     return {
       actions: row?.actions ?? 0,
       people: row?.people ?? 0,

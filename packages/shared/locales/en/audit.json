@@ -309,6 +309,7 @@
     },
     "more": "+ {count} more",
     "less": "Show less",
+    "valueHidden": "Changed (amount hidden)",
     "money": "Money",
     "failed": "Failed",
     "openRecord": "Open record",

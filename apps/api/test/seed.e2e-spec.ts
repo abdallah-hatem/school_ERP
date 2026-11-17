@@ -252,10 +252,10 @@ describe('Seed (e2e)', () => {
     const lines = recalculated.lines;
     const active = EMPLOYEES.filter((e) => !e.inactive).length;
     expect(lines).toHaveLength(active);
-    expect(lines.some((l) => l.penaltyAmount > 0 && l.penaltyDays > 0)).toBe(true);
-    expect(lines.some((l) => l.latenessAmount > 0 && l.latenessDays > 0)).toBe(true);
-    expect(lines.some((l) => l.adjustmentAdditions > 0)).toBe(true);
-    expect(lines.some((l) => l.adjustmentDeductions > 0)).toBe(true);
+    expect(lines.some((l) => l.penaltyAmount! > 0 && l.penaltyDays > 0)).toBe(true);
+    expect(lines.some((l) => l.latenessAmount! > 0 && l.latenessDays > 0)).toBe(true);
+    expect(lines.some((l) => l.adjustmentAdditions! > 0)).toBe(true);
+    expect(lines.some((l) => l.adjustmentDeductions! > 0)).toBe(true);
     expect(recalculated.adjustments).toHaveLength(ADJUSTMENTS.length);
 
     const pendingIds = new Set(

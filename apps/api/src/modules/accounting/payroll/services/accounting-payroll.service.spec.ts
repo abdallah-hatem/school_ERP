@@ -1,5 +1,5 @@
 import { NotFoundException } from '@nestjs/common';
-import { DEFAULT_TAX_RULE, type PayrollRun } from '@school-erp/shared';
+import { DEFAULT_TAX_RULE } from '@school-erp/shared';
 import type { TransactionHost } from '@nestjs-cls/transactional';
 import type { AuditService } from '../../../../core/audit';
 import type { DbAdapter } from '../../../../database/transactions';
@@ -17,19 +17,17 @@ const line = (employeeId: string, net: number) => ({
 });
 
 function makeService(opts: { status?: 'DRAFT' | 'APPROVED'; recorded?: boolean; created?: boolean } = {}) {
-  const run = {
-    id: 'hr-run',
-    month: '2026-11',
-    status: opts.status ?? 'APPROVED',
-    lines: [line('a', 1_200_000), line('b', 1_200_000), line('c', 0)],
-  } as unknown as PayrollRun;
+  const run =
+    (opts.status ?? 'APPROVED') === 'APPROVED'
+      ? { month: '2026-11', lines: [line('a', 1_200_000), line('b', 1_200_000), line('c', 0)] }
+      : null;
   const repository = {
     findByHrRun: jest.fn(() => Promise.resolve(opts.recorded ? { id: 'acc-run' } : null)),
     findByMonth: jest.fn(() => Promise.resolve(null)),
     create: jest.fn(() => Promise.resolve(opts.created === false ? null : { id: 'acc-run', month: '2026-11' })),
   };
   const hrPayroll = {
-    get: jest.fn(() => Promise.resolve(run)),
+    approvedLinesForAccounting: jest.fn(() => Promise.resolve(run)),
     approvedRunIdForMonth: jest.fn(() => Promise.resolve(null)),
   };
   const employees = {
@@ -76,7 +74,7 @@ describe('AccountingPayrollService.recordApprovedRun', () => {
   it('a month already recorded (the event delivered twice) is left alone', async () => {
     const { service, repository, hrPayroll } = makeService({ recorded: true });
     await expect(service.recordApprovedRun('hr-run')).resolves.toBeNull();
-    expect(hrPayroll.get).not.toHaveBeenCalled();
+    expect(hrPayroll.approvedLinesForAccounting).not.toHaveBeenCalled();
     expect(repository.create).not.toHaveBeenCalled();
   });
 

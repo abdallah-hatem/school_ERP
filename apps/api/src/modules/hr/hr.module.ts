@@ -1,5 +1,9 @@
 import { Module } from '@nestjs/common';
+import { AuditModule } from '../../core/audit';
+import { PermissionsModule } from '../../core/permissions';
 import { SettingsModule } from '../../core/settings';
+import { HrAccessService } from './access/hr-access.service';
+import { HrAuditAccess } from './access/hr-audit-access';
 import { DashboardController } from './dashboard/controllers/dashboard.controller';
 import { DashboardService } from './dashboard/services/dashboard.service';
 import { EmployeesController } from './employees/controllers/employees.controller';
@@ -34,7 +38,7 @@ import { LatenessService } from './staff-attendance/services/lateness.service';
  * Sub-folders add their controllers / providers here (additive). Export only public services.
  */
 @Module({
-  imports: [SettingsModule],
+  imports: [SettingsModule, PermissionsModule, AuditModule],
   controllers: [
     // settings (T6)
     HrSettingsController,
@@ -53,6 +57,9 @@ import { LatenessService } from './staff-attendance/services/lateness.service';
     DashboardController,
   ],
   providers: [
+    // who sees which employees, and whose salary (P4: scopes R5, salary R7)
+    HrAccessService,
+    HrAuditAccess,
     // settings (T6)
     HrSettingsService,
     // month lock (T6) — used by penalties, lateness and payroll

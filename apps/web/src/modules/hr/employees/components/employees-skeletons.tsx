@@ -1,6 +1,8 @@
 'use client';
 
+import { EMPLOYEE_SALARY_FIELDS } from '@school-erp/shared';
 import { useParams, usePathname } from 'next/navigation';
+import { useCan } from '@/core/auth';
 import { RecordHistorySkeleton } from '@/core/audit';
 import { PageHeader } from '@/shared/components/layout/page-header';
 import { Skeleton, SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
@@ -109,12 +111,20 @@ const DETAILS_SKELETON: { title: string; className?: string; fields: { key: stri
 /** The Details tab while it loads: the real cards and labels, each value a bar in its line box. */
 export function EmployeeDetailsSkeleton() {
   const { t } = useTranslation();
+  // Without salaries (R7) the Details tab has no salary line and no bank card: neither has its skeleton.
+  const salary = useCan()('hr.employees.view_salary');
+  const cards = salary
+    ? DETAILS_SKELETON
+    : DETAILS_SKELETON.filter((card) => card.title !== 'employees.sections.bank').map((card) => ({
+        ...card,
+        fields: card.fields.filter((f) => !(EMPLOYEE_SALARY_FIELDS as readonly string[]).includes(f.key)),
+      }));
   return (
     <div aria-busy="true" className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       <span role="status" className="sr-only">
         {t('ui.states.loading')}
       </span>
-      {DETAILS_SKELETON.map((card) => (
+      {cards.map((card) => (
         <DetailsCard key={card.title} title={t(card.title)} className={card.className}>
           {card.fields.map((field) => (
             <DetailsItem key={field.key} label={t(`employees.fields.${field.key}`)} wide={field.wide}>

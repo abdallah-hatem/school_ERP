@@ -1,5 +1,6 @@
 'use client';
 
+import { useCan } from '@/core/auth';
 import { EmployeeStatus, PAGINATION, type Employee, type PenaltyRecord } from '@school-erp/shared';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
@@ -47,7 +48,8 @@ export function EmployeePenalties({ employeesPath, employee, rows, total, page, 
     startTransition(() => router.push(qs ? `${tabPath}?${qs}` : tabPath, { scroll: false }));
   }
 
-  const recordButton = active ? (
+  const canRecord = useCan()('hr.penalties.record');
+  const recordButton = active && canRecord ? (
     <Button variant="primary" className="cursor-pointer" disabled={rows === undefined} onClick={() => setRecording(true)}>
       <AddIcon />
       {t('penalties.record')}

@@ -1,8 +1,9 @@
-import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   ErrorCode,
   HrEvent,
+  PAYROLL_LINE_MONEY_FIELDS,
   PayrollFlag,
   PayrollStatus,
   type Language,
@@ -13,6 +14,7 @@ import {
   type PayrollLine,
   type PayrollRun,
   type PayrollRunSummary,
+  type PayrollTotals,
   type EmployeePayrollLine,
   type Payslip,
   type Uuid,
@@ -27,6 +29,13 @@ import {
   penaltyShare,
   sumAdjustments,
 } from '../../domain';
+import {
+  covers,
+  employeeWhere,
+  withoutFields,
+  type EmployeeScope,
+} from '../../access/employee-scope.pure';
+import { HrAccessService, VIEW_SALARY } from '../../access/hr-access.service';
 import { EmployeesService } from '../../employees/services/employees.service';
 import { PenaltyRecordsService } from '../../penalties/services/penalty-records.service';
 import { HrSettingsService } from '../../settings/hr-settings.service';
@@ -43,26 +52,63 @@ import {
 
 const conflict = (code: ErrorCode) => new CodedException(HttpStatus.CONFLICT, code);
 
-function toLine(row: LineRow): PayrollLine {
-  return {
+/** A run's money totals (R7): left out together with the lines' money when not visible. */
+const TOTALS_MONEY_FIELDS = [
+  'monthSalary',
+  'penaltyAmount',
+  'latenessAmount',
+  'adjustmentAdditions',
+  'adjustmentDeductions',
+  'net',
+] as const satisfies readonly (keyof PayrollTotals)[];
+
+/** A line; its money (`PAYROLL_LINE_MONEY_FIELDS`) left out unless `salaryVisible` (R7). */
+function toLine(row: LineRow, salaryVisible: boolean): PayrollLine {
+  const line = {
     ...row,
     penaltyDays: Number(row.penaltyDays),
     latenessDays: Number(row.latenessDays),
     flags: row.flags as PayrollFlag[],
   };
+  return { ...withoutFields(line, PAYROLL_LINE_MONEY_FIELDS, salaryVisible), salaryVisible };
 }
 
-/** `applied` is false when the adjustment's employee no longer has a line in the run. */
-function toAdjustment(row: AdjustmentRow, inRun: ReadonlySet<string>): PayrollAdjustment {
+/**
+ * `applied` is false when the adjustment's employee no longer has a line in the run. Its amount is
+ * left out unless `salaryVisible` (R7).
+ */
+function toAdjustment(
+  row: AdjustmentRow,
+  inRun: ReadonlySet<string>,
+  salaryVisible: boolean,
+): PayrollAdjustment {
   const { employee, ...rest } = row;
   return {
-    ...rest,
+    ...withoutFields(rest, ['amount'], salaryVisible),
+    salaryVisible,
     employeeCode: employee.code,
     nameEn: employee.nameEn,
     nameAr: employee.nameAr,
     createdAt: row.createdAt.toISOString(),
     applied: inRun.has(row.employeeId),
   };
+}
+
+/** What the viewer may see of payroll (R5, R7): whose lines, and whose pay. */
+interface PayrollView {
+  /** The employees `hr.payroll.view` covers: their lines, adjustments and payslips. */
+  lines: EmployeeScope;
+  /** The employees `hr.employees.view_salary` covers: whose money is shown. */
+  salary: EmployeeScope;
+}
+
+/**
+ * Whether a run's totals show money (R7, P4): always for the whole school (`hr.payroll.view` at
+ * scope `all` — a school total gives no one's pay away; the principal's "payroll totals"); for a
+ * narrower view only when the viewer's salary scope covers all of it (a team's total would).
+ */
+export function totalsMoneyVisible(view: PayrollView): boolean {
+  return view.lines.kind === 'all' || covers(view.salary, view.lines);
 }
 
 /** A line's adjustment sums, net and flags after its adjustments changed (rest unchanged). */
@@ -97,42 +143,68 @@ export class PayrollService {
     private readonly hrSettings: HrSettingsService,
     private readonly schoolSettings: SettingsService,
     private readonly events: EventEmitter2,
+    private readonly access: HrAccessService,
   ) {}
 
+  /** Every run (runs are school-wide); totals over the lines the viewer may see (R5, R7). */
   async list(query: PaginationQueryDto): Promise<Paginated<PayrollRunSummary>> {
+    const view = await this.view();
     const result = await this.repository.list(query.page, query.limit);
-    const totals = await this.repository.totalsFor(result.data.map((r) => r.id));
-    return { ...result, data: result.data.map((run) => this.toSummary(run, totals.get(run.id)!)) };
+    const totals = await this.repository.totalsFor(
+      result.data.map((r) => r.id),
+      employeeWhere(view.lines),
+    );
+    return {
+      ...result,
+      data: result.data.map((run) => this.toSummary(run, totals.get(run.id)!, view)),
+    };
   }
 
   /**
    * A run with its totals (all lines), the lines matching the filters and — on a draft — the live
    * count of PENDING penalties dated in its month (0 on an approved run, whose month is locked).
    */
+  /**
+   * Only the lines and adjustments of the employees the viewer's `hr.payroll.view` covers (R5),
+   * each with money only where their salary scope covers the employee (R7).
+   */
   async get(id: Uuid, query: PayrollRunQueryDto = {}): Promise<PayrollRun> {
     const run = await this.findRun(id);
+    const view = await this.view();
+    const scope = employeeWhere(view.lines);
     const [totals, lines, adjustments, inRun, pendingPenalties] = await Promise.all([
-      this.repository.totalsFor([id]),
-      this.repository.findLines(id, query),
-      this.repository.findAdjustments(id),
+      this.repository.totalsFor([id], scope),
+      this.repository.findLines(id, query, scope),
+      this.repository.findAdjustments(id, undefined, scope),
       this.repository.lineEmployeeIds(id),
       run.status === PayrollStatus.DRAFT ? this.penalties.pendingCountInMonth(run.month) : 0,
     ]);
+    const paid = await this.salaryVisibleFor(
+      view,
+      [...lines.map((l) => l.employeeId), ...adjustments.map((a) => a.employeeId)],
+    );
     return {
-      ...this.toSummary(run, totals.get(id)!),
+      ...this.toSummary(run, totals.get(id)!, view),
       pendingPenalties,
-      lines: lines.map(toLine),
-      adjustments: adjustments.map((a) => toAdjustment(a, inRun)),
+      lines: lines.map((l) => toLine(l, paid.has(l.employeeId))),
+      adjustments: adjustments.map((a) => toAdjustment(a, inRun, paid.has(a.employeeId))),
     };
   }
 
-  /** An employee's line in each run, newest month first (profile Payroll tab). 404 if unknown. */
+  /**
+   * An employee's line in each run, newest month first (profile Payroll tab). 404 if unknown or
+   * outside the viewer's `hr.payroll.view` scope (edge case 3); `net` only with their salary (R7).
+   */
   async employeeLines(
     employeeId: Uuid,
     query: PaginationQueryDto,
   ): Promise<Paginated<EmployeePayrollLine>> {
-    await this.employees.get(employeeId);
-    const result = await this.repository.listEmployeeLines(employeeId, query.page, query.limit);
+    await this.employees.assertInScope('hr.payroll.view', employeeId);
+    const [result, paid] = await Promise.all([
+      this.repository.listEmployeeLines(employeeId, query.page, query.limit),
+      this.employees.filterInScope(VIEW_SALARY, [employeeId]),
+    ]);
+    const salaryVisible = paid.has(employeeId);
     return {
       ...result,
       data: result.data.map((row) => ({
@@ -140,17 +212,19 @@ export class PayrollService {
         lineId: row.id,
         month: row.run.month,
         status: row.run.status,
-        net: row.net,
+        salaryVisible,
+        ...(salaryVisible ? { net: row.net } : {}),
       })),
     };
   }
 
-  /** The run of a month with its net, or null (dashboard). */
+  /** The run of a month with its net, or null (dashboard) — totals as `list` shows them. */
   async monthSummary(month: Month): Promise<PayrollRunSummary | null> {
     const run = await this.repository.findByMonth(month);
     if (!run) return null;
-    const totals = await this.repository.totalsFor([run.id]);
-    return this.toSummary(run, totals.get(run.id)!);
+    const view = await this.view();
+    const totals = await this.repository.totalsFor([run.id], employeeWhere(view.lines));
+    return this.toSummary(run, totals.get(run.id)!, view);
   }
 
   /** A DRAFT run for the month with one line per ACTIVE employee. 409 if the month has one. */
@@ -187,11 +261,12 @@ export class PayrollService {
     if (!(await this.repository.replaceLines(id, lines, { approvedById }))) {
       throw conflict(ErrorCode.PAYROLL_APPROVED);
     }
-    const approved = await this.get(id);
+    const [approved, wholeRun] = await Promise.all([this.get(id), this.repository.totalsFor([id])]);
     const event: PayrollApprovedEvent = {
       runId: id,
       month: approved.month,
-      totals: approved.totals,
+      // The whole run's totals, whatever the approver may see (listeners need the real figures).
+      totals: wholeRun.get(id)!,
       approvedById,
       at: approved.approvedAt ?? new Date().toISOString(),
     };
@@ -230,24 +305,37 @@ export class PayrollService {
   }
 
   /** Payslip data for one line of an APPROVED run (409 `PAYROLL_NOT_APPROVED` on a draft). */
+  /**
+   * Payslip data for one line of an APPROVED run (409 `PAYROLL_NOT_APPROVED` on a draft). 404 when
+   * the line's employee is outside the viewer's `hr.payroll.view` scope (edge case 3); every amount
+   * is left out unless their salary scope covers the employee (R7).
+   */
   async payslip(id: Uuid, lineId: Uuid): Promise<Payslip> {
     const run = await this.findApproved(id);
-    const row = await this.repository.findLine(id, lineId);
+    const view = await this.view();
+    const row = await this.repository.findLine(id, lineId, employeeWhere(view.lines));
     if (!row) throw new NotFoundException();
-    const line = toLine(row);
+    const salaryVisible = (await this.salaryVisibleFor(view, [row.employeeId])).has(row.employeeId);
     const [penalties, adjustments, school] = await Promise.all([
-      this.penalties.approvedInMonth(run.month, line.employeeId),
-      this.repository.findAdjustments(id, line.employeeId),
+      this.penalties.approvedInMonth(run.month, row.employeeId),
+      this.repository.findAdjustments(id, row.employeeId),
       this.schoolSettings.getSchoolSettings(),
     ]);
+    const penaltyDays = Number(row.penaltyDays);
     return {
-      ...line,
+      ...toLine(row, salaryVisible),
       month: run.month,
       penalties: penalties.map((p) => ({
         ...p,
-        amount: penaltyShare(deductedDays(p.action, p.days), line.penaltyDays, line.penaltyAmount),
+        ...(salaryVisible
+          ? { amount: penaltyShare(deductedDays(p.action, p.days), penaltyDays, row.penaltyAmount) }
+          : {}),
       })),
-      adjustments: adjustments.map((a) => ({ type: a.type, amount: a.amount, reason: a.reason })),
+      adjustments: adjustments.map((a) => ({
+        type: a.type,
+        reason: a.reason,
+        ...(salaryVisible ? { amount: a.amount } : {}),
+      })),
       school: { nameEn: school.nameEn, nameAr: school.nameAr, logoUrl: school.logoUrl },
     };
   }
@@ -258,8 +346,37 @@ export class PayrollService {
     return run?.status === PayrollStatus.APPROVED ? run.id : null;
   }
 
-  /** The `.xlsx` bank sheet of an APPROVED run, with its file name. */
+  /**
+   * An APPROVED run's every line with its net, for accounting (§10) — a system read, not a
+   * viewer's: it is not narrowed by whoever's request triggered it (the approver, or the accountant
+   * reading a month). Null when the run is unknown or not approved. Accounting's own endpoints are
+   * guarded by `accounting.payroll.view`.
+   */
+  async approvedLinesForAccounting(id: Uuid): Promise<{
+    month: Month;
+    lines: { employeeId: Uuid; employeeCode: string; nameEn: string; nameAr: string; net: number }[];
+  } | null> {
+    const run = await this.repository.findRun(id);
+    if (run?.status !== PayrollStatus.APPROVED) return null;
+    const lines = await this.repository.findLines(id);
+    return {
+      month: run.month,
+      lines: lines.map(({ employeeId, employeeCode, nameEn, nameAr, net }) => ({
+        employeeId,
+        employeeCode,
+        nameEn,
+        nameAr,
+        net,
+      })),
+    };
+  }
+
+  /**
+   * The `.xlsx` bank sheet of an APPROVED run, with its file name. It lists every employee's net,
+   * so it also needs every salary (`hr.employees.view_salary` at scope `all`, R7) — 403 otherwise.
+   */
   async bankSheet(id: Uuid, lang: Language): Promise<{ fileName: string; content: Buffer }> {
+    if ((await this.access.salaryScope()).kind !== 'all') throw new ForbiddenException();
     const run = await this.findApproved(id);
     const lines = await this.repository.findLines(id);
     return {
@@ -314,14 +431,35 @@ export class PayrollService {
     });
   }
 
-  private toSummary(run: RunRow, totals: PayrollRunSummary['totals']): PayrollRunSummary {
+  private toSummary(
+    run: RunRow,
+    totals: PayrollTotals,
+    view: PayrollView,
+  ): PayrollRunSummary {
+    const salaryVisible = totalsMoneyVisible(view);
     return {
       id: run.id,
       month: run.month,
       status: run.status,
-      totals,
+      salaryVisible,
+      totals: withoutFields(totals, TOTALS_MONEY_FIELDS, salaryVisible),
       approvedAt: run.approvedAt?.toISOString() ?? null,
     };
+  }
+
+  private async view(): Promise<PayrollView> {
+    const [lines, salary] = await Promise.all([
+      this.access.scope('hr.payroll.view'),
+      this.access.salaryScope(),
+    ]);
+    return { lines, salary };
+  }
+
+  /** Which of `employeeIds` the viewer's salary scope covers (one query; none when it's `all`). */
+  private async salaryVisibleFor(view: PayrollView, employeeIds: readonly Uuid[]): Promise<Set<Uuid>> {
+    if (view.salary.kind === 'all') return new Set(employeeIds);
+    if (view.salary.kind === 'none') return new Set();
+    return this.employees.filterInScope(VIEW_SALARY, employeeIds);
   }
 
   private async findRun(id: Uuid): Promise<RunRow> {

@@ -437,7 +437,7 @@ describe('HR payroll and dashboard (e2e)', () => {
       line.nameEn,
       line.nameAr,
       line.nationalId,
-      line.net / 100,
+      line.net! / 100,
     ]);
   });
 
@@ -708,7 +708,7 @@ describe('HR payroll and dashboard (e2e)', () => {
     const line = lineOf(approved, noId);
     const row = sheet.getRow(sheet.getColumn(1).values.indexOf(line.employeeCode));
     expect(row.getCell(4).value).toBeNull();
-    expect(row.getCell(5).value).toBe(line.net / 100);
+    expect(row.getCell(5).value).toBe(line.net! / 100);
     expect(row.getCell(5).numFmt).toBe('0.00');
     // 1,234,567 − round(0.25 × 1,234,567 ÷ 30) = 1,234,567 − 10,288 → EGP 12,242.79
     expect(line.net).toBe(1_224_279);
@@ -807,8 +807,8 @@ describe('HR payroll and dashboard (e2e)', () => {
 
     const before = await dashboard();
     expect(before.currentRun).toBeNull();
-    expect(before.headcount.active).toBe(await db.employee.count({ where: { status: 'ACTIVE' } }));
-    expect(before.headcount.active).toBe(before.headcount.byStage.reduce((n, s) => n + s.count, 0));
+    expect(before.headcount!.active).toBe(await db.employee.count({ where: { status: 'ACTIVE' } }));
+    expect(before.headcount!.active).toBe(before.headcount!.byStage.reduce((n, s) => n + s.count, 0));
 
     const emp = await employee();
     const leaver = await employee();
@@ -818,16 +818,16 @@ describe('HR payroll and dashboard (e2e)', () => {
     await approvedPenalty(emp, day(nextMonth(), 1)); // another month: not counted
 
     const after = await dashboard();
-    expect(after.headcount.active).toBe(before.headcount.active + 1);
-    expect(after.headcount.byStage).toEqual([
+    expect(after.headcount!.active).toBe(before.headcount!.active + 1);
+    expect(after.headcount!.byStage).toEqual([
       {
         stage: { id: stageId, nameEn: 'Primary', nameAr: 'ابتدائي' },
-        count: after.headcount.active,
+        count: after.headcount!.active,
       },
     ]);
     expect(after.penaltiesThisMonth).toEqual({
-      pending: before.penaltiesThisMonth.pending + 1,
-      approved: before.penaltiesThisMonth.approved + 1,
+      pending: before.penaltiesThisMonth!.pending + 1,
+      approved: before.penaltiesThisMonth!.approved + 1,
     });
     expect(after.currentRun).toBeNull();
 
@@ -836,6 +836,7 @@ describe('HR payroll and dashboard (e2e)', () => {
       id: run.id,
       month: current,
       status: 'DRAFT',
+      salaryVisible: true,
       net: run.totals.net,
     });
   });
@@ -893,6 +894,7 @@ describe('HR payroll and dashboard (e2e)', () => {
         lineId: lineOf(newerRun, emp).id,
         month: newer,
         status: 'DRAFT',
+        salaryVisible: true,
         net: 2_000_000,
       },
       {
@@ -900,6 +902,7 @@ describe('HR payroll and dashboard (e2e)', () => {
         lineId: lineOf(olderRun, emp).id,
         month: older,
         status: 'APPROVED',
+        salaryVisible: true,
         net: 1_000_000,
       },
     ]);

@@ -1,5 +1,6 @@
 'use client';
 
+import { useCan } from '@/core/auth';
 import type { Month, PayrollRunSummary } from '@school-erp/shared';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -106,12 +107,13 @@ export function RunsList({ basePath, query, runs, total, currentMonth }: RunsLis
     )),
   ];
 
-  const createButton = (
+  // R6: only someone who may create a run sees the button.
+  const createButton = useCan()('hr.payroll.create') ? (
     <Button variant="primary" className="cursor-pointer" disabled={runs === undefined} onClick={() => setCreating(true)}>
       <AddIcon />
       {t('payroll.create.action')}
     </Button>
-  );
+  ) : null;
 
   return (
     <div className="flex flex-col gap-5">
