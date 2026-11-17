@@ -121,7 +121,7 @@ describe('permissions (e2e)', () => {
 
   it('GET /auth/me carries the user’s permission keys (R6)', async () => {
     const res = await http(app).get('/auth/me').expect(200);
-    expect(res.body.data).toMatchObject({ id: user.id, role: 'HR_ADMIN' });
+    expect(res.body.data).toMatchObject({ id: user.id, mustChangePassword: false });
     expect([...res.body.data.permissions].sort()).toEqual([...PERMISSION_KEYS].sort());
   });
 });

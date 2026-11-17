@@ -8,7 +8,7 @@ async function makeService(found: Partial<UserCredentials> | null) {
         id: 'u-1',
         email: 'admin@school.local',
         name: 'HR Admin',
-        role: 'HR_ADMIN',
+        mustChangePassword: false,
         isActive: true,
         passwordHash: await hashPassword('right-password', 4),
         ...found,
@@ -29,7 +29,7 @@ describe('UsersService.verifyCredentials', () => {
       id: 'u-1',
       email: 'admin@school.local',
       name: 'HR Admin',
-      role: 'HR_ADMIN',
+      mustChangePassword: false,
     });
   });
 

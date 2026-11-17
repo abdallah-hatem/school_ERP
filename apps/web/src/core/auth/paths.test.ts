@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { tokenPairFromSetCookies } from '@/lib/middlewareFunctions';
-import { homeFor, loginPathFor, safeNextPath } from './paths';
+import { homeFor, loginPathFor, safeNextPath, setPasswordPathFor } from './paths';
 
 describe('safeNextPath (after login → the kept return path)', () => {
   it.each(['/ar', '/en/employees', '/ar/payroll?month=2026-11#line-3'])('keeps %s', (p) => {
@@ -14,6 +14,7 @@ describe('safeNextPath (after login → the kept return path)', () => {
     'ar/employees',
     '/ar/login',
     '/en/login?next=/ar',
+    '/en/set-password',
     '/ar\u0000x',
     '',
     null,
@@ -23,14 +24,15 @@ describe('safeNextPath (after login → the kept return path)', () => {
   });
 });
 
-describe('homeFor / loginPathFor', () => {
-  it('sends the HR admin to the dashboard of their language', () => {
-    expect(homeFor('HR_ADMIN', 'ar')).toBe('/ar');
-    expect(homeFor('HR_ADMIN', 'en')).toBe('/en');
+describe('homeFor / loginPathFor / setPasswordPathFor', () => {
+  it('sends every signed-in user to the dashboard of their language', () => {
+    expect(homeFor('ar')).toBe('/ar');
+    expect(homeFor('en')).toBe('/en');
   });
 
-  it('an unknown role still lands on a page that exists', () => {
-    expect(homeFor('SOMETHING_ELSE', 'en')).toBe('/en');
+  it('the set-password page keeps where the user was going', () => {
+    expect(setPasswordPathFor('en')).toBe('/en/set-password');
+    expect(setPasswordPathFor('ar', '/ar/payroll')).toBe('/ar/set-password?next=%2Far%2Fpayroll');
   });
 
   it('keeps the return path encoded', () => {

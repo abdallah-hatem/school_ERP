@@ -6,6 +6,7 @@
  * `PermissionsService.scopeFor(user, key)`.
  */
 export {
+  AllowedBeforePasswordChange,
   Permission,
   Public,
   SignedIn,

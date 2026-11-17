@@ -11,6 +11,9 @@
     "payroll": "الرواتب",
     "settings": "الإعدادات",
     "activity": "سجل النشاط",
+    "users": "المستخدمون",
+    "roles": "الأدوار",
+    "account": "حسابي",
     "modules": {
       "home": "الرئيسية",
       "hr": "الموارد البشرية",
@@ -21,7 +24,11 @@
     },
     "soon": "قريبًا",
     "soonTitle": "{name} — قريبًا",
-    "modulePages": "صفحات {name}"
+    "modulePages": "صفحات {name}",
+    "myAccount": "حسابي",
+    "myAccountOf": "حسابي — {name}",
+    "noRoles": "بلا أدوار",
+    "roleSeparator": " · "
   },
   "actions": {
     "save": "حفظ",
@@ -103,9 +110,6 @@
       "THURSDAY": "الخميس",
       "FRIDAY": "الجمعة",
       "SATURDAY": "السبت"
-    },
-    "userRole": {
-      "HR_ADMIN": "مسؤول الموارد البشرية"
     }
   }
 }

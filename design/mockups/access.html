@@ -1,0 +1,1075 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Access Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Tajawal:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/duotone/style.css">
+<style>
+/* Tokens copied from apps/web/src/app/globals.css (direction "Campus"). Light theme only. */
+:root{
+  --radius:14px;
+  --background:#f2f8f6; --foreground:#11302b; --card:#ffffff;
+  --muted:#f5faf8; --muted-foreground:#587069; --secondary:#eaf4f1;
+  --primary:#0b7a68; --primary-foreground:#ffffff; --primary-soft:#d5efe8; --primary-hover:#096656;
+  --accent:#ffc43d; --accent-foreground:#4a3400; --accent-soft:#fff1c9;
+  --success:#1f9a62; --success-soft:#ddf4e7; --success-ink:#126b42;
+  --warning:#d9771c; --warning-soft:#ffe8d2; --warning-ink:#8f4608;
+  --destructive:#d9473a; --destructive-soft:#fde3df; --destructive-ink:#a82d22;
+  --info:#2f6fb3; --info-soft:#e0eefb; --info-ink:#24578e;
+  --border:#dce9e5; --input:#cfe0db;
+  --overlay:rgb(9 40 35 / .42);
+  --shadow-card:0 1px 2px rgb(11 72 62 / .06),0 10px 30px -12px rgb(11 72 62 / .18);
+  --shadow-raised:0 2px 4px rgb(11 72 62 / .05),0 30px 60px -24px rgb(11 72 62 / .28);
+  --shadow-primary:0 8px 20px -8px rgb(11 122 104 / .7);
+  --ease-snappy:cubic-bezier(.22,1,.36,1);
+  --bar:#0f2f2a; --bar-ink:#e7f4f0;
+  --font-latin:"Plus Jakarta Sans",system-ui,sans-serif;
+  --font-ar:"IBM Plex Sans Arabic","Plus Jakarta Sans",system-ui,sans-serif;
+  --font-ar-display:"Tajawal","IBM Plex Sans Arabic",system-ui,sans-serif;
+  --font:var(--font-latin); --font-display:var(--font-latin);
+  color-scheme:light;
+}
+:root[lang="ar"]{--font:var(--font-ar);--font-display:var(--font-ar-display)}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:#e4efec;color:var(--foreground);font-family:var(--font);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid color-mix(in srgb,var(--primary) 55%,transparent);outline-offset:2px}
+.num{font-family:var(--font-latin);font-variant-numeric:tabular-nums lining-nums}
+[dir="rtl"] .flip{transform:scaleX(-1)}
+.ph-duotone.flip,.ph-duotone.car{display:inline-block}
+.ph-duotone{line-height:1}
+bdi{unicode-bidi:isolate}
+
+/* ---------- mockup bar ---------- */
+.mockbar{background:var(--bar);color:var(--bar-ink);display:flex;align-items:center;gap:16px;padding:10px 24px;position:sticky;top:0;z-index:50;flex-wrap:wrap;font-size:13px}
+.mockbar strong{font-size:14px}
+.mockbar .hint{opacity:.7}
+.mockbar .sp{flex:1}
+.seg{display:inline-flex;background:rgb(255 255 255 / .08);border-radius:999px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;color:inherit;padding:5px 14px;border-radius:999px;font-weight:700;font-size:13px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#3a2900}
+.seg .ar{font-family:var(--font-ar-display);font-size:15px}
+.optnote{padding:18px 24px 0;max-width:1488px;margin-inline:auto;color:var(--muted-foreground);font-size:13.5px}
+.optnote b{color:var(--foreground)}
+.section-title{max-width:1488px;margin:28px auto 10px;padding-inline:24px;font-family:var(--font-display);font-weight:800;font-size:16px}
+body.only-desktop #phoneSec, body.only-phone #deskSec{display:none}
+
+/* ---------- frames ---------- */
+.desk-scroll{overflow-x:auto;padding:6px 24px 8px}
+.desk{width:1440px;margin-inline:auto;position:relative;background:var(--background);border-radius:22px;box-shadow:var(--shadow-raised);overflow:hidden;border:1px solid var(--border);display:flex;min-height:1000px;container:page / inline-size}
+.phones{display:flex;gap:32px;justify-content:center;flex-wrap:wrap;padding:6px 24px 60px;align-items:flex-start}
+.phone-wrap{display:flex;flex-direction:column;gap:8px;align-items:center}
+.phone-cap{font-size:12.5px;color:var(--muted-foreground);font-weight:600}
+.phone{width:390px;height:844px;background:var(--background);border-radius:44px;border:10px solid #1b2e2a;box-shadow:var(--shadow-raised);overflow:hidden;position:relative;container:page / inline-size;display:flex;flex-direction:column}
+.phone .scroll{overflow-y:auto;flex:1;scrollbar-width:none}
+body.full .phone:not(.fixed){height:auto;min-height:844px}
+body.full .phone:not(.fixed) .scroll{overflow:visible}
+
+/* ---------- sidebar (app shell, option B module groups) ---------- */
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:38px;height:38px;flex:none;border-radius:12px;background:var(--primary);color:#fff;display:grid;place-items:center;font-size:22px;position:relative}
+.logo::after{content:"";position:absolute;width:9px;height:9px;border-radius:50%;background:var(--accent);inset-block-start:-2px;inset-inline-end:-2px;box-shadow:0 0 0 2px var(--card)}
+.brand-name{font-family:var(--font-display);font-weight:800;font-size:14.5px;line-height:1.25}
+.brand-sub{font-size:11.5px;color:var(--muted-foreground)}
+.soon{font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--secondary);color:var(--muted-foreground);margin-inline-start:auto;white-space:nowrap}
+.user{display:flex;align-items:center;gap:10px;padding:10px;border-radius:16px;background:var(--muted);border:1px solid var(--border)}
+.user .av{width:36px;height:36px;border-radius:12px;font-size:13px}
+.user .n{font-weight:700;font-size:13px;line-height:1.2}
+.user .r{font-size:11.5px;color:var(--muted-foreground)}
+.user > .ph-duotone{margin-inline-start:auto;color:var(--muted-foreground);font-size:18px}
+.navlink{display:flex;align-items:center;gap:11px;min-height:40px;padding:8px 12px;border-radius:12px;color:var(--muted-foreground);text-decoration:none;font-weight:600;font-size:14px}
+.navlink .ph-duotone{font-size:20px}
+.navlink[aria-current="page"]{background:var(--primary-soft);color:var(--primary)}
+.navlink[aria-current="page"]::after{content:"";margin-inline-start:auto;width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 30%,transparent)}
+.sb{width:272px;flex:none;background:var(--card);border-inline-end:1px solid var(--border);padding:22px 14px;display:flex;flex-direction:column;gap:20px}
+.sb nav{display:flex;flex-direction:column;gap:6px}
+.mod{border-radius:16px}
+.mod[open]{background:var(--muted);box-shadow:inset 0 0 0 1px var(--border)}
+.mod summary{list-style:none;display:flex;align-items:center;gap:11px;min-height:46px;padding:8px 10px;border-radius:14px;font-weight:700;font-size:14.5px;cursor:pointer;color:var(--foreground)}
+.mod summary::-webkit-details-marker{display:none}
+.mi{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;font-size:18px;flex:none}
+.mod summary .car{margin-inline-start:auto;color:var(--muted-foreground);font-size:16px}
+.mod[open] summary .car{transform:rotate(180deg)}
+.mod .kids{display:flex;flex-direction:column;gap:2px;padding:0 10px 10px;margin-inline-start:24px;border-inline-start:2px solid var(--border);padding-inline-start:8px}
+.mod .kids .navlink{min-height:36px;font-size:13.5px;padding:6px 10px}
+.mod.dis summary{cursor:not-allowed;color:var(--muted-foreground);font-weight:600}
+.mod.dis summary .mi{filter:grayscale(1);opacity:.7}
+.sb .single{display:flex;align-items:center;gap:11px;min-height:46px;padding:8px 10px;border-radius:14px;font-weight:700;font-size:14.5px;color:var(--foreground);text-decoration:none}
+.sb .single .mi{background:var(--secondary);color:var(--muted-foreground)}
+.sb .bottom{margin-top:auto;display:flex;flex-direction:column;gap:10px}
+.newdot{font-size:10px;font-weight:800;padding:1px 6px;border-radius:999px;background:var(--accent-soft);color:#6b4b00;margin-inline-start:auto}
+
+/* ---------- main + common controls ---------- */
+.main{flex:1;min-width:0;padding:22px 36px 36px;display:flex;flex-direction:column;gap:18px;position:relative}
+.topline{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted-foreground);min-height:40px}
+.topline .sp{flex:1}
+.lang{display:inline-flex;background:var(--secondary);border-radius:999px;padding:3px}
+.lang span{padding:4px 12px;border-radius:999px;font-weight:700;font-size:12.5px}
+.lang span.on{background:var(--accent);color:var(--accent-foreground)}
+.lang .ar{font-family:var(--font-ar-display);font-size:14px}
+.head{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.head h1{margin:0;font-family:var(--font-display);font-size:30px;font-weight:800;line-height:1.15;letter-spacing:-.01em;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+:root[lang="ar"] .head h1{letter-spacing:0}
+.head p{margin:4px 0 0;color:var(--muted-foreground);font-size:14px;max-width:640px}
+.head .acts{margin-inline-start:auto;display:flex;gap:10px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:var(--radius);padding:10px 16px;font-weight:700;font-size:14px;border:1px solid var(--input);background:var(--card);white-space:nowrap}
+.btn .ph-duotone{font-size:18px}
+.btn-primary{background:var(--primary);color:#fff;border-color:transparent;box-shadow:var(--shadow-primary)}
+.btn-sm{padding:7px 12px;font-size:13px}
+.btn-ghost{border-color:transparent;background:transparent;color:var(--primary)}
+.toolbar{background:var(--card);border-radius:20px;box-shadow:var(--shadow-card);padding:14px;display:flex;flex-direction:column;gap:12px}
+.frow{display:flex;gap:10px;flex-wrap:wrap}
+.search{flex:2.2;min-width:240px;display:flex;align-items:center;gap:8px;border:1px solid var(--input);border-radius:var(--radius);padding:0 12px;height:42px;background:var(--card);color:var(--muted-foreground)}
+.search .ph-duotone{font-size:18px;flex:none}
+.search span{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fsel{flex:1;min-width:150px;display:flex;align-items:center;gap:8px;height:42px;border:1px solid var(--input);border-radius:var(--radius);padding:0 12px;background:var(--card);font-size:13.5px;font-weight:600;color:var(--foreground);white-space:nowrap;position:relative}
+.fsel .ph-duotone{color:var(--muted-foreground);font-size:16px}
+.fsel .ph-caret-down{margin-inline-start:auto}
+.fsel.set{border-color:var(--primary);background:var(--primary-soft);color:var(--primary)}
+.fsel.set .ph-duotone{color:var(--primary)}
+.resline{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted-foreground);padding:0 4px;flex-wrap:wrap}
+.resline b{color:var(--foreground)}
+.resline .sp{flex:1}
+.chipx{display:inline-flex;align-items:center;gap:6px;background:var(--primary-soft);color:var(--primary);border-radius:999px;padding:3px 8px 3px 10px;font-weight:700;font-size:12.5px;white-space:nowrap}
+.linkbtn{border:0;background:transparent;color:var(--primary);font-weight:700;font-size:13px;padding:0;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.card{background:var(--card);border-radius:24px;box-shadow:var(--shadow-card)}
+.av{border-radius:12px;background:var(--accent);color:var(--accent-foreground);display:grid;place-items:center;font-weight:800;flex:none;font-family:var(--font-display);width:34px;height:34px;font-size:12.5px}
+.av.anon{background:var(--secondary);color:var(--muted-foreground)}
+.av.sm{width:28px;height:28px;border-radius:10px;font-size:11px}
+.av.lg{width:42px;height:42px;border-radius:14px;font-size:14px}
+.ibtn{width:34px;height:34px;border-radius:11px;border:1px solid transparent;background:transparent;display:grid;place-items:center;color:var(--muted-foreground);flex:none}
+.ibtn .ph-duotone{font-size:18px}
+.ibtn.on{background:var(--primary-soft);color:var(--primary)}
+.ibtn.bd{border-color:var(--border);background:var(--card)}
+.who{display:flex;align-items:center;gap:10px;min-width:0}
+.who .n{font-weight:700;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.who .r{font-size:12px;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:700;white-space:nowrap}
+.pill .ph-duotone{font-size:14px}
+.pill .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.m-core{background:var(--secondary);color:var(--muted-foreground)}
+.m-hr{background:var(--primary-soft);color:var(--primary)}
+.t-money{background:var(--info-soft);color:var(--info-ink)}
+.t-fail{background:var(--warning-soft);color:var(--warning-ink)}
+.p-active{background:var(--success-soft);color:var(--success-ink)}
+.kic{width:32px;height:32px;border-radius:11px;display:grid;place-items:center;font-size:17px;flex:none;background:var(--secondary);color:var(--muted-foreground)}
+.kic.money{background:var(--info-soft);color:var(--info)}
+.kic.fail{background:var(--warning-soft);color:var(--warning)}
+.kic.ok{background:var(--success-soft);color:var(--success)}
+.sent{line-height:1.45}
+.sent .rec{font-weight:700}
+.chg{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;vertical-align:baseline}
+.old{color:var(--muted-foreground);text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--muted-foreground) 60%,transparent)}
+.new{font-weight:700}
+.arr{font-size:13px;color:var(--muted-foreground)}
+.money{font-weight:700;white-space:nowrap}
+.money .cur{font-weight:600;color:var(--muted-foreground);font-size:.82em}
+.new .money,.money.new{color:var(--info-ink)}
+.time{white-space:nowrap;color:var(--foreground);font-weight:600;font-size:13px;border-bottom:1px dashed var(--input);cursor:help;position:relative}
+.time-sub{font-size:12px;color:var(--muted-foreground)}
+.tip{position:absolute;inset-block-start:calc(100% + 8px);inset-inline-start:-6px;background:var(--foreground);color:#fff;font-size:12px;font-weight:600;padding:6px 10px;border-radius:10px;white-space:nowrap;z-index:5;box-shadow:var(--shadow-raised)}
+.tip::before{content:"";position:absolute;top:-4px;inset-inline-start:16px;width:8px;height:8px;background:inherit;transform:rotate(45deg)}
+
+/* changes table (shared) */
+.ctab{width:100%;border-collapse:collapse;font-size:13px}
+.ctab th{font-size:12px;color:var(--muted-foreground);font-weight:600;text-align:start;padding:6px 12px;border-bottom:1px solid var(--border)}
+.ctab td{padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+.ctab tr:last-child td{border-bottom:0}
+.ctab td.f{color:var(--muted-foreground);font-weight:600;width:30%}
+.ctab td.b{color:var(--muted-foreground)}
+.ctab td.a{font-weight:700}
+.ctab .none{color:var(--muted-foreground);font-weight:500}
+.ctab .arcell{width:24px;color:var(--muted-foreground);padding-inline:0;text-align:center}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.fact{background:var(--muted);border-radius:12px;padding:8px 12px;min-width:0}
+.fact .l{font-size:11.5px;color:var(--muted-foreground)}
+.fact .v{font-size:13px;font-weight:700;overflow-wrap:anywhere}
+
+/* row menu */
+.menu{position:absolute;z-index:6;background:var(--card);border-radius:14px;box-shadow:var(--shadow-raised);border:1px solid var(--border);padding:6px;min-width:230px}
+.menu a{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;font-size:13.5px;font-weight:600;color:var(--foreground);text-decoration:none;white-space:nowrap}
+.menu a .ph-duotone{font-size:18px;color:var(--muted-foreground)}
+.menu a.hl{background:var(--muted)}
+
+/* pagination */
+.pager{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:14px 20px;flex-wrap:wrap;border-top:1px solid var(--border)}
+.pager .info{font-size:13px;color:var(--muted-foreground)}
+.pages{display:flex;gap:6px;align-items:center}
+.pg{min-width:36px;height:36px;border-radius:11px;border:1px solid var(--border);background:var(--card);font-weight:700;font-size:13px;display:grid;place-items:center;padding:0 8px}
+.pg[aria-current="page"]{background:var(--primary);color:#fff;border-color:transparent}
+.pg[disabled]{opacity:.45;cursor:default}
+.pg .ph-duotone{font-size:16px}
+.gap{color:var(--muted-foreground)}
+.mpager{display:flex;flex-direction:column;gap:8px;padding:12px 14px}
+.mpager .info{font-size:12.5px;color:var(--muted-foreground)}
+.mpager .row{display:flex;align-items:center;justify-content:space-between}
+.mpager .row b{font-size:13px}
+
+/* tabs (profile) */
+.crumb{display:flex;align-items:center;gap:6px;font-size:13.5px;color:var(--muted-foreground)}
+.crumb .ph-duotone{font-size:12px}
+.submeta{font-size:14px;color:var(--muted-foreground);margin-top:6px}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
+.tab{padding:10px 16px;font-weight:600;color:var(--muted-foreground);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;display:inline-flex;align-items:center;gap:7px;font-size:14px}
+.tab.on{color:var(--primary);border-color:var(--primary);font-weight:700}
+.tab .cnt{font-size:11px;font-weight:800;background:var(--primary-soft);color:var(--primary);border-radius:999px;padding:0 7px}
+.sec-h{display:flex;align-items:center;gap:12px;padding:20px 24px 14px;flex-wrap:wrap}
+.sec-h h2{margin:0;font-family:var(--font-display);font-size:19px;font-weight:800}
+.sec-h p{margin:2px 0 0;font-size:13px;color:var(--muted-foreground)}
+.sec-h .sp{flex:1}
+/* ---------- phone chrome ---------- */
+.mbar{display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--card);border-bottom:1px solid var(--border);flex:none}
+.mbar .menub{width:38px;height:38px;border-radius:12px;border:1px solid var(--border);background:var(--card);display:grid;place-items:center;font-size:20px}
+.mbar .brand-name{font-size:14px}
+.mbar .lang{margin-inline-start:auto}
+
+/* skeleton */
+.sk{background:var(--secondary);border-radius:8px;animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.55}}
+@media (prefers-reduced-motion:reduce){.sk{animation:none}}
+.skrow{padding:14px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:10px}
+.skrow .l1{display:flex;gap:10px;align-items:center}
+
+/* picker sheet */
+.scrim{position:absolute;inset:0;background:var(--overlay);z-index:5}
+.sheet{position:absolute;inset-inline:0;bottom:0;z-index:6;background:var(--card);border-radius:24px 24px 0 0;box-shadow:var(--shadow-raised);display:flex;flex-direction:column;max-height:88%}
+.sheet .grab{width:40px;height:5px;border-radius:5px;background:var(--input);margin:10px auto 4px;flex:none}
+.sheet .sh{display:flex;align-items:center;gap:10px;padding:8px 16px 12px;border-bottom:1px solid var(--border)}
+.sheet .sh h3{margin:0;font-family:var(--font-display);font-size:17px;font-weight:800;flex:1;min-width:0}
+.sheet .sbody{overflow:auto;padding:14px 16px 20px;display:flex;flex-direction:column;gap:12px;scrollbar-width:none}
+.plist{display:flex;flex-direction:column;gap:2px}
+.popt{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px}
+.popt.sel{background:var(--primary-soft)}
+.popt .who{flex:1}
+.popt .ck{color:var(--primary);font-size:18px}
+.popt .ico{width:28px;height:28px;border-radius:10px;display:grid;place-items:center;background:var(--secondary);color:var(--muted-foreground);font-size:16px;flex:none}
+.pinput{display:flex;align-items:center;gap:8px;border:1px solid var(--primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 18%,transparent);border-radius:var(--radius);padding:0 12px;height:42px;color:var(--muted-foreground);font-size:13.5px}
+
+.empty{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:40px 24px}
+.empty .eic{width:64px;height:64px;border-radius:20px;background:var(--primary-soft);color:var(--primary);display:grid;place-items:center;font-size:32px;margin-bottom:6px}
+.empty h3{margin:0;font-family:var(--font-display);font-size:17px;font-weight:800}
+.empty p{margin:0;color:var(--muted-foreground);font-size:13.5px}
+.ta{width:calc(100% - 20px);margin:10px;border-collapse:separate;border-spacing:0}
+.ta>thead th{background:var(--muted);font-size:12.5px;color:var(--muted-foreground);font-weight:600;text-align:start;padding:11px 14px;white-space:nowrap}
+.ta>thead th:first-child{border-start-start-radius:12px;border-end-start-radius:12px}
+.ta>thead th:last-child{border-start-end-radius:12px;border-end-end-radius:12px}
+.ta>tbody>tr>td{padding:12px 14px;border-bottom:1px solid var(--border);vertical-align:middle;position:relative}
+.segm{display:flex;background:var(--secondary);border-radius:12px;padding:3px}
+.segm span{flex:1;text-align:center;padding:6px 8px;border-radius:9px;font-size:13px;font-weight:700;color:var(--muted-foreground);white-space:nowrap}
+.segm span.on{background:var(--card);color:var(--primary);box-shadow:0 1px 2px rgb(11 72 62 / .12)}
+
+/* ================= ACCESS (users, roles, my account) ================= */
+.desk{min-height:0}
+.desk .main{min-height:900px}
+a.lnk{color:var(--primary);font-weight:700;text-decoration:none}
+a.lnk:hover{text-decoration:underline}
+.muted{color:var(--muted-foreground)}
+.sm{font-size:12.5px}
+.who a.n{color:var(--foreground);text-decoration:none}
+.who a.n:hover{color:var(--primary);text-decoration:underline}
+.ell{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.btn[disabled]{opacity:.5;box-shadow:none;cursor:not-allowed}
+.btn-danger{color:var(--destructive-ink);border-color:color-mix(in srgb,var(--destructive) 35%,var(--input))}
+.btn-block{width:100%}
+.addb .plus{width:22px;height:22px;border-radius:8px;background:rgb(255 255 255 / .22);display:grid;place-items:center}
+.addb .plus .ph-duotone{font-size:14px}
+.btn:not(.btn-primary).addb .plus{background:var(--primary-soft);color:var(--primary)}
+
+.desk .ta>tbody>tr>td{padding:12px 10px}.desk .ta>thead th{padding:11px 10px}
+.toolbar>.search{flex:none;min-height:42px}
+.toast.side{inset-inline-end:564px}
+.bigtabs span.on .cnt{background:rgb(255 255 255 / .25);color:#fff}
+.cwrap{grid-template-columns:210px minmax(0,1fr)!important}
+.cwrap .ta td:first-child .who{max-width:220px}
+.cwrap .ta td:nth-child(2){max-width:190px}
+.cwrap .ta>tbody>tr>td,.cwrap .ta>thead th{padding-inline:8px}
+/* chips */
+.rchip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:700;white-space:nowrap;background:var(--primary-soft);color:var(--primary)}
+.rchip .ph-duotone{font-size:13px}
+.rchip.sa{background:var(--accent-soft);color:#6b4b00}
+.rchip.cu{background:var(--info-soft);color:var(--info-ink)}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.bi{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:700;background:var(--secondary);color:var(--muted-foreground);white-space:nowrap;font-family:var(--font)}
+.bi .ph-duotone{font-size:12px}
+.bi.cu{background:var(--info-soft);color:var(--info-ink)}
+.p-inactive{background:var(--secondary);color:var(--muted-foreground)}
+.p-temp{background:var(--warning-soft);color:var(--warning-ink)}
+.emp{display:inline-flex;align-items:center;gap:6px;color:var(--primary);font-weight:700;text-decoration:none;font-size:13px;white-space:nowrap}
+.emp .ph-duotone{font-size:16px}
+.none{color:var(--muted-foreground)}
+.avs{display:flex;align-items:center}
+.avs .av{box-shadow:0 0 0 2px var(--card)}
+.avs .av + .av{margin-inline-start:-8px}
+.avs .more{margin-inline-start:6px;font-size:12px;font-weight:700;color:var(--muted-foreground)}
+tr.inact td .who .n,tr.inact td .ell{color:var(--muted-foreground)}
+tr.inact .av{filter:grayscale(1);opacity:.6}
+
+/* forms */
+.fcard{padding:22px 24px;display:flex;flex-direction:column;gap:16px}
+.fcard h2{margin:0;font-family:var(--font-display);font-size:18px;font-weight:800;display:flex;align-items:center;gap:10px}
+.fcard .fsub{margin:-10px 0 0;font-size:13px;color:var(--muted-foreground)}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field>.lb{font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px}
+.field>.lb .opt{font-weight:500;color:var(--muted-foreground)}
+.input{min-height:42px;border:1px solid var(--input);border-radius:var(--radius);padding:0 12px;display:flex;align-items:center;gap:8px;background:var(--card);font-size:14px;min-width:0}
+.input .ph-duotone{font-size:18px;color:var(--muted-foreground);flex:none}
+.input .grow{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.input.ph{color:var(--muted-foreground)}
+.input.ro{background:var(--muted);color:var(--muted-foreground)}
+.input.focus{border-color:var(--primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 18%,transparent)}
+.input.err{border-color:var(--destructive);box-shadow:0 0 0 3px color-mix(in srgb,var(--destructive) 14%,transparent)}
+.input .dots{letter-spacing:2px;font-weight:800}
+.fh{font-size:12.5px;color:var(--muted-foreground)}
+.fe{font-size:12.5px;color:var(--destructive-ink);display:flex;align-items:center;gap:6px;font-weight:600}
+.fe .ph-duotone{font-size:15px}
+.sepline{height:1px;background:var(--border);margin:2px 0}
+.cbx{width:20px;height:20px;border-radius:6px;border:1.5px solid var(--input);display:grid;place-items:center;flex:none;background:var(--card);color:transparent}
+.cbx .ph-duotone{font-size:13px}
+.cbx.on{background:var(--primary);border-color:var(--primary);color:#fff}
+.cbx.lock{background:color-mix(in srgb,var(--primary) 40%,#fff);border-color:transparent;color:#fff}
+.cklist{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ckrow{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:12px;border:1px solid var(--border);min-width:0}
+.ckrow.on{background:color-mix(in srgb,var(--primary-soft) 60%,transparent);border-color:color-mix(in srgb,var(--primary) 30%,transparent)}
+.ckrow.lock{background:var(--muted);border-style:dashed;border-color:var(--input)}
+.ckrow .t{font-weight:700;font-size:13.5px;line-height:1.3;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ckrow .d{font-size:12px;color:var(--muted-foreground);margin-top:2px}
+.ckrow .why{font-size:12px;color:var(--warning-ink);margin-top:4px;display:flex;gap:5px;align-items:flex-start;font-weight:600}
+.ckrow .why .ph-duotone{font-size:14px;margin-top:1px}
+.note{display:flex;gap:10px;padding:12px 14px;border-radius:14px;font-size:13px;align-items:flex-start}
+.note>.ph-duotone{font-size:20px;flex:none}
+.note b{font-weight:800}
+.note .nb{display:flex;flex-direction:column;gap:6px;min-width:0;flex:1}
+.note.warn{background:var(--warning-soft);color:var(--warning-ink)}
+.note.info{background:var(--info-soft);color:var(--info-ink)}
+.note.err{background:var(--destructive-soft);color:var(--destructive-ink)}
+.note.ok{background:var(--success-soft);color:var(--success-ink)}
+.note.lock{background:var(--muted);color:var(--muted-foreground);border:1px dashed var(--input)}
+.note.lock b{color:var(--foreground)}
+.copy{display:flex;align-items:center;gap:10px;background:var(--card);border:1px dashed color-mix(in srgb,var(--warning) 50%,transparent);border-radius:12px;padding:8px 12px}
+.copy .code{white-space:nowrap;font-family:ui-monospace,Menlo,monospace;font-size:15px;font-weight:700;letter-spacing:.06em;color:var(--foreground);flex:1;direction:ltr;text-align:start}
+.dd{position:absolute;z-index:8;inset-inline:0;top:calc(100% + 6px);background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-raised);padding:6px;display:flex;flex-direction:column;gap:2px}
+.dd .pinput{margin:2px 2px 6px}
+.dd .popt{padding:7px 10px}
+.dd .foot{font-size:12px;color:var(--muted-foreground);padding:6px 10px 4px;border-top:1px solid var(--border);margin-top:4px}
+.popt .code{font-size:12px;color:var(--muted-foreground);font-weight:600}
+.popt.dis{opacity:.55}
+.rel{position:relative}
+.sticky{position:sticky;bottom:12px;background:var(--card);box-shadow:var(--shadow-raised);border:1px solid var(--border);border-radius:18px;padding:12px 16px;display:flex;align-items:center;gap:10px;z-index:3;flex-wrap:wrap}
+.sticky .st{font-size:13px;color:var(--muted-foreground);flex:1;display:flex;align-items:center;gap:8px;min-width:0}
+.sticky .st .ph-duotone{font-size:17px}
+.sticky .st.chg{color:var(--warning-ink);font-weight:700}
+.formwrap{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px;align-items:start}
+.side-col{display:flex;flex-direction:column;gap:18px}
+.kv{display:flex;flex-direction:column;gap:2px}
+.kv .l{font-size:12px;color:var(--muted-foreground)}
+.kv .v{font-weight:700}
+
+/* toast */
+.toast{position:absolute;top:18px;inset-inline-end:24px;z-index:30;background:var(--card);border-radius:16px;box-shadow:var(--shadow-raised);border:1px solid var(--border);padding:12px 14px;display:flex;gap:12px;align-items:flex-start;width:380px;max-width:calc(100% - 24px)}
+.toast .tic{width:32px;height:32px;border-radius:11px;display:grid;place-items:center;font-size:18px;flex:none;background:var(--success-soft);color:var(--success)}
+.toast.err .tic{background:var(--destructive-soft);color:var(--destructive)}
+.toast .tt{font-weight:800;font-size:13.5px}
+.toast .tb{font-size:12.5px;color:var(--muted-foreground)}
+.toast .x{margin-inline-start:auto;color:var(--muted-foreground);font-size:16px}
+.toast.err{border-color:color-mix(in srgb,var(--destructive) 30%,var(--border))}
+
+/* switch + scope */
+.sw{width:38px;height:22px;border-radius:999px;background:var(--input);position:relative;flex:none;display:inline-block}
+.sw::after{content:"";position:absolute;top:3px;inset-inline-start:3px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgb(0 0 0 / .2)}
+.sw.on{background:var(--primary)}
+.sw.on::after{inset-inline-start:19px}
+.sw.ro{opacity:.55}
+.scp{display:inline-flex;background:var(--secondary);border-radius:11px;padding:3px;gap:2px;flex:none}
+.scp span{padding:5px 10px;border-radius:8px;font-size:12.5px;font-weight:700;color:var(--muted-foreground);white-space:nowrap}
+.scp span.on{background:var(--card);color:var(--primary);box-shadow:0 1px 2px rgb(11 72 62 / .14)}
+.scp.off{opacity:.4}
+.scsel{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 10px;border:1px solid var(--input);border-radius:11px;font-size:12.5px;font-weight:700;background:var(--card);white-space:nowrap}
+.scsel .ph-duotone{font-size:15px;color:var(--muted-foreground)}
+.scsel.w{border-color:color-mix(in srgb,var(--info) 40%,transparent);background:var(--info-soft);color:var(--info-ink)}
+.scsel.w .ph-duotone{color:var(--info-ink)}
+.nosc{font-size:12px;color:var(--muted-foreground);white-space:nowrap}
+
+/* permission list */
+.pmod{display:flex;align-items:center;gap:12px;padding:18px 22px 10px;flex-wrap:wrap}
+.pmod h3{margin:0;font-family:var(--font-display);font-size:16px;font-weight:800}
+.pmod .cnt{font-size:12.5px;color:var(--muted-foreground);font-weight:600}
+.pmod .sp{flex:1}
+.prow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;padding:11px 22px;border-top:1px solid var(--border)}
+.prow .pl{font-weight:700;font-size:13.5px;line-height:1.3}
+.prow .pdsc{font-size:12.5px;color:var(--muted-foreground);line-height:1.4}
+.prow .pk{font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--muted-foreground);direction:ltr;unicode-bidi:isolate}
+.prow.off .pl{color:var(--muted-foreground);font-weight:600}
+.prow.chg{background:color-mix(in srgb,var(--warning-soft) 55%,transparent)}
+.prow.sub{border-top-style:dashed}
+
+/* drawers, dialogs */
+.dim{position:absolute;inset:0;background:var(--overlay);z-index:9}
+.drawer{position:absolute;top:0;bottom:0;inset-inline-end:0;width:540px;background:var(--card);box-shadow:var(--shadow-raised);z-index:10;display:flex;flex-direction:column}
+.drawer .dh{display:flex;align-items:flex-start;gap:12px;padding:20px 22px 16px;border-bottom:1px solid var(--border)}
+.drawer .dh h2{margin:0;font-family:var(--font-display);font-size:20px;font-weight:800;line-height:1.25}
+.drawer .db{flex:1;overflow:hidden;padding:18px 22px;display:flex;flex-direction:column;gap:16px}
+.drawer .df{padding:14px 22px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;background:var(--card)}
+.drawer .df .st{flex:1;font-size:13px;color:var(--muted-foreground);display:flex;align-items:center;gap:8px}
+.dsec{display:flex;flex-direction:column;gap:10px}
+.dsec>.h{font-size:12px;font-weight:800;color:var(--muted-foreground);letter-spacing:.03em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+:root[lang="ar"] .dsec>.h{letter-spacing:0;font-size:13px}
+.tchips{display:flex;flex-wrap:wrap;gap:8px}
+.tchip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--input);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700;white-space:nowrap;background:var(--card)}
+.tchip .ph-duotone{font-size:15px}
+.tchip.on{background:var(--primary);border-color:var(--primary);color:#fff}
+.tchip.lock{background:var(--accent-soft);border-color:transparent;color:#6b4b00}
+.dlg{position:absolute;z-index:10;inset-inline-start:50%;top:70px;transform:translateX(-50%);width:640px;background:var(--card);border-radius:24px;box-shadow:var(--shadow-raised);display:flex;flex-direction:column}
+[dir="rtl"] .dlg{transform:translateX(50%)}
+.dlg .dh{display:flex;align-items:flex-start;gap:12px;padding:22px 24px 14px}
+.dlg .dh h2{margin:0;font-family:var(--font-display);font-size:20px;font-weight:800}
+.dlg .db{padding:4px 24px 18px;display:flex;flex-direction:column;gap:16px}
+.dlg .df{padding:14px 24px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.dlg .df .st{flex:1;font-size:13px;color:var(--muted-foreground);display:flex;align-items:center;gap:8px}
+.ms{min-height:44px;border:1px solid var(--primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 18%,transparent);border-radius:var(--radius);padding:6px 10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.ms .tok{display:inline-flex;align-items:center;gap:6px;background:var(--primary-soft);color:var(--primary);border-radius:999px;padding:3px 6px 3px 10px;font-size:12.5px;font-weight:700;white-space:nowrap}
+.ms .tok.lock{background:var(--accent-soft);color:#6b4b00;padding-inline-end:10px}
+.ms .tok .ph-duotone{font-size:13px}
+.ms .typ{color:var(--muted-foreground);font-size:13.5px;padding:0 4px}
+.lockreason{display:flex;align-items:flex-start;gap:6px;font-size:12.5px;color:var(--warning-ink);font-weight:600}
+.lockreason .ph-duotone{font-size:15px;margin-top:1px}
+
+/* users option B cards */
+.ugrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.ucard{background:var(--card);border-radius:20px;box-shadow:var(--shadow-card);padding:16px;display:flex;flex-direction:column;gap:12px;position:relative;min-width:0}
+.ucard .top{display:flex;gap:12px;align-items:flex-start}
+.ucard .top .who{flex:1}
+.ucard .ufoot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:10px;font-size:12.5px;color:var(--muted-foreground)}
+.ucard .ufoot .sp{flex:1}
+.ucard.inact{background:var(--muted);box-shadow:none;border:1px dashed var(--input)}
+.ucard.inact .av{filter:grayscale(1);opacity:.6}
+.ucard.sel{box-shadow:0 0 0 2px var(--primary),var(--shadow-card)}
+.ucard.add{border:2px dashed var(--input);background:transparent;box-shadow:none;align-items:center;justify-content:center;text-align:center;color:var(--primary);font-weight:700;min-height:150px}
+.ucard.add .plus{width:40px;height:40px;border-radius:14px;background:var(--primary-soft);display:grid;place-items:center;font-size:22px}
+.fchips{display:flex;gap:6px;flex-wrap:wrap}
+.rgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.rcard{background:var(--card);border-radius:20px;box-shadow:var(--shadow-card);padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.rcard .rt{display:flex;align-items:flex-start;gap:12px}
+.rcard .ricon{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;font-size:22px;flex:none;background:var(--primary-soft);color:var(--primary)}
+.rcard .ricon.sa{background:var(--accent-soft);color:#6b4b00}
+.rcard .ricon.cu{background:var(--info-soft);color:var(--info-ink)}
+.rcard h3{margin:0;font-family:var(--font-display);font-size:16px;font-weight:800;line-height:1.3}
+.rcard .bar{height:6px;border-radius:6px;background:var(--secondary);overflow:hidden}
+.rcard .bar i{display:block;height:100%;background:var(--primary);border-radius:6px}
+.rcard .rf{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted-foreground)}
+.rcard .rf .sp{flex:1}
+.rcard.sel{box-shadow:0 0 0 2px var(--primary),var(--shadow-card)}
+.grp-h{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:800;font-size:16px;margin-top:6px}
+.grp-h .c{font-family:var(--font);font-weight:600;font-size:12.5px;color:var(--muted-foreground)}
+
+/* option C */
+.cwrap{display:grid;grid-template-columns:240px minmax(0,1fr);gap:18px;align-items:start}
+.rail{padding:12px;display:flex;flex-direction:column;gap:2px}
+.rail .rh{font-size:12px;font-weight:800;color:var(--muted-foreground);padding:8px 10px 4px}
+.rail a{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:11px;color:var(--foreground);text-decoration:none;font-size:13.5px;font-weight:600}
+.rail a .c{margin-inline-start:auto;font-size:12px;color:var(--muted-foreground);font-weight:700}
+.rail a.on{background:var(--primary-soft);color:var(--primary);font-weight:800}
+.rail a.on .c{color:var(--primary)}
+.rail .dotc{width:8px;height:8px;border-radius:50%;flex:none}
+.bigtabs{display:flex;gap:4px;background:var(--card);border-radius:16px;padding:5px;box-shadow:var(--shadow-card);width:max-content;max-width:100%}
+.bigtabs span{display:inline-flex;align-items:center;gap:8px;padding:9px 18px;border-radius:12px;font-weight:700;color:var(--muted-foreground);white-space:nowrap}
+.bigtabs span .ph-duotone{font-size:18px}
+.bigtabs span.on{background:var(--primary);color:#fff}
+.bigtabs .cnt{font-size:11.5px;background:rgb(255 255 255 / .22);border-radius:999px;padding:0 7px;font-weight:800}
+.bigtabs span:not(.on) .cnt{background:var(--secondary)}
+.mx{width:100%;border-collapse:separate;border-spacing:0;font-size:13px}
+.mx th,.mx td{border-bottom:1px solid var(--border)}
+.mx thead th{position:sticky;top:0;background:var(--card);padding:12px 6px 10px;vertical-align:bottom;font-weight:700;font-size:12px;text-align:center;line-height:1.25}
+.mx thead th.pc{text-align:start;padding-inline-start:20px;font-size:12.5px;color:var(--muted-foreground);font-weight:600}
+.mx thead th .rn{display:block;color:var(--foreground);font-weight:800;font-size:12.5px;min-height:31px}
+.mx thead th .uc{display:inline-flex;align-items:center;gap:3px;color:var(--muted-foreground);font-weight:600;font-size:11.5px;margin-top:4px}
+.mx thead th.sa{background:color-mix(in srgb,var(--accent-soft) 60%,var(--card))}
+.mx td{padding:7px 6px;text-align:center;vertical-align:middle;position:relative}
+.mx td.pc{text-align:start;padding:8px 12px 8px 20px;padding-inline:20px 12px}
+.mx td.pc .pl{font-weight:700;line-height:1.3}
+.mx td.pc .pk{font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:var(--muted-foreground);direction:ltr;unicode-bidi:isolate}
+.mx td.sa{background:color-mix(in srgb,var(--accent-soft) 35%,var(--card))}
+.mx tr.modh td{background:var(--muted);text-align:start;padding:10px 20px;font-family:var(--font-display);font-weight:800;font-size:14px}
+.mx tr.modh td .c{font-family:var(--font);font-weight:600;font-size:12px;color:var(--muted-foreground);margin-inline-start:8px}
+.cell{display:inline-flex;flex-direction:column;align-items:center;gap:1px}
+.cell .dotk{width:24px;height:24px;border-radius:8px;display:grid;place-items:center;font-size:14px;background:var(--primary);color:#fff}
+.cell .dotk.no{background:transparent;border:1.5px dashed var(--input);color:transparent}
+.cell .dotk.lk{background:color-mix(in srgb,var(--accent) 55%,#fff);color:#6b4b00}
+.cell .sc{font-size:10.5px;font-weight:700;color:var(--info-ink);line-height:1.1}
+td.chgd{background:var(--warning-soft)!important;box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--warning) 55%,transparent)}
+td.act{box-shadow:inset 0 0 0 2px var(--primary)}
+.pop{position:absolute;z-index:8;top:calc(100% - 4px);inset-inline-start:50%;width:220px;background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-raised);padding:6px;text-align:start;transform:translateX(-50%)}
+[dir="rtl"] .pop{transform:translateX(50%)}
+.pop .ph1{font-size:11.5px;font-weight:800;color:var(--muted-foreground);padding:6px 8px 4px}
+.pop a{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:9px;font-weight:600;font-size:13px;color:var(--foreground);text-decoration:none}
+.pop a.on{background:var(--primary-soft);color:var(--primary);font-weight:800}
+.pop a .ph-duotone{font-size:16px}
+.pop .sepline{margin:4px 0}
+.legend{display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted-foreground)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend .cell .dotk{width:18px;height:18px;font-size:11px;border-radius:6px}
+.auth{flex:1;display:grid;grid-template-columns:1fr 1fr;min-height:760px}
+.auth .art{background:var(--primary);color:#fff;padding:48px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden}
+.auth .art::after{content:"";position:absolute;width:340px;height:340px;border-radius:50%;background:var(--accent);inset-block-end:-120px;inset-inline-end:-100px;opacity:.95}
+.auth .art .q{font-family:var(--font-display);font-size:32px;font-weight:800;line-height:1.2;max-width:420px;position:relative;z-index:1}
+.auth .pane{display:grid;place-items:center;padding:40px;background:var(--background)}
+.acard2{width:420px;max-width:100%;background:var(--card);border-radius:24px;box-shadow:var(--shadow-card);padding:28px;display:flex;flex-direction:column;gap:16px}
+.acard2 h1{margin:0;font-family:var(--font-display);font-size:24px;font-weight:800}
+.acard2 p{margin:0;color:var(--muted-foreground);font-size:13.5px}
+.keyic{width:52px;height:52px;border-radius:16px;background:var(--warning-soft);color:var(--warning);display:grid;place-items:center;font-size:28px}
+.rules{display:flex;flex-direction:column;gap:4px;font-size:12.5px}
+.rules span{display:flex;align-items:center;gap:6px;color:var(--muted-foreground)}
+.rules span.ok{color:var(--success-ink);font-weight:600}
+.rules .ph-duotone{font-size:15px}
+.meter{display:flex;gap:4px}
+.meter i{flex:1;height:5px;border-radius:5px;background:var(--secondary)}
+.meter i.on{background:var(--success)}
+.solo{flex:1;display:grid;place-items:center;padding:40px;min-height:760px;background:var(--background)}
+.mtabs{display:flex;gap:4px;border-bottom:1px solid var(--border)}
+.acct-head{display:flex;align-items:center;gap:16px}
+.acct-head .av{width:64px;height:64px;border-radius:20px;font-size:22px}
+.acct-head h2{margin:0;font-family:var(--font-display);font-size:22px;font-weight:800}
+
+/* phone tweaks */
+.mcards{display:flex;flex-direction:column}
+.mcard{padding:14px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:9px;position:relative}
+.mcard:last-child{border-bottom:0}
+.mcard .top{display:flex;align-items:center;gap:10px}
+.mcard .top .who{flex:1}
+.mcard .meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px;color:var(--muted-foreground)}
+.mcard .meta .sp{flex:1}
+.mcard.inact .av{filter:grayscale(1);opacity:.6}
+.pbar{position:sticky;bottom:0;background:var(--card);border-top:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:10px;box-shadow:0 -10px 24px -16px rgb(11 72 62 / .35)}
+.pbar .st{flex:1;font-size:12.5px;color:var(--muted-foreground);display:flex;align-items:center;gap:6px;min-width:0}
+.mprow{padding:12px 14px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px}
+.mprow .r1{display:flex;gap:12px;align-items:flex-start}
+.mprow .r1>div{flex:1;min-width:0}
+.mprow .pl{font-weight:700;font-size:13.5px}
+.mprow .pdsc{font-size:12px;color:var(--muted-foreground)}
+.mprow.off .pl{color:var(--muted-foreground);font-weight:600}
+.phone .toast{top:74px;inset-inline:12px;width:auto}
+.phone .dlg{inset-inline:12px;width:auto;transform:none;top:auto;bottom:16px}
+.phone .sheet .df{display:flex;gap:10px;padding:12px 16px;border-top:1px solid var(--border)}
+.phone .sheet .df .btn{flex:1}
+
+@container page (max-width:720px){
+  .cwrap{grid-template-columns:minmax(0,1fr)!important}
+  .fgrid,.cklist,.formwrap,.ugrid,.rgrid,.cwrap{grid-template-columns:minmax(0,1fr)}
+  .fcard{padding:16px}
+  .fcard h2{font-size:16.5px}
+  .sticky{bottom:0;border-radius:0;margin:0 -16px -16px;border-inline:0;border-bottom:0}
+  .pmod{padding:14px 14px 8px}
+  .bigtabs{width:100%}
+  .bigtabs span{flex:1;justify-content:center;padding:8px 10px}
+  .acct-head .av{width:52px;height:52px;font-size:18px;border-radius:16px}
+  .acard2{padding:20px;box-shadow:none;background:transparent}
+  .auth{grid-template-columns:1fr;min-height:0}
+  .solo{padding:20px 16px;min-height:0;place-items:start stretch}
+}
+</style>
+</head>
+<body>
+<div class="mockbar" role="toolbar" aria-label="Mockup controls">
+  <strong>Users, Roles and My account</strong>
+  <span class="hint">Static mockup · nothing is built yet</span>
+  <span class="sp"></span>
+  <div class="seg" id="optSeg">
+    <button data-opt="A" aria-pressed="true">Option A</button>
+    <button data-opt="B" aria-pressed="false">Option B</button>
+    <button data-opt="C" aria-pressed="false">Option C</button>
+  </div>
+  <div class="seg" id="langSeg">
+    <button data-lang="en" aria-pressed="true">EN</button>
+    <button data-lang="ar" aria-pressed="false" class="ar">ع</button>
+  </div>
+</div>
+<div class="optnote" id="optNote"></div>
+<section id="deskSec"></section>
+<section id="phoneSec">
+  <div class="section-title" id="phoneT"></div>
+  <div class="phones" id="phones"></div>
+</section>
+<script>
+let opt="A", lang="en";
+const AR=()=>lang==="ar";
+const s=(en,ar)=>AR()?ar:en;
+const v=x=>Array.isArray(x)?(AR()?x[1]:x[0]):x;
+const ic=(n,extra="")=>`<i class="ph-duotone ph-${n} ${extra}" aria-hidden="true"></i>`;
+const num=x=>`<span class="num">${x}</span>`;
+
+/* ---------- data: permissions (packages/shared/src/permissions.ts + locales) ---------- */
+const PERMS=[
+ ["core.settings.view","core","View school settings","عرض إعدادات المدرسة","See the school's name, logo, working hours and the settings change history.","الاطلاع على اسم المدرسة وشعارها ومواعيد العمل وسجل تغييرات الإعدادات."],
+ ["core.settings.edit","core","Edit school settings","تعديل إعدادات المدرسة","Change the school's name, logo, language and working hours.","تغيير اسم المدرسة وشعارها ولغتها الافتراضية ومواعيد العمل."],
+ ["core.stages.view","core","View stages","عرض المراحل الدراسية","See the school's stages.","الاطلاع على المراحل الدراسية في المدرسة."],
+ ["core.stages.manage","core","Manage stages","إدارة المراحل الدراسية","Add, rename and switch off stages.","إضافة المراحل الدراسية وتعديل أسمائها وإيقافها."],
+ ["core.audit.view","core","View the activity log","عرض سجل النشاط","See who did what and when, across the system and in each record's history.","معرفة من قام بكل إجراء ومتى، في النظام كله وفي سجل كل عنصر."],
+ ["core.users.view","core","View users","عرض المستخدمين","See the user accounts, their roles and linked employees.","الاطلاع على حسابات المستخدمين وأدوارهم والموظفين المرتبطين بهم."],
+ ["core.users.manage","core","Manage users","إدارة المستخدمين","Add and edit user accounts, give them roles, deactivate them and set temporary passwords.","إضافة حسابات المستخدمين وتعديلها وإسناد الأدوار إليهم وإيقافهم وتعيين كلمات مرور مؤقتة."],
+ ["core.roles.view","core","View roles","عرض الأدوار","See the roles and the permissions each one grants.","الاطلاع على الأدوار والصلاحيات التي يمنحها كل دور."],
+ ["core.roles.manage","core","Manage roles","إدارة الأدوار","Add custom roles and change which permissions a role grants, and for which rows.","إضافة أدوار مخصصة وتغيير الصلاحيات التي يمنحها الدور ونطاق كل صلاحية."],
+ ["hr.dashboard.view","hr","View the HR dashboard","عرض لوحة شؤون الموظفين","See the HR summary on the home page.","الاطلاع على ملخص شؤون الموظفين في الصفحة الرئيسية."],
+ ["hr.employees.view","hr","View employees","عرض الموظفين","See the employee list and profiles.","الاطلاع على قائمة الموظفين وملفاتهم."],
+ ["hr.employees.view_salary","hr","View salaries","عرض الرواتب","See employees' salaries and pay details.","الاطلاع على رواتب الموظفين وتفاصيل أجورهم."],
+ ["hr.employees.create","hr","Add employees","إضافة موظفين","Add new employees.","إضافة موظفين جدد."],
+ ["hr.employees.edit","hr","Edit employees","تعديل بيانات الموظفين","Change an employee's details.","تعديل بيانات الموظف."],
+ ["hr.employees.change_status","hr","Deactivate and reactivate employees","إيقاف الموظفين وإعادة تفعيلهم","Mark an employee as having left, or bring them back.","تسجيل ترك الموظف للعمل أو إعادته إليه."],
+ ["hr.lists.view","hr","View HR lists","عرض قوائم شؤون الموظفين","See departments and job titles.","الاطلاع على الأقسام والمسميات الوظيفية."],
+ ["hr.lists.manage","hr","Manage HR lists","إدارة قوائم شؤون الموظفين","Add, rename and switch off departments and job titles.","إضافة الأقسام والمسميات الوظيفية وتعديلها وإيقافها."],
+ ["hr.settings.view","hr","View HR rules","عرض قواعد شؤون الموظفين","See work days, hours, lateness and penalty rules.","الاطلاع على أيام العمل وساعاته وقواعد التأخير والجزاءات."],
+ ["hr.settings.edit","hr","Edit HR rules","تعديل قواعد شؤون الموظفين","Change work days, hours, lateness and penalty rules.","تغيير أيام العمل وساعاته وقواعد التأخير والجزاءات."],
+ ["hr.penalty_catalogue.view","hr","View the penalty catalogue","عرض لائحة الجزاءات","See penalty groups and violations.","الاطلاع على مجموعات الجزاءات والمخالفات."],
+ ["hr.penalty_catalogue.manage","hr","Manage the penalty catalogue","إدارة لائحة الجزاءات","Add and edit penalty groups and violations.","إضافة مجموعات الجزاءات والمخالفات وتعديلها."],
+ ["hr.penalties.view","hr","View penalties","عرض الجزاءات","See recorded penalties and their status.","الاطلاع على الجزاءات المسجلة وحالاتها."],
+ ["hr.penalties.record","hr","Record penalties","تسجيل الجزاءات","Record a penalty for an employee (it waits for approval).","تسجيل جزاء على موظف، ويبقى في انتظار الاعتماد."],
+ ["hr.penalties.approve","hr","Approve penalties","اعتماد الجزاءات","Approve a pending penalty so it counts in payroll.","اعتماد الجزاء المعلّق ليُحتسب في الرواتب."],
+ ["hr.penalties.cancel","hr","Cancel penalties","إلغاء الجزاءات","Cancel a penalty, giving the reason.","إلغاء الجزاء مع ذكر السبب."],
+ ["hr.lateness.view","hr","View lateness","عرض التأخير","See each month's lateness minutes.","الاطلاع على دقائق التأخير لكل شهر."],
+ ["hr.lateness.edit","hr","Enter lateness","إدخال التأخير","Enter and correct each month's lateness minutes.","إدخال دقائق التأخير لكل شهر وتصحيحها."],
+ ["hr.payroll.view","hr","View payroll","عرض الرواتب الشهرية","See payroll runs and payslips.","الاطلاع على مسيرات الرواتب وقسائم الرواتب."],
+ ["hr.payroll.create","hr","Prepare payroll","إعداد مسير الرواتب","Start a month's payroll run.","بدء مسير رواتب الشهر."],
+ ["hr.payroll.recalculate","hr","Recalculate payroll","إعادة احتساب الرواتب","Recalculate a draft payroll run after changes.","إعادة احتساب مسودة مسير الرواتب بعد التعديلات."],
+ ["hr.payroll.adjust","hr","Adjust payroll","تسويات الرواتب","Add and remove bonuses and deductions on a draft run.","إضافة المكافآت والخصومات على مسودة المسير وحذفها."],
+ ["hr.payroll.approve","hr","Approve payroll","اعتماد الرواتب","Approve a payroll run; it can no longer change.","اعتماد مسير الرواتب، فلا يمكن تعديله بعد ذلك."],
+ ["hr.payroll.export_bank_sheet","hr","Export the bank sheet","تصدير كشف البنك","Download the bank transfer sheet of an approved run.","تنزيل كشف التحويل البنكي لمسير معتمد."]
+].map(p=>({k:p[0],m:p[1],l:[p[2],p[3]],d:[p[4],p[5]]}));
+const MODS={core:["School","المدرسة"],hr:["HR","شؤون الموظفين"]};
+const MODIC={core:"buildings",hr:"users-three"};
+/* rows a scope can narrow: data about employees */
+const SCOPED=new Set(["hr.employees.view","hr.employees.view_salary","hr.employees.edit","hr.employees.change_status","hr.penalties.view","hr.penalties.record","hr.penalties.approve","hr.penalties.cancel","hr.lateness.view","hr.lateness.edit","hr.payroll.view"]);
+const SC={all:["Everyone","الجميع"],own_stage:["Their stage","مرحلته فقط"],own_team:["Their team","فريقه فقط"],self:["Themselves only","نفسه فقط"]};
+const SCS={own_stage:["Stage","المرحلة"],own_team:["Team","الفريق"],self:["Self","نفسه"]};
+const SCIC={all:"globe-hemisphere-east",own_stage:"stairs",own_team:"users-four",self:"user"};
+const KEYS=PERMS.map(p=>p.k);
+const allOf=(...k)=>Object.fromEntries(k.map(x=>[x,"all"]));
+const HRK=KEYS.filter(k=>k.startsWith("hr."));
+const line=sc=>({"hr.employees.view":sc,"hr.penalties.view":sc,"hr.penalties.record":sc,...allOf("core.stages.view","hr.penalty_catalogue.view")});
+
+/* ---------- data: roles (packages/shared/src/roles.ts) + two custom examples ---------- */
+const ROLES=[
+ {k:"system_admin",n:["System admin","مدير النظام"],b:1,sa:1,u:1,g:allOf(...KEYS)},
+ {k:"hr_manager",n:["HR manager","مدير شؤون الموظفين"],b:1,u:2,g:allOf(...HRK,"core.stages.view","core.audit.view")},
+ {k:"hr_officer",n:["HR officer","موظف شؤون الموظفين"],b:1,u:2,g:allOf("core.stages.view","hr.dashboard.view","hr.employees.view","hr.employees.view_salary","hr.employees.create","hr.employees.edit","hr.employees.change_status","hr.lists.view","hr.settings.view","hr.penalty_catalogue.view","hr.penalties.view","hr.penalties.record","hr.lateness.view","hr.lateness.edit","hr.payroll.view","hr.payroll.create","hr.payroll.recalculate","hr.payroll.adjust")},
+ {k:"accountant",n:["Accountant","المحاسب"],b:1,u:1,g:allOf("hr.employees.view","hr.employees.view_salary","hr.payroll.view","hr.payroll.export_bank_sheet")},
+ {k:"principal",n:["Principal / administrative director","المدير / المدير الإداري"],b:1,u:1,g:allOf("core.stages.view","core.audit.view","hr.dashboard.view","hr.employees.view","hr.lists.view","hr.penalty_catalogue.view","hr.penalties.view","hr.penalties.approve","hr.penalties.cancel","hr.lateness.view","hr.payroll.view")},
+ {k:"stage_head",n:["Stage head","رئيس المرحلة"],b:1,u:3,g:line("own_stage")},
+ {k:"direct_manager",n:["Direct manager","المدير المباشر"],b:1,u:4,g:line("own_team")},
+ {k:"payroll_reviewer",n:["Payroll reviewer","مراجع الرواتب"],u:1,g:allOf("hr.employees.view","hr.employees.view_salary","hr.payroll.view")},
+ {k:"front_desk",n:["Front desk","مكتب الاستقبال"],u:0,g:allOf("hr.employees.view")}
+];
+const RO=Object.fromEntries(ROLES.map(r=>[r.k,r]));
+const pc=r=>Object.keys(r.g).length;
+
+/* ---------- data: users ---------- */
+const USERS=[
+ {k:"hany",n:["Hany Saad","هاني سعد"],i:["HS","هس"],e:"hany.saad@greenvalley.school",r:["system_admin","hr_manager"],emp:"EMP-0002",last:["Today, 09:12","اليوم، 09:12"]},
+ {k:"laila",n:["Laila Hassan","ليلى حسن"],i:["LH","لح"],e:"laila.hassan@greenvalley.school",r:["hr_manager"],emp:"EMP-0008",last:["Today, 08:55","اليوم، 08:55"]},
+ {k:"mona",n:["Mona Ibrahim","منى إبراهيم"],i:["MI","مإ"],e:"mona.ibrahim@greenvalley.school",r:["hr_officer"],emp:"EMP-0014",last:["Today, 08:40","اليوم، 08:40"]},
+ {k:"rania",n:["Rania Magdy","رانيا مجدي"],i:["RM","رم"],e:"rania.magdy@greenvalley.school",r:["hr_officer","payroll_reviewer"],emp:"EMP-0019",temp:1,last:["Never","لم يدخل بعد"]},
+ {k:"ahmed",n:["Ahmed Mahmoud","أحمد محمود"],i:["AM","أم"],e:"ahmed.mahmoud@greenvalley.school",r:["principal"],emp:"EMP-0001",last:["Yesterday, 14:20","أمس، 14:20"]},
+ {k:"nadia",n:["Nadia Fouad","نادية فؤاد"],i:["NF","نف"],e:"nadia.fouad@greenvalley.school",r:["accountant"],emp:"EMP-0022",last:["15 Nov, 11:05","15 نوفمبر، 11:05"]},
+ {k:"khaled",n:["Khaled Mostafa","خالد مصطفى"],i:["KM","خم"],e:"khaled.mostafa@greenvalley.school",r:["stage_head"],emp:"EMP-0041",last:["14 Nov, 10:30","14 نوفمبر، 10:30"]},
+ {k:"samir",n:["Samir Adel","سمير عادل"],i:["SA","سع"],e:"samir.adel@greenvalley.school",r:["direct_manager"],emp:"EMP-0057",last:["12 Nov, 13:10","12 نوفمبر، 13:10"]},
+ {k:"dina",n:["Dina Sherif","دينا شريف"],i:["DS","دش"],e:"dina.sherif@greenvalley.school",r:["direct_manager"],emp:null,last:["10 Nov, 09:00","10 نوفمبر، 09:00"]},
+ {k:"youssef",n:["Youssef Kamal","يوسف كمال"],i:["YK","يك"],e:"youssef.kamal@greenvalley.school",r:["stage_head"],emp:"EMP-0063",off:1,last:["2 Oct, 12:45","2 أكتوبر، 12:45"]}
+];
+const UX={tarek:{n:["Tarek Nabil","طارق نبيل"],i:["TN","طن"]},hoda:{n:["Hoda Ali","هدى علي"],i:["HA","هع"]},amr:{n:["Amr Fawzy","عمرو فوزي"],i:["AF","عف"]}};
+const UU=Object.fromEntries([...USERS.map(u=>[u.k,u]),...Object.entries(UX)]);
+const EMPS=[["Rania Magdy","رانيا مجدي","EMP-0019",["HR officer","موظفة شؤون الموظفين"]],["Rana Mostafa","رنا مصطفى","EMP-0072",["Science teacher","معلمة علوم"]],["Rami Adel","رامي عادل","EMP-0085",["Bus supervisor","مشرف الحافلات"]],["Rasha Hamdy","رشا حمدي","EMP-0091",["Librarian","أمينة المكتبة"]]];
+
+/* ---------- shared pieces ---------- */
+const av=(k,cls="")=>`<div class="av ${cls}">${v(UU[k].i)}</div>`;
+const nameLink=(k)=>`<a class="n" href="#">${v(UU[k].n)}</a>`;
+const whoU=(k,cls="",sub)=>`<div class="who">${av(k,cls)}<div style="min-width:0">${nameLink(k)}${sub!=null?(String(sub).includes("@")?`<div class="r" dir="ltr" style="text-align:${AR()?"right":"left"}">${sub}</div>`:`<div class="r">${sub}</div>`):""}</div></div>`;
+const rchip=(rk)=>{const r=RO[rk];return `<span class="rchip ${r.sa?"sa":r.b?"":"cu"}">${r.sa?ic("shield-star"):""}${v(r.n)}</span>`;};
+const chips=u=>`<div class="chips">${u.r.map(rchip).join("")}</div>`;
+const status=u=>u.off?`<span class="pill p-inactive"><span class="dot"></span>${s("Inactive","موقوف")}</span>`:`<span class="pill p-active"><span class="dot"></span>${s("Active","نشط")}</span>`;
+const tempPill=()=>`<span class="pill p-temp">${ic("key")}${s("Must change password","يجب تغيير كلمة المرور")}</span>`;
+const empLink=u=>u.emp?`<a class="emp" href="#">${ic("identification-card")}<span class="num">${u.emp}</span></a>`:`<span class="none sm">${s("Not linked","غير مرتبط")}</span>`;
+const lastIn=u=>`<span class="${u.temp?"muted":""}" style="white-space:nowrap">${v(u.last)}</span>`;
+const builtIn=()=>`<span class="bi">${ic("seal-check")}${s("Built-in","أساسي")}</span>`;
+const customB=()=>`<span class="bi cu">${ic("sparkle")}${s("Custom","مخصص")}</span>`;
+const addBtn=(label,primary=true)=>`<button class="btn ${primary?"btn-primary":""} addb"><span class="plus">${ic("plus")}</span>${label}</button>`;
+const holders=(k)=>({system_admin:["hany"],hr_manager:["hany","laila"],hr_officer:["mona","rania"],accountant:["nadia"],principal:["ahmed"],stage_head:["khaled","youssef","tarek"],direct_manager:["samir","dina","hoda","amr"],payroll_reviewer:["rania"],front_desk:[]}[k]);
+const avStack=(k,max=4)=>{const h=holders(k);if(!h.length)return `<span class="none sm">${s("Nobody yet","لا أحد بعد")}</span>`;return `<div class="avs">${h.slice(0,max).map(x=>av(x,"sm")).join("")}${h.length>max?`<span class="more">+${num(h.length-max)}</span>`:""}</div>`;};
+const usersN=n=>AR()?(n===0?"لا أحد":n===1?"مستخدم واحد":n===2?"مستخدمان":`${num(n)} مستخدمين`):(n===1?"1 user":`${num(n)} users`);
+const permsN=n=>AR()?(n===1?"صلاحية واحدة":n===2?"صلاحيتان":n<=10?`${num(n)} صلاحيات`:`${num(n)} صلاحية`):(n===1?"1 permission":`${num(n)} permissions`);
+const ofN=(n,t)=>AR()?`${num(n)} من ${num(t)}`:`${num(n)} of ${num(t)}`;
+const langT=()=>`<span class="lang"><span class="${!AR()?"on":""}">EN</span><span class="ar ${AR()?"on":""}">ع</span></span>`;
+const crumb=(...p)=>`<div class="crumb">${p.map((x,i)=>i<p.length-1?`<span>${x}</span>${ic("caret-right","flip")}`:`<span style="color:var(--foreground);font-weight:600">${x}</span>`).join("")}</div>`;
+const topline=(c="")=>`<div class="topline">${c}<span class="sp"></span>${langT()}</div>`;
+const head=(title,sub,acts="")=>`<div class="head"><div><h1>${title}</h1>${sub?`<p>${sub}</p>`:""}</div>${acts?`<div class="acts">${acts}</div>`:""}</div>`;
+const toast=(kind,t,b)=>`<div class="toast ${kind==="err"?"err":""}" role="status"><span class="tic">${ic(kind==="err"?"warning-octagon":"check-circle")}</span><div style="min-width:0"><div class="tt">${t}</div><div class="tb">${b}</div></div>${ic("x","x")}</div>`;
+const pager=(info,pages)=>`<nav class="pager" aria-label="pagination"><span class="info">${info}</span><div class="pages"><button class="pg" disabled>${ic("caret-left","flip")}</button>${pages}<button class="pg">${ic("caret-right","flip")}</button></div></nav>`;
+const upager=()=>pager(s(`Showing <b class="num">1–10</b> of <b class="num">13</b>`,`عرض <b class="num">1–10</b> من <b class="num">13</b>`),`<button class="pg num" aria-current="page">1</button><button class="pg num">2</button>`);
+const mpager=()=>`<div class="mpager"><span class="info">${s(`Showing <b class="num">1–10</b> of <b class="num">13</b>`,`عرض <b class="num">1–10</b> من <b class="num">13</b>`)}</span><div class="row"><button class="pg" disabled>${ic("caret-left","flip")}</button><b>${s(`Page <span class="num">1</span> of <span class="num">2</span>`,`صفحة <span class="num">1</span> من <span class="num">2</span>`)}</b><button class="pg">${ic("caret-right","flip")}</button></div></div>`;
+const userMenu=(u,style)=>`<div class="menu" style="${style}"><a href="#" class="hl">${ic("pencil-simple")}${s("Edit","تعديل")}</a><a href="#">${ic("key")}${s("Set temporary password","تعيين كلمة مرور مؤقتة")}</a>${u.off?`<a href="#">${ic("user-check")}${s("Reactivate","إعادة التفعيل")}</a>`:`<a href="#" style="color:var(--destructive-ink)">${ic("user-minus")}${s("Deactivate","إيقاف الحساب")}</a>`}</div>`;
+const input=(val,o={})=>`<div class="input ${o.cls||""}">${o.icon?ic(o.icon):""}<span class="grow ${o.dir?"num":""}" ${o.dir?'dir="ltr" style="text-align:start"':""}>${val}</span>${o.end||""}</div>`;
+const field=(lb,body,o={})=>`<div class="field" ${o.style?`style="${o.style}"`:""}><span class="lb">${lb}${o.opt?`<span class="opt">· ${s("Optional","اختياري")}</span>`:""}</span>${body}${o.hint?`<span class="fh">${o.hint}</span>`:""}${o.err?`<span class="fe">${ic("warning-circle")}${o.err}</span>`:""}</div>`;
+const pw=(o={})=>`<div class="input ${o.cls||""}">${ic("lock-key")}<span class="grow">${o.empty?`<span class="muted" style="letter-spacing:0">${o.empty}</span>`:`<span class="dots">${"•".repeat(o.n||10)}</span>`}</span>${ic("eye")}</div>`;
+const LAST_ADMIN_WHY=()=>s("Hany Saad is the only System admin. Give the role to someone else first.","هاني سعد هو مدير النظام الوحيد. امنح الدور لشخص آخر أولًا.");
+const LAST_ADMIN_T=()=>s("Can't remove the last System admin","لا يمكن إزالة آخر مدير للنظام");
+const noChanges=()=>`<span class="st">${ic("check-circle")}${s("No changes yet","لا توجد تغييرات بعد")}</span>`;
+const nChanges=n=>`<span class="st chg">${ic("pencil-simple-line")}${AR()?(n===1?"تغيير واحد لم يُحفظ":n===2?"تغييران لم يُحفظا":`${num(n)} تغييرات لم تُحفظ`):(n===1?"1 unsaved change":`${num(n)} unsaved changes`)}</span>`;
+const saveBar=(changed,label)=>`<div class="sticky">${changed?nChanges(changed):noChanges()}<button class="btn">${s("Cancel","إلغاء")}</button><button class="btn btn-primary" ${changed?"":"disabled"}>${ic("floppy-disk")}${label||s("Save","حفظ")}</button></div>`;
+const swc=(on,ro)=>`<span class="sw ${on?"on":""} ${ro?"ro":""}" role="switch" aria-checked="${on}"></span>`;
+const scopeSeg=(sc,dis)=>`<div class="scp ${dis?"off":""}">${["all","own_stage","own_team","self"].map(x=>`<span class="${x===sc?"on":""}">${v(SC[x])}</span>`).join("")}</div>`;
+const scopeSel=(sc)=>`<span class="scsel ${sc!=="all"?"w":""}">${ic(SCIC[sc])}${v(SC[sc])}${ic("caret-down")}</span>`;
+const empLabel=(code)=>{const u=USERS.find(x=>x.emp===code);return u?`${v(u.n)} · <span class="num">${code}</span>`:code;};
+const skel=(w,h=12,r=8)=>`<div class="sk" style="width:${w};height:${h}px;border-radius:${r}px"></div>`;
+
+/* ---------- shell ---------- */
+const link=(icon,label,cur,extra="")=>`<a class="navlink" href="#" ${cur?'aria-current="page"':""}>${ic(icon)}<span>${label}</span>${extra}</a>`;
+const brand=()=>`<div class="brand"><div class="logo">${ic("graduation-cap")}</div><div><div class="brand-name">${s("Green Valley School","مدرسة الوادي الأخضر")}</div><div class="brand-sub">${s("School ERP","نظام إدارة المدرسة")}</div></div></div>`;
+function side(page){
+ const mod=(icon,label,bg,fg,kids,open)=>`<details class="mod" ${open?"open":""}><summary><span class="mi" style="background:${bg};color:${fg}">${ic(icon)}</span>${label}${ic("caret-down","car")}</summary><div class="kids">${kids}</div></details>`;
+ const dis=(icon,label)=>`<details class="mod dis"><summary><span class="mi" style="background:var(--secondary)">${ic(icon)}</span>${label}<span class="soon">${s("Soon","قريبًا")}</span></summary></details>`;
+ const nw=`<span class="newdot">${s("New","جديد")}</span>`;
+ const adminKids=opt==="C"
+  ? link("gear-six",s("Settings","الإعدادات"))+link("clock-counter-clockwise",s("Activity","سجل النشاط"))+link("user-circle-gear",s("Users and roles","المستخدمون والأدوار"),page==="users"||page==="roles",page==="users"||page==="roles"?"":nw)
+  : link("gear-six",s("Settings","الإعدادات"))+link("clock-counter-clockwise",s("Activity","سجل النشاط"))+link("user-circle-gear",s("Users","المستخدمون"),page==="users",page==="users"?"":nw)+link("shield-check",s("Roles","الأدوار"),page==="roles",page==="roles"?"":nw);
+ const adminOpen=page==="users"||page==="roles";
+ const me=page==="me";
+ return `<aside class="sb">${brand()}<nav>
+ <a class="single" href="#"><span class="mi">${ic("squares-four")}</span>${s("Dashboard","لوحة التحكم")}</a>
+ ${mod("users-three",s("HR","الموارد البشرية"),"var(--primary-soft)","var(--primary)",link("users",s("Employees","الموظفون"))+link("gavel",s("Penalties","الجزاءات"))+link("clock-countdown",s("Lateness","التأخير"))+link("wallet",s("Payroll","الرواتب")),false)}
+ ${dis("calculator",s("Accounting","الحسابات"))}${dis("package",s("Inventory","المخازن"))}${dis("student",s("Students","الطلاب"))}
+ ${mod("buildings",s("Administration","الإدارة"),"var(--accent-soft)","#6b4b00",adminKids,adminOpen||me)}
+ </nav><div class="bottom"><a href="#" class="user" style="text-decoration:none;color:inherit;${me?"background:var(--primary-soft);border-color:transparent":""}">${av("hany")}<div style="min-width:0"><div class="n">${v(UU.hany.n)}</div><div class="r">${me?s("My account","حسابي"):s("System admin","مدير النظام")}</div></div>${ic(me?"user-circle":"caret-up-down")}</a></div></aside>`;}
+const mbar=()=>`<div class="mbar"><button class="menub" aria-label="menu">${ic("list")}</button><div class="brand-name">${s("Green Valley School","مدرسة الوادي الأخضر")}</div>${langT()}</div>`;
+
+/* ---------- permission rows (shared by A + B) ---------- */
+function permGroups(role,o={}){ /* o.phone, o.ro, o.chg:Set */
+ return ["core","hr"].map(m=>{const ps=PERMS.filter(p=>p.m===m);const on=ps.filter(p=>role.g[p.k]).length;
+  const rows=ps.map((p,i)=>{const sc=role.g[p.k];const ch=o.chg&&o.chg.has(p.k);
+   const sub=i>0&&ps[i-1].k.split(".")[1]===p.k.split(".")[1];
+   if(o.phone){return `<div class="mprow ${sc?"":"off"}"><div class="r1">${o.ro?`<span class="cbx lock">${ic("check")}</span>`:swc(!!sc)}<div><div class="pl">${v(p.l)}</div><div class="pdsc">${v(p.d)}</div></div></div>${sc&&SCOPED.has(p.k)&&!o.ro?`<div style="padding-inline-start:50px">${scopeSel(sc)}</div>`:""}</div>`;}
+   return `<div class="prow ${sc?"":"off"} ${ch?"chg":""} ${sub?"sub":""}">${o.ro?`<span class="cbx lock">${ic("check")}</span>`:swc(!!sc)}<div style="min-width:0"><div class="pl">${v(p.l)}</div><div class="pdsc">${v(p.d)}</div></div><div>${o.ro?`<span class="nosc">${v(SC.all)}</span>`:SCOPED.has(p.k)?(o.compact?(sc?scopeSel(sc):""):scopeSeg(sc||"all",!sc)):`<span class="nosc">${s("Whole school","المدرسة كلها")}</span>`}</div></div>`;}).join("");
+  return `<div class="pmod"><span class="kic" style="background:${m==="hr"?"var(--primary-soft)":"var(--secondary)"};color:${m==="hr"?"var(--primary)":"var(--muted-foreground)"}">${ic(MODIC[m])}</span><h3>${v(MODS[m])}</h3><span class="cnt">${ofN(on,ps.length)}</span><span class="sp"></span>${o.ro||o.phone?"":`<button class="linkbtn">${on===ps.length?s("Turn all off","إلغاء الكل"):s("Turn all on","تفعيل الكل")}</button>`}</div>${rows}`;}).join("");
+}
+
+/* ================= OPTION A: classic tables + full-page forms ================= */
+const usersTitle=()=>s("Users","المستخدمون");
+const usersSub=()=>s("Who can sign in, which roles they hold and which employee they are.","من يمكنه تسجيل الدخول، وما أدواره، وأي موظف يمثّله.");
+const rolesTitle=()=>s("Roles","الأدوار");
+const rolesSub=()=>s("A role is a set of permissions. A user can hold several roles and gets all of their permissions.","الدور مجموعة من الصلاحيات. يمكن أن يحمل المستخدم أكثر من دور ويحصل على كل صلاحياتها.");
+const usersToolbar=(phone,empty)=>`<section class="toolbar"><div class="frow"><label class="search">${ic("magnifying-glass")}<span>${empty?`<span style="color:var(--foreground)">${s("Samy","سامي")}</span>`:s("Name or email","الاسم أو البريد الإلكتروني")}</span></label>
+ <button class="fsel ${empty?"set":""}">${ic("shield-check")}${empty?v(RO.accountant.n):s("All roles","كل الأدوار")}${ic("caret-down")}</button><button class="fsel">${ic("toggle-right")}${s("All statuses","كل الحالات")}${ic("caret-down")}</button></div>
+ ${empty?`<div class="resline"><span>${s(`<b class="num">0</b> users`,`<b class="num">0</b> مستخدم`)}</span><span class="sp"></span><button class="linkbtn">${s("Clear filters","مسح الفلاتر")}</button></div>`:""}</section>`;
+
+function A_users(){
+ const rows=USERS.map((u,i)=>{const menu=u.k==="rania";
+  return `<tr class="${u.off?"inact":""}"><td>${whoU(u.k)}</td><td><div class="ell muted" dir="ltr" style="max-width:170px;text-align:${AR()?"right":"left"}">${u.e}</div></td><td>${chips(u)}</td><td>${empLink(u)}</td><td>${status(u)}</td>
+  <td>${lastIn(u)}${u.temp?`<div style="margin-top:3px">${tempPill()}</div>`:""}</td><td style="width:48px;position:relative"><button class="ibtn ${menu?"on":""}" aria-label="${s("Actions","إجراءات")}">${ic("dots-three")}</button>${menu?userMenu(u,"top:46px;inset-inline-end:8px"):""}</td></tr>`;}).join("");
+ return `<main class="main">${topline(crumb(s("Administration","الإدارة"),usersTitle()))}
+ ${toast("ok",s("Temporary password set","تم تعيين كلمة مرور مؤقتة"),s("Rania Magdy was signed out everywhere and must choose a new password at sign-in.","تم تسجيل خروج رانيا مجدي من كل الأجهزة، وعليها اختيار كلمة مرور جديدة عند الدخول."))}
+ ${head(usersTitle(),usersSub(),addBtn(s("Add user","إضافة مستخدم")))}
+ ${usersToolbar()}
+ <section class="card"><table class="ta"><thead><tr><th>${s("Name","الاسم")}</th><th>${s("Email","البريد الإلكتروني")}</th><th>${s("Roles","الأدوار")}</th><th>${s("Linked employee","الموظف المرتبط")}</th><th>${s("Status","الحالة")}</th><th>${s("Last sign-in","آخر دخول")}</th><th></th></tr></thead><tbody>${rows}</tbody></table>${upager()}</section></main>`;}
+
+function roleChecklist(sel,lockSA,phone){
+ const list=ROLES.map(r=>{const on=sel.includes(r.k);const lock=lockSA&&r.sa;
+  return `<div class="ckrow ${lock?"lock":on?"on":""}"><span class="cbx ${lock?"lock":on?"on":""}">${ic(lock?"lock-simple":"check")}</span><div style="min-width:0"><div class="t">${v(r.n)}${r.b?"":customB()}</div><div class="d">${permsN(pc(r))}</div>${lock?`<div class="why">${ic("info")}<span>${LAST_ADMIN_WHY()}</span></div>`:""}</div></div>`;}).join("");
+ return `<div class="input ph">${ic("magnifying-glass")}<span class="grow">${s("Search roles","ابحث عن دور")}</span></div><div class="cklist">${list}</div>`;}
+
+function A_userFormBody(u,phone){
+ const hany=u.k==="hany";
+ const acc=`<section class="card fcard"><h2>${s("Account","الحساب")}</h2><div class="fgrid">${field(s("Full name","الاسم الكامل"),input(v(u.n)))}${field(s("Email","البريد الإلكتروني"),input(u.e,{dir:1,icon:"envelope-simple"}),{hint:s("Used to sign in.","يُستخدم لتسجيل الدخول.")})}</div></section>`;
+ const roles=`<section class="card fcard"><h2>${s("Roles","الأدوار")}</h2><p class="fsub">${s("Pick one or more. The user gets every permission of every role.","اختر دورًا أو أكثر. يحصل المستخدم على كل صلاحيات كل دور.")}</p>${roleChecklist(u.r,hany,phone)}</section>`;
+ const emp=`<section class="card fcard"><h2>${s("Linked employee","الموظف المرتبط")}<span class="opt muted" style="font-size:13px;font-weight:500;font-family:var(--font)">· ${s("Optional","اختياري")}</span></h2><p class="fsub">${s("Scopes like “Their stage” and “Their team” use this employee.","النطاقات مثل «مرحلته فقط» و«فريقه فقط» تعتمد على هذا الموظف.")}</p>
+  ${field(s("Employee","الموظف"),input(empLabel(u.emp),{icon:"identification-card",end:ic("caret-down")}),{hint:s("Search by name or employee code.","ابحث بالاسم أو كود الموظف.")})}</section>`;
+ return {acc,roles,emp};}
+
+function A_statusCard(u){const hany=u.k==="hany";
+ return `<section class="card fcard"><h2>${s("Status","الحالة")}</h2><div style="display:flex;align-items:center;gap:10px">${status(u)}<span class="muted sm">${s("Last sign-in","آخر دخول")}: ${v(u.last)}</span></div>
+ <button class="btn btn-danger" ${hany?"disabled":""}>${ic("user-minus")}${s("Deactivate account","إيقاف الحساب")}</button>${hany?`<div class="lockreason">${ic("lock-simple")}<span>${s("The last System admin can't be deactivated.","لا يمكن إيقاف آخر مدير للنظام.")}</span></div>`:`<span class="fh">${s("Ends their sessions at once.","ينهي جلساته فورًا.")}</span>`}</section>`;}
+function A_pwCard(u){
+ if(u.temp) return `<section class="card fcard"><h2>${s("Password","كلمة المرور")}</h2><div class="note warn">${ic("key")}<div class="nb"><b>${s("Must change password","يجب تغيير كلمة المرور")}</b><span>${s("A temporary password was set on 17 Nov by Hany Saad. Rania will be asked for a new one at her next sign-in.","عيّن هاني سعد كلمة مرور مؤقتة يوم 17 نوفمبر. سيُطلب من رانيا كلمة مرور جديدة عند دخولها التالي.")}</span></div></div><button class="btn">${ic("arrows-clockwise")}${s("Set a new temporary password","تعيين كلمة مرور مؤقتة جديدة")}</button></section>`;
+ return `<section class="card fcard"><h2>${s("Password","كلمة المرور")}</h2><p class="fsub" style="margin:0">${s("Forgot it? Give a temporary password. They are signed out everywhere and must choose a new one at sign-in.","نسيها؟ عيّن كلمة مرور مؤقتة. يُسجَّل خروجه من كل الأجهزة ويختار كلمة جديدة عند الدخول.")}</p><button class="btn">${ic("key")}${s("Set temporary password","تعيين كلمة مرور مؤقتة")}</button></section>`;}
+
+function A_editUser(){const u=UU.hany;const b=A_userFormBody(u);
+ return `<main class="main">${topline(crumb(s("Administration","الإدارة"),usersTitle(),v(u.n)))}
+ ${head(`${v(u.n)}`,s("Edit the account, its roles and the linked employee.","عدّل الحساب وأدواره والموظف المرتبط به."))}
+ <div class="formwrap"><div class="side-col">${b.acc}${b.roles}${b.emp}</div><div class="side-col">${A_statusCard(u)}${A_pwCard(u)}</div></div>${saveBar(0)}</main>`;}
+
+function empPicker(search){return `<div class="dd">${search?`<div class="pinput">${ic("magnifying-glass")}<span style="color:var(--foreground)">${s("Ra","ر")}</span></div>`:""}
+ ${EMPS.map((e,i)=>`<div class="popt ${i===1?"sel":""} ${i===0?"dis":""}"><div class="av sm">${AR()?e[1].split(" ").map(x=>x[0]).join(""):e[0].split(" ").map(x=>x[0]).join("")}</div><div class="who" style="flex:1;flex-direction:column;align-items:flex-start;gap:0"><div class="n">${AR()?e[1]:e[0]}</div><div class="code"><span class="num">${e[2]}</span> · ${v(e[3])}${i===0?` · ${s("already has an account","لديها حساب بالفعل")}`:""}</div></div>${i===1?ic("check","ck"):""}</div>`).join("")}
+ <div class="foot">${s(`<span class="num">4</span> of <span class="num">86</span> employees match`,`<span class="num">4</span> من <span class="num">86</span> موظفًا مطابقًا`)}</div></div>`;}
+const tempBox=()=>`<div class="note warn">${ic("key")}<div class="nb"><b>${s("Temporary password","كلمة مرور مؤقتة")}</b><div class="copy"><span class="code">Kite-4827-Moss</span><button class="ibtn" aria-label="copy">${ic("copy")}</button><button class="ibtn" aria-label="new">${ic("arrows-clockwise")}</button></div><span>${s("Shown only once. Rana must choose her own password the first time she signs in.","تظهر مرة واحدة فقط. على رنا اختيار كلمة مرور خاصة بها عند أول دخول.")}</span></div></div>`;
+function A_addUser(){
+ const fake={n:["Rana Mostafa","رنا مصطفى"],e:"rana.mostafa@greenvalley.school",r:["direct_manager"]};
+ return `<main class="main">${topline(crumb(s("Administration","الإدارة"),usersTitle(),s("Add user","إضافة مستخدم")))}
+ ${head(s("Add user","إضافة مستخدم"),s("New users get a temporary password and choose their own when they first sign in.","يحصل المستخدم الجديد على كلمة مرور مؤقتة ويختار كلمته عند أول دخول."))}
+ <div class="formwrap"><div class="side-col">
+ <section class="card fcard"><h2>${s("Account","الحساب")}</h2><div class="fgrid">${field(s("Full name","الاسم الكامل"),input(v(fake.n)))}${field(s("Email","البريد الإلكتروني"),input(fake.e,{dir:1,icon:"envelope-simple"}),{hint:s("Used to sign in.","يُستخدم لتسجيل الدخول.")})}</div></section>
+ <section class="card fcard" style="position:relative;z-index:4"><h2>${s("Linked employee","الموظف المرتبط")}<span class="muted" style="font-size:13px;font-weight:500;font-family:var(--font)">· ${s("Optional","اختياري")}</span></h2>
+ <div class="field rel"><span class="lb">${s("Employee","الموظف")}</span><div class="input focus">${ic("magnifying-glass")}<span class="grow" style="color:var(--foreground)">${s("Ra","ر")}</span>${ic("caret-up")}</div>${empPicker()}</div><div style="height:300px"></div></section>
+ <section class="card fcard"><h2>${s("Roles","الأدوار")}</h2>${roleChecklist(fake.r,false)}</section>
+ </div><div class="side-col"><section class="card fcard"><h2>${s("Password","كلمة المرور")}</h2>${tempBox()}</section></div></div>
+ <div class="sticky"><span class="st">${ic("info")}${s("Required fields are filled","تم ملء الحقول المطلوبة")}</span><button class="btn">${s("Cancel","إلغاء")}</button><button class="btn btn-primary">${ic("user-plus")}${s("Add user","إضافة مستخدم")}</button></div></main>`;}
+
+function A_roles(){
+ const rows=ROLES.map(r=>{const menu=r.k==="payroll_reviewer";
+  return `<tr><td><div class="who"><span class="kic" style="${r.sa?"background:var(--accent-soft);color:#6b4b00":r.b?"background:var(--primary-soft);color:var(--primary)":"background:var(--info-soft);color:var(--info-ink)"}">${ic(r.sa?"shield-star":r.b?"shield-check":"sparkle")}</span><div style="min-width:0"><a class="n" href="#">${v(r.n)}</a><div class="r">${AR()?r.n[0]:r.n[1]}</div></div></div></td>
+  <td>${r.b?builtIn():customB()}</td><td>${r.sa?`<span class="sm" style="font-weight:700">${s("Every permission","كل الصلاحيات")}</span>`:`<span class="sm" style="font-weight:700">${permsN(pc(r))}</span>`}</td>
+  <td><div style="display:flex;align-items:center;gap:10px">${avStack(r.k)}<span class="muted sm">${r.u?usersN(r.u):""}</span></div></td>
+  <td style="width:48px;position:relative"><button class="ibtn ${menu?"on":""}">${ic("dots-three")}</button>${menu?`<div class="menu" style="top:46px;inset-inline-end:8px;min-width:260px"><a href="#" class="hl">${ic("pencil-simple")}${s("Edit","تعديل")}</a><a href="#">${ic("copy")}${s("Duplicate","إنشاء نسخة")}</a><a href="#" style="opacity:.5;flex-wrap:wrap;white-space:normal">${ic("trash")}${s("Delete","حذف")}<span class="sm muted" style="width:100%;padding-inline-start:28px;font-weight:500">${s("Rania Magdy still holds it","ما زالت رانيا مجدي تحمل هذا الدور")}</span></a></div>`:""}</td></tr>`;}).join("");
+ return `<main class="main">${topline(crumb(s("Administration","الإدارة"),rolesTitle()))}
+ ${head(rolesTitle(),rolesSub(),addBtn(s("Add custom role","إضافة دور مخصص")))}
+ <section class="card"><table class="ta"><thead><tr><th>${s("Role","الدور")}</th><th>${s("Type","النوع")}</th><th>${s("Permissions","الصلاحيات")}</th><th>${s("Held by","يحمله")}</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+ <div style="padding:6px 20px 18px"><div class="note info">${ic("info")}<span>${s("Built-in roles can be edited but not deleted. A custom role can be deleted once nobody holds it. System admin always holds every permission.","يمكن تعديل الأدوار الأساسية دون حذفها. يمكن حذف الدور المخصص عندما لا يحمله أحد. مدير النظام يملك كل الصلاحيات دائمًا.")}</span></div></div></section></main>`;}
+
+const holderList=(k)=>{const h=holders(k);if(!h.length)return `<div class="empty" style="padding:22px 10px"><div class="eic" style="width:52px;height:52px;font-size:26px">${ic("users")}</div><h3 style="font-size:15px">${s("Nobody holds this role yet","لا يحمل أحد هذا الدور بعد")}</h3><p>${s("Give it to a user from their account page.","امنحه لمستخدم من صفحة حسابه.")}</p><button class="btn btn-sm" style="margin-top:6px">${ic("user-plus")}${s("Give to a user","منحه لمستخدم")}</button></div>`;
+ return `<div style="display:flex;flex-direction:column;gap:10px">${h.map(x=>{const u=USERS.find(z=>z.k===x);return `<div style="display:flex;align-items:center;gap:10px">${whoU(x,"sm",u?u.e:"")}<span style="margin-inline-start:auto">${u&&u.off?status(u):""}</span></div>`;}).join("")}</div>`;};
+const roleNames=(r,ro)=>`<div class="fgrid">${field(s("Name in English","الاسم بالإنجليزية"),input(r.n[0],{cls:ro?"ro":"",dir:AR()?1:0}))}${field(s("Name in Arabic","الاسم بالعربية"),`<div class="input ${ro?"ro":""}"><span class="grow" dir="rtl" style="text-align:start;font-family:var(--font-ar)">${r.n[1]}</span></div>`)}</div>`;
+const SH_EDIT=()=>({...RO.stage_head,g:{...RO.stage_head.g,"hr.lateness.view":"own_stage"}});
+function A_role(){const r=SH_EDIT();
+ return `<main class="main">${topline(crumb(s("Administration","الإدارة"),rolesTitle(),v(r.n)))}
+ ${head(`${v(r.n)} ${builtIn()}`,s("What a stage head can see and do. Scopes limit it to the employees of their own stage.","ما يمكن لرئيس المرحلة رؤيته وفعله. النطاق يقصره على موظفي مرحلته."))}
+ <div class="formwrap"><div class="side-col"><section class="card fcard"><h2>${s("Name","الاسم")}</h2>${roleNames(r)}</section>
+ <section class="card" style="overflow:hidden"><div class="sec-h" style="padding-bottom:4px"><div><h2>${s("Permissions","الصلاحيات")}</h2><p>${s("Turn a permission on, then choose whose records it covers.","فعّل الصلاحية ثم اختر سجلات من تشملها.")}</p></div></div>${permGroups(r,{chg:new Set(["hr.lateness.view"])})}</section></div>
+ <div class="side-col"><section class="card fcard"><h2>${s("Who holds this role","من يحمل هذا الدور")}<span class="muted sm" style="font-family:var(--font);font-weight:600">${usersN(3)}</span></h2>${holderList("stage_head")}<a class="lnk sm" href="#">${s("See them in Users","عرضهم في المستخدمين")} ${ic("arrow-right","flip")}</a></section>
+ <section class="card fcard"><h2>${s("Scopes","النطاقات")}</h2>${["all","own_stage","own_team","self"].map(x=>`<div style="display:flex;gap:10px;align-items:flex-start"><span class="kic" style="width:28px;height:28px;font-size:15px">${ic(SCIC[x])}</span><div><div style="font-weight:700;font-size:13.5px">${v(SC[x])}</div><div class="fh">${v({all:["Every employee in the school.","كل موظفي المدرسة."],own_stage:["Employees of the stage of the user's linked employee.","موظفو مرحلة الموظف المرتبط بالمستخدم."],own_team:["Employees whose direct manager is the user's linked employee.","الموظفون الذين مديرهم المباشر هو الموظف المرتبط بالمستخدم."],self:["Only the user's own linked employee.","الموظف المرتبط بالمستخدم فقط."]}[x])}</div></div></div>`).join("")}</section></div></div>
+ ${saveBar(1)}</main>`;}
+
+function meProfile(){const u=UU.hany;
+ return `<section class="card fcard"><div class="acct-head">${av("hany")}<div style="min-width:0"><h2>${v(u.n)}</h2><div class="muted sm num" dir="ltr" style="text-align:start">${u.e}</div></div></div>
+ <div class="fgrid">${field(s("Full name","الاسم الكامل"),input(v(u.n),{cls:"ro",end:ic("lock-simple")}))}${field(s("Email","البريد الإلكتروني"),input(u.e,{cls:"ro",dir:1,end:ic("lock-simple")}))}</div>
+ <span class="fh">${s("Ask a System admin to change your name or email.","اطلب من مدير النظام تغيير اسمك أو بريدك.")}</span>
+ <div class="sepline"></div><div class="fgrid"><div class="kv"><span class="l">${s("Your roles","أدوارك")}</span><div style="margin-top:4px">${chips(u)}</div></div><div class="kv"><span class="l">${s("Linked employee","الموظف المرتبط")}</span><div style="margin-top:4px">${empLink(u)}</div></div></div></section>`;}
+function pwForm(state){ /* state: empty | mismatch | ok */
+ const filled=state!=="empty";
+ return `${field(s("Current password","كلمة المرور الحالية"),filled?pw({n:9}):pw({empty:s("Enter your current password","أدخل كلمة المرور الحالية")}))}
+ ${field(s("New password","كلمة المرور الجديدة"),filled?pw({n:12}):pw({empty:s("At least 8 characters","8 أحرف على الأقل")}))}
+ ${filled?`<div class="meter"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>`:""}
+ ${field(s("Confirm new password","تأكيد كلمة المرور الجديدة"),filled?pw({n:11,cls:state==="mismatch"?"err":""}):pw({empty:s("Type it again","اكتبها مرة أخرى")}),state==="mismatch"?{err:s("The passwords don't match.","كلمتا المرور غير متطابقتين.")}:{})}`;}
+function A_me(){
+ return `<main class="main">${topline(crumb(s("My account","حسابي")))}
+ ${head(s("My account","حسابي"),s("Your sign-in details. Only you can change your password.","بيانات دخولك. أنت وحدك من يستطيع تغيير كلمة مرورك."))}
+ <div class="formwrap"><div class="side-col">${meProfile()}
+ <section class="card fcard"><h2>${s("Change password","تغيير كلمة المرور")}</h2><p class="fsub">${s("You stay signed in here; your other devices are signed out.","تبقى مسجَّلًا هنا، ويُسجَّل خروجك من أجهزتك الأخرى.")}</p>${pwForm("empty")}
+ <div style="display:flex;align-items:center;gap:10px"><span class="fh" style="flex:1">${s("Fill in all three fields.","املأ الحقول الثلاثة.")}</span><button class="btn btn-primary" disabled>${ic("lock-key")}${s("Change password","تغيير كلمة المرور")}</button></div></section></div>
+ <div class="side-col"><section class="card fcard"><h2>${s("Sign-in","تسجيل الدخول")}</h2><div class="kv"><span class="l">${s("Last sign-in","آخر دخول")}</span><span class="v">${v(UU.hany.last)}</span></div><div class="kv"><span class="l">${s("Password changed","آخر تغيير لكلمة المرور")}</span><span class="v">${s("3 Sep 2026","3 سبتمبر 2026")}</span></div><button class="btn">${ic("sign-out","flip")}${s("Sign out","تسجيل الخروج")}</button></section></div></div></main>`;}
+
+const forcedCard=(phone)=>`<div class="acard2"><div class="keyic">${ic("key")}</div><div><h1>${s("Set a new password","اختر كلمة مرور جديدة")}</h1><p style="margin-top:6px">${s("Hi Rania. You signed in with a temporary password from Hany Saad. Choose your own password to continue.","أهلًا رانيا. دخلتِ بكلمة مرور مؤقتة من هاني سعد. اختاري كلمة مرور خاصة بك للمتابعة.")}</p></div>
+ ${field(s("New password","كلمة المرور الجديدة"),pw({n:12,cls:"focus"}))}<div class="meter"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div>
+ <div class="rules"><span class="ok">${ic("check-circle")}${s("At least 8 characters","8 أحرف على الأقل")}</span><span class="ok">${ic("check-circle")}${s("Not the temporary password","ليست كلمة المرور المؤقتة")}</span></div>
+ ${field(s("Confirm new password","تأكيد كلمة المرور الجديدة"),pw({n:12}))}
+ <button class="btn btn-primary btn-block">${ic("arrow-right","flip")}${s("Save and continue","حفظ ومتابعة")}</button>
+ <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span class="fh num" dir="ltr">${UU.rania.e}</span><button class="linkbtn">${ic("sign-out","flip")}${s("Sign out","تسجيل الخروج")}</button></div></div>`;
+function A_forced(){
+ return `<div class="solo" style="display:flex;flex-direction:column;align-items:center;gap:22px;justify-content:center">${brand()}${forcedCard()}<div>${langT()}</div></div>`;}
+
+/* ---- A phones ---- */
+function A_pUsers(empty){
+ const cards=USERS.map(u=>`<article class="mcard ${u.off?"inact":""}"><div class="top">${whoU(u.k,"",`<span class="num" dir="ltr">${u.e}</span>`)}<button class="ibtn">${ic("dots-three")}</button></div>${chips(u)}<div class="meta">${status(u)}${u.temp?tempPill():""}<span class="sp"></span>${empLink(u)}</div><div class="meta">${ic("sign-in","flip")}${s("Last sign-in","آخر دخول")}: ${v(u.last)}</div></article>`).join("");
+ const emptyB=`<div class="empty"><div class="eic">${ic("user-circle-dashed")}</div><h3>${s("No users match these filters","لا يوجد مستخدمون يطابقون هذه الفلاتر")}</h3><p>${s("Nobody called “Samy” holds the Accountant role. Try another name or clear the filters.","لا يوجد أحد باسم «سامي» يحمل دور المحاسب. جرّب اسمًا آخر أو امسح الفلاتر.")}</p><button class="btn btn-sm" style="margin-top:8px">${ic("x")}${s("Clear filters","مسح الفلاتر")}</button></div>`;
+ return `<main class="main">${head(usersTitle(),"",addBtn(s("Add user","إضافة مستخدم")))}${usersToolbar(1,empty)}<section class="card">${empty?emptyB:`<div class="mcards">${cards}</div>${mpager()}`}</section></main>`;}
+function A_pEdit(){const u=UU.hany;const b=A_userFormBody(u,1);
+ return `<main class="main" style="padding-bottom:0">${crumb(usersTitle(),v(u.n))}${head(v(u.n))}${b.acc}${b.roles}${A_statusCard(u)}${b.emp}${A_pwCard(u)}${saveBar(0)}</main>`;}
+function A_pAddPicker(){
+ return `<main class="main">${head(s("Add user","إضافة مستخدم"))}<section class="card fcard">${field(s("Full name","الاسم الكامل"),input(s("Rana Mostafa","رنا مصطفى")))}${field(s("Linked employee","الموظف المرتبط"),input(s("Choose an employee","اختر موظفًا"),{cls:"ph",icon:"identification-card",end:ic("caret-down")}),{opt:1})}</section><section class="card fcard">${tempBox()}</section></main>
+ <!--over--><div class="scrim"></div><div class="sheet"><div class="grab"></div><div class="sh"><h3>${s("Linked employee","الموظف المرتبط")}</h3><button class="ibtn">${ic("x")}</button></div><div class="sbody" style="position:relative"><div style="position:relative;min-height:330px">${empPicker(1).replace('class="dd"','class="dd" style="position:static;box-shadow:none;border:0;padding:0"')}</div></div></div>`;}
+function A_pRoles(){
+ return `<main class="main">${head(rolesTitle(),rolesSub(),addBtn(s("Add custom role","إضافة دور مخصص")))}<section class="card"><div class="mcards">${ROLES.map(r=>`<article class="mcard"><div class="top"><span class="kic" style="${r.sa?"background:var(--accent-soft);color:#6b4b00":r.b?"background:var(--primary-soft);color:var(--primary)":"background:var(--info-soft);color:var(--info-ink)"}">${ic(r.sa?"shield-star":r.b?"shield-check":"sparkle")}</span><div style="flex:1;min-width:0"><a class="lnk" href="#" style="color:var(--foreground)">${v(r.n)}</a><div class="meta" style="margin-top:2px">${r.b?builtIn():customB()}<span>${r.sa?s("Every permission","كل الصلاحيات"):permsN(pc(r))}</span></div></div>${ic("caret-right","flip muted")}</div><div class="meta">${avStack(r.k,5)}<span>${r.u?usersN(r.u):""}</span></div></article>`).join("")}</div></section></main>`;}
+function saBody(phone){const r=RO.system_admin;
+ return `<div class="note lock">${ic("lock-simple")}<div class="nb"><b>${s("Holds every permission","يملك كل الصلاحيات")}</b><span>${s("The System admin always has every permission, including ones added later. It can't be edited or deleted, and the last System admin can't lose the role.","مدير النظام يملك كل الصلاحيات دائمًا، ومنها ما يُضاف لاحقًا. لا يمكن تعديله أو حذفه، ولا يمكن سحب الدور من آخر مدير للنظام.")}</span></div></div>`;}
+function A_pSA(){const r=RO.system_admin;
+ return `<main class="main">${crumb(rolesTitle(),v(r.n))}${head(`${v(r.n)} ${builtIn()}`)}${saBody(1)}
+ <section class="card fcard"><h2>${s("Who holds this role","من يحمل هذا الدور")}</h2>${holderList("system_admin")}</section>
+ <section class="card" style="overflow:hidden">${permGroups(r,{phone:1,ro:1})}</section></main>`;}
+function A_pRole(){const r=SH_EDIT();
+ return `<main class="main" style="padding-bottom:0">${crumb(rolesTitle(),v(r.n))}${head(`${v(r.n)} ${builtIn()}`)}<section class="card fcard">${roleNames(r)}</section>
+ <section class="card fcard"><h2>${s("Who holds this role","من يحمل هذا الدور")}<span class="muted sm" style="font-family:var(--font);font-weight:600">${usersN(3)}</span></h2>${avStack("stage_head")}</section>
+ <section class="card" style="overflow:hidden">${permGroups(r,{phone:1})}</section>${saveBar(1)}</main>`;}
+function A_pMe(){
+ return `<main class="main">${head(s("My account","حسابي"))}${meProfile()}<section class="card fcard"><h2>${s("Change password","تغيير كلمة المرور")}</h2>${pwForm("empty")}<button class="btn btn-primary btn-block" disabled>${ic("lock-key")}${s("Change password","تغيير كلمة المرور")}</button></section></main>`;}
+function A_pForced(){return `<!--nobar--><div class="solo" style="display:flex;flex-direction:column;gap:18px">${`<div style="display:flex;align-items:center;justify-content:space-between;width:100%">${brand()}${langT()}</div>`}${forcedCard(1)}</div>`;}
+
+/* ================= OPTION B: cards + side drawers ================= */
+const statusChips=()=>`<div class="segm" style="flex:none"><span class="on">${s("All","الكل")} <span class="num">13</span></span><span>${s("Active","نشط")} <span class="num">12</span></span><span>${s("Inactive","موقوف")} <span class="num">1</span></span></div>`;
+const ucard=(u,sel)=>`<article class="ucard ${u.off?"inact":""} ${sel?"sel":""}"><div class="top">${whoU(u.k,"lg",`<span class="num" dir="ltr">${u.e}</span>`)}<button class="ibtn">${ic("dots-three")}</button></div>${chips(u)}
+ <div class="ufoot">${status(u)}${u.temp?tempPill():""}<span class="sp"></span>${empLink(u)}</div><div class="ufoot" style="border:0;padding:0;margin-top:-6px">${ic("sign-in","flip")}<span>${s("Last sign-in","آخر دخول")}: ${v(u.last)}</span></div></article>`;
+function B_usersPage(sel){
+ return `<main class="main">${topline(crumb(s("Administration","الإدارة"),usersTitle()))}
+ ${head(usersTitle(),usersSub(),addBtn(s("Add user","إضافة مستخدم")))}
+ <section class="toolbar"><div class="frow"><label class="search">${ic("magnifying-glass")}<span>${s("Name or email","الاسم أو البريد الإلكتروني")}</span></label><button class="fsel" style="flex:none;min-width:200px">${ic("shield-check")}${s("All roles","كل الأدوار")}${ic("caret-down")}</button>${statusChips()}</div></section>
+ <div class="ugrid">${USERS.map(u=>ucard(u,u.k===sel)).join("")}</div><section class="card">${upager()}</section></main>`;}
+function roleToggles(sel,lockSA){
+ return `<div class="input ph">${ic("magnifying-glass")}<span class="grow">${s("Search roles","ابحث عن دور")}</span></div><div class="tchips">${ROLES.map(r=>{const on=sel.includes(r.k);const lock=lockSA&&r.sa;return `<span class="tchip ${lock?"lock":on?"on":""}">${ic(lock?"lock-simple":on?"check":"plus")}${v(r.n)}</span>`;}).join("")}</div>`;}
+function B_userDrawer(u,err){const hany=u.k==="hany";
+ return `<div class="dim"></div><aside class="drawer"><div class="dh">${av(u.k,"lg")}<div style="flex:1;min-width:0"><h2>${v(u.n)}</h2><div class="muted sm num" dir="ltr" style="text-align:start">${u.e}</div><div style="display:flex;gap:6px;margin-top:6px">${status(u)}${u.temp?tempPill():""}</div></div><button class="ibtn bd">${ic("x")}</button></div>
+ <div class="db">${err?`<div class="note err">${ic("warning-octagon")}<div class="nb"><b>${LAST_ADMIN_T()}</b><span>${s("Hany Saad is the only System admin, so the account can't be deactivated and the role can't be taken away. Give the System admin role to someone else first.","هاني سعد هو مدير النظام الوحيد، فلا يمكن إيقاف حسابه ولا سحب الدور منه. امنح دور مدير النظام لشخص آخر أولًا.")}</span></div></div>`:""}
+ <div class="dsec"><div class="h">${s("Account","الحساب")}</div><div class="fgrid">${field(s("Full name","الاسم الكامل"),input(v(u.n)))}${field(s("Email","البريد الإلكتروني"),input(u.e,{dir:1}))}</div></div>
+ <div class="dsec"><div class="h">${s("Roles","الأدوار")}</div>${roleToggles(u.r,hany)}${hany?`<div class="lockreason">${ic("lock-simple")}<span>${LAST_ADMIN_WHY()}</span></div>`:""}</div>
+ <div class="dsec"><div class="h">${s("Linked employee","الموظف المرتبط")}</div>${input(empLabel(u.emp),{icon:"identification-card",end:ic("caret-down")})}</div>
+ <div class="dsec"><div class="h">${s("Password","كلمة المرور")}</div>${u.temp?`<div class="note warn">${ic("key")}<div class="nb"><b>${s("Must change password","يجب تغيير كلمة المرور")}</b><span>${s("Temporary password set on 17 Nov by Hany Saad. Rania will be asked for a new one at her next sign-in.","عيّن هاني سعد كلمة مرور مؤقتة يوم 17 نوفمبر. سيُطلب من رانيا كلمة مرور جديدة عند دخولها التالي.")}</span></div></div>`:""}<button class="btn" style="align-self:flex-start">${ic("key")}${s(u.temp?"Set a new temporary password":"Set temporary password",u.temp?"تعيين كلمة مرور مؤقتة جديدة":"تعيين كلمة مرور مؤقتة")}</button></div>
+ <div class="dsec"><div class="h">${s("Access","الوصول")}</div><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><button class="btn btn-danger" ${hany?"disabled":""}>${ic("user-minus")}${s("Deactivate account","إيقاف الحساب")}</button>${hany?`<span class="lockreason">${ic("lock-simple")}${s("The last System admin can't be deactivated.","لا يمكن إيقاف آخر مدير للنظام.")}</span>`:""}</div></div>
+ </div><div class="df">${noChanges()}<button class="btn">${s("Cancel","إلغاء")}</button><button class="btn btn-primary" disabled>${ic("floppy-disk")}${s("Save","حفظ")}</button></div></aside>`;}
+function B_users(){
+ return B_usersPage("hany")+toast("err",s("Account not deactivated","لم يتم إيقاف الحساب"),s("Hany Saad is the last System admin.","هاني سعد هو آخر مدير للنظام.")).replace('class="toast err"','class="toast err side"')+B_userDrawer(UU.hany,true);}
+const rcard=(r,sel)=>`<article class="rcard ${sel?"sel":""}"><div class="rt"><span class="ricon ${r.sa?"sa":r.b?"":"cu"}">${ic(r.sa?"shield-star":r.b?"shield-check":"sparkle")}</span><div style="flex:1;min-width:0"><h3>${v(r.n)}</h3><div class="muted sm">${AR()?r.n[0]:r.n[1]}</div></div>${r.b?builtIn():customB()}</div>
+ <div><div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px"><span class="muted">${s("Permissions","الصلاحيات")}</span><b>${r.sa?s("Every permission","كل الصلاحيات"):ofN(pc(r),33)}</b></div><div class="bar"><i style="width:${Math.round(pc(r)/33*100)}%;${r.sa?"background:var(--accent)":""}"></i></div></div>
+ <div class="rf">${avStack(r.k)}<span>${r.u?usersN(r.u):""}</span><span class="sp"></span><button class="ibtn">${ic("dots-three")}</button></div></article>`;
+function B_rolesPage(sel){
+ return `<main class="main" style="min-height:1500px">${topline(crumb(s("Administration","الإدارة"),rolesTitle()))}${head(rolesTitle(),rolesSub(),addBtn(s("Add custom role","إضافة دور مخصص")))}
+ <div class="grp-h">${s("Built-in roles","الأدوار الأساسية")}<span class="c">${s("Can be edited, not deleted","يمكن تعديلها دون حذفها")}</span></div><div class="rgrid">${ROLES.filter(r=>r.b).map(r=>rcard(r,r.k===sel)).join("")}</div>
+ <div class="grp-h">${s("Custom roles","الأدوار المخصصة")}<span class="c">${s("Made by your school","أنشأتها مدرستك")}</span></div><div class="rgrid">${ROLES.filter(r=>!r.b).map(r=>rcard(r,r.k===sel)).join("")}<article class="ucard add"><span class="plus">${ic("plus")}</span>${s("Add custom role","إضافة دور مخصص")}<span class="muted sm" style="font-weight:500">${s("Start empty or copy a role","ابدأ فارغًا أو انسخ دورًا")}</span></article></div></main>`;}
+function B_roleDrawer(r,o={}){
+ return `<div class="dim"></div><aside class="drawer" style="width:620px"><div class="dh"><span class="ricon ${r.sa?"sa":""}" style="width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font-size:22px;background:${r.sa?"var(--accent-soft)":"var(--primary-soft)"};color:${r.sa?"#6b4b00":"var(--primary)"}">${ic(r.sa?"shield-star":"shield-check")}</span><div style="flex:1;min-width:0"><h2>${v(r.n)}</h2><div style="display:flex;gap:8px;align-items:center;margin-top:4px">${builtIn()}<span class="muted sm">${r.sa?s("Every permission","كل الصلاحيات"):permsN(pc(r))}</span></div></div><button class="ibtn bd">${ic("x")}</button></div>
+ <div class="db" style="padding-inline:0;gap:0"><div style="padding:0 22px 16px;display:flex;flex-direction:column;gap:14px">${r.sa?saBody():roleNames(r)}
+ <div style="display:flex;align-items:center;gap:10px;background:var(--muted);border-radius:14px;padding:10px 12px">${avStack(r.k)}<span class="sm" style="font-weight:700">${usersN(holders(r.k).length)}</span><span class="sp" style="flex:1"></span><a class="lnk sm" href="#">${s("See who","عرض الأسماء")} ${ic("arrow-right","flip")}</a></div></div>
+ ${permGroups(r,{compact:1,ro:r.sa,chg:o.chg})}</div>
+ <div class="df">${r.sa?`<span class="st">${ic("lock-simple")}${s("Read-only","للعرض فقط")}</span><button class="btn">${s("Close","إغلاق")}</button>`:`${nChanges(1)}<button class="btn">${s("Cancel","إلغاء")}</button><button class="btn btn-primary">${ic("floppy-disk")}${s("Save","حفظ")}</button>`}</div></aside>`;}
+function B_roles(){return B_rolesPage("stage_head")+B_roleDrawer(SH_EDIT(),{chg:new Set(["hr.lateness.view"])});}
+function B_me(){
+ return `<main class="main">${topline(crumb(s("My account","حسابي")))}${head(s("My account","حسابي"),s("Your sign-in details. Only you can change your password.","بيانات دخولك. أنت وحدك من يستطيع تغيير كلمة مرورك."))}
+ <div class="fgrid" style="align-items:start;gap:18px">${meProfile()}<section class="card fcard"><h2>${ic("lock-key")}${s("Change password","تغيير كلمة المرور")}</h2><p class="fsub" style="margin:0">${s("You stay signed in here; your other devices are signed out.","تبقى مسجَّلًا هنا، ويُسجَّل خروجك من أجهزتك الأخرى.")}</p>${pwForm("mismatch")}<button class="btn btn-primary" style="align-self:flex-end" disabled>${ic("lock-key")}${s("Change password","تغيير كلمة المرور")}</button></section></div></main>`;}
+function dashSkel(){return `<main class="main">${topline()}${head(s("Good morning, Rania","صباح الخير يا رانيا"))}<div class="ugrid">${[1,2,3].map(()=>`<div class="card" style="padding:20px;display:flex;flex-direction:column;gap:12px">${skel("40%")}${skel("70%",24)}${skel("90%")}</div>`).join("")}</div><div class="card" style="padding:20px;display:flex;flex-direction:column;gap:14px;height:420px">${skel("30%",16)}${[1,2,3,4,5,6].map(()=>skel("100%",14)).join("")}</div></main>`;}
+function B_forced(){return dashSkel()+`<div class="dim"></div><div class="dlg" style="width:460px;top:110px">${forcedCard().replace('class="acard2"','class="acard2" style="box-shadow:none;width:100%"')}</div>`;}
+
+/* ---- B phones ---- */
+function B_pUsers(){return `<main class="main">${head(usersTitle(),"",addBtn(s("Add user","إضافة مستخدم")))}<section class="toolbar"><label class="search">${ic("magnifying-glass")}<span>${s("Name or email","الاسم أو البريد الإلكتروني")}</span></label>${statusChips()}</section>${USERS.slice(0,6).map(u=>ucard(u)).join("")}<section class="card">${mpager()}</section></main>`;}
+function B_pErr(){return B_pUsers()+`<!--over-->`+toast("err",LAST_ADMIN_T(),LAST_ADMIN_WHY());}
+function sheetWrap(title,body,foot,lead=""){return `<div class="scrim"></div><div class="sheet" style="max-height:92%"><div class="grab"></div><div class="sh">${lead}<h3>${title}</h3><button class="ibtn">${ic("x")}</button></div><div class="sbody">${body}</div>${foot?`<div class="df">${foot}</div>`:""}</div>`;}
+function B_pRania(){const u=UU.rania;
+ const body=B_userDrawer(u).replace(/^[\s\S]*?<div class="db">/,"").replace(/<\/div><div class="df">[\s\S]*$/,"");
+ return B_pUsers()+`<!--over-->`+sheetWrap(v(u.n),body,`<button class="btn">${s("Cancel","إلغاء")}</button><button class="btn btn-primary" disabled>${s("Save","حفظ")}</button>`,av(u.k,"sm"));}
+function B_pRoles(){return `<main class="main">${head(rolesTitle(),"",addBtn(s("Add custom role","إضافة دور مخصص")))}<div class="grp-h">${s("Built-in roles","الأدوار الأساسية")}</div>${ROLES.filter(r=>r.b).slice(0,4).map(r=>rcard(r)).join("")}</main>`;}
+function B_pRole(){const r=SH_EDIT();
+ return B_pRoles()+`<!--over-->`+sheetWrap(v(r.n),`${roleNames(r)}<div style="display:flex;align-items:center;gap:10px">${avStack(r.k)}<span class="sm" style="font-weight:700">${usersN(3)}</span></div><div class="card" style="box-shadow:none;border:1px solid var(--border);overflow:hidden">${permGroups(r,{phone:1})}</div>`,`<button class="btn">${s("Cancel","إلغاء")}</button><button class="btn btn-primary">${s("Save","حفظ")}</button>`);}
+function B_pSA(){const r=RO.system_admin;
+ return B_pRoles()+`<!--over-->`+sheetWrap(v(r.n),`${saBody()}<div style="display:flex;align-items:center;gap:10px">${avStack(r.k)}<span class="sm" style="font-weight:700">${usersN(1)}</span></div><div class="card" style="box-shadow:none;border:1px solid var(--border);overflow:hidden">${permGroups(r,{phone:1,ro:1})}</div>`,`<button class="btn">${s("Close","إغلاق")}</button>`,`<span class="kic" style="background:var(--accent-soft);color:#6b4b00">${ic("shield-star")}</span>`);}
+function B_pEmpty(){return `<main class="main">${head(usersTitle(),"",addBtn(s("Add user","إضافة مستخدم")))}<section class="toolbar"><label class="search" style="color:var(--foreground)">${ic("magnifying-glass")}<span>${s("Samy","سامي")}</span></label></section><section class="card"><div class="empty"><div class="eic">${ic("user-circle-dashed")}</div><h3>${s("No users match “Samy”","لا يوجد مستخدم باسم «سامي»")}</h3><p>${s("Check the spelling, or add Samy as a new user.","تحقق من الكتابة، أو أضف سامي مستخدمًا جديدًا.")}</p><div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-sm">${ic("x")}${s("Clear search","مسح البحث")}</button>${addBtn(s("Add user","إضافة مستخدم")).replace('class="btn btn-primary addb"','class="btn btn-sm btn-primary addb"')}</div></div></section></main>`;}
+function B_pMe(){return `<main class="main">${head(s("My account","حسابي"))}${meProfile()}<section class="card fcard"><h2>${s("Change password","تغيير كلمة المرور")}</h2>${pwForm("mismatch")}<button class="btn btn-primary btn-block" disabled>${s("Change password","تغيير كلمة المرور")}</button></section></main>`;}
+function B_pForced(){return `<main class="main">${head(s("Good morning, Rania","صباح الخير يا رانيا"))}<div class="card" style="padding:16px;display:flex;flex-direction:column;gap:12px;height:300px">${skel("40%")}${skel("80%",22)}${skel("90%")}</div></main><!--over--><div class="scrim"></div><div class="sheet" style="max-height:94%"><div class="grab"></div><div class="sbody" style="padding:4px 0 8px">${forcedCard(1)}</div></div>`;}
+
+/* ================= OPTION C: one "Users and roles" page, tabs + permission matrix ================= */
+const cTitle=()=>s("Users and roles","المستخدمون والأدوار");
+const cTabs=(t)=>`<div class="bigtabs"><span class="${t==="u"?"on":""}">${ic("users")}${s("Users","المستخدمون")}<span class="cnt num">13</span></span><span class="${t==="r"?"on":""}">${ic("shield-check")}${s("Roles","الأدوار")}<span class="cnt num">9</span></span></div>`;
+const cHead=(t)=>`${topline(crumb(s("Administration","الإدارة"),cTitle()))}<div class="head"><div><h1>${cTitle()}</h1><p>${s("Who can sign in, and what each role lets them see and do.","من يمكنه الدخول، وما الذي يتيحه كل دور.")}</p></div><div class="acts">${t==="u"?addBtn(s("Add user","إضافة مستخدم")):addBtn(s("Add custom role","إضافة دور مخصص"))}</div></div>${cTabs(t)}`;
+function C_rail(){
+ const cl=(k)=>`<span class="dotc" style="background:${RO[k].sa?"var(--accent)":RO[k].b?"var(--primary)":"var(--info)"}"></span>`;
+ return `<section class="card rail"><a class="on" href="#">${ic("users")}${s("All users","كل المستخدمين")}<span class="c num">13</span></a>
+ <div class="rh">${s("By role","حسب الدور")}</div>${ROLES.map(r=>`<a href="#">${cl(r.k)}<span class="ell">${v(r.n)}</span><span class="c num">${r.u}</span></a>`).join("")}
+ <div class="rh">${s("Status","الحالة")}</div><a href="#">${ic("check-circle")}${s("Active","نشط")}<span class="c num">12</span></a><a href="#">${ic("prohibit")}${s("Inactive","موقوف")}<span class="c num">1</span></a><a href="#">${ic("key")}${s("Must change password","يجب تغيير كلمة المرور")}<span class="c num">1</span></a></section>`;}
+function C_usersTable(){
+ const rows=USERS.map(u=>`<tr class="${u.off?"inact":""}"><td>${whoU(u.k,"",`<span class="num" dir="ltr">${u.e}</span>`)}</td><td>${chips(u)}</td><td>${empLink(u)}</td><td>${status(u)}${u.temp?`<div style="margin-top:3px"><span class="pill p-temp">${ic("key")}${s("Temporary password","كلمة مرور مؤقتة")}</span></div>`:""}</td><td>${lastIn(u)}</td><td style="width:48px"><button class="ibtn">${ic("dots-three")}</button></td></tr>`).join("");
+ return `<section class="card"><div style="padding:14px 14px 0"><label class="search">${ic("magnifying-glass")}<span>${s("Name or email","الاسم أو البريد الإلكتروني")}</span></label></div><table class="ta"><thead><tr><th>${s("Name and email","الاسم والبريد")}</th><th>${s("Roles","الأدوار")}</th><th>${s("Employee","الموظف")}</th><th>${s("Status","الحالة")}</th><th>${s("Last sign-in","آخر دخول")}</th><th></th></tr></thead><tbody>${rows}</tbody></table>${upager()}</section>`;}
+function C_usersPage(){return `<main class="main">${cHead("u")}<div class="cwrap">${C_rail()}${C_usersTable()}</div></main>`;}
+function rolesMS(open){const u=UU.hany;
+ return `<div class="field rel"><span class="lb">${s("Roles","الأدوار")}</span><div class="ms">${u.r.map(k=>RO[k].sa?`<span class="tok lock">${ic("lock-simple")}${v(RO[k].n)}</span>`:`<span class="tok">${v(RO[k].n)}${ic("x")}</span>`).join("")}<span class="typ">${s("Add a role…","أضف دورًا…")}</span></div>
+ <div class="lockreason">${ic("lock-simple")}<span>${LAST_ADMIN_WHY()}</span></div>
+ ${open?`<div class="dd" style="position:static;margin-top:4px;box-shadow:none"><div class="pinput">${ic("magnifying-glass")}<span>${s("Search roles","ابحث عن دور")}</span></div>${ROLES.map(r=>{const on=u.r.includes(r.k);return `<div class="popt ${on?"sel":""} ${r.sa?"dis":""}"><span class="dotc" style="width:8px;height:8px;border-radius:50%;background:${r.sa?"var(--accent)":r.b?"var(--primary)":"var(--info)"}"></span><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13.5px">${v(r.n)}</div><div class="code">${r.sa?s("Every permission","كل الصلاحيات"):permsN(pc(r))}</div></div>${on?ic(r.sa?"lock-simple":"check","ck"):""}</div>`;}).join("")}</div>`:""}</div>`;}
+function C_editBody(open){const u=UU.hany;
+ return `<div class="fgrid">${field(s("Full name","الاسم الكامل"),input(v(u.n)))}${field(s("Email","البريد الإلكتروني"),input(u.e,{dir:1}))}</div>${rolesMS(open)}
+ ${field(s("Linked employee","الموظف المرتبط"),input(empLabel(u.emp),{icon:"identification-card",end:ic("caret-down")}),{opt:1})}
+ <div class="note err">${ic("warning-octagon")}<div class="nb"><b>${s("Can't deactivate the last System admin","لا يمكن إيقاف آخر مدير للنظام")}</b><span>${s("Give the System admin role to another user, then try again.","امنح دور مدير النظام لمستخدم آخر، ثم حاول مرة أخرى.")}</span></div></div>`;}
+function C_edit(){
+ return C_usersPage()+`<div class="dim"></div><div class="dlg" role="dialog"><div class="dh">${av("hany","lg")}<div style="flex:1"><h2>${s("Edit user","تعديل مستخدم")}</h2><div class="muted sm">${v(UU.hany.n)} · ${s("Last sign-in","آخر دخول")} ${v(UU.hany.last)}</div></div><button class="ibtn bd">${ic("x")}</button></div>
+ <div class="db">${C_editBody(false)}</div><div class="df"><button class="btn btn-danger btn-sm">${ic("user-minus")}${s("Deactivate","إيقاف الحساب")}</button><button class="btn btn-sm">${ic("key")}${s("Temporary password","كلمة مرور مؤقتة")}</button>${noChanges()}<button class="btn btn-primary" disabled>${s("Save","حفظ")}</button></div></div>`;}
+
+const MXCHG={"direct_manager|hr.lateness.view":"own_team","accountant|core.audit.view":"all"};
+function mxCell(r,p){const key=r.k+"|"+p.k;const ch=MXCHG[key];const sc=ch||r.g[p.k];
+ const act=key==="direct_manager|hr.lateness.view";
+ let inner;
+ if(r.sa) inner=`<span class="cell"><span class="dotk lk">${ic("lock-simple")}</span></span>`;
+ else if(!sc) inner=`<span class="cell"><span class="dotk no">${ic("check")}</span></span>`;
+ else inner=`<span class="cell"><span class="dotk">${ic("check")}</span>${sc!=="all"?`<span class="sc">${v(SCS[sc])}</span>`:""}</span>`;
+ const pop=act?`<div class="pop"><div class="ph1">${v(p.l)} · ${v(r.n)}</div>${["all","own_stage","own_team","self"].map(x=>`<a href="#" class="${x==="own_team"?"on":""}">${ic(SCIC[x])}${v(SC[x])}${x==="own_team"?ic("check","ck"):""}</a>`).join("")}<div class="sepline"></div><a href="#" style="color:var(--destructive-ink)">${ic("x-circle")}${s("Remove permission","إزالة الصلاحية")}</a></div>`:"";
+ return `<td class="${r.sa?"sa":""} ${ch?"chgd":""} ${act?"act":""}">${inner}${pop}</td>`;}
+function C_matrix(){
+ const head=`<thead><tr><th class="pc">${s("Permission","الصلاحية")}</th>${ROLES.map(r=>`<th class="${r.sa?"sa":""}"><span class="rn">${v(r.n)}</span>${r.sa?`<span class="bi" style="margin-top:4px">${ic("lock-simple")}${s("Fixed","ثابت")}</span>`:r.b?"":`<span class="bi cu" style="margin-top:4px">${s("Custom","مخصص")}</span>`}<br><span class="uc">${ic("user")}${num(r.u)}</span></th>`).join("")}</tr></thead>`;
+ const body=["core","hr"].map(m=>`<tr class="modh"><td colspan="${ROLES.length+1}">${v(MODS[m])}<span class="c">${permsN(PERMS.filter(p=>p.m===m).length)}</span></td></tr>`+PERMS.filter(p=>p.m===m).map(p=>`<tr><td class="pc"><div class="pl">${v(p.l)}</div><div class="pk">${p.k}</div></td>${ROLES.map(r=>mxCell(r,p)).join("")}</tr>`).join("")).join("");
+ return `<main class="main">${cHead("r")}
+ <section class="toolbar"><div class="frow" style="align-items:center"><div class="segm" style="flex:none"><span class="on">${ic("grid-four")} ${s("Matrix","المصفوفة")}</span><span>${ic("list")} ${s("List","القائمة")}</span></div><label class="search" style="flex:1">${ic("magnifying-glass")}<span>${s("Find a permission","ابحث عن صلاحية")}</span></label>
+ <div class="legend"><span><span class="cell"><span class="dotk">${ic("check")}</span></span>${v(SC.all)}</span><span><span class="cell"><span class="dotk">${ic("check")}</span></span><b style="color:var(--info-ink)">${v(SCS.own_stage)}</b> / <b style="color:var(--info-ink)">${v(SCS.own_team)}</b> ${s("= limited","= محدودة")}</span><span><span class="cell"><span class="dotk no">${ic("check")}</span></span>${s("Off","غير مفعّلة")}</span></div></div></section>
+ <section class="card" style="overflow:visible"><table class="mx">${head}<tbody>${body}</tbody></table></section>
+ ${saveBar(2,s("Save changes","حفظ التغييرات"))}</main>`;}
+function C_role(){const r=RO.front_desk;
+ return `<main class="main">${topline(crumb(cTitle(),s("Roles","الأدوار"),v(r.n)))}
+ <div class="head"><div><h1>${v(r.n)} ${customB()}</h1><p>${s("A custom role made by your school. It can be deleted while nobody holds it.","دور مخصص أنشأته مدرستك. يمكن حذفه ما دام لا يحمله أحد.")}</p></div><div class="acts"><button class="btn">${ic("copy")}${s("Duplicate","إنشاء نسخة")}</button><button class="btn btn-danger">${ic("trash")}${s("Delete role","حذف الدور")}</button></div></div>
+ <div class="formwrap"><div class="side-col"><section class="card fcard"><h2>${s("Name","الاسم")}</h2>${roleNames(r)}</section>
+ <section class="card" style="overflow:hidden"><div class="sec-h" style="padding-bottom:4px"><div><h2>${s("Permissions","الصلاحيات")}</h2><p>${permsN(1)} · ${s("switch one on to choose whose records it covers","فعّل صلاحية لتختار سجلات من تشملها")}</p></div></div>${permGroups(r,{compact:1})}</section></div>
+ <div class="side-col"><section class="card fcard"><h2>${s("Who holds this role","من يحمل هذا الدور")}</h2>${holderList("front_desk")}</section></div></div>${saveBar(0)}</main>`;}
+function C_me(){
+ return `<main class="main">${topline(crumb(s("My account","حسابي")))}${toast("ok",s("Password changed","تم تغيير كلمة المرور"),s("Your other devices were signed out.","تم تسجيل خروجك من أجهزتك الأخرى."))}
+ <div class="acct-head">${av("hany")}<div><h2>${v(UU.hany.n)}</h2><div class="muted sm num" dir="ltr" style="text-align:start">${UU.hany.e}</div></div></div>
+ <div class="tabs"><span class="tab">${ic("user")}${s("Profile","الملف الشخصي")}</span><span class="tab on">${ic("lock-key")}${s("Password","كلمة المرور")}</span></div>
+ <div style="display:grid;grid-template-columns:minmax(0,560px) minmax(0,1fr);gap:18px;align-items:start"><section class="card fcard"><h2>${s("Change password","تغيير كلمة المرور")}</h2>${pwForm("empty")}${saveBar(0,s("Change password","تغيير كلمة المرور")).replace('class="sticky"','class="sticky" style="position:static;box-shadow:none;border:0;padding:0"')}</section>
+ <section class="card fcard"><h2>${s("Good passwords","كلمات مرور جيدة")}</h2><div class="rules"><span>${ic("check-circle")}${s("At least 8 characters","8 أحرف على الأقل")}</span><span>${ic("check-circle")}${s("Not your name or email","ليست اسمك أو بريدك")}</span><span>${ic("check-circle")}${s("Not used for another site","غير مستخدمة في موقع آخر")}</span></div><div class="sepline"></div><div class="kv"><span class="l">${s("Password changed","آخر تغيير لكلمة المرور")}</span><span class="v">${s("Today, 09:40","اليوم، 09:40")}</span></div></section></div></main>`;}
+function C_forced(){return `<div class="auth" style="flex:1"><div class="art"><div class="brand" style="color:#fff"><div class="logo" style="background:#fff;color:var(--primary)">${ic("graduation-cap")}</div><div><div class="brand-name">${s("Green Valley School","مدرسة الوادي الأخضر")}</div><div class="brand-sub" style="color:rgb(255 255 255 / .75)">${s("School ERP","نظام إدارة المدرسة")}</div></div></div><div class="q">${s("One last step, then you're in.","خطوة أخيرة ثم تبدأ.")}</div><div style="position:relative;z-index:1;opacity:.85;font-size:13px">${s("Your password is yours alone. Nobody at the school, including the System admin, can see it.","كلمة مرورك لك وحدك. لا يستطيع أحد في المدرسة رؤيتها، ولا حتى مدير النظام.")}</div></div><div class="pane"><div style="display:flex;flex-direction:column;gap:16px;align-items:flex-end">${langT()}${forcedCard()}</div></div></div>`;}
+
+/* ---- C phones ---- */
+function C_pUsers(){return `<main class="main">${head(cTitle(),"",addBtn(s("Add user","إضافة مستخدم")))}${cTabs("u")}<section class="toolbar"><label class="search">${ic("magnifying-glass")}<span>${s("Name or email","الاسم أو البريد الإلكتروني")}</span></label><div class="frow"><button class="fsel">${ic("shield-check")}${s("All roles","كل الأدوار")}${ic("caret-down")}</button><button class="fsel">${ic("toggle-right")}${s("All statuses","كل الحالات")}${ic("caret-down")}</button></div></section>
+ <section class="card"><div class="mcards">${USERS.map(u=>`<article class="mcard ${u.off?"inact":""}"><div class="top">${whoU(u.k,"sm",`<span class="num" dir="ltr">${u.e}</span>`)}<button class="ibtn">${ic("dots-three")}</button></div><div class="meta">${chips(u)}</div><div class="meta">${status(u)}${u.temp?tempPill():""}<span class="sp"></span><span>${v(u.last)}</span></div></article>`).join("")}</div>${mpager()}</section></main>`;}
+function C_pEdit(){return C_pUsers()+`<!--over-->`+sheetWrap(s("Edit user","تعديل مستخدم"),C_editBody(true).replace(/<div class="fgrid">[\s\S]*?<\/div><\/div><\/div>/,""),`<button class="btn">${s("Cancel","إلغاء")}</button><button class="btn btn-primary" disabled>${s("Save","حفظ")}</button>`,av("hany","sm"));}
+function C_pSkel(){const r=()=>`<div class="skrow"><div class="l1">${skel("28px",28,10)}<div style="flex:1;display:flex;flex-direction:column;gap:6px">${skel("50%")}${skel("75%",10)}</div></div><div class="l1">${skel("70px",20,999)}${skel("90px",20,999)}</div><div class="l1">${skel("56px",20,999)}<span style="flex:1"></span>${skel("70px",10)}</div></div>`;
+ return `<main class="main" aria-busy="true">${head(cTitle(),"",addBtn(s("Add user","إضافة مستخدم")))}${cTabs("u")}<section class="toolbar"><label class="search">${ic("magnifying-glass")}<span>${s("Name or email","الاسم أو البريد الإلكتروني")}</span></label></section><section class="card">${Array.from({length:10},r).join("")}</section></main>`;}
+function C_pRoles(){return `<main class="main">${head(cTitle(),"",addBtn(s("Add custom role","إضافة دور مخصص")))}${cTabs("r")}<div class="note info">${ic("grid-four")}<span>${s("The permission matrix needs a wider screen. On a phone, open one role at a time.","مصفوفة الصلاحيات تحتاج شاشة أعرض. على الهاتف افتح دورًا واحدًا في كل مرة.")}</span></div>
+ <section class="card"><div class="mcards">${ROLES.map(r=>`<article class="mcard"><div class="top"><span class="dotc" style="width:10px;height:10px;border-radius:50%;flex:none;background:${r.sa?"var(--accent)":r.b?"var(--primary)":"var(--info)"}"></span><div style="flex:1;min-width:0"><div style="font-weight:700">${v(r.n)}</div><div class="meta">${r.b?builtIn():customB()}<span>${r.sa?s("Every permission","كل الصلاحيات"):permsN(pc(r))}</span><span>·</span><span>${r.u?usersN(r.u):s("Nobody yet","لا أحد بعد")}</span></div></div>${ic("caret-right","flip")}</div></article>`).join("")}</div></section></main>`;}
+function C_pRole(){const r=RO.front_desk;return `<main class="main" style="padding-bottom:0">${crumb(s("Roles","الأدوار"),v(r.n))}${head(`${v(r.n)} ${customB()}`)}<section class="card fcard"><h2>${s("Who holds this role","من يحمل هذا الدور")}</h2>${holderList("front_desk")}</section><section class="card fcard">${roleNames(r)}</section><section class="card" style="overflow:hidden">${permGroups(r,{phone:1})}</section><button class="btn btn-danger">${ic("trash")}${s("Delete role","حذف الدور")}</button>${saveBar(0)}</main>`;}
+function C_pSA(){const r=RO.system_admin;return `<main class="main">${crumb(s("Roles","الأدوار"),v(r.n))}${head(`${v(r.n)} ${builtIn()}`)}${saBody()}<section class="card fcard"><h2>${s("Who holds this role","من يحمل هذا الدور")}</h2>${holderList("system_admin")}</section><section class="card" style="overflow:hidden">${permGroups(r,{phone:1,ro:1})}</section></main>`;}
+function C_pMe(){return `<main class="main"><div class="acct-head">${av("hany")}<div style="min-width:0"><h2>${v(UU.hany.n)}</h2><div class="muted sm num ell" dir="ltr" style="text-align:start">${UU.hany.e}</div></div></div><div class="tabs"><span class="tab">${s("Profile","الملف الشخصي")}</span><span class="tab on">${s("Password","كلمة المرور")}</span></div><section class="card fcard">${pwForm("empty")}<button class="btn btn-primary btn-block" disabled>${s("Change password","تغيير كلمة المرور")}</button></section></main><!--over-->${toast("ok",s("Password changed","تم تغيير كلمة المرور"),s("Your other devices were signed out.","تم تسجيل خروجك من أجهزتك الأخرى."))}`;}
+function C_pForced(){return `<!--nobar--><div style="background:var(--primary);color:#fff;padding:22px 18px 26px;position:relative;overflow:hidden"><div style="display:flex;align-items:center;justify-content:space-between"><div class="brand"><div class="logo" style="background:#fff;color:var(--primary)">${ic("graduation-cap")}</div><div class="brand-name">${s("Green Valley School","مدرسة الوادي الأخضر")}</div></div>${langT()}</div><div style="font-family:var(--font-display);font-weight:800;font-size:22px;margin-top:18px;position:relative;z-index:1">${s("One last step, then you're in.","خطوة أخيرة ثم تبدأ.")}</div><span style="position:absolute;width:140px;height:140px;border-radius:50%;background:var(--accent);inset-inline-end:-40px;bottom:-60px"></span></div><div style="padding:8px 0">${forcedCard(1)}</div>`;}
+
+/* ---------- notes + render ---------- */
+const NOTE={
+ A:{en:"<b>Option A — Classic tables and full-page forms.</b> Users and Roles are two items in the <b>Administration</b> group. Lists are tables (10 per page, ⋯ menu per row); add and edit open a full page with cards and the sticky Save bar. Roles are picked from a searchable checklist; the last System admin's box is locked with the reason under it. A role's page lists every permission with a switch and an inline scope control. Forced password change is a page of its own.",
+    ar:"<b>الخيار A — جداول تقليدية ونماذج بصفحة كاملة.</b> «المستخدمون» و«الأدوار» عنصران في مجموعة <b>الإدارة</b>. القوائم جداول (10 في الصفحة، وقائمة ⋯ لكل صف)؛ والإضافة والتعديل في صفحة كاملة ببطاقات وشريط حفظ ثابت. تُختار الأدوار من قائمة قابلة للبحث، ومربع آخر مدير للنظام مقفل وسبب القفل تحته. صفحة الدور تعرض كل صلاحية بمفتاح تشغيل وتحكم في النطاق بجانبها. تغيير كلمة المرور الإجباري صفحة مستقلة."},
+ B:{en:"<b>Option B — Cards with side drawers.</b> Users and roles are cards (roles split into Built-in and Custom, with a permissions bar and who holds them). Editing never leaves the list: a drawer slides in from the inline-end edge, roles are toggle chips, scopes are a small dropdown per permission. Shown: the error when trying to deactivate the last System admin. Forced password change is a blocking dialog over the app.",
+    ar:"<b>الخيار B — بطاقات مع لوحات جانبية.</b> المستخدمون والأدوار بطاقات (الأدوار مقسمة إلى أساسية ومخصصة، مع شريط للصلاحيات ومن يحملها). التعديل لا يغادر القائمة: لوحة تنزلق من الطرف، والأدوار شرائح تبديل، والنطاق قائمة صغيرة لكل صلاحية. معروض: الخطأ عند محاولة إيقاف آخر مدير للنظام. تغيير كلمة المرور الإجباري نافذة تمنع استخدام النظام حتى يتم."},
+ C:{en:"<b>Option C — One “Users and roles” page.</b> One sidebar item, two tabs. Users: a role/status rail with counts beside a compact table; editing opens a dialog with a searchable role picker. Roles: a <b>permission matrix</b> (permissions × roles) where each cell is on/off with its scope, set from a popover; changes are marked and saved together. A role still has its own page (shown: a custom role nobody holds). Phone drops the matrix for one role at a time.",
+    ar:"<b>الخيار C — صفحة واحدة «المستخدمون والأدوار».</b> عنصر واحد في القائمة وتبويبان. المستخدمون: شريط جانبي بالأدوار والحالات وأعدادها بجانب جدول مختصر، والتعديل في نافذة بها منتقي أدوار قابل للبحث. الأدوار: <b>مصفوفة صلاحيات</b> (الصلاحيات × الأدوار)، كل خانة مفعّلة أو لا مع نطاقها، تُضبط من قائمة منبثقة؛ التغييرات مميزة وتُحفظ معًا. لكل دور صفحته أيضًا (المعروض: دور مخصص لا يحمله أحد). على الهاتف لا توجد مصفوفة، بل دور واحد في كل مرة."}
+};
+const DESK={
+ A:[["Users list — row menu open, toast","قائمة المستخدمين — قائمة الصف مفتوحة، مع إشعار","users",A_users],
+    ["Edit user — the last System admin (locked role, Save disabled until a change)","تعديل مستخدم — آخر مدير للنظام (دور مقفل، والحفظ معطّل حتى يحدث تغيير)","users",A_editUser],
+    ["Add user — searchable employee picker, temporary password","إضافة مستخدم — منتقي موظفين قابل للبحث، وكلمة مرور مؤقتة","users",A_addUser],
+    ["Roles list","قائمة الأدوار","roles",A_roles],
+    ["Role page — Stage head, one unsaved change","صفحة الدور — رئيس المرحلة، مع تغيير لم يُحفظ","roles",A_role],
+    ["My account","حسابي","me",A_me],
+    ["Forced “Set a new password” after a temporary password","شاشة «اختر كلمة مرور جديدة» الإجبارية بعد كلمة مرور مؤقتة",null,A_forced]],
+ B:[["Users as cards — drawer: error on the last System admin","المستخدمون كبطاقات — اللوحة الجانبية: خطأ آخر مدير للنظام","users",B_users],
+    ["Roles as cards — drawer: Stage head with scopes","الأدوار كبطاقات — اللوحة الجانبية: رئيس المرحلة مع النطاقات","roles",B_roles],
+    ["My account — passwords don't match","حسابي — كلمتا المرور غير متطابقتين","me",B_me],
+    ["Forced “Set a new password” as a blocking dialog","«اختر كلمة مرور جديدة» كنافذة إجبارية","dash",B_forced]],
+ C:[["Users tab — role rail with counts","تبويب المستخدمين — شريط الأدوار وأعدادها","users",C_usersPage],
+    ["Edit user dialog — locked System admin, deactivate refused","نافذة تعديل المستخدم — مدير النظام مقفل، ورفض الإيقاف","users",C_edit],
+    ["Roles tab — permission matrix, scope popover, two unsaved changes","تبويب الأدوار — مصفوفة الصلاحيات، قائمة النطاق، وتغييران لم يُحفظا","roles",C_matrix],
+    ["Role page — custom role nobody holds (empty state)","صفحة الدور — دور مخصص لا يحمله أحد (حالة فارغة)","roles",C_role],
+    ["My account — Password tab, success toast","حسابي — تبويب كلمة المرور، مع إشعار النجاح","me",C_me],
+    ["Forced “Set a new password” at sign-in","«اختر كلمة مرور جديدة» عند الدخول",null,C_forced]]
+};
+const PHONES={
+ A:[["Users","المستخدمون",A_pUsers],["Edit user — last System admin","تعديل مستخدم — آخر مدير للنظام",A_pEdit],["Add user — employee picker","إضافة مستخدم — منتقي الموظف",A_pAddPicker,1],["Roles","الأدوار",A_pRoles],["Role — Stage head","الدور — رئيس المرحلة",A_pRole],["System admin (read-only)","مدير النظام (للعرض فقط)",A_pSA],["My account","حسابي",A_pMe],["Set a new password","اختر كلمة مرور جديدة",A_pForced],["No results for these filters","لا نتائج لهذه الفلاتر",()=>A_pUsers(1),1]],
+ B:[["Users","المستخدمون",B_pUsers],["Edit user — temporary password","تعديل مستخدم — كلمة مرور مؤقتة",B_pRania,1],["Error toast — last System admin","إشعار خطأ — آخر مدير للنظام",B_pErr,1],["Roles","الأدوار",B_pRoles],["Role sheet — Stage head","ورقة الدور — رئيس المرحلة",B_pRole,1],["System admin (read-only)","مدير النظام (للعرض فقط)",B_pSA,1],["My account","حسابي",B_pMe],["Set a new password (blocking)","اختر كلمة مرور جديدة (إجباري)",B_pForced,1],["No results","لا نتائج",B_pEmpty,1]],
+ C:[["Users tab","تبويب المستخدمين",C_pUsers],["Edit user — role picker","تعديل مستخدم — منتقي الأدوار",C_pEdit,1],["Loading (same shape as 10 rows)","جارٍ التحميل (بشكل الصفوف العشرة)",C_pSkel,1],["Roles tab","تبويب الأدوار",C_pRoles],["Custom role nobody holds","دور مخصص لا يحمله أحد",C_pRole],["System admin (read-only)","مدير النظام (للعرض فقط)",C_pSA],["My account — password changed","حسابي — تم تغيير كلمة المرور",C_pMe,1],["Set a new password","اختر كلمة مرور جديدة",C_pForced]]
+};
+function render(){
+ document.documentElement.lang=lang; document.documentElement.dir=AR()?"rtl":"ltr";
+ document.getElementById("optNote").innerHTML=NOTE[opt][lang];
+ document.getElementById("deskSec").innerHTML=DESK[opt].map(([en,ar,page,fn])=>`<div class="section-title">${s("Desktop · 1440 px — ","سطح المكتب · 1440 بكسل — ")}${s(en,ar)}</div><div class="desk-scroll"><div class="desk">${page?side(page):""}${fn()}</div></div>`).join("");
+ document.getElementById("phoneT").textContent=s("Phone · 390 px","الهاتف · 390 بكسل");
+ document.getElementById("phones").innerHTML=PHONES[opt].map(([en,ar,fn,fixed])=>{let html=fn();const nobar=html.startsWith("<!--nobar-->");
+  const i=html.indexOf("<!--over-->");const mainPart=i<0?html:html.slice(0,i), over=i<0?"":html.slice(i);
+  return `<div class="phone-wrap"><div class="phone ${fixed?"fixed":""}">${nobar?"":mbar()}<div class="scroll">${mainPart}</div>${over}</div><div class="phone-cap">${s(en,ar)}</div></div>`;}).join("");
+}
+const q=new URLSearchParams(location.search);
+if(q.get("opt")) opt=q.get("opt"); if(q.get("lang")) lang=q.get("lang");
+if(q.get("view")==="desktop") document.body.classList.add("only-desktop");
+if(q.get("view")==="phone") document.body.classList.add("only-phone");
+if(q.get("full")) document.body.classList.add("full");
+const sync=()=>{document.querySelectorAll("#optSeg button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.opt===opt));document.querySelectorAll("#langSeg button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.lang===lang));};
+document.querySelectorAll("#optSeg button").forEach(b=>b.addEventListener("click",()=>{opt=b.dataset.opt;sync();render();}));
+document.querySelectorAll("#langSeg button").forEach(b=>b.addEventListener("click",()=>{lang=b.dataset.lang;sync();render();}));
+sync();render();
+</script>
+</body>
+</html>

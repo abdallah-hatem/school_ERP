@@ -17,6 +17,7 @@ import {
   PASSWORD_MIN_LENGTH,
   type ChangePasswordRequest,
   type CreateUserRequest,
+  type EmployeeOptionsQuery,
   type ListUsersQuery,
   type SetTemporaryPasswordRequest,
   type UpdateUserRequest,
@@ -76,10 +77,12 @@ export class SetTemporaryPasswordDto implements SetTemporaryPasswordRequest {
 }
 
 export class ChangePasswordDto implements ChangePasswordRequest {
+  /** Required unless the user signed in with a temporary password (the service decides). */
+  @IsOptional()
   @IsString()
   @IsNotEmpty()
   @MaxLength(200)
-  currentPassword!: string;
+  currentPassword?: string;
 
   @Password()
   newPassword!: string;
@@ -89,4 +92,11 @@ export class ListUsersQueryDto extends PaginationQueryDto implements ListUsersQu
   @IsOptional()
   @IsIn(['active', 'inactive'])
   status?: 'active' | 'inactive';
+
+  @IsOptional()
+  @IsUUID()
+  roleId?: string;
 }
+
+/** `GET /users/employee-options` — `?page&limit&search` (either name, or the code). */
+export class EmployeeOptionsQueryDto extends PaginationQueryDto implements EmployeeOptionsQuery {}

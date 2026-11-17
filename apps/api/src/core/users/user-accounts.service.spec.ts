@@ -18,6 +18,8 @@ function row(overrides: Partial<UserAccountRow> = {}): UserAccountRow {
     isActive: true,
     mustChangePassword: false,
     createdAt: new Date('2026-11-17T10:00:00Z'),
+    lastSignInAt: null,
+    passwordChangedAt: null,
     linkedEmployee: null,
     roles: [{ role: ADMIN }, { role: HR }],
     ...overrides,
@@ -164,6 +166,46 @@ describe('UserAccountsService', () => {
       'u-1',
       expect.objectContaining({ mustChangePassword: false }),
     );
+  });
+
+  it('change own password: no current password without a temporary one → WRONG_PASSWORD', async () => {
+    const { service, users } = makeService();
+    users.findPasswordHash.mockResolvedValue(await hashPassword('the-right-one', 4));
+    const me = { id: 'u-1', name: 'Mona', mustChangePassword: false } as AuthUser;
+    await expect(
+      service.changeOwnPassword(me, { newPassword: 'new-password-1' }),
+    ).rejects.toMatchObject({ code: ErrorCode.WRONG_PASSWORD });
+    expect(users.update).not.toHaveBeenCalled();
+  });
+
+  it('after a temporary password (P3): the new one alone is enough, and the flag is cleared', async () => {
+    const { service, users } = makeService();
+    users.findPasswordHash.mockResolvedValue(await hashPassword('temporary-1234', 4));
+    const me = { id: 'u-1', name: 'Mona', mustChangePassword: true } as AuthUser;
+    await service.changeOwnPassword(me, { newPassword: 'my-own-password' });
+    expect(users.update).toHaveBeenCalledWith(
+      'u-1',
+      expect.objectContaining({ mustChangePassword: false, passwordChangedAt: expect.any(Date) }),
+    );
+  });
+
+  it('the new password can’t be the one in use (the temporary one) → SAME_PASSWORD', async () => {
+    const { service, users } = makeService();
+    users.findPasswordHash.mockResolvedValue(await hashPassword('temporary-1234', 4));
+    const me = { id: 'u-1', name: 'Mona', mustChangePassword: true } as AuthUser;
+    await expect(
+      service.changeOwnPassword(me, { newPassword: 'temporary-1234' }),
+    ).rejects.toMatchObject({ code: ErrorCode.SAME_PASSWORD });
+    expect(users.update).not.toHaveBeenCalled();
+  });
+
+  it('a temporary password but a wrong current one sent anyway → WRONG_PASSWORD', async () => {
+    const { service, users } = makeService();
+    users.findPasswordHash.mockResolvedValue(await hashPassword('temporary-1234', 4));
+    const me = { id: 'u-1', name: 'Mona', mustChangePassword: true } as AuthUser;
+    await expect(
+      service.changeOwnPassword(me, { currentPassword: 'nope', newPassword: 'my-own-password' }),
+    ).rejects.toMatchObject({ code: ErrorCode.WRONG_PASSWORD });
   });
 
   it('a taken email → EMAIL_TAKEN; a linked employee → EMPLOYEE_ALREADY_LINKED', async () => {
