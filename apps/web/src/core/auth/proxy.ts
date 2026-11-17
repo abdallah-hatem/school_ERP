@@ -2,7 +2,6 @@ import { LANG_COOKIE, LOGIN_PATH } from '@school-erp/shared';
 import { NextResponse, type NextRequest } from 'next/server';
 import {
   ACCESS_TOKEN_KEY,
-  decodeJwtPayload,
   isAccessTokenLive,
   REFRESH_TOKEN_KEY,
   refreshTokens,
@@ -45,7 +44,7 @@ function withPathname(req: NextRequest): NextResponse {
  * routing):
  * - no locale in the path → the visitor's language (`lang` cookie, else Arabic);
  * - signed out on a protected page → the login page, keeping the path to come back to;
- * - signed in on a guest-only page (login) → the role's home;
+ * - signed in on a guest-only page (login) → home (the dashboard);
  * - access token expired but refresh token valid → refreshed in place: the new access token is
  *   forwarded to this same request and both cookies are set on its response. No refresh URL
  *   ever shows in the address bar. Only a failed refresh lands on login.
@@ -81,12 +80,11 @@ export async function authProxy(req: NextRequest): Promise<NextResponse> {
     return staleSession ? clearSession(res) : res;
   }
 
-  const role = decodeJwtPayload(access)?.role;
   const writes = refreshed ? sessionCookies(refreshed) : [];
 
   let res: NextResponse;
   if (guestOnly) {
-    res = redirectTo(req, homeFor(typeof role === 'string' ? role : undefined, locale));
+    res = redirectTo(req, homeFor(locale));
   } else {
     // Forward the fresh tokens to this request so the page's API calls use them right away.
     writes.forEach((c) => req.cookies.set(c.name, c.value));

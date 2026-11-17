@@ -147,9 +147,3 @@ export const SettingScope = {
 export type SettingScope = (typeof SettingScope)[keyof typeof SettingScope];
 export const SETTING_SCOPES = values(SettingScope);
 
-/** The single demo role (§2). The roles system comes later. */
-export const UserRole = {
-  HR_ADMIN: 'HR_ADMIN',
-} as const;
-export type UserRole = (typeof UserRole)[keyof typeof UserRole];
-export const USER_ROLES = values(UserRole);

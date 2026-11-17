@@ -2,11 +2,11 @@ import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { authProxy } from './proxy';
 
-/** An unsigned JWT-shaped token — the proxy only reads `exp` and `role` for routing. */
-function token(expInSeconds: number, role = 'HR_ADMIN'): string {
+/** An unsigned JWT-shaped token — the proxy only reads `exp` for routing. */
+function token(expInSeconds: number): string {
   const b64 = (o: object) => Buffer.from(JSON.stringify(o)).toString('base64url');
   const exp = Math.floor(Date.now() / 1000) + expInSeconds;
-  return `${b64({ alg: 'HS256' })}.${b64({ sub: 'u-1', role, exp })}.sig`;
+  return `${b64({ alg: 'HS256' })}.${b64({ sub: 'u-1', exp })}.sig`;
 }
 
 function request(path: string, cookies: Record<string, string> = {}): NextRequest {
@@ -59,7 +59,7 @@ describe('auth routing (proxy)', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('signed-in visitor opening /login → redirected to the dashboard (the role home)', async () => {
+  it('signed-in visitor opening /login → redirected to the dashboard (every user’s home)', async () => {
     const res = await authProxy(request('/en/login', { auth_token: token(600) }));
     expect(location(res)).toBe('/en');
   });

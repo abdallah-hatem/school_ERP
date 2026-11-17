@@ -94,6 +94,25 @@ describe('RolesService', () => {
     expect(repo.replaceGrants).not.toHaveBeenCalled();
   });
 
+  it('a whole-school permission can only cover everyone → INVALID_SCOPE (P3)', async () => {
+    const { service, repo } = makeService();
+    await expect(
+      service.update('r-1', { permissions: [{ key: 'hr.payroll.approve', scope: 'own_stage' }] }),
+    ).rejects.toMatchObject({ code: ErrorCode.INVALID_SCOPE });
+    await expect(
+      service.create({
+        nameEn: 'Desk',
+        nameAr: 'مكتب',
+        permissions: [{ key: 'core.settings.view', scope: 'self' }],
+      }),
+    ).rejects.toMatchObject({ code: ErrorCode.INVALID_SCOPE });
+    expect(repo.replaceGrants).not.toHaveBeenCalled();
+    // Row-level ones take any scope.
+    await expect(
+      service.update('r-1', { permissions: [{ key: 'hr.penalties.view', scope: 'own_team' }] }),
+    ).resolves.toBeDefined();
+  });
+
   it('the System admin’s permissions can’t be changed (R8); its names can', async () => {
     const { service, repo } = makeService(row({ key: 'system_admin', builtIn: true }));
     await expect(service.update('r-1', { permissions: [] })).rejects.toMatchObject({

@@ -4,10 +4,9 @@ import type { AuditActor, AuditEntry, IsoDateTime } from '@school-erp/shared';
 import { useRouter } from 'next/navigation';
 import { useTransition, type ReactNode } from 'react';
 import { Pagination } from '@/shared/components/data-table/pagination';
-import { FilterSelect } from '@/shared/components/form/filter-controls';
+import { ClearFilters, FilterSelect } from '@/shared/components/form/filter-controls';
 import { EmptyState, ErrorState } from '@/shared/components/layout/empty-state';
-import { Button } from '@/shared/components/ui/button';
-import { CloseIcon, FilterIcon, HistoryIcon, SearchIcon } from '@/shared/components/ui/icons';
+import { FilterIcon, HistoryIcon, SearchIcon } from '@/shared/components/ui/icons';
 import { Skeleton, SkeletonText } from '@/shared/components/ui/skeleton';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
@@ -68,6 +67,8 @@ export function RecordHistory({
     .sort((a, b) => a.label.localeCompare(b.label, locale));
   const actorOptions = actors.map((a) => ({ value: a.id, label: a.name || t('audit.system') }));
   const filterCount = (query.field ? 1 : 0) + (query.actorId ? 1 : 0);
+  /** Both filters and the page, in one URL update. */
+  const clearFilters = () => go({ page: 1 });
   const causes = [
     query.field ? t('audit.history.causes.field', { name: fieldLabel(query.field, t, has) }) : null,
     query.actorId
@@ -115,12 +116,7 @@ export function RecordHistory({
         icon={SearchIcon}
         title={t('audit.history.noResultsTitle')}
         description={t('audit.history.noResultsBody', { causes: causes.join(t('audit.activity.causes.and')) })}
-        action={
-          <Button variant="secondary" onClick={() => go({ page: 1 })}>
-            <CloseIcon />
-            {t('audit.filters.clear')}
-          </Button>
-        }
+        action={<ClearFilters placement="empty" count={filterCount} onClear={clearFilters} />}
       />
     ) : (
       <EmptyState icon={HistoryIcon} title={t('audit.history.emptyTitle')} description={t('audit.history.emptyBody')} />
@@ -144,15 +140,7 @@ export function RecordHistory({
             <FilterIcon className="size-5 text-muted-foreground" />
             {t('audit.filters.title')}
           </h3>
-          {filterCount ? (
-            <button
-              type="button"
-              onClick={() => go({ page: 1 })}
-              className="ms-auto cursor-pointer rounded-sm text-[0.8125rem] font-bold text-primary hover:underline focus-visible:outline-3 focus-visible:outline-ring/55"
-            >
-              {t('audit.filters.clear')}
-            </button>
-          ) : null}
+          <ClearFilters count={filterCount} onClear={clearFilters} disabled={pending} className="ms-auto h-9 px-2.5" />
         </div>
         {selects}
         {latest ? (

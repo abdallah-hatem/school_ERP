@@ -17,6 +17,7 @@ export class AuthService {
   async login(email: string, password: string): Promise<IssuedSession> {
     const user = await this.users.verifyCredentials(email, password);
     if (!user) throw new CodedException(HttpStatus.UNAUTHORIZED, ErrorCode.INVALID_CREDENTIALS);
+    await this.users.recordSignIn(user.id);
     return this.issue(user, await this.tokens.issueRefresh(user.id));
   }
 

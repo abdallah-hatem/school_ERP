@@ -193,7 +193,7 @@ describe('auth (e2e)', () => {
   it('Expired access token + valid refresh → refreshed transparently', async () => {
     const user = await makeUser();
     const cookies = cookiesOf(await login(user.email).expect(200));
-    const expired = await jwt.signAsync({ sub: user.id, role: user.role }, { expiresIn: -10 });
+    const expired = await jwt.signAsync({ sub: user.id }, { expiresIn: -10 });
 
     await http(app).get('/auth/me').set('Cookie', `${AUTH_COOKIES.access}=${expired}`).expect(401);
 
@@ -213,9 +213,14 @@ describe('auth (e2e)', () => {
       id: user.id,
       email: user.email,
       name: user.name,
-      role: user.role,
+      mustChangePassword: false,
       // System admin + HR manager hold every key (P2); the web app's can() reads them.
       permissions: PERMISSION_KEYS,
+      // The roles that grant them, starting roles first (the user chip, P3).
+      roles: [
+        expect.objectContaining({ key: 'system_admin' }),
+        expect.objectContaining({ key: 'hr_manager' }),
+      ],
     });
 
     // The web server forwards tokens as a bearer header; that works the same way.
@@ -344,7 +349,7 @@ describe('auth (e2e)', () => {
 
     // Tokens travel only in httpOnly cookies, never in the body.
     expect(res.body.data).toEqual({
-      user: { id: user.id, email: user.email, name: user.name, role: user.role },
+      user: { id: user.id, email: user.email, name: user.name, mustChangePassword: false },
     });
     expect(JSON.stringify(res.body)).not.toMatch(/token/i);
     const setCookie = (res.headers['set-cookie'] as unknown as string[]).join('\n');

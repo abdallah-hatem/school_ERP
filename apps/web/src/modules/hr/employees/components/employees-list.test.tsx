@@ -55,8 +55,27 @@ describe('EmployeesList', () => {
     const filtered = screen.getByRole('region', { name: 'Employees' });
     expect(within(filtered).getByText('No employees match')).toBeTruthy();
     expect(within(filtered).queryByText('No employees yet')).toBeNull();
-    await user.click(within(filtered).getByRole('button', { name: 'Clear filters' }));
+    // The toolbar's and the "No results" one.
+    const clears = within(filtered).getAllByRole('button', { name: 'Clear filters · 2' });
+    expect(clears).toHaveLength(2);
+    await user.click(clears[1]!);
+    expect(push).toHaveBeenCalledTimes(1);
     expect(push).toHaveBeenCalledWith('/en/employees', { scroll: false });
+  });
+
+  it('"Clear filters · n" shows only while something narrows the list and resets it all in one URL update', async () => {
+    const user = userEvent.setup();
+    renderList({}, people);
+    expect(screen.queryByRole('button', { name: /Clear filters/ })).toBeNull();
+    cleanup();
+
+    renderList({ page: '3', search: 'mona', departmentId: 'd-sci', status: 'ACTIVE' }, people);
+    const search = screen.getByRole('textbox', { name: 'Search employees' }) as HTMLInputElement;
+    expect(search.value).toBe('mona');
+    await user.click(screen.getByRole('button', { name: 'Clear filters · 3' }));
+    expect(push).toHaveBeenCalledTimes(1);
+    expect(push).toHaveBeenCalledWith('/en/employees', { scroll: false });
+    expect(search.value).toBe('');
   });
 
   it('a filter updates the URL in place and goes back to page 1', async () => {

@@ -4,6 +4,7 @@ import {
   SYSTEM_ADMIN_ROLE,
   isPermissionKey,
   isPermissionScope,
+  isRowScoped,
   type PermissionKey,
   type Role,
   type RoleGrant,
@@ -68,6 +69,15 @@ export function duplicateKey(grants: readonly RoleGrant[]): PermissionKey | null
     seen.add(g.key);
   }
   return null;
+}
+
+/**
+ * The first grant giving a narrower scope than `all` to a whole-school permission (one not in
+ * `ROW_SCOPED_PERMISSIONS`), or null. Those permissions have no rows a scope could narrow.
+ */
+export function wronglyScoped(grants: readonly RoleGrant[]): PermissionKey | null {
+  const bad = grants.find((g) => g.scope !== PermissionScope.ALL && !isRowScoped(g.key));
+  return bad?.key ?? null;
 }
 
 /** Grants valid for storage (registry keys, known scopes) — the DTO already refused the rest. */

@@ -325,13 +325,19 @@ describe('RunPage — draft', () => {
       query: { flagged: true },
     });
     expect(screen.getByText('No employees match')).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: 'Clear filters' }));
+    // The toolbar's and the "No results" one.
+    const clears = screen.getAllByRole('button', { name: 'Clear filters · 1' });
+    expect(clears).toHaveLength(2);
+    router.push.mockClear();
+    await user.click(clears[1]!);
+    expect(router.push).toHaveBeenCalledTimes(1);
     expect(router.push).toHaveBeenCalledWith(`/en/payroll/${RUN_ID}`, {
       scroll: false,
     });
     unmount();
     renderRun({ run: run({ lines: [] }) });
     expect(screen.getByText('No employees in this run')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Clear filters/ })).toBeNull();
   });
 
   it('a mutation while filtered keeps the filtered lines and refetches them', async () => {

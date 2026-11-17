@@ -8,8 +8,10 @@
 - **DECIDED** — Users sign in with email and password. Accounts are created by a System admin (the
   first one by the system's setup); there is no self sign-up. A System admin can give a temporary
   password, which the user is asked to change; anyone can change their own password.
-  *Interim (until P3): the temporary password is recorded as "must change", but nothing asks the
-  user to change it yet.*
+- **DECIDED** (enforced, P3) — Someone who signs in with a temporary password is taken straight to
+  "Set a new password" and can do nothing else (except sign out) until they choose their own. The
+  new password must be different from the temporary one. Changing it later from My account needs
+  the current password.
 - **DECIDED** — Deactivating a user, or giving them a temporary password, signs them out everywhere
   at once.
 - **GUESS** (Claude's answers until the owner and client confirm; spec

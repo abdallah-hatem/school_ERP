@@ -3,10 +3,12 @@ import {
   BUILT_IN_ROLES,
   PERMISSION_KEYS,
   PERMISSION_SCOPES,
+  ROW_SCOPED_PERMISSIONS,
   SEED_ADMIN_ROLES,
   SYSTEM_ADMIN_ROLE,
   isPermissionKey,
   isPermissionScope,
+  isRowScoped,
   widerScope,
   type PermissionKey,
 } from '../src';
@@ -163,5 +165,26 @@ describe('scopes (R5)', () => {
     expect(isPermissionScope('own_team')).toBe(true);
     expect(isPermissionScope('ALL')).toBe(false);
     expect(isPermissionScope(undefined)).toBe(false);
+  });
+});
+
+describe('row-level permissions (P3: the roles screen scopes only these)', () => {
+  it('are registry keys about particular employees', () => {
+    for (const key of ROW_SCOPED_PERMISSIONS) {
+      expect(isPermissionKey(key)).toBe(true);
+      expect(key.startsWith('hr.')).toBe(true);
+    }
+    expect(isRowScoped('hr.employees.view')).toBe(true);
+    expect(isRowScoped('hr.payroll.approve')).toBe(false);
+    expect(isRowScoped('core.settings.view')).toBe(false);
+  });
+
+  it('every starting role scopes only row-level permissions (the API refuses the rest)', () => {
+    const wrong = BUILT_IN_ROLES.flatMap((r) =>
+      Object.entries(r.permissions)
+        .filter(([key, scope]) => scope !== 'all' && !isRowScoped(key as PermissionKey))
+        .map(([key]) => `${r.key}: ${key}`),
+    );
+    expect(wrong).toEqual([]);
   });
 });

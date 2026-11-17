@@ -11,6 +11,9 @@
     "payroll": "Payroll",
     "settings": "Settings",
     "activity": "Activity",
+    "users": "Users",
+    "roles": "Roles",
+    "account": "My account",
     "modules": {
       "home": "Home",
       "hr": "HR",
@@ -21,7 +24,11 @@
     },
     "soon": "Soon",
     "soonTitle": "{name} — coming soon",
-    "modulePages": "{name} pages"
+    "modulePages": "{name} pages",
+    "myAccount": "My account",
+    "myAccountOf": "My account — {name}",
+    "noRoles": "No roles",
+    "roleSeparator": " · "
   },
   "actions": {
     "save": "Save",
@@ -103,9 +110,6 @@
       "THURSDAY": "Thursday",
       "FRIDAY": "Friday",
       "SATURDAY": "Saturday"
-    },
-    "userRole": {
-      "HR_ADMIN": "HR officer"
     },
     "insuranceStatus": {
       "INSURED": "Insured",

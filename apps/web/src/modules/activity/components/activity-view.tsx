@@ -5,10 +5,9 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
 import { AUDIT_PAGE_SIZE, AuditFiltersSheet, AuditTimeline, formatFilterRange, schoolDay } from '@/core/audit';
 import { Pagination } from '@/shared/components/data-table/pagination';
-import { SearchInput } from '@/shared/components/form/filter-controls';
+import { ClearFilters, SearchInput } from '@/shared/components/form/filter-controls';
 import { EmptyState, ErrorState } from '@/shared/components/layout/empty-state';
 import { PageHeader } from '@/shared/components/layout/page-header';
-import { Button } from '@/shared/components/ui/button';
 import { ActivityIcon, CloseIcon, SearchIcon } from '@/shared/components/ui/icons';
 import { TABLET_UP, useMediaQuery } from '@/shared/hooks/use-media-query';
 import { formatCount } from '@/shared/lib/format';
@@ -99,16 +98,23 @@ function FilterChips({
   total,
   showTotal,
   onChange,
+  clearCount,
+  onClear,
+  disabled,
 }: {
   query: ActivityQuery;
   actors: AuditActor[];
   total: number;
   showTotal: boolean;
   onChange: (next: ActivityQuery) => void;
+  /** The search (when it has text) plus each filter in use: "Clear filters · n" at the row's end. */
+  clearCount: number;
+  onClear: () => void;
+  disabled?: boolean;
 }) {
   const { t, locale } = useTranslation();
   const chips = activeFilters(query, actors, t, locale);
-  if (!showTotal && chips.length === 0) return null;
+  if (!showTotal && chips.length === 0 && clearCount === 0) return null;
   return (
     <div className="scrollbar-clean -mx-1 flex items-center gap-2 overflow-x-auto px-1 py-1.5 text-[0.8125rem] whitespace-nowrap text-muted-foreground @min-[56rem]/activity:hidden">
       {showTotal ? (
@@ -128,6 +134,13 @@ function FilterChips({
           <CloseIcon className="size-3.5" />
         </button>
       ))}
+      {/* Pinned to the row's inline end while the chips scroll under it, so a phone always shows it. */}
+      <ClearFilters
+        count={clearCount}
+        onClear={onClear}
+        disabled={disabled}
+        className="sticky end-0 ms-auto h-9 bg-background px-2.5 hover:bg-primary-soft"
+      />
     </div>
   );
 }
@@ -178,14 +191,27 @@ export function ActivityView({
     }, SEARCH_DEBOUNCE_MS);
   }
 
+  /** Search, every filter and the page, in one URL update. */
   function clearAll() {
+    if (searchTimer.current) clearTimeout(searchTimer.current);
     setSearch('');
     go({ page: 1, types: [] });
   }
 
   const filterCount = activeFilterCount(query);
+  const clearCount = filterCount + (query.q ? 1 : 0);
   const filters = (title: boolean) => (
-    <ActivityFilters query={query} actors={actors} summary={summary} today={today} onChange={go} disabled={pending} title={title} />
+    <ActivityFilters
+      query={query}
+      actors={actors}
+      summary={summary}
+      today={today}
+      onChange={go}
+      onClear={title ? clearAll : undefined}
+      clearCount={clearCount}
+      disabled={pending}
+      title={title}
+    />
   );
 
   let body: ReactNode;
@@ -197,12 +223,7 @@ export function ActivityView({
         icon={SearchIcon}
         title={t('audit.activity.noResultsTitle')}
         description={t('audit.activity.noResultsBody', { causes: noResultsCauses(query, actors, t, locale) })}
-        action={
-          <Button variant="secondary" onClick={clearAll}>
-            <CloseIcon />
-            {t('audit.filters.clear')}
-          </Button>
-        }
+        action={<ClearFilters placement="empty" count={clearCount} onClear={clearAll} />}
       />
     ) : (
       <EmptyState icon={ActivityIcon} title={t('audit.activity.emptyTitle')} description={t('audit.activity.emptyBody')} />
@@ -245,7 +266,16 @@ export function ActivityView({
                 {filters(false)}
               </AuditFiltersSheet>
             </div>
-            <FilterChips query={query} actors={actors} total={total} showTotal={!error && total > 0} onChange={go} />
+            <FilterChips
+              query={query}
+              actors={actors}
+              total={total}
+              showTotal={!error && total > 0}
+              onChange={go}
+              clearCount={clearCount}
+              onClear={clearAll}
+              disabled={pending}
+            />
             <section aria-label={t('audit.title')} className="@container min-w-0 rounded-3xl bg-card shadow-card">
               {body}
               {error ? null : (

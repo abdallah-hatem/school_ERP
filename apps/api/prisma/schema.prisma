@@ -16,27 +16,24 @@ datasource db {
 
 // ── core ──────────────────────────────────────────────────────────────────────
 
-/// Deprecated since P2: access comes from `user_roles`. Kept until the web app stops reading
-/// `AuthUser.role` (P3); nothing decides access with it.
-enum UserRole {
-  HR_ADMIN
-}
-
 /// A person who signs in. Not the same as an employee (R9: a user may be linked to one).
 model User {
-  id                 String   @id @default(uuid()) @db.Uuid
-  email              String   @unique
-  passwordHash       String   @map("password_hash")
+  id                 String    @id @default(uuid()) @db.Uuid
+  email              String    @unique
+  passwordHash       String    @map("password_hash")
   name               String
-  /// Deprecated (P2) — see `UserRole`.
-  role               UserRole @default(HR_ADMIN)
-  isActive           Boolean  @default(true) @map("is_active")
-  /// Set by an admin's temporary password; cleared when the user changes it (R9).
-  mustChangePassword Boolean  @default(false) @map("must_change_password")
+  isActive           Boolean   @default(true) @map("is_active")
+  /// Set by an admin's temporary password; cleared when the user changes it (R9). While set, the
+  /// API answers only `/auth/me`, sign-out and `POST /account/password` (P3).
+  mustChangePassword Boolean   @default(false) @map("must_change_password")
+  /// The last successful sign-in (P3, Users screen); null: never.
+  lastSignInAt       DateTime? @map("last_sign_in_at")
+  /// When the password was last set by an admin or changed by the user (P3); null: before P3.
+  passwordChangedAt  DateTime? @map("password_changed_at")
   /// The linked employee (core-owned link, P2). Scopes (`own_stage`, `own_team`, `self`) read it.
-  employeeId         String?  @unique @map("employee_id") @db.Uuid
-  createdAt          DateTime @default(now()) @map("created_at")
-  updatedAt          DateTime @updatedAt @map("updated_at")
+  employeeId         String?   @unique @map("employee_id") @db.Uuid
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
 
   linkedEmployee      Employee?            @relation("UserLinkedEmployee", fields: [employeeId], references: [id], onDelete: SetNull)
   roles               UserRoleAssignment[]
