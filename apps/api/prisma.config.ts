@@ -7,6 +7,7 @@ export default defineConfig({
   schema: path.join('prisma', 'schema.prisma'),
   migrations: {
     path: path.join('prisma', 'migrations'),
-    seed: 'tsx prisma/seed/index.ts',
+    // ts-node, not tsx: the seed boots Nest, whose injection needs emitted decorator metadata.
+    seed: 'ts-node --transpile-only prisma/seed/index.ts',
   },
 });

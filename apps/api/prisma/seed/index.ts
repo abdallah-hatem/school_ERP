@@ -1,21 +1,17 @@
 /**
- * Seed entry point (`pnpm --filter api db:seed`). T16 composes the full demo seed here.
- * Client material (school name, logo, catalogue text) lives in `prisma/seed-data.local/`
- * (git-ignored) — never in tracked files.
+ * Seed entry point (`pnpm --filter api db:seed`): the HR admin plus the full demo data (see
+ * `run.ts`). Needs `SEED_ADMIN_PASSWORD`. Client material (school name, logo, catalogue text)
+ * lives in `prisma/seed-data.local/` (git-ignored) — never in tracked files; without it the seed
+ * uses a generic fallback.
+ *
+ * Runs under ts-node (not tsx): Nest's dependency injection needs the decorator metadata that
+ * esbuild-based runners don't emit.
  */
-import { PrismaClient } from '@prisma/client';
-import { seedAdmin } from './admin';
+import { runSeed } from './run';
 
-async function main(): Promise<void> {
-  const prisma = new PrismaClient();
-  try {
-    await seedAdmin(prisma);
-  } finally {
-    await prisma.$disconnect();
-  }
-}
-
-main().catch((err: unknown) => {
-  console.error(err);
-  process.exit(1);
-});
+runSeed()
+  .then((summary) => console.log(`seed: done (${JSON.stringify(summary)})`))
+  .catch((err: unknown) => {
+    console.error(err);
+    process.exit(1);
+  });

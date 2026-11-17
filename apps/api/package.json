@@ -19,7 +19,7 @@
     "db:migrate": "DATABASE_URL=\"postgresql://postgres:postgres@localhost:5442/school_erp?schema=public\" prisma migrate dev",
     "db:migrate:create": "DATABASE_URL=\"postgresql://postgres:postgres@localhost:5442/school_erp?schema=public\" prisma migrate dev --create-only",
     "db:deploy": "DATABASE_URL=\"postgresql://postgres:postgres@localhost:5442/school_erp?schema=public\" prisma migrate deploy",
-    "db:seed": "DATABASE_URL=\"postgresql://postgres:postgres@localhost:5442/school_erp?schema=public\" tsx prisma/seed/index.ts",
+    "db:seed": "DATABASE_URL=\"postgresql://postgres:postgres@localhost:5442/school_erp?schema=public\" ts-node --transpile-only prisma/seed/index.ts",
     "db:studio": "DATABASE_URL=\"postgresql://postgres:postgres@localhost:5442/school_erp?schema=public\" prisma studio"
   },
   "dependencies": {
