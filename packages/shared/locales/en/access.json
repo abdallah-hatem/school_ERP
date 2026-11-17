@@ -60,7 +60,8 @@
       "confirm": "Reactivate",
       "done": "{name} can sign in again."
     },
-    "lastAdmin": "The last System admin can't be deactivated."
+    "lastAdmin": "The last System admin can't be deactivated.",
+    "temporaryPassword": "Temporary password"
   },
   "userForm": {
     "addTitle": "Add user",
