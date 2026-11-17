@@ -667,6 +667,10 @@ Frontend rules:
   the form by the language's plural rules — "1 entry", "سجلان", "12 سجلًا".
 - Small controls reach 44 × 44px on touch screens and phone widths with the `tap-target` utility (an
   invisible hit area; desktop density unchanged). Search boxes never show the browser's own "×".
+- Every list with a search or filters has `ClearFilters` (`shared/components/form/filter-controls`,
+  owner 2026-11-18): "Clear filters · n" at the toolbar's inline end and in its "No results" state,
+  shown only while something narrows the list; one click resets the search, every filter and the
+  page in one URL update and brings the list's top back into view. A period (a month) is not a filter.
 - Branding (name, logo, colours) loads from settings into CSS variables.
 
 ### `packages/shared`

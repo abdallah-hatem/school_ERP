@@ -118,8 +118,25 @@ describe('PenaltiesList', () => {
 
     renderList({ rows: [], total: 0, query: { ...QUERY, status: 'APPROVED', search: 'zz' } });
     expect(screen.getByText('No penalties match')).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: 'Clear filters' }));
+    // The toolbar's and the "No results" one; either resets search and status, keeping the month.
+    const clears = screen.getAllByRole('button', { name: 'Clear filters · 2' });
+    expect(clears).toHaveLength(2);
+    router.push.mockClear();
+    await user.click(clears[1]!);
+    expect(router.push).toHaveBeenCalledTimes(1);
     expect(router.push).toHaveBeenLastCalledWith('/en/penalties', { scroll: false });
+  });
+
+  it('"Clear filters" is hidden with nothing narrowing the list, and keeps the month', async () => {
+    const user = userEvent.setup();
+    const { unmount } = renderList();
+    expect(screen.queryByRole('button', { name: /Clear filters/ })).toBeNull();
+    unmount();
+    renderList({ query: { ...QUERY, month: '2026-09', page: 2, status: 'APPROVED' } });
+    router.push.mockClear();
+    await user.click(screen.getByRole('button', { name: 'Clear filters · 1' }));
+    expect(router.push).toHaveBeenCalledTimes(1);
+    expect(router.push).toHaveBeenLastCalledWith('/en/penalties?month=2026-09', { scroll: false });
   });
 
   it('a failed load shows the error state with a retry', async () => {

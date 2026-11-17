@@ -1,8 +1,11 @@
 'use client';
 
-import type { ComponentProps } from 'react';
+import { useRef, type ComponentProps } from 'react';
+import { scrollListIntoView } from '@/shared/components/data-table/pagination';
+import { Button } from '@/shared/components/ui/button';
 import { Combobox, needsSearch } from '@/shared/components/ui/combobox';
-import { SearchIcon } from '@/shared/components/ui/icons';
+import { ClearFiltersIcon, SearchIcon } from '@/shared/components/ui/icons';
+import { formatCount } from '@/shared/lib/format';
 import { Input } from '@/shared/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select';
 import { cn } from '@/shared/lib/utils';
@@ -113,6 +116,53 @@ function SearchableFilter({
       emptyText={t('ui.form.noOptions')}
       noMatchesText={t('ui.form.noMatches')}
     />
+  );
+}
+
+/**
+ * "Clear filters · 3": shown only while a search or a filter narrows the list (`count` > 0), at
+ * the inline end of the toolbar and as the "No results" action (`placement="empty"`). `onClear`
+ * resets the search, every filter and the page in one URL update (the caller's `go`, with
+ * `scroll: false`); this then brings the top of the list back into view, as paging does
+ * (owner, 2026-11-18: every list with filters gets one).
+ */
+export function ClearFilters({
+  count,
+  onClear,
+  disabled,
+  placement = 'toolbar',
+  className,
+}: {
+  /** The search (when it has text) plus each filter in use. */
+  count: number;
+  onClear: () => void;
+  disabled?: boolean;
+  placement?: 'toolbar' | 'empty';
+  className?: string;
+}) {
+  const { t } = useTranslation();
+  const ref = useRef<HTMLButtonElement>(null);
+  if (count <= 0) return null;
+  return (
+    <Button
+      ref={ref}
+      type="button"
+      variant={placement === 'empty' ? 'secondary' : 'ghost'}
+      data-testid="clear-filters"
+      disabled={disabled}
+      onClick={() => {
+        onClear();
+        scrollListIntoView(ref.current);
+      }}
+      className={cn(
+        'shrink-0 cursor-pointer',
+        placement === 'toolbar' && 'tap-target text-primary hover:bg-primary-soft hover:text-primary',
+        className,
+      )}
+    >
+      <ClearFiltersIcon />
+      <span className="tabular">{t('ui.filters.clearCount', { count: formatCount(count) })}</span>
+    </Button>
   );
 }
 

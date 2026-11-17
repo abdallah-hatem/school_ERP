@@ -6,7 +6,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderWithI18n } from '@/test/render';
 import { Pagination } from '../data-table/pagination';
-import { FilterSelect } from './filter-controls';
+import { ClearFilters, FilterSelect } from './filter-controls';
 
 const OPTIONS = [
   { value: 'd1', label: 'Science' },
@@ -43,5 +43,46 @@ describe('Selects show their choice while closed', () => {
     renderWithI18n(<Pagination page={1} limit={10} total={45} onPageChange={vi.fn()} />);
     expect(screen.queryByRole('combobox')).toBeNull();
     expect(screen.getByText('Showing 1–10 of 45')).toBeTruthy();
+  });
+});
+
+describe('ClearFilters', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('is hidden while no search or filter is in use', () => {
+    renderWithI18n(<ClearFilters count={0} onClear={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: /Clear filters/ })).toBeNull();
+  });
+
+  it('shows how many are in use, in both languages', () => {
+    renderWithI18n(<ClearFilters count={3} onClear={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'Clear filters · 3' })).toBeTruthy();
+    cleanup();
+    renderWithI18n(<ClearFilters count={2} onClear={vi.fn()} />, { locale: 'ar' });
+    expect(screen.getByRole('button', { name: 'مسح عوامل التصفية · 2' })).toBeTruthy();
+  });
+
+  it('one click is one reset, then the list scrolls back to its top (like paging)', async () => {
+    const onClear = vi.fn();
+    const scrollTo = vi.fn();
+    vi.stubGlobal('scrollTo', scrollTo);
+    renderWithI18n(
+      <section data-testid="list">
+        <ClearFilters count={2} onClear={onClear} />
+      </section>,
+    );
+    // The list's top has scrolled above the screen.
+    vi.spyOn(screen.getByTestId('list'), 'getBoundingClientRect').mockReturnValue({ top: -400 } as DOMRect);
+    await userEvent.click(screen.getByRole('button', { name: 'Clear filters · 2' }));
+    expect(onClear).toHaveBeenCalledTimes(1);
+    expect(scrollTo).toHaveBeenCalledTimes(1);
+    vi.unstubAllGlobals();
+  });
+
+  it('is disabled while the list is loading', async () => {
+    const onClear = vi.fn();
+    renderWithI18n(<ClearFilters count={1} onClear={onClear} disabled />);
+    await userEvent.click(screen.getByRole('button', { name: 'Clear filters · 1' }));
+    expect(onClear).not.toHaveBeenCalled();
   });
 });
