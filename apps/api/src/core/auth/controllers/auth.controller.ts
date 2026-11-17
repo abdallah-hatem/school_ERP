@@ -1,5 +1,5 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseInterceptors } from '@nestjs/common';
-import type { AuthUser } from '@school-erp/shared';
+import type { AuthUser, SessionUser } from '@school-erp/shared';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { Public } from '../../../common/decorators/public.decorator';
 import { RefreshTokenValue } from '../decorators/refresh-token.decorator';
@@ -8,6 +8,7 @@ import { AuthCookiesInterceptor } from '../interceptors/auth-cookies.interceptor
 import { AuthService } from '../services/auth.service';
 import { ClearedSession, type IssuedSession } from '../session';
 import { NotAudited } from '../../audit';
+import { SignedIn, permissionsFor } from '../../permissions';
 
 /** There is no sign-up route (§2: accounts come from the seed). */
 @Controller('auth')
@@ -33,6 +34,7 @@ export class AuthController {
 
   @NotAudited('wired in T28')
   @Post('logout')
+  @SignedIn()
   @HttpCode(HttpStatus.OK)
   async logout(
     @CurrentUser() user: AuthUser,
@@ -42,8 +44,10 @@ export class AuthController {
     return new ClearedSession();
   }
 
+  /** The signed-in user with their permission keys — the web app's `can()` reads them (R6). */
   @Get('me')
-  me(@CurrentUser() user: AuthUser): AuthUser {
-    return user;
+  @SignedIn()
+  me(@CurrentUser() user: AuthUser): SessionUser {
+    return { ...user, permissions: [...permissionsFor(user)] };
   }
 }

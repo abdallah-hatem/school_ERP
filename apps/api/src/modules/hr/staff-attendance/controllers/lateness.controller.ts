@@ -4,6 +4,7 @@ import { CurrentUser } from '../../../../common/decorators/current-user.decorato
 import { LatenessMonthParamDto, LatenessMonthQueryDto, PutLatenessDto } from '../dto/lateness.dto';
 import { LatenessService } from '../services/lateness.service';
 import { NotAudited } from '../../../../core/audit';
+import { Permission } from '../../../../core/permissions';
 
 /**
  * `/hr/lateness` (contract: "Monthly lateness — hr"). The month's list is one row per active
@@ -15,12 +16,14 @@ export class LatenessController {
   constructor(private readonly lateness: LatenessService) {}
 
   @Get()
+  @Permission('hr.lateness.view')
   list(@Query() query: LatenessMonthQueryDto): Promise<LatenessMonth> {
     return this.lateness.month(query.month);
   }
 
   @NotAudited('wired in T29')
   @Put(':month')
+  @Permission('hr.lateness.edit')
   put(
     @Param() params: LatenessMonthParamDto,
     @Body() body: PutLatenessDto,

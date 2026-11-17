@@ -1,8 +1,12 @@
-import { readdirSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { Controller, Delete, Get, Patch, Post, Put, RequestMethod } from '@nestjs/common';
-import { CONTROLLER_WATERMARK, METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants';
 import { isAuditAction } from '@school-erp/shared';
+import {
+  appControllers,
+  controllerFiles,
+  routeHandlers,
+  type ControllerClass,
+} from '../../common/testing/controller-scan';
 import {
   Audited,
   NotAudited,
@@ -28,53 +32,17 @@ interface WriteHandler {
   declaration: AuditDeclaration;
 }
 
-type Ctor = { new (...args: never[]): unknown; name: string; prototype: object };
-
 /** Every POST / PATCH / PUT / DELETE handler of the given controllers, with its declaration. */
-function writeHandlers(controllers: Ctor[]): WriteHandler[] {
-  const out: WriteHandler[] = [];
-  for (const controller of controllers) {
-    const base = String(Reflect.getMetadata(PATH_METADATA, controller) ?? '');
-    for (const name of Object.getOwnPropertyNames(controller.prototype)) {
-      if (name === 'constructor') continue;
-      const handler = (controller.prototype as Record<string, unknown>)[name];
-      if (typeof handler !== 'function') continue;
-      const method = Reflect.getMetadata(METHOD_METADATA, handler) as RequestMethod | undefined;
-      if (method === undefined || !WRITE_METHODS.has(method)) continue;
-      const path = String(Reflect.getMetadata(PATH_METADATA, handler) ?? '');
-      out.push({
-        route: `${RequestMethod[method]} /${[base, path].filter((p) => p && p !== '/').join('/')} (${controller.name}.${name})`,
-
-        declaration: auditDeclarationOf(handler),
-      });
-    }
-  }
-  return out;
+function writeHandlers(controllers: ControllerClass[]): WriteHandler[] {
+  return routeHandlers(controllers)
+    .filter((h) => WRITE_METHODS.has(h.method))
+    .map((h) => ({ route: h.route, declaration: auditDeclarationOf(h.handler) }));
 }
 
-function controllerFiles(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(dir, entry.name);
-    if (entry.isDirectory()) return controllerFiles(path);
-    return entry.name.endsWith('.controller.ts') ? [path] : [];
-  });
-}
-
-/** Every class decorated with `@Controller()` exported by a `*.controller.ts` under src/. */
-function appControllers(): Ctor[] {
-  const src = join(__dirname, '..', '..');
-  return controllerFiles(src).flatMap((file) => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- load each controller file
-    const exported = require(file) as Record<string, unknown>;
-    return Object.values(exported).filter(
-      (value): value is Ctor =>
-        typeof value === 'function' && Reflect.getMetadata(CONTROLLER_WATERMARK, value) === true,
-    );
-  });
-}
+const SRC = join(__dirname, '..', '..');
 
 describe('every write endpoint declares its audit (D6)', () => {
-  const controllers = appControllers();
+  const controllers = appControllers(SRC);
   const writes = writeHandlers(controllers);
 
   it('finds the controllers and their write handlers', () => {
@@ -132,9 +100,7 @@ describe('every write endpoint declares its audit (D6)', () => {
   });
 
   it('lists the files it scanned relative to src (for the CI log)', () => {
-    const files = controllerFiles(join(__dirname, '..', '..')).map((f) =>
-      relative(join(__dirname, '..', '..'), f),
-    );
+    const files = controllerFiles(SRC).map((f) => relative(SRC, f));
     expect(files).toEqual(expect.arrayContaining(['core/settings/settings.controller.ts']));
   });
 });

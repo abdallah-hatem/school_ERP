@@ -25,11 +25,12 @@ vi.mock('next/link', () => ({
   ),
 }));
 
-import { renderWithI18n } from '@/test/render';
+import type { SessionUser } from '@school-erp/shared';
+import { renderWithI18n, sessionWithout, TEST_SESSION } from '@/test/render';
 import { SidebarNav } from './sidebar-nav';
 
-function renderNav(variant: 'full' | 'rail' = 'full', locale: 'en' | 'ar' = 'en') {
-  return renderWithI18n(<SidebarNav variant={variant} />, { locale });
+function renderNav(variant: 'full' | 'rail' = 'full', locale: 'en' | 'ar' = 'en', session: SessionUser = TEST_SESSION) {
+  return renderWithI18n(<SidebarNav variant={variant} />, { locale, session });
 }
 
 const hrButton = (name = 'HR') => screen.getByRole('button', { name });
@@ -126,5 +127,39 @@ describe('SidebarNav (grouped by module)', () => {
     expect(screen.getAllByText('قريبًا')).toHaveLength(3);
     await user.click(hr);
     expect(screen.queryByRole('link', { name: 'التأخير' })).toBeNull();
+  });
+
+  describe('only what the user may see (can(), view only)', () => {
+    it('the HR admin sees every page and Settings', () => {
+      renderNav();
+      for (const name of ['Dashboard', 'Employees', 'Penalties', 'Lateness', 'Payroll', 'Settings']) {
+        expect(screen.getByRole('link', { name })).toBeTruthy();
+      }
+    });
+
+    it('a page without its view permission is left out', () => {
+      renderNav('full', 'en', sessionWithout('hr.payroll.view', 'hr.lateness.view'));
+      expect(screen.getByRole('link', { name: 'Employees' })).toBeTruthy();
+      expect(screen.queryByRole('link', { name: 'Payroll' })).toBeNull();
+      expect(screen.queryByRole('link', { name: 'Lateness' })).toBeNull();
+    });
+
+    it('a module with no visible page is not drawn; coming modules still are', () => {
+      renderNav('full', 'en', sessionWithout('hr.employees.view', 'hr.penalties.view', 'hr.lateness.view', 'hr.payroll.view'));
+      expect(screen.queryByRole('button', { name: 'HR' })).toBeNull();
+      expect(screen.getAllByText('Soon')).toHaveLength(3);
+      cleanup();
+      renderNav('rail', 'en', sessionWithout('hr.employees.view', 'hr.penalties.view', 'hr.lateness.view', 'hr.payroll.view'));
+      expect(screen.queryByRole('button', { name: 'HR' })).toBeNull();
+    });
+
+    it('Settings shows with any one of its sections, and not with none', () => {
+      const settingsKeys = ['core.settings.view', 'hr.settings.view', 'hr.lists.view', 'core.stages.view', 'hr.penalty_catalogue.view'];
+      renderNav('full', 'en', sessionWithout(...settingsKeys.filter((k) => k !== 'hr.lists.view')));
+      expect(screen.getByRole('link', { name: 'Settings' })).toBeTruthy();
+      cleanup();
+      renderNav('full', 'en', sessionWithout(...settingsKeys));
+      expect(screen.queryByRole('link', { name: 'Settings' })).toBeNull();
+    });
   });
 });

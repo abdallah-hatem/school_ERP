@@ -3,6 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { SchoolSettingKey, SETTING_DEFAULTS, WEEKDAYS, workTimeOptions, type SchoolSettings, type UpdateSchoolSettingsRequest } from '@school-erp/shared';
 import { useRef, useState } from 'react';
+import { Can } from '@/core/auth';
 import { useForm } from 'react-hook-form';
 import { brandingFrom, useSchoolBranding } from '@/core/settings';
 import { SelectField, TextField, ToggleGroupField } from '@/shared/components/form/fields';
@@ -182,16 +183,18 @@ function SchoolForm({ initial, onSaved }: { initial: SchoolSettings; onSaved: (n
           options={weekdayOptions}
           required
         />
-        <SaveBar
-          dirty={isDirty}
-          valid={isValid}
-          saving={isSubmitting}
-          saved={saved && !isDirty}
-          onDiscard={() => {
-            form.reset();
-            setSaved(false);
-          }}
-        />
+        <Can permission="core.settings.edit">
+          <SaveBar
+            dirty={isDirty}
+            valid={isValid}
+            saving={isSubmitting}
+            saved={saved && !isDirty}
+            onDiscard={() => {
+              form.reset();
+              setSaved(false);
+            }}
+          />
+        </Can>
       </Form>
     </SectionPanel>
   );

@@ -10,6 +10,7 @@ import {
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
+import { Can } from '@/core/auth';
 import { Pagination } from '@/shared/components/data-table/pagination';
 import { EmptyState, ErrorState } from '@/shared/components/layout/empty-state';
 import { PageHeader } from '@/shared/components/layout/page-header';
@@ -80,12 +81,14 @@ export function EmployeesList({ basePath, query, rows, total, departments, stage
     [...items].sort((a, b) => a.sortOrder - b.sortOrder).map((i) => ({ value: i.id, label: localName(i, locale), keywords: [i.nameEn, i.nameAr] }));
 
   const addButton = (
-    <Button asChild variant="primary">
-      <Link href={`${basePath}/new`}>
-        <AddIcon />
-        {t('employees.add')}
-      </Link>
-    </Button>
+    <Can permission="hr.employees.create">
+      <Button asChild variant="primary">
+        <Link href={`${basePath}/new`}>
+          <AddIcon />
+          {t('employees.add')}
+        </Link>
+      </Button>
+    </Can>
   );
 
   const emptyState = filtered ? (

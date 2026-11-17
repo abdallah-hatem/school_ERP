@@ -3,6 +3,7 @@
 import { PenaltyStatus, type PenaltyRecord } from '@school-erp/shared';
 import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
+import { useCan } from '@/core/auth';
 import { callApi } from '@/lib/callApi';
 import { RowActions } from '@/shared/components/data-table/row-actions';
 import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
@@ -18,10 +19,12 @@ type Pending = 'approve' | 'cancel' | null;
  * A row's ⋯ menu: approve (pending only) behind a confirmation, cancel (pending or approved) with
  * a required reason. A cancelled penalty has none (§4). When the server refuses — the month's
  * payroll is approved, it was cancelled meanwhile — the dialog stays open with the translated
- * reason and the list refreshes to show the record as it now is.
+ * reason and the list refreshes to show the record as it now is. Each action shows only to a user
+ * holding its permission (view only — the API refuses the rest); with neither, no menu.
  */
 export function PenaltyActions({ record }: { record: PenaltyRecord }) {
   const { t, has, locale } = useTranslation();
+  const can = useCan();
   const router = useRouter();
   const [open, setOpen] = useState<Pending>(null);
   const [error, setError] = useState<string | null>(null);
@@ -29,7 +32,9 @@ export function PenaltyActions({ record }: { record: PenaltyRecord }) {
   // the explanation stays readable (a refresh to "cancelled" would remove these actions mid-read).
   const stale = useRef(false);
 
-  if (record.status === PenaltyStatus.CANCELLED) return null;
+  const canApprove = can('hr.penalties.approve') && record.status === PenaltyStatus.PENDING;
+  const canCancel = can('hr.penalties.cancel');
+  if (record.status === PenaltyStatus.CANCELLED || (!canApprove && !canCancel)) return null;
 
   const name = nameIn(record.employee, locale);
   const violation = nameIn(record.violation, locale);
@@ -76,7 +81,7 @@ export function PenaltyActions({ record }: { record: PenaltyRecord }) {
             id: 'approve',
             label: t('penalties.approve.button'),
             icon: ApproveIcon,
-            hidden: record.status !== PenaltyStatus.PENDING,
+            hidden: !canApprove,
             onSelect: () => show('approve'),
           },
           {
@@ -84,6 +89,7 @@ export function PenaltyActions({ record }: { record: PenaltyRecord }) {
             label: t('penalties.cancel.button'),
             icon: CloseIcon,
             destructive: true,
+            hidden: !canCancel,
             onSelect: () => show('cancel'),
           },
         ]}

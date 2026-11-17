@@ -1,7 +1,8 @@
 'use client';
 
-import { PAGINATION, type ListItem } from '@school-erp/shared';
+import { PAGINATION, type ListItem, type PermissionKey } from '@school-erp/shared';
 import { useState } from 'react';
+import { useCan } from '@/core/auth';
 import { callApi } from '@/lib/callApi';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-table/data-table';
 import { RowActions, rowActionsColumn } from '@/shared/components/data-table/row-actions';
@@ -22,8 +23,16 @@ import { SectionPanel } from './section-panel';
  * delete: an item in use is hidden from new choices. The API returns the whole (short) list, so
  * it is paged here.
  */
+/** Who may add, rename and hide each list's items (view only — the API decides). */
+const MANAGE_PERMISSION: Record<ListKind, PermissionKey> = {
+  stages: 'core.stages.manage',
+  departments: 'hr.lists.manage',
+  jobTitles: 'hr.lists.manage',
+};
+
 export function ListManager({ kind }: { kind: ListKind }) {
   const { t, locale } = useTranslation();
+  const canManage = useCan()(MANAGE_PERMISSION[kind]);
   const list = useResource(kind, () => GET_LIST_ITEMS(kind));
   const [page, setPage] = useState(1);
   const limit = PAGINATION.defaultLimit;
@@ -105,21 +114,21 @@ export function ListManager({ kind }: { kind: ListKind }) {
         busy={toggling === item.id}
         disabled={toggling !== null && toggling !== item.id}
         actions={[
-          { id: 'rename', label: t('settings.lists.rename'), icon: EditIcon, onSelect: () => setEditing(item) },
+          { id: 'rename', label: t('settings.lists.rename'), icon: EditIcon, hidden: !canManage, onSelect: () => setEditing(item) },
           item.isActive
-            ? { id: 'hide', label: t('settings.lists.hide'), icon: HideIcon, destructive: true, onSelect: () => void toggle(item) }
-            : { id: 'show', label: t('settings.lists.show'), icon: ShowIcon, onSelect: () => void toggle(item) },
+            ? { id: 'hide', label: t('settings.lists.hide'), icon: HideIcon, destructive: true, hidden: !canManage, onSelect: () => void toggle(item) }
+            : { id: 'show', label: t('settings.lists.show'), icon: ShowIcon, hidden: !canManage, onSelect: () => void toggle(item) },
         ]}
       />
     )),
   ];
 
-  const addButton = (
+  const addButton = canManage ? (
     <Button variant="primary" onClick={() => setEditing('new')} disabled={!list.data}>
       <AddIcon />
       {copy('add')}
     </Button>
-  );
+  ) : null;
 
   return (
     <SectionPanel title={copy('title')} description={copy('description')} actions={addButton}>

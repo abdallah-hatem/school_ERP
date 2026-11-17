@@ -12,6 +12,7 @@ const apis = vi.hoisted(() => ({ APPROVE_PENALTY: vi.fn(), CANCEL_PENALTY: vi.fn
 vi.mock('../apis', () => apis);
 
 import { chooseRowAction, menuItemNames, openRowActions, rowActionsButton } from '@/test/row-actions';
+import { sessionWithout } from '@/test/render';
 import { failure, ok, record, renderPenalties } from '../test/fixtures';
 import { PenaltyActions } from './penalty-actions';
 
@@ -145,5 +146,17 @@ describe('PenaltyActions', () => {
     await user.type(within(dialog).getByRole('textbox', { name: /Reason for cancelling/ }), 'Duplicate');
     await user.click(within(dialog).getByRole('button', { name: 'Cancel penalty' }));
     expect((await within(dialog).findByRole('alert')).textContent).toBe('This penalty is already cancelled.');
+  });
+
+  it('edge case 9 — a user who can record but not approve sees no Approve; with neither key, no menu', async () => {
+    const user = userEvent.setup();
+    const { unmount } = renderPenalties(<PenaltyActions record={record()} />, 'en', sessionWithout('hr.penalties.approve'));
+    const menu = await openRowActions(user, 'Mona Khalil');
+    expect(menuItemNames(menu)).toEqual(['Cancel']);
+    await user.keyboard('{Escape}');
+    unmount();
+
+    renderPenalties(<PenaltyActions record={record()} />, 'en', sessionWithout('hr.penalties.approve', 'hr.penalties.cancel'));
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
   });
 });

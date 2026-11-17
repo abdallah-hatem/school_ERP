@@ -1,6 +1,6 @@
 'use server';
 
-import type { AuthUser, LoginRequest, LoginResponse } from '@school-erp/shared';
+import type { LoginRequest, LoginResponse, SessionUser } from '@school-erp/shared';
 import { apiFetch } from '@/lib/api';
 import { handleResponse } from '@/lib/handleResponse';
 
@@ -31,7 +31,7 @@ export async function LOGOUT() {
 }
 
 export async function GET_ME() {
-  return apiFetch<AuthUser>('/auth/me', {
+  return apiFetch<SessionUser>('/auth/me', {
     cache: 'no-store',
     ignore401Redirect: true,
   });

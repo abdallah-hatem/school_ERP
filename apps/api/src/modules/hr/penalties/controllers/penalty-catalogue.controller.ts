@@ -9,6 +9,7 @@ import {
 } from '../dto/catalogue.dto';
 import { PenaltyCatalogueService } from '../services/penalty-catalogue.service';
 import { NotAudited } from '../../../../core/audit';
+import { Permission } from '../../../../core/permissions';
 
 /**
  * Penalty catalogue (contract: "Penalty catalogue — hr"). No DELETE routes: groups and violations
@@ -19,18 +20,21 @@ export class PenaltyCatalogueController {
   constructor(private readonly catalogue: PenaltyCatalogueService) {}
 
   @Get('penalty-groups')
+  @Permission('hr.penalty_catalogue.view')
   list() {
     return this.catalogue.list();
   }
 
   @NotAudited('wired in T28')
   @Post('penalty-groups')
+  @Permission('hr.penalty_catalogue.manage')
   createGroup(@Body() dto: CreatePenaltyGroupDto, @CurrentUser() user?: AuthUser) {
     return this.catalogue.createGroup(dto, user?.id ?? null);
   }
 
   @NotAudited('wired in T28')
   @Patch('penalty-groups/:id')
+  @Permission('hr.penalty_catalogue.manage')
   updateGroup(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdatePenaltyGroupDto,
@@ -41,6 +45,7 @@ export class PenaltyCatalogueController {
 
   @NotAudited('wired in T28')
   @Post('penalty-groups/:groupId/violations')
+  @Permission('hr.penalty_catalogue.manage')
   createViolation(
     @Param('groupId', ParseUUIDPipe) groupId: string,
     @Body() dto: CreateViolationDto,
@@ -51,6 +56,7 @@ export class PenaltyCatalogueController {
 
   @NotAudited('wired in T28')
   @Patch('violations/:id')
+  @Permission('hr.penalty_catalogue.manage')
   updateViolation(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateViolationDto,

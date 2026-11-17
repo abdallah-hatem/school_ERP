@@ -1,7 +1,7 @@
-import type { PenaltyGroup, PenaltyRecord } from '@school-erp/shared';
+import type { PenaltyGroup, PenaltyRecord, SessionUser } from '@school-erp/shared';
 import type { ReactElement } from 'react';
 import type { Locale } from '@/shared/lib/i18n';
-import { renderWithI18n } from '@/test/render';
+import { renderWithI18n, TEST_SESSION } from '@/test/render';
 import { PenaltiesI18n } from '../messages';
 
 /** Test data for the penalties screens. */
@@ -91,8 +91,8 @@ export function record(overrides: Partial<PenaltyRecord> = {}): PenaltyRecord {
 }
 
 /** Render a penalties component with the `penalties` + `errors` namespaces, like its route does. */
-export function renderPenalties(ui: ReactElement, locale: Locale = 'en') {
-  return renderWithI18n(<PenaltiesI18n locale={locale}>{ui}</PenaltiesI18n>, { locale });
+export function renderPenalties(ui: ReactElement, locale: Locale = 'en', session: SessionUser = TEST_SESSION) {
+  return renderWithI18n(<PenaltiesI18n locale={locale}>{ui}</PenaltiesI18n>, { locale, session });
 }
 
 /** A failed envelope as `apiFetch` returns it. */
