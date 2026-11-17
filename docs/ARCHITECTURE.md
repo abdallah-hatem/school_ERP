@@ -588,6 +588,8 @@ apps/web/src/
 │   ├── auth/                         ← session, current user, <Can permission="…">
 │   ├── settings/                     ← settings, feature flags, branding → CSS variables
 │   ├── navigation/                   ← sidebar menu, filtered by flags + permissions
+│   ├── employees/                    ← EmployeeLink: every employee name opens the profile
+│   │                                   (plain text without hr.employees.view)
 │   ├── audit/                        ← activity log pieces: apis.ts (GET /audit…), timeline,
 │   │                                   entry text (sentences, field labels), record History
 │   └── academic-year/                ← year switcher, current-year context

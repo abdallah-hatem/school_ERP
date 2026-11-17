@@ -22,8 +22,6 @@ const SEARCH_DEBOUNCE_MS = 300;
 export interface PenaltiesListProps {
   /** `/ar/penalties`. */
   basePath: string;
-  /** `/ar/employees`, for the employee links. */
-  employeesPath: string;
   query: PenaltiesListQuery;
   /** This month: the default and the latest month the stepper reaches. */
   currentMonth: Month;
@@ -39,7 +37,6 @@ export interface PenaltiesListProps {
 /** The month's penalties, filtered by status and a search, with "Record a penalty". */
 export function PenaltiesList({
   basePath,
-  employeesPath,
   query,
   currentMonth,
   rows,
@@ -111,7 +108,6 @@ export function PenaltiesList({
       <PenaltiesTable
         label={t('penalties.tableLabel', { month: formatMonth(query.month, locale) })}
         rows={rows}
-        employeesPath={employeesPath}
         refreshing={pending}
         error={error}
         retrying={pending && error}

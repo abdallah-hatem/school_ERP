@@ -11,11 +11,11 @@ import { CloseIcon, FilterIcon, HistoryIcon, SearchIcon } from '@/shared/compone
 import { Skeleton, SkeletonText } from '@/shared/components/ui/skeleton';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
-import { actorName, fieldLabel } from '../lib/entry-text';
+import { fieldLabel } from '../lib/entry-text';
 import { AUDIT_PAGE_SIZE, historyQueryString, type HistoryQuery } from '../lib/history-query';
 import { AuditFiltersSheet } from './filters-sheet';
 import { formatShortDay, relativeAgo, schoolDay } from '../lib/time';
-import { AuditTimeline, AuditTimelineSkeleton } from './timeline';
+import { ActorName, AuditTimeline, AuditTimelineSkeleton } from './timeline';
 
 export interface RecordHistoryProps {
   /** The tab's own path (`/en/employees/<id>/history`), for URL updates. */
@@ -161,7 +161,7 @@ export function RecordHistory({
             <div className="rounded-xl bg-muted px-3 py-2">
               <p className="text-[0.8125rem] font-bold break-words">
                 {relativeAgo(latest.at, now, t) ?? formatShortDay(schoolDay(latest.at), locale)} ·{' '}
-                <bdi>{actorName(latest, t)}</bdi>
+                <ActorName entry={latest} className="" />
               </p>
               {latest.changes[0] ? (
                 <p className="text-xs text-muted-foreground">{fieldLabel(latest.changes[0].field, t, has)}</p>

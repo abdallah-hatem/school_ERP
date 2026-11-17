@@ -260,8 +260,11 @@ export interface AuditEntry {
    * names carry the same text in `en` and `ar`.
    */
   entityLabel: AuditLabel;
-  /** `null` for failed sign-ins and system actions. The name is a snapshot (edge case 4). */
-  actor: { id: Uuid; name: string } | null;
+  /**
+   * `null` for failed sign-ins and system actions. The name is a snapshot (edge case 4);
+   * `employeeId` is the employee the user is linked to today (null when none), for a profile link.
+   */
+  actor: { id: Uuid; name: string; employeeId: Uuid | null } | null;
   changes: AuditChange[];
   meta: { ip: string | null; userAgent: string | null };
   at: IsoDateTime;

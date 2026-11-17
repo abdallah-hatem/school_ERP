@@ -280,6 +280,13 @@ describe('RunPage — draft', () => {
     expect(within(monaRow).getByText('Ready')).toBeTruthy();
   });
 
+  it("each employee's name opens their profile; the code and department stay plain text", () => {
+    renderRun();
+    const salma = table().getByRole('link', { name: 'Salma Adel' });
+    expect(salma.getAttribute('href')).toBe('/en/employees/e-salma');
+    expect(table().getByText('EMP-0002').closest('a')).toBeNull();
+  });
+
   it('recalculate sends once, shows the recalculated run and a toast', async () => {
     const user = userEvent.setup();
     let resolve: (v: unknown) => void = () => undefined;
@@ -364,7 +371,10 @@ describe('RunPage — draft', () => {
     });
     expect(within(section).getByText('Uniform')).toBeTruthy();
     expect(within(section).getByText('Not applied')).toBeTruthy();
-    expect(within(section).getByText('Not applied — Karim Fawzy (EMP-0042) is no longer in this run')).toBeTruthy();
+    const goneLine = within(section).getByRole('link', { name: 'Karim Fawzy (EMP-0042)' });
+    // The name opens the employee's profile, inside the sentence.
+    expect(goneLine.getAttribute('href')).toBe('/en/employees/e-gone');
+    expect(goneLine.parentElement?.textContent).toBe('Not applied — Karim Fawzy (EMP-0042) is no longer in this run');
     expect(within(section).queryByText('Exam supervision')).toBeNull();
   });
 

@@ -132,6 +132,19 @@ export class AuditEntryRepository {
     return row?.name ?? null;
   }
 
+  /**
+   * The employees these users are linked to today (`users.employee_id`), so a timeline can open the
+   * actor's profile. Users without a link (or deleted since) are missing from the map.
+   */
+  async findLinkedEmployees(userIds: readonly string[]): Promise<Map<string, string>> {
+    if (userIds.length === 0) return new Map();
+    const rows = await this.txHost.tx.user.findMany({
+      where: { id: { in: [...userIds] }, employeeId: { not: null } },
+      select: { id: true, employeeId: true },
+    });
+    return new Map(rows.flatMap((r) => (r.employeeId ? [[r.id, r.employeeId] as const] : [])));
+  }
+
   /** Newest first (`at`, then insertion order). `limit` capped at the contract max. */
   async findPage(
     filter: AuditEntryFilter,

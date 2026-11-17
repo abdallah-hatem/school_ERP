@@ -1,7 +1,7 @@
 'use client';
 
 import { EmployeeStatus, type Names } from '@school-erp/shared';
-import Link from 'next/link';
+import { EmployeeLink } from '@/core/employees';
 import { StatusPill } from '@/shared/components/ui/status-pill';
 import { localName } from '@/shared/lib/i18n';
 import { cn } from '@/shared/lib/utils';
@@ -10,14 +10,12 @@ import { initialsOf } from '@/shared/lib/initials';
 
 export { initialsOf };
 
-/** Sunflower initials tile + name + code, as in the Campus tables. A link when `href` is given. */
+/** Sunflower initials tile + name + code, as in the Campus tables. The name opens the profile. */
 export function EmployeeIdentity({
   employee,
-  href,
   size = 'sm',
 }: {
-  employee: Names & { code: string };
-  href?: string;
+  employee: Names & { id: string; code: string };
   size?: 'sm' | 'lg';
 }) {
   const { locale } = useTranslation();
@@ -34,18 +32,13 @@ export function EmployeeIdentity({
       >
         {initialsOf(name)}
       </span>
-      <span className="flex min-w-0 flex-col whitespace-normal">
-        {href ? (
-          <Link href={href} className={cn(nameClass, 'cursor-pointer rounded-sm hover:text-primary hover:underline')}>
-            {name}
-          </Link>
-        ) : (
-          <span className={nameClass}>{name}</span>
-        )}
-        <span dir="ltr" className="tabular self-start text-xs text-muted-foreground">
-          {employee.code}
-        </span>
-      </span>
+      <EmployeeLink
+        employeeId={employee.id}
+        name={name}
+        code={employee.code}
+        className={nameClass}
+        wrapperClassName="whitespace-normal"
+      />
     </div>
   );
 }

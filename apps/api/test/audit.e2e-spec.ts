@@ -257,7 +257,7 @@ describe('audit log (e2e)', () => {
       // The signed-in user renamed: their old entries keep the old name.
       await db.user.update({ where: { id: user.id }, data: { name: 'Renamed Admin' } });
       const mine = await http(app).get(`/audit?actorId=${user.id}&limit=1`).expect(200);
-      expect(mine.body.data[0].actor).toEqual({ id: user.id, name: user.name });
+      expect(mine.body.data[0].actor).toEqual({ id: user.id, name: user.name, employeeId: null });
       await db.user.update({ where: { id: user.id }, data: { name: user.name } });
     });
 

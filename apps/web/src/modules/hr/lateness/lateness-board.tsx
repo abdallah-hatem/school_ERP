@@ -3,6 +3,7 @@
 import { ErrorCode, PAGINATION, type LatenessRule, type LatenessRow, type Month } from '@school-erp/shared';
 import { useRouter } from 'next/navigation';
 import { useId, useMemo, useRef, useState, useTransition } from 'react';
+import { EmployeeLink } from '@/core/employees';
 import { callApi } from '@/lib/callApi';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-table/data-table';
 import { SearchInput } from '@/shared/components/form/filter-controls';
@@ -127,8 +128,8 @@ export function LatenessBoard({ month, maxMonth, rows: initialRows, rule, locked
         </span>
       ),
       cell: (row) => (
-        <span className="flex min-w-0 flex-col">
-          <span className="font-bold break-words">{nameIn(row.employee, locale)}</span>
+        <span className="flex min-w-0 flex-col items-start">
+          <EmployeeLink employeeId={row.employee.id} name={nameIn(row.employee, locale)} className="font-bold" />
           <bdi className="tabular text-xs text-muted-foreground @min-[740px]:hidden">{row.employee.code}</bdi>
         </span>
       ),

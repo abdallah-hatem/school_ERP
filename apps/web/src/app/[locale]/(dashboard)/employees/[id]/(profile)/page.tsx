@@ -12,5 +12,5 @@ export const generateMetadata = sectionMetadata('employees');
 export default async function EmployeeProfilePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
-  return <ProfileEmployeeDetails basePath={`/${locale}/employees`} />;
+  return <ProfileEmployeeDetails />;
 }
