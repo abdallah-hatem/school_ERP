@@ -117,6 +117,8 @@ set -e
 # Summary lines ("6 passed (1.2m)", "1 failed", …) and, on failure, the failures in full.
 grep -E '^\s+[0-9]+ (passed|failed|flaky|skipped|did not run)' "$logs/playwright.log" || true
 if [[ $status -ne 0 ]]; then
+  # Every failing test's title first (the details below are cut at 200 lines).
+  grep -E '^  [0-9]+\) ' "$logs/playwright.log" || true
   sed -n '/^  [0-9]*) /,$p' "$logs/playwright.log" | head -n 200
   echo "smoke: FAILED — full log: apps/web/e2e/.logs/playwright.log" >&2
   exit "$status"

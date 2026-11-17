@@ -178,3 +178,4 @@ jobs:
             apps/web/e2e/.logs/
           retention-days: 14
           if-no-files-found: ignore
+          include-hidden-files: true

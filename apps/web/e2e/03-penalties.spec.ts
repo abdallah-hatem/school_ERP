@@ -145,9 +145,9 @@ test('penalties: a repeat is previewed as level 2 → saved → approved → lis
   await expect(confirm).toBeHidden();
 
   await page.goto(filtered(PenaltyStatus.APPROVED));
+  // A table row, or a card when the list's container is narrow (DataTable `cardsBelow`).
   const row = page
-    .getByRole('table')
-    .getByRole('row')
+    .locator('table tr:visible, [data-view="cards"] > li:visible')
     .filter({ hasText: violation.nameEn })
     .filter({ hasText: t('en', 'penalties.levelValue', { level: 2 }) });
   await expect(row).toHaveCount(1);
