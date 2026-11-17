@@ -40,6 +40,8 @@ export interface AuditEntryFilter {
   entityId?: string;
   /** Only entries that changed this field. */
   field?: string;
+  /** Leave out entries about records of these types outside their ids (the viewer's scope, P4). */
+  restricted?: readonly { entityType: string; ids: readonly string[] }[];
 }
 
 const entrySelect = {
@@ -103,6 +105,13 @@ function whereOf(filter: AuditEntryFilter): Prisma.AuditEntryWhereInput {
       : {}),
     // jsonb containment: the changes array holds an element with this field.
     ...(filter.field ? { changes: { array_contains: [{ field: filter.field }] } } : {}),
+    ...(filter.restricted?.length
+      ? {
+          AND: filter.restricted.map((r) => ({
+            NOT: { entityType: r.entityType, entityId: { notIn: [...r.ids] } },
+          })),
+        }
+      : {}),
   };
 }
 

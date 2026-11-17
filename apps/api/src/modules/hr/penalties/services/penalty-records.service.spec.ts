@@ -5,6 +5,7 @@ import type { HrSettingsService } from '../../settings/hr-settings.service';
 import type { PenaltyRecordsRepository } from '../repositories/penalty-records.repository';
 import type { PenaltyCatalogueService } from './penalty-catalogue.service';
 import { PenaltyRecordsService } from './penalty-records.service';
+import { fakeAccess } from '../../access/hr-access.testing';
 
 const LEVELS = [
   { level: 1, action: 'NOTICE', days: null },
@@ -56,9 +57,10 @@ function makeService(repo: Record<string, jest.Mock> = {}) {
   const service = new PenaltyRecordsService(
     repository as unknown as PenaltyRecordsRepository,
     { getUsable: jest.fn() } as unknown as PenaltyCatalogueService,
-    { assertActive: jest.fn() } as unknown as EmployeesService,
+    { assertActive: jest.fn(), assertInScope: jest.fn() } as unknown as EmployeesService,
     settings as unknown as HrSettingsService,
     monthLock as unknown as MonthLockService,
+    fakeAccess(),
   );
   return { service, repository, monthLock };
 }

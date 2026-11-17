@@ -766,6 +766,7 @@ describe('HR lists and employees (e2e)', () => {
       jobTitle: { id: title.id, nameEn: 'Lab tech', nameAr: 'فني معمل' },
       workSystem: 'FULL_TIME',
       basicSalary: 1000000,
+      salaryVisible: true,
       status: 'ACTIVE',
       photoUrl: null,
     });

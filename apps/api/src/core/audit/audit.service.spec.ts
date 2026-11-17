@@ -2,6 +2,8 @@ import type { TransactionHost } from '@nestjs-cls/transactional';
 import type { AuthUser } from '@school-erp/shared';
 import { CLS_REQ, type ClsService } from 'nestjs-cls';
 import type { DbAdapter } from '../../database/transactions';
+import type { PermissionsService } from '../permissions';
+import { AuditRecordAccess } from './audit-record-access';
 import { AUDIT_RECORDED, AuditOutsideTransactionError, AuditService } from './audit.service';
 import type {
   AuditEntryRepository,
@@ -11,8 +13,18 @@ import type {
 
 const USER: AuthUser = { id: 'u1', email: 'mona@x.test', name: 'Mona', mustChangePassword: false };
 
-function makeService(opts: { inTx?: boolean; user?: AuthUser | null; clsActive?: boolean } = {}) {
-  const { inTx = true, user = USER, clsActive = true } = opts;
+function makeService(
+  opts: {
+    inTx?: boolean;
+    user?: AuthUser | null;
+    clsActive?: boolean;
+    /** The viewer's `hr.employees.view_salary` scope; null: not held. */
+    salaryScope?: string | null;
+    /** The employees whose entries the viewer may read (P4); absent: every one. */
+    visibleEmployees?: readonly string[];
+  } = {},
+) {
+  const { inTx = true, user = USER, clsActive = true, salaryScope = 'all', visibleEmployees } = opts;
   const created: NewAuditEntry[] = [];
   const entries = {
     create: jest.fn((e: NewAuditEntry) => {
@@ -43,10 +55,23 @@ function makeService(opts: { inTx?: boolean; user?: AuthUser | null; clsActive?:
   const txHost = { isTransactionActive: () => inTx };
   // The actor's name is read through the entries repository (no dependency on core/users).
   const users = { findName: entries.findUserName };
+  const permissions = {
+    scopeFor: jest.fn((_user: unknown, key: string) =>
+      Promise.resolve(
+        key === 'hr.employees.view_salary' && salaryScope
+          ? { scope: salaryScope, employeeId: null, stageId: null }
+          : null,
+      ),
+    ),
+  };
+  const recordAccess = new AuditRecordAccess();
+  if (visibleEmployees) recordAccess.register('employee', () => Promise.resolve(visibleEmployees));
   const service = new AuditService(
     entries as unknown as AuditEntryRepository,
     txHost as unknown as TransactionHost<DbAdapter>,
     cls as unknown as ClsService,
+    permissions as unknown as PermissionsService,
+    recordAccess,
   );
   return { service, entries, created, recorded, users };
 }
@@ -278,7 +303,7 @@ describe('AuditService reads', () => {
       meta: { ip: '10.0.0.7', userAgent: 'Firefox/140' },
       at: '2026-11-17T08:00:00.000Z',
     });
-    expect(entries.findPage).toHaveBeenCalledWith({ module: 'hr' }, 1, 10);
+    expect(entries.findPage).toHaveBeenCalledWith({ module: 'hr', restricted: [] }, 1, 10);
   });
 
   it('finding 3 — a label kept in both languages reads back as both names', async () => {
@@ -293,9 +318,72 @@ describe('AuditService reads', () => {
     entries.findPage.mockResolvedValueOnce(pageOf([]));
     await service.listForRecord('payroll_run', 'r1', 2, 5);
     expect(entries.findPage).toHaveBeenCalledWith(
-      { entityType: 'payroll_run', entityId: 'r1' },
+      { entityType: 'payroll_run', entityId: 'r1', restricted: [] },
       2,
       5,
     );
+  });
+
+  describe('P4 — what the viewer may see', () => {
+    const salaryChanges = [
+      { field: 'phone', before: '010', after: '011' },
+      { field: 'basicSalary', before: 500000, after: 600000 },
+      { field: 'iban', before: null, after: 'EG380019000500000000263180002' },
+    ];
+
+    it('edge case 4 — without every salary, salary-type changes say "changed" with no values', async () => {
+      const { service, entries } = makeService({ salaryScope: null });
+      entries.findPage.mockResolvedValueOnce(pageOf([row({ changes: salaryChanges })]));
+      const page = await service.list({}, 1, 10);
+      expect(page.data[0].changes).toEqual([
+        { field: 'phone', before: '010', after: '011' },
+        { field: 'basicSalary', hidden: true },
+        { field: 'iban', hidden: true },
+      ]);
+    });
+
+    it('a salary scope narrower than the whole school still hides the values (the log is school-wide)', async () => {
+      const { service, entries } = makeService({ salaryScope: 'own_stage' });
+      entries.findPage.mockResolvedValueOnce(pageOf([row({ changes: salaryChanges })]));
+      const page = await service.list({}, 1, 10);
+      expect(page.data[0].changes[1]).toEqual({ field: 'basicSalary', hidden: true });
+    });
+
+    it('with hr.employees.view_salary at scope all, the values are shown', async () => {
+      const { service, entries } = makeService({ salaryScope: 'all' });
+      entries.findPage.mockResolvedValueOnce(pageOf([row({ changes: salaryChanges })]));
+      const page = await service.list({}, 1, 10);
+      expect(page.data[0].changes).toEqual(salaryChanges);
+    });
+
+    it('entries about employees outside the scope are left out of the list', async () => {
+      const { service, entries } = makeService({ visibleEmployees: ['e1'] });
+      entries.findPage.mockResolvedValueOnce(pageOf([]));
+      await service.list({}, 1, 10);
+      expect(entries.findPage).toHaveBeenCalledWith(
+        { restricted: [{ entityType: 'employee', ids: ['e1'] }] },
+        1,
+        10,
+      );
+    });
+
+    it('edge case 3 — the History of an employee outside the scope is 404', async () => {
+      const { service, entries } = makeService({ visibleEmployees: ['e1'] });
+      await expect(service.listForRecord('employee', 'e2', 1, 10)).rejects.toMatchObject({
+        status: 404,
+      });
+      expect(entries.findPage).not.toHaveBeenCalled();
+      await expect(service.listFields('employee', 'e2')).rejects.toMatchObject({ status: 404 });
+      await expect(
+        service.listActors({ entityType: 'employee', entityId: 'e2' }),
+      ).rejects.toMatchObject({ status: 404 });
+    });
+
+    it('the History of an employee inside the scope reads as before', async () => {
+      const { service, entries } = makeService({ visibleEmployees: ['e1'] });
+      entries.findPage.mockResolvedValueOnce(pageOf([row()]));
+      const page = await service.listForRecord('employee', 'e1', 1, 10);
+      expect(page.data).toHaveLength(1);
+    });
   });
 });

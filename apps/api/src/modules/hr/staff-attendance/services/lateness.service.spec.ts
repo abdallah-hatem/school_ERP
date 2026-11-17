@@ -24,6 +24,8 @@ function makeService(over: {
   locked?: boolean;
   assertActive?: jest.Mock;
   rule?: typeof RULE;
+  /** The employees the user's `hr.lateness.edit` covers (default: all of them). */
+  editable?: string[];
 } = {}) {
   const calls: string[] = [];
   const repository = {
@@ -44,6 +46,11 @@ function makeService(over: {
         calls.push('active');
         return Promise.resolve();
       }),
+    filterInScope: jest
+      .fn()
+      .mockImplementation((_key: string, ids: string[]) =>
+        Promise.resolve(new Set(over.editable ?? ids)),
+      ),
   };
   const settings = { get: jest.fn().mockResolvedValue({ lateness: over.rule ?? RULE }) };
   const monthLock = {
@@ -104,6 +111,26 @@ describe('LatenessService', () => {
       [{ employeeId: '1', minutes: 120 }],
       'u1',
     );
+  });
+
+  it('the month list asks for the employees hr.lateness.view covers (R5)', async () => {
+    const { service, employees } = makeService();
+    await service.month('2026-11');
+    expect(employees.listActiveWithDepartments).toHaveBeenCalledWith('hr.lateness.view');
+  });
+
+  it('payroll’s list (no key) is school-wide', async () => {
+    const { service, employees } = makeService();
+    await service.list('2026-11');
+    expect(employees.listActiveWithDepartments).toHaveBeenCalledWith(undefined);
+  });
+
+  it('edge case 3 — put for an employee outside hr.lateness.edit → 404, nothing written', async () => {
+    const { service, repository } = makeService({ editable: ['1'] });
+    await expect(
+      service.put('2026-11', { entries: [{ employeeId: '1', minutes: 5 }, { employeeId: '2', minutes: 5 }] }, 'u1'),
+    ).rejects.toMatchObject({ status: 404 });
+    expect(repository.upsertMany).not.toHaveBeenCalled();
   });
 
   it('put on an approved month → PAYROLL_APPROVED, nothing written', async () => {

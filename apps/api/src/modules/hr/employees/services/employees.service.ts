@@ -1,11 +1,18 @@
 import { randomUUID } from 'node:crypto';
-import { BadRequestException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  HttpStatus,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   applyInsuranceStatus,
   contractYearFor,
   Employee,
   EMPLOYEE_PHOTO_UPLOAD,
+  EMPLOYEE_SALARY_FIELDS,
   EmployeeHiredEvent,
   EmployeeRef,
   EmployeeStatus,
@@ -16,11 +23,14 @@ import {
   NamedRef,
   oneYearContractEnd,
   Paginated,
+  type PermissionKey,
   socialInsuranceIssues,
   type SocialInsurance,
   Uuid,
 } from '@school-erp/shared';
 import { CodedException } from '../../../../common/errors/coded.exception';
+import { inScope, withoutFields, type EmployeeScope } from '../../access/employee-scope.pure';
+import { HrAccessService } from '../../access/hr-access.service';
 import { checkImageUpload, FileStorageService, type UploadedFileLike } from '../../../../core/settings';
 import { fromIsoDate, todayIsoDate, toIsoDate } from '../../../../common/utils/dates.util';
 import { DepartmentsService } from '../../lists/services/departments.service';
@@ -28,6 +38,7 @@ import { JobTitlesService } from '../../lists/services/job-titles.service';
 import { CreateEmployeeDto, ListEmployeesQueryDto, UpdateEmployeeDto } from '../dto/employee.dto';
 import {
   EmployeeDetailRow,
+  EmployeeScopeFields,
   EmployeesRepository,
   EmployeeSummaryRow,
   EmployeeUpdateData,
@@ -60,14 +71,25 @@ export const EMPLOYEE_PHOTO_FOLDER = 'employee-photos';
 
 const bad = (code: ErrorCode) => new CodedException(HttpStatus.BAD_REQUEST, code);
 
-export function toEmployeeSummary(row: EmployeeSummaryRow): EmployeeSummary {
-  return { ...row };
+/** The scope fields of a detail row (its stage and manager come as references). */
+const detailScopeFields = (row: EmployeeDetailRow): EmployeeScopeFields => ({
+  id: row.id,
+  stageId: row.stage.id,
+  managerId: row.manager?.id ?? null,
+});
+
+/** A list row; `basicSalary` left out unless `salaryVisible` (R7). */
+export function toEmployeeSummary(row: EmployeeSummaryRow, salaryVisible: boolean): EmployeeSummary {
+  const { managerId: _managerId, ...rest } = row;
+  return { ...withoutFields(rest, ['basicSalary'], salaryVisible), salaryVisible };
 }
 
-export function toEmployee(row: EmployeeDetailRow): Employee {
+/** The full record; the salary fields (`EMPLOYEE_SALARY_FIELDS`) left out unless `salaryVisible` (R7). */
+export function toEmployee(row: EmployeeDetailRow, salaryVisible: boolean): Employee {
   const { manager, ...rest } = row;
   return {
-    ...rest,
+    ...withoutFields(rest, EMPLOYEE_SALARY_FIELDS, salaryVisible),
+    salaryVisible,
     manager: manager
       ? {
           id: manager.id,
@@ -102,24 +124,66 @@ export class EmployeesService {
     private readonly jobTitles: JobTitlesService,
     private readonly events: EventEmitter2,
     private readonly files: FileStorageService,
+    private readonly access: HrAccessService,
   ) {}
 
+  /** The employees `hr.employees.view` covers for the user (R5), salary per row (R7). */
   async list(query: ListEmployeesQueryDto): Promise<Paginated<EmployeeSummary>> {
-    const result = await this.repository.list(query.page, query.limit, query.search, {
-      departmentId: query.departmentId,
-      stageId: query.stageId,
-      status: query.status,
-      workSystem: query.workSystem,
-      managesPeople: query.managesPeople,
-      excludeId: query.excludeId,
-    });
-    return { ...result, data: result.data.map(toEmployeeSummary) };
+    const [scope, salary] = await Promise.all([
+      this.access.where('hr.employees.view'),
+      this.access.salaryScope(),
+    ]);
+    const result = await this.repository.list(
+      query.page,
+      query.limit,
+      query.search,
+      {
+        departmentId: query.departmentId,
+        stageId: query.stageId,
+        status: query.status,
+        workSystem: query.workSystem,
+        managesPeople: query.managesPeople,
+        excludeId: query.excludeId,
+      },
+      scope,
+    );
+    return {
+      ...result,
+      data: result.data.map((row) =>
+        toEmployeeSummary(row, inScope(salary, { ...row, stageId: row.stage.id })),
+      ),
+    };
   }
 
+  /** 404 when unknown or outside the user's `hr.employees.view` scope (edge case 3). */
   async get(id: Uuid): Promise<Employee> {
-    const row = await this.repository.findDetail(id);
+    const row = await this.repository.findDetail(id, await this.access.where('hr.employees.view'));
     if (!row) throw new NotFoundException();
-    return toEmployee(row);
+    return this.present(row);
+  }
+
+  /**
+   * 404 unless the employee exists and `key` covers them for the user (edge case 3) — for another
+   * area's read about one employee (their payroll lines, penalties).
+   */
+  async assertInScope(key: PermissionKey, id: Uuid): Promise<void> {
+    await this.access.assertInScope(key, await this.repository.findScopeFields(id));
+  }
+
+  /** The ids of the employees `hr.employees.view` covers for the user (Activity log, R5). */
+  async idsInViewScope(): Promise<Uuid[] | 'all'> {
+    const scope = await this.access.scope('hr.employees.view');
+    if (scope.kind === 'all') return 'all';
+    return this.repository.findIdsInScope(await this.access.where('hr.employees.view'));
+  }
+
+  /** Which of `ids` `key` covers for the user (unknown ids are left out). */
+  async filterInScope(key: PermissionKey, ids: readonly Uuid[]): Promise<Set<Uuid>> {
+    const [scope, rows] = await Promise.all([
+      this.access.scope(key),
+      this.repository.findScopeFieldsMany([...new Set(ids)]),
+    ]);
+    return new Set(rows.filter((row) => inScope(scope, row)).map((row) => row.id));
   }
 
   /** Every active employee, ordered by code — for month-wide lists (lateness, payroll). */
@@ -127,9 +191,16 @@ export class EmployeesService {
     return this.repository.findActiveRefs();
   }
 
-  /** Every active employee with their department, ordered by code (the lateness month). */
-  async listActiveWithDepartments(): Promise<{ employee: EmployeeRef; department: NamedRef }[]> {
-    const rows = await this.repository.findActiveWithDepartments();
+  /**
+   * Every active employee with their department, ordered by code (the lateness month). With `key`,
+   * only the employees it covers for the user (R5); without, all of them (payroll's calculation).
+   */
+  async listActiveWithDepartments(
+    key?: PermissionKey,
+  ): Promise<{ employee: EmployeeRef; department: NamedRef }[]> {
+    const rows = await this.repository.findActiveWithDepartments(
+      key ? await this.access.where(key) : {},
+    );
     return rows.map(({ department, ...employee }) => ({ employee, department }));
   }
 
@@ -138,12 +209,17 @@ export class EmployeesService {
     return this.repository.findActiveForPayroll();
   }
 
-  /** Active headcount, total and per stage (dashboard). Inactive employees never count. */
+  /**
+   * Active headcount, total and per stage (dashboard) — of the employees `hr.employees.view` covers
+   * for the user (R5). Inactive employees never count.
+   */
   async activeHeadcount(): Promise<{
     active: number;
     byStage: { stage: NamedRef; count: number }[];
   }> {
-    const byStage = await this.repository.countActiveByStage();
+    const byStage = await this.repository.countActiveByStage(
+      await this.access.where('hr.employees.view'),
+    );
     return { active: byStage.reduce((n, s) => n + s.count, 0), byStage };
   }
 
@@ -162,6 +238,8 @@ export class EmployeesService {
   }
 
   async create(dto: CreateEmployeeDto): Promise<Employee> {
+    // A new employee's pay is set on create, so only someone who sees every salary may create (R7).
+    if ((await this.access.salaryScope()).kind !== 'all') throw new ForbiddenException();
     await this.assertSelectable(dto);
     const insurance = this.resolveInsurance(dto, null);
     await this.assertUnique({ ...dto, insuranceNumber: insurance.insuranceNumber }, null);
@@ -202,12 +280,20 @@ export class EmployeesService {
       graduationYear: dto.graduationYear ?? null,
     });
     this.emit(HrEvent.EMPLOYEE_HIRED, row.id);
-    return toEmployee(row);
+    return this.present(row);
   }
 
+  /**
+   * 404 outside the user's `hr.employees.edit` scope (edge case 3); 403 when the edit sends a
+   * salary field (`EMPLOYEE_SALARY_FIELDS`) for an employee whose salary the user can't see (R7).
+   */
   async update(id: Uuid, dto: UpdateEmployeeDto): Promise<Employee> {
-    const current = await this.repository.findDetail(id);
+    const current = await this.repository.findDetail(id, await this.access.where('hr.employees.edit'));
     if (!current) throw new NotFoundException();
+    const sendsSalary = EMPLOYEE_SALARY_FIELDS.some((f) => dto[f] !== undefined);
+    if (sendsSalary && !inScope(await this.access.salaryScope(), detailScopeFields(current))) {
+      throw new ForbiddenException();
+    }
 
     const cleared = REQUIRED_FIELDS.filter((f) => dto[f] === null);
     if (cleared.length) throw new BadRequestException(`${cleared.join(', ')} cannot be empty`);
@@ -240,7 +326,7 @@ export class EmployeesService {
     Object.assign(data, this.insuranceData(insurance));
     const row = await this.repository.updateEmployee(id, data);
     this.emit(HrEvent.EMPLOYEE_UPDATED, id);
-    return toEmployee(row);
+    return this.present(row);
   }
 
   /**
@@ -248,6 +334,7 @@ export class EmployeesService {
    * file is deleted once the record points at the new one.
    */
   async setPhoto(id: Uuid, file: UploadedFileLike | undefined): Promise<Employee> {
+    await this.assertInScope('hr.employees.edit', id);
     const previous = await this.repository.findPhotoUrl(id);
     if (previous === undefined) throw new NotFoundException();
     const { type, buffer } = checkImageUpload(file, EMPLOYEE_PHOTO_UPLOAD);
@@ -255,18 +342,19 @@ export class EmployeesService {
     const row = await this.repository.updateEmployee(id, { photoUrl });
     if (previous) await this.files.remove(previous);
     this.emit(HrEvent.EMPLOYEE_UPDATED, id);
-    return toEmployee(row);
+    return this.present(row);
   }
 
   /** Removes the photo; the employee shows the silhouette again. No photo → nothing changes. */
   async removePhoto(id: Uuid): Promise<Employee> {
+    await this.assertInScope('hr.employees.edit', id);
     const previous = await this.repository.findPhotoUrl(id);
     if (previous === undefined) throw new NotFoundException();
     if (!previous) return this.get(id);
     const row = await this.repository.updateEmployee(id, { photoUrl: null });
     await this.files.remove(previous);
     this.emit(HrEvent.EMPLOYEE_UPDATED, id);
-    return toEmployee(row);
+    return this.present(row);
   }
 
   /** Inactive: kept with all history, left out of new payroll runs, penalties and lateness. */
@@ -281,12 +369,22 @@ export class EmployeesService {
 
   /** Idempotent: setting the status an employee already has changes nothing and emits nothing. */
   private async setStatus(id: Uuid, status: EmployeeStatus, event: HrEvent): Promise<Employee> {
+    await this.assertInScope('hr.employees.change_status', id);
     const current = await this.repository.findState(id);
     if (!current) throw new NotFoundException();
     if (current.status === status) return this.get(id);
     const row = await this.repository.updateEmployee(id, { status });
     this.emit(event, id);
-    return toEmployee(row);
+    return this.present(row);
+  }
+
+  /** The record as this user may see it: salary fields only when their salary scope covers it. */
+  private async present(row: EmployeeDetailRow): Promise<Employee> {
+    return toEmployee(row, this.salaryVisible(await this.access.salaryScope(), row));
+  }
+
+  private salaryVisible(salary: EmployeeScope, row: EmployeeDetailRow): boolean {
+    return inScope(salary, detailScopeFields(row));
   }
 
   private async assertSelectable(ids: {

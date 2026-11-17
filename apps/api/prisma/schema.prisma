@@ -38,8 +38,6 @@ model User {
   linkedEmployee      Employee?            @relation("UserLinkedEmployee", fields: [employeeId], references: [id], onDelete: SetNull)
   roles               UserRoleAssignment[]
   refreshTokens       RefreshToken[]
-  /// Deprecated (P2): HR's old `employees.user_id` link, copied into `employeeId`.
-  employee            Employee?            @relation("EmployeeUser")
   settingsUpdated     SchoolSetting[]
   penaltiesCreated    PenaltyRecord[]      @relation("PenaltyCreatedBy")
   penaltiesApproved   PenaltyRecord[]      @relation("PenaltyApprovedBy")
@@ -340,7 +338,6 @@ model Employee {
   university                   String?
   graduationYear               Int?            @map("graduation_year")
   status                       EmployeeStatus  @default(ACTIVE)
-  userId                       String?         @unique @map("user_id") @db.Uuid
   createdAt                    DateTime        @default(now()) @map("created_at")
   updatedAt                    DateTime        @updatedAt @map("updated_at")
 
@@ -349,7 +346,6 @@ model Employee {
   jobTitle   JobTitle   @relation(fields: [jobTitleId], references: [id], onDelete: Restrict)
   manager    Employee?  @relation("EmployeeManager", fields: [managerId], references: [id], onDelete: Restrict)
   reports    Employee[] @relation("EmployeeManager")
-  user       User?      @relation("EmployeeUser", fields: [userId], references: [id], onDelete: SetNull)
   linkedUser User?      @relation("UserLinkedEmployee")
 
   penalties    PenaltyRecord[]
