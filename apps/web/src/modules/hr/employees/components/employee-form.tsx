@@ -1,5 +1,6 @@
 'use client';
 
+import { FormActionBar } from '@/shared/components/form/form-action-bar';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   GENDERS,
@@ -200,14 +201,14 @@ export function EmployeeForm({ basePath, employee, departments, stages, jobTitle
           </p>
         ) : null}
 
-        <div className="flex flex-wrap justify-end gap-2.5">
+        <FormActionBar>
           <Button asChild variant="secondary" aria-disabled={busy || undefined}>
             <Link href={cancelHref}>{t('common.actions.cancel')}</Link>
           </Button>
           <Button type="submit" variant="primary" loading={busy}>
             {employee ? t('employees.edit.submit') : t('employees.create.submit')}
           </Button>
-        </div>
+        </FormActionBar>
       </Form>
     </div>
   );
