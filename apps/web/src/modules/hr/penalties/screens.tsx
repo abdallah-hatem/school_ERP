@@ -1,8 +1,8 @@
-import { EmployeeStatus, monthOf, PAGINATION, type Employee } from '@school-erp/shared';
+import { EmployeeStatus, monthOf, PAGINATION, type Uuid } from '@school-erp/shared';
 import type { Locale } from '@/shared/lib/i18n';
 import { GET_EMPLOYEES } from '../employees/apis';
 import { GET_PENALTIES, GET_PENALTY_GROUPS } from './apis';
-import { EmployeePenalties } from './components/employee-penalties';
+import { ProfileEmployeePenalties } from './components/employee-penalties';
 import { PenaltiesList } from './components/penalties-list';
 import { parsePagingQuery, parsePenaltiesQuery, type SearchParamsRecord } from './lib/list-query';
 import { employeeOptions, violationGroups } from './lib/penalty-text';
@@ -34,26 +34,25 @@ export async function PenaltiesScreen({ locale, searchParams }: { locale: Locale
   );
 }
 
-/** Server: one employee's penalties, every month, newest first (the profile tab). */
+/**
+ * Server: one employee's penalties, every month, newest first (the profile tab). Fetches only the
+ * penalties — the employee comes from the profile layout, which already loaded it.
+ */
 export async function EmployeePenaltiesScreen({
   locale,
-  employee,
+  employeeId,
   searchParams,
 }: {
   locale: Locale;
-  employee: Employee;
+  employeeId: Uuid;
   searchParams: SearchParamsRecord;
 }) {
   const { page, limit } = parsePagingQuery(searchParams);
-  const [penalties, groups] = await Promise.all([
-    GET_PENALTIES({ employeeId: employee.id, page, limit }),
-    GET_PENALTY_GROUPS(),
-  ]);
+  const [penalties, groups] = await Promise.all([GET_PENALTIES({ employeeId, page, limit }), GET_PENALTY_GROUPS()]);
   return (
     <PenaltiesI18n locale={locale}>
-      <EmployeePenalties
+      <ProfileEmployeePenalties
         employeesPath={`/${locale}/employees`}
-        employee={employee}
         rows={penalties.success ? (penalties.data ?? []) : []}
         total={penalties.success ? (penalties.meta?.total ?? 0) : 0}
         page={page}

@@ -3,8 +3,9 @@
 import { monthOf } from '@school-erp/shared';
 import { useSearchParams } from 'next/navigation';
 import { useTranslation } from '@/shared/providers/i18n-provider';
-import { parsePenaltiesQuery } from '../lib/list-query';
+import { parsePagingQuery, parsePenaltiesQuery } from '../lib/list-query';
 import { PenaltiesI18n } from '../messages';
+import { ProfileEmployeePenalties } from './employee-penalties';
 import { PenaltiesList } from './penalties-list';
 
 /**
@@ -25,6 +26,25 @@ export function PenaltiesSkeleton() {
         rows={undefined}
         total={0}
         employees={[]}
+        violations={[]}
+      />
+    </PenaltiesI18n>
+  );
+}
+
+/** The profile's "Penalties" tab while it loads: the tab itself with skeleton rows (the header stays). */
+export function EmployeePenaltiesSkeleton() {
+  const { locale } = useTranslation();
+  const params = useSearchParams();
+  const { page, limit } = parsePagingQuery(Object.fromEntries(params));
+  return (
+    <PenaltiesI18n locale={locale}>
+      <ProfileEmployeePenalties
+        employeesPath={`/${locale}/employees`}
+        rows={undefined}
+        total={0}
+        page={page}
+        limit={limit}
         violations={[]}
       />
     </PenaltiesI18n>
