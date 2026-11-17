@@ -34,12 +34,14 @@ test('a Stage head sees only their stage, no salary, no Payroll or History; the 
     const cards = head.getByRole('article');
     await expect(cards.first()).toBeVisible();
     const shown = await cards.count();
-    expect(shown).toBe(Math.min(setup.inStage.length, 12));
+    // First that every card is someone of their stage (the scope), then the count: a full page, or
+    // the whole stage when it fits on one.
     const names = setup.inStage.map((e) => (locale === 'ar' ? e.nameAr : e.nameEn));
     for (let i = 0; i < shown; i++) {
       const name = (await cards.nth(i).getAttribute('aria-label')) ?? (await cards.nth(i).getByRole('heading').textContent());
       expect(names).toContain(name?.trim());
     }
+    expect(shown).toBe(Math.min(setup.inStage.length, 12));
     await expect(head.getByText(t(locale, 'employees.columns.basicSalary'))).toHaveCount(0);
     await settle(head);
     await shoot(head, info, `p4-stage-head-employees-${locale}-desktop`);

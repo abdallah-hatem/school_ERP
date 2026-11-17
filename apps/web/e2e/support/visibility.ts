@@ -19,12 +19,25 @@ export interface StageHeadSetup {
   passwordChosen?: boolean;
 }
 
+const PAGE = 100;
+
+async function allPages<T>(api: Api, path: string): Promise<T[]> {
+  const out: T[] = [];
+  for (let page = 1; ; page++) {
+    const rows = await api.get<T[]>(path, { page, limit: PAGE });
+    out.push(...rows);
+    if (rows.length < PAGE) return out;
+  }
+}
+
 export async function makeStageHead(): Promise<StageHeadSetup> {
   const api = await Api.asAdmin();
-  const everyone = await api.get<EmployeeSummary[]>('/hr/employees', { limit: 100 });
+  // Every employee and every picker option, page by page (the API serves at most 100 a page, and
+  // the seed plus earlier specs hold more).
+  const everyone = await allPages<EmployeeSummary>(api, '/hr/employees');
   // An employee has at most one account: each run (and each spec) links a Stage head to one nobody
   // holds yet.
-  const options = await api.get<EmployeeOption[]>('/users/employee-options', { limit: 100 });
+  const options = await allPages<EmployeeOption>(api, '/users/employee-options');
   const linked = new Set(options.filter((o) => o.linkedUser).map((o) => o.id));
   // A stage with an unlinked employee in it and someone outside it.
   const own = everyone.find((e) => !linked.has(e.id) && everyone.some((o) => o.stage.id !== e.stage.id));
