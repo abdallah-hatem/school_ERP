@@ -51,6 +51,17 @@ for (const locale of ['en', 'ar'] as const satisfies readonly Language[]) {
 
     await page.keyboard.press('Tab');
     await expect(salary).toHaveValue('35,000.00');
+
+    // Clicking back in selects the whole figure, so typing replaces it.
+    await salary.click();
+    expect(await caret(salary)).toEqual([0, 9]);
+    await page.keyboard.type('42000');
+    await expect(salary).toHaveValue('42,000');
+
+    // A second click on the focused field places the caret instead of selecting again.
+    await salary.click({ position: { x: 8, y: 10 } });
+    const [start, end] = await caret(salary);
+    expect(start).toBe(end);
   });
 }
 

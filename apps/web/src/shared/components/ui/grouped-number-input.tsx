@@ -17,7 +17,8 @@ type GroupedNumberInputProps = Omit<ComponentProps<typeof Input>, 'value' | 'onC
 /**
  * A text input for a figure that groups thousands while the person types (`30000` → `30,000`),
  * keeping the caret by digit count, ignoring letters and rejecting keystrokes that could never be
- * valid. Latin digits and left-to-right in both languages.
+ * valid. Latin digits and left-to-right in both languages. Clicking into it selects the whole
+ * figure, so typing replaces it; a second click places the caret.
  */
 export function GroupedNumberInput({
   value,
@@ -26,11 +27,16 @@ export function GroupedNumberInput({
   allowNegative = false,
   ref,
   onKeyDown,
+  onFocus,
+  onMouseDown,
+  onMouseUp,
   className,
   ...props
 }: GroupedNumberInputProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const pendingCaret = useRef<number | null>(null);
+  // Set by the click that focuses the field, so its mouseup doesn't drop the selection.
+  const keepSelectionOnMouseUp = useRef(false);
   // Re-render even when the text is unchanged (an ignored letter), so React puts the value back
   // and the caret is restored rather than left at the end.
   const [, rerender] = useReducer((n: number) => n + 1, 0);
@@ -68,6 +74,21 @@ export function GroupedNumberInput({
       dir="ltr"
       className={cn('tabular text-start rtl:text-end', className)}
       value={value}
+      onFocus={(e) => {
+        onFocus?.(e);
+        e.currentTarget.select();
+      }}
+      onMouseDown={(e) => {
+        onMouseDown?.(e);
+        keepSelectionOnMouseUp.current = e.currentTarget.ownerDocument.activeElement !== e.currentTarget;
+      }}
+      onMouseUp={(e) => {
+        onMouseUp?.(e);
+        if (!keepSelectionOnMouseUp.current) return;
+        keepSelectionOnMouseUp.current = false;
+        e.preventDefault();
+        e.currentTarget.select();
+      }}
       onKeyDown={(e) => {
         onKeyDown?.(e);
         // A caret restore only ever belongs to the edit that queued it; any new key starts clean.
