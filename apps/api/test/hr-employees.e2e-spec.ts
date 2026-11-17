@@ -386,7 +386,9 @@ describe('HR lists and employees (e2e)', () => {
       expect(res.body.error).toBe(ErrorCode.INVALID_MANAGER);
 
       // A valid change and clearing the manager both work.
-      await http(app).patch(`/hr/employees/${c.id}`).send({ managerId: a.id }).expect(200);
+      const changed = await http(app).patch(`/hr/employees/${c.id}`).send({ managerId: a.id }).expect(200);
+      // The manager reference carries what the avatar needs (photo, else a gendered silhouette).
+      expect(changed.body.data.manager).toMatchObject({ id: a.id, photoUrl: null, gender: 'FEMALE' });
       const cleared = await http(app)
         .patch(`/hr/employees/${c.id}`)
         .send({ managerId: null })
@@ -768,6 +770,7 @@ describe('HR lists and employees (e2e)', () => {
       basicSalary: 1000000,
       status: 'ACTIVE',
       photoUrl: null,
+      gender: 'FEMALE',
     });
 
     await http(app).post(`/hr/employees/${e.id}/deactivate`).expect(200);

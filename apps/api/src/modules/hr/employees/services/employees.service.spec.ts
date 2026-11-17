@@ -316,6 +316,7 @@ describe('EmployeesService', () => {
       nameEn: 'M',
       nameAr: 'م',
       photoUrl: null,
+      gender: 'FEMALE' as const,
       jobTitle: { managesPeople: false },
     };
 
@@ -352,7 +353,7 @@ describe('EmployeesService', () => {
         findDetail: jest.fn().mockResolvedValue(row({ manager: managerRef })),
       });
       await expect(service.get('e1')).resolves.toMatchObject({
-        manager: { id: 'm1', code: 'EMP-0009', nameEn: 'M', nameAr: 'م', managesPeople: false },
+        manager: { id: 'm1', code: 'EMP-0009', nameEn: 'M', nameAr: 'م', managesPeople: false, gender: 'FEMALE' },
       });
     });
 

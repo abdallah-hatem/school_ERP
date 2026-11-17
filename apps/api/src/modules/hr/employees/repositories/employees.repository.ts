@@ -22,6 +22,7 @@ export const EMPLOYEE_SUMMARY_SELECT = {
   basicSalary: true,
   status: true,
   photoUrl: true,
+  gender: true,
 } satisfies Prisma.EmployeeSelect;
 
 /** The employee fields a payroll line snapshots at calculation (§6). */
@@ -63,6 +64,7 @@ export const EMPLOYEE_DETAIL_SELECT = {
       nameEn: true,
       nameAr: true,
       photoUrl: true,
+      gender: true,
       jobTitle: { select: { managesPeople: true } },
     },
   },

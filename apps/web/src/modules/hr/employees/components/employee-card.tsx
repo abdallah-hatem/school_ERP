@@ -119,7 +119,7 @@ export function EmployeeCard({
       }
       avatar={
         <>
-          <EmployeeAvatar photoUrl={employee.photoUrl} size="lg" muted={inactive} className="ring-4 ring-card" />
+          <EmployeeAvatar photoUrl={employee.photoUrl} gender={employee.gender} size="lg" muted={inactive} className="ring-4 ring-card" />
           <span className="ms-auto mb-1">
             <EmployeeStatusPill status={employee.status} />
           </span>

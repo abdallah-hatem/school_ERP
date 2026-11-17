@@ -113,7 +113,7 @@ describe('EmployeeForm', () => {
   it('Manager picker: a kept manager who no longer manages people is listed and flagged; search finds by code', async () => {
     const user = userEvent.setup();
     const candidates = [summary({ id: 'e-omar', code: 'EMP-0002', nameEn: 'Omar Fathy', nameAr: 'عمر فتحي' })];
-    const kept = { id: 'e-hany', code: 'EMP-0007', nameEn: 'Hany Said', nameAr: 'هاني سعيد', managesPeople: false, photoUrl: null };
+    const kept = { id: 'e-hany', code: 'EMP-0007', nameEn: 'Hany Said', nameAr: 'هاني سعيد', managesPeople: false, photoUrl: null, gender: 'MALE' as const };
     renderForm({ editing: { ...employee, manager: kept }, candidates });
 
     const trigger = screen.getByRole('combobox', { name: /Direct manager/ });
@@ -137,7 +137,7 @@ describe('EmployeeForm', () => {
   });
 
   it('Manager picker in Arabic: the kept-manager note and the no-managers hint are translated', () => {
-    const kept = { id: 'e-hany', code: 'EMP-0007', nameEn: 'Hany Said', nameAr: 'هاني سعيد', managesPeople: false, photoUrl: null };
+    const kept = { id: 'e-hany', code: 'EMP-0007', nameEn: 'Hany Said', nameAr: 'هاني سعيد', managesPeople: false, photoUrl: null, gender: 'MALE' as const };
     renderForm({ editing: { ...employee, manager: kept }, locale: 'ar' });
     expect(screen.getByText('لم يعد في منصب إداري؛ يبقى مديرًا لهذا الموظف.')).toBeTruthy();
     cleanup();

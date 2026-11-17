@@ -70,6 +70,8 @@ export interface EmployeeSummary extends Names {
   status: EmployeeStatus;
   /** Signed-in-only image URL; null → the silhouette avatar. */
   photoUrl: string | null;
+  /** Picks the male or female silhouette when there is no photo. */
+  gender: Gender;
 }
 
 /** All §3 fields a client sends (everything except `code` and `status`). */
@@ -136,7 +138,7 @@ export interface Employee extends Names {
    * `managesPeople`: the manager's job title still manages people. `false` means they no longer
    * qualify — the employee keeps them, and the form flags it (§3).
    */
-  manager: (NamedRef & { code: string; managesPeople: boolean; photoUrl: string | null }) | null;
+  manager: (NamedRef & { code: string; managesPeople: boolean; photoUrl: string | null; gender: Gender }) | null;
   grade: string | null;
   workSystem: WorkSystem;
   basicSalary: Piastres;
@@ -171,6 +173,8 @@ export interface EmployeeRef extends NamedRef {
   code: string;
   /** Present where the response shows the employee's avatar (e.g. penalties). */
   photoUrl?: string | null;
+  /** Present with `photoUrl`: picks the male or female silhouette. */
+  gender?: Gender;
 }
 
 // ── Penalty catalogue ──────────────────────────────────────────────────────
