@@ -104,7 +104,9 @@
   },
   "edit": {
     "title": "Edit employee",
-    "submit": "Save changes"
+    "submit": "Save changes",
+    "unsaved": "You have unsaved changes.",
+    "noChanges": "No changes yet."
   },
   "profile": {
     "tabs": "Employee sections",

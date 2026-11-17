@@ -64,6 +64,10 @@ export function EmployeeForm({ basePath, employee, departments, stages, jobTitle
   const isEdit = Boolean(employee);
   const initial = useMemo(() => (employee ? employeeToForm(employee) : emptyEmployeeForm()), [employee]);
   const form = useForm<EmployeeFormValues>({ resolver: zodResolver(employeeFormSchema), defaultValues: initial });
+  // Editing: Save stays disabled until something differs from the saved employee (back to the
+  // original value counts as unchanged). Adding: always enabled — submitting shows what's missing.
+  const { isDirty } = form.formState;
+  const nothingToSave = Boolean(employee) && !isDirty;
   const { control, setError, setValue, getFieldState } = form;
 
   // One request at a time, and the button stays busy through the navigation after a save.
@@ -201,11 +205,19 @@ export function EmployeeForm({ basePath, employee, departments, stages, jobTitle
           </p>
         ) : null}
 
-        <FormActionBar>
+        <FormActionBar
+          status={
+            employee ? (
+              <p role="status" className="text-muted-foreground">
+                {isDirty ? t('employees.edit.unsaved') : t('employees.edit.noChanges')}
+              </p>
+            ) : undefined
+          }
+        >
           <Button asChild variant="secondary" aria-disabled={busy || undefined}>
             <Link href={cancelHref}>{t('common.actions.cancel')}</Link>
           </Button>
-          <Button type="submit" variant="primary" loading={busy}>
+          <Button type="submit" variant="primary" loading={busy} disabled={nothingToSave}>
             {employee ? t('employees.edit.submit') : t('employees.create.submit')}
           </Button>
         </FormActionBar>

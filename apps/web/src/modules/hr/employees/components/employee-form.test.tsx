@@ -80,9 +80,11 @@ describe('EmployeeForm', () => {
     const user = userEvent.setup();
     update.mockResolvedValueOnce(conflict('DUPLICATE_FINGERPRINT_ID', 'dup'));
     renderForm({ editing: employee });
+    const fingerprint = screen.getByRole('textbox', { name: /Fingerprint ID/ });
+    await user.clear(fingerprint);
+    await user.type(fingerprint, 'FP-9999');
 
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
-    const fingerprint = screen.getByRole('textbox', { name: /Fingerprint ID/ });
     await waitFor(() => expect(fingerprint.getAttribute('aria-invalid')).toBe('true'));
     expect(screen.getByText('Another employee already has this fingerprint ID.')).toBeTruthy();
 
@@ -108,11 +110,35 @@ describe('EmployeeForm', () => {
     expect(names).toEqual(['No direct manager', 'Omar Fathy · EMP-0002']);
   });
 
+  it('edit: Save stays disabled until something changes, and again once it is changed back', async () => {
+    const user = userEvent.setup();
+    renderForm({ editing: employee });
+    const save = screen.getByRole('button', { name: 'Save changes' });
+    expect(save).toHaveProperty('disabled', true);
+    expect(screen.getByText('No changes yet.')).toBeTruthy();
+
+    const phone = screen.getByRole('textbox', { name: /Phone/ }) as HTMLInputElement;
+    const original = phone.value;
+    await user.clear(phone);
+    await user.type(phone, '01011112222');
+    await waitFor(() => expect(save).toHaveProperty('disabled', false));
+    expect(screen.getByText('You have unsaved changes.')).toBeTruthy();
+
+    await user.clear(phone);
+    if (original) await user.type(phone, original);
+    await waitFor(() => expect(save).toHaveProperty('disabled', true));
+    await user.click(save);
+    expect(update).not.toHaveBeenCalled();
+  });
+
   it('Double submit prevented', async () => {
     const user = userEvent.setup();
     let resolve: (v: Awaited<ReturnType<typeof UPDATE_EMPLOYEE>>) => void = () => undefined;
     update.mockReturnValue(new Promise((r) => (resolve = r)));
     renderForm({ editing: employee });
+    const phone = screen.getByRole('textbox', { name: /Phone/ });
+    await user.clear(phone);
+    await user.type(phone, '01011112222');
 
     const save = screen.getByRole('button', { name: 'Save changes' });
     await user.dblClick(save);
