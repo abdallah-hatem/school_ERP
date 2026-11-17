@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Basic avatars</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#eaf4f1; --card:#fff; --text:#11302b; --muted:#5d7671; --tile:#d6dadd; --fig:#ffffff; }
+  body { margin:0; padding:32px; background:var(--bg); font-family:"Plus Jakarta Sans",system-ui,sans-serif; color:var(--text); }
+  .card { background:var(--card); border-radius:18px; padding:24px; max-width:760px; }
+  h1 { font-size:20px; margin:0 0 4px } p { color:var(--muted); margin:0 0 20px; font-size:14px }
+  .row { display:flex; align-items:flex-end; gap:22px; margin-bottom:18px }
+  .lbl { font-size:12px; color:var(--muted); text-align:center; margin-top:6px }
+  .av { display:block; border-radius:14px; background:var(--tile); color:var(--fig); overflow:hidden }
+  .list { display:flex; flex-direction:column; gap:10px; margin-top:8px }
+  .item { display:flex; align-items:center; gap:12px; font-weight:700; font-size:14px }
+  .item small { display:block; font-weight:500; color:var(--muted) }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Basic avatars</h1>
+  <p>Shown only when an employee has no photo. Classic default silhouette: white figure on a light grey tile.</p>
+
+  <template id="male">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><path fill="currentColor" d="M7 64c2-9 9-12.5 17-15.5V42c-3.5-2.5-5.6-6.6-6.6-10.4-1.9-.1-3.1-1.8-3.1-3.9 0-1.6.7-2.8 1.8-3.3-.7-5.1-.3-10.5 3.6-14C23.3 7.1 28 6 32.5 6.2c2.6.1 4.6.6 6 1.4 1.4-.4 3 .1 3.8 1.6 2.8 1.4 4 4.5 3.9 8.2 0 2.4-.4 4.6-.9 6.7 1.2.4 2 1.7 2 3.4 0 2.2-1.3 3.9-3.2 4-1 3.9-3.1 7.9-6.6 10.4v6.5c8 3 15 6.5 17 15.5z"/></svg>
+  </template>
+  <template id="female">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><path fill="currentColor" d="M8 64c2-8 9.5-11.5 17-14v-9.4c-3.6.2-7.4-.5-10.4-2.2 2.4-2.6 2.9-6.2 2.9-9.9 0-5.6 1.9-10 5.6-12.8 2.6-2 5.6-2.9 8.9-2.9s6.3.9 8.9 2.9c3.7 2.8 5.6 7.2 5.6 12.8 0 3.7.5 7.3 2.9 9.9-3 1.7-6.8 2.4-10.4 2.2v9.4C46.5 52.5 54 56 56 64z"/></svg>
+  </template>
+
+  <div class="row" id="sizes"></div>
+  <div class="list" id="list"></div>
+</div>
+<script>
+  const svg = (g) => document.getElementById(g).innerHTML;
+  const sizes = document.getElementById('sizes');
+  for (const g of ['male', 'female']) for (const s of [36, 48, 64, 96]) {
+    const d = document.createElement('div');
+    d.innerHTML = `<span class="av" style="width:${s}px;height:${s}px">${svg(g)}</span><div class="lbl">${g === 'male' ? 'Male' : 'Female'} · ${s}</div>`;
+    sizes.appendChild(d);
+  }
+  const people = [['Karim Hossam Nabil','Vice Principal','male'],['Mona Adel Hassan','Vice Principal','female'],['Omar Khaled Shaker','Teacher','male'],['Nour Ehab Kamel','Teacher','female']];
+  const list = document.getElementById('list');
+  for (const [n, j, g] of people) {
+    const d = document.createElement('div'); d.className = 'item';
+    d.innerHTML = `<span class="av" style="width:36px;height:36px">${svg(g)}</span><span>${n}<small>${j}</small></span>`;
+    list.appendChild(d);
+  }
+</script>
+</body>
+</html>
