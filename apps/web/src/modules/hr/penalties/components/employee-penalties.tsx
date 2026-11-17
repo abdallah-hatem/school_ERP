@@ -9,6 +9,7 @@ import { Button } from '@/shared/components/ui/button';
 import { AddIcon } from '@/shared/components/ui/icons';
 import { nameIn } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
+import { useProfileEmployee } from '../../employees';
 import { employeeOptions } from '../lib/penalty-text';
 import { PenaltiesTable } from './penalties-table';
 import { RecordPenaltyDialog } from './record-penalty-dialog';
@@ -17,7 +18,8 @@ export interface EmployeePenaltiesProps {
   /** `/ar/employees`. */
   employeesPath: string;
   employee: Employee;
-  rows: PenaltyRecord[];
+  /** `undefined` while the tab loads: skeleton rows, the record button disabled. */
+  rows: PenaltyRecord[] | undefined;
   total: number;
   page: number;
   limit: number;
@@ -46,7 +48,7 @@ export function EmployeePenalties({ employeesPath, employee, rows, total, page, 
   }
 
   const recordButton = active ? (
-    <Button variant="primary" className="cursor-pointer" onClick={() => setRecording(true)}>
+    <Button variant="primary" className="cursor-pointer" disabled={rows === undefined} onClick={() => setRecording(true)}>
       <AddIcon />
       {t('penalties.record')}
     </Button>
@@ -89,4 +91,12 @@ export function EmployeePenalties({ employeesPath, employee, rows, total, page, 
       ) : null}
     </>
   );
+}
+
+/**
+ * The tab inside the profile layout: the employee is the one the layout already loaded (and
+ * refreshes after deactivate / reactivate), so the tab never fetches it again.
+ */
+export function ProfileEmployeePenalties(props: Omit<EmployeePenaltiesProps, 'employee'>) {
+  return <EmployeePenalties {...props} employee={useProfileEmployee()} />;
 }

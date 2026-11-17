@@ -1,13 +1,14 @@
 'use client';
 
 import { monthOf, PAGINATION } from '@school-erp/shared';
-import { useSearchParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { DataTable } from '@/shared/components/data-table/data-table';
 import { PageHeader } from '@/shared/components/layout/page-header';
 import { Skeleton, SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { parseRunQuery, parseRunsQuery } from '../lib/run-query';
 import { PayrollI18n } from '../messages';
+import { EmployeePayroll } from './employee-payroll';
 import { PayslipSkeleton as PayslipSkeletonBody } from './payslip-view';
 import { RulesPanel } from './rules-panel';
 import { RUN_COLUMN_IDS, RunLinesToolbar, RunTiles, runColumn } from './run-page';
@@ -110,6 +111,25 @@ export function PayslipSkeleton() {
   return (
     <PayrollI18n locale={locale}>
       <PayslipSkeletonBody />
+    </PayrollI18n>
+  );
+}
+
+/** The profile's "Payroll" tab while it loads: the tab's table with skeleton rows (the header stays). */
+export function EmployeePayrollSkeleton() {
+  const { locale } = useTranslation();
+  const { id } = useParams<{ id: string }>();
+  const query = parseRunsQuery(Object.fromEntries(useSearchParams()));
+  return (
+    <PayrollI18n locale={locale}>
+      <EmployeePayroll
+        payrollPath={`/${locale}/payroll`}
+        tabPath={`/${locale}/employees/${id}/payroll`}
+        rows={undefined}
+        total={0}
+        page={query.page}
+        limit={query.limit}
+      />
     </PayrollI18n>
   );
 }

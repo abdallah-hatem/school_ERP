@@ -18,8 +18,8 @@ export interface EmployeePayrollProps {
   payrollPath: string;
   /** `/ar/employees/<id>/payroll` — pagination pushes `?page&limit` onto it. */
   tabPath: string;
-  /** `null` when the history failed to load. */
-  rows: EmployeePayrollLine[] | null;
+  /** `null` when the history failed to load; `undefined` while the tab loads (skeleton rows). */
+  rows: EmployeePayrollLine[] | null | undefined;
   total: number;
   page: number;
   limit: number;
@@ -84,7 +84,8 @@ export function EmployeePayroll({ payrollPath, tabPath, rows, total, page, limit
     <DataTable
       label={t('payroll.profile.tableLabel')}
       columns={columns}
-      rows={rows === null ? undefined : rows}
+      rows={rows ?? undefined}
+      loading={rows === undefined}
       getRowId={({ lineId }) => lineId}
       refreshing={pending}
       error={rows === null}

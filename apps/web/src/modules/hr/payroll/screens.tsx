@@ -74,7 +74,7 @@ export async function PayslipScreen({ locale, id, lineId }: { locale: Locale; id
   );
 }
 
-/** The body of the employee profile's "Payroll" tab (the route wraps it in the profile shell). */
+/** The body of the employee profile's "Payroll" tab (the profile layout draws the header around it). */
 export async function EmployeePayrollSection({
   locale,
   employee,

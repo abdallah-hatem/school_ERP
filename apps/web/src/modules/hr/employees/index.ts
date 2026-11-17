@@ -3,9 +3,16 @@
  * modules (penalties T12, payroll T14 — the profile tabs) import from here only.
  */
 export { EmployeeForm, type EmployeeFormProps } from './components/employee-form';
-export { EmployeeDetails, EmployeeProfileShell, PROFILE_TABS, type ProfileTabKey } from './components/employee-profile';
+export {
+  EmployeeDetails,
+  EmployeeProfileShell,
+  PROFILE_TABS,
+  ProfileEmployeeDetails,
+  useProfileEmployee,
+  type ProfileTabKey,
+} from './components/employee-profile';
 export { EmployeeIdentity, EmployeeStatusPill } from './components/employee-bits';
 export { EmployeesList, type EmployeesListProps } from './components/employees-list';
-export { EmployeePageSkeleton, EmployeesListSkeleton } from './components/employees-skeletons';
+export { EmployeeDetailsSkeleton, EmployeePageSkeleton, EmployeeProfileSkeleton, EmployeesListSkeleton } from './components/employees-skeletons';
 export { EmployeesI18n, employeesMessages } from './messages';
 export { parseEmployeesQuery, type SearchParamsRecord } from './lib/list-query';
