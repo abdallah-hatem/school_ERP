@@ -14,8 +14,10 @@ skills. **Where this file differs from a skill, this file wins.**
 3. **`packages/shared` exists even though there is no mobile app.** It holds zod schemas, API
    types, permission / setting / module keys, enums, locale files and tokens.
 4. **Frontend is split into `core/`, `shared/` and `modules/`** — see `docs/ARCHITECTURE.md`.
-5. **PRs into `dev` are not merged by Claude.** Open the PR, then stop: a human approval is required
-   (branch protection + `CODEOWNERS`). Merge only after approval and green CI.
+5. **Into `dev`: a PR with green CI, no approval needed** (owner, 2026-11-17). Anyone — Claude
+   included — merges their own PR once CI passes; direct pushes to `dev` are blocked. **Into
+   `testing` and `production`: green CI and the owner's approval** (branch protection + `CODEOWNERS`
+   `*`). Claude never merges into `testing` or `production`.
 6. **No Vercel. Our own Contabo VPS runs Coolify with three environments: dev, testing and prod.**
    Three branches, promoted one way: `dev` → `testing` → `production` (merge commits, never squash).
    `dev` and `testing` auto-deploy their environments. `production` builds a versioned Docker image

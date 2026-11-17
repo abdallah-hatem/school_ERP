@@ -45,7 +45,16 @@ Code moves one way: **`dev` → `testing` → `production`**. Each branch deploy
 - `production` — what the schools run. Changed only by a release PR from `testing`.
 - Work branches cut from `dev`: `feature/<name>`, `fix/<name>`, `chore/<name>`.
 - Commit messages: conventional (`feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`).
-- Never push straight to `dev`, `testing` or `production`. Branch protection enforces it.
+- Branch protection (owner, 2026-11-17):
+
+  | Branch | How code lands | Needs |
+  |---|---|---|
+  | your work branch | push freely (the pre-push hook runs `pnpm ci:local`) | — |
+  | `dev` | a PR | **green CI**; no approval — the author merges when CI passes |
+  | `testing`, `production` | a PR (`dev` → `testing`, `testing` → `production`) | **green CI and the owner's approval** |
+
+  Nobody pushes straight to `dev`, `testing` or `production`, and they can't be force-pushed or
+  deleted.
 
 ## Before opening a PR
 
@@ -122,7 +131,9 @@ How:
 - Review within **one working day**.
 - Mark comments **must fix** or **nit**. Nits don't block.
 - Comments are about the code, not the person.
-- The **author merges** after approval and green CI — **squash** into `dev`, delete the branch.
+- Into `dev`: the **author merges** once CI is green (no approval required; ask for a review when
+  you want one — always for changes to core or shared code). Merge commit, delete the branch.
+- Into `testing` / `production`: the owner approves and merges.
 
 ## Environments and QA
 
