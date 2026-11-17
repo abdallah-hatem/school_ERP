@@ -6,3 +6,4 @@ export * from './types/common';
 export * from './types/core';
 export * from './types/hr';
 export * from './rules';
+export * from './format';

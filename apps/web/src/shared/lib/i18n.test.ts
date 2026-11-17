@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { dirFor, getCommonMessages, isLocale } from './i18n';
+import {
+  createTranslator,
+  dirFor,
+  getBaseMessages,
+  getCommonMessages,
+  isLocale,
+  mergeMessages,
+  swapLocaleInPath,
+} from './i18n';
 
 describe('i18n', () => {
   it('Arabic renders right-to-left, English left-to-right', () => {
@@ -17,5 +25,25 @@ describe('i18n', () => {
   it('loads the shared common namespace for each locale', () => {
     expect(getCommonMessages('en').nav.payroll).toBe('Payroll');
     expect(getCommonMessages('ar').nav.payroll).not.toBe(getCommonMessages('en').nav.payroll);
+  });
+
+  it('translates nested keys with values, and shows a missing key as itself', () => {
+    const t = createTranslator(getBaseMessages('en'));
+    expect(t('ui.table.showing', { from: 1, to: 10, total: 14 })).toBe('Showing 1–10 of 14');
+    expect(t('common.nav.payroll')).toBe('Payroll');
+    expect(t('ui.nope')).toBe('ui.nope');
+  });
+
+  it('lets a module add its namespace on top of the base ones', () => {
+    const t = createTranslator(mergeMessages(getBaseMessages('en'), { hr: { title: 'HR' } }));
+    expect(t('hr.title')).toBe('HR');
+    expect(t('common.nav.payroll')).toBe('Payroll');
+  });
+
+  it('swaps only the locale segment of a path', () => {
+    expect(swapLocaleInPath('/en/payroll/2026-11', 'ar')).toBe('/ar/payroll/2026-11');
+    expect(swapLocaleInPath('/ar', 'en')).toBe('/en');
+    expect(swapLocaleInPath('/', 'ar')).toBe('/ar');
+    expect(swapLocaleInPath('/employees', 'en')).toBe('/en/employees');
   });
 });

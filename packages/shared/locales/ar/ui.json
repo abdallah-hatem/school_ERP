@@ -1,0 +1,55 @@
+{
+  "shell": {
+    "openMenu": "فتح القائمة",
+    "closeMenu": "إغلاق القائمة",
+    "mainNav": "التنقل الرئيسي",
+    "language": "اللغة",
+    "productName": "نظام إدارة المدرسة",
+    "breadcrumbs": "مسار التنقل"
+  },
+  "table": {
+    "showing": "عرض {from}–{to} من {total}",
+    "rowsPerPage": "عدد الصفوف",
+    "pagination": "التنقل بين الصفحات",
+    "firstPage": "الصفحة الأولى",
+    "previousPage": "الصفحة السابقة",
+    "nextPage": "الصفحة التالية",
+    "lastPage": "الصفحة الأخيرة",
+    "page": "صفحة {page}"
+  },
+  "states": {
+    "emptyTitle": "لا يوجد شيء هنا بعد",
+    "emptyBody": "ستظهر هنا العناصر التي تضيفها.",
+    "errorTitle": "تعذّر التحميل",
+    "errorBody": "تحقق من الاتصال ثم حاول مرة أخرى.",
+    "retry": "حاول مرة أخرى",
+    "loading": "جارٍ التحميل…"
+  },
+  "dialog": {
+    "close": "إغلاق",
+    "confirm": "تأكيد",
+    "cancel": "إلغاء",
+    "reasonLabel": "السبب",
+    "reasonPlaceholder": "سُجّلت لموظف آخر بالخطأ",
+    "reasonRequired": "اكتب السبب للمتابعة."
+  },
+  "form": {
+    "required": "هذا الحقل مطلوب.",
+    "invalidNumber": "أدخل رقمًا.",
+    "invalidAmount": "أدخل مبلغًا بحد أقصى رقمين عشريين، مثل 1,250.00.",
+    "pickDate": "اختر يومًا",
+    "chooseOption": "اختر من القائمة",
+    "noOptions": "لا توجد خيارات بعد.",
+    "counter": "{count} / {max}",
+    "previousMonth": "الشهر السابق",
+    "nextMonth": "الشهر التالي"
+  },
+  "units": {
+    "currency": "ج.م",
+    "days": "يوم"
+  },
+  "comingSoon": {
+    "title": "هذه الشاشة قيد الإنشاء",
+    "body": "ستتوفر في تحديث قادم. باقي النظام يعمل كالمعتاد."
+  }
+}
