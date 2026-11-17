@@ -1,9 +1,11 @@
 import { Injectable } from '@nestjs/common';
+import { TransactionHost } from '@nestjs-cls/transactional';
 import { Prisma } from '@prisma/client';
 import { PenaltyStatus, type IsoDate, type PenaltyAction } from '@school-erp/shared';
 import { BaseRepository } from '../../../../common/repositories/base.repository';
 import { fromIsoDate, monthDateRange, toIsoDate } from '../../../../common/utils/dates.util';
 import { DatabaseService } from '../../../../database/database.service';
+import type { DbAdapter, DbClient } from '../../../../database/transactions';
 import { LEVEL_SELECT, type LevelData } from './penalty-catalogue.repository';
 
 const USER_REF = { select: { id: true, name: true } } as const;
@@ -111,7 +113,7 @@ export type ApproveOutcome = 'APPROVED' | 'NOT_PENDING' | 'ONCE_PER_DAY';
  */
 export type SameDayRefusal = (sameDayOthers: PenaltyStatus[]) => boolean;
 
-type Tx = Prisma.TransactionClient;
+type Tx = DbClient;
 
 /**
  * Serialises writes of one employee + violation pair (recording and approving) for the rest of the
@@ -122,7 +124,7 @@ const lockPair = (tx: Tx, key: RepeatKey) =>
 
 /** Statuses of the pair's records dated `date`, other than `exceptId`. */
 async function sameDayStatuses(
-  db: Tx | DatabaseService,
+  db: Tx,
   key: RepeatKey,
   date: IsoDate,
   exceptId?: string,
@@ -149,12 +151,16 @@ export class PenaltyRecordsRepository extends BaseRepository<
   RecordCreateData,
   Prisma.PenaltyRecordUncheckedUpdateInput
 > {
-  constructor(databaseService: DatabaseService) {
+  constructor(
+    databaseService: DatabaseService,
+    private readonly txHost: TransactionHost<DbAdapter>,
+  ) {
     super(databaseService, 'penaltyRecord');
   }
 
-  private get db(): DatabaseService {
-    return this.databaseService;
+  /** The open transaction when there is one (an audited request, audit D2), else the plain client. */
+  private get db(): DbClient {
+    return this.txHost.tx;
   }
 
   /** `scope`: the employees whose records the viewer may see (R5) — `{}` for all. */
@@ -224,7 +230,8 @@ export class PenaltyRecordsRepository extends BaseRepository<
    * concurrent recordings of the same day can't both pass.
    */
   createRecord(data: RecordCreateData, refuse: SameDayRefusal): Promise<RecordRow | null> {
-    return this.db.$transaction(async (tx) => {
+    return this.txHost.withTransaction(async () => {
+      const tx = this.txHost.tx;
       await lockPair(tx, data);
       if (refuse(await sameDayStatuses(tx, data, data.date))) return null;
       return tx.penaltyRecord.create({
@@ -268,7 +275,8 @@ export class PenaltyRecordsRepository extends BaseRepository<
     resolve: (approved: ApprovedCandidate[]) => LevelData,
     refuse: SameDayRefusal,
   ): Promise<ApproveOutcome> {
-    return this.db.$transaction(async (tx) => {
+    return this.txHost.withTransaction(async () => {
+      const tx = this.txHost.tx;
       await lockPair(tx, key);
       // `window.upTo` is the record's own date.
       if (refuse(await sameDayStatuses(tx, key, window.upTo, id))) return 'ONCE_PER_DAY';

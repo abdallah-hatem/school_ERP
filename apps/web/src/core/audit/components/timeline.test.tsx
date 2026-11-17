@@ -166,6 +166,22 @@ describe('AuditTimeline', () => {
     expect(screen.getByTestId('audit-entry').textContent).toContain('تعديل بيانات الموظف Omar Fathy');
   });
 
+  it('a lateness month reads one line per changed employee, named in the screen\'s language', () => {
+    const saved = entry({
+      action: 'hr.lateness.save',
+      entityType: 'lateness_month',
+      entityLabel: { en: '2026-11', ar: '2026-11' },
+      changes: [
+        { field: 'minutes', before: 0, after: 90, subject: { en: 'Mona Khalil', ar: 'منى خليل' } },
+        { field: 'minutes', before: 30, after: 0, subject: { en: 'Salma Adel', ar: 'سلمى عادل' } },
+      ],
+    });
+    renderAudit(<AuditTimeline entries={[saved]} grouping="day" now={NOW} label="Activity timeline" />);
+    const item = screen.getByTestId('audit-entry');
+    expect(within(item).getByText('Mona Khalil · Minutes')).toBeTruthy();
+    expect(within(item).getByText('Salma Adel · Minutes')).toBeTruthy();
+  });
+
   it('renaming only the Arabic name shows that part with its own label, never "Strike → Strike"', () => {
     const before = { id: 'v1', nameEn: 'Strike', nameAr: 'إضراب قديم', isActive: true, sortOrder: 2 };
     const renamed = entry({

@@ -240,6 +240,11 @@ export interface AuditChange {
   before: unknown;
   after: unknown;
   /**
+   * The record inside the entry this line is about, when one entry covers several (a lateness
+   * month: one line per employee whose minutes changed — spec edge case 7). Both names.
+   */
+  subject?: AuditLabel;
+  /**
    * Set (and `before` / `after` left out) when the viewer may not see this field's values: a
    * salary-type field (`AUDIT_SALARY_FIELDS`) for someone without `hr.employees.view_salary` (P4).
    * Never stored — the API adds it when it answers.

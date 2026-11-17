@@ -200,7 +200,11 @@ export function changeRows(
 ): ChangeRow[] {
   const rows: ChangeRow[] = [];
   changes.forEach((change, i) => {
-    const label = fieldLabel(change.field, t, has);
+    const field = fieldLabel(change.field, t, has);
+    // A line about one record inside the entry (an employee of a lateness month): "Mona · Minutes".
+    const label = change.subject
+      ? t('audit.timeline.part', { field: localName({ nameEn: change.subject.en, nameAr: change.subject.ar }, locale), part: field })
+      : field;
     if (change.hidden) {
       rows.push({ key: `${change.field}-${i}`, field: change.field, label, before: undefined, after: undefined, created: false, hidden: true });
       return;
