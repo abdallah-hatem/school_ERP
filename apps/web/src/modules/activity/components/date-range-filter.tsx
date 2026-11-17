@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/
 import { fromIsoDate, toIsoDate } from '@/shared/lib/format';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
-import { formatFilterDay } from '@/core/audit/lib/time';
+import { formatFilterRange } from '@/core/audit/lib/time';
 
 type Preset = 'any' | 'today' | 'last7' | 'last30' | 'thisMonth';
 
@@ -55,11 +55,7 @@ export function DateRangeFilter({
   const [draft, setDraft] = useState<DateRange | undefined>(undefined);
   const [anchor, setAnchor] = useState<Date | null>(null);
   const set = Boolean(from || to);
-  const label = !set
-    ? t('audit.filters.anyDate')
-    : from === to
-      ? formatFilterDay(from!, locale)
-      : t('audit.filters.range', { from: formatFilterDay(from!, locale), to: formatFilterDay(to!, locale) });
+  const label = set ? formatFilterRange(from ?? to!, to ?? from!, locale) : t('audit.filters.anyDate');
   const current = PRESETS.find((p) => {
     const r = presetRange(p, today);
     return r.from === from && r.to === to;
@@ -85,17 +81,19 @@ export function DateRangeFilter({
           aria-label={`${t('audit.filters.dateRange')}: ${label}`}
           className={cn(
             controlClasses,
-            'flex h-11 w-full cursor-pointer items-center gap-2 text-start',
+            // The chosen range wraps onto a second line rather than being cut off (either language).
+            'flex min-h-11 w-full cursor-pointer items-center gap-2 py-2 text-start',
             set && 'border-primary bg-primary-soft text-primary',
           )}
         >
           <CalendarIcon className="size-5 shrink-0" />
-          <span className="tabular min-w-0 flex-1 truncate font-semibold">{label}</span>
+          <span className="tabular min-w-0 flex-1 leading-snug font-semibold break-words">{label}</span>
           <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="scrollbar-clean flex w-auto flex-col gap-3 overflow-y-auto p-3 sm:flex-row">
-        <ul className="flex flex-wrap gap-1.5 sm:w-36 sm:flex-col sm:flex-nowrap">
+      {/* Phone: presets in an even two-column grid above the calendar, centred in the popup. */}
+      <PopoverContent className="scrollbar-clean flex w-auto flex-col items-center gap-3 overflow-y-auto p-3 sm:flex-row sm:items-start">
+        <ul className="grid w-full grid-cols-2 gap-1.5 sm:flex sm:w-36 sm:flex-col">
           {PRESETS.map((p) => (
             <li key={p}>
               <button
@@ -103,7 +101,7 @@ export function DateRangeFilter({
                 aria-pressed={current === p}
                 onClick={() => choose(presetRange(p, today))}
                 className={cn(
-                  'min-h-9 w-full cursor-pointer rounded-lg px-3 text-start text-sm font-semibold transition-colors duration-150',
+                  'min-h-11 w-full cursor-pointer rounded-lg px-3 text-start text-sm font-semibold transition-colors duration-150 sm:min-h-9',
                   current === p ? 'bg-primary-soft text-primary' : 'hover:bg-muted',
                 )}
               >
@@ -112,8 +110,8 @@ export function DateRangeFilter({
             </li>
           ))}
         </ul>
-        <div className="flex flex-col gap-1.5">
-          <p className="px-1 text-xs text-muted-foreground">{t('audit.filters.pickRange')}</p>
+        <div className="flex flex-col items-center gap-1.5 sm:items-stretch">
+          <p className="self-stretch px-1 text-xs text-muted-foreground">{t('audit.filters.pickRange')}</p>
           <RangeCalendar
             locale={locale}
             selected={draft}

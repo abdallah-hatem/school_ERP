@@ -58,27 +58,55 @@ export function getBaseMessages(locale: Locale): MessageTree {
 export type TranslateValues = Record<string, string | number>;
 export type Translate = (key: string, values?: TranslateValues) => string;
 
-function lookup(tree: MessageTree, key: string): string | undefined {
-  let node: string | MessageTree | undefined = tree;
+function node(tree: MessageTree, key: string): string | MessageTree | undefined {
+  let current: string | MessageTree | undefined = tree;
   for (const part of key.split('.')) {
-    if (typeof node !== 'object' || node === null) return undefined;
-    node = node[part];
+    if (typeof current !== 'object' || current === null) return undefined;
+    current = current[part];
   }
-  return typeof node === 'string' ? node : undefined;
+  return current;
 }
 
-/** Whether `key` names a string in `messages` (used to translate zod messages that are keys). */
+/** A message with plural forms: `{ one, other }` and, for Arabic, `zero`, `two`, `few`, `many`. */
+function isPlural(value: string | MessageTree | undefined): value is MessageTree & { other: string } {
+  return typeof value === 'object' && value !== null && typeof value.other === 'string';
+}
+
+/** Whether `key` names a message (a string, or plural forms) in `messages`. */
 export function hasMessage(messages: MessageTree, key: string): boolean {
-  return lookup(messages, key) !== undefined;
+  const found = node(messages, key);
+  return typeof found === 'string' || isPlural(found);
+}
+
+const PLURAL_RULES: Record<Locale, Intl.PluralRules> = {
+  en: new Intl.PluralRules('en'),
+  ar: new Intl.PluralRules('ar'),
+};
+
+/** `count` as a number, also when the caller passed it grouped for display (`"1,284"`). */
+function countOf(value: string | number | undefined): number | null {
+  if (typeof value === 'number') return value;
+  if (typeof value !== 'string') return null;
+  const n = Number(value.replace(/,/g, ''));
+  return Number.isFinite(n) ? n : null;
 }
 
 /**
- * `t('ui.table.showing', { from: 1, to: 10, total: 14 })`. A missing key renders the key itself,
- * so a gap is visible on screen instead of silently blank.
+ * `t('ui.table.showing', { from: 1, to: 10, total: 14 })`. A message with plural forms
+ * (`{ "one": "{count} entry", "other": "{count} entries" }`, plus `zero` / `two` / `few` / `many`
+ * for Arabic) picks the form for `values.count` by the locale's plural rules. A missing key renders
+ * the key itself, so a gap is visible on screen instead of silently blank.
  */
-export function createTranslator(messages: MessageTree): Translate {
+export function createTranslator(messages: MessageTree, locale: Locale = 'en'): Translate {
   return (key, values) => {
-    const template = lookup(messages, key) ?? key;
+    const found = node(messages, key);
+    let template = key;
+    if (typeof found === 'string') template = found;
+    else if (isPlural(found)) {
+      const count = countOf(values?.count);
+      const chosen = count === null ? undefined : found[PLURAL_RULES[locale].select(count)];
+      template = typeof chosen === 'string' ? chosen : found.other;
+    }
     if (!values) return template;
     return template.replace(/\{(\w+)\}/g, (match, name: string) =>
       name in values ? String(values[name]) : match,

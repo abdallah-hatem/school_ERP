@@ -143,4 +143,44 @@ describe('Activity page', () => {
     expect(screen.getByRole('searchbox', { name: 'البحث عن السجل' })).toBeTruthy();
     expect(screen.getByText('سجل النشاط')).toBeTruthy();
   });
+
+  it('counts read as "1 entry" / "24 entries", and in Arabic plural forms', () => {
+    renderView({}, [entry()], { total: 1 });
+    expect(screen.getByText('1 entry')).toBeTruthy();
+    cleanup();
+    renderView({}, [entry()], { total: 24 });
+    expect(screen.getByText('24 entries')).toBeTruthy();
+    cleanup();
+    renderView({}, [entry()], { total: 2, locale: 'ar' });
+    expect(screen.getByText('سجلان')).toBeTruthy();
+  });
+
+  it('no results: no paging and no "0 entries"; the message names every active cause', () => {
+    renderView({ person: AHMED.id, module: 'hr', type: 'create,update', from: '2026-11-01', to: '2026-11-17', q: 'zzz' }, [], {
+      total: 0,
+    });
+    expect(screen.queryByText(/Showing/)).toBeNull();
+    expect(screen.queryByRole('navigation', { name: 'Pagination' })).toBeNull();
+    expect(screen.queryByText(/0 entries/)).toBeNull();
+    expect(screen.getByText(/^Nothing matches/).textContent).toBe(
+      'Nothing matches the search “zzz”, the person Ahmed Mahmoud, the module HR, the action type Added, Changed and the dates 1–17 Nov 2026. Remove one of them or clear all filters.',
+    );
+  });
+
+  it('keyboard order: the filters panel comes before the timeline it narrows', () => {
+    renderView();
+    const filters = panel();
+    const timeline = screen.getByRole('region', { name: 'Activity' });
+    expect(filters.compareDocumentPosition(timeline) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('the filters sheet has a close button and keeps "Clear filters"', async () => {
+    const user = userEvent.setup();
+    renderView({ module: 'hr' });
+    await user.click(screen.getByRole('button', { name: 'Filters, 1 on' }));
+    const sheet = await screen.findByRole('dialog', { name: 'Filters' });
+    expect(within(sheet).getByRole('button', { name: 'Clear filters' })).toBeTruthy();
+    await user.click(within(sheet).getByRole('button', { name: 'Close filters' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
 });

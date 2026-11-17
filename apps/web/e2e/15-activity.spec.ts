@@ -5,7 +5,9 @@ import {
   employeeEntries,
   expectWorkingDaysEntry,
   firstEntry,
+  renameDepartmentAr,
   shootSkeleton,
+  someDepartment,
 } from './support/activity';
 import { t } from './support/i18n';
 import { activeEmployee } from './support/profile-tabs';
@@ -99,3 +101,41 @@ for (const locale of ['en', 'ar'] as const) {
     await shootSkeleton(browser, page, info, `/${locale}/employees/${employee.id}/history`, `history-loading-${locale}-desktop`);
   });
 }
+
+test('activity: a department renamed in Arabic only reads its Arabic name, the changed part on its own line', async ({
+  page,
+}, info) => {
+  const department = await someDepartment();
+  const renamed = `${department.nameAr} ت`;
+  await renameDepartmentAr(department.id, renamed);
+  try {
+    await signIn(page, 'ar');
+    const part = (locale: 'en' | 'ar') =>
+      t(locale, 'audit.timeline.part', {
+        field: t(locale, 'audit.fields.hr.departments'),
+        part: t(locale, 'audit.fields.nameAr'),
+      });
+    // Recorded after the write commits: reload until it is there.
+    await expect(async () => {
+      await page.goto('/ar/activity?module=hr');
+      await expect(firstEntry(page)).toContainText(renamed, { timeout: 2_000 });
+    }).toPass();
+    const entry = firstEntry(page);
+    // The Arabic sentence names the record in Arabic (finding 3)…
+    await expect(entry).toContainText(`${t('ar', 'audit.actions.hr.department.update').split('{')[0]}${renamed}`);
+    await expect(entry).not.toContainText(department.nameEn);
+    // …and the change is the Arabic name's own line, with its old and new value (finding 4).
+    await expect(entry).toContainText(part('ar'));
+    await expect(entry).toContainText(department.nameAr);
+    await settle(page);
+    await shoot(page, info, 'activity-arabic-name-ar-desktop');
+
+    await page.goto('/en/activity?module=hr');
+    await expect(firstEntry(page)).toContainText(department.nameEn);
+    await expect(firstEntry(page)).toContainText(part('en'));
+    await shoot(page, info, 'activity-arabic-name-en-desktop');
+  } finally {
+    await renameDepartmentAr(department.id, department.nameAr);
+  }
+});
+

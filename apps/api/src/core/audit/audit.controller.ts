@@ -12,10 +12,12 @@ import { Permission } from '../permissions';
 import { AuditService } from './audit.service';
 import {
   AuditActorsQueryDto,
+  AuditDayTotalsQueryDto,
   AuditListQueryDto,
   AuditRecordParamsDto,
   AuditRecordQueryDto,
   AuditSummaryQueryDto,
+  parsePeriod,
 } from './dto/audit-query.dto';
 
 /** `[from, to)` as dates; 400 when `from` is not before `to`. */
@@ -50,6 +52,24 @@ export class AuditController {
       query.limit ?? PAGINATION.defaultLimit,
     );
     return ResponseUtil.paginated(page, undefined, req.url);
+  }
+
+  /**
+   * The Activity page's day headers: for the same filters as `GET /audit`, how many entries fall in
+   * each period (`periods=<from>/<to>,…`, the school days on screen), in order. 400 on a bad period.
+   */
+  @Get('day-totals')
+  @Permission('core.audit.view')
+  dayTotals(@Query() query: AuditDayTotalsQueryDto): Promise<number[]> {
+    const periods = query.periods.map((p) => {
+      const period = parsePeriod(p);
+      if (!period) throw new BadRequestException(`Invalid period "${p}": use <from>/<to> with from before to`);
+      return period;
+    });
+    return this.audit.countPerPeriod(
+      { actorId: query.actorId, module: query.module, actions: query.action, q: query.q || undefined },
+      periods,
+    );
   }
 
   /** Activity's "today at a glance": entries, people, money entries and failed sign-ins. */

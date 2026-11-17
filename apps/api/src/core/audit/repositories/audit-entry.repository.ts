@@ -19,6 +19,8 @@ export interface NewAuditEntry {
   entityType: string;
   entityId: string;
   entityLabel: string;
+  /** The Arabic name, when the record has one (else the label reads the same in both languages). */
+  entityLabelAr: string | null;
   actorId: string | null;
   actorName: string | null;
   changes: AuditChange[];
@@ -47,6 +49,7 @@ const entrySelect = {
   entityType: true,
   entityId: true,
   entityLabel: true,
+  entityLabelAr: true,
   actorId: true,
   actorName: true,
   changes: true,
@@ -89,7 +92,15 @@ function whereOf(filter: AuditEntryFilter): Prisma.AuditEntryWhereInput {
           },
         }
       : {}),
-    ...(filter.q ? { entityLabel: { contains: filter.q, mode: 'insensitive' } } : {}),
+    // The record's name in either language.
+    ...(filter.q
+      ? {
+          OR: [
+            { entityLabel: { contains: filter.q, mode: 'insensitive' } },
+            { entityLabelAr: { contains: filter.q, mode: 'insensitive' } },
+          ],
+        }
+      : {}),
     // jsonb containment: the changes array holds an element with this field.
     ...(filter.field ? { changes: { array_contains: [{ field: filter.field }] } } : {}),
   };
@@ -141,6 +152,17 @@ export class AuditEntryRepository {
       db.auditEntry.count({ where }),
     ]);
     return paginated(data, total, current, take);
+  }
+
+  /**
+   * How many entries match `filter` in each period (`[from, to)`), in order — the Activity page's
+   * day headers. `filter`'s own `from` / `to` are ignored; each period replaces them.
+   */
+  async countPerPeriod(filter: AuditEntryFilter, periods: readonly { from: Date; to: Date }[]): Promise<number[]> {
+    const db = this.txHost.tx;
+    return Promise.all(
+      periods.map((p) => db.auditEntry.count({ where: whereOf({ ...filter, from: p.from, to: p.to }) })),
+    );
   }
 
   /**

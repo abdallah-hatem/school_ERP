@@ -39,3 +39,24 @@ export async function settle(page: Page): Promise<void> {
 export function searchField(page: Page, name: string): Locator {
   return page.getByRole('searchbox', { name, exact: true }).or(page.getByRole('textbox', { name, exact: true }));
 }
+
+/**
+ * Each control is at least 44 × 44px to a finger: its own box, or the invisible hit area the
+ * `tap-target` utility draws around it (an absolutely placed ::after).
+ */
+export async function expectTapTargets(controls: Locator): Promise<void> {
+  const sizes = await controls.evaluateAll((els) =>
+    els.map((el) => {
+      const box = el.getBoundingClientRect();
+      const after = getComputedStyle(el, '::after');
+      const hit = after.content !== 'none' && after.position === 'absolute';
+      const width = hit ? Math.max(box.width, parseFloat(after.width) || 0) : box.width;
+      const height = hit ? Math.max(box.height, parseFloat(after.height) || 0) : box.height;
+      const name = el.getAttribute('aria-label') ?? el.textContent?.trim() ?? el.tagName;
+      return { name, width: Math.round(width), height: Math.round(height) };
+    }),
+  );
+  expect(sizes.length).toBeGreaterThan(0);
+  expect(sizes.filter((s) => s.width < 44 || s.height < 44)).toEqual([]);
+}
+

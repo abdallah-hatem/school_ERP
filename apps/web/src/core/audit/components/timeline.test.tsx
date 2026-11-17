@@ -13,7 +13,7 @@ afterEach(cleanup);
 
 const many = entry({
   action: 'hr.employee.create',
-  entityLabel: 'Yasmin Khaled',
+  entityLabel: { en: 'Yasmin Khaled', ar: 'ياسمين خالد' },
   changes: [
     { field: 'nameEn', before: null, after: 'Yasmin Khaled' },
     { field: 'departmentId', before: null, after: { nameEn: 'Science', nameAr: 'العلوم' } },
@@ -24,20 +24,23 @@ const many = entry({
 });
 
 describe('AuditTimeline', () => {
-  it('groups by day under Today / Yesterday headers; the actor sits beside the sentence', () => {
+  it("groups by day under Today / Yesterday headers, each counting the whole day; the actor sits beside the sentence", () => {
     renderAudit(
       <AuditTimeline
         entries={[entry({ at: '2026-11-17T12:24:00.000Z' }), many, entry({ at: '2026-11-15T07:02:00.000Z' })]}
         grouping="day"
         now={NOW}
         label="Activity timeline"
+        // The day's totals come from the API: the page holds one entry of each day.
+        dayTotals={{ '2026-11-17': 23, '2026-11-16': 1 }}
       />,
     );
     const headings = screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent);
     expect(headings).toEqual([
-      'Today · Tuesday 17 Nov 20261 entries',
-      'Yesterday · Monday 16 Nov 20261 entries',
-      'Sunday 15 Nov 20261 entries',
+      'Today · Tuesday 17 Nov 202623 entries',
+      'Yesterday · Monday 16 Nov 20261 entry',
+      // No total known for the day: no count rather than the page's.
+      'Sunday 15 Nov 2026',
     ]);
     const [first] = screen.getAllByTestId('audit-entry');
     // "Mona Ibrahim edited the employee Omar Fathy" — the sentence omits the actor (T27).
@@ -74,7 +77,7 @@ describe('AuditTimeline', () => {
             action: 'core.auth.sign_in_failed',
             module: 'core',
             entityType: 'user',
-            entityLabel: 'admin@school.test',
+            entityLabel: { en: 'admin@school.test', ar: 'admin@school.test' },
             actor: null,
             changes: [],
           }),
@@ -105,9 +108,92 @@ describe('AuditTimeline', () => {
     expect(document.documentElement.dir).toBe('rtl');
     expect(screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual(['نوفمبر 2026', 'أكتوبر 2026']);
     const [first] = screen.getAllByTestId('audit-entry');
-    expect(first!.textContent).toContain('Mona Ibrahim · تعديل بيانات الموظف Omar Fathy');
+    // The record's Arabic name in the Arabic sentence (finding 3).
+    expect(first!.textContent).toContain('Mona Ibrahim · تعديل بيانات الموظف عمر فتحي');
     expect(first!.textContent).toContain('14:24');
     // History has no module chip or record link: the record is the page.
     expect(within(first!).queryByRole('link')).toBeNull();
+  });
+
+  it('Arabic day totals use Arabic plural forms', () => {
+    const at = '2026-11-17T12:24:00.000Z';
+    const totals = (n: number) => {
+      cleanup();
+      renderAudit(
+        <AuditTimeline entries={[entry({ at })]} grouping="day" now={NOW} label="سجل" dayTotals={{ '2026-11-17': n }} />,
+        'ar',
+      );
+      return screen.getByTestId('day-total').textContent;
+    };
+    expect(totals(1)).toBe('سجل واحد');
+    expect(totals(2)).toBe('سجلان');
+    expect(totals(5)).toBe('5 سجلات');
+    expect(totals(12)).toBe('12 سجلًا');
+    expect(totals(100)).toBe('100 سجل');
+  });
+
+  it('an entry written with one label (older entries) shows it in both languages', () => {
+    renderAudit(
+      <AuditTimeline
+        entries={[entry({ entityLabel: { en: 'Omar Fathy', ar: 'Omar Fathy' } })]}
+        grouping="day"
+        now={NOW}
+        label="سجل"
+      />,
+      'ar',
+    );
+    expect(screen.getByTestId('audit-entry').textContent).toContain('تعديل بيانات الموظف Omar Fathy');
+  });
+
+  it('renaming only the Arabic name shows that part with its own label, never "Strike → Strike"', () => {
+    const before = { id: 'v1', nameEn: 'Strike', nameAr: 'إضراب قديم', isActive: true, sortOrder: 2 };
+    const renamed = entry({
+      action: 'hr.violation.update',
+      entityType: 'violation',
+      entityLabel: { en: 'Strike', ar: 'إضراب' },
+      changes: [{ field: 'hr.violations', before, after: { ...before, nameAr: 'إضراب' } }],
+    });
+    renderAudit(<AuditTimeline entries={[renamed]} grouping="day" now={NOW} label="Activity timeline" />);
+    const item = screen.getByTestId('audit-entry');
+    expect(within(item).getByText('Violation · Name (Arabic)')).toBeTruthy();
+    expect(within(item).getByText('إضراب قديم')).toBeTruthy();
+    expect(within(item).getByText('إضراب')).toBeTruthy();
+    const changes = item.querySelector('dl') as HTMLElement;
+    expect(within(changes).queryByText('Strike')).toBeNull();
+    expect(item.textContent).toContain('edited the violation Strike');
+  });
+
+  it('hiding a list item reads as its "Shown" part changing, not as a renamed item', () => {
+    const before = { id: 'g1', nameEn: 'Test', nameAr: 'تجربة', isActive: true, sortOrder: 1 };
+    const hidden = entry({
+      action: 'hr.penalty_group.update',
+      entityType: 'penalty_group',
+      entityLabel: { en: 'Test', ar: 'تجربة' },
+      changes: [{ field: 'hr.penaltyGroups', before, after: { ...before, isActive: false } }],
+    });
+    renderAudit(<AuditTimeline entries={[hidden]} grouping="day" now={NOW} label="Activity timeline" />);
+    const item = screen.getByTestId('audit-entry');
+    expect(within(item).getByText('Penalty group · Shown')).toBeTruthy();
+    expect(within(item).getByText('Yes')).toBeTruthy();
+    expect(within(item).getByText('No')).toBeTruthy();
+  });
+
+  it('a different item picked (another department) stays one line with both names', () => {
+    const moved = entry({
+      changes: [
+        {
+          field: 'departmentId',
+          before: { id: 'd1', nameEn: 'Science', nameAr: 'العلوم' },
+          after: { id: 'd2', nameEn: 'Maths', nameAr: 'الرياضيات' },
+        },
+      ],
+    });
+    renderAudit(<AuditTimeline entries={[moved]} grouping="day" now={NOW} label="Activity timeline" />);
+    const item = screen.getByTestId('audit-entry');
+    expect(within(item).getByText('Department')).toBeTruthy();
+    expect(within(item).getByText('Science')).toBeTruthy();
+    // The arrow travels with the new value, so it never ends a line on its own.
+    const after = within(item).getByText('Maths');
+    expect(after.closest('dd > span')?.textContent).toContain('→');
   });
 });

@@ -1,4 +1,4 @@
-import type { AuditChange } from '@school-erp/shared';
+import type { AuditChange, AuditLabel } from '@school-erp/shared';
 
 /*
  * The changed-fields diff (audit spec D7). Pure: values in, changes out. Only changed fields are
@@ -79,4 +79,12 @@ export function cleanChanges(changes: readonly AuditChange[]): AuditChange[] {
       after: toStoredValue(c.after),
     }))
     .filter((c) => !same(c.before, c.after));
+}
+
+/** A label as stored: English (or the only name) and the Arabic one, when it differs. */
+export function labelColumns(label: string | AuditLabel): { entityLabel: string; entityLabelAr: string | null } {
+  if (typeof label === 'string') return { entityLabel: label, entityLabelAr: null };
+  const en = label.en || label.ar;
+  const ar = label.ar || label.en;
+  return { entityLabel: en, entityLabelAr: ar === en ? null : ar };
 }

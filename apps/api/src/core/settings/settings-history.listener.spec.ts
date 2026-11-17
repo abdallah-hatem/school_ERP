@@ -37,7 +37,7 @@ describe('SettingsHistoryListener (list and catalogue edits, until T28)', () => 
     );
     expect(record).toHaveBeenCalledWith({
       action: 'hr.department.create',
-      entity: { type: 'department', id: 'd1', label: 'Science' },
+      entity: { type: 'department', id: 'd1', label: { en: 'Science', ar: 'العلوم' } },
       changes: [{ field: 'hr.departments', before: null, after: dept }],
       actor: { id: 'user-1' },
     });
@@ -53,7 +53,7 @@ describe('SettingsHistoryListener (list and catalogue edits, until T28)', () => 
       event({ scope, key, oldValue: dept, newValue: { ...dept, nameEn: 'X' } }),
     );
     expect(record).toHaveBeenCalledWith(
-      expect.objectContaining({ action, entity: { type, id: 'd1', label: 'X' } }),
+      expect.objectContaining({ action, entity: { type, id: 'd1', label: { en: 'X', ar: 'العلوم' } } }),
     );
   });
 
@@ -69,7 +69,7 @@ describe('SettingsHistoryListener (list and catalogue edits, until T28)', () => 
     expect(record).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'core.stage.update',
-        entity: { type: 'stage', id: 's9', label: 'Science' },
+        entity: { type: 'stage', id: 's9', label: { en: 'Science', ar: 'العلوم' } },
       }),
     );
   });

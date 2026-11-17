@@ -36,8 +36,9 @@ describe('DataTable states', () => {
     const table = screen.getByRole('region', { name: 'Employees' });
     expect(within(table).getByRole('status')).toHaveProperty('textContent', expect.stringContaining('Nothing here yet'));
     expect(within(table).queryByRole('table')).toBeNull();
-    // Pagination still shows, with an honest summary.
-    expect(within(table).getByText('Showing 0–0 of 0')).toBeTruthy();
+    // Nothing to page: no "Showing 0–0 of 0" and no paging buttons under the empty state.
+    expect(within(table).queryByText(/Showing/)).toBeNull();
+    expect(within(table).queryByRole('navigation', { name: 'Pagination' })).toBeNull();
   });
 
   it('DataTable: a custom empty state replaces the default (e.g. no results for these filters)', () => {

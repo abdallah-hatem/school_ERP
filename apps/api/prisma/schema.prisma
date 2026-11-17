@@ -167,8 +167,11 @@ model AuditEntry {
   module      String
   entityType  String   @map("entity_type")
   entityId    String   @map("entity_id")
+  /// The record's name when the entry was written: English (or its only name)…
   entityLabel String   @map("entity_label")
-  actorId     String?  @map("actor_id") @db.Uuid
+  /// …and Arabic, when the record has one. Null on one-name records and on older entries.
+  entityLabelAr String? @map("entity_label_ar")
+  actorId    String?  @map("actor_id") @db.Uuid
   actorName   String?  @map("actor_name")
   changes     Json     @default("[]")
   meta        Json     @default("{}")

@@ -69,6 +69,17 @@ class AuditProbeController {
     });
   }
 
+  /** A record with an English and an Arabic name (UI audit finding 3). */
+  @Post('named/:id')
+  @Audited('hr.violation.update')
+  named(@Param('id') id: string, @Query('en') en: string, @Query('ar') ar: string) {
+    return this.audit.record({
+      action: 'hr.violation.update',
+      entity: { type: 'violation', id, label: { en, ar } },
+      changes: [{ field: 'nameAr', before: 'قديم', after: ar }],
+    });
+  }
+
   /** Recorded on behalf of a given user (as a successful sign-in will be). */
   @Post('as/:userId')
   @Audited('core.auth.sign_in')
@@ -239,7 +250,7 @@ describe('audit log (e2e)', () => {
       const res = await http(app).get(`/audit?actorId=${temp.id}`).expect(200);
       expect(res.body.data).toHaveLength(1);
       expect(res.body.data[0]).toMatchObject({
-        entityLabel: label,
+        entityLabel: { en: label, ar: label },
         actor: { id: temp.id, name: 'Old Name' },
       });
 
@@ -353,6 +364,57 @@ describe('audit log (e2e)', () => {
     it('has no write endpoints', async () => {
       await http(app).post('/audit').send({}).expect(404);
       await http(app).delete('/audit/records/employee/x').expect(404);
+    });
+  });
+
+  describe('record names in both languages (UI audit finding 3)', () => {
+    it('stores both names, returns them as { en, ar } and finds the entry by either name', async () => {
+      const en = unique('Strike');
+      const ar = `إضراب ${Date.now()}`;
+      const id = `named-${Date.now()}`;
+      await http(app)
+        .post(`/__audit-probe/named/${id}?en=${encodeURIComponent(en)}&ar=${encodeURIComponent(ar)}`)
+        .expect(201);
+      const byEn = await http(app).get(`/audit?q=${encodeURIComponent(en)}`).expect(200);
+      expect(byEn.body.data).toHaveLength(1);
+      expect(byEn.body.data[0].entityLabel).toEqual({ en, ar });
+      const byAr = await http(app).get(`/audit?q=${encodeURIComponent(ar)}`).expect(200);
+      expect(byAr.body.data.map((e: AuditEntry) => e.entityId)).toEqual([id]);
+    });
+  });
+
+  describe('GET /audit/day-totals (UI audit finding 2)', () => {
+    it("counts the whole period for the same filters, one total per period, whatever the page size", async () => {
+      const label = unique('Day Totals');
+      const q = encodeURIComponent(label);
+      const from = new Date(Date.now() - 1000).toISOString();
+      for (let i = 0; i < 3; i++) {
+        await http(app).post(`/__audit-probe/two/day-${Date.now()}-${i}?label=${q}`).expect(201);
+      }
+      const to = new Date(Date.now() + 1000).toISOString();
+      const empty = '2001-01-01T00:00:00.000Z/2001-01-02T00:00:00.000Z';
+      // Page 1 of 2 holds 2 entries; the period holds all 6.
+      const page = await http(app).get(`/audit?q=${q}&limit=2`).expect(200);
+      expect(page.body.data).toHaveLength(2);
+      const res = await http(app)
+        .get(`/audit/day-totals?q=${q}&periods=${encodeURIComponent(`${from}/${to}`)},${encodeURIComponent(empty)}`)
+        .expect(200);
+      expect(res.body.data).toEqual([6, 0]);
+      const created = await http(app)
+        .get(`/audit/day-totals?q=${q}&action=hr.employee.create&periods=${encodeURIComponent(`${from}/${to}`)}`)
+        .expect(200);
+      expect(created.body.data).toEqual([3]);
+    });
+
+    it('400 on a missing, malformed or backwards period, or too many; needs a session', async () => {
+      await http(app).get('/audit/day-totals').expect(400);
+      await http(app).get('/audit/day-totals?periods=yesterday').expect(400);
+      await http(app)
+        .get(`/audit/day-totals?periods=${encodeURIComponent('2026-11-17T10:00:00Z/2026-11-17T09:00:00Z')}`)
+        .expect(400);
+      const day = encodeURIComponent('2026-11-17T00:00:00Z/2026-11-18T00:00:00Z');
+      await http(app).get(`/audit/day-totals?periods=${Array(32).fill(day).join(',')}`).expect(400);
+      await http(app).get(`/audit/day-totals?periods=${day}`).set(ANONYMOUS_HEADER, '1').expect(401);
     });
   });
 

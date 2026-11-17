@@ -180,13 +180,30 @@
     "label": "الخط الزمني للنشاط",
     "searchLabel": "البحث عن السجل",
     "searchPlaceholder": "اسم الموظف أو كوده، أو شهر الرواتب",
-    "results": "{count} سجل",
+    "results": {
+      "zero": "لا سجلات",
+      "one": "سجل واحد",
+      "two": "سجلان",
+      "few": "{count} سجلات",
+      "many": "{count} سجلًا",
+      "other": "{count} سجل"
+    },
     "emptyTitle": "لا يوجد نشاط مسجل بعد",
     "emptyBody": "ستظهر هنا التغييرات وعمليات الدخول مع استخدام النظام.",
     "noResultsTitle": "لا يوجد نشاط يطابق هذه الفلاتر",
-    "noResultsBody": "جرّب فترة أوسع أو شخصًا آخر أو قسمًا آخر.",
+    "noResultsBody": "لا يوجد ما يطابق {causes}. أزل أحدها أو امسح كل الفلاتر.",
     "noAccessTitle": "لا تملك صلاحية عرض سجل النشاط",
-    "noAccessBody": "اطلب من مسؤول المدرسة صلاحية عرض سجل النشاط."
+    "noAccessBody": "اطلب من مسؤول المدرسة صلاحية عرض سجل النشاط.",
+    "searchPlaceholderShort": "الاسم أو الكود أو الشهر",
+    "causes": {
+      "search": "البحث «{q}»",
+      "person": "الشخص {name}",
+      "module": "القسم {name}",
+      "types": "نوع الإجراء {name}",
+      "date": "الفترة {range}",
+      "and": " و",
+      "list": "، "
+    }
   },
   "filters": {
     "title": "الفلاتر",
@@ -201,7 +218,6 @@
     "last7": "آخر 7 أيام",
     "last30": "آخر 30 يومًا",
     "thisMonth": "هذا الشهر",
-    "range": "{from} – {to}",
     "pickRange": "اختر أول يوم وآخر يوم",
     "previousMonth": "الشهر السابق",
     "nextMonth": "الشهر التالي",
@@ -225,15 +241,37 @@
     "glanceActions": "الإجراءات",
     "glancePeople": "أشخاص نشطون",
     "glanceMoney": "تغييرات مالية",
-    "glanceFailed": "محاولات دخول فاشلة"
+    "glanceFailed": "محاولات دخول فاشلة",
+    "close": "إغلاق الفلاتر"
   },
   "timeline": {
     "today": "اليوم · {date}",
     "yesterday": "أمس · {date}",
-    "dayCount": "{count} سجل",
+    "dayCount": {
+      "zero": "لا سجلات",
+      "one": "سجل واحد",
+      "two": "سجلان",
+      "few": "{count} سجلات",
+      "many": "{count} سجلًا",
+      "other": "{count} سجل"
+    },
     "justNow": "الآن",
-    "minutesAgo": "منذ {count} دقيقة",
-    "hoursAgo": "منذ {count} ساعة",
+    "minutesAgo": {
+      "zero": "الآن",
+      "one": "منذ دقيقة",
+      "two": "منذ دقيقتين",
+      "few": "منذ {count} دقائق",
+      "many": "منذ {count} دقيقة",
+      "other": "منذ {count} دقيقة"
+    },
+    "hoursAgo": {
+      "zero": "الآن",
+      "one": "منذ ساعة",
+      "two": "منذ ساعتين",
+      "few": "منذ {count} ساعات",
+      "many": "منذ {count} ساعة",
+      "other": "منذ {count} ساعة"
+    },
     "more": "+ {count} أخرى",
     "less": "عرض أقل",
     "money": "مالي",
@@ -242,7 +280,8 @@
     "created": "جديد",
     "changes": "التغييرات",
     "to": "تغيّر إلى",
-    "noChanges": "لا توجد تفاصيل"
+    "noChanges": "لا توجد تفاصيل",
+    "part": "{field} · {part}"
   },
   "history": {
     "title": "سجل التغييرات",
@@ -256,12 +295,23 @@
     "emptyTitle": "لا توجد تغييرات مسجلة بعد",
     "emptyBody": "ستظهر هنا التعديلات على بيانات هذا الموظف ومن قام بها.",
     "noResultsTitle": "لا توجد تغييرات تطابق هذه الفلاتر",
-    "noResultsBody": "جرّب حقلًا آخر أو شخصًا آخر."
+    "noResultsBody": "لا يوجد ما يطابق {causes}. أزل أحدها أو امسح الفلاتر.",
+    "causes": {
+      "field": "الحقل {name}",
+      "person": "الشخص {name}"
+    }
   },
   "values": {
     "step": "الساعة {hour}: {days}",
     "hiddenItem": "{name} (مخفي)",
-    "minutes": "{count} دقيقة",
+    "minutes": {
+      "zero": "{count} دقيقة",
+      "one": "دقيقة واحدة",
+      "two": "دقيقتان",
+      "few": "{count} دقائق",
+      "many": "{count} دقيقة",
+      "other": "{count} دقيقة"
+    },
     "yes": "نعم",
     "no": "لا"
   }

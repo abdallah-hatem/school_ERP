@@ -44,7 +44,7 @@ export function I18nProvider({
       locale: resolvedLocale,
       dir: dirFor(resolvedLocale),
       messages: merged,
-      t: createTranslator(merged),
+      t: createTranslator(merged, resolvedLocale),
       has: (key) => hasMessage(merged, key),
     };
   }, [locale, messages, parent]);

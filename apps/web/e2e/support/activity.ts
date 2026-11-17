@@ -75,3 +75,24 @@ export async function employeeEntries(employeeId: string): Promise<AuditEntry[]>
   await api.dispose();
   return entries;
 }
+
+/** A department to rename in Arabic only (its English name stays), and its names now. */
+export async function someDepartment(): Promise<{ id: string; nameEn: string; nameAr: string }> {
+  const api = await Api.asAdmin();
+  const list = await api.get<{ id: string; nameEn: string; nameAr: string; isActive: boolean }[]>('/hr/departments');
+  await api.dispose();
+  const department = list.find((d) => d.isActive) ?? list[0];
+  if (!department) throw new Error('smoke: the seed has no department');
+  return department;
+}
+
+/**
+ * Renames a department's Arabic name (setup through the API, like the seed: the Settings lists
+ * screen has its own spec). The change is recorded on Activity with both names.
+ */
+export async function renameDepartmentAr(id: string, nameAr: string): Promise<void> {
+  const api = await Api.asAdmin();
+  await api.patch(`/hr/departments/${id}`, { nameAr });
+  await api.dispose();
+}
+

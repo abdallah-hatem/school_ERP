@@ -139,6 +139,19 @@ export function formatFilterDay(day: IsoDate, locale: Locale): string {
   }).format(noon(day));
 }
 
+/**
+ * A chosen range for the date filter, as short as it can be read: one day `17 Nov 2026`; the same
+ * month `1–17 Nov 2026`; the same year once `30 Sept – 10 Oct 2026`; across years both in full.
+ */
+export function formatFilterRange(from: IsoDate, to: IsoDate, locale: Locale): string {
+  if (from === to) return formatFilterDay(from, locale);
+  if (from.slice(0, 7) === to.slice(0, 7)) return `${Number(from.slice(8))}–${formatFilterDay(to, locale)}`;
+  const dash = ' – ';
+  if (from.slice(0, 4) !== to.slice(0, 4)) return formatFilterDay(from, locale) + dash + formatFilterDay(to, locale);
+  const short = new Intl.DateTimeFormat(INTL_LOCALE[locale], { timeZone: 'UTC', day: 'numeric', month: 'short' });
+  return short.format(noon(from)) + dash + formatFilterDay(to, locale);
+}
+
 /** `November 2026` — a month header. */
 export function formatMonthHeading(month: Month, locale: Locale): string {
   return new Intl.DateTimeFormat(INTL_LOCALE[locale], { timeZone: 'UTC', month: 'long', year: 'numeric' }).format(

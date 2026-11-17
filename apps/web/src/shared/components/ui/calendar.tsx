@@ -40,25 +40,35 @@ function CaptionDropdown({ options, value, onChange, disabled, 'aria-label': ari
   );
 }
 
-/** The month grid's look, shared by the single-day and the range calendars. */
+/**
+ * The week starts on Sunday in both languages: the school's working week (Sunday–Thursday), so
+ * English and Arabic grids line up the same days in the same columns.
+ */
+export const WEEK_STARTS_ON = 0;
+
+/**
+ * The month grid's look, shared by the single-day and the range calendars. On a phone each day is
+ * 44px (a finger's width); from 768px the grid keeps its desktop 40px. The month arrows keep their
+ * size and grow their hit area instead (`tap-target`).
+ */
 const CALENDAR_CLASS_NAMES = {
   months: 'relative flex flex-col gap-4',
   month: 'flex flex-col gap-3',
   // The nav lies over the caption so its buttons flank the month / year pickers; only the
   // buttons take pointer events, or the nav would swallow every click on the pickers.
   nav: 'pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center justify-between',
-  button_previous: cn(buttonVariants({ variant: 'ghost', size: 'icon-sm' }), 'pointer-events-auto'),
-  button_next: cn(buttonVariants({ variant: 'ghost', size: 'icon-sm' }), 'pointer-events-auto'),
+  button_previous: cn(buttonVariants({ variant: 'ghost', size: 'icon-sm' }), 'tap-target pointer-events-auto'),
+  button_next: cn(buttonVariants({ variant: 'ghost', size: 'icon-sm' }), 'tap-target pointer-events-auto'),
   month_caption: 'flex h-9 items-center justify-center px-10 font-display text-sm font-bold',
   dropdowns: 'flex min-w-0 items-center gap-1.5',
   months_dropdown: 'min-w-0 flex-1',
   years_dropdown: 'w-[5.25rem] shrink-0',
   weekdays: 'flex',
-  weekday: 'w-10 text-center text-xs font-semibold text-muted-foreground',
+  weekday: 'w-11 text-center text-xs font-semibold text-muted-foreground md:w-10',
   week: 'mt-1 flex',
-  day: 'size-10 p-0 text-center text-sm',
+  day: 'size-11 p-0 text-center text-sm md:size-10',
   day_button: cn(
-    'size-10 cursor-pointer rounded-lg transition-colors duration-150 hover:bg-primary-soft hover:text-primary',
+    'size-11 cursor-pointer rounded-lg transition-colors duration-150 hover:bg-primary-soft hover:text-primary md:size-10',
     'focus-visible:outline-3 focus-visible:outline-ring/55',
   ),
   selected: '[&>button]:bg-primary [&>button]:text-primary-foreground [&>button]:hover:bg-primary-hover',
@@ -145,6 +155,7 @@ export function Calendar({
       locale={locale === 'ar' ? arEG : enGB}
       dir={dir}
       numerals="latn"
+      weekStartsOn={WEEK_STARTS_ON}
       showOutsideDays
       className={cn('tabular w-fit', className)}
       classNames={CALENDAR_CLASS_NAMES}
@@ -189,13 +200,18 @@ export function RangeCalendar({
       locale={locale === 'ar' ? arEG : enGB}
       dir={dir}
       numerals="latn"
+      weekStartsOn={WEEK_STARTS_ON}
       showOutsideDays
       className={cn('tabular w-fit', className)}
       classNames={{
         ...CALENDAR_CLASS_NAMES,
-        range_start: '[&>button]:bg-primary [&>button]:text-primary-foreground',
-        range_end: '[&>button]:bg-primary [&>button]:text-primary-foreground',
-        range_middle: 'bg-primary-soft [&>button]:bg-transparent [&>button]:text-primary [&>button]:rounded-none',
+        // Every day in the range is "selected"; only its two ends are solid teal with white text.
+        // The days between sit on the pale band in dark text (white on it was unreadable).
+        selected: '',
+        range_start: '[&>button]:bg-primary [&>button]:text-primary-foreground [&>button]:hover:bg-primary-hover',
+        range_end: '[&>button]:bg-primary [&>button]:text-primary-foreground [&>button]:hover:bg-primary-hover',
+        range_middle:
+          'bg-primary-soft [&>button]:rounded-none [&>button]:bg-transparent [&>button]:font-semibold [&>button]:text-foreground',
       }}
       components={calendarComponents(dir)}
     />

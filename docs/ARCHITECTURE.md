@@ -243,6 +243,13 @@ module through core's exported `AuditService` — never through its repository.
 
 - `audit.record({ action, entity: { type, id, label }, before?, after?, changes? })` writes **in the
   current transaction** and throws outside one (D2): the entry commits or rolls back with the change.
+- **`label` keeps both names** when the record has them: `label: { en: nameEn, ar: nameAr }` (stages,
+  departments, job titles, penalty groups, violations, roles, employees). It is stored as
+  `entity_label` (English, or the only name) + `entity_label_ar` (Arabic, null when the same), and the
+  API returns `entityLabel: { en, ar }`; the timeline shows the screen's language. A plain string (a
+  user's name or email, a payroll month) reads the same in both. Entries written before
+  `entity_label_ar` existed have it null and read as their one label in both languages (the table is
+  append-only, so they are never backfilled). Search (`q`) matches either name.
 - Who (id + name snapshot), IP, user agent and request id come from the request (D4). `actor` is
   passed only where the request has no user yet (a successful sign-in) or none applies (`null`).
 - Only changed fields are stored, each `{ field, before, after }`; secrets (password hashes,
@@ -267,7 +274,9 @@ module through core's exported `AuditService` — never through its repository.
   action — one or several, comma-separated — from inclusive / to exclusive as ISO instants, q on the
   record label) and `GET /audit/records/:entityType/:entityId` (page, limit, actorId, field), newest
   first, server-paged; plus `GET /audit/summary?from&to` (entries, people, money entries, failed
-  sign-ins — Activity's "today at a glance"), `GET /audit/actors[?entityType&entityId]` (the
+  sign-ins — Activity's "today at a glance"), `GET /audit/day-totals?<the GET /audit filters>&periods=
+  <from>/<to>,…` (≤ 31 periods → one count each, in order: Activity's day headers count the whole
+  school day for the filters, not the page), `GET /audit/actors[?entityType&entityId]` (the
   person pickers) and `GET /audit/records/:entityType/:entityId/fields` (the History field filter).
   "Money" entries are payroll actions or changes to `AUDIT_MONEY_FIELDS` (`packages/shared`).
 - **Settings history** (D9) lives in the audit log. The screens (T30): Administration → **Activity**
@@ -276,7 +285,14 @@ module through core's exported `AuditService` — never through its repository.
   `module=settings` (the settings actions of both modules). `GET /settings/history` was removed.
   The old `setting_changes` rows were copied by the T27 migration (same id, value, person, time).
 - **Dates** on the audit screens are read in the school's time zone (`SCHOOL_TIME_ZONE`, Cairo, in
-  `core/audit/lib/time.ts`): day headers, times and the date filter's day edges.
+  `core/audit/lib/time.ts`): day headers, times and the date filter's day edges. Calendars start the
+  week on Sunday in both languages (the school's working week, `WEEK_STARTS_ON`).
+- **Change lines** (`changeRows`, `core/audit/lib/entry-text.ts`): a list item edited in place
+  (`{ nameEn, nameAr, isActive, sortOrder }` before and after, same id) shows one line per changed
+  part — "Violation · Name (Arabic)" — never "Strike → Strike"; a different item picked stays one line.
+- **Filters** on both audit screens: a side panel on wide screens (first in the page's tab order,
+  drawn in the second column), else one Filters button opening `AuditFiltersSheet` — from the
+  bottom on a phone, from the inline-end edge on a tablet.
 
 ### Permissions
 
@@ -612,6 +628,11 @@ Frontend rules:
   still enforces both.
 - RTL: logical classes only (`ms-`/`me-`, `start`/`end`); transforms and chevrons get explicit
   `[dir="rtl"]` overrides.
+- Counts in text use plural forms: the message is `{ "zero", "one", "two", "few", "many", "other" }`
+  (the same keys in `en` and `ar`; English only reads `one` / `other`) and `t(key, { count })` picks
+  the form by the language's plural rules — "1 entry", "سجلان", "12 سجلًا".
+- Small controls reach 44 × 44px on touch screens and phone widths with the `tap-target` utility (an
+  invisible hit area; desktop density unchanged). Search boxes never show the browser's own "×".
 - Branding (name, logo, colours) loads from settings into CSS variables.
 
 ### `packages/shared`

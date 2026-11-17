@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, formatDayHeading, formatSchoolTime, schoolDay, schoolDayRange, schoolDayStart } from './time';
+import { addDays, formatDayHeading, formatFilterRange, formatSchoolTime, schoolDay, schoolDayRange, schoolDayStart } from './time';
 
 describe('school time zone (Africa/Cairo)', () => {
   it('an instant falls on the school-calendar day, whatever the viewer’s zone', () => {
@@ -28,5 +28,13 @@ describe('school time zone (Africa/Cairo)', () => {
     expect(formatSchoolTime('2026-11-17T12:24:00Z', 'ar')).toBe('14:24');
     expect(formatDayHeading('2026-11-17', 'en')).toBe('Tuesday 17 Nov 2026');
     expect(formatDayHeading('2026-11-17', 'ar')).toBe('الثلاثاء 17 نوفمبر 2026');
+  });
+
+  it('a chosen range is as short as it reads (finding 5: nothing cut off in the filters panel)', () => {
+    expect(formatFilterRange('2026-11-17', '2026-11-17', 'en')).toBe('17 Nov 2026');
+    expect(formatFilterRange('2026-11-01', '2026-11-17', 'en')).toBe('1–17 Nov 2026');
+    expect(formatFilterRange('2026-09-30', '2026-10-10', 'en')).toBe('30 Sept – 10 Oct 2026');
+    expect(formatFilterRange('2025-12-28', '2026-01-03', 'en')).toBe('28 Dec 2025 – 3 Jan 2026');
+    expect(formatFilterRange('2026-09-30', '2026-10-10', 'ar')).toBe('30 سبتمبر – 10 أكتوبر 2026');
   });
 });

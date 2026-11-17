@@ -46,7 +46,8 @@ export function LocaleSwitch({ className }: { className?: string }) {
           aria-label={t(FULL_NAME_KEY[option])}
           onClick={() => switchTo(option)}
           className={cn(
-            'grid h-9 min-w-11 cursor-pointer place-items-center rounded-full px-3 text-sm font-bold transition-colors duration-150',
+            // 36px tall to the eye, 44px to a finger (`tap-target`).
+            'tap-target grid h-9 min-w-11 cursor-pointer place-items-center rounded-full px-3 text-sm font-bold transition-colors duration-150',
             option === 'ar' && 'font-display text-base leading-none',
             option === locale
               ? 'bg-accent text-accent-foreground'

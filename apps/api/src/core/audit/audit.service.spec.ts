@@ -79,6 +79,7 @@ describe('AuditService.record', () => {
         entityType: 'employee',
         entityId: 'e1',
         entityLabel: 'Mona Khalil',
+        entityLabelAr: null,
         actorId: 'u1',
         actorName: 'Mona',
         changes: [{ field: 'phone', before: '010', after: '011' }],
@@ -114,6 +115,24 @@ describe('AuditService.record', () => {
     });
     expect(created).toHaveLength(1);
     expect(created[0].changes).toEqual([]);
+  });
+
+  it('finding 3 — a record with two names stores both; one name, or the same twice, stores one', async () => {
+    const { service, created } = makeService();
+    const violation = (label: { en: string; ar: string }) =>
+      service.record({
+        action: 'hr.violation.update',
+        entity: { type: 'violation', id: 'v1', label },
+        changes: [{ field: 'hr.violations', before: 1, after: 2 }],
+      });
+    await violation({ en: 'Strike', ar: 'إضراب' });
+    await violation({ en: 'Same', ar: 'Same' });
+    await violation({ en: '', ar: 'إضراب' });
+    expect(created.map((e) => [e.entityLabel, e.entityLabelAr])).toEqual([
+      ['Strike', 'إضراب'],
+      ['Same', null],
+      ['إضراب', null],
+    ]);
   });
 
   it('a request with no signed-in user (sign-in) records a null actor', async () => {
@@ -204,6 +223,7 @@ describe('AuditService reads', () => {
     entityType: 'employee',
     entityId: 'e1',
     entityLabel: 'Mona Khalil',
+    entityLabelAr: null,
     actorId: 'u1',
     actorName: 'Mona (then)',
     changes: [{ field: 'phone', before: '010', after: '011' }],
@@ -238,13 +258,20 @@ describe('AuditService reads', () => {
       module: 'hr',
       entityType: 'employee',
       entityId: 'e1',
-      entityLabel: 'Mona Khalil',
+      entityLabel: { en: 'Mona Khalil', ar: 'Mona Khalil' },
       actor: null,
       changes: [{ field: 'phone', before: '010', after: '011' }],
       meta: { ip: '10.0.0.7', userAgent: 'Firefox/140' },
       at: '2026-11-17T08:00:00.000Z',
     });
     expect(entries.findPage).toHaveBeenCalledWith({ module: 'hr' }, 1, 10);
+  });
+
+  it('finding 3 — a label kept in both languages reads back as both names', async () => {
+    const { service, entries } = makeService();
+    entries.findPage.mockResolvedValueOnce(pageOf([row({ entityLabel: 'Strike', entityLabelAr: 'إضراب' })]));
+    const page = await service.list({}, 1, 10);
+    expect(page.data[0].entityLabel).toEqual({ en: 'Strike', ar: 'إضراب' });
   });
 
   it('a record history filters by entity type and id', async () => {

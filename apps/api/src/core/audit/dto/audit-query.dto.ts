@@ -1,5 +1,6 @@
 import {
   AUDIT_ACTION_KEYS,
+  AUDIT_DAY_TOTALS_MAX,
   AUDIT_ENTITY_TYPES,
   AUDIT_MODULES,
   PAGINATION,
@@ -7,6 +8,7 @@ import {
   type AuditEntityType,
   type AuditModule,
 } from '@school-erp/shared';
+import { IntersectionType } from '@nestjs/mapped-types';
 import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
@@ -19,6 +21,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
   Max,
   MaxLength,
   Min,
@@ -62,8 +65,8 @@ class AuditPeriodDto extends AuditPageQueryDto {
   to?: string;
 }
 
-/** `GET /audit` filters. */
-export class AuditListQueryDto extends AuditPeriodDto {
+/** The `GET /audit` filters other than paging and period, shared with `GET /audit/day-totals`. */
+class AuditFiltersDto {
   @IsOptional()
   @IsUUID()
   actorId?: string;
@@ -81,12 +84,41 @@ export class AuditListQueryDto extends AuditPeriodDto {
   @IsIn(AUDIT_ACTION_KEYS, { each: true })
   action?: AuditAction[];
 
-  /** The record's label: employee name or code, payroll month. */
+  /** The record's label (either language): employee name or code, payroll month. */
   @IsOptional()
   @IsString()
   @MaxLength(100)
   @Transform(trim)
   q?: string;
+}
+
+/** `GET /audit` filters. */
+export class AuditListQueryDto extends IntersectionType(AuditPeriodDto, AuditFiltersDto) {}
+
+/** One period: `<from>/<to>`, both ISO 8601 instants with an offset, `to` exclusive. */
+const PERIOD = /^(\d{4}-\d{2}-\d{2}T[^/]+)\/(\d{4}-\d{2}-\d{2}T[^/]+)$/;
+
+/**
+ * `GET /audit/day-totals` — the `GET /audit` filters plus `periods=<from>/<to>,…` (at most 31):
+ * the Activity page's day headers, each counting its whole day.
+ */
+export class AuditDayTotalsQueryDto extends AuditFiltersDto {
+  @Transform(list)
+  @IsArray()
+  @ArrayNotEmpty()
+  @ArrayMaxSize(AUDIT_DAY_TOTALS_MAX)
+  @Matches(PERIOD, { each: true })
+  periods!: string[];
+}
+
+/** `"<from>/<to>"` → dates; null when either edge is not a date or `from` is not before `to`. */
+export function parsePeriod(period: string): { from: Date; to: Date } | null {
+  const match = PERIOD.exec(period);
+  if (!match) return null;
+  const from = new Date(match[1]);
+  const to = new Date(match[2]);
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || from >= to) return null;
+  return { from, to };
 }
 
 /** `/audit/records/:entityType/:entityId` */
