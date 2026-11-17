@@ -291,6 +291,34 @@ html body[data-scroll-locked] {
   }
 }
 
+/*
+ * Toast motion (DESIGN.md → Motion). Sonner moves the toasts; these set how: in ~240ms on the
+ * snappy curve, out faster (150ms), never ease-in. Sonner's own sheet is unlayered, so these are
+ * too, with enough specificity to win. Reduced motion: no slide, a plain fade (sonner's default
+ * there is no motion at all, which makes a toast pop in).
+ */
+[data-sonner-toaster] [data-sonner-toast] {
+  transition:
+    transform 240ms var(--ease-snappy),
+    opacity 200ms var(--ease-snappy),
+    height 240ms var(--ease-snappy);
+}
+[data-sonner-toaster] [data-sonner-toast] > * {
+  transition: opacity 150ms var(--ease-snappy);
+}
+[data-sonner-toaster][data-sonner-theme] [data-sonner-toast][data-removed="true"][data-front][data-swipe-out="false"] {
+  transition:
+    transform 150ms var(--ease-snappy),
+    opacity 150ms var(--ease-snappy),
+    height 150ms var(--ease-snappy);
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-sonner-toaster] [data-sonner-toast],
+  [data-sonner-toaster][data-sonner-theme] [data-sonner-toast][data-removed="true"][data-front][data-swipe-out="false"] {
+    transition: opacity 150ms ease !important;
+  }
+}
+
 @media print {
   .no-print {
     display: none !important;
