@@ -36,6 +36,7 @@ function renderRun(r = run()) {
       settingsHref="/en/settings"
       penaltiesHref="/en/penalties"
       run={r}
+      asOf={0}
       departments={[]}
       settings={SETTINGS}
       query={{}}
@@ -93,6 +94,7 @@ describe('Adjustments dialog', () => {
     });
     apis.ADD_PAYROLL_ADJUSTMENT.mockResolvedValue({
       success: true,
+      asOf: 1,
       status: 201,
       data: updated,
     });
@@ -128,7 +130,7 @@ describe('Adjustments dialog', () => {
     await user.type(within(dialog).getByRole('textbox', { name: /Reason/ }), 'Overtime');
     await user.dblClick(within(dialog).getByRole('button', { name: 'Add adjustment' }));
     await waitFor(() => expect(apis.ADD_PAYROLL_ADJUSTMENT).toHaveBeenCalledTimes(1));
-    resolve({ success: true, status: 201, data: run() });
+    resolve({ success: true, asOf: 1, status: 201, data: run() });
     await waitFor(() => expect(toast.success).toHaveBeenCalled());
     expect(apis.ADD_PAYROLL_ADJUSTMENT).toHaveBeenCalledTimes(1);
   });
@@ -136,6 +138,7 @@ describe('Adjustments dialog', () => {
   it('removes an adjustment on a draft', async () => {
     apis.REMOVE_PAYROLL_ADJUSTMENT.mockResolvedValue({
       success: true,
+      asOf: 1,
       status: 200,
       data: run(),
     });

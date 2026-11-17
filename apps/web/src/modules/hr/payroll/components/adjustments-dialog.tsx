@@ -59,7 +59,8 @@ export function AdjustmentsDialog({
   /** The employee's adjustments. */
   adjustments: PayrollAdjustment[];
   onOpenChange: (open: boolean) => void;
-  onRunChange: (run: PayrollRun) => void;
+  /** The run the write returned, with its server stamp (`asOf`). */
+  onRunChange: (run: PayrollRun, asOf: number) => void;
 }) {
   const { t, locale } = useTranslation();
   const form = useForm<AdjustmentFormValues>({
@@ -88,7 +89,7 @@ export function AdjustmentsDialog({
       });
       if (res.unauthorized) return;
       if (res.success && res.data) {
-        onRunChange(res.data);
+        onRunChange(res.data, res.asOf);
         form.reset(EMPTY_ADJUSTMENT);
       }
     } finally {
@@ -106,7 +107,7 @@ export function AdjustmentsDialog({
         successMessage: t('payroll.adjustments.removed'),
       });
       if (res.unauthorized) return;
-      if (res.success && res.data) onRunChange(res.data);
+      if (res.success && res.data) onRunChange(res.data, res.asOf);
     } finally {
       setRemoving(null);
     }
