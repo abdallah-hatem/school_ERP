@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/shared/components/ui/switch';
 import { Textarea } from '@/shared/components/ui/textarea';
 import { formatDate, formatMoney, fromIsoDate, parseMoney, toIsoDate } from '@/shared/lib/format';
+import { acceptPhoneInput } from '@/shared/lib/phone';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { FieldShell } from './field-shell';
@@ -89,6 +90,52 @@ export function TextField<T extends FieldValues>({
           placeholder={placeholder}
           value={value}
           onChange={(e) => field.onChange(e.target.value)}
+          onBlur={field.onBlur}
+        />
+      )}
+    </FieldShell>
+  );
+}
+
+// ── Phone ────────────────────────────────────────────────────────────────────
+
+/**
+ * Phone number — mobile, landline or international, kept as typed (`+20 2 2345 6789`). A letter or
+ * a character past the 20th is rejected rather than trimmed; validate with `isValidPhone`.
+ */
+export function PhoneField<T extends FieldValues>({
+  control,
+  name,
+  label,
+  required,
+  hint,
+  disabled,
+  className,
+  placeholder,
+}: BaseFieldProps<T> & { placeholder: string }) {
+  const id = useFieldId(name);
+  const { field, fieldState } = useController({ control, name });
+  const value = (field.value as string | null | undefined) ?? '';
+  return (
+    <FieldShell id={id} label={label} required={required} hint={hint} error={fieldState.error?.message} className={className}>
+      {(a11y) => (
+        <Input
+          {...a11y}
+          ref={field.ref}
+          name={field.name}
+          type="tel"
+          inputMode="tel"
+          autoComplete="tel"
+          dir="ltr"
+          className="tabular text-start rtl:text-end"
+          required={required}
+          disabled={disabled}
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => {
+            const next = acceptPhoneInput(e.target.value);
+            if (next !== null) field.onChange(next);
+          }}
           onBlur={field.onBlur}
         />
       )}
@@ -357,7 +404,15 @@ export function SelectField<T extends FieldValues>({
 
 // ── Date ─────────────────────────────────────────────────────────────────────
 
-/** Calendar date picker. The form holds `YYYY-MM-DD`. */
+/** Years the month / year pickers offer when no `min` / `max` is given. */
+const DATE_FIELD_FIRST_YEAR = 1940;
+const DATE_FIELD_YEARS_AHEAD = 2;
+
+/**
+ * Calendar date picker with month and year pickers in its caption. The form holds `YYYY-MM-DD`.
+ * `min` / `max` (`YYYY-MM-DD`, inclusive) bound the pickers and disable the days outside them —
+ * e.g. `max={today}` for a date that can't be in the future.
+ */
 export function DateField<T extends FieldValues>({
   control,
   name,
@@ -367,8 +422,16 @@ export function DateField<T extends FieldValues>({
   disabled,
   className,
   placeholder,
-}: BaseFieldProps<T> & { placeholder?: string }) {
+  min,
+  max,
+}: BaseFieldProps<T> & { placeholder?: string; min?: IsoDate; max?: IsoDate }) {
   const { t, locale } = useTranslation();
+  const thisYear = new Date().getFullYear();
+  const minDate = min ? fromIsoDate(min) : undefined;
+  const maxDate = max ? fromIsoDate(max) : undefined;
+  const outOfRange = [minDate ? { before: minDate } : null, maxDate ? { after: maxDate } : null].filter(
+    (m): m is { before: Date } | { after: Date } => m !== null,
+  );
   const id = useFieldId(name);
   const [open, setOpen] = useState(false);
   const { field, fieldState } = useController({ control, name });
@@ -401,8 +464,14 @@ export function DateField<T extends FieldValues>({
           <PopoverContent className="w-auto">
             <Calendar
               locale={locale}
+              captionLayout="dropdown"
+              startMonth={minDate ?? new Date(DATE_FIELD_FIRST_YEAR, 0)}
+              endMonth={maxDate ?? new Date(thisYear + DATE_FIELD_YEARS_AHEAD, 11)}
+              disabled={outOfRange.length ? outOfRange : undefined}
+              monthLabel={t('ui.form.month')}
+              yearLabel={t('ui.form.year')}
               selected={value ? fromIsoDate(value) : undefined}
-              defaultMonth={value ? fromIsoDate(value) : undefined}
+              defaultMonth={value ? fromIsoDate(value) : maxDate && maxDate < new Date() ? maxDate : undefined}
               onSelect={(date) => {
                 field.onChange(date ? toIsoDate(date) : null);
                 setOpen(false);

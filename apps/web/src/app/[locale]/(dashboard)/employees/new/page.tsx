@@ -1,0 +1,29 @@
+import { notFound } from 'next/navigation';
+import { EmployeeForm, EmployeesI18n } from '@/modules/hr/employees';
+import { GET_DEPARTMENTS, GET_JOB_TITLES, GET_MANAGER_OPTIONS, GET_STAGES } from '@/modules/hr/employees/apis';
+import { isLocale } from '@/shared/lib/i18n';
+
+/** Add an employee. Pickers offer visible list items and active managers only. */
+export default async function NewEmployeePage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  if (!isLocale(locale)) notFound();
+
+  const [departments, stages, jobTitles, managers] = await Promise.all([
+    GET_DEPARTMENTS(),
+    GET_STAGES(),
+    GET_JOB_TITLES(),
+    GET_MANAGER_OPTIONS(),
+  ]);
+
+  return (
+    <EmployeesI18n locale={locale}>
+      <EmployeeForm
+        basePath={`/${locale}/employees`}
+        departments={departments.success ? (departments.data ?? []) : []}
+        stages={stages.success ? (stages.data ?? []) : []}
+        jobTitles={jobTitles.success ? (jobTitles.data ?? []) : []}
+        managerCandidates={managers.success ? (managers.data ?? []) : []}
+      />
+    </EmployeesI18n>
+  );
+}

@@ -14,10 +14,14 @@ import {
   HourglassIcon as Hourglass,
   ListIcon as List,
   MagnifyingGlassIcon as MagnifyingGlass,
+  PencilSimpleIcon as PencilSimple,
+  PlusIcon as Plus,
   ProhibitIcon as Prohibit,
   SlidersHorizontalIcon as SlidersHorizontal,
   SquaresFourIcon as SquaresFour,
   TrayIcon as Tray,
+  UserCheckIcon as UserCheck,
+  UserMinusIcon as UserMinus,
   UsersThreeIcon as UsersThree,
   WalletIcon as Wallet,
   WarningCircleIcon as WarningCircle,
@@ -60,6 +64,12 @@ export const CheckIcon = duotone(Check, 'Check');
 export const SearchIcon = duotone(MagnifyingGlass, 'Search');
 export const CalendarIcon = duotone(CalendarBlank, 'Calendar');
 export const RetryIcon = duotone(ArrowClockwise, 'Retry');
+
+// Actions
+export const AddIcon = duotone(Plus, 'Add');
+export const EditIcon = duotone(PencilSimple, 'Edit');
+export const DeactivateIcon = duotone(UserMinus, 'Deactivate');
+export const ReactivateIcon = duotone(UserCheck, 'Reactivate');
 
 // States
 export const EmptyIcon = duotone(Tray, 'Empty');

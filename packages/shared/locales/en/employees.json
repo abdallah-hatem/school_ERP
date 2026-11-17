@@ -1,0 +1,122 @@
+{
+  "title": "Employees",
+  "description": "Everyone on the school's staff, active and inactive.",
+  "add": "Add employee",
+  "list": {
+    "label": "Employees",
+    "searchLabel": "Search employees",
+    "searchPlaceholder": "Name or code, e.g. EMP-0012",
+    "filtersLabel": "Filters",
+    "allDepartments": "All departments",
+    "allStages": "All stages",
+    "allStatuses": "All statuses",
+    "allWorkSystems": "All work systems",
+    "clearFilters": "Clear filters",
+    "emptyTitle": "No employees yet",
+    "emptyBody": "Add the first employee to start building the staff list.",
+    "noResultsTitle": "No employees match",
+    "noResultsBody": "Try another search, or clear the filters to see everyone."
+  },
+  "columns": {
+    "employee": "Employee",
+    "department": "Department",
+    "stage": "Stage",
+    "jobTitle": "Job title",
+    "workSystem": "Work system",
+    "basicSalary": "Basic salary",
+    "status": "Status"
+  },
+  "sections": {
+    "personal": "Personal details",
+    "job": "Job",
+    "contract": "Pay and contract"
+  },
+  "fields": {
+    "code": "Employee code",
+    "nameEn": "Full name in English",
+    "nameAr": "Full name in Arabic",
+    "nationalId": "National ID",
+    "gender": "Gender",
+    "dateOfBirth": "Date of birth",
+    "phone": "Phone",
+    "email": "Email",
+    "address": "Address",
+    "hireDate": "Hire date",
+    "stage": "Stage",
+    "department": "Department",
+    "jobTitle": "Job title",
+    "manager": "Direct manager",
+    "grade": "Grade",
+    "workSystem": "Work system",
+    "basicSalary": "Basic monthly salary",
+    "fingerprintId": "Fingerprint ID",
+    "contractStart": "Contract start",
+    "contractEnd": "Contract end",
+    "usesBus": "Uses the school bus",
+    "status": "Status"
+  },
+  "placeholders": {
+    "nameEn": "Mona Ahmed Khalil",
+    "nameAr": "منى أحمد خليل",
+    "nationalId": "29001011234567",
+    "phone": "01012345678",
+    "email": "mona.khalil@example.com",
+    "address": "12 El Nasr Street, Nasr City, Cairo",
+    "grade": "Grade 3",
+    "basicSalary": "14,000.00",
+    "fingerprintId": "1042",
+    "gender": "Choose gender",
+    "stage": "Choose a stage",
+    "department": "Choose a department",
+    "jobTitle": "Choose a job title",
+    "manager": "No direct manager",
+    "workSystem": "Choose a work system"
+  },
+  "hints": {
+    "nationalId": "Optional. 14 digits.",
+    "phone": "Mobile, landline or international. Digits, spaces, +, - and brackets.",
+    "basicSalary": "Monthly, in Egyptian pounds.",
+    "contract": "Defaults to 1 June – 31 May. Changing the start moves the end to one year later.",
+    "usesBus": "Turn on if the employee rides the school bus.",
+    "hiddenItem": "Hidden from new choices; kept for this employee."
+  },
+  "noManager": "No direct manager",
+  "noDepartments": "No departments yet. Add them in Settings.",
+  "noStages": "No stages yet. Add them in Settings.",
+  "noJobTitles": "No job titles yet. Add them in Settings.",
+  "errors": {
+    "nameRequired": "Enter the full name.",
+    "nationalId": "The national ID must be exactly 14 digits.",
+    "phone": "Enter a phone number of 7 to 20 characters, like 01012345678 or +20 2 2345 6789.",
+    "email": "Enter a valid email, like name@example.com.",
+    "hireDateFuture": "The hire date can't be in the future.",
+    "salaryPositive": "The salary must be more than 0.",
+    "salaryTooLarge": "This salary is too large.",
+    "contractOrder": "The contract end must be after its start.",
+    "tooLong": "This is too long.",
+    "saveFailed": "The employee couldn't be saved."
+  },
+  "create": {
+    "title": "Add employee",
+    "description": "The employee code is assigned automatically when you save.",
+    "submit": "Save employee"
+  },
+  "edit": {
+    "title": "Edit employee",
+    "submit": "Save changes"
+  },
+  "profile": {
+    "tabs": "Employee sections",
+    "details": "Details",
+    "notSet": "Not set",
+    "edit": "Edit"
+  },
+  "status": {
+    "deactivate": "Deactivate",
+    "reactivate": "Reactivate",
+    "deactivateTitle": "Deactivate {name}?",
+    "deactivateBody": "Their record and history are kept. They won't be included in new payroll runs and can't get new penalties or lateness entries.",
+    "reactivateTitle": "Reactivate {name}?",
+    "reactivateBody": "They will be included in new payroll runs again and can get penalties and lateness entries."
+  }
+}

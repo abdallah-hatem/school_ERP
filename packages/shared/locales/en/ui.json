@@ -42,7 +42,9 @@
     "noOptions": "Nothing to choose from yet.",
     "counter": "{count} / {max}",
     "previousMonth": "Previous month",
-    "nextMonth": "Next month"
+    "nextMonth": "Next month",
+    "month": "Month",
+    "year": "Year"
   },
   "units": {
     "currency": "EGP",
