@@ -45,7 +45,9 @@
     "previousMonth": "Previous month",
     "nextMonth": "Next month",
     "month": "Month",
-    "year": "Year"
+    "year": "Year",
+    "searchOptions": "Type to search",
+    "noMatches": "Nothing matches that search."
   },
   "units": {
     "currency": "EGP",

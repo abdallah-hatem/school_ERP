@@ -42,7 +42,8 @@ export function StatTile({
 }) {
   const feature = tone === 'feature';
   const classes = cn(
-    'relative isolate flex min-w-0 flex-col gap-3 overflow-hidden rounded-2xl bg-card px-5 pt-4.5 pb-5 shadow-card',
+    // A size container, so the figure shrinks in a half-width phone tile instead of overflowing.
+    '@container/tile relative isolate flex min-w-0 flex-col gap-3 overflow-hidden rounded-2xl bg-card px-5 pt-4.5 pb-5 shadow-card',
     tones[tone].tile,
     href &&
       'cursor-pointer transition-shadow duration-150 ease-snappy hover:shadow-raised focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring/55',
@@ -76,7 +77,9 @@ export function StatTile({
               {unit}
             </span>
           ) : null}
-          <span className="tabular text-[clamp(1.5rem,2.4vw,2rem)] font-extrabold tracking-tight">{value}</span>
+          <span className="tabular text-xl font-extrabold tracking-tight @min-[13rem]/tile:text-[clamp(1.5rem,2.4vw,2rem)]">
+            {value}
+          </span>
         </div>
       )}
       {sub ? (

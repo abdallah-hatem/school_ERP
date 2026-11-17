@@ -1,6 +1,9 @@
+import { sectionMetadata } from '@/core/navigation/section-metadata';
 import { notFound } from 'next/navigation';
 import { SettingsPage } from '@/modules/settings';
 import { isLocale } from '@/shared/lib/i18n';
+
+export const generateMetadata = sectionMetadata('settings');
 
 export default async function Page({
   params,

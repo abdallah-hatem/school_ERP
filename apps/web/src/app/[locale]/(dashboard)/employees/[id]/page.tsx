@@ -1,7 +1,10 @@
+import { sectionMetadata } from '@/core/navigation/section-metadata';
 import { notFound } from 'next/navigation';
 import { EmployeeDetails, EmployeeProfileShell, EmployeesI18n } from '@/modules/hr/employees';
 import { loadEmployee } from '@/modules/hr/employees/lib/load-employee';
 import { isLocale } from '@/shared/lib/i18n';
+
+export const generateMetadata = sectionMetadata('employees');
 
 /** Employee profile — the "Details" section. */
 export default async function EmployeeProfilePage({ params }: { params: Promise<{ locale: string; id: string }> }) {

@@ -208,6 +208,13 @@ export class PenaltyRecordsRepository extends BaseRepository<
     });
   }
 
+  /** How many PENDING records are dated in a month (the payroll run's live notice). */
+  countPendingInMonth(month: string): Promise<number> {
+    return this.db.penaltyRecord.count({
+      where: { date: monthDateRange(month), status: PenaltyStatus.PENDING },
+    });
+  }
+
   /** One employee's APPROVED records dated in a month, by date, for the payslip. */
   findApprovedForPayslip(month: string, employeeId: string) {
     return this.db.penaltyRecord.findMany({

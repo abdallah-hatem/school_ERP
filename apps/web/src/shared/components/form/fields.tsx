@@ -4,6 +4,7 @@ import type { IsoDate, Piastres } from '@school-erp/shared';
 import { useId, useState, type ComponentProps, type ReactNode } from 'react';
 import { useController, type Control, type FieldPath, type FieldValues } from 'react-hook-form';
 import { Calendar } from '@/shared/components/ui/calendar';
+import { Combobox } from '@/shared/components/ui/combobox';
 import { CalendarIcon } from '@/shared/components/ui/icons';
 import { Input, controlClasses } from '@/shared/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover';
@@ -357,6 +358,8 @@ export function MoneyField<T extends FieldValues>({
 export interface SelectOption {
   value: string;
   label: string;
+  /** Extra text a searchable picker (`ComboboxField`) matches but doesn't show. */
+  keywords?: readonly string[];
   disabled?: boolean;
 }
 
@@ -426,6 +429,59 @@ export function SelectField<T extends FieldValues>({
             ))}
           </SelectContent>
         </Select>
+      )}
+    </FieldShell>
+  );
+}
+
+// ── Searchable select ────────────────────────────────────────────────────────
+
+/**
+ * A select with a search box (`Combobox`) for lists long enough to need typing — employees by name
+ * in either language or by code. Same field contract as `SelectField`.
+ */
+export function ComboboxField<T extends FieldValues>({
+  control,
+  name,
+  label,
+  required,
+  hint,
+  disabled,
+  className,
+  placeholder,
+  searchPlaceholder,
+  options,
+  emptyText,
+  noMatchesText,
+}: BaseFieldProps<T> & {
+  options: SelectOption[];
+  placeholder?: string;
+  /** The search box's placeholder, e.g. "Type a name or code". */
+  searchPlaceholder?: string;
+  emptyText?: string;
+  noMatchesText?: string;
+}) {
+  const { t } = useTranslation();
+  const id = useFieldId(name);
+  const { field, fieldState } = useController({ control, name });
+  return (
+    <FieldShell id={id} label={label} required={required} hint={hint} error={fieldState.error?.message} className={className}>
+      {(a11y) => (
+        <Combobox
+          {...a11y}
+          ref={field.ref}
+          name={field.name}
+          aria-required={required || undefined}
+          disabled={disabled}
+          options={options}
+          value={(field.value as string | null | undefined) ?? ''}
+          onValueChange={field.onChange}
+          onClose={field.onBlur}
+          placeholder={placeholder ?? t('ui.form.chooseOption')}
+          searchPlaceholder={searchPlaceholder ?? t('ui.form.searchOptions')}
+          emptyText={emptyText ?? t('ui.form.noOptions')}
+          noMatchesText={noMatchesText ?? t('ui.form.noMatches')}
+        />
       )}
     </FieldShell>
   );

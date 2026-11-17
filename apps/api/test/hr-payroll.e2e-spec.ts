@@ -323,6 +323,29 @@ describe('HR payroll and dashboard (e2e)', () => {
     expect((await approveOk(run.id)).status).toBe('APPROVED');
   });
 
+  it('pendingPenalties is live: approving the pending penalty drops it to 0 before Recalculate, flags stay', async () => {
+    const month = nextMonth();
+    const emp = await employee();
+    const first = await recordPenalty(emp, await violation(), day(month, 4));
+    const second = await recordPenalty(emp, await violation(), day(month, 5));
+    await recordPenalty(emp, await violation(), day(nextMonth(), 5)); // another month: not counted
+    const run = await createRun(month);
+    expect(run.pendingPenalties).toBe(2);
+    expect(lineOf(run, emp).flags).toEqual(['PENDING_PENALTIES']);
+
+    await approvePenalty(first);
+    expect((await getRun(run.id)).pendingPenalties).toBe(1);
+    await approvePenalty(second);
+    const after = await getRun(run.id);
+    expect(after.pendingPenalties).toBe(0);
+    // The lines still carry the last calculation's flag until Recalculate.
+    expect(lineOf(after, emp).flags).toEqual(['PENDING_PENALTIES']);
+    const recalculated = (await recalculate(run.id).expect(200)).body.data as PayrollRun;
+    expect(recalculated.pendingPenalties).toBe(0);
+    expect(lineOf(recalculated, emp).flags).toEqual([]);
+    expect((await approveOk(run.id)).pendingPenalties).toBe(0);
+  });
+
   it('Approve → locked: recalculate / adjustments → 409; penalties and lateness of that month locked', async () => {
     const month = nextMonth();
     const emp = await employee();

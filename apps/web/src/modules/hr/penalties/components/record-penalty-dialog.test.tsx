@@ -106,6 +106,34 @@ describe('RecordPenaltyDialog', () => {
     expect(lastCall.date < todayIso()).toBe(true);
   });
 
+  it('the employee picker searches active employees by Arabic name or code and picks with the keyboard', async () => {
+    const user = userEvent.setup();
+    apis.GET_PENALTY_PREVIEW.mockResolvedValue(ok(preview()));
+    renderPenalties(
+      <RecordPenaltyDialog
+        open
+        onOpenChange={vi.fn()}
+        employees={employeeOptions(
+          [
+            { id: 'e-mona', code: 'EMP-0001', nameEn: 'Mona Khalil', nameAr: 'منى خليل', status: 'ACTIVE' },
+            { id: 'e-omar', code: 'EMP-0002', nameEn: 'Omar Fathy', nameAr: 'عمر فتحي', status: 'ACTIVE' },
+            { id: 'e-gone', code: 'EMP-0003', nameEn: 'Omar Gone', nameAr: 'عمر سابق', status: 'INACTIVE' },
+          ],
+          'en',
+        )}
+        violations={violationGroups(groups, 'en')}
+      />,
+    );
+    await user.click(screen.getByRole('combobox', { name: /Employee/ }));
+    const search = screen.getByRole('searchbox', { name: /Type a name/ });
+    await user.type(search, 'عمر');
+    // The inactive one is never offered.
+    expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['Omar Fathy · EMP-0002']);
+    await user.clear(search);
+    await user.type(search, '0001{Enter}');
+    expect(screen.getByRole('combobox', { name: /Employee/ }).textContent).toBe('Mona Khalil · EMP-0001');
+  });
+
   it('a slower, older preview answer never replaces the latest one', async () => {
     const user = userEvent.setup();
     let resolveFirst: (v: unknown) => void = () => undefined;

@@ -31,11 +31,11 @@ describe('HR rules — lateness rule editor', () => {
     vi.clearAllMocks();
   });
 
-  it('lateness rule editor shows a live example ("90 minutes → 0.75 days")', async () => {
+  it('lateness rule editor shows a live example ("90 minutes → 0.75 day")', async () => {
     const user = userEvent.setup();
     renderSettings(<HrRulesSection />);
     await screen.findByText('Lateness rule');
-    expect(example()).toContain('90 minutes → 0.75 days');
+    expect(example()).toContain('90 minutes → 0.75 day');
 
     // Edit the 2nd hour step: 0.25 + 1 = 1.25.
     const hour2 = screen.getByRole('textbox', { name: /Hour 2 costs/ });
@@ -47,13 +47,31 @@ describe('HR rules — lateness rule editor', () => {
     const minutes = screen.getByRole('textbox', { name: 'Minutes in a month' });
     await user.clear(minutes);
     await user.type(minutes, '30');
-    expect(example()).toContain('30 minutes → 0.25 days');
+    expect(example()).toContain('30 minutes → 0.25 day');
 
     // Grace 30 → nothing left to count.
     const grace = screen.getByRole('textbox', { name: /Grace minutes/ });
     await user.clear(grace);
     await user.type(grace, '30');
     await waitFor(() => expect(example()).toContain('30 minutes → 0 days'));
+  });
+
+  it('the Save/Discard bar stays in view over the whole form only while there are unsaved changes', async () => {
+    const user = userEvent.setup();
+    renderSettings(<HrRulesSection />);
+    await screen.findByText('Lateness rule');
+    const bar = () => screen.getByRole('button', { name: 'Save' }).parentElement as HTMLElement;
+    // A direct child of the form (spanning every card), so it can follow the whole form.
+    expect(bar().parentElement?.tagName).toBe('FORM');
+    expect(bar().dataset.sticky).toBeUndefined();
+
+    const grace = screen.getByRole('textbox', { name: /Grace minutes/ });
+    await user.clear(grace);
+    await user.type(grace, '5');
+    await waitFor(() => expect(bar().dataset.sticky).toBe('true'));
+
+    await user.click(screen.getByRole('button', { name: 'Discard' }));
+    await waitFor(() => expect(bar().dataset.sticky).toBeUndefined());
   });
 
   it('the live "days" preview uses the shared latenessDays from packages/shared (no second copy of the rule)', async () => {

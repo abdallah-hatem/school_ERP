@@ -58,7 +58,7 @@ describe('PayslipView', () => {
 
   it('shows lateness, adjustments with their reasons, and the net', () => {
     renderPayroll(<PayslipView payslip={PAYSLIP} backHref="/x" />);
-    expect(screen.getByText('90 minutes = 0.75 days').parentElement?.textContent).toContain('350.00');
+    expect(screen.getByText('90 minutes = 0.75 day').parentElement?.textContent).toContain('350.00');
     expect(screen.getByText('Lost library book')).toBeTruthy();
     expect(screen.getByText('Exam supervision')).toBeTruthy();
     expect(screen.getByText('Net pay').parentElement?.textContent).toContain('13,350.00');

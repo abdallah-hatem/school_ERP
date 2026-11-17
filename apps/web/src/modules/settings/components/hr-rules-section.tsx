@@ -21,7 +21,7 @@ import { Button } from '@/shared/components/ui/button';
 import { AddIcon, RemoveIcon } from '@/shared/components/ui/icons';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
-import { formatCount, formatDays } from '@/shared/lib/format';
+import { formatCount, formatDayCount } from '@/shared/lib/format';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { GET_HR_SETTINGS, UPDATE_HR_SETTINGS } from '../apis';
 import { useReportDirty } from '../hooks/unsaved-changes';
@@ -233,17 +233,18 @@ function HrRulesForm({ initial, onSaved }: { initial: HrSettings; onSaved: (next
             required
           />
         </div>
-        <SaveBar
-          dirty={isDirty}
-          valid={isValid}
-          saving={isSubmitting}
-          saved={saved && !isDirty}
-          onDiscard={() => {
-            form.reset();
-            setSaved(false);
-          }}
-        />
       </SectionPanel>
+      {/* A child of the form, not of the last card, so it can stay in view over the whole form. */}
+      <SaveBar
+        dirty={isDirty}
+        valid={isValid}
+        saving={isSubmitting}
+        saved={saved && !isDirty}
+        onDiscard={() => {
+          form.reset();
+          setSaved(false);
+        }}
+      />
     </Form>
   );
 }
@@ -255,7 +256,7 @@ const EXAMPLE_DEFAULT = 90;
  * the same function the API uses for the lateness list and payroll (no second copy of the rule).
  */
 function LatenessExample({ control }: { control: Control<HrRulesFormValues> }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const id = useId();
   const [minutesText, setMinutesText] = useState(String(EXAMPLE_DEFAULT));
   const [graceMinutes, steps, extraHourDays] = useWatch({ control, name: ['graceMinutes', 'steps', 'extraHourDays'] });
@@ -265,7 +266,7 @@ function LatenessExample({ control }: { control: Control<HrRulesFormValues> }) {
   let line: string;
   if (!rule) line = t('settings.hrRules.example.invalidRule');
   else if (minutes === null) line = t('settings.hrRules.example.enterMinutes');
-  else line = t('settings.hrRules.example.line', { minutes: formatCount(minutes), days: formatDays(latenessDays(minutes, rule)) });
+  else line = t('settings.hrRules.example.line', { minutes: formatCount(minutes), days: formatDayCount(latenessDays(minutes, rule), locale) });
 
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-primary-soft bg-primary-soft/50 p-4">

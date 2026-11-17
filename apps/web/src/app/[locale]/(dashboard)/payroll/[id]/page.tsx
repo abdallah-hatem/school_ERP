@@ -1,6 +1,9 @@
+import { sectionMetadata } from '@/core/navigation/section-metadata';
 import { notFound } from 'next/navigation';
 import { PayrollRunScreen } from '@/modules/hr/payroll';
 import { isLocale } from '@/shared/lib/i18n';
+
+export const generateMetadata = sectionMetadata('payroll');
 
 /** One month's payroll run. `?search&departmentId&flagged` filter its lines (API-side). */
 export default async function PayrollRunPage({

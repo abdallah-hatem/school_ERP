@@ -101,6 +101,9 @@ test('penalties: a repeat is previewed as level 2 → saved → approved → lis
     name: t('en', 'penalties.form.title'),
   });
   await dialog.getByRole('combobox', { name: t('en', 'penalties.form.employee') }).click();
+  // The employee picker searches: typing the code narrows the list to that employee.
+  await page.getByRole('searchbox', { name: t('en', 'penalties.form.employeeSearch') }).fill(employee.code);
+  await expect(page.getByRole('option')).toHaveCount(1);
   await page
     .getByRole('option', {
       name: `${employee.nameEn} · ${employee.code}`,

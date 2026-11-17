@@ -312,6 +312,11 @@ export interface PayrollAdjustment {
 }
 
 export interface PayrollRun extends PayrollRunSummary {
+  /**
+   * PENDING penalties dated in the run's month right now (0 on an approved run). Live, unlike the
+   * lines' `PENDING_PENALTIES` flags, which reflect the last calculation.
+   */
+  pendingPenalties: number;
   lines: PayrollLine[];
   adjustments: PayrollAdjustment[];
 }

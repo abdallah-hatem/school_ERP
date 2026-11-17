@@ -45,7 +45,9 @@
     "previousMonth": "الشهر السابق",
     "nextMonth": "الشهر التالي",
     "month": "الشهر",
-    "year": "السنة"
+    "year": "السنة",
+    "searchOptions": "اكتب للبحث",
+    "noMatches": "لا توجد نتائج مطابقة."
   },
   "units": {
     "currency": "ج.م",

@@ -31,10 +31,8 @@
     "profileEmptyBody": "تظهر هنا الجزاءات المسجلة لهذا الموظف، الأحدث أولًا."
   },
   "action": {
-    "deductOne": "خصم {days} يوم",
-    "deductMany": "خصم {days} أيام",
-    "investigationOne": "إحالة للتحقيق مع خصم {days} يوم",
-    "investigationMany": "إحالة للتحقيق مع خصم {days} أيام"
+    "deduct": "خصم {days}",
+    "investigation": "إحالة للتحقيق مع خصم {days}"
   },
   "cancelledBecause": "السبب: {reason}",
   "approve": {
@@ -60,6 +58,8 @@
     "description": "يُحفظ قيد الانتظار. تُحسب المرة من الجزاءات المعتمدة للموظف على المخالفة نفسها.",
     "employee": "الموظف",
     "employeePlaceholder": "اختر موظفًا",
+    "employeeSearch": "اكتب الاسم (عربي أو إنجليزي) أو الكود",
+    "noEmployeeMatches": "لا يوجد موظف نشط يطابق البحث.",
     "noEmployees": "لا يوجد موظفون نشطون. أضف موظفًا من شاشة الموظفين.",
     "violation": "المخالفة",
     "violationPlaceholder": "اختر مخالفة",

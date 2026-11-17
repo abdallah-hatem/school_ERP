@@ -154,7 +154,7 @@
       "label": "مثال:",
       "minutes": "الدقائق في الشهر",
       "minutesPlaceholder": "90",
-      "line": "{minutes} دقيقة ← {days} يوم",
+      "line": "{minutes} دقيقة ← {days}",
       "enterMinutes": "أدخل الدقائق لترى كم يومًا تكلّف.",
       "invalidRule": "صحّح القاعدة أعلاه لترى مثالًا."
     },
@@ -209,7 +209,7 @@
     "addLevel": "إضافة مستوى",
     "removeLevel": "حذف المستوى {level}",
     "levelPlain": "{level}. {action}",
-    "levelWithDays": "{level}. {action} · {days} يوم",
+    "levelWithDays": "{level}. {action} · {days}",
     "problems": {
       "COUNT": "للمخالفة من 1 إلى 5 مستويات.",
       "NUMBERING": "يجب ترقيم المستويات من 1 إلى 5 دون فجوات.",

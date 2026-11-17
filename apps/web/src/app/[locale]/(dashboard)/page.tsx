@@ -1,6 +1,9 @@
+import { sectionMetadata } from '@/core/navigation/section-metadata';
 import { notFound } from 'next/navigation';
 import { DashboardScreen } from '@/modules/hr/dashboard';
 import { isLocale } from '@/shared/lib/i18n';
+
+export const generateMetadata = sectionMetadata('dashboard');
 
 /** HR dashboard: headcount, this month's payroll run, this month's penalties, quick links. */
 export default async function DashboardPage({ params }: { params: Promise<{ locale: string }> }) {

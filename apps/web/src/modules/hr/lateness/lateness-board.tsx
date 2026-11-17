@@ -16,7 +16,7 @@ import { BlockedIcon, ErrorIcon, LatenessIcon, RetryIcon, SearchIcon } from '@/s
 import { Input } from '@/shared/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover';
 import { StatusPill } from '@/shared/components/ui/status-pill';
-import { formatCount, formatDays, formatMonth } from '@/shared/lib/format';
+import { formatCount, formatDayCount, formatMonth } from '@/shared/lib/format';
 import { nameIn } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { PUT_LATENESS } from './apis';
@@ -256,10 +256,10 @@ export function LatenessBoard({ month, maxMonth, rows: initialRows, rule, locked
                 {t('lateness.summary', {
                   employees: formatCount(rows.length),
                   minutes: formatCount(state.totalMinutes),
-                  days: state.totalDays === null ? '—' : formatDays(state.totalDays),
+                  days: state.totalDays === null ? '—' : formatDayCount(state.totalDays, locale),
                 })}
               </p>
-              {rule ? <p className="w-full text-xs text-muted-foreground">{t('lateness.rule', { rule: describeLatenessRule(rule, t) })}</p> : null}
+              {rule ? <p className="w-full text-xs text-muted-foreground">{t('lateness.rule', { rule: describeLatenessRule(rule, t, locale) })}</p> : null}
             </>
           )
         }

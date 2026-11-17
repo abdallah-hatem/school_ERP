@@ -131,10 +131,11 @@ describe('RunPage — approve', () => {
   it.each(['en', 'ar'] as const)(
     '%s: pending penalties are announced before Approve is pressed, with a link to the filtered penalties list',
     (locale) => {
-      renderRun({ run: run({ lines: [MONA, SALMA] }) }, locale);
+      renderRun({ run: run({ lines: [MONA, SALMA], pendingPenalties: 2 }) }, locale);
       const notice = screen.getByRole('note');
+      // The live count from the server (2 penalties), not the flagged lines (1).
       expect(notice.textContent).toContain(
-        locale === 'en' ? 'Employees with pending penalties: 1.' : 'موظفون لديهم جزاءات معلّقة: 1.',
+        locale === 'en' ? 'Pending penalties dated this month: 2.' : 'جزاءات معلّقة بتاريخ هذا الشهر: 2.',
       );
       const link = within(notice).getByRole('link');
       expect(link.getAttribute('href')).toBe(`/${locale}/penalties?month=2026-11&status=PENDING`);
@@ -145,6 +146,26 @@ describe('RunPage — approve', () => {
       ).toBe(false);
     },
   );
+
+  it('pending penalties approved since the last calculation: no stale count, a recalculate hint that recalculates', async () => {
+    const user = userEvent.setup();
+    apis.RECALCULATE_PAYROLL_RUN.mockResolvedValue({
+      success: true,
+      data: run({ lines: [MONA, { ...SALMA, flags: [] }], pendingPenalties: 0 }),
+    });
+    renderRun({ run: run({ lines: [MONA, SALMA], pendingPenalties: 0 }) });
+    const hint = screen.getByRole('note');
+    expect(hint.textContent).not.toContain('Pending penalties dated this month');
+    expect(hint.textContent).toContain('Penalties changed since the last calculation');
+    await user.click(within(hint).getByRole('button', { name: 'Recalculate now' }));
+    expect(apis.RECALCULATE_PAYROLL_RUN).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.queryByRole('note')).toBeNull());
+  });
+
+  it('a penalty recorded since the last calculation: the live count shows even with no flagged line', () => {
+    renderRun({ run: run({ lines: [MONA], pendingPenalties: 1 }) });
+    expect(screen.getByRole('note').textContent).toContain('Pending penalties dated this month: 1.');
+  });
 
   it('no pending-penalties notice when no line is flagged, nor on an approved run', () => {
     const { unmount } = renderRun({ run: run({ lines: [MONA] }) });

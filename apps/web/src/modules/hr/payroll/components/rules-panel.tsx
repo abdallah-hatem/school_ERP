@@ -71,7 +71,7 @@ export function RulesPanel({
             })}
           </Rule>
           <Rule icon={LatenessIcon} title={t('payroll.rules.lateness')}>
-            {describeLatenessRule(settings.lateness, t)}
+            {describeLatenessRule(settings.lateness, t, locale)}
           </Rule>
           <Rule icon={PenaltiesIcon} title={t('payroll.rules.penalties')}>
             {t('payroll.rules.penaltiesRule', {

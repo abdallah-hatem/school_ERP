@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatDays, formatMoney, parseMoney } from '../src';
+import { formatDayCount, formatDays, formatMoney, parseMoney } from '../src';
 
 describe('Money and Days formatters (§6)', () => {
   it('Money(1400000) = "14,000.00", Money(1) = "0.01", Money(100) = "1.00", Money(1000001) = "10,000.01"; no float drift; Days(1.25) = "1.25"', () => {
@@ -32,5 +32,54 @@ describe('Money and Days formatters (§6)', () => {
     expect(parseMoney('abc')).toBeNull();
     expect(parseMoney('')).toBeNull();
     expect(parseMoney(formatMoney(1000001))).toBe(1000001);
+  });
+});
+
+describe('formatDayCount: the noun agrees with the number', () => {
+  it.each([
+    [1, 'يوم واحد'],
+    [2, 'يومان'],
+    [3, '3 أيام'],
+    [10, '10 أيام'],
+    [11, '11 يومًا'],
+    [30, '30 يومًا'],
+    [0.25, '0.25 يوم'],
+    [0.5, '0.5 يوم'],
+    [0.75, '0.75 يوم'],
+    [1.25, '1.25 يوم'],
+    [2.5, '2.5 يوم'],
+    [0, '0 يوم'],
+    [100, '100 يوم'],
+    [102, '102 يوم'],
+    [103, '103 أيام'],
+    [111, '111 يومًا'],
+  ])('Arabic %s → %s (Western digits)', (days, text) => {
+    expect(formatDayCount(days, 'ar')).toBe(text);
+  });
+
+  it.each([
+    [1, 'يوم واحد'],
+    [2, 'يومين'],
+    [3, '3 أيام'],
+    [11, '11 يومًا'],
+    [0.5, '0.5 يوم'],
+  ])('Arabic after a verbal noun (oblique, "خصم …") %s → %s', (days, text) => {
+    expect(formatDayCount(days, 'ar', { case: 'oblique' })).toBe(text);
+  });
+
+  it('English ignores the case', () => {
+    expect(formatDayCount(2, 'en', { case: 'oblique' })).toBe('2 days');
+  });
+
+  it.each([
+    [1, '1 day'],
+    [0.5, '0.5 day'],
+    [0.25, '0.25 day'],
+    [2, '2 days'],
+    [1.25, '1.25 days'],
+    [0, '0 days'],
+    [11, '11 days'],
+  ])('English %s → %s', (days, text) => {
+    expect(formatDayCount(days, 'en')).toBe(text);
   });
 });
