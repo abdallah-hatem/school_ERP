@@ -54,14 +54,32 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+/** Groups start folded; open one by its header the way a person would. */
+async function openGroup(user: ReturnType<typeof userEvent.setup>, name: string) {
+  const header = await screen.findByRole('button', { name: new RegExp(`^${name}`), expanded: false });
+  await user.click(header);
+}
+
 describe('Penalty catalogue editor', () => {
+  it('every group starts folded; clicking a header opens it', async () => {
+    const user = userEvent.setup();
+    api.GET_PENALTY_GROUPS.mockImplementation(() => ok(catalogue));
+    renderSettings(<CatalogueSection />);
+    await screen.findByText('General table A');
+    expect(screen.queryAllByRole('button', { expanded: true })).toHaveLength(0);
+    expect(screen.queryByText('Late arrival')).toBeNull();
+    await openGroup(user, 'General table A');
+    expect(await screen.findByText('Late arrival')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Table B/ }).getAttribute('aria-expanded')).toBe('false');
+  });
+
   it('level days are checked live with the shared rules; save is disabled until they are valid', async () => {
     const user = userEvent.setup();
     api.GET_PENALTY_GROUPS.mockImplementation(() => ok(catalogue));
     api.UPDATE_VIOLATION.mockImplementation((_id: string, body: object) => ok({ ...catalogue[0]!.violations[0]!, ...body }));
     renderSettings(<CatalogueSection />);
 
-    await screen.findByText('Late arrival');
+    await openGroup(user, 'General table A');
     await chooseRowAction(user, 'Late arrival', 'Edit');
     const dialog = await screen.findByRole('dialog', { name: 'Edit violation' });
     // The short title stays one line on a phone; the violation's name follows underneath.
@@ -106,7 +124,7 @@ describe('Penalty catalogue editor', () => {
     const user = userEvent.setup();
     api.GET_PENALTY_GROUPS.mockImplementation(() => ok(catalogue));
     renderSettings(<CatalogueSection />);
-    await screen.findByText('Late arrival');
+    await openGroup(user, 'General table A');
     await chooseRowAction(user, 'Late arrival', 'Edit');
     const dialog = await screen.findByRole('dialog');
     const add = within(dialog).getByRole('button', { name: 'Add a level' });
@@ -136,6 +154,7 @@ describe('Penalty catalogue editor', () => {
     await user.click(screen.getByRole('button', { name: 'Retire' }));
 
     await waitFor(() => expect(api.UPDATE_PENALTY_GROUP).toHaveBeenCalledWith('g1', { isActive: false }));
+    await openGroup(user, 'General table A');
     expect(await screen.findByText(/This group is retired/)).toBeTruthy();
     // A retired group offers Restore (not red) in place of Retire.
     const menu = await openRowActions(user, 'General table A');
@@ -152,7 +171,7 @@ describe('Penalty catalogue editor', () => {
     const pending = deferred<{ success: true; status: number; data: unknown }>();
     api.UPDATE_VIOLATION.mockReturnValue(pending.promise);
     renderSettings(<CatalogueSection />);
-    await screen.findByText('Late arrival');
+    await openGroup(user, 'General table A');
     await chooseRowAction(user, 'Late arrival', 'Retire');
     // While it saves the ⋯ is busy and can't open again, so a second Retire can't be sent.
     await waitFor(() => expect(rowActionsButton('Late arrival')).toHaveProperty('disabled', true));

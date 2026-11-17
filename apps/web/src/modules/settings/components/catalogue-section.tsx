@@ -9,7 +9,7 @@ import { BidiText } from '@/shared/components/ui/bidi-text';
 import { Button } from '@/shared/components/ui/button';
 import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { AddIcon, ChevronDownIcon, EditIcon, RestoreIcon, RetireIcon } from '@/shared/components/ui/icons';
-import { Skeleton, SkeletonButton, SkeletonText } from '@/shared/components/ui/skeleton';
+import { Skeleton, SkeletonText } from '@/shared/components/ui/skeleton';
 import { StatusPill } from '@/shared/components/ui/status-pill';
 import { formatCount, formatDayCount } from '@/shared/lib/format';
 import { localName, otherName } from '@/shared/lib/i18n';
@@ -45,9 +45,8 @@ export function CatalogueSection() {
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const groups = catalogue.data ? [...catalogue.data].sort((a, b) => a.sortOrder - b.sortOrder) : undefined;
-  // The first group starts open so the screen shows what a catalogue looks like.
-  const firstId = groups?.[0]?.id;
-  const isOpen = (id: string) => open.has(id) !== (id === firstId);
+  // Every group starts folded (owner, 2026-11-17): the catalogue is long, the headers are the map.
+  const isOpen = (id: string) => open.has(id);
 
   function toggleOpen(id: string) {
     setOpen((prev) => {
@@ -336,12 +335,12 @@ function ViolationRow({
 }
 
 /**
- * First load: the groups in their real shape — the first one open with a few violations (as the
- * loaded list opens it), the rest closed — so the list doesn't jump when it arrives.
+ * First load: the groups in their real shape — all folded, as the loaded list opens them — so the
+ * list doesn't jump when it arrives.
  */
 function CatalogueSkeleton() {
-  const groupHeader = (open: boolean) => (
-    <div className={cn('flex flex-wrap items-center gap-3 p-3 sm:p-4', open && 'border-b border-border bg-muted')}>
+  const groupHeader = () => (
+    <div className="flex flex-wrap items-center gap-3 p-3 sm:p-4">
       <div className="flex min-w-0 flex-1 basis-56 items-center gap-3">
         <Skeleton className="size-5 shrink-0 rounded-full" />
         <span className="flex min-w-0 flex-1 flex-col">
@@ -356,32 +355,7 @@ function CatalogueSkeleton() {
     <ul className="flex flex-col gap-3" aria-hidden="true">
       {[0, 1, 2, 3].map((g) => (
         <li key={g} className="overflow-hidden rounded-2xl border border-border">
-          {groupHeader(g === 0)}
-          {g === 0 ? (
-            <div className="flex flex-col gap-3 p-3 sm:p-4">
-              <ul className="flex flex-col divide-y divide-border">
-                {[0, 1].map((v) => (
-                  <li key={v} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
-                    <div className="flex min-w-0 flex-1 flex-col gap-2">
-                      <SkeletonText className="font-semibold" width="w-64" />
-                      <SkeletonText className="text-xs" width="w-40" />
-                      <div className="flex flex-wrap gap-1.5">
-                        {[0, 1, 2].map((l) => (
-                          <Skeleton key={l} className="h-6 w-28 rounded-full" />
-                        ))}
-                      </div>
-                    </div>
-                    <div className="-mt-1.5 shrink-0">
-                      <RowActionsSkeleton />
-                    </div>
-                  </li>
-                ))}
-              </ul>
-              <div>
-                <SkeletonButton className="w-36" />
-              </div>
-            </div>
-          ) : null}
+          {groupHeader()}
         </li>
       ))}
     </ul>
