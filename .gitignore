@@ -30,6 +30,7 @@ uploads/
 apps/web/e2e/screenshots/
 apps/web/e2e/.logs/
 apps/web/e2e/.results/
+apps/web/e2e/.report/
 apps/web/playwright-report/
 
 # generated
