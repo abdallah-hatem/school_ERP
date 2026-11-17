@@ -16,8 +16,9 @@ Grey areas:
 - A module **changing another module's** service → shared-code review.
 - **Adding a dependency** → Abdallah reviews.
 
-**First month or two: Abdallah reviews every PR** while the patterns settle. After that, module
-PRs need one developer review (Tamer ↔ Waleed, or Abdallah).
+Into `dev`, a PR needs only green CI (see Branches); reviews are asked for, not enforced. **First
+month or two: ask Abdallah to review every PR** while the patterns settle, and always for shared
+code. Releases into `testing` and `production` always need Abdallah's approval.
 
 ## Claude Code setup (once per clone)
 
