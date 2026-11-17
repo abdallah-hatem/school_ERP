@@ -36,6 +36,25 @@ describe('i18n', () => {
     expect(t('ui.nope')).toBe('ui.nope');
   });
 
+  it('picks the plural form for count by the locale (English one/other, Arabic six forms)', () => {
+    const forms = { zero: 'z', one: 'one {count}', two: 'two', few: '{count} few', many: '{count} many', other: '{count} other' };
+    const en = createTranslator({ x: { n: { ...forms } } }, 'en');
+    expect(en('x.n', { count: 1 })).toBe('one 1');
+    expect(en('x.n', { count: 0 })).toBe('0 other');
+    expect(en('x.n', { count: '1,284' })).toBe('1,284 other');
+    const ar = createTranslator({ x: { n: { ...forms } } }, 'ar');
+    expect([0, 1, 2, 5, 11, 100].map((count) => ar('x.n', { count }))).toEqual([
+      'z',
+      'one 1',
+      'two',
+      '5 few',
+      '11 many',
+      '100 other',
+    ]);
+    // No count: the "other" form.
+    expect(ar('x.n')).toBe('{count} other');
+  });
+
   it('lets a module add its namespace on top of the base ones', () => {
     const t = createTranslator(mergeMessages(getBaseMessages('en'), { hr: { title: 'HR' } }));
     expect(t('hr.title')).toBe('HR');

@@ -98,7 +98,7 @@ describe('every endpoint declares its permission (R4)', () => {
         .map((d) =>
           d.declaration.kind === 'permission' ? d.declaration.keys : d.declaration.kind,
         );
-    expect(keysOf(/^GET \/audit/)).toEqual(Array(5).fill(['core.audit.view']));
+    expect(keysOf(/^GET \/audit/)).toEqual(Array(6).fill(['core.audit.view']));
     expect(keysOf(/^POST \/hr\/penalties\/:id\/approve /)).toEqual([['hr.penalties.approve']]);
     expect(keysOf(/^POST \/hr\/payroll-runs\/:id\/approve /)).toEqual([['hr.payroll.approve']]);
   });

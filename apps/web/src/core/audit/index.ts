@@ -6,8 +6,9 @@
 export { AuditTimeline, AuditTimelineSkeleton, type TimelineGrouping } from './components/timeline';
 export { RecordHistory, RecordHistorySkeleton, type RecordHistoryProps } from './components/record-history';
 export { NoAuditAccess } from './components/no-access';
+export { AuditFiltersSheet } from './components/filters-sheet';
 export { AuditI18n, auditMessages } from './messages';
-export { actorName, entrySentence, fieldLabel, formatAuditValue, recordHref } from './lib/entry-text';
+export { actorName, changeRows, entrySentence, fieldLabel, formatAuditValue, labelIn, recordHref } from './lib/entry-text';
 export {
   AUDIT_PAGE_SIZE,
   parseHistoryQuery,
@@ -15,4 +16,4 @@ export {
   type HistoryQuery,
   type SearchParamsRecord,
 } from './lib/history-query';
-export { addDays, schoolDay, schoolDayRange, SCHOOL_TIME_ZONE } from './lib/time';
+export { addDays, formatFilterRange, schoolDay, schoolDayRange, SCHOOL_TIME_ZONE } from './lib/time';

@@ -130,7 +130,7 @@ export class RolesService {
     }
   }
 
-  private entity(role: Pick<Role, 'id' | 'nameEn'>) {
-    return { type: AuditEntityType.ROLE, id: role.id, label: role.nameEn };
+  private entity(role: Pick<Role, 'id' | 'nameEn' | 'nameAr'>) {
+    return { type: AuditEntityType.ROLE, id: role.id, label: { en: role.nameEn, ar: role.nameAr } };
   }
 }

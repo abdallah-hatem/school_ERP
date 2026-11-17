@@ -7,6 +7,7 @@ import {
   type AuditChange,
   type AuditEntityType,
   type AuditEntry,
+  type AuditLabel,
   type AuditModule,
   type AuditSummary,
   type AuthUser,
@@ -15,7 +16,7 @@ import {
 import type { Request } from 'express';
 import { CLS_REQ, ClsService } from 'nestjs-cls';
 import type { DbAdapter } from '../../database/transactions';
-import { cleanChanges, diffChanges } from './audit.pure';
+import { cleanChanges, diffChanges, labelColumns } from './audit.pure';
 import {
   AuditEntryRepository,
   type AuditEntryFilter,
@@ -27,8 +28,12 @@ export const AUDIT_RECORDED = Symbol('audit:recorded');
 
 export interface AuditRecordInput {
   action: AuditAction;
-  /** The record the action touched. `label` is a snapshot (the employee's name now). */
-  entity: { type: AuditEntityType; id: string; label: string };
+  /**
+   * The record the action touched. `label` is a snapshot (the employee's name now): pass both
+   * names (`{ en: nameEn, ar: nameAr }`) when the record has them, so Arabic sentences show the
+   * Arabic name; a plain string (a user's name, a month) reads the same in both languages.
+   */
+  entity: { type: AuditEntityType; id: string; label: string | AuditLabel };
   /** Snapshots before / after: only the fields that differ are stored (D7). */
   before?: unknown;
   after?: unknown;
@@ -92,7 +97,7 @@ export class AuditService {
         module: definition.module,
         entityType: input.entity.type,
         entityId: input.entity.id,
-        entityLabel: input.entity.label,
+        ...labelColumns(input.entity.label),
         actorId: actor?.id ?? null,
         actorName: actor?.name ?? null,
         changes,
@@ -137,6 +142,11 @@ export class AuditService {
     return this.entries.findFields(entityType, entityId);
   }
 
+  /** The Activity page's day headers: how many entries match `filter` in each period, in order. */
+  countPerPeriod(filter: AuditEntryFilter, periods: readonly { from: Date; to: Date }[]): Promise<number[]> {
+    return this.entries.countPerPeriod(filter, periods);
+  }
+
   /** "Today at a glance" for `[from, to)`. */
   summary(from: Date, to: Date): Promise<AuditSummary> {
     return this.entries.summary(from, to);
@@ -171,7 +181,8 @@ function toAuditEntry(row: AuditEntryRow): AuditEntry {
     module: row.module as AuditModule,
     entityType: row.entityType as AuditEntityType,
     entityId: row.entityId,
-    entityLabel: row.entityLabel,
+    // Older entries (and one-name records) have no Arabic label: the same name in both.
+    entityLabel: { en: row.entityLabel, ar: row.entityLabelAr ?? row.entityLabel },
     actor: row.actorId ? { id: row.actorId, name: row.actorName ?? '' } : null,
     changes: (Array.isArray(row.changes) ? row.changes : []) as unknown as AuditChange[],
     meta: { ip: meta.ip ?? null, userAgent: meta.userAgent ?? null },

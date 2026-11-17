@@ -28,8 +28,10 @@ export function pageWindow(page: number, pageCount: number, size = 5): number[] 
 }
 
 /**
- * Always visible, even when everything fits on one page: summary, first / previous / numbers /
- * next / last. No rows-per-page control: the page size is fixed by the caller. Callers update the URL with `scroll: false` so the list stays put.
+ * Always visible while there is something to page, even when everything fits on one page: summary,
+ * first / previous / numbers / next / last. An empty result has nothing to page and draws nothing
+ * (no "Showing 0–0 of 0" under an empty state). No rows-per-page control: the page size is fixed
+ * by the caller. Callers update the URL with `scroll: false` so the list stays put.
  */
 export function Pagination({
   page,
@@ -52,12 +54,13 @@ export function Pagination({
   const to = Math.min(total, current * limit);
   const atStart = current <= 1 || disabled;
   const atEnd = current >= pageCount || disabled;
+  if (total === 0 && !loading) return null;
 
   const nav = (label: string, target: number, blocked: boolean, Icon: typeof ChevronStartIcon, className?: string) => (
     <Button
       variant="secondary"
       size="icon-sm"
-      className={className}
+      className={cn('tap-target', className)}
       aria-label={label}
       disabled={blocked}
       onClick={() => onPageChange(target)}
@@ -81,14 +84,15 @@ export function Pagination({
         </p>
       )}
       {/*
-        Phones (< 768px): previous · "Page X of Y" · next across the whole row — nine buttons don't
-        fit a 326px card. From 768px: first / previous / page numbers / next / last.
+        Phones (< 768px): first · previous · "Page X of Y" · next · last across the whole row — nine
+        buttons don't fit a 326px card. From 768px: first / previous / page numbers / next / last.
+        Each button reaches 44px to a finger (`tap-target`), spaced so the hit areas don't overlap.
       */}
       <nav
         aria-label={t('ui.table.pagination')}
-        className="flex w-full items-center justify-between gap-1.5 md:ms-auto md:w-auto md:justify-start"
+        className="flex w-full items-center justify-between gap-2 md:ms-auto md:w-auto md:justify-start md:gap-1.5"
       >
-        {nav(t('ui.table.firstPage'), 1, atStart, ChevronFirstIcon, 'hidden md:inline-flex')}
+        {nav(t('ui.table.firstPage'), 1, atStart, ChevronFirstIcon)}
         {nav(t('ui.table.previousPage'), current - 1, atStart, ChevronStartIcon)}
         {pageWindow(current, pageCount).map((n) => (
           <Button
@@ -99,7 +103,7 @@ export function Pagination({
             aria-label={t('ui.table.page', { page: n })}
             disabled={disabled}
             onClick={() => onPageChange(n)}
-            className={cn('tabular hidden text-sm md:inline-flex', n === current && 'shadow-none')}
+            className={cn('tap-target tabular hidden text-sm md:inline-flex', n === current && 'shadow-none')}
           >
             {n}
           </Button>
@@ -108,7 +112,7 @@ export function Pagination({
           {t('ui.table.pageOf', { page: formatCount(current), count: formatCount(pageCount) })}
         </p>
         {nav(t('ui.table.nextPage'), current + 1, atEnd, ChevronEndIcon)}
-        {nav(t('ui.table.lastPage'), pageCount, atEnd, ChevronLastIcon, 'hidden md:inline-flex')}
+        {nav(t('ui.table.lastPage'), pageCount, atEnd, ChevronLastIcon)}
       </nav>
     </div>
   );

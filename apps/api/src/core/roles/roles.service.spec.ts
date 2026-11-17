@@ -74,7 +74,7 @@ describe('RolesService', () => {
     expect(audit.record).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'core.role.update',
-        entity: { type: 'role', id: 'r-1', label: 'Nurse' },
+        entity: { type: 'role', id: 'r-1', label: { en: 'Nurse', ar: 'ممرضة' } },
         before: expect.objectContaining({ permissions: { 'hr.employees.view': 'own_stage' } }),
         after: expect.objectContaining({ permissions: { 'hr.employees.view': 'all' } }),
       }),

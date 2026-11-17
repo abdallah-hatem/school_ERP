@@ -241,6 +241,12 @@ export interface AuditChange {
   after: unknown;
 }
 
+/** A record's name in both languages; the timeline shows the one matching the screen. */
+export interface AuditLabel {
+  en: string;
+  ar: string;
+}
+
 /** `GET /audit` and `GET /audit/records/:entityType/:entityId` item. */
 export interface AuditEntry {
   id: Uuid;
@@ -248,8 +254,12 @@ export interface AuditEntry {
   module: AuditModule;
   entityType: AuditEntityType;
   entityId: string;
-  /** Snapshot taken when the entry was written (e.g. the employee's name then). */
-  entityLabel: string;
+  /**
+   * Snapshot taken when the entry was written (e.g. the employee's name then), in both languages.
+   * Records with one name (a user, a payroll month) and entries written before labels kept both
+   * names carry the same text in `en` and `ar`.
+   */
+  entityLabel: AuditLabel;
   /** `null` for failed sign-ins and system actions. The name is a snapshot (edge case 4). */
   actor: { id: Uuid; name: string } | null;
   changes: AuditChange[];
@@ -271,6 +281,19 @@ export interface AuditListQuery {
   /** Searches the record's label (employee name or code, payroll month). */
   q?: string;
 }
+
+/**
+ * `GET /audit/day-totals` query: the `GET /audit` filters (no paging, no period) plus the periods to
+ * count — each `from/to` (ISO instants, `to` exclusive), comma-separated, at most 31. The Activity
+ * page sends the school days of the page it shows, so each day header counts the whole day.
+ * Answer: one total per period, in order.
+ */
+export type AuditDayTotalsQuery = Omit<AuditListQuery, 'page' | 'limit' | 'from' | 'to'> & {
+  periods: readonly { from: IsoDateTime; to: IsoDateTime }[];
+};
+
+/** How many periods one `GET /audit/day-totals` may count. */
+export const AUDIT_DAY_TOTALS_MAX = 31;
 
 /** `GET /audit/records/:entityType/:entityId` query: paging, plus who and which field. */
 export interface AuditRecordQuery {

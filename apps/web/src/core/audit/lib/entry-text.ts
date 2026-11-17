@@ -5,8 +5,10 @@ import {
   LANGUAGES,
   SchoolSettingKey,
   WEEKDAYS,
+  type AuditChange,
   type AuditEntityType,
   type AuditEntry,
+  type AuditLabel,
   type Names,
 } from '@school-erp/shared';
 import { formatDate, formatDayCount, formatDays } from '@/shared/lib/format';
@@ -20,9 +22,19 @@ import { formatSchoolDateTime } from './time';
  * to the raw text, so a new action never breaks the timeline.
  */
 
+/** The record's name in the screen's language (entries keep both names; older ones one). */
+export function labelIn(label: AuditLabel | string, locale: Locale): string {
+  if (typeof label === 'string') return label;
+  return (locale === 'ar' ? label.ar : label.en) || label.en || label.ar;
+}
+
 /** The sentence, without the actor (shown beside it): "Edited the employee Omar Fathy". */
-export function entrySentence(entry: Pick<AuditEntry, 'action' | 'entityLabel'>, t: Translate): string {
-  return t(`audit.actions.${entry.action}`, { entity: entry.entityLabel });
+export function entrySentence(
+  entry: { action: AuditEntry['action']; entityLabel: AuditLabel | string },
+  t: Translate,
+  locale: Locale,
+): string {
+  return t(`audit.actions.${entry.action}`, { entity: labelIn(entry.entityLabel, locale) });
 }
 
 /** Stage edits are keyed per stage (`lists.stages.<id>`, settings history format). */
@@ -145,6 +157,73 @@ export function formatAuditValue(
     }
   }
   return JSON.stringify(value);
+}
+
+/** One line of an entry's changes as the timeline draws it. */
+export interface ChangeRow {
+  key: string;
+  /** The field the values are formatted as (`nameAr`, `phone`, `hr.violations`). */
+  field: string;
+  label: string;
+  before: unknown;
+  after: unknown;
+  /** Nothing before: only the new value shows. */
+  created: boolean;
+}
+
+/** The parts of a list item whose change is worth a line of its own; `id` never is. */
+const NAME_PARTS = ['nameEn', 'nameAr', 'isActive', 'sortOrder'] as const;
+
+/**
+ * Before and after are the same item edited in place: the same id (list and catalogue snapshots),
+ * or no ids and the same name in this language (a picked item whose other name changed).
+ */
+function editedInPlace(a: Names & { id?: unknown }, b: Names & { id?: unknown }, locale: Locale): boolean {
+  if (a.id !== undefined && b.id !== undefined) return a.id === b.id;
+  return localName(a, locale) === localName(b, locale);
+}
+
+/**
+ * The lines an entry's changes read as. A list item edited in place (`{ nameEn, nameAr, … }` before
+ * and after, the same item) is split into the parts that changed — "Violation · Name (Arabic)" with its
+ * own before and after — so renaming only the Arabic name never reads "Strike → Strike". A change
+ * whose two sides read the same in this language is dropped; everything else is one line.
+ */
+export function changeRows(
+  changes: readonly AuditChange[],
+  t: Translate,
+  has: (key: string) => boolean,
+  locale: Locale,
+  entityType?: AuditEntityType,
+): ChangeRow[] {
+  const rows: ChangeRow[] = [];
+  changes.forEach((change, i) => {
+    const label = fieldLabel(change.field, t, has);
+    const { before, after } = change;
+    const created = before === null || before === undefined;
+    if (!created && isNames(before) && isNames(after) && editedInPlace(before, after, locale)) {
+      const b = before as unknown as Record<string, unknown>;
+      const a = after as unknown as Record<string, unknown>;
+      for (const part of NAME_PARTS) {
+        if (JSON.stringify(b[part]) === JSON.stringify(a[part])) continue;
+        rows.push({
+          key: `${change.field}-${i}-${part}`,
+          field: part,
+          label: t('audit.timeline.part', { field: label, part: fieldLabel(part, t, has) }),
+          before: b[part],
+          after: a[part],
+          created: false,
+        });
+      }
+      return;
+    }
+    if (!created) {
+      const shown = (v: unknown) => formatAuditValue(change.field, v, t, has, locale, entityType);
+      if (shown(before) === shown(after) && JSON.stringify(before) === JSON.stringify(after)) return;
+    }
+    rows.push({ key: `${change.field}-${i}`, field: change.field, label, before, after, created });
+  });
+  return rows;
 }
 
 /** Where "Open record" goes for an entry, or null when the record has no page. */

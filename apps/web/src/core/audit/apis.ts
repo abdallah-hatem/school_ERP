@@ -3,6 +3,7 @@
 import type {
   AuditActor,
   AuditActorsQuery,
+  AuditDayTotalsQuery,
   AuditEntityType,
   AuditEntry,
   AuditListQuery,
@@ -32,6 +33,22 @@ export async function GET_AUDIT(query: AuditListQuery) {
       actorId: query.actorId,
       from: query.from,
       to: query.to,
+    },
+    cache: 'no-store',
+  });
+  return handleResponse({ response });
+}
+
+/** `GET /audit/day-totals` — each period's whole count for the Activity filters (the day headers). */
+export async function GET_AUDIT_DAY_TOTALS(query: AuditDayTotalsQuery) {
+  const action = query.action === undefined ? undefined : ([] as string[]).concat(query.action).join(',');
+  const response = await apiFetch<number[]>('/audit/day-totals', {
+    params: {
+      q: query.q,
+      module: query.module,
+      action,
+      actorId: query.actorId,
+      periods: query.periods.map((p) => `${p.from}/${p.to}`).join(','),
     },
     cache: 'no-store',
   });

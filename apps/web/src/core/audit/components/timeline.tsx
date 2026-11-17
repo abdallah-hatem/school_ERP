@@ -1,6 +1,6 @@
 'use client';
 
-import { AUDIT_ACTIONS, isMoneyEntry, type AuditChange, type AuditEntry, type IsoDateTime } from '@school-erp/shared';
+import { AUDIT_ACTIONS, isMoneyEntry, type AuditEntry, type IsoDate, type IsoDateTime } from '@school-erp/shared';
 import Link from 'next/link';
 import { Fragment, useId, useState, type ReactNode } from 'react';
 import { Money } from '@/shared/components/ui/figures';
@@ -26,12 +26,14 @@ import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import {
   actorName,
+  changeRows,
   entrySentence,
-  fieldLabel,
   formatAuditValue,
   isFailedSignIn,
   isMoneyField,
+  labelIn,
   recordHref,
+  type ChangeRow,
 } from '../lib/entry-text';
 import {
   formatDayHeading,
@@ -85,16 +87,16 @@ function entryLook(entry: AuditEntry): { icon: AppIcon; tone: Tone } {
 
 /** The sentence with the record's label in bold, isolated so a name in the other script reads right. */
 function Sentence({ entry, lowerFirst = false }: { entry: AuditEntry; lowerFirst?: boolean }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const MARK = '\u0000';
-  const [text = '', after] = entrySentence({ action: entry.action, entityLabel: MARK }, t).split(MARK);
+  const [text = '', after] = entrySentence({ action: entry.action, entityLabel: MARK }, t, locale).split(MARK);
   // English sentences start with a capital; after the actor's name ("Mona changed…") it is lowered.
   const before = lowerFirst ? text.charAt(0).toLowerCase() + text.slice(1) : text;
   if (after === undefined) return <>{before}</>;
   return (
     <>
       {before}
-      <bdi className="font-bold">{entry.entityLabel}</bdi>
+      <bdi className="font-bold">{labelIn(entry.entityLabel, locale)}</bdi>
       {after}
     </>
   );
@@ -131,48 +133,56 @@ function Arrow() {
   );
 }
 
-function Value({ change, side, entry }: { change: AuditChange; side: 'before' | 'after'; entry: AuditEntry }) {
+function Value({ row, side, entry }: { row: ChangeRow; side: 'before' | 'after'; entry: AuditEntry }) {
   const { t, has, locale } = useTranslation();
-  const value = change[side];
-  if (isMoneyField(change.field) && typeof value === 'number') return <Money value={value} />;
-  return <bdi>{formatAuditValue(change.field, value, t, has, locale, entry.entityType)}</bdi>;
+  const value = row[side];
+  if (isMoneyField(row.field) && typeof value === 'number') return <Money value={value} />;
+  return <bdi>{formatAuditValue(row.field, value, t, has, locale, entry.entityType)}</bdi>;
 }
 
-/** The changed fields: the first few inline, the rest behind "+ n more". */
+/**
+ * The changed fields: the first few inline, the rest behind "+ n more". Labels sit in a column as
+ * wide as the longest one (up to 11rem, then they wrap); the arrow stays with the new value.
+ */
 function Changes({ entry, inline }: { entry: AuditEntry; inline: number }) {
-  const { t, has } = useTranslation();
+  const { t, has, locale } = useTranslation();
   const [open, setOpen] = useState(false);
   const listId = useId();
-  if (entry.changes.length === 0) return null;
-  const shown = open ? entry.changes : entry.changes.slice(0, inline);
-  const hidden = entry.changes.length - inline;
+  const rows = changeRows(entry.changes, t, has, locale, entry.entityType);
+  if (rows.length === 0) return null;
+  const shown = open ? rows : rows.slice(0, inline);
+  const hidden = rows.length - inline;
   return (
     <div className="flex flex-col gap-1 rounded-xl bg-muted px-3 py-2 text-[0.8125rem]">
-      <dl id={listId} className="flex flex-col gap-1">
-        {shown.map((change, i) => {
-          const created = change.before === null || change.before === undefined;
-          return (
-            <div
-              key={`${change.field}-${i}`}
-              className="grid items-baseline gap-x-2.5 gap-y-0.5 @min-[34rem]:grid-cols-[7.5rem_minmax(0,1fr)]"
-            >
-              <dt className="font-semibold text-muted-foreground">{fieldLabel(change.field, t, has)}</dt>
-              <dd className="flex min-w-0 flex-wrap items-baseline gap-x-1.5 break-words [overflow-wrap:anywhere]">
-                {created ? null : (
+      <dl
+        id={listId}
+        className="grid gap-y-1 @min-[34rem]:grid-cols-[fit-content(11rem)_minmax(0,1fr)] @min-[34rem]:gap-x-3"
+      >
+        {shown.map((row) => (
+          <div key={row.key} className="grid gap-y-0.5 @min-[34rem]:contents">
+            <dt className="font-semibold leading-snug text-muted-foreground break-words">{row.label}</dt>
+            <dd className="min-w-0 leading-snug break-words [overflow-wrap:anywhere]">
+              {row.created ? null : (
+                <>
+                  <span className="text-muted-foreground line-through decoration-muted-foreground/60">
+                    <Value row={row} side="before" entry={entry} />
+                  </span>{' '}
+                </>
+              )}
+              {/* One unit: the arrow never ends a line on its own, away from the value it points at. */}
+              <span className="inline">
+                {row.created ? null : (
                   <>
-                    <span className="text-muted-foreground line-through decoration-muted-foreground/60">
-                      <Value change={change} side="before" entry={entry} />
-                    </span>
-                    <Arrow />
+                    <Arrow />{' '}
                   </>
                 )}
-                <span className={cn('font-bold', isMoneyField(change.field) && 'text-info-ink')}>
-                  <Value change={change} side="after" entry={entry} />
+                <span className={cn('font-bold', isMoneyField(row.field) && 'text-info-ink')}>
+                  <Value row={row} side="after" entry={entry} />
                 </span>
-              </dd>
-            </div>
-          );
-        })}
+              </span>
+            </dd>
+          </div>
+        ))}
       </dl>
       {hidden > 0 ? (
         <button
@@ -180,7 +190,7 @@ function Changes({ entry, inline }: { entry: AuditEntry; inline: number }) {
           aria-expanded={open}
           aria-controls={listId}
           onClick={() => setOpen((o) => !o)}
-          className="cursor-pointer self-start rounded-sm py-0.5 text-[0.8125rem] font-bold text-primary hover:underline focus-visible:outline-3 focus-visible:outline-ring/55"
+          className="tap-target cursor-pointer self-start rounded-sm py-0.5 text-[0.8125rem] font-bold text-primary hover:underline focus-visible:outline-3 focus-visible:outline-ring/55"
         >
           {open ? t('audit.timeline.less') : t('audit.timeline.more', { count: hidden })}
         </button>
@@ -224,7 +234,7 @@ function EntryMeta({ entry }: { entry: AuditEntry }) {
   const { t, locale } = useTranslation();
   const href = recordHref(entry, locale);
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
+    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
       <ModuleChip entry={entry} />
       {isMoneyEntry(entry) ? (
         <Tag tone="money" icon={MoneyIcon}>
@@ -239,9 +249,9 @@ function EntryMeta({ entry }: { entry: AuditEntry }) {
       {href ? (
         <Link
           href={href}
-          className="inline-flex cursor-pointer items-center gap-1 rounded-sm px-1 text-[0.8125rem] font-bold text-primary hover:underline focus-visible:outline-3 focus-visible:outline-ring/55"
+          className="tap-target inline-flex cursor-pointer items-center gap-1 rounded-md px-1.5 py-0.5 text-[0.8125rem] font-bold text-primary hover:underline focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-ring/55"
         >
-          <OpenRecordIcon className="size-4" />
+          <OpenRecordIcon className="size-4 shrink-0" />
           {t('audit.timeline.openRecord')}
         </Link>
       ) : null}
@@ -331,7 +341,8 @@ function groupEntries(entries: AuditEntry[], grouping: TimelineGrouping): Group[
   return groups;
 }
 
-function DayHeading({ day, count, now }: { day: string; count: number; now: IsoDateTime }) {
+/** A day's header; `total` is the whole day's count for the filters (not this page's), when known. */
+function DayHeading({ day, total, now }: { day: string; total: number | undefined; now: IsoDateTime }) {
   const { t, locale } = useTranslation();
   const today = schoolDay(now);
   const date = formatDayHeading(day, locale);
@@ -345,9 +356,11 @@ function DayHeading({ day, count, now }: { day: string; count: number; now: IsoD
     <h3 className="flex items-center gap-2.5 px-4 pt-4 pb-2 font-display text-[0.9375rem] font-extrabold @min-[34rem]:px-6">
       <span>{title}</span>
       <span aria-hidden="true" className="h-px flex-1 bg-border" />
-      <span className="tabular font-sans text-xs font-semibold text-muted-foreground">
-        {t('audit.timeline.dayCount', { count })}
-      </span>
+      {total === undefined ? null : (
+        <span data-testid="day-total" className="tabular font-sans text-xs font-semibold text-muted-foreground">
+          {t('audit.timeline.dayCount', { count: total })}
+        </span>
+      )}
     </h3>
   );
 }
@@ -361,12 +374,15 @@ export function AuditTimeline({
   grouping,
   now,
   label,
+  dayTotals,
 }: {
   entries: AuditEntry[];
   grouping: TimelineGrouping;
   now: IsoDateTime;
   /** Accessible name of the list. */
   label: string;
+  /** Each day's whole count for the current filters (`GET /audit/day-totals`); none → no counts. */
+  dayTotals?: Partial<Record<IsoDate, number>>;
 }) {
   const { locale } = useTranslation();
   // Activity reads "Mona changed …" in English; Arabic sentences are verbal nouns, joined with "·".
@@ -376,7 +392,7 @@ export function AuditTimeline({
       {groupEntries(entries, grouping).map((group) => (
         <Fragment key={group.key}>
           {grouping === 'day' ? (
-            <DayHeading day={group.key} count={group.entries.length} now={now} />
+            <DayHeading day={group.key} total={dayTotals?.[group.key as IsoDate]} now={now} />
           ) : (
             <h3 className="px-4 pt-4 pb-1.5 text-[0.8125rem] font-extrabold tracking-wide text-muted-foreground @min-[34rem]:px-6">
               {formatMonthHeading(group.key as `${number}-${number}`, locale)}

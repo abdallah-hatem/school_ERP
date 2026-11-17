@@ -1,10 +1,12 @@
 'use client';
 
-import { useParams } from 'next/navigation';
+import { useParams, usePathname } from 'next/navigation';
+import { RecordHistorySkeleton } from '@/core/audit';
 import { PageHeader } from '@/shared/components/layout/page-header';
 import { Skeleton, SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { EMPLOYEES_PAGE_SIZE } from '../lib/list-query';
+import { EmployeesI18n } from '../messages';
 import { EmployeeCardGrid, EmployeeCardSkeleton } from './employee-card';
 import { DetailsCard, DetailsItem, ProfileTabs } from './employee-profile';
 
@@ -113,12 +115,24 @@ export function EmployeeDetailsSkeleton() {
 
 /**
  * First visit to a profile, before its layout has the employee: the header in its real shape
- * (breadcrumbs, title, status, code line, two actions), the real tab bar and the Details cards.
- * Tab switches never show it — the profile layout stays mounted and only the tab's skeleton shows.
+ * (breadcrumbs, title, status, code line, two actions), the real tab bar and the opened tab's body —
+ * the History timeline on `/history`, the Details cards otherwise. It renders above the profile
+ * layout (no `employees` messages yet), so it brings its own. Tab switches never show it — the
+ * profile layout stays mounted and only the tab's skeleton shows.
  */
 export function EmployeeProfileSkeleton() {
+  const { locale } = useTranslation();
+  return (
+    <EmployeesI18n locale={locale}>
+      <ProfileSkeleton />
+    </EmployeesI18n>
+  );
+}
+
+function ProfileSkeleton() {
   const { t, locale } = useTranslation();
   const { id } = useParams<{ id: string }>();
+  const history = usePathname()?.endsWith('/history') ?? false;
   const basePath = `/${locale}/employees`;
   return (
     <div className="flex flex-col gap-6">
@@ -136,7 +150,7 @@ export function EmployeeProfileSkeleton() {
         }
       />
       <ProfileTabs profileHref={`${basePath}/${id}`} />
-      <EmployeeDetailsSkeleton />
+      {history ? <RecordHistorySkeleton /> : <EmployeeDetailsSkeleton />}
     </div>
   );
 }

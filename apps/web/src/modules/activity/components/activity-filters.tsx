@@ -69,8 +69,9 @@ function ModuleSwitch({
     })),
   ];
   return (
-    // One row when the names fit (English); a long name ("الموارد البشرية") wraps the last one.
-    <div className="flex flex-wrap gap-0.5 rounded-xl bg-secondary p-0.75">
+    // One row in both languages: segments size to their names with tight padding, so the long
+    // Arabic "الموارد البشرية" and "الإعدادات" fit the 300px panel side by side.
+    <div className="flex gap-0.5 rounded-xl bg-secondary p-0.75">
       {options.map((o) => {
         const on = o.value === value;
         return (
@@ -81,7 +82,7 @@ function ModuleSwitch({
             disabled={disabled}
             onClick={() => onChange(o.value)}
             className={cn(
-              'min-h-9 flex-[1_0_auto] cursor-pointer rounded-[0.6rem] px-2.5 text-[0.8125rem] font-bold whitespace-nowrap transition-colors duration-150',
+              'tap-target min-h-9 flex-[1_1_auto] cursor-pointer rounded-[0.6rem] px-1.5 text-[0.8125rem] font-bold whitespace-nowrap transition-colors duration-150',
               'focus-visible:outline-3 focus-visible:outline-ring/55 disabled:cursor-not-allowed',
               on ? 'bg-card text-primary shadow-xs' : 'text-muted-foreground hover:text-foreground',
             )}
@@ -106,7 +107,7 @@ function TypeChips({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="flex flex-wrap gap-1.5">
+    <div className="flex flex-wrap gap-x-1.5 gap-y-3 md:gap-y-1.5">
       {ACTIVITY_TYPES.map((type) => {
         const on = value.includes(type);
         const Icon = TYPE_ICONS[type];
@@ -118,7 +119,7 @@ function TypeChips({
             disabled={disabled}
             onClick={() => onChange(on ? value.filter((v) => v !== type) : [...value, type])}
             className={cn(
-              'inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-full border px-2.5 text-[0.8125rem] font-semibold whitespace-nowrap transition-colors duration-150',
+              'tap-target inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-full border px-2.5 text-[0.8125rem] font-semibold whitespace-nowrap transition-colors duration-150',
               'focus-visible:outline-3 focus-visible:outline-ring/55 disabled:cursor-not-allowed',
               on ? 'border-transparent bg-primary-soft text-primary' : 'border-input bg-card hover:bg-muted',
             )}
@@ -155,13 +156,13 @@ function PersonPicker({
         disabled={disabled}
         onClick={onClick}
         className={cn(
-          'flex min-h-10 w-full cursor-pointer items-center gap-2.5 rounded-xl px-2 py-1.5 text-start text-sm transition-colors duration-150',
+          'flex min-h-11 w-full cursor-pointer items-center gap-2.5 rounded-xl px-2 py-1.5 text-start text-sm transition-colors duration-150 md:min-h-10',
           'focus-visible:outline-3 focus-visible:outline-ring/55 disabled:cursor-not-allowed',
           selected ? 'bg-primary-soft font-bold text-primary' : 'hover:bg-muted',
         )}
       >
         {lead}
-        <span className="min-w-0 flex-1 truncate">{name}</span>
+        <bdi className="min-w-0 flex-1 truncate">{name}</bdi>
         {selected ? <CheckIcon className="size-4 shrink-0" /> : null}
       </button>
     </li>
@@ -178,7 +179,7 @@ function PersonPicker({
           placeholder={t('audit.filters.searchPeople')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className={cn(controlClasses, 'h-10 rounded-none border-0 ps-9 shadow-none [&::-webkit-search-cancel-button]:appearance-none')}
+          className={cn(controlClasses, 'h-11 rounded-none border-0 ps-9 shadow-none md:h-10')}
         />
       </div>
       <ul className="scrollbar-clean flex max-h-56 flex-col gap-0.5 overflow-y-auto overscroll-contain p-1">
@@ -282,7 +283,7 @@ export function ActivityFilters({
             <button
               type="button"
               onClick={() => onChange({ page: 1, types: [], ...(query.q ? { q: query.q } : {}) })}
-              className="ms-auto cursor-pointer rounded-sm text-[0.8125rem] font-bold text-primary hover:underline focus-visible:outline-3 focus-visible:outline-ring/55"
+              className="tap-target ms-auto cursor-pointer rounded-sm text-[0.8125rem] font-bold text-primary hover:underline focus-visible:outline-3 focus-visible:outline-ring/55"
             >
               {t('audit.filters.clear')}
             </button>

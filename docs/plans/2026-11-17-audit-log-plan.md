@@ -47,6 +47,12 @@ edit, deactivate, reactivate), departments, job titles, HR settings, penalty cat
 action: the entry exists with the right action, record, actor and changed fields; a rolled-back
 change leaves none.
 
+**Record names in both languages (UI audit fix, `fix/activity-ui`):** pass the record's two names as
+the label — `entity: { type, id, label: { en: employee.nameEn, ar: employee.nameAr } }` (likewise
+departments, job titles, penalty groups, violations, stages). Only records with one name (a user's
+email, a payroll month `2026-11`) pass a string. Core's `historyAuditTarget` already does this for the
+lists and catalogue; when T28 moves them off `SettingsHistoryListener`, keep passing both names.
+
 **From T27:** HR settings are already recorded (`hr.settings.update`) by core's
 `SettingsService.setValues`, in the write's transaction; to switch the handler to `@Audited`, make
 the no-change path call `setValues` too (or `record()` with no changes). Stages, lists and the
@@ -59,7 +65,8 @@ Repositories written to in an audited request must move to `TransactionHost` (`t
 
 Penalties (record, approve, cancel); lateness month save (one entry, changed employees only — spec
 7); payroll run create, recalculate, approve (one entry with totals — spec 6), adjustment add/remove.
-Same tests as T28.
+Same tests as T28. Labels: `{ en, ar }` where the record has two names (a penalty → the employee's
+two names); the payroll run and lateness month are a month string (see T28's note).
 
 **From T27:** same repository move as T28. The HR repositories that open their own `$transaction`
 (penalty records, payroll runs, lateness, employees) must switch to `txHost.withTransaction` so the
@@ -95,9 +102,8 @@ Activity page and dry-run on a copy; spot-check 10 entries by hand against what 
 - The smoke's employee History check (`e2e/15-activity`, `16-activity-phone`) asserts the empty
   state while the employee has no entries (`TODO(T28)`): once T28 records `hr.employee.update`, edit
   an employee in the spec and assert the entry at the top of the tab.
-- `entityLabel` is one snapshot string: list items and catalogue entries are recorded with their
-  English name, so Arabic sentences show English record names. Decide (T28) whether labels should
-  keep both names.
+- ~~`entityLabel` is one snapshot string~~ — done in `fix/activity-ui`: labels keep both names
+  (`{ en, ar }`, column `entity_label_ar`); see T28's note for how callers pass them.
 - Employee field changes holding ids (`departmentId`, `jobTitleId`, `stageId`, `managerId`) show the
   raw value unless T28 records `{ nameEn, nameAr }` snapshots (the timeline names those).
 - A penalty's entries are on the penalty, not on the employee: the employee History shows only

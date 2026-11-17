@@ -182,6 +182,30 @@
   [role="button"]:not([aria-disabled="true"]) {
     cursor: pointer;
   }
+  /* Search boxes never show the browser's own "×": they all look and clear the same way. */
+  input[type="search"]::-webkit-search-cancel-button,
+  input[type="search"]::-webkit-search-decoration {
+    -webkit-appearance: none;
+    appearance: none;
+    display: none;
+  }
+}
+
+/*
+ * A small control that keeps its look but is at least 44 × 44px to a finger: on touch screens and
+ * phone widths an invisible ::after grows the hit area around it (centred, never smaller than the
+ * control). Desktop density stays as drawn. Needs no positioned child of its own using ::after.
+ */
+@utility tap-target {
+  position: relative;
+  @media (pointer: coarse), (width < 48rem) {
+    &::after {
+      content: "";
+      position: absolute;
+      inset-block: min(0px, calc((100% - 2.75rem) / 2));
+      inset-inline: min(0px, calc((100% - 2.75rem) / 2));
+    }
+  }
 }
 
 /* Opening a Radix overlay never shifts the page (building-frontends → ui-patterns). */

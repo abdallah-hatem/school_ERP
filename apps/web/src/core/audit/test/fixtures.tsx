@@ -26,7 +26,7 @@ export function entry(over: Partial<AuditEntry> = {}): AuditEntry {
     module: 'hr',
     entityType: 'employee',
     entityId: '33333333-3333-4333-8333-333333333333',
-    entityLabel: 'Omar Fathy',
+    entityLabel: { en: 'Omar Fathy', ar: 'عمر فتحي' },
     actor: MONA,
     changes: [{ field: 'phone', before: '01001234567', after: '01112345678' }],
     meta: { ip: null, userAgent: null },

@@ -27,6 +27,12 @@ export function t(locale: Language, key: string, values: Record<string, string |
   const [ns = '', ...path] = key.split('.');
   let node: string | Tree | undefined = namespace(locale, ns);
   for (const part of path) node = typeof node === 'object' ? node[part] : undefined;
+  // Plural forms (`{ one, other, … }`): the form for `values.count`, as the app picks it.
+  if (typeof node === 'object' && typeof node.other === 'string' && values.count !== undefined) {
+    const count = Number(String(values.count).replace(/,/g, ''));
+    const form = node[new Intl.PluralRules(locale).select(count)];
+    node = typeof form === 'string' ? form : node.other;
+  }
   if (typeof node !== 'string') throw new Error(`smoke: missing locale key ${locale}:${key}`);
   return node.replace(/\{(\w+)\}/g, (match, name: string) => (name in values ? String(values[name]) : match));
 }

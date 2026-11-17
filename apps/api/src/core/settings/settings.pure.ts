@@ -6,6 +6,7 @@ import {
   SETTING_DEFAULTS,
   SchoolSettingKey,
   type AuditAction,
+  type AuditLabel,
   type SchoolSettings,
   type SettingsChangedEvent,
   type SettingKey,
@@ -101,7 +102,8 @@ export const STAGE_HISTORY_PREFIX = 'lists.stages.';
 /** The audit action and record of a list / catalogue `settings.changed` event. */
 export interface HistoryAuditTarget {
   action: AuditAction;
-  entity: { type: AuditEntityType; id: string; label: string };
+  /** Both names of the item (UI audit finding 3): Arabic sentences show the Arabic name. */
+  entity: { type: AuditEntityType; id: string; label: AuditLabel };
 }
 
 const LIST_ACTIONS: Record<string, { type: AuditEntityType; create: AuditAction; update: AuditAction }> = {
@@ -140,7 +142,8 @@ const field = (value: unknown, name: string): string | undefined => {
 export function historyAuditTarget(event: SettingsChangedEvent): HistoryAuditTarget | null {
   const created = event.oldValue === null || event.oldValue === undefined;
   const snapshot = created ? event.newValue : (event.newValue ?? event.oldValue);
-  const label = field(snapshot, 'nameEn') ?? field(snapshot, 'nameAr') ?? '';
+  const en = field(snapshot, 'nameEn') ?? field(snapshot, 'nameAr') ?? '';
+  const label: AuditLabel = { en, ar: field(snapshot, 'nameAr') ?? en };
 
   if (event.scope === 'lists' && event.key.startsWith(STAGE_HISTORY_PREFIX)) {
     return {

@@ -180,7 +180,8 @@ describe('core settings and school structure (e2e)', () => {
       expect(history.body.data[0]).toMatchObject({
         id,
         action: 'hr.department.create',
-        entityLabel: 'Science',
+        // An entry written with one label (before labels kept both names) reads as it in both.
+        entityLabel: { en: 'Science', ar: 'Science' },
         actor: { id: TEST_USER.id, name: TEST_USER.name },
         changes: [{ field: 'hr.departments', before: null, after: snapshot }],
         at: stored.at.toISOString(),
