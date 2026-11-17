@@ -20,7 +20,10 @@ describe('HR rule settings — /hr/settings (e2e)', () => {
   let db: DatabaseService;
   let events: SettingsChangedEvent[];
 
-  const patch = (body: unknown) => http(app).patch('/hr/settings').send(body as object);
+  const patch = (body: unknown) =>
+    http(app)
+      .patch('/hr/settings')
+      .send(body as object);
   const getSettings = async (): Promise<HrSettings> =>
     (await http(app).get('/hr/settings').expect(200)).body.data as HrSettings;
 
@@ -32,6 +35,7 @@ describe('HR rule settings — /hr/settings (e2e)', () => {
 
   beforeEach(async () => {
     await db.schoolSetting.deleteMany({ where: { key: { in: HR_KEYS } } });
+    await db.settingChange.deleteMany({ where: { key: { in: HR_KEYS } } });
     events = [];
   });
 
@@ -167,10 +171,16 @@ describe('HR rule settings — /hr/settings (e2e)', () => {
     expect(rows.map((r) => r.key).sort()).toEqual(Object.keys(byKey).sort());
     for (const r of rows) expect(r.updatedById).toBe(user.id);
 
+    // Exactly ONE history row per changed key (core writes history only from the event).
+    const history = await db.settingChange.findMany({ where: { key: { in: HR_KEYS } } });
+    expect(history.map((h) => h.key).sort()).toEqual(Object.keys(byKey).sort());
+    for (const h of history) expect(h).toMatchObject({ scope: 'HR', changedById: user.id });
+
     // The same PATCH again changes nothing → no events.
     events = [];
     await patch({ lateness: { graceMinutes: 10 }, payroll: { dayDivisor: 26 } }).expect(200);
     expect(events).toHaveLength(0);
+    expect(await db.settingChange.count({ where: { key: { in: HR_KEYS } } })).toBe(3);
   });
 
   it('empty PATCH → 200 with the current settings, no changes', async () => {

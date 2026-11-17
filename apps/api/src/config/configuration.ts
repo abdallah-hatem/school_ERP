@@ -6,6 +6,7 @@ export interface AppConfig {
   port: number;
   databaseUrl: string;
   corsOrigin: string;
+  uploadsDir: string;
 }
 
 export const configuration = (): AppConfig => {
@@ -15,5 +16,6 @@ export const configuration = (): AppConfig => {
     port: env.PORT,
     databaseUrl: env.DATABASE_URL,
     corsOrigin: env.CORS_ORIGIN,
+    uploadsDir: env.UPLOADS_DIR,
   };
 };

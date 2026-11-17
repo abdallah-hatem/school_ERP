@@ -1,18 +1,15 @@
 import { Injectable } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   HrSettingKey,
   PART_TIME_WORK_SYSTEMS,
   SETTING_DEFAULTS,
-  SettingsEvent,
   type HrSettings,
   type LatenessStep,
   type PartTimeWorkSystem,
-  type SettingsChangedEvent,
   type SettingValueMap,
 } from '@school-erp/shared';
+import { SettingsService } from '../../../core/settings';
 import { UpdateHrSettingsDto } from './dto/update-hr-settings.dto';
-import { HrSettingsRepository } from './repositories/hr-settings.repository';
 
 type HrValues = { [K in HrSettingKey]: SettingValueMap[K] };
 
@@ -28,22 +25,18 @@ function canonical(value: unknown): string {
 }
 
 function sortSteps(steps: readonly LatenessStep[]): LatenessStep[] {
-  return [...steps]
-    .map(({ hour, days }) => ({ hour, days }))
-    .sort((a, b) => a.hour - b.hour);
+  return [...steps].map(({ hour, days }) => ({ hour, days })).sort((a, b) => a.hour - b.hour);
 }
 
 /**
  * HR rule settings (§5, §6, §7): lateness rule, payroll rule, penalty repetition window. Stored one
- * row per key with the §7 defaults behind them. Every changed key emits one `settings.changed`
- * event after the write commits; core's listener records the history row.
+ * row per key with the §7 defaults behind them, through core's `SettingsService` (HR never writes
+ * core's table). Every changed key emits one `settings.changed` after the write commits; core's
+ * listener records the history row.
  */
 @Injectable()
 export class HrSettingsService {
-  constructor(
-    private readonly repository: HrSettingsRepository,
-    private readonly events: EventEmitter2,
-  ) {}
+  constructor(private readonly settings: SettingsService) {}
 
   async get(): Promise<HrSettings> {
     return this.toResponse(await this.load());
@@ -57,7 +50,8 @@ export class HrSettingsService {
     if (lateness?.graceMinutes !== undefined) {
       next[HrSettingKey.LATENESS_GRACE_MINUTES] = lateness.graceMinutes;
     }
-    if (lateness?.steps !== undefined) next[HrSettingKey.LATENESS_STEPS] = sortSteps(lateness.steps);
+    if (lateness?.steps !== undefined)
+      next[HrSettingKey.LATENESS_STEPS] = sortSteps(lateness.steps);
     if (lateness?.extraHourDays !== undefined) {
       next[HrSettingKey.LATENESS_EXTRA_HOUR_DAYS] = lateness.extraHourDays;
     }
@@ -77,34 +71,24 @@ export class HrSettingsService {
     }
 
     const changed = HR_KEYS.filter((key) => canonical(old[key]) !== canonical(next[key]));
-    await this.repository.upsertMany(
-      changed.map((key) => ({ key, value: next[key] })),
-      changedById,
-    );
-
-    // After the write has committed: one event per changed key.
-    const changedAt = new Date().toISOString();
-    for (const key of changed) {
-      const event: SettingsChangedEvent = {
-        scope: 'hr',
-        key,
-        oldValue: old[key],
-        newValue: next[key],
+    if (changed.length > 0) {
+      // Core writes the changed keys in one transaction, then emits one `settings.changed` per
+      // key after the commit; its listener records exactly one history row each.
+      await this.settings.setValues(
+        'hr',
+        Object.fromEntries(changed.map((key) => [key, next[key]])),
         changedById,
-        changedAt,
-      };
-      this.events.emit(SettingsEvent.CHANGED, event);
+      );
     }
 
     return this.toResponse(next);
   }
 
-  /** Stored values over the §7 defaults. */
+  /** Stored values over the §7 defaults (core's SettingsService fills the defaults in). */
   private async load(): Promise<HrValues> {
-    const rows = await this.repository.findByKeys(HR_KEYS);
-    const stored = new Map(rows.map((r) => [r.key, r.value]));
+    const stored = await this.settings.getValues(HR_KEYS);
     const pick = <K extends HrSettingKey>(key: K): SettingValueMap[K] =>
-      (stored.has(key) ? stored.get(key) : SETTING_DEFAULTS[key]) as SettingValueMap[K];
+      (stored[key] ?? SETTING_DEFAULTS[key]) as SettingValueMap[K];
 
     const partTime = pick(HrSettingKey.PAYROLL_PART_TIME);
     return {

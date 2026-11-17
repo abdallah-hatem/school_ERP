@@ -3,7 +3,7 @@
 ## Lists
 
 - **DECIDED** — **Stages:** Kindergarten, Primary, Preparatory, plus "None" for staff not tied to a
-  stage. **Departments** and **job titles** are lists the school manages in Settings (§7).
+  stage (all four come from the seed). **Departments** and **job titles** are lists the school manages in Settings (§7).
   Each item has an English and an Arabic name.
 - **DECIDED** — A list item in use by an employee can't be deleted, only hidden from new choices.
 - **DECIDED** — Hidden items are left out of lists unless asked for. An employee who already has a

@@ -1,4 +1,10 @@
-import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
+import {
+  CallHandler,
+  ExecutionContext,
+  Injectable,
+  NestInterceptor,
+  StreamableFile,
+} from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
@@ -11,8 +17,14 @@ function isEnvelope(data: unknown): data is ApiResponse {
 
 /** Wraps whatever a controller returns in the house envelope. */
 @Injectable()
-export class ResponseInterceptor<T> implements NestInterceptor<T, ApiResponse<T> | ApiResponse> {
-  intercept(context: ExecutionContext, next: CallHandler<T>): Observable<ApiResponse<T> | ApiResponse> {
+export class ResponseInterceptor<T> implements NestInterceptor<
+  T,
+  ApiResponse<T> | ApiResponse | StreamableFile
+> {
+  intercept(
+    context: ExecutionContext,
+    next: CallHandler<T>,
+  ): Observable<ApiResponse<T> | ApiResponse | StreamableFile> {
     const http = context.switchToHttp();
     const request = http.getRequest<Request>();
     const response = http.getResponse<Response>();
@@ -21,6 +33,8 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, ApiResponse<T>
       map((data) => {
         // Already enveloped (a route used ResponseUtil directly) — leave it alone.
         if (isEnvelope(data)) return data;
+        // A file download is the body itself, never wrapped.
+        if (data instanceof StreamableFile) return data;
 
         const statusCode = response.statusCode;
         let message = 'Operation successful';

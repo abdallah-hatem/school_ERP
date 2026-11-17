@@ -25,6 +25,11 @@ export class EnvironmentVariables {
   @IsOptional()
   @IsString()
   CORS_ORIGIN: string = 'http://localhost:3000';
+
+  /** Where uploaded files (the school logo…) are stored on disk; relative to the working dir. */
+  @IsOptional()
+  @IsString()
+  UPLOADS_DIR: string = 'uploads';
 }
 
 /** Used by `ConfigModule.forRoot({ validate })`. Throws with every problem listed. */

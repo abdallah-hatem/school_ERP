@@ -23,6 +23,8 @@ enum UserRole {
 enum SettingScope {
   SCHOOL
   HR
+  LISTS
+  CATALOGUE
 }
 
 /// A person who signs in. Not the same as an employee (an employee may optionally link to one).

@@ -114,10 +114,15 @@ export const Weekday = {
 export type Weekday = (typeof Weekday)[keyof typeof Weekday];
 export const WEEKDAYS = values(Weekday);
 
-/** Scope of a setting change: school-wide (core) or a module's rule settings. */
+/**
+ * Scope of a setting change (the `SettingChange.scope` column): school-wide (core), a module's
+ * rule settings, the managed lists (stages, departments, job titles) or the penalty catalogue.
+ */
 export const SettingScope = {
   SCHOOL: 'SCHOOL',
   HR: 'HR',
+  LISTS: 'LISTS',
+  CATALOGUE: 'CATALOGUE',
 } as const;
 export type SettingScope = (typeof SettingScope)[keyof typeof SettingScope];
 export const SETTING_SCOPES = values(SettingScope);

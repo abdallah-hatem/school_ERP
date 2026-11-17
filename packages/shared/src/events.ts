@@ -42,6 +42,13 @@ export type SettingsEvent = (typeof SettingsEvent)[keyof typeof SettingsEvent];
 
 /** Which owner changed the setting. */
 export type SettingsChangeScope = 'school' | 'hr' | 'lists' | 'catalogue';
+/** Every scope, at runtime. Each maps one to one onto `SettingScope` (upper-cased). */
+export const SETTINGS_CHANGE_SCOPES: readonly SettingsChangeScope[] = [
+  'school',
+  'hr',
+  'lists',
+  'catalogue',
+];
 
 export interface SettingsChangedEvent {
   scope: SettingsChangeScope;

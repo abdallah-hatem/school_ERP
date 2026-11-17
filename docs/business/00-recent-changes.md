@@ -11,3 +11,6 @@
 - 2026-11-17 — Employees (T5 review): contract end defaults to one year after a given start; uses-bus
   defaults to no; hidden list items stay on employees who have them; repeated deactivate/reactivate
   changes nothing; required fields can't be cleared.
+- 2026-11-17 — Settings (T4 review): the logo is public for the sign-in page; logo limits (PNG/JPG/SVG,
+  2 MB) and name lengths; the change history covers school settings, HR rules, lists and the
+  catalogue and can be viewed; history is written just after the change (GUESS).

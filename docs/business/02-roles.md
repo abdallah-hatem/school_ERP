@@ -1,7 +1,8 @@
 # §2 Roles
 
 - **DECIDED (demo)** — One role: **HR admin**. Can do everything in HR and Settings.
-- **DECIDED** — Every action requires a signed-in user; there is no public page except sign-in.
+- **DECIDED** — Every action requires a signed-in user. The only public things are the sign-in page
+  and what it shows: the school's name, logo and default language.
 - **DECIDED** — Users sign in with email and password. Accounts are created by the system's setup
   (seed) for now; there is no self sign-up.
 - **Planned** — Roles and permissions from the client's approval chain: direct manager, stage head,

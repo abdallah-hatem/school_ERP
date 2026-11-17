@@ -7,6 +7,9 @@
  *
  * Refuses to run against anything that isn't an `_e2e` database — teardown deletes rows.
  */
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 const url = process.env.DATABASE_URL;
 if (!url) {
   throw new Error('e2e: DATABASE_URL is required (create one with scripts/e2e-db.sh <n>)');
@@ -17,3 +20,5 @@ if (!/_e2e(_\w+)?$/.test(dbName)) {
 }
 process.env.NODE_ENV = 'test';
 process.env.PORT = process.env.PORT ?? '0';
+// Uploads go to a throwaway folder per database, never the app's own uploads/.
+process.env.UPLOADS_DIR = process.env.UPLOADS_DIR ?? join(tmpdir(), `${dbName}-uploads`);

@@ -1,8 +1,15 @@
 # §7 Settings
 
 Everything here is changed by the school in the Settings screen, takes effect immediately, and
-affects only **draft** payroll runs (approved runs never change). Every change is recorded with who
-changed it and when (GUESS: a simple change history in the demo).
+affects only **draft** payroll runs (approved runs never change).
+
+- **DECIDED** — **Change history:** every change to school settings, HR rules, lists (stages,
+  departments, job titles) and the penalty catalogue is recorded: what changed, the old and new
+  value, who changed it and when. The history can be viewed, newest first, page by page.
+- **GUESS** — The history row is written right after the change is saved. If writing it fails, the
+  change stands and the failure is logged (tightening this is Planned).
+- **DECIDED** — The logo must be PNG, JPG or SVG and at most 2 MB. School names are at most 200
+  characters; stage, department and job-title names at most 100.
 
 | Setting | Default | Source |
 |---|---|---|
