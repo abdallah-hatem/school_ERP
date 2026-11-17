@@ -6,8 +6,9 @@ affects only **draft** payroll runs (approved runs never change).
 - **DECIDED** — **Change history:** every change to school settings, HR rules, lists (stages,
   departments, job titles) and the penalty catalogue is recorded: what changed, the old and new
   value, who changed it and when. The history can be viewed, newest first, page by page.
-- **GUESS** — The history row is written right after the change is saved. If writing it fails, the
-  change stands and the failure is logged (tightening this is Planned).
+- **DECIDED** — The history is part of the audit log (§9): it is saved together with the change, and
+  if it can't be saved the change is refused. (Built with the audit log; until then it is written
+  right after the change.)
 - **DECIDED** — The logo must be PNG, JPG or SVG and at most 2 MB. School names are at most 200
   characters; stage, department and job-title names at most 100.
 

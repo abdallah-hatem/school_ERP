@@ -26,6 +26,8 @@ responsive layout.
 - **Roles and permissions** for the whole approval chain (§2).
 - **Accounting:** journal entries created from approved payroll (and later fee payments).
 - **Supervision duty roster.**
+- **Audit log** (§9) — approved 2026-11-17, being built.
+- **App logging** for developers (requests, errors) — with hosting.
 
 ## Left out on purpose
 
