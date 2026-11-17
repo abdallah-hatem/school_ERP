@@ -90,7 +90,11 @@ The seeded `admin@school.local` becomes **System admin** + **HR manager**.
   generated key and can be deleted once nobody holds them; the employee link moved to
   `users.employee_id` (HR's `employees.user_id` deprecated); the `users.role` column is kept,
   deprecated, until P3. **Salary filtering moved to P4** (it is an HR change); until then the
-  accountant and principal see what HR endpoints return today.
-- [ ] **P3 screens** (`ui`, mockups first): Users, Roles, My account; sidebar items by `can()`.
+  principal, stage head, direct manager and accountant see what HR endpoints return today.
+- [ ] **P3 screens** (`ui`, mockups first): Users, Roles, My account; sidebar items by `can()`; ask for
+  a new password at sign-in when `must_change_password` is set.
 - [ ] **P4 scopes in HR** (`logic`): apply `own_stage` / `own_team` in HR repositories with
   `scopeFor`; salary filtering (R7, edge case 4); drop HR's deprecated `employees.user_id`.
+  **Open until P4:** edge case 3 (outside-team → 404) and edge case 4 (no salary fields) — today
+  every role that can view employees, penalties or payroll sees all rows and salaries; a test that
+  the employee link stays consistent while both `users.employee_id` and `employees.user_id` exist.

@@ -4,7 +4,8 @@ Who did what, to which record, and when — for the whole system. Spec:
 `docs/specs/2026-11-17-audit-log.md`.
 
 - **DECIDED** — Every action that changes data or access is recorded: sign-in, sign-out and failed
-  sign-ins; school settings, logo and stages; employees (create, edit, deactivate, reactivate);
+  sign-ins; users (create, edit, deactivate, reactivate, temporary password, own password change)
+  and roles (create, edit, delete); school settings, logo and stages; employees (create, edit, deactivate, reactivate);
   departments and job titles; HR rules and the penalty catalogue; penalties (record, approve,
   cancel); monthly lateness (per employee, minutes before and after); payroll runs (create,
   recalculate, approve) and adjustments (add, remove).
@@ -17,7 +18,7 @@ Who did what, to which record, and when — for the whole system. Spec:
   are not recorded yet (T28, T29).*
 - **DECIDED** — Entries can't be edited or deleted by anyone, and are kept forever (for now).
 - **DECIDED** — Opening or reading something (a payslip, a profile) is not recorded.
-- **DECIDED** — The HR admin sees the Activity page (everything) and the History of each employee.
-  **Planned** — a separate permission to view the activity log, when roles arrive (§2).
+- **DECIDED** — Whoever holds the "view activity log" permission (§2: System admin, HR manager,
+  principal) sees the Activity page (everything) and the History of each employee.
 - **DECIDED** — Every entry reads in English and in Arabic, including entries made before a
   language switch.
