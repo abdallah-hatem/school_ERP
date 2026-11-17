@@ -39,6 +39,13 @@ skills. **Where this file differs from a skill, this file wins.**
 
 ## Facts the skill cannot know
 
+- **Every write is audited — new or existing.** Any endpoint that changes data or access is
+  `@Audited('<action>')` and records it with `audit.record()` in its service (`docs/CONVENTIONS.md` →
+  Audit log). An endpoint still marked `@NotAudited('wired in T28')` / `('wired in T29')` is wired in
+  **the same PR** as any change to it or to the service method behind it — never left for later, even
+  when the task is about something else (tax, a new field, a fix). `@NotAudited('<reason>')` is only
+  for writes that are deliberately not recorded (e.g. a token refresh).
+
 - **One deployment and one database per school.** No `school_id` anywhere. No branches/campuses for
   now (no `branch_id`) — keep data access in repositories so it can be added later.
 - **Per-school differences come from settings and feature flags, never from code.** No school's

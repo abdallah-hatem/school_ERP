@@ -81,6 +81,8 @@ GitHub also runs API e2e and the smoke specs (desktop-en and phone-ar shards) on
   `@SignedIn()` / `@Public()`) — see Permissions below.
 - [ ] Every new write endpoint (POST / PATCH / PUT / DELETE) is `@Audited('<action>')` and calls
   `audit.record()` for that action in its service, or is `@NotAudited('<reason>')` (see below).
+- [ ] Changed an **existing** write endpoint, or the service method behind it, that is still marked
+  `@NotAudited('wired in T28')` / `('wired in T29')`? Wire its audit in this PR (see below).
 - [ ] `docs/BUSINESS_LOGIC.md` updated in the same PR if a business rule changed.
 - [ ] UI changes: screenshots. New or visually changed screens: EN/AR × phone/desktop (light only).
 
@@ -105,6 +107,13 @@ Transactions and the audit log). For a new write endpoint:
 
 A write that is deliberately not recorded (e.g. a token refresh) gets `@NotAudited('<why>')`. A
 handler with neither fails the controller scan in CI.
+
+**Existing writes too (owner, 2026-11-18).** Some endpoints still carry the temporary
+`@NotAudited('wired in T28')` / `('wired in T29')` placeholders from the audit foundation. Whoever
+changes one of them — the handler or the service method behind it, for any reason (a new rule, a new
+field, a fix) — wires its audit in the same PR: replace the placeholder with `@Audited('<action>')`,
+call `audit.record()` in the service (both names: `label: { en, ar }`), add the test that the entry is
+written. The placeholders are a to-do list for T28/T29, not a permission to skip.
 
 ## Permissions: every endpoint declares who may use it
 
