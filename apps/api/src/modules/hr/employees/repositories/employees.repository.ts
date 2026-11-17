@@ -141,6 +141,23 @@ export class EmployeesRepository extends BaseRepository<
     });
   }
 
+  /** Every active employee with their department, ordered by code. */
+  findActiveWithDepartments(): Promise<
+    { id: string; code: string; nameEn: string; nameAr: string; department: { id: string; nameEn: string; nameAr: string } }[]
+  > {
+    return this.databaseService.employee.findMany({
+      where: { status: EmployeeStatus.ACTIVE },
+      select: {
+        id: true,
+        code: true,
+        nameEn: true,
+        nameAr: true,
+        department: { select: { id: true, nameEn: true, nameAr: true } },
+      },
+      orderBy: { code: 'asc' },
+    });
+  }
+
   /** Id and status of each existing employee among `ids` (missing ids are simply absent). */
   findStates(ids: string[]): Promise<{ id: string; status: EmployeeStatus }[]> {
     if (!ids.length) return Promise.resolve([]);

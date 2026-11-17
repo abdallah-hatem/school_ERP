@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { LatenessRow, Month, PutLatenessRequest } from '@school-erp/shared';
+import type { LatenessMonth, LatenessRow, Month, PutLatenessRequest } from '@school-erp/shared';
 import { latenessDays } from '../../domain';
 import { EmployeesService } from '../../employees/services/employees.service';
 import { MonthLockService } from '../../month-lock/month-lock.service';
@@ -19,17 +19,26 @@ export class LatenessService {
     private readonly monthLock: MonthLockService,
   ) {}
 
-  /** Every ACTIVE employee with their stored minutes (0 when none) and the days they cost. */
+  /** The month's list plus whether its payroll is approved (the screen opens read-only). */
+  async month(month: Month): Promise<LatenessMonth> {
+    const [locked, rows] = await Promise.all([this.monthLock.isMonthLocked(month), this.list(month)]);
+    return { locked, rows };
+  }
+
+  /**
+   * Every ACTIVE employee with their department, stored minutes (0 when none) and the days they
+   * cost.
+   */
   async list(month: Month): Promise<LatenessRow[]> {
     const [employees, stored, settings] = await Promise.all([
-      this.employees.listActiveRefs(),
+      this.employees.listActiveWithDepartments(),
       this.repository.findByMonth(month),
       this.settings.get(),
     ]);
     const minutesOf = new Map(stored.map((e) => [e.employeeId, e.minutes]));
-    return employees.map((employee) => {
+    return employees.map(({ employee, department }) => {
       const minutes = minutesOf.get(employee.id) ?? 0;
-      return { employee, minutes, days: latenessDays(minutes, settings.lateness) };
+      return { employee, department, minutes, days: latenessDays(minutes, settings.lateness) };
     });
   }
 
@@ -38,7 +47,7 @@ export class LatenessService {
    * payroll is approved (409 `PAYROLL_APPROVED`), and for unknown (400) or inactive (409)
    * employees — nothing is written unless every entry is valid.
    */
-  async put(month: Month, body: PutLatenessRequest, userId: string | null): Promise<LatenessRow[]> {
+  async put(month: Month, body: PutLatenessRequest, userId: string | null): Promise<LatenessMonth> {
     await this.monthLock.assertMonthOpen(month);
     await this.employees.assertActive(body.entries.map((e) => e.employeeId));
     await this.repository.upsertMany(
@@ -46,6 +55,6 @@ export class LatenessService {
       body.entries.map(({ employeeId, minutes }) => ({ employeeId, minutes })),
       userId,
     );
-    return this.list(month);
+    return this.month(month);
   }
 }

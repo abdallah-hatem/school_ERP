@@ -211,8 +211,17 @@ export interface PenaltyRecord {
 
 export interface LatenessRow {
   employee: EmployeeRef;
+  /** The employee's department. */
+  department: NamedRef;
   minutes: number;
   days: Days;
+}
+
+/** `GET /hr/lateness?month=` and `PUT /hr/lateness/:month`: the month's whole list. */
+export interface LatenessMonth {
+  /** True once the month's payroll is approved — entry is refused (409 `PAYROLL_APPROVED`). */
+  locked: boolean;
+  rows: LatenessRow[];
 }
 
 export interface PutLatenessRequest {

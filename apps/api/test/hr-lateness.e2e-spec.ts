@@ -4,6 +4,7 @@ import {
   SETTING_DEFAULTS,
   HrSettingKey,
   type CreateEmployeeRequest,
+  type LatenessMonth,
   type LatenessRow,
 } from '@school-erp/shared';
 import { DatabaseService } from '../src/database/database.service';
@@ -54,7 +55,8 @@ describe('Monthly lateness — /hr/lateness (e2e)', () => {
   const get = (month: string) => http(app).get(`/hr/lateness?month=${month}`);
   const put = (month: string, entries: unknown) =>
     http(app).put(`/hr/lateness/${month}`).send({ entries });
-  const rows = async (month: string) => (await get(month).expect(200)).body.data as LatenessRow[];
+  const rows = async (month: string) =>
+    ((await get(month).expect(200)).body.data as LatenessMonth).rows;
   const rowOf = (list: LatenessRow[], id: string) => list.find((r) => r.employee.id === id);
 
   beforeAll(async () => {
@@ -108,7 +110,7 @@ describe('Monthly lateness — /hr/lateness (e2e)', () => {
       { employeeId: b, minutes: 121 },
     ]).expect(200);
     expect(res.body).toMatchObject({ success: true, statusCode: 200 });
-    const after = res.body.data as LatenessRow[];
+    const after = res.body.data.rows as LatenessRow[];
     expect(rowOf(after, a)).toMatchObject({ minutes: 61, days: 0.75 });
     expect(rowOf(after, b)).toMatchObject({ minutes: 121, days: 1.25 });
     expect(rowOf(await rows(MONTH), a)).toMatchObject({ minutes: 61, days: 0.75 });
@@ -124,6 +126,31 @@ describe('Monthly lateness — /hr/lateness (e2e)', () => {
     await put(DRAFT_MONTH, [{ employeeId: a, minutes: 30 }]).expect(200);
   });
 
+  it('locked is false for an open month (no run, or a DRAFT run) and true once the payroll is APPROVED', async () => {
+    await newEmployee();
+    const open = (await get(MONTH).expect(200)).body.data as LatenessMonth;
+    expect(open.locked).toBe(false);
+    expect(Array.isArray(open.rows)).toBe(true);
+    expect(((await get(DRAFT_MONTH).expect(200)).body.data as LatenessMonth).locked).toBe(false);
+    expect(((await get(APPROVED_MONTH).expect(200)).body.data as LatenessMonth).locked).toBe(true);
+    // PUT returns the same shape.
+    const putRes = (await put(MONTH, []).expect(200)).body.data as LatenessMonth;
+    expect(putRes.locked).toBe(false);
+  });
+
+  it('each row carries the employee\'s department { id, nameEn, nameAr }', async () => {
+    const a = await newEmployee();
+    const department = await db.department.findUniqueOrThrow({ where: { id: departmentId } });
+    expect(rowOf(await rows(MONTH), a)!.department).toEqual({
+      id: departmentId,
+      nameEn: department.nameEn,
+      nameAr: department.nameAr,
+    });
+    const list = (await put(MONTH, [{ employeeId: a, minutes: 5 }]).expect(200)).body.data
+      .rows as LatenessRow[];
+    expect(rowOf(list, a)!.department.id).toBe(departmentId);
+  });
+
   it('Minutes negative, decimal or above 6,000 → 400', async () => {
     const a = await newEmployee();
     for (const minutes of [-1, 1.5, 6001, '30', null]) {
@@ -136,12 +163,12 @@ describe('Monthly lateness — /hr/lateness (e2e)', () => {
   it('6,000 minutes accepted; 6,001 → 400; 0 accepted', async () => {
     const a = await newEmployee();
     let list = (await put(MONTH, [{ employeeId: a, minutes: 6000 }]).expect(200)).body
-      .data as LatenessRow[];
+      .data.rows as LatenessRow[];
     // 100 hours: ¼ + ½ + 98 × ½ = 49.75 days under the default rule.
     expect(rowOf(list, a)).toMatchObject({ minutes: 6000, days: 49.75 });
     await put(MONTH, [{ employeeId: a, minutes: 6001 }]).expect(400);
     list = (await put(MONTH, [{ employeeId: a, minutes: 0 }]).expect(200)).body
-      .data as LatenessRow[];
+      .data.rows as LatenessRow[];
     expect(rowOf(list, a)).toMatchObject({ minutes: 0, days: 0 });
   });
 
@@ -215,13 +242,13 @@ describe('Monthly lateness — /hr/lateness (e2e)', () => {
 
     await put(MONTH, [{ employeeId: a, minutes: 45 }]).expect(200);
     const list = (await put(MONTH, [{ employeeId: b, minutes: 90 }]).expect(200)).body
-      .data as LatenessRow[];
+      .data.rows as LatenessRow[];
     expect(rowOf(list, a)).toMatchObject({ minutes: 45, days: 0.25 });
     expect(rowOf(list, b)).toMatchObject({ minutes: 90, days: 0.75 });
     expect(rowOf(list, c)).toMatchObject({ minutes: 0, days: 0 });
 
     // An empty PUT writes nothing and returns the month's list.
-    const empty = (await put(MONTH, []).expect(200)).body.data as LatenessRow[];
+    const empty = (await put(MONTH, []).expect(200)).body.data.rows as LatenessRow[];
     expect(rowOf(empty, a)).toMatchObject({ minutes: 45 });
   });
 });
