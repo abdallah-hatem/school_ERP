@@ -24,8 +24,8 @@ phase live in `docs/build-log/`.
 | 4 | Design system | Campus, teal + sunflower, light only; tokens go in code in T3 |
 | 5 | Plan | `docs/plans/2026-11-17-hr-demo-plan.md` (18 tasks, 7 waves); review CONFLICTS fixed, re-review's 4 remaining items fixed |
 | 6 | Build | **done** — T1–T17, T8b, T19 merged (#4–#26) |
-| 7 | Verify | full suite green on dev (lint, typecheck, api 189 unit + 189 e2e, web 35 files, deps:check, smoke 6/6); UI audit running |
-| 8 | Ship | local demo; hosting later |
+| 7 | Verify | **done** — dev green (lint, typecheck, api 189 unit + 189 e2e, web 36 files, deps:check, smoke 10/10); UI audit (309 screenshots) → 1 blocker, 6 major, 4 minor, 5 nits → fixed in T20 (#28), after-screenshots checked |
+| 8 | Ship | local demo ready on the seeded dev DB; hosting later; `dev` → `testing` → `production` promotion waits for the owner |
 
 ## Log
 
@@ -99,6 +99,11 @@ phase live in `docs/build-log/`.
   width, language switch guard) → smoke 6/6 on top → merged #26.
 - 2026-11-17 — Verify: dev green end to end (see Stages). UI audit dispatched over every screen, light
   only, EN/AR, phone/tablet/desktop, against the seeded dev DB (writes only on a copy).
+- 2026-11-17 — UI audit: 309 screenshots in `design/audit/` (local). Blocker: date picker month/year
+  dropdowns not clickable. Major: Arabic date word order, clipped change history, phone pagination
+  and payslip tables, RTL calendar chevrons, selects forced LTR. T20 fixed all 14 items (+ Arabic
+  seed reasons), Playwright checks for the date picker, smoke 10/10 → merged #28. After-screenshots
+  in `design/audit/after/`. The dev DB's four seeded reasons were switched to the Arabic text.
 
 ## Next up
 
