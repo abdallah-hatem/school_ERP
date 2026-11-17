@@ -9,6 +9,7 @@ export * from './roles';
 export * from './types/common';
 export * from './types/core';
 export * from './types/hr';
+export * from './types/accounting';
 export * from './rules';
 export * from './format';
 export * from './months';
