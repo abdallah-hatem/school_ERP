@@ -7,29 +7,49 @@ import { DEFAULT_LOCALE, isLocale } from '@/shared/lib/i18n';
 import { LOGIN, LOGOUT } from './apis';
 import { homeFor, loginPathFor, safeNextPath } from './paths';
 
-export interface SignInState {
-  /** The API's translated message (by the page's language); '' = failed with no message. */
-  error: string | null;
-  /** Kept so a failed attempt doesn't make the user type the email again. */
-  email?: string;
+export interface SignInInput {
+  email: string;
+  password: string;
+  locale: string;
+  next?: string;
 }
 
-/** The sign-in form's action: on success, back to `next` or the role's home. */
-export async function signIn(_prev: SignInState, form: FormData): Promise<SignInState> {
+export interface SignInResult {
+  /** The API's message, translated by the page's language ('' when it sent none). */
+  error: string;
+}
+
+/**
+ * Signs in at the API (which sets the session cookies, mirrored onto this origin), then goes back
+ * to `next` or the role's home. Returns only on failure.
+ */
+export async function signIn(input: SignInInput): Promise<SignInResult> {
+  const locale = isLocale(input.locale) ? input.locale : DEFAULT_LOCALE;
+  const res = await LOGIN({
+    data: { email: input.email, password: input.password },
+    lang: locale,
+  });
+  if (!res.success) {
+    return { error: typeof res.message === 'string' ? res.message : '' };
+  }
+  redirect(safeNextPath(input.next) ?? homeFor(res.data?.user.role, locale));
+}
+
+/**
+ * The same sign-in for a form posted before the page's scripts run (no JS yet): the password goes
+ * in a POST body, never the URL. On failure it reloads the sign-in page, keeping `next`.
+ */
+export async function signInWithForm(form: FormData): Promise<void> {
   const rawLocale = String(form.get('locale') ?? '');
   const locale = isLocale(rawLocale) ? rawLocale : DEFAULT_LOCALE;
-  const email = String(form.get('email') ?? '');
-  const password = String(form.get('password') ?? '');
-
-  const res = await LOGIN({ data: { email, password }, lang: locale });
-  if (!res.success) {
-    return {
-      error: typeof res.message === 'string' ? res.message : '',
-      email,
-    };
-  }
-  const next = safeNextPath(String(form.get('next') ?? ''));
-  redirect(next ?? homeFor(res.data?.user.role, locale));
+  const next = safeNextPath(String(form.get('next') ?? '')) ?? undefined;
+  await signIn({
+    email: String(form.get('email') ?? ''),
+    password: String(form.get('password') ?? ''),
+    locale,
+    next,
+  });
+  redirect(loginPathFor(locale, next));
 }
 
 /** Ends the session at the API and here, whatever the API answers, then shows sign-in. */

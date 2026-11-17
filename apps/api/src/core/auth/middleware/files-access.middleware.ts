@@ -18,9 +18,11 @@ export class FilesAccessMiddleware implements NestMiddleware {
   ) {}
 
   async use(req: Request, _res: Response, next: NextFunction): Promise<void> {
-    const path = decodeURIComponent((req.originalUrl ?? req.url).split('?')[0] ?? '');
-    // `..` could climb out of the public folder: never treat such a path as public.
-    if (path.startsWith(PUBLIC_FILES_PREFIX) && !path.includes('..')) return next();
+    const path = (req.originalUrl ?? req.url).split('?')[0] ?? '';
+    // A literal `..` segment could climb out of the public folder: never treat it as public.
+    // Encoded names (`..%2F…`) stay one route parameter; the logo route refuses them (404).
+    const climbs = path.split('/').some((segment) => segment === '..' || segment === '.');
+    if (path.startsWith(PUBLIC_FILES_PREFIX) && !climbs) return next();
 
     const payload = await this.tokens.verifyAccess(accessTokenFrom(req));
     const user = payload ? await this.users.findActiveAuthUser(payload.sub) : null;

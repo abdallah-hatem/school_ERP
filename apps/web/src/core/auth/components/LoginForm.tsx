@@ -1,110 +1,87 @@
 'use client';
 
-import { useActionState } from 'react';
-import type { Locale } from '@/shared/lib/i18n';
-import { cn } from '@/shared/lib/utils';
-import { signIn, type SignInState } from '../actions';
-import type { AuthMessages } from '../i18n';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useState, useTransition } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { Form } from '@/shared/components/form/form';
+import { TextField } from '@/shared/components/form/fields';
+import { Button } from '@/shared/components/ui/button';
+import { useTranslation } from '@/shared/providers/i18n-provider';
+import { signIn, signInWithForm } from '../actions';
 
-const INITIAL: SignInState = { error: null };
+/** Messages are translation keys, so the same schema serves both languages. */
+const loginSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .min(1, 'ui.form.required')
+    .pipe(z.email('auth.login.errors.invalidEmail')),
+  password: z.string().min(1, 'ui.form.required'),
+});
+type LoginValues = z.infer<typeof loginSchema>;
 
-const fieldClass = cn(
-  'border-input bg-card text-foreground h-11 w-full rounded-lg border px-3 text-base md:text-sm',
-  'placeholder:text-muted-foreground/70 transition-[border-color,box-shadow] duration-150',
-  'focus-visible:border-primary focus-visible:ring-primary/20 focus-visible:ring-3 focus-visible:outline-none',
-  'aria-invalid:border-destructive disabled:cursor-not-allowed disabled:opacity-60',
-);
+/**
+ * Email + password. The button is busy and disabled while signing in, so two clicks send one
+ * request; a failed attempt keeps what was typed and shows the API's translated message.
+ */
+export function LoginForm({ next }: { next?: string }) {
+  const { t, locale } = useTranslation();
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+  const form = useForm<LoginValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' },
+  });
 
-interface LoginFormProps {
-  locale: Locale;
-  next?: string;
-  t: AuthMessages['login'];
-}
-
-/** Email + password. Disabled while signing in, so two clicks send one request. */
-export function LoginForm({ locale, next, t }: LoginFormProps) {
-  const [state, action, pending] = useActionState(signIn, INITIAL);
-  const error = state.error === null ? null : state.error || t.errorFallback;
+  const onSubmit = (values: LoginValues) => {
+    setError(null);
+    startTransition(async () => {
+      const res = await signIn({ ...values, locale, next });
+      setError(res.error || t('auth.login.errorFallback'));
+    });
+  };
 
   return (
-    <form action={action} className="flex flex-col gap-5" noValidate={false}>
+    // `action` only runs if the form is posted before hydration; once hydrated, onSubmit takes over.
+    <Form action={signInWithForm} onSubmit={(e) => void form.handleSubmit(onSubmit)(e)}>
       <input type="hidden" name="locale" value={locale} />
       {next ? <input type="hidden" name="next" value={next} /> : null}
-
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="email" className="text-sm font-medium">
-          {t.email}
-          <span aria-hidden="true" className="text-destructive ms-0.5">
-            *
-          </span>
-        </label>
-        <input
-          id="email"
-          name="email"
-          type="email"
-          dir="ltr"
-          required
-          autoComplete="username"
-          inputMode="email"
-          defaultValue={state.email}
-          placeholder={t.emailPlaceholder}
-          aria-invalid={error ? true : undefined}
-          aria-describedby={error ? 'login-error' : undefined}
-          disabled={pending}
-          className={cn(fieldClass, 'text-start rtl:text-end')}
-        />
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="password" className="text-sm font-medium">
-          {t.password}
-          <span aria-hidden="true" className="text-destructive ms-0.5">
-            *
-          </span>
-        </label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          required
-          autoComplete="current-password"
-          placeholder={t.passwordPlaceholder}
-          aria-invalid={error ? true : undefined}
-          aria-describedby={error ? 'login-error' : undefined}
-          disabled={pending}
-          className={fieldClass}
-        />
-      </div>
+      <TextField
+        control={form.control}
+        name="email"
+        type="email"
+        dir="ltr"
+        inputMode="email"
+        autoComplete="username"
+        label={t('auth.login.email')}
+        placeholder={t('auth.login.emailPlaceholder')}
+        disabled={pending}
+        required
+      />
+      <TextField
+        control={form.control}
+        name="password"
+        type="password"
+        autoComplete="current-password"
+        label={t('auth.login.password')}
+        placeholder={t('auth.login.passwordPlaceholder')}
+        disabled={pending}
+        required
+      />
 
       {error ? (
         <p
-          id="login-error"
           role="alert"
-          className="border-destructive/30 bg-destructive/10 text-destructive rounded-lg border px-3 py-2 text-sm"
+          className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm font-semibold text-destructive-ink"
         >
           {error}
         </p>
       ) : null}
 
-      <button
-        type="submit"
-        disabled={pending}
-        aria-busy={pending}
-        className={cn(
-          'bg-primary text-primary-foreground inline-flex h-11 items-center justify-center gap-2 rounded-lg px-4 font-semibold',
-          'cursor-pointer transition-[opacity,transform] duration-150 active:scale-[0.98]',
-          'focus-visible:ring-primary/30 focus-visible:ring-3 focus-visible:outline-none',
-          'disabled:cursor-not-allowed disabled:opacity-70',
-        )}
-      >
-        {pending ? (
-          <span
-            aria-hidden="true"
-            className="size-4 animate-spin rounded-full border-2 border-current border-e-transparent motion-reduce:animate-none"
-          />
-        ) : null}
-        {pending ? t.submitting : t.submit}
-      </button>
-    </form>
+      <Button type="submit" variant="primary" size="lg" loading={pending} className="w-full">
+        {pending ? t('auth.login.submitting') : t('auth.login.submit')}
+      </Button>
+    </Form>
   );
 }

@@ -1,6 +1,6 @@
 'use server';
 
-import type { AuthUser, LoginRequest, LoginResponse, SchoolSettings } from '@school-erp/shared';
+import type { AuthUser, LoginRequest, LoginResponse } from '@school-erp/shared';
 import { apiFetch } from '@/lib/api';
 import { handleResponse } from '@/lib/handleResponse';
 
@@ -34,14 +34,5 @@ export async function GET_ME() {
   return apiFetch<AuthUser>('/auth/me', {
     cache: 'no-store',
     ignore401Redirect: true,
-  });
-}
-
-/** School name and logo for the sign-in page. Any failure (404, 401…) → the page's fallback. */
-export async function GET_LOGIN_BRANDING() {
-  return apiFetch<SchoolSettings>('/settings/school', {
-    includeAuth: false,
-    ignore401Redirect: true,
-    cache: 'no-store',
   });
 }

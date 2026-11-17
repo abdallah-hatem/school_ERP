@@ -1,35 +1,23 @@
-import { Controller, Get, INestApplication, RequestMethod } from '@nestjs/common';
+import { INestApplication, RequestMethod } from '@nestjs/common';
 import { METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants';
 import { ConfigService } from '@nestjs/config';
 import { DiscoveryModule, DiscoveryService, Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
-import { AUTH_COOKIES, ErrorCode } from '@school-erp/shared';
+import { AUTH_COOKIES, ErrorCode, PUBLIC_FILES_PREFIX } from '@school-erp/shared';
 import { createHash } from 'node:crypto';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
-import { IS_PUBLIC_KEY, Public } from '../src/common/decorators/public.decorator';
+import { IS_PUBLIC_KEY } from '../src/common/decorators/public.decorator';
 import { hashPassword } from '../src/common/utils/password.util';
 import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
 
-/**
- * Stand-in for the files route core/settings serves (T4): the logo lives under
- * `/files/logo/` and is public; everything else under `/files/` needs a session.
- */
-@Controller('files')
-class FilesStubController {
-  @Public()
-  @Get('logo/:name')
-  logo() {
-    return { file: 'logo' };
-  }
-
-  @Get(':name')
-  other() {
-    return { file: 'other' };
-  }
-}
+/** A minimal PNG (signature + padding) for the logo upload. */
+const PNG = Buffer.concat([
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  Buffer.alloc(64, 1),
+]);
 
 const PASSWORD = 'correct-horse-battery-staple';
 const sha256 = (v: string) => createHash('sha256').update(v).digest('hex');
@@ -104,7 +92,6 @@ describe('auth (e2e)', () => {
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule, DiscoveryModule],
-      controllers: [FilesStubController],
     }).compile();
     app = moduleRef.createNestApplication();
     configureApp(app);
@@ -114,6 +101,8 @@ describe('auth (e2e)', () => {
   });
 
   afterAll(async () => {
+    await db.settingChange.deleteMany({ where: { changedById: { in: userIds } } });
+    await db.schoolSetting.deleteMany({ where: { updatedById: { in: userIds } } });
     await db.user.deleteMany({ where: { id: { in: userIds } } }); // tokens cascade
     await app.close();
   });
@@ -305,18 +294,33 @@ describe('auth (e2e)', () => {
   });
 
   it('GET /files/<logo> without a cookie → 200; any other /files/… without a cookie → 401', async () => {
-    await http(app).get('/files/logo/school.png').expect(200);
-    await http(app).get('/files/payslip-2026-11.pdf').expect(401);
-    await http(app).get('/files/logo/..%2Fsecret.pdf').expect(401);
-    // Guarded even where no controller serves the path (e.g. static file serving).
-    await http(app).get('/files/uploads/contract.pdf').expect(401);
-
     const user = await makeUser();
-    const cookies = cookiesOf(await login(user.email).expect(200));
-    await http(app)
-      .get('/files/payslip-2026-11.pdf')
-      .set('Cookie', cookieHeader(cookies))
-      .expect(200);
+    const cookies = cookieHeader(cookiesOf(await login(user.email).expect(200)));
+    const upload = await http(app)
+      .post('/settings/school/logo')
+      .set('Cookie', cookies)
+      .attach('file', PNG, { filename: 'logo.png', contentType: 'image/png' })
+      .expect(201);
+    const logoUrl: string = upload.body.data.logoUrl;
+    expect(logoUrl.startsWith(PUBLIC_FILES_PREFIX)).toBe(true);
+
+    await http(app).get(logoUrl).expect(200);
+    await http(app).get('/files/payslips/payslip-2026-11.pdf').expect(401);
+    // Climbing out of the public folder never reaches another file.
+    await http(app).get('/files/logo/..%2Fpayslips%2Fx.pdf').expect(404);
+    // Guarded even where no controller serves the path (e.g. static file serving).
+    await http(app).get('/files/uploads/contracts/contract.pdf').expect(401);
+    // With a session the request reaches the files route (404: no such file).
+    await http(app).get('/files/payslips/payslip-2026-11.pdf').set('Cookie', cookies).expect(404);
+  });
+
+  it('GET /settings/school/public without a cookie → 200 with only the 4 identity fields', async () => {
+    const res = await http(app).get('/settings/school/public').expect(200);
+    expect(Object.keys(res.body.data).sort()).toEqual(
+      ['defaultLanguage', 'logoUrl', 'nameAr', 'nameEn'].sort(),
+    );
+    // The full settings (hours, working days) still need a session.
+    await http(app).get('/settings/school').expect(401);
   });
 
   it('full flow: sign in → me → refresh → sign out → session gone', async () => {

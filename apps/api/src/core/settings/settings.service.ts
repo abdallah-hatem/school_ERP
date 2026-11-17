@@ -6,6 +6,7 @@ import {
   ErrorCode,
   LOGO_UPLOAD,
   type Paginated,
+  type PublicSchoolSettings,
   type SchoolSettings,
   type SettingChangeItem,
   type SettingKey,
@@ -99,6 +100,17 @@ export class SettingsService {
     const out = {} as Record<keyof SchoolSettings, unknown>;
     for (const field of SCHOOL_FIELDS) out[field] = values[SCHOOL_FIELD_KEYS[field]];
     return out as SchoolSettings;
+  }
+
+  /** The identity a signed-out visitor may see (sign-in page): names, logo, language only. */
+  async getPublicSchoolSettings(): Promise<PublicSchoolSettings> {
+    const s = await this.getSchoolSettings();
+    return {
+      nameEn: s.nameEn,
+      nameAr: s.nameAr,
+      logoUrl: s.logoUrl,
+      defaultLanguage: s.defaultLanguage,
+    };
   }
 
   async updateSchoolSettings(
