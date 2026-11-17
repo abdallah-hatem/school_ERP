@@ -30,7 +30,8 @@ export const PAYSLIP_PRINT_CSS = `@page { size: A4 portrait; margin: 12mm; }
 
 /**
  * The payslip of one line of an approved run (§6): school, month, employee, salary for the month,
- * each penalty (zero-amount ones too) with its share of the deduction, lateness, adjustments, net.
+ * each penalty (zero-amount ones too) with its share of the deduction, lateness, adjustments, net,
+ * then what the school pays on top (insurance share, income tax, martyrs' fund) and the gross.
  * In the page's language; prints on one A4 page.
  */
 export function PayslipView({ payslip, backHref }: { payslip: Payslip; backHref: string }) {
@@ -261,6 +262,24 @@ export function PayslipView({ payslip, backHref }: { payslip: Payslip; backHref:
         {payslip.flags.includes(PayrollFlag.NET_FLOORED) ? (
           <p className="text-warning-ink text-xs">{t('payroll.payslip.netFloored')}</p>
         ) : null}
+
+        {/* §6: salaries are net — the school pays these on top of the net pay. */}
+        <Section title={t('payroll.payslip.paidBySchool')}>
+          {payslip.insuranceAmount > 0 ? (
+            <Row label={t('payroll.payslip.insurance')}>
+              <Money value={payslip.insuranceAmount} />
+            </Row>
+          ) : null}
+          <Row label={t('payroll.payslip.incomeTax')}>
+            <Money value={payslip.incomeTax} />
+          </Row>
+          <Row label={t('payroll.payslip.martyrTax')}>
+            <Money value={payslip.martyrTax} />
+          </Row>
+          <Row label={t('payroll.payslip.gross')}>
+            <Money value={payslip.gross} className="font-bold" />
+          </Row>
+        </Section>
         <p className="text-muted-foreground hidden text-xs print:block">{t('payroll.payslip.printNote')}</p>
       </article>
     </div>
@@ -327,6 +346,11 @@ export function PayslipSkeleton() {
           <span className="font-display text-lg font-extrabold">{t('payroll.payslip.net')}</span>
           <SkeletonText className="text-2xl font-extrabold" width="w-40" barClassName="bg-primary-foreground/20" />
         </div>
+        <Section title={t('payroll.payslip.paidBySchool')}>
+          <Row label={t('payroll.payslip.incomeTax')}>{amount}</Row>
+          <Row label={t('payroll.payslip.martyrTax')}>{amount}</Row>
+          <Row label={t('payroll.payslip.gross')}>{amount}</Row>
+        </Section>
       </div>
     </div>
   );

@@ -280,6 +280,23 @@ describe('RunPage — draft', () => {
     expect(within(monaRow).getByText('Ready')).toBeTruthy();
   });
 
+  it('each line shows what the school pays on top (insurance + income tax + fund) and the gross; the Net tile sums them', () => {
+    const taxed = { ...MONA, insuranceAmount: 55_000, incomeTax: 190_000, martyrTax: 800, gross: 1_645_800 };
+    renderRun({ run: run({ lines: [taxed, SALMA] }) });
+    const row = table().getByText('Mona Khalil').closest('tr') as HTMLElement;
+    expect(within(row).getByText('2,458.00')).toBeTruthy(); // 550 + 1,900 + 8
+    expect(within(row).getByText('16,458.00')).toBeTruthy();
+    expect(screen.getByText(/The school also pays tax & insurance EGP 2,458.00/)).toBeTruthy();
+    expect(screen.getByRole('columnheader', { name: 'Tax & insurance' })).toBeTruthy();
+    expect(screen.getByRole('columnheader', { name: 'Gross' })).toBeTruthy();
+  });
+
+  it('the rules panel summarises the tax rule (slices, top rate, fund, insurance share)', () => {
+    renderRun();
+    const panel = screen.getByRole('complementary', { name: 'Rules applied this month' });
+    expect(within(panel).getByText(/6 monthly tax slices up to 25% · martyrs' fund 0.05% · insurance share 11%/)).toBeTruthy();
+  });
+
   it("each employee's name opens their profile; the code and department stay plain text", () => {
     renderRun();
     const salma = table().getByRole('link', { name: 'Salma Adel' });

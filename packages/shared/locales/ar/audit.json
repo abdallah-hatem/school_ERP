@@ -325,6 +325,8 @@
   },
   "values": {
     "step": "الساعة {hour}: {days}",
+    "bracket": "{amount} بنسبة {percent}%",
+    "bracketRest": "ما تبقى بنسبة {percent}%",
     "hiddenItem": "{name} (مخفي)",
     "minutes": {
       "zero": "{count} دقيقة",

@@ -9,6 +9,8 @@ import {
   PenaltyAction,
   RepetitionWindow,
   SETTING_LIMITS,
+  TAX_BRACKETS_MAX,
+  taxRuleIssues,
   violationLevelsProblem,
   Weekday,
 } from '@school-erp/shared';
@@ -70,6 +72,40 @@ export type NamesFormValues = z.infer<ReturnType<typeof namesSchema>>;
 
 const percent = () => wholeNumber(SETTING_LIMITS.percentMin, SETTING_LIMITS.percentMax, 'settings.errors.percent');
 
+/** A rate from 0 up to (not including) 100, with at most 2 decimals (§7 tax rule). */
+const rate = z
+  .number({ error: required })
+  .min(0, 'settings.errors.rate')
+  .lt(100, 'settings.errors.rate')
+  .refine((v) => Number.isInteger(Math.round(v * 100)) && Math.abs(v * 100 - Math.round(v * 100)) < 1e-6, 'settings.errors.rate');
+
+/**
+ * The tax rule (§6, §7). Every bracket has a width except the last ("the rest"), whose width the
+ * form keeps as null. The whole rule is checked by the shared `taxRuleIssues` — the API's check.
+ */
+const taxSchema = z
+  .object({
+    brackets: z
+      .array(z.object({ width: z.number({ error: required }).nullable(), percent: rate }))
+      .min(1)
+      .max(TAX_BRACKETS_MAX),
+    martyrPercent: rate,
+    insurancePercent: rate,
+  })
+  .superRefine((value, ctx) => {
+    value.brackets.forEach((b, i) => {
+      const last = i === value.brackets.length - 1;
+      if (!last && (b.width == null || !Number.isInteger(b.width) || b.width <= 0)) {
+        ctx.addIssue({ code: 'custom', path: ['brackets', i, 'width'], message: 'settings.errors.bracketWidth' });
+      }
+    });
+    for (const { issue, index } of taxRuleIssues(value)) {
+      if (issue === 'bracketPlusFund' && index !== undefined) {
+        ctx.addIssue({ code: 'custom', path: ['brackets', index, 'percent'], message: 'settings.errors.bracketPlusFund' });
+      }
+    }
+  });
+
 export const hrRulesSchema = z.object({
   graceMinutes: wholeNumber(0, SETTING_LIMITS.latenessMinutesMax, 'settings.errors.grace'),
   /** Step `i` is hour `i + 1`; the hours are numbered on save. */
@@ -78,6 +114,7 @@ export const hrRulesSchema = z.object({
   dayDivisor: wholeNumber(SETTING_LIMITS.dayDivisorMin, SETTING_LIMITS.dayDivisorMax, 'settings.errors.divisor'),
   partTime: z.object({ PART_TIME_4: percent(), PART_TIME_3: percent(), PART_TIME_2: percent() }),
   repetitionWindow: z.enum(RepetitionWindow, { error: required }),
+  tax: taxSchema,
 });
 export type HrRulesFormValues = z.infer<typeof hrRulesSchema>;
 

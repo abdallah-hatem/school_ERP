@@ -325,6 +325,8 @@
   },
   "values": {
     "step": "hour {hour}: {days}",
+    "bracket": "{amount} at {percent}%",
+    "bracketRest": "the rest at {percent}%",
     "hiddenItem": "{name} (hidden)",
     "minutes": {
       "zero": "{count} min",

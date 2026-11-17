@@ -146,8 +146,10 @@ phase live in `docs/build-log/`.
 
 - **Payroll tax** (spec `docs/specs/2026-11-18-payroll-tax.md`, owner 2026-11-18: tax + martyrs'
   fund + insurance, salaries net → grossed up, defaults from the previous HR system). PR 1 (shared
-  rules, API, migration, docs) in review; PR 2 (Settings → HR rules panel, run page, payslip,
-  rules panel, smoke) next. Defaults are GUESS until the accountant confirms.
+  rules, API, migration, docs) and the screens (Settings → HR rules tax panel with live example,
+  run page Tax & insurance + Gross columns, payslip "Paid by the school", rules panel, history
+  formatting) on `feature/payroll-tax`; one PR. Left: smoke spec assertions, ui-auditor pass, demo
+  dry run. Defaults are GUESS until the accountant confirms.
 
 - `pnpm smoke` in CI (needs Postgres + Chromium in the workflow).
 - The client should check the Arabic penalty catalogue against the printed regulations (copied from the scans).

@@ -69,7 +69,8 @@ martyrs' fund on top of it.
 ## Outputs
 
 - **DECIDED** — **Payslip** per employee for an approved run, printable, in Arabic or English: salary,
-  each penalty with its level, action and days, lateness, adjustments, net. Penalties that cost
+  each penalty with its level, action and days, lateness, adjustments, net, then what the school
+  pays on top (insurance share when insured, income tax, martyrs' fund) and the gross. Penalties that cost
   nothing (notice, warning, raise-related…) are listed with amount 0 so the employee sees them.
 - **DECIDED** — A penalty's amount on the payslip is its share of the line's penalty deduction
   (its days ÷ the line's penalty days × the line's penalty amount). The shares can differ from the
@@ -80,6 +81,8 @@ martyrs' fund on top of it.
   and net, or none yet), and this month's penalties (pending and approved, by violation date).
 - **DECIDED** — Approving a run announces it (`payroll approved`, with the totals) for a future
   accounting module; nothing listens to it yet.
+- **DECIDED** — The run shows each line's tax & insurance (insurance share + income tax + fund) and
+  gross beside its net; the run's totals include them.
 - **DECIDED** — **Bank sheet** export of an approved run (Excel): employee code, name, national ID,
   net. The employee's bank details are recorded (§3); adding them to the sheet is Planned.
 - **Planned** — allowances, the annual raise, the exam bonus rules, loans, the employer's insurance

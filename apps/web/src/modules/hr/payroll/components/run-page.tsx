@@ -251,6 +251,14 @@ export function RunPage({
       cell: (line) => <Money value={line.net} currency={false} className="font-extrabold" />,
     },
     {
+      ...runColumn('taxInsurance', t),
+      cell: (line) => <Money value={taxAndInsurance(line)} currency={false} />,
+    },
+    {
+      ...runColumn('gross', t),
+      cell: (line) => <Money value={line.gross} currency={false} />,
+    },
+    {
       ...runColumn('status', t),
       cell: (line) => <LineStatus flags={line.flags} />,
     },
@@ -524,10 +532,36 @@ export function RunPage({
 
 // ── Pieces shared with the route's skeleton (same markup, so nothing moves on load) ──────────
 
-type RunColumnId = 'employee' | 'monthSalary' | 'penalties' | 'lateness' | 'adjustments' | 'net' | 'status' | 'actions';
+type RunColumnId =
+  | 'employee'
+  | 'monthSalary'
+  | 'penalties'
+  | 'lateness'
+  | 'adjustments'
+  | 'net'
+  | 'taxInsurance'
+  | 'gross'
+  | 'status'
+  | 'actions';
 type Translate = ReturnType<typeof useTranslation>['t'];
 
-export const RUN_COLUMN_IDS: RunColumnId[] = ['employee', 'monthSalary', 'penalties', 'lateness', 'adjustments', 'net', 'status', 'actions'];
+export const RUN_COLUMN_IDS: RunColumnId[] = [
+  'employee',
+  'monthSalary',
+  'penalties',
+  'lateness',
+  'adjustments',
+  'net',
+  'taxInsurance',
+  'gross',
+  'status',
+  'actions',
+];
+
+/** What the school pays on top of a line's net (§6): insurance share + income tax + martyrs' fund. */
+export function taxAndInsurance(line: Pick<PayrollLine, 'insuranceAmount' | 'incomeTax' | 'martyrTax'>) {
+  return line.insuranceAmount + line.incomeTax + line.martyrTax;
+}
 
 const RUN_COLUMN_LAYOUT: Record<RunColumnId, Omit<DataTableColumn<PayrollLine>, 'id' | 'header' | 'cell'>> = {
   employee: {
@@ -545,6 +579,8 @@ const RUN_COLUMN_LAYOUT: Record<RunColumnId, Omit<DataTableColumn<PayrollLine>, 
   lateness: { align: 'end', className: 'w-28' },
   adjustments: { align: 'end', className: 'w-28' },
   net: { align: 'end', className: 'w-32', card: 'highlight' },
+  taxInsurance: { align: 'end', className: 'w-28' },
+  gross: { align: 'end', className: 'w-32' },
   status: { className: 'w-36', card: 'status', skeleton: <SkeletonPill /> },
   actions: { align: 'end', className: 'w-16', card: 'menu', skeleton: <RowActionsSkeleton /> },
 };
@@ -620,7 +656,17 @@ export function RunTiles({ totals }: { totals: PayrollRun['totals'] | undefined 
         label={t('payroll.tiles.net')}
         unit={t('ui.units.currency')}
         value={totals ? formatMoney(totals.net) : null}
-        sub={sub((x) => t('payroll.tiles.netSub', { additions: money(x.adjustmentAdditions) }), 1, 3, true)}
+        sub={sub(
+          (x) =>
+            t('payroll.tiles.netSub', {
+              additions: money(x.adjustmentAdditions),
+              taxes: money(taxAndInsurance(x)),
+              gross: money(x.gross),
+            }),
+          2,
+          3,
+          true,
+        )}
         loading={loading}
       />
     </div>

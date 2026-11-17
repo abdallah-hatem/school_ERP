@@ -149,6 +149,12 @@ export const PAYSLIP: Payslip = {
     adjustmentAdditions: 50_000,
     adjustmentDeductions: 10_000,
     net: 1_335_000,
+    insuranceStatus: 'INSURED',
+    insuredSalary: 500_000,
+    insuranceAmount: 55_000,
+    incomeTax: 190_000,
+    martyrTax: 800,
+    gross: 1_580_800,
   }),
   month: '2026-11',
   penalties: [
