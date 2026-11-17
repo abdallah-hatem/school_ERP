@@ -23,7 +23,7 @@ phase live in `docs/build-log/`.
 | 3 | Contract | done (in the spec) |
 | 4 | Design system | Campus, teal + sunflower, light only; tokens go in code in T3 |
 | 5 | Plan | `docs/plans/2026-11-17-hr-demo-plan.md` (18 tasks, 7 waves); review CONFLICTS fixed, re-review's 4 remaining items fixed |
-| 6 | Build | merged: T1 (#4), T6 (#6), T5 (#7). Running: T2, T3, T4 (finishing: dedupe + HR-settings fix), T7, T8 |
+| 6 | Build | merged: T1 #4, T6 #6, T5 #7, T3 #9, T4 #10, T8 #11, T2 #12, T7 #13. Running: T9 payroll, T10 settings screen, T11 employees screens, T13 lateness screen |
 | 7 | Verify | — |
 | 8 | Ship | local demo; hosting later |
 
@@ -63,8 +63,24 @@ phase live in `docs/build-log/`.
   revealed that T6's HR settings write core's settings table directly (module-rule break). T4 sent
   back: rebase, keep T5's copies, route HR settings through core's `SettingsService`.
 - 2026-11-17 — Wave 3 started: T7 penalties, T8 lateness (base f36a72f).
+- 2026-11-17 — T3 (design system + shell) verified, checked in a browser at 1440/390 px in AR/EN (no
+  horizontal scroll) → merged #9.
+- 2026-11-17 — T4 rebased with T5's shared pieces kept and HR settings routed through core's
+  `SettingsService`; review DOC OUT OF DATE → §2/§3/§7 updated → merged #10. Known: history rows are
+  written just after the change (GUESS, Planned to tighten).
+- 2026-11-17 — T8 (lateness) rebased (hr.module conflict resolved), e2e 105 green, review ALIGNED →
+  merged #11. T13 (lateness screen) and T11 (employees screens) dispatched.
+- 2026-11-17 — T2 (auth) rebased; added public `GET /settings/school/public` for the sign-in page and
+  a `/files` rewrite; the sign-in form posts to a server action (no password in URLs). e2e 121
+  green, review ALIGNED (refresh grace window recorded in the plan) → merged #12.
+- 2026-11-17 — T7 (penalties) review DOC OUT OF DATE → §4 updated (retired groups, approving pending
+  after retirement/deactivation, preview ignores the lock, rolling window boundary); e2e 148 green →
+  merged #13. T9 (payroll) and T10 (settings screen) dispatched (base 6f9132c).
 
 ## Next up
+
+- Login rate limiting (T2 left it out; security baseline).
+- Write the settings history in the same transaction as the change (outbox), instead of right after.
 
 - Hosting the demo on the Contabo server (owner: later; local demo is the fallback).
 - Roles, permissions and security section for `docs/ARCHITECTURE.md` (drafted in chat, not yet approved).
