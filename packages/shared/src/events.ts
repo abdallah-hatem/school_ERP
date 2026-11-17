@@ -27,3 +27,28 @@ export interface PayrollApprovedEvent {
   approvedById: Uuid;
   at: string;
 }
+
+// ── Settings change history (§7) ───────────────────────────────────────────
+
+/**
+ * Emitted once per changed setting key, after the write commits. Every module that owns settings
+ * (core school settings, HR rules, lists, the penalty catalogue) emits it; core's listener writes
+ * the history row.
+ */
+export const SettingsEvent = {
+  CHANGED: 'settings.changed',
+} as const;
+export type SettingsEvent = (typeof SettingsEvent)[keyof typeof SettingsEvent];
+
+/** Which owner changed the setting. */
+export type SettingsChangeScope = 'school' | 'hr' | 'lists' | 'catalogue';
+
+export interface SettingsChangedEvent {
+  scope: SettingsChangeScope;
+  key: string;
+  oldValue: unknown;
+  newValue: unknown;
+  changedById: Uuid | null;
+  /** ISO 8601 timestamp. */
+  changedAt: string;
+}
