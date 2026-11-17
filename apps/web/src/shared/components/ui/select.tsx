@@ -61,6 +61,7 @@ export function SelectContent({
         data-slot="select-content"
         position="popper"
         sideOffset={6}
+        collisionPadding={16}
         className={cn(
           // As wide as its trigger (never wider than the screen); long options wrap instead.
           'relative z-(--z-popover) max-h-(--radix-select-content-available-height) w-(--radix-select-trigger-width) min-w-(--radix-select-trigger-width) max-w-[calc(100vw-2rem)]',
