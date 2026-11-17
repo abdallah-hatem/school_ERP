@@ -211,7 +211,22 @@ async function ensureList(
   return ids;
 }
 
-/** Groups by English name, violations by group + English name; returns seedKey → id. */
+/** Stored levels in the shape `levelsOf` produces, for comparing with the seed data. */
+const storedLevels = (levels: { level: number; action: string; days: unknown }[]) =>
+  [...levels]
+    .sort((a, b) => a.level - b.level)
+    .map((l) => ({
+      level: l.level,
+      action: l.action,
+      days: l.days === null ? null : Number(l.days),
+    }));
+
+/**
+ * Groups by English name, violations by group + English name; returns seedKey → id. A missing
+ * one is created; an existing one whose Arabic name, note or levels differ from the seed data is
+ * updated through the catalogue service (history row included — approved penalties keep their
+ * fixed level, §4). Nothing is retired.
+ */
 async function seedCatalogue(
   catalogue: PenaltyCatalogueService,
   db: DatabaseService,
@@ -220,36 +235,41 @@ async function seedCatalogue(
 ): Promise<Map<string, string>> {
   const bySeedKey = new Map<string, string>();
   for (const [index, group] of data.groups.entries()) {
-    const groupId =
-      (await db.penaltyGroup.findFirst({ where: { nameEn: group.nameEn }, select: { id: true } }))
-        ?.id ??
-      (
+    const existingGroup = await db.penaltyGroup.findFirst({
+      where: { nameEn: group.nameEn },
+      select: { id: true, nameAr: true },
+    });
+    let groupId = existingGroup?.id;
+    if (!groupId) {
+      groupId = (
         await catalogue.createGroup(
           { nameEn: group.nameEn, nameAr: group.nameAr, sortOrder: index },
           adminId,
         )
       ).id;
+    } else if (existingGroup!.nameAr !== group.nameAr) {
+      await catalogue.updateGroup(groupId, { nameAr: group.nameAr }, adminId);
+    }
+
     for (const v of group.violations) {
-      const violationId =
-        (
-          await db.violation.findFirst({
-            where: { groupId, nameEn: v.nameEn },
-            select: { id: true },
-          })
-        )?.id ??
-        (
-          await catalogue.createViolation(
-            groupId,
-            {
-              nameEn: v.nameEn,
-              nameAr: v.nameAr,
-              note: v.note ?? null,
-              levels: levelsOf(v.levels),
-            },
-            adminId,
-          )
+      const wanted = { nameAr: v.nameAr, note: v.note ?? null, levels: levelsOf(v.levels) };
+      const existing = await db.violation.findFirst({
+        where: { groupId, nameEn: v.nameEn },
+        select: { id: true, nameAr: true, note: true, levels: true },
+      });
+      let violationId = existing?.id;
+      if (!existing) {
+        violationId = (
+          await catalogue.createViolation(groupId, { nameEn: v.nameEn, ...wanted }, adminId)
         ).id;
-      if (v.seedKey) bySeedKey.set(v.seedKey, violationId);
+      } else if (
+        existing.nameAr !== wanted.nameAr ||
+        existing.note !== wanted.note ||
+        JSON.stringify(storedLevels(existing.levels)) !== JSON.stringify(wanted.levels)
+      ) {
+        await catalogue.updateViolation(existing.id, wanted, adminId);
+      }
+      if (v.seedKey) bySeedKey.set(v.seedKey, violationId!);
     }
   }
   return bySeedKey;

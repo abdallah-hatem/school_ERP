@@ -16,7 +16,7 @@ import { runSeed } from '../prisma/seed/run';
 import { AppModule } from '../src/app.module';
 import { SettingsService } from '../src/core/settings';
 import { DatabaseService } from '../src/database/database.service';
-import { PayrollService } from '../src/modules/hr';
+import { PayrollService, PenaltyCatalogueService } from '../src/modules/hr';
 import { countPriorInWindow, penaltyLevel } from '../src/modules/hr/domain';
 
 const REPO_ROOT = resolve(__dirname, '..', '..', '..');
@@ -113,6 +113,37 @@ describe('Seed (e2e)', () => {
     // The counter never advanced on the second run: no code was handed out and thrown away.
     expect(second.counter).toBe(first.counter);
     expect(new Set(second.codes).size).toBe(second.codes.length);
+  }, 120_000);
+
+  it('Re-seeding after the catalogue data changed updates groups and violations by English name, creating nothing', async () => {
+    const catalogue = app.get(PenaltyCatalogueService);
+    const seedGroup = data.catalogue.groups[1];
+    const seedViolation = seedGroup.violations[0];
+    const group = await db.penaltyGroup.findFirstOrThrow({ where: { nameEn: seedGroup.nameEn } });
+    const violation = await db.violation.findFirstOrThrow({
+      where: { groupId: group.id, nameEn: seedViolation.nameEn },
+    });
+    // Stand-in for an older seed's wording and levels.
+    await catalogue.updateGroup(group.id, { nameAr: 'اسم قديم للمجموعة' }, null);
+    await catalogue.updateViolation(
+      violation.id,
+      { nameAr: 'اسم قديم', note: null, levels: [{ level: 1, action: 'NOTICE' }] },
+      null,
+    );
+
+    await runSeed({ app });
+
+    const after = await db.violation.findUniqueOrThrow({
+      where: { id: violation.id },
+      include: { levels: { orderBy: { level: 'asc' } }, group: true },
+    });
+    expect(after.group.nameAr).toBe(seedGroup.nameAr);
+    expect(after.nameAr).toBe(seedViolation.nameAr);
+    expect(after.note).toBe(seedViolation.note ?? null);
+    expect(after.levels.map((l) => [l.action, l.days === null ? null : Number(l.days)])).toEqual(
+      seedViolation.levels.map((l) => [l.action, l.days ?? null]),
+    );
+    expect((await snapshot(db)).counts).toEqual(first.counts);
   }, 120_000);
 
   it('Seeded catalogue = 4 groups, 72 violations, each with 1–5 gap-free levels; DEDUCT_DAYS levels have days > 0', async () => {
