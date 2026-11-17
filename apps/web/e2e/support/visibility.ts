@@ -15,6 +15,8 @@ export interface StageHeadSetup {
   /** Every employee of their stage (any status), and one of another stage. */
   inStage: EmployeeSummary[];
   outside: EmployeeSummary;
+  /** Set once the first sign-in replaced the temporary password (`user.password` is then theirs). */
+  passwordChosen?: boolean;
 }
 
 export async function makeStageHead(): Promise<StageHeadSetup> {
@@ -53,10 +55,15 @@ export async function signInAsStageHead(
   const context = await browser.newContext({ locale: locale === 'ar' ? 'ar-EG' : 'en-US', viewport });
   const page = await context.newPage();
   await signInAs(page, locale, setup.user.email, setup.user.password);
-  await page.getByRole('textbox', { name: t(locale, 'auth.password.new'), exact: true }).fill(own);
-  await page.getByRole('textbox', { name: t(locale, 'auth.password.confirm'), exact: true }).fill(own);
-  await page.getByRole('button', { name: t(locale, 'auth.setPassword.submit') }).click();
-  await expect(page).not.toHaveURL(/set-password/);
+  // The first sign-in uses the temporary password and must choose one; later ones use that one.
+  if (!setup.passwordChosen) {
+    await page.getByRole('textbox', { name: t(locale, 'auth.password.new'), exact: true }).fill(own);
+    await page.getByRole('textbox', { name: t(locale, 'auth.password.confirm'), exact: true }).fill(own);
+    await page.getByRole('button', { name: t(locale, 'auth.setPassword.submit') }).click();
+    await expect(page).not.toHaveURL(/set-password/);
+    setup.user.password = own;
+    setup.passwordChosen = true;
+  }
   return page;
 }
 
