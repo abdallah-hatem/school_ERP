@@ -63,6 +63,15 @@ describe('HR penalty catalogue and records (e2e)', () => {
   const violation = async (levels: ViolationLevelInput[] = LEVELS_5, note?: string) =>
     (await newViolation(levels, note).expect(201)).body.data.id as string;
 
+  /** A violation that repeats within a day (§4: once per day off). */
+  const repeatingViolation = async () =>
+    (
+      await http(app)
+        .post(`/hr/penalty-groups/${groupId}/violations`)
+        .send({ nameEn: unique('Violation'), nameAr: unique('مخالفة'), oncePerDay: false, levels: LEVELS_5 })
+        .expect(201)
+    ).body.data.id as string;
+
   const record = (employeeId: string, violationId: string, date: string, note?: string) =>
     http(app).post('/hr/penalties').send({ employeeId, violationId, date, note });
 
@@ -359,7 +368,8 @@ describe('HR penalty catalogue and records (e2e)', () => {
 
   it('Window = contract year: an approved record from 31 May doesn’t count for a violation on 1 June', async () => {
     const emp = await employee();
-    const v = await violation();
+    // Previews on the date of an approved one: a violation that may repeat in a day (§4).
+    const v = await repeatingViolation();
     await approvedOn(emp, v, '2025-05-31');
     expect((await preview(emp, v, '2025-06-01').expect(200)).body.data).toMatchObject({
       level: 1,
@@ -373,7 +383,7 @@ describe('HR penalty catalogue and records (e2e)', () => {
 
   it('CALENDAR_YEAR: approved on 31 Dec doesn’t count on 1 Jan; ROLLING_12_MONTHS: approved 2025-11-17 counts on 2026-11-16, not on 2026-11-18', async () => {
     const emp = await employee();
-    const v = await violation();
+    const v = await repeatingViolation();
     await approvedOn(emp, v, '2024-12-31');
     await setWindow('CALENDAR_YEAR');
     expect((await preview(emp, v, '2025-01-01').expect(200)).body.data.priorCount).toBe(0);
@@ -416,7 +426,7 @@ describe('HR penalty catalogue and records (e2e)', () => {
 
   it('Same violation date: record and approve three in order → levels 1, 2, 3; the preview counts them all', async () => {
     const emp = await employee();
-    const v = await violation();
+    const v = await repeatingViolation();
     const first = await recordOk(emp, v, '2025-11-05');
     const second = await recordOk(emp, v, '2025-11-05');
     const third = await recordOk(emp, v, '2025-11-05');
@@ -432,7 +442,7 @@ describe('HR penalty catalogue and records (e2e)', () => {
 
   it('Same violation date, approved out of order: the later-recorded one approved first stays level 1; a pending one shows the count of those recorded before it', async () => {
     const emp = await employee();
-    const v = await violation();
+    const v = await repeatingViolation();
     const first = await recordOk(emp, v, '2025-11-06');
     const second = await recordOk(emp, v, '2025-11-06');
     const third = await recordOk(emp, v, '2025-11-06');
@@ -544,6 +554,76 @@ describe('HR penalty catalogue and records (e2e)', () => {
     expect(await getRecord(second.id)).toMatchObject({ status: 'APPROVED', level: 2 });
     // New records now count only the remaining approved one.
     expect((await preview(emp, v, '2025-09-10').expect(200)).body.data.priorCount).toBe(1);
+  });
+
+  describe('once per day (§4, owner 2026-11-18)', () => {
+    const refused = (res: { status: number; body: { error?: string } }) => {
+      expect(res.status).toBe(409);
+      expect(res.body.error).toBe(ErrorCode.VIOLATION_ONCE_PER_DAY);
+    };
+
+    it('on by default: a second same-day penalty is refused while the first is pending or approved; the preview says so', async () => {
+      const created = (await newViolation().expect(201)).body.data;
+      expect(created.oncePerDay).toBe(true);
+      const v = created.id as string;
+      const emp = await employee();
+      const first = await recordOk(emp, v, '2025-10-06');
+      refused(await record(emp, v, '2025-10-06'));
+      refused(await preview(emp, v, '2025-10-06'));
+      await approveOk(first.id);
+      refused(await record(emp, v, '2025-10-06'));
+      // Another date, or another employee the same date, is fine.
+      expect((await recordOk(emp, v, '2025-10-07')).level).toBe(2);
+      await recordOk(await employee(), v, '2025-10-06');
+      // Only one record for that day exists.
+      expect(await db.penaltyRecord.count({ where: { employeeId: emp, violationId: v, date: new Date('2025-10-06') } })).toBe(1);
+    });
+
+    it('a cancelled one doesn’t block the day', async () => {
+      const v = await violation();
+      const emp = await employee();
+      const first = await recordOk(emp, v, '2025-10-08');
+      await cancel(first.id, 'recorded by mistake').expect(200);
+      expect((await preview(emp, v, '2025-10-08').expect(200)).body.data.level).toBe(1);
+      await recordOk(emp, v, '2025-10-08');
+    });
+
+    it('flag off: the same violation can be recorded several times a day', async () => {
+      const v = await repeatingViolation();
+      const emp = await employee();
+      await recordOk(emp, v, '2025-10-09');
+      await recordOk(emp, v, '2025-10-09');
+      await preview(emp, v, '2025-10-09').expect(200);
+    });
+
+    it('re-checked at approval: two pending of one day (recorded while off) can’t both be approved once it is on; approved ones never change', async () => {
+      const v = await repeatingViolation();
+      const emp = await employee();
+      const earlier = await approvedOn(emp, v, '2025-10-01');
+      const a = await recordOk(emp, v, '2025-10-10');
+      const b = await recordOk(emp, v, '2025-10-10');
+      const turnedOn = await http(app).patch(`/hr/violations/${v}`).send({ oncePerDay: true }).expect(200);
+      expect(turnedOn.body.data.oncePerDay).toBe(true);
+      await approveOk(a.id);
+      refused(await approve(b.id));
+      expect((await getRecord(b.id)).status).toBe('PENDING');
+      // b can still be cancelled; an earlier approved penalty is untouched.
+      await cancel(b.id, 'duplicate').expect(200);
+      expect(await getRecord(earlier.id)).toMatchObject({ status: 'APPROVED', level: earlier.level });
+    });
+
+    it('concurrent recordings of the same day: exactly one succeeds', async () => {
+      const v = await violation();
+      const emp = await employee();
+      const results = await Promise.all([record(emp, v, '2025-10-13'), record(emp, v, '2025-10-13')]);
+      expect(results.map((r) => r.status).sort()).toEqual([201, 409]);
+    });
+
+    it('PATCH oncePerDay: null or not a boolean → 400', async () => {
+      const v = await violation();
+      await http(app).patch(`/hr/violations/${v}`).send({ oncePerDay: null }).expect(400);
+      await http(app).patch(`/hr/violations/${v}`).send({ oncePerDay: 'yes' }).expect(400);
+    });
   });
 
   it('Concurrent approvals of the same record: exactly one succeeds', async () => {

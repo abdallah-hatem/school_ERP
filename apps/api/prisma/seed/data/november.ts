@@ -42,11 +42,12 @@ export const PENALTIES: SeedPenalty[] = [
   { employee: 14, violation: 'unexcused-absence', date: '2026-11-03', status: 'APPROVED' },
   { employee: 16, violation: 'late-to-class', date: '2026-11-04', status: 'APPROVED' },
   { employee: 20, violation: 'phone-in-class', date: '2026-11-05', status: 'APPROVED' },
-  // Twice on the same day: recorded and approved in this order → levels 1 then 2 (§4).
-  { employee: 12, violation: 'chewing-gum', date: '2026-11-06', status: 'APPROVED' },
+  // Twice on the same day: recorded and approved in this order → levels 1 then 2 (§4). Late to
+  // class can repeat in a day; a once-per-day violation would refuse the second one.
+  { employee: 12, violation: 'late-to-class', date: '2026-11-06', status: 'APPROVED' },
   {
     employee: 12,
-    violation: 'chewing-gum',
+    violation: 'late-to-class',
     date: '2026-11-06',
     status: 'APPROVED',
     note: 'المرة الثانية في نفس اليوم',

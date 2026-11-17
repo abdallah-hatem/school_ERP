@@ -27,6 +27,7 @@ export const RECORD_SELECT = {
       id: true,
       nameEn: true,
       nameAr: true,
+      oncePerDay: true,
       levels: { select: LEVEL_SELECT, orderBy: { level: 'asc' } },
     },
   },
@@ -101,6 +102,43 @@ const candidatesWhere = (
   OR: keys.map((k) => ({ employeeId: k.employeeId, violationId: k.violationId })),
 });
 
+/** How an approval ended (`approve`). */
+export type ApproveOutcome = 'APPROVED' | 'NOT_PENDING' | 'ONCE_PER_DAY';
+
+/**
+ * §4 once per day: given the statuses of the OTHER records of the same pair and date, whether the
+ * write must be refused (the service passes the domain's `oncePerDayRefuses`).
+ */
+export type SameDayRefusal = (sameDayOthers: PenaltyStatus[]) => boolean;
+
+type Tx = Prisma.TransactionClient;
+
+/**
+ * Serialises writes of one employee + violation pair (recording and approving) for the rest of the
+ * transaction, so two of them can't both read the same count or the same free day.
+ */
+const lockPair = (tx: Tx, key: RepeatKey) =>
+  tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`penalty:${key.employeeId}:${key.violationId}`}))`;
+
+/** Statuses of the pair's records dated `date`, other than `exceptId`. */
+async function sameDayStatuses(
+  db: Tx | DatabaseService,
+  key: RepeatKey,
+  date: IsoDate,
+  exceptId?: string,
+): Promise<PenaltyStatus[]> {
+  const rows = await db.penaltyRecord.findMany({
+    where: {
+      employeeId: key.employeeId,
+      violationId: key.violationId,
+      date: fromIsoDate(date),
+      ...(exceptId ? { id: { not: exceptId } } : {}),
+    },
+    select: { status: true },
+  });
+  return rows.map((r) => r.status);
+}
+
 /**
  * Recorded penalties (§4). Never deleted. Status changes are conditional updates
  * (`where status = …`), so two concurrent approvals or cancels can't both succeed.
@@ -153,10 +191,24 @@ export class PenaltyRecordsRepository extends BaseRepository<
     return row && { status: row.status, date: toIsoDate(row.date) };
   }
 
-  createRecord(data: RecordCreateData): Promise<RecordRow> {
-    return this.db.penaltyRecord.create({
-      data: { ...data, date: fromIsoDate(data.date), status: PenaltyStatus.PENDING },
-      select: RECORD_SELECT,
+  /** Statuses of the pair's records on `date` (the preview's once-per-day check, §4). */
+  sameDayStatuses(key: RepeatKey, date: IsoDate): Promise<PenaltyStatus[]> {
+    return sameDayStatuses(this.db, key, date);
+  }
+
+  /**
+   * Records a PENDING penalty, unless `refuse` says the day is taken (§4 once per day) — then
+   * nothing is written and null is returned. Checked and written under the pair's lock, so two
+   * concurrent recordings of the same day can't both pass.
+   */
+  createRecord(data: RecordCreateData, refuse: SameDayRefusal): Promise<RecordRow | null> {
+    return this.db.$transaction(async (tx) => {
+      await lockPair(tx, data);
+      if (refuse(await sameDayStatuses(tx, data, data.date))) return null;
+      return tx.penaltyRecord.create({
+        data: { ...data, date: fromIsoDate(data.date), status: PenaltyStatus.PENDING },
+        select: RECORD_SELECT,
+      });
     });
   }
 
@@ -181,9 +233,10 @@ export class PenaltyRecordsRepository extends BaseRepository<
   /**
    * Approves a PENDING record, fixing the level `resolve` computes from the pair's APPROVED
    * records in `window` (same date included; `resolve` decides which come earlier, §4).
-   * Approvals of the same employee + violation are serialised with a transaction-level advisory
-   * lock, so two approvals can't both read the same records. Returns false when the record was no
-   * longer PENDING.
+   * Writes of the same employee + violation are serialised with a transaction-level advisory
+   * lock, so two approvals can't both read the same records, and the once-per-day rule (`refuse`,
+   * §4) is checked again inside the same transaction. NOT_PENDING when the record was no longer
+   * PENDING; ONCE_PER_DAY when another record of that day is already approved.
    */
   async approve(
     id: string,
@@ -191,9 +244,12 @@ export class PenaltyRecordsRepository extends BaseRepository<
     window: { from: IsoDate; upTo: IsoDate },
     approvedById: string | null,
     resolve: (approved: ApprovedCandidate[]) => LevelData,
-  ): Promise<boolean> {
+    refuse: SameDayRefusal,
+  ): Promise<ApproveOutcome> {
     return this.db.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`penalty:${key.employeeId}:${key.violationId}`}))`;
+      await lockPair(tx, key);
+      // `window.upTo` is the record's own date.
+      if (refuse(await sameDayStatuses(tx, key, window.upTo, id))) return 'ONCE_PER_DAY';
       const approved = await tx.penaltyRecord.findMany({
         where: candidatesWhere([key], window.upTo, window.from),
         select: CANDIDATE_SELECT,
@@ -210,7 +266,7 @@ export class PenaltyRecordsRepository extends BaseRepository<
           approvedAt: new Date(),
         },
       });
-      return count === 1;
+      return count === 1 ? 'APPROVED' : 'NOT_PENDING';
     });
   }
 

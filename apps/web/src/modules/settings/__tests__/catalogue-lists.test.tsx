@@ -37,6 +37,7 @@ const catalogue: PenaltyGroup[] = [
         nameAr: 'التأخر',
         note: null,
         isActive: true,
+        oncePerDay: true,
         levels: [
           { level: 1, action: 'WARNING', days: null },
           { level: 2, action: 'DEDUCT_DAYS', days: 0.5 },
@@ -109,6 +110,7 @@ describe('Penalty catalogue editor', () => {
       nameEn: 'Late arrival',
       nameAr: 'التأخر',
       note: null,
+      oncePerDay: true,
       levels: [
         { level: 1, action: 'WARNING', days: null },
         { level: 2, action: 'DEDUCT_DAYS', days: 1.25 },
