@@ -311,7 +311,8 @@ describe('Notifications — core mechanism (e2e)', () => {
       await db.user.update({ where: { id: inactive }, data: { isActive: false } });
       const actor = await newUser('Actor', ['principal']);
       const s = subject();
-      await send({ subject: s, dedupeKey: `e2e:${s.entityId}`, actorId: actor });
+      // A group of its own: an item joining an earlier open group keeps that group's first actor.
+      await send({ subject: s, dedupeKey: `e2e:${s.entityId}`, actorId: actor, groupKey: unique('actor') });
       expect(await rowsOf(inactive)).toHaveLength(0);
       expect(await rowsOf(actor)).toHaveLength(0);
       const item = await db.notificationItem.findFirst({
