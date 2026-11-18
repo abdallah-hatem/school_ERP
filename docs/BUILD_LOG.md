@@ -217,6 +217,11 @@ phase live in `docs/build-log/`.
   and the recommended answers to the spec's open questions (grouping, a per-employee probation end
   date, deadlines 25th/28th as settings, approvals always on, retention 90/30/365 days, contract
   reminders at 30 and 7 days, System admin edits Notifications settings) — recorded in #106.
+- 2026-11-18 — Notifications spec, plan, §11 and the option A mockup merged → #106 (build waits for
+  events + outbox).
+- 2026-11-18 — CI (owner): PRs into `dev` no longer have to be up to date with `dev`; instead the
+  full suite runs on `dev` after every merge → #111 (branch protection: dev strict off; testing,
+  production and demo still strict). A red run on `dev` is fixed before anything else.
 
 ## Next up
 
