@@ -29,12 +29,17 @@ export type ActivityType = (typeof ACTIVITY_TYPES)[number];
 
 const ofKind = (kind: string) => AUDIT_ACTION_KEYS.filter((key) => AUDIT_ACTIONS[key].kind === kind);
 
+/** "Failed sign-in": a wrong password, and the lockout too many of them cause (§2). */
+const FAILED_ACTIONS: readonly AuditAction[] = [AUDIT_FAILED_SIGN_IN, 'core.auth.locked_out'];
+
 export const TYPE_ACTIONS: Record<ActivityType, readonly AuditAction[]> = {
   create: ofKind('create'),
   update: ofKind('update'),
   status: ofKind('status'),
-  signIn: ofKind('access').filter((key) => key.startsWith('core.auth.') && key !== AUDIT_FAILED_SIGN_IN),
-  failed: [AUDIT_FAILED_SIGN_IN],
+  signIn: ofKind('access').filter(
+    (key) => key.startsWith('core.auth.') && !FAILED_ACTIONS.includes(key),
+  ),
+  failed: FAILED_ACTIONS,
 };
 
 export interface ActivityQuery {
