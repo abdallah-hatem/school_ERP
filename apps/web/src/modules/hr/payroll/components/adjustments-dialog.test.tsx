@@ -26,7 +26,7 @@ const apis = vi.hoisted(() => ({
 }));
 vi.mock('../apis', () => apis);
 
-import { ADJ_MONA, MONA, renderPayroll, run, RUN_ID, SETTINGS } from '../test/fixtures';
+import { ADJ_MONA, MONA, renderPayroll, run, RUN_ID } from '../test/fixtures';
 import { RunPage } from './run-page';
 
 function renderRun(r = run()) {
@@ -38,7 +38,6 @@ function renderRun(r = run()) {
       run={r}
       asOf={0}
       departments={[]}
-      settings={SETTINGS}
       query={{}}
     />,
   );

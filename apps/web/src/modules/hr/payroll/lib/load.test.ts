@@ -9,8 +9,6 @@ const apis = vi.hoisted(() => ({
 vi.mock('../apis', () => apis);
 const employees = vi.hoisted(() => ({ GET_DEPARTMENTS: vi.fn() }));
 vi.mock('../../employees/apis', () => employees);
-const lateness = vi.hoisted(() => ({ GET_HR_SETTINGS: vi.fn() }));
-vi.mock('../../lateness/apis', () => lateness);
 const nav = vi.hoisted(() => ({
   notFound: vi.fn(() => {
     throw new Error('NEXT_NOT_FOUND');
@@ -24,9 +22,8 @@ import { loadEmployeePayroll, loadPayslip, loadRun } from './load';
 const ok = <T>(data: T) => ({ success: true, status: 200, data });
 
 beforeEach(() => {
-  for (const fn of [...Object.values(apis), employees.GET_DEPARTMENTS, lateness.GET_HR_SETTINGS]) fn.mockReset();
+  for (const fn of [...Object.values(apis), employees.GET_DEPARTMENTS]) fn.mockReset();
   employees.GET_DEPARTMENTS.mockResolvedValue(ok([]));
-  lateness.GET_HR_SETTINGS.mockResolvedValue(ok(SETTINGS));
 });
 
 describe('payroll loaders', () => {
@@ -38,7 +35,9 @@ describe('payroll loaders', () => {
       search: 'salma',
     });
     expect(data.run.lines).toEqual([SALMA]);
-    expect(data.settings).toEqual(SETTINGS);
+    // The rules come with the run (no HR settings read, which a Principal or Accountant can't make).
+    expect(data.run.rules).toEqual(SETTINGS);
+    expect(data).not.toHaveProperty('settings');
   });
 
   it('an unfiltered run is read once', async () => {

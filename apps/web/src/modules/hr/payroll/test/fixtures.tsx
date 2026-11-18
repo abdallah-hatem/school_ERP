@@ -7,6 +7,7 @@ import {
   type PayrollRunSummary,
   type Payslip,
 } from '@school-erp/shared';
+import type { SessionUser } from '@school-erp/shared';
 import type { ReactElement } from 'react';
 import type { Locale } from '@/shared/lib/i18n';
 import { renderWithI18n } from '@/test/render';
@@ -96,6 +97,7 @@ export function run(overrides: Partial<PayrollRun> = {}): PayrollRun {
     salaryVisible: true,
     adjustments: [],
     pendingPenalties: lines.filter((l) => l.flags.includes('PENDING_PENALTIES')).length,
+    rules: SETTINGS,
     ...overrides,
     lines,
   };
@@ -179,8 +181,10 @@ export const PAYSLIP: Payslip = {
   school: { nameEn: 'Demo School', nameAr: 'مدرسة تجريبية', logoUrl: null },
 };
 
-export function renderPayroll(ui: ReactElement, locale: Locale = 'en') {
+/** `session` defaults to the HR admin holding every permission. */
+export function renderPayroll(ui: ReactElement, locale: Locale = 'en', session?: SessionUser) {
   return renderWithI18n(<PayrollI18n locale={locale}>{ui}</PayrollI18n>, {
     locale,
+    ...(session ? { session } : {}),
   });
 }

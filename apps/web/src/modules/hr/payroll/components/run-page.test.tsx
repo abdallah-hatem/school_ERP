@@ -29,7 +29,8 @@ vi.mock('../apis', () => apis);
 const download = vi.hoisted(() => ({ saveDownloadedFile: vi.fn() }));
 vi.mock('@/shared/lib/download', () => download);
 
-import type { PayrollRunQuery } from '@school-erp/shared';
+import { BUILT_IN_ROLES, type PayrollRunQuery, type SessionUser } from '@school-erp/shared';
+import { sessionWith } from '@/test/render';
 import type { Locale } from '@/shared/lib/i18n';
 import { ADJ_MONA, MONA, renderPayroll, run, RUN_ID, SALMA, SETTINGS } from '../test/fixtures';
 import { PayrollI18n } from '../messages';
@@ -61,15 +62,14 @@ function runElement(props: Partial<RunPageProps> = {}, locale: Locale = 'en') {
       run={props.run ?? run()}
       asOf={0}
       departments={DEPARTMENTS}
-      settings={SETTINGS}
       query={{} as PayrollRunQuery}
       {...props}
     />
   );
 }
 
-function renderRun(props: Partial<RunPageProps> = {}, locale: Locale = 'en') {
-  return renderPayroll(runElement(props, locale), locale);
+function renderRun(props: Partial<RunPageProps> = {}, locale: Locale = 'en', session?: SessionUser) {
+  return renderPayroll(runElement(props, locale), locale, session);
 }
 
 function table() {
@@ -393,7 +393,7 @@ describe('RunPage — draft', () => {
     expect(within(section).queryByText('Exam supervision')).toBeNull();
   });
 
-  it('the rules panel shows the live HR settings, or says they failed to load', () => {
+  it('the rules panel shows the rules the run came with, or says they are missing', () => {
     const { unmount } = renderRun();
     const panel = screen.getByRole('complementary', {
       name: 'Rules applied this month',
@@ -402,11 +402,29 @@ describe('RunPage — draft', () => {
     expect(within(panel).getByText(/4 days 80% · 3 days 60% · 2 days 40%/)).toBeTruthy();
     expect(within(panel).getByRole('link', { name: 'Edit in settings' }).getAttribute('href')).toBe('/en/settings');
     unmount();
-    renderRun({ settings: null });
+    renderRun({ run: run({ rules: undefined as unknown as typeof SETTINGS }) });
     expect(within(screen.getByRole('complementary')).getByRole('alert').textContent).toContain(
       "The HR rules couldn't load",
     );
   });
+
+  it.each(['principal', 'accountant'])(
+    'reads the rules from the run, not HR settings — the %s sees them, without the Edit link',
+    (key) => {
+      const keys = Object.keys(BUILT_IN_ROLES.find((r) => r.key === key)!.permissions);
+      expect(keys).not.toContain('hr.settings.view');
+      const rules = {
+        ...SETTINGS,
+        payroll: { dayDivisor: 26, partTime: { PART_TIME_4: 75, PART_TIME_3: 55, PART_TIME_2: 35 } },
+      };
+      renderRun({ run: run({ rules }) }, 'en', sessionWith(...keys));
+      const panel = screen.getByRole('complementary', { name: 'Rules applied this month' });
+      expect(within(panel).getByText('1 day = salary for the month ÷ 26')).toBeTruthy();
+      expect(within(panel).getByText(/4 days 75% · 3 days 55% · 2 days 35%/)).toBeTruthy();
+      expect(within(panel).queryByRole('alert')).toBeNull();
+      expect(within(panel).queryByRole('link', { name: 'Edit in settings' })).toBeNull();
+    },
+  );
 
   it('on an APPROVED run the rules panel is labelled as today\'s rules, with when the run was calculated', () => {
     renderRun({

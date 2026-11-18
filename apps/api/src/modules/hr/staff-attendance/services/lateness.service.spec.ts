@@ -57,7 +57,15 @@ function makeService(over: {
         : Promise.resolve();
     }),
   };
-  const settings = { get: jest.fn().mockResolvedValue({ lateness: over.rule ?? RULE }) };
+  // The whole HR settings, as HrSettingsService returns them: the month list must pass on only the
+  // lateness rule (no payroll or penalty setting).
+  const settings = {
+    get: jest.fn().mockResolvedValue({
+      lateness: over.rule ?? RULE,
+      payroll: { dayDivisor: 30, partTime: { PART_TIME_4: 80, PART_TIME_3: 60, PART_TIME_2: 40 } },
+      penalties: { repetitionWindow: 'ACADEMIC_YEAR' },
+    }),
+  };
   const monthLock = {
     isMonthLocked: jest.fn().mockResolvedValue(over.locked ?? false),
     assertMonthOpen: jest.fn().mockImplementation(() => {
@@ -93,6 +101,17 @@ describe('LatenessService', () => {
     expect((await open.service.month('2026-11')).rows).toHaveLength(2);
     const locked = makeService({ locked: true });
     await expect(locked.service.month('2026-11')).resolves.toMatchObject({ locked: true });
+  });
+
+  it('month: carries the lateness rule its days were computed with — only that rule, no other setting', async () => {
+    const rule = { ...RULE, graceMinutes: 10 };
+    const { service } = makeService({ stored: [{ employeeId: '1', minutes: 70 }], rule });
+    const month = await service.month('2026-11');
+    expect(Object.keys(month).sort()).toEqual(['locked', 'rows', 'rule']);
+    expect(month.rule).toEqual(rule);
+    expect(Object.keys(month.rule).sort()).toEqual(['extraHourDays', 'graceMinutes', 'steps']);
+    // 70 minutes, 10 of grace → 60 → hour 1 = 0.25 d: the rows use the very rule returned.
+    expect(month.rows[0]).toMatchObject({ minutes: 70, days: 0.25 });
   });
 
   it('list: a stored row for an employee no longer active is not shown', async () => {

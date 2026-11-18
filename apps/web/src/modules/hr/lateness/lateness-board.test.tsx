@@ -307,6 +307,30 @@ describe('LatenessBoard', () => {
     expect(router.refresh).toHaveBeenCalled();
   });
 
+  it('after Save the days follow the rule the saved list came with', async () => {
+    const user = userEvent.setup();
+    const newRule: LatenessRule = { graceMinutes: 0, steps: [{ hour: 1, days: 1 }], extraHourDays: 1 };
+    apis.PUT_LATENESS.mockResolvedValue({
+      success: true,
+      status: 200,
+      data: {
+        locked: false,
+        rule: newRule,
+        rows: ROWS.map((r) => (r.employee.id === 'e2' ? { ...r, minutes: 61, days: latenessDays(61, newRule) } : r)),
+      },
+    });
+    renderBoard();
+    const input = minutesInput('Karim Fawzy');
+    await user.clear(input);
+    await user.type(input, '61');
+    await user.click(saveButton());
+    await waitFor(() => expect(daysOf('e2')).toBe(formatDayCount(latenessDays(61, newRule), 'en')));
+    // A new draft is previewed with that rule too: 120 minutes → 2 days, not 0.75.
+    await user.clear(minutesInput('Karim Fawzy'));
+    await user.type(minutesInput('Karim Fawzy'), '120');
+    expect(daysOf('e2')).toBe(formatDayCount(2, 'en'));
+  });
+
   it('a missing rule shows a warning and no days, but minutes can still be saved', async () => {
     const user = userEvent.setup();
     renderBoard({ rule: null });

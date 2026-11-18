@@ -30,6 +30,11 @@ import { handleResponse } from '@/lib/handleResponse';
  */
 
 const HR_SETTINGS_TAG = 'hr-settings';
+/**
+ * The lateness list and the payroll runs carry the HR rules they use (their screens need no
+ * `hr.settings.view`), so changing the rules refreshes them too.
+ */
+const HR_RULE_READERS_TAGS = ['hr-lateness', 'hr-payroll-runs'];
 const ACCOUNTING_SETTINGS_TAG = 'accounting-settings';
 const CATALOGUE_TAG = 'penalty-catalogue';
 
@@ -109,7 +114,7 @@ export async function UPDATE_HR_SETTINGS(data: UpdateHrSettingsRequest) {
   const res = await apiFetch<HrSettings>('/hr/settings', {
     method: 'PATCH',
     body: { ...data },
-    revalidateTags: [HR_SETTINGS_TAG],
+    revalidateTags: [HR_SETTINGS_TAG, ...HR_RULE_READERS_TAGS],
   });
   return handleResponse({ response: res });
 }

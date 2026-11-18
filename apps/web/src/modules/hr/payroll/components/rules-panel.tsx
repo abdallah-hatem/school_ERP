@@ -21,18 +21,19 @@ import { useTranslation } from '@/shared/providers/i18n-provider';
 import { describeLatenessRule } from '../../lateness/describe-rule';
 
 /**
- * The live HR settings (GET /hr/settings) with a link to change them. On a draft they are the
- * rules behind every figure ("Rules applied this month"). An approved run keeps the numbers it
- * was approved with and the run stores no copy of the rules, so for it (`approvedAt` set) the
- * panel says these are today's rules and when the run was calculated — never that they applied.
+ * The HR rules the run comes with (`run.rules`, so a viewer without `hr.settings.view` sees them
+ * too), with a link to change them for those who may. On a draft they are the rules behind every
+ * figure ("Rules applied this month"). An approved run keeps the numbers it was approved with and
+ * the run stores no copy of the rules, so for it (`approvedAt` set) the panel says these are
+ * today's rules and when the run was calculated — never that they applied.
  */
 export function RulesPanel({
-  settings,
+  rules: loaded,
   settingsHref,
   approvedAt = null,
 }: {
-  /** `null` when they failed to load; `undefined` while the run loads (bars in the rules' place). */
-  settings: HrSettings | null | undefined;
+  /** `null` when the run came without them; `undefined` while the run loads (bars in their place). */
+  rules: HrSettings | null | undefined;
   settingsHref: string;
   /** Set for an APPROVED run. */
   approvedAt?: IsoDateTime | null;
@@ -41,8 +42,8 @@ export function RulesPanel({
   const approved = approvedAt !== null;
   // While the settings load: the rules worded with §7's defaults, each sentence a bar per line —
   // the same cards and line count the loaded rules take.
-  const loading = settings === undefined;
-  const rules = settings ?? (loading ? HR_SETTINGS_DEFAULTS : null);
+  const loading = loaded === undefined;
+  const rules = loaded ?? (loading ? HR_SETTINGS_DEFAULTS : null);
   return (
     <aside
       aria-labelledby="payroll-rules-title"
