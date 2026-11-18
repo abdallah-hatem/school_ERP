@@ -20,6 +20,11 @@ export const ErrorCode = {
   // auth
   INVALID_CREDENTIALS: 'INVALID_CREDENTIALS',
   INVALID_REFRESH_TOKEN: 'INVALID_REFRESH_TOKEN',
+  /**
+   * Sign-in is locked after too many wrong passwords (429). The message has plural forms: the
+   * minutes left are its `count`, and the envelope carries them as `retryAfterMinutes`.
+   */
+  TOO_MANY_ATTEMPTS: 'TOO_MANY_ATTEMPTS',
 
   // users and roles (P2)
   /** Would leave the school without an active System admin (R8, edge case 5). */
@@ -80,3 +85,9 @@ export const ErrorCode = {
 } as const;
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
 export const ERROR_CODES = Object.values(ErrorCode) as ErrorCode[];
+
+/**
+ * Values for an error's message, sent as the envelope's `params` (e.g. `TOO_MANY_ATTEMPTS` →
+ * `{ count: 12 }`, the minutes left). `count` picks the message's plural form.
+ */
+export type ErrorParams = Record<string, string | number>;

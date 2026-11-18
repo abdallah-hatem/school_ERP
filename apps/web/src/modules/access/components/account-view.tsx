@@ -10,6 +10,7 @@ import { PageHeader } from '@/shared/components/layout/page-header';
 import { Button } from '@/shared/components/ui/button';
 import { ErrorIcon, LinkedEmployeeIcon, LockedIcon, PasswordIcon, SignOutIcon } from '@/shared/components/ui/icons';
 import { Input } from '@/shared/components/ui/input';
+import { apiErrorText } from '@/shared/lib/api-error';
 import { localName } from '@/shared/lib/i18n';
 import { initialsOf } from '@/shared/lib/initials';
 import { useTranslation } from '@/shared/providers/i18n-provider';
@@ -169,10 +170,8 @@ export function ChangePasswordCard() {
       }
       if (res.error === ErrorCode.WRONG_PASSWORD) setWrongCurrent(true);
       else if (res.error === ErrorCode.SAME_PASSWORD) setSameAsCurrent(true);
-      else {
-        const key = `errors.${String(res.error)}`;
-        setError(has(key) ? t(key) : res.message || t('auth.password.failed'));
-      }
+      // Anything else, a sign-in lock included ("Try again in N minutes", from `params.count`).
+      else setError(apiErrorText(res, { t, has }) || t('auth.password.failed'));
     } finally {
       inFlight.current = false;
       setBusy(false);

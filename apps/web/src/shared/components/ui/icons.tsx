@@ -73,6 +73,7 @@ import {
   ShieldStarIcon as ShieldStar,
   KeyIcon as Key,
   LockSimpleIcon as LockSimple,
+  LockSimpleOpenIcon as LockSimpleOpen,
   CopyIcon as Copy,
   IdentificationCardIcon as IdentificationCard,
   SparkleIcon as Sparkle,
@@ -264,6 +265,8 @@ export const CustomRoleIcon = duotone(Sparkle, 'CustomRole');
 export const TemporaryPasswordIcon = duotone(Key, 'TemporaryPassword');
 export const PasswordIcon = duotone(LockKey, 'Password');
 export const LockedIcon = duotone(LockSimple, 'Locked');
+// Sign-in locked by too many wrong passwords, and a System admin unlocking it (owner 2026-11-18).
+export const UnlockIcon = duotone(LockSimpleOpen, 'Unlock');
 export const CopyIcon = duotone(Copy, 'Copy');
 export const LinkedEmployeeIcon = duotone(IdentificationCard, 'LinkedEmployee');
 export const EmailIcon = duotone(EnvelopeSimple, 'Email');

@@ -8,32 +8,36 @@ import { Button } from '@/shared/components/ui/button';
 import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { Dialog, DialogClose, DialogContent } from '@/shared/components/ui/dialog';
 import { useTranslation } from '@/shared/providers/i18n-provider';
-import { DEACTIVATE_USER, REACTIVATE_USER, SET_TEMPORARY_PASSWORD } from '../apis';
+import { DEACTIVATE_USER, REACTIVATE_USER, SET_TEMPORARY_PASSWORD, UNLOCK_SIGN_IN } from '../apis';
 import { generateTemporaryPassword } from '../lib/temp-password';
 import { TempPasswordBox } from './temp-password';
 
 type Target = Pick<UserAccount, 'id' | 'name'>;
-type Open = { kind: 'deactivate' | 'reactivate' | 'password'; user: Target } | null;
+type Open = { kind: 'deactivate' | 'reactivate' | 'unlock' | 'password'; user: Target } | null;
 
 /**
- * The three account actions the Users list's ⋯ and a user's page share: deactivate, reactivate
- * (each behind a confirmation) and set a temporary password (a dialog showing the password to give
- * them). `dialogs` must be rendered once; each action refreshes the page's data when it lands.
+ * The account actions the Users list's ⋯ and a user's page share: deactivate, reactivate, unlock a
+ * sign-in locked by too many wrong passwords (each behind a confirmation) and set a temporary
+ * password (a dialog showing the password to give them). `dialogs` must be rendered once; each
+ * action refreshes the page's data when it lands.
  */
 export function useUserActions(): {
   dialogs: ReactNode;
   deactivate: (user: Target) => void;
   reactivate: (user: Target) => void;
+  unlock: (user: Target) => void;
   setPassword: (user: Target) => void;
 } {
   const [open, setOpen] = useState<Open>(null);
   const deactivate = useCallback((user: Target) => setOpen({ kind: 'deactivate', user }), []);
   const reactivate = useCallback((user: Target) => setOpen({ kind: 'reactivate', user }), []);
+  const unlock = useCallback((user: Target) => setOpen({ kind: 'unlock', user }), []);
   const setPassword = useCallback((user: Target) => setOpen({ kind: 'password', user }), []);
   return {
     dialogs: <UserActionDialogs open={open} onClose={() => setOpen(null)} />,
     deactivate,
     reactivate,
+    unlock,
     setPassword,
   };
 }
@@ -44,9 +48,11 @@ function UserActionDialogs({ open, onClose }: { open: Open; onClose: () => void 
   const user = open?.user;
   const name = user?.name ?? '';
 
-  async function changeStatus(kind: 'deactivate' | 'reactivate') {
+  async function changeStatus(kind: 'deactivate' | 'reactivate' | 'unlock') {
     if (!user) return false;
-    const res = await callApi(kind === 'deactivate' ? DEACTIVATE_USER(user.id) : REACTIVATE_USER(user.id), {
+    const call =
+      kind === 'deactivate' ? DEACTIVATE_USER(user.id) : kind === 'reactivate' ? REACTIVATE_USER(user.id) : UNLOCK_SIGN_IN(user.id);
+    const res = await callApi(call, {
       showSuccessToast: true,
       successMessage: t(`access.users.${kind}.done`, { name }),
     });
@@ -73,6 +79,14 @@ function UserActionDialogs({ open, onClose }: { open: Open; onClose: () => void 
         description={t('access.users.reactivate.body')}
         confirmLabel={t('access.users.reactivate.confirm')}
         onConfirm={() => changeStatus('reactivate')}
+      />
+      <ConfirmDialog
+        open={open?.kind === 'unlock'}
+        onOpenChange={(o) => (o ? null : onClose())}
+        title={t('access.users.unlock.title', { name })}
+        description={t('access.users.unlock.body')}
+        confirmLabel={t('access.users.unlock.confirm')}
+        onConfirm={() => changeStatus('unlock')}
       />
       {open?.kind === 'password' && user ? <TempPasswordDialog user={user} onClose={onClose} /> : null}
     </>

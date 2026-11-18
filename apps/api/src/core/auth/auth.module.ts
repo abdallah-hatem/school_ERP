@@ -5,6 +5,7 @@ import { PassportModule } from '@nestjs/passport';
 import type { AppConfig } from '../../config';
 import { AuditModule } from '../audit';
 import { PermissionsModule } from '../permissions';
+import { SignInLimitModule } from '../sign-in-limit';
 import { UsersModule } from '../users';
 import { AuthController } from './controllers/auth.controller';
 import { AuthCookiesInterceptor } from './interceptors/auth-cookies.interceptor';
@@ -22,6 +23,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     AuditModule,
     UsersModule,
     PermissionsModule,
+    SignInLimitModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {

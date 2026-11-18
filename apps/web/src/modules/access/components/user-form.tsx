@@ -20,12 +20,13 @@ import {
   LockedIcon,
   ReadyIcon,
   TemporaryPasswordIcon,
+  UnlockIcon,
 } from '@/shared/components/ui/icons';
 import { StatusChangeButton } from '@/shared/components/ui/status-change-button';
 import { StatusPill } from '@/shared/components/ui/status-pill';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { CREATE_USER, UPDATE_USER } from '../apis';
-import { formatSignIn } from '../lib/sign-in-time';
+import { formatLockEnd, formatSignIn } from '../lib/sign-in-time';
 import { generateTemporaryPassword } from '../lib/temp-password';
 import {
   changedFields,
@@ -237,6 +238,24 @@ export function UserForm({ basePath, user, roles, lastAdmin = false, initialPass
           {t('access.userForm.lastSignIn', { when: formatSignIn(user.lastSignInAt, now, locale, t) })}
         </span>
       </div>
+      {user.lockedUntil ? (
+        // Too many wrong passwords (owner 2026-11-18): a System admin may unlock it before it ends.
+        <div className="flex flex-col gap-2.5 rounded-xl bg-destructive-soft p-3 text-destructive-ink">
+          <div className="flex items-start gap-2.5">
+            <LockedIcon className="mt-0.5 size-5 shrink-0" />
+            <div className="flex flex-col gap-0.5 text-sm">
+              <span className="font-bold">{t('access.userForm.lockedTitle')}</span>
+              <span>{t('access.userForm.lockedBody', { time: formatLockEnd(user.lockedUntil, locale) })}</span>
+            </div>
+          </div>
+          {canManage ? (
+            <Button type="button" variant="secondary" className="w-full" onClick={() => actions.unlock(user)}>
+              <UnlockIcon />
+              {t('access.userForm.unlock')}
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
       {canManage ? (
         user.isActive ? (
           <div className="flex flex-col gap-2">

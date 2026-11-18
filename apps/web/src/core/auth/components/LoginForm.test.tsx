@@ -63,4 +63,18 @@ describe('LoginForm', () => {
     // Once hydrated, the no-JS fallback action never runs.
     expect(signInWithForm).not.toHaveBeenCalled();
   });
+
+  it('a locked account: the lockout message shows, worded by the API in the page language', async () => {
+    // The API answers 429 TOO_MANY_ATTEMPTS with its message in the page's language and plural form.
+    signIn.mockResolvedValue({ error: 'محاولات كثيرة جدًا. حاول مرة أخرى بعد 15 دقيقة.' });
+    const user = userEvent.setup();
+    renderForm('ar');
+    await user.type(screen.getByRole('textbox', { name: /البريد/ }), 'admin@school.local');
+    await user.type(screen.getByLabelText(/كلمة المرور/), 'right-password');
+    await user.click(screen.getByRole('button', { name: 'تسجيل الدخول' }));
+    expect((await screen.findByRole('alert')).textContent).toBe(
+      'محاولات كثيرة جدًا. حاول مرة أخرى بعد 15 دقيقة.',
+    );
+    expect(signIn).toHaveBeenCalledWith(expect.objectContaining({ locale: 'ar' }));
+  });
 });

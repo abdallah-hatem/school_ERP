@@ -14,6 +14,29 @@
   the current password.
 - **DECIDED** — Deactivating a user, or giving them a temporary password, signs them out everywhere
   at once.
+
+### Security: sign-in limits
+
+- **DECIDED** (owner, 2026-11-18) — **5 wrong passwords within 15 minutes lock that account's
+  sign-in for 15 minutes.** The count is per account (the email typed, in any letter case), never
+  per computer or network. An email nobody has is counted and locked the same way, so the answer
+  never tells whether an account exists. Wrong passwords for a deactivated account count too.
+- **DECIDED** — While an account is locked, every sign-in is refused **without checking the
+  password** — the right one too — with one message for every case: "Too many attempts. Try again
+  in N minutes." (Arabic: "محاولات كثيرة جدًا. حاول مرة أخرى بعد N دقيقة", with the right plural
+  form), N being the minutes left, rounded up.
+- **DECIDED** — A correct sign-in before the limit clears the count. After 15 minutes without a lock
+  the count starts over; when a lock ends, the right password signs in again.
+- **DECIDED** — The forced "Set a new password" screen and the password change on My account have
+  the same limit: refused while the account is locked, and a wrong current password counts as a
+  wrong sign-in.
+- **DECIDED** — A **System admin** (or anyone with "Manage users") can **unlock** an account early
+  from its Users page: the list shows "Sign-in locked" (with the time it ends) and its ⋯ has
+  **Unlock sign-in**; the user's page has the same button. The user can sign in at once.
+- **DECIDED** — Lockouts and unlocks are recorded in the audit log (§9). The numbers (5 attempts,
+  15-minute window, 15-minute lock) are school settings with those defaults (§7).
+- **DECIDED** — Old counts are deleted every night at 03:00 school time, once both their 15 minutes
+  and their lock ended more than a day ago.
 - **GUESS** (Claude's answers until the owner and client confirm; spec
   `docs/specs/2026-11-17-roles-permissions.md`) — Starting roles: **System admin**, **HR manager**,
   **HR officer**, **Accountant**, **Principal / administrative director**, **Stage head**, **Direct

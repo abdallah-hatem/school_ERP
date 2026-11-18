@@ -6,6 +6,7 @@ import { useRef, useState, type FormEvent } from 'react';
 import { callApi } from '@/lib/callApi';
 import { Button } from '@/shared/components/ui/button';
 import { ChevronEndIcon, ErrorIcon, SignOutIcon } from '@/shared/components/ui/icons';
+import { apiErrorText } from '@/shared/lib/api-error';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { signOut } from '../actions';
 import { CHANGE_OWN_PASSWORD } from '../apis';
@@ -52,8 +53,8 @@ export function SetPasswordForm({ email, destination }: { email: string; destina
         setSameAsCurrent(true);
         return;
       }
-      const key = `errors.${String(res.error)}`;
-      setError(has(key) ? t(key) : res.message || t('auth.password.failed'));
+      // Locked by too many wrong passwords: "Try again in N minutes" (the API's `params.count`).
+      setError(apiErrorText(res, { t, has }) || t('auth.password.failed'));
     } finally {
       if (!done) {
         inFlight.current = false;
