@@ -36,6 +36,8 @@
   Opening anyone else shows "This page isn't here", as for a record that doesn't exist. Someone in
   such a role who isn't linked to an employee sees nobody. Each screen, tab, section and button is
   shown only to those who may use it.
+- **GUESS** — The payroll tax rule (§10) belongs to the Accountant (view and change) and the
+  System admin (owner, 2026-11-18).
 - **DECIDED** — The last System admin can't be removed or deactivated.
 - **Planned** — Legal affairs, medical clinic and security desk roles, with their modules.
 - **DECIDED** — Viewing the activity log is its own permission (§9): System admin, HR manager and

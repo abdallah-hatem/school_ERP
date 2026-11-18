@@ -42,6 +42,8 @@ export const ErrorCode = {
 
   // settings and files
   INVALID_WORK_HOURS: 'INVALID_WORK_HOURS',
+  /** §7: the merged tax rule breaks a rule `taxRuleIssues` checks (e.g. bracket % + fund ≥ 100). */
+  INVALID_TAX_RULE: 'INVALID_TAX_RULE',
   INVALID_FILE_TYPE: 'INVALID_FILE_TYPE',
   FILE_TOO_LARGE: 'FILE_TOO_LARGE',
 
