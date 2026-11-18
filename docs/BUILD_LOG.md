@@ -302,14 +302,21 @@ phase live in `docs/build-log/`.
   the job lock prevent repeats; recipients by permission and scope. Days are HR settings (shown in
   N4's Settings → Notifications). GUESS: past dates aren't chased; only the current month's
   lateness/payroll reminders are sent.
+- 2026-11-18 — N4 merged → #137: the bell (unread count, refresh every minute and on focus),
+  the list as a popover on desktop / full-screen sheet on a phone (grouped items, done states, mark
+  all read), My account → Notifications (one switch per type, required ones locked, reset to the
+  school default), Settings → Notifications (defaults, reminder timing, retention; System admin
+  edits, HR manager reads; timings follow HR-rules editing). Checked in screenshots. The phone smoke
+  spec's ambiguous heading locator fixed by us. Left for N2: a penalty notification opens that
+  penalty; the full record → bell → approve smoke flow.
 
 ## Next up
 
 - Outbox nits (from #121's live test, cosmetic): the "dead after 10 failures" log line always says
   10 (after an admin retry it's 11); a dead row still gets a `next_attempt_at`. A lock held longer
   than Prisma's 15 s transaction timeout counts as one failure, then the next tick delivers it.
-- **Notifications — spec, plan and option A decided (PR #106). Events + outbox and jobs are in; N0 (probation
-  field) and N1 (core) are being built; then N2, N3, N4 in parallel, then N5.** Spec
+- **Notifications — spec, plan and option A decided (PR #106). Events + outbox and jobs are in; N0 (#124), N1 (#127), N3 (#134) and N4 (#137) are merged; N2 (approvals) is being built, then
+  N5 (verify).** Spec
   `docs/specs/2026-11-18-notifications.md`, plan `docs/plans/2026-11-18-notifications-plan.md`,
   business §11, mockup `design/mockups/notifications.html` (option A · bell popover; B and C dropped). The
   UI shows the in-app channel only — one switch per type; the API keeps a `channel` field (`in_app`). Owner decisions (2026-11-18): in-app bell only (channels addable later), staff users now
