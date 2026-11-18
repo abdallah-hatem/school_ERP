@@ -114,7 +114,7 @@ describe('auth (e2e)', () => {
     // Its wrong passwords would add up across runs on one database and lock the next run out.
     const emails = (await db.user.findMany({ where: { id: { in: userIds } }, select: { email: true } }))
       .map((u) => u.email);
-    await db.loginAttempt.deleteMany({ where: { email: { in: [...emails, 'nobody@school.test'] } } });
+    await db.loginAttempt.deleteMany({ where: { email: { in: [...emails, 'nobody@school.test', 'a@b.co'] } } });
     await db.schoolSetting.deleteMany({ where: { updatedById: { in: userIds } } });
     await db.user.deleteMany({ where: { id: { in: userIds } } }); // tokens cascade
     await app.close();
