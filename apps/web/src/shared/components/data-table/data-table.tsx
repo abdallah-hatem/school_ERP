@@ -279,15 +279,17 @@ function Cards<Row>({ columns, rows, getRowId, label, rowTone, viewClass, height
           >
             {titles.length || statuses.length || menus.length ? (
               <div className="flex items-start justify-between gap-3">
-                <div className="flex min-w-0 flex-col gap-1 break-words">
+                <div className="flex min-w-0 flex-1 flex-col gap-1 break-words">
                   {titles.map((c) => (
                     <div key={c.id}>{c.cell(row)}</div>
                   ))}
                 </div>
                 {statuses.length || menus.length ? (
-                  <div className="flex shrink-0 items-start gap-1">
+                  // At most half the card: a long status (a cancelled penalty's reason) wraps in its
+                  // half instead of squeezing the title to one word per line (dry run 2026-11-18).
+                  <div className="flex max-w-[50%] shrink-0 items-start gap-1">
                     {statuses.length ? (
-                      <div className="flex flex-col items-end gap-1">
+                      <div className="flex min-w-0 flex-col items-end gap-1 break-words">
                         {statuses.map((c) => (
                           <div key={c.id}>{c.cell(row)}</div>
                         ))}

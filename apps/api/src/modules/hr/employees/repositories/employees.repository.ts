@@ -265,6 +265,16 @@ export class EmployeesRepository extends BaseRepository<
     });
   }
 
+  /** The bank details on file for `ids` (bank sheet, §6). */
+  findBankDetails(
+    ids: readonly string[],
+  ): Promise<{ id: string; bankName: string | null; bankAccountNumber: string | null; iban: string | null }[]> {
+    return this.databaseService.employee.findMany({
+      where: { id: { in: [...ids] } },
+      select: { id: true, bankName: true, bankAccountNumber: true, iban: true },
+    });
+  }
+
   /** Active employees per stage, with the stage's names, in stage order (dashboard). */
   async countActiveByStage(scope: EmployeeScopeWhere = {}): Promise<
     { stage: { id: string; nameEn: string; nameAr: string }; count: number }[]

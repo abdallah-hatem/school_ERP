@@ -52,7 +52,8 @@
 
 **DECIDED** (owner, 2026-11-18) — four more groups on the employee record. Accounting takes the
 employee's insurance share from the insurance status and insured salary as the approved payroll
-line recorded them (§6, §10); how payroll uses the bank details is Planned (§6).
+line recorded them (§6, §10). The bank sheet of an approved run lists the bank details (§6);
+paying by bank transfer is Planned.
 
 | Group | Field | Rule |
 |---|---|---|

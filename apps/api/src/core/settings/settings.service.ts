@@ -73,6 +73,11 @@ export class SettingsService {
     return resolveValues(keys, await this.settings.findByKeys(keys));
   }
 
+  /** When any of `keys` last changed (a save that changes nothing writes nothing), or null. */
+  lastChangedAt(keys: readonly SettingKey[]): Promise<Date | null> {
+    return this.settings.lastWrittenAt(keys);
+  }
+
   /**
    * Writes the keys whose value changed and records one audit entry listing them, all in one
    * transaction (joining the caller's, if any). After the commit, emits one `settings.changed`

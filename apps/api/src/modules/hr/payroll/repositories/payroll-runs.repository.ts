@@ -20,6 +20,7 @@ export const RUN_SELECT = {
   month: true,
   status: true,
   approvedAt: true,
+  calculatedAt: true,
 } satisfies Prisma.PayrollRunSelect;
 
 export type RunRow = Prisma.PayrollRunGetPayload<{ select: typeof RUN_SELECT }>;
@@ -41,6 +42,7 @@ export const LINE_SELECT = {
   penaltyDays: true,
   penaltyAmount: true,
   latenessMinutes: true,
+  latenessGraceMinutes: true,
   latenessDays: true,
   latenessAmount: true,
   adjustmentAdditions: true,
@@ -92,6 +94,8 @@ export interface LineData {
   penaltyDays: number;
   penaltyAmount: number;
   latenessMinutes: number;
+  /** The lateness grace in force at this calculation (§5). */
+  latenessGraceMinutes: number;
   latenessDays: number;
   latenessAmount: number;
   adjustmentAdditions: number;

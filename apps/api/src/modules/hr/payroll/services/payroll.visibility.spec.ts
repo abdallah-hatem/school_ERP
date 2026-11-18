@@ -38,6 +38,7 @@ const line = (employeeId: string): LineRow => ({
   penaltyDays: 1 as unknown as Prisma.Decimal,
   penaltyAmount: 30000,
   latenessMinutes: 0,
+  latenessGraceMinutes: 0,
   latenessDays: 0 as unknown as Prisma.Decimal,
   latenessAmount: 0,
   adjustmentAdditions: 0,
@@ -59,7 +60,7 @@ const TOTALS = {
 
 function makeService(scopes: Parameters<typeof fakeAccess>[0], salaryIds: string[] = []) {
   const repository = {
-    findRun: jest.fn().mockResolvedValue({ id: 'r1', month: '2026-10', status: 'APPROVED', approvedAt: new Date() }),
+    findRun: jest.fn().mockResolvedValue({ id: 'r1', month: '2026-10', status: 'APPROVED', approvedAt: new Date(), calculatedAt: new Date() }),
     list: jest.fn().mockResolvedValue({
       data: [{ id: 'r1', month: '2026-10', status: 'APPROVED', approvedAt: null }],
       total: 1,

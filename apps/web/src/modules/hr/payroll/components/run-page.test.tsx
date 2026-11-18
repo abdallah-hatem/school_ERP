@@ -170,6 +170,42 @@ describe('RunPage — approve', () => {
     await waitFor(() => expect(screen.queryByRole('note')).toBeNull());
   });
 
+  it.each(['en', 'ar'] as const)(
+    'HR rules changed since the last calculation (%s): a hint on the draft that recalculates, then goes (dry run 2026-11-18)',
+    async (locale) => {
+      const user = userEvent.setup();
+      apis.RECALCULATE_PAYROLL_RUN.mockResolvedValue({
+        success: true,
+        asOf: 1,
+        data: run({ lines: [MONA], rulesChanged: false }),
+      });
+      renderRun({ run: run({ lines: [MONA], rulesChanged: true }) }, locale);
+      const hint = screen.getByTestId('rules-changed-notice');
+      expect(hint.getAttribute('role')).toBe('note');
+      expect(hint.textContent).toContain(
+        locale === 'en' ? 'HR rules changed since the last calculation' : 'تغيّرت قواعد الموارد البشرية منذ آخر حساب',
+      );
+      await user.click(within(hint).getByRole('button', { name: locale === 'en' ? 'Recalculate now' : 'أعد الحساب الآن' }));
+      expect(apis.RECALCULATE_PAYROLL_RUN).toHaveBeenCalledTimes(1);
+      await waitFor(() => expect(screen.queryByTestId('rules-changed-notice')).toBeNull());
+    },
+  );
+
+  it('no rules hint when the rules did not change, on an approved run, or beside the penalties recalculate hint', () => {
+    const { unmount } = renderRun({ run: run({ lines: [MONA] }) });
+    expect(screen.queryByTestId('rules-changed-notice')).toBeNull();
+    unmount();
+    const approved = renderRun({
+      run: run({ lines: [MONA], status: 'APPROVED', approvedAt: '2026-11-30T10:00:00.000Z', rulesChanged: true }),
+    });
+    expect(screen.queryByTestId('rules-changed-notice')).toBeNull();
+    approved.unmount();
+    // The stale-penalties hint already offers Recalculate: one hint, one button.
+    renderRun({ run: run({ lines: [SALMA], pendingPenalties: 0, rulesChanged: true }) });
+    expect(screen.getAllByRole('note')).toHaveLength(1);
+    expect(screen.queryByTestId('rules-changed-notice')).toBeNull();
+  });
+
   it('a penalty recorded since the last calculation: the live count shows even with no flagged line', () => {
     renderRun({ run: run({ lines: [MONA], pendingPenalties: 1 }) });
     expect(screen.getByRole('note').textContent).toContain('Pending penalties dated this month: 1.');

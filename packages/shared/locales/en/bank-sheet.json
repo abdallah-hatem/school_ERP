@@ -4,5 +4,9 @@
   "nameEn": "Name (English)",
   "nameAr": "Name (Arabic)",
   "nationalId": "National ID",
-  "net": "Net (EGP)"
+  "bankName": "Bank",
+  "bankAccountNumber": "Account number",
+  "iban": "IBAN",
+  "net": "Net (EGP)",
+  "total": "Total"
 }

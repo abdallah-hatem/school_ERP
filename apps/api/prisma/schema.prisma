@@ -527,6 +527,9 @@ model PayrollLine {
   penaltyDays          Decimal         @default(0) @map("penalty_days") @db.Decimal(5, 2)
   penaltyAmount        Int             @default(0) @map("penalty_amount")
   latenessMinutes      Int             @default(0) @map("lateness_minutes")
+  /// The lateness grace taken off the minutes at this calculation (§5). Null on lines calculated
+  /// before it was kept (the payslip then shows the minutes without it).
+  latenessGraceMinutes Int?            @map("lateness_grace_minutes")
   latenessDays         Decimal         @default(0) @map("lateness_days") @db.Decimal(5, 2)
   latenessAmount       Int             @default(0) @map("lateness_amount")
   adjustmentAdditions  Int             @default(0) @map("adjustment_additions")

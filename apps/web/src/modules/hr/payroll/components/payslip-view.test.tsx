@@ -64,6 +64,33 @@ describe('PayslipView', () => {
     expect(screen.getByText('Net pay').parentElement?.textContent).toContain('13,350.00');
   });
 
+  it('lateness shows the grace minutes taken off, in English and Arabic (dry run 2026-11-18)', () => {
+    const slip = { ...PAYSLIP, latenessMinutes: 130, latenessGraceMinutes: 30, latenessDays: 0.75 };
+    const { unmount } = renderPayroll(<PayslipView payslip={slip} backHref="/x" />);
+    expect(screen.getByText('130 minutes − 30 minutes grace = 100 minutes = 0.75 day')).toBeTruthy();
+    unmount();
+    renderPayroll(<PayslipView payslip={slip} backHref="/x" />, 'ar');
+    expect(screen.getByText('130 دقيقة − سماح 30 دقيقة = 100 دقيقة = 0.75 يوم')).toBeTruthy();
+  });
+
+  it('lateness without a grace (none set, a line from before it was kept, or no minutes) reads as before', () => {
+    for (const latenessGraceMinutes of [0, null]) {
+      const { unmount } = renderPayroll(
+        <PayslipView payslip={{ ...PAYSLIP, latenessGraceMinutes }} backHref="/x" />,
+      );
+      expect(screen.getByText('90 minutes = 0.75 day')).toBeTruthy();
+      unmount();
+    }
+    // Minutes under the grace: nothing counted, no subtraction shown.
+    renderPayroll(
+      <PayslipView
+        payslip={{ ...PAYSLIP, latenessMinutes: 0, latenessGraceMinutes: 30, latenessDays: 0 }}
+        backHref="/x"
+      />,
+    );
+    expect(screen.getByText('0 minutes = 0 days')).toBeTruthy();
+  });
+
   it('a payslip with nothing deducted says so', () => {
     renderPayroll(
       <PayslipView
