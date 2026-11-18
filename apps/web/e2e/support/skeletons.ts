@@ -1,5 +1,5 @@
 import { expect, test, type Browser, type Page, type TestInfo } from '@playwright/test';
-import { monthOf, PAGINATION, PayrollStatus, type Language, type PayrollRun, type PayrollRunSummary, type EmployeeSummary, type PenaltyRecord } from '@school-erp/shared';
+import { monthOf, PAGINATION, PayrollStatus, type Language, type PayrollRun, type PayrollRunSummary, type EmployeeSummary, type PenaltyRecord, type UserAccount } from '@school-erp/shared';
 import { join } from 'node:path';
 import { Api } from './api';
 import { adminAccount, makeUser, rolesByKey } from './access';
@@ -132,6 +132,11 @@ export function diff(skeleton: MeasuredBlock[], loaded: MeasuredBlock[]): string
   return problems;
 }
 
+function previousMonth(month: string): string {
+  const [y, m] = month.split('-').map(Number) as [number, number];
+  return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`;
+}
+
 /** Every screen with a skeleton, in menu order. */
 export const SKELETON_SCREENS = [
   'dashboard',
@@ -192,8 +197,12 @@ async function readPaths(): Promise<Record<SkeletonScreenName, string | null>> {
     const admin = await adminAccount(api);
     const roles = await rolesByKey(api);
     // A plain account (one role) besides the admin, as every school has: the Users rows' shape.
-    const users = await api.get<unknown[]>('/users', { limit: 2 });
-    if (users.length < 2) await makeUser(api, { name: 'Skeleton Check', roleIds: [roles.get('hr_officer')?.id ?? ''] });
+    const users = await api.get<UserAccount[]>('/users', { limit: PAGINATION.maxLimit, status: 'active' });
+    // A user's page as most are: an active account that isn't the last System admin (whose page
+    // adds a "can't deactivate" note).
+    const plain =
+      users.find((u) => u.id !== admin.id && !u.mustChangePassword) ??
+      (await makeUser(api, { name: 'Skeleton Check', roleIds: [roles.get('hr_officer')?.id ?? ''] }));
     const role = roles.get('direct_manager') ?? [...roles.values()][0]!;
     const e = `/employees/${employee.id}`;
     return {
@@ -206,14 +215,16 @@ async function readPaths(): Promise<Record<SkeletonScreenName, string | null>> {
       'employee-new': '/employees/new',
       'employee-edit': `${e}/edit`,
       penalties: '/penalties',
-      lateness: '/lateness',
+      // Last month: this month's payroll may be approved (05-payroll), which locks its lateness
+      // board and drops its Save button — a state the skeleton can't know.
+      lateness: `/lateness?month=${previousMonth(monthOf(new Date()))}`,
       payroll: '/payroll',
       'payroll-run': `/payroll/${run.id}`,
       payslip: line ? `/payroll/${run.id}/payslip/${line.id}` : null,
       activity: '/activity',
       users: '/users',
       'user-new': '/users/new',
-      'user-edit': `/users/${admin.id}`,
+      'user-edit': `/users/${plain.id}`,
       roles: '/roles',
       'role-new': '/roles/new',
       'role-edit': `/roles/${role.id}`,

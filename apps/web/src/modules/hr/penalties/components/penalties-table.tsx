@@ -88,6 +88,8 @@ export function PenaltiesTable({
       id: 'violation',
       header: t('penalties.columns.violation'),
       className: 'min-w-40 whitespace-normal',
+      // Names run long: across the card, so a phone shows them on one line as a rule.
+      card: 'wide',
       cell: (p) => <span className="break-words">{nameIn(p.violation, locale)}</span>,
     },
     {

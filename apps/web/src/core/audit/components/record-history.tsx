@@ -7,10 +7,11 @@ import { Pagination } from '@/shared/components/data-table/pagination';
 import { ClearFilters, FilterSelect } from '@/shared/components/form/filter-controls';
 import { EmptyState, ErrorState } from '@/shared/components/layout/empty-state';
 import { FilterIcon, HistoryIcon, SearchIcon } from '@/shared/components/ui/icons';
-import { Skeleton, SkeletonText } from '@/shared/components/ui/skeleton';
+import { Skeleton, SkeletonProse, SkeletonText } from '@/shared/components/ui/skeleton';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { fieldLabel } from '../lib/entry-text';
+import { AuditI18n } from '../messages';
 import { AUDIT_PAGE_SIZE, historyQueryString, type HistoryQuery } from '../lib/history-query';
 import { AuditFiltersSheet } from './filters-sheet';
 import { formatShortDay, relativeAgo, schoolDay } from '../lib/time';
@@ -192,9 +193,22 @@ export function RecordHistory({
 
 /**
  * The History tab while it loads: the side panel (wide screens) or the Filters button (below), and
- * a month timeline of one page. No translated text, so it renders before any messages load.
+ * a month timeline of one page. It renders before the page's messages load, so it brings them.
  */
 export function RecordHistorySkeleton() {
+  const { locale } = useTranslation();
+  return (
+    <AuditI18n locale={locale}>
+      <HistorySkeleton />
+    </AuditI18n>
+  );
+}
+
+/** A typical record name's length, for the description's shape while the record loads. */
+const NAME_SHAPE = 'Xxxxxx Xxxxxxx Xxxxxxx';
+
+function HistorySkeleton() {
+  const { t } = useTranslation();
   return (
     <div aria-busy="true" className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_17.5rem]">
       <div
@@ -217,8 +231,11 @@ export function RecordHistorySkeleton() {
       <Panel data-skeleton-block="timeline" data-skeleton-measure="width" className="@container min-w-0 lg:order-1">
         <div aria-hidden="true" data-skeleton-block="timeline-header" className="flex items-start gap-3 px-4 pt-5 @min-[34rem]:px-6">
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <SkeletonText className="font-display text-lg" width="w-36" />
-            <SkeletonText className="text-sm" width="w-64" />
+            <h2 className="font-display text-lg font-extrabold">{t('audit.history.title')}</h2>
+            {/* The real sentence with a name-shaped gap, as bars: it wraps where the loaded one does. */}
+            <p className="text-sm">
+              <SkeletonProse>{t('audit.history.description', { name: NAME_SHAPE })}</SkeletonProse>
+            </p>
           </div>
           <Skeleton className="h-11 w-12 shrink-0 rounded-lg lg:hidden" />
         </div>

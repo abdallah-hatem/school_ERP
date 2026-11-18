@@ -142,7 +142,7 @@ function ProfileSkeleton({ body }: { body?: ReactNode }) {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title={<SkeletonText width="w-56" />}
+        title={<SkeletonText width="w-36 sm:w-56" />}
         leading={<Skeleton className="size-16 shrink-0 rounded-[1.25rem]" />}
         status={<SkeletonPill />}
         description={<SkeletonText width="w-72" />}

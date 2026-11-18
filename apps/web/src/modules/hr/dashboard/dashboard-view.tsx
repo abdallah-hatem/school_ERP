@@ -253,7 +253,7 @@ export function DashboardView({ data, month }: DashboardViewProps) {
 
 /** First load: the tiles and quick links in their final shape, nothing that shifts. */
 export function DashboardSkeleton() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const shown = useTilesShown();
   const seesFigures = useCan()('hr.dashboard.view') && anyTile(shown);
   const quick = useQuickLinks();
@@ -272,8 +272,9 @@ export function DashboardSkeleton() {
           label={t('dashboard.headcount.label')}
           value={null}
           loading
-          // Stages over two lines (four in a half-width phone tile); the row stretches to the tallest.
-          sub={<StatTileSubSkeleton lines={2} narrowLines={4} gapped feature />}
+          // Stages over two lines (four in a half-width phone tile, five in English's longer names);
+          // the row stretches to the tallest.
+          sub={<StatTileSubSkeleton lines={2} narrowLines={locale === 'ar' ? 4 : 5} gapped feature />}
         />
         ) : null}
         {shown.payroll ? (
@@ -309,11 +310,17 @@ export function DashboardSkeleton() {
       </div>
       ) : null}
       {quick.length > 0 ? (
-        <QuickLinksFrame>
-          {quick.map(({ key }) => (
-            <Skeleton key={key} className="h-12 rounded-lg" />
-          ))}
-        </QuickLinksFrame>
+        // The real buttons (their labels wrap as loaded), masked: each a pulsing block.
+        <div aria-hidden="true" inert className="skeleton-mask">
+          <QuickLinksFrame>
+            {quick.map(({ key, icon: Icon }) => (
+              <Button key={key} variant="secondary" className={QUICK_ITEM} tabIndex={-1}>
+                <Icon className="size-5 text-primary" />
+                {t(`dashboard.quickLinks.${key}`)}
+              </Button>
+            ))}
+          </QuickLinksFrame>
+        </div>
       ) : null}
     </div>
   );
