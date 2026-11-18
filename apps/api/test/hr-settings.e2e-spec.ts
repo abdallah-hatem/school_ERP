@@ -49,7 +49,7 @@ describe('HR rule settings — /hr/settings (e2e)', () => {
     await app.close();
   });
 
-  it('Fresh database: HR settings = grace 0, steps 1→0.25 and 2→0.5, extra 0.5, divisor 30, 80/60/40, CONTRACT_YEAR', async () => {
+  it('Fresh database: HR settings = grace 0, steps 1→0.25 and 2→0.5, extra 0.5, divisor 30, 80/60/40, CONTRACT_YEAR, probation 3 months', async () => {
     const res = await http(app).get('/hr/settings').expect(200);
     expect(res.body).toMatchObject({ success: true, statusCode: 200 });
     expect(res.body.data).toEqual({
@@ -63,6 +63,7 @@ describe('HR rule settings — /hr/settings (e2e)', () => {
       },
       payroll: { dayDivisor: 30, partTime: { PART_TIME_4: 80, PART_TIME_3: 60, PART_TIME_2: 40 } },
       penalties: { repetitionWindow: 'CONTRACT_YEAR' },
+      employees: { defaultProbationMonths: 3 },
     });
   });
 
@@ -127,6 +128,11 @@ describe('HR rule settings — /hr/settings (e2e)', () => {
       ['null section', { lateness: null }],
       ['section as a string', { payroll: 'thirty' }],
       ['days as a string', { lateness: { extraHourDays: '0.5' } }],
+      ['probation 7 months (N0: 0–6)', { employees: { defaultProbationMonths: 7 } }],
+      ['probation −1 months', { employees: { defaultProbationMonths: -1 } }],
+      ['probation 1.5 months', { employees: { defaultProbationMonths: 1.5 } }],
+      ['probation null', { employees: { defaultProbationMonths: null } }],
+      ['unknown employees key', { employees: { probationDays: 90 } }],
     ])('%s → 400, nothing saved', async (_label, body) => {
       const res = await patch(body).expect(400);
       expect(res.body).toMatchObject({ success: false, statusCode: 400 });
@@ -140,6 +146,9 @@ describe('HR rule settings — /hr/settings (e2e)', () => {
         lateness: { extraHourDays: 30, steps: [{ hour: 1, days: 0 }] },
       }).expect(200);
       await patch({ payroll: { dayDivisor: 31 } }).expect(200);
+      // N0: 0 (no probation) and 6 months are the bounds.
+      await patch({ employees: { defaultProbationMonths: 0 } }).expect(200);
+      await patch({ employees: { defaultProbationMonths: 6 } }).expect(200);
     });
   });
 
@@ -214,6 +223,7 @@ describe('HR rule settings — /hr/settings (e2e)', () => {
       },
       payroll: { dayDivisor: 26, partTime: { PART_TIME_4: 75 } },
       penalties: { repetitionWindow: 'ROLLING_12_MONTHS' },
+      employees: { defaultProbationMonths: 0 },
     }).expect(200);
 
     const after = await getSettings();
@@ -229,6 +239,7 @@ describe('HR rule settings — /hr/settings (e2e)', () => {
       },
       payroll: { dayDivisor: 26, partTime: { PART_TIME_4: 75, PART_TIME_3: 60, PART_TIME_2: 40 } },
       penalties: { repetitionWindow: 'ROLLING_12_MONTHS' },
+      employees: { defaultProbationMonths: 0 },
     });
     // 90 min − 10 grace = 80 → 2nd hour → 0.5 + 1.
     expect(latenessDays(90, after.lateness)).toBe(1.5);

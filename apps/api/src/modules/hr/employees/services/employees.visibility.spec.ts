@@ -11,6 +11,7 @@ import type {
   EmployeesRepository,
   EmployeeSummaryRow,
 } from '../repositories/employees.repository';
+import type { HrSettingsService } from '../../settings/hr-settings.service';
 import { EmployeesService } from './employees.service';
 
 /*
@@ -45,6 +46,7 @@ const detail = (over: Partial<EmployeeDetailRow> = {}): EmployeeDetailRow => ({
   fingerprintId: null,
   contractStart: d('2025-06-01'),
   contractEnd: d('2026-05-31'),
+  probationEnd: d('2024-03-31'),
   usesBus: false,
   photoUrl: null,
   insuranceStatus: 'INSURED',
@@ -112,6 +114,7 @@ function makeService(scopes: Parameters<typeof fakeAccess>[0], repo: Record<stri
     fakeAccess(scopes),
     { record: jest.fn(() => Promise.resolve()) } as unknown as AuditService,
     { run: jest.fn(), inTransaction: (fn: () => Promise<unknown>) => fn() } as unknown as AfterCommit,
+    { defaultProbationMonths: jest.fn().mockResolvedValue(3) } as unknown as HrSettingsService,
   );
   return { service, repository };
 }
@@ -186,6 +189,13 @@ describe('employees — salary (R7)', () => {
     }
     // Everything else is still there.
     expect(employee).toMatchObject({ insuranceNumber: '123', code: 'EMP-0001' });
+  });
+
+  it('N0 edge 9 — the probation end is not salary-type: a stage head sees it without salaries', async () => {
+    const { service } = makeService(STAGE_HEAD);
+    const employee = await service.get('e1');
+    expect(employee.salaryVisible).toBe(false);
+    expect(employee.probationEnd).toBe('2024-03-31');
   });
 
   it('edge case 4 — without the key, list rows (cards) have no basicSalary', async () => {

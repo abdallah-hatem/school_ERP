@@ -3,6 +3,7 @@
 import type { IsoDate, Piastres } from '@school-erp/shared';
 import { useId, useState, type ComponentProps, type ReactNode } from 'react';
 import { useController, type Control, type FieldPath, type FieldValues } from 'react-hook-form';
+import { Button } from '@/shared/components/ui/button';
 import { Calendar } from '@/shared/components/ui/calendar';
 import { Combobox, needsSearch } from '@/shared/components/ui/combobox';
 import { CalendarIcon } from '@/shared/components/ui/icons';
@@ -486,7 +487,14 @@ export function DateField<T extends FieldValues>({
   placeholder,
   min,
   max,
-}: BaseFieldProps<T> & { placeholder?: string; min?: IsoDate; max?: IsoDate }) {
+  clearable,
+}: BaseFieldProps<T> & {
+  placeholder?: string;
+  min?: IsoDate;
+  max?: IsoDate;
+  /** An optional date that can be emptied again: a "Clear the date" action under the calendar. */
+  clearable?: boolean;
+}) {
   const { t, locale } = useTranslation();
   const thisYear = new Date().getFullYear();
   const minDate = min ? fromIsoDate(min) : undefined;
@@ -541,6 +549,20 @@ export function DateField<T extends FieldValues>({
               previousLabel={t('ui.form.previousMonth')}
               nextLabel={t('ui.form.nextMonth')}
             />
+            {clearable && value ? (
+              <div className="flex justify-end border-t border-border pt-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    field.onChange(null);
+                    setOpen(false);
+                  }}
+                >
+                  {t('ui.form.clearDate')}
+                </Button>
+              </div>
+            ) : null}
           </PopoverContent>
         </Popover>
       )}

@@ -36,6 +36,7 @@ affects only **draft** payroll runs (approved runs never change).
 | Day value divisor | 30 | GUESS |
 | Part-time percentages | 4 days 80%, 3 days 60%, 2 days 40% | DECIDED |
 | Penalty repetition window | Contract year (1 June – 31 May); alternatives: calendar year, rolling 12 months | GUESS |
+| Default probation length (fills a new employee's probation end, §3) | 3 months; whole months 0–6, 0 = no probation | DECIDED (owner, 2026-11-18) — Settings → HR rules → Employees |
 | Penalty catalogue | The school's 4 tables (72 violations) | DECIDED |
 | Violation "Once per day" (§4) | On, except violations that repeat within a day (late to class, leaving a task early…) | DECIDED (owner, 2026-11-18) |
 | Stages (school structure), departments, job titles | From the seed | DECIDED |
@@ -49,7 +50,7 @@ affects only **draft** payroll runs (approved runs never change).
   that do). It decides who can be chosen as a direct manager (§3). Changing it is recorded in the
   change history like any list change.
 - **DECIDED** — Settings are validated: times in order, percentages 1–100, divisor 1–31, days in
-  quarter steps (0.25) from 0 to 30.
+  quarter steps (0.25) from 0 to 30, the default probation length in whole months from 0 to 6.
 - **DECIDED** (owner, 2026-11-17) — Work start and work end are on a 30-minute boundary (07:00,
   07:30 — not 07:15). The Settings screen offers them as a list from 05:00 to 20:00 every half hour,
   shown in the screen's language; a time off the boundary is refused. Times already saved on a

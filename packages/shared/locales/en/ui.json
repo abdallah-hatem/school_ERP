@@ -46,6 +46,7 @@
     "invalidNumber": "Enter a number.",
     "invalidAmount": "Enter an amount with up to two decimals, like 1,250.00.",
     "pickDate": "Pick a day",
+    "clearDate": "Clear the date",
     "chooseOption": "Choose an option",
     "noOptions": "Nothing to choose from yet.",
     "counter": "{count} / {max}",

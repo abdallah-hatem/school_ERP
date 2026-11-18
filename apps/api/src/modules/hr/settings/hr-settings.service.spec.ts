@@ -34,12 +34,27 @@ const DEFAULTS = {
   },
   payroll: { dayDivisor: 30, partTime: { PART_TIME_4: 80, PART_TIME_3: 60, PART_TIME_2: 40 } },
   penalties: { repetitionWindow: 'CONTRACT_YEAR' },
+  employees: { defaultProbationMonths: 3 },
 };
 
 describe('HrSettingsService', () => {
   it('returns the §7 defaults when nothing is stored', async () => {
     const { service } = makeService();
     await expect(service.get()).resolves.toEqual(DEFAULTS);
+  });
+
+  it('N0 — the default probation length is 3 months; a stored one wins', async () => {
+    await expect(makeService().service.defaultProbationMonths()).resolves.toBe(3);
+    const stored = makeService([{ key: 'hr.employees.defaultProbationMonths', value: 0 }]);
+    await expect(stored.service.defaultProbationMonths()).resolves.toBe(0);
+    expect((await stored.service.get()).employees).toEqual({ defaultProbationMonths: 0 });
+  });
+
+  it('N0 — changing the probation length hands only that key to core (one hr.settings.update entry)', async () => {
+    const { service, settings } = makeService();
+    const result = await service.update({ employees: { defaultProbationMonths: 6 } }, 'user-1');
+    expect(result.employees.defaultProbationMonths).toBe(6);
+    expect(settings.setValues).toHaveBeenCalledWith('hr', { 'hr.employees.defaultProbationMonths': 6 }, 'user-1');
   });
 
   it('stored values win over defaults; a part-time key missing from storage falls back', async () => {

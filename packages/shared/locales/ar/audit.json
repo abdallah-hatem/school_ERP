@@ -139,6 +139,7 @@
     "fingerprintId": "رقم البصمة",
     "contractStart": "بداية العقد",
     "contractEnd": "نهاية العقد",
+    "probationEnd": "نهاية فترة الاختبار",
     "usesBus": "يستخدم أتوبيس المدرسة",
     "photoUrl": "الصورة",
     "insuranceStatus": "حالة التأمين",
@@ -197,6 +198,9 @@
       },
       "penalties": {
         "repetitionWindow": "فترة تكرار الجزاءات"
+      },
+      "employees": {
+        "defaultProbationMonths": "مدة فترة الاختبار الافتراضية"
       },
       "departments": "القسم",
       "jobTitles": "المسمى الوظيفي",

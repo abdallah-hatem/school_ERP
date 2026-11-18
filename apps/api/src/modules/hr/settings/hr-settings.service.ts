@@ -41,7 +41,8 @@ function sortSteps(steps: readonly LatenessStep[]): LatenessStep[] {
 }
 
 /**
- * HR rule settings (§5, §6, §7): lateness rule, payroll rule, penalty repetition window. Stored one
+ * HR rule settings (§3, §5, §6, §7): lateness rule, payroll rule, penalty repetition window, a new
+ * employee's default probation length. Stored one
  * row per key with the §7 defaults behind them, through core's `SettingsService` (HR never writes
  * core's table). A save is one `hr.settings.update` audit entry listing the changed keys — the
  * Settings history (D9).
@@ -54,6 +55,11 @@ export class HrSettingsService {
     return this.toResponse(await this.load());
   }
 
+  /** A new employee's default probation length in months (§3, §7; 0 = no probation). */
+  async defaultProbationMonths(): Promise<number> {
+    return (await this.load())[HrSettingKey.EMPLOYEES_DEFAULT_PROBATION_MONTHS];
+  }
+
   /** When the rules a payroll run is calculated from last changed, or null (never: defaults). */
   payrollRulesChangedAt(): Promise<Date | null> {
     return this.settings.lastChangedAt(PAYROLL_RULE_KEYS);
@@ -63,7 +69,7 @@ export class HrSettingsService {
     const old = await this.load();
     const next: HrValues = { ...old };
 
-    const { lateness, payroll, penalties } = dto;
+    const { lateness, payroll, penalties, employees } = dto;
     if (lateness?.graceMinutes !== undefined) {
       next[HrSettingKey.LATENESS_GRACE_MINUTES] = lateness.graceMinutes;
     }
@@ -85,6 +91,9 @@ export class HrSettingsService {
     }
     if (penalties?.repetitionWindow !== undefined) {
       next[HrSettingKey.PENALTIES_REPETITION_WINDOW] = penalties.repetitionWindow;
+    }
+    if (employees?.defaultProbationMonths !== undefined) {
+      next[HrSettingKey.EMPLOYEES_DEFAULT_PROBATION_MONTHS] = employees.defaultProbationMonths;
     }
 
     const changed = HR_KEYS.filter((key) => canonical(old[key]) !== canonical(next[key]));
@@ -120,6 +129,7 @@ export class HrSettingsService {
         ]),
       ) as Record<PartTimeWorkSystem, number>,
       [HrSettingKey.PENALTIES_REPETITION_WINDOW]: pick(HrSettingKey.PENALTIES_REPETITION_WINDOW),
+      [HrSettingKey.EMPLOYEES_DEFAULT_PROBATION_MONTHS]: pick(HrSettingKey.EMPLOYEES_DEFAULT_PROBATION_MONTHS),
     };
   }
 
@@ -135,6 +145,7 @@ export class HrSettingsService {
         partTime: v[HrSettingKey.PAYROLL_PART_TIME],
       },
       penalties: { repetitionWindow: v[HrSettingKey.PENALTIES_REPETITION_WINDOW] },
+      employees: { defaultProbationMonths: v[HrSettingKey.EMPLOYEES_DEFAULT_PROBATION_MONTHS] },
     };
   }
 }

@@ -163,6 +163,62 @@ describe('EmployeeForm', () => {
     expect(screen.getByRole('combobox', { name: /Direct manager/ }).getAttribute('aria-invalid')).toBe('true');
   });
 
+  describe('probation end (§3, N0)', () => {
+    const probationField = () => screen.getByRole('button', { name: /Probation ends/ });
+
+    it('sits with the job fields, with the hint; editing shows the saved date', () => {
+      renderForm({ editing: employee });
+      expect(probationField().textContent).toContain('30 Nov 2020');
+      expect(screen.getByText('Filled from the hire date; change it if this employee’s probation differs.')).toBeTruthy();
+    });
+
+    it('a new employee starts with it empty: left so, the request leaves it to the API (filled from the hire date)', () => {
+      renderForm();
+      expect(probationField().textContent).toContain('Pick a day');
+    });
+
+    it('edge 5 — clearing it on an edit sends probationEnd: null only', async () => {
+      const user = userEvent.setup();
+      update.mockResolvedValue(ok({ ...employee, probationEnd: null }));
+      renderForm({ editing: employee });
+      await user.click(probationField());
+      await user.click(await screen.findByRole('button', { name: 'Clear the date' }));
+      expect(probationField().textContent).toContain('Pick a day');
+      await user.click(screen.getByRole('button', { name: 'Save changes' }));
+      await waitFor(() => expect(update).toHaveBeenCalledWith('e-mona', { probationEnd: null }));
+    });
+
+    it('an empty field has nothing to clear', async () => {
+      const user = userEvent.setup();
+      renderForm({ editing: { ...employee, probationEnd: null } });
+      await user.click(probationField());
+      await screen.findByRole('grid');
+      expect(screen.queryByRole('button', { name: 'Clear the date' })).toBeNull();
+    });
+
+    it('edge 4 — a refused date (PROBATION_BEFORE_HIRE) lands on the field', async () => {
+      const user = userEvent.setup();
+      update.mockResolvedValue({
+        success: false,
+        status: 400,
+        error: 'PROBATION_BEFORE_HIRE',
+        message: 'The probation end can’t be before the hire date.',
+      } as never);
+      renderForm({ editing: employee });
+      await user.click(probationField());
+      await user.click(await screen.findByRole('button', { name: 'Clear the date' }));
+      await user.click(screen.getByRole('button', { name: 'Save changes' }));
+      expect(await screen.findByText('The probation end can’t be before the hire date.')).toBeTruthy();
+      expect(probationField().getAttribute('aria-invalid')).toBe('true');
+    });
+
+    it('Arabic: the label and hint are translated', () => {
+      renderForm({ editing: employee, locale: 'ar' });
+      expect(screen.getByRole('button', { name: /نهاية فترة الاختبار/ })).toBeTruthy();
+      expect(screen.getByText('تُملأ من تاريخ التعيين؛ غيّرها إن كانت فترة اختبار هذا الموظف مختلفة.')).toBeTruthy();
+    });
+  });
+
   it('edit: Save stays disabled until something changes, and again once it is changed back', async () => {
     const user = userEvent.setup();
     renderForm({ editing: employee });

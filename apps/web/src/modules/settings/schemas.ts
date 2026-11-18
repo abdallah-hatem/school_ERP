@@ -80,6 +80,11 @@ export const hrRulesSchema = z.object({
   dayDivisor: wholeNumber(SETTING_LIMITS.dayDivisorMin, SETTING_LIMITS.dayDivisorMax, 'settings.errors.divisor'),
   partTime: z.object({ PART_TIME_4: percent(), PART_TIME_3: percent(), PART_TIME_2: percent() }),
   repetitionWindow: z.enum(RepetitionWindow, { error: required }),
+  defaultProbationMonths: wholeNumber(
+    SETTING_LIMITS.probationMonthsMin,
+    SETTING_LIMITS.probationMonthsMax,
+    'settings.errors.probationMonths',
+  ),
 });
 export type HrRulesFormValues = z.infer<typeof hrRulesSchema>;
 

@@ -40,6 +40,28 @@ describe('employee form rules (§3)', () => {
     expect(issues({ basicSalary: 0 })).toEqual([['basicSalary', 'employees.errors.salaryPositive']]);
   });
 
+  it('N0 — the probation end is optional, on or after the hire date', () => {
+    const base = employeeToForm(employee);
+    const issues = (values: object) =>
+      employeeFormSchema.safeParse({ ...base, ...values }).error?.issues.map((i) => [i.path.join('.'), i.message]) ?? [];
+    expect(issues({ probationEnd: null })).toEqual([]);
+    expect(issues({ probationEnd: base.hireDate })).toEqual([]);
+    expect(issues({ probationEnd: '2020-08-31' })).toEqual([['probationEnd', 'employees.errors.probationBeforeHire']]);
+    // A hire date moved past it (edge 6: the date doesn't follow) is caught before saving.
+    expect(issues({ hireDate: '2021-01-01' })).toEqual([['probationEnd', 'employees.errors.probationBeforeHire']]);
+  });
+
+  it('N0 — a new employee starts with it empty (the API fills it); an edit sends a change or a clear', () => {
+    expect(emptyEmployeeForm('2026-11-17').probationEnd).toBeNull();
+    const initial = employeeToForm(employee);
+    expect(initial.probationEnd).toBe('2020-11-30');
+    expect(formToRequest(initial).probationEnd).toBe('2020-11-30');
+    expect(formToUpdate({ ...initial, probationEnd: '2020-12-31' }, initial)).toEqual({ probationEnd: '2020-12-31' });
+    expect(formToUpdate({ ...initial, probationEnd: null }, initial)).toEqual({ probationEnd: null });
+    // A changed hire date doesn't send the probation end (edge 6).
+    expect(formToUpdate({ ...initial, hireDate: '2020-10-01' }, initial)).toEqual({ hireDate: '2020-10-01' });
+  });
+
   it('an edit sends only what changed; clearing an optional field sends null', () => {
     const initial = employeeToForm(employee);
     expect(formToUpdate(initial, initial)).toEqual({});
@@ -54,6 +76,7 @@ describe('employee form rules (§3)', () => {
   it('server error codes that belong to a field', () => {
     expect(fieldForError('DUPLICATE_NATIONAL_ID')).toBe('nationalId');
     expect(fieldForError('MANAGER_LOOP')).toBe('managerId');
+    expect(fieldForError('PROBATION_BEFORE_HIRE')).toBe('probationEnd');
     expect(fieldForError('PAYROLL_APPROVED')).toBeUndefined();
   });
 

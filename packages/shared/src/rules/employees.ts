@@ -31,3 +31,20 @@ export function oneYearContractEnd(start: IsoDate): IsoDate {
   const [y, m, d] = start.split('-').map(Number) as [number, number, number];
   return new Date(Date.UTC(y + 1, m - 1, d - 1)).toISOString().slice(0, 10);
 }
+
+/**
+ * The probation end a new employee gets when none is given (§3, owner 2026-11-18): the day before
+ * the date `months` months after the hire date (hired 1 Sep, 3 months → 30 Nov). A day the target
+ * month doesn't have counts as its last day (hired 30 Nov → 28 Feb, so 27 Feb; GUESS). `0` months
+ * means no probation: `null`.
+ */
+export function defaultProbationEnd(hireDate: IsoDate, months: number): IsoDate | null {
+  if (months <= 0) return null;
+  const [y, m, d] = hireDate.split('-').map(Number) as [number, number, number];
+  const lastDay = new Date(Date.UTC(y, m - 1 + months + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(y, m - 1 + months, Math.min(d, lastDay) - 1)).toISOString().slice(0, 10);
+}
+
+/** §3: a probation end is on or after the hire date. */
+export const isProbationEndValid = (hireDate: IsoDate, probationEnd: IsoDate | null): boolean =>
+  probationEnd === null || probationEnd >= hireDate;
