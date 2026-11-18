@@ -270,6 +270,9 @@ phase live in `docs/build-log/`.
   "View school structure" / "View penalty catalogue" from Stage head or Direct manager in
   Administration → Roles if a school wants; no code change. Notifications N0 (probation end) and
   N1 (core) started.
+- 2026-11-18 — Ownership (owner): Abdallah now does T29/T31 (penalties audit, Activity search),
+  the accounting payroll-taxes screen, notifications and events/outbox; Tamer does the payroll-run
+  rules snapshot and reviews his listener in #119. T29 started.
 
 ## Next up
 
@@ -287,7 +290,7 @@ phase live in `docs/build-log/`.
   off, retention 90 / 30 / 365 days, contract reminders at 30 and 7 days, Settings → Notifications
   changed by the System admin and seen by the HR manager.
 
-- **Accounting payroll taxes screen** — a page per approved month (net, insurance share, income tax,
+- **Accounting payroll taxes screen** (Abdallah) — a page per approved month (net, insurance share, income tax,
   fund, gross per employee) and a sidebar entry: **mockups first** (CLAUDE.md rule 9). The API
   (`GET /accounting/payroll[/:month]`) is built. Tax defaults are GUESS until the accountant confirms.
 - Accounting settings, from the #84 review (optional): `AccountingSettingsService.update()` now
@@ -297,7 +300,7 @@ phase live in `docs/build-log/`.
 - **Before Sunday (owner):** on the demo DB run `prisma migrate deploy`, then `db:seed` once with the
   same `SEED_ADMIN_PASSWORD`. Activity in the demo: settings, sign-ins, employees and HR rules are recorded; penalties, lateness
   and payroll only once T29 lands.
-- Payroll runs could keep a snapshot of the rules they were calculated with (Tamer to decide); today
+- Payroll runs could keep a snapshot of the rules they were calculated with (**Tamer**, told 2026-11-18); today
   an approved run shows current rules.
 - Dry-run follow-ups (2026-11-18): the eight polish items are fixed in #99. Still open: Activity
   search in Arabic doesn't find pre-17th entries; the lateness page itself doesn't show
@@ -309,8 +312,7 @@ phase live in `docs/build-log/`.
   no screen yet; add them to Settings → School if a school wants to change them.
 
 - Hosting the demo on the Contabo server (owner: later; local demo is the fallback).
-- Audit log T28 done (#107); T29 (Tamer: penalties, lateness,
-  payroll), then T31 verify. Optional CI ratchet that forbids touching an unwired endpoint (owner: docs only for now). Follow-ups from T30 still open: penalties don't appear on the employee's History (T29); the payroll
+- Audit log T28 done (#107); T29 (Abdallah, being built: penalties) and T31 verify. Optional CI ratchet that forbids touching an unwired endpoint (owner: docs only for now). Follow-ups from T30 still open: penalties don't appear on the employee's History (T29); the payroll
   run page has no History tab yet.
 
 - Optional: server-side paging for lateness (loads the whole month today) and column sorting.
