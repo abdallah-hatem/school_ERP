@@ -80,7 +80,14 @@
     "adjustFor": "Adjustments for {name}",
     "payslip": "Payslip",
     "payslipFor": "Payslip for {name}",
-    "days": "{days} d"
+    "days": {
+      "zero": "{count} d",
+      "one": "{count} d",
+      "two": "{count} d",
+      "few": "{count} d",
+      "many": "{count} d",
+      "other": "{count} d"
+    }
   },
   "filters": {
     "searchLabel": "Search employees",
@@ -164,7 +171,14 @@
     "noPenalties": "No penalties this month.",
     "penaltyShareNote": "Each penalty's amount is its share of the penalty deduction; the total is what is deducted.",
     "lateness": "Lateness",
-    "latenessDetail": "{minutes} minutes = {days}",
+    "latenessDetail": {
+      "zero": "{count} minutes = {days}",
+      "one": "{count} minute = {days}",
+      "two": "{count} minutes = {days}",
+      "few": "{count} minutes = {days}",
+      "many": "{count} minutes = {days}",
+      "other": "{count} minutes = {days}"
+    },
     "adjustments": "Adjustments",
     "noAdjustments": "No adjustments this month.",
     "totalPenalties": "Penalty deductions",

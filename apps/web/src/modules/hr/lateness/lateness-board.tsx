@@ -280,8 +280,9 @@ export function LatenessBoard({ month, maxMonth, rows: initialRows, rule, locked
               {rows ? (
                 <p data-testid="lateness-summary" className="ms-auto text-sm font-semibold text-muted-foreground">
                   {t('lateness.summary', {
-                    employees: formatCount(rows.length),
-                    minutes: formatCount(state.totalMinutes),
+                    // Each count agrees with its own noun (Arabic plural forms).
+                    employees: t('lateness.summaryEmployees', { count: formatCount(rows.length) }),
+                    minutes: t('lateness.summaryMinutes', { count: formatCount(state.totalMinutes) }),
                     days: state.totalDays === null ? '—' : formatDayCount(state.totalDays, locale),
                   })}
                 </p>

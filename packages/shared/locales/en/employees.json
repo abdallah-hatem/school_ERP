@@ -15,7 +15,14 @@
     "emptyBody": "Add the first employee to start building the staff list.",
     "noResultsTitle": "No employees match",
     "noResultsBody": "Try another search, or clear the filters to see everyone.",
-    "count": "{count} employees"
+    "count": {
+      "zero": "{count} employees",
+      "one": "{count} employee",
+      "two": "{count} employees",
+      "few": "{count} employees",
+      "many": "{count} employees",
+      "other": "{count} employees"
+    }
   },
   "columns": {
     "employee": "Employee",

@@ -34,6 +34,51 @@ describe('locales', () => {
     expect(keys(load('ar', file)).sort()).toEqual(keys(load('en', file)).sort());
   });
 
+  /*
+   * Arabic counts agree with their noun ("10 مخالفات", "11 مخالفة", "38 موظفًا"), so a message that
+   * puts {count} before a noun must be plural forms — zero, one, two, few (3–10), many (11–99),
+   * other — picked by `Intl.PluralRules('ar')`. The few listed here use {count} as a bare number.
+   */
+  const PLURAL_FORMS = ['few', 'many', 'one', 'other', 'two', 'zero'];
+  const BARE_COUNTS = [
+    'access.json:roleForm.groupCount',
+    'audit.json:filters.openCount',
+    'audit.json:timeline.more',
+    'lateness.json:saveCount',
+    'payroll.json:approve.pendingBody',
+    'ui.json:filters.clearCount',
+    'ui.json:form.counter',
+    'ui.json:table.pageOf',
+  ];
+
+  function walk(tree: Tree, visit: (path: string, node: string | Tree) => void, prefix = ''): void {
+    for (const [k, v] of Object.entries(tree)) {
+      const path = `${prefix}${k}`;
+      visit(path, v);
+      if (typeof v === 'object' && typeof v.other !== 'string') walk(v, visit, `${path}.`);
+    }
+  }
+
+  it.each(files)('%s: every Arabic count before a noun has the six plural forms', (file) => {
+    const bare: string[] = [];
+    walk(load('ar', file), (path, node) => {
+      if (typeof node === 'string' && /\{count\}/.test(node) && !BARE_COUNTS.includes(`${file}:${path}`)) {
+        bare.push(`${path}: ${node}`);
+      }
+    });
+    expect(bare).toEqual([]);
+  });
+
+  it.each(files)('%s: plural messages have all six forms in both languages', (file) => {
+    for (const lang of ['en', 'ar']) {
+      walk(load(lang, file), (path, node) => {
+        if (typeof node === 'object' && typeof node.other === 'string') {
+          expect({ path, forms: Object.keys(node).sort() }).toEqual({ path, forms: PLURAL_FORMS });
+        }
+      });
+    }
+  });
+
   it('every error code has a translated message', () => {
     const errorKeys = Object.keys(load('en', 'errors.json'));
     expect(errorKeys.sort()).toEqual([...ERROR_CODES].sort());
