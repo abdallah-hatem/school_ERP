@@ -393,6 +393,27 @@ export function isMoneyEntry(entry: Pick<AuditEntry, 'action' | 'changes'>): boo
 }
 
 /**
+ * The parts of a run's `totals` (HR's `PayrollTotals`, accounting's `AccountingPayrollTotals`), in
+ * the order the timeline lists them: money in piastres, counts as whole numbers. Each has a label
+ * under `audit.totals.<part>`. A part not listed still reads (as a plain value), after these.
+ */
+export const AUDIT_TOTAL_PARTS = {
+  net: 'money',
+  employees: 'count',
+  flagged: 'count',
+  monthSalary: 'money',
+  gross: 'money',
+  penaltyAmount: 'money',
+  latenessAmount: 'money',
+  adjustmentAdditions: 'money',
+  adjustmentDeductions: 'money',
+  incomeTax: 'money',
+  martyrTax: 'money',
+  insuranceAmount: 'money',
+} as const satisfies Record<string, 'money' | 'count'>;
+export type AuditTotalPart = keyof typeof AUDIT_TOTAL_PARTS;
+
+/**
  * Fields whose values are salary-type (R7): the money fields plus the employee's insured salary and
  * bank details. A viewer without `hr.employees.view_salary` (scope `all` — the log is school-wide)
  * gets these changes with `hidden: true` and no `before` / `after`: the timeline says the field

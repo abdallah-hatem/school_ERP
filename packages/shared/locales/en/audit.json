@@ -243,6 +243,20 @@
       }
     }
   },
+  "totals": {
+    "net": "Net",
+    "employees": "Employees",
+    "flagged": "Need review",
+    "monthSalary": "Salaries",
+    "gross": "Gross salaries",
+    "penaltyAmount": "Penalties",
+    "latenessAmount": "Lateness",
+    "adjustmentAdditions": "Additions",
+    "adjustmentDeductions": "Deductions",
+    "incomeTax": "Income tax",
+    "martyrTax": "Martyrs' fund",
+    "insuranceAmount": "Employee insurance"
+  },
   "activity": {
     "description": "Every change and sign-in across the school, newest first. Entries can't be edited or deleted.",
     "label": "Activity timeline",

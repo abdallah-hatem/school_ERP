@@ -33,8 +33,9 @@ import {
   formatAuditValue,
   isFailedSignIn,
   isMoneyField,
-  labelIn,
+  isMonthRecord,
   recordHref,
+  recordLabel,
   type ChangeRow,
 } from '../lib/entry-text';
 import {
@@ -104,7 +105,10 @@ function Sentence({
   const text = entrySentence({ action: entry.action, entityLabel: TEXT_SLOT }, t, locale);
   // English sentences start with a capital; after the actor's name ("Mona changed…") it is lowered.
   const sentence = lowerFirst ? text.charAt(0).toLowerCase() + text.slice(1) : text;
-  const label = <bdi className="font-bold">{labelIn(entry.entityLabel, locale)}</bdi>;
+  // A month ("November 2026") never breaks across lines.
+  const label = (
+    <bdi className={cn('font-bold', isMonthRecord(entry) && 'whitespace-nowrap')}>{recordLabel(entry, locale)}</bdi>
+  );
   return (
     <SlotText
       text={sentence}
