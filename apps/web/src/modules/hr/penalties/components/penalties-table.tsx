@@ -96,6 +96,8 @@ export function PenaltiesTable({
       id: 'action',
       header: t('penalties.columns.levelAction'),
       className: 'min-w-36 whitespace-normal',
+      // "Deduct 0.25 day from salary" doesn't fit half a phone card: across it, like the violation.
+      card: 'wide',
       skeleton: (
         <span className="flex flex-col gap-0.5">
           <SkeletonText className="text-xs" width="w-14" />

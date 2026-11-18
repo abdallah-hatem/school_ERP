@@ -43,9 +43,9 @@ import {
   RecalculateIcon,
   SearchIcon,
 } from '@/shared/components/ui/icons';
-import { SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
+import { SkeletonPill, SkeletonProse, SkeletonText } from '@/shared/components/ui/skeleton';
 import { SlotText, TEXT_SLOT } from '@/shared/components/ui/slot-text';
-import { StatTile, StatTileSubSkeleton } from '@/shared/components/ui/stat-tile';
+import { StatTile } from '@/shared/components/ui/stat-tile';
 import { StatusPill } from '@/shared/components/ui/status-pill';
 import { Switch } from '@/shared/components/ui/switch';
 import { useNewestServerState } from '@/shared/hooks/use-newest-server-state';
@@ -591,14 +591,26 @@ export function runColumn(id: RunColumnId, t: Translate) {
 }
 
 /** The four figures (Net first on phones); `undefined` while the run loads. */
+/** A month's totals as a school's usually read (the tiles' loading shape). */
+const TYPICAL_TOTALS: PayrollRun['totals'] = {
+  employees: 40,
+  flagged: 2,
+  monthSalary: 35_158_000,
+  penaltyAmount: 128_000,
+  latenessAmount: 268_502,
+  adjustmentAdditions: 75_000,
+  adjustmentDeductions: 30_000,
+  net: 34_806_498,
+};
+
 export function RunTiles({ totals }: { totals: PayrollRun['totals'] | undefined }) {
   const { t } = useTranslation();
   const money = (value: number | undefined) => (value === undefined ? formatMoney(value) : `${t('ui.units.currency')} ${formatMoney(value)}`);
   const loading = totals === undefined;
-  /** The sub line, or bars in its place (one per line the loaded text usually takes). */
-  // While loading: as many bars as the text usually takes, more in a half-width phone tile.
-  const sub = (text: (x: PayrollRun['totals']) => string, lines: number, narrowLines: number, feature = false) =>
-    totals ? text(totals) : <StatTileSubSkeleton lines={lines} narrowLines={narrowLines} feature={feature} />;
+  // While loading: each sub line is its own sentence worded with typical figures, drawn as bars,
+  // so it wraps onto as many lines as the loaded one in every tile width and language.
+  const sub = (text: (x: PayrollRun['totals']) => string, feature = false) =>
+    totals ? text(totals) : <SkeletonProse className={feature ? 'bg-primary-foreground/20' : undefined}>{text(TYPICAL_TOTALS)}</SkeletonProse>;
   return (
     // Two by two from phone width (Net first), four across on wide screens — like the dashboard.
     <div data-skeleton-block="tiles" className="grid grid-cols-1 gap-3 @min-[320px]:grid-cols-2 @min-[520px]:gap-4 @min-[1080px]:grid-cols-4">
@@ -612,8 +624,6 @@ export function RunTiles({ totals }: { totals: PayrollRun['totals'] | undefined 
             ready: formatCount(x.employees - x.flagged),
             review: formatCount(x.flagged),
           }),
-          1,
-          3,
         )}
         loading={loading}
       />
@@ -623,7 +633,7 @@ export function RunTiles({ totals }: { totals: PayrollRun['totals'] | undefined 
         label={t('payroll.tiles.gross')}
         unit={t('ui.units.currency')}
         value={totals ? formatMoney(totals.monthSalary) : null}
-        sub={sub(() => t('payroll.tiles.grossSub'), 1, 2)}
+        sub={sub(() => t('payroll.tiles.grossSub'))}
         loading={loading}
       />
       <StatTile
@@ -639,8 +649,6 @@ export function RunTiles({ totals }: { totals: PayrollRun['totals'] | undefined 
               lateness: money(x.latenessAmount),
               adjustments: money(x.adjustmentDeductions),
             }),
-          2,
-          3,
         )}
         loading={loading}
       />
@@ -651,7 +659,7 @@ export function RunTiles({ totals }: { totals: PayrollRun['totals'] | undefined 
         label={t('payroll.tiles.net')}
         unit={t('ui.units.currency')}
         value={totals ? formatMoney(totals.net) : null}
-        sub={sub((x) => t('payroll.tiles.netSub', { additions: money(x.adjustmentAdditions) }), 1, 3, true)}
+        sub={sub((x) => t('payroll.tiles.netSub', { additions: money(x.adjustmentAdditions) }), true)}
         loading={loading}
       />
     </div>
@@ -689,7 +697,8 @@ export function RunLinesToolbar({
       <div className="flex w-full flex-wrap items-baseline gap-x-3 gap-y-1">
         <h2 className="font-display text-lg font-extrabold">{t('payroll.table.heading')}</h2>
         {count === null ? (
-          <SkeletonText className="text-sm" width="w-32" />
+          // "38 of 38": short, so it stays beside the heading as the loaded count does.
+          <SkeletonText className="text-sm" width="w-16" />
         ) : (
           <p data-testid="lines-count" className="text-muted-foreground text-sm">
             {count}

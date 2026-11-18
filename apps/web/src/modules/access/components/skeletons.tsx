@@ -6,7 +6,10 @@ import { FieldShell } from '@/shared/components/form/field-shell';
 import { Form } from '@/shared/components/form/form';
 import { FormActionBar } from '@/shared/components/form/form-action-bar';
 import { PageHeader } from '@/shared/components/layout/page-header';
-import { Skeleton, SkeletonIdentity, SkeletonMask, SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
+import { Button } from '@/shared/components/ui/button';
+import { AddUserIcon, ReadyIcon } from '@/shared/components/ui/icons';
+import { formatCount } from '@/shared/lib/format';
+import { Skeleton, SkeletonIdentity, SkeletonMask, SkeletonPill, SkeletonProse, SkeletonText } from '@/shared/components/ui/skeleton';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { parseUsersQuery } from '../lib/users-query';
 import { AccessI18n } from '../messages';
@@ -80,12 +83,17 @@ function LoadingStatus() {
   );
 }
 
-function Header({ crumb }: { crumb?: 'users' | 'roles' }) {
+/**
+ * The page header with the loaded title and description drawn as bars of their own text, so they
+ * wrap where the loaded ones do; a record's name (not known yet) is a short bar.
+ */
+function Header({ crumb, title, description, status }: { crumb?: 'users' | 'roles'; title?: string; description: string; status?: boolean }) {
   const { t } = useTranslation();
   return (
     <PageHeader
-      title={<SkeletonText width="w-40" />}
-      description={<SkeletonText width="w-96" />}
+      title={title ? <SkeletonProse>{title}</SkeletonProse> : <SkeletonText width="w-40" />}
+      status={status ? <SkeletonPill /> : undefined}
+      description={<SkeletonProse>{description}</SkeletonProse>}
       breadcrumbs={
         crumb ? [{ label: t('access.administration') }, { label: t(`access.${crumb}.title`) }, { label: ' ' }] : undefined
       }
@@ -113,11 +121,35 @@ function Masked({ children }: { children: ReactNode }) {
   );
 }
 
-function SaveBar() {
+/**
+ * The form's Save bar with its real status line and buttons — the skeleton's `<Form>` is masked,
+ * so they are pulsing blocks of the loaded widths and the bar wraps where the loaded one does.
+ */
+function SaveBar({ kind, adding }: { kind: 'user' | 'role'; adding: boolean }) {
+  const { t } = useTranslation();
+  const status = !adding ? (
+    <p role="status" className="text-muted-foreground">
+      {t('access.userForm.noChanges')}
+    </p>
+  ) : kind === 'user' ? (
+    <p role="status" className="flex items-center gap-1.5 text-muted-foreground max-sm:sr-only">
+      <ReadyIcon className="size-4" />
+      {t('access.userForm.requiredMissing')}
+    </p>
+  ) : (
+    <p role="status" className="text-muted-foreground">
+      {t('access.roles.permissionCount', { count: formatCount(0) })}
+    </p>
+  );
   return (
-    <FormActionBar status={<SkeletonText className="text-sm" width="w-36" />}>
-      <Skeleton className="h-11 w-24 rounded-lg" />
-      <Skeleton className="h-11 w-36 rounded-lg" />
+    <FormActionBar status={status}>
+      <Button type="button" variant="secondary" tabIndex={-1}>
+        {t('common.actions.cancel')}
+      </Button>
+      <Button type="button" variant="primary" tabIndex={-1}>
+        {kind === 'user' && adding ? <AddUserIcon /> : null}
+        {t(adding ? `access.${kind}Form.create` : `access.${kind}Form.save`)}
+      </Button>
     </FormActionBar>
   );
 }
@@ -148,8 +180,12 @@ function UserSkeleton({ adding }: { adding: boolean }) {
   );
   return (
     <>
-      <Header crumb="users" />
-      <Form aria-hidden="true">
+      <Header
+        crumb="users"
+        title={adding ? t('access.userForm.addTitle') : undefined}
+        description={t(adding ? 'access.userForm.addDescription' : 'access.userForm.editDescription')}
+      />
+      <Form aria-hidden="true" inert className="skeleton-mask">
         <FormColumns
           main={
             adding ? (
@@ -190,7 +226,7 @@ function UserSkeleton({ adding }: { adding: boolean }) {
             )
           }
         />
-        <SaveBar />
+        <SaveBar kind="user" adding={adding} />
       </Form>
     </>
   );
@@ -200,8 +236,13 @@ function RoleSkeleton({ adding }: { adding: boolean }) {
   const { t } = useTranslation();
   return (
     <>
-      <Header crumb="roles" />
-      <Form aria-hidden="true">
+      <Header
+        crumb="roles"
+        title={adding ? t('access.roleForm.addTitle') : undefined}
+        status={!adding}
+        description={t(adding ? 'access.roleForm.addDescription' : 'access.roleForm.description')}
+      />
+      <Form aria-hidden="true" inert className="skeleton-mask">
         <FormColumns
           main={
             <>
@@ -236,7 +277,7 @@ function RoleSkeleton({ adding }: { adding: boolean }) {
             </>
           }
         />
-        <SaveBar />
+        <SaveBar kind="role" adding={adding} />
       </Form>
     </>
   );
@@ -246,7 +287,7 @@ function AccountSkeleton() {
   const { t } = useTranslation();
   return (
     <>
-      <Header />
+      <Header title={t('access.account.title')} description={t('access.account.description')} />
       <FormColumns
         main={
           <>

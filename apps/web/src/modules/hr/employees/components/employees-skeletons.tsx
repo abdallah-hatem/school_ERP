@@ -5,7 +5,7 @@ import { useParams, usePathname, useSearchParams } from 'next/navigation';
 import { useCan } from '@/core/auth';
 import type { ReactNode } from 'react';
 import { PageHeader } from '@/shared/components/layout/page-header';
-import { Skeleton, SkeletonMask, SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
+import { Skeleton, SkeletonMask, SkeletonPill, SkeletonProse, SkeletonText } from '@/shared/components/ui/skeleton';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { parseEmployeesQuery } from '../lib/list-query';
 import { EmployeesI18n } from '../messages';
@@ -191,7 +191,8 @@ function FormSkeleton() {
         header={
           <PageHeader
             title={<SkeletonText width="w-48" />}
-            description={<SkeletonText width="w-64" />}
+            // The line the loaded header has, as bars, so it wraps where that one does.
+            description={<SkeletonProse>{editing ? 'Xxxxxx Xxxxxxx Xxxxxxx · EMP-0000' : t('employees.create.description')}</SkeletonProse>}
             breadcrumbs={[{ label: t('employees.title'), href: basePath }, { label: ' ' }]}
             breadcrumbsLabel={t('ui.shell.breadcrumbs')}
           />

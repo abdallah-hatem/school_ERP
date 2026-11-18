@@ -204,11 +204,11 @@ export function RecordHistorySkeleton() {
   );
 }
 
-/** A typical record name's length, for the description's shape while the record loads. */
-const NAME_SHAPE = 'Xxxxxx Xxxxxxx Xxxxxxx';
+/** A typical record name's length in each script, for the description's shape while it loads. */
+const NAME_SHAPE = { en: 'Xxxxxx Xxxxxxx Xxxxxxx', ar: 'سسسس سسسس سسسسس' } as const;
 
 function HistorySkeleton() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   return (
     <div aria-busy="true" className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_17.5rem]">
       <div
@@ -234,7 +234,7 @@ function HistorySkeleton() {
             <h2 className="font-display text-lg font-extrabold">{t('audit.history.title')}</h2>
             {/* The real sentence with a name-shaped gap, as bars: it wraps where the loaded one does. */}
             <p className="text-sm">
-              <SkeletonProse>{t('audit.history.description', { name: NAME_SHAPE })}</SkeletonProse>
+              <SkeletonProse>{t('audit.history.description', { name: NAME_SHAPE[locale] })}</SkeletonProse>
             </p>
           </div>
           <Skeleton className="h-11 w-12 shrink-0 rounded-lg lg:hidden" />
