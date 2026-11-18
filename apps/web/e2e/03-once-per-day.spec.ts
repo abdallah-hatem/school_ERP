@@ -61,7 +61,9 @@ test('once per day: the same violation twice on one day for one employee → the
     const message = t('en', 'errors.VIOLATION_ONCE_PER_DAY');
     await expect(dialog.getByTestId('penalty-preview')).toHaveText(message);
     await dialog.getByRole('button', { name: t('en', 'penalties.form.save') }).click();
-    await expect(dialog.getByText(message)).toHaveCount(2);
+    // Shown once (dry run 2026-11-18): under the date, the preview stepping aside.
+    await expect(dialog.getByText(message)).toHaveCount(1);
+    await expect(dialog.getByTestId('penalty-preview')).toHaveCount(0);
     await expect(dialog).toBeVisible();
     await settle(page);
     await shoot(page, info, 'once-per-day-refused');

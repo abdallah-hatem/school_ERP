@@ -20,6 +20,10 @@ lines each role sees: §2 Roles (enforced, P4).
   penalties, lateness and adjustments. An approved run
   is never edited or deleted; corrections go into the next month as adjustments.
 - **DECIDED** — A month can't be approved while it still has **pending** penalties.
+- **DECIDED** (demo dry run, 2026-11-18) — A draft run says when the **HR rules** it is calculated
+  from (the lateness rule and the payroll rule, §5, §7) changed after its last calculation, and
+  offers **Recalculate**. The penalty repetition window doesn't count: it sets a penalty's level when
+  the penalty is recorded, not the run.
 - **GUESS** (2026-11-18, §2) — Adding or removing an **adjustment** needs the "Adjust payroll"
   permission (System admin, HR manager, HR officer). Without it, a draft's adjustments can be
   opened and read but not changed, and the screen says why.
@@ -63,6 +67,9 @@ lines each role sees: §2 Roles (enforced, P4).
 - **DECIDED** — **Payslip** per employee for an approved run, printable, in Arabic or English: salary,
   each penalty with its level, action and days, lateness, adjustments, net. Penalties that cost
   nothing (notice, warning, raise-related…) are listed with amount 0 so the employee sees them.
+  Lateness shows the grace minutes taken off (§5): "130 minutes − 30 minutes grace = 100 minutes =
+  0.75 day". Each line keeps the grace of its calculation; a line calculated before 2026-11-18
+  shows the minutes alone until it is recalculated.
 - **DECIDED** — A penalty's amount on the payslip is its share of the line's penalty deduction
   (its days ÷ the line's penalty days × the line's penalty amount). The shares can differ from the
   line total by a piastre; the line total is what is paid.
@@ -74,7 +81,11 @@ lines each role sees: §2 Roles (enforced, P4).
   approval is saved. Accounting works out the month's insurance share, income tax, martyrs' fund
   and gross from it (§10); HR payroll itself ends at the net.
 - **DECIDED** — **Bank sheet** export of an approved run (Excel): employee code, name, national ID,
-  net. The employee's bank details are recorded (§3); adding them to the sheet is Planned.
+  bank, account number, IBAN, net, then a **Total** row (the sum of the nets = the run's net). Its
+  export needs every salary (§2), which covers the bank details (§3).
+- **GUESS** (demo dry run, 2026-11-18) — The bank details are the ones on the employee's record when
+  the sheet is exported (the account the money goes to now), not a copy taken at approval; an
+  employee with none on file has empty cells.
 - **Planned** — allowances, the annual raise, the exam bonus rules, loans.
 - **DECIDED** — Salaries are **net, grossed up** (owner, 2026-11-17): the employee's
   social-insurance share, income tax and the martyrs' fund are not deducted here — the school pays

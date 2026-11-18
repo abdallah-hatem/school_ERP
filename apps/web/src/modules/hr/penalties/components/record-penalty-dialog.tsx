@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import type { PenaltyPreview } from '@school-erp/shared';
 import { useRouter } from 'next/navigation';
 import { useEffect, useId, useRef, useState } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { useForm, useFormState, useWatch } from 'react-hook-form';
 import { callApi } from '@/lib/callApi';
 import { DateField, SelectField, TextareaField, type SelectOption, type SelectOptionGroup } from '@/shared/components/form/fields';
 import { Form } from '@/shared/components/form/form';
@@ -74,6 +74,12 @@ export function RecordPenaltyDialog({ open, onOpenChange, employees, violations,
       : null;
   const preview: PreviewState =
     previewKey === null ? { kind: 'idle' } : answer?.key === previewKey ? answer.state : { kind: 'loading' };
+  // A refused save puts its rule error under its field (once per day → the date). When the preview
+  // already says the same, it steps aside: the message shows once (dry run 2026-11-18).
+  const { errors } = useFormState({ control });
+  const previewRepeatsFieldError =
+    preview.kind === 'error' &&
+    Object.values(errors).some((error) => error?.message === preview.message);
 
   // Live preview: one request per change of employee, violation or date; a slower earlier answer
   // never overwrites a later one.
@@ -191,7 +197,7 @@ export function RecordPenaltyDialog({ open, onOpenChange, employees, violations,
             hint={t('penalties.form.dateHint')}
             max={todayIso()}
           />
-          <PreviewLine state={preview} />
+          {previewRepeatsFieldError ? null : <PreviewLine state={preview} />}
           <TextareaField
             control={control}
             name="note"

@@ -238,7 +238,7 @@ describe('EmployeeForm — photo (§3)', () => {
     await waitFor(() => expect(remove).toHaveBeenCalledWith('e-mona'));
     expect(await screen.findByText('Photo removed.')).toBeTruthy();
     expect(screen.getByTestId('photo-status').textContent).toBe(
-      'No photo yet. A neutral silhouette is shown until you add one.',
+      'No photo yet. A male or female silhouette is shown until you add one.',
     );
   });
 

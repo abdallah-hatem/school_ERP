@@ -400,6 +400,11 @@ export interface PayrollLine extends Names, SalaryVisibility {
   penaltyDays: Days;
   penaltyAmount?: Piastres;
   latenessMinutes: number;
+  /**
+   * The lateness grace taken off `latenessMinutes` at calculation (§5); null on a line calculated
+   * before it was kept.
+   */
+  latenessGraceMinutes: number | null;
   latenessDays: Days;
   latenessAmount?: Piastres;
   adjustmentAdditions?: Piastres;
@@ -446,6 +451,13 @@ export interface PayrollRun extends PayrollRunSummary {
    * lines' `PENDING_PENALTIES` flags, which reflect the last calculation.
    */
   pendingPenalties: number;
+  /** When the lines were last calculated (create, Recalculate, approve). */
+  calculatedAt: IsoDateTime;
+  /**
+   * A DRAFT run whose lateness or payroll rules (HR settings) changed after `calculatedAt`: a
+   * Recalculate is due. Always false on an approved run.
+   */
+  rulesChanged: boolean;
   /**
    * The HR rules behind the run's figures, for its "rules applied" panel — readable by anyone who
    * may view the run, without `hr.settings.view`. A run stores no copy of the rules, so these are

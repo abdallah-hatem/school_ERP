@@ -45,8 +45,9 @@ export function SchoolBrand({
       ) : (
         <FallbackMark className="size-11 shrink-0" />
       )}
-      <div className={cn('min-w-0', collapse === 'below-xl' && 'max-xl:sr-only')}>
-        <p className="font-display truncate text-base leading-tight font-extrabold" title={name}>
+      <div className={cn('min-w-0 flex-1', collapse === 'below-xl' && 'max-xl:sr-only')}>
+        {/* Up to two lines, never an ellipsis on a name that fits in two (long Arabic names). */}
+        <p className="font-display line-clamp-2 text-base leading-tight font-extrabold break-words text-balance" title={name}>
           {name}
         </p>
         {name !== productName ? <p className="truncate text-xs text-muted-foreground">{productName}</p> : null}

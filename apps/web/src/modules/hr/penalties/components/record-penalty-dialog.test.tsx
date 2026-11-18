@@ -227,7 +227,12 @@ describe('RecordPenaltyDialog', () => {
     await user.click(screen.getByRole('button', { name: 'Save as pending' }));
     expect(await screen.findByText('This employee is inactive.')).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Save as pending' }));
-    await waitFor(() => expect(screen.getAllByText("This violation is retired and can't be used.").length).toBe(2));
+    // Under the violation now, and only there: the preview steps aside rather than repeat it.
+    await waitFor(() =>
+      expect(screen.getByRole('combobox', { name: /Violation/ }).getAttribute('aria-invalid')).toBe('true'),
+    );
+    expect(screen.getAllByText("This violation is retired and can't be used.")).toHaveLength(1);
+    expect(screen.queryByTestId('penalty-preview')).toBeNull();
   });
 
   it('the violation picker searches English and Arabic names and group names', async () => {
@@ -255,7 +260,7 @@ describe('RecordPenaltyDialog', () => {
     expect(screen.getByText('لا توجد مخالفة مستخدمة تطابق البحث.')).toBeTruthy();
   });
 
-  it('once per day (§4): the preview says so before saving, and a refused save lands under the date', async () => {
+  it('once per day (§4): the preview says so before saving, and a refused save moves it under the date — shown once', async () => {
     const user = userEvent.setup();
     apis.GET_PENALTY_PREVIEW.mockResolvedValue(failure(409, 'VIOLATION_ONCE_PER_DAY'));
     apis.CREATE_PENALTY.mockResolvedValue(failure(409, 'VIOLATION_ONCE_PER_DAY'));
@@ -266,7 +271,10 @@ describe('RecordPenaltyDialog', () => {
     await waitFor(() => expect(previewLine()).toBe(message));
 
     await user.click(screen.getByRole('button', { name: 'Save as pending' }));
-    await waitFor(() => expect(screen.getAllByText(message)).toHaveLength(2));
+    // Once, not in the preview and under the date both (dry run 2026-11-18).
+    await waitFor(() => expect(screen.getByRole('button', { name: /Date of the violation/ }).getAttribute('aria-invalid')).toBe('true'));
+    expect(screen.getAllByText(message)).toHaveLength(1);
+    expect(screen.queryByTestId('penalty-preview')).toBeNull();
     // Under the date field (its error is tied to the date's trigger), not the form-level alert.
     const date = screen.getByRole('button', { name: /Date of the violation/ });
     expect(date.getAttribute('aria-invalid')).toBe('true');

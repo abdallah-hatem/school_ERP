@@ -157,6 +157,10 @@ export function RunPage({
   );
   const pendingNotice = !draft || approveError ? null : run.pendingPenalties > 0 ? 'pending' : staleFlags ? 'stale' : null;
   const pendingTitleId = useId();
+  // HR rules (lateness, payroll) changed after the last calculation (dry run 2026-11-18). Not shown
+  // beside the "stale" notice, which already offers Recalculate.
+  const rulesNotice = draft && !approveError && run.rulesChanged && pendingNotice !== 'stale';
+  const rulesTitleId = useId();
 
   const pageCount = Math.max(1, Math.ceil(run.lines.length / limit));
   const currentPage = Math.min(page, pageCount);
@@ -409,6 +413,34 @@ export function RunPage({
           >
             {t('payroll.approve.staleAction')}
           </Button>
+        </div>
+      ) : null}
+
+      {rulesNotice ? (
+        <div
+          role="note"
+          aria-labelledby={rulesTitleId}
+          data-testid="rules-changed-notice"
+          className="bg-info-soft text-info-ink flex flex-wrap items-start gap-3 rounded-2xl px-4 py-3.5"
+        >
+          <RecalculateIcon className="mt-0.5 size-5 shrink-0" />
+          <div className="flex min-w-0 flex-1 basis-56 flex-col gap-0.5">
+            <p id={rulesTitleId} className="font-bold">
+              {t('payroll.rulesChanged.title')}
+            </p>
+            <p className="text-sm">{t('payroll.rulesChanged.body')}</p>
+          </div>
+          <Can permission="hr.payroll.recalculate">
+            <Button
+              size="sm"
+              variant="secondary"
+              className="cursor-pointer"
+              loading={recalculating}
+              onClick={() => void recalculate()}
+            >
+              {t('payroll.approve.staleAction')}
+            </Button>
+          </Can>
         </div>
       ) : null}
 

@@ -13,7 +13,7 @@ import { ChevronStartIcon, PayslipIcon, PrintIcon } from '@/shared/components/ui
 import { Skeleton, SkeletonText } from '@/shared/components/ui/skeleton';
 import { apiErrorText } from '@/shared/lib/api-error';
 import { formatCount, formatDate, formatDayCount, formatMonth } from '@/shared/lib/format';
-import { localName, nameIn } from '@/shared/lib/i18n';
+import { localName, nameIn, type Locale, type Translate } from '@/shared/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 
@@ -27,6 +27,30 @@ export const PAYSLIP_PRINT_CSS = `@page { size: A4 portrait; margin: 12mm; }
   main { padding: 0 !important; }
   [data-payslip] { box-shadow: none !important; border: 0 !important; padding: 0 !important; max-width: none !important; break-inside: avoid; }
 }`;
+
+/**
+ * The lateness line: "130 minutes − 30 grace = 100 minutes = 0.75 day" when a grace was taken off
+ * (§5), else "130 minutes = 0.75 day" (no grace, no minutes, or a line calculated before the grace
+ * was kept).
+ */
+export function latenessLabel(
+  payslip: Pick<Payslip, 'latenessMinutes' | 'latenessGraceMinutes' | 'latenessDays'>,
+  t: Translate,
+  locale: Locale,
+): string {
+  const days = formatDayCount(payslip.latenessDays, locale);
+  const grace = payslip.latenessGraceMinutes ?? 0;
+  if (grace <= 0 || payslip.latenessMinutes <= 0) {
+    return t('payroll.payslip.latenessDetail', { count: formatCount(payslip.latenessMinutes), days });
+  }
+  const minutes = (n: number) => t('payroll.payslip.latenessMinutes', { count: formatCount(n) });
+  return t('payroll.payslip.latenessGraceDetail', {
+    total: minutes(payslip.latenessMinutes),
+    grace: minutes(grace),
+    counted: minutes(Math.max(0, payslip.latenessMinutes - grace)),
+    days,
+  });
+}
 
 /**
  * The payslip of one line of an approved run (§6): school, month, employee, salary for the month,
@@ -213,10 +237,7 @@ export function PayslipView({ payslip, backHref }: { payslip: Payslip; backHref:
 
         <Section title={t('payroll.payslip.lateness')}>
           <Row
-            label={t('payroll.payslip.latenessDetail', {
-              count: formatCount(payslip.latenessMinutes),
-              days: formatDayCount(payslip.latenessDays, locale),
-            })}
+            label={latenessLabel(payslip, t, locale)}
           >
             <Money
               value={payslip.latenessAmount}

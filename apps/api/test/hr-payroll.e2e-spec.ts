@@ -413,8 +413,13 @@ describe('HR payroll and dashboard (e2e)', () => {
     expect(lineOf(run, pending).net).toBe(1_200_000);
   });
 
-  it('Bank sheet on a draft run → 409; on an approved run → xlsx with code, names, national ID, net', async () => {
-    const emp = await employee({ nationalId: nationalId() });
+  it('Bank sheet on a draft run → 409; on an approved run → xlsx with code, names, national ID, bank, account, IBAN, net and a total row', async () => {
+    const emp = await employee({
+      nationalId: nationalId(),
+      bankName: 'National Bank of Egypt',
+      bankAccountNumber: '0123456789012',
+      iban: 'EG380019000500000000263180002',
+    });
     const run = await createRun(nextMonth());
     const draft = await http(app).get(`/hr/payroll-runs/${run.id}/bank-sheet`).expect(409);
     expect(draft.body.error).toBe(ErrorCode.PAYROLL_NOT_APPROVED);
@@ -430,6 +435,9 @@ describe('HR payroll and dashboard (e2e)', () => {
       'Name (English)',
       'Name (Arabic)',
       'National ID',
+      'Bank',
+      'Account number',
+      'IBAN',
       'Net (EGP)',
     ]);
     const line = lineOf(approved, emp);
@@ -440,8 +448,16 @@ describe('HR payroll and dashboard (e2e)', () => {
       line.nameEn,
       line.nameAr,
       line.nationalId,
+      'National Bank of Egypt',
+      '0123456789012',
+      'EG380019000500000000263180002',
       line.net! / 100,
     ]);
+    // Last row: the total of every net, equal to the run's net.
+    const total = sheet.getRow(sheet.actualRowCount);
+    expect(total.getCell(1).value).toBe('Total');
+    expect(total.getCell(8).value).toBe(approved.totals.net! / 100);
+    expect(total.font?.bold).toBe(true);
   });
 
   // ── review edge cases ─────────────────────────────────────────────────────
@@ -760,12 +776,16 @@ describe('HR payroll and dashboard (e2e)', () => {
     );
 
     expect(sheet.getRow(1).getCell(1).value).toBe('كود الموظف');
-    expect(sheet.actualRowCount - 1).toBe(approved.lines.length);
+    // A header, one row per line, then the total row ("الإجمالي").
+    expect(sheet.actualRowCount - 2).toBe(approved.lines.length);
+    expect(sheet.getRow(sheet.actualRowCount).getCell(1).value).toBe('الإجمالي');
     const line = lineOf(approved, noId);
     const row = sheet.getRow(sheet.getColumn(1).values.indexOf(line.employeeCode));
     expect(row.getCell(4).value).toBeNull();
-    expect(row.getCell(5).value).toBe(line.net! / 100);
-    expect(row.getCell(5).numFmt).toBe('0.00');
+    // No bank details on file → empty bank, account and IBAN cells.
+    expect([5, 6, 7].map((c) => row.getCell(c).value)).toEqual([null, null, null]);
+    expect(row.getCell(8).value).toBe(line.net! / 100);
+    expect(row.getCell(8).numFmt).toBe('0.00');
     // 1,234,567 − round(0.25 × 1,234,567 ÷ 30) = 1,234,567 − 10,288 → EGP 12,242.79
     expect(line.net).toBe(1_224_279);
   });
@@ -820,6 +840,43 @@ describe('HR payroll and dashboard (e2e)', () => {
     expect(approvedNow).toEqual(approvedThen);
     expect(rulesAtApproval.payroll.dayDivisor).toBe(30);
     expect(rulesNow.payroll.dayDivisor).toBe(25);
+  });
+
+  it('Rules changed after the last calculation → the DRAFT run says so until Recalculate; an approved run never does', async () => {
+    const draftMonth = nextMonth();
+    const approvedMonth = nextMonth();
+    const approved = await approveOk((await createRun(approvedMonth)).id);
+    const draft = await createRun(draftMonth);
+    expect(draft.rulesChanged).toBe(false);
+
+    // A save that changes nothing is no change.
+    await setDivisor(30);
+    expect((await getRun(draft.id)).rulesChanged).toBe(false);
+
+    await http(app).patch('/hr/settings').send({ lateness: { graceMinutes: 15 } }).expect(200);
+    expect((await getRun(draft.id)).rulesChanged).toBe(true);
+    expect((await getRun(approved.id)).rulesChanged).toBe(false);
+
+    const recalculated = (await recalculate(draft.id).expect(200)).body.data as PayrollRun;
+    expect(recalculated.rulesChanged).toBe(false);
+    expect(Date.parse(recalculated.calculatedAt)).toBeGreaterThan(Date.parse(draft.calculatedAt));
+
+    // The penalty repetition window doesn't change a run's figures: no hint.
+    await http(app).patch('/hr/settings').send({ penalties: { repetitionWindow: 'CALENDAR_YEAR' } }).expect(200);
+    expect((await getRun(draft.id)).rulesChanged).toBe(false);
+  });
+
+  it('A line keeps the lateness grace of its calculation; the payslip shows it', async () => {
+    const month = nextMonth();
+    const emp = await employee();
+    await setLateness(month, emp, 130).expect(200);
+    await http(app).patch('/hr/settings').send({ lateness: { graceMinutes: 30 } }).expect(200);
+    const run = await createRun(month);
+    // 130 − 30 = 100 min → 0.75 day.
+    expect(lineOf(run, emp)).toMatchObject({ latenessMinutes: 130, latenessGraceMinutes: 30, latenessDays: 0.75 });
+    const approved = await approveOk(run.id);
+    const slip = (await payslip(run.id, lineOf(approved, emp).id).expect(200)).body.data as Payslip;
+    expect(slip).toMatchObject({ latenessMinutes: 130, latenessGraceMinutes: 30, latenessDays: 0.75 });
   });
 
   it("Move an employee to another department after APPROVE → the approved run's department filter still lists them under the old department", async () => {

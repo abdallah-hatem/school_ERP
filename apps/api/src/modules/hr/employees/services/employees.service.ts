@@ -234,6 +234,18 @@ export class EmployeesService {
   }
 
   /**
+   * The bank details on file today for `ids`, by employee id (bank sheet, §6). No scope check: the
+   * caller (the bank sheet) already requires every salary, which covers the bank details (§3, R7).
+   */
+  async bankDetailsFor(
+    ids: readonly string[],
+  ): Promise<Map<string, { bankName: string | null; bankAccountNumber: string | null; iban: string | null }>> {
+    if (ids.length === 0) return new Map();
+    const rows = await this.repository.findBankDetails(ids);
+    return new Map(rows.map(({ id, ...bank }) => [id, bank]));
+  }
+
+  /**
    * Active headcount, total and per stage (dashboard) — of the employees `hr.employees.view` covers
    * for the user (R5). Inactive employees never count.
    */
