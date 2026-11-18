@@ -34,6 +34,16 @@ describe('SCREENS (who may open each page)', () => {
     expect(canOpenScreen(['hr.payroll.view', 'hr.employees.view'], 'employeePayroll')).toBe(true);
   });
 
+  it('payroll taxes (§10): the Accountant and the System admin open them; the HR officer and the HR manager don\'t', () => {
+    const keysOf = (key: string) => Object.keys(BUILT_IN_ROLES.find((r) => r.key === key)?.permissions ?? {});
+    for (const id of ['payrollTaxes', 'payrollTaxesMonth'] as const) {
+      expect(canOpenScreen(keysOf('accountant'), id)).toBe(true);
+      expect(canOpenScreen(keysOf('system_admin'), id)).toBe(true);
+      expect(canOpenScreen(keysOf('hr_officer'), id)).toBe(false);
+      expect(canOpenScreen(keysOf('hr_manager'), id)).toBe(false);
+    }
+  });
+
   it('every sidebar screen is a screen; every built-in role sees at least one page besides the dashboard', () => {
     for (const id of SIDEBAR_SCREENS) expect(SCREENS[id]).toBeDefined();
     for (const role of BUILT_IN_ROLES) {

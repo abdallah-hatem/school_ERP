@@ -32,7 +32,10 @@ export type SettingsSectionId = keyof typeof SETTINGS_SECTION_ACCESS;
 export const SETTINGS_SECTIONS = Object.keys(SETTINGS_SECTION_ACCESS) as SettingsSectionId[];
 
 export interface ScreenAccess {
-  /** Path after the locale segment; `''` is the dashboard, `:id` / `:lineId` a record's id. */
+  /**
+   * Path after the locale segment; `''` is the dashboard, `:id` / `:lineId` a record's id, `:month`
+   * a `YYYY-MM` month.
+   */
   path: string;
   anyOf: readonly ScreenRequirement[] | null;
 }
@@ -61,6 +64,9 @@ export const SCREENS = {
   payroll: screen('/payroll', 'hr.payroll.view'),
   payrollRun: screen('/payroll/:id', 'hr.payroll.view'),
   payslip: screen('/payroll/:id/payslip/:lineId', 'hr.payroll.view'),
+  // Accounting (§10): the year board of payroll taxes and one month's statement (`:month` YYYY-MM).
+  payrollTaxes: screen('/accounting/payroll-taxes', 'accounting.payroll.view'),
+  payrollTaxesMonth: screen('/accounting/payroll-taxes/:month', 'accounting.payroll.view'),
   settings: screen('/settings', ...Object.values(SETTINGS_SECTION_ACCESS)),
   activity: screen('/activity', 'core.audit.view'),
   users: screen('/users', 'core.users.view'),
@@ -83,6 +89,7 @@ export const SIDEBAR_SCREENS = [
   'penalties',
   'lateness',
   'payroll',
+  'payrollTaxes',
   'settings',
   'activity',
   'users',

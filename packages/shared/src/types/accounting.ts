@@ -85,3 +85,34 @@ export interface AccountingPayrollMonth extends AccountingPayrollMonthSummary {
   lines: AccountingPayrollLine[];
 }
 
+/**
+ * Where a month stands for accounting (§10): HR approved it (its taxes are worked out), it is a
+ * draft in HR (nothing in accounting yet), or HR has no run for it.
+ */
+export const AccountingMonthState = {
+  APPROVED: 'APPROVED',
+  DRAFT: 'DRAFT',
+  NONE: 'NONE',
+} as const;
+export type AccountingMonthState = (typeof AccountingMonthState)[keyof typeof AccountingMonthState];
+
+/** One month of `GET /accounting/payroll/year/:year`. */
+export interface AccountingPayrollYearMonth {
+  month: Month;
+  state: AccountingMonthState;
+  /**
+   * The approved month's totals. Absent on a draft or empty month, and on an approved month whose
+   * taxes haven't been worked out yet (they are when the month is first opened).
+   */
+  summary?: AccountingPayrollMonthSummary;
+}
+
+/** `GET /accounting/payroll/year/:year` — the year board: its twelve months, January first. */
+export interface AccountingPayrollYear {
+  year: number;
+  months: AccountingPayrollYearMonth[];
+}
+
+/** Years the board can show (`/accounting/payroll/year/:year`). */
+export const ACCOUNTING_YEAR_RANGE = { min: 2000, max: 2100 } as const;
+

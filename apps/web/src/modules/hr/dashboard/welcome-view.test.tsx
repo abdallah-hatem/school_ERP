@@ -52,9 +52,9 @@ describe('Home without hr.dashboard.view', () => {
     expect(GET_HR_DASHBOARD).not.toHaveBeenCalled();
   });
 
-  it('the Accountant: Employees, Payroll, Settings (Accounting), My account', () => {
+  it('the Accountant: Employees, Payroll, Payroll taxes, Settings (Accounting), My account', () => {
     renderAs(sessionWith(...keysOf('accountant')));
-    expect(links().map(([label]) => label)).toEqual(['Employees', 'Payroll', 'Settings', 'My account']);
+    expect(links().map(([label]) => label)).toEqual(['Employees', 'Payroll', 'Payroll taxes', 'Settings', 'My account']);
   });
 
   it('no permission at all: says so, and still offers My account', () => {

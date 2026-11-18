@@ -3,13 +3,17 @@ import { TransactionHost } from '@nestjs-cls/transactional';
 import type { Prisma } from '@prisma/client';
 import {
   ACCOUNTING_LINE_MONEY_FIELDS,
+  AccountingMonthState,
   AuditEntityType,
+  PayrollStatus,
   insuranceShare,
   payrollTax,
   type AccountingPayrollLine,
   type AccountingPayrollMonth,
   type AccountingPayrollMonthSummary,
   type AccountingPayrollTotals,
+  type AccountingPayrollYear,
+  type Language,
   type Month,
   type Paginated,
   type TaxRule,
@@ -20,6 +24,7 @@ import { AuditService } from '../../../../core/audit';
 import type { DbAdapter } from '../../../../database/transactions';
 import { EmployeesService, PayrollService } from '../../../hr';
 import { AccountingSettingsService } from '../../settings/accounting-settings.service';
+import { buildPayrollTaxesSheet } from '../payroll-taxes-sheet';
 import {
   AccountingPayrollRepository,
   type AccountingLineData,
@@ -107,6 +112,48 @@ export class AccountingPayrollService {
       hasNextPage: page * limit < total,
       hasPreviousPage: page > 1,
     };
+  }
+
+  /**
+   * The year board (§10): each of the year's twelve months — APPROVED with its totals (money only
+   * for someone who sees every salary, §2 P4), DRAFT when HR has a run not approved yet, or NONE.
+   * Read only: HR's run statuses come through HR's exported `PayrollService`. An approved month
+   * whose taxes were never worked out (a missed event) has no summary; opening it works them out.
+   */
+  async year(year: number): Promise<AccountingPayrollYear> {
+    const [runs, hrRuns, everySalary] = await Promise.all([
+      this.repository.findInYear(year),
+      this.hrPayroll.runStatusesInYear(year),
+      this.employees.seesEverySalary(),
+    ]);
+    const totals = await this.repository.totalsFor(runs.map((r) => r.id));
+    const recorded = new Map(runs.map((r) => [r.month, r]));
+    const hrStatus = new Map(hrRuns.map((r) => [r.month, r.status]));
+    const months = Array.from({ length: 12 }, (_, i) => {
+      const month: Month = `${year}-${String(i + 1).padStart(2, '0')}`;
+      const run = recorded.get(month);
+      if (run) {
+        return { month, state: AccountingMonthState.APPROVED, summary: toSummary(run, totals.get(run.id)!, everySalary) };
+      }
+      const status = hrStatus.get(month);
+      const state =
+        status === PayrollStatus.APPROVED
+          ? AccountingMonthState.APPROVED
+          : status === PayrollStatus.DRAFT
+            ? AccountingMonthState.DRAFT
+            : AccountingMonthState.NONE;
+      return { month, state };
+    });
+    return { year, months };
+  }
+
+  /**
+   * A month's taxes as `.xlsx`, with the lines exactly as `getMonth` gives them to this viewer
+   * (amounts only within their salary scope, totals only with every salary) and the tax rule used.
+   */
+  async exportMonth(month: Month, lang: Language): Promise<{ fileName: string; content: Buffer }> {
+    const data = await this.getMonth(month);
+    return { fileName: `payroll-taxes-${month}.xlsx`, content: await buildPayrollTaxesSheet(data, lang) };
   }
 
   /**

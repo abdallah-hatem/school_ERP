@@ -959,6 +959,7 @@ apps/web/src/
 ├── modules/
 │   ├── hr/  academics/  students/  admissions/  attendance/
 │   ├── fees/  exams/  communication/  transport/
+│   ├── accounting/                   ← Payroll taxes: the year board and each month's statement (§10)
 │   ├── settings/                     ← the Settings screen
 │   ├── access/                       ← Users, Roles, My account (P3)
 │   └── activity/                     ← the Activity screen (filters panel, today's counts, paging)
@@ -1011,7 +1012,8 @@ doesn't update its skeleton fails CI (owner, 2026-11-18).
   `FormCard`, `DetailsCard`, `StatTile`, the payslip card).
 - **Mark the main blocks.** The screen and its skeleton carry the same `data-skeleton-block="<name>"`
   on their main content blocks. The shared pieces already do: `PageHeader` (`header`), `DataTable`
-  (`table`, `table-toolbar`, `table-head`, `table-row`, `table-card`), `Pagination`
+  (`table`, `table-toolbar`, `table-head`, `table-row`, `table-card`, and with a `footer` totals row
+  `table-foot` / `table-card-foot`), `Pagination`
   (`pagination`), `StatTile` (`tile`), `FormActionBar` (`form-actions`), `SectionPanel`
   (`section-panel`), `FormCard` (`form-card`); screens mark their own cards, panels and filters.
   Two optional attributes: `data-skeleton-each` on a list's items (a run of them counts once, as
@@ -1019,7 +1021,10 @@ doesn't update its skeleton fails CI (owner, 2026-11-18).
   `data-skeleton-measure="width"` on a block whose height follows the data (a table, the timeline);
   everything else must match (the History tab's pagination too, since T28 gives every record
   entries). A `DataTable` whose phone cards grow
-  with their text passes `cardHeightsVary` (penalties: long violation names).
+  with their text passes `cardHeightsVary` (penalties: long violation names). A `DataTable` whose
+  very presence is data — the payroll taxes statement's Insured / Not insured groups, either of
+  which can be empty (an empty state) one month — passes `skeletonBlocks={false}` and is measured
+  as part of the block around it.
 - **Text that wraps is drawn as its own text.** A bar can't wrap, so where a loaded line usually
   wraps (a header description, a tile's sub line, the History sentence) the skeleton renders the
   same sentence — worded with typical values — through `SkeletonProse` (transparent text on a bar

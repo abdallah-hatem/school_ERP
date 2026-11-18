@@ -81,6 +81,10 @@ import {
   UserPlusIcon as UserPlus,
   UserCircleDashedIcon as UserCircleDashed,
   EraserIcon as Eraser,
+  MicrosoftExcelLogoIcon as MicrosoftExcelLogo,
+  FilePdfIcon as FilePdf,
+  EqualsIcon as EquivalentRule,
+  NotEqualsIcon as NotEquals,
   BellIcon as Bell,
   FileTextIcon as FileText,
   HourglassMediumIcon as HourglassMedium,
@@ -279,6 +283,13 @@ export const EmailIcon = duotone(EnvelopeSimple, 'Email');
 export const AddUserIcon = duotone(UserPlus, 'AddUser');
 export const NoUserIcon = duotone(UserCircleDashed, 'NoUser');
 
+// Accounting (§10): payroll taxes, its exports, and the tax rule badge.
+export const PayrollTaxesIcon = duotone(Receipt, 'PayrollTaxes');
+export const ExcelIcon = duotone(MicrosoftExcelLogo, 'Excel');
+export const PdfIcon = duotone(FilePdf, 'Pdf');
+export const InsuredIcon = duotone(ShieldCheck, 'Insured');
+export const SameRuleIcon = duotone(EquivalentRule, 'SameRule');
+export const OtherRuleIcon = duotone(NotEquals, 'OtherRule');
 // Notifications (§11): the bell, its actions and one icon per kind of notification.
 export const NotificationsIcon = duotone(Bell, 'Notifications');
 export const MarkAllReadIcon = duotone(Checks, 'MarkAllRead');

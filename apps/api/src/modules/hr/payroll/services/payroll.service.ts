@@ -451,6 +451,14 @@ export class PayrollService {
   }
 
   /**
+   * Each month of `year` that has a run, with its status — no lines, no money — for accounting's
+   * year board (§10), which shows drafts as "draft in HR". Read only.
+   */
+  async runStatusesInYear(year: number): Promise<{ month: Month; status: PayrollStatus }[]> {
+    return this.repository.findInYear(year);
+  }
+
+  /**
    * An APPROVED run's every line with its net and the insurance taken at approval, and when it was
    * approved, for accounting (§10) — a system read, not a
    * viewer's: it is not narrowed by whoever's request triggered it (the approver, or the accountant
