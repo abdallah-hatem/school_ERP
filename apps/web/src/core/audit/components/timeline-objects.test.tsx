@@ -170,3 +170,37 @@ describe('AuditTimeline — object values', () => {
     expect(container.textContent).not.toMatch(/[{}"]/);
   });
 });
+
+/* A month record (payroll run, its taxes, a lateness month) reads as the app prints a month, on one line. */
+describe('AuditTimeline — month records', () => {
+  const monthEntries = [
+    created,
+    entry({ ...created, id: 'tax', action: 'accounting.payroll.record', module: 'accounting', entityType: 'accounting_payroll', actor: null }),
+    entry({
+      ...created,
+      id: 'late',
+      action: 'hr.lateness.save',
+      entityType: 'lateness_month',
+      entityId: '2026-11',
+      changes: [{ field: 'minutes', before: 10, after: 20 }],
+    }),
+  ];
+
+  for (const [locale, month] of [
+    ['en', 'November 2026'],
+    ['ar', 'نوفمبر 2026'],
+  ] as const) {
+    it(`${locale}: "${month}", never "2026-11", kept together`, () => {
+      const { container } = show(monthEntries, locale);
+      const months = screen.getAllByText(month, { selector: 'bdi' });
+      expect(months).toHaveLength(3);
+      for (const m of months) expect(m.className).toMatch(/whitespace-nowrap/);
+      expect(container.textContent).not.toMatch(/2026-11/);
+    });
+  }
+
+  it('another record whose label looks like a month stays as it is', () => {
+    show([entry({ entityLabel: { en: '2026-11', ar: '2026-11' } })]);
+    expect(screen.getByText('2026-11', { selector: 'bdi' })).toBeTruthy();
+  });
+});

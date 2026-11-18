@@ -7,13 +7,14 @@ import {
   LANGUAGES,
   SchoolSettingKey,
   WEEKDAYS,
+  isMonth,
   type AuditChange,
   type AuditEntityType,
   type AuditEntry,
   type AuditLabel,
   type Names,
 } from '@school-erp/shared';
-import { formatCount, formatDate, formatDayCount, formatDays, formatMoney } from '@/shared/lib/format';
+import { formatCount, formatDate, formatDayCount, formatDays, formatMoney, formatMonth } from '@/shared/lib/format';
 import { localName, type Locale, type Translate } from '@/shared/lib/i18n';
 import { formatSchoolDateTime } from './time';
 
@@ -30,13 +31,33 @@ export function labelIn(label: AuditLabel | string, locale: Locale): string {
   return (locale === 'ar' ? label.ar : label.en) || label.en || label.ar;
 }
 
+/** Records labelled by their month (`2026-11`): a payroll run, its taxes, a lateness month. */
+const MONTH_RECORDS: readonly AuditEntityType[] = ['payroll_run', 'accounting_payroll', 'lateness_month'];
+
+/** Whether the entry's record reads as a month ("November 2026"), kept on one line. */
+export function isMonthRecord(entry: { entityType?: AuditEntityType; entityLabel: AuditLabel | string }): boolean {
+  return entry.entityType !== undefined && MONTH_RECORDS.includes(entry.entityType) && isMonth(labelIn(entry.entityLabel, 'en'));
+}
+
+/**
+ * The record's name as the sentence shows it: a month record's `2026-11` reads as the rest of the
+ * app prints a month — "November 2026" / "نوفمبر 2026" — anything else as `labelIn`.
+ */
+export function recordLabel(
+  entry: { entityType?: AuditEntityType; entityLabel: AuditLabel | string },
+  locale: Locale,
+): string {
+  const label = labelIn(entry.entityLabel, locale);
+  return isMonthRecord(entry) && isMonth(label) ? formatMonth(label, locale) : label;
+}
+
 /** The sentence, without the actor (shown beside it): "Edited the employee Omar Fathy". */
 export function entrySentence(
-  entry: { action: AuditEntry['action']; entityLabel: AuditLabel | string },
+  entry: { action: AuditEntry['action']; entityType?: AuditEntityType; entityLabel: AuditLabel | string },
   t: Translate,
   locale: Locale,
 ): string {
-  return t(`audit.actions.${entry.action}`, { entity: labelIn(entry.entityLabel, locale) });
+  return t(`audit.actions.${entry.action}`, { entity: recordLabel(entry, locale) });
 }
 
 /** Stage edits are keyed per stage (`lists.stages.<id>`, settings history format). */
@@ -144,6 +165,7 @@ export function formatAuditValue(
     if (field === SchoolSettingKey.LOGO_URL || field === 'photoUrl') return value.split('/').pop() ?? value;
     const enumList = enumOf(field, entityType);
     if (enumList && has(`common.enums.${enumList}.${value}`)) return t(`common.enums.${enumList}.${value}`);
+    if (field === 'month' && isMonth(value)) return formatMonth(value, locale);
     if (ISO_DAY.test(value)) return formatDate(value, locale);
     if (ISO_INSTANT.test(value) && !Number.isNaN(Date.parse(value))) return formatSchoolDateTime(value, locale);
     return value;

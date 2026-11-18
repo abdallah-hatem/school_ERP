@@ -392,6 +392,8 @@ module through core's exported `AuditService` — never through its repository.
   run's `totals` as "Totals · Net" etc. (`AUDIT_TOTAL_PARTS` in shared: order, money or count; labels
   under `audit.totals.*`), a role's `permissions` as "Permissions · View payroll: Everyone → Their
   stage". A `totals` the viewer may not see (R7) stays one "changed" line.
+  A month record (payroll run, its taxes, a lateness month — labelled `2026-11`) reads in the
+  sentence as the app prints a month, "November 2026" / "نوفمبر 2026" (`recordLabel`), on one line.
 - **Filters** on both audit screens: a side panel on wide screens (first in the page's tab order,
   drawn in the second column), else one Filters button opening `AuditFiltersSheet` — from the
   bottom on a phone, from the inline-end edge on a tablet.
