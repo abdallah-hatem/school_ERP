@@ -1,6 +1,6 @@
 'use client';
 
-import { PayrollStatus, type HrDashboard, type Month } from '@school-erp/shared';
+import { PayrollStatus, SCREENS, type HrDashboard, type Month } from '@school-erp/shared';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTransition, type ReactNode } from 'react';
@@ -177,7 +177,8 @@ const QUICK_LINKS: {
     key: 'settings',
     icon: SettingsIcon,
     href: (l) => l.settings,
-    anyOf: ['core.settings.view', 'hr.settings.view', 'hr.lists.view', 'core.stages.view', 'hr.penalty_catalogue.view'],
+    // The same options as the Settings page's own guard.
+    anyOf: SCREENS.settings.anyOf ?? [],
   },
 ];
 

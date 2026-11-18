@@ -3,6 +3,7 @@
 import { HR_SETTINGS_DEFAULTS, type HrSettings, type IsoDateTime } from '@school-erp/shared';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { Can } from '@/core/auth';
 import { Button } from '@/shared/components/ui/button';
 import {
   BlockedIcon,
@@ -98,12 +99,15 @@ export function RulesPanel({
           <span>{t('payroll.rules.error')}</span>
         </p>
       )}
-      <Button asChild variant="soft" className="w-full cursor-pointer @min-[640px]:w-auto @min-[640px]:self-start">
-        <Link href={settingsHref}>
-          <SettingsIcon />
-          {t('payroll.rules.edit')}
-        </Link>
-      </Button>
+      {/* Only for someone who may open Settings → HR rules (an Accountant would land on not-found). */}
+      <Can permission="hr.settings.view">
+        <Button asChild variant="soft" className="w-full cursor-pointer @min-[640px]:w-auto @min-[640px]:self-start">
+          <Link href={settingsHref}>
+            <SettingsIcon />
+            {t('payroll.rules.edit')}
+          </Link>
+        </Button>
+      </Can>
     </aside>
   );
 }
