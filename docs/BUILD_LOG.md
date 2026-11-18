@@ -247,6 +247,10 @@ phase live in `docs/build-log/`.
 - 2026-11-18 — Docs flow (owner): the build log has one writer, whoever merges (PRs carry a "Log
   entry" in their body instead); business changes are one file each in
   `docs/business/recent-changes/`. Stops the docs-only conflicts between parallel PRs.
+- 2026-11-18 — Layout fixes from the browser check → #116: on a phone the user page shows Status
+  (with the sign-in lock and Unlock) first; Users cards put status pills on their own line so the
+  email shows in full; toasts sit bottom-end on desktop (clear of header actions and the Save bar),
+  full width under the top bar on a phone. Checked in screenshots (EN desktop, AR phone).
 
 ## Next up
 
