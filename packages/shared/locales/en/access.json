@@ -45,7 +45,8 @@
       "view": "Open",
       "setPassword": "Set temporary password",
       "deactivate": "Deactivate",
-      "reactivate": "Reactivate"
+      "reactivate": "Reactivate",
+      "unlock": "Unlock sign-in"
     },
     "deactivate": {
       "title": "Deactivate {name}?",
@@ -60,7 +61,15 @@
       "done": "{name} can sign in again."
     },
     "lastAdmin": "The last System admin can't be deactivated.",
-    "temporaryPassword": "Temporary password"
+    "temporaryPassword": "Temporary password",
+    "locked": "Sign-in locked",
+    "lockedTitle": "Too many wrong passwords: sign-in is locked until {time}.",
+    "unlock": {
+      "title": "Unlock sign-in for {name}?",
+      "body": "Their wrong passwords are forgotten and they can sign in right away.",
+      "confirm": "Unlock",
+      "done": "{name} can sign in again."
+    }
   },
   "userForm": {
     "addTitle": "Add user",
@@ -127,7 +136,10 @@
     "errors": {
       "name": "Enter the person's full name.",
       "email": "Enter an email like name@school.edu.eg."
-    }
+    },
+    "lockedTitle": "Sign-in locked",
+    "lockedBody": "Too many wrong passwords. Sign-in is locked until {time}, unless you unlock it.",
+    "unlock": "Unlock sign-in"
   },
   "tempPassword": {
     "label": "Temporary password",

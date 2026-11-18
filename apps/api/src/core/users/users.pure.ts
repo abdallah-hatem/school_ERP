@@ -1,8 +1,11 @@
 import { EmployeeStatus, type EmployeeOption, type UserAccount } from '@school-erp/shared';
 import type { EmployeeOptionRow, UserAccountRow } from './repositories/users.repository';
 
-/** A user account as the API returns it. Never the password hash (it is not even selected). */
-export function toUserAccount(row: UserAccountRow): UserAccount {
+/**
+ * A user account as the API returns it. Never the password hash (it is not even selected).
+ * `lockedUntil`: when their sign-in lock ends, if it is locked now (core/sign-in-limit).
+ */
+export function toUserAccount(row: UserAccountRow, lockedUntil: Date | null = null): UserAccount {
   return {
     id: row.id,
     name: row.name,
@@ -14,6 +17,7 @@ export function toUserAccount(row: UserAccountRow): UserAccount {
     createdAt: row.createdAt.toISOString(),
     lastSignInAt: row.lastSignInAt?.toISOString() ?? null,
     passwordChangedAt: row.passwordChangedAt?.toISOString() ?? null,
+    lockedUntil: lockedUntil?.toISOString() ?? null,
   };
 }
 

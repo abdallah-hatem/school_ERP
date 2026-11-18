@@ -42,6 +42,7 @@ affects only **draft** payroll runs (approved runs never change).
 | Brand colours | Teal and sunflower (the "Campus" design), fixed for now | DECIDED |
 | Currency | EGP | DECIDED |
 | Payroll tax rule (income-tax slices, martyrs' fund, insurance share) | See §10 | GUESS — Settings → Accounting |
+| Sign-in limit: wrong passwords, within minutes, lock minutes (§2) | 5, 15, 15 | DECIDED (owner, 2026-11-18) — no screen yet; each at least 1 |
 
 - **DECIDED** (owner, 2026-11-18) — Each job title in the job-titles list has a **Manages people**
   switch (set when adding or editing the title; the list shows a "Manages people" badge on those

@@ -228,9 +228,14 @@ phase live in `docs/build-log/`.
   tab fills in; smoke History checks and the skeleton History comparison are full. Left: T29
   penalties (Tamer), then T31 (scan expects no placeholders, dry-run check, Activity search by
   employee code).
+- 2026-11-18 — Login rate limiting (owner-approved rules) and the scheduled-jobs foundation: 5 wrong
+  passwords in 15 minutes lock that account for 15 minutes (per account, `login_attempts`, one atomic
+  upsert; 429 `TOO_MANY_ATTEMPTS`; sign-in and both password-change paths), admin unlock from Users
+  (`POST /users/:id/unlock-sign-in`, audited), lockouts audited; `core/jobs` (`@nestjs/schedule`,
+  advisory lock per job, `job_runs`) with the nightly `login-attempts.cleanup` at 03:00 Cairo.
 - 2026-11-18 — `docs/EVENTS.md` (owner): every event (name, payload, emitter, listeners, after-commit
   or not, emit vs emitAsync, planned kind) and every transaction boundary, from the code; a unit
-  test fails when the doc and the code disagree. Nine gaps listed there (the `employee.*` events fire
+  test fails when the doc and the code disagree. Eleven gaps listed there (the `employee.*` events fire
   inside the transaction; four events have no listener; emit/emitAsync mixed) → `docs/events-catalogue`.
 
 ## Next up
@@ -284,7 +289,8 @@ phase live in `docs/build-log/`.
 
 - The client should check the Arabic penalty catalogue against the printed regulations (copied from the scans).
 
-- Login rate limiting (T2 left it out; security baseline).
+- Sign-in limit numbers (5 wrong passwords / 15-minute window / 15-minute lock) are core settings with
+  no screen yet; add them to Settings → School if a school wants to change them.
 
 - Hosting the demo on the Contabo server (owner: later; local demo is the fallback).
 - Audit log T28 done (#107); T29 (Tamer: penalties, lateness,

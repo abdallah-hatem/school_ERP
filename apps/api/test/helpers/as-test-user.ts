@@ -64,6 +64,8 @@ export async function createAppAsTestUser(
     select: { id: true },
   });
   user.id = row.id;
+  // Wrong passwords from earlier runs on this database must not lock the test user (sign-in limit).
+  await db.loginAttempt.deleteMany({ where: { email: TEST_USER_EMAIL } });
   // Like the seeded admin: System admin + HR manager, so the test user holds every key (P2).
   await giveRoles(db, row.id, SEED_ADMIN_ROLES);
 

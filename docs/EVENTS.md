@@ -137,7 +137,8 @@ How a write gets its transaction:
   transaction whoever calls it.
 - **`txHost.withTransaction(fn)`** — joins the open transaction or opens a plain one (no
   after-commit queue). Used by repositories for multi-row writes.
-- **`Propagation.RequiresNew`** — a separate transaction that commits on its own.
+- **`Propagation.RequiresNew`** — a separate transaction that commits on its own. Inside an open
+  request transaction it needs a **second pooled connection** while the first is held (gap 11).
 - **`txHost.tx`** — the repositories that join: audit entries, refresh tokens, grants, roles,
   stages, school settings, users, employees, the HR lists, payroll runs, penalties, lateness,
   accounting. Repositories still on `DatabaseService` (`apps/api/src/common/repositories/base.repository.ts`
@@ -149,10 +150,14 @@ How a write gets its transaction:
 | `apps/api/src/database/transactions.ts` | `AfterCommit.transaction` / `inTransaction` / `run` | defines them | — | runs the queue in order, logs failures |
 | `apps/api/src/core/audit/interceptors/audited.interceptor.ts` | every `@Audited` handler | `afterCommit.transaction` | the handler's writes + its `audit.record()`; `AUDIT_NOT_RECORDED` rolls all back | the queued work |
 | `apps/api/src/core/audit/audit.service.ts` | `audit.record()` | requires an open transaction (throws `AuditOutsideTransactionError`) | one `audit_entries` row | — |
-| `apps/api/src/core/auth/services/auth.service.ts` | sign-in, sign-out | request transaction (`@Audited`) | `recordSignIn`, refresh token, `core.auth.sign_in` / `sign_out` entry | — |
-| `apps/api/src/core/auth/services/auth.service.ts` | failed sign-in | `Propagation.RequiresNew` | the `core.auth.sign_in_failed` entry — its own transaction because the request's rolls back with the 401 | — |
+| `apps/api/src/core/auth/services/auth.service.ts` | sign-in (`login`) | **no request transaction**: `POST /auth/login` is `@NotAudited` (with the reason); on success `afterCommit.inTransaction` | `recordSignIn`, the refresh token and the `core.auth.sign_in` entry, together. Why not `@Audited`: a request transaction holds one pooled connection while the failure path's `RequiresNew` waits for a second — concurrent wrong passwords (pool size or more) starved every request. Now each step holds at most one connection | — |
+| `apps/api/src/core/auth/services/auth.service.ts` | sign-out | request transaction (`@Audited`) | the revoked refresh token + `core.auth.sign_out` entry | — |
+| `apps/api/src/core/auth/services/auth.service.ts` | failed sign-in (wrong password, or locked) | `Propagation.RequiresNew` (no outer transaction, so one connection) | the `core.auth.sign_in_failed` entry — its own transaction so it outlives the 401 / 429 | — |
+| `apps/api/src/core/sign-in-limit/sign-in-limit.service.ts` | `recordFailure` when the attempt reaches the limit (sign-in and both password-change paths) | `Propagation.RequiresNew`; a failure is logged, never turns the 401 into a 500 | the `core.auth.locked_out` entry | — |
+| `apps/api/src/core/sign-in-limit/repositories/login-attempts.repository.ts` | count a wrong password, clear, unlock | plain client (`DatabaseService`), never in a transaction: one atomic upsert | the `login_attempts` row | — |
+| `apps/api/src/core/jobs/repositories/job-runs.repository.ts` | `withLock` (every scheduled job run, via `JobRunner` in `apps/api/src/core/jobs/job-runner.service.ts`) | `db.$transaction` on the plain client (outside any request), holding `pg_try_advisory_xact_lock(hashtextextended('job:<name>', 0))` — released when the transaction ends, also if the process dies | the job's own work (e.g. `login-attempts.cleanup`) runs inside it; `job_runs` is written afterwards by `record`, outside it | — |
 | `apps/api/src/core/auth/repositories/refresh-tokens.repository.ts` | token refresh (`rotate`) | `databaseService.$transaction` (not CLS; `@NotAudited`) | the new token + marking the old one used | — |
-| `apps/api/src/core/users/user-accounts.service.ts` | create, update, deactivate, reactivate, temporary password, change password | request transaction (`@Audited`) | the user + roles + the `core.user.*` entry | `core.user.sessions_ended` (deactivate, temporary password) |
+| `apps/api/src/core/users/user-accounts.service.ts` | create, update, deactivate, reactivate, unlock sign-in, temporary password, change password | request transaction (`@Audited`) | the user + roles + the `core.user.*` entry (unlock: deletes the `login_attempts` row through the plain client) | `core.user.sessions_ended` (deactivate, temporary password) |
 | `apps/api/src/core/roles/roles.service.ts` | role create, update, delete | request transaction (`@Audited`) | the role + grants + the `core.role.*` entry | — |
 | `apps/api/src/core/settings/settings.service.ts` | `writeValues` (school settings, logo, HR and accounting settings) | `txHost.withTransaction` (joins the request's) | the changed keys + one entry for the owner's action | `settings.changed` per changed key |
 | `apps/api/src/core/settings/repositories/school-setting.repository.ts` | `upsertMany` | `txHost.withTransaction` | every key or none | — |
@@ -203,10 +208,19 @@ Found while writing this file. Each fix is one line; most land with the `DomainE
    rollback hook, or a nightly sweep of unreferenced files.
 9. **Token refresh uses `databaseService.$transaction`**, outside the CLS transaction (deliberate:
    not audited). Fix, if it ever must be audited: `txHost.withTransaction`.
+10. **`POST /account/password` can still starve the pool.** It stays `@Audited`, so its request
+    transaction holds a connection, and a wrong current password then needs a second one
+    (`login_attempts` upsert on the plain client, plus the lockout's `RequiresNew`). Many concurrent
+    wrong attempts (pool size or more) could block every request, as sign-in did before #109. Fix:
+    make it `@NotAudited` and record in its own `afterCommit.inTransaction`, like `AuthService.login`.
+11. **Rule: a `RequiresNew` (or a plain-client write) inside a request transaction needs two pooled
+    connections at once.** Under concurrency that can exhaust the pool and deadlock the API. Fix: only
+    open one where no request transaction is open (sign-in, listeners, jobs), or move the write after
+    the commit.
 
 ## Planned
 
-Approved 2026-11-18, starting after the scheduled-jobs PR (#109) merges — see `docs/BUILD_LOG.md`
+Approved 2026-11-18; the scheduled-jobs foundation it needs (#109, `apps/api/src/core/jobs/`) is merged — see `docs/BUILD_LOG.md`
 → Next up → **Events + outbox**:
 
 - `DomainEvents.publish(name, payload, { mustDeliver? })` in core, typed by one name→payload map in

@@ -59,6 +59,8 @@ export const AUDIT_ACTIONS = {
     entityType: E.USER,
     kind: 'access',
   },
+  // Too many wrong passwords locked the account's sign-in (core/sign-in-limit). Label: the email.
+  'core.auth.locked_out': { module: 'core', entityType: E.USER, kind: 'access' },
   // core — settings and school structure
   'core.settings.update': {
     module: 'core',
@@ -95,6 +97,7 @@ export const AUDIT_ACTIONS = {
     entityType: E.USER,
     kind: 'access',
   },
+  'core.user.unlock_sign_in': { module: 'core', entityType: E.USER, kind: 'access' },
   'core.role.create': { module: 'core', entityType: E.ROLE, kind: 'create' },
   'core.role.update': { module: 'core', entityType: E.ROLE, kind: 'update' },
   'core.role.delete': { module: 'core', entityType: E.ROLE, kind: 'status' },

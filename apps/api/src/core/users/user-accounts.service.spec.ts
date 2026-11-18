@@ -4,6 +4,7 @@ import { hashPassword } from '../../common/utils/password.util';
 import type { AfterCommit } from '../../database/transactions';
 import type { AuditService } from '../audit';
 import type { RolesService } from '../roles';
+import type { SignInLimitService } from '../sign-in-limit';
 import type { UserAccountRow, UsersRepository } from './repositories/users.repository';
 import { UserAccountsService } from './user-accounts.service';
 
@@ -26,8 +27,12 @@ function row(overrides: Partial<UserAccountRow> = {}): UserAccountRow {
   };
 }
 
-function makeService(start: UserAccountRow = row(), opts: { otherAdmins?: number } = {}) {
+function makeService(
+  start: UserAccountRow = row(),
+  opts: { otherAdmins?: number; lockedUntil?: Date } = {},
+) {
   let current = start;
+  let lockedUntil = opts.lockedUntil;
   const users = {
     findAccount: jest.fn(() => Promise.resolve(current)),
     update: jest.fn((_id: string, data: Partial<UserAccountRow>) => {
@@ -66,14 +71,32 @@ function makeService(start: UserAccountRow = row(), opts: { otherAdmins?: number
     }),
   };
   const events = { emitAsync: jest.fn(() => Promise.resolve([])) };
+  const signInLimit = {
+    lockedUntil: jest.fn((emails: string[]) =>
+      Promise.resolve(new Map(lockedUntil ? emails.map((e) => [e, lockedUntil as Date]) : [])),
+    ),
+    unlock: jest.fn(() => {
+      const was = lockedUntil !== undefined;
+      lockedUntil = undefined;
+      return Promise.resolve(was);
+    }),
+    assertNotLocked: jest.fn(() =>
+      lockedUntil
+        ? Promise.reject(Object.assign(new Error('locked'), { code: ErrorCode.TOO_MANY_ATTEMPTS }))
+        : Promise.resolve(),
+    ),
+    recordFailure: jest.fn(() => Promise.resolve()),
+    clear: jest.fn(() => Promise.resolve()),
+  };
   const service = new UserAccountsService(
     users as unknown as UsersRepository,
     roles as unknown as RolesService,
     audit as unknown as AuditService,
     afterCommit as unknown as AfterCommit,
     events as unknown as EventEmitter2,
+    signInLimit as unknown as SignInLimitService,
   );
-  return { service, users, roles, audit, queued, events };
+  return { service, users, roles, audit, queued, events, signInLimit };
 }
 
 describe('UserAccountsService', () => {
@@ -221,6 +244,69 @@ describe('UserAccountsService', () => {
     users.employeeExists.mockResolvedValueOnce(false);
     await expect(service.update('u-1', { employeeId: 'e-9' })).rejects.toMatchObject({
       code: ErrorCode.UNKNOWN_EMPLOYEE,
+    });
+  });
+
+  describe('sign-in limit (owner 2026-11-18)', () => {
+    const LOCKED_UNTIL = new Date('2026-11-18T10:15:00Z');
+    const me = { id: 'u-1', name: 'Mona', email: 'mona@school.test' } as AuthUser;
+
+    it('a locked account: the password change is refused before any password is checked', async () => {
+      const { service, users, signInLimit } = makeService(row(), { lockedUntil: LOCKED_UNTIL });
+      await expect(
+        service.changeOwnPassword(me, { currentPassword: 'x', newPassword: 'new-password-1' }),
+      ).rejects.toMatchObject({ code: ErrorCode.TOO_MANY_ATTEMPTS });
+      expect(users.findPasswordHash).not.toHaveBeenCalled();
+      expect(signInLimit.recordFailure).not.toHaveBeenCalled();
+    });
+
+    it('the forced new-password path is refused while locked too', async () => {
+      const { service, users } = makeService(row(), { lockedUntil: LOCKED_UNTIL });
+      await expect(
+        service.changeOwnPassword({ ...me, mustChangePassword: true }, { newPassword: 'mine-1234567' }),
+      ).rejects.toMatchObject({ code: ErrorCode.TOO_MANY_ATTEMPTS });
+      expect(users.update).not.toHaveBeenCalled();
+    });
+
+    it('a wrong current password counts as a wrong sign-in; a right one clears the count', async () => {
+      const { service, users, signInLimit } = makeService();
+      users.findPasswordHash.mockResolvedValue(await hashPassword('the-right-one', 4));
+      await expect(
+        service.changeOwnPassword(me, { currentPassword: 'wrong', newPassword: 'new-password-1' }),
+      ).rejects.toMatchObject({ code: ErrorCode.WRONG_PASSWORD });
+      expect(signInLimit.recordFailure).toHaveBeenCalledWith('mona@school.test');
+      expect(signInLimit.clear).not.toHaveBeenCalled();
+
+      await service.changeOwnPassword(me, { currentPassword: 'the-right-one', newPassword: 'new-password-1' });
+      expect(signInLimit.clear).toHaveBeenCalledWith('mona@school.test');
+    });
+
+    it('the account shows when its lock ends', async () => {
+      const { service } = makeService(row(), { lockedUntil: LOCKED_UNTIL });
+      await expect(service.get('u-1')).resolves.toMatchObject({
+        lockedUntil: LOCKED_UNTIL.toISOString(),
+      });
+    });
+
+    it('unlock: the lock goes and the change is recorded', async () => {
+      const { service, audit, signInLimit } = makeService(row(), { lockedUntil: LOCKED_UNTIL });
+      const after = await service.unlockSignIn('u-1');
+      expect(after.lockedUntil).toBeNull();
+      expect(signInLimit.unlock).toHaveBeenCalledWith('mona@school.test');
+      expect(audit.record).toHaveBeenCalledWith({
+        action: 'core.user.unlock_sign_in',
+        entity: { type: 'user', id: 'u-1', label: 'Mona' },
+        before: { lockedUntil: LOCKED_UNTIL.toISOString() },
+        after: { lockedUntil: null },
+      });
+    });
+
+    it('unlock of an account that was not locked records no change (before = after)', async () => {
+      const { service, audit } = makeService();
+      await service.unlockSignIn('u-1');
+      expect(audit.record).toHaveBeenCalledWith(
+        expect.objectContaining({ before: { lockedUntil: null }, after: { lockedUntil: null } }),
+      );
     });
   });
 });

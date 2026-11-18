@@ -42,7 +42,8 @@ describe('Activity query (URL ↔ API)', () => {
       to: '2026-11-17T22:00:00.000Z',
     });
     const chips = toAuditListQuery(parseActivityQuery({ type: 'signIn,failed', module: 'core' }));
-    expect(chips?.action).toEqual(['core.auth.sign_in', 'core.auth.sign_out', 'core.auth.sign_in_failed']);
+    // "Failed" also holds the lockout too many wrong passwords cause.
+    expect(chips?.action).toEqual(['core.auth.sign_in', 'core.auth.sign_out', 'core.auth.sign_in_failed', 'core.auth.locked_out']);
     // HR + sign-ins can't match anything.
     expect(toAuditListQuery(parseActivityQuery({ type: 'signIn', module: 'hr' }))).toBeNull();
   });

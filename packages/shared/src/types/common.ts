@@ -31,6 +31,8 @@ export interface ApiResponse<T = unknown> {
   error?: string;
   /** Per-field validation messages (400 `VALIDATION_FAILED` only), untranslated, for debugging. */
   details?: string[];
+  /** Values in the error's message (`ErrorParams`), e.g. `{ count }` minutes left on a sign-in lock. */
+  params?: Record<string, string | number>;
   timestamp: string;
   path?: string;
   meta?: Meta;

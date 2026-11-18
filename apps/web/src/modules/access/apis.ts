@@ -90,6 +90,15 @@ export async function REACTIVATE_USER(id: Uuid) {
   return handleResponse({ response });
 }
 
+/** Unlocks a sign-in locked by too many wrong passwords, before the lock ends (owner 2026-11-18). */
+export async function UNLOCK_SIGN_IN(id: Uuid) {
+  const response = await apiFetch<UserAccount>(`/users/${path(id)}/unlock-sign-in`, {
+    method: 'POST',
+    revalidateTags: [USERS_TAG, userTag(id)],
+  });
+  return handleResponse({ response });
+}
+
 /** A temporary password: the user is signed out everywhere and must choose their own. */
 export async function SET_TEMPORARY_PASSWORD(id: Uuid, password: string) {
   const response = await apiFetch<Record<string, never>>(`/users/${path(id)}/password`, {

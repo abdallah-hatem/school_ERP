@@ -13,6 +13,14 @@
   "INTERNAL_ERROR": "Something went wrong. Please try again.",
   "INVALID_CREDENTIALS": "Email or password is incorrect.",
   "INVALID_REFRESH_TOKEN": "Your session has expired. Please sign in again.",
+  "TOO_MANY_ATTEMPTS": {
+    "zero": "Too many attempts. Try again in a moment.",
+    "one": "Too many attempts. Try again in 1 minute.",
+    "two": "Too many attempts. Try again in 2 minutes.",
+    "few": "Too many attempts. Try again in {count} minutes.",
+    "many": "Too many attempts. Try again in {count} minutes.",
+    "other": "Too many attempts. Try again in {count} minutes."
+  },
   "INVALID_WORK_HOURS": "Work end must be after work start.",
   "INVALID_TAX_RULE": "The tax rule isn't valid: only the last bracket is open-ended, widths are above 0, and each bracket's rate plus the martyrs' fund stays under 100%.",
   "INVALID_FILE_TYPE": "Only PNG, JPG or SVG files are allowed.",

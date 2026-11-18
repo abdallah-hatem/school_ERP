@@ -129,6 +129,7 @@ describe('every endpoint declares its permission (R4)', () => {
       ['PATCH /users/:id', ['core.users.manage']],
       ['POST /users/:id/deactivate', ['core.users.manage']],
       ['POST /users/:id/reactivate', ['core.users.manage']],
+      ['POST /users/:id/unlock-sign-in', ['core.users.manage']],
       ['POST /users/:id/password', ['core.users.manage']],
     ]);
     expect(declared(/^\w+ \/roles/)).toEqual([
