@@ -60,6 +60,9 @@ catalogue still reach the log through core's temporary `SettingsHistoryListener`
 transaction, history-key + whole-snapshot change, so Settings history reads as before): record them
 in the write's transaction instead, then delete the listener and its `settings.changed` emits.
 Repositories written to in an audited request must move to `TransactionHost` (`txHost.tx`).
+**Done for stages, lists and the catalogue** (`fix/settings-history-in-transaction`): they record
+through `SettingsHistory.record()` in their write's transaction, their repositories use `txHost.tx`,
+their ten endpoints are `@Audited`, and the listener is deleted.
 
 ## T29 — wire HR penalties, lateness, payroll (`logic`)
 

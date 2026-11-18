@@ -1,6 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
-import type { EventEmitter2 } from '@nestjs/event-emitter';
-import { ErrorCode, HrCatalogueKey, SettingsEvent } from '@school-erp/shared';
+import { ErrorCode, HrCatalogueKey } from '@school-erp/shared';
+import { fakeTransaction } from '../../../../common/testing/fake-transaction';
+import type { SettingsHistory } from '../../../../core/settings';
 import type { PenaltyCatalogueRepository } from '../repositories/penalty-catalogue.repository';
 import { PenaltyCatalogueService } from './penalty-catalogue.service';
 
@@ -16,25 +17,42 @@ const violationRow = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
+const groupRow = { id: 'g1', nameEn: 'A', nameAr: 'أ', sortOrder: 0, isActive: true };
+
 function makeService(repo: Partial<Record<keyof PenaltyCatalogueRepository, jest.Mock>> = {}) {
-  const events = { emit: jest.fn() };
+  const tx = fakeTransaction();
+  /** A repository write: goes through the fake transaction. */
+  const writing = (value: unknown) =>
+    jest.fn(() => {
+      tx.write('catalogue');
+      return Promise.resolve(value);
+    });
+  const history = {
+    record: jest.fn(() => {
+      tx.write('history');
+      return Promise.resolve();
+    }),
+  };
   const repository = {
-    findGroup: jest.fn().mockResolvedValue({ id: 'g1', nameEn: 'A', nameAr: 'أ', sortOrder: 0, isActive: true }),
+    findGroup: jest.fn().mockResolvedValue(groupRow),
     findViolation: jest.fn().mockResolvedValue({ ...violationRow(), group: { isActive: true } }),
-    createViolation: jest.fn().mockResolvedValue(violationRow()),
-    updateViolation: jest.fn().mockResolvedValue(violationRow()),
+    createGroup: writing(groupRow),
+    updateGroup: writing({ ...groupRow, isActive: false }),
+    createViolation: writing(violationRow()),
+    updateViolation: writing(violationRow()),
     ...repo,
   };
   const service = new PenaltyCatalogueService(
     repository as unknown as PenaltyCatalogueRepository,
-    events as unknown as EventEmitter2,
+    history as unknown as SettingsHistory,
+    tx.afterCommit,
   );
-  return { service, repository, events };
+  return { service, repository, history, tx };
 }
 
 describe('PenaltyCatalogueService', () => {
   it('once per day (§4): stored only when given (the schema defaults it on), and a change is history', async () => {
-    const { service, repository, events } = makeService({
+    const { service, repository, history } = makeService({
       updateViolation: jest.fn().mockResolvedValue(violationRow({ oncePerDay: false })),
     });
     const levels = [{ level: 1, action: 'NOTICE' as const }];
@@ -43,11 +61,11 @@ describe('PenaltyCatalogueService', () => {
     await service.createViolation('g1', { nameEn: 'x', nameAr: 'y', oncePerDay: false, levels }, null);
     expect(repository.createViolation.mock.calls[1][1]).toMatchObject({ oncePerDay: false });
 
-    events.emit.mockClear();
+    history.record.mockClear();
     const after = await service.updateViolation('v1', { oncePerDay: false }, 'u1');
     expect(after.oncePerDay).toBe(false);
     expect(repository.updateViolation).toHaveBeenCalledWith('v1', { oncePerDay: false }, undefined);
-    expect(events.emit.mock.calls[0][1]).toMatchObject({
+    expect((history.record.mock.calls as unknown[][])[0][0]).toMatchObject({
       oldValue: { oncePerDay: true },
       newValue: { oncePerDay: false },
     });
@@ -72,8 +90,8 @@ describe('PenaltyCatalogueService', () => {
     expect(repository.createViolation).not.toHaveBeenCalled();
   });
 
-  it('stores levels sorted with days null when absent, and emits a catalogue history event', async () => {
-    const { service, repository, events } = makeService();
+  it('stores levels sorted with days null when absent, and records a catalogue history entry', async () => {
+    const { service, repository, history, tx } = makeService();
     const v = await service.createViolation(
       'g1',
       {
@@ -91,16 +109,59 @@ describe('PenaltyCatalogueService', () => {
       { level: 2, action: 'WARNING', days: null },
     ]);
     expect(v.levels[0]).toEqual({ level: 1, action: 'DEDUCT_DAYS', days: 1.5 });
-    expect(events.emit).toHaveBeenCalledWith(
-      SettingsEvent.CHANGED,
+    expect(history.record).toHaveBeenCalledWith(
       expect.objectContaining({ scope: 'catalogue', key: HrCatalogueKey.VIOLATIONS, oldValue: null, changedById: 'u1' }),
     );
+    expect(tx.state).toEqual({ committed: ['catalogue', 'history'], commits: 1, rollbacks: 0 });
   });
 
-  it('an update that changes nothing emits no history event', async () => {
-    const { service, events } = makeService();
+  it('groups: create and update commit with their history entry', async () => {
+    const { service, history, tx } = makeService();
+    await service.createGroup({ nameEn: 'A', nameAr: 'أ' }, 'u1');
+    await service.updateGroup('g1', { isActive: false }, 'u1');
+    expect(history.record).toHaveBeenLastCalledWith({
+      scope: 'catalogue',
+      key: HrCatalogueKey.PENALTY_GROUPS,
+      oldValue: groupRow,
+      newValue: { ...groupRow, isActive: false },
+      changedById: 'u1',
+    });
+    expect(tx.state).toEqual({
+      committed: ['catalogue', 'history', 'catalogue', 'history'],
+      commits: 2,
+      rollbacks: 0,
+    });
+  });
+
+  it('the history write fails → the catalogue change rolls back with it', async () => {
+    const { service, history, tx } = makeService();
+    history.record.mockImplementation(() => Promise.reject(new Error('audit down')));
+    const levels = [{ level: 1, action: 'NOTICE' as const }];
+    await expect(service.createGroup({ nameEn: 'A', nameAr: 'أ' }, 'u1')).rejects.toThrow('audit down');
+    await expect(service.updateGroup('g1', { isActive: false }, 'u1')).rejects.toThrow('audit down');
+    await expect(
+      service.createViolation('g1', { nameEn: 'x', nameAr: 'y', levels }, 'u1'),
+    ).rejects.toThrow('audit down');
+    await expect(service.updateViolation('v1', { nameEn: 'X' }, 'u1')).rejects.toThrow('audit down');
+    expect(tx.state).toEqual({ committed: [], commits: 0, rollbacks: 4 });
+  });
+
+  it('the catalogue write fails → no history entry', async () => {
+    const { service, history, tx } = makeService({
+      updateViolation: jest.fn().mockRejectedValue(new Error('db down')),
+    });
+    await expect(service.updateViolation('v1', { nameEn: 'X' }, 'u1')).rejects.toThrow('db down');
+    expect(history.record).not.toHaveBeenCalled();
+    expect(tx.state).toEqual({ committed: [], commits: 0, rollbacks: 1 });
+  });
+
+  it('an update that changes nothing passes equal snapshots (history writes no entry for them)', async () => {
+    const { service, history } = makeService();
     await service.updateViolation('v1', { nameEn: 'Late' }, null);
-    expect(events.emit).not.toHaveBeenCalled();
+    const [change] = (history.record.mock.calls as unknown[][])[0] as [
+      { oldValue: unknown; newValue: unknown },
+    ];
+    expect(change.oldValue).toEqual(change.newValue);
   });
 
   it('unknown group / violation → 404', async () => {

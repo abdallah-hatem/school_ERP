@@ -152,7 +152,7 @@ describe('HR rule settings — /hr/settings (e2e)', () => {
       partTime: { PART_TIME_4: 80, PART_TIME_3: 50, PART_TIME_2: 40 },
     });
 
-    // One settings.changed per changed key; core's listener (T4) turns each into a history row.
+    // One settings.changed per changed key, after the commit (history is already written).
     const byKey = Object.fromEntries(events.map((e) => [e.key, e]));
     expect(events).toHaveLength(3);
     expect(byKey['hr.lateness.graceMinutes']).toMatchObject({

@@ -1,17 +1,16 @@
 import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   ErrorCode,
   HrCatalogueKey,
-  SettingsEvent,
   violationLevelsProblem,
   type PenaltyGroup,
-  type SettingsChangedEvent,
   type Uuid,
   type Violation,
   type ViolationLevel,
 } from '@school-erp/shared';
 import { CodedException } from '../../../../common/errors/coded.exception';
+import { SettingsHistory } from '../../../../core/settings';
+import { AfterCommit } from '../../../../database/transactions';
 import type { CatalogueLevel } from '../../domain';
 import type {
   CreatePenaltyGroupDto,
@@ -69,9 +68,6 @@ function toLevelData(levels: readonly ViolationLevelDto[]): LevelData[] {
     .map((l) => ({ level: l.level, action: l.action, days: l.days ?? null }));
 }
 
-/** Snapshots built by the mappers above have a fixed key order, so JSON equality is safe. */
-const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
-
 /** A violation that new penalties may use (§4, §7): exists, isn't retired, its group isn't. */
 export interface UsableViolation {
   id: Uuid;
@@ -83,14 +79,15 @@ export interface UsableViolation {
 /**
  * The penalty catalogue (§4, §7): groups → violations → levels 1–5. Nothing is deleted; a
  * violation used by approved penalties is retired (`isActive: false`). Every create / change
- * emits `settings.changed` (scope `catalogue`) after the write, for core's history listener.
+ * records its history entry through core's `SettingsHistory`, in the write's own transaction.
  * Approved penalties copied their level / action / days, so edits here never change them.
  */
 @Injectable()
 export class PenaltyCatalogueService {
   constructor(
     private readonly repository: PenaltyCatalogueRepository,
-    private readonly events: EventEmitter2,
+    private readonly history: SettingsHistory,
+    private readonly afterCommit: AfterCommit,
   ) {}
 
   async list(): Promise<PenaltyGroup[]> {
@@ -104,68 +101,82 @@ export class PenaltyCatalogueService {
     }));
   }
 
-  async createGroup(dto: CreatePenaltyGroupDto, changedById: Uuid | null): Promise<GroupSnapshot> {
-    const group = toGroup(
-      await this.repository.createGroup({
-        nameEn: dto.nameEn,
-        nameAr: dto.nameAr,
-        ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
-      }),
-    );
-    this.emitChange(HrCatalogueKey.PENALTY_GROUPS, null, group, changedById);
-    return group;
+  /** Each write and its history entry commit together (audit D2). */
+  createGroup(dto: CreatePenaltyGroupDto, changedById: Uuid | null): Promise<GroupSnapshot> {
+    return this.afterCommit.inTransaction(async () => {
+      const group = toGroup(
+        await this.repository.createGroup({
+          nameEn: dto.nameEn,
+          nameAr: dto.nameAr,
+          ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
+        }),
+      );
+      await this.recordChange(HrCatalogueKey.PENALTY_GROUPS, null, group, changedById);
+      return group;
+    });
   }
 
-  async updateGroup(
+  /** A save that changes nothing writes no history entry. */
+  updateGroup(
     id: Uuid,
     dto: UpdatePenaltyGroupDto,
     changedById: Uuid | null,
   ): Promise<GroupSnapshot> {
-    const before = await this.repository.findGroup(id);
-    if (!before) throw new NotFoundException();
-    const after = toGroup(await this.repository.updateGroup(id, dto));
-    const old = toGroup(before);
-    if (!same(old, after)) this.emitChange(HrCatalogueKey.PENALTY_GROUPS, old, after, changedById);
-    return after;
+    return this.afterCommit.inTransaction(async () => {
+      const before = await this.repository.findGroup(id);
+      if (!before) throw new NotFoundException();
+      const after = toGroup(await this.repository.updateGroup(id, dto));
+      await this.recordChange(HrCatalogueKey.PENALTY_GROUPS, toGroup(before), after, changedById);
+      return after;
+    });
   }
 
-  async createViolation(
+  createViolation(
     groupId: Uuid,
     dto: CreateViolationDto,
     changedById: Uuid | null,
   ): Promise<ViolationSnapshot> {
-    if (!(await this.repository.findGroup(groupId))) throw new NotFoundException();
-    const levels = this.checkedLevels(dto.levels);
-    const violation = toViolation(
-      await this.repository.createViolation(
-        groupId,
-        {
-          nameEn: dto.nameEn,
-          nameAr: dto.nameAr,
-          note: dto.note ?? null,
-          ...(dto.oncePerDay !== undefined ? { oncePerDay: dto.oncePerDay } : {}),
-        },
-        levels,
-      ),
-    );
-    this.emitChange(HrCatalogueKey.VIOLATIONS, null, violation, changedById);
-    return violation;
+    return this.afterCommit.inTransaction(async () => {
+      if (!(await this.repository.findGroup(groupId))) throw new NotFoundException();
+      const levels = this.checkedLevels(dto.levels);
+      const violation = toViolation(
+        await this.repository.createViolation(
+          groupId,
+          {
+            nameEn: dto.nameEn,
+            nameAr: dto.nameAr,
+            note: dto.note ?? null,
+            ...(dto.oncePerDay !== undefined ? { oncePerDay: dto.oncePerDay } : {}),
+          },
+          levels,
+        ),
+      );
+      await this.recordChange(HrCatalogueKey.VIOLATIONS, null, violation, changedById);
+      return violation;
+    });
   }
 
-  async updateViolation(
+  /** A save that changes nothing writes no history entry. */
+  updateViolation(
     id: Uuid,
     dto: UpdateViolationDto,
     changedById: Uuid | null,
   ): Promise<ViolationSnapshot> {
-    const before = await this.repository.findViolation(id);
-    if (!before) throw new NotFoundException();
-    const levels = dto.levels ? this.checkedLevels(dto.levels) : undefined;
-    const { levels: _levels, ...fields } = dto;
-    const after = toViolation(await this.repository.updateViolation(id, fields, levels));
-    const { group: _group, ...beforeRow } = before;
-    const old = toViolation(beforeRow);
-    if (!same(old, after)) this.emitChange(HrCatalogueKey.VIOLATIONS, old, after, changedById);
-    return after;
+    return this.afterCommit.inTransaction(async () => {
+      const before = await this.repository.findViolation(id);
+      if (!before) throw new NotFoundException();
+      const levels = dto.levels ? this.checkedLevels(dto.levels) : undefined;
+      const { levels: _levels, ...fields } = dto;
+      const after = toViolation(await this.repository.updateViolation(id, fields, levels));
+      const { group: _group, ...beforeRow } = before;
+      await this.recordChange(
+        HrCatalogueKey.VIOLATIONS,
+        toViolation(beforeRow),
+        after,
+        changedById,
+      );
+      return after;
+    });
   }
 
   /**
@@ -188,20 +199,12 @@ export class PenaltyCatalogueService {
     return toLevelData(levels);
   }
 
-  private emitChange(
+  private recordChange(
     key: HrCatalogueKey,
     oldValue: unknown,
     newValue: unknown,
     changedById: Uuid | null,
-  ): void {
-    const event: SettingsChangedEvent = {
-      scope: 'catalogue',
-      key,
-      oldValue,
-      newValue,
-      changedById,
-      changedAt: new Date().toISOString(),
-    };
-    this.events.emit(SettingsEvent.CHANGED, event);
+  ): Promise<void> {
+    return this.history.record({ scope: 'catalogue', key, oldValue, newValue, changedById });
   }
 }

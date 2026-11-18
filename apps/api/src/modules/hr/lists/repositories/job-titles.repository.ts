@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import type { JobTitle } from '@school-erp/shared';
+import { TransactionHost } from '@nestjs-cls/transactional';
 import { DatabaseService } from '../../../../database/database.service';
+import type { DbAdapter } from '../../../../database/transactions';
 import {
   LIST_ITEM_SELECT,
   ListItemData,
@@ -20,7 +22,7 @@ export class JobTitlesRepository extends ListItemsRepository<
   JobTitleData,
   JobTitleUpdateData
 > {
-  constructor(databaseService: DatabaseService) {
-    super(databaseService, 'jobTitle', JOB_TITLE_SELECT);
+  constructor(databaseService: DatabaseService, txHost: TransactionHost<DbAdapter>) {
+    super(databaseService, txHost, 'jobTitle', JOB_TITLE_SELECT);
   }
 }

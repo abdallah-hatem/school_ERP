@@ -1,12 +1,8 @@
 import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import {
-  SettingsEvent,
-  ErrorCode,
-  type SettingsChangedEvent,
-  type Stage,
-} from '@school-erp/shared';
+import { ErrorCode, type Stage } from '@school-erp/shared';
 import { CodedException } from '../../common/errors/coded.exception';
+import { AfterCommit } from '../../database/transactions';
+import { SettingsHistory } from '../settings';
 import type { CreateListItemDto, UpdateListItemDto } from './dto/list-item.dto';
 import { StageRepository } from './repositories/stage.repository';
 
@@ -30,7 +26,8 @@ export function stageHistoryValue(stage: Stage): Omit<Stage, 'isNoStage'> {
 export class StagesService {
   constructor(
     private readonly stages: StageRepository,
-    private readonly events: EventEmitter2,
+    private readonly history: SettingsHistory,
+    private readonly afterCommit: AfterCommit,
   ) {}
 
   list(includeHidden = false): Promise<Stage[]> {
@@ -51,14 +48,17 @@ export class StagesService {
     return stage;
   }
 
-  async create(dto: CreateListItemDto, changedById: string | null): Promise<Stage> {
-    const stage = await this.stages.create({
-      nameEn: dto.nameEn,
-      nameAr: dto.nameAr,
-      sortOrder: dto.sortOrder ?? (await this.stages.nextSortOrder()),
+  /** The stage and its history entry commit together (audit D2). */
+  create(dto: CreateListItemDto, changedById: string | null): Promise<Stage> {
+    return this.afterCommit.inTransaction(async () => {
+      const stage = await this.stages.create({
+        nameEn: dto.nameEn,
+        nameAr: dto.nameAr,
+        sortOrder: dto.sortOrder ?? (await this.stages.nextSortOrder()),
+      });
+      await this.recordChange(stage.id, null, stage, changedById);
+      return stage;
     });
-    await this.recordChange(stage.id, null, stage, changedById);
-    return stage;
   }
 
   /**
@@ -74,36 +74,37 @@ export class StagesService {
     return this.stages.setNoStage(id);
   }
 
-  /** Hiding a stage in use is allowed: existing employees keep it, new choices can't pick it. */
-  async update(id: string, dto: UpdateListItemDto, changedById: string | null): Promise<Stage> {
-    const before = await this.getById(id);
-    const stage = await this.stages.update(id, {
-      nameEn: dto.nameEn,
-      nameAr: dto.nameAr,
-      sortOrder: dto.sortOrder,
-      isActive: dto.isActive,
-    });
-    if (JSON.stringify(before) !== JSON.stringify(stage)) {
+  /**
+   * Hiding a stage in use is allowed: existing employees keep it, new choices can't pick it. The
+   * change and its history entry commit together; a save that changes nothing writes none.
+   */
+  update(id: string, dto: UpdateListItemDto, changedById: string | null): Promise<Stage> {
+    return this.afterCommit.inTransaction(async () => {
+      const before = await this.getById(id);
+      const stage = await this.stages.update(id, {
+        nameEn: dto.nameEn,
+        nameAr: dto.nameAr,
+        sortOrder: dto.sortOrder,
+        isActive: dto.isActive,
+      });
       await this.recordChange(id, before, stage, changedById);
-    }
-    return stage;
+      return stage;
+    });
   }
 
-  /** After the write has committed: one history row via core/settings' listener. */
-  private async recordChange(
+  /** In the write's transaction: one history entry (core/settings → the audit log). */
+  private recordChange(
     id: string,
     oldValue: Stage | null,
     newValue: Stage,
     changedById: string | null,
   ): Promise<void> {
-    const event: SettingsChangedEvent = {
+    return this.history.record({
       scope: 'lists',
       key: stageHistoryKey(id),
       oldValue: oldValue && stageHistoryValue(oldValue),
       newValue: stageHistoryValue(newValue),
       changedById,
-      changedAt: new Date().toISOString(),
-    };
-    await this.events.emitAsync(SettingsEvent.CHANGED, event);
+    });
   }
 }

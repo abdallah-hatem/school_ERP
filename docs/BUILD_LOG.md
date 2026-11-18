@@ -202,12 +202,34 @@ phase live in `docs/build-log/`.
   (PR, four green checks, owner approval); Sunday's demo runs from it (ARCHITECTURE → Environments).
 - 2026-11-18 — Team (owner): Waleed is paused for now; the work is split between Abdallah and
   Tamer. Waleed's T28 (audit wiring for auth, settings, employees, lists) moves to Abdallah.
+- 2026-11-18 — Settings history written in the change's own transaction (no outbox needed): stages,
+  departments, job titles, penalty groups and violations record through core's `SettingsHistory`
+  inside their write, so a failed entry rolls the change back; the after-commit listener is gone and
+  those ten endpoints are `@Audited` → `fix/settings-history-in-transaction`.
 - 2026-11-18 — The "no stage" entry is a flag, not a name (`fix/none-stage-by-id`): `stages.is_no_stage`,
   set on the stage named "None" by its migration and by the seed (`StagesService.ensureNoStage`, no
   endpoint); the card band reads the flag. Was the only name check in api/web/shared/seed.
 
 ## Next up
 
+- **Events + outbox (owner, 2026-11-18) — start once the scheduled-jobs PR is merged.** Decided:
+  - `DomainEvents.publish(name, payload, { mustDeliver? })` in core, typed by one name→payload map
+    in `packages/shared`; always after commit; every existing emit moves to it; a lint check bans
+    calling `EventEmitter2` directly.
+  - Fire-and-forget: in memory after commit (cache refresh, `user.sessions_ended`,
+    `settings.changed`). Must-deliver: an `outbox_events` row written in the same transaction,
+    delivered per listener (`outbox_deliveries`) — rule: if losing it leaves data wrong or someone
+    not told, it's must-deliver (`hr.payroll.approved`, every notification event,
+    `employee.deactivated`).
+  - Delivery: a nudge right after commit (instant) + a poll every **30 s** on the jobs foundation as
+    the safety net; `FOR UPDATE SKIP LOCKED`; in creation order. The poll writes to `job_runs` only
+    when it delivered or failed.
+  - Retries 10 s, 1 min, 5 min, 30 min, then every 2 h; **dead after 10 failures** (logged, later a
+    system notification to admins); an admin can retry a dead event.
+  - Listeners are idempotent through a base class that records handled event ids.
+  - Nightly cleanup of delivered events older than 30 days; dead ones kept.
+  - `hr.payroll.approved` → accounting moves to must-deliver (Tamer reviews; his late path stays as
+    a second guard). ARCHITECTURE's events section rewritten. Notifications builds on it.
 - **Accounting payroll taxes screen** — a page per approved month (net, insurance share, income tax,
   fund, gross per employee) and a sidebar entry: **mockups first** (CLAUDE.md rule 9). The API
   (`GET /accounting/payroll[/:month]`) is built. Tax defaults are GUESS until the accountant confirms.
@@ -228,7 +250,6 @@ phase live in `docs/build-log/`.
 - The client should check the Arabic penalty catalogue against the printed regulations (copied from the scans).
 
 - Login rate limiting (T2 left it out; security baseline).
-- Write the settings history in the same transaction as the change (outbox), instead of right after.
 
 - Hosting the demo on the Contabo server (owner: later; local demo is the fallback).
 - Audit log T28 (Abdallah, was Waleed's: auth, settings, employees, lists) and T29 (Tamer: penalties, lateness,
