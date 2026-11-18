@@ -47,6 +47,7 @@
 | Work system | Full-time, or part-time 4, 3 or 2 days a week. DECIDED |
 | Basic salary | Monthly, in EGP, required, greater than 0 |
 | Fingerprint ID | Optional; unique if given (for the device integration later) |
+| Probation end | **Planned** (owner, 2026-11-18, §11): a date, filled with the hire date + the school's default probation length (3 months; 0 = no probation, left empty) and editable; on or after the hire date. The probation reminder (§11) follows it |
 | Contract start / end | Required (filled automatically when left empty). Defaults to 1 June – 31 May of the current contract year; if only a start is given, the end is one year later minus a day (e.g. 1 Sep 2026 → 31 Aug 2027). End after start. DECIDED (one-year fixed contract) |
 | Uses school bus | Yes / no, required (defaults to no) |
 | Photo | Optional; PNG, JPG or WebP, up to 2 MB, shown square-cropped. Only signed-in users can open it. Without a photo the employee shows a neutral silhouette, never initials. DECIDED (owner, 2026-11-18) |
