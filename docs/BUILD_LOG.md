@@ -198,14 +198,11 @@ phase live in `docs/build-log/`.
   run-page/docs conflicts with each other resolved by us, `ci:local` re-run on each merge.
 - 2026-11-18 — CI: docs-only PRs pass API e2e and smoke in seconds without running them; lint,
   typecheck, unit tests and module rules always run; CI also runs on PRs into `demo` → #100.
+- 2026-11-18 — `demo` branch cut from dev at 0d07713 (after #97–#101) and protected like testing
+  (PR, four green checks, owner approval); Sunday's demo runs from it (ARCHITECTURE → Environments).
 
 ## Next up
 
-- **`demo` branch (owner, 2026-11-18):** once the rules-in-lateness/run, dry-run polish and roles
-  leftovers PRs are merged and dev is green, cut `demo` from dev and run Sunday's demo from it, so
-  untested work on dev never reaches the demo. Protected like testing/production (PR, four green
-  checks, owner approval; fixes land in dev first). CI runs on PRs into `demo`. Document in
-  ARCHITECTURE → branches.
 - **Accounting payroll taxes screen** — a page per approved month (net, insurance share, income tax,
   fund, gross per employee) and a sidebar entry: **mockups first** (CLAUDE.md rule 9). The API
   (`GET /accounting/payroll[/:month]`) is built. Tax defaults are GUESS until the accountant confirms.

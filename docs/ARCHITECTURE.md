@@ -43,6 +43,12 @@ backups proven by a restore).
 | **testing** | every merge to the `testing` branch (a PR from `dev`), automatically | realistic fake data at real volume (e.g. 2,000 students, a full year of payments) | operations QA, the school's review before a release, speed and load tests |
 | **prod** | the `production` branch (`vX.Y.Z` image), one deployment per school | real school data | the schools |
 
+- **The `demo` branch** (owner, 2026-11-18) holds what client demos run from: cut from a green `dev`
+  after a demo dry run, so features still being built on `dev` never show in a demo. It is
+  protected like `testing` and `production` (a PR, all four checks green and up to date, the
+  owner's approval). A fix a demo needs lands in `dev` first, then reaches `demo` by a PR from
+  `dev` (or a branch cut from `demo` for that one fix). Run it locally: check out `demo`,
+  `prisma migrate deploy` on the demo database, then the seed once. No environment deploys it yet.
 - **Each environment is its own Coolify project** with its own containers, env vars and databases.
 - **Prod has its own Postgres container.** dev and testing share a separate one. A heavy test can
   never touch a school's data.
