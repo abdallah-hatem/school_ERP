@@ -2,10 +2,11 @@
 
 Date: 2026-11-18 · Mode: build-software feature mode, guided · Business: §11 (new), §2, §4, §5, §6,
 §7, §9 · Plan: `docs/plans/2026-11-18-notifications-plan.md` · Mockups:
-`design/mockups/notifications.html` (three options, **owner to pick** before any screen is built).
+`design/mockups/notifications.html` — **option A · Bell popover**, picked by the owner (2026-11-18).
 
-Status: **draft for the owner.** No code until the owner approves this spec and picks a mockup
-(CLAUDE.md rule 9: a new navigation element and a new panel are a design change).
+Status: **decided by the owner (2026-11-18)**: layout option A, in-app only in the UI, and the
+answers to every earlier OPEN question ("go with your recommended answers") — see "Owner decisions
+— answers" below. Build waits for the events + outbox work (`docs/BUILD_LOG.md` → Next up).
 
 Owner decisions (2026-11-18) this spec is built on:
 
@@ -20,6 +21,26 @@ Owner decisions (2026-11-18) this spec is built on:
   `feature/login-rate-limit-and-jobs`).
 - **Preferences: per person, per type, per channel**; the school sets defaults in Settings; some
   types can't be turned off.
+- **Layout: option A · Bell popover** (owner, 2026-11-18, PR #106): the bell beside the language
+  switch opens a compact list over the page (full screen on a phone). **The UI shows the in-app
+  channel only**: no Email / WhatsApp / SMS anywhere on screen or in the UI copy. Each type is one
+  on/off for the person; a type that can't be turned off shows on and locked. The data model and
+  the API stay channel-ready (a `channel` field whose only value today is `in_app`).
+
+### Owner decisions — answers (2026-11-18, "go with your recommended answers")
+
+1. **Many items at once → one grouped notification** ("12 contracts end within 30 days"),
+   expandable to the list of items (N17).
+2. **Probation → a per-employee probation end date** on the employee record, filled with hire date
+   + the school's default probation length (3 months, a setting) and editable. A new HR employee
+   field: its own plan task (N0), before the reminders.
+3. **Deadlines → lateness entered by the 25th, payroll prepared and approved by the 28th**, both
+   settings with those defaults (the days are GUESS until the school confirms).
+4. **Approval notifications can't be turned off.** Reminders can.
+5. **Retention → read 90 days, done approvals 30 days, anything at most 365 days**, removed by a
+   nightly cleanup job.
+6. **Contract reminders at 30 days and again at 7 days** before the end.
+7. **Settings → Notifications: the System admin changes it; the HR manager sees it read-only.**
 
 Markers as in `docs/BUSINESS_LOGIC.md`: **DECIDED** (owner), **GUESS** (our default, to confirm),
 **OPEN** (not decided; the build doesn't depend on it, or the plan says which task waits).
@@ -52,7 +73,7 @@ each screen and look.
 | Payroll preparers (today: HR officer, HR manager, System admin) | "Payroll not prepared yet" |
 | Lateness editors (today: HR officer, HR manager, System admin) | "Lateness not entered" |
 | Employee editors (today: HR officer, HR manager, System admin) | "Contract ends soon", "Probation ends soon" — for employees inside their scope |
-| Holders of the new permissions **View / Manage notification settings** (`core.notifications.view`: System admin and HR manager; `core.notifications.manage`: System admin — GUESS) | Settings → Notifications: the school's defaults per type and channel and the retention (read-only with view only) |
+| Holders of the new permissions **View / Manage notification settings** (`core.notifications.view`: System admin and HR manager; `core.notifications.manage`: System admin — DECIDED, owner 2026-11-18) | Settings → Notifications: the school's defaults per type and channel and the retention (read-only with view only) |
 | Whoever may change HR rules (`hr.settings.edit`) | The reminder timings (days before a contract ends, the check days of the month) — they are HR rule settings (§7) |
 | Parents / students | **Planned.** The recipient model allows a contact; nothing is built for them |
 
@@ -71,14 +92,15 @@ Recipients are chosen by **permission and scope**, never by role name: a custom 
 | N6 | **Recipient is polymorphic**: `recipient_kind` (`user` now; `contact` Planned for parents / students) + `recipient_id`. Only `user` is built; the API, the bell and preferences are for users. | Parents later without reshaping the table. |
 | N7 | **Channels are adapters** behind one interface (`NotificationChannel`: key, `send(delivery)`), registered in core. `in_app` is the only one built. Adding email / WhatsApp / SMS later = a new adapter + its key in `NOTIFICATION_CHANNELS` + its school setting (sender, credentials); no module changes, because modules never name a channel. | The owner's "add channels later without touching the modules". |
 | N8 | **One delivery row per notification per enabled channel** (`notification_deliveries`: channel, status `pending` / `sent` / `failed` / `skipped`, attempts, last error, sent at). `in_app` is `sent` at once. A channel that is switched off for the person at send time gets no row. | One place to see what reached whom; retries for outside channels later. |
-| N9 | **Dedupe by key**: a notification carries a `dedupe_key` built by its type (`contract_end:<employeeId>:<contractEnd>`, `lateness_missing:<month>`, `penalty:<penaltyId>`); a unique index on `(recipient_kind, recipient_id, type, dedupe_key)` makes a second send a no-op (`ON CONFLICT DO NOTHING`). | A reminder is never sent twice for the same thing — across restarts, two containers, a job run twice, or a retried request. |
-| N10 | **Approvals resolve**: when the thing waiting is done (penalty approved or cancelled; run approved), the module calls `resolve(type, subject)`: every open notification for that subject, **for every recipient**, is marked resolved (who and when) and stops counting as unread. It stays in the list, greyed, reading "Approved by Laila Hassan". | The other approvers stop seeing a "waiting" that someone else already handled. |
+| N9 | **Dedupe by key**: every item (N17) carries a `dedupe_key` built by its type (`contract_end:<employeeId>:<contractEnd>:30`, `lateness_missing:<month>`, `penalty:<penaltyId>`); a unique index on `(recipient_kind, recipient_id, type, dedupe_key)` over the items makes a second send a no-op (`ON CONFLICT DO NOTHING`). | A reminder is never sent twice for the same thing — across restarts, two containers, a job run twice, or a retried request. |
+| N10 | **Approvals resolve**: when the thing waiting is done (penalty approved or cancelled; run approved), the module calls `resolve(type, subject)`: every open item for that subject, **for every recipient**, is marked resolved (who and when); a notification whose items are all resolved is resolved and stops counting as unread. It stays in the list, greyed, reading "Approved by Laila Hassan" (a group: "All done"). | The other approvers stop seeing a "waiting" that someone else already handled. |
 | N11 | **Access is checked again when reading**: the list and the count re-check each approval / reminder against the reader's current permissions and scope (the same resolver as N5). A notification the reader may no longer see is **left out** of the list and the count (not deleted). Opening its link goes to the record's page, which answers "This page isn't here" like any record outside their scope (§2). | Losing a permission or a scope change must not leave names or counts behind in the bell. |
 | N12 | The **bell polls**: the unread count every 60 seconds while the tab is visible, and on focus. GUESS. Live push (server-sent events) is Planned if polling proves too slow. | Simple, cacheless (every page is per-user, CLAUDE.md rule 7), fine for a school's numbers. |
-| N13 | **Preferences**: effective = the type can't be turned off → on; else the person's own choice for that type and channel, if any; else the school's default; else the type's default. A person can only switch a channel the school has turned on (a channel not set up — email today — is shown "Coming soon"). | "Per person, per type, per channel; the school sets defaults; some types can't be turned off." |
-| N14 | **Retention** (GUESS, settings): read notifications are deleted 90 days after they were read, resolved ones 30 days after they were resolved, and any notification after 365 days; a nightly job does it. Delivery rows go with their notification. | Notifications are a to-do list, not a record; the audit log is the record (§9). |
+| N13 | **Preferences**: effective = the type can't be turned off → on; else the person's own choice for that type and channel, if any; else the school's default; else the type's default. A person can only switch a channel that is live; today that is `in_app` only, so the screens show **one switch per type** and never mention other channels (owner, 2026-11-18). | "Per person, per type, per channel; the school sets defaults; some types can't be turned off." |
+| N14 | **Retention** (DECIDED, owner 2026-11-18; settings): read notifications are deleted 90 days after they were read, resolved ones 30 days after they were resolved, and any notification after 365 days; a nightly job does it. Delivery rows go with their notification. | Notifications are a to-do list, not a record; the audit log is the record (§9). |
 | N15 | **Reminder rules are HR settings** (module rule settings live in their module): days before a contract ends, days before probation ends, the probation length, the lateness check day, the payroll check day. They are shown in Settings → Notifications next to the school defaults (one screen), but saved and audited as HR rules. | ARCHITECTURE → "Module rule settings live in their module". |
 | N16 | Reminders run from **one daily HR job** on the jobs foundation (07:00 school time, Africa/Cairo), protected by its advisory lock, logged in `job_runs`. The job is idempotent: it finds everything due **today or overdue** and sends with dedupe keys, so a missed day (server down) is caught up the next day, never twice. | Owner: reminders run on the jobs foundation; dedupe makes catch-up safe. |
+| N17 | **Grouping** (DECIDED, owner 2026-11-18): items of one type for one recipient join that recipient's **open, unread** notification of the same type and group key (the group key is the type's: the school day for reminders and approvals of one kind, e.g. `2026-11-18`), instead of making a new notification. One item reads as itself ("Penalty for Omar Khalil is waiting…"); two or more read as a group ("3 penalties waiting for your approval", "12 contracts end within 30 days") and open into the list of items, each with its own link. Once the person has read the notification, a new item starts a new one. The bell counts notifications, not items. | Many items at once (every contract ends 31 May) must not flood the bell. |
 
 ## Entities
 
@@ -97,20 +119,27 @@ Business terms; the tables are a sketch for the plan.
 | link | the screen and record it opens |
 | texts | title + body per language, with plural forms |
 
-### Notification (one per recipient)
+### Notification (one per recipient per group)
 
-`id`, `type`, `recipient_kind` + `recipient_id`, `subject` (`entity_type`, `entity_id`, and
-`employee_id` when the subject is about one employee — used for the scope re-check), `params`
-(jsonb: the values for the sentence — names `{ en, ar }`, month, counts, dates), `dedupe_key`,
-`batch_key` (the job run or request that made it: the list can collapse "12 contracts end soon"
-from one run into one row), `actor_id` (who caused it; null for a reminder), `created_at`,
-`read_at`, `resolved_at`, `resolved_by_name` (snapshot, `{ en, ar }`), `resolution`
-(`approved` / `cancelled` / `done`).
+`id`, `type`, `recipient_kind` + `recipient_id`, `group_key`, `actor_id` (who caused the first
+item; null for a reminder), `created_at`, `updated_at` (its latest item), `read_at`, `resolved_at`
+(when its last open item was resolved).
 
-Indexes: `(recipient_kind, recipient_id, created_at desc)`; partial `(recipient_kind,
-recipient_id) where read_at is null and resolved_at is null` (the count); `(type, entity_type,
-entity_id) where resolved_at is null` (resolve); unique `(recipient_kind, recipient_id, type,
-dedupe_key)`.
+Indexes: `(recipient_kind, recipient_id, updated_at desc)`; partial `(recipient_kind, recipient_id)
+where read_at is null and resolved_at is null` (the count); partial unique `(recipient_kind,
+recipient_id, type, group_key) where read_at is null and resolved_at is null` (the open group an
+item joins).
+
+### Item (one or more per notification)
+
+`notification_id`, `recipient_kind` + `recipient_id` + `type` (copied, for the dedupe index),
+`subject` (`entity_type`, `entity_id`, and `employee_id` when the subject is about one employee —
+used for the scope re-check), `params` (jsonb: the values for the sentence — names `{ en, ar }`,
+month, counts, dates), `dedupe_key`, `created_at`, `resolved_at`, `resolved_by_name` (snapshot,
+`{ en, ar }`), `resolution` (`approved` / `cancelled` / `done`).
+
+Indexes: unique `(recipient_kind, recipient_id, type, dedupe_key)`; `(type, entity_type, entity_id)
+where resolved_at is null` (resolve); `(notification_id)`.
 
 ### Delivery (one per notification per channel)
 
@@ -130,32 +159,33 @@ dedupe_key)`.
 
 | Key | Category | Off allowed? | To whom (permission, scope) | Sent when | Resolved when | Link | Dedupe key |
 |---|---|---|---|---|---|---|---|
-| `hr.penalty.awaiting_approval` | approval | **No** (GUESS) | `hr.penalties.approve` covering the employee | A penalty is recorded (pending) | It is approved or cancelled (by anyone) | Penalties, opened on that penalty | `penalty:<id>` |
-| `hr.payroll.ready_to_approve` | approval | **No** (GUESS) | `hr.payroll.approve` (all) | A draft run is created or recalculated **and** the month has no pending penalties | The run is approved — or a pending penalty appears in the month again (then it's no longer ready; it is sent again when it is) | The payroll run | `payroll_ready:<month>:<calc #>` GUESS: one per calculation that makes it ready |
-| `hr.contract.ending_soon` | reminder | Yes | `hr.employees.edit` covering the employee | An active employee's contract ends within **30 days** (setting) | The contract end moves out of the window, or the employee is deactivated | The employee's profile | `contract_end:<employeeId>:<contractEnd>` |
-| `hr.probation.ending_soon` | reminder | Yes | `hr.employees.edit` covering the employee | An active employee's probation (hire date + **3 months**, setting) ends within **7 days** (setting) | The date passes, or the employee is deactivated | The employee's profile | `probation_end:<employeeId>:<probationEnd>` |
-| `hr.lateness.not_entered` | reminder | Yes | `hr.lateness.edit` (all) | On or after day **25** (setting) of the month, the month's lateness has never been saved | The month's lateness is saved, or its payroll is approved | Lateness, that month | `lateness_missing:<month>` |
-| `hr.payroll.not_prepared` | reminder | Yes | `hr.payroll.create` (all) | On or after day **28** (setting) of the month, the month has no payroll run | A run is created | Payroll | `payroll_missing:<month>` |
+| `hr.penalty.awaiting_approval` | approval | **No** (DECIDED) | `hr.penalties.approve` covering the employee | A penalty is recorded (pending) | It is approved or cancelled (by anyone) | Penalties, opened on that penalty | `penalty:<id>` |
+| `hr.payroll.ready_to_approve` | approval | **No** (DECIDED) | `hr.payroll.approve` (all) | A draft run is created or recalculated **and** the month has no pending penalties | The run is approved — or a pending penalty appears in the month again (then it's no longer ready; it is sent again when it is) | The payroll run | `payroll_ready:<month>:<calc #>` GUESS: one per calculation that makes it ready |
+| `hr.contract.ending_soon` | reminder | Yes | `hr.employees.edit` covering the employee | An active employee's contract ends within **30 days**, and again within **7 days** (both settings; DECIDED) | The contract end moves out of the window, or the employee is deactivated; the 30-day item is resolved (`done`) when the 7-day one is sent | The employee's profile | `contract_end:<employeeId>:<contractEnd>:<30\|7>` |
+| `hr.probation.ending_soon` | reminder | Yes | `hr.employees.edit` covering the employee | An active employee's **probation end date** (employee field, N0; default hire date + 3 months) is within **7 days** (setting) | The date passes or is moved out of the window, or the employee is deactivated | The employee's profile | `probation_end:<employeeId>:<probationEnd>` |
+| `hr.lateness.not_entered` | reminder | Yes | `hr.lateness.edit` (all) | On or after day **25** (setting; DECIDED, the day GUESS) of the month, the month's lateness has never been saved | The month's lateness is saved, or its payroll is approved | Lateness, that month | `lateness_missing:<month>` |
+| `hr.payroll.not_prepared` | reminder | Yes | `hr.payroll.create` (all) | On or after day **28** (setting; DECIDED, the day GUESS) of the month, the month has no payroll run | A run is created | Payroll | `payroll_missing:<month>` |
 | `hr.payroll.not_approved` | reminder | Yes | `hr.payroll.approve` (all) | On or after day **28** (setting), the month's run is still a draft | The run is approved | The payroll run | `payroll_unapproved:<month>` |
 
-- **GUESS** — Approval types can't be turned off in-app: the approval chain depends on them.
-  Reminders can.
+- **DECIDED** (owner, 2026-11-18) — Approval types can't be turned off. Reminders can.
 - **GUESS** — The person who caused the event isn't notified about it (an HR manager who records
   a penalty and may approve it gets no "waiting" for it).
-- **GUESS** — One notification **per penalty**, not one digest ("5 penalties waiting"). The list
-  collapses rows of one type made by the same run (`batch_key`) into one expandable row. **OPEN**
-  (owner): a digest instead?
-- **GUESS** — Probation is hire date + 3 months (the legal maximum in Egypt). The employee record has
-  no probation field. **OPEN**: does the school use probation, and does it differ per employee
-  (then it becomes an employee field)?
-- **GUESS** — The lateness and payroll check days are for the **current** month (November's
-  lateness is due by 25 November, its payroll by 28 November). A day past the month's end means its
-  last day (31 → 28 February). **OPEN**: the real dates the school works to.
+- **DECIDED** (owner, 2026-11-18) — Many items at once make **one grouped notification** per
+  recipient (N17): "3 penalties waiting for your approval", "38 contracts end within 30 days",
+  expandable to the items. A single item reads as itself.
+- **DECIDED** (owner, 2026-11-18) — Probation is a **per-employee probation end date** (N0): filled
+  with hire date + the school's default probation length (**3 months**, a setting; 0 = no
+  probation, the field stays empty) and editable on the employee record. Reminders follow the
+  employee's date.
+- **DECIDED** (owner, 2026-11-18) — Lateness is due by the **25th** and payroll is prepared and
+  approved by the **28th**, as settings with those defaults (the days are GUESS until the school
+  confirms). They are days of the **current** month (November's lateness is due by 25 November);
+  a day past the month's end means its last day (31 → 28 February).
 - **GUESS** — "Lateness entered" means the month was saved at least once, even with all zeros.
-- **GUESS** — Contract end: 30 days before; probation: 7 days before. Since every contract ends
-  on 31 May by default (§3), on 1 May each employee editor gets one reminder per employee — the
-  collapsed row reads "38 contracts end within 30 days". **OPEN**: a second reminder closer to the
-  date (e.g. 7 days)?
+- **DECIDED** (owner, 2026-11-18) — Contract reminders go **30 days and again 7 days** before the
+  end; probation 7 days before. Since every contract ends on 31 May by default (§3), on 1 May each
+  employee editor gets one grouped notification ("38 contracts end within 30 days"), and a second
+  on 24 May ("38 contracts end within 7 days").
 - **Planned** — More types belong to their modules as they are built: leave requests (direct
   manager, then HR manager), fees overdue (parents, later), exam marks missing, etc.
 
@@ -175,8 +205,9 @@ dedupe key. Approving the run resolves it as `approved`.
    actorId })`.
 3. Core resolves recipients (N5): active users holding the type's permission; scope checked by the
    registered resolver for that subject; the actor left out.
-4. For each recipient: one notification row (`ON CONFLICT DO NOTHING` on the dedupe key), then one
-   delivery row per channel enabled for that person (N13). `in_app` → `sent`.
+4. For each recipient: one item (`ON CONFLICT DO NOTHING` on the dedupe key) added to their open,
+   unread notification of that type and group key, or to a new one (N17); a new notification gets
+   one delivery row per channel enabled for that person (N13). `in_app` → `sent`.
 5. Commit. Nothing is sent outside the app now; later channels pick their `pending` deliveries up
    from a job after the commit (N4).
 6. The recipient's bell shows the new count on its next poll (≤ 60 s) or when the tab gets focus.
@@ -203,7 +234,8 @@ change fails too (GUESS: correctness over availability, as the audit log). Zero 
 - **List**: newest first, server-paged (20 per page), filter All / Unread, and by category (Needs
   action / Reminders). Each row: icon of its type, the sentence in the reader's language, how long
   ago ("3 min ago", "Yesterday 14:20" — school time zone), unread dot, resolved line.
-- **Open** a notification → it is marked read and the app goes to its link. A link the reader
+- **Open** a notification → it is marked read and the app goes to its link (a group opens into its
+  items first; each item has its own link). A link the reader
   can't open, or a record that no longer exists, shows the shell's "This page isn't here" —
   never anything from the record (§2). (HR records are never deleted, but the rule holds for later
   modules.)
@@ -214,11 +246,12 @@ change fails too (GUESS: correctness over availability, as the audit log). Zero 
 ### 4. Preferences
 
 - **My account → Notifications** (every user): the types the person can receive (they hold the
-  permission), grouped by module, with a switch per channel. `in_app` today; email, WhatsApp, SMS
-  shown as "Coming soon". A type that can't be turned off shows a locked switch and "Required". A
-  switch that differs from the school default shows "Reset to school default".
+  permission), grouped by module, **one on/off switch per type** (the in-app channel — no other
+  channel is shown). A type that can't be turned off shows its switch on, locked, with "Required".
+  A switch that differs from the school default shows "Changed from school default" and "Reset to
+  school default".
 - **Settings → Notifications** (`core.notifications.view` to see it, read-only; `core.notifications.manage`
-  to change it — GUESS: System admin changes, HR manager sees): the school default per type and channel; under it, the HR
+  to change it — DECIDED, owner 2026-11-18: the System admin changes it, the HR manager sees it read-only): the school default per type (one switch each, in-app); under it, the HR
   reminder timings (HR rule settings, `hr.settings.edit`).
 - Turning a type off stops **new** notifications of that type on that channel; it doesn't delete
   those already received.
@@ -227,14 +260,15 @@ change fails too (GUESS: correctness over availability, as the audit log). Zero 
 
 | Setting | Default | Range | Source |
 |---|---|---|---|
-| Remind before a contract ends | 30 days | 1–120 | GUESS |
-| Probation length | 3 months | 0 (no probation reminders) – 6 | GUESS |
+| Remind before a contract ends (first) | 30 days | 1–120 | DECIDED (owner, 2026-11-18) |
+| Remind before a contract ends (second) | 7 days | 0 (no second reminder) – 60, less than the first | DECIDED (owner, 2026-11-18) |
+| Default probation length (fills a new employee's probation end) | 3 months | 0 (no probation) – 6 | DECIDED (owner, 2026-11-18) |
 | Remind before probation ends | 7 days | 1–60 | GUESS |
-| Lateness check day (of each month) | 25 | 1–31 (past the month's end = its last day) | GUESS |
-| Payroll check day (of each month) | 28 | 1–31 (same) | GUESS |
+| Lateness check day (of each month) | 25 | 1–31 (past the month's end = its last day) | DECIDED setting; day GUESS until the school confirms |
+| Payroll check day (of each month) | 28 | 1–31 (same) | DECIDED setting; day GUESS until the school confirms |
 
 Core settings (Settings → Notifications): read notifications kept **90 days**, resolved **30 days**,
-everything at most **365 days** (GUESS); the school's default per type and channel.
+everything at most **365 days** (DECIDED, owner 2026-11-18; a nightly cleanup job); the school's default per type and channel.
 
 Changing a timing affects the next daily run only. A reminder already sent stays; one whose
 condition no longer holds under the new timing is not withdrawn (GUESS — simpler; it resolves when
@@ -250,9 +284,10 @@ the snapshot in the reader's language. Arabic uses all six plural forms (`zero`,
 |---|---|---|
 | `hr.penalty.awaiting_approval` | **Penalty waiting for your approval** — {employee} · {violation}, level {level} | **جزاء في انتظار اعتمادك** — {employee} · {violation}، المرة {level} |
 | — resolved | Approved by {name} / Cancelled by {name} | اعتمده {name} / ألغاه {name} |
+| — grouped (N17) | {count, plural, other {# penalties waiting for your approval}} | {count, plural, two {جزاءان في انتظار اعتمادك} few {# جزاءات في انتظار اعتمادك} many {# جزاءً في انتظار اعتمادك} other {# جزاء في انتظار اعتمادك}} |
 | `hr.payroll.ready_to_approve` | **{month} payroll is ready to approve** — {count, plural, one {# employee} other {# employees}}, net {net} | **رواتب {month} جاهزة للاعتماد** — {count, plural, zero {لا موظفين} one {موظف واحد} two {موظفان} few {# موظفين} many {# موظفًا} other {# موظف}}، الصافي {net} |
 | `hr.contract.ending_soon` | **{employee}'s contract ends {date}** — {days, plural, one {in # day} other {in # days}} | **ينتهي عقد {employee} في {date}** — {days, plural, zero {اليوم} one {بعد يوم واحد} two {بعد يومين} few {بعد # أيام} many {بعد # يومًا} other {بعد # يوم}} |
-| — collapsed batch | {count, plural, one {# contract ends} other {# contracts end}} within {days} days | {count, plural, one {ينتهي عقد واحد} two {ينتهي عقدان} few {تنتهي # عقود} many {ينتهي # عقدًا} other {ينتهي # عقد}} خلال {days} يومًا |
+| — grouped (N17) | {count, plural, one {# contract ends} other {# contracts end}} within {days} days | {count, plural, one {ينتهي عقد واحد} two {ينتهي عقدان} few {تنتهي # عقود} many {ينتهي # عقدًا} other {ينتهي # عقد}} خلال {days} يومًا |
 | `hr.probation.ending_soon` | **{employee}'s probation ends {date}** | **تنتهي فترة اختبار {employee} في {date}** |
 | `hr.lateness.not_entered` | **{month} lateness isn't entered yet** — payroll needs it | **لم يُدخَل تأخير شهر {month} بعد** — الرواتب تحتاج إليه |
 | `hr.payroll.not_prepared` | **{month} payroll hasn't been prepared** | **لم يُعَدّ مسير رواتب {month} بعد** |
@@ -279,14 +314,14 @@ another person's notification id answers **404** (not 403).
 | `POST /notifications/read-all` | same | `{ upTo: IsoDateTime }` | `{ updated: number }` |
 | `GET /notifications/preferences` | `@SignedIn()` | — | `NotificationPreferences` |
 | `PUT /notifications/preferences` | `@SignedIn()`, `@Audited('core.notification_preferences.update')` | `{ items: { type, channel, enabled: boolean \| null }[] }` (`null` = back to the school default) | `NotificationPreferences` |
-| `GET /settings/notifications` | `@Permission('core.notifications.view')` GUESS (System admin, HR manager) | — | `NotificationSettings` |
+| `GET /settings/notifications` | `@Permission('core.notifications.view')` (System admin, HR manager — DECIDED) | — | `NotificationSettings` |
 | `PUT /settings/notifications` | `@Permission('core.notifications.manage')`, `@Audited('core.notification_settings.update')` | `{ defaults?: { type, channel, enabled }[]; retention?: { readDays, resolvedDays, maxDays } }` | `NotificationSettings` |
 | HR reminder timings | existing `GET / PUT /hr/settings` (new keys under `hr.reminders.*`, `hr.settings.edit`, already `@Audited('hr.settings.update')`) | `{ reminders: { contractEndDays, probationMonths, probationEndDays, latenessCheckDay, payrollCheckDay } }` | the HR settings |
 
 Shared types (`packages/shared/src/types/notifications.ts`):
 
 ```ts
-type NotificationChannel = 'in_app' | 'email' | 'whatsapp' | 'sms';     // only in_app is live
+type NotificationChannel = 'in_app';   // channel-ready: later channels add a value here, not a new shape
 type NotificationCategory = 'approval' | 'reminder';
 
 interface NotificationItem {
@@ -296,8 +331,13 @@ interface NotificationItem {
   category: NotificationCategory;
   params: Record<string, unknown>;      // names as { en, ar }, month, counts, dates
   link: { screen: ScreenId; recordId?: Uuid; query?: Record<string, string> } | null;
-  batchKey: string | null;
-  batchSize: number;                    // > 1: the list may collapse the batch
+  items: {                              // one or more (N17); only those the reader may still see
+    id: Uuid; params: Record<string, unknown>;
+    link: { screen: ScreenId; recordId?: Uuid; query?: Record<string, string> } | null;
+    resolved: { at: IsoDateTime; by: { en: string; ar: string } | null;
+                resolution: 'approved' | 'cancelled' | 'done' } | null;
+  }[];
+  openCount: number;                    // items not resolved
   createdAt: IsoDateTime;
   readAt: IsoDateTime | null;
   resolved: { at: IsoDateTime; by: { en: string; ar: string } | null;
@@ -305,7 +345,7 @@ interface NotificationItem {
 }
 
 interface NotificationPreferences {
-  channels: { channel: NotificationChannel; available: boolean }[];   // available = set up for the school
+  channels: { channel: NotificationChannel; available: boolean }[];   // today: [{ in_app, true }]; the UI doesn't show it
   types: {
     type: NotificationTypeKey; module: string; category: NotificationCategory;
     canTurnOff: boolean;
@@ -323,14 +363,14 @@ interface NotificationSettings {
 ```
 
 Errors: `NOTIFICATION_TYPE_REQUIRED` (409, turning off a type that can't be), `CHANNEL_NOT_AVAILABLE`
-(409, a channel the school hasn't set up), `VALIDATION_FAILED` (400). Unknown type keys in the body
+(409, a channel that isn't live — any value but `in_app` today), `VALIDATION_FAILED` (400). Unknown type keys in the body
 → 400.
 
 Core's exported service (for modules, not HTTP):
 
 ```ts
 notify(input: { type; subject: { entityType; entityId; employeeId? }; params; dedupeKey;
-                actorId?: Uuid | null; batchKey?: string }): Promise<{ created: number }>;
+                actorId?: Uuid | null; groupKey?: string }): Promise<{ created: number }>;
 resolve(input: { type; subject: { entityType; entityId }; resolution; byUserId?: Uuid | null }):
   Promise<{ resolved: number }>;
 registerScopeResolver(entityType: string, resolver: NotificationScopeResolver): void;
@@ -402,6 +442,16 @@ later modules        ← the same: own types, call core
 15. Nobody holds the permission (fresh school) → the change succeeds, nothing is written. — Flow 1
 16. A salary-blind approver of penalties (principal) → a payroll sentence never shows a net they
     can't see. — §2, Text
+17. 38 contracts end on 31 May → on 1 May one notification per employee editor, "38 contracts end
+    within 30 days", opening into the 38; on 24 May one more, "… within 7 days", and the 30-day
+    items are resolved as done. — N17, owner 2026-11-18
+18. Three penalties recorded while the approver hasn't opened the bell → one notification "3
+    penalties waiting for your approval"; after they read it, a fourth starts a new one. Approving
+    one of the three → the group reads 2 open; all three → resolved. — N17, N10
+19. A group where the reader may now see only some items (scope change) → only those items are
+    listed and counted; none left → the notification leaves the list and the count. — N11, N17
+20. Probation end moved later by HR → the open probation item is resolved; a new one comes 7 days
+    before the new date. Empty probation end (no probation) → no reminder. — N0, owner 2026-11-18
 
 ## Proposed business-doc edit
 
@@ -418,7 +468,7 @@ later modules        ← the same: own types, call core
 - Parents and students as recipients; a parent portal. Planned.
 - Live push to the browser (SSE / WebSocket). Planned.
 - Notifications about other modules (leave, fees, exams) — they come with their modules.
-- A digest ("daily summary") per person. OPEN.
+- A daily summary e-mail-style digest per person (grouping in the bell is built, N17). Not planned.
 - Notifying the person a penalty is about (employee self-service is Planned).
 - Free-text announcements to staff (the Planned `communication` module, which will send through
   core's notifications).
@@ -426,13 +476,6 @@ later modules        ← the same: own types, call core
 
 ## OPEN questions for the owner
 
-1. **Which mockup** — A, B or C (`design/mockups/notifications.html`)?
-2. **Digest or one per item** for penalties waiting (several recorded at once) and contract ends
-   (every contract ends 31 May)? Default: one per item, collapsed in the list.
-3. **Probation**: does the school use it, is it 3 months for everyone, or a field per employee?
-4. **Real dates**: by which day must lateness be entered and payroll be prepared / approved?
-   (Defaults 25th and 28th.)
-5. **Can approvals be turned off?** Default: no (in-app). Reminders: yes.
-6. **Retention**: 90 / 30 / 365 days OK?
-7. **Contract reminder**: one at 30 days, or a second one closer to the date?
-8. **Who sees Settings → Notifications**: System admin only (default), or HR manager too?
+None left — the owner answered every one on 2026-11-18 (see "Owner decisions — answers"). Still
+GUESS, to confirm with the school when it sees the demo: the lateness and payroll days (25th,
+28th), the probation reminder (7 days), and that the person who caused an event isn't told.

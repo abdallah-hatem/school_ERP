@@ -1,14 +1,17 @@
 # §11 Notifications
 
 Telling staff, inside the ERP, that something waits for them or is due. Spec:
-`docs/specs/2026-11-18-notifications.md`. **Planned** — spec, plan and mockups are with the owner;
-nothing is built until a mockup is picked.
+`docs/specs/2026-11-18-notifications.md`. **Planned** — layout picked (option A, below); not built yet.
 
 ## What and how
 
 - **DECIDED** (owner, 2026-11-18) — One channel for now: **in the app**. A bell shows how many
   notifications are unread and opens the list. Email, WhatsApp and SMS are Planned, and adding one
   must not change how any module decides what to send.
+- **DECIDED** (owner, 2026-11-18) — **The bell opens a short list over the page** (all, or unread
+  only), with "Mark all as read" and a link to the notification settings; on a phone the list
+  fills the screen. The screens show only notifications in the app — no other channel is mentioned
+  anywhere.
 - **DECIDED** (owner, 2026-11-18) — Recipients are **staff users** now. Parents and students are
   Planned.
 - **DECIDED** — A person sees only their own notifications. Nobody, the System admin included, reads
@@ -25,25 +28,30 @@ nothing is built until a mockup is picked.
   cover (their stage, their team, or the whole school — §2).
 - **GUESS** — The person who caused the event isn't told about it (recording a penalty you may
   approve yourself sends you nothing).
-- **GUESS** — First notifications:
+- **DECIDED** (owner, 2026-11-18) — First notifications (who gets each is §2's GUESS roles):
 
 | Notification | Who gets it | When | Goes away when |
 |---|---|---|---|
 | Penalty waiting for your approval | Whoever may approve penalties for that employee (§2) | A penalty is recorded | It is approved or cancelled, by anyone |
 | Payroll ready to approve | Whoever may approve payroll | A draft month is calculated and has no pending penalties | It is approved (or a pending penalty appears in the month again) |
-| Contract ends soon | Whoever may edit that employee | 30 days before the contract ends | The contract is extended, or the employee is deactivated |
-| Probation ends soon | Whoever may edit that employee | 7 days before probation ends (probation: 3 months from the hire date) | The date passes, or the employee is deactivated |
+| Contract ends soon | Whoever may edit that employee | 30 days, and again 7 days, before the contract ends | The contract is extended, or the employee is deactivated |
+| Probation ends soon | Whoever may edit that employee | 7 days before the employee's probation end date | The date passes or moves, or the employee is deactivated |
 | Lateness not entered | Whoever may enter lateness | From the 25th, while the month's lateness was never saved | The month is saved, or its payroll is approved |
 | Payroll not prepared | Whoever may prepare payroll | From the 28th, while the month has no payroll run | A run is created |
 | Payroll still a draft | Whoever may approve payroll | From the 28th, while the month's run is a draft | It is approved |
 
 - **GUESS** — When an approval is done by one person, everyone else who was told sees it as done
   ("Approved by Laila Hassan") and it no longer counts as unread.
-- **GUESS** — One notification per penalty; several of one kind from the same moment (e.g. every
-  contract ending on 31 May) show as one row in the list ("38 contracts end within 30 days") that
-  opens into the list of them. OPEN: a daily digest instead.
-- **OPEN** — Whether the school uses probation, its length, and whether it differs per employee.
-- **OPEN** — The real days by which lateness must be entered and payroll prepared and approved.
+- **DECIDED** (owner, 2026-11-18) — Many of one kind at once make **one notification** that groups
+  them ("12 contracts end within 30 days", "3 penalties waiting for your approval") and opens into
+  the list of them. One on its own reads as itself. Once read, the next one starts a new
+  notification.
+- **DECIDED** (owner, 2026-11-18) — **Probation** is a date on each employee's record (§3): filled
+  with the hire date plus the school's default probation length (3 months, a setting; 0 means no
+  probation) and editable. The reminder follows the employee's date.
+- **DECIDED** (owner, 2026-11-18) — Lateness must be entered **by the 25th** and payroll prepared and
+  approved **by the 28th** of the month; both days are settings. GUESS until the school confirms
+  the days.
 
 ## Reminders
 
@@ -59,23 +67,26 @@ nothing is built until a mockup is picked.
 - **DECIDED** (owner, 2026-11-18) — Each person chooses, **per kind of notification and per
   channel**, what they receive. The school sets the **defaults** in Settings. Some kinds can't be
   turned off.
-- **GUESS** — "Waiting for your approval" can't be turned off in the app: approvals depend on it.
-  Reminders can. A channel the school hasn't set up (email today) shows as coming soon.
+- **DECIDED** (owner, 2026-11-18) — On screen, each kind of notification is **one switch** (on or
+  off) for the person, in My account → Notifications; Settings → Notifications has the same list for
+  the school's defaults. A kind that can't be turned off shows as on and can't be changed.
+- **DECIDED** (owner, 2026-11-18) — "Waiting for your approval" can't be turned off: approvals
+  depend on it. Reminders can.
 - **GUESS** — Turning a kind off stops new ones; notifications already received stay.
-- **GUESS** — Settings → Notifications: the System admin changes the school's defaults and how long
-  notifications are kept; the HR manager sees them. The reminder timings are HR rules (§7), changed
+- **DECIDED** (owner, 2026-11-18) — Settings → Notifications: the System admin changes the school's
+  defaults and how long notifications are kept; the HR manager sees them read-only. The reminder timings are HR rules (§7), changed
   by whoever may change HR rules.
 
 | Setting | Default | Source |
 |---|---|---|
-| Remind before a contract ends | 30 days | GUESS |
-| Probation length | 3 months (0 = no probation reminders) | GUESS |
+| Remind before a contract ends | 30 days, and again 7 days | DECIDED (owner, 2026-11-18) |
+| Default probation length (fills a new employee's probation end) | 3 months (0 = no probation) | DECIDED (owner, 2026-11-18) |
 | Remind before probation ends | 7 days | GUESS |
-| Lateness check day of the month | 25 | GUESS |
-| Payroll check day of the month | 28 | GUESS |
-| Keep read notifications | 90 days | GUESS |
-| Keep done approvals | 30 days | GUESS |
-| Keep any notification at most | 365 days | GUESS |
+| Lateness due by (day of the month) | 25 | DECIDED setting; day GUESS until the school confirms |
+| Payroll prepared and approved by (day of the month) | 28 | DECIDED setting; day GUESS until the school confirms |
+| Keep read notifications | 90 days | DECIDED (owner, 2026-11-18) |
+| Keep done approvals | 30 days | DECIDED (owner, 2026-11-18) |
+| Keep any notification at most | 365 days (old ones are removed every night) | DECIDED (owner, 2026-11-18) |
 
 ## Access
 

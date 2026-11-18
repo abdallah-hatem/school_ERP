@@ -209,13 +209,17 @@ phase live in `docs/build-log/`.
 
 ## Next up
 
-- **Notifications — spec + plan + mockups in PR; build after the owner picks a mockup.** Spec
+- **Notifications — spec, plan and option A decided (PR #106). Build after the events + outbox work
+  lands; tasks N0 (probation field) … N5.** Spec
   `docs/specs/2026-11-18-notifications.md`, plan `docs/plans/2026-11-18-notifications-plan.md`,
-  business §11, mockups `design/mockups/notifications.html` (A bell popover · B inbox page · C action
-  tray). Owner decisions (2026-11-18): in-app bell only (channels addable later), staff users now
+  business §11, mockup `design/mockups/notifications.html` (option A · bell popover; B and C dropped). The
+  UI shows the in-app channel only — one switch per type; the API keeps a `channel` field (`in_app`). Owner decisions (2026-11-18): in-app bell only (channels addable later), staff users now
   (parents later), approvals waiting + scheduled reminders, preferences per person / type / channel
-  with school defaults, some types can't be turned off. Waits on: the owner's pick and the OPEN
-  questions in the spec, and the jobs foundation (`feature/login-rate-limit-and-jobs`) being merged.
+  with school defaults, some types can't be turned off. Owner answers (2026-11-18): grouped notifications, probation end per
+  employee (N0), lateness by the 25th and payroll by the 28th (settings), approvals can't be turned
+  off, retention 90 / 30 / 365 days, contract reminders at 30 and 7 days, Settings → Notifications
+  changed by the System admin and seen by the HR manager. Also waits on the jobs foundation
+  (`feature/login-rate-limit-and-jobs`).
 
 - **Accounting payroll taxes screen** — a page per approved month (net, insurance share, income tax,
   fund, gross per employee) and a sidebar entry: **mockups first** (CLAUDE.md rule 9). The API
