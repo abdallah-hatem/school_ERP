@@ -174,8 +174,10 @@ describe('Once per day (§4)', { timeout: 20_000 }, () => {
     const user = userEvent.setup();
     api.GET_PENALTY_GROUPS.mockImplementation(() => ok(catalogue));
     renderSettings(<CatalogueSection />);
-    await user.type(await screen.findByRole('searchbox', { name: 'Search violations' }), 'lesson');
-    expect(screen.getAllByText('Can repeat in a day')).toHaveLength(1);
+    // The loading skeleton has a search box too: typing into it before the catalogue loads is lost.
+    await screen.findByRole('button', { name: /^Educational violations/ });
+    await user.type(screen.getByRole('searchbox', { name: 'Search violations' }), 'lesson');
+    await waitFor(() => expect(screen.getAllByText('Can repeat in a day')).toHaveLength(1));
     const lateRow = screen.getByText('Late to', { exact: false }).closest('li')!;
     expect(within(lateRow).getByText('Can repeat in a day')).toBeTruthy();
   });
