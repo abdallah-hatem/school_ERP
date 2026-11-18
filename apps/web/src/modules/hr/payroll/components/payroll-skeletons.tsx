@@ -89,7 +89,7 @@ function RunPageSkeletonBody() {
             pagination={{ page: 1, limit: PAGINATION.defaultLimit, total: 0, onPageChange: noop }}
           />
         </div>
-        <RulesPanel settings={undefined} settingsHref={`/${locale}/settings`} />
+        <RulesPanel rules={undefined} settingsHref={`/${locale}/settings`} />
       </div>
     </div>
   );

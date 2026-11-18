@@ -318,6 +318,11 @@ export interface LatenessRow {
 export interface LatenessMonth {
   /** True once the month's payroll is approved — entry is refused (409 `PAYROLL_APPROVED`). */
   locked: boolean;
+  /**
+   * The lateness rule the rows' `days` were computed with (today's rule, §5) — so a viewer without
+   * `hr.settings.view` can still see and preview days. Only the lateness rule, no other setting.
+   */
+  rule: LatenessRule;
   rows: LatenessRow[];
 }
 
@@ -453,6 +458,13 @@ export interface PayrollRun extends PayrollRunSummary {
    * Recalculate is due. Always false on an approved run.
    */
   rulesChanged: boolean;
+  /**
+   * The HR rules behind the run's figures, for its "rules applied" panel — readable by anyone who
+   * may view the run, without `hr.settings.view`. A run stores no copy of the rules, so these are
+   * TODAY's rules: on a draft they are exactly what the next calculation uses; on an approved run
+   * the screen words them as the current rules, not the ones it was approved with. No money.
+   */
+  rules: HrSettings;
   lines: PayrollLine[];
   adjustments: PayrollAdjustment[];
 }

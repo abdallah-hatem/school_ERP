@@ -776,7 +776,14 @@ describe('HR payroll and dashboard (e2e)', () => {
     expect(
       lineOf((await recalculate(draft.id).expect(200)).body.data as PayrollRun, emp).penaltyAmount,
     ).toBe(48_000);
-    expect(await getRun(approved.id)).toEqual(approved);
+    // The approved run's money, lines and totals never change. Its `rules` are TODAY's HR rules
+    // (a run keeps no snapshot; the screen labels them "Current rules … may differ", §6), so they
+    // follow the new divisor and are compared apart.
+    const { rules: rulesNow, ...approvedNow } = await getRun(approved.id);
+    const { rules: rulesAtApproval, ...approvedThen } = approved;
+    expect(approvedNow).toEqual(approvedThen);
+    expect(rulesAtApproval.payroll.dayDivisor).toBe(30);
+    expect(rulesNow.payroll.dayDivisor).toBe(25);
   });
 
   it('Rules changed after the last calculation → the DRAFT run says so until Recalculate; an approved run never does', async () => {

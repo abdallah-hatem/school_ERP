@@ -6,6 +6,11 @@
   grace taken off ("130 minutes − 30 minutes grace = 100 minutes = 0.75 day"). The once-per-day
   message shows once after Save (under the date). Every page's tab title names the school,
   the dashboard's included.
+- 2026-11-18 — Rules on Lateness and payroll runs (§5, §6, owner): the Principal's Lateness screen
+  now shows the days, and the Principal's and Accountant's payroll run shows "Rules applied" — the
+  rules come with the lateness list and the run instead of from HR settings, which those roles
+  still can't open. Only the rules each screen needs; no salaries. An approved run shows today's
+  rules, labelled as such.
 - 2026-11-18 — Payroll taxes frozen at approval, even when late (§10, §6, review of #85): a month
   whose taxes are worked out after its approval (a missed event) now uses the tax rule in force at
   the approval, not today's. Every change to the tax rule is kept with the moment it took effect.

@@ -17,3 +17,8 @@
 - **DECIDED** — Lateness days reduce pay in that month's payroll (§6). Entries can't change once that
   month's payroll is approved.
 - **DECIDED** — Minutes are whole numbers from 0 up to 6,000 a month.
+- **DECIDED** (owner, 2026-11-18) — Anyone who may see a month's lateness also sees the lateness
+  rule its days were worked out with (grace minutes, hour steps, cost of each further hour), so the
+  Principal sees the days without the right to see HR settings. Only that rule comes with it — no
+  other setting. The days always follow today's rule; changing the rule in Settings is still only
+  for those who may.

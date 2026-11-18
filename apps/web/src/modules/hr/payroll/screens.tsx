@@ -55,7 +55,6 @@ export async function PayrollRunScreen({
         run={data.run}
         asOf={data.asOf}
         departments={data.departments}
-        settings={data.settings}
       />
     </PayrollI18n>
   );

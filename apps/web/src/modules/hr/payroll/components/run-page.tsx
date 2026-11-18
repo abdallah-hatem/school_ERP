@@ -74,7 +74,6 @@ export interface RunPageProps {
   /** The server's clock before `run` was read (`loadRun`): a newer mutation result wins over it. */
   asOf: number;
   departments: Department[];
-  settings: HrSettings | null;
   query: PayrollRunQuery;
 }
 
@@ -91,7 +90,6 @@ export function RunPage({
   run: serverRun,
   asOf: serverAsOf,
   departments,
-  settings,
   query,
 }: RunPageProps) {
   const { t, has, locale } = useTranslation();
@@ -558,7 +556,7 @@ export function RunPage({
           ) : null}
         </div>
 
-        <RulesPanel settings={settings} settingsHref={settingsHref} approvedAt={draft ? null : run.approvedAt} />
+        <RulesPanel rules={run.rules ?? null} settingsHref={settingsHref} approvedAt={draft ? null : run.approvedAt} />
       </div>
 
       <AdjustmentsDialog

@@ -1,5 +1,5 @@
 import type { Prisma } from '@prisma/client';
-import { PAYROLL_LINE_MONEY_FIELDS } from '@school-erp/shared';
+import { HR_SETTINGS_DEFAULTS, PAYROLL_LINE_MONEY_FIELDS } from '@school-erp/shared';
 import type { EventEmitter2 } from '@nestjs/event-emitter';
 import type { SettingsService } from '../../../../core/settings';
 import { fakeAccess } from '../../access/hr-access.testing';
@@ -116,7 +116,8 @@ function makeService(scopes: Parameters<typeof fakeAccess>[0], salaryIds: string
     employees as unknown as EmployeesService,
     penalties as unknown as PenaltyRecordsService,
     {} as unknown as LatenessService,
-    {} as unknown as HrSettingsService,
+    // An extra key beside the HR rules: the run must pass on the rules only.
+    { get: jest.fn().mockResolvedValue({ ...HR_SETTINGS_DEFAULTS, extra: { secret: 1 } }) } as unknown as HrSettingsService,
     school as unknown as SettingsService,
     { emit: jest.fn() } as unknown as EventEmitter2,
     fakeAccess(scopes),
@@ -127,6 +128,25 @@ function makeService(scopes: Parameters<typeof fakeAccess>[0], salaryIds: string
 }
 
 const PRINCIPAL = { 'hr.employees.view_salary': null } as const;
+/** The Accountant: every run, with salaries. */
+const ACCOUNTANT = {} as const;
+
+describe('payroll — the run carries its rules (no hr.settings.view needed)', () => {
+  it.each([
+    ['principal', PRINCIPAL],
+    ['accountant', ACCOUNTANT],
+  ])('%s: the run holds the HR rules, and nothing but them', async (_who, scopes) => {
+    const run = await makeService(scopes).service.get('r1');
+    expect(run.rules).toEqual(HR_SETTINGS_DEFAULTS);
+    expect(Object.keys(run.rules).sort()).toEqual(['lateness', 'payroll', 'penalties']);
+  });
+
+  it('the rules hold no money, whatever the viewer’s salary scope', async () => {
+    const run = await makeService(PRINCIPAL).service.get('r1');
+    const json = JSON.stringify(run.rules);
+    for (const field of PAYROLL_LINE_MONEY_FIELDS) expect(json).not.toContain(field);
+  });
+});
 
 describe('payroll — salary (R7)', () => {
   it('edge case 4 — a payroll viewer without the salary key sees lines without money', async () => {
