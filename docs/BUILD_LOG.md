@@ -326,6 +326,13 @@ phase live in `docs/build-log/`.
   everyone when one person acts. `/penalties?penalty=<id>` opens that penalty with Approve/Cancel;
   smoke covers record → bell → approve → "Approved by …". Notifications N0–N4 are done; N5
   (verify) next.
+- 2026-11-19 — First visit opens in English → #142 (an old `/` → `/ar` redirect in next.config ran
+  before the proxy and overrode the English default; smoke now checks a fresh visitor lands on /en).
+  Toasts back at the top inline-end corner (top-right EN, top-left AR) → #143 (owner preferred it
+  over #116's bottom corner).
+- 2026-11-19 — Started: payroll taxes statement fixes (subtotal row to the table's right edge;
+  pagination + search per group on screen, print/Excel complete) and a break-ui pass over every
+  money screen with worst-case amounts (owner).
 
 ## Next up
 
