@@ -19,3 +19,6 @@ Corrections recorded so they don't have to be repeated. Loaded at session start.
   from a scratch copy on a throwaway database before reporting — "stay off the shared databases"
   means use a throwaway one, not skip the look. The owner wants changed screens seen before merge
   ("check in browser of course"). — 2026-11-18
+- A green PR into `dev` is mine to merge without asking — also when it touches Tamer's module (he
+  reviews afterwards; flag it in the PR and the log) or adds a screen the owner has already seen in
+  screenshots. The owner asked "why this particular pr are you asking me for merge ?". — 2026-11-19
