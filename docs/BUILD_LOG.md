@@ -202,6 +202,10 @@ phase live in `docs/build-log/`.
   (PR, four green checks, owner approval); Sunday's demo runs from it (ARCHITECTURE → Environments).
 - 2026-11-18 — Team (owner): Waleed is paused for now; the work is split between Abdallah and
   Tamer. Waleed's T28 (audit wiring for auth, settings, employees, lists) moves to Abdallah.
+- 2026-11-18 — Settings history written in the change's own transaction (no outbox needed): stages,
+  departments, job titles, penalty groups and violations record through core's `SettingsHistory`
+  inside their write, so a failed entry rolls the change back; the after-commit listener is gone and
+  those ten endpoints are `@Audited` → `fix/settings-history-in-transaction`.
 
 ## Next up
 
@@ -233,7 +237,6 @@ phase live in `docs/build-log/`.
 - The client should check the Arabic penalty catalogue against the printed regulations (copied from the scans).
 
 - Login rate limiting (T2 left it out; security baseline).
-- Write the settings history in the same transaction as the change (outbox), instead of right after.
 
 - Hosting the demo on the Contabo server (owner: later; local demo is the fallback).
 - Audit log T28 (Abdallah, was Waleed's: auth, settings, employees, lists) and T29 (Tamer: penalties, lateness,

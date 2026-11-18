@@ -3,7 +3,7 @@ import type { AuthUser, Stage } from '@school-erp/shared';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { CreateListItemDto, ListItemsQueryDto, UpdateListItemDto } from './dto/list-item.dto';
 import { StagesService } from './stages.service';
-import { NotAudited } from '../audit';
+import { Audited } from '../audit';
 import { Permission } from '../permissions';
 
 /** No DELETE route on purpose: a stage is hidden, never deleted (§3). */
@@ -17,7 +17,7 @@ export class StagesController {
     return this.stages.list(query.includeHidden ?? false);
   }
 
-  @NotAudited('wired in T28')
+  @Audited('core.stage.create')
   @Post()
   @Permission('core.stages.manage')
   create(
@@ -27,7 +27,7 @@ export class StagesController {
     return this.stages.create(dto, user?.id ?? null);
   }
 
-  @NotAudited('wired in T28')
+  @Audited('core.stage.update')
   @Patch(':id')
   @Permission('core.stages.manage')
   update(

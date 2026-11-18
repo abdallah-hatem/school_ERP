@@ -8,7 +8,7 @@ import {
   UpdateViolationDto,
 } from '../dto/catalogue.dto';
 import { PenaltyCatalogueService } from '../services/penalty-catalogue.service';
-import { NotAudited } from '../../../../core/audit';
+import { Audited } from '../../../../core/audit';
 import { Permission } from '../../../../core/permissions';
 
 /**
@@ -25,14 +25,14 @@ export class PenaltyCatalogueController {
     return this.catalogue.list();
   }
 
-  @NotAudited('wired in T28')
+  @Audited('hr.penalty_group.create')
   @Post('penalty-groups')
   @Permission('hr.penalty_catalogue.manage')
   createGroup(@Body() dto: CreatePenaltyGroupDto, @CurrentUser() user?: AuthUser) {
     return this.catalogue.createGroup(dto, user?.id ?? null);
   }
 
-  @NotAudited('wired in T28')
+  @Audited('hr.penalty_group.update')
   @Patch('penalty-groups/:id')
   @Permission('hr.penalty_catalogue.manage')
   updateGroup(
@@ -43,7 +43,7 @@ export class PenaltyCatalogueController {
     return this.catalogue.updateGroup(id, dto, user?.id ?? null);
   }
 
-  @NotAudited('wired in T28')
+  @Audited('hr.violation.create')
   @Post('penalty-groups/:groupId/violations')
   @Permission('hr.penalty_catalogue.manage')
   createViolation(
@@ -54,7 +54,7 @@ export class PenaltyCatalogueController {
     return this.catalogue.createViolation(groupId, dto, user?.id ?? null);
   }
 
-  @NotAudited('wired in T28')
+  @Audited('hr.violation.update')
   @Patch('violations/:id')
   @Permission('hr.penalty_catalogue.manage')
   updateViolation(
