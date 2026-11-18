@@ -208,7 +208,7 @@
       "confirm": "Delete role",
       "done": "The role “{name}” was deleted.",
       "blockedTitle": "“{name}” can't be deleted yet",
-      "blockedBody": "Take the role away on their user page first."
+      "blockedBody": "Take the role away from them in Users first."
     },
     "emptyTitle": "No roles yet",
     "emptyBody": "Add a custom role to group the permissions some users need."
