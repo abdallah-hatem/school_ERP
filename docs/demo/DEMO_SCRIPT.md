@@ -16,8 +16,8 @@ marks the managing job titles and stores the principal's photo, without touching
 ## 2. Dashboard
 - Active headcount with the split by stage; this month's payroll (status + net); pending and
   approved penalties this month; quick links.
-- The menu is grouped by module: HR (Employees, Penalties, Lateness, Payroll), Accounting,
-  Inventory and Students marked "Soon", Administration (Settings, Activity, Users, Roles).
+- The menu is grouped by module: HR (Employees, Penalties, Lateness, Payroll), Accounting (Payroll
+  taxes), Inventory and Students marked "Soon", Administration (Settings, Activity, Users, Roles).
 - Switch **ع ↔ EN**: the whole layout mirrors without a reload and stays on the same page.
 - ✔ The browser tab reads "Dashboard · <school name>" (لوحة التحكم · <اسم المدرسة> in Arabic), like
   the sign-in page; the school name in the desktop sidebar is shown whole (up to two lines).
@@ -83,6 +83,14 @@ marks the managing job titles and stores the principal's photo, without touching
 - Sign in as the **Accountant** → ✔ Settings is in the menu and opens straight on Accounting, the
   only section listed; the rule can be changed. An HR officer opening `?section=accounting` → ✔
   lands on their first section, no error.
+- Still as the Accountant, **Payroll taxes**: the year's twelve months. ✔ The month approved in
+  step 7 shows *Approved* with its gross; a month HR hasn't approved shows *Draft in HR* (dashed);
+  the rest say there is no payroll or that they haven't started. Open the approved month → the
+  statement: ✔ net + insurance share + income tax + martyrs' fund = gross across the top, checked
+  by hand; the Insured and Not insured tables each end with a subtotal, and the two subtotals add up
+  to the gross. ✔ The tax rule at the foot matches Settings → Accounting and says "Same as today's
+  rule". **Excel** downloads the lines and a sheet with the rule; **Download PDF** prints the
+  statement (landscape A4, no menu). An HR officer opening the Payroll taxes link → ✔ not found.
 - Click the employee's name (on the payslip, or in the run's "Employees this month") → ✔ their
   profile opens. Every employee name in the app does this (penalties, lateness, the run).
 - On the profile, **Details** shows the social insurance, bank account, emergency contact and

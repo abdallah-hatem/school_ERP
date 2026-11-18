@@ -37,6 +37,8 @@
       "approvedOn": "Approved in HR",
       "insured": "Insured",
       "notInsured": "Not insured",
+      "insuredOne": "Insured",
+      "notInsuredOne": "Not insured",
       "subtotal": "Subtotal",
       "totalsHidden": "Only for someone who sees every salary",
       "salaryHidden": "Salary hidden",

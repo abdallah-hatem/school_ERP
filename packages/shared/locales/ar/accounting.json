@@ -37,6 +37,8 @@
       "approvedOn": "معتمد في الموارد البشرية",
       "insured": "مؤمَّن عليهم",
       "notInsured": "غير مؤمَّن عليهم",
+      "insuredOne": "مؤمَّن عليه",
+      "notInsuredOne": "غير مؤمَّن عليه",
       "subtotal": "المجموع الفرعي",
       "totalsHidden": "فقط لمن يرى جميع الرواتب",
       "salaryHidden": "الراتب مخفي",
