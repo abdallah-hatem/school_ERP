@@ -388,6 +388,12 @@ module through core's exported `AuditService` — never through its repository.
 - **Change lines** (`changeRows`, `core/audit/lib/entry-text.ts`): a list item edited in place
   (`{ nameEn, nameAr, isActive, sortOrder }` before and after, same id) shows one line per changed
   part — "Violation · Name (Arabic)" — never "Strike → Strike"; a different item picked stays one line.
+  Any other object value is split into one line per part that changed, never shown as JSON: a payroll
+  run's `totals` as "Totals · Net" etc. (`AUDIT_TOTAL_PARTS` in shared: order, money or count; labels
+  under `audit.totals.*`), a role's `permissions` as "Permissions · View payroll: Everyone → Their
+  stage". A `totals` the viewer may not see (R7) stays one "changed" line.
+  A month record (payroll run, its taxes, a lateness month — labelled `2026-11`) reads in the
+  sentence as the app prints a month, "November 2026" / "نوفمبر 2026" (`recordLabel`), on one line.
 - **Filters** on both audit screens: a side panel on wide screens (first in the page's tab order,
   drawn in the second column), else one Filters button opening `AuditFiltersSheet` — from the
   bottom on a phone, from the inline-end edge on a tablet.
@@ -699,8 +705,24 @@ types** and sends through core's exported `NotificationsService` — core never 
   approved run ("Approved by …"). Subjects: `employee` (scoped through `HrNotificationScopes` with
   HR's stage / team rule), `lateness_month`, `payroll_month`, `payroll_run` (whole-school: a scoped
   holder is never told).
-- **Not yet:** HR's approval notifications (N2); the bell, My account tab and Settings section are N4 (the `SETTINGS_SECTION_ACCESS` entry for
-  Settings → Notifications comes with that screen).
+- **Screens (N4, option A of `design/mockups/notifications.html`)** — `apps/web/src/core/notifications`:
+  the **bell** beside the language switch in the shell (both the phone top bar and the desktop row
+  draw one; `NotificationInbox` in `AppShell` holds their one state, so one poll), the unread count
+  polled every 60 s while the tab is visible and on focus (`99+`), and the list — a popover anchored
+  to the bell from 768px, a full-screen `Sheet` (`side="full"`) below — with All / Unread, the latest
+  20, groups opening into their items, deep links (`linkHref`: `SCREENS` path + record + query),
+  done rows and Mark all as read (`upTo` = the newest the list showed). Sentences are drawn in
+  `lib/text.ts` from the type key and values (names `{ en, ar }`, months, dates, money with its
+  label); a single item reads from its own values. **My account → Notifications**
+  (`/account/notifications`, `SCREENS.accountNotifications`; My account's routes are `account/(profile)`
+  and `account/notifications`, each with its skeleton) is `TypeSwitchList`: one switch per type,
+  grouped by module and category, required ones locked, each change saved at once and put back on
+  failure, "Reset to school default" (`enabled: null`). **Settings → Notifications**
+  (`modules/settings`, `SETTINGS_SECTION_ACCESS.notifications = 'core.notifications.view'`) is the
+  same list for the defaults plus the reminder timing (HR rules: `PUT /hr/settings`,
+  `hr.settings.edit`) and the retention; defaults and retention follow `core.notifications.manage`,
+  so the HR manager sees them read-only. In-app only: no other channel appears in the UI.
+- **Not yet:** HR's approval notifications (N2).
 
 ### Deliberate shortcuts
 
@@ -923,6 +945,8 @@ apps/web/src/
 │   │                                   (plain text without hr.employees.view)
 │   ├── audit/                        ← activity log pieces: apis.ts (GET /audit…), timeline,
 │   │                                   entry text (sentences, field labels), record History
+│   ├── notifications/                ← the bell and its list, the per-type switch list,
+│   │                                   My account → Notifications (§11, N4)
 │   └── academic-year/                ← year switcher, current-year context
 ├── shared/                           ← shared technical pieces
 │   ├── components/ui/                ← shadcn kit

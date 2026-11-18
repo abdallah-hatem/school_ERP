@@ -28,6 +28,10 @@
     "accounting": {
       "title": "Accounting",
       "description": "The payroll tax rule: income-tax slices, the martyrs' fund and the insurance share."
+    },
+    "notifications": {
+      "title": "Notifications",
+      "description": "What everyone receives, reminder timing, how long they are kept"
     }
   },
   "save": {

@@ -159,6 +159,22 @@ describe('Activity page', () => {
     expect(screen.getByText('سجلان')).toBeTruthy();
   });
 
+  it('phone row: the count stays outside the sideways-scrolling chips, so it is never cut (EN and AR)', () => {
+    for (const locale of ['en', 'ar'] as const) {
+      renderView({ module: 'hr', type: 'create,update', person: AHMED.id }, [entry()], { total: 1284, locale });
+      const count = screen.getByTestId('activity-total');
+      const chips = screen.getByTestId('activity-chips');
+      expect(count.textContent).toMatch(/1,284/);
+      expect(chips.contains(count)).toBe(false);
+      // The chips (and "Clear filters") are what scrolls.
+      expect(chips.className).toMatch(/overflow-x-auto/);
+      expect(chips.querySelectorAll('button').length).toBeGreaterThanOrEqual(4);
+      // Nothing that holds the count scrolls sideways.
+      for (let el = count.parentElement; el; el = el.parentElement) expect(el.className).not.toMatch(/overflow-x-auto/);
+      cleanup();
+    }
+  });
+
   it('no results: no paging and no "0 entries"; the message names every active cause', () => {
     renderView({ person: AHMED.id, module: 'hr', type: 'create,update', from: '2026-11-01', to: '2026-11-17', q: 'zzz' }, [], {
       total: 0,

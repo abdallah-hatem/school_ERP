@@ -85,6 +85,12 @@ import {
   FilePdfIcon as FilePdf,
   EqualsIcon as EquivalentRule,
   NotEqualsIcon as NotEquals,
+  BellIcon as Bell,
+  FileTextIcon as FileText,
+  HourglassMediumIcon as HourglassMedium,
+  ClockCountdownIcon as ClockCountdown,
+  CalendarCheckIcon as CalendarCheck,
+  ChecksIcon as Checks,
 } from '@phosphor-icons/react/ssr';
 import type { ComponentType, SVGProps } from 'react';
 import { cn } from '@/shared/lib/utils';
@@ -284,3 +290,11 @@ export const PdfIcon = duotone(FilePdf, 'Pdf');
 export const InsuredIcon = duotone(ShieldCheck, 'Insured');
 export const SameRuleIcon = duotone(EquivalentRule, 'SameRule');
 export const OtherRuleIcon = duotone(NotEquals, 'OtherRule');
+// Notifications (§11): the bell, its actions and one icon per kind of notification.
+export const NotificationsIcon = duotone(Bell, 'Notifications');
+export const MarkAllReadIcon = duotone(Checks, 'MarkAllRead');
+export const NotificationSettingsIcon = duotone(GearSix, 'NotificationSettings');
+export const ContractEndIcon = duotone(FileText, 'ContractEnd');
+export const ProbationEndIcon = duotone(HourglassMedium, 'ProbationEnd');
+export const LatenessDueIcon = duotone(ClockCountdown, 'LatenessDue');
+export const PayrollDueIcon = duotone(CalendarCheck, 'PayrollDue');

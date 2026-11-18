@@ -44,11 +44,11 @@ affects only **draft** payroll runs (approved runs never change).
 | Currency | EGP | DECIDED |
 | Payroll tax rule (income-tax slices, martyrs' fund, insurance share) | See §10 | GUESS — Settings → Accounting |
 | Sign-in limit: wrong passwords, within minutes, lock minutes (§2) | 5, 15, 15 | DECIDED (owner, 2026-11-18) — no screen yet; each at least 1 |
-| Remind before a contract ends (§11) | 30 days (1–120), and again 7 days (0 = none; 0–60, fewer than the first) | DECIDED (owner, 2026-11-18) — an HR rule; Settings → Notifications → Reminder timing (screen Planned) |
+| Remind before a contract ends (§11) | 30 days (1–120), and again 7 days (0 = none; 0–60, fewer than the first) | DECIDED (owner, 2026-11-18) — an HR rule; Settings → Notifications → Reminder timing |
 | Remind before probation ends (§11) | 7 days (1–60) | GUESS — an HR rule; same screen |
 | Lateness check day / payroll check day (§11) | 25 / 28 (1–31; past the month's end = its last day) | DECIDED settings; the days GUESS until the school confirms — HR rules; same screen |
-| Keep read notifications / done approvals / any notification (§11) | 90 / 30 / 365 days (each 1–3650) | DECIDED (owner, 2026-11-18) — Settings → Notifications (screen Planned) |
-| Each kind of notification on or off by default (§11) | On; approvals always on | DECIDED (owner, 2026-11-18) — Settings → Notifications (screen Planned) |
+| Keep read notifications / done approvals / any notification (§11) | 90 / 30 / 365 days (each 1–3650) | DECIDED (owner, 2026-11-18) — Settings → Notifications |
+| Each kind of notification on or off by default (§11) | On; approvals always on | DECIDED (owner, 2026-11-18) — Settings → Notifications |
 
 - **DECIDED** (owner, 2026-11-18) — Each job title in the job-titles list has a **Manages people**
   switch (set when adding or editing the title; the list shows a "Manages people" badge on those

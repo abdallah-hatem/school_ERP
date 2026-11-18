@@ -273,7 +273,13 @@
     "passwordChanged": "آخر تغيير لكلمة المرور",
     "unknown": "غير مسجّل",
     "signOut": "تسجيل الخروج",
-    "loadFailed": "تعذّر تحميل حسابك."
+    "loadFailed": "تعذّر تحميل حسابك.",
+    "tabs": {
+      "label": "أقسام حسابي",
+      "profile": "الملف",
+      "notifications": "الإشعارات"
+    },
+    "notificationsDescription": "اختر ما تريد أن تُبلَّغ به."
   },
   "noAccess": {
     "usersTitle": "لا يمكنك رؤية المستخدمين",
