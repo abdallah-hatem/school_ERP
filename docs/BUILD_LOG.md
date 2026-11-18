@@ -209,6 +209,14 @@ phase live in `docs/build-log/`.
 - 2026-11-18 — The "no stage" entry is a flag, not a name (`fix/none-stage-by-id`): `stages.is_no_stage`,
   set on the stage named "None" by its migration and by the seed (`StagesService.ensureNoStage`, no
   endpoint); the card band reads the flag. Was the only name check in api/web/shared/seed.
+- 2026-11-18 — Merged: #105 settings history in the same transaction as the change (stages, lists,
+  catalogue; their ten T28 endpoints now audited) and #104 the "no stage" entry found by a flag,
+  not its English name (rebuilt on #105).
+- 2026-11-18 — Decisions (owner): events + outbox design approved (nudge after commit + 30 s poll);
+  notifications use option A (bell popover), in-app only in the UI (no Email/WhatsApp/SMS "Soon"),
+  and the recommended answers to the spec's open questions (grouping, a per-employee probation end
+  date, deadlines 25th/28th as settings, approvals always on, retention 90/30/365 days, contract
+  reminders at 30 and 7 days, System admin edits Notifications settings) — recorded in #106.
 - 2026-11-18 — Login rate limiting (owner-approved rules) and the scheduled-jobs foundation: 5 wrong
   passwords in 15 minutes lock that account for 15 minutes (per account, `login_attempts`, one atomic
   upsert; 429 `TOO_MANY_ATTEMPTS`; sign-in and both password-change paths), admin unlock from Users
