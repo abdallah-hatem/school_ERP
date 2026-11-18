@@ -23,7 +23,8 @@ import { AvatarStack, RoleKindBadge, RoleTile } from './role-bits';
 export interface RolesListProps {
   /** `/en/roles`. */
   basePath: string;
-  roles: Role[];
+  /** `undefined` while the roles load: the table draws skeleton rows. */
+  roles: Role[] | undefined;
   /** The names of (some of) each role's holders, for the avatar stack. */
   holderNames: Record<string, string[]>;
   error?: boolean;
@@ -166,6 +167,7 @@ export function RolesList({ basePath, roles, holderNames, error = false }: Roles
         columns={columns}
         rows={roles}
         getRowId={(r) => r.id}
+        loading={roles === undefined}
         refreshing={pending}
         error={error}
         onRetry={() => startTransition(() => router.refresh())}
@@ -174,7 +176,7 @@ export function RolesList({ basePath, roles, holderNames, error = false }: Roles
         cardsBelow={740}
       />
       {error ? null : (
-        <p className="flex items-start gap-2.5 rounded-2xl bg-info-soft px-4 py-3 text-sm text-info-ink">
+        <p data-skeleton-block="note" className="flex items-start gap-2.5 rounded-2xl bg-info-soft px-4 py-3 text-sm text-info-ink">
           <ReadyIcon className="mt-0.5 size-4.5 shrink-0" />
           {t('access.roles.note')}
         </p>

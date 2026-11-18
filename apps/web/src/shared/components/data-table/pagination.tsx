@@ -92,6 +92,7 @@ export function Pagination({
   return (
     <div
       ref={rootRef}
+      data-skeleton-block="pagination"
       className={cn(
         'flex min-w-0 flex-wrap items-center gap-x-4 gap-y-3 border-t border-border px-4 py-3.5 text-sm text-muted-foreground sm:px-5',
         className,

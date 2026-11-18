@@ -74,6 +74,11 @@ export interface DataTableProps<Row> {
    * widths add up to more than 740px passes a wider one, so it never scrolls sideways.
    */
   cardsBelow?: CardsBelow;
+  /**
+   * The cards' height follows their text (long names that wrap on a phone): the skeleton spec
+   * compares their width only. Rows (the table view) are still compared in full.
+   */
+  cardHeightsVary?: boolean;
   className?: string;
 }
 
@@ -99,6 +104,7 @@ export function DataTable<Row>({
   toolbar,
   rowTone,
   cardsBelow = 740,
+  cardHeightsVary = false,
   className,
 }: DataTableProps<Row>) {
   const view = VIEW_CLASSES[cardsBelow];
@@ -125,7 +131,7 @@ export function DataTable<Row>({
         </span>
         <div aria-hidden="true">
           <Table columns={skeletonColumns} rows={placeholders} getRowId={String} label={label} viewClass={view.table} />
-          <Cards columns={skeletonColumns} rows={placeholders} getRowId={String} label={label} viewClass={view.cards} />
+          <Cards columns={skeletonColumns} rows={placeholders} getRowId={String} label={label} viewClass={view.cards} heightsVary={cardHeightsVary} />
         </div>
       </div>
     );
@@ -138,7 +144,7 @@ export function DataTable<Row>({
         className={cn('transition-opacity duration-150', refreshing && 'pointer-events-none opacity-55')}
       >
         <Table columns={columns} rows={rows ?? []} getRowId={getRowId} label={label} rowTone={rowTone} viewClass={view.table} />
-        <Cards columns={columns} rows={rows ?? []} getRowId={getRowId} label={label} rowTone={rowTone} viewClass={view.cards} />
+        <Cards columns={columns} rows={rows ?? []} getRowId={getRowId} label={label} rowTone={rowTone} viewClass={view.cards} heightsVary={cardHeightsVary} />
       </div>
     );
   }
@@ -147,9 +153,12 @@ export function DataTable<Row>({
     <section
       aria-label={label}
       data-cards-below={cardsBelow}
+      // Its height follows the row count; the head, a row and the pagination are measured instead.
+      data-skeleton-block="table"
+      data-skeleton-measure="width"
       className={cn('@container min-w-0 overflow-hidden rounded-3xl bg-card shadow-card', className)}
     >
-      {toolbar ? <div className="flex flex-wrap items-center gap-3 px-5 pt-5 pb-4">{toolbar}</div> : null}
+      {toolbar ? <div data-skeleton-block="table-toolbar" className="flex flex-wrap items-center gap-3 px-5 pt-5 pb-4">{toolbar}</div> : null}
       {body}
       {pagination && !error ? <Pagination {...pagination} disabled={loading || refreshing} loading={showSkeleton} /> : null}
     </section>
@@ -166,6 +175,8 @@ interface RowsProps<Row> {
   rowTone?: (row: Row) => RowTone;
   /** Which container widths show this view (from `cardsBelow`). */
   viewClass: string;
+  /** Cards only: their height follows their text (`cardHeightsVary`). */
+  heightsVary?: boolean;
 }
 
 const toneBar = {
@@ -192,7 +203,7 @@ function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass }: Rows
       />
       <div ref={ref} className="scrollbar-clean overflow-x-auto">
       <table aria-label={label} className="w-full border-separate border-spacing-0 text-sm">
-        <thead>
+        <thead data-skeleton-block="table-head">
           <tr>
             {columns.map((column) => (
               <th
@@ -214,7 +225,7 @@ function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass }: Rows
           {rows.map((row) => {
             const tone = rowTone?.(row);
             return (
-              <tr key={getRowId(row)} className="group/row">
+              <tr key={getRowId(row)} data-skeleton-block="table-row" data-skeleton-each className="group/row">
                 {columns.map((column, i) => (
                   <td
                     key={column.id}
@@ -242,7 +253,7 @@ function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass }: Rows
 
 // ── Cards (container < 740px) ────────────────────────────────────────────────
 
-function Cards<Row>({ columns, rows, getRowId, label, rowTone, viewClass }: RowsProps<Row>) {
+function Cards<Row>({ columns, rows, getRowId, label, rowTone, viewClass, heightsVary = false }: RowsProps<Row>) {
   const titles = columns.filter((c) => c.card === 'title');
   const statuses = columns.filter((c) => c.card === 'status');
   const highlights = columns.filter((c) => c.card === 'highlight');
@@ -257,6 +268,9 @@ function Cards<Row>({ columns, rows, getRowId, label, rowTone, viewClass }: Rows
         return (
           <li
             key={getRowId(row)}
+            data-skeleton-block="table-card"
+            data-skeleton-each
+            data-skeleton-measure={heightsVary ? 'width' : undefined}
             className={cn(
               'flex min-w-0 flex-col gap-2.5 rounded-2xl border border-border bg-card p-3.5 shadow-xs',
               tone === 'warning' && 'border-s-4 border-s-warning',

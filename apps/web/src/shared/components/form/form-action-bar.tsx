@@ -23,6 +23,7 @@ export function FormActionBar({
   return (
     <div
       data-slot="form-action-bar"
+      data-skeleton-block="form-actions"
       data-sticky={sticky || undefined}
       className={cn(
         'flex flex-wrap items-center justify-end gap-x-3 gap-y-2',

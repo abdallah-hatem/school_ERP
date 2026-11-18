@@ -88,12 +88,16 @@ export function PenaltiesTable({
       id: 'violation',
       header: t('penalties.columns.violation'),
       className: 'min-w-40 whitespace-normal',
+      // Names run long: across the card, so a phone shows them on one line as a rule.
+      card: 'wide',
       cell: (p) => <span className="break-words">{nameIn(p.violation, locale)}</span>,
     },
     {
       id: 'action',
       header: t('penalties.columns.levelAction'),
       className: 'min-w-36 whitespace-normal',
+      // "Deduct 0.25 day from salary" doesn't fit half a phone card: across it, like the violation.
+      card: 'wide',
       skeleton: (
         <span className="flex flex-col gap-0.5">
           <SkeletonText className="text-xs" width="w-14" />
@@ -134,6 +138,8 @@ export function PenaltiesTable({
       columns={columns}
       rows={rows}
       loading={rows === undefined}
+      // Violation names run long and wrap on a phone card however wide it is.
+      cardHeightsVary
       getRowId={(p) => p.id}
       refreshing={refreshing}
       error={error}

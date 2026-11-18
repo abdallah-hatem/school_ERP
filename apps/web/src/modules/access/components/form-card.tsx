@@ -12,6 +12,7 @@ export function FormCard({
   note,
   hint,
   aside,
+  measure,
   children,
   className,
 }: {
@@ -21,11 +22,15 @@ export function FormCard({
   hint?: ReactNode;
   /** Right of the heading (a count, a link). */
   aside?: ReactNode;
+  /** `width`: its height follows the data (a list of roles or holders) — the skeleton spec compares its width only. */
+  measure?: 'width';
   children: ReactNode;
   className?: string;
 }) {
   return (
     <section
+      data-skeleton-block="form-card"
+      data-skeleton-measure={measure}
       aria-labelledby={titleId}
       className={cn('@container flex min-w-0 flex-col gap-4 rounded-3xl bg-card p-5 shadow-card md:p-6', className)}
     >

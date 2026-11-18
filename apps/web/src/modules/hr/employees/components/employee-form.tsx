@@ -63,13 +63,17 @@ export interface EmployeeFormProps {
   jobTitles: ListItem[];
   /** Active employees whose job title manages people, for the direct-manager picker (§3). */
   managerCandidates: EmployeeSummary[];
+  /** Replaces the page header: the form's skeleton draws one without the employee's name. */
+  header?: ReactNode;
+  /** The edit page's skeleton (no employee yet): the form in its edit shape. */
+  editing?: boolean;
 }
 
 /** Add or edit an employee (§3). Server rule errors land on their field. */
-export function EmployeeForm({ basePath, employee, departments, stages, jobTitles, managerCandidates }: EmployeeFormProps) {
+export function EmployeeForm({ basePath, employee, departments, stages, jobTitles, managerCandidates, header, editing = false }: EmployeeFormProps) {
   const { t, has, locale } = useTranslation();
   const router = useRouter();
-  const isEdit = Boolean(employee);
+  const isEdit = Boolean(employee) || editing;
   const initial = useMemo(() => (employee ? employeeToForm(employee) : emptyEmployeeForm()), [employee]);
   // Salary-type fields (R7): editing, only when the API sent them; adding, with the salary key.
   const canSeeSalary = useCan()('hr.employees.view_salary');
@@ -187,6 +191,7 @@ export function EmployeeForm({ basePath, employee, departments, stages, jobTitle
 
   return (
     <div className="flex flex-col gap-6">
+      {header ?? (
       <PageHeader
         title={title}
         description={employee ? `${localName(employee, locale)} · ${employee.code}` : t('employees.create.description')}
@@ -197,6 +202,7 @@ export function EmployeeForm({ basePath, employee, departments, stages, jobTitle
         ]}
         breadcrumbsLabel={t('ui.shell.breadcrumbs')}
       />
+      )}
       <Form onSubmit={(e) => void form.handleSubmit(onSubmit)(e)} aria-label={title}>
         <Section title={t('employees.sections.photo')}>
           <EmployeePhotoField employee={employee} gender={(gender || null) as Gender | null} onPendingChange={(file) => (pendingPhoto.current = file)} />
@@ -342,7 +348,7 @@ export function EmployeeForm({ basePath, employee, departments, stages, jobTitle
 
         <FormActionBar
           status={
-            employee ? (
+            isEdit ? (
               <p role="status" className="text-muted-foreground">
                 {isDirty ? t('employees.edit.unsaved') : t('employees.edit.noChanges')}
               </p>
@@ -363,7 +369,7 @@ export function EmployeeForm({ basePath, employee, departments, stages, jobTitle
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-5 rounded-3xl bg-card p-5 shadow-card md:p-6">
+    <section data-skeleton-block="form-section" className="flex flex-col gap-5 rounded-3xl bg-card p-5 shadow-card md:p-6">
       <h2 className="font-display text-lg font-extrabold">{title}</h2>
       <div className="grid gap-5 sm:grid-cols-2">{children}</div>
     </section>
