@@ -1,5 +1,11 @@
 # Recent changes
 
+- 2026-11-18 — Notifications (§11, new, owner): an in-app bell for staff — approvals waiting (penalties,
+  payroll) for whoever may approve within their stage or team, and daily reminders (contract and
+  probation ending, lateness not entered, payroll not prepared or approved), never sent twice.
+  Preferences per person, kind and channel, with school defaults; approvals can't be turned off.
+  Email / WhatsApp / SMS and parents are Planned. Spec, plan and three mockups for the owner; not
+  built yet.
 - 2026-11-18 — Demo dry-run polish (§6, §5, §4): the **bank sheet** now has each employee's bank,
   account number and IBAN, and a Total row. A **draft run** says when the lateness or payroll rules
   changed after its last calculation and offers Recalculate. The **payslip**'s lateness shows the

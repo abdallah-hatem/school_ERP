@@ -205,6 +205,14 @@ phase live in `docs/build-log/`.
 
 ## Next up
 
+- **Notifications — spec + plan + mockups in PR; build after the owner picks a mockup.** Spec
+  `docs/specs/2026-11-18-notifications.md`, plan `docs/plans/2026-11-18-notifications-plan.md`,
+  business §11, mockups `design/mockups/notifications.html` (A bell popover · B inbox page · C action
+  tray). Owner decisions (2026-11-18): in-app bell only (channels addable later), staff users now
+  (parents later), approvals waiting + scheduled reminders, preferences per person / type / channel
+  with school defaults, some types can't be turned off. Waits on: the owner's pick and the OPEN
+  questions in the spec, and the jobs foundation (`feature/login-rate-limit-and-jobs`) being merged.
+
 - **Accounting payroll taxes screen** — a page per approved month (net, insurance share, income tax,
   fund, gross per employee) and a sidebar entry: **mockups first** (CLAUDE.md rule 9). The API
   (`GET /accounting/payroll[/:month]`) is built. Tax defaults are GUESS until the accountant confirms.
