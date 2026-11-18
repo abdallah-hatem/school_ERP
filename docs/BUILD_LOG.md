@@ -260,13 +260,18 @@ phase live in `docs/build-log/`.
   after commit; kill -9 mid-delivery and after commit both recovered by the poll, taxes once;
   job_runs only on work; retry schedule, dead after 10, admin retry audited, non-admin 403;
   no-op employee save publishes nothing.
+- 2026-11-18 — Outbox follow-ups merged → #121: the nudge runs in the background after the
+  response (approve no longer waits for accounting), retries count from the claiming pass with a
+  1 s tolerance (on time), `attempts` counts failures only. Tested live before merge: approve
+  returned in 0.05–0.09 s with accounting's table locked, taxes appeared once the lock was
+  released (38/38 lines); normal approve delivered 6 ms after commit; retries at +10 s/+1 min/+5 min
+  from each tick; dead after 10; admin retry answered in 9 ms and is audited.
 
 ## Next up
 
-- Outbox follow-ups from the live test (#119): the approve request waits for the accounting
-  listener (the nudge is awaited) — a stuck listener holds HR's response open; make the nudge run
-  in the background after the response. Retries land on the next 30 s poll tick (≈30 s instead of
-  10 s); compute the next try from the poll tick. `attempts` also counts the successful try.
+- Outbox nits (from #121's live test, cosmetic): the "dead after 10 failures" log line always says
+  10 (after an admin retry it's 11); a dead row still gets a `next_attempt_at`. A lock held longer
+  than Prisma's 15 s transaction timeout counts as one failure, then the next tick delivers it.
 - **Notifications — spec, plan and option A decided (PR #106). Build after the events + outbox work
   lands; tasks N0 (probation field) … N5.** Spec
   `docs/specs/2026-11-18-notifications.md`, plan `docs/plans/2026-11-18-notifications-plan.md`,
