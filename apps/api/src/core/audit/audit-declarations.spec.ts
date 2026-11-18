@@ -62,7 +62,7 @@ describe('every write endpoint declares its audit (D6)', () => {
     expect(unknown).toEqual([]);
   });
 
-  it('settings writes are wired; the handlers still waiting for T28 / T29 are listed (T31 expects none)', () => {
+  it('settings writes are wired; no handler is left waiting for T28 / T29 (T31)', () => {
     const audited = writes.filter((w) => w.declaration.kind === 'audited').map((w) => w.route);
     expect(audited).toEqual(
       expect.arrayContaining([
@@ -70,14 +70,25 @@ describe('every write endpoint declares its audit (D6)', () => {
         expect.stringMatching(/^POST \/settings\/school\/logo /),
       ]),
     );
-    const pending = (task: string) =>
-      writes
-        .filter((w) => w.declaration.kind === 'not-audited' && w.declaration.reason === `wired in ${task}`)
-        .map((w) => w.route.replace(/ \(.*\)$/, ''));
-    // T28 is done: no core or HR-people handler waits any more.
-    expect(pending('T28')).toEqual([]);
-    // Only the penalty records remain for T29; T31 changes this to `toEqual([])`.
-    expect(pending('T29').every((route) => / \/hr\/penalties\b/.test(route))).toBe(true);
+    // Only deliberate reasons remain: no `wired in …` placeholder from the audit foundation.
+    const placeholders = writes
+      .filter((w) => w.declaration.kind === 'not-audited' && /^wired in\b/i.test(w.declaration.reason))
+      .map((w) => w.route);
+    expect(placeholders).toEqual([]);
+  });
+
+  it('every penalty write records its hr.penalty.* action (T29)', () => {
+    const declared = writes
+      .filter((w) => /^\w+ \/hr\/penalties\b/.test(w.route))
+      .map((w) => [
+        w.route.replace(/ \(.*\)$/, ''),
+        w.declaration.kind === 'audited' ? w.declaration.action : w.declaration.kind,
+      ]);
+    expect(declared).toEqual([
+      ['POST /hr/penalties', 'hr.penalty.record'],
+      ['POST /hr/penalties/:id/approve', 'hr.penalty.approve'],
+      ['POST /hr/penalties/:id/cancel', 'hr.penalty.cancel'],
+    ]);
   });
 
   it('every core and HR-people write records its action (T28)', () => {

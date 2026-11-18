@@ -219,6 +219,21 @@ export class PenaltyRecordsRepository extends BaseRepository<
     return rows.map((r) => r.id);
   }
 
+  /**
+   * The ids of the records of one employee, or (`code`) of the employees whose code contains it,
+   * any case — their History and Activity's search (audit log).
+   */
+  async findIdsOfEmployees(by: { employeeId: string } | { code: string }): Promise<string[]> {
+    const rows = await this.db.penaltyRecord.findMany({
+      where:
+        'employeeId' in by
+          ? { employeeId: by.employeeId }
+          : { employee: { code: { contains: by.code, mode: 'insensitive' } } },
+      select: { id: true },
+    });
+    return rows.map((r) => r.id);
+  }
+
   /** Statuses of the pair's records on `date` (the preview's once-per-day check, §4). */
   sameDayStatuses(key: RepeatKey, date: IsoDate): Promise<PenaltyStatus[]> {
     return sameDayStatuses(this.db, key, date);

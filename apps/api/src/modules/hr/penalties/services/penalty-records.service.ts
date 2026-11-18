@@ -1,7 +1,10 @@
 import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import { isUUID } from 'class-validator';
 import {
+  AuditEntityType,
   ErrorCode,
   PenaltyStatus,
+  type AuditAction,
   type Days,
   type IsoDate,
   type Month,
@@ -13,6 +16,8 @@ import {
   type Uuid,
 } from '@school-erp/shared';
 import { CodedException } from '../../../../common/errors/coded.exception';
+import { AuditService } from '../../../../core/audit';
+import { AfterCommit } from '../../../../database/transactions';
 import { monthOf, toIsoDate } from '../../../../common/utils/dates.util';
 import {
   countPriorInWindow,
@@ -86,6 +91,26 @@ const positionOf = (row: RecordRow): PenaltyTarget => ({
 const storedLevel = (row: RecordRow): CatalogueLevel => toLevel(row);
 
 /**
+ * A record as its audit entries store it (§9): the violation by its two names, not its id, and the
+ * level, action and days stored on it (fixed at recording, then at approval). The employee is the
+ * entry's label, so not a line of its own (it would repeat the sentence — the screen check of
+ * #126). No money: a penalty is days, priced only by payroll.
+ */
+function penaltyAuditSnapshot(row: RecordRow) {
+  const { level, action, days } = storedLevel(row);
+  return {
+    violationId: { nameEn: row.violation.nameEn, nameAr: row.violation.nameAr },
+    date: toIsoDate(row.date),
+    level,
+    action,
+    days,
+    status: row.status,
+    note: row.note,
+    cancelReason: row.cancelReason,
+  };
+}
+
+/**
  * Penalty records (§4). Level = 1 + APPROVED records of the same violation and employee inside
  * the repetition window that come earlier: an earlier violation date, or the same date and recorded
  * earlier (a not-yet-recorded penalty comes after every same-date one). A PENDING record is shown with today's
@@ -94,6 +119,8 @@ const storedLevel = (row: RecordRow): CatalogueLevel => toLevel(row);
  * Never deleted: cancelled with a reason instead, and a cancelled record is final.
  * A "once per day" violation takes at most one pending or approved record per employee per date
  * (409 VIOLATION_ONCE_PER_DAY at preview, recording and approval; a cancelled one frees the day).
+ * Recording, approving and cancelling are each one audit entry (§9) on the penalty, labelled with
+ * the employee's two names, written in the change's transaction; a refused write records nothing.
  */
 @Injectable()
 export class PenaltyRecordsService {
@@ -104,6 +131,8 @@ export class PenaltyRecordsService {
     private readonly settings: HrSettingsService,
     private readonly monthLock: MonthLockService,
     private readonly access: HrAccessService,
+    private readonly audit: AuditService,
+    private readonly tx: AfterCommit,
   ) {}
 
   /** The records of the employees `hr.penalties.view` covers for the user (R5). */
@@ -144,6 +173,11 @@ export class PenaltyRecordsService {
   }
 
   async create(dto: CreatePenaltyDto, createdById: Uuid | null): Promise<PenaltyRecord> {
+    // The record and its audit entry commit together (audit D2).
+    return this.tx.inTransaction(() => this.createInTransaction(dto, createdById));
+  }
+
+  private async createInTransaction(dto: CreatePenaltyDto, createdById: Uuid | null): Promise<PenaltyRecord> {
     const { levels, oncePerDay } = await this.assertRecordable(dto.employeeId, dto.violationId);
     await this.monthLock.assertMonthOpen(monthOf(dto.date));
     const priorCount = await this.priorCount(dto, dto.date, await this.window());
@@ -159,11 +193,16 @@ export class PenaltyRecordsService {
       (sameDay) => oncePerDayRefuses(oncePerDay, sameDay, 'record'),
     );
     if (!row) this.throwOncePerDay();
+    await this.record('hr.penalty.record', null, row);
     return this.present(row);
   }
 
   /** PENDING → APPROVED, fixing level, action and days from today's catalogue and count. */
   async approve(id: Uuid, approvedById: Uuid | null): Promise<PenaltyRecord> {
+    return this.tx.inTransaction(() => this.approveInTransaction(id, approvedById));
+  }
+
+  private async approveInTransaction(id: Uuid, approvedById: Uuid | null): Promise<PenaltyRecord> {
     // Outside the user's `hr.penalties.approve` scope → 404, like an unknown record (R5).
     const current = await this.repository.findOne(id, await this.access.where('hr.penalties.approve'));
     if (!current) throw new NotFoundException();
@@ -188,6 +227,7 @@ export class PenaltyRecordsService {
     );
     if (outcome === 'ONCE_PER_DAY') this.throwOncePerDay();
     if (outcome === 'NOT_PENDING') await this.throwStatusConflict(id);
+    await this.record('hr.penalty.approve', current, await this.findWritten(id));
     return this.get(id);
   }
 
@@ -197,14 +237,23 @@ export class PenaltyRecordsService {
     dto: CancelPenaltyDto,
     cancelledById: Uuid | null,
   ): Promise<PenaltyRecord> {
+    return this.tx.inTransaction(() => this.cancelInTransaction(id, dto, cancelledById));
+  }
+
+  private async cancelInTransaction(
+    id: Uuid,
+    dto: CancelPenaltyDto,
+    cancelledById: Uuid | null,
+  ): Promise<PenaltyRecord> {
     // Outside the user's `hr.penalties.cancel` scope → 404, like an unknown record (R5).
-    const current = await this.repository.findStatus(id, await this.access.where('hr.penalties.cancel'));
+    const current = await this.repository.findOne(id, await this.access.where('hr.penalties.cancel'));
     if (!current) throw new NotFoundException();
     this.assertNotCancelled(current.status);
-    await this.monthLock.assertMonthOpen(monthOf(current.date));
+    await this.monthLock.assertMonthOpen(monthOf(toIsoDate(current.date)));
     if (!(await this.repository.cancel(id, dto.reason, cancelledById))) {
       await this.throwStatusConflict(id);
     }
+    await this.record('hr.penalty.cancel', current, await this.findWritten(id));
     return this.get(id);
   }
 
@@ -267,6 +316,21 @@ export class PenaltyRecordsService {
   }
 
   /**
+   * An employee's records (their History lists these records' entries too, audit log). The History
+   * route takes any record id: one that isn't a UUID is no employee of ours, so it has none (and
+   * never reaches the uuid column, which would refuse it).
+   */
+  async idsOfEmployee(employeeId: string): Promise<Uuid[]> {
+    if (!isUUID(employeeId)) return [];
+    return this.repository.findIdsOfEmployees({ employeeId });
+  }
+
+  /** The records of the employees whose code contains `q` (Activity's search). */
+  idsWithEmployeeCode(q: string): Promise<Uuid[]> {
+    return this.repository.findIdsOfEmployees({ code: q });
+  }
+
+  /**
    * §3: only an active employee; §4, §7: only a usable violation; R5: only an employee the user's
    * `hr.penalties.record` scope covers (else 404, edge case 3).
    */
@@ -276,6 +340,30 @@ export class PenaltyRecordsService {
     // Unknown → 400 FOREIGN_KEY_VIOLATION; inactive → 409 EMPLOYEE_INACTIVE.
     await this.employees.assertActive([employeeId]);
     return this.catalogue.getUsable(violationId);
+  }
+
+  /**
+   * One audit entry about the penalty, labelled with its employee's two names: only the fields
+   * that changed (recording: every field, from nothing).
+   */
+  private record(action: AuditAction, before: RecordRow | null, after: RecordRow): Promise<void> {
+    return this.audit.record({
+      action,
+      entity: {
+        type: AuditEntityType.PENALTY,
+        id: after.id,
+        label: { en: after.employee.nameEn, ar: after.employee.nameAr },
+      },
+      before: before ? penaltyAuditSnapshot(before) : null,
+      after: penaltyAuditSnapshot(after),
+    });
+  }
+
+  /** The record as this transaction just wrote it (it exists: the write matched it). */
+  private async findWritten(id: Uuid): Promise<RecordRow> {
+    const row = await this.repository.findOne(id);
+    if (!row) throw new NotFoundException();
+    return row;
   }
 
   /** §4: a once-per-day violation already has a pending or approved penalty that day. */
