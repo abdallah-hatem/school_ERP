@@ -80,7 +80,8 @@ export function RolesList({ basePath, roles, holderNames, error = false }: Roles
     {
       id: 'type',
       header: t('access.roles.columns.type'),
-      card: 'status',
+      // Under the title on a card: "Starting role" beside it squeezes a role's name on a phone.
+      card: 'badges',
       className: 'w-32',
       skeleton: <SkeletonPill />,
       cell: (r) => <RoleKindBadge builtIn={r.builtIn} />,
