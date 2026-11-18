@@ -232,7 +232,12 @@ phase live in `docs/build-log/`.
   passwords in 15 minutes lock that account for 15 minutes (per account, `login_attempts`, one atomic
   upsert; 429 `TOO_MANY_ATTEMPTS`; sign-in and both password-change paths), admin unlock from Users
   (`POST /users/:id/unlock-sign-in`, audited), lockouts audited; `core/jobs` (`@nestjs/schedule`,
-  advisory lock per job, `job_runs`) with the nightly `login-attempts.cleanup` at 03:00 Cairo.
+  advisory lock per job, `job_runs`) with the nightly `login-attempts.cleanup` at 03:00 Cairo →
+  #109. Its concurrency test exposed pool starvation (a request transaction holding one connection
+  while a `RequiresNew` audit write needs a second): sign-in now records itself in one transaction
+  with the session instead of `@Audited`; `POST /account/password` keeps the same risk (noted).
+- 2026-11-18 — Events + outbox build started (owner, the approved design); `docs/EVENTS.md` + its
+  consistency test in #114.
 
 ## Next up
 
