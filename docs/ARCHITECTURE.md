@@ -729,7 +729,12 @@ doesn't update its skeleton fails CI (owner, 2026-11-18).
   tall as its shortest item — how many arrive and whose name wraps is data),
   `data-skeleton-measure="width"` on a block whose height follows the data (a table, the timeline),
   and `data-skeleton-optional` around a block that exists only with data (the History tab's
-  pagination) — use it sparingly; everything else must match.
+  pagination) — use it sparingly; everything else must match. A `DataTable` whose phone cards grow
+  with their text passes `cardHeightsVary` (penalties: long violation names).
+- **Text that wraps is drawn as its own text.** A bar can't wrap, so where a loaded line usually
+  wraps (a header description, a tile's sub line, the History sentence) the skeleton renders the
+  same sentence — worded with typical values — through `SkeletonProse` (transparent text on a bar
+  per line), and `StatTile` lays a typical figure out invisibly under its bar (`placeholder`).
 - **The check:** `apps/web/e2e/23-skeletons.spec.ts` (desktop) and `23-skeletons-phone.spec.ts`
   (phone), in English and Arabic, one pass per screen (`e2e/support/skeletons.ts`). It opens the
   screen with JavaScript off — the server streams the skeleton first and the real content stays

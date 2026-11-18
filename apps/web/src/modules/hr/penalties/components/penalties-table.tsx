@@ -138,6 +138,8 @@ export function PenaltiesTable({
       columns={columns}
       rows={rows}
       loading={rows === undefined}
+      // Violation names run long and wrap on a phone card however wide it is.
+      cardHeightsVary
       getRowId={(p) => p.id}
       refreshing={refreshing}
       error={error}
