@@ -64,6 +64,19 @@ describe('HR audit wiring — lateness and payroll (T29, e2e)', () => {
       orderBy: { seq: 'asc' },
     });
   const changesOf = (e: { changes: unknown }) => e.changes as AuditChange[];
+  /**
+   * Approves a run, then waits for accounting's listener (§10) to work out the month: it writes its
+   * own `accounting.payroll.record` entry just after the approval returns, which would otherwise
+   * land inside a later "no entry" window on a slow machine.
+   */
+  const approve = async (run: PayrollRun) => {
+    const res = await http(app).post(`/hr/payroll-runs/${run.id}/approve`).expect(200);
+    for (let i = 0; i < 50; i += 1) {
+      if (await db.accountingPayrollRun.findUnique({ where: { month: run.month } })) break;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    return res.body.data as PayrollRun;
+  };
   const field = (e: { changes: unknown }, name: string) => changesOf(e).find((c) => c.field === name);
 
   beforeAll(async () => {
@@ -84,6 +97,7 @@ describe('HR audit wiring — lateness and payroll (T29, e2e)', () => {
   });
 
   afterAll(async () => {
+    await db.accountingPayrollRun.deleteMany({ where: { month: { in: usedMonths } } });
     await db.payrollRun.deleteMany({ where: { month: { in: usedMonths } } });
     await db.latenessEntry.deleteMany({});
     await db.penaltyRecord.deleteMany({});
@@ -135,7 +149,7 @@ describe('HR audit wiring — lateness and payroll (T29, e2e)', () => {
     const month = nextMonth();
     const emp = await employee();
     const run = (await http(app).post('/hr/payroll-runs').send({ month }).expect(201)).body.data as PayrollRun;
-    await http(app).post(`/hr/payroll-runs/${run.id}/approve`).expect(200);
+    await approve(run);
     mark = await historyMark(db);
     await http(app).put(`/hr/lateness/${month}`).send({ entries: [{ employeeId: emp.id, minutes: 30 }] }).expect(409);
     expect(await entries()).toHaveLength(0);
@@ -159,7 +173,7 @@ describe('HR audit wiring — lateness and payroll (T29, e2e)', () => {
 
     const events: unknown[] = [];
     app.get(EventEmitter2).once(HrEvent.PAYROLL_APPROVED, (e) => events.push(e));
-    const approved = (await http(app).post(`/hr/payroll-runs/${run.id}/approve`).expect(200)).body.data as PayrollRun;
+    const approved = await approve(run);
     const approvals = await entries('hr.payroll.approve');
     expect(approvals).toHaveLength(1);
     expect(field(approvals[0], 'totals')).toMatchObject({ before: null, after: approved.totals });
