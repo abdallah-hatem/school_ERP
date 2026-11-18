@@ -285,8 +285,11 @@ phase live in `docs/build-log/`.
   everyone, access re-checked on every read; preferences over school defaults, approvals locked on;
   nightly purge 90/30/365 days; permissions `core.notifications.view`/`.manage` granted by
   migration. API only — screens are N4. N2 (approvals), N3 (reminders) and N4 (screens) started.
-- 2026-11-18 — Accounting payroll-taxes mockups (three options) → #129; waiting for the owner's
-  pick (recommended: A, two pages).
+- 2026-11-18 — Accounting payroll-taxes mockups (three options) → #129. Owner picked **C** (year
+  board + printable statement), **with the draft state** on the board, and every table built from
+  the shared `DataTable` (the mockup's tables were hand-drawn). The draft state needs a small
+  read-only addition to accounting's API (through HR's exported payroll service) for Tamer to review.
+  Build started.
 
 ## Next up
 
@@ -304,7 +307,7 @@ phase live in `docs/build-log/`.
   off, retention 90 / 30 / 365 days, contract reminders at 30 and 7 days, Settings → Notifications
   changed by the System admin and seen by the HR manager.
 
-- **Accounting payroll taxes screen** (Abdallah) — a page per approved month (net, insurance share, income tax,
+- **Accounting payroll taxes screen** (Abdallah, option C, being built) — a page per approved month (net, insurance share, income tax,
   fund, gross per employee) and a sidebar entry: **mockups first** (CLAUDE.md rule 9). The API
   (`GET /accounting/payroll[/:month]`) is built. Tax defaults are GUESS until the accountant confirms.
 - Accounting settings, from the #84 review (optional): `AccountingSettingsService.update()` now
