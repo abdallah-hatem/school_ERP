@@ -3,9 +3,9 @@ import '@/test/dom-polyfills';
 import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { toast } from 'sonner';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithI18n } from '@/test/render';
-import { Toaster } from './toaster';
+import { Toaster, TOASTER_DESKTOP } from './toaster';
 
 afterEach(() => {
   act(() => {
@@ -68,7 +68,7 @@ describe('Toaster', () => {
     expect(el.querySelector('[data-icon] svg.animate-spin')).toBeTruthy();
   });
 
-  it('sits at the top end of the screen: top-left in Arabic, labelled in Arabic', async () => {
+  it('on a phone (no wide match) sits under the top bar: top-left in Arabic, labelled in Arabic', async () => {
     renderWithI18n(<Toaster />, { locale: 'ar' });
     act(() => {
       toast.success('تم الحفظ');
@@ -80,12 +80,38 @@ describe('Toaster', () => {
     expect(screen.getByRole('region', { name: /الإشعارات/ })).toBeTruthy();
   });
 
-  it('sits top-right in English', async () => {
-    renderWithI18n(<Toaster />);
-    act(() => {
-      toast.info('Heads up');
+  describe('from 600px wide', () => {
+    beforeEach(() => {
+      // Off the page header's actions (owner 2026-11-18): the bottom inline-end corner.
+      vi.stubGlobal('matchMedia', (query: string) => ({
+        matches: query === TOASTER_DESKTOP,
+        media: query,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+      }));
     });
-    const el = await waitFor(() => toastNamed('Heads up'));
-    expect(el.dataset.xPosition).toBe('right');
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it('sits bottom-right in English', async () => {
+      renderWithI18n(<Toaster />);
+      act(() => {
+        toast.info('Heads up');
+      });
+      const el = await waitFor(() => toastNamed('Heads up'));
+      expect(el.dataset.xPosition).toBe('right');
+      expect(el.dataset.yPosition).toBe('bottom');
+    });
+
+    it('sits bottom-left in Arabic', async () => {
+      renderWithI18n(<Toaster />, { locale: 'ar' });
+      act(() => {
+        toast.info('تنبيه');
+      });
+      const el = await waitFor(() => toastNamed('تنبيه'));
+      expect(el.dataset.xPosition).toBe('left');
+      expect(el.dataset.yPosition).toBe('bottom');
+    });
   });
 });

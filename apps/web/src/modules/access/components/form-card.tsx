@@ -49,13 +49,28 @@ export function FormCard({
   );
 }
 
-/** Two columns on a wide content area (main + side), one below it. */
-export function FormColumns({ main, side }: { main: ReactNode; side: ReactNode }) {
+/**
+ * Two columns on a wide content area (main + side), one below it. `sideFirst`: below the two-column
+ * width the side column comes first (a user's Status, with a locked sign-in, must not sit under the
+ * whole form on a phone). It is first in the DOM too, so reading and focus order follow what is
+ * seen; on a wide area it is placed back in the second column.
+ */
+export function FormColumns({ main, side, sideFirst = false }: { main: ReactNode; side: ReactNode; sideFirst?: boolean }) {
+  const mainColumn = (
+    <div className={cn('flex min-w-0 flex-col gap-5', sideFirst && '@min-[1000px]:col-start-1 @min-[1000px]:row-start-1')}>
+      {main}
+    </div>
+  );
+  const sideColumn = (
+    <div className={cn('flex min-w-0 flex-col gap-5', sideFirst && '@min-[1000px]:col-start-2 @min-[1000px]:row-start-1')}>
+      {side}
+    </div>
+  );
   return (
     <div className="@container">
       <div className="grid items-start gap-5 @min-[1000px]:grid-cols-[minmax(0,1fr)_21rem]">
-        <div className="flex min-w-0 flex-col gap-5">{main}</div>
-        <div className="flex min-w-0 flex-col gap-5">{side}</div>
+        {sideFirst ? sideColumn : mainColumn}
+        {sideFirst ? mainColumn : sideColumn}
       </div>
     </div>
   );

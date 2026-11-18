@@ -162,7 +162,8 @@ export function UsersList({ basePath, query, rows, total, roles, lastAdminId, no
     {
       id: 'status',
       header: t('access.users.columns.status'),
-      card: 'status',
+      // On a card the pills get their own line, so the name and email keep the card's width.
+      card: 'badges',
       className: 'w-52',
       skeleton: <SkeletonPill />,
       // The account's whole state in one place: active/inactive, and a temporary password still to

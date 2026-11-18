@@ -32,12 +32,14 @@ export interface DataTableColumn<Row> {
   /** Width/min-width classes for the column, e.g. `w-36` or `min-w-40`. */
   className?: string;
   /**
-   * Its place on a card: `title` (top, start), `status` (top, end), `highlight` (a full-width band,
+   * Its place on a card: `title` (top, start), `status` (top, end), `badges` (a row of pills on its
+   * own line under the title, for a status of several pills that would squeeze the title — a locked
+   * user's Active · Temporary password · Sign-in locked), `highlight` (a full-width band,
    * e.g. net pay), `field` (label + value grid — the default), `wide` (a field across the whole
    * grid), `menu` (the row's ⋯ `RowActions`, in the card's top end corner), `actions` (a row of
    * buttons under a divider, no label) or `hidden`.
    */
-  card?: 'title' | 'status' | 'highlight' | 'field' | 'wide' | 'menu' | 'actions' | 'hidden';
+  card?: 'title' | 'status' | 'badges' | 'highlight' | 'field' | 'wide' | 'menu' | 'actions' | 'hidden';
   /** Label on the card; defaults to `header` when that is a string. */
   cardLabel?: ReactNode;
   /**
@@ -256,6 +258,7 @@ function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass }: Rows
 function Cards<Row>({ columns, rows, getRowId, label, rowTone, viewClass, heightsVary = false }: RowsProps<Row>) {
   const titles = columns.filter((c) => c.card === 'title');
   const statuses = columns.filter((c) => c.card === 'status');
+  const badges = columns.filter((c) => c.card === 'badges');
   const highlights = columns.filter((c) => c.card === 'highlight');
   const fields = columns.filter((c) => (c.card ?? 'field') === 'field' || c.card === 'wide');
   const actions = columns.filter((c) => c.card === 'actions');
@@ -305,6 +308,11 @@ function Cards<Row>({ columns, rows, getRowId, label, rowTone, viewClass, height
                 ) : null}
               </div>
             ) : null}
+            {badges.map((c) => (
+              <div key={c.id} className="flex min-w-0 flex-wrap items-center gap-1.5">
+                {c.cell(row)}
+              </div>
+            ))}
             {highlights.map((c) => (
               <div
                 key={c.id}
