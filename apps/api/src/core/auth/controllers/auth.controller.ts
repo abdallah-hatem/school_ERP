@@ -22,7 +22,9 @@ export class AuthController {
   ) {}
 
   @Public()
-  @Audited('core.auth.sign_in')
+  @NotAudited(
+    'records its own entries: core.auth.sign_in in one transaction with the session; failed sign-ins and lockouts each in their own, since a request transaction would hold a connection while they wait for another',
+  )
   @Post('login')
   @HttpCode(HttpStatus.OK)
   login(@Body() dto: LoginDto): Promise<IssuedSession> {

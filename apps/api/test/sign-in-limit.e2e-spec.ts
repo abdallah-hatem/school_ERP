@@ -199,10 +199,11 @@ describe('sign-in limit and scheduled jobs (e2e)', () => {
       const person = await makeUser();
       const mark = await historyMark(db);
       const results = await Promise.all(
-        Array.from({ length: 8 }, () => login(person.email, 'not-the-password')),
+        // More than CI's connection pool (2 vCPUs → 5): no request may starve another of a connection.
+        Array.from({ length: 12 }, () => login(person.email, 'not-the-password')),
       );
       // Every one was either counted (401) or refused once the lock landed (429).
-      expect(results.every((r) => r.status === 401 || r.status === 429)).toBe(true);
+      expect(results.map((r) => r.status).filter((s) => s !== 401 && s !== 429)).toEqual([]);
       const counted = results.filter((r) => r.status === 401).length;
       expect((await attempt(person.email))?.failedCount).toBe(counted);
       expect(counted).toBeGreaterThanOrEqual(5);

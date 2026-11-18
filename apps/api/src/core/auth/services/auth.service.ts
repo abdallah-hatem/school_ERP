@@ -8,7 +8,7 @@ import {
 } from '@school-erp/shared';
 import { CodedException } from '../../../common/errors/coded.exception';
 import { normalizeEmail } from '../../../common/utils/password.util';
-import type { DbAdapter } from '../../../database/transactions';
+import { AfterCommit, type DbAdapter } from '../../../database/transactions';
 import { AuditService } from '../../audit';
 import { SignInLimitService } from '../../sign-in-limit';
 import { UsersService } from '../../users';
@@ -27,6 +27,7 @@ export class AuthService {
     private readonly audit: AuditService,
     private readonly txHost: TransactionHost<DbAdapter>,
     private readonly signInLimit: SignInLimitService,
+    private readonly afterCommit: AfterCommit,
   ) {}
 
   /**
@@ -34,6 +35,13 @@ export class AuthService {
    * counts towards the account's sign-in limit; while it is locked, every attempt gets the same 429
    * without the password being checked (still recorded as a failed sign-in). A correct sign-in
    * clears the count.
+   *
+   * No request transaction wraps a sign-in (`@NotAudited` on the handler, with the reason): the
+   * failure path writes entries that must outlive the 401/429, each in its own transaction, and a
+   * request transaction would hold one pooled connection while waiting for another — under
+   * concurrent wrong passwords (pool size or more) every request starved. Here each step holds at
+   * most one connection; the success path records `core.auth.sign_in` in one transaction with the
+   * session it issues.
    */
   async login(email: string, password: string): Promise<IssuedSession> {
     try {
@@ -49,15 +57,17 @@ export class AuthService {
       throw new CodedException(HttpStatus.UNAUTHORIZED, ErrorCode.INVALID_CREDENTIALS);
     }
     await this.signInLimit.clear(email);
-    await this.users.recordSignIn(user.id);
-    const session = await this.issue(user, await this.tokens.issueRefresh(user.id));
-    // The request has no signed-in user yet: the actor is the one signing in.
-    await this.audit.record({
-      action: 'core.auth.sign_in',
-      entity: this.entity(user),
-      actor: { id: user.id, name: user.name },
+    return this.afterCommit.inTransaction(async () => {
+      await this.users.recordSignIn(user.id);
+      const session = await this.issue(user, await this.tokens.issueRefresh(user.id));
+      // The request has no signed-in user yet: the actor is the one signing in.
+      await this.audit.record({
+        action: 'core.auth.sign_in',
+        entity: this.entity(user),
+        actor: { id: user.id, name: user.name },
+      });
+      return session;
     });
-    return session;
   }
 
   async refresh(rawRefreshToken: string | undefined): Promise<IssuedSession> {

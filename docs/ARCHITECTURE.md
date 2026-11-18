@@ -510,6 +510,15 @@ only — no per-IP limit.**
   actor on sign-in — in **its own transaction** (`Propagation.RequiresNew`), so it stays though the
   request fails; a failure to record is logged, never turned into a 500. Every sign-in attempt that
   fails is also a `core.auth.sign_in_failed` — wrong ones and those refused while locked (429).
+- **No request transaction around a sign-in.** `POST /auth/login` is `@NotAudited` (with the reason):
+  `AuthService.login` writes `core.auth.sign_in` in one transaction with the session it issues
+  (`afterCommit.inTransaction`), and the failure path's entries and count in their own. An
+  `@Audited` login held a pooled connection for the request while those writes waited for another;
+  with as many concurrent wrong passwords as the pool has connections (5 on CI's 2 vCPUs) every
+  request starved: they failed waiting for a connection (Prisma pool / transaction timeouts, which the
+  filter answers as a 4xx) — the e2e "concurrent wrong passwords" case (12 at once) guards it. `POST /account/password` stays `@Audited`, so a wrong current password still needs a
+  second connection while its request holds one — acceptable for one person's own password, but
+  the same reason applies if it ever sees bulk traffic.
 - **Unlock.** `POST /users/:id/unlock-sign-in` (`core.users.manage`, `@Audited('core.user.unlock_sign_in')`,
   change `lockedUntil` → `null`; nothing written when it wasn't locked). `UserAccount.lockedUntil` is
   set while a lock holds; the Users list shows "Sign-in locked" and ⋯ → Unlock sign-in, the user's

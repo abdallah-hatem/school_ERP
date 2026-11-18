@@ -88,7 +88,8 @@ describe('every write endpoint declares its audit (D6)', () => {
       ]),
     );
     const expected: [string, string][] = [
-      ['POST /auth/login', 'core.auth.sign_in'],
+      // Sign-in records core.auth.sign_in itself, without a request transaction (AuthService.login).
+      ['POST /auth/login', 'not-audited'],
       ['POST /auth/logout', 'core.auth.sign_out'],
       ['POST /stages', 'core.stage.create'],
       ['PATCH /stages/:id', 'core.stage.update'],
