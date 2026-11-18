@@ -35,8 +35,8 @@ export interface PayrollApprovedEvent {
 
 /**
  * Emitted once per changed setting key, after the write commits. Every module that owns settings
- * (core school settings, HR rules, lists, the penalty catalogue) emits it; core's listener writes
- * the history row.
+ * (core school settings, HR rules, lists, the penalty catalogue) emits it. A notice only: the
+ * history row is already written, in the change's own transaction (core/settings).
  */
 export const SettingsEvent = {
   CHANGED: 'settings.changed',

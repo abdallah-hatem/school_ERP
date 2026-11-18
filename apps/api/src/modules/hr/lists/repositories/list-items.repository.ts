@@ -1,6 +1,8 @@
+import type { TransactionHost } from '@nestjs-cls/transactional';
 import type { ListItem } from '@school-erp/shared';
 import { BaseRepository, ModelName } from '../../../../common/repositories/base.repository';
 import { DatabaseService } from '../../../../database/database.service';
+import type { DbAdapter } from '../../../../database/transactions';
 
 export interface ListItemData {
   nameEn: string;
@@ -36,6 +38,8 @@ interface ListDelegate<T, D, U> {
 /**
  * Departments and job titles share one table shape, so one repository class serves both. A list
  * with extra columns (job titles' `managesPeople`) passes its own wider types and `select`.
+ * Its own queries run in the caller's transaction when one is open, so an edit and its history
+ * commit together.
  */
 export abstract class ListItemsRepository<
   T extends ListItem = ListItem,
@@ -44,6 +48,7 @@ export abstract class ListItemsRepository<
 > extends BaseRepository<T, D, U> {
   protected constructor(
     databaseService: DatabaseService,
+    private readonly txHost: TransactionHost<DbAdapter>,
     modelName: ModelName,
     private readonly select: ListItemSelect = LIST_ITEM_SELECT,
   ) {
@@ -51,7 +56,7 @@ export abstract class ListItemsRepository<
   }
 
   private get list(): ListDelegate<T, D, U> {
-    return this.databaseService[this.modelName] as unknown as ListDelegate<T, D, U>;
+    return this.txHost.tx[this.modelName] as unknown as ListDelegate<T, D, U>;
   }
 
   findAllOrdered(includeHidden: boolean): Promise<T[]> {
