@@ -175,16 +175,15 @@ export function RecordHistory({
         </header>
         {body}
         {error ? null : (
-          // Only with entries (a record often has none yet): not compared with the skeleton's.
-          <div data-skeleton-optional className="contents">
-            <Pagination
-              page={query.page}
-              limit={AUDIT_PAGE_SIZE}
-              total={total}
-              onPageChange={(page) => go({ ...query, page })}
-              disabled={pending}
-            />
-          </div>
+          // Every record has entries from its first write (T28), so this is compared with the
+          // skeleton's pagination like Activity's.
+          <Pagination
+            page={query.page}
+            limit={AUDIT_PAGE_SIZE}
+            total={total}
+            onPageChange={(page) => go({ ...query, page })}
+            disabled={pending}
+          />
         )}
       </Panel>
     </div>
@@ -240,9 +239,7 @@ function HistorySkeleton() {
           <Skeleton className="h-11 w-12 shrink-0 rounded-lg lg:hidden" />
         </div>
         <AuditTimelineSkeleton grouping="month" />
-        <div data-skeleton-optional className="contents">
-          <Pagination page={1} limit={AUDIT_PAGE_SIZE} total={0} onPageChange={() => undefined} disabled loading />
-        </div>
+        <Pagination page={1} limit={AUDIT_PAGE_SIZE} total={0} onPageChange={() => undefined} disabled loading />
       </Panel>
     </div>
   );

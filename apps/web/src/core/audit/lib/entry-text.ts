@@ -126,7 +126,8 @@ export function formatAuditValue(
       return t(value === 'ar' ? 'common.common.arabic' : 'common.common.english');
     }
     if (field === HrSettingKey.PENALTIES_REPETITION_WINDOW) return t(`common.enums.repetitionWindow.${value}`);
-    if (field === SchoolSettingKey.LOGO_URL) return value.split('/').pop() ?? value;
+    // A stored file (the school logo, an employee's photo) reads as its file name.
+    if (field === SchoolSettingKey.LOGO_URL || field === 'photoUrl') return value.split('/').pop() ?? value;
     const enumList = enumOf(field, entityType);
     if (enumList && has(`common.enums.${enumList}.${value}`)) return t(`common.enums.${enumList}.${value}`);
     if (ISO_DAY.test(value)) return formatDate(value, locale);

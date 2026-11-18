@@ -2,7 +2,9 @@ import { BadRequestException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { contractYearFor, ErrorCode, HrEvent } from '@school-erp/shared';
 import { todayIsoDate } from '../../../../common/utils/dates.util';
+import type { AuditService } from '../../../../core/audit';
 import type { FileStorageService } from '../../../../core/settings';
+import type { AfterCommit } from '../../../../database/transactions';
 import { DepartmentsService } from '../../lists/services/departments.service';
 import { JobTitlesService } from '../../lists/services/job-titles.service';
 import type { CreateEmployeeDto } from '../dto/employee.dto';
@@ -77,7 +79,6 @@ function makeService(repo: Record<string, jest.Mock> = {}, access: HrAccessServi
   const repository = {
     findDetail: jest.fn().mockResolvedValue(row()),
     findScopeFields: jest.fn().mockResolvedValue({ id: 'e1', stageId: 's1', managerId: null }),
-    findState: jest.fn().mockResolvedValue({ id: 'm1', status: 'ACTIVE' }),
     findManagerState: jest
       .fn()
       .mockResolvedValue({ id: 'm1', status: 'ACTIVE', jobTitle: { managesPeople: true } }),
@@ -85,7 +86,6 @@ function makeService(repo: Record<string, jest.Mock> = {}, access: HrAccessServi
     findIdByNationalId: jest.fn().mockResolvedValue(null),
     findIdByFingerprintId: jest.fn().mockResolvedValue(null),
     findIdByInsuranceNumber: jest.fn().mockResolvedValue(null),
-    findPhotoUrl: jest.fn().mockResolvedValue(null),
     managerChainIds: jest.fn().mockResolvedValue([]),
     createWithCode: jest.fn().mockImplementation(() => Promise.resolve(row())),
     updateEmployee: jest.fn().mockImplementation(() => Promise.resolve(row())),
@@ -97,6 +97,12 @@ function makeService(repo: Record<string, jest.Mock> = {}, access: HrAccessServi
     save: jest.fn().mockImplementation((folder: string, name: string) => Promise.resolve(`/files/${folder}/${name}`)),
     remove: jest.fn().mockResolvedValue(undefined),
   };
+  const audit = { record: jest.fn(() => Promise.resolve()) };
+  // Runs after-commit work at once, as it does outside a transaction.
+  const afterCommit = {
+    run: jest.fn((fn: () => unknown) => Promise.resolve(fn())),
+    inTransaction: (fn: () => Promise<unknown>) => fn(),
+  };
   const service = new EmployeesService(
     repository as unknown as EmployeesRepository,
     lists as unknown as DepartmentsService,
@@ -104,8 +110,10 @@ function makeService(repo: Record<string, jest.Mock> = {}, access: HrAccessServi
     events as unknown as EventEmitter2,
     files as unknown as FileStorageService,
     access,
+    audit as unknown as AuditService,
+    afterCommit as unknown as AfterCommit,
   );
-  return { service, repository, events, files };
+  return { service, repository, events, files, audit, afterCommit };
 }
 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0]);
@@ -208,10 +216,11 @@ describe('EmployeesService — photo (§3)', () => {
   });
 
   it('stores the photo under employee-photos and deletes the previous one', async () => {
-    const { service, repository, files } = makeService({
-      findPhotoUrl: jest.fn().mockResolvedValue('/files/employee-photos/old.png'),
+    const { service, repository, files, afterCommit } = makeService({
+      findDetail: jest.fn().mockResolvedValue(row({ photoUrl: '/files/employee-photos/old.png' })),
     });
     await service.setPhoto('e1', file());
+    expect(afterCommit.run).toHaveBeenCalledTimes(1);
     expect(files.save).toHaveBeenCalledWith('employee-photos', expect.stringMatching(/^e1-.+\.png$/), PNG);
     expect(repository.updateEmployee).toHaveBeenCalledWith('e1', {
       photoUrl: expect.stringMatching(/^\/files\/employee-photos\/e1-/),
@@ -237,7 +246,7 @@ describe('EmployeesService — photo (§3)', () => {
   });
 
   it('unknown employee → 404; removing when there is no photo changes nothing', async () => {
-    const missing = makeService({ findPhotoUrl: jest.fn().mockResolvedValue(undefined) });
+    const missing = makeService({ findDetail: jest.fn().mockResolvedValue(null) });
     await expect(missing.service.setPhoto('x', file())).rejects.toThrow('Not Found');
     const { service, repository, files } = makeService();
     await service.removePhoto('e1');
@@ -424,7 +433,6 @@ describe('EmployeesService', () => {
 
   it('deactivating an inactive employee is a no-op without an event', async () => {
     const { service, repository, events } = makeService({
-      findState: jest.fn().mockResolvedValue({ id: 'e1', status: 'INACTIVE' }),
       findDetail: jest.fn().mockResolvedValue(row({ status: 'INACTIVE' })),
     });
     await expect(service.deactivate('e1')).resolves.toMatchObject({ status: 'INACTIVE' });
@@ -440,5 +448,89 @@ describe('EmployeesService', () => {
       contractStart: '2025-06-01',
       contractEnd: '2026-05-31',
     });
+  });
+});
+
+describe('EmployeesService — audit (§9, T28)', () => {
+  type Recorded = { action: string; entity: unknown; before: Record<string, unknown> | null; after: Record<string, unknown> };
+  const recorded = (audit: { record: jest.Mock }) => audit.record.mock.calls.map(([input]) => input as Recorded);
+
+  it('create records hr.employee.create with both names, the new snapshot and no before', async () => {
+    const { service, audit } = makeService();
+    await service.create(dto());
+    const [entry] = recorded(audit);
+    expect(entry).toMatchObject({
+      action: 'hr.employee.create',
+      entity: { type: 'employee', id: 'e1', label: { en: 'A', ar: 'أ' } },
+      before: null,
+      after: expect.objectContaining({ code: 'EMP-0001', basicSalary: 100, dateOfBirth: '1990-01-01' }),
+    });
+  });
+
+  it('an edit records the before and after snapshots, with id fields stored by name', async () => {
+    const science = { id: 'd1', nameEn: 'Science', nameAr: 'علوم' };
+    const maths = { id: 'd2', nameEn: 'Maths', nameAr: 'رياضيات' };
+    const { service, audit } = makeService({
+      findDetail: jest.fn().mockResolvedValue(row({ department: science })),
+      updateEmployee: jest.fn().mockResolvedValue(row({ department: maths })),
+    });
+    await service.update('e1', { departmentId: 'd2' });
+    const [entry] = recorded(audit);
+    expect(entry?.action).toBe('hr.employee.update');
+    expect(entry?.before?.departmentId).toEqual({ nameEn: 'Science', nameAr: 'علوم' });
+    expect(entry?.after.departmentId).toEqual({ nameEn: 'Maths', nameAr: 'رياضيات' });
+    expect(entry?.after).not.toHaveProperty('department');
+  });
+
+  it('a failed write records nothing', async () => {
+    const { service, audit } = makeService({
+      updateEmployee: jest.fn().mockRejectedValue(new Error('db down')),
+    });
+    await expect(service.update('e1', { grade: 'B' })).rejects.toThrow('db down');
+    expect(audit.record).not.toHaveBeenCalled();
+  });
+
+  it('deactivate / reactivate record their own action with the status change', async () => {
+    const active = makeService({
+      updateEmployee: jest.fn().mockResolvedValue(row({ status: 'INACTIVE' })),
+    });
+    await active.service.deactivate('e1');
+    expect(recorded(active.audit)[0]).toMatchObject({
+      action: 'hr.employee.deactivate',
+      before: expect.objectContaining({ status: 'ACTIVE' }),
+      after: expect.objectContaining({ status: 'INACTIVE' }),
+    });
+
+    const inactive = makeService({
+      findDetail: jest.fn().mockResolvedValue(row({ status: 'INACTIVE' })),
+    });
+    await inactive.service.reactivate('e1');
+    expect(recorded(inactive.audit)[0]?.action).toBe('hr.employee.reactivate');
+  });
+
+  it('a no-op (already inactive, no photo to remove) records equal snapshots: no entry, @Audited answered', async () => {
+    const inactive = makeService({ findDetail: jest.fn().mockResolvedValue(row({ status: 'INACTIVE' })) });
+    await inactive.service.deactivate('e1');
+    const [entry] = recorded(inactive.audit);
+    expect(entry?.before).toEqual(entry?.after);
+
+    const noPhoto = makeService();
+    await noPhoto.service.removePhoto('e1');
+    const [photo] = recorded(noPhoto.audit);
+    expect(photo?.action).toBe('hr.employee.update');
+    expect(photo?.before).toEqual(photo?.after);
+  });
+
+  it('a new photo records the photo change and deletes the old file only after the commit', async () => {
+    const { service, audit, files, afterCommit } = makeService({
+      findDetail: jest.fn().mockResolvedValue(row({ photoUrl: '/files/employee-photos/old.png' })),
+      updateEmployee: jest.fn().mockResolvedValue(row({ photoUrl: '/files/employee-photos/e1-new.png' })),
+    });
+    await service.setPhoto('e1', { mimetype: 'image/png', size: PNG.length, buffer: PNG });
+    const [entry] = recorded(audit);
+    expect(entry?.before?.photoUrl).toBe('/files/employee-photos/old.png');
+    expect(entry?.after.photoUrl).toBe('/files/employee-photos/e1-new.png');
+    expect(afterCommit.run).toHaveBeenCalledTimes(1);
+    expect(files.remove).toHaveBeenCalledWith('/files/employee-photos/old.png');
   });
 });

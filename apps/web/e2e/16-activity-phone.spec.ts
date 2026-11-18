@@ -1,5 +1,12 @@
 import { expect, test } from '@playwright/test';
-import { adminName, changeWorkingDays, employeeEntries, expectWorkingDaysEntry, firstEntry } from './support/activity';
+import {
+  adminName,
+  changeWorkingDays,
+  expectGradeEntry,
+  expectWorkingDaysEntry,
+  firstEntry,
+  setEmployeeGrade,
+} from './support/activity';
 import { t } from './support/i18n';
 import { activeEmployee } from './support/profile-tabs';
 import { schoolDay } from '../src/core/audit/lib/time';
@@ -49,18 +56,21 @@ for (const locale of ['ar', 'en'] as const) {
     await changeWorkingDays(page, locale);
   });
 
-  test(`employee History tab on a phone (${locale})`, async ({ page }, info) => {
+  test(`employee History tab on a phone (${locale}): an edit of the employee is at the top`, async ({ page }, info) => {
     const employee = await activeEmployee();
-    const entries = await employeeEntries(employee.id);
-    await signIn(page, locale);
-    await page.goto(`/${locale}/employees/${employee.id}/history`);
-    await expect(page.getByRole('heading', { level: 2, name: t(locale, 'audit.history.title') })).toBeVisible();
-    // TODO(T28): assert an employee edit at the top once T28 records `hr.employee.update`.
-    if (entries.length === 0) await expect(page.getByText(t(locale, 'audit.history.emptyTitle'))).toBeVisible();
-    else await expect(firstEntry(page)).toBeVisible();
-    await expectNoHorizontalScroll(page);
-    await settle(page);
-    await shoot(page, info, `history-${locale}-phone`);
+    const grade = `Smoke ${locale} ${Date.now()}`;
+    await setEmployeeGrade(employee.id, grade);
+    try {
+      await signIn(page, locale);
+      await page.goto(`/${locale}/employees/${employee.id}/history`);
+      await expect(page.getByRole('heading', { level: 2, name: t(locale, 'audit.history.title') })).toBeVisible();
+      await expectGradeEntry(firstEntry(page), locale, grade);
+      await expectNoHorizontalScroll(page);
+      await settle(page);
+      await shoot(page, info, `history-${locale}-phone`);
+    } finally {
+      await setEmployeeGrade(employee.id, employee.grade);
+    }
   });
 }
 

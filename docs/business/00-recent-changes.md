@@ -1,5 +1,12 @@
 # Recent changes
 
+- 2026-11-18 — Audit log, core and HR people (§9, §3, §7, T28): sign-ins, sign-outs and **failed
+  sign-ins** (the typed email, no person, the same whether the email exists or not) are now on
+  Activity, and so are employees (added, edited, deactivated, reactivated, photo), departments, job
+  titles, stages, HR rules and the penalty catalogue — each saved together with its change. An
+  employee's **History** tab lists their edits, with names instead of codes ("Department: Science →
+  Maths"); salary-type amounts stay hidden from someone who can't see salaries. Penalties follow
+  with T29.
 - 2026-11-18 — Notifications decisions (§11, §3, owner: "go with your recommended answers"): many of
   one kind at once make one grouped notification; probation becomes a date on each employee's
   record (hire date + 3 months by default, editable — Planned in §3); lateness due by the 25th and
@@ -15,7 +22,6 @@
 - 2026-11-18 — The "no stage" entry (§3) is marked, not matched by name: renaming the "None" stage
   (or a school naming it differently) no longer gives its staff a stage colour on the employee
   cards. Existing databases mark the stage named "None" once, when they update.
-
 - 2026-11-18 — Demo dry-run polish (§6, §5, §4): the **bank sheet** now has each employee's bank,
   account number and IBAN, and a Total row. A **draft run** says when the lateness or payroll rules
   changed after its last calculation and offers Recalculate. The **payslip**'s lateness shows the

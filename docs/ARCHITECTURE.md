@@ -246,7 +246,8 @@ UUID) and `@nestjs-cls/transactional` with the Prisma adapter keeps the open tra
   uses `txHost.tx` (the transaction client inside one, the plain client outside). Its multi-row
   writes use `txHost.withTransaction(...)`, which joins an open transaction or opens one.
   Repositories still on `DatabaseService` keep working but always run outside any transaction —
-  move a repository over when its writes must be audited (T28 / T29 move HR's).
+  move a repository over when its writes must be audited (#105 moved stages, the HR lists and the
+  penalty catalogue; T28 refresh tokens and employees; T29 penalties, lateness and payroll).
 - Never pass options to a nested `withTransaction`; only the request transaction sets them.
 - **After-commit work** (events): `AfterCommit.run(fn)` queues `fn` until the open request
   transaction commits (dropped on rollback), or runs it at once when none is open.
@@ -270,6 +271,18 @@ module through core's exported `AuditService` — never through its repository.
   those older entries' Arabic names).
 - Who (id + name snapshot), IP, user agent and request id come from the request (D4). `actor` is
   passed only where the request has no user yet (a successful sign-in) or none applies (`null`).
+- **A service records in its own write's transaction** even when called outside a request (the
+  seed): it wraps the write in `AfterCommit.inTransaction(...)`, which joins the request's
+  transaction or opens one. An employee entry written by the seed has no actor ("System").
+- **A failed sign-in** (spec 5, `AuthService`) is recorded in a transaction of its own
+  (`Propagation.RequiresNew`), since the request's rolls back with the 401. Its record is the typed
+  email (normalised) as id and label, never a user id — the same entry whether or not the email
+  belongs to an account — with no actor and no password.
+- **Employee entries** store the record as `employeeAuditSnapshot` (`hr/employees`) builds it: dates
+  as `YYYY-MM-DD`, money in piastres, and the stage, department, job title and direct manager by
+  their two names under their id fields (`departmentId: { nameEn, nameAr }`), so the timeline reads
+  "Department: Science → Maths" and a later rename never rewrites the entry. Salary-type values are
+  stored and hidden at read time (`hideSalaryValues`, P4).
 - Only changed fields are stored, each `{ field, before, after }`; secrets (password hashes,
   tokens, anything matching the deny list in `audit.pure.ts`) are dropped at any depth; money stays
   in piastres; `id` / `createdAt` / `updatedAt` are ignored (D7). Equal before and after write
@@ -752,11 +765,11 @@ doesn't update its skeleton fails CI (owner, 2026-11-18).
   (`table`, `table-toolbar`, `table-head`, `table-row`, `table-card`), `Pagination`
   (`pagination`), `StatTile` (`tile`), `FormActionBar` (`form-actions`), `SectionPanel`
   (`section-panel`), `FormCard` (`form-card`); screens mark their own cards, panels and filters.
-  Three optional attributes: `data-skeleton-each` on a list's items (a run of them counts once, as
-  tall as its shortest item — how many arrive and whose name wraps is data),
-  `data-skeleton-measure="width"` on a block whose height follows the data (a table, the timeline),
-  and `data-skeleton-optional` around a block that exists only with data (the History tab's
-  pagination) — use it sparingly; everything else must match. A `DataTable` whose phone cards grow
+  Two optional attributes: `data-skeleton-each` on a list's items (a run of them counts once, as
+  tall as its shortest item — how many arrive and whose name wraps is data), and
+  `data-skeleton-measure="width"` on a block whose height follows the data (a table, the timeline);
+  everything else must match (the History tab's pagination too, since T28 gives every record
+  entries). A `DataTable` whose phone cards grow
   with their text passes `cardHeightsVary` (penalties: long violation names).
 - **Text that wraps is drawn as its own text.** A bar can't wrap, so where a loaded line usually
   wraps (a header description, a tile's sub line, the History sentence) the skeleton renders the

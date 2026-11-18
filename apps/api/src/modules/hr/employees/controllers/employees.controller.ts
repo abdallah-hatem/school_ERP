@@ -17,7 +17,7 @@ import { EMPLOYEE_PHOTO_UPLOAD } from '@school-erp/shared';
 import { ResponseUtil } from '../../../../common/utils/response.util';
 import { CreateEmployeeDto, ListEmployeesQueryDto, UpdateEmployeeDto } from '../dto/employee.dto';
 import { EmployeesService } from '../services/employees.service';
-import { NotAudited } from '../../../../core/audit';
+import { Audited } from '../../../../core/audit';
 import { Permission } from '../../../../core/permissions';
 import { imageUploadInterceptor, type UploadedFileLike } from '../../../../core/settings';
 
@@ -40,21 +40,21 @@ export class EmployeesController {
     return this.employees.get(id);
   }
 
-  @NotAudited('wired in T28')
+  @Audited('hr.employee.create')
   @Post()
   @Permission('hr.employees.create')
   create(@Body() dto: CreateEmployeeDto) {
     return this.employees.create(dto);
   }
 
-  @NotAudited('wired in T28')
+  @Audited('hr.employee.update')
   @Patch(':id')
   @Permission('hr.employees.edit')
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateEmployeeDto) {
     return this.employees.update(id, dto);
   }
 
-  @NotAudited('wired in T28')
+  @Audited('hr.employee.deactivate')
   @Post(':id/deactivate')
   @Permission('hr.employees.change_status')
   @HttpCode(HttpStatus.OK)
@@ -62,7 +62,7 @@ export class EmployeesController {
     return this.employees.deactivate(id);
   }
 
-  @NotAudited('wired in T28')
+  @Audited('hr.employee.reactivate')
   @Post(':id/reactivate')
   @Permission('hr.employees.change_status')
   @HttpCode(HttpStatus.OK)
@@ -71,7 +71,7 @@ export class EmployeesController {
   }
 
   /** Multipart `file`: PNG, JPG or WebP, up to 2 MB (§3). Returns the employee. */
-  @NotAudited('wired in T28')
+  @Audited('hr.employee.update')
   @Post(':id/photo')
   @Permission('hr.employees.edit')
   @HttpCode(HttpStatus.OK)
@@ -83,7 +83,7 @@ export class EmployeesController {
     return this.employees.setPhoto(id, file);
   }
 
-  @NotAudited('wired in T28')
+  @Audited('hr.employee.update')
   @Delete(':id/photo')
   @Permission('hr.employees.edit')
   removePhoto(@Param('id', ParseUUIDPipe) id: string) {

@@ -1,5 +1,5 @@
 import { expect, type Browser, type Locator, type Page, type TestInfo } from '@playwright/test';
-import { Weekday, type AuditEntry, type Language } from '@school-erp/shared';
+import { Weekday, type Language } from '@school-erp/shared';
 import { Api } from './api';
 import { literal, t } from './i18n';
 import { shoot } from './ui';
@@ -68,12 +68,22 @@ export async function adminName(): Promise<string> {
   return me.name;
 }
 
-/** Entries recorded on one employee (none until T28 wires the employee service). */
-export async function employeeEntries(employeeId: string): Promise<AuditEntry[]> {
+/**
+ * Sets an employee's grade (setup through the API, like `renameDepartmentAr`): recorded as
+ * `hr.employee.update` on the employee's History. Free text, so no other spec's numbers move; put
+ * the old grade back afterwards.
+ */
+export async function setEmployeeGrade(employeeId: string, grade: string | null): Promise<void> {
   const api = await Api.asAdmin();
-  const entries = await api.get<AuditEntry[]>(`/audit/records/employee/${employeeId}`, { limit: 10 });
+  await api.patch(`/hr/employees/${employeeId}`, { grade });
   await api.dispose();
-  return entries;
+}
+
+/** Asserts `entry` is the grade change just made on the employee. */
+export async function expectGradeEntry(entry: Locator, locale: Language, grade: string): Promise<void> {
+  await expect(entry).toContainText(t(locale, 'audit.actions.hr.employee.update').split('{')[0]!.trim());
+  await expect(entry).toContainText(t(locale, 'audit.fields.grade'));
+  await expect(entry).toContainText(grade);
 }
 
 /** A department to rename in Arabic only (its English name stays), and its names now. */

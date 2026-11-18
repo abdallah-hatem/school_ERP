@@ -18,6 +18,7 @@ import { IS_PUBLIC_KEY } from '../src/common/decorators/public.decorator';
 import { hashPassword } from '../src/common/utils/password.util';
 import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
+import { historyMark } from './helpers/history';
 import { giveRoles } from './helpers/as-test-user';
 
 /** A minimal PNG (signature + padding) for the logo upload. */
@@ -380,5 +381,97 @@ describe('auth (e2e)', () => {
       .post('/auth/refresh')
       .set('Cookie', `${AUTH_COOKIES.refresh}=${cookies[AUTH_COOKIES.refresh]}`)
       .expect(401);
+  });
+
+  // ── Audit (T28, D11): sign-in, sign-out and failed sign-ins are recorded ──────
+
+  describe('audit log', () => {
+    let mark = BigInt(0);
+    const entries = () =>
+      db.auditEntry.findMany({ where: { seq: { gt: mark } }, orderBy: { seq: 'asc' } });
+
+    beforeEach(async () => {
+      mark = await historyMark(db);
+    });
+
+    it('a sign-in records core.auth.sign_in: the user as record and actor, IP and device kept', async () => {
+      const user = await makeUser();
+      await login(user.email.toUpperCase()).set('User-Agent', 'e2e-agent').expect(200);
+      const list = await entries();
+      expect(list).toHaveLength(1);
+      expect(list[0]).toMatchObject({
+        action: 'core.auth.sign_in',
+        module: 'core',
+        entityType: 'user',
+        entityId: user.id,
+        entityLabel: user.name,
+        actorId: user.id,
+        actorName: user.name,
+        changes: [],
+      });
+      expect(list[0]?.meta).toMatchObject({ userAgent: 'e2e-agent' });
+    });
+
+    it('a sign-out records core.auth.sign_out by the signed-in user; a refresh records nothing', async () => {
+      const user = await makeUser();
+      const cookies = cookiesOf(await login(user.email).expect(200));
+      mark = await historyMark(db);
+      const refreshed = await http(app).post('/auth/refresh').set('Cookie', cookieHeader(cookies)).expect(200);
+      expect(await entries()).toHaveLength(0);
+      await http(app).post('/auth/logout').set('Cookie', cookieHeader(cookiesOf(refreshed))).expect(200);
+      const list = await entries();
+      expect(list.map((e) => e.action)).toEqual(['core.auth.sign_out']);
+      expect(list[0]).toMatchObject({ entityId: user.id, actorId: user.id, actorName: user.name });
+    });
+
+    it('spec 5 — a failed sign-in records the typed email with no actor and never the password; the 401 is unchanged', async () => {
+      const user = await makeUser();
+      const res = await login(user.email, 'wrong-password').expect(401);
+      expect(res.body.error).toBe(ErrorCode.INVALID_CREDENTIALS);
+      const list = await entries();
+      expect(list).toHaveLength(1);
+      expect(list[0]).toMatchObject({
+        action: 'core.auth.sign_in_failed',
+        entityType: 'user',
+        entityId: user.email,
+        entityLabel: user.email,
+        actorId: null,
+        actorName: null,
+        changes: [],
+      });
+      const { seq: _seq, ...stored } = list[0];
+      expect(JSON.stringify(stored)).not.toContain('wrong-password');
+    });
+
+    it('a failed sign-in for a known and for an unknown email write the same shape of entry (nothing tells them apart)', async () => {
+      const user = await makeUser();
+      const unknownEmail = `${unique('nobody')}@school.test`.toLowerCase();
+      const known = await login(user.email, 'wrong-password').set('Accept-Language', 'en');
+      const unknown = await login(unknownEmail).set('Accept-Language', 'en');
+      expect([known.status, unknown.status]).toEqual([401, 401]);
+      const answer = ({ timestamp: _at, ...body }: Record<string, unknown>) => body;
+      expect(answer(unknown.body as Record<string, unknown>)).toEqual(answer(known.body as Record<string, unknown>));
+
+      const shape = (e: { action: string; entityType: string; entityId: string; entityLabel: string; actorId: string | null; changes: unknown }) => ({
+        action: e.action,
+        entityType: e.entityType,
+        idIsTheEmail: e.entityId === e.entityLabel,
+        actorId: e.actorId,
+        changes: e.changes,
+      });
+      const [a, b] = await entries();
+      expect(a?.entityId).toBe(user.email);
+      expect(b?.entityId).toBe(unknownEmail);
+      expect(shape(a)).toEqual(shape(b));
+    });
+
+    it('an inactive user signing in is a failed sign-in, recorded like any other', async () => {
+      const user = await makeUser({ isActive: false });
+      await login(user.email).expect(401);
+      const list = await entries();
+      expect(list.map((e) => [e.action, e.entityId, e.actorId])).toEqual([
+        ['core.auth.sign_in_failed', user.email, null],
+      ]);
+    });
   });
 });
