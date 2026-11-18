@@ -33,6 +33,7 @@ import { BUILT_IN_ROLES, type PayrollRunQuery, type SessionUser } from '@school-
 import { sessionWith } from '@/test/render';
 import type { Locale } from '@/shared/lib/i18n';
 import { ADJ_MONA, MONA, renderPayroll, run, RUN_ID, SALMA, SETTINGS } from '../test/fixtures';
+import { renderWithI18n, sessionWithout } from '@/test/render';
 import { PayrollI18n } from '../messages';
 import { RunPage, type RunPageProps } from './run-page';
 
@@ -256,6 +257,26 @@ describe('RunPage — approve', () => {
         base64: 'UEs=',
       }),
     );
+  });
+
+  it('a draft without hr.payroll.adjust: recorded adjustments viewable (no add or remove, says why); none recorded → no menu', async () => {
+    const user = userEvent.setup();
+    renderWithI18n(<PayrollI18n locale="en">{runElement({ run: run({ adjustments: [ADJ_MONA] }) }, 'en')}</PayrollI18n>, {
+      session: sessionWithout('hr.payroll.adjust'),
+    });
+    expect(menuItemNames(await openRowActions(user, 'Mona Khalil', table()))).toEqual(['Adjustments']);
+    await user.keyboard('{Escape}');
+    await chooseRowAction(user, 'Mona Khalil', /^Adjustments/, table());
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Exam supervision')).toBeTruthy();
+    expect(
+      within(dialog).getByText('You can view these adjustments. Changing them needs the Adjust payroll permission.'),
+    ).toBeTruthy();
+    expect(within(dialog).queryByRole('button', { name: 'Add adjustment' })).toBeNull();
+    expect(within(dialog).queryByRole('button', { name: /^Remove/ })).toBeNull();
+    await user.keyboard('{Escape}');
+    // Salma has no adjustments: nothing to view, nothing to add — no ⋯ at all.
+    expect(table().queryByRole('button', { name: /^Actions for Salma/ })).toBeNull();
   });
 
   it('an approved run opens read-only', () => {

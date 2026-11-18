@@ -77,6 +77,22 @@ for (const role of BUILT_IN_ROLES) {
       else await expect(link, `${role.key}: sidebar hides ${key}`).toHaveCount(0);
     }
 
+    // Home: the HR dashboard with `hr.dashboard.view`; without it a welcome linking to each screen
+    // the role may open (the sidebar's, less Home), then My account — no figures.
+    const welcome = main.getByRole('region', { name: t(locale, 'dashboard.welcome.screensTitle') });
+    if (user.keys.includes('hr.dashboard.view')) {
+      await expect(welcome, `${role.key}: Home is the dashboard`).toHaveCount(0);
+    } else {
+      const expected = SIDEBAR_SCREENS.filter((key) => key !== 'dashboard' && canOpenScreen(user.keys, key)).map((key) =>
+        t(locale, `common.nav.${key}`),
+      );
+      await expect(welcome.getByRole('link'), `${role.key}: Home links to its screens`).toHaveText([
+        ...expected,
+        t(locale, 'common.nav.account'),
+      ]);
+      await expect(main.getByText(t(locale, 'dashboard.headcount.label'))).toHaveCount(0);
+    }
+
     // Settings: only the sections it may view, and it opens on the first of them.
     const sections = visibleSettingsSections(user.keys);
     if (ACCOUNTING_SECTION_LIVE) {

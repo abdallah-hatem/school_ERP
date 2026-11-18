@@ -17,6 +17,10 @@ affects only **draft** payroll runs (approved runs never change).
   them; a link to a section they can't view opens their first allowed one instead. Anyone who may
   view at least one section (e.g. the Accountant, for Accounting) has Settings in the menu. A
   section they may view but not change is shown read-only: no typing, adding or removing.
+  Every section follows it (2026-11-18): School (fields disabled, no logo upload, no Save), HR rules
+  (fields disabled, no adding or removing hour steps, no Save), Structure and the lists (no Add, no
+  rename / hide menu), the penalty catalogue (no Add group / Add violation, no menus) and
+  Accounting. The live examples (lateness, tax) still work: they are calculators, not settings.
 - **DECIDED** — The logo must be PNG, JPG or SVG and at most 2 MB. School names are at most 200
   characters; stage, department and job-title names at most 100.
 

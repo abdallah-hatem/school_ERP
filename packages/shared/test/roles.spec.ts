@@ -101,6 +101,8 @@ describe('starting roles (spec table, GUESS)', () => {
   it('payroll is prepared by the officer, approved by the HR manager; the accountant views and exports', () => {
     expect(holders('hr.payroll.create')).toEqual(['hr_manager', 'hr_officer', 'system_admin']);
     expect(holders('hr.payroll.approve')).toEqual(['hr_manager', 'system_admin']);
+    // Adjustments (bonus, advance) are part of preparing the run: whoever prepares it adjusts it.
+    expect(holders('hr.payroll.adjust')).toEqual(['hr_manager', 'hr_officer', 'system_admin']);
     expect(holders('hr.payroll.export_bank_sheet')).toEqual([
       'accountant',
       'hr_manager',
