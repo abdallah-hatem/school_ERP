@@ -122,7 +122,7 @@ describe('Statement', () => {
     expect(screen.getByText('مدرسة تجريبية · بيان ضرائب الرواتب')).toBeTruthy();
     expect(screen.getByText('مطابقة لقاعدة اليوم')).toBeTruthy();
     expect(lastRowCells('غير مؤمَّن عليهم')[0]).toBe('المجموع الفرعي · موظف واحد');
-    expect(lastRowCells('مؤمَّن عليهم')[0]).toBe('المجموع الفرعي · الموظفان كلاهما');
+    expect(lastRowCells('مؤمَّن عليهم')[0]).toBe('المجموع الفرعي · الاثنان');
   });
 
   describe('a month of many employees (paging, search, print)', () => {

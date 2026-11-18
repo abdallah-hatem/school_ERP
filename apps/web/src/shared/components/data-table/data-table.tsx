@@ -339,6 +339,8 @@ function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass, footer
                     'first:ps-5 last:pe-5',
                     alignClass[column.align ?? 'start'],
                     column.className,
+                    // The label stays on one line even in a column whose names wrap.
+                    i === 0 && 'whitespace-nowrap',
                   )}
                 >
                   {i === 0 ? footer.label : footer.cells?.[column.id]}
