@@ -516,7 +516,8 @@ only — no per-IP limit.**
   `@Audited` login held a pooled connection for the request while those writes waited for another;
   with as many concurrent wrong passwords as the pool has connections (5 on CI's 2 vCPUs) every
   request starved: they failed waiting for a connection (Prisma pool / transaction timeouts, which the
-  filter answers as a 4xx) — the e2e "concurrent wrong passwords" case (12 at once) guards it. `POST /account/password` stays `@Audited`, so a wrong current password still needs a
+  filter answers as a 4xx) — the e2e "concurrent wrong passwords" case (12 at once) guards it.
+  `POST /account/password` stays `@Audited`, so a wrong current password still needs a
   second connection while its request holds one — acceptable for one person's own password, but
   the same reason applies if it ever sees bulk traffic.
 - **Unlock.** `POST /users/:id/unlock-sign-in` (`core.users.manage`, `@Audited('core.user.unlock_sign_in')`,
