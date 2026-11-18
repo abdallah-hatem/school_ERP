@@ -94,6 +94,10 @@ up-to-date branch.
 - [ ] Changed an **existing** write endpoint, or the service method behind it, that is still marked
   `@NotAudited('wired in T28')` / `('wired in T29')`? Wire its audit in this PR (see below).
 - [ ] `docs/BUSINESS_LOGIC.md` updated in the same PR if a business rule changed.
+- [ ] A business change? Add **one new file** `docs/business/recent-changes/YYYY-MM-DD-NNN-<slug>.md`
+      (never edit `00-recent-changes.md` or another PR's file).
+- [ ] **Don't edit `docs/BUILD_LOG.md`** in a feature or fix PR. Put a short "Log entry" section in the
+      PR body instead; whoever merges the PR writes the build log from it (see The PR).
 - [ ] UI changes: screenshots. New or visually changed screens: EN/AR × phone/desktop (light only).
 - [ ] Changed a component → updated its skeleton in the same PR, and the skeleton spec passes
       (`pnpm smoke 23-skeletons`; owner, 2026-11-18). A new main block gets the same
@@ -169,7 +173,15 @@ The API refuses anything undeclared (403) and CI fails on it (`docs/ARCHITECTURE
 - Targets `dev`. Title: `feat: <what it does>` (or `fix:` / `chore:`).
 - Body (the template fills this in): what changed and why, the business rule (§ in the business
   doc), the test command and its result, the edge cases covered, screenshots.
-- **(team rule)** Claude opens PRs but **does not merge them**. A human approval is required.
+- The body ends with a **Log entry**: two or three lines for the build log — what changed, decisions
+  taken, anything left open.
+- **Merging into `dev`:** green CI, no approval needed (CLAUDE.md rule 5); `testing` and `production`
+  need the owner's approval and Claude never merges them.
+- **The build log has one writer: whoever merges** (owner, 2026-11-18). Right after a merge into
+  `dev`, the merger adds the PR's log entry (and updates Next up) in a small docs-only PR. Parallel
+  PRs all appending to the same spot of `docs/BUILD_LOG.md` (or `00-recent-changes.md`) is what made
+  them conflict; with one writer and one file per business change they don't. At the start of each
+  session, compare the log with the PRs merged into `dev` and add any entry that's missing.
 
 ## Review
 

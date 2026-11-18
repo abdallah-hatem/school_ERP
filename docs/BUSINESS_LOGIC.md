@@ -1,8 +1,9 @@
 # Business logic — index
 
 What is true **now** about the business and how the system behaves. Business terms only. Each section
-is its own file; "§N" means the file listed for N below. Dated changes go in
-[`business/00-recent-changes.md`](business/00-recent-changes.md).
+is its own file; "§N" means the file listed for N below. Dated changes are one file each in
+[`business/recent-changes/`](business/recent-changes/) (see
+[`00-recent-changes.md`](business/00-recent-changes.md)).
 
 ## Markers
 
