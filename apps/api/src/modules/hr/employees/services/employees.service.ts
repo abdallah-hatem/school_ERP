@@ -6,7 +6,6 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   AuditEntityType,
   applyInsuranceStatus,
@@ -14,7 +13,6 @@ import {
   Employee,
   EMPLOYEE_PHOTO_UPLOAD,
   EMPLOYEE_SALARY_FIELDS,
-  EmployeeHiredEvent,
   EmployeeRef,
   EmployeeStatus,
   EmployeeSummary,
@@ -32,6 +30,7 @@ import {
 } from '@school-erp/shared';
 import { CodedException } from '../../../../common/errors/coded.exception';
 import { AuditService } from '../../../../core/audit';
+import { DomainEvents } from '../../../../core/events';
 import { AfterCommit } from '../../../../database/transactions';
 import { inScope, withoutFields, type EmployeeScope } from '../../access/employee-scope.pure';
 import { HrAccessService } from '../../access/hr-access.service';
@@ -48,7 +47,7 @@ import {
   EmployeeUpdateData,
   PayrollSnapshotRow,
 } from '../repositories/employees.repository';
-import { employeeAuditLabel, employeeAuditSnapshot } from './employee-audit.pure';
+import { changedEmployeeFields, employeeAuditLabel, employeeAuditSnapshot } from './employee-audit.pure';
 
 /** Fields a PATCH may change but never clear (§3 "required"). */
 const REQUIRED_FIELDS = [
@@ -121,7 +120,8 @@ export function toEmployee(row: EmployeeDetailRow, salaryVisible: boolean): Empl
 /**
  * §3 employee records. Never deleted — deactivated. Codes come from the repository's counter.
  * Every write is recorded in the audit log in its transaction (`hr.employee.*`, §9) with the
- * changed fields; emits `employee.hired` / `employee.updated` / `employee.deactivated`.
+ * changed fields. Publishes `hr.employee.hired` / `hr.employee.updated` (fire-and-forget) and
+ * `hr.employee.deactivated` (must-deliver), always after the commit.
  */
 @Injectable()
 export class EmployeesService {
@@ -129,7 +129,7 @@ export class EmployeesService {
     private readonly repository: EmployeesRepository,
     private readonly departments: DepartmentsService,
     private readonly jobTitles: JobTitlesService,
-    private readonly events: EventEmitter2,
+    private readonly events: DomainEvents,
     private readonly files: FileStorageService,
     private readonly access: HrAccessService,
     private readonly audit: AuditService,
@@ -329,7 +329,11 @@ export class EmployeesService {
         graduationYear: dto.graduationYear ?? null,
       });
       await this.record('hr.employee.create', null, row);
-      this.emit(HrEvent.EMPLOYEE_HIRED, row.id);
+      await this.events.publish(HrEvent.EMPLOYEE_HIRED, {
+        employeeId: row.id,
+        hireDate: toIsoDate(row.hireDate),
+        at: new Date().toISOString(),
+      });
       return this.present(row);
     });
   }
@@ -381,7 +385,7 @@ export class EmployeesService {
       const row = await this.repository.updateEmployee(id, data);
       // Always recorded: a save that changes nothing writes no entry but still answers `@Audited`.
       await this.record('hr.employee.update', current, row);
-      this.emit(HrEvent.EMPLOYEE_UPDATED, id);
+      await this.publishUpdated(current, row);
       return this.present(row);
     });
   }
@@ -398,10 +402,12 @@ export class EmployeesService {
       if (!before) throw new NotFoundException();
       const { type, buffer } = checkImageUpload(file, EMPLOYEE_PHOTO_UPLOAD);
       const photoUrl = await this.files.save(EMPLOYEE_PHOTO_FOLDER, `${id}-${randomUUID()}.${type}`, buffer);
+      // Written before the commit: a rolled-back change deletes it again (no orphan file, gap 8).
+      this.afterCommit.onRollback(() => this.files.remove(photoUrl));
       const row = await this.repository.updateEmployee(id, { photoUrl });
       await this.record('hr.employee.update', before, row);
       this.removeFileAfterCommit(before.photoUrl);
-      this.emit(HrEvent.EMPLOYEE_UPDATED, id);
+      await this.publishUpdated(before, row);
       return this.present(row);
     });
   }
@@ -421,26 +427,27 @@ export class EmployeesService {
       const row = await this.repository.updateEmployee(id, { photoUrl: null });
       await this.record('hr.employee.update', before, row);
       this.removeFileAfterCommit(before.photoUrl);
-      this.emit(HrEvent.EMPLOYEE_UPDATED, id);
+      await this.publishUpdated(before, row);
       return this.present(row);
     });
   }
 
   /** Inactive: kept with all history, left out of new payroll runs, penalties and lateness. */
   deactivate(id: Uuid): Promise<Employee> {
-    return this.setStatus(id, EmployeeStatus.INACTIVE, HrEvent.EMPLOYEE_DEACTIVATED);
+    return this.setStatus(id, EmployeeStatus.INACTIVE);
   }
 
   /** §3 GUESS: reactivating is allowed. */
   reactivate(id: Uuid): Promise<Employee> {
-    return this.setStatus(id, EmployeeStatus.ACTIVE, HrEvent.EMPLOYEE_UPDATED);
+    return this.setStatus(id, EmployeeStatus.ACTIVE);
   }
 
   /**
    * Idempotent: setting the status an employee already has changes nothing, records no entry and
-   * emits nothing.
+   * publishes nothing. Deactivating publishes `hr.employee.deactivated` (must-deliver: in the
+   * outbox with this change); reactivating, `hr.employee.updated` with `status`.
    */
-  private async setStatus(id: Uuid, status: EmployeeStatus, event: HrEvent): Promise<Employee> {
+  private async setStatus(id: Uuid, status: EmployeeStatus): Promise<Employee> {
     // The change and its audit entry commit together (audit D2), for the seed too.
     return this.afterCommit.inTransaction(async () => {
       await this.assertInScope('hr.employees.change_status', id);
@@ -454,7 +461,15 @@ export class EmployeesService {
       }
       const row = await this.repository.updateEmployee(id, { status });
       await this.record(action, current, row);
-      this.emit(event, id);
+      if (status === EmployeeStatus.INACTIVE) {
+        await this.events.publish(
+          HrEvent.EMPLOYEE_DEACTIVATED,
+          { employeeId: id, at: new Date().toISOString() },
+          { mustDeliver: true },
+        );
+      } else {
+        await this.publishUpdated(current, row);
+      }
       return this.present(row);
     });
   }
@@ -633,8 +648,14 @@ export class EmployeesService {
     if (end <= start) throw new BadRequestException('contractEnd must be after contractStart');
   }
 
-  private emit(event: HrEvent, employeeId: Uuid): void {
-    const payload: EmployeeHiredEvent = { employeeId, at: new Date().toISOString() };
-    this.events.emit(event, payload);
+  /** `hr.employee.updated` after the commit — only when a field really changed (fire-and-forget). */
+  private async publishUpdated(before: EmployeeDetailRow, after: EmployeeDetailRow): Promise<void> {
+    const fields = changedEmployeeFields(before, after);
+    if (fields.length === 0) return;
+    await this.events.publish(HrEvent.EMPLOYEE_UPDATED, {
+      employeeId: after.id,
+      fields,
+      at: new Date().toISOString(),
+    });
   }
 }

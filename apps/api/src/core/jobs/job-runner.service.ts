@@ -9,6 +9,9 @@ import {
   type JobRunStatus,
 } from './scheduled-job';
 
+/** A run that had nothing to do (its handler returned 'idle'). */
+const IDLE = Symbol('idle');
+
 /** Longest error text kept on a failed run. */
 export const JOB_ERROR_MAX_LENGTH = 4000;
 
@@ -28,8 +31,9 @@ export function jobErrorText(e: unknown): string {
  * name — on its clock (`JobScheduler`) or when a test or an operator asks (`run(name)`).
  *
  * A run takes the job's advisory lock first, so two API containers never run it at once (the
- * second is `skipped`). It ends `success` or `failed` and is recorded in `job_runs`; a failing job
- * is logged and recorded and never throws into the API.
+ * second is `skipped`) — unless the job says `lock: false` (it is safe to run concurrently). It ends
+ * `success` or `failed` and is recorded in `job_runs`, or `idle` (nothing to do, not recorded); a
+ * failing job is logged and recorded and never throws into the API.
  */
 @Injectable()
 export class JobRunner implements OnModuleInit {
@@ -75,26 +79,31 @@ export class JobRunner implements OnModuleInit {
     if (!job) throw new Error(`No scheduled job named "${name}"`);
 
     const startedAt = now();
-    // The job's error text, or null when it succeeded.
-    let error: string | null;
-    try {
-      const lock = await this.runs.withLock(name, async () => {
-        try {
-          await job.handler.run();
-          return null;
-        } catch (e) {
-          return jobErrorText(e);
-        }
-      });
-      if (!lock.taken) {
-        this.logger.log(`Job "${name}" skipped: another instance is running it`);
-        return 'skipped';
+    // The job's error text, null when it succeeded, 'idle' when it had nothing to do.
+    const attempt = async (): Promise<string | null | typeof IDLE> => {
+      try {
+        return (await job.handler.run()) === 'idle' ? IDLE : null;
+      } catch (e) {
+        return jobErrorText(e);
       }
-      error = lock.value;
-    } catch (e) {
-      // The lock itself failed (database down, transaction timeout): the run failed too.
-      error = jobErrorText(e);
+    };
+    let error: string | null | typeof IDLE;
+    if (job.definition.lock === false) {
+      error = await attempt();
+    } else {
+      try {
+        const lock = await this.runs.withLock(name, attempt);
+        if (!lock.taken) {
+          this.logger.log(`Job "${name}" skipped: another instance is running it`);
+          return 'skipped';
+        }
+        error = lock.value;
+      } catch (e) {
+        // The lock itself failed (database down, transaction timeout): the run failed too.
+        error = jobErrorText(e);
+      }
     }
+    if (error === IDLE) return 'idle';
 
     const status: JobRunStatus = error === null ? 'success' : 'failed';
     if (error !== null) this.logger.error(`Job "${name}" failed`, error);

@@ -1,5 +1,4 @@
 import { INestApplication } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   HrEvent,
   type AuditChange,
@@ -8,6 +7,7 @@ import {
 } from '@school-erp/shared';
 import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
+import { outboxEvents } from './helpers/events';
 import { createAppAsTestUser } from './helpers/as-test-user';
 import { historyMark } from './helpers/history';
 
@@ -171,15 +171,13 @@ describe('HR audit wiring — lateness and payroll (T29, e2e)', () => {
     const [recalc] = await entries('hr.payroll.recalculate');
     expect(field(recalc, 'totals')).toMatchObject({ before: run.totals, after: recalculated.totals });
 
-    const events: unknown[] = [];
-    app.get(EventEmitter2).once(HrEvent.PAYROLL_APPROVED, (e) => events.push(e));
     const approved = await approve(run);
     const approvals = await entries('hr.payroll.approve');
     expect(approvals).toHaveLength(1);
     expect(field(approvals[0], 'totals')).toMatchObject({ before: null, after: approved.totals });
     expect(field(approvals[0], 'status')).toMatchObject({ before: 'DRAFT', after: 'APPROVED' });
-    // The event still goes out — after the commit.
-    expect(events).toHaveLength(1);
+    // The event is in the outbox with the approval (must-deliver).
+    expect(await outboxEvents(db, HrEvent.PAYROLL_APPROVED, { runId: run.id })).toHaveLength(1);
   });
 
   it('hr.payroll.adjustment_add / adjustment_remove — the employee by both names, type, amount, reason', async () => {

@@ -1,5 +1,4 @@
 import { INestApplication } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   contractYearFor,
   ErrorCode,
@@ -12,15 +11,13 @@ import { todayIsoDate } from '../src/common/utils/dates.util';
 import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
 import { createAppAsTestUser } from './helpers/as-test-user';
+import { clearRecorded, EventRecorderModule, outboxEvents, recorded } from './helpers/events';
 import { historyMark, historyRows } from './helpers/history';
 
 describe('HR lists and employees (e2e)', () => {
   let app: INestApplication;
   let userId: string;
   let db: DatabaseService;
-  let emitSpy: jest.SpyInstance;
-  // settings.changed fires with emitAsync, after the change and its history commit.
-  let emitAsyncSpy: jest.SpyInstance;
 
   let stageId: string;
   let hiddenStageId: string;
@@ -61,19 +58,15 @@ describe('HR lists and employees (e2e)', () => {
     return res.body.data as { id: string; code: string; status: string };
   };
 
-  const settingsEvents = () =>
-    emitAsyncSpy.mock.calls
-      .filter(([name]) => name === SettingsEvent.CHANGED)
-      .map(([, payload]) => payload);
+  /** `core.settings.changed` as listeners received it — after the change and its history commit. */
+  const settingsEvents = () => recorded(SettingsEvent.CHANGED);
 
   beforeAll(async () => {
     ({
       app,
       user: { id: userId },
-    } = await createAppAsTestUser());
+    } = await createAppAsTestUser(undefined, [EventRecorderModule]));
     db = app.get(DatabaseService);
-    emitSpy = jest.spyOn(app.get(EventEmitter2), 'emit');
-    emitAsyncSpy = jest.spyOn(app.get(EventEmitter2), 'emitAsync');
 
     stageId = (await db.stage.create({ data: { nameEn: 'Primary', nameAr: 'ابتدائي' } })).id;
     hiddenStageId = (
@@ -109,8 +102,7 @@ describe('HR lists and employees (e2e)', () => {
   });
 
   beforeEach(() => {
-    emitSpy.mockClear();
-    emitAsyncSpy.mockClear();
+    clearRecorded();
   });
 
   afterAll(async () => {
@@ -207,7 +199,7 @@ describe('HR lists and employees (e2e)', () => {
         changedById: userId,
       });
 
-      emitAsyncSpy.mockClear();
+      clearRecorded();
       await http(app)
         .post('/hr/departments')
         .send({ nameEn: 'Finance', nameAr: 'مالية' })
@@ -427,7 +419,7 @@ describe('HR lists and employees (e2e)', () => {
       ).body.data;
       expect(lead.managesPeople).toBe(true);
 
-      emitAsyncSpy.mockClear();
+      clearRecorded();
       const on = await http(app)
         .patch(`/hr/job-titles/${plain.id}`)
         .send({ managesPeople: true })
@@ -609,10 +601,13 @@ describe('HR lists and employees (e2e)', () => {
       const e = await createOk({ nationalId: nationalId() });
       const res = await http(app).post(`/hr/employees/${e.id}/deactivate`).expect(200);
       expect(res.body.data).toMatchObject({ id: e.id, code: e.code, status: 'INACTIVE' });
-      expect(emitSpy).toHaveBeenCalledWith(HrEvent.EMPLOYEE_DEACTIVATED, {
-        employeeId: e.id,
-        at: expect.any(String),
-      });
+      // Must-deliver: an outbox row, written with the change (no listener yet: delivered at once).
+      expect(await outboxEvents(db, HrEvent.EMPLOYEE_DEACTIVATED, { employeeId: e.id })).toEqual([
+        { id: expect.any(String), status: 'delivered', payload: { employeeId: e.id, at: expect.any(String) } },
+      ]);
+      // Deactivating again changes nothing: no second event.
+      await http(app).post(`/hr/employees/${e.id}/deactivate`).expect(200);
+      expect(await outboxEvents(db, HrEvent.EMPLOYEE_DEACTIVATED, { employeeId: e.id })).toHaveLength(1);
       const got = await http(app).get(`/hr/employees/${e.id}`).expect(200);
       expect(got.body.data.status).toBe('INACTIVE');
 
@@ -713,7 +708,7 @@ describe('HR lists and employees (e2e)', () => {
     ).body.data;
     const boss = await createOk({ departmentId: dept.id });
 
-    emitSpy.mockClear();
+    clearRecorded();
     const hired = await http(app)
       .post('/hr/employees')
       .send(
@@ -750,10 +745,9 @@ describe('HR lists and employees (e2e)', () => {
       dateOfBirth: '1990-04-12',
       hireDate: '2024-09-01',
     });
-    expect(emitSpy).toHaveBeenCalledWith(HrEvent.EMPLOYEE_HIRED, {
-      employeeId: e.id,
-      at: expect.any(String),
-    });
+    expect(recorded(HrEvent.EMPLOYEE_HIRED)).toEqual([
+      { employeeId: e.id, hireDate: '2024-09-01', at: expect.any(String) },
+    ]);
 
     const view = await http(app).get(`/hr/employees/${e.id}`).expect(200);
     expect(view.body.data).toEqual(e);
@@ -767,10 +761,20 @@ describe('HR lists and employees (e2e)', () => {
       workSystem: 'FULL_TIME',
       hireDate: '2024-08-15',
     });
-    expect(emitSpy).toHaveBeenCalledWith(HrEvent.EMPLOYEE_UPDATED, {
-      employeeId: e.id,
-      at: expect.any(String),
-    });
+    expect(recorded(HrEvent.EMPLOYEE_UPDATED)).toEqual([
+      {
+        employeeId: e.id,
+        fields: expect.arrayContaining(['basicSalary', 'workSystem', 'hireDate']),
+        at: expect.any(String),
+      },
+    ]);
+    // The same values again: nothing changed, no hr.employee.updated (EVENTS gap 3).
+    clearRecorded();
+    await http(app)
+      .patch(`/hr/employees/${e.id}`)
+      .send({ basicSalary: 1000000, workSystem: 'FULL_TIME', hireDate: '2024-08-15' })
+      .expect(200);
+    expect(recorded(HrEvent.EMPLOYEE_UPDATED)).toEqual([]);
 
     const list = await http(app).get(`/hr/employees?departmentId=${dept.id}`).expect(200);
     const row = (list.body.data as { id: string }[]).find((r) => r.id === e.id);

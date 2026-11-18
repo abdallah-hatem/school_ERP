@@ -1,7 +1,6 @@
-import type { TransactionHost } from '@nestjs-cls/transactional';
 import { DEFAULT_TAX_RULE, SETTING_DEFAULTS, type TaxRule } from '@school-erp/shared';
 import type { SettingsService } from '../../../core/settings';
-import type { DbAdapter } from '../../../database/transactions';
+import type { AfterCommit } from '../../../database/transactions';
 import { AccountingSettingsService } from './accounting-settings.service';
 import { BASELINE_EFFECTIVE_FROM, type AccountingTaxRuleRepository } from './accounting-tax-rule.repository';
 
@@ -37,13 +36,13 @@ function makeService(
     }),
     isEmpty: jest.fn(() => Promise.resolve(versions.length === 0)),
   };
-  const txHost = { withTransaction: jest.fn((fn: () => Promise<unknown>) => fn()) };
+  const afterCommit = { inTransaction: jest.fn((fn: () => Promise<unknown>) => fn()) };
   const service = new AccountingSettingsService(
     settings as unknown as SettingsService,
     taxRules as unknown as AccountingTaxRuleRepository,
-    txHost as unknown as TransactionHost<DbAdapter>,
+    afterCommit as unknown as AfterCommit,
   );
-  return { service, settings, taxRules, versions, txHost };
+  return { service, settings, taxRules, versions, afterCommit };
 }
 
 const rule = (insurancePercent: number): TaxRule => ({ ...DEFAULT_TAX_RULE, insurancePercent });
@@ -92,10 +91,10 @@ describe('AccountingSettingsService', () => {
   });
 
   it('a change is kept as a version, in the same transaction; the first one also keeps the rule before it as the baseline', async () => {
-    const { service, versions, txHost } = makeService();
+    const { service, versions, afterCommit } = makeService();
     const before = Date.now();
     await service.update({ payroll: { insurancePercent: 12 } }, 'u1');
-    expect(txHost.withTransaction).toHaveBeenCalledTimes(1);
+    expect(afterCommit.inTransaction).toHaveBeenCalledTimes(1);
     expect(versions).toEqual([
       { rule: DEFAULT_TAX_RULE, effectiveFrom: BASELINE_EFFECTIVE_FROM, changedById: null },
       { rule: rule(12), effectiveFrom: expect.any(Date), changedById: 'u1' },

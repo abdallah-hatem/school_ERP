@@ -1,6 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import { HR_SETTINGS_DEFAULTS, PAYROLL_LINE_MONEY_FIELDS } from '@school-erp/shared';
-import type { EventEmitter2 } from '@nestjs/event-emitter';
+import type { DomainEvents } from '../../../../core/events';
 import type { SettingsService } from '../../../../core/settings';
 import { fakeAccess } from '../../access/hr-access.testing';
 import type { EmployeeScope } from '../../access/employee-scope.pure';
@@ -119,7 +119,7 @@ function makeService(scopes: Parameters<typeof fakeAccess>[0], salaryIds: string
     // An extra key beside the HR rules: the run must pass on the rules only.
     { get: jest.fn().mockResolvedValue({ ...HR_SETTINGS_DEFAULTS, extra: { secret: 1 } }) } as unknown as HrSettingsService,
     school as unknown as SettingsService,
-    { emit: jest.fn() } as unknown as EventEmitter2,
+    { publish: jest.fn() } as unknown as DomainEvents,
     fakeAccess(scopes),
     { record: jest.fn() } as never,
     { inTransaction: (fn: () => unknown) => fn(), run: (fn: () => unknown) => Promise.resolve(fn()) } as never,

@@ -33,6 +33,7 @@ export const AuditEntityType = {
   PAYROLL_RUN: 'payroll_run',
   ACCOUNTING_SETTINGS: 'accounting_settings',
   ACCOUNTING_PAYROLL: 'accounting_payroll',
+  OUTBOX_DELIVERY: 'outbox_delivery',
 } as const;
 export type AuditEntityType = (typeof AuditEntityType)[keyof typeof AuditEntityType];
 export const AUDIT_ENTITY_TYPES = Object.values(AuditEntityType) as AuditEntityType[];
@@ -101,6 +102,8 @@ export const AUDIT_ACTIONS = {
   'core.role.create': { module: 'core', entityType: E.ROLE, kind: 'create' },
   'core.role.update': { module: 'core', entityType: E.ROLE, kind: 'update' },
   'core.role.delete': { module: 'core', entityType: E.ROLE, kind: 'status' },
+  // core — must-deliver events (core/events): an admin sends a dead delivery again
+  'core.outbox.retry': { module: 'core', entityType: E.OUTBOX_DELIVERY, kind: 'status' },
   // hr — employees
   'hr.employee.create': {
     module: 'hr',

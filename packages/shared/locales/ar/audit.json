@@ -27,7 +27,8 @@
     "lateness_month": "تأخير الشهر",
     "payroll_run": "مسيّر رواتب",
     "accounting_settings": "قواعد المحاسبة",
-    "accounting_payroll": "ضرائب الرواتب"
+    "accounting_payroll": "ضرائب الرواتب",
+    "outbox_delivery": "تسليم حدث"
   },
   "actions": {
     "core": {
@@ -58,6 +59,9 @@
         "create": "إضافة الدور {entity}",
         "update": "تعديل الدور {entity}",
         "delete": "حذف الدور {entity}"
+      },
+      "outbox": {
+        "retry": "إعادة محاولة تسليم الحدث {entity}"
       }
     },
     "hr": {

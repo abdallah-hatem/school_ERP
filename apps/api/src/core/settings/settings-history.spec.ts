@@ -1,23 +1,16 @@
-import type { EventEmitter2 } from '@nestjs/event-emitter';
 import { SettingsEvent } from '@school-erp/shared';
-import type { AfterCommit } from '../../database/transactions';
 import type { AuditService } from '../audit';
+import type { DomainEvents } from '../events';
 import { SettingsHistory, type ListHistoryChange } from './settings-history';
 
 function makeHistory(record: jest.Mock = jest.fn(() => Promise.resolve())) {
-  /** What `AfterCommit.run` queued: it runs only once the transaction commits. */
-  const queued: (() => unknown)[] = [];
-  const afterCommit = { run: jest.fn((fn: () => unknown) => (queued.push(fn), Promise.resolve())) };
-  const events = { emitAsync: jest.fn(() => Promise.resolve([])) };
+  // DomainEvents holds the event until the commit itself (its own spec).
+  const events = { publish: jest.fn(() => Promise.resolve()) };
   const history = new SettingsHistory(
     { record } as unknown as AuditService,
-    afterCommit as unknown as AfterCommit,
-    events as unknown as EventEmitter2,
+    events as unknown as DomainEvents,
   );
-  const commit = async () => {
-    for (const fn of queued.splice(0)) await fn();
-  };
-  return { history, record, afterCommit, events, commit };
+  return { history, record, events };
 }
 
 const dept = { id: 'd1', nameEn: 'Science', nameAr: 'العلوم', sortOrder: 1, isActive: true };
@@ -78,12 +71,10 @@ describe('SettingsHistory (list and catalogue edits, in the change’s transacti
     expect(record.mock.calls[0][0]).not.toHaveProperty('actor');
   });
 
-  it('settings.changed fires only after the commit, and only for a real change', async () => {
-    const { history, events, commit } = makeHistory();
+  it('core.settings.changed is published (fire-and-forget), only for a real change', async () => {
+    const { history, events } = makeHistory();
     await history.record(change());
-    expect(events.emitAsync).not.toHaveBeenCalled();
-    await commit();
-    expect(events.emitAsync).toHaveBeenCalledWith(
+    expect(events.publish).toHaveBeenCalledWith(
       SettingsEvent.CHANGED,
       expect.objectContaining({
         key: 'hr.departments',
@@ -92,18 +83,17 @@ describe('SettingsHistory (list and catalogue edits, in the change’s transacti
       }),
     );
 
-    events.emitAsync.mockClear();
+    events.publish.mockClear();
     await history.record(change({ oldValue: dept, newValue: { ...dept } }));
-    await commit();
-    expect(events.emitAsync).not.toHaveBeenCalled();
+    expect(events.publish).not.toHaveBeenCalled();
   });
 
   it('a failing audit write is thrown back, so the caller’s transaction rolls back', async () => {
-    const { history, afterCommit } = makeHistory(
+    const { history, events } = makeHistory(
       jest.fn(() => Promise.reject(new Error('db down'))),
     );
     await expect(history.record(change())).rejects.toThrow('db down');
-    expect(afterCommit.run).not.toHaveBeenCalled();
+    expect(events.publish).not.toHaveBeenCalled();
   });
 
   it('refuses an unknown key instead of writing a bad entry', async () => {

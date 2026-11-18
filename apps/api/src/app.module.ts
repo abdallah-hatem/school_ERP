@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
@@ -19,8 +18,6 @@ import { AccountingModule } from './modules/accounting';
     DatabaseModule,
     // Request context + request-scoped transactions (audit spec D3).
     TransactionsModule,
-    // In-memory domain events (docs/ARCHITECTURE.md → How modules talk). Emit after commit.
-    EventEmitterModule.forRoot(),
     HealthModule,
     CoreModule,
     HrModule,

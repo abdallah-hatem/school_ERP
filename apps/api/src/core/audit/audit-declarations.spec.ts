@@ -108,6 +108,7 @@ describe('every write endpoint declares its audit (D6)', () => {
       ['POST /hr/employees/:id/reactivate', 'hr.employee.reactivate'],
       ['POST /hr/employees/:id/photo', 'hr.employee.update'],
       ['DELETE /hr/employees/:id/photo', 'hr.employee.update'],
+      ['POST /outbox/deliveries/:id/retry', 'core.outbox.retry'],
     ];
     expect(expected.map(([route]) => [route, declared.get(route)])).toEqual(expected);
     // A token refresh rotates the session; it is deliberately not recorded (D11).
@@ -131,7 +132,9 @@ describe('every write endpoint declares its audit (D6)', () => {
       ['POST /users/:id/reactivate', 'core.user.reactivate'],
       ['POST /users/:id/unlock-sign-in', 'core.user.unlock_sign_in'],
       ['POST /users/:id/password', 'core.user.set_password'],
-      ['POST /account/password', 'core.user.change_password'],
+      // Records core.user.change_password itself, in one transaction with the new password: no
+      // request transaction held while a wrong password's count needs a connection (EVENTS gap 10).
+      ['POST /account/password', 'not-audited'],
     ]);
   });
 

@@ -15,7 +15,7 @@ import type { ApiResponse, AuthUser, EmployeeOption, UserAccount } from '@school
 import type { Request } from 'express';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ResponseUtil } from '../../common/utils/response.util';
-import { Audited } from '../audit';
+import { Audited, NotAudited } from '../audit';
 import { AllowedBeforePasswordChange, Permission, SignedIn } from '../permissions';
 import {
   ChangePasswordDto,
@@ -136,7 +136,11 @@ export class AccountController {
   @Post('password')
   @SignedIn()
   @AllowedBeforePasswordChange()
-  @Audited('core.user.change_password')
+  @NotAudited(
+    'records core.user.change_password itself, in one transaction with the new password ' +
+      '(UserAccountsService.changeOwnPassword): a request transaction would hold a pooled connection ' +
+      "while a wrong password's count and lockout entry need another (docs/EVENTS.md)",
+  )
   @HttpCode(HttpStatus.NO_CONTENT)
   changePassword(@CurrentUser() me: AuthUser, @Body() dto: ChangePasswordDto): Promise<void> {
     return this.accounts.changeOwnPassword(me, dto);

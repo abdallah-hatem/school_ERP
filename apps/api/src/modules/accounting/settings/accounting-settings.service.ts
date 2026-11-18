@@ -1,5 +1,4 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { TransactionHost } from '@nestjs-cls/transactional';
 import {
   AccountingSettingKey,
   ErrorCode,
@@ -12,7 +11,7 @@ import {
 } from '@school-erp/shared';
 import { CodedException } from '../../../common/errors/coded.exception';
 import { SettingsService } from '../../../core/settings';
-import type { DbAdapter } from '../../../database/transactions';
+import { AfterCommit } from '../../../database/transactions';
 import { AccountingTaxRuleRepository, BASELINE_EFFECTIVE_FROM } from './accounting-tax-rule.repository';
 import { UpdateAccountingSettingsDto } from './dto/update-accounting-settings.dto';
 
@@ -45,7 +44,7 @@ export class AccountingSettingsService {
   constructor(
     private readonly settings: SettingsService,
     private readonly taxRules: AccountingTaxRuleRepository,
-    private readonly txHost: TransactionHost<DbAdapter>,
+    private readonly afterCommit: AfterCommit,
   ) {}
 
   async get(): Promise<AccountingSettings> {
@@ -61,8 +60,9 @@ export class AccountingSettingsService {
   }
 
   async update(dto: UpdateAccountingSettingsDto, changedById: string | null): Promise<AccountingSettings> {
-    // The setting, its audit entry (core joins this transaction) and its version commit together.
-    return this.txHost.withTransaction(async () => {
+    // The setting, its audit entry (core joins this transaction) and its version commit together;
+    // `core.settings.changed` goes out after the commit — also when called outside a request.
+    return this.afterCommit.inTransaction(async () => {
       const old = await this.load();
       const next: AccountingValues = { ...old };
       const payroll = dto.payroll;

@@ -1,4 +1,4 @@
-import type { EventEmitter2 } from '@nestjs/event-emitter';
+import type { DomainEvents } from '../../../../core/events';
 import type { AuditService } from '../../../../core/audit';
 import type { FileStorageService } from '../../../../core/settings';
 import type { AfterCommit } from '../../../../database/transactions';
@@ -107,7 +107,7 @@ function makeService(scopes: Parameters<typeof fakeAccess>[0], repo: Record<stri
     repository as unknown as EmployeesRepository,
     { getSelectable: jest.fn() } as unknown as DepartmentsService,
     { getSelectable: jest.fn() } as unknown as JobTitlesService,
-    { emit: jest.fn() } as unknown as EventEmitter2,
+    { publish: jest.fn() } as unknown as DomainEvents,
     {} as unknown as FileStorageService,
     fakeAccess(scopes),
     { record: jest.fn(() => Promise.resolve()) } as unknown as AuditService,

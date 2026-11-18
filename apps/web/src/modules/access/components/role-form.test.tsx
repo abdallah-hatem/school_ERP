@@ -74,7 +74,7 @@ describe('RoleForm', () => {
     expect(screen.getByText('No changes yet')).toBeTruthy();
     await user.click(screen.getAllByRole('button', { name: 'Turn all on' })[0]!);
     expect(within(row('core.settings.view')).getByRole('switch').getAttribute('aria-checked')).toBe('true');
-    expect(screen.getByText('9 unsaved changes')).toBeTruthy();
+    expect(screen.getByText('10 unsaved changes')).toBeTruthy();
   });
 
   it('a stage head’s scoped permission shows its scope', () => {

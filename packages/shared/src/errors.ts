@@ -82,6 +82,10 @@ export const ErrorCode = {
   // audit log
   /** An `@Audited` handler finished without recording its action (D6b); the change rolled back. */
   AUDIT_NOT_RECORDED: 'AUDIT_NOT_RECORDED',
+
+  // events (core/events)
+  /** Only a dead outbox delivery can be retried. */
+  OUTBOX_NOT_DEAD: 'OUTBOX_NOT_DEAD',
 } as const;
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
 export const ERROR_CODES = Object.values(ErrorCode) as ErrorCode[];

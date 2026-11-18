@@ -1,5 +1,4 @@
 import { INestApplication } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   HrSettingKey,
   latenessDays,
@@ -8,6 +7,7 @@ import {
   type HrSettings,
   type SettingsChangedEvent,
 } from '@school-erp/shared';
+import { EventListeners } from '../src/core/events/event-listeners';
 import { DatabaseService } from '../src/database/database.service';
 import { http } from './helpers';
 import { createAppAsTestUser } from './helpers/as-test-user';
@@ -32,7 +32,10 @@ describe('HR rule settings — /hr/settings (e2e)', () => {
   beforeAll(async () => {
     ({ app, user } = await createAppAsTestUser());
     db = app.get(DatabaseService);
-    app.get(EventEmitter2).on(SettingsEvent.CHANGED, (e: SettingsChangedEvent) => events.push(e));
+    // A real listener: it hears core.settings.changed only after the commit, as any listener does.
+    app.get(EventListeners).addInMemory(SettingsEvent.CHANGED, 'HrSettingsSpec', {
+      handle: (e) => (events.push(e as SettingsChangedEvent), Promise.resolve()),
+    });
   });
 
   beforeEach(async () => {

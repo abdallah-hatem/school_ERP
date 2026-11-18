@@ -1,9 +1,8 @@
 import { isDeepStrictEqual } from 'node:util';
 import { Injectable } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SettingsEvent, type SettingsChangedEvent } from '@school-erp/shared';
-import { AfterCommit } from '../../database/transactions';
 import { AuditService } from '../audit';
+import { DomainEvents } from '../events';
 import { historyAuditTarget } from './settings.pure';
 
 /** A list / catalogue change: stages, departments, job titles, penalty groups, violations. */
@@ -16,7 +15,7 @@ export type ListHistoryChange = Omit<SettingsChangedEvent, 'changedAt'> & {
  * transaction (audit D2): the owning service calls `record()` inside the transaction that wrote
  * the change, so the change and its history commit or roll back together. The entry is the one
  * the old after-commit listener wrote — the history key as the field, whole snapshots as before /
- * after, both names as the label. `settings.changed` still fires, after the commit.
+ * after, both names as the label. `core.settings.changed` is published, after the commit.
  *
  * School, HR and accounting settings don't come here: `SettingsService.setValues` records them.
  */
@@ -24,8 +23,7 @@ export type ListHistoryChange = Omit<SettingsChangedEvent, 'changedAt'> & {
 export class SettingsHistory {
   constructor(
     private readonly audit: AuditService,
-    private readonly afterCommit: AfterCommit,
-    private readonly events: EventEmitter2,
+    private readonly events: DomainEvents,
   ) {}
 
   /**
@@ -43,7 +41,8 @@ export class SettingsHistory {
       ...(change.changedById ? { actor: { id: change.changedById } } : {}),
     });
     if (!isDeepStrictEqual(change.oldValue, change.newValue)) {
-      await this.afterCommit.run(() => this.events.emitAsync(SettingsEvent.CHANGED, event));
+      // Fire-and-forget, after the commit.
+      await this.events.publish(SettingsEvent.CHANGED, event);
     }
   }
 }

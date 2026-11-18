@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from 'node:util';
 import type { AuditLabel } from '@school-erp/shared';
 import { toIsoDate } from '../../../../common/utils/dates.util';
 import type { EmployeeDetailRow } from '../repositories/employees.repository';
@@ -48,3 +49,27 @@ export const employeeAuditLabel = (row: Pick<EmployeeDetailRow, 'nameEn' | 'name
   en: row.nameEn,
   ar: row.nameAr,
 });
+
+/**
+ * The fields whose value differs between two versions of the record, named as in the snapshot
+ * (`departmentId` for the department) — what `hr.employee.updated` carries. A reference counts as
+ * changed when it points at another record (by id), not when only its name differs.
+ */
+export function changedEmployeeFields(before: EmployeeDetailRow, after: EmployeeDetailRow): string[] {
+  const out: string[] = [];
+  for (const key of Object.keys(after) as (keyof EmployeeDetailRow)[]) {
+    if (SKIPPED.includes(key)) continue;
+    const refField = (REF_FIELDS as Record<string, string>)[key];
+    const a: unknown = before[key];
+    const b: unknown = after[key];
+    if (refField) {
+      if ((a as { id?: string } | null)?.id !== (b as { id?: string } | null)?.id) out.push(refField);
+    } else if (a instanceof Date || b instanceof Date) {
+      const iso = (v: unknown) => (v instanceof Date ? v.toISOString() : v);
+      if (iso(a) !== iso(b)) out.push(key);
+    } else if (!isDeepStrictEqual(a, b)) {
+      out.push(key);
+    }
+  }
+  return out;
+}

@@ -36,7 +36,7 @@ Exact text in `docs/business/10-accounting.md`. Gross-up: taxable `t` solves
   `GET /accounting/payroll/:month` → the month's lines (net, insurance status and insured salary
   snapshot, insurance share, income tax, fund, gross), totals and the frozen rule. 404 for a month
   HR hasn't approved; 400 for a malformed month (`accounting.payroll.view`).
-- Event: listens to `payroll.approved`; records `accounting.payroll.record` (system) in the audit
+- Event: listens to `hr.payroll.approved` (must-deliver, through the outbox — `docs/EVENTS.md`); records `accounting.payroll.record` (system) in the audit
   log. Idempotent per HR run.
 
 ## Data

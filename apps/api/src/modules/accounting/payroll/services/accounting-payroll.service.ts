@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { Propagation, TransactionHost } from '@nestjs-cls/transactional';
+import { TransactionHost } from '@nestjs-cls/transactional';
 import type { Prisma } from '@prisma/client';
 import {
   ACCOUNTING_LINE_MONEY_FIELDS,
@@ -73,7 +73,10 @@ export class AccountingPayrollService {
       };
     });
 
-    return this.txHost.withTransaction(Propagation.RequiresNew, async () => {
+    // Joins the open transaction — the outbox delivery's, so the taxes commit with its "delivered"
+    // mark — or, on the late read path, opens one. Never RequiresNew: a second pooled connection
+    // while the delivery's is held (docs/EVENTS.md).
+    return this.txHost.withTransaction(async () => {
       const created = await this.repository.create(
         { hrRunId, month: run.month, taxRule: rule as unknown as Prisma.InputJsonValue },
         lines,

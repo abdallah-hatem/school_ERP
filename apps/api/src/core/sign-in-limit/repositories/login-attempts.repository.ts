@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { Prisma } from '@prisma/client';
 import { DatabaseService } from '../../../database/database.service';
+import { utcTimestamp } from '../../../database/sql';
 import type { DbAdapter } from '../../../database/transactions';
 
 export interface FailureLimits {
@@ -17,11 +18,8 @@ export interface FailureResult {
 
 const MINUTE_MS = 60_000;
 
-/**
- * A UTC instant as a `timestamp(3)` literal — the columns hold UTC without a zone (as Prisma
- * writes them), so the raw statement never depends on the connection's TimeZone.
- */
-const utc = (d: Date) => Prisma.sql`${d.toISOString().replace('Z', '')}::timestamp(3)`;
+/** UTC `timestamp(3)` literals: the statement never depends on the connection's TimeZone. */
+const utc = utcTimestamp;
 
 /**
  * `login_attempts` (core/sign-in-limit owns it). Counting a wrong password uses the plain client,
