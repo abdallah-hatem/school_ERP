@@ -292,7 +292,7 @@ function LatenessExample({ control }: { control: Control<HrRulesFormValues> }) {
   let line: string;
   if (!rule) line = t('settings.hrRules.example.invalidRule');
   else if (minutes === null) line = t('settings.hrRules.example.enterMinutes');
-  else line = t('settings.hrRules.example.line', { minutes: formatCount(minutes), days: formatDayCount(latenessDays(minutes, rule), locale) });
+  else line = t('settings.hrRules.example.line', { count: formatCount(minutes), days: formatDayCount(latenessDays(minutes, rule), locale) });
 
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-primary-soft bg-primary-soft/50 p-4">

@@ -18,11 +18,34 @@
     "label": "البحث عن موظف",
     "placeholder": "الاسم أو الكود، مثل EMP-0012"
   },
-  "summary": "{employees} موظف · {minutes} دقيقة · {days}",
+  "summary": "{employees} · {minutes} · {days}",
+  "summaryEmployees": {
+    "zero": "{count} موظف",
+    "one": "موظف واحد",
+    "two": "موظفان",
+    "few": "{count} موظفين",
+    "many": "{count} موظفًا",
+    "other": "{count} موظف"
+  },
+  "summaryMinutes": {
+    "zero": "{count} دقيقة",
+    "one": "دقيقة واحدة",
+    "two": "دقيقتان",
+    "few": "{count} دقائق",
+    "many": "{count} دقيقة",
+    "other": "{count} دقيقة"
+  },
   "rule": "القاعدة: {rule}",
   "ruleStep": "الساعة {hour} = {dayCount}",
   "ruleExtra": "كل ساعة بعدها = {dayCount}",
-  "ruleGrace": "تُخصم أولًا {minutes} دقيقة سماح",
+  "ruleGrace": {
+    "zero": "بلا دقائق سماح",
+    "one": "تُخصم أولًا دقيقة سماح واحدة",
+    "two": "تُخصم أولًا دقيقتا سماح",
+    "few": "تُخصم أولًا {count} دقائق سماح",
+    "many": "تُخصم أولًا {count} دقيقة سماح",
+    "other": "تُخصم أولًا {count} دقيقة سماح"
+  },
   "save": "حفظ الكل",
   "saveCount": "حفظ الكل ({count})",
   "saved": "تم حفظ التأخير.",
@@ -32,7 +55,14 @@
   },
   "discard": {
     "title": "تجاهل الدقائق غير المحفوظة؟",
-    "body": "عدّلت {count} صفوف في {month} دون حفظ. تغيير الشهر يتجاهلها.",
+    "body": {
+      "zero": "لم تعدّل أي صف في {month}.",
+      "one": "عدّلت صفًا واحدًا في {month} دون حفظ. تغيير الشهر يتجاهله.",
+      "two": "عدّلت صفّين في {month} دون حفظ. تغيير الشهر يتجاهلهما.",
+      "few": "عدّلت {count} صفوف في {month} دون حفظ. تغيير الشهر يتجاهلها.",
+      "many": "عدّلت {count} صفًا في {month} دون حفظ. تغيير الشهر يتجاهلها.",
+      "other": "عدّلت {count} صف في {month} دون حفظ. تغيير الشهر يتجاهلها."
+    },
     "confirm": "تجاهل وتغيير الشهر"
   },
   "empty": {

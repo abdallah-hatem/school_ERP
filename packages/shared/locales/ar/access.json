@@ -92,8 +92,8 @@
     "inactiveEmployee": "ترك العمل",
     "employeesMatch": {
       "zero": "لا يوجد موظف مطابق",
-      "one": "{shown} من {count} موظف مطابق",
-      "two": "{shown} من {count} موظف مطابق",
+      "one": "{shown} من موظف واحد مطابق",
+      "two": "{shown} من موظفَين مطابقَين",
       "few": "{shown} من {count} موظفين مطابقين",
       "many": "{shown} من {count} موظفًا مطابقًا",
       "other": "{shown} من {count} موظف مطابق"
@@ -182,7 +182,14 @@
       "delete": "حذف"
     },
     "deleteBlocked": "لا يزال {name} يحمله",
-    "deleteBlockedMany": "لا يزال {count} مستخدمين يحملونه",
+    "deleteBlockedMany": {
+      "zero": "لا أحد يحمله",
+      "one": "لا يزال مستخدم واحد يحمله",
+      "two": "لا يزال مستخدمان يحملانه",
+      "few": "لا يزال {count} مستخدمين يحملونه",
+      "many": "لا يزال {count} مستخدمًا يحملونه",
+      "other": "لا يزال {count} مستخدم يحملونه"
+    },
     "delete": {
       "title": "حذف الدور «{name}»؟",
       "body": "لا أحد يحمله. لا يمكن التراجع عن الحذف، ويحتفظ سجل النشاط بما كان يمنحه.",

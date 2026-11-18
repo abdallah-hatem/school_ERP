@@ -326,6 +326,25 @@ describe('AuditService reads', () => {
     expect(page.data[0].entityLabel).toEqual({ en: 'Strike', ar: 'إضراب' });
   });
 
+  it('dry run 2026-11-18 — an older catalogue entry reads its Arabic name from its own snapshot', async () => {
+    const { service, entries } = makeService();
+    const snapshot = { id: 'v1', nameEn: 'Late to class', nameAr: 'التأخر عن الحصة', isActive: true };
+    entries.findPage.mockResolvedValueOnce(
+      pageOf([
+        row({
+          action: 'hr.violation.update',
+          entityType: 'violation',
+          entityId: 'v1',
+          entityLabel: 'Late to class',
+          entityLabelAr: null,
+          changes: [{ field: 'hr.violations', before: snapshot, after: { ...snapshot, isActive: false } }],
+        }),
+      ]),
+    );
+    const page = await service.list({}, 1, 10);
+    expect(page.data[0].entityLabel).toEqual({ en: 'Late to class', ar: 'التأخر عن الحصة' });
+  });
+
   it('a record history filters by entity type and id', async () => {
     const { service, entries } = makeService();
     entries.findPage.mockResolvedValueOnce(pageOf([]));

@@ -13,6 +13,6 @@ export function describeLatenessRule(rule: LatenessRule, t: Translate, locale: L
     .sort((a, b) => a.hour - b.hour)
     .map((step) => t('lateness.ruleStep', { hour: step.hour, ...days(step.days) }));
   parts.push(t('lateness.ruleExtra', days(rule.extraHourDays)));
-  if (rule.graceMinutes > 0) parts.unshift(t('lateness.ruleGrace', { minutes: formatCount(rule.graceMinutes) }));
+  if (rule.graceMinutes > 0) parts.unshift(t('lateness.ruleGrace', { count: formatCount(rule.graceMinutes) }));
   return parts.join(' · ');
 }

@@ -251,8 +251,13 @@ module through core's exported `AuditService` — never through its repository.
   `entity_label` (English, or the only name) + `entity_label_ar` (Arabic, null when the same), and the
   API returns `entityLabel: { en, ar }`; the timeline shows the screen's language. A plain string (a
   user's name or email, a payroll month) reads the same in both. Entries written before
-  `entity_label_ar` existed have it null and read as their one label in both languages (the table is
-  append-only, so they are never backfilled). Search (`q`) matches either name.
+  `entity_label_ar` existed have it null. They are never backfilled — the table is append-only, and
+  the record's *current* Arabic name may postdate the entry (a rename since), which would rewrite
+  history. Instead `readLabel` (`audit.pure.ts`) reads the Arabic name at read time from the entry's
+  own snapshot: those entries are list and catalogue edits whose one change holds the whole item, so
+  its `nameAr` is the name as it was then (used only when its `nameEn` is the stored label). Anything
+  else reads as its one label in both languages. Search (`q`) matches either stored name (so not
+  those older entries' Arabic names).
 - Who (id + name snapshot), IP, user agent and request id come from the request (D4). `actor` is
   passed only where the request has no user yet (a successful sign-in) or none applies (`null`).
 - Only changed fields are stored, each `{ field, before, after }`; secrets (password hashes,

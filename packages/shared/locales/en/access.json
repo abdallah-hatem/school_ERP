@@ -182,7 +182,14 @@
       "delete": "Delete"
     },
     "deleteBlocked": "{name} still holds it",
-    "deleteBlockedMany": "{count} users still hold it",
+    "deleteBlockedMany": {
+      "zero": "{count} users still hold it",
+      "one": "{count} user still holds it",
+      "two": "{count} users still hold it",
+      "few": "{count} users still hold it",
+      "many": "{count} users still hold it",
+      "other": "{count} users still hold it"
+    },
     "delete": {
       "title": "Delete the role “{name}”?",
       "body": "Nobody holds it. Deleting it can't be undone; the activity log keeps what it granted.",
