@@ -96,9 +96,7 @@ export interface DataTableProps<Row> {
   cardHeightsVary?: boolean;
   /**
    * A totals row under the rows (and a summary card under the cards). Not drawn on an empty list.
-   * It spans the table's full width in both directions: a table with one reserves no scrollbar
-   * gutter (a table only ever scrolls sideways, and the gutter left the shaded row short of the
-   * inline-end edge).
+   * Like every row, it spans the table's full width in both directions.
    */
   footer?: DataTableFooter;
   /**
@@ -279,12 +277,13 @@ function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass, footer
         className="pointer-events-none absolute inset-y-0 end-0 z-10 w-8 from-card to-transparent ltr:bg-linear-to-l rtl:bg-linear-to-r"
       />
       {/*
-        A table only scrolls sideways, so the vertical gutter `scrollbar-clean` keeps reserves an
-        empty strip at the inline-end edge. A totals row's shaded cells must reach that edge (and
-        the card's corner), so a table with a footer gives the gutter up; the others keep their
-        layout unchanged.
+        A table only scrolls sideways, so the vertical gutter `scrollbar-clean` keeps would be an
+        empty strip at the inline-end edge: the header, the rows' hover and hairlines and a totals
+        row stopped short of the card's edge there (right in LTR, left in RTL). No gutter: they
+        reach both edges. A scrollbar that is really needed still takes its own space (the
+        sideways one under the rows), so it never covers a cell.
       */}
-      <div ref={ref} data-table-scroll="" className={cn('scrollbar-clean overflow-x-auto', footer && '[scrollbar-gutter:auto]!')}>
+      <div ref={ref} data-table-scroll="" className="scrollbar-clean overflow-x-auto [scrollbar-gutter:auto]!">
       <table aria-label={label} className="w-full border-separate border-spacing-0 text-sm">
         <thead data-skeleton-block={head}>
           <tr>

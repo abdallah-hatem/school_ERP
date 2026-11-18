@@ -181,22 +181,26 @@ describe('DataTable totals row (footer)', () => {
     expect(new Set(names)).toEqual(new Set(['table', 'table-head', 'table-row', 'table-foot', 'table-card', 'table-card-foot']));
   });
 
-  it.each(['en', 'ar'] as const)('spans the full width (%s): a table with a totals row reserves no scrollbar gutter at its inline end', (locale) => {
+  it.each(['en', 'ar'] as const)('spans the full width (%s): no table reserves a scrollbar gutter at its inline end, with or without totals', (locale) => {
     // `scrollbar-clean` keeps a vertical gutter at the inline end (right in LTR, left in RTL); a
-    // table only scrolls sideways, and the gutter left the shaded totals row short of that edge.
-    // The geometry itself is checked in a real browser by e2e/27-table-footer.spec.ts.
-    const { container } = renderWithI18n(
+    // table only scrolls sideways, and the gutter left the header, the rows and the totals row
+    // short of that edge on every list. The geometry itself is checked in a real browser by
+    // e2e/27-table-footer.spec.ts (the statement and plain lists, EN and AR).
+    const withFooter = renderWithI18n(
       <DataTable label="Employees" columns={columns} rows={people} getRowId={(p) => p.id} footer={{ label: 'Subtotal', cells: { salary: '2,630,000' } }} />,
       { locale },
     );
     expect(document.documentElement.dir).toBe(locale === 'ar' ? 'rtl' : 'ltr');
-    const scroller = container.querySelector<HTMLElement>('[data-table-scroll]')!;
-    expect(scroller.contains(container.querySelector('tfoot'))).toBe(true);
+    const scroller = withFooter.container.querySelector<HTMLElement>('[data-table-scroll]')!;
+    expect(scroller.contains(withFooter.container.querySelector('thead'))).toBe(true);
+    expect(scroller.contains(withFooter.container.querySelector('tfoot'))).toBe(true);
     expect(scroller.className).toContain('[scrollbar-gutter:auto]!');
+    // Still a clean sideways scroller when the columns don't fit.
+    expect(scroller.className).toContain('scrollbar-clean');
+    expect(scroller.className).toContain('overflow-x-auto');
     cleanup();
-    // A list without a totals row keeps its layout exactly as it was.
     const plain = renderWithI18n(<DataTable label="Employees" columns={columns} rows={people} getRowId={(p) => p.id} />, { locale });
-    expect(plain.container.querySelector<HTMLElement>('[data-table-scroll]')!.className).toBe('scrollbar-clean overflow-x-auto');
+    expect(plain.container.querySelector<HTMLElement>('[data-table-scroll]')!.className).toBe(scroller.className);
   });
 
   it('printRows: the screen shows its page, the printout lists every row with the totals and no pagination', () => {

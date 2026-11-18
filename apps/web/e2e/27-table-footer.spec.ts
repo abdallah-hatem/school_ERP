@@ -5,10 +5,11 @@ import { t } from './support/i18n';
 import { searchField, shoot, signIn } from './support/ui';
 
 /*
- * The payroll taxes statement (§10) on a desktop, English then Arabic: each group's totals row
- * reaches both edges of its table card (it used to stop short of the inline end by the scrollbar
- * gutter), each group pages with the subtotal of the whole group, and print lists everyone.
- * Needs an approved month (05-payroll approves one).
+ * Every DataTable's header, rows and totals row reach both inner edges of their card, in English
+ * and Arabic (the scroller's scrollbar gutter used to leave an empty 10px strip at the inline end:
+ * right in LTR, left in RTL). Then the payroll taxes statement (§10): each group pages with the
+ * subtotal of the whole group, and print lists everyone. Needs an approved month (05-payroll
+ * approves one). The employees screen is a card grid, not a DataTable, so it isn't measured here.
  */
 
 async function approvedMonth(): Promise<AccountingPayrollMonth> {
@@ -23,46 +24,52 @@ async function approvedMonth(): Promise<AccountingPayrollMonth> {
   }
 }
 
-/** For each visible totals row: how far its shaded row stops from its table card's inner edges. */
-function footerGaps(page: Page) {
-  return page.locator('[data-statement] section[data-cards-below]').evaluateAll((sections) =>
-    sections
-      .map((section) => {
-        const row = section.querySelector<HTMLElement>('[data-view="table"] tfoot tr');
-        if (!row || row.getBoundingClientRect().width === 0) return null;
-        const card = section.getBoundingClientRect();
-        const style = getComputedStyle(section);
-        const r = row.getBoundingClientRect();
-        return {
-          start: Math.round(r.left - (card.left + parseFloat(style.borderLeftWidth))),
-          end: Math.round(card.right - parseFloat(style.borderRightWidth) - r.right),
-        };
-      })
-      .filter((gap) => gap !== null),
+/**
+ * For each table drawn as a table: how far its header row, first row and totals row (when there
+ * is one) stop from its card's inner edges, in px — 0 when they reach the edge.
+ */
+function rowGaps(page: Page) {
+  return page.locator('section[data-cards-below]').evaluateAll((sections) =>
+    sections.flatMap((section) => {
+      const view = section.querySelector<HTMLElement>('[data-view="table"]');
+      if (!view || view.getBoundingClientRect().width === 0) return [];
+      const card = section.getBoundingClientRect();
+      const style = getComputedStyle(section);
+      const left = card.left + parseFloat(style.borderLeftWidth);
+      const right = card.right - parseFloat(style.borderRightWidth);
+      return ['thead tr', 'tbody tr', 'tfoot tr'].flatMap((selector) => {
+        const row = view.querySelector<HTMLElement>(selector);
+        if (!row) return [];
+        const box = row.getBoundingClientRect();
+        return [{ row: selector, start: Math.round(box.left - left), end: Math.round(right - box.right) }];
+      });
+    }),
   );
 }
 
+/** Opens a screen and waits until the streamed skeleton has been replaced by the loaded screen. */
+async function openSettled(page: Page, path: string) {
+  await page.goto(path);
+  await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+}
+
 for (const locale of ['en', 'ar'] as const) {
-  test(`payroll taxes statement: totals row full width, paging, print lists everyone (${locale})`, async ({ page }, info) => {
+  test(`every table's rows reach both edges of its card (${locale})`, async ({ page }) => {
     const month = await approvedMonth();
     await signIn(page, locale);
-    await page.goto(`/${locale}/accounting/payroll-taxes/${month.month}`);
-    await expect(page.locator('[data-statement]')).toBeVisible();
-    await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+    for (const path of ['/payroll', '/penalties', '/users', `/accounting/payroll-taxes/${month.month}`]) {
+      await openSettled(page, `/${locale}${path}`);
+      const gaps = await rowGaps(page);
+      expect(gaps.length, path).toBeGreaterThan(0);
+      for (const gap of gaps) expect({ path, ...gap }).toEqual({ path, row: gap.row, start: 0, end: 0 });
+    }
+  });
 
-    // The shaded totals row meets the card's edges on both sides, in LTR and RTL.
-    const gaps = await footerGaps(page);
-    expect(gaps.length).toBeGreaterThan(0);
-    for (const gap of gaps) expect(gap).toEqual({ start: 0, end: 0 });
-    // Lists without a totals row keep their layout (the scroller's gutter is unchanged).
-    await page.goto(`/${locale}/payroll`);
-    await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
-    const gutters = await page
-      .locator('[data-table-scroll]')
-      .evaluateAll((els) => els.map((el) => getComputedStyle(el).scrollbarGutter));
-    for (const gutter of gutters) expect(gutter).toBe('stable');
-    await page.goto(`/${locale}/accounting/payroll-taxes/${month.month}`);
-    await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+  test(`payroll taxes statement: paging, whole-group subtotals, print lists everyone (${locale})`, async ({ page }, info) => {
+    const month = await approvedMonth();
+    await signIn(page, locale);
+    await openSettled(page, `/${locale}/accounting/payroll-taxes/${month.month}`);
+    await expect(page.locator('[data-statement]')).toHaveCount(1);
 
     // Each group shows at most a page; its subtotal names the whole group.
     const insured = month.lines.filter((l) => l.insuranceStatus === 'INSURED').length;
@@ -91,7 +98,7 @@ for (const locale of ['en', 'ar'] as const) {
       await expect(page.locator(`[data-statement] table[aria-label="${group.name}"] tbody tr:visible`)).toHaveCount(group.count);
     }
     await expect(page.getByRole('navigation', { name: t(locale, 'ui.table.pagination') }).first()).toBeHidden();
-    await expect(page.getByRole('search')).toBeHidden();
+    await expect(page.locator('[data-statement] [role="search"]')).toBeHidden();
     await page.emulateMedia({ media: 'screen' });
   });
 }
