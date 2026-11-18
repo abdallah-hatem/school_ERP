@@ -1,15 +1,16 @@
 'use client';
 
 import type { PenaltyGroup, Violation } from '@school-erp/shared';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useCan } from '@/core/auth';
 import { callApi } from '@/lib/callApi';
 import { RowActions, RowActionsSkeleton } from '@/shared/components/data-table/row-actions';
+import { ClearFilters, SearchInput } from '@/shared/components/form/filter-controls';
 import { EmptyState, ErrorState } from '@/shared/components/layout/empty-state';
 import { BidiText } from '@/shared/components/ui/bidi-text';
 import { Button } from '@/shared/components/ui/button';
 import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
-import { AddIcon, ChevronDownIcon, EditIcon, RestoreIcon, RetireIcon } from '@/shared/components/ui/icons';
+import { AddIcon, ChevronDownIcon, EditIcon, RepeatsInDayIcon, RestoreIcon, RetireIcon } from '@/shared/components/ui/icons';
 import { Skeleton, SkeletonText } from '@/shared/components/ui/skeleton';
 import { StatusPill } from '@/shared/components/ui/status-pill';
 import { formatCount, formatDayCount } from '@/shared/lib/format';
@@ -24,6 +25,7 @@ import {
   UPDATE_VIOLATION,
 } from '../apis';
 import { useResource } from '../hooks/use-resource';
+import { highlightParts, searchCatalogue } from '../lib/catalogue-search';
 import { toLevelInputs, type NamesFormValues, type ViolationFormValues } from '../schemas';
 import { NamesDialog } from './names-dialog';
 import { SectionPanel } from './section-panel';
@@ -35,6 +37,9 @@ type ViolationEdit = { groupId: string; violation: Violation | null };
 /**
  * The penalty catalogue (§4, §7): groups → violations → levels. Groups and violations are retired
  * and restored, never deleted. Edits change pending penalties and new ones, never approved ones.
+ * A search box (`/` focuses it) filters violations by name in both languages and by group name;
+ * the catalogue loads whole, so it filters here. While searching, matching groups open and show
+ * only their matching violations (all of them when the group's own name matched).
  */
 export function CatalogueSection() {
   const { t, locale } = useTranslation();
@@ -45,12 +50,46 @@ export function CatalogueSection() {
   const [editing, setEditing] = useState<ViolationEdit | null>(null);
   const [retiring, setRetiring] = useState<PenaltyGroup | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  // Groups folded by hand during the current search (they open by themselves while it matches).
+  const [foldedInSearch, setFoldedInSearch] = useState<Set<string>>(new Set());
+  const searchRef = useRef<HTMLInputElement>(null);
+  const searching = query.trim() !== '';
 
   const groups = catalogue.data ? [...catalogue.data].sort((a, b) => a.sortOrder - b.sortOrder) : undefined;
+  const matches = groups ? searchCatalogue(groups, query) : undefined;
   // Every group starts folded (owner, 2026-11-17): the catalogue is long, the headers are the map.
-  const isOpen = (id: string) => open.has(id);
+  const isOpen = (id: string) => (searching ? !foldedInSearch.has(id) : open.has(id));
+
+  // `/` focuses the search, unless the person is typing somewhere or a dialog is open.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
+      const el = e.target instanceof Element ? e.target : null;
+      if (el?.closest('input, textarea, select, [contenteditable="true"], [role="dialog"]')) return;
+      if (!searchRef.current || searchRef.current.disabled) return;
+      e.preventDefault();
+      searchRef.current.focus();
+    }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
+
+  function changeQuery(next: string) {
+    setQuery(next);
+    setFoldedInSearch(new Set());
+  }
 
   function toggleOpen(id: string) {
+    if (searching) {
+      setFoldedInSearch((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      });
+      return;
+    }
     setOpen((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -123,6 +162,7 @@ export function CatalogueSection() {
       nameEn: values.nameEn,
       nameAr: values.nameAr,
       note: values.note.trim() || null,
+      oncePerDay: values.oncePerDay,
       levels: toLevelInputs(values.levels),
     };
     const res = editing.violation
@@ -139,16 +179,54 @@ export function CatalogueSection() {
     </Button>
   ) : null;
 
+  // The search toolbar: shown while loading (disabled, so the skeleton has the loaded layout) and
+  // whenever the catalogue has groups.
+  const toolbar = (
+    <div role="search" className="flex flex-wrap items-center gap-2.5">
+      <SearchInput
+        ref={searchRef}
+        aria-label={t('settings.catalogue.search')}
+        placeholder={t('settings.catalogue.searchPlaceholder')}
+        aria-keyshortcuts="/"
+        title={t('settings.catalogue.searchShortcut')}
+        value={query}
+        disabled={!groups}
+        onChange={(e) => changeQuery(e.target.value)}
+      />
+      <ClearFilters count={searching ? 1 : 0} onClear={() => changeQuery('')} />
+    </div>
+  );
+
   let body;
   if (catalogue.error) body = <ErrorState onRetry={catalogue.retry} retrying={catalogue.retrying} />;
-  else if (!groups) body = <CatalogueSkeleton />;
+  else if (!groups || !matches)
+    body = (
+      <div className="flex flex-col gap-4">
+        {toolbar}
+        <CatalogueSkeleton />
+      </div>
+    );
   else if (groups.length === 0)
     body = <EmptyState title={t('settings.catalogue.emptyTitle')} description={t('settings.catalogue.emptyBody')} action={addGroup} />;
+  else if (matches.length === 0)
+    body = (
+      <div className="flex flex-col gap-4">
+        {toolbar}
+        <EmptyState
+          title={t('settings.catalogue.noMatchesTitle')}
+          description={t('settings.catalogue.noMatchesBody')}
+          action={<ClearFilters count={1} placement="empty" onClear={() => changeQuery('')} />}
+        />
+      </div>
+    );
   else
     body = (
-      <ul className="flex flex-col gap-3">
-        {groups.map((group) => {
+      <div className="flex flex-col gap-4">
+        {toolbar}
+        <ul className="flex flex-col gap-3">
+        {matches.map(({ group, groupMatched }) => {
           const expanded = isOpen(group.id);
+          const total = groups.find((g) => g.id === group.id)?.violations.length ?? group.violations.length;
           const name = localName(group, locale);
           const panelId = `group-${group.id}`;
           return (
@@ -163,9 +241,14 @@ export function CatalogueSection() {
                 >
                   <ChevronDownIcon className={cn('size-5 shrink-0 text-muted-foreground transition-transform duration-150', !expanded && '-rotate-90 rtl:rotate-90')} />
                   <span className="flex min-w-0 flex-col">
-                    <span className="font-display font-extrabold break-words">{name}</span>
+                    <span className="font-display font-extrabold break-words">
+                      <Highlight text={name} query={groupMatched ? query : ''} />
+                    </span>
                     <span className="text-xs text-muted-foreground">
-                      {t('settings.catalogue.violationCount', { count: formatCount(group.violations.length) })}
+                      {t('settings.catalogue.violationCount', { count: formatCount(total) })}
+                      {searching && !groupMatched
+                        ? ` · ${t('settings.catalogue.matchCount', { count: formatCount(group.violations.length) })}`
+                        : null}
                     </span>
                   </span>
                 </button>
@@ -199,6 +282,7 @@ export function CatalogueSection() {
                         <ViolationRow
                           key={violation.id}
                           violation={violation}
+                          query={groupMatched ? '' : query}
                           groupActive={group.isActive}
                           busy={busyId === violation.id}
                           locked={busyId !== null && busyId !== violation.id}
@@ -208,7 +292,7 @@ export function CatalogueSection() {
                       ))}
                     </ul>
                   )}
-                  {group.isActive && canManage ? (
+                  {group.isActive && canManage && !searching ? (
                     <div>
                       <Button size="sm" variant="soft" onClick={() => setEditing({ groupId: group.id, violation: null })}>
                         <AddIcon />
@@ -221,7 +305,8 @@ export function CatalogueSection() {
             </li>
           );
         })}
-      </ul>
+        </ul>
+      </div>
     );
 
   return (
@@ -273,8 +358,23 @@ export function CatalogueSection() {
   );
 }
 
+/** `text` with the first plain occurrence of `query` marked (see `highlightParts`). */
+function Highlight({ text, query }: { text: string; query: string }) {
+  const parts = highlightParts(text, query);
+  if (!parts) return <>{text}</>;
+  const [before, match, after] = parts;
+  return (
+    <>
+      {before}
+      <mark className="rounded-sm bg-accent-soft px-0.5 text-accent-foreground">{match}</mark>
+      {after}
+    </>
+  );
+}
+
 function ViolationRow({
   violation,
+  query,
   groupActive,
   busy,
   locked,
@@ -282,6 +382,8 @@ function ViolationRow({
   onToggle,
 }: {
   violation: Violation;
+  /** The catalogue search, highlighted in the names. */
+  query: string;
   groupActive: boolean;
   busy: boolean;
   locked: boolean;
@@ -296,10 +398,20 @@ function ViolationRow({
     <li className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
       <div className="flex min-w-0 flex-1 flex-col gap-2">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="font-semibold break-words">{name}</span>
+          <span className="font-semibold break-words">
+            <Highlight text={name} query={query} />
+          </span>
           {violation.isActive ? null : <StatusPill tone="neutral">{t('settings.catalogue.retired')}</StatusPill>}
+          {/* The exception is the one marked: most violations count once a day (§4). */}
+          {violation.oncePerDay ? null : (
+            <StatusPill tone="info" icon={RepeatsInDayIcon}>
+              {t('settings.catalogue.repeatsInDay')}
+            </StatusPill>
+          )}
         </div>
-        <BidiText className="text-xs break-words text-muted-foreground">{otherName(violation, locale)}</BidiText>
+        <BidiText className="text-xs break-words text-muted-foreground" text={otherName(violation, locale)}>
+          <Highlight text={otherName(violation, locale)} query={query} />
+        </BidiText>
         <ol className="flex flex-wrap gap-1.5" aria-label={t('settings.catalogue.levels')}>
           {levels.map((l) => (
             <li key={l.level} className="rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold text-secondary-foreground">

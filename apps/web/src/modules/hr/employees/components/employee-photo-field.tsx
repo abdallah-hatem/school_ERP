@@ -1,6 +1,6 @@
 'use client';
 
-import { EMPLOYEE_PHOTO_UPLOAD, type Employee } from '@school-erp/shared';
+import { EMPLOYEE_PHOTO_UPLOAD, type Employee, type Gender } from '@school-erp/shared';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { EmployeeAvatar } from '@/core/employees';
@@ -36,9 +36,12 @@ export async function uploadEmployeePhoto(id: string, file: File) {
  */
 export function EmployeePhotoField({
   employee,
+  gender,
   onPendingChange,
 }: {
   employee?: Employee;
+  /** The form's current gender: the silhouette shown while there is no photo follows it. */
+  gender?: Gender | null;
   onPendingChange?: (file: File | null) => void;
 }) {
   const { t } = useTranslation();
@@ -101,7 +104,7 @@ export function EmployeePhotoField({
 
   return (
     <div className="flex flex-wrap items-center gap-5 sm:col-span-2">
-      <EmployeeAvatar photoUrl={shown} size="xl" />
+      <EmployeeAvatar photoUrl={shown} gender={gender} size="xl" />
       <div className="flex min-w-0 flex-1 basis-56 flex-col gap-3">
         <p className="text-sm text-muted-foreground">{t('employees.photo.description', { max: MAX_MB })}</p>
         <p className="text-sm font-semibold break-words" data-testid="photo-status">

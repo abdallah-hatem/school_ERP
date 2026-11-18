@@ -16,7 +16,7 @@ test('sign in → the dashboard shows the headcount', async ({ page }, info) => 
     name: literal(t('en', 'dashboard.headcount.label')),
   });
   await expect(headcount).toBeVisible();
-  await expect(headcount).toContainText(new Intl.NumberFormat('en-US').format(dashboard.headcount.active));
-  expect(dashboard.headcount.active).toBeGreaterThan(0);
+  await expect(headcount).toContainText(new Intl.NumberFormat('en-US').format(dashboard.headcount!.active));
+  expect(dashboard.headcount!.active).toBeGreaterThan(0);
   await shoot(page, info, 'dashboard');
 });

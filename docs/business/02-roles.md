@@ -22,12 +22,20 @@
 - **GUESS** — A penalty is recorded by an HR officer, stage head or direct manager and **approved by
   the HR manager or principal**. Payroll is prepared by an HR officer and **approved by the HR
   manager**; the accountant views and exports it. Leave (Planned): direct manager, then HR manager.
-- **GUESS** — Salaries are seen only by System admin, HR manager, HR officer and Accountant.
-  "Salaries" includes the employee's insured salary and bank details (§3).
-- **GUESS** — A stage head sees only their stage's employees; a direct manager only their team.
-  *Interim (until P4): the salary and stage/team limits above are not enforced in HR yet — every
-  role that can view employees, penalties or payroll sees all of them, salaries included. Until P4,
-  give real users only System admin, HR manager or HR officer.*
+- **GUESS** (enforced, P4) — Salaries are seen only by System admin, HR manager, HR officer and
+  Accountant. "Salaries" includes the employee's insured salary and bank details (§3). Anyone else
+  gets no salary at all — not on employee cards, the profile, the employee form, payroll lines,
+  payslips or the activity log (which says "changed" without the amounts). The principal sees the
+  payroll lines — names, codes, departments, days deducted, lateness minutes and flags — without any
+  money, plus the run **totals** for the whole school (on the Payroll screen, the dashboard and the
+  activity log alike), never one person's pay. Adding an employee needs to see
+  every salary (the pay is set when adding); the bank sheet too.
+- **GUESS** (enforced, P4) — A stage head sees only their stage's employees; a direct manager only
+  the employees they directly manage. That covers every list, count, search, picker and dashboard
+  figure, their penalties, lateness and payroll lines, and the activity log's entries about them.
+  Opening anyone else shows "This page isn't here", as for a record that doesn't exist. Someone in
+  such a role who isn't linked to an employee sees nobody. Each screen, tab, section and button is
+  shown only to those who may use it.
 - **DECIDED** — The last System admin can't be removed or deactivated.
 - **Planned** — Legal affairs, medical clinic and security desk roles, with their modules.
 - **DECIDED** — Viewing the activity log is its own permission (§9): System admin, HR manager and

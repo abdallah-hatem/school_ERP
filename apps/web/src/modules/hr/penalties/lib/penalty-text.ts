@@ -25,6 +25,7 @@ export function describeAction(t: Translate, locale: Locale, action: PenaltyActi
 /**
  * The violation picker's sections: one per catalogue group in its order, each with the violations
  * still in use. A retired group retires every violation in it (§4); empty groups are left out.
+ * Searchable by the violation's name in either language and by its group's name in either.
  */
 export function violationGroups(groups: PenaltyGroup[], locale: Locale): SelectOptionGroup[] {
   return [...groups]
@@ -33,7 +34,9 @@ export function violationGroups(groups: PenaltyGroup[], locale: Locale): SelectO
     .map((g) => ({
       key: g.id,
       label: nameIn(g, locale),
-      options: g.violations.filter((v) => v.isActive).map((v) => ({ value: v.id, label: nameIn(v, locale), keywords: [v.nameEn, v.nameAr] })),
+      options: g.violations
+        .filter((v) => v.isActive)
+        .map((v) => ({ value: v.id, label: nameIn(v, locale), keywords: [v.nameEn, v.nameAr, g.nameEn, g.nameAr] })),
     }))
     .filter((g) => g.options.length > 0);
 }

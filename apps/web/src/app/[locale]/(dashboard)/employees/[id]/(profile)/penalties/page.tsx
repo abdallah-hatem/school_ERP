@@ -1,5 +1,6 @@
 import { sectionMetadata } from '@/core/navigation/section-metadata';
 import { notFound } from 'next/navigation';
+import { requirePermission } from '@/core/auth';
 import { EmployeePenaltiesScreen, type SearchParamsRecord } from '@/modules/hr/penalties';
 import { isLocale } from '@/shared/lib/i18n';
 
@@ -15,5 +16,7 @@ export default async function EmployeePenaltiesPage({
 }) {
   const [{ locale, id }, query] = await Promise.all([params, searchParams]);
   if (!isLocale(locale)) notFound();
+  // R6: a page the viewer's roles can't open is the not-found screen.
+  await requirePermission('hr.penalties.view');
   return <EmployeePenaltiesScreen locale={locale} employeeId={id} searchParams={query} />;
 }

@@ -4,6 +4,7 @@ import { PayrollStatus, type HrDashboard, type Month } from '@school-erp/shared'
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTransition, type ReactNode } from 'react';
+import { canAny, useCan, useSession, type PermissionRequirement } from '@/core/auth';
 import { useSchoolBranding } from '@/core/settings';
 import { ErrorState } from '@/shared/components/layout/empty-state';
 import { PageHeader } from '@/shared/components/layout/page-header';
@@ -52,12 +53,36 @@ function CtaLine({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * Which tiles the viewer gets (R6): each needs the view permission of what it counts. The API
+ * sends null for a widget the viewer can't see; the skeleton uses the same rule, so nothing shifts.
+ */
+export interface DashboardTilesShown {
+  headcount: boolean;
+  payroll: boolean;
+  penalties: boolean;
+}
+
+export function useTilesShown(): DashboardTilesShown {
+  const can = useCan();
+  return {
+    headcount: can('hr.employees.view'),
+    payroll: can('hr.payroll.view'),
+    penalties: can('hr.penalties.view'),
+  };
+}
+
+const anyTile = (shown: DashboardTilesShown) => shown.headcount || shown.payroll || shown.penalties;
+
 function DashboardTiles({ data, month, links }: { data: HrDashboard; month: Month; links: DashboardLinks }) {
   const { t, locale } = useTranslation();
+  const shown = useTilesShown();
   const { headcount, currentRun, penaltiesThisMonth } = data;
   const monthLabel = formatMonth(month, locale);
+  if (!anyTile(shown)) return null;
   return (
     <section aria-label={t('dashboard.tilesLabel')} data-skeleton-block="tiles" className={TILE_GRID}>
+      {headcount && shown.headcount ? (
       <StatTile
         tone="feature"
         icon={EmployeesIcon}
@@ -81,14 +106,16 @@ function DashboardTiles({ data, month, links }: { data: HrDashboard; month: Mont
           )
         }
       />
-      {currentRun ? (
+      ) : null}
+      {!shown.payroll ? null : currentRun ? (
         <StatTile
           tone="primary"
           icon={PayrollIcon}
           href={links.payroll}
           label={t('dashboard.payroll.label', { month: monthLabel })}
-          unit={t('ui.units.currency')}
-          value={formatMoney(currentRun.net)}
+          // The run's net, unless the viewer may not see it (R7): then its status alone.
+          unit={currentRun.net === undefined ? undefined : t('ui.units.currency')}
+          value={currentRun.net === undefined ? <span aria-label={t('ui.units.amountHidden')}>—</span> : formatMoney(currentRun.net)}
           sub={
             <span className="flex flex-wrap items-center gap-2">
               <StatusPill
@@ -111,6 +138,8 @@ function DashboardTiles({ data, month, links }: { data: HrDashboard; month: Mont
           sub={<CtaLine>{t('dashboard.payroll.create')}</CtaLine>}
         />
       )}
+      {penaltiesThisMonth && shown.penalties ? (
+      <>
       <StatTile
         tone={penaltiesThisMonth.pending > 0 ? 'warning' : 'info'}
         icon={PenaltiesIcon}
@@ -127,17 +156,35 @@ function DashboardTiles({ data, month, links }: { data: HrDashboard; month: Mont
         value={formatCount(penaltiesThisMonth.approved)}
         sub={t('dashboard.penalties.approvedSub')}
       />
+      </>
+      ) : null}
     </section>
   );
 }
 
-const QUICK_LINKS: { key: string; icon: AppIcon; href: (l: DashboardLinks) => string }[] = [
-  { key: 'addEmployee', icon: AddIcon, href: (l) => l.newEmployee },
-  { key: 'recordPenalty', icon: PenaltiesIcon, href: (l) => l.penalties },
-  { key: 'enterLateness', icon: LatenessIcon, href: (l) => l.lateness },
-  { key: 'runPayroll', icon: PayrollIcon, href: (l) => l.payroll },
-  { key: 'settings', icon: SettingsIcon, href: (l) => l.settings },
+/** Each quick link shows only to someone who may do what it leads to (R6). */
+const QUICK_LINKS: {
+  key: string;
+  icon: AppIcon;
+  href: (l: DashboardLinks) => string;
+  anyOf: readonly PermissionRequirement[];
+}[] = [
+  { key: 'addEmployee', icon: AddIcon, href: (l) => l.newEmployee, anyOf: ['hr.employees.create'] },
+  { key: 'recordPenalty', icon: PenaltiesIcon, href: (l) => l.penalties, anyOf: ['hr.penalties.record'] },
+  { key: 'enterLateness', icon: LatenessIcon, href: (l) => l.lateness, anyOf: ['hr.lateness.edit'] },
+  { key: 'runPayroll', icon: PayrollIcon, href: (l) => l.payroll, anyOf: ['hr.payroll.create'] },
+  {
+    key: 'settings',
+    icon: SettingsIcon,
+    href: (l) => l.settings,
+    anyOf: ['core.settings.view', 'hr.settings.view', 'hr.lists.view', 'core.stages.view', 'hr.penalty_catalogue.view'],
+  },
 ];
+
+function useQuickLinks() {
+  const user = useSession();
+  return QUICK_LINKS.filter((link) => canAny(user, link.anyOf));
+}
 const QUICK_GRID = 'grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-5';
 const QUICK_ITEM = 'h-auto min-h-12 justify-start py-3 text-start whitespace-normal';
 
@@ -155,9 +202,11 @@ function QuickLinksFrame({ children }: { children: ReactNode }) {
 
 function QuickLinks({ links }: { links: DashboardLinks }) {
   const { t } = useTranslation();
+  const quick = useQuickLinks();
+  if (quick.length === 0) return null;
   return (
     <QuickLinksFrame>
-      {QUICK_LINKS.map(({ key, icon: Icon, href }) => (
+      {quick.map(({ key, icon: Icon, href }) => (
         <Button key={key} asChild variant="secondary" className={QUICK_ITEM}>
           <Link href={href(links)}>
             <Icon className="size-5 text-primary" />
@@ -170,8 +219,8 @@ function QuickLinks({ links }: { links: DashboardLinks }) {
 }
 
 export interface DashboardViewProps {
-  /** `null` when the figures failed to load. */
-  data: HrDashboard | null;
+  /** `null` when the figures failed to load; `undefined` when the viewer can't see them (no `hr.dashboard.view`). */
+  data: HrDashboard | null | undefined;
   /** The month the figures are for (this month). */
   month: Month;
 }
@@ -185,7 +234,7 @@ export function DashboardView({ data, month }: DashboardViewProps) {
 
   return (
     <>
-      {data ? (
+      {data === undefined ? null : data ? (
         <DashboardTiles data={data} month={data.currentRun?.month ?? month} links={links} />
       ) : (
         <div className="rounded-3xl bg-card shadow-card">
@@ -205,13 +254,18 @@ export function DashboardView({ data, month }: DashboardViewProps) {
 /** First load: the tiles and quick links in their final shape, nothing that shifts. */
 export function DashboardSkeleton() {
   const { t } = useTranslation();
+  const shown = useTilesShown();
+  const seesFigures = useCan()('hr.dashboard.view') && anyTile(shown);
+  const quick = useQuickLinks();
   return (
     // `contents`: the tiles and quick links stay direct items of the screen's column, as loaded.
     <div aria-busy="true" className="contents">
       <span role="status" className="sr-only">
         {t('ui.states.loading')}
       </span>
+      {seesFigures ? (
       <div data-skeleton-block="tiles" className={TILE_GRID}>
+        {shown.headcount ? (
         <StatTile
           tone="feature"
           icon={EmployeesIcon}
@@ -221,6 +275,8 @@ export function DashboardSkeleton() {
           // Stages over two lines (four in a half-width phone tile); the row stretches to the tallest.
           sub={<StatTileSubSkeleton lines={2} narrowLines={4} gapped feature />}
         />
+        ) : null}
+        {shown.payroll ? (
         <StatTile
           tone="primary"
           icon={PayrollIcon}
@@ -229,6 +285,9 @@ export function DashboardSkeleton() {
           loading
           sub={<Skeleton className="h-6 w-36 rounded-full" />}
         />
+        ) : null}
+        {shown.penalties ? (
+        <>
         <StatTile
           tone="info"
           icon={PenaltiesIcon}
@@ -245,12 +304,17 @@ export function DashboardSkeleton() {
           loading
           sub={<StatTileSubSkeleton narrowLines={2} />}
         />
+        </>
+        ) : null}
       </div>
-      <QuickLinksFrame>
-        {QUICK_LINKS.map(({ key }) => (
-          <Skeleton key={key} className="h-12 rounded-lg" />
-        ))}
-      </QuickLinksFrame>
+      ) : null}
+      {quick.length > 0 ? (
+        <QuickLinksFrame>
+          {quick.map(({ key }) => (
+            <Skeleton key={key} className="h-12 rounded-lg" />
+          ))}
+        </QuickLinksFrame>
+      ) : null}
     </div>
   );
 }

@@ -95,9 +95,9 @@ test('payroll: run → penalty deduction → grace change → recalculate → ap
   const first = await api.get<PayrollRun>(`/hr/payroll-runs/${runId}`);
   await shoot(page, info, 'payroll-run-draft');
 
-  const penalised = first.lines.find((l) => l.penaltyAmount > 0);
+  const penalised = first.lines.find((l) => (l.penaltyAmount ?? 0) > 0);
   if (!penalised) throw new Error('smoke: no line has a penalty deduction — did 03-penalties run?');
-  await expect(await lineRow(page, penalised)).toContainText(formatMoney(penalised.penaltyAmount));
+  await expect(await lineRow(page, penalised)).toContainText(formatMoney(penalised.penaltyAmount!));
 
   // A line whose lateness days move when the grace grows.
   const settings = await api.get<HrSettings>('/hr/settings');
@@ -113,17 +113,23 @@ test('payroll: run → penalty deduction → grace change → recalculate → ap
   // Change the lateness rule in Settings.
   await page.goto('/en/settings?section=hrRules');
   const graceField = page.getByLabel(t('en', 'settings.hrRules.lateness.grace'));
-  // Wait for the form to load the saved rule first — typing earlier gets overwritten by the
-  // form's reset, leaving Save disabled (no change).
-  // The saved grace is often the default 0, so the value alone can't tell the load has finished:
-  // type again until the change sticks (Save enabled).
+  // Until the saved rule loads, the section shows the form itself as an inert skeleton
+  // (`SkeletonMask`, aria-busy) holding the defaults, and the saved grace is often the default 0, so
+  // the value alone can't tell the load has finished. Typing into the skeleton is lost when the real
+  // form replaces it, leaving Save disabled. Wait for the skeleton to go first.
+  await expect(
+    page.locator('[aria-busy="true"]').filter({ has: page.locator('input[name="graceMinutes"]') }),
+  ).toHaveCount(0);
   await expect(graceField).toHaveValue(String(settings.lateness.graceMinutes));
+  // Clear before each try: the field keeps the typed text as a draft until blur, so re-filling the
+  // same text after a lost change fires no input event and Save would stay disabled for good.
   await expect(async () => {
+    await graceField.fill('');
     await graceField.fill(String(rule.graceMinutes));
     await expect(page.getByRole('button', { name: t('en', 'common.actions.save'), exact: true })).toBeEnabled({
       timeout: 2_000,
     });
-  }).toPass();
+  }).toPass({ timeout: 20_000 });
   restoreGrace = settings.lateness.graceMinutes;
   await page.getByRole('button', { name: t('en', 'common.actions.save'), exact: true }).click();
   await expect(page.getByText(t('en', 'settings.save.saved'))).toBeVisible();
@@ -137,19 +143,24 @@ test('payroll: run → penalty deduction → grace change → recalculate → ap
     second.lines.find((l) => l.id === late.id) ?? second.lines.find((l) => l.employeeId === late.employeeId);
   if (!after) throw new Error('smoke: the late employee left the run');
   expect(after.latenessDays).toBe(latenessDays(late.latenessMinutes, rule));
-  expect(after.latenessAmount).toBeLessThan(late.latenessAmount);
-  expect(after.net).toBeGreaterThan(late.net);
+  expect(after.latenessAmount).toBeLessThan(late.latenessAmount!);
+  expect(after.net).toBeGreaterThan(late.net!);
   const lateRow = await lineRow(page, after);
-  await expect(lateRow).toContainText(formatMoney(after.latenessAmount));
-  await expect(lateRow).toContainText(formatMoney(after.net));
+  await expect(lateRow).toContainText(formatMoney(after.latenessAmount!));
+  await expect(lateRow).toContainText(formatMoney(after.net!));
 
-  // Approve.
+  // Approve right after clearing the search, without waiting for its debounced navigation: one
+  // still in flight when Approve answers must not bring the run back as a draft.
   await searchField(page, t('en', 'payroll.filters.searchLabel')).fill('');
   await page.getByRole('button', { name: t('en', 'payroll.actions.approve') }).click();
   const confirm = page.getByRole('dialog');
   await confirm.getByRole('button', { name: t('en', 'payroll.approve.confirm') }).click();
   await expect(confirm).toBeHidden();
   await expect(page.getByText(t('en', 'payroll.actions.approved'))).toBeVisible();
+  await expect(page.getByRole('button', { name: t('en', 'payroll.actions.recalculate') })).toHaveCount(0);
+  // Once the search navigation has landed too, the run is still approved.
+  await expect(page).not.toHaveURL(/[?&]search=/);
+  await expect(page.getByRole('button', { name: t('en', 'payroll.actions.approve') })).toHaveCount(0);
   await expect(page.getByRole('button', { name: t('en', 'payroll.actions.recalculate') })).toHaveCount(0);
   const approved = await api.get<PayrollRun>(`/hr/payroll-runs/${runId}`);
   expect(approved.status).toBe(PayrollStatus.APPROVED);
@@ -170,7 +181,7 @@ test('payroll: run → penalty deduction → grace change → recalculate → ap
   const payslip = page.getByRole('article', {
     name: t('en', 'payroll.payslip.title'),
   });
-  await expect(payslip).toContainText(formatMoney(line.net));
+  await expect(payslip).toContainText(formatMoney(line.net!));
   await expect(payslip.getByTestId('payslip-penalty').first()).toBeVisible();
   await shoot(page, info, 'payslip');
 

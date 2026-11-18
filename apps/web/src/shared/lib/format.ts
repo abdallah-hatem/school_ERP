@@ -1,8 +1,21 @@
-import type { IsoDate, IsoDateTime, Month, TimeOfDay } from '@school-erp/shared';
+import { formatMoney as formatPiastres, type IsoDate, type IsoDateTime, type Month, type Piastres, type TimeOfDay } from '@school-erp/shared';
 import type { Locale } from './i18n';
 
 /** Money and day counts are pure and shared with the API: one implementation, in packages/shared. */
-export { formatDayCount, formatDays, formatMoney, parseMoney } from '@school-erp/shared';
+export { formatDayCount, formatDays, parseMoney } from '@school-erp/shared';
+
+/**
+ * `14,000.00`. `undefined` — an amount the API left out because the viewer may not see it (R7,
+ * salary) — is a dash.
+ */
+export function formatMoney(value: Piastres | undefined): string {
+  return value === undefined ? '—' : formatPiastres(value);
+}
+
+/** The sum of amounts, or `undefined` when any of them is hidden (R7). */
+export function sumMoney(...values: (Piastres | undefined)[]): Piastres | undefined {
+  return values.some((v) => v === undefined) ? undefined : values.reduce<number>((a, v) => a + (v as number), 0);
+}
 
 /** Arabic month and day names, Latin digits — figures stay typable and match the tables. */
 const INTL_LOCALE: Record<Locale, string> = { en: 'en-GB', ar: 'ar-EG-u-nu-latn' };

@@ -18,7 +18,13 @@ Who did what, to which record, and when — for the whole system. Spec:
   are not recorded yet (T28, T29).*
 - **DECIDED** — Entries can't be edited or deleted by anyone, and are kept forever (for now).
 - **DECIDED** — Opening or reading something (a payslip, a profile) is not recorded.
-- **DECIDED** — Whoever holds the "view activity log" permission (§2: System admin, HR manager,
-  principal) sees the Activity page (everything) and the History of each employee.
+- **DECIDED** (enforced, P4) — Whoever holds the "view activity log" permission (§2: System admin,
+  HR manager, principal) sees the Activity page and the History tab — but only entries about
+  records they may see (§2): an employee, their penalties, their lateness minutes and their payroll
+  lines outside the viewer's stage or team are left out, and so are the people and counts on
+  "Today at a glance" that come from them. The History of an employee they can't see shows "This
+  page isn't here". Salary-type amounts (salaries, insured salary, bank details, payroll amounts)
+  read "Changed (amount hidden)" for someone who can't see salaries; a payroll run's totals follow
+  the Payroll screen (shown to whoever sees the whole school's payroll).
 - **DECIDED** — Every entry reads in English and in Arabic, including entries made before a
   language switch.

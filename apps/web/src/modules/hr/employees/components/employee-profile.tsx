@@ -23,8 +23,9 @@ import { EmployeeStatusAction } from './employee-status-action';
  */
 export const PROFILE_TABS = [
   { key: 'details', labelKey: 'employees.profile.details', segment: '' },
-  { key: 'penalties', labelKey: 'common.nav.penalties', segment: 'penalties' },
-  { key: 'payroll', labelKey: 'common.nav.payroll', segment: 'payroll' },
+  // Each tab only for people who may read what it shows (R6); its page refuses the rest (not found).
+  { key: 'penalties', labelKey: 'common.nav.penalties', segment: 'penalties', permission: 'hr.penalties.view' },
+  { key: 'payroll', labelKey: 'common.nav.payroll', segment: 'payroll', permission: 'hr.payroll.view' },
   // Who changed what on this employee (audit log, T30); only for people who may read the log.
   { key: 'history', labelKey: 'employees.profile.history', segment: 'history', permission: 'core.audit.view' },
 ] as const satisfies readonly {
@@ -116,7 +117,7 @@ export function EmployeeProfileShell({
       <div className="flex flex-col gap-6">
         <PageHeader
           title={localName(employee, locale)}
-          leading={<EmployeeAvatar photoUrl={employee.photoUrl} size="lg" muted={employee.status !== EmployeeStatus.ACTIVE} />}
+          leading={<EmployeeAvatar photoUrl={employee.photoUrl} gender={employee.gender} size="lg" muted={employee.status !== EmployeeStatus.ACTIVE} />}
           status={<EmployeeStatusPill status={employee.status} />}
           description={
             <span className="flex flex-wrap items-center gap-x-2">
@@ -164,6 +165,7 @@ export function EmployeeDetails({ employee }: { employee: Employee }) {
   const { t, locale } = useTranslation();
   const notSet = <span className="text-muted-foreground">{t('employees.profile.notSet')}</span>;
   const insured = employee.insuranceStatus === InsuranceStatus.INSURED;
+  const salary = employee.salaryVisible;
   const text = (v: string | null) => (v ? v : notSet);
   const ltr = (v: string | null) =>
     v ? (
@@ -211,9 +213,12 @@ export function EmployeeDetails({ employee }: { employee: Employee }) {
         <DetailsItem label={t('employees.fields.fingerprintId')}>{ltr(employee.fingerprintId)}</DetailsItem>
       </DetailsCard>
       <DetailsCard title={t('employees.sections.contract')}>
-        <DetailsItem label={t('employees.fields.basicSalary')} wide>
-          <Money value={employee.basicSalary} className="text-lg font-extrabold text-primary" />
-        </DetailsItem>
+        {/* Salary-type fields only when the API sent them (R7: `hr.employees.view_salary`). */}
+        {salary ? (
+          <DetailsItem label={t('employees.fields.basicSalary')} wide>
+            <Money value={employee.basicSalary} className="text-lg font-extrabold text-primary" />
+          </DetailsItem>
+        ) : null}
         <DetailsItem label={t('employees.fields.contractStart')}>{date(employee.contractStart)}</DetailsItem>
         <DetailsItem label={t('employees.fields.contractEnd')}>{date(employee.contractEnd)}</DetailsItem>
         <DetailsItem label={t('employees.fields.usesBus')}>{employee.usesBus ? t('common.common.yes') : t('common.common.no')}</DetailsItem>
@@ -225,22 +230,26 @@ export function EmployeeDetails({ employee }: { employee: Employee }) {
         {insured ? (
           <>
             <DetailsItem label={t('employees.fields.insuranceNumber')}>{ltr(employee.insuranceNumber)}</DetailsItem>
-            <DetailsItem label={t('employees.fields.insuranceRegistrationDate')}>
+            <DetailsItem label={t('employees.fields.insuranceRegistrationDate')} wide={!salary}>
               {employee.insuranceRegistrationDate ? date(employee.insuranceRegistrationDate) : notSet}
             </DetailsItem>
-            <DetailsItem label={t('employees.fields.insuredSalary')}>
-              {employee.insuredSalary == null ? notSet : <Money value={employee.insuredSalary} />}
-            </DetailsItem>
+            {salary ? (
+              <DetailsItem label={t('employees.fields.insuredSalary')}>
+                {employee.insuredSalary == null ? notSet : <Money value={employee.insuredSalary} />}
+              </DetailsItem>
+            ) : null}
           </>
         ) : null}
       </DetailsCard>
-      <DetailsCard title={t('employees.sections.bank')}>
-        <DetailsItem label={t('employees.fields.bankName')}>{text(employee.bankName)}</DetailsItem>
-        <DetailsItem label={t('employees.fields.bankAccountNumber')}>{ltr(employee.bankAccountNumber)}</DetailsItem>
-        <DetailsItem label={t('employees.fields.iban')} wide>
-          {ltr(employee.iban)}
-        </DetailsItem>
-      </DetailsCard>
+      {salary ? (
+        <DetailsCard title={t('employees.sections.bank')}>
+          <DetailsItem label={t('employees.fields.bankName')}>{text(employee.bankName ?? null)}</DetailsItem>
+          <DetailsItem label={t('employees.fields.bankAccountNumber')}>{ltr(employee.bankAccountNumber ?? null)}</DetailsItem>
+          <DetailsItem label={t('employees.fields.iban')} wide>
+            {ltr(employee.iban ?? null)}
+          </DetailsItem>
+        </DetailsCard>
+      ) : null}
       <DetailsCard title={t('employees.sections.emergency')}>
         <DetailsItem label={t('employees.fields.emergencyContactName')}>{text(employee.emergencyContactName)}</DetailsItem>
         <DetailsItem label={t('employees.fields.emergencyContactRelationship')}>{text(employee.emergencyContactRelationship)}</DetailsItem>

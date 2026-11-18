@@ -16,13 +16,12 @@ import { PageHeader } from '@/shared/components/layout/page-header';
 import { Button } from '@/shared/components/ui/button';
 import {
   AddUserIcon,
-  DeactivateIcon,
   ErrorIcon,
   LockedIcon,
-  ReactivateIcon,
   ReadyIcon,
   TemporaryPasswordIcon,
 } from '@/shared/components/ui/icons';
+import { StatusChangeButton } from '@/shared/components/ui/status-change-button';
 import { StatusPill } from '@/shared/components/ui/status-pill';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { CREATE_USER, UPDATE_USER } from '../apis';
@@ -228,7 +227,7 @@ export function UserForm({ basePath, user, roles, lastAdmin = false, now }: User
         {user.isActive ? (
           <StatusPill tone="success">{t('access.users.statuses.active')}</StatusPill>
         ) : (
-          <StatusPill tone="neutral">{t('access.users.statuses.inactive')}</StatusPill>
+          <StatusPill tone="neutral" hollow>{t('access.users.statuses.inactive')}</StatusPill>
         )}
         <span className="text-sm text-muted-foreground">
           {t('access.userForm.lastSignIn', { when: formatSignIn(user.lastSignInAt, now, locale, t) })}
@@ -237,17 +236,15 @@ export function UserForm({ basePath, user, roles, lastAdmin = false, now }: User
       {canManage ? (
         user.isActive ? (
           <div className="flex flex-col gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              className="w-full text-destructive-ink"
+            <StatusChangeButton
+              change="deactivate"
+              className="w-full"
               disabled={lastAdmin}
               aria-describedby={lastAdmin ? `${employeeFieldId}-last-admin` : undefined}
               onClick={() => actions.deactivate(user)}
             >
-              <DeactivateIcon />
               {t('access.userForm.deactivateAccount')}
-            </Button>
+            </StatusChangeButton>
             {lastAdmin ? (
               <p id={`${employeeFieldId}-last-admin`} className="flex items-start gap-1.5 text-xs font-semibold text-warning-ink">
                 <LockedIcon className="mt-px size-3.5 shrink-0" />
@@ -256,10 +253,9 @@ export function UserForm({ basePath, user, roles, lastAdmin = false, now }: User
             ) : null}
           </div>
         ) : (
-          <Button type="button" variant="secondary" className="w-full" onClick={() => actions.reactivate(user)}>
-            <ReactivateIcon />
+          <StatusChangeButton change="reactivate" className="w-full" onClick={() => actions.reactivate(user)}>
             {t('access.userForm.reactivateAccount')}
-          </Button>
+          </StatusChangeButton>
         )
       ) : null}
     </FormCard>

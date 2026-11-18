@@ -1,4 +1,4 @@
-import { HttpStatus } from '@nestjs/common';
+import { HttpStatus, NotFoundException } from '@nestjs/common';
 import { ErrorCode } from '@school-erp/shared';
 import { CodedException } from '../../../../common/errors/coded.exception';
 import type { EmployeesService } from '../../employees/services/employees.service';
@@ -24,6 +24,8 @@ function makeService(over: {
   locked?: boolean;
   assertActive?: jest.Mock;
   rule?: typeof RULE;
+  /** The employees the user's `hr.lateness.edit` covers (default: all of them). */
+  editable?: string[];
 } = {}) {
   const calls: string[] = [];
   const repository = {
@@ -44,6 +46,14 @@ function makeService(over: {
         calls.push('active');
         return Promise.resolve();
       }),
+    // Scope first (edge case 3): outside `editable` → 404 before any other check.
+    assertScopeFirst: jest.fn().mockImplementation((_key: string, ids: string[]) => {
+      calls.push('scope');
+      const editable = over.editable;
+      return editable && ids.some((id) => !editable.includes(id))
+        ? Promise.reject(new NotFoundException())
+        : Promise.resolve();
+    }),
   };
   const settings = { get: jest.fn().mockResolvedValue({ lateness: over.rule ?? RULE }) };
   const monthLock = {
@@ -95,15 +105,46 @@ describe('LatenessService', () => {
     expect((await service.list('2026-11'))[0]).toMatchObject({ minutes: 10, days: 0 });
   });
 
-  it('put: checks the lock, then the employees, then writes only the given entries', async () => {
+  it('put: checks the lock, then the scope, then the employees, then writes only the given entries', async () => {
     const { service, repository, calls } = makeService();
     await service.put('2026-11', { entries: [{ employeeId: '1', minutes: 120 }] }, 'u1');
-    expect(calls).toEqual(['lock', 'active', 'write']);
+    expect(calls).toEqual(['lock', 'scope', 'active', 'write']);
     expect(repository.upsertMany).toHaveBeenCalledWith(
       '2026-11',
       [{ employeeId: '1', minutes: 120 }],
       'u1',
     );
+  });
+
+  it('the month list asks for the employees hr.lateness.view covers (R5)', async () => {
+    const { service, employees } = makeService();
+    await service.month('2026-11');
+    expect(employees.listActiveWithDepartments).toHaveBeenCalledWith('hr.lateness.view');
+  });
+
+  it('payroll’s list (no key) is school-wide', async () => {
+    const { service, employees } = makeService();
+    await service.list('2026-11');
+    expect(employees.listActiveWithDepartments).toHaveBeenCalledWith(undefined);
+  });
+
+  it('edge case 3 — put for an employee outside hr.lateness.edit → 404, nothing written', async () => {
+    const { service, repository } = makeService({ editable: ['1'] });
+    await expect(
+      service.put('2026-11', { entries: [{ employeeId: '1', minutes: 5 }, { employeeId: '2', minutes: 5 }] }, 'u1'),
+    ).rejects.toMatchObject({ status: 404 });
+    expect(repository.upsertMany).not.toHaveBeenCalled();
+  });
+
+  it('edge case 3 — outside the scope is 404 even when the employee is inactive (scope checked first)', async () => {
+    const assertActive = jest
+      .fn()
+      .mockRejectedValue(new CodedException(HttpStatus.CONFLICT, ErrorCode.EMPLOYEE_INACTIVE));
+    const { service } = makeService({ editable: ['1'], assertActive });
+    await expect(
+      service.put('2026-11', { entries: [{ employeeId: '2', minutes: 5 }] }, 'u1'),
+    ).rejects.toMatchObject({ status: 404 });
+    expect(assertActive).not.toHaveBeenCalled();
   });
 
   it('put on an approved month → PAYROLL_APPROVED, nothing written', async () => {

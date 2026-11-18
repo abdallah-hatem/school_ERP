@@ -145,7 +145,7 @@ export function PayslipView({ payslip, backHref }: { payslip: Payslip; backHref:
                       <Money
                         value={p.amount}
                         currency={false}
-                        className={cn('shrink-0 font-bold', p.amount > 0 ? 'text-destructive-ink' : 'text-muted-foreground')}
+                        className={cn('shrink-0 font-bold', (p.amount ?? 0) > 0 ? 'text-destructive-ink' : 'text-muted-foreground')}
                       />
                     </div>
                     <p className="text-muted-foreground flex flex-wrap gap-x-2 text-xs">
@@ -192,7 +192,7 @@ export function PayslipView({ payslip, backHref }: { payslip: Payslip; backHref:
                           <Money
                             value={p.amount}
                             currency={false}
-                            className={p.amount > 0 ? 'text-destructive-ink' : 'text-muted-foreground'}
+                            className={(p.amount ?? 0) > 0 ? 'text-destructive-ink' : 'text-muted-foreground'}
                           />
                         </Td>
                       </tr>
@@ -206,7 +206,7 @@ export function PayslipView({ payslip, backHref }: { payslip: Payslip; backHref:
           <Row label={t('payroll.payslip.totalPenalties')}>
             <Money
               value={payslip.penaltyAmount}
-              className={payslip.penaltyAmount > 0 ? 'text-destructive-ink font-bold' : 'font-bold'}
+              className={(payslip.penaltyAmount ?? 0) > 0 ? 'text-destructive-ink font-bold' : 'font-bold'}
             />
           </Row>
         </Section>
@@ -220,7 +220,7 @@ export function PayslipView({ payslip, backHref }: { payslip: Payslip; backHref:
           >
             <Money
               value={payslip.latenessAmount}
-              className={payslip.latenessAmount > 0 ? 'text-destructive-ink font-bold' : 'font-bold'}
+              className={(payslip.latenessAmount ?? 0) > 0 ? 'text-destructive-ink font-bold' : 'font-bold'}
             />
           </Row>
         </Section>
@@ -238,7 +238,7 @@ export function PayslipView({ payslip, backHref }: { payslip: Payslip; backHref:
                     <BidiText className="text-muted-foreground">{a.reason}</BidiText>
                   </span>
                   <Money
-                    value={a.type === AdjustmentType.DEDUCTION ? -a.amount : a.amount}
+                    value={a.type === AdjustmentType.DEDUCTION && a.amount !== undefined ? -a.amount : a.amount}
                     className={a.type === AdjustmentType.DEDUCTION ? 'text-destructive-ink' : 'text-success-ink'}
                   />
                 </li>
@@ -250,7 +250,7 @@ export function PayslipView({ payslip, backHref }: { payslip: Payslip; backHref:
               <Money value={payslip.adjustmentAdditions} className="text-success-ink font-bold" />
             </Row>
           ) : null}
-          {payslip.adjustmentDeductions > 0 ? (
+          {(payslip.adjustmentDeductions ?? 0) > 0 ? (
             <Row label={t('payroll.payslip.totalDeductions')}>
               <Money value={payslip.adjustmentDeductions} className="text-destructive-ink font-bold" />
             </Row>

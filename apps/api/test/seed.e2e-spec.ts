@@ -139,7 +139,12 @@ describe('Seed (e2e)', () => {
     await catalogue.updateGroup(group.id, { nameAr: 'اسم قديم للمجموعة' }, null);
     await catalogue.updateViolation(
       violation.id,
-      { nameAr: 'اسم قديم', note: null, levels: [{ level: 1, action: 'NOTICE' }] },
+      {
+        nameAr: 'اسم قديم',
+        note: null,
+        oncePerDay: !(seedViolation.oncePerDay ?? true),
+        levels: [{ level: 1, action: 'NOTICE' }],
+      },
       null,
     );
 
@@ -152,6 +157,7 @@ describe('Seed (e2e)', () => {
     expect(after.group.nameAr).toBe(seedGroup.nameAr);
     expect(after.nameAr).toBe(seedViolation.nameAr);
     expect(after.note).toBe(seedViolation.note ?? null);
+    expect(after.oncePerDay).toBe(seedViolation.oncePerDay ?? true);
     expect(after.levels.map((l) => [l.action, l.days === null ? null : Number(l.days)])).toEqual(
       seedViolation.levels.map((l) => [l.action, l.days ?? null]),
     );
@@ -178,6 +184,21 @@ describe('Seed (e2e)', () => {
     }
   });
 
+  it('Seeded once-per-day flags (§4): on unless the data marks the violation as repeating in a day', async () => {
+    const rows = await db.violation.findMany({
+      select: { nameEn: true, oncePerDay: true, group: { select: { nameEn: true } } },
+    });
+    const flag = new Map(rows.map((r) => [`${r.group.nameEn}|${r.nameEn}`, r.oncePerDay]));
+    for (const g of data.catalogue.groups) {
+      for (const v of g.violations) {
+        expect([v.nameEn, flag.get(`${g.nameEn}|${v.nameEn}`)]).toEqual([v.nameEn, v.oncePerDay ?? true]);
+      }
+    }
+    // Late to class happens several times a day: every catalogue lets it repeat.
+    const late = data.catalogue.groups.flatMap((g) => g.violations).find((v) => v.seedKey === 'late-to-class')!;
+    expect(late.oncePerDay).toBe(false);
+  });
+
   it('Seeded repeated penalties carry the levels penaltyLevel() gives over earlier approved ones', async () => {
     const window = (await app.get(SettingsService).getValues(['hr.penalties.repetitionWindow']))[
       'hr.penalties.repetitionWindow'
@@ -187,12 +208,19 @@ describe('Seed (e2e)', () => {
     });
     const approved = records.filter((r) => r.status === 'APPROVED');
     const iso = (d: Date) => d.toISOString().slice(0, 10);
+    // Every record's place in the repeat order: date, then when recorded, then id (§4).
+    const positions = records.map((r) => ({
+      id: r.id,
+      employeeId: r.employeeId,
+      violationId: r.violationId,
+      status: r.status,
+      date: iso(r.date),
+      recordedAt: r.createdAt,
+    }));
 
     for (const r of approved) {
-      const earlier = approved
-        .filter((o) => o.employeeId === r.employeeId && o.violationId === r.violationId)
-        .map((o) => iso(o.date));
-      const prior = countPriorInWindow(iso(r.date), window, earlier);
+      const target = positions.find((p) => p.id === r.id)!;
+      const prior = countPriorInWindow(target, window, positions);
       expect(r.level).toBe(penaltyLevel(prior, r.violation.levels));
       const catalogueLevel = r.violation.levels.find((l) => l.level === r.level)!;
       expect(r.action).toBe(catalogueLevel.action);
@@ -200,6 +228,19 @@ describe('Seed (e2e)', () => {
     // The demo really repeats: someone reached level 3, someone else level 2.
     expect(Math.max(...approved.map((r) => r.level))).toBe(3);
     expect(approved.filter((r) => r.level === 2).length).toBeGreaterThanOrEqual(2);
+    // Same date, same violation, same employee: the one recorded first is level 1, the next 2.
+    const sameDay = approved
+      .filter((r) =>
+        approved.some(
+          (o) =>
+            o.id !== r.id &&
+            o.employeeId === r.employeeId &&
+            o.violationId === r.violationId &&
+            iso(o.date) === iso(r.date),
+        ),
+      )
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    expect(sameDay.map((r) => r.level)).toEqual([1, 2]);
   });
 
   it('The seeded November run recalculates with penalty, lateness and adjustment lines, and PENDING_PENALTIES where penalties are pending', async () => {
@@ -211,10 +252,10 @@ describe('Seed (e2e)', () => {
     const lines = recalculated.lines;
     const active = EMPLOYEES.filter((e) => !e.inactive).length;
     expect(lines).toHaveLength(active);
-    expect(lines.some((l) => l.penaltyAmount > 0 && l.penaltyDays > 0)).toBe(true);
-    expect(lines.some((l) => l.latenessAmount > 0 && l.latenessDays > 0)).toBe(true);
-    expect(lines.some((l) => l.adjustmentAdditions > 0)).toBe(true);
-    expect(lines.some((l) => l.adjustmentDeductions > 0)).toBe(true);
+    expect(lines.some((l) => l.penaltyAmount! > 0 && l.penaltyDays > 0)).toBe(true);
+    expect(lines.some((l) => l.latenessAmount! > 0 && l.latenessDays > 0)).toBe(true);
+    expect(lines.some((l) => l.adjustmentAdditions! > 0)).toBe(true);
+    expect(lines.some((l) => l.adjustmentDeductions! > 0)).toBe(true);
     expect(recalculated.adjustments).toHaveLength(ADJUSTMENTS.length);
 
     const pendingIds = new Set(

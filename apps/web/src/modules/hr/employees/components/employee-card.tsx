@@ -3,6 +3,7 @@
 import { EmployeeStatus, type EmployeeSummary } from '@school-erp/shared';
 import Link from 'next/link';
 import { useId, type ReactNode } from 'react';
+import { useCan } from '@/core/auth';
 import { EmployeeLink } from '@/core/employees';
 import { Button } from '@/shared/components/ui/button';
 import { Money } from '@/shared/components/ui/figures';
@@ -101,6 +102,7 @@ export function EmployeeCard({
   const { t, locale } = useTranslation();
   const nameId = useId();
   const name = localName(employee, locale);
+  const canEdit = useCan()('hr.employees.edit');
   const inactive = employee.status !== EmployeeStatus.ACTIVE;
 
   return (
@@ -121,7 +123,7 @@ export function EmployeeCard({
       }
       avatar={
         <>
-          <EmployeeAvatar photoUrl={employee.photoUrl} size="lg" muted={inactive} className="ring-4 ring-card" />
+          <EmployeeAvatar photoUrl={employee.photoUrl} gender={employee.gender} size="lg" muted={inactive} className="ring-4 ring-card" />
           <span className="ms-auto mb-1">
             <EmployeeStatusPill status={employee.status} />
           </span>
@@ -142,28 +144,33 @@ export function EmployeeCard({
               value={t(`common.enums.workSystem.${employee.workSystem}`)}
             />
           </div>
-          <div
-            className={cn(
-              'flex items-center justify-between gap-2 rounded-[0.875rem] px-3 py-2.5',
-              inactive ? 'bg-secondary text-muted-foreground' : 'bg-primary-soft text-primary',
-            )}
-          >
-            <span className="text-xs font-bold">{t('employees.columns.basicSalary')}</span>
-            <Money value={employee.basicSalary} className="text-[1.06rem] font-extrabold" />
-          </div>
-          <div className="mt-auto grid grid-cols-2 gap-2">
+          {/* The salary only when the API sent it (R7: `hr.employees.view_salary`). */}
+          {employee.salaryVisible ? (
+            <div
+              className={cn(
+                'flex items-center justify-between gap-2 rounded-[0.875rem] px-3 py-2.5',
+                inactive ? 'bg-secondary text-muted-foreground' : 'bg-primary-soft text-primary',
+              )}
+            >
+              <span className="text-xs font-bold">{t('employees.columns.basicSalary')}</span>
+              <Money value={employee.basicSalary} className="text-[1.06rem] font-extrabold" />
+            </div>
+          ) : null}
+          <div className={cn('mt-auto grid gap-2', canEdit && 'grid-cols-2')}>
             <Button asChild size="sm" className="min-w-0">
               <Link href={href} aria-label={t('employees.card.viewLabel', { name })}>
                 <ShowIcon />
                 {t('employees.card.view')}
               </Link>
             </Button>
-            <Button asChild size="sm" className="min-w-0">
-              <Link href={`${href}/edit`} aria-label={t('employees.card.editLabel', { name })}>
-                <EditIcon />
-                {t('employees.card.edit')}
-              </Link>
-            </Button>
+            {canEdit ? (
+              <Button asChild size="sm" className="min-w-0">
+                <Link href={`${href}/edit`} aria-label={t('employees.card.editLabel', { name })}>
+                  <EditIcon />
+                  {t('employees.card.edit')}
+                </Link>
+              </Button>
+            ) : null}
           </div>
         </>
       }
@@ -173,6 +180,9 @@ export function EmployeeCard({
 
 /** One card's skeleton: the same frame and heights as `EmployeeCard`. */
 export function EmployeeCardSkeleton() {
+  const can = useCan();
+  const salary = can('hr.employees.view_salary');
+  const canEdit = can('hr.employees.edit');
   return (
     <CardFrame
       bandClass="bg-band-neutral"
@@ -198,10 +208,10 @@ export function EmployeeCardSkeleton() {
             <Skeleton className="h-13.5 rounded-xl" />
             <Skeleton className="h-13.5 rounded-xl" />
           </div>
-          <Skeleton className="h-12 rounded-[0.875rem]" />
-          <div className="mt-auto grid grid-cols-2 gap-2">
+          {salary ? <Skeleton className="h-12 rounded-[0.875rem]" /> : null}
+          <div className={cn('mt-auto grid gap-2', canEdit && 'grid-cols-2')}>
             <Skeleton className="h-9 rounded-lg" />
-            <Skeleton className="h-9 rounded-lg" />
+            {canEdit ? <Skeleton className="h-9 rounded-lg" /> : null}
           </div>
         </>
       }

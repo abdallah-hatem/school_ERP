@@ -72,6 +72,8 @@ uses insurance and bank details is Planned and belongs to the payroll owner (§6
 - **DECIDED** — The employee's address (above) is the only address; the emergency contact has none.
 - **DECIDED** — The insured salary and the bank details are salary-type data: they follow the same
   visibility rule as the basic salary (§2).
+- **DECIDED** (enforced, P4) — Who sees the basic salary, insured salary and bank details, and
+  which employees each role sees at all: §2 Roles.
 
 ## Rules
 

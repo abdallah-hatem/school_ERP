@@ -58,18 +58,29 @@ export interface ListEmployeesQuery extends PaginationQuery {
   excludeId?: Uuid;
 }
 
-/** `GET /hr/employees` item. */
-export interface EmployeeSummary extends Names {
+/**
+ * Salary (R7, edge case 4). Without `hr.employees.view_salary` covering the employee, the API
+ * leaves the salary-type fields out of the response — they are absent, not null — and sets
+ * `salaryVisible: false`, so the screen hides the field instead of showing "not set".
+ */
+export interface SalaryVisibility {
+  salaryVisible: boolean;
+}
+
+/** `GET /hr/employees` item. `basicSalary` is absent when `salaryVisible` is false (R7). */
+export interface EmployeeSummary extends Names, SalaryVisibility {
   id: Uuid;
   code: string;
   department: NamedRef;
   stage: NamedRef;
   jobTitle: NamedRef;
   workSystem: WorkSystem;
-  basicSalary: Piastres;
+  basicSalary?: Piastres;
   status: EmployeeStatus;
   /** Signed-in-only image URL; null → the silhouette avatar. */
   photoUrl: string | null;
+  /** Picks the male or female silhouette when there is no photo. */
+  gender: Gender;
 }
 
 /** All §3 fields a client sends (everything except `code` and `status`). */
@@ -118,8 +129,21 @@ export interface CreateEmployeeRequest extends Names {
 
 export type UpdateEmployeeRequest = Partial<CreateEmployeeRequest>;
 
-/** `GET /hr/employees/:id`. */
-export interface Employee extends Names {
+/** The employee fields R7 treats as salary: absent from responses when `salaryVisible` is false. */
+export const EMPLOYEE_SALARY_FIELDS = [
+  'basicSalary',
+  'insuredSalary',
+  'bankName',
+  'bankAccountNumber',
+  'iban',
+] as const;
+export type EmployeeSalaryField = (typeof EMPLOYEE_SALARY_FIELDS)[number];
+
+/**
+ * `GET /hr/employees/:id`. The salary fields (`EMPLOYEE_SALARY_FIELDS`) are absent when
+ * `salaryVisible` is false (R7).
+ */
+export interface Employee extends Names, SalaryVisibility {
   id: Uuid;
   code: string;
   nationalId: string | null;
@@ -136,10 +160,10 @@ export interface Employee extends Names {
    * `managesPeople`: the manager's job title still manages people. `false` means they no longer
    * qualify — the employee keeps them, and the form flags it (§3).
    */
-  manager: (NamedRef & { code: string; managesPeople: boolean; photoUrl: string | null }) | null;
+  manager: (NamedRef & { code: string; managesPeople: boolean; photoUrl: string | null; gender: Gender }) | null;
   grade: string | null;
   workSystem: WorkSystem;
-  basicSalary: Piastres;
+  basicSalary?: Piastres;
   fingerprintId: string | null;
   contractStart: IsoDate;
   contractEnd: IsoDate;
@@ -149,10 +173,10 @@ export interface Employee extends Names {
   insuranceStatus: InsuranceStatus;
   insuranceNumber: string | null;
   insuranceRegistrationDate: IsoDate | null;
-  insuredSalary: Piastres | null;
-  bankName: string | null;
-  bankAccountNumber: string | null;
-  iban: string | null;
+  insuredSalary?: Piastres | null;
+  bankName?: string | null;
+  bankAccountNumber?: string | null;
+  iban?: string | null;
   emergencyContactName: string | null;
   emergencyContactRelationship: string | null;
   emergencyContactPhone: string | null;
@@ -161,7 +185,6 @@ export interface Employee extends Names {
   university: string | null;
   graduationYear: number | null;
   status: EmployeeStatus;
-  userId: Uuid | null;
   createdAt: IsoDateTime;
   updatedAt: IsoDateTime;
 }
@@ -171,6 +194,8 @@ export interface EmployeeRef extends NamedRef {
   code: string;
   /** Present where the response shows the employee's avatar (e.g. penalties). */
   photoUrl?: string | null;
+  /** Present with `photoUrl`: picks the male or female silhouette. */
+  gender?: Gender;
 }
 
 // ── Penalty catalogue ──────────────────────────────────────────────────────
@@ -187,6 +212,11 @@ export interface Violation extends Names {
   id: Uuid;
   note: string | null;
   isActive: boolean;
+  /**
+   * §4 (owner, 2026-11-18): at most one pending or approved penalty for this violation per
+   * employee per date. Off for violations that genuinely repeat within a day (late to class…).
+   */
+  oncePerDay: boolean;
   levels: ViolationLevel[];
 }
 
@@ -214,11 +244,14 @@ export interface ViolationLevelInput {
 
 export interface CreateViolationRequest extends Names {
   note?: string | null;
+  /** Default true. */
+  oncePerDay?: boolean;
   levels: ViolationLevelInput[];
 }
 
 export interface UpdateViolationRequest extends Partial<Names> {
   note?: string | null;
+  oncePerDay?: boolean;
   isActive?: boolean;
   levels?: ViolationLevelInput[];
 }
@@ -325,8 +358,27 @@ export interface UpdateHrSettingsRequest {
 
 export type { PayrollTotals } from './payroll-totals';
 
-/** A payroll line. Employee fields are a snapshot taken at calculation. */
-export interface PayrollLine extends Names {
+/**
+ * A payroll line's money (R7): absent when `salaryVisible` is false — the viewer may see the run
+ * but not this employee's pay (no `hr.employees.view_salary` covering them).
+ */
+export const PAYROLL_LINE_MONEY_FIELDS = [
+  'basicSalary',
+  'monthSalary',
+  'dayValue',
+  'penaltyAmount',
+  'latenessAmount',
+  'adjustmentAdditions',
+  'adjustmentDeductions',
+  'net',
+] as const;
+export type PayrollLineMoneyField = (typeof PAYROLL_LINE_MONEY_FIELDS)[number];
+
+/**
+ * A payroll line. Employee fields are a snapshot taken at calculation. The money fields
+ * (`PAYROLL_LINE_MONEY_FIELDS`) are absent when `salaryVisible` is false.
+ */
+export interface PayrollLine extends Names, SalaryVisibility {
   id: Uuid;
   employeeId: Uuid;
   employeeCode: string;
@@ -335,23 +387,30 @@ export interface PayrollLine extends Names {
   departmentId: Uuid;
   departmentNameEn: string;
   departmentNameAr: string;
-  basicSalary: Piastres;
+  basicSalary?: Piastres;
   workSystem: WorkSystem;
-  monthSalary: Piastres;
+  monthSalary?: Piastres;
   /** Rounded for display only; deductions use `monthSalary ÷ divisor` unrounded. */
-  dayValue: Piastres;
+  dayValue?: Piastres;
   penaltyDays: Days;
-  penaltyAmount: Piastres;
+  penaltyAmount?: Piastres;
   latenessMinutes: number;
   latenessDays: Days;
-  latenessAmount: Piastres;
-  adjustmentAdditions: Piastres;
-  adjustmentDeductions: Piastres;
-  net: Piastres;
+  latenessAmount?: Piastres;
+  adjustmentAdditions?: Piastres;
+  adjustmentDeductions?: Piastres;
+  net?: Piastres;
   flags: PayrollFlag[];
 }
 
-export interface PayrollRunSummary {
+/**
+ * `totals` sums the lines the viewer may see (`hr.payroll.view` scope; the whole run at scope
+ * `all`). Its money is left out (`salaryVisible: false`, money fields absent) when the viewer's
+ * scope is narrower than the whole school and their `hr.employees.view_salary` doesn't cover it —
+ * a team's total would give away its members' pay. A whole-school total is shown to every
+ * `hr.payroll.view` holder (the principal's "payroll totals").
+ */
+export interface PayrollRunSummary extends SalaryVisibility {
   id: Uuid;
   month: Month;
   status: PayrollStatus;
@@ -367,7 +426,9 @@ export interface PayrollAdjustment {
   nameEn: string;
   nameAr: string;
   type: AdjustmentType;
-  amount: Piastres;
+  /** Absent when `salaryVisible` is false (R7). */
+  amount?: Piastres;
+  salaryVisible: boolean;
   reason: string;
   createdAt: IsoDateTime;
   /** False when its employee has no line in the run (deactivated, removed on recalculation). */
@@ -408,31 +469,42 @@ export interface PayslipPenalty {
   level: number;
   action: PenaltyAction;
   days: Days | null;
-  amount: Piastres;
+  /** Absent when the payslip's `salaryVisible` is false. */
+  amount?: Piastres;
 }
 
 /** `GET /hr/payroll-runs/:id/lines/:lineId` — approved runs only. */
 export interface Payslip extends PayrollLine {
   month: Month;
   penalties: PayslipPenalty[];
-  adjustments: { type: AdjustmentType; amount: Piastres; reason: string }[];
+  /** `amount` is absent when the payslip's `salaryVisible` is false. */
+  adjustments: { type: AdjustmentType; amount?: Piastres; reason: string }[];
   school: { nameEn: string; nameAr: string; logoUrl: string | null };
 }
 
 /** `GET /hr/employees/:id/payroll-lines` — one employee's line in each run, newest month first. */
-export interface EmployeePayrollLine {
+export interface EmployeePayrollLine extends SalaryVisibility {
   runId: Uuid;
   lineId: Uuid;
   month: Month;
   status: PayrollStatus;
-  /** From the line snapshot. */
-  net: Piastres;
+  /** From the line snapshot. Absent when `salaryVisible` is false (R7). */
+  net?: Piastres;
 }
 
 // ── Dashboard ──────────────────────────────────────────────────────────────
 
+/**
+ * `GET /hr/dashboard`. Each widget counts only what the viewer may see (R5) and is null when they
+ * can't see that kind of record at all: `headcount` needs `hr.employees.view`, `currentRun`
+ * `hr.payroll.view` (null also when the month has no run), `penaltiesThisMonth` `hr.penalties.view`.
+ * `currentRun.net` follows the run totals' rule (`PayrollRunSummary`): absent when
+ * `salaryVisible` is false.
+ */
 export interface HrDashboard {
-  headcount: { active: number; byStage: { stage: NamedRef; count: number }[] };
-  currentRun: { id: Uuid; month: Month; status: PayrollStatus; net: Piastres } | null;
-  penaltiesThisMonth: { pending: number; approved: number };
+  headcount: { active: number; byStage: { stage: NamedRef; count: number }[] } | null;
+  currentRun:
+    | { id: Uuid; month: Month; status: PayrollStatus; net?: Piastres; salaryVisible: boolean }
+    | null;
+  penaltiesThisMonth: { pending: number; approved: number } | null;
 }

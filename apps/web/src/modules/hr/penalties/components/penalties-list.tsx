@@ -1,5 +1,6 @@
 'use client';
 
+import { useCan } from '@/core/auth';
 import { PAGINATION, PENALTY_STATUSES, type Month, type PenaltyRecord, type PenaltyStatus } from '@school-erp/shared';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
@@ -80,15 +81,17 @@ export function PenaltiesList({
     go({ month: query.month, page: PAGINATION.defaultPage, limit: query.limit });
   }
 
+  const canRecord = useCan()('hr.penalties.record');
   const filterCount = (query.search ? 1 : 0) + (query.status ? 1 : 0);
   const filtered = filterCount > 0;
   const loading = rows === undefined;
-  const recordButton = (
+  // R6: only someone who may record a penalty sees the button.
+  const recordButton = canRecord ? (
     <Button variant="primary" className="cursor-pointer" disabled={loading} onClick={() => setRecording(true)}>
       <AddIcon />
       {t('penalties.record')}
     </Button>
-  );
+  ) : null;
 
   return (
     <div className="flex flex-col gap-6">

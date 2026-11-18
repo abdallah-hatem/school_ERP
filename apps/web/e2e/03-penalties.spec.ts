@@ -37,8 +37,8 @@ const deducts = (p: { days: number | null }) => (p.days ?? 0) > 0;
 /**
  * An active employee and a violation in use for which a penalty dated today would be level 2 with
  * a day deduction — read from the approved penalties already there. When none fits (the seed's
- * month is outside today's repetition window), one is made: a level-1 penalty, recorded and
- * approved through the API.
+ * month is outside today's repetition window), one is made: a level-1 penalty dated today on a
+ * violation that may repeat in a day, recorded and approved through the API.
  */
 async function findTarget(api: Api, today: string): Promise<Target> {
   const employees = await all<EmployeeSummary>(api, '/hr/employees', {
@@ -60,15 +60,21 @@ async function findTarget(api: Api, today: string): Promise<Target> {
     const violation = usableViolations.get(p.violation.id);
     if (seen.has(key) || !employee || !violation) continue;
     seen.add(key);
-    const preview = await api.get<PenaltyPreview>('/hr/penalties/preview', {
-      employeeId: employee.id,
-      violationId: violation.id,
-      date: today,
-    });
-    if (preview.level === 2 && deducts(preview)) return { employee, violation };
+    // A once-per-day violation already recorded today is refused (409): not a candidate (§4).
+    const preview = await api
+      .get<PenaltyPreview>('/hr/penalties/preview', {
+        employeeId: employee.id,
+        violationId: violation.id,
+        date: today,
+      })
+      .catch(() => null);
+    if (preview && preview.level === 2 && deducts(preview)) return { employee, violation };
   }
 
-  const violation = violations.find((v) => deducts(v.levels.find((l) => l.level === 2) ?? { days: null }));
+  // The level-1 penalty is dated today, so the violation must be one that may repeat in a day (§4).
+  const violation = violations.find(
+    (v) => !v.oncePerDay && deducts(v.levels.find((l) => l.level === 2) ?? { days: null }),
+  );
   const penalised = new Set(approved.map((p) => p.employee.id));
   const employee = employees.find((e) => !penalised.has(e.id));
   if (!violation || !employee) throw new Error('smoke: no violation with a level-2 day deduction to use');
@@ -145,9 +151,9 @@ test('penalties: a repeat is previewed as level 2 → saved → approved → lis
   await expect(confirm).toBeHidden();
 
   await page.goto(filtered(PenaltyStatus.APPROVED));
+  // A table row, or a card when the list's container is narrow (DataTable `cardsBelow`).
   const row = page
-    .getByRole('table')
-    .getByRole('row')
+    .locator('table tr:visible, [data-view="cards"] > li:visible')
     .filter({ hasText: violation.nameEn })
     .filter({ hasText: t('en', 'penalties.levelValue', { level: 2 }) });
   await expect(row).toHaveCount(1);

@@ -109,11 +109,35 @@ The seeded `admin@school.local` becomes **System admin** + **HR manager**.
   `password_changed_at` were added; the deprecated `users.role` column was dropped (the chip shows
   role names, everyone's home is the dashboard). The Roles list is not paged (a school has about
   ten roles; the mockup shows none).
-- [ ] **P4 scopes in HR** (`logic`): apply `own_stage` / `own_team` in HR repositories with
-  `scopeFor`; salary filtering (R7, edge case 4); drop HR's deprecated `employees.user_id`.
-  **Open until P4:** edge case 3 (outside-team → 404) and edge case 4 (no salary fields) — today
-  every role that can view employees, penalties or payroll sees all rows and salaries; a test that
-  the employee link stays consistent while both `users.employee_id` and `employees.user_id` exist.
+- [x] **P4 scopes in HR** (`logic`) — done: `own_stage` / `own_team` / `self` applied in HR's
+  repositories (`HrAccessService` + `employee-scope.pure.ts`) on every row-scoped read — employees
+  (list, detail, headcount, pickers), penalties (list, detail, counts), lateness (the month's rows),
+  payroll (lines, adjustments, payslips, an employee's payroll lines, run totals) and the activity
+  log's entries about employees and penalties (`AuditRecordAccess`, registered by HR). Writes keyed
+  by an employee check their own key's scope (edit, change status, photo, record / approve / cancel
+  a penalty, lateness entries). Outside the scope → **404** (edge case 3); a scoped user with no
+  linked employee gets empty lists. Salary filtering (R7, edge case 4): without
+  `hr.employees.view_salary` covering the employee the API **omits** the salary-type fields and sets
+  `salaryVisible: false` (shared `SalaryVisibility`); the web hides the fields, sections and cards'
+  salary. HR's `employees.user_id` dropped (migration `employees_drop_user_id`, which first copies any
+  link P2 missed). Decisions taken while building: **payroll money** — a payroll line's amounts,
+  adjustments' amounts, payslip money and an employee's payroll-tab net need the salary key covering
+  that employee; run **totals** are shown to every `hr.payroll.view` holder at scope `all` (the
+  principal's "payroll totals" — a school total gives nobody's pay away) and, for a narrower payroll
+  scope, only when the salary scope covers it; the **bank sheet** and **adding an employee** need
+  the salary key at scope `all` (403 otherwise); an **edit** sending a salary field for an employee
+  whose salary the user can't see → 403; the **activity log** shows salary-type values only with
+  the salary key at scope `all` (the log is school-wide) — otherwise the change reads "changed"
+  (`hidden: true`, no values) — except a payroll run's `totals`, shown with `hr.payroll.view` at
+  scope `all` like the Payroll screen; Activity, its day totals, its people picker and "Today at a
+  glance" all leave out entries about records outside the scope, and lateness-month and payroll-run
+  entries (which carry several employees' figures) need `hr.lateness.view` / `hr.payroll.view` at
+  scope `all`; on writes keyed by employees the **scope is checked first** (`assertScopeFirst`), so a
+  scoped user gets 404 before any 400 / 409 that would reveal the employee exists; an edit can't set
+  a direct manager the user can't see (400 `INVALID_MANAGER`) nor move the employee out of the
+  editor's scope (another stage → 400 `FOREIGN_KEY_VIOLATION`, another team → 400
+  `INVALID_MANAGER`); the **dashboard** widgets are null without their view key. Pages a
+  role can't open render the app's not-found screen (`requirePermission`).
   **Salary-type fields (2026-11-18):** R7's salary filtering covers the employee's `insuredSalary`
   and bank details (`bankName`, `bankAccountNumber`, `iban`) as well as `basicSalary` — a role
   without `hr.employees.view_salary` gets none of them.

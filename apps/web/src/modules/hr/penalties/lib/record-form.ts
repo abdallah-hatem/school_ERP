@@ -45,6 +45,9 @@ export function fieldForError(code: unknown): keyof RecordPenaltyValues | null {
       return 'employeeId';
     case ErrorCode.VIOLATION_RETIRED:
       return 'violationId';
+    // §4 once per day: the date is what to change (or the violation, if it was the wrong one).
+    case ErrorCode.VIOLATION_ONCE_PER_DAY:
+      return 'date';
     default:
       return null;
   }

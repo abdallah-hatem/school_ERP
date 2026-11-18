@@ -33,6 +33,12 @@
   --accent-soft: #fff1c9;
 
   /* Status */
+  /* Neutral states (inactive, hidden, retired): a true grey, never mint — it must not read as success. */
+  --neutral-soft: #eceef0;
+  /* Default employee avatar (no photo): white figure on this light grey. */
+  --avatar-tile: #d6dadd;
+  --avatar-figure: #ffffff;
+  --neutral-ink: #4f5a60;
   --success: #1f9a62;
   --success-soft: #ddf4e7;
   --success-ink: #126b42;
@@ -98,6 +104,10 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent-soft: var(--accent-soft);
+  --color-neutral-soft: var(--neutral-soft);
+  --color-avatar-tile: var(--avatar-tile);
+  --color-avatar-figure: var(--avatar-figure);
+  --color-neutral-ink: var(--neutral-ink);
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
   --color-success-ink: var(--success-ink);
@@ -288,6 +298,34 @@ html body[data-scroll-locked] {
 @utility flip-rtl {
   [dir="rtl"] & {
     transform: scaleX(-1);
+  }
+}
+
+/*
+ * Toast motion (DESIGN.md → Motion). Sonner moves the toasts; these set how: in ~240ms on the
+ * snappy curve, out faster (150ms), never ease-in. Sonner's own sheet is unlayered, so these are
+ * too, with enough specificity to win. Reduced motion: no slide, a plain fade (sonner's default
+ * there is no motion at all, which makes a toast pop in).
+ */
+[data-sonner-toaster] [data-sonner-toast] {
+  transition:
+    transform 240ms var(--ease-snappy),
+    opacity 200ms var(--ease-snappy),
+    height 240ms var(--ease-snappy);
+}
+[data-sonner-toaster] [data-sonner-toast] > * {
+  transition: opacity 150ms var(--ease-snappy);
+}
+[data-sonner-toaster][data-sonner-theme] [data-sonner-toast][data-removed="true"][data-front][data-swipe-out="false"] {
+  transition:
+    transform 150ms var(--ease-snappy),
+    opacity 150ms var(--ease-snappy),
+    height 150ms var(--ease-snappy);
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-sonner-toaster] [data-sonner-toast],
+  [data-sonner-toaster][data-sonner-theme] [data-sonner-toast][data-removed="true"][data-front][data-swipe-out="false"] {
+    transition: opacity 150ms ease !important;
   }
 }
 
