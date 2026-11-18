@@ -211,7 +211,7 @@ export function PayslipView({ payslip, backHref }: { payslip: Payslip; backHref:
         <Section title={t('payroll.payslip.lateness')}>
           <Row
             label={t('payroll.payslip.latenessDetail', {
-              minutes: formatCount(payslip.latenessMinutes),
+              count: formatCount(payslip.latenessMinutes),
               days: formatDayCount(payslip.latenessDays, locale),
             })}
           >

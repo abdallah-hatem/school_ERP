@@ -27,4 +27,6 @@ Who did what, to which record, and when — for the whole system. Spec:
   read "Changed (amount hidden)" for someone who can't see salaries; a payroll run's totals follow
   the Payroll screen (shown to whoever sees the whole school's payroll).
 - **DECIDED** — Every entry reads in English and in Arabic, including entries made before a
-  language switch.
+  language switch. A record's name shows in the screen's language as it was at the time of the
+  change — also for the settings and catalogue changes made before the log kept both names (those
+  read the Arabic name from the change itself; the log is never rewritten).

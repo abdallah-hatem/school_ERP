@@ -83,7 +83,14 @@
     "line": "Level {level} — {action}",
     "priorNone": "No earlier approved penalty for this violation in the repetition window.",
     "priorOne": "1 earlier approved penalty for this violation in the repetition window.",
-    "priorMany": "{count} earlier approved penalties for this violation in the repetition window.",
+    "priorMany": {
+      "zero": "{count} earlier approved penalties for this violation in the repetition window.",
+      "one": "{count} earlier approved penalty for this violation in the repetition window.",
+      "two": "{count} earlier approved penalties for this violation in the repetition window.",
+      "few": "{count} earlier approved penalties for this violation in the repetition window.",
+      "many": "{count} earlier approved penalties for this violation in the repetition window.",
+      "other": "{count} earlier approved penalties for this violation in the repetition window."
+    },
     "failed": "The level couldn't be worked out."
   }
 }
