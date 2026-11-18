@@ -11,6 +11,7 @@ import { DatabaseModule } from './database/database.module';
 import { TransactionsModule } from './database/transactions';
 import { HealthModule } from './health/health.module';
 import { HrModule } from './modules/hr';
+import { AccountingModule } from './modules/accounting';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { HrModule } from './modules/hr';
     HealthModule,
     CoreModule,
     HrModule,
+    AccountingModule,
   ],
   providers: [
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },

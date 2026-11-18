@@ -1,5 +1,10 @@
 # Recent changes
 
+- 2026-11-18 — Accounting (§10, §2, §7, owner): a new **accounting** module owns the payroll tax
+  rule — monthly income-tax slices, the martyrs' fund and the employee's insurance share — since
+  HR payroll ends at the net and salaries are net, grossed up (owner, 2026-11-17). Defaults from
+  the school's previous HR system (GUESS — to confirm with the accountant). Accountant and System
+  admin see and change it. Working each approved month out follows.
 - 2026-11-18 — What each role sees (§2, P4, owner: "I still see salaries, all employees, every
   detail"): stage and team limits and salary visibility are now enforced. A stage head sees only
   their stage's employees, a direct manager only their team — in every list, count, picker,

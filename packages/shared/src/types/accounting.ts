@@ -11,3 +11,13 @@ export interface TaxRule {
   martyrPercent: number;
   insurancePercent: number;
 }
+
+/** `GET /accounting/settings`. */
+export interface AccountingSettings {
+  payroll: TaxRule;
+}
+
+/** `PATCH /accounting/settings` — any subset; `brackets` replaces the whole table. */
+export interface UpdateAccountingSettingsRequest {
+  payroll?: Partial<TaxRule>;
+}
