@@ -182,7 +182,7 @@ export function CatalogueSection() {
   // The search toolbar: shown while loading (disabled, so the skeleton has the loaded layout) and
   // whenever the catalogue has groups.
   const toolbar = (
-    <div role="search" className="flex flex-wrap items-center gap-2.5">
+    <div role="search" data-skeleton-block="search" className="flex flex-wrap items-center gap-2.5">
       <SearchInput
         ref={searchRef}
         aria-label={t('settings.catalogue.search')}
