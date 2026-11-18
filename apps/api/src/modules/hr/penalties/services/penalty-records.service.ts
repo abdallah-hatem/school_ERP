@@ -1,4 +1,5 @@
 import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import { isUUID } from 'class-validator';
 import {
   AuditEntityType,
   ErrorCode,
@@ -314,8 +315,13 @@ export class PenaltyRecordsService {
     return this.repository.findIdsInScope(await this.access.where('hr.penalties.view'));
   }
 
-  /** An employee's records (their History lists these records' entries too, audit log). */
-  idsOfEmployee(employeeId: Uuid): Promise<Uuid[]> {
+  /**
+   * An employee's records (their History lists these records' entries too, audit log). The History
+   * route takes any record id: one that isn't a UUID is no employee of ours, so it has none (and
+   * never reaches the uuid column, which would refuse it).
+   */
+  async idsOfEmployee(employeeId: string): Promise<Uuid[]> {
+    if (!isUUID(employeeId)) return [];
     return this.repository.findIdsOfEmployees({ employeeId });
   }
 

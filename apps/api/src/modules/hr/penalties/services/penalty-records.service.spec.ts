@@ -317,4 +317,12 @@ describe('PenaltyRecordsService — audit entries (§9, T29)', () => {
     await expect(locked.service.cancel('r1', { reason: 'x' }, 'u1')).rejects.toThrow('locked');
     expect(locked.audit.record).not.toHaveBeenCalled();
   });
+
+  it('an employee History asked for a non-UUID record id has no penalties (no query on the uuid column)', async () => {
+    const findIdsOfEmployees = jest.fn().mockResolvedValue(['p1']);
+    const { service } = makeService({ findIdsOfEmployees });
+    await expect(service.idsOfEmployee('act-123')).resolves.toEqual([]);
+    expect(findIdsOfEmployees).not.toHaveBeenCalled();
+    await expect(service.idsOfEmployee('33333333-3333-4333-8333-333333333333')).resolves.toEqual(['p1']);
+  });
 });
