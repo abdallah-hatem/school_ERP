@@ -35,17 +35,18 @@ model User {
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
-  linkedEmployee      Employee?            @relation("UserLinkedEmployee", fields: [employeeId], references: [id], onDelete: SetNull)
+  linkedEmployee      Employee?                @relation("UserLinkedEmployee", fields: [employeeId], references: [id], onDelete: SetNull)
   roles               UserRoleAssignment[]
   refreshTokens       RefreshToken[]
   settingsUpdated     SchoolSetting[]
-  penaltiesCreated    PenaltyRecord[]      @relation("PenaltyCreatedBy")
-  penaltiesApproved   PenaltyRecord[]      @relation("PenaltyApprovedBy")
-  penaltiesCancelled  PenaltyRecord[]      @relation("PenaltyCancelledBy")
+  penaltiesCreated    PenaltyRecord[]          @relation("PenaltyCreatedBy")
+  penaltiesApproved   PenaltyRecord[]          @relation("PenaltyApprovedBy")
+  penaltiesCancelled  PenaltyRecord[]          @relation("PenaltyCancelledBy")
   latenessUpdated     LatenessEntry[]
-  payrollRunsCreated  PayrollRun[]         @relation("PayrollRunCreatedBy")
-  payrollRunsApproved PayrollRun[]         @relation("PayrollRunApprovedBy")
+  payrollRunsCreated  PayrollRun[]             @relation("PayrollRunCreatedBy")
+  payrollRunsApproved PayrollRun[]             @relation("PayrollRunApprovedBy")
   adjustmentsCreated  PayrollAdjustment[]
+  notificationPrefs   NotificationPreference[]
 
   @@index([isActive])
   @@map("users")
@@ -191,6 +192,111 @@ model OutboxDelivery {
   @@unique([eventId, listener])
   @@index([status, nextAttemptAt])
   @@map("outbox_deliveries")
+}
+
+/// One notification in a person's bell (core/notifications, §11): one or more items of one type
+/// (N17 — items join the recipient's open, unread notification of the same type and group key).
+/// `recipient_kind` + `recipient_id` (N6): `user` now, a parent or student `contact` later — no
+/// foreign key, so the shape stays. `resolved_at` is set when its last open item is resolved.
+/// Deleted by the nightly `core.notifications.purge` (read > 90 days, resolved > 30, any > 365).
+model Notification {
+  id            String                 @id @default(uuid()) @db.Uuid
+  type          String
+  recipientKind String                 @map("recipient_kind")
+  recipientId   String                 @map("recipient_id") @db.Uuid
+  /// The type's grouping key (the school day by default): items of one key join one notification.
+  groupKey      String                 @map("group_key")
+  /// Who caused the first item; null for a reminder.
+  actorId       String?                @map("actor_id") @db.Uuid
+  createdAt     DateTime               @default(now()) @map("created_at")
+  /// When its latest item arrived (the list's order; "mark all read" up to a moment).
+  updatedAt     DateTime               @map("updated_at")
+  readAt        DateTime?              @map("read_at")
+  resolvedAt    DateTime?              @map("resolved_at")
+  items         NotificationItem[]
+  deliveries    NotificationDelivery[]
+
+  @@index([recipientKind, recipientId, updatedAt(sort: Desc)])
+  @@index([recipientKind, recipientId, readAt, resolvedAt])
+  @@index([recipientKind, recipientId, type, groupKey])
+  @@index([readAt])
+  @@index([resolvedAt])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+/// One thing a notification is about (a penalty, a contract, a month). `recipient_*` and `type` are
+/// copied from the notification for the dedupe index (N9): a second send of the same item to the
+/// same person is a no-op. `params` holds the sentence's values (names as `{ en, ar }`), never a
+/// sentence (N3). `employee_id` is the employee it concerns, for the scope re-check (N11).
+model NotificationItem {
+  id             String       @id @default(uuid()) @db.Uuid
+  notificationId String       @map("notification_id") @db.Uuid
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  recipientKind  String       @map("recipient_kind")
+  recipientId    String       @map("recipient_id") @db.Uuid
+  type           String
+  entityType     String       @map("entity_type")
+  entityId       String       @map("entity_id")
+  employeeId     String?      @map("employee_id") @db.Uuid
+  params         Json         @default("{}")
+  dedupeKey      String       @map("dedupe_key")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  resolvedAt     DateTime?    @map("resolved_at")
+  /// Who resolved it, as their name was then: `{ en, ar }`; null for no person (a job).
+  resolvedByName Json?        @map("resolved_by_name")
+  /// `approved` | `cancelled` | `done`.
+  resolution     String?
+
+  @@unique([recipientKind, recipientId, type, dedupeKey])
+  @@index([type, entityType, entityId, resolvedAt])
+  @@index([notificationId])
+  @@map("notification_items")
+}
+
+/// One notification per channel enabled for the person when it was made (N8). `in_app` is `sent`
+/// at once; later channels pick `pending` rows up after the commit. `status`: `pending` | `sent` |
+/// `failed` | `skipped`.
+model NotificationDelivery {
+  id             String       @id @default(uuid()) @db.Uuid
+  notificationId String       @map("notification_id") @db.Uuid
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  channel        String
+  status         String
+  attempts       Int          @default(0)
+  lastError      String?      @map("last_error")
+  sentAt         DateTime?    @map("sent_at")
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  @@unique([notificationId, channel])
+  @@index([channel, status])
+  @@map("notification_deliveries")
+}
+
+/// The school's default per type and channel (Settings → Notifications). No row: the type's own default.
+model NotificationDefault {
+  type        String
+  channel     String
+  enabled     Boolean
+  updatedById String?  @map("updated_by_id") @db.Uuid
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@id([type, channel])
+  @@map("notification_defaults")
+}
+
+/// A person's own choice per type and channel (My account → Notifications). No row: the school's default.
+model NotificationPreference {
+  userId    String   @map("user_id") @db.Uuid
+  type      String
+  channel   String
+  enabled   Boolean
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, type, channel])
+  @@map("notification_preferences")
 }
 
 /// Named monotonic counters (e.g. 'employee_code'). Incremented atomically; values never reused.

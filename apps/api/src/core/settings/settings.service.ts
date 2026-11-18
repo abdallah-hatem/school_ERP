@@ -6,6 +6,7 @@ import {
   ErrorCode,
   LOGO_UPLOAD,
   type AuditAction,
+  type AuditChange,
   type PublicSchoolSettings,
   type SchoolSettings,
   type SettingKey,
@@ -35,19 +36,24 @@ export type { UploadedFileLike };
 const SCHOOL_FIELDS = Object.keys(SCHOOL_FIELD_KEYS) as (keyof SchoolSettings)[];
 const SCHOOL_KEYS = Object.values(SCHOOL_FIELD_KEYS);
 
-/** Who owns the keys a `setValues` call writes: core's school settings, HR's or accounting's rules. */
-export type SettingsOwner = Extract<SettingsChangeScope, 'school' | 'hr' | 'accounting'>;
+/**
+ * Who owns the keys a `setValues` call writes: core's school settings, HR's or accounting's rules,
+ * or core/notifications' retention (Settings → Notifications).
+ */
+export type SettingsOwner = Extract<SettingsChangeScope, 'school' | 'hr' | 'accounting' | 'notifications'>;
 
 const OWNER_RECORD = {
   school: { type: AuditEntityType.SCHOOL_SETTINGS, id: 'school', label: '' },
   hr: { type: AuditEntityType.HR_SETTINGS, id: 'hr', label: '' },
   accounting: { type: AuditEntityType.ACCOUNTING_SETTINGS, id: 'accounting', label: '' },
+  notifications: { type: AuditEntityType.NOTIFICATION_SETTINGS, id: 'notifications', label: '' },
 } as const;
 
 const OWNER_ACTION: Record<SettingsOwner, AuditAction> = {
   school: 'core.settings.update',
   hr: 'hr.settings.update',
   accounting: 'accounting.settings.update',
+  notifications: 'core.notification_settings.update',
 };
 
 /**
@@ -79,13 +85,17 @@ export class SettingsService {
    * Writes the keys whose value changed and records one audit entry listing them, all in one
    * transaction (joining the caller's, if any). After the commit, emits one `settings.changed`
    * per changed key. Validate before calling. Returns what changed.
+   *
+   * `alsoChanged`: lines the owner changed in its own tables in the same save, listed in the same
+   * entry (Settings → Notifications: the school's default per type next to the retention keys).
    */
   setValues(
     owner: SettingsOwner,
     values: Partial<SettingValueMap>,
     changedById: string | null,
+    alsoChanged: readonly AuditChange[] = [],
   ): Promise<SettingKey[]> {
-    return this.writeValues(OWNER_ACTION[owner], owner, values, changedById);
+    return this.writeValues(OWNER_ACTION[owner], owner, values, changedById, alsoChanged);
   }
 
   private async writeValues(
@@ -93,6 +103,7 @@ export class SettingsService {
     owner: SettingsOwner,
     values: Partial<SettingValueMap>,
     changedById: string | null,
+    alsoChanged: readonly AuditChange[] = [],
   ): Promise<SettingKey[]> {
     const keys = Object.keys(values) as SettingKey[];
     // Joins the caller's transaction, or (the seed) opens one with an after-commit queue.
@@ -108,7 +119,10 @@ export class SettingsService {
       await this.audit.record({
         action,
         entity: OWNER_RECORD[owner],
-        changes: changed.map((d) => ({ field: d.key, before: d.oldValue, after: d.newValue })),
+        changes: [
+          ...changed.map((d) => ({ field: d.key, before: d.oldValue, after: d.newValue })),
+          ...alsoChanged,
+        ],
       });
       const changedAt = new Date().toISOString();
       for (const { key, oldValue, newValue } of changed) {

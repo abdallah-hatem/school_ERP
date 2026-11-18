@@ -196,7 +196,7 @@ How a write gets its transaction:
   sign-in and lockout entries, whose callers hold no request transaction).
 - **`txHost.tx`** — the repositories that join: audit entries, refresh tokens, grants, roles,
   stages, school settings, users, employees, the HR lists, payroll runs, penalties, lateness,
-  accounting, the outbox. Plain-client writes (`DatabaseService`) are listed with their reasons in
+  accounting, the outbox, notifications. Plain-client writes (`DatabaseService`) are listed with their reasons in
   `apps/api/src/database/connections.spec.ts`; read-only repositories still on it
   (`apps/api/src/modules/hr/month-lock/repositories/month-lock.repository.ts`) run outside any transaction.
 
@@ -213,6 +213,9 @@ How a write gets its transaction:
 | `apps/api/src/core/auth/services/auth.service.ts` | failed sign-in (wrong password, or locked) | `Propagation.RequiresNew` (no outer transaction, so one connection) | the `core.auth.sign_in_failed` entry — its own transaction so it outlives the 401 / 429 | — |
 | `apps/api/src/core/sign-in-limit/sign-in-limit.service.ts` | `recordFailure` when the attempt reaches the limit (sign-in and both password-change paths) | `Propagation.RequiresNew` (no outer transaction on either caller); a failure is logged, never turns the 401 into a 500 | the `core.auth.locked_out` entry | — |
 | `apps/api/src/core/sign-in-limit/repositories/login-attempts.repository.ts` | count a wrong password, clear, unlock | the count: plain client, one atomic upsert, never in a transaction; clear / unlock join the caller's (`txHost.tx`) | the `login_attempts` row | — |
+| `apps/api/src/core/notifications/notifications.service.ts` | `notify()` / `resolve()` (modules send through them; no module calls them yet — N2 / N3) | **joins the caller's** transaction and throws outside one (`NotificationOutsideTransactionError`, like `audit.record()`): a module's own change, or an outbox listener's delivery transaction; a job opens one with `afterCommit.inTransaction`. Opens none itself, so never a second connection | per recipient: a transaction-scoped advisory lock on the recipient's group (`pg_advisory_xact_lock`, `apps/api/src/core/notifications/repositories/notifications.repository.ts`), then the item (`ON CONFLICT DO NOTHING` on the dedupe key), a new notification and its `in_app` delivery when no open group exists; `resolve`: the items and the notifications left with none open | — (outside channels later send their `pending` deliveries from a job after the commit) |
+| `apps/api/src/core/notifications/notification-preferences.service.ts` | `PUT /notifications/preferences`, `PUT /settings/notifications` | request transaction (`@Audited`); the settings save goes through `SettingsService.setValues` (owner `notifications`), which joins it | the personal rows / the school defaults + the retention keys + one `core.notification_preferences.update` / `core.notification_settings.update` entry | `core.settings.changed` per changed retention key |
+| `apps/api/src/core/notifications/notifications-purge.job.ts` | `core.notifications.purge` (02:30) | under the job's advisory lock; one `deleteMany` on `txHost.tx` (no transaction of its own) | — | — |
 | `apps/api/src/core/jobs/repositories/job-runs.repository.ts` | `withLock` (every scheduled job run with `lock` on, via `JobRunner` in `apps/api/src/core/jobs/job-runner.service.ts`) | `db.$transaction` on the plain client (outside any request), holding `pg_try_advisory_xact_lock(hashtextextended('job:<name>', 0))` — released when the transaction ends, also if the process dies. `lock: false` jobs (the outbox's) run without it | the job's own work (e.g. `login-attempts.cleanup`) runs inside it; `job_runs` is written afterwards by `record`, outside it | — |
 | `apps/api/src/core/auth/repositories/refresh-tokens.repository.ts` | token refresh (`rotate`) | `databaseService.$transaction` (not CLS; `@NotAudited`, deliberately — see Known gaps) | the new token + marking the old one used | — |
 | `apps/api/src/core/users/user-accounts.service.ts` | create, update, deactivate, reactivate, unlock sign-in, temporary password | request transaction (`@Audited`) | the user + roles + the `core.user.*` entry (unlock: deletes the `login_attempts` row) | `core.user.sessions_ended` (deactivate, temporary password) |
@@ -246,7 +249,8 @@ risk on `POST /account/password`, and the `RequiresNew` rule (now a scan).
 1. **Events nobody listens to yet:** `hr.employee.hired`, `hr.employee.updated`,
    `hr.employee.deactivated`, `core.settings.changed`. Harmless (a must-deliver one without a
    listener is written delivered at once). Owner: whoever builds the first consumer —
-   notifications (Abdallah, next), academics (unassign on deactivation), a settings cache.
+   notifications (the core mechanism landed in N1; HR's notifications, N2 / N3, call `notify()` /
+   `resolve()` in HR's own transactions, so HR's own events need no listener for them), academics (unassign on deactivation), a settings cache.
 2. **Token refresh uses `databaseService.$transaction`**, outside the CLS transaction — deliberate:
    a refresh is not an audited action (D11) and holds no request transaction, so one connection.
    Owner: Abdallah, only if a refresh must ever be audited (then `txHost.withTransaction`).
@@ -254,8 +258,10 @@ risk on `POST /account/password`, and the `RequiresNew` rule (now a scan).
    deleted after the commit; the logo never did, and the rollback fix didn't change that). Owner:
    Abdallah — delete it after the commit like a photo, or sweep unreferenced files, if disk use
    ever matters.
-4. **A dead delivery only logs.** The system notification to admins comes with notifications
-   (Abdallah), and there is no screen for `GET /outbox/deliveries` yet (an admin uses the API).
+4. **A dead delivery only logs.** The notifications mechanism exists now (core/notifications, N1),
+   but no type tells admins about a dead delivery yet (a `core.*` type needs its texts and a
+   decision on who receives it), and there is no screen for `GET /outbox/deliveries` yet (an admin
+   uses the API). Owner: Abdallah.
 5. **A listener added later doesn't get old events**: delivery rows are made per listener known when
    the event is published. A renamed outbox listener strands its pending rows (they fail as "no
    listener", then go dead, and can be retried after a fix). Owner: the listener's author — keep

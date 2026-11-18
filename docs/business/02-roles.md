@@ -77,3 +77,6 @@
 - **Planned** — Legal affairs, medical clinic and security desk roles, with their modules.
 - **DECIDED** — Viewing the activity log is its own permission (§9): System admin, HR manager and
   principal hold it.
+- **DECIDED** (owner, 2026-11-18) — Settings → Notifications (§11) has two permissions: **View
+  notification settings** (System admin, HR manager) and **Manage notification settings** (System
+  admin). Everyone sees and manages only their own notifications and their own preferences.

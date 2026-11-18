@@ -28,7 +28,9 @@
     "payroll_run": "Payroll run",
     "accounting_settings": "Accounting rules",
     "accounting_payroll": "Payroll taxes",
-    "outbox_delivery": "Event delivery"
+    "outbox_delivery": "Event delivery",
+    "notification_preferences": "Notification preferences",
+    "notification_settings": "Notification settings"
   },
   "actions": {
     "core": {
@@ -62,6 +64,12 @@
       },
       "outbox": {
         "retry": "Retried the event delivery {entity}"
+      },
+      "notification_preferences": {
+        "update": "Changed the notification preferences of {entity}"
+      },
+      "notification_settings": {
+        "update": "Changed the notification settings"
       }
     },
     "hr": {
@@ -218,6 +226,13 @@
         "taxBrackets": "Income-tax slices",
         "martyrPercent": "Martyrs' fund rate",
         "insurancePercent": "Employee insurance share"
+      }
+    },
+    "notifications": {
+      "retention": {
+        "readDays": "Keep read notifications (days)",
+        "resolvedDays": "Keep done approvals (days)",
+        "maxDays": "Keep any notification at most (days)"
       }
     }
   },

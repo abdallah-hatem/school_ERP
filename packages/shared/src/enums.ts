@@ -144,6 +144,7 @@ export const SettingScope = {
   ACCOUNTING: 'ACCOUNTING',
   LISTS: 'LISTS',
   CATALOGUE: 'CATALOGUE',
+  NOTIFICATIONS: 'NOTIFICATIONS',
 } as const;
 export type SettingScope = (typeof SettingScope)[keyof typeof SettingScope];
 export const SETTING_SCOPES = values(SettingScope);

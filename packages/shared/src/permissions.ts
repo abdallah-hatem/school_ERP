@@ -42,6 +42,9 @@ export const PERMISSIONS = {
   'core.roles.manage': core,
   // core — event deliveries (the outbox): see the dead ones and retry them
   'core.outbox.manage': core,
+  // core — notifications (§11): the school's defaults per type and how long notifications are kept
+  'core.notifications.view': core,
+  'core.notifications.manage': core,
 
   // hr — dashboard
   'hr.dashboard.view': hr,
