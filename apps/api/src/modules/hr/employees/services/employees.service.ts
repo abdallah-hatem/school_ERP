@@ -10,6 +10,7 @@ import {
   AuditEntityType,
   applyInsuranceStatus,
   contractYearFor,
+  defaultProbationEnd,
   Employee,
   EMPLOYEE_PHOTO_UPLOAD,
   EMPLOYEE_SALARY_FIELDS,
@@ -19,6 +20,7 @@ import {
   ErrorCode,
   HrEvent,
   InsuranceStatus,
+  isProbationEndValid,
   NamedRef,
   oneYearContractEnd,
   Paginated,
@@ -38,6 +40,7 @@ import { checkImageUpload, FileStorageService, type UploadedFileLike } from '../
 import { fromIsoDate, todayIsoDate, toIsoDate } from '../../../../common/utils/dates.util';
 import { DepartmentsService } from '../../lists/services/departments.service';
 import { JobTitlesService } from '../../lists/services/job-titles.service';
+import { HrSettingsService } from '../../settings/hr-settings.service';
 import { CreateEmployeeDto, ListEmployeesQueryDto, UpdateEmployeeDto } from '../dto/employee.dto';
 import {
   EmployeeDetailRow,
@@ -68,7 +71,7 @@ const REQUIRED_FIELDS = [
   'insuranceStatus',
 ] as const satisfies readonly (keyof UpdateEmployeeDto)[];
 
-const DATE_FIELDS = ['dateOfBirth', 'hireDate', 'contractStart', 'contractEnd'] as const;
+const DATE_FIELDS = ['dateOfBirth', 'hireDate', 'contractStart', 'contractEnd', 'probationEnd'] as const;
 
 /** Folder under UPLOADS_DIR (and `/files/…`) holding employee photos — signed-in only. */
 export const EMPLOYEE_PHOTO_FOLDER = 'employee-photos';
@@ -109,6 +112,7 @@ export function toEmployee(row: EmployeeDetailRow, salaryVisible: boolean): Empl
     hireDate: toIsoDate(row.hireDate),
     contractStart: toIsoDate(row.contractStart),
     contractEnd: toIsoDate(row.contractEnd),
+    probationEnd: row.probationEnd ? toIsoDate(row.probationEnd) : null,
     insuranceRegistrationDate: row.insuranceRegistrationDate
       ? toIsoDate(row.insuranceRegistrationDate)
       : null,
@@ -134,6 +138,7 @@ export class EmployeesService {
     private readonly access: HrAccessService,
     private readonly audit: AuditService,
     private readonly afterCommit: AfterCommit,
+    private readonly hrSettings: HrSettingsService,
   ) {}
 
   /** The employees `hr.employees.view` covers for the user (R5), salary per row (R7). */
@@ -299,6 +304,7 @@ export class EmployeesService {
         await this.assertManager(null, dto.managerId, true);
       }
       const contract = this.resolveContract(dto.contractStart, dto.contractEnd);
+      const probationEnd = await this.resolveProbationEnd(dto.hireDate, dto.probationEnd);
 
       const row = await this.repository.createWithCode({
         nameEn: dto.nameEn,
@@ -320,6 +326,7 @@ export class EmployeesService {
         fingerprintId: dto.fingerprintId ?? null,
         contractStart: fromIsoDate(contract.start),
         contractEnd: fromIsoDate(contract.end),
+        probationEnd: probationEnd ? fromIsoDate(probationEnd) : null,
         usesBus: dto.usesBus ?? false,
         ...this.insuranceData(insurance),
         bankName: dto.bankName ?? null,
@@ -378,6 +385,17 @@ export class EmployeesService {
         this.assertContractOrder(
           dto.contractStart ?? toIsoDate(current.contractStart),
           dto.contractEnd ?? toIsoDate(current.contractEnd),
+        );
+      }
+      // §3: a changed hire date never moves the probation end, but both must stay in order.
+      if (dto.hireDate !== undefined || dto.probationEnd !== undefined) {
+        this.assertProbationOrder(
+          dto.hireDate ?? toIsoDate(current.hireDate),
+          dto.probationEnd !== undefined
+            ? dto.probationEnd
+            : current.probationEnd
+              ? toIsoDate(current.probationEnd)
+              : null,
         );
       }
 
@@ -651,6 +669,20 @@ export class EmployeesService {
 
   private assertContractOrder(start: string, end: string): void {
     if (end <= start) throw new BadRequestException('contractEnd must be after contractStart');
+  }
+
+  /**
+   * A new employee's probation end (§3, N0): the one given, else hire date + the school's default
+   * probation length (`hr.employees.defaultProbationMonths`; 0 → none). On or after the hire date.
+   */
+  private async resolveProbationEnd(hireDate: string, given?: string | null): Promise<string | null> {
+    const end = given ?? defaultProbationEnd(hireDate, await this.hrSettings.defaultProbationMonths());
+    this.assertProbationOrder(hireDate, end);
+    return end;
+  }
+
+  private assertProbationOrder(hireDate: string, probationEnd: string | null): void {
+    if (!isProbationEndValid(hireDate, probationEnd)) throw bad(ErrorCode.PROBATION_BEFORE_HIRE);
   }
 
   /** `hr.employee.updated` after the commit — only when a field really changed (fire-and-forget). */

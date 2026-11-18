@@ -224,6 +224,15 @@ describe('P4 — scopes and salary in HR (e2e)', () => {
       await asUser(users.stageHead, () => http(app).get(`/hr/employees/${ids.p1}`).expect(200));
     });
 
+    it('N0 edge 9 — the probation end shows on their stage’s profile, without salaries (not salary-type)', async () => {
+      await asUser(users.stageHead, async () => {
+        const employee = (await http(app).get(`/hr/employees/${ids.p1}`).expect(200)).body.data as Employee;
+        expect(employee.salaryVisible).toBe(false);
+        // Hired 1 Sep 2020 with no date given → filled from the default 3 months.
+        expect(employee.probationEnd).toBe('2020-11-30');
+      });
+    });
+
     it('edge case 3 — an employee of another stage → 404', async () => {
       await asUser(users.stageHead, () => http(app).get(`/hr/employees/${ids.k1}`).expect(404));
     });
@@ -270,6 +279,15 @@ describe('P4 — scopes and salary in HR (e2e)', () => {
         await http(app).get(`/hr/employees/${ids.k1}`).expect(200);
         await http(app).get(`/hr/employees/${ids.k2}`).expect(404);
         await http(app).get(`/hr/employees/${ids.boss}`).expect(404);
+      });
+    });
+
+    it('N0 edge 9 — outside the team the probation end is as absent as the rest: 404; inside it shows', async () => {
+      await asUser(users.directManager, async () => {
+        const res = await http(app).get(`/hr/employees/${ids.k2}`).expect(404);
+        expect(JSON.stringify(res.body)).not.toContain('probationEnd');
+        const inside = (await http(app).get(`/hr/employees/${ids.k1}`).expect(200)).body.data as Employee;
+        expect(inside).toHaveProperty('probationEnd');
       });
     });
   });
@@ -375,7 +393,7 @@ describe('P4 — scopes and salary in HR (e2e)', () => {
         await asUser(who, async () => {
           await http(app).get('/hr/settings').expect(403);
           const run = (await http(app).get(`/hr/payroll-runs/${runId}`).expect(200)).body.data as PayrollRun;
-          expect(run.rules).toEqual(settings);
+          expect(run.rules).toEqual({ lateness: settings.lateness, payroll: settings.payroll, penalties: settings.penalties });
           expect(Object.keys(run.rules).sort()).toEqual(['lateness', 'payroll', 'penalties']);
           expect(Object.keys(run.rules.payroll).sort()).toEqual(['dayDivisor', 'partTime']);
           expect(Object.keys(run.rules.penalties)).toEqual(['repetitionWindow']);

@@ -139,6 +139,7 @@
     "fingerprintId": "Fingerprint ID",
     "contractStart": "Contract start",
     "contractEnd": "Contract end",
+    "probationEnd": "Probation end",
     "usesBus": "Uses the bus",
     "photoUrl": "Photo",
     "insuranceStatus": "Insurance status",
@@ -197,6 +198,9 @@
       },
       "penalties": {
         "repetitionWindow": "Penalty repetition window"
+      },
+      "employees": {
+        "defaultProbationMonths": "Default probation length"
       },
       "departments": "Department",
       "jobTitles": "Job title",

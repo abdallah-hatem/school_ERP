@@ -388,6 +388,8 @@ model Employee {
   fingerprintId                String?         @unique @map("fingerprint_id")
   contractStart                DateTime        @map("contract_start") @db.Date
   contractEnd                  DateTime        @map("contract_end") @db.Date
+  /// §3 (N0): hire date + the default probation length unless given; null = no probation.
+  probationEnd                 DateTime?       @map("probation_end") @db.Date
   usesBus                      Boolean         @default(false) @map("uses_bus")
   /// `/files/employee-photos/<name>`, signed-in only. Null shows the silhouette.
   photoUrl                     String?         @map("photo_url")

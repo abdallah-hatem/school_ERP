@@ -9,6 +9,7 @@ import { DepartmentsService } from '../../lists/services/departments.service';
 import { JobTitlesService } from '../../lists/services/job-titles.service';
 import type { CreateEmployeeDto } from '../dto/employee.dto';
 import { EmployeeDetailRow, EmployeesRepository } from '../repositories/employees.repository';
+import type { HrSettingsService } from '../../settings/hr-settings.service';
 import { EmployeesService } from './employees.service';
 import { fakeAccess } from '../../access/hr-access.testing';
 import type { HrAccessService } from '../../access/hr-access.service';
@@ -38,6 +39,7 @@ const row = (over: Partial<EmployeeDetailRow> = {}): EmployeeDetailRow => ({
   fingerprintId: null,
   contractStart: d('2025-06-01'),
   contractEnd: d('2026-05-31'),
+  probationEnd: d('2024-03-31'),
   usesBus: false,
   photoUrl: null,
   insuranceStatus: 'NOT_INSURED',
@@ -75,7 +77,11 @@ const dto = (over: Partial<CreateEmployeeDto> = {}): CreateEmployeeDto => ({
   ...over,
 });
 
-function makeService(repo: Record<string, jest.Mock> = {}, access: HrAccessService = fakeAccess()) {
+function makeService(
+  repo: Record<string, jest.Mock> = {},
+  access: HrAccessService = fakeAccess(),
+  probationMonths = 3,
+) {
   const repository = {
     findDetail: jest.fn().mockResolvedValue(row()),
     findScopeFields: jest.fn().mockResolvedValue({ id: 'e1', stageId: 's1', managerId: null }),
@@ -123,6 +129,7 @@ function makeService(repo: Record<string, jest.Mock> = {}, access: HrAccessServi
     access,
     audit as unknown as AuditService,
     afterCommit as unknown as AfterCommit,
+    { defaultProbationMonths: jest.fn().mockResolvedValue(probationMonths) } as unknown as HrSettingsService,
   );
   return { service, repository, events, files, audit, afterCommit };
 }
@@ -592,5 +599,105 @@ describe('EmployeesService — audit (§9, T28)', () => {
     expect(entry?.after.photoUrl).toBe('/files/employee-photos/e1-new.png');
     expect(afterCommit.run).toHaveBeenCalledTimes(1);
     expect(files.remove).toHaveBeenCalledWith('/files/employee-photos/old.png');
+  });
+});
+
+describe('EmployeesService — probation end (§3, N0)', () => {
+  type Recorded = { action: string; before: Record<string, unknown> | null; after: Record<string, unknown> };
+  const recorded = (audit: { record: jest.Mock }) => audit.record.mock.calls.map(([input]) => input as Recorded);
+  /** The fields an entry lists: those whose snapshot values differ (what core's diff keeps). */
+  const changed = (e: Recorded) =>
+    Object.keys(e.after).filter((k) => JSON.stringify(e.before?.[k]) !== JSON.stringify(e.after[k]));
+  const written = (repository: { createWithCode: jest.Mock }, call = 0) =>
+    (repository.createWithCode.mock.calls[call] as [{ probationEnd: Date | null }])[0];
+
+  it('edge 1 — hired 1 Sep with no probation end → saved as 30 Nov (default 3 months)', async () => {
+    const { service, repository } = makeService();
+    await service.create(dto({ hireDate: '2026-09-01' }));
+    expect(written(repository).probationEnd).toEqual(d('2026-11-30'));
+  });
+
+  it('edge 1 — an explicit null on create is filled the same way', async () => {
+    const { service, repository } = makeService();
+    await service.create(dto({ hireDate: '2026-09-01', probationEnd: null }));
+    expect(written(repository).probationEnd).toEqual(d('2026-11-30'));
+  });
+
+  it('edge 2 — a given probation end is kept as given', async () => {
+    const { service, repository } = makeService();
+    await service.create(dto({ hireDate: '2026-09-01', probationEnd: '2026-10-15' }));
+    expect(written(repository).probationEnd).toEqual(d('2026-10-15'));
+  });
+
+  it('edge 3 / 7 — the length is read from the setting at create: 0 leaves it empty, 6 gives 28 Feb', async () => {
+    const none = makeService({}, fakeAccess(), 0);
+    await none.service.create(dto({ hireDate: '2026-09-01' }));
+    expect(written(none.repository).probationEnd).toBeNull();
+    const six = makeService({}, fakeAccess(), 6);
+    await six.service.create(dto({ hireDate: '2026-09-01' }));
+    expect(written(six.repository).probationEnd).toEqual(d('2027-02-28'));
+  });
+
+  it('edge 4 — before the hire date → 400 PROBATION_BEFORE_HIRE, nothing saved; the hire date itself is fine', async () => {
+    const { service, repository } = makeService();
+    await expect(service.create(dto({ hireDate: '2026-09-01', probationEnd: '2026-08-31' }))).rejects.toMatchObject({
+      status: 400,
+      code: ErrorCode.PROBATION_BEFORE_HIRE,
+    });
+    await expect(service.update('e1', { probationEnd: '2023-12-31' })).rejects.toMatchObject({
+      code: ErrorCode.PROBATION_BEFORE_HIRE,
+    });
+    expect(repository.createWithCode).not.toHaveBeenCalled();
+    expect(repository.updateEmployee).not.toHaveBeenCalled();
+    await service.create(dto({ hireDate: '2026-09-01', probationEnd: '2026-09-01' }));
+    expect(written(repository).probationEnd).toEqual(d('2026-09-01'));
+  });
+
+  it('edge 5 — an edit can clear it (no probation)', async () => {
+    const { service, repository } = makeService();
+    await service.update('e1', { probationEnd: null });
+    expect(repository.updateEmployee.mock.calls[0][1]).toMatchObject({ probationEnd: null });
+  });
+
+  it("edge 6 — an edited hire date doesn't move it; one moved past it is refused", async () => {
+    const { service, repository } = makeService();
+    await service.update('e1', { hireDate: '2024-02-01' });
+    expect(repository.updateEmployee.mock.calls[0][1]).not.toHaveProperty('probationEnd');
+    await expect(service.update('e1', { hireDate: '2024-04-01' })).rejects.toMatchObject({
+      code: ErrorCode.PROBATION_BEFORE_HIRE,
+    });
+    // Both sent together are checked together.
+    await service.update('e1', { hireDate: '2024-04-01', probationEnd: '2024-06-30' });
+    expect(repository.updateEmployee.mock.calls[1][1]).toMatchObject({ probationEnd: d('2024-06-30') });
+  });
+
+  it('edge 8 — an edit changing only the probation end lists only that field, before and after', async () => {
+    const { service, audit } = makeService({
+      updateEmployee: jest.fn().mockResolvedValue(row({ probationEnd: d('2024-05-31') })),
+    });
+    await service.update('e1', { probationEnd: '2024-05-31' });
+    const [entry] = recorded(audit);
+    expect(entry?.action).toBe('hr.employee.update');
+    expect(changed(entry)).toEqual(['probationEnd']);
+    expect(entry?.before?.probationEnd).toBe('2024-03-31');
+    expect(entry?.after.probationEnd).toBe('2024-05-31');
+  });
+
+  it("edge 8 — an edit that doesn't change it doesn't list it; create records it", async () => {
+    const { service, audit } = makeService({
+      updateEmployee: jest.fn().mockResolvedValue(row({ grade: 'B' })),
+    });
+    await service.update('e1', { grade: 'B' });
+    expect(changed(recorded(audit)[0])).toEqual(['grade']);
+    const created = makeService();
+    await created.service.create(dto());
+    expect(recorded(created.audit)[0]?.after).toHaveProperty('probationEnd', '2024-03-31');
+  });
+
+  it('the record carries it as YYYY-MM-DD, or null', async () => {
+    const { service } = makeService({ findDetail: jest.fn().mockResolvedValue(row({ probationEnd: null })) });
+    expect((await service.get('e1')).probationEnd).toBeNull();
+    const dated = makeService();
+    expect((await dated.service.get('e1')).probationEnd).toBe('2024-03-31');
   });
 });

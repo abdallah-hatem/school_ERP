@@ -1,6 +1,6 @@
 'use client';
 
-import { HR_SETTINGS_DEFAULTS, type HrSettings, type IsoDateTime } from '@school-erp/shared';
+import { HR_SETTINGS_DEFAULTS, type IsoDateTime, type PayrollRunRules } from '@school-erp/shared';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { Can } from '@/core/auth';
@@ -33,7 +33,7 @@ export function RulesPanel({
   approvedAt = null,
 }: {
   /** `null` when the run came without them; `undefined` while the run loads (bars in their place). */
-  rules: HrSettings | null | undefined;
+  rules: PayrollRunRules | null | undefined;
   settingsHref: string;
   /** Set for an APPROVED run. */
   approvedAt?: IsoDateTime | null;

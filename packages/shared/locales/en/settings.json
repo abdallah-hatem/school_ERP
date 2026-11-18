@@ -42,7 +42,8 @@
     "discard": "Discard changes"
   },
   "units": {
-    "minutes": "min"
+    "minutes": "min",
+    "months": "months"
   },
   "names": {
     "name": "Name",
@@ -67,7 +68,8 @@
     "stepsMin": "Keep at least one hour step.",
     "rate": "Enter a rate from 0 to 99.99, with up to 2 decimals.",
     "bracketWidth": "Enter an amount above 0.",
-    "bracketPlusFund": "This rate plus the martyrs' fund must stay under 100%."
+    "bracketPlusFund": "This rate plus the martyrs' fund must stay under 100%.",
+    "probationMonths": "Enter whole months from 0 to 6."
   },
   "school": {
     "nameEn": "School name in English",
@@ -186,6 +188,13 @@
       "title": "Penalty repeats",
       "description": "How far back the system looks when it counts a repeated violation.",
       "window": "Repetition window"
+    },
+    "employees": {
+      "title": "Employees",
+      "description": "What a new employee’s record starts with.",
+      "probation": "Default probation length",
+      "probationHint": "A new employee’s probation ends this many months after their hire date. 0 means no probation. Existing employees keep their dates.",
+      "probationPlaceholder": "3"
     }
   },
   "catalogue": {

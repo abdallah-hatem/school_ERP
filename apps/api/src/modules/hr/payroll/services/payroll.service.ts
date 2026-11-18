@@ -18,6 +18,7 @@ import {
   type PayrollTotals,
   type EmployeePayrollLine,
   type HrSettings,
+  type PayrollRunRules,
   type InsuranceStatus,
   type Payslip,
   type Uuid,
@@ -60,7 +61,7 @@ import {
  * The rules a run's panel shows, field by field: exactly the HR rules (§5, §6, §7), so a setting
  * added to `HrSettings` later never reaches run viewers without being chosen here.
  */
-function runRules(s: HrSettings): HrSettings {
+function runRules(s: HrSettings): PayrollRunRules {
   return {
     lateness: {
       graceMinutes: s.lateness.graceMinutes,

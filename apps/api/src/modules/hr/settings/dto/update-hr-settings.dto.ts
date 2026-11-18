@@ -116,6 +116,15 @@ export class UpdatePenaltyRuleDto {
   repetitionWindow?: RepetitionWindow;
 }
 
+export class UpdateEmployeeRuleDto {
+  /** Whole months, 0–6 (§7, N0); 0 = no probation. */
+  @IsOptionalNotNull()
+  @IsInt()
+  @Min(SETTING_LIMITS.probationMonthsMin)
+  @Max(SETTING_LIMITS.probationMonthsMax)
+  defaultProbationMonths?: number;
+}
+
 /** `PATCH /hr/settings` — any subset. Unknown keys at any level → 400 (whitelist). */
 export class UpdateHrSettingsDto implements UpdateHrSettingsRequest {
   @IsOptionalNotNull()
@@ -135,4 +144,10 @@ export class UpdateHrSettingsDto implements UpdateHrSettingsRequest {
   @ValidateNested()
   @Type(() => UpdatePenaltyRuleDto)
   penalties?: UpdatePenaltyRuleDto;
+
+  @IsOptionalNotNull()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => UpdateEmployeeRuleDto)
+  employees?: UpdateEmployeeRuleDto;
 }

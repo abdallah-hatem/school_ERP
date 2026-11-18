@@ -41,7 +41,7 @@ N2 and N3 both touch HR services but different ones (N2: penalties, payroll runs
 `resolve()` calls in the payroll service go in after N2 merges if both edit the same method — merge
 `origin/dev` first.
 
-## N0 — probation end on the employee record (`logic`, backend + frontend, HR)
+## N0 — probation end on the employee record (`logic`, backend + frontend, HR) — ✅ done (PR `feature/n0-probation-end`)
 
 Owner, 2026-11-18: probation is a per-employee date, filled with hire date + the school's default
 probation length and editable. Business: §3 (Planned row, becomes DECIDED with this task), §11.

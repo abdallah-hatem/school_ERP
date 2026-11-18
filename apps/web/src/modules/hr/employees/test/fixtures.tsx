@@ -52,6 +52,7 @@ export const employee: Employee = {
   fingerprintId: '1042',
   contractStart: '2026-06-01',
   contractEnd: '2027-05-31',
+  probationEnd: '2020-11-30',
   usesBus: false,
   photoUrl: null,
   insuranceStatus: 'NOT_INSURED',

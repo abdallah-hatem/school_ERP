@@ -24,6 +24,8 @@ export const HrSettingKey = {
   PAYROLL_DAY_DIVISOR: 'hr.payroll.dayDivisor',
   PAYROLL_PART_TIME: 'hr.payroll.partTime',
   PENALTIES_REPETITION_WINDOW: 'hr.penalties.repetitionWindow',
+  /** §3, §7 (N0): a new employee's probation length; 0 = no probation. */
+  EMPLOYEES_DEFAULT_PROBATION_MONTHS: 'hr.employees.defaultProbationMonths',
 } as const;
 export type HrSettingKey = (typeof HrSettingKey)[keyof typeof HrSettingKey];
 
@@ -99,6 +101,7 @@ export interface SettingValueMap {
   'hr.payroll.dayDivisor': number;
   'hr.payroll.partTime': Record<PartTimeWorkSystem, number>;
   'hr.penalties.repetitionWindow': RepetitionWindow;
+  'hr.employees.defaultProbationMonths': number;
   'accounting.payroll.taxBrackets': TaxBracket[];
   'accounting.payroll.martyrPercent': number;
   'accounting.payroll.insurancePercent': number;
@@ -128,6 +131,8 @@ export const SETTING_DEFAULTS: { [K in SettingKey]: SettingValueMap[K] } = {
   'hr.payroll.dayDivisor': 30,
   'hr.payroll.partTime': { PART_TIME_4: 80, PART_TIME_3: 60, PART_TIME_2: 40 },
   'hr.penalties.repetitionWindow': 'CONTRACT_YEAR',
+  // §7 (owner 2026-11-18): 3 months; 0 = no probation.
+  'hr.employees.defaultProbationMonths': 3,
   // §10 GUESS (the school's previous HR system; to confirm with the accountant): Egypt's annual
   // scale ÷ 12 — 60,000 at 0%, 15,000 at 10%, 15,000 at 15%, 130,000 at 20%, 200,000 at 22.5%,
   // the rest at 25%.
@@ -163,6 +168,8 @@ export const SETTING_LIMITS = {
   daysMin: 0,
   daysMax: 30,
   latenessMinutesMax: 6000,
+  probationMonthsMin: 0,
+  probationMonthsMax: 6,
 } as const;
 
 /**

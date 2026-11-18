@@ -202,15 +202,21 @@ export function EmployeeDetails({ employee }: { employee: Employee }) {
       <DetailsCard title={t('employees.sections.job')}>
         <DetailsItem label={t('employees.fields.code')}>{ltr(employee.code)}</DetailsItem>
         <DetailsItem label={t('employees.fields.hireDate')}>{date(employee.hireDate)}</DetailsItem>
+        <DetailsItem label={t('employees.fields.probationEnd')}>
+          {employee.probationEnd ? date(employee.probationEnd) : t('employees.noProbation')}
+        </DetailsItem>
         <DetailsItem label={t('employees.fields.stage')}>{localName(employee.stage, locale)}</DetailsItem>
         <DetailsItem label={t('employees.fields.department')}>{localName(employee.department, locale)}</DetailsItem>
         <DetailsItem label={t('employees.fields.jobTitle')}>{localName(employee.jobTitle, locale)}</DetailsItem>
         <DetailsItem label={t('employees.fields.workSystem')}>{t(`common.enums.workSystem.${employee.workSystem}`)}</DetailsItem>
+        {/* Grade before the manager line and the fingerprint across: the two columns stay full. */}
+        <DetailsItem label={t('employees.fields.grade')}>{text(employee.grade)}</DetailsItem>
         <DetailsItem label={t('employees.fields.manager')} wide>
           {employee.manager ? <EmployeeIdentity employee={employee.manager} /> : notSet}
         </DetailsItem>
-        <DetailsItem label={t('employees.fields.grade')}>{text(employee.grade)}</DetailsItem>
-        <DetailsItem label={t('employees.fields.fingerprintId')}>{ltr(employee.fingerprintId)}</DetailsItem>
+        <DetailsItem label={t('employees.fields.fingerprintId')} wide>
+          {ltr(employee.fingerprintId)}
+        </DetailsItem>
       </DetailsCard>
       <DetailsCard title={t('employees.sections.contract')}>
         {/* Salary-type fields only when the API sent them (R7: `hr.employees.view_salary`). */}

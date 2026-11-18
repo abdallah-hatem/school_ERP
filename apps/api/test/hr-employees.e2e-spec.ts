@@ -630,6 +630,79 @@ describe('HR lists and employees (e2e)', () => {
     });
   });
 
+  describe('probation end (§3, N0)', () => {
+    const PROBATION_KEY = 'hr.employees.defaultProbationMonths';
+    const setMonths = (defaultProbationMonths: number) =>
+      http(app).patch('/hr/settings').send({ employees: { defaultProbationMonths } }).expect(200);
+    const patchEmployee = (id: string, send: object) => http(app).patch(`/hr/employees/${id}`).send(send);
+
+    afterAll(async () => {
+      await db.schoolSetting.deleteMany({ where: { key: PROBATION_KEY } });
+    });
+
+    it('edge 1 — hired 1 Sep with none given → 30 Nov; edge 2 — a given one is kept', async () => {
+      const filled = await create({ hireDate: '2024-09-01' }).expect(201);
+      expect(filled.body.data.probationEnd).toBe('2024-11-30');
+      const given = await create({ hireDate: '2024-09-01', probationEnd: '2024-10-15' }).expect(201);
+      expect(given.body.data.probationEnd).toBe('2024-10-15');
+      expect(
+        (await db.employee.findUniqueOrThrow({ where: { id: given.body.data.id } })).probationEnd?.toISOString(),
+      ).toBe('2024-10-15T00:00:00.000Z');
+    });
+
+    it('edge 4 — before the hire date → 400 PROBATION_BEFORE_HIRE, nothing saved; on the hire date is fine', async () => {
+      const count = await db.employee.count();
+      const refused = await create({ hireDate: '2024-09-01', probationEnd: '2024-08-31' }).expect(400);
+      expect(refused.body.error).toBe(ErrorCode.PROBATION_BEFORE_HIRE);
+      expect(await db.employee.count()).toBe(count);
+      await create({ hireDate: '2024-09-01', probationEnd: '2024-09-01' }).expect(201);
+      await create({ probationEnd: 'not-a-date' }).expect(400);
+
+      const e = await createOk({ hireDate: '2024-09-01' });
+      const patch = await patchEmployee(e.id, { probationEnd: '2024-01-01', grade: 'Z' }).expect(400);
+      expect(patch.body.error).toBe(ErrorCode.PROBATION_BEFORE_HIRE);
+      const after = await db.employee.findUniqueOrThrow({ where: { id: e.id } });
+      expect(after.grade).toBeNull();
+      expect(after.probationEnd?.toISOString().slice(0, 10)).toBe('2024-11-30');
+    });
+
+    it('edge 5 — an edit clears it (saved empty); edge 6 — an edited hire date leaves it where it was', async () => {
+      const e = await createOk({ hireDate: '2024-09-01' });
+      const moved = await patchEmployee(e.id, { hireDate: '2024-10-01' }).expect(200);
+      expect(moved.body.data.probationEnd).toBe('2024-11-30');
+      // A hire date moved past it is refused (it would end before the hire date).
+      const past = await patchEmployee(e.id, { hireDate: '2024-12-01' }).expect(400);
+      expect(past.body.error).toBe(ErrorCode.PROBATION_BEFORE_HIRE);
+      const cleared = await patchEmployee(e.id, { probationEnd: null }).expect(200);
+      expect(cleared.body.data.probationEnd).toBeNull();
+      expect((await db.employee.findUniqueOrThrow({ where: { id: e.id } })).probationEnd).toBeNull();
+      // With none, any hire date goes.
+      await patchEmployee(e.id, { hireDate: '2024-12-01' }).expect(200);
+    });
+
+    it('edge 3 / 7 — the default length applies to employees created afterwards only; 0 leaves it empty', async () => {
+      const before = await createOk({ hireDate: '2024-09-01' });
+      await setMonths(0);
+      const none = await create({ hireDate: '2024-09-01' }).expect(201);
+      expect(none.body.data.probationEnd).toBeNull();
+      await setMonths(6);
+      const six = await create({ hireDate: '2024-09-01' }).expect(201);
+      expect(six.body.data.probationEnd).toBe('2025-02-28');
+      // Existing dates stay.
+      expect((await http(app).get(`/hr/employees/${before.id}`).expect(200)).body.data.probationEnd).toBe('2024-11-30');
+      await db.schoolSetting.deleteMany({ where: { key: PROBATION_KEY } });
+    });
+
+    it('changing only the probation end publishes hr.employee.updated naming it', async () => {
+      const e = await createOk({ hireDate: '2024-09-01' });
+      clearRecorded();
+      await patchEmployee(e.id, { probationEnd: '2024-12-31' }).expect(200);
+      expect(recorded(HrEvent.EMPLOYEE_UPDATED)).toEqual([
+        { employeeId: e.id, fields: ['probationEnd'], at: expect.any(String) },
+      ]);
+    });
+  });
+
   describe('list', () => {
     it('list filters (department, stage, status, work system) and search by code / EN name / AR name', async () => {
       const tag = unique('Zebra');

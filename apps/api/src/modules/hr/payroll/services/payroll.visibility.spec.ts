@@ -137,7 +137,9 @@ describe('payroll — the run carries its rules (no hr.settings.view needed)', (
     ['accountant', ACCOUNTANT],
   ])('%s: the run holds the HR rules, and nothing but them', async (_who, scopes) => {
     const run = await makeService(scopes).service.get('r1');
-    expect(run.rules).toEqual(HR_SETTINGS_DEFAULTS);
+    const { lateness, payroll, penalties } = HR_SETTINGS_DEFAULTS;
+    expect(run.rules).toEqual({ lateness, payroll, penalties });
+    // Not the employee rule (N0's probation length) either: the run's figures don't use it.
     expect(Object.keys(run.rules).sort()).toEqual(['lateness', 'payroll', 'penalties']);
   });
 

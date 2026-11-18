@@ -50,7 +50,8 @@ marks the managing job titles and stores the principal's photo, without touching
 
 ## 6. Settings change the numbers (the key moment)
 - Settings → HR rules: change a rule, e.g. grace minutes 0 → 30. The example line updates live
-  (90 min → 0.25 day). Save.
+  (90 min → 0.25 day). Save. ✔ The last card, **Employees**, holds the default probation length
+  (3 months); an employee's profile shows **Probation ends** under the hire date.
 - Back on the draft run: ✔ a note says the HR rules changed since the last calculation, with
   **Recalculate now** (it goes once recalculated).
 - **View change history** (top of Settings) → Activity, filtered to Settings: ✔ the grace-minutes

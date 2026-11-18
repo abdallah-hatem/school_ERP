@@ -103,7 +103,7 @@ describe('Settings → HR rules, view only vs edit', () => {
   it('without hr.settings.edit: fields disabled, no adding or removing hour steps, no Save bar', async () => {
     renderSettings(<HrRulesSection />, 'en', sessionWithout('hr.settings.edit'));
     await loaded('Lateness rule');
-    for (const name of [/Grace minutes/, /Day value divisor/, /Hour 1/]) {
+    for (const name of [/Grace minutes/, /Day value divisor/, /Hour 1/, /Default probation length/]) {
       expect(textbox(name)).toHaveProperty('disabled', true);
     }
     expect(screen.queryByRole('button', { name: 'Add an hour step' })).toBeNull();
