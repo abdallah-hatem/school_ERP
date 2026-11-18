@@ -75,6 +75,15 @@ export class AccountingPayrollRepository {
     return this.db.accountingPayrollRun.findUnique({ where: { month }, select: ACCOUNTING_RUN_SELECT });
   }
 
+  /** The recorded months of a calendar year (`YYYY-…`), January first. */
+  findInYear(year: number): Promise<AccountingRunRow[]> {
+    return this.db.accountingPayrollRun.findMany({
+      where: { month: { startsWith: `${year}-` } },
+      select: ACCOUNTING_RUN_SELECT,
+      orderBy: { month: 'asc' },
+    });
+  }
+
   findLines(runId: string): Promise<AccountingLineRow[]> {
     return this.db.accountingPayrollLine.findMany({
       where: { runId },

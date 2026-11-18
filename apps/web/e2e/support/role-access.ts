@@ -35,7 +35,7 @@ async function allPages<T>(api: Api, path: string): Promise<T[]> {
   }
 }
 
-/** The ids a screen's path needs (`:id`, `:lineId`), or null when the database has no such record. */
+/** The ids a screen's path needs (`:id`, `:lineId`, `:month`), or null when the database has no such record. */
 export type ScreenUrls = Partial<Record<ScreenId, string>>;
 
 export interface RoleUser {
@@ -105,12 +105,14 @@ export async function makeRoleUser(role: BuiltInRole): Promise<RoleUser> {
       line: line?.id,
       user: admin.id,
       role: anyRole.id,
+      // A month HR approved: it has payroll taxes (§10) to open.
+      month: run?.status === PayrollStatus.APPROVED ? run.month : undefined,
     };
     const urls: ScreenUrls = {};
     for (const [id, screen] of Object.entries(SCREENS) as [ScreenId, { path: string }][]) {
       const idFor = id.startsWith('employee')
         ? ids.employee
-        : id.startsWith('payroll') || id === 'payslip'
+        : (id.startsWith('payroll') && !id.startsWith('payrollTaxes')) || id === 'payslip'
           ? ids.run
           : id === 'user'
             ? ids.user
@@ -119,7 +121,11 @@ export async function makeRoleUser(role: BuiltInRole): Promise<RoleUser> {
               : undefined;
       if (screen.path.includes(':id') && !idFor) continue;
       if (screen.path.includes(':lineId') && !ids.line) continue;
-      urls[id] = screen.path.replace(':id', idFor ?? '').replace(':lineId', ids.line ?? '');
+      if (screen.path.includes(':month') && !ids.month) continue;
+      urls[id] = screen.path
+        .replace(':id', idFor ?? '')
+        .replace(':lineId', ids.line ?? '')
+        .replace(':month', ids.month ?? '');
     }
 
     const password = `Temp-${Date.now()}-${role}`;

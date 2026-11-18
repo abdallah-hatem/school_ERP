@@ -2,6 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import {
   type AccountingPayrollMonth,
   type AccountingPayrollMonthSummary,
+  type AccountingPayrollYear,
   type AuthUser,
   type CreateEmployeeRequest,
   type PayrollRun,
@@ -292,6 +293,50 @@ describe('Accounting — payroll taxes of approved months (e2e)', () => {
     expect(later.totals).toEqual(atApproval.totals);
   });
 
+  // ── the year board and the Excel export ───────────────────────────────────
+
+  it('the year board: twelve months, an approved month with its totals, a draft in HR, the rest nothing yet', async () => {
+    const approved = nextMonth();
+    const draft = nextMonth();
+    await employee();
+    const run = await createRun(approved);
+    await approve(run.id);
+    await recorded(approved);
+    await createRun(draft);
+    const full = await monthOf(approved);
+
+    const year = Number(approved.slice(0, 4));
+    const board = (await http(app).get(`/accounting/payroll/year/${year}`).expect(200)).body.data as AccountingPayrollYear;
+    expect(board.year).toBe(year);
+    expect(board.months).toHaveLength(12);
+    expect(board.months[0]?.month).toBe(`${year}-01`);
+    expect(board.months.find((m) => m.month === approved)).toMatchObject({
+      state: 'APPROVED',
+      summary: { month: approved, hrRunId: run.id, totals: full.totals },
+    });
+    if (draft.startsWith(`${year}-`)) {
+      expect(board.months.find((m) => m.month === draft)).toEqual({ month: draft, state: 'DRAFT' });
+    }
+    // A year with no run at all.
+    const empty = (await http(app).get('/accounting/payroll/year/2099').expect(200)).body.data as AccountingPayrollYear;
+    expect(empty.months.every((m) => m.state === 'NONE')).toBe(true);
+
+    await http(app).get('/accounting/payroll/year/1999').expect(400);
+    await http(app).get('/accounting/payroll/year/twenty').expect(400);
+  });
+
+  it('Excel export: the month as .xlsx; an unknown month → 404', async () => {
+    const month = nextMonth();
+    await employee();
+    const run = await createRun(month);
+    await approve(run.id);
+    await recorded(month);
+    const res = await http(app).get(`/accounting/payroll/${month}/export`).expect(200);
+    expect(res.headers['content-type']).toContain('spreadsheetml');
+    expect(res.headers['content-disposition']).toContain(`payroll-taxes-${month}.xlsx`);
+    await http(app).get('/accounting/payroll/2099-12/export').expect(404);
+  });
+
   // ── who sees it (§2, P4) ──────────────────────────────────────────────────
 
   it('salary data: a role with accounting.payroll.view but not hr.employees.view_salary sees the lines without tax, insurance, gross or net, and no money totals', async () => {
@@ -316,6 +361,9 @@ describe('Accounting — payroll taxes of approved months (e2e)', () => {
       const list = (await http(app).get('/accounting/payroll').query({ limit: 100 }).expect(200)).body
         .data as AccountingPayrollMonthSummary[];
       expect(list.find((r) => r.month === month)?.totals).toEqual({ employees: full.totals.employees });
+      const board = (await http(app).get(`/accounting/payroll/year/${month.slice(0, 4)}`).expect(200)).body
+        .data as AccountingPayrollYear;
+      expect(board.months.find((m) => m.month === month)?.summary?.totals).toEqual({ employees: full.totals.employees });
     });
   });
 
@@ -323,6 +371,8 @@ describe('Accounting — payroll taxes of approved months (e2e)', () => {
     await as(roleless, async () => {
       await http(app).get('/accounting/payroll').expect(403);
       await http(app).get('/accounting/payroll/2026-11').expect(403);
+      await http(app).get('/accounting/payroll/year/2026').expect(403);
+      await http(app).get('/accounting/payroll/2026-11/export').expect(403);
     });
   });
 });

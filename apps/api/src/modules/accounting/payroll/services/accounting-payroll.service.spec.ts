@@ -22,7 +22,16 @@ const line = (employeeId: string, net: number, insuredSalary: number | null = nu
 const APPROVED_AT = new Date('2026-11-05T10:00:00Z');
 
 function makeService(
-  opts: { status?: 'DRAFT' | 'APPROVED'; recorded?: boolean; created?: boolean; approvedRunId?: string } = {},
+  opts: {
+    status?: 'DRAFT' | 'APPROVED';
+    recorded?: boolean;
+    created?: boolean;
+    approvedRunId?: string;
+    everySalary?: boolean;
+    /** Accounting's recorded months of the year, and HR's runs of it (`runStatusesInYear`). */
+    inYear?: string[];
+    hrYear?: { month: string; status: 'DRAFT' | 'APPROVED' }[];
+  } = {},
 ) {
   const run =
     (opts.status ?? 'APPROVED') === 'APPROVED'
@@ -36,17 +45,28 @@ function makeService(
   const repository = {
     findByHrRun: jest.fn(() => Promise.resolve(opts.recorded ? { id: 'acc-run' } : null)),
     findByMonth: jest.fn(() => Promise.resolve(null)),
+    findInYear: jest.fn(() =>
+      Promise.resolve((opts.inYear ?? []).map((month) => ({ ...stored, id: `acc-${month}`, month }))),
+    ),
     findLines: jest.fn(() => Promise.resolve([])),
-    totalsFor: jest.fn(() => Promise.resolve(new Map([['acc-run', { employees: 3 }]]))),
+    totalsFor: jest.fn((ids: string[]) =>
+      Promise.resolve(
+        new Map<string, unknown>([
+          ['acc-run', { employees: 3 }],
+          ...ids.map((id): [string, unknown] => [id, { employees: 3, net: 100, insuranceAmount: 10, incomeTax: 5, martyrTax: 1, gross: 116 }]),
+        ]),
+      ),
+    ),
     create: jest.fn(() => Promise.resolve(opts.created === false ? null : stored)),
   };
   const hrPayroll = {
     approvedLinesForAccounting: jest.fn(() => Promise.resolve(run)),
     approvedRunIdForMonth: jest.fn(() => Promise.resolve(opts.approvedRunId ?? null)),
+    runStatusesInYear: jest.fn(() => Promise.resolve(opts.hrYear ?? [])),
   };
   // Today's employee record isn't read: the insurance comes from HR's approved lines.
   const employees = {
-    seesEverySalary: jest.fn(() => Promise.resolve(true)),
+    seesEverySalary: jest.fn(() => Promise.resolve(opts.everySalary ?? true)),
   };
   const settings = { taxRuleAt: jest.fn((_at: Date) => Promise.resolve(DEFAULT_TAX_RULE)) };
   const audit = { record: jest.fn(() => Promise.resolve()) };
@@ -60,7 +80,7 @@ function makeService(
     audit as unknown as AuditService,
     txHost as unknown as TransactionHost<DbAdapter>,
   );
-  return { service, repository, hrPayroll, audit, settings };
+  return { service, repository, hrPayroll, audit, settings, employees };
 }
 
 describe('AccountingPayrollService.recordApprovedRun', () => {
@@ -112,5 +132,53 @@ describe('AccountingPayrollService.recordApprovedRun', () => {
   it('a month HR never approved → 404', async () => {
     const { service } = makeService();
     await expect(service.getMonth('2026-12')).rejects.toBeInstanceOf(NotFoundException);
+  });
+});
+
+describe('AccountingPayrollService.year (the year board)', () => {
+  it('twelve months, January first: approved with totals, a draft in HR, or nothing yet', async () => {
+    const { service, hrPayroll, repository } = makeService({
+      inYear: ['2026-09'],
+      hrYear: [
+        { month: '2026-09', status: 'APPROVED' },
+        { month: '2026-10', status: 'DRAFT' },
+      ],
+    });
+    const year = await service.year(2026);
+    expect(hrPayroll.runStatusesInYear).toHaveBeenCalledWith(2026);
+    expect(repository.findInYear).toHaveBeenCalledWith(2026);
+    expect(year.year).toBe(2026);
+    expect(year.months.map((m) => m.month)).toEqual(
+      Array.from({ length: 12 }, (_, i) => `2026-${String(i + 1).padStart(2, '0')}`),
+    );
+    expect(year.months[8]).toMatchObject({
+      month: '2026-09',
+      state: 'APPROVED',
+      summary: { salaryVisible: true, totals: { employees: 3, gross: 116 } },
+    });
+    expect(year.months[9]).toEqual({ month: '2026-10', state: 'DRAFT' });
+    expect(year.months[0]).toEqual({ month: '2026-01', state: 'NONE' });
+    // Read only: nothing is worked out or recorded from the board.
+    expect(repository.create).not.toHaveBeenCalled();
+  });
+
+  it('approved in HR but never worked out (a missed event): approved, with no summary', async () => {
+    const { service, repository } = makeService({ hrYear: [{ month: '2026-03', status: 'APPROVED' }] });
+    const year = await service.year(2026);
+    expect(year.months[2]).toEqual({ month: '2026-03', state: 'APPROVED' });
+    expect(repository.create).not.toHaveBeenCalled();
+  });
+
+  it('salary data (§2, P4): without every salary the totals are the head count only', async () => {
+    const { service } = makeService({ everySalary: false, inYear: ['2026-09'] });
+    const year = await service.year(2026);
+    expect(year.months[8]?.summary).toMatchObject({ salaryVisible: false, totals: { employees: 3 } });
+    expect(year.months[8]?.summary?.totals).not.toHaveProperty('gross');
+  });
+
+  it('an empty year: twelve months, none of them started', async () => {
+    const { service } = makeService();
+    const year = await service.year(2030);
+    expect(year.months.every((m) => m.state === 'NONE' && !m.summary)).toBe(true);
   });
 });

@@ -186,6 +186,15 @@ export class PayrollRunsRepository extends BaseRepository<
     return this.db.payrollRun.findUnique({ where: { month }, select: RUN_SELECT });
   }
 
+  /** Every run of a calendar year (`YYYY-…` months), January first: month and status only. */
+  findInYear(year: number): Promise<{ month: string; status: PayrollStatus }[]> {
+    return this.db.payrollRun.findMany({
+      where: { month: { startsWith: `${year}-` } },
+      select: { month: true, status: true },
+      orderBy: { month: 'asc' },
+    });
+  }
+
   /**
    * Totals of each run from its lines — all of them, or those of the employees in `scope` (R5) —
    * one aggregate query each kind.

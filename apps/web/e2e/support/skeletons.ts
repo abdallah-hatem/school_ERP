@@ -168,6 +168,8 @@ export const SKELETON_SCREENS = [
   'payroll',
   'payroll-run',
   'payslip',
+  'payroll-taxes',
+  'payroll-taxes-month',
   'activity',
   'users',
   'user-new',
@@ -243,6 +245,9 @@ async function readPaths(): Promise<Record<SkeletonScreenName, string | null>> {
       payroll: '/payroll',
       'payroll-run': `/payroll/${run.id}`,
       payslip: line ? `/payroll/${run.id}/payslip/${line.id}` : null,
+      // The year of an approved month (its tiles in every state), and that month's statement (§10).
+      'payroll-taxes': `/accounting/payroll-taxes?year=${(approved?.month ?? monthOf(new Date())).slice(0, 4)}`,
+      'payroll-taxes-month': approved ? `/accounting/payroll-taxes/${approved.month}` : null,
       activity: '/activity',
       users: '/users',
       'user-new': '/users/new',
@@ -270,7 +275,7 @@ export function defineSkeletonSpecs(locales: readonly Language[]): void {
   for (const name of SKELETON_SCREENS) {
     test(`${name}: the skeleton has the loaded screen's blocks, in order and size`, async ({ page, browser }, info) => {
       const path = (await screenPaths())[name];
-      test.skip(path === null, 'no approved payroll run to open a payslip of');
+      test.skip(path === null, 'no approved payroll run to open (a payslip, a payroll taxes statement)');
       await signIn(page, locales[0]!);
       const problems: string[] = [];
       for (const locale of locales) {

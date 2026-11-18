@@ -120,6 +120,62 @@ describe('DataTable states', () => {
   });
 });
 
+describe('DataTable totals row (footer)', () => {
+  afterEach(cleanup);
+
+  it('puts each total under its column in the table and on a summary card after the cards', () => {
+    renderWithI18n(
+      <DataTable
+        label="Employees"
+        columns={columns}
+        rows={people}
+        getRowId={(p) => p.id}
+        footer={{ label: 'Subtotal', cells: { salary: '2,630,000' } }}
+      />,
+    );
+    const table = screen.getByRole('table', { name: 'Employees' });
+    const rows = within(table).getAllByRole('row');
+    // Header, two rows, the totals row last — label in the first column, the sum under Salary.
+    expect(rows).toHaveLength(4);
+    expect(within(rows[3]!).getAllByRole('cell').map((c) => c.textContent)).toEqual(['Subtotal', '2,630,000']);
+    const cards = within(screen.getByRole('list', { name: 'Employees' })).getAllByRole('listitem');
+    expect(cards).toHaveLength(3);
+    expect(cards[2]!.textContent).toContain('Subtotal');
+    expect(cards[2]!.textContent).toContain('Salary2,630,000');
+  });
+
+  it('a note instead of the totals spans the other columns (totals the viewer may not see)', () => {
+    renderWithI18n(
+      <DataTable
+        label="Employees"
+        columns={columns}
+        rows={people}
+        getRowId={(p) => p.id}
+        footer={{ label: 'Subtotal', note: 'Hidden' }}
+      />,
+    );
+    const last = within(screen.getByRole('table', { name: 'Employees' })).getAllByRole('row').at(-1)!;
+    const cells = within(last).getAllByRole('cell');
+    expect(cells.map((c) => c.textContent)).toEqual(['Subtotal', 'Hidden']);
+    expect(cells[1]!.getAttribute('colspan')).toBe('1');
+  });
+
+  it('keeps its place in the skeleton and is not drawn on an empty list', () => {
+    const footer = { label: 'Subtotal', cells: { salary: '2,630,000' } };
+    const { container, unmount } = renderWithI18n(
+      <DataTable label="Employees" columns={columns} rows={undefined} getRowId={(p) => p.id} loading footer={footer} />,
+    );
+    expect(container.querySelectorAll('[aria-hidden="true"] tfoot tr')).toHaveLength(1);
+    expect(container.querySelector('[aria-hidden="true"] tfoot')?.textContent).toBe('');
+    unmount();
+    const empty = renderWithI18n(
+      <DataTable label="Employees" columns={columns} rows={[]} getRowId={(p) => p.id} footer={footer} />,
+    );
+    expect(empty.container.querySelector('tfoot')).toBeNull();
+    expect(screen.queryByText('Subtotal')).toBeNull();
+  });
+});
+
 describe('DataTable sideways scroll cue', () => {
   afterEach(() => {
     cleanup();
