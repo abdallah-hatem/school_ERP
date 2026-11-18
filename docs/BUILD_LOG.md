@@ -193,6 +193,11 @@ phase live in `docs/build-log/`.
   approval (tax rule versions + insurance snapshot on HR's approved lines, so a month worked out
   late matches approval day) merged after review and all four checks; #85's docs conflicts with
   #83 resolved by us. #78 is replaced by the stack.
+- 2026-11-18 — Merged after all four checks: #97 (Lateness and runs return the HR rules they use,
+  so Principal/Accountant see them), #98 (roles leftovers), #99 (the eight dry-run fixes). Their
+  run-page/docs conflicts with each other resolved by us, `ci:local` re-run on each merge.
+- 2026-11-18 — CI: docs-only PRs pass API e2e and smoke in seconds without running them; lint,
+  typecheck, unit tests and module rules always run; CI also runs on PRs into `demo` → #100.
 
 ## Next up
 
