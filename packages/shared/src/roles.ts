@@ -99,6 +99,8 @@ export const BUILT_IN_ROLES: readonly BuiltInRoleDefinition[] = [
       'hr.employees.view_salary',
       'hr.payroll.view',
       'hr.payroll.export_bank_sheet',
+      'accounting.settings.view',
+      'accounting.settings.edit',
     ),
   },
   {

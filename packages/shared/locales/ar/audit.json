@@ -3,7 +3,8 @@
   "system": "النظام",
   "modules": {
     "core": "المدرسة",
-    "hr": "الموارد البشرية"
+    "hr": "الموارد البشرية",
+    "accounting": "المحاسبة"
   },
   "kinds": {
     "access": "الدخول والخروج",
@@ -24,7 +25,8 @@
     "violation": "مخالفة",
     "penalty": "جزاء",
     "lateness_month": "تأخير الشهر",
-    "payroll_run": "مسيّر رواتب"
+    "payroll_run": "مسيّر رواتب",
+    "accounting_settings": "قواعد المحاسبة"
   },
   "actions": {
     "core": {
@@ -95,6 +97,11 @@
         "approve": "اعتماد مسيّر رواتب {entity}",
         "adjustment_add": "إضافة تسوية إلى مسيّر رواتب {entity}",
         "adjustment_remove": "حذف تسوية من مسيّر رواتب {entity}"
+      }
+    },
+    "accounting": {
+      "settings": {
+        "update": "تعديل قواعد المحاسبة"
       }
     }
   },
@@ -190,7 +197,14 @@
     },
     "name": "الاسم",
     "roles": "الأدوار",
-    "permissions": "الصلاحيات"
+    "permissions": "الصلاحيات",
+    "accounting": {
+      "payroll": {
+        "taxBrackets": "شرائح ضريبة كسب العمل",
+        "martyrPercent": "نسبة صندوق الشهداء",
+        "insurancePercent": "حصة العامل في التأمينات"
+      }
+    }
   },
   "activity": {
     "description": "كل تغيير وكل تسجيل دخول في المدرسة، الأحدث أولًا. لا يمكن تعديل السجلات أو حذفها.",
@@ -321,6 +335,8 @@
   },
   "values": {
     "step": "الساعة {hour}: {days}",
+    "bracket": "{amount} بنسبة {percent}%",
+    "bracketRest": "ما تبقى بنسبة {percent}%",
     "hiddenItem": "{name} (مخفي)",
     "minutes": {
       "zero": "{count} دقيقة",
