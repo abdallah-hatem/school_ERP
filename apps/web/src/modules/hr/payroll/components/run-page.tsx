@@ -619,6 +619,7 @@ export function RunTiles({ totals }: { totals: PayrollRun['totals'] | undefined 
         tone="info"
         label={t('payroll.tiles.employees')}
         value={totals ? formatCount(totals.employees) : null}
+        placeholder={formatCount(TYPICAL_TOTALS.employees)}
         sub={sub((x) =>
           t('payroll.tiles.employeesSub', {
             ready: formatCount(x.employees - x.flagged),
@@ -633,6 +634,7 @@ export function RunTiles({ totals }: { totals: PayrollRun['totals'] | undefined 
         label={t('payroll.tiles.gross')}
         unit={t('ui.units.currency')}
         value={totals ? formatMoney(totals.monthSalary) : null}
+        placeholder={formatMoney(TYPICAL_TOTALS.monthSalary)}
         sub={sub(() => t('payroll.tiles.grossSub'))}
         loading={loading}
       />
@@ -642,6 +644,7 @@ export function RunTiles({ totals }: { totals: PayrollRun['totals'] | undefined 
         label={t('payroll.tiles.deductions')}
         unit={t('ui.units.currency')}
         value={totals ? formatMoney(sumMoney(totals.penaltyAmount, totals.latenessAmount, totals.adjustmentDeductions)) : null}
+        placeholder={formatMoney(sumMoney(TYPICAL_TOTALS.penaltyAmount, TYPICAL_TOTALS.latenessAmount, TYPICAL_TOTALS.adjustmentDeductions))}
         sub={sub(
           (x) =>
             t('payroll.tiles.deductionsSub', {
@@ -659,6 +662,7 @@ export function RunTiles({ totals }: { totals: PayrollRun['totals'] | undefined 
         label={t('payroll.tiles.net')}
         unit={t('ui.units.currency')}
         value={totals ? formatMoney(totals.net) : null}
+        placeholder={formatMoney(TYPICAL_TOTALS.net)}
         sub={sub((x) => t('payroll.tiles.netSub', { additions: money(x.adjustmentAdditions) }), true)}
         loading={loading}
       />

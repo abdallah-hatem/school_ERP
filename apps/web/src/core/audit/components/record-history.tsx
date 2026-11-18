@@ -205,7 +205,7 @@ export function RecordHistorySkeleton() {
 }
 
 /** A typical record name's length in each script, for the description's shape while it loads. */
-const NAME_SHAPE = { en: 'Xxxxxx Xxxxxxx Xxxxxxx', ar: 'سسسس سسسس سسسسس' } as const;
+const NAME_SHAPE = { en: 'Xxxxxx Xxxxxxx Xxxxxxx', ar: 'سسسس سسسس' } as const;
 
 function HistorySkeleton() {
   const { t, locale } = useTranslation();

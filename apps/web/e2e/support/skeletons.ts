@@ -1,7 +1,8 @@
-import { expect, test, type Browser, type Page, type TestInfo } from '@playwright/test';
+import { expect, request, test, type Browser, type Page, type TestInfo } from '@playwright/test';
 import { monthOf, PAGINATION, PayrollStatus, type Language, type PayrollRun, type PayrollRunSummary, type EmployeeSummary, type PenaltyRecord, type UserAccount } from '@school-erp/shared';
 import { join } from 'node:path';
 import { Api } from './api';
+import { env } from './env';
 import { adminAccount, makeUser, rolesByKey } from './access';
 import { signIn } from './ui';
 
@@ -30,6 +31,8 @@ export interface MeasuredBlock {
   width: number;
   height: number;
   measure: 'size' | 'width';
+  /** The loaded block's text, shown when it doesn't match (what wrapped). */
+  text?: string;
 }
 
 /** ±8px, or ±5% for blocks over 160px. */
@@ -40,7 +43,7 @@ export function tolerance(a: number, b: number): number {
 async function blocksOf(page: Page): Promise<MeasuredBlock[]> {
   await page.evaluate(() => document.fonts.ready.then(() => undefined));
   return page.evaluate(() => {
-    const out: { name: string; width: number; height: number; measure: 'size' | 'width' }[] = [];
+    const out: { name: string; width: number; height: number; measure: 'size' | 'width'; text: string }[] = [];
     for (const el of Array.from(document.querySelectorAll<HTMLElement>('#main [data-skeleton-block]'))) {
       const r = el.getBoundingClientRect();
       // Not drawn: the other view of a table (cards on desktop), a hidden streamed tree.
@@ -61,6 +64,7 @@ async function blocksOf(page: Page): Promise<MeasuredBlock[]> {
         width: Math.round(r.width * 10) / 10,
         height: Math.round(r.height * 10) / 10,
         measure: el.dataset.skeletonMeasure === 'width' ? 'width' : 'size',
+        text: (el.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 160),
       });
     }
     return out;
@@ -125,11 +129,26 @@ export function diff(skeleton: MeasuredBlock[], loaded: MeasuredBlock[]): string
     const keys: ('width' | 'height')[] = s.measure === 'width' || l.measure === 'width' ? ['width'] : ['width', 'height'];
     for (const key of keys) {
       if (Math.abs(s[key] - l[key]) > tolerance(s[key], l[key])) {
-        problems.push(`#${i} ${s.name}.${key}: skeleton ${s[key]} vs loaded ${l[key]}`);
+        problems.push(`#${i} ${s.name}.${key}: skeleton ${s[key]} vs loaded ${l[key]} — loaded: "${l.text ?? ''}"`);
       }
     }
   });
   return problems;
+}
+
+/** A new account that has already chosen its own password (no "must choose" note on its page). */
+async function settledUser(api: Api, roleId: string): Promise<UserAccount> {
+  const user = await makeUser(api, { name: 'Skeleton Check', roleIds: [roleId] });
+  const ctx = await request.newContext({ baseURL: env.apiUrl });
+  try {
+    const login = await ctx.post('/auth/login', { data: { email: user.email, password: user.password } });
+    expect(login.ok(), 'skeleton spec: the new user signs in').toBe(true);
+    const set = await ctx.post('/account/password', { data: { newPassword: `Own-${Date.now()}-Pass9` } });
+    expect(set.ok(), 'skeleton spec: the new user sets their own password').toBe(true);
+  } finally {
+    await ctx.dispose();
+  }
+  return user;
 }
 
 function previousMonth(month: string): string {
@@ -200,9 +219,7 @@ async function readPaths(): Promise<Record<SkeletonScreenName, string | null>> {
     const users = await api.get<UserAccount[]>('/users', { limit: PAGINATION.maxLimit, status: 'active' });
     // A user's page as most are: an active account that isn't the last System admin (whose page
     // adds a "can't deactivate" note).
-    const plain =
-      users.find((u) => u.id !== admin.id && !u.mustChangePassword) ??
-      (await makeUser(api, { name: 'Skeleton Check', roleIds: [roles.get('hr_officer')?.id ?? ''] }));
+    const plain = users.find((u) => u.id !== admin.id && !u.mustChangePassword) ?? (await settledUser(api, roles.get('hr_officer')?.id ?? ''));
     const role = roles.get('direct_manager') ?? [...roles.values()][0]!;
     const e = `/employees/${employee.id}`;
     return {
