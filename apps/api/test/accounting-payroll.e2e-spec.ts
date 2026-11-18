@@ -12,7 +12,8 @@ import { createAppAsTestUser, giveRoles } from './helpers/as-test-user';
 
 /*
  * §10 accounting payroll taxes: worked out once when HR approves a month, from the accounting tax
- * rule and each employee's insurance at that moment, then frozen. Expected money was worked out
+ * rule in force at the approval and the insurance on HR's approved lines, then frozen — even when
+ * worked out later. Expected money was worked out
  * independently with exact fractions (the gross-up, rounded half up).
  */
 
@@ -142,7 +143,9 @@ describe('Accounting — payroll taxes of approved months (e2e)', () => {
   });
 
   afterEach(async () => {
+    // Back to the defaults, with no history: a version left behind would stay "in force".
     await db.schoolSetting.deleteMany({ where: { key: { in: ACCOUNTING_KEYS } } });
+    await db.accountingTaxRuleVersion.deleteMany({});
   });
 
   afterAll(async () => {
@@ -260,6 +263,30 @@ describe('Accounting — payroll taxes of approved months (e2e)', () => {
     await db.accountingPayrollRun.deleteMany({ where: { month } });
     const m = await monthOf(month);
     expect(lineOf(m, emp)).toMatchObject({ net: 1_200_000, incomeTax: 151_732, gross: 1_352_408 });
+  });
+
+  it('missed at approval and worked out later: still the rule and the insurance of the approval, not today\'s', async () => {
+    const month = nextMonth();
+    const emp = await insured(500_000);
+    const run = await createRun(month);
+    await approve(run.id);
+    await recorded(month);
+    const atApproval = await monthOf(month);
+    expect(lineOf(atApproval, emp)).toMatchObject({ insuredSalary: 500_000, insuranceAmount: 55_000, gross: 1_407_442 });
+
+    // After the approval: a new tax rule, and the employee's insured salary raised.
+    await http(app)
+      .patch('/accounting/settings')
+      .send({ payroll: { brackets: [{ width: null, percent: 0 }], martyrPercent: 0, insurancePercent: 1 } })
+      .expect(200);
+    await http(app).patch(`/hr/employees/${emp}`).send({ insuredSalary: 900_000 }).expect(200);
+
+    // The listener's record lost: the first read works the month out again.
+    await db.accountingPayrollRun.deleteMany({ where: { month } });
+    const later = await monthOf(month);
+    expect(later.taxRule).toEqual(atApproval.taxRule);
+    expect(later.lines).toEqual(atApproval.lines);
+    expect(later.totals).toEqual(atApproval.totals);
   });
 
   // ── who sees it (§2, P4) ──────────────────────────────────────────────────

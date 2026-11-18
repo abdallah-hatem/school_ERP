@@ -30,8 +30,9 @@ import {
 /**
  * Payroll taxes (§10). HR payroll ends at the net. When HR approves a month, this works out for
  * every line what the school pays on top — the employee's insurance share, income tax and the
- * martyrs' fund — and the gross, with the tax rule and each employee's insurance at that moment,
- * and keeps them frozen. Reads HR only through its exported services; writes only its own tables.
+ * martyrs' fund — and the gross, with the tax rule in force at the approval and the insurance HR's
+ * approved line holds, and keeps them frozen. Worked out later (a missed event), the answer is the
+ * same. Reads HR only through its exported services; writes only its own tables.
  */
 @Injectable()
 export class AccountingPayrollService {
@@ -47,7 +48,8 @@ export class AccountingPayrollService {
   ) {}
 
   /**
-   * Works out and stores an APPROVED HR run's taxes, once. A run already recorded, or one not
+   * Works out and stores an APPROVED HR run's taxes, once — with the tax rule in force when HR
+   * approved it and the insurance on HR's approved lines, never today's. A run already recorded, or one not
    * approved (yet), is left alone and returns null — so a repeated event never doubles a month.
    */
   async recordApprovedRun(hrRunId: Uuid): Promise<AccountingRunRow | null> {
@@ -55,14 +57,9 @@ export class AccountingPayrollService {
     const run = await this.hrPayroll.approvedLinesForAccounting(hrRunId);
     if (!run) return null;
 
-    const rule = await this.settings.taxRule();
-    const insurance = new Map(
-      (await this.employees.insuranceFor(run.lines.map((l) => l.employeeId))).map((e) => [e.id, e]),
-    );
+    const rule = await this.settings.taxRuleAt(run.approvedAt);
     const lines: AccountingLineData[] = run.lines.map((line) => {
-      const ins = insurance.get(line.employeeId);
-      const insuranceStatus = ins?.insuranceStatus ?? 'NOT_INSURED';
-      const insuredSalary = ins?.insuredSalary ?? null;
+      const { insuranceStatus, insuredSalary } = line;
       const amounts = payrollTax(line.net, insuranceShare(insuranceStatus, insuredSalary, rule.insurancePercent), rule);
       return {
         employeeId: line.employeeId,
@@ -111,7 +108,8 @@ export class AccountingPayrollService {
 
   /**
    * One approved month's taxes. If HR approved the month but its event was missed (the listener
-   * failed or hasn't finished), they are worked out now, with today's rule (logged).
+   * failed or hasn't finished), they are worked out now (logged) — still with the rule in force at
+   * the approval and the insurance HR took then, so the month comes out as it would have.
    */
   async getMonth(month: Month): Promise<AccountingPayrollMonth> {
     let run = await this.repository.findByMonth(month);

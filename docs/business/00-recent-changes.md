@@ -1,5 +1,10 @@
 # Recent changes
 
+- 2026-11-18 — Payroll taxes frozen at approval, even when late (§10, §6, review of #85): a month
+  whose taxes are worked out after its approval (a missed event) now uses the tax rule in force at
+  the approval, not today's. Every change to the tax rule is kept with the moment it took effect.
+  HR's approved lines also keep each employee's insurance status and insured salary, and
+  accounting reads those instead of today's employee record.
 - 2026-11-18 — Payroll taxes (§10, §6, §3, owner): when HR approves a month, accounting works out
   each employee's insurance share (11% of the insured salary, insured only), income tax on the
   monthly slices and the martyrs' fund (0.05%), paid by the school on top of the net, and the gross

@@ -5,6 +5,7 @@ import {
   PAGINATION,
   PayrollStatus,
   type AdjustmentType,
+  type InsuranceStatus,
   type Paginated,
   type PayrollFlag,
   type PayrollTotals,
@@ -97,7 +98,26 @@ export interface LineData {
   adjustmentDeductions: number;
   net: number;
   flags: PayrollFlag[];
+  /** The employee's social insurance (§3), retaken at approval; accounting's taxes use it (§10). */
+  insuranceStatus: InsuranceStatus;
+  insuredSalary: number | null;
 }
+
+/**
+ * What accounting reads of an approved line (§10). Kept apart from `LINE_SELECT`: HR's own
+ * line responses don't carry the insurance.
+ */
+export const ACCOUNTING_LINE_SELECT = {
+  employeeId: true,
+  employeeCode: true,
+  nameEn: true,
+  nameAr: true,
+  net: true,
+  insuranceStatus: true,
+  insuredSalary: true,
+} satisfies Prisma.PayrollLineSelect;
+
+export type AccountingLineSource = Prisma.PayrollLineGetPayload<{ select: typeof ACCOUNTING_LINE_SELECT }>;
 
 export interface LineFilter {
   search?: string;
@@ -230,6 +250,15 @@ export class PayrollRunsRepository extends BaseRepository<
     return this.db.payrollLine.findMany({
       where,
       select: LINE_SELECT,
+      orderBy: { employeeCode: 'asc' },
+    });
+  }
+
+  /** Every line of a run as accounting reads it (§10), with the insurance taken at approval. */
+  findAccountingLines(runId: string): Promise<AccountingLineSource[]> {
+    return this.db.payrollLine.findMany({
+      where: { runId },
+      select: ACCOUNTING_LINE_SELECT,
       orderBy: { employeeCode: 'asc' },
     });
   }

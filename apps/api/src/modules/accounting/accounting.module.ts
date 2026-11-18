@@ -8,6 +8,7 @@ import { AccountingPayrollRepository } from './payroll/repositories/accounting-p
 import { AccountingPayrollService } from './payroll/services/accounting-payroll.service';
 import { AccountingSettingsController } from './settings/accounting-settings.controller';
 import { AccountingSettingsService } from './settings/accounting-settings.service';
+import { AccountingTaxRuleRepository } from './settings/accounting-tax-rule.repository';
 
 /**
  * Accounting (§10) — the top of the module order: it reads HR through HR's front door and reacts to
@@ -19,6 +20,7 @@ import { AccountingSettingsService } from './settings/accounting-settings.servic
   controllers: [AccountingSettingsController, AccountingPayrollController],
   providers: [
     AccountingSettingsService,
+    AccountingTaxRuleRepository,
     AccountingPayrollRepository,
     AccountingPayrollService,
     PayrollApprovedListener,

@@ -24,7 +24,6 @@ import {
   oneYearContractEnd,
   Paginated,
   type PermissionKey,
-  type Piastres,
   socialInsuranceIssues,
   type SocialInsurance,
   Uuid,
@@ -246,16 +245,6 @@ export class EmployeesService {
       await this.access.where('hr.employees.view'),
     );
     return { active: byStage.reduce((n, s) => n + s.count, 0), byStage };
-  }
-
-  /**
-   * Insurance status and insured salary of the given employees, now (§3). For accounting, which
-   * snapshots them when HR approves a month (§10). Unknown ids are left out.
-   */
-  insuranceFor(
-    ids: Uuid[],
-  ): Promise<{ id: Uuid; insuranceStatus: InsuranceStatus; insuredSalary: Piastres | null }[]> {
-    return this.repository.findInsurance([...new Set(ids)]);
   }
 
   /**

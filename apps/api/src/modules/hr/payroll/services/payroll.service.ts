@@ -18,6 +18,7 @@ import {
   type PayrollRunSummary,
   type PayrollTotals,
   type EmployeePayrollLine,
+  type InsuranceStatus,
   type Payslip,
   type Uuid,
 } from '@school-erp/shared';
@@ -418,27 +419,33 @@ export class PayrollService {
   }
 
   /**
-   * An APPROVED run's every line with its net, for accounting (§10) — a system read, not a
+   * An APPROVED run's every line with its net and the insurance taken at approval, and when it was
+   * approved, for accounting (§10) — a system read, not a
    * viewer's: it is not narrowed by whoever's request triggered it (the approver, or the accountant
    * reading a month). Null when the run is unknown or not approved. Accounting's own endpoints are
    * guarded by `accounting.payroll.view`.
    */
   async approvedLinesForAccounting(id: Uuid): Promise<{
     month: Month;
-    lines: { employeeId: Uuid; employeeCode: string; nameEn: string; nameAr: string; net: number }[];
+    /** When HR approved it: accounting uses the tax rule in force at this moment (§10). */
+    approvedAt: Date;
+    lines: {
+      employeeId: Uuid;
+      employeeCode: string;
+      nameEn: string;
+      nameAr: string;
+      net: number;
+      /** The insurance taken at approval (§3, §10) — not today's. */
+      insuranceStatus: InsuranceStatus;
+      insuredSalary: number | null;
+    }[];
   } | null> {
     const run = await this.repository.findRun(id);
-    if (run?.status !== PayrollStatus.APPROVED) return null;
-    const lines = await this.repository.findLines(id);
+    if (run?.status !== PayrollStatus.APPROVED || !run.approvedAt) return null;
     return {
       month: run.month,
-      lines: lines.map(({ employeeId, employeeCode, nameEn, nameAr, net }) => ({
-        employeeId,
-        employeeCode,
-        nameEn,
-        nameAr,
-        net,
-      })),
+      approvedAt: run.approvedAt,
+      lines: await this.repository.findAccountingLines(id),
     };
   }
 
@@ -496,6 +503,10 @@ export class PayrollService {
         departmentNameAr: e.department.nameAr,
         basicSalary: e.basicSalary,
         workSystem: e.workSystem,
+        // Retaken at every calculation, approval included: the approved line holds the insurance
+        // accounting works the month's taxes out from (§10).
+        insuranceStatus: e.insuranceStatus,
+        insuredSalary: e.insuredSalary,
         latenessMinutes: late?.minutes ?? 0,
         ...amounts,
       };

@@ -41,6 +41,8 @@ lines each role sees: §2 Roles (enforced, P4).
   rounded for display only.
 - **DECIDED** — Each line keeps a **snapshot** of the employee's code, names, national ID,
   department, basic salary and work system at calculation. Editing an employee later never changes an approved run.
+  It also keeps the employee's **social insurance** (status and insured salary), retaken at
+  approval: accounting works the month's taxes out from it (§10), not from today's record.
 - **GUESS** — Net never goes below 0. If deductions exceed the salary, net is 0 and the line is
   flagged for review.
 - **GUESS** — No pro-rata for employees who join or leave mid-month in the demo (OPEN for later).

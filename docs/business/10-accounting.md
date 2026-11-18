@@ -13,7 +13,11 @@ out is accounting's job, not HR's (owner, 2026-11-18).
   change to the tax rule or to an employee's insurance never changes an approved month.
 - **DECIDED** — A draft month has nothing in accounting.
 - **DECIDED** — A month is worked out once. If it couldn't be worked out at approval, it is the
-  first time it is looked at (with the rule in force then).
+  first time it is looked at — and it still comes out as at the approval: with the **tax rule in
+  force when HR approved it** and the **insurance HR recorded on the approved lines** (§6), never
+  today's rule or today's employee record (review of #85, 2026-11-18).
+- **DECIDED** — Every change to the tax rule is kept, with the moment it took effect, so the rule
+  in force at any approval can always be found.
 - **DECIDED** (P4, §2) — Tax, insurance and gross are salary data: someone without the salary
   permission for an employee sees that employee's line without them, and the month's money totals
   only with every salary.

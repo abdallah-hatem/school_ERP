@@ -162,7 +162,9 @@ accounting        ← the payroll tax rule and the payroll taxes of approved mon
   module owns its own rule settings (HR: lateness, payroll, penalty catalogue; accounting: the payroll
   tax rule). The one Settings screen shows a section per module.
 - **Accounting** sits at the top. It listens to `payroll.approved` (and later `payment.recorded`)
-  and creates its own records — today each approved month's payroll taxes, idempotent per HR run; its pure tax maths live in `packages/shared/src/rules/payroll-tax.ts`. It
+  and creates its own records — today each approved month's payroll taxes, idempotent per HR run,
+  worked out with the tax-rule version in force at the approval (`accounting_tax_rule_versions`)
+  and the insurance HR's approved lines snapshot, so a late calculation gives the same answer; its pure tax maths live in `packages/shared/src/rules/payroll-tax.ts`. It
   reads other modules only through their exported services. No module below depends on it
   (`.dependency-cruiser.cjs` enforces it). Plan: `docs/plans/2026-11-18-accounting-plan.md`.
 

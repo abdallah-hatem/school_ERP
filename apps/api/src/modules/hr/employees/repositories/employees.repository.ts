@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { EmployeeStatus, InsuranceStatus, Prisma } from '@prisma/client';
+import { EmployeeStatus, Prisma } from '@prisma/client';
 import { ErrorCode, formatEmployeeCode, Paginated } from '@school-erp/shared';
 import { CodedException } from '../../../../common/errors/coded.exception';
 import { BaseRepository } from '../../../../common/repositories/base.repository';
@@ -38,6 +38,8 @@ export const PAYROLL_SNAPSHOT_SELECT = {
   department: { select: { nameEn: true, nameAr: true } },
   basicSalary: true,
   workSystem: true,
+  insuranceStatus: true,
+  insuredSalary: true,
 } satisfies Prisma.EmployeeSelect;
 
 export type PayrollSnapshotRow = Prisma.EmployeeGetPayload<{
@@ -298,17 +300,6 @@ export class EmployeesRepository extends BaseRepository<
     return this.databaseService.employee.findMany({
       where: { id: { in: ids } },
       select: { id: true, status: true },
-    });
-  }
-
-  /** Social insurance of the given employees (§3) — accounting reads it at payroll approval (§10). */
-  findInsurance(
-    ids: string[],
-  ): Promise<{ id: string; insuranceStatus: InsuranceStatus; insuredSalary: number | null }[]> {
-    if (!ids.length) return Promise.resolve([]);
-    return this.databaseService.employee.findMany({
-      where: { id: { in: ids } },
-      select: { id: true, insuranceStatus: true, insuredSalary: true },
     });
   }
 
