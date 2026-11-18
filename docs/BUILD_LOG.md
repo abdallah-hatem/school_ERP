@@ -273,6 +273,11 @@ phase live in `docs/build-log/`.
 - 2026-11-18 — Ownership (owner): Abdallah now does T29/T31 (penalties audit, Activity search),
   the accounting payroll-taxes screen, notifications and events/outbox; Tamer does the payroll-run
   rules snapshot and reviews his listener in #119. T29 started.
+- 2026-11-18 — N0 merged → #124: each employee has a probation end date (default hire date +
+  the HR setting `defaultProbationMonths`, 3, minus a day; editable, clearable, never before the
+  hire date; existing employees backfilled); Settings → HR rules → Employees card. Business
+  alignment review: aligned. Screens checked in EN desktop and AR phone on a throwaway DB (one Job
+  card layout fix made).
 
 ## Next up
 
