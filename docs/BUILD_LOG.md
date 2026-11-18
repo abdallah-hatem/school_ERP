@@ -320,14 +320,26 @@ phase live in `docs/build-log/`.
   `GET /accounting/payroll/year/:year` (via HR's `PayrollService.runStatusesInYear`) and the month
   export — for Tamer to review. Checked in screenshots. Tamer can now start the payroll-run rules
   snapshot (merge dev first; N2 touches `payroll.service.ts`).
+- 2026-11-19 — N2 merged → #131: approval notifications — a pending penalty tells whoever may
+  approve it within their stage or team (not the recorder); a calculated payroll month with no
+  pending penalty tells payroll approvers (net only for whole-school viewers); both resolve for
+  everyone when one person acts. `/penalties?penalty=<id>` opens that penalty with Approve/Cancel;
+  smoke covers record → bell → approve → "Approved by …". Notifications N0–N4 are done; N5
+  (verify) next.
+- 2026-11-19 — First visit opens in English → #142 (an old `/` → `/ar` redirect in next.config ran
+  before the proxy and overrode the English default; smoke now checks a fresh visitor lands on /en).
+  Toasts back at the top inline-end corner (top-right EN, top-left AR) → #143 (owner preferred it
+  over #116's bottom corner).
+- 2026-11-19 — Started: payroll taxes statement fixes (subtotal row to the table's right edge;
+  pagination + search per group on screen, print/Excel complete) and a break-ui pass over every
+  money screen with worst-case amounts (owner).
 
 ## Next up
 
 - Outbox nits (from #121's live test, cosmetic): the "dead after 10 failures" log line always says
   10 (after an admin retry it's 11); a dead row still gets a `next_attempt_at`. A lock held longer
   than Prisma's 15 s transaction timeout counts as one failure, then the next tick delivers it.
-- **Notifications — spec, plan and option A decided (PR #106). Events + outbox and jobs are in; N0 (#124), N1 (#127), N3 (#134) and N4 (#137) are merged; N2 (approvals) is being built, then
-  N5 (verify).** Spec
+- **Notifications — spec, plan and option A decided (PR #106). Events + outbox and jobs are in; N0–N4 are merged (#124, #127, #131, #134, #137); N5 (verify) next.** Spec
   `docs/specs/2026-11-18-notifications.md`, plan `docs/plans/2026-11-18-notifications-plan.md`,
   business §11, mockup `design/mockups/notifications.html` (option A · bell popover; B and C dropped). The
   UI shows the in-app channel only — one switch per type; the API keeps a `channel` field (`in_app`). Owner decisions (2026-11-18): in-app bell only (channels addable later), staff users now

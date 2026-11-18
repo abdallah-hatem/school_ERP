@@ -4,6 +4,15 @@ import { Api } from './support/api';
 import { literal, t } from './support/i18n';
 import { shoot, signIn } from './support/ui';
 
+test('a first visit with no language chosen opens in English (the default)', async ({ browser }) => {
+  // A fresh context: no `lang` cookie. Arabic speakers switch with the EN/ع toggle.
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await page.goto('/');
+  await expect(page).toHaveURL(/\/en(\/|$)/);
+  await context.close();
+});
+
 test('sign in → the dashboard shows the headcount', async ({ page }, info) => {
   const api = await Api.asAdmin();
   const dashboard = await api.get<HrDashboard>('/hr/dashboard');
