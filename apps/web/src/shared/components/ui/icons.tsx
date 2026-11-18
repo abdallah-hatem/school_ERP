@@ -81,6 +81,12 @@ import {
   UserPlusIcon as UserPlus,
   UserCircleDashedIcon as UserCircleDashed,
   EraserIcon as Eraser,
+  BellIcon as Bell,
+  FileTextIcon as FileText,
+  HourglassMediumIcon as HourglassMedium,
+  ClockCountdownIcon as ClockCountdown,
+  CalendarCheckIcon as CalendarCheck,
+  ChecksIcon as Checks,
 } from '@phosphor-icons/react/ssr';
 import type { ComponentType, SVGProps } from 'react';
 import { cn } from '@/shared/lib/utils';
@@ -273,3 +279,11 @@ export const EmailIcon = duotone(EnvelopeSimple, 'Email');
 export const AddUserIcon = duotone(UserPlus, 'AddUser');
 export const NoUserIcon = duotone(UserCircleDashed, 'NoUser');
 
+// Notifications (§11): the bell, its actions and one icon per kind of notification.
+export const NotificationsIcon = duotone(Bell, 'Notifications');
+export const MarkAllReadIcon = duotone(Checks, 'MarkAllRead');
+export const NotificationSettingsIcon = duotone(GearSix, 'NotificationSettings');
+export const ContractEndIcon = duotone(FileText, 'ContractEnd');
+export const ProbationEndIcon = duotone(HourglassMedium, 'ProbationEnd');
+export const LatenessDueIcon = duotone(ClockCountdown, 'LatenessDue');
+export const PayrollDueIcon = duotone(CalendarCheck, 'PayrollDue');

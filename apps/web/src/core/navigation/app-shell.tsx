@@ -2,6 +2,7 @@
 
 import type { SessionUser } from "@school-erp/shared";
 import { useState, type ReactNode } from "react";
+import { NotificationBell, NotificationInbox } from "@/core/notifications";
 import { SchoolBrand } from "@/core/settings/school-brand";
 import { useSchoolBranding } from "@/core/settings/branding-provider";
 import { LocaleSwitch } from "@/shared/components/layout/locale-switch";
@@ -21,6 +22,7 @@ import { UserChip } from "./user-chip";
  * The signed-in frame.
  * - ≥1280px: sidebar grouped by module (Administration last), the signed-in user at the bottom.
  * - 768–1279px: icon rail, one icon per module.
+ * - The notification bell sits beside the language switch on every width (§11, option A).
  * - <768px: top bar with the school name and a menu button opening a drawer from the start edge
  *   (the same grouped menu). Esc, the backdrop, ✕ or choosing a link closes it, and focus returns
  *   to the menu button.
@@ -38,7 +40,7 @@ export function AppShell({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const schoolName = locale === "ar" ? branding.nameAr : branding.nameEn;
 
-  return (
+  const shell = (
     <div className="min-h-dvh md:grid md:grid-cols-[5.25rem_minmax(0,1fr)] xl:grid-cols-[17rem_minmax(0,1fr)] print:block">
       {/*
         Sidebar / icon rail (never printed: a printout is the page's content only). The column
@@ -110,11 +112,13 @@ export function AppShell({
           <p className="font-display line-clamp-2 min-w-0 flex-1 text-sm leading-tight font-extrabold break-words min-[400px]:text-base">
             {schoolName}
           </p>
+          {user ? <NotificationBell /> : null}
           <LocaleSwitch />
         </header>
 
-        {/* Tablet and desktop: language switch above the content */}
-        <div className="no-print hidden items-center justify-end px-6 pt-5 md:flex xl:px-8">
+        {/* Tablet and desktop: the bell and the language switch above the content */}
+        <div className="no-print hidden items-center justify-end gap-2.5 px-6 pt-5 md:flex xl:px-8">
+          {user ? <NotificationBell /> : null}
           <LocaleSwitch />
         </div>
 
@@ -127,4 +131,6 @@ export function AppShell({
       </div>
     </div>
   );
+  // One inbox for both bells (phone bar, desktop row): one poll, one count.
+  return user ? <NotificationInbox>{shell}</NotificationInbox> : shell;
 }
