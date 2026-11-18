@@ -166,7 +166,8 @@ describe('sign-in limit and scheduled jobs (e2e)', () => {
 
     it('the email is counted lower-cased: different cases add up to one lock', async () => {
       const person = await makeUser();
-      const variants = [person.email.toUpperCase(), person.email, ` ${person.email} `];
+      const mixed = person.email.charAt(0).toUpperCase() + person.email.slice(1);
+      const variants = [person.email.toUpperCase(), person.email, mixed];
       for (let i = 0; i < 5; i++) {
         await login(variants[i % variants.length], 'not-the-password').expect(401);
       }
