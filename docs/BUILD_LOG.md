@@ -228,6 +228,10 @@ phase live in `docs/build-log/`.
   tab fills in; smoke History checks and the skeleton History comparison are full. Left: T29
   penalties (Tamer), then T31 (scan expects no placeholders, dry-run check, Activity search by
   employee code).
+- 2026-11-18 — `docs/EVENTS.md` (owner): every event (name, payload, emitter, listeners, after-commit
+  or not, emit vs emitAsync, planned kind) and every transaction boundary, from the code; a unit
+  test fails when the doc and the code disagree. Nine gaps listed there (the `employee.*` events fire
+  inside the transaction; four events have no listener; emit/emitAsync mixed) → `docs/events-catalogue`.
 
 ## Next up
 

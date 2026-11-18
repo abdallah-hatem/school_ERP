@@ -209,6 +209,9 @@ Use it to get data with the owner's rules applied, or to ask the owner to change
 **2. Event: "something happened; whoever cares can react."** The lower module announces it and
 doesn't know who listens. This is how a lower module triggers work in a higher one.
 
+**Every event, its emitters and listeners, and every transaction boundary: `docs/EVENTS.md`**
+(kept in step with the code by `apps/api/src/common/events/events-doc.spec.ts`).
+
 ```ts
 // hr
 this.events.emit('employee.deactivated', { employeeId, at: new Date() });
