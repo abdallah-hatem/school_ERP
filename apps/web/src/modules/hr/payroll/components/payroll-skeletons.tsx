@@ -11,7 +11,7 @@ import { PayrollI18n } from '../messages';
 import { EmployeePayroll } from './employee-payroll';
 import { PayslipSkeleton as PayslipSkeletonBody } from './payslip-view';
 import { RulesPanel } from './rules-panel';
-import { RUN_COLUMN_IDS, RunLinesToolbar, RunTiles, runColumn } from './run-page';
+import { RUN_COLUMN_IDS, RUN_LINES_CARDS_BELOW, RunLinesToolbar, RunTiles, runColumn } from './run-page';
 import { RunsList } from './runs-list';
 
 /*
@@ -74,6 +74,7 @@ function RunPageSkeletonBody() {
             loading
             rows={undefined}
             getRowId={String}
+            cardsBelow={RUN_LINES_CARDS_BELOW}
             columns={RUN_COLUMN_IDS.map((id) => ({ ...runColumn(id, t), cell: () => null }))}
             toolbar={
               <RunLinesToolbar

@@ -258,34 +258,49 @@ function SumLine({ month, t }: { month: AccountingPayrollMonth | undefined; t: T
   ];
   const value = (field: SubtotalField) =>
     month ? <Money value={month.totals[field]} /> : <SkeletonText className="text-base" width="w-28" />;
+  // Phone: a list (label at the start, figure at the end). From 740px of page (676 of the sum's
+  // own width, inside the statement's padding): the sum as terms — the four
+  // across with the gross as a band under them, and all five on one line only from 960px, where a
+  // month of EGP 99,999,999.99 still fits each term (narrower, the figures overflowed their terms).
   return (
-    <div className="flex flex-col @min-[740px]:flex-row @min-[740px]:items-stretch @min-[740px]:gap-2">
-      {terms.map((term, i) => (
-        <Fragment key={term.field}>
-          {i > 0 ? <Operator>+</Operator> : null}
-          <div className="flex min-w-0 items-baseline justify-between gap-2 border-b border-border px-0.5 py-2.5 @min-[740px]:flex-1 @min-[740px]:flex-col @min-[740px]:items-stretch @min-[740px]:justify-start @min-[740px]:gap-1 @min-[740px]:rounded-2xl @min-[740px]:border @min-[740px]:bg-muted @min-[740px]:px-3.5 @min-[740px]:py-3">
-            <span className="text-xs font-semibold text-muted-foreground">{term.label}</span>
-            <span className="text-base font-extrabold">{value(term.field)}</span>
-          </div>
-        </Fragment>
-      ))}
-      <Operator>=</Operator>
-      <div className="relative mt-2 flex min-w-0 items-baseline justify-between gap-2 overflow-hidden rounded-2xl bg-primary px-3.5 py-3 text-primary-foreground @min-[740px]:mt-0 @min-[740px]:flex-[1.3] @min-[740px]:flex-col @min-[740px]:items-stretch @min-[740px]:justify-start @min-[740px]:gap-1 print:border print:border-foreground print:bg-card print:text-foreground">
-        <span
-          aria-hidden="true"
-          // Phone: a small circle off the label's corner; wider: the feature tile's corner circle.
-          className="absolute -start-4 -top-6 size-11 rounded-full bg-accent/85 print:hidden @min-[740px]:start-auto @min-[740px]:-end-7 @min-[740px]:-top-11 @min-[740px]:size-22"
-        />
-        <span className="relative text-xs font-semibold opacity-85">{t('accounting.payrollTaxes.columns.gross')}</span>
-        <span className="relative text-lg font-extrabold @min-[740px]:text-xl">{value('gross')}</span>
+    <div className="@container/sum">
+      <div className="flex flex-col @min-[676px]/sum:flex-row @min-[676px]/sum:flex-wrap @min-[676px]/sum:items-stretch @min-[676px]/sum:gap-2 @min-[960px]/sum:flex-nowrap">
+        {terms.map((term, i) => (
+          <Fragment key={term.field}>
+            {i > 0 ? <Operator>+</Operator> : null}
+            <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-2 border-b border-border px-0.5 py-2.5 @min-[676px]/sum:flex-1 @min-[676px]/sum:flex-col @min-[676px]/sum:flex-nowrap @min-[676px]/sum:items-stretch @min-[676px]/sum:justify-start @min-[676px]/sum:gap-1 @min-[676px]/sum:rounded-2xl @min-[676px]/sum:border @min-[676px]/sum:bg-muted @min-[676px]/sum:px-3.5 @min-[676px]/sum:py-3">
+              <span className="text-xs font-semibold text-muted-foreground">{term.label}</span>
+              {/* Bottom of the term: a figure whose label wrapped above it still lines up with the others. */}
+              <span className="min-w-0 text-base font-extrabold @min-[676px]/sum:mt-auto">{value(term.field)}</span>
+            </div>
+          </Fragment>
+        ))}
+        <Operator wide>=</Operator>
+        <div className="relative mt-2 flex min-w-0 flex-wrap items-baseline justify-between gap-x-2 overflow-hidden rounded-2xl bg-primary px-3.5 py-3 text-primary-foreground @min-[676px]/sum:mt-0 @min-[676px]/sum:basis-full @min-[960px]/sum:basis-0 @min-[960px]/sum:flex-[1.3] @min-[960px]/sum:flex-col @min-[960px]/sum:flex-nowrap @min-[960px]/sum:items-stretch @min-[960px]/sum:justify-start @min-[960px]/sum:gap-1 print:border print:border-foreground print:bg-card print:text-foreground">
+          <span
+            aria-hidden="true"
+            // A band (phone, and under the terms): a small circle off the label's corner; a term on
+            // their line: the feature tile's corner circle.
+            className="absolute -start-4 -top-6 size-11 rounded-full bg-accent/85 print:hidden @min-[960px]/sum:start-auto @min-[960px]/sum:-end-7 @min-[960px]/sum:-top-11 @min-[960px]/sum:size-22"
+          />
+          <span className="relative text-xs font-semibold opacity-85">{t('accounting.payrollTaxes.columns.gross')}</span>
+          <span className="relative min-w-0 text-lg font-extrabold @min-[676px]/sum:text-xl">{value('gross')}</span>
+        </div>
       </div>
     </div>
   );
 }
 
-function Operator({ children }: { children: ReactNode }) {
+/** `+` between the terms; `=` (`wide`) only once the gross shares their line. */
+function Operator({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
   return (
-    <span aria-hidden="true" className="hidden w-4.5 shrink-0 place-items-center text-xl font-extrabold text-muted-foreground @min-[740px]:grid">
+    <span
+      aria-hidden="true"
+      className={cn(
+        'hidden w-4.5 shrink-0 place-items-center text-xl font-extrabold text-muted-foreground',
+        wide ? '@min-[960px]/sum:grid' : '@min-[676px]/sum:grid',
+      )}
+    >
       {children}
     </span>
   );

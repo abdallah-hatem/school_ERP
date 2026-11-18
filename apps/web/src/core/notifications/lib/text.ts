@@ -9,7 +9,7 @@ import {
   type NotificationName,
 } from '@school-erp/shared';
 import { addDays, formatSchoolTime, formatShortDay, schoolDay } from '@/core/audit/lib/time';
-import { formatMoney, formatMonth } from '@/shared/lib/format';
+import { formatMoney, formatMoneyText, formatMonth } from '@/shared/lib/format';
 import type { Locale, Translate, TranslateValues } from '@/shared/lib/i18n';
 
 /*
@@ -45,10 +45,7 @@ export function sentenceDate(date: IsoDate, locale: Locale): string {
 
 /** Money in a sentence with its label on the left, as `<Money>` draws it: `EGP 14,000.00` / `14,000.00 ج.م`. */
 function sentenceMoney(piastres: number, locale: Locale, t?: Translate): string {
-  const figure = formatMoney(piastres);
-  if (!t) return figure;
-  const label = t('ui.units.currency');
-  return locale === 'ar' ? `${figure} ${label}` : `${label} ${figure}`;
+  return t ? formatMoneyText(piastres, locale, t('ui.units.currency')) : formatMoney(piastres);
 }
 
 /** The values a sentence fills in, each shown the way the screens show it. */

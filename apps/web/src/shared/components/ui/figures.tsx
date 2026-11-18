@@ -33,10 +33,18 @@ export function Money({
     );
   }
   // The label always sits left of the figure: "EGP 14,000.00" reads LTR, "14,000.00 ج.م" reads RTL.
+  // Where the box is too narrow for both (EGP 99,999,999.99 in a half-width tile or a sum term),
+  // the label moves onto its own line above the figure; the figure itself never breaks or overflows
+  // its own line (`whitespace-nowrap` on each part). Wrapped lines keep to the reading start.
   return (
-    <span dir="ltr" className={cn('inline-flex items-baseline gap-1 whitespace-nowrap', className)}>
-      {currency ? <span className="text-[0.85em] font-semibold opacity-75">{t('ui.units.currency')}</span> : null}
-      <span className="tabular">{formatMoney(value)}</span>
+    <span
+      dir="ltr"
+      className={cn('inline-flex max-w-full flex-wrap items-baseline gap-x-1 rtl:justify-end', className)}
+    >
+      {currency ? (
+        <span className="text-[0.85em] font-semibold whitespace-nowrap opacity-75">{t('ui.units.currency')}</span>
+      ) : null}
+      <span className="tabular whitespace-nowrap">{formatMoney(value)}</span>
     </span>
   );
 }

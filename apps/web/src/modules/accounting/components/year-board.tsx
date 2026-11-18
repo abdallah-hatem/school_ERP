@@ -169,7 +169,9 @@ function MonthTile({ month, basePath, future }: { month: AccountingPayrollYearMo
             {t('accounting.payrollTaxes.board.employees', { count: formatCount(summary.totals.employees) })}
           </span>
         ) : null}
-        <div className="mt-auto flex min-w-0 flex-col gap-0.5">
+        {/* A size container: the gross follows the tile's width (16px in a 390px phone's half tile,
+            20px on wide screens), so EGP 146,934,120.74 still fits a 320px phone's half tile. */}
+        <div className="@container/gross mt-auto flex min-w-0 flex-col gap-0.5">
           {!summary ? (
             <span className="text-sm font-bold text-primary">{t('accounting.payrollTaxes.board.notWorkedOut')}</span>
           ) : summary.salaryVisible ? (
@@ -177,7 +179,7 @@ function MonthTile({ month, basePath, future }: { month: AccountingPayrollYearMo
               <span className="text-xs text-muted-foreground">{t('accounting.payrollTaxes.board.gross')}</span>
               <Money
                 value={summary.totals.gross}
-                className="text-base font-extrabold text-primary @min-[640px]:text-xl"
+                className="text-[clamp(0.8125rem,11cqi,1.25rem)] font-extrabold text-primary"
               />
             </>
           ) : (
@@ -203,7 +205,12 @@ function MonthTile({ month, basePath, future }: { month: AccountingPayrollYearMo
       )}
     >
       <TileHead name={name} muted>
-        {draft ? <StatusPill tone="accent">{t('accounting.payrollTaxes.board.draft')}</StatusPill> : null}
+        {draft ? (
+          // Wraps in the narrowest tile ("مسودة في الموارد البشرية" in a 320px phone's half tile).
+          <StatusPill tone="accent" className="whitespace-normal">
+            {t('accounting.payrollTaxes.board.draft')}
+          </StatusPill>
+        ) : null}
       </TileHead>
       <span className="mt-auto text-xs text-muted-foreground">
         {draft

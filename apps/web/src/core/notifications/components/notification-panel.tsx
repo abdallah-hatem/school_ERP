@@ -308,7 +308,14 @@ function NotificationRow({
             const itemHref = linkHref(item.link, locale);
             const inner = (
               <>
-                <bdi className={cn('max-w-[55%] shrink-0 truncate', item.resolved ? 'text-muted-foreground line-through' : 'font-medium')}>
+                <bdi
+                  className={cn(
+                    // Capped only to leave room for a detail; alone, the line takes the row.
+                    line.detail ? 'max-w-[55%] shrink-0' : 'min-w-0 flex-1',
+                    'truncate',
+                    item.resolved ? 'text-muted-foreground line-through' : 'font-medium',
+                  )}
+                >
                   {line.main}
                 </bdi>
                 {line.detail ? <bdi className="min-w-0 flex-1 truncate text-end text-muted-foreground">{line.detail}</bdi> : null}
