@@ -50,8 +50,9 @@
 
 ## Insurance, bank, emergency contact and qualification
 
-**DECIDED** (owner, 2026-11-18) — four more groups on the employee record. Data only: how payroll
-uses insurance and bank details is Planned and belongs to the payroll owner (§6).
+**DECIDED** (owner, 2026-11-18) — four more groups on the employee record. Accounting takes the
+employee's insurance share from the insurance status and insured salary as the approved payroll
+line recorded them (§6, §10); how payroll uses the bank details is Planned (§6).
 
 | Group | Field | Rule |
 |---|---|---|

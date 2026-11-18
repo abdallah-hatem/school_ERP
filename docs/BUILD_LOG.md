@@ -183,6 +183,13 @@ phase live in `docs/build-log/`.
 
 ## Next up
 
+- **Accounting payroll taxes screen** — a page per approved month (net, insurance share, income tax,
+  fund, gross per employee) and a sidebar entry: **mockups first** (CLAUDE.md rule 9). The API
+  (`GET /accounting/payroll[/:month]`) is built. Tax defaults are GUESS until the accountant confirms.
+- Accounting settings, from the #84 review (optional): `AccountingSettingsService.update()` now
+  reads inside the write's transaction, but two simultaneous saves can still overwrite each other
+  (needs a row lock or a version check); the settings e2e checks the audit entry exists but not its
+  before/after values.
 - **Before Sunday (owner):** on the demo DB run `prisma migrate deploy`, then `db:seed` once with the
   same `SEED_ADMIN_PASSWORD`. Until T28/T29 land, open Activity in the demo only for a settings change.
 - Access decisions from #89: Principal/Accountant can't read HR rules on Lateness and the payroll run

@@ -193,6 +193,14 @@ export class EmployeesService {
     if (unique.some((id) => !covered.has(id))) throw new NotFoundException();
   }
 
+  /**
+   * Whether the user sees every salary (`hr.employees.view_salary` at scope `all`, R7): what whole-
+   * school money totals need. For other modules (accounting, §10), through HR's front door.
+   */
+  async seesEverySalary(): Promise<boolean> {
+    return (await this.access.salaryScope()).kind === 'all';
+  }
+
   /** Which of `ids` `key` covers for the user (unknown ids are left out). */
   async filterInScope(key: PermissionKey, ids: readonly Uuid[]): Promise<Set<Uuid>> {
     const [scope, rows] = await Promise.all([

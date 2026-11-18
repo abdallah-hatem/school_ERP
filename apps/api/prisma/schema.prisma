@@ -508,34 +508,38 @@ model PayrollRun {
 /// One employee's line in a run. Every employee and department field is a SNAPSHOT taken at
 /// calculation — editing the employee later never changes it.
 model PayrollLine {
-  id                   String     @id @default(uuid()) @db.Uuid
-  runId                String     @map("run_id") @db.Uuid
-  employeeId           String     @map("employee_id") @db.Uuid
-  employeeCode         String     @map("employee_code")
-  nameEn               String     @map("name_en")
-  nameAr               String     @map("name_ar")
-  nationalId           String?    @map("national_id")
+  id                   String          @id @default(uuid()) @db.Uuid
+  runId                String          @map("run_id") @db.Uuid
+  employeeId           String          @map("employee_id") @db.Uuid
+  employeeCode         String          @map("employee_code")
+  nameEn               String          @map("name_en")
+  nameAr               String          @map("name_ar")
+  nationalId           String?         @map("national_id")
   /// Snapshot of the employee's department id (plain column, not a relation).
-  departmentId         String     @map("department_id") @db.Uuid
-  departmentNameEn     String     @map("department_name_en")
-  departmentNameAr     String     @map("department_name_ar")
-  basicSalary          Int        @map("basic_salary")
-  workSystem           WorkSystem @map("work_system")
-  monthSalary          Int        @map("month_salary")
+  departmentId         String          @map("department_id") @db.Uuid
+  departmentNameEn     String          @map("department_name_en")
+  departmentNameAr     String          @map("department_name_ar")
+  basicSalary          Int             @map("basic_salary")
+  workSystem           WorkSystem      @map("work_system")
+  monthSalary          Int             @map("month_salary")
   /// Rounded for display; deductions use monthSalary ÷ divisor unrounded.
-  dayValue             Int        @map("day_value")
-  penaltyDays          Decimal    @default(0) @map("penalty_days") @db.Decimal(5, 2)
-  penaltyAmount        Int        @default(0) @map("penalty_amount")
-  latenessMinutes      Int        @default(0) @map("lateness_minutes")
-  latenessDays         Decimal    @default(0) @map("lateness_days") @db.Decimal(5, 2)
-  latenessAmount       Int        @default(0) @map("lateness_amount")
-  adjustmentAdditions  Int        @default(0) @map("adjustment_additions")
-  adjustmentDeductions Int        @default(0) @map("adjustment_deductions")
+  dayValue             Int             @map("day_value")
+  penaltyDays          Decimal         @default(0) @map("penalty_days") @db.Decimal(5, 2)
+  penaltyAmount        Int             @default(0) @map("penalty_amount")
+  latenessMinutes      Int             @default(0) @map("lateness_minutes")
+  latenessDays         Decimal         @default(0) @map("lateness_days") @db.Decimal(5, 2)
+  latenessAmount       Int             @default(0) @map("lateness_amount")
+  adjustmentAdditions  Int             @default(0) @map("adjustment_additions")
+  adjustmentDeductions Int             @default(0) @map("adjustment_deductions")
   net                  Int
+  /// Snapshot of the employee's social insurance (§3), retaken at approval — what accounting
+  /// works the month's taxes out from (§10), whenever it does.
+  insuranceStatus      InsuranceStatus @map("insurance_status")
+  insuredSalary        Int?            @map("insured_salary")
   /// `PayrollFlag` values: NET_FLOORED, PENDING_PENALTIES.
-  flags                String[]   @default([])
-  createdAt            DateTime   @default(now()) @map("created_at")
-  updatedAt            DateTime   @updatedAt @map("updated_at")
+  flags                String[]        @default([])
+  createdAt            DateTime        @default(now()) @map("created_at")
+  updatedAt            DateTime        @updatedAt @map("updated_at")
 
   run      PayrollRun @relation(fields: [runId], references: [id], onDelete: Cascade)
   employee Employee   @relation(fields: [employeeId], references: [id], onDelete: Restrict)
@@ -567,4 +571,58 @@ model PayrollAdjustment {
   @@index([employeeId])
   @@index([createdById])
   @@map("payroll_adjustments")
+}
+
+// ── accounting (§10) ───────────────────────────────────────────────────────
+
+/// One approved HR payroll month as accounting sees it: worked out once, when HR approved it, and
+/// frozen. `taxRule` is the accounting tax rule in force then. Accounting writes only its tables.
+model AccountingPayrollRun {
+  id         String   @id @default(uuid()) @db.Uuid
+  /// The approved HR run (plain id, not a relation — accounting reads HR only through its service).
+  hrRunId    String   @unique @map("hr_run_id") @db.Uuid
+  month      String   @unique @db.Char(7)
+  taxRule    Json     @map("tax_rule")
+  recordedAt DateTime @default(now()) @map("recorded_at")
+
+  lines AccountingPayrollLine[]
+
+  @@map("accounting_payroll_runs")
+}
+
+/// Every version of the payroll tax rule (§10), from the moment it took effect: an approved month
+/// is worked out with the version in force at its approval, even when that happens later.
+model AccountingTaxRuleVersion {
+  id            String   @id @default(uuid()) @db.Uuid
+  rule          Json
+  effectiveFrom DateTime @default(now()) @map("effective_from")
+  /// Who saved it (plain id; the audit log has the details). Null for the baseline.
+  changedById   String?  @map("changed_by_id") @db.Uuid
+
+  @@index([effectiveFrom])
+  @@map("accounting_tax_rule_versions")
+}
+
+/// One employee's taxes for an approved month. Employee fields and insurance are a SNAPSHOT at
+/// approval. gross = net + insuranceAmount + incomeTax + martyrTax.
+model AccountingPayrollLine {
+  id              String          @id @default(uuid()) @db.Uuid
+  runId           String          @map("run_id") @db.Uuid
+  employeeId      String          @map("employee_id") @db.Uuid
+  employeeCode    String          @map("employee_code")
+  nameEn          String          @map("name_en")
+  nameAr          String          @map("name_ar")
+  net             Int
+  insuranceStatus InsuranceStatus @map("insurance_status")
+  insuredSalary   Int?            @map("insured_salary")
+  insuranceAmount Int             @map("insurance_amount")
+  incomeTax       Int             @map("income_tax")
+  martyrTax       Int             @map("martyr_tax")
+  gross           Int
+
+  run AccountingPayrollRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@unique([runId, employeeId])
+  @@index([runId])
+  @@map("accounting_payroll_lines")
 }

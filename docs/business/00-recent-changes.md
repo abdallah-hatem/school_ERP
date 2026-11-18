@@ -1,5 +1,15 @@
 # Recent changes
 
+- 2026-11-18 — Payroll taxes frozen at approval, even when late (§10, §6, review of #85): a month
+  whose taxes are worked out after its approval (a missed event) now uses the tax rule in force at
+  the approval, not today's. Every change to the tax rule is kept with the moment it took effect.
+  HR's approved lines also keep each employee's insurance status and insured salary, and
+  accounting reads those instead of today's employee record.
+- 2026-11-18 — Payroll taxes (§10, §6, §3, owner): when HR approves a month, accounting works out
+  each employee's insurance share (11% of the insured salary, insured only), income tax on the
+  monthly slices and the martyrs' fund (0.05%), paid by the school on top of the net, and the gross
+  — frozen for that month. Salary data: hidden without the salary permission (§2). Read through
+  the API for now (Accountant, System admin); the screen waits for mockups.
 - 2026-11-18 — Settings access (§7, §10, review of the accounting panel): the Accountant now has
   Settings in the menu and lands on Accounting. Settings lists only the sections a user may view; a
   link to another section opens their first allowed one. Without the right to change the tax rule,
@@ -17,6 +27,9 @@
   HR payroll ends at the net and salaries are net, grossed up (owner, 2026-11-17). Defaults from
   the school's previous HR system (GUESS — to confirm with the accountant). Accountant and System
   admin see and change it. Working each approved month out follows.
+- 2026-11-18 — Audit log (§9, T29): penalties (record, approve, cancel), monthly lateness (one entry
+  per saved month, a line per changed employee) and payroll runs (create, recalculate, approve with
+  the totals; adjustments added and removed) are now recorded, together with the change.
 - 2026-11-18 — What each role sees (§2, P4, owner: "I still see salaries, all employees, every
   detail"): stage and team limits and salary visibility are now enforced. A stage head sees only
   their stage's employees, a direct manager only their team — in every list, count, picker,

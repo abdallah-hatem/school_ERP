@@ -88,6 +88,8 @@ import { LatenessService } from './staff-attendance/services/lateness.service';
   exports: [
     // lists + employees (T5)
     EmployeesService,
+    // payroll — accounting reads approved runs (§10)
+    PayrollService,
   ],
 })
 export class HrModule {}

@@ -114,12 +114,13 @@ describe('starting roles (spec table, GUESS)', () => {
         'hr.payroll.export_bank_sheet',
         'accounting.settings.view',
         'accounting.settings.edit',
+        'accounting.payroll.view',
       ].sort(),
     );
   });
 
-  it('accounting (§10): the payroll tax rule — Accountant and System admin only', () => {
-    for (const key of ['accounting.settings.view', 'accounting.settings.edit'] as const) {
+  it('accounting (§10): the payroll tax rule and the months\' taxes — Accountant and System admin only', () => {
+    for (const key of ['accounting.settings.view', 'accounting.settings.edit', 'accounting.payroll.view'] as const) {
       expect(holders(key)).toEqual(['accountant', 'system_admin']);
     }
   });

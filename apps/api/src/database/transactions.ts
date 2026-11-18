@@ -87,6 +87,15 @@ export class AfterCommit {
     return result;
   }
 
+  /**
+   * Runs `fn` in the open transaction (an `@Audited` request's), or — called outside one, e.g. by
+   * the seed — in a new transaction with its own after-commit queue. A service whose write and
+   * audit entry must commit together wraps them in this.
+   */
+  inTransaction<T>(fn: () => Promise<T>): Promise<T> {
+    return this.cls.isActive() && this.txHost.isTransactionActive() ? fn() : this.transaction(fn);
+  }
+
   /** Queues `fn` for after the open transaction's commit, or runs it now when none is open. */
   async run(fn: AfterCommitFn): Promise<void> {
     const queue =

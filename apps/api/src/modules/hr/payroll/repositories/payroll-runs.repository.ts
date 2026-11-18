@@ -1,9 +1,11 @@
 import { Injectable } from '@nestjs/common';
+import { TransactionHost } from '@nestjs-cls/transactional';
 import { Prisma } from '@prisma/client';
 import {
   PAGINATION,
   PayrollStatus,
   type AdjustmentType,
+  type InsuranceStatus,
   type Paginated,
   type PayrollFlag,
   type PayrollTotals,
@@ -11,6 +13,7 @@ import {
 } from '@school-erp/shared';
 import { BaseRepository } from '../../../../common/repositories/base.repository';
 import { DatabaseService } from '../../../../database/database.service';
+import type { DbAdapter, DbClient } from '../../../../database/transactions';
 
 export const RUN_SELECT = {
   id: true,
@@ -95,7 +98,26 @@ export interface LineData {
   adjustmentDeductions: number;
   net: number;
   flags: PayrollFlag[];
+  /** The employee's social insurance (§3), retaken at approval; accounting's taxes use it (§10). */
+  insuranceStatus: InsuranceStatus;
+  insuredSalary: number | null;
 }
+
+/**
+ * What accounting reads of an approved line (§10). Kept apart from `LINE_SELECT`: HR's own
+ * line responses don't carry the insurance.
+ */
+export const ACCOUNTING_LINE_SELECT = {
+  employeeId: true,
+  employeeCode: true,
+  nameEn: true,
+  nameAr: true,
+  net: true,
+  insuranceStatus: true,
+  insuredSalary: true,
+} satisfies Prisma.PayrollLineSelect;
+
+export type AccountingLineSource = Prisma.PayrollLineGetPayload<{ select: typeof ACCOUNTING_LINE_SELECT }>;
 
 export interface LineFilter {
   search?: string;
@@ -109,7 +131,7 @@ export type LineAdjustmentUpdate = Pick<
   'adjustmentAdditions' | 'adjustmentDeductions' | 'net' | 'flags'
 >;
 
-type Tx = Prisma.TransactionClient;
+type Tx = DbClient;
 
 const EMPTY_TOTALS: PayrollTotals = {
   employees: 0,
@@ -133,12 +155,16 @@ export class PayrollRunsRepository extends BaseRepository<
   Prisma.PayrollRunUncheckedCreateInput,
   Prisma.PayrollRunUncheckedUpdateInput
 > {
-  constructor(databaseService: DatabaseService) {
+  constructor(
+    databaseService: DatabaseService,
+    private readonly txHost: TransactionHost<DbAdapter>,
+  ) {
     super(databaseService, 'payrollRun');
   }
 
-  private get db(): DatabaseService {
-    return this.databaseService;
+  /** The open transaction when there is one (an audited request, audit D2), else the plain client. */
+  private get db(): DbClient {
+    return this.txHost.tx;
   }
 
   list(page: number | undefined, limit: number | undefined) {
@@ -224,6 +250,15 @@ export class PayrollRunsRepository extends BaseRepository<
     return this.db.payrollLine.findMany({
       where,
       select: LINE_SELECT,
+      orderBy: { employeeCode: 'asc' },
+    });
+  }
+
+  /** Every line of a run as accounting reads it (§10), with the insurance taken at approval. */
+  findAccountingLines(runId: string): Promise<AccountingLineSource[]> {
+    return this.db.payrollLine.findMany({
+      where: { runId },
+      select: ACCOUNTING_LINE_SELECT,
       orderBy: { employeeCode: 'asc' },
     });
   }
@@ -315,7 +350,8 @@ export class PayrollRunsRepository extends BaseRepository<
     lines: LineData[],
   ): Promise<string | null> {
     try {
-      return await this.db.$transaction(async (tx) => {
+      return await this.txHost.withTransaction(async () => {
+      const tx = this.txHost.tx;
         const run = await tx.payrollRun.create({
           data: { month, createdById, status: PayrollStatus.DRAFT },
           select: { id: true },
@@ -343,7 +379,8 @@ export class PayrollRunsRepository extends BaseRepository<
     lines: LineData[],
     approve?: { approvedById: string | null },
   ): Promise<boolean> {
-    return this.db.$transaction(async (tx) => {
+    return this.txHost.withTransaction(async () => {
+      const tx = this.txHost.tx;
       if (!(await this.claimDraft(tx, runId))) return false;
       // Upsert by employee so a line keeps its id across recalculations.
       await tx.payrollLine.deleteMany({
@@ -385,7 +422,8 @@ export class PayrollRunsRepository extends BaseRepository<
     createdById: string | null,
     recompute: (line: LineRow, adjustments: AdjustmentRow[]) => LineAdjustmentUpdate,
   ): Promise<boolean> {
-    return this.db.$transaction(async (tx) => {
+    return this.txHost.withTransaction(async () => {
+      const tx = this.txHost.tx;
       if (!(await this.claimDraft(tx, runId))) return false;
       await tx.payrollAdjustment.create({
         data: { ...data, runId, createdById },
@@ -402,7 +440,8 @@ export class PayrollRunsRepository extends BaseRepository<
     adjustment: { id: string; employeeId: string },
     recompute: (line: LineRow, adjustments: AdjustmentRow[]) => LineAdjustmentUpdate,
   ): Promise<boolean> {
-    return this.db.$transaction(async (tx) => {
+    return this.txHost.withTransaction(async () => {
+      const tx = this.txHost.tx;
       if (!(await this.claimDraft(tx, runId))) return false;
       await tx.payrollAdjustment.deleteMany({ where: { id: adjustment.id, runId } });
       await this.updateLineAdjustments(tx, runId, adjustment.employeeId, recompute);

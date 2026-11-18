@@ -66,7 +66,9 @@ describe('Accounting — the payroll tax rule (e2e)', () => {
   });
 
   afterEach(async () => {
+    // Back to the defaults, with no history: a version left behind would stay "in force".
     await db.schoolSetting.deleteMany({ where: { key: { in: ACCOUNTING_KEYS } } });
+    await db.accountingTaxRuleVersion.deleteMany({});
   });
 
   afterAll(async () => {
@@ -109,6 +111,14 @@ describe('Accounting — the payroll tax rule (e2e)', () => {
       orderBy: { seq: 'desc' },
     });
     expect(entry).toMatchObject({ module: 'accounting', entityType: 'accounting_settings', actorId: user.id });
+    // Kept as a version (§10), after the baseline it replaced (the defaults).
+    const versions = await db.accountingTaxRuleVersion.findMany({ orderBy: { effectiveFrom: 'asc' } });
+    expect(versions).toHaveLength(2);
+    expect(versions[0]).toMatchObject({ effectiveFrom: new Date('1970-01-01T00:00:00.000Z'), changedById: null });
+    expect(versions[1]).toMatchObject({ rule: payroll, changedById: user.id });
+    // Saving the same rule again keeps no new version.
+    await patch({ payroll }).expect(200);
+    expect(await db.accountingTaxRuleVersion.count()).toBe(2);
   });
 
   describe('a bad tax table is refused → 400, nothing saved', () => {

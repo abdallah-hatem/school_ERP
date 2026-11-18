@@ -19,7 +19,7 @@ import { resolveLanguage } from '../../../../common/i18n/i18n';
 import { ResponseUtil } from '../../../../common/utils/response.util';
 import { CreateAdjustmentDto, CreatePayrollRunDto, PayrollRunQueryDto } from '../dto/payroll.dto';
 import { PayrollService } from '../services/payroll.service';
-import { NotAudited } from '../../../../core/audit';
+import { Audited } from '../../../../core/audit';
 import { Permission } from '../../../../core/permissions';
 
 const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
@@ -38,7 +38,7 @@ export class PayrollRunsController {
     return ResponseUtil.paginated(await this.payroll.list(query));
   }
 
-  @NotAudited('wired in T29')
+  @Audited('hr.payroll.create')
   @Post()
   @Permission('hr.payroll.create')
   create(@Body() dto: CreatePayrollRunDto, @CurrentUser() user?: AuthUser) {
@@ -51,7 +51,7 @@ export class PayrollRunsController {
     return this.payroll.get(id, query);
   }
 
-  @NotAudited('wired in T29')
+  @Audited('hr.payroll.recalculate')
   @Post(':id/recalculate')
   @Permission('hr.payroll.recalculate')
   @HttpCode(HttpStatus.OK)
@@ -59,7 +59,7 @@ export class PayrollRunsController {
     return this.payroll.recalculate(id);
   }
 
-  @NotAudited('wired in T29')
+  @Audited('hr.payroll.approve')
   @Post(':id/approve')
   @Permission('hr.payroll.approve')
   @HttpCode(HttpStatus.OK)
@@ -87,7 +87,7 @@ export class PayrollRunsController {
     return this.payroll.payslip(id, lineId);
   }
 
-  @NotAudited('wired in T29')
+  @Audited('hr.payroll.adjustment_add')
   @Post(':id/adjustments')
   @Permission('hr.payroll.adjust')
   addAdjustment(
@@ -98,7 +98,7 @@ export class PayrollRunsController {
     return this.payroll.addAdjustment(id, dto, user?.id ?? null);
   }
 
-  @NotAudited('wired in T29')
+  @Audited('hr.payroll.adjustment_remove')
   @Delete(':id/adjustments/:adjustmentId')
   @Permission('hr.payroll.adjust')
   removeAdjustment(

@@ -26,7 +26,8 @@
     "penalty": "Penalty",
     "lateness_month": "Monthly lateness",
     "payroll_run": "Payroll run",
-    "accounting_settings": "Accounting rules"
+    "accounting_settings": "Accounting rules",
+    "accounting_payroll": "Payroll taxes"
   },
   "actions": {
     "core": {
@@ -102,6 +103,9 @@
     "accounting": {
       "settings": {
         "update": "Changed the accounting rules"
+      },
+      "payroll": {
+        "record": "Worked out the payroll taxes for {entity}"
       }
     }
   },

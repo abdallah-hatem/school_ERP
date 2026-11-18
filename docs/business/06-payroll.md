@@ -41,6 +41,8 @@ lines each role sees: §2 Roles (enforced, P4).
   rounded for display only.
 - **DECIDED** — Each line keeps a **snapshot** of the employee's code, names, national ID,
   department, basic salary and work system at calculation. Editing an employee later never changes an approved run.
+  It also keeps the employee's **social insurance** (status and insured salary), retaken at
+  approval: accounting works the month's taxes out from it (§10), not from today's record.
 - **GUESS** — Net never goes below 0. If deductions exceed the salary, net is 0 and the line is
   flagged for review.
 - **GUESS** — No pro-rata for employees who join or leave mid-month in the demo (OPEN for later).
@@ -59,11 +61,14 @@ lines each role sees: §2 Roles (enforced, P4).
   recalculate) stays recorded but doesn't count, and is shown as "not applied".
 - **DECIDED** — **Dashboard:** active headcount (by stage), the current month's payroll run (status
   and net, or none yet), and this month's penalties (pending and approved, by violation date).
-- **DECIDED** — Approving a run announces it (`payroll approved`, with the totals) for a future
-  accounting module; nothing listens to it yet.
+- **DECIDED** — Approving a run announces it (`payroll approved`, with the totals) once the
+  approval is saved. Accounting works out the month's insurance share, income tax, martyrs' fund
+  and gross from it (§10); HR payroll itself ends at the net.
 - **DECIDED** — **Bank sheet** export of an approved run (Excel): employee code, name, national ID,
   net. The employee's bank details are recorded (§3); adding them to the sheet is Planned.
-- **Planned** — tax, social insurance, allowances, the annual raise, the exam bonus rules, loans.
-- **Planned** (owner of payroll: Tamer) — **social insurance deductions** from the insured salary
-  and **bank transfer** of net pay using the employee's bank account. The employee fields exist
-  (§3, 2026-11-18); how payroll uses them is decided and built by the payroll owner.
+- **Planned** — allowances, the annual raise, the exam bonus rules, loans.
+- **DECIDED** — Salaries are **net, grossed up** (owner, 2026-11-17): the employee's
+  social-insurance share, income tax and the martyrs' fund are not deducted here — the school pays
+  them on top, and accounting works them out when the month is approved (owner, 2026-11-18; §10).
+- **Planned** (owner of payroll: Tamer) — **bank transfer** of net pay using the employee's bank
+  account. The employee fields exist (§3, 2026-11-18).

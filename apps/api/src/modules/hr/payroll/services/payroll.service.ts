@@ -1,9 +1,11 @@
 import { ForbiddenException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
+  AuditEntityType,
   ErrorCode,
   HrEvent,
   PAYROLL_LINE_MONEY_FIELDS,
+  type AdjustmentType,
   PayrollFlag,
   PayrollStatus,
   type Language,
@@ -16,10 +18,13 @@ import {
   type PayrollRunSummary,
   type PayrollTotals,
   type EmployeePayrollLine,
+  type InsuranceStatus,
   type Payslip,
   type Uuid,
 } from '@school-erp/shared';
+import { AuditService } from '../../../../core/audit';
 import { SettingsService } from '../../../../core/settings';
+import { AfterCommit } from '../../../../database/transactions';
 import { CodedException } from '../../../../common/errors/coded.exception';
 import type { PaginationQueryDto } from '../../../../common/dto/pagination-query.dto';
 import {
@@ -127,6 +132,21 @@ function withAdjustments(line: LineRow, adjustments: readonly AdjustmentRow[]) {
   return { adjustmentAdditions: additions, adjustmentDeductions: deductions, net, flags };
 }
 
+/** An adjustment as its audit entry shows it: the employee by both names, type, amount, reason. */
+function adjustmentFields(a: {
+  employee: { nameEn: string; nameAr: string };
+  type: AdjustmentType;
+  amount: number;
+  reason: string;
+}) {
+  return {
+    employeeId: { nameEn: a.employee.nameEn, nameAr: a.employee.nameAr },
+    type: a.type,
+    amount: a.amount,
+    reason: a.reason,
+  };
+}
+
 /**
  * Monthly payroll runs (§6). One run per month, DRAFT until approved. Lines snapshot the
  * employee and are calculated from the current penalties, lateness, adjustments and settings
@@ -144,6 +164,8 @@ export class PayrollService {
     private readonly schoolSettings: SettingsService,
     private readonly events: EventEmitter2,
     private readonly access: HrAccessService,
+    private readonly audit: AuditService,
+    private readonly afterCommit: AfterCommit,
   ) {}
 
   /** Every run (runs are school-wide); totals over the lines the viewer may see (R5, R7). */
@@ -179,10 +201,10 @@ export class PayrollService {
       this.repository.lineEmployeeIds(id),
       run.status === PayrollStatus.DRAFT ? this.penalties.pendingCountInMonth(run.month) : 0,
     ]);
-    const paid = await this.salaryVisibleFor(
-      view,
-      [...lines.map((l) => l.employeeId), ...adjustments.map((a) => a.employeeId)],
-    );
+    const paid = await this.salaryVisibleFor(view, [
+      ...lines.map((l) => l.employeeId),
+      ...adjustments.map((a) => a.employeeId),
+    ]);
     return {
       ...this.toSummary(run, totals.get(id)!, view),
       pendingPenalties,
@@ -229,21 +251,36 @@ export class PayrollService {
 
   /** A DRAFT run for the month with one line per ACTIVE employee. 409 if the month has one. */
   async create(month: Month, createdById: Uuid | null): Promise<PayrollRun> {
-    if (await this.repository.findByMonth(month)) throw conflict(ErrorCode.PAYROLL_RUN_EXISTS);
-    const lines = await this.buildLines(month, []);
-    const id = await this.repository.createRun(month, createdById, lines);
-    // Two creates for one month at once: the unique month decides, the loser gets the 409.
-    if (!id) throw conflict(ErrorCode.PAYROLL_RUN_EXISTS);
-    return this.get(id);
+    // The change and its audit entry commit together (audit D2).
+    return this.afterCommit.inTransaction(async () => {
+      if (await this.repository.findByMonth(month)) throw conflict(ErrorCode.PAYROLL_RUN_EXISTS);
+      const lines = await this.buildLines(month, []);
+      const id = await this.repository.createRun(month, createdById, lines);
+      // Two creates for one month at once: the unique month decides, the loser gets the 409.
+      if (!id) throw conflict(ErrorCode.PAYROLL_RUN_EXISTS);
+      await this.recordRun('hr.payroll.create', id, month, undefined, await this.wholeTotals(id));
+      return this.get(id);
+    });
   }
 
   /** Rebuilds every line of a DRAFT run from current data; adjustments survive. */
   async recalculate(id: Uuid): Promise<PayrollRun> {
-    const run = await this.findDraft(id);
-    const lines = await this.buildLines(run.month, await this.repository.findAdjustments(id));
-    if (!(await this.repository.replaceLines(id, lines)))
-      throw conflict(ErrorCode.PAYROLL_APPROVED);
-    return this.get(id);
+    // The change and its audit entry commit together (audit D2).
+    return this.afterCommit.inTransaction(async () => {
+      const run = await this.findDraft(id);
+      const before = await this.wholeTotals(id);
+      const lines = await this.buildLines(run.month, await this.repository.findAdjustments(id));
+      if (!(await this.repository.replaceLines(id, lines)))
+        throw conflict(ErrorCode.PAYROLL_APPROVED);
+      await this.recordRun(
+        'hr.payroll.recalculate',
+        id,
+        run.month,
+        before,
+        await this.wholeTotals(id),
+      );
+      return this.get(id);
+    });
   }
 
   /**
@@ -253,25 +290,36 @@ export class PayrollService {
    * after the commit.
    */
   async approve(id: Uuid, approvedById: Uuid | null): Promise<PayrollRun> {
-    const run = await this.findDraft(id);
-    const inputs = await this.penalties.payrollInputs(run.month);
-    if (inputs.pending.size > 0) throw conflict(ErrorCode.PENDING_PENALTIES);
+    // The change and its audit entry commit together (audit D2).
+    return this.afterCommit.inTransaction(async () => {
+      const run = await this.findDraft(id);
+      const inputs = await this.penalties.payrollInputs(run.month);
+      if (inputs.pending.size > 0) throw conflict(ErrorCode.PENDING_PENALTIES);
 
-    const lines = await this.buildLines(run.month, await this.repository.findAdjustments(id));
-    if (!(await this.repository.replaceLines(id, lines, { approvedById }))) {
-      throw conflict(ErrorCode.PAYROLL_APPROVED);
-    }
-    const [approved, wholeRun] = await Promise.all([this.get(id), this.repository.totalsFor([id])]);
-    const event: PayrollApprovedEvent = {
-      runId: id,
-      month: approved.month,
-      // The whole run's totals, whatever the approver may see (listeners need the real figures).
-      totals: wholeRun.get(id)!,
-      approvedById,
-      at: approved.approvedAt ?? new Date().toISOString(),
-    };
-    this.events.emit(HrEvent.PAYROLL_APPROVED, event);
-    return approved;
+      const lines = await this.buildLines(run.month, await this.repository.findAdjustments(id));
+      if (!(await this.repository.replaceLines(id, lines, { approvedById }))) {
+        throw conflict(ErrorCode.PAYROLL_APPROVED);
+      }
+      // The whole run's totals, whatever the approver may see (the log and listeners need the real
+      // figures; the log hides them from a reader without salaries).
+      const [approved, totals] = await Promise.all([this.get(id), this.wholeTotals(id)]);
+      // One entry, with the totals approved — not one per line (spec edge case 6). Stated without a
+      // "before": approval usually leaves the figures as they were, and the entry must still show them.
+      await this.recordRun('hr.payroll.approve', id, run.month, undefined, totals, {
+        before: PayrollStatus.DRAFT,
+        after: PayrollStatus.APPROVED,
+      });
+      const event: PayrollApprovedEvent = {
+        runId: id,
+        month: approved.month,
+        totals,
+        approvedById,
+        at: approved.approvedAt ?? new Date().toISOString(),
+      };
+      // Only once the approval has committed (it runs in the request's transaction now).
+      await this.afterCommit.run(() => this.events.emit(HrEvent.PAYROLL_APPROVED, event));
+      return approved;
+    });
   }
 
   /** A one-off addition or deduction on a DRAFT run, for an employee in the run (§6). */
@@ -280,28 +328,52 @@ export class PayrollService {
     dto: CreateAdjustmentDto,
     createdById: Uuid | null,
   ): Promise<PayrollRun> {
-    await this.findDraft(id);
-    if (!(await this.repository.findLineByEmployee(id, dto.employeeId))) {
-      throw new CodedException(HttpStatus.BAD_REQUEST, ErrorCode.EMPLOYEE_NOT_IN_RUN);
-    }
-    const added = await this.repository.addAdjustment(
-      id,
-      { employeeId: dto.employeeId, type: dto.type, amount: dto.amount, reason: dto.reason },
-      createdById,
-      withAdjustments,
-    );
-    if (!added) throw conflict(ErrorCode.PAYROLL_APPROVED);
-    return this.get(id);
+    // The change and its audit entry commit together (audit D2).
+    return this.afterCommit.inTransaction(async () => {
+      await this.findDraft(id);
+      if (!(await this.repository.findLineByEmployee(id, dto.employeeId))) {
+        throw new CodedException(HttpStatus.BAD_REQUEST, ErrorCode.EMPLOYEE_NOT_IN_RUN);
+      }
+      const added = await this.repository.addAdjustment(
+        id,
+        { employeeId: dto.employeeId, type: dto.type, amount: dto.amount, reason: dto.reason },
+        createdById,
+        withAdjustments,
+      );
+      if (!added) throw conflict(ErrorCode.PAYROLL_APPROVED);
+      const run = await this.findRun(id);
+      const employee = await this.repository.findLineByEmployee(id, dto.employeeId);
+      await this.audit.record({
+        action: 'hr.payroll.adjustment_add',
+        entity: { type: AuditEntityType.PAYROLL_RUN, id, label: run.month },
+        after: adjustmentFields({
+          employee: { nameEn: employee?.nameEn ?? '', nameAr: employee?.nameAr ?? '' },
+          type: dto.type,
+          amount: dto.amount,
+          reason: dto.reason,
+        }),
+      });
+      return this.get(id);
+    });
   }
 
   async removeAdjustment(id: Uuid, adjustmentId: Uuid): Promise<PayrollRun> {
-    await this.findDraft(id);
-    const adjustment = await this.repository.findAdjustment(id, adjustmentId);
-    if (!adjustment) throw new NotFoundException();
-    if (!(await this.repository.deleteAdjustment(id, adjustment, withAdjustments))) {
-      throw conflict(ErrorCode.PAYROLL_APPROVED);
-    }
-    return this.get(id);
+    // The change and its audit entry commit together (audit D2).
+    return this.afterCommit.inTransaction(async () => {
+      await this.findDraft(id);
+      const adjustment = await this.repository.findAdjustment(id, adjustmentId);
+      if (!adjustment) throw new NotFoundException();
+      if (!(await this.repository.deleteAdjustment(id, adjustment, withAdjustments))) {
+        throw conflict(ErrorCode.PAYROLL_APPROVED);
+      }
+      const run = await this.findRun(id);
+      await this.audit.record({
+        action: 'hr.payroll.adjustment_remove',
+        entity: { type: AuditEntityType.PAYROLL_RUN, id, label: run.month },
+        before: adjustmentFields(adjustment),
+      });
+      return this.get(id);
+    });
   }
 
   /** Payslip data for one line of an APPROVED run (409 `PAYROLL_NOT_APPROVED` on a draft). */
@@ -337,6 +409,43 @@ export class PayrollService {
         ...(salaryVisible ? { amount: a.amount } : {}),
       })),
       school: { nameEn: school.nameEn, nameAr: school.nameAr, logoUrl: school.logoUrl },
+    };
+  }
+
+  /** The id of a month's APPROVED run, or null (no run, or still a draft). For accounting (§10). */
+  async approvedRunIdForMonth(month: Month): Promise<Uuid | null> {
+    const run = await this.repository.findByMonth(month);
+    return run?.status === PayrollStatus.APPROVED ? run.id : null;
+  }
+
+  /**
+   * An APPROVED run's every line with its net and the insurance taken at approval, and when it was
+   * approved, for accounting (§10) — a system read, not a
+   * viewer's: it is not narrowed by whoever's request triggered it (the approver, or the accountant
+   * reading a month). Null when the run is unknown or not approved. Accounting's own endpoints are
+   * guarded by `accounting.payroll.view`.
+   */
+  async approvedLinesForAccounting(id: Uuid): Promise<{
+    month: Month;
+    /** When HR approved it: accounting uses the tax rule in force at this moment (§10). */
+    approvedAt: Date;
+    lines: {
+      employeeId: Uuid;
+      employeeCode: string;
+      nameEn: string;
+      nameAr: string;
+      net: number;
+      /** The insurance taken at approval (§3, §10) — not today's. */
+      insuranceStatus: InsuranceStatus;
+      insuredSalary: number | null;
+    }[];
+  } | null> {
+    const run = await this.repository.findRun(id);
+    if (run?.status !== PayrollStatus.APPROVED || !run.approvedAt) return null;
+    return {
+      month: run.month,
+      approvedAt: run.approvedAt,
+      lines: await this.repository.findAccountingLines(id),
     };
   }
 
@@ -394,17 +503,17 @@ export class PayrollService {
         departmentNameAr: e.department.nameAr,
         basicSalary: e.basicSalary,
         workSystem: e.workSystem,
+        // Retaken at every calculation, approval included: the approved line holds the insurance
+        // accounting works the month's taxes out from (§10).
+        insuranceStatus: e.insuranceStatus,
+        insuredSalary: e.insuredSalary,
         latenessMinutes: late?.minutes ?? 0,
         ...amounts,
       };
     });
   }
 
-  private toSummary(
-    run: RunRow,
-    totals: PayrollTotals,
-    view: PayrollView,
-  ): PayrollRunSummary {
+  private toSummary(run: RunRow, totals: PayrollTotals, view: PayrollView): PayrollRunSummary {
     const salaryVisible = totalsMoneyVisible(view);
     return {
       id: run.id,
@@ -425,10 +534,37 @@ export class PayrollService {
   }
 
   /** Which of `employeeIds` the viewer's salary scope covers (one query; none when it's `all`). */
-  private async salaryVisibleFor(view: PayrollView, employeeIds: readonly Uuid[]): Promise<Set<Uuid>> {
+  private async salaryVisibleFor(
+    view: PayrollView,
+    employeeIds: readonly Uuid[],
+  ): Promise<Set<Uuid>> {
     if (view.salary.kind === 'all') return new Set(employeeIds);
     if (view.salary.kind === 'none') return new Set();
     return this.employees.filterInScope(VIEW_SALARY, employeeIds);
+  }
+
+  /** The whole run's totals (every line), whoever is asking. */
+  private async wholeTotals(id: Uuid): Promise<PayrollTotals> {
+    return (await this.repository.totalsFor([id])).get(id)!;
+  }
+
+  /** A run's audit entry (§9, T29): labelled by its month, with its totals before → after. */
+  private recordRun(
+    action: 'hr.payroll.create' | 'hr.payroll.recalculate' | 'hr.payroll.approve',
+    id: Uuid,
+    month: Month,
+    before: PayrollTotals | undefined,
+    after: PayrollTotals,
+    status?: { before: PayrollStatus; after: PayrollStatus },
+  ): Promise<void> {
+    return this.audit.record({
+      action,
+      entity: { type: AuditEntityType.PAYROLL_RUN, id, label: month },
+      changes: [
+        { field: 'totals', before: before ?? null, after },
+        ...(status ? [{ field: 'status', before: status.before, after: status.after }] : []),
+      ],
+    });
   }
 
   private async findRun(id: Uuid): Promise<RunRow> {

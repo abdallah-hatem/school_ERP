@@ -22,7 +22,7 @@ export interface EmployeeDeactivatedEvent {
   employeeId: Uuid;
   at: string;
 }
-/** Emitted after an approval commits (§6). No listener yet. */
+/** Emitted after an approval commits (§6). Accounting works out the month's taxes from it (§10). */
 export interface PayrollApprovedEvent {
   runId: Uuid;
   month: Month;

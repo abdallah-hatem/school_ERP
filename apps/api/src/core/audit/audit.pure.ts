@@ -77,6 +77,7 @@ export function cleanChanges(changes: readonly AuditChange[]): AuditChange[] {
       field: c.field,
       before: toStoredValue(c.before),
       after: toStoredValue(c.after),
+      ...(c.subject ? { subject: { en: c.subject.en, ar: c.subject.ar } } : {}),
     }))
     .filter((c) => !same(c.before, c.after));
 }
@@ -92,7 +93,7 @@ export function hideSalaryValues(
 ): AuditChange[] {
   return changes.map((c) =>
     isSalaryField(c.field) && !(keepTotals && c.field === 'totals')
-      ? ({ field: c.field, hidden: true } as AuditChange)
+      ? ({ field: c.field, hidden: true, ...(c.subject ? { subject: c.subject } : {}) } as AuditChange)
       : c,
   );
 }

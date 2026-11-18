@@ -14,8 +14,12 @@ Who did what, to which record, and when — for the whole system. Spec:
   after. Passwords and tokens are never recorded. A failed sign-in keeps the email that was typed.
 - **DECIDED** — An entry is saved together with the change: if one fails, neither is kept.
   *Interim (until T28): changes to stages, departments, job titles and the penalty catalogue are
-  still recorded right after they are saved, not together with them (§7). Sign-ins and HR records
-  are not recorded yet (T28, T29).*
+  still recorded right after they are saved, not together with them (§7). Sign-ins, employees and
+  the HR lists are not recorded yet (T28). Penalties, monthly lateness and payroll are (T29,
+  2026-11-18).*
+- **DECIDED** — A month's lateness is one entry: one line per employee whose minutes changed,
+  named, with the minutes before and after. Approving a payroll run is one entry with the run's
+  totals, not one per employee.
 - **DECIDED** — Entries can't be edited or deleted by anyone, and are kept forever (for now).
 - **DECIDED** — Opening or reading something (a payslip, a profile) is not recorded.
 - **DECIDED** (enforced, P4) — Whoever holds the "view activity log" permission (§2: System admin,
