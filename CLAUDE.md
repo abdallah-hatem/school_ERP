@@ -57,7 +57,9 @@ skills. **Where this file differs from a skill, this file wins.**
   and HR's payroll and penalties.** Other modules keep their logic in services.
 - **Modules talk only through another module's exported service or through events.** Never import
   another module's repository. Reading other modules' tables is allowed; writing them is not.
-- **Module order:** `core` ← `hr` ← `academics` ← `students` ← the rest (← `accounting`, Planned).
+- **Module order:** `core` ← `hr` ← `academics` ← `students` ← the rest ← `accounting` (top). Accounting
+  exists for payroll taxes only (worked out when HR approves a month, owned by Tamer — plan
+  `docs/plans/2026-11-18-accounting-plan.md`); journal entries and the rest of accounting are Planned.
   Depend only downward, no cycles. HR is built first. An employee is not a user (optional link).
   Stages live in `core/school-structure`. Module rule settings live in their module.
 - **Design:** direction "Campus", teal + sunflower palette, **light theme only** (no dark tokens, no
