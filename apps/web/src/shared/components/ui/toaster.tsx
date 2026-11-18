@@ -2,7 +2,6 @@
 
 import { useEffect } from 'react';
 import { Toaster as Sonner, toast } from 'sonner';
-import { useMediaQuery } from '@/shared/hooks/use-media-query';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { buttonVariants, Spinner } from './button';
@@ -12,11 +11,8 @@ import { CheckIcon, CloseIcon, ErrorIcon, InfoIcon, WarningIcon } from './icons'
  * The one toaster (DESIGN.md → Campus). Sonner places, stacks, times and swipes the toasts; the look
  * is ours: a white card with the soft border and raised shadow of every floating surface, a tone
  * icon in a soft round badge at the start, the title in the display face, a muted description, a
- * close button and actions in the app's button style. Where: never over a page header's actions
- * (owner 2026-11-18: a toast sat on "Add user"). From 600px (sonner's own phone breakpoint) the
- * bottom inline-end corner — bottom-right in English, bottom-left in Arabic — lifted clear of a
- * form's sticky Save bar; on a phone, full width just under the top bar, away from the Save bar at
- * the bottom. Motion lives in globals.css (`[data-sonner-toast]`).
+ * close button and actions in the app's button style. Top end of the screen: top-right in English,
+ * top-left in Arabic. Motion lives in globals.css (`[data-sonner-toast]`).
  *
  * Components never call `toast.*` themselves — handleResponse does (fetch-wrapper rule).
  */
@@ -32,12 +28,8 @@ const badgeTone = cn(
 
 const iconClass = 'size-5';
 
-/** Sonner lays toasts out full width below this (its own phone breakpoint). */
-export const TOASTER_DESKTOP = '(min-width: 600px)';
-
 export function Toaster() {
   const { t, dir } = useTranslation();
-  const desktop = useMediaQuery(TOASTER_DESKTOP);
   useEffect(() => {
     // Smoke builds only (scripts/smoke.sh): lets e2e/23-toasts show the toast types no screen
     // raises yet (warning, info, loading, with an action). Never set for a real deployment.
@@ -47,10 +39,9 @@ export function Toaster() {
   return (
     <Sonner
       dir={dir}
-      position={desktop ? (dir === 'rtl' ? 'bottom-left' : 'bottom-right') : dir === 'rtl' ? 'top-left' : 'top-right'}
-      // Desktop: above the sticky Save bar (12px from the bottom, ~68px tall). Phone: below the top
-      // bar (language switch, menu), never over it.
-      offset={{ bottom: 96, right: 24, left: 24 }}
+      position={dir === 'rtl' ? 'top-left' : 'top-right'}
+      // Below the top bar (language switch, phone menu), never over it.
+      offset={{ top: 76, right: 24, left: 24 }}
       mobileOffset={{ top: 72, right: 16, left: 16 }}
       // Stacked with gaps, every toast readable at once, never a collapsed pile.
       expand
