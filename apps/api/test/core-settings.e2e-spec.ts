@@ -371,7 +371,7 @@ describe('core settings and school structure (e2e)', () => {
       const ids = list.body.data.map((s: { id: string }) => s.id);
       expect(ids.indexOf(a.id)).toBeLessThan(ids.indexOf(b.id));
       expect(Object.keys(list.body.data[0]).sort()).toEqual(
-        ['id', 'isActive', 'nameAr', 'nameEn', 'sortOrder'].sort(),
+        ['id', 'isActive', 'isNoStage', 'nameAr', 'nameEn', 'sortOrder'].sort(),
       );
 
       await http(app).patch(`/stages/${b.id}`).send({ nameAr: 'بيتا' }).expect(200);

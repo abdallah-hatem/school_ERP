@@ -8,12 +8,15 @@ export interface SeedListItem {
   managesPeople?: boolean;
 }
 
+/** The stage the seed marks as the "no stage" entry (`Stage.isNoStage`); never matched by name. */
+export const NO_STAGE_KEY = 'none';
+
 /** §3 DECIDED: the four stages, "None" for staff not tied to a stage. */
 export const STAGES = [
   { key: 'kg', nameEn: 'Kindergarten', nameAr: 'رياض الأطفال' },
   { key: 'primary', nameEn: 'Primary', nameAr: 'المرحلة الابتدائية' },
   { key: 'prep', nameEn: 'Preparatory', nameAr: 'المرحلة الإعدادية' },
-  { key: 'none', nameEn: 'None', nameAr: 'بدون مرحلة' },
+  { key: NO_STAGE_KEY, nameEn: 'None', nameAr: 'بدون مرحلة' },
 ] as const satisfies readonly SeedListItem[];
 
 export const DEPARTMENTS = [
