@@ -21,8 +21,13 @@ export function SectionPanel({
   className?: string;
 }) {
   return (
-    <section className={cn('flex min-w-0 flex-col gap-5 rounded-3xl bg-card p-5 shadow-card sm:p-6', className)}>
-      <header className="flex flex-wrap items-start justify-between gap-3">
+    <section
+      // Its height follows what it holds (a list's rows); its header and body are measured inside.
+      data-skeleton-block="section-panel"
+      data-skeleton-measure="width"
+      className={cn('flex min-w-0 flex-col gap-5 rounded-3xl bg-card p-5 shadow-card sm:p-6', className)}
+    >
+      <header data-skeleton-block="section-header" className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 flex-1 basis-60 flex-col gap-1">
           <h2 className="font-display text-lg leading-tight font-extrabold">{title}</h2>
           {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}

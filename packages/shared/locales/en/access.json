@@ -23,7 +23,6 @@
       "many": "{count} users",
       "other": "{count} users"
     },
-    "clearFilters": "Clear filters",
     "noResultsTitle": "No users match these filters",
     "noResultsBody": "Check the spelling, or clear the filters to see everyone.",
     "emptyTitle": "No users yet",

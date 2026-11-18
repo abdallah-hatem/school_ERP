@@ -19,6 +19,7 @@ import { AddIcon, SearchIcon } from '@/shared/components/ui/icons';
 import { Input } from '@/shared/components/ui/input';
 import { ClearFilters, FilterSelect } from '@/shared/components/form/filter-controls';
 import { formatCount } from '@/shared/lib/format';
+import { SkeletonText } from '@/shared/components/ui/skeleton';
 import { localName } from '@/shared/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
@@ -29,7 +30,7 @@ import {
   type EmployeesListQuery,
 } from '../lib/list-query';
 import { stageBandOf } from '../lib/stage-band';
-import { EmployeeCard, EmployeeCardGrid } from './employee-card';
+import { EmployeeCard, EmployeeCardGrid, EmployeeCardSkeleton } from './employee-card';
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -37,7 +38,8 @@ export interface EmployeesListProps {
   /** `/ar/employees` — the list's own path, for links and URL updates. */
   basePath: string;
   query: EmployeesListQuery;
-  rows: EmployeeSummary[];
+  /** `undefined` while the first page loads: the list draws itself with skeleton cards. */
+  rows: EmployeeSummary[] | undefined;
   total: number;
   /** Every department and stage, hidden ones too — hidden items can still have employees. */
   departments: ListItem[];
@@ -78,6 +80,7 @@ export function EmployeesList({ basePath, query, rows, total, departments, stage
     go({ page: PAGINATION.defaultPage, limit: query.limit });
   }
 
+  const loading = rows === undefined;
   const filterCount = activeFilterCount(query);
   const filtered = filterCount > 0;
   const itemOptions = (items: ListItem[]) =>
@@ -106,7 +109,23 @@ export function EmployeesList({ basePath, query, rows, total, departments, stage
   );
 
   let body: ReactNode;
-  if (error) {
+  if (loading) {
+    // First load: a full page of cards in the same grid and frame, so nothing moves when they land.
+    body = (
+      <div aria-busy="true">
+        <span role="status" className="sr-only">
+          {t('ui.states.loading')}
+        </span>
+        <EmployeeCardGrid>
+          {Array.from({ length: query.limit }, (_, i) => (
+            <li key={i} className="min-w-0" data-testid="employee-card-skeleton">
+              <EmployeeCardSkeleton />
+            </li>
+          ))}
+        </EmployeeCardGrid>
+      </div>
+    );
+  } else if (error) {
     body = (
       <div className="rounded-3xl bg-card shadow-card">
         <ErrorState onRetry={() => startTransition(() => router.refresh())} retrying={pending} />
@@ -136,7 +155,7 @@ export function EmployeesList({ basePath, query, rows, total, departments, stage
     <div className="flex flex-col gap-6">
       <PageHeader title={t('employees.title')} description={t('employees.description')} actions={addButton} />
       <section aria-label={t('employees.list.label')} className="flex min-w-0 flex-col gap-4.5">
-        <div className="flex flex-col gap-3 rounded-[1.25rem] bg-card p-3.5 shadow-card">
+        <div data-skeleton-block="filters" className="flex flex-col gap-3 rounded-[1.25rem] bg-card p-3.5 shadow-card">
           {/* One row on a wide content area; search above a row of four (tablet) or a 2 × 2 grid (phone). */}
           <div role="search" className="flex w-full flex-col gap-2.5 @min-[1000px]:flex-row @min-[1000px]:items-center">
             <div className="relative min-w-0 flex-1">
@@ -146,6 +165,7 @@ export function EmployeesList({ basePath, query, rows, total, departments, stage
                 placeholder={t('employees.list.searchPlaceholder')}
                 value={search}
                 onChange={(e) => onSearchChange(e.target.value)}
+                disabled={loading}
                 className="ps-11"
               />
             </div>
@@ -157,6 +177,7 @@ export function EmployeesList({ basePath, query, rows, total, departments, stage
                 options={itemOptions(departments)}
                 searchable
                 onChange={(v) => setFilter('departmentId', v)}
+                disabled={loading}
                 className="w-full sm:w-full @min-[1000px]:w-44"
               />
               <FilterSelect
@@ -166,6 +187,7 @@ export function EmployeesList({ basePath, query, rows, total, departments, stage
                 options={itemOptions(stages)}
                 searchable
                 onChange={(v) => setFilter('stageId', v)}
+                disabled={loading}
                 className="w-full sm:w-full @min-[1000px]:w-44"
               />
               <FilterSelect
@@ -174,6 +196,7 @@ export function EmployeesList({ basePath, query, rows, total, departments, stage
                 value={query.status}
                 options={EMPLOYEE_STATUSES.map((s) => ({ value: s, label: t(`common.enums.employeeStatus.${s}`) }))}
                 onChange={(v) => setFilter('status', v)}
+                disabled={loading}
                 className="w-full sm:w-full @min-[1000px]:w-44"
               />
               <FilterSelect
@@ -182,6 +205,7 @@ export function EmployeesList({ basePath, query, rows, total, departments, stage
                 value={query.workSystem}
                 options={WORK_SYSTEMS.map((w) => ({ value: w, label: t(`common.enums.workSystem.${w}`) }))}
                 onChange={(v) => setFilter('workSystem', v)}
+                disabled={loading}
                 className="w-full sm:w-full @min-[1000px]:w-44"
               />
             </div>
@@ -189,12 +213,14 @@ export function EmployeesList({ basePath, query, rows, total, departments, stage
           {/* The count, and "Clear filters · n" at the inline end — its own line, so a phone keeps it in view. */}
           {error && !filtered ? null : (
             <div className="flex min-h-9 flex-wrap items-center gap-x-3 gap-y-1">
-              {error ? null : (
+              {error ? null : loading ? (
+                <SkeletonText className="px-1 text-[0.8rem]" width="w-24" />
+              ) : (
                 <p aria-live="polite" data-testid="employees-count" className="px-1 text-[0.8rem] text-muted-foreground">
                   {t('employees.list.count', { count: formatCount(total) })}
                 </p>
               )}
-              <ClearFilters count={filterCount} onClear={clearFilters} disabled={pending} className="ms-auto h-9" />
+              <ClearFilters count={filterCount} onClear={clearFilters} disabled={pending || loading} className="ms-auto h-9" />
             </div>
           )}
         </div>
@@ -205,7 +231,8 @@ export function EmployeesList({ basePath, query, rows, total, departments, stage
             limit={query.limit}
             total={total}
             onPageChange={(page) => go({ ...query, page })}
-            disabled={pending}
+            disabled={pending || loading}
+            loading={loading}
             className="border-t-0 px-0.5 py-1 sm:px-0.5"
           />
         )}

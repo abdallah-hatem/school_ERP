@@ -35,7 +35,7 @@ export function PageHeader({
   className?: string;
 }) {
   return (
-    <header className={cn('flex flex-col gap-3', className)}>
+    <header data-skeleton-block="header" className={cn('flex flex-col gap-3', className)}>
       {breadcrumbs?.length ? (
         <nav aria-label={breadcrumbsLabel} className="hidden md:block">
           <ol className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">

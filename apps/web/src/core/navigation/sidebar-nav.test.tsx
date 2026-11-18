@@ -184,19 +184,29 @@ describe('SidebarNav (grouped by module)', () => {
       cleanup();
 
       // An HR officer: HR pages only, no Users / Roles / Activity.
-      renderNav('full', 'en', sessionWithout('core.users.view', 'core.roles.view', 'core.audit.view', 'core.settings.view', 'core.stages.view', 'hr.settings.view', 'hr.lists.view', 'hr.penalty_catalogue.view'));
+      renderNav('full', 'en', sessionWithout('core.users.view', 'core.roles.view', 'core.audit.view', 'core.settings.view', 'core.stages.view', 'hr.settings.view', 'hr.lists.view', 'hr.penalty_catalogue.view', 'accounting.settings.view'));
       for (const name of ['Users', 'Roles', 'Activity', 'Settings']) expect(screen.queryByRole('link', { name })).toBeNull();
       expect(screen.queryByRole('button', { name: 'Administration' })).toBeNull();
       expect(screen.getByRole('link', { name: 'Employees' })).toBeTruthy();
     });
 
     it('Settings shows with any one of its sections, and not with none', () => {
-      const settingsKeys = ['core.settings.view', 'hr.settings.view', 'hr.lists.view', 'core.stages.view', 'hr.penalty_catalogue.view'];
+      const settingsKeys = [
+        'core.settings.view',
+        'hr.settings.view',
+        'hr.lists.view',
+        'core.stages.view',
+        'hr.penalty_catalogue.view',
+        'accounting.settings.view',
+      ];
       renderNav('full', 'en', sessionWithout(...settingsKeys.filter((k) => k !== 'hr.lists.view')));
       expect(screen.getByRole('link', { name: 'Settings' })).toBeTruthy();
       cleanup();
       renderNav('full', 'en', sessionWithout(...settingsKeys));
-      expect(screen.queryByRole('link', { name: 'Settings' })).toBeNull();
+      expect(screen.queryByRole('link', { name: 'Settings' })).toBeNull();      cleanup();
+      // The Accountant: only Settings → Accounting (§10).
+      renderNav('full', 'en', sessionWithout(...settingsKeys.filter((k) => k !== 'accounting.settings.view')));
+      expect(screen.getByRole('link', { name: 'Settings' })).toBeTruthy();
     });
   });
 });

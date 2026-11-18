@@ -176,6 +176,11 @@ phase live in `docs/build-log/`.
   demo DB after `migrate deploy` (owner). Arabic plural counts and Arabic names on older Activity
   entries (read-time fallback, no backfill) fixed → #91.
 
+- 2026-11-18 — Skeletons match their screens → #88: each skeleton is built from its screen's own
+  parts (masked real forms, `SkeletonProse` for wrapping text, route groups so a page never shows a
+  parent's skeleton); `23-skeletons*.spec.ts` compares skeleton and loaded blocks on desktop EN and
+  phone AR (±8px). All four checks green; dev re-checked.
+
 ## Next up
 
 - **Accounting payroll taxes screen** — a page per approved month (net, insurance share, income tax,
@@ -212,5 +217,6 @@ phase live in `docs/build-log/`.
 
 - Optional: server-side paging for lateness (loads the whole month today) and column sorting.
 - The stage "None" band is detected by its English name; key it by an id instead.
-- Skeletons match their components + the layout spec that enforces it → #88 (open: desktop green,
-  9 phone screens still mismatch).
+- Small leftovers from #88: UserForm makes its temporary password during render (hydration
+  mismatch); the Users list uses its own Clear filters instead of the shared one; the History tab's
+  skeleton assumes entries, so it still jumps while History is empty (until T28).

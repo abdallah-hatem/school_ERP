@@ -44,7 +44,7 @@ export async function expectWorkingDaysEntry(entry: Locator, locale: Language, a
 
 /**
  * A screenshot of a route's loading skeleton, as the server streams it first: with JavaScript off
- * the content never swaps in, so the skeleton stays on screen (same trick as 09-skeletons).
+ * the content never swaps in, so the skeleton stays on screen (same trick as 23-skeletons).
  */
 export async function shootSkeleton(browser: Browser, page: Page, info: TestInfo, path: string, name: string): Promise<void> {
   const noScript = await browser.newContext({

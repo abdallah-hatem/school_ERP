@@ -62,8 +62,9 @@ For each employee in the approved run:
 
 ## Who
 
-- **GUESS** — The Accountant and the System admin see and change the tax rule and see each
-  approved month's payroll taxes (§2).
+- **GUESS** — The Accountant and the System admin see and change the tax rule (§2) — in Settings →
+  Accounting, which the Accountant opens from the menu; someone who may only view it sees it
+  read-only — and see each approved month's payroll taxes.
 
 ## Planned
 

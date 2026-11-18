@@ -8,6 +8,7 @@ import { AccessState } from './components/no-access';
 import { RoleForm } from './components/role-form';
 import { RolesList } from './components/roles-list';
 import { UserForm } from './components/user-form';
+import { generateTemporaryPassword } from './lib/temp-password';
 import { UsersList } from './components/users-list';
 import { parseUsersQuery, type SearchParamsRecord } from './lib/users-query';
 import { AccessI18n } from './messages';
@@ -84,6 +85,7 @@ export async function UserScreen({ locale, id }: { locale: Locale; id?: string }
         user={account}
         roles={roleList}
         lastAdmin={Boolean(account) && lone === account?.id}
+        initialPassword={account ? undefined : generateTemporaryPassword()}
         now={new Date().toISOString()}
       />
     </AccessI18n>

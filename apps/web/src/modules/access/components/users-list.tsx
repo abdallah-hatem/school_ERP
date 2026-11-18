@@ -8,13 +8,12 @@ import { Can, useCan } from '@/core/auth';
 import { EmployeeLink } from '@/core/employees';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-table/data-table';
 import { RowActions, rowActionsColumn } from '@/shared/components/data-table/row-actions';
-import { FilterSelect, SearchInput } from '@/shared/components/form/filter-controls';
+import { ClearFilters, FilterSelect, SearchInput } from '@/shared/components/form/filter-controls';
 import { EmptyState } from '@/shared/components/layout/empty-state';
 import { PageHeader } from '@/shared/components/layout/page-header';
 import { Button } from '@/shared/components/ui/button';
 import {
   AddIcon,
-  CloseIcon,
   DeactivateIcon,
   EditIcon,
   LinkedEmployeeIcon,
@@ -29,7 +28,7 @@ import { formatCount } from '@/shared/lib/format';
 import { localName } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { formatSignIn } from '../lib/sign-in-time';
-import { hasActiveFilters, usersQueryString, type UsersFilterKey, type UsersListQuery } from '../lib/users-query';
+import { activeFilterCount, usersQueryString, type UsersFilterKey, type UsersListQuery } from '../lib/users-query';
 import { Avatar, RoleChips } from './role-bits';
 import { useUserActions } from './user-actions';
 
@@ -39,7 +38,8 @@ export interface UsersListProps {
   /** `/en/users` — the list's own path, for links and URL updates. */
   basePath: string;
   query: UsersListQuery;
-  rows: UserAccount[];
+  /** `undefined` while the first page loads: the list draws itself with skeleton rows. */
+  rows: UserAccount[] | undefined;
   total: number;
   /** Every role, for the role filter. */
   roles: Role[];
@@ -81,6 +81,7 @@ export function UsersList({ basePath, query, rows, total, roles, lastAdminId, no
     searchTimer.current = setTimeout(() => setFilter('search', text.trim()), SEARCH_DEBOUNCE_MS);
   }
   function clearFilters() {
+    if (searchTimer.current) clearTimeout(searchTimer.current);
     setSearch('');
     go({ page: PAGINATION.defaultPage, limit: query.limit });
   }
@@ -226,18 +227,15 @@ export function UsersList({ basePath, query, rows, total, roles, lastAdminId, no
     )),
   ];
 
-  const filtered = hasActiveFilters(query);
+  const loading = rows === undefined;
+  const filterCount = activeFilterCount(query);
+  const filtered = filterCount > 0;
   const emptyState = filtered ? (
     <EmptyState
       icon={SearchIcon}
       title={t('access.users.noResultsTitle')}
       description={t('access.users.noResultsBody')}
-      action={
-        <Button variant="secondary" onClick={clearFilters}>
-          <CloseIcon />
-          {t('access.users.clearFilters')}
-        </Button>
-      }
+      action={<ClearFilters placement="empty" count={filterCount} onClear={clearFilters} />}
     />
   ) : (
     <EmptyState title={t('access.users.emptyTitle')} description={t('access.users.emptyBody')} action={addButton} />
@@ -255,13 +253,14 @@ export function UsersList({ basePath, query, rows, total, roles, lastAdminId, no
         actions={addButton}
       />
       <section aria-label={t('access.users.label')} className="@container flex min-w-0 flex-col gap-4.5">
-        <div className="flex flex-col gap-3 rounded-[1.25rem] bg-card p-3.5 shadow-card">
+        <div data-skeleton-block="filters" className="flex flex-col gap-3 rounded-[1.25rem] bg-card p-3.5 shadow-card">
           <div role="search" className="flex w-full flex-col gap-2.5 @min-[900px]:flex-row @min-[900px]:items-center">
             <SearchInput
               aria-label={t('access.users.searchLabel')}
               placeholder={t('access.users.searchPlaceholder')}
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
+              disabled={loading}
               wrapperClassName="basis-auto"
             />
             <FilterSelect
@@ -270,6 +269,7 @@ export function UsersList({ basePath, query, rows, total, roles, lastAdminId, no
               value={query.roleId}
               options={roleOptions}
               onChange={(v) => setFilter('roleId', v)}
+              disabled={loading}
               className="w-full sm:w-full @min-[900px]:w-60"
             />
             <FilterSelect
@@ -281,19 +281,20 @@ export function UsersList({ basePath, query, rows, total, roles, lastAdminId, no
                 { value: 'inactive', label: t('access.users.statuses.inactive') },
               ]}
               onChange={(v) => setFilter('status', v)}
+              disabled={loading}
               className="w-full sm:w-full @min-[900px]:w-52"
             />
           </div>
           {error ? null : (
             <div className="flex items-center justify-between gap-3 px-1">
-              <p aria-live="polite" data-testid="users-count" className="text-[0.8rem] text-muted-foreground">
-                {t('access.users.count', { count: formatCount(total) })}
-              </p>
-              {filtered ? (
-                <Button variant="ghost" size="sm" onClick={clearFilters} className="text-primary">
-                  {t('access.users.clearFilters')}
-                </Button>
-              ) : null}
+              {loading ? (
+                <SkeletonText className="text-[0.8rem]" width="w-16" />
+              ) : (
+                <p aria-live="polite" data-testid="users-count" className="text-[0.8rem] text-muted-foreground">
+                  {t('access.users.count', { count: formatCount(total) })}
+                </p>
+              )}
+              <ClearFilters count={filterCount} onClear={clearFilters} disabled={loading || pending} className="ms-auto" />
             </div>
           )}
         </div>
@@ -302,6 +303,7 @@ export function UsersList({ basePath, query, rows, total, roles, lastAdminId, no
           columns={columns}
           rows={rows}
           getRowId={(u) => u.id}
+          loading={loading}
           refreshing={pending}
           error={error}
           onRetry={() => startTransition(() => router.refresh())}

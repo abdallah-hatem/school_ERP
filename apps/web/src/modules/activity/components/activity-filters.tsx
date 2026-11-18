@@ -16,6 +16,7 @@ import {
 } from '@/shared/components/ui/icons';
 import { ClearFilters } from '@/shared/components/form/filter-controls';
 import { controlClasses } from '@/shared/components/ui/input';
+import { SkeletonText } from '@/shared/components/ui/skeleton';
 import { formatCount } from '@/shared/lib/format';
 import { initialsOf } from '@/shared/lib/initials';
 import { matchesSearch } from '@/shared/lib/search';
@@ -218,28 +219,33 @@ function PersonPicker({
   );
 }
 
-function Glance({ summary }: { summary: AuditSummary }) {
+/** Today's four counts; `undefined` while the page loads (each figure a bar in its line box). */
+function Glance({ summary }: { summary: AuditSummary | undefined }) {
   const { t } = useTranslation();
-  const tile = (value: number, label: string, tone?: 'info' | 'warning') => (
+  const tile = (value: number | undefined, label: string, tone?: 'info' | 'warning') => (
     <div className="rounded-xl bg-muted px-3 py-2.5">
-      <p
-        className={cn(
-          'tabular text-xl font-extrabold',
-          tone === 'info' && 'text-info-ink',
-          tone === 'warning' && value > 0 && 'text-warning-ink',
-        )}
-      >
-        {formatCount(value)}
-      </p>
+      {value === undefined ? (
+        <SkeletonText className="text-xl" width="w-10" />
+      ) : (
+        <p
+          className={cn(
+            'tabular text-xl font-extrabold',
+            tone === 'info' && 'text-info-ink',
+            tone === 'warning' && value > 0 && 'text-warning-ink',
+          )}
+        >
+          {formatCount(value)}
+        </p>
+      )}
       <p className="text-xs text-muted-foreground">{label}</p>
     </div>
   );
   return (
     <div data-testid="today-at-a-glance" className="grid grid-cols-2 gap-2">
-      {tile(summary.actions, t('audit.filters.glanceActions'))}
-      {tile(summary.people, t('audit.filters.glancePeople'))}
-      {tile(summary.money, t('audit.filters.glanceMoney'), 'info')}
-      {tile(summary.failedSignIns, t('audit.filters.glanceFailed'), 'warning')}
+      {tile(summary?.actions, t('audit.filters.glanceActions'))}
+      {tile(summary?.people, t('audit.filters.glancePeople'))}
+      {tile(summary?.money, t('audit.filters.glanceMoney'), 'info')}
+      {tile(summary?.failedSignIns, t('audit.filters.glanceFailed'), 'warning')}
     </div>
   );
 }
@@ -262,7 +268,8 @@ export function ActivityFilters({
 }: {
   query: ActivityQuery;
   actors: AuditActor[];
-  summary: AuditSummary | null;
+  /** Today's counts; null when they couldn't be loaded, undefined while the page loads. */
+  summary: AuditSummary | null | undefined;
   /** Today in the school's calendar. */
   today: IsoDate;
   onChange: (next: ActivityQuery) => void;
@@ -307,7 +314,7 @@ export function ActivityFilters({
       <Group label={t('audit.filters.person')}>
         <PersonPicker actors={actors} value={query.actorId} disabled={disabled} onChange={(actorId) => set({ actorId })} />
       </Group>
-      {summary ? (
+      {summary !== null ? (
         <Group label={t('audit.filters.glance')}>
           <Glance summary={summary} />
         </Group>

@@ -86,6 +86,10 @@ GitHub also runs API e2e and the smoke specs (desktop-en and phone-ar shards) on
   `@NotAudited('wired in T28')` / `('wired in T29')`? Wire its audit in this PR (see below).
 - [ ] `docs/BUSINESS_LOGIC.md` updated in the same PR if a business rule changed.
 - [ ] UI changes: screenshots. New or visually changed screens: EN/AR × phone/desktop (light only).
+- [ ] Changed a component → updated its skeleton in the same PR, and the skeleton spec passes
+      (`pnpm smoke 23-skeletons`; owner, 2026-11-18). A new main block gets the same
+      `data-skeleton-block` on both sides; a new screen with a skeleton is added to the spec
+      (`docs/ARCHITECTURE.md` → Skeletons match their screens).
 
 ## Plans: a new module starts with one
 

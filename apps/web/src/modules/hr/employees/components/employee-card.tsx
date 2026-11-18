@@ -36,7 +36,7 @@ const BAND_CLASSES: Record<StageBand | 'inactive', string> = {
 /** Grid of cards: 3 a row from a 900px-wide content area (a 1280px window), 2 from 620px, 1 below. */
 export function EmployeeCardGrid({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <ul className={cn('grid grid-cols-1 gap-4.5 @min-[620px]:grid-cols-2 @min-[900px]:grid-cols-3', className)}>
+    <ul data-skeleton-block="employee-cards" data-skeleton-measure="width" className={cn('grid grid-cols-1 gap-4.5 @min-[620px]:grid-cols-2 @min-[900px]:grid-cols-3', className)}>
       {children}
     </ul>
   );
@@ -60,6 +60,8 @@ function CardFrame({
 }) {
   return (
     <article
+      data-skeleton-block="employee-card"
+      data-skeleton-each
       aria-labelledby={labelledBy}
       data-inactive={inactive || undefined}
       className="flex h-full flex-col overflow-hidden rounded-[1.375rem] bg-card shadow-card"

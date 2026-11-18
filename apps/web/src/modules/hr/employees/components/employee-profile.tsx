@@ -49,6 +49,14 @@ export function useProfileEmployee(): Employee {
   return employee;
 }
 
+/**
+ * The profile layout's employee, or null outside it — a tab's skeleton drawn on a first visit,
+ * before the layout has loaded the employee.
+ */
+export function useProfileEmployeeIfLoaded(): Employee | null {
+  return useContext(ProfileEmployeeContext);
+}
+
 /** The tab a pathname shows: the first segment after `/employees/<id>` (none = details). */
 export function activeProfileTab(pathname: string, profileHref: string): ProfileTabKey {
   const rest = pathname.startsWith(profileHref) ? pathname.slice(profileHref.length) : '';
@@ -63,7 +71,7 @@ export function ProfileTabs({ profileHref }: { profileHref: string }) {
   const active = activeProfileTab(usePathname(), profileHref);
   const tabs = PROFILE_TABS.filter((tab) => !('permission' in tab) || can(tab.permission));
   return (
-    <nav aria-label={t('employees.profile.tabs')} className="scrollbar-clean -mb-2 overflow-x-auto">
+    <nav aria-label={t('employees.profile.tabs')} data-skeleton-block="tabs" className="scrollbar-clean -mb-2 overflow-x-auto">
       <ul className="flex gap-1.5 border-b border-border">
         {tabs.map((tab) => {
           const current = tab.key === active;
@@ -265,7 +273,7 @@ export function EmployeeDetails({ employee }: { employee: Employee }) {
 
 export function DetailsCard({ title, className, children }: { title: string; className?: string; children: ReactNode }) {
   return (
-    <section className={cn('flex flex-col gap-4 rounded-3xl bg-card p-5 shadow-card md:p-6', className)}>
+    <section data-skeleton-block="details-card" className={cn('flex flex-col gap-4 rounded-3xl bg-card p-5 shadow-card md:p-6', className)}>
       <h2 className="font-display text-lg font-extrabold">{title}</h2>
       <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">{children}</dl>
     </section>
