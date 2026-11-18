@@ -15,6 +15,18 @@ type HrValues = { [K in HrSettingKey]: SettingValueMap[K] };
 
 const HR_KEYS = Object.values(HrSettingKey);
 
+/**
+ * The keys a payroll line is calculated from (§5, §6): the lateness rule and the payroll rule. The
+ * penalty repetition window only decides a penalty's level when it is recorded, not the run.
+ */
+const PAYROLL_RULE_KEYS = [
+  HrSettingKey.LATENESS_GRACE_MINUTES,
+  HrSettingKey.LATENESS_STEPS,
+  HrSettingKey.LATENESS_EXTRA_HOUR_DAYS,
+  HrSettingKey.PAYROLL_DAY_DIVISOR,
+  HrSettingKey.PAYROLL_PART_TIME,
+] as const;
+
 /** Canonical JSON (object keys sorted) so equal values compare equal whatever their key order. */
 function canonical(value: unknown): string {
   return JSON.stringify(value, (_key, v: unknown) =>
@@ -40,6 +52,11 @@ export class HrSettingsService {
 
   async get(): Promise<HrSettings> {
     return this.toResponse(await this.load());
+  }
+
+  /** When the rules a payroll run is calculated from last changed, or null (never: defaults). */
+  payrollRulesChangedAt(): Promise<Date | null> {
+    return this.settings.lastChangedAt(PAYROLL_RULE_KEYS);
   }
 
   async update(dto: UpdateHrSettingsDto, changedById: string | null): Promise<HrSettings> {

@@ -195,11 +195,9 @@ phase live in `docs/build-log/`.
 - Access decisions from #89: Principal/Accountant can't read HR rules on Lateness and the payroll run
   (recommended: the endpoints return the rule they used); should Stage head / Direct manager see
   Settings (Structure, Catalogue, read-only)?
-- Dry-run follow-ups (2026-11-18): payslip doesn't say grace minutes were taken off; bank sheet lacks
-  bank/account/IBAN and a total row; dashboard tab title lacks the school name; desktop sidebar cuts
-  the Arabic school name; photo help text still says "neutral silhouette"; no Recalculate hint after
-  HR rules change; phone cancelled-penalty card squeezes the name; once-per-day message shows twice.
-  Activity search in Arabic doesn't find pre-17th entries.
+- Dry-run follow-ups (2026-11-18): the eight polish items are fixed in `fix/dry-run-polish`. Still
+  open: Activity search in Arabic doesn't find pre-17th entries; the lateness page itself doesn't
+  show "minutes − grace" per row (the rule line names the grace).
 
 - The client should check the Arabic penalty catalogue against the printed regulations (copied from the scans).
 

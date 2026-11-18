@@ -1,5 +1,11 @@
 # Recent changes
 
+- 2026-11-18 — Demo dry-run polish (§6, §5, §4): the **bank sheet** now has each employee's bank,
+  account number and IBAN, and a Total row. A **draft run** says when the lateness or payroll rules
+  changed after its last calculation and offers Recalculate. The **payslip**'s lateness shows the
+  grace taken off ("130 minutes − 30 minutes grace = 100 minutes = 0.75 day"). The once-per-day
+  message shows once after Save (under the date). Every page's tab title names the school,
+  the dashboard's included.
 - 2026-11-18 — Payroll taxes frozen at approval, even when late (§10, §6, review of #85): a month
   whose taxes are worked out after its approval (a missed event) now uses the tax rule in force at
   the approval, not today's. Every change to the tax rule is kept with the moment it took effect.

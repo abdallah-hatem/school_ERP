@@ -185,7 +185,7 @@
   "photo": {
     "description": "Shown on the employee’s card and profile. PNG, JPG or WebP, up to {max} MB. Cropped to a square.",
     "current": "This is the photo in use.",
-    "none": "No photo yet. A neutral silhouette is shown until you add one.",
+    "none": "No photo yet. A male or female silhouette is shown until you add one.",
     "ready": "Preview of {name}. Upload it to use it.",
     "readyOnSave": "Preview of {name}. It is added when you save the employee.",
     "choose": "Choose a photo",

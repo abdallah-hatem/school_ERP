@@ -38,6 +38,10 @@
     "print": "Print",
     "backToRun": "Back to the run"
   },
+  "rulesChanged": {
+    "title": "HR rules changed since the last calculation",
+    "body": "The lateness or payroll rules in Settings changed after this run was calculated. Recalculate to apply them."
+  },
   "approve": {
     "title": "Approve {month}?",
     "body": "Every line is recalculated one last time, then the run, its penalties, lateness and adjustments are locked. An approved run can't be edited.",
@@ -179,6 +183,15 @@
       "many": "{count} minutes = {days}",
       "other": "{count} minutes = {days}"
     },
+    "latenessMinutes": {
+      "zero": "{count} minutes",
+      "one": "{count} minute",
+      "two": "{count} minutes",
+      "few": "{count} minutes",
+      "many": "{count} minutes",
+      "other": "{count} minutes"
+    },
+    "latenessGraceDetail": "{total} − {grace} grace = {counted} = {days}",
     "adjustments": "Adjustments",
     "noAdjustments": "No adjustments this month.",
     "totalPenalties": "Penalty deductions",

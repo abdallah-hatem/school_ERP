@@ -194,12 +194,14 @@ export class PayrollService {
     const run = await this.findRun(id);
     const view = await this.view();
     const scope = employeeWhere(view.lines);
-    const [totals, lines, adjustments, inRun, pendingPenalties] = await Promise.all([
+    const draft = run.status === PayrollStatus.DRAFT;
+    const [totals, lines, adjustments, inRun, pendingPenalties, rulesChangedAt] = await Promise.all([
       this.repository.totalsFor([id], scope),
       this.repository.findLines(id, query, scope),
       this.repository.findAdjustments(id, undefined, scope),
       this.repository.lineEmployeeIds(id),
-      run.status === PayrollStatus.DRAFT ? this.penalties.pendingCountInMonth(run.month) : 0,
+      draft ? this.penalties.pendingCountInMonth(run.month) : 0,
+      draft ? this.hrSettings.payrollRulesChangedAt() : null,
     ]);
     const paid = await this.salaryVisibleFor(view, [
       ...lines.map((l) => l.employeeId),
@@ -208,6 +210,8 @@ export class PayrollService {
     return {
       ...this.toSummary(run, totals.get(id)!, view),
       pendingPenalties,
+      calculatedAt: run.calculatedAt.toISOString(),
+      rulesChanged: !!rulesChangedAt && rulesChangedAt > run.calculatedAt,
       lines: lines.map((l) => toLine(l, paid.has(l.employeeId))),
       adjustments: adjustments.map((a) => toAdjustment(a, inRun, paid.has(a.employeeId))),
     };
@@ -457,9 +461,16 @@ export class PayrollService {
     if ((await this.access.salaryScope()).kind !== 'all') throw new ForbiddenException();
     const run = await this.findApproved(id);
     const lines = await this.repository.findLines(id);
+    // The bank details on file today (§6, GUESS): the account the money goes to now. They are
+    // salary-type data (§3), covered by the salary scope `all` checked above.
+    const bank = await this.employees.bankDetailsFor(lines.map((l) => l.employeeId));
+    const none = { bankName: null, bankAccountNumber: null, iban: null };
     return {
       fileName: `bank-sheet-${run.month}.xlsx`,
-      content: await buildBankSheet(lines, lang),
+      content: await buildBankSheet(
+        lines.map((l) => ({ ...l, ...(bank.get(l.employeeId) ?? none) })),
+        lang,
+      ),
     };
   }
 
@@ -508,6 +519,8 @@ export class PayrollService {
         insuranceStatus: e.insuranceStatus,
         insuredSalary: e.insuredSalary,
         latenessMinutes: late?.minutes ?? 0,
+        // The grace taken off the minutes at this calculation, so the payslip can show it (§5).
+        latenessGraceMinutes: settings.lateness.graceMinutes,
         ...amounts,
       };
     });

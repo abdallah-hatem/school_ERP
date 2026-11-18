@@ -19,6 +19,8 @@ marks the managing job titles and stores the principal's photo, without touching
 - The menu is grouped by module: HR (Employees, Penalties, Lateness, Payroll), Accounting,
   Inventory and Students marked "Soon", Administration (Settings, Activity, Users, Roles).
 - Switch **ع ↔ EN**: the whole layout mirrors without a reload and stays on the same page.
+- ✔ The browser tab reads "Dashboard · <school name>" (لوحة التحكم · <اسم المدرسة> in Arabic), like
+  the sign-in page; the school name in the desktop sidebar is shown whole (up to two lines).
 
 ## 3. Penalties — the rules come from the school's own regulations
 - Open **Record a penalty**. Pick an employee who already has approved penalties for a violation
@@ -29,8 +31,8 @@ marks the managing job titles and stores the principal's photo, without touching
 - Save (pending) → approve it from the list. Approve any other pending penalties of the month
   (payroll can't be approved while any are pending).
 - Open **Record a penalty** again with the same employee, violation and date. ✔ The preview says
-  this violation counts once per day and the employee already has one on this date; Save shows the
-  same message under the date. (Late to class is different: it can be recorded several times a day.)
+  this violation counts once per day and the employee already has one on this date; Save moves the
+  message under the date — ✔ it shows once, not twice. (Late to class is different: it can be recorded several times a day.)
 - Settings → Penalty catalogue: type part of a violation's name in the search (Arabic, then
   English). ✔ Only matching violations show, their groups open, the match is marked; a word nothing
   has → "No violations match" with **Clear filters**. Violations that can repeat in a day carry a
@@ -49,6 +51,8 @@ marks the managing job titles and stores the principal's photo, without touching
 ## 6. Settings change the numbers (the key moment)
 - Settings → HR rules: change a rule, e.g. grace minutes 0 → 30. The example line updates live
   (90 min → 0.25 day). Save.
+- Back on the draft run: ✔ a note says the HR rules changed since the last calculation, with
+  **Recalculate now** (it goes once recalculated).
 - **View change history** (top of Settings) → Activity, filtered to Settings: ✔ the grace-minutes
   change is at the top, with who made it and old → new (Administration → Activity shows it too).
   Activity holds settings and catalogue changes for now; penalties, lateness, payroll and sign-ins
@@ -60,10 +64,14 @@ marks the managing job titles and stores the principal's photo, without touching
 ## 7. Approve
 - **Approve payroll** → confirmation explains it recalculates once more and locks the month.
 - After approval: read-only, **Export bank sheet** downloads an Excel file, each row has a payslip.
+  ✔ The sheet has the bank, account number and IBAN of each employee (empty where none is on file)
+  and a **Total** row at the bottom equal to the run's net.
 
 ## 8. Payslip
 - Open the payslip of the employee from step 3. ✔ Each penalty is listed with its level, days and
   amount, and they add up to the line's penalty total; lateness, adjustments and net match the line.
+  ✔ Lateness shows the grace taken off, e.g. "130 minutes − 30 minutes grace = 100 minutes = 0.75
+  day" (a run calculated before this change shows it after a Recalculate).
 - Print → one A4 page, in Arabic and in English.
 - Settings → **Accounting** (signed in as System admin or Accountant): the payroll tax rule —
   monthly slices, martyrs' fund, insurance share. ✔ The example shows net 10,000.00 → income tax

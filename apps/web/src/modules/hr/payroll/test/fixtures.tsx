@@ -32,6 +32,7 @@ export function line(
     penaltyDays: 0,
     penaltyAmount: 0,
     latenessMinutes: 0,
+    latenessGraceMinutes: 0,
     latenessDays: 0,
     latenessAmount: 0,
     adjustmentAdditions: 0,
@@ -96,6 +97,8 @@ export function run(overrides: Partial<PayrollRun> = {}): PayrollRun {
     salaryVisible: true,
     adjustments: [],
     pendingPenalties: lines.filter((l) => l.flags.includes('PENDING_PENALTIES')).length,
+    calculatedAt: '2026-11-18T08:00:00.000Z',
+    rulesChanged: false,
     ...overrides,
     lines,
   };
