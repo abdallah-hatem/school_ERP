@@ -20,11 +20,13 @@ responsive layout.
 - **Contracts:** renewal and non-renewal deadlines, early termination, deemed resignation after
   unexcused absence.
 - **Medical and legal:** sick-leave approval by the clinic, investigations.
-- **Payroll:** annual raise and the raise-related penalties, exam bonus, overtime rate, tax, social
-  insurance, loans, bank accounts.
+- **Payroll:** annual raise and the raise-related penalties, exam bonus, overtime rate, loans, bank
+  transfer. (The payroll taxes — insurance share, income tax, martyrs' fund — are built in
+  accounting, §10.)
 - **Reports** for official bodies, the bus department's attendance report.
 - **Roles and permissions** for the whole approval chain (§2).
-- **Accounting:** journal entries created from approved payroll (and later fee payments).
+- **Accounting:** a screen for each approved month's payroll taxes (mockups first), journal entries
+  created from approved payroll (and later fee payments), the employer's insurance share.
 - **Supervision duty roster.**
 - **Audit log** (§9) — approved 2026-11-17, being built.
 - **App logging** for developers (requests, errors) — with hosting.

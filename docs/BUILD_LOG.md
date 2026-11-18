@@ -139,6 +139,12 @@ phase live in `docs/build-log/`.
 
 ## Next up
 
+- **Accounting payroll taxes screen** — a page per approved month (net, insurance share, income tax,
+  fund, gross per employee) and a sidebar entry: **mockups first** (CLAUDE.md rule 9). The API
+  (`GET /accounting/payroll[/:month]`) is built. Tax defaults are GUESS until the accountant confirms.
+- Flaky under load: `catalogue-search.test.tsx` "only a violation that can repeat in a day shows the
+  badge" (fails in the pre-push run on a busy machine, passes alone).
+
 - `pnpm smoke` in CI (needs Postgres + Chromium in the workflow).
 - The client should check the Arabic penalty catalogue against the printed regulations (copied from the scans).
 

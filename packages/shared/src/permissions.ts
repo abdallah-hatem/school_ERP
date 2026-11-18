@@ -77,6 +77,8 @@ export const PERMISSIONS = {
   // accounting — rules (the payroll tax rule: slices, martyrs' fund, insurance share)
   'accounting.settings.view': accounting,
   'accounting.settings.edit': accounting,
+  // accounting — payroll taxes of approved months
+  'accounting.payroll.view': accounting,
 } as const satisfies Record<string, PermissionDefinition>;
 
 export type PermissionKey = keyof typeof PERMISSIONS;

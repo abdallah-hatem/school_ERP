@@ -32,6 +32,7 @@ export const AuditEntityType = {
   LATENESS_MONTH: 'lateness_month',
   PAYROLL_RUN: 'payroll_run',
   ACCOUNTING_SETTINGS: 'accounting_settings',
+  ACCOUNTING_PAYROLL: 'accounting_payroll',
 } as const;
 export type AuditEntityType = (typeof AuditEntityType)[keyof typeof AuditEntityType];
 export const AUDIT_ENTITY_TYPES = Object.values(AuditEntityType) as AuditEntityType[];
@@ -207,6 +208,12 @@ export const AUDIT_ACTIONS = {
     entityType: E.ACCOUNTING_SETTINGS,
     kind: 'update',
   },
+  // accounting — a month's taxes worked out when HR approved its payroll (by the system, §10)
+  'accounting.payroll.record': {
+    module: 'accounting',
+    entityType: E.ACCOUNTING_PAYROLL,
+    kind: 'create',
+  },
 } as const satisfies Record<string, AuditActionDefinition>;
 
 export type AuditAction = keyof typeof AUDIT_ACTIONS;
@@ -354,8 +361,8 @@ export interface AuditSummary {
  * "money" entry: the Activity page tags it and the summary counts it.
  */
 export const AUDIT_MONEY_FIELDS = ['basicSalary', 'amount', 'totals', 'net'] as const;
-export const AUDIT_MONEY_ACTIONS: readonly AuditAction[] = AUDIT_ACTION_KEYS.filter((key) =>
-  key.startsWith('hr.payroll.'),
+export const AUDIT_MONEY_ACTIONS: readonly AuditAction[] = AUDIT_ACTION_KEYS.filter(
+  (key) => key.startsWith('hr.payroll.') || key.startsWith('accounting.payroll.'),
 );
 
 export function isMoneyEntry(entry: Pick<AuditEntry, 'action' | 'changes'>): boolean {

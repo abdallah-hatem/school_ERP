@@ -411,6 +411,37 @@ export class PayrollService {
     };
   }
 
+  /** The id of a month's APPROVED run, or null (no run, or still a draft). For accounting (§10). */
+  async approvedRunIdForMonth(month: Month): Promise<Uuid | null> {
+    const run = await this.repository.findByMonth(month);
+    return run?.status === PayrollStatus.APPROVED ? run.id : null;
+  }
+
+  /**
+   * An APPROVED run's every line with its net, for accounting (§10) — a system read, not a
+   * viewer's: it is not narrowed by whoever's request triggered it (the approver, or the accountant
+   * reading a month). Null when the run is unknown or not approved. Accounting's own endpoints are
+   * guarded by `accounting.payroll.view`.
+   */
+  async approvedLinesForAccounting(id: Uuid): Promise<{
+    month: Month;
+    lines: { employeeId: Uuid; employeeCode: string; nameEn: string; nameAr: string; net: number }[];
+  } | null> {
+    const run = await this.repository.findRun(id);
+    if (run?.status !== PayrollStatus.APPROVED) return null;
+    const lines = await this.repository.findLines(id);
+    return {
+      month: run.month,
+      lines: lines.map(({ employeeId, employeeCode, nameEn, nameAr, net }) => ({
+        employeeId,
+        employeeCode,
+        nameEn,
+        nameAr,
+        net,
+      })),
+    };
+  }
+
   /**
    * The `.xlsx` bank sheet of an APPROVED run, with its file name. It lists every employee's net,
    * so it also needs every salary (`hr.employees.view_salary` at scope `all`, R7) — 403 otherwise.

@@ -26,7 +26,8 @@
     "penalty": "جزاء",
     "lateness_month": "تأخير الشهر",
     "payroll_run": "مسيّر رواتب",
-    "accounting_settings": "قواعد المحاسبة"
+    "accounting_settings": "قواعد المحاسبة",
+    "accounting_payroll": "ضرائب الرواتب"
   },
   "actions": {
     "core": {
@@ -102,6 +103,9 @@
     "accounting": {
       "settings": {
         "update": "تعديل قواعد المحاسبة"
+      },
+      "payroll": {
+        "record": "حساب ضرائب رواتب {entity}"
       }
     }
   },

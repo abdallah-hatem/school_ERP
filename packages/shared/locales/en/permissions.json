@@ -178,6 +178,12 @@
           "label": "Edit accounting rules",
           "description": "Change the payroll tax rule: income-tax slices, the martyrs' fund and the insurance share."
         }
+      },
+      "payroll": {
+        "view": {
+          "label": "View payroll taxes",
+          "description": "See each approved month's insurance, income tax, martyrs' fund and gross per employee."
+        }
       }
     }
   },
