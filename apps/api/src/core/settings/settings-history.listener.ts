@@ -13,7 +13,7 @@ import { historyAuditTarget } from './settings.pure';
  * old history rows were, so Settings → Change history keeps showing them. T28 records these in
  * the write's own transaction and removes this listener.
  *
- * School and HR settings are NOT handled here: `SettingsService` records them in the write's
+ * School, HR and accounting settings are NOT handled here: `SettingsService` records them in the write's
  * transaction (D2). A failure here is logged, never thrown back at the emitter.
  */
 @Injectable()
@@ -27,7 +27,7 @@ export class SettingsHistoryListener {
 
   @OnEvent(SettingsEvent.CHANGED)
   async record(event: SettingsChangedEvent): Promise<void> {
-    if (event.scope === 'school' || event.scope === 'hr') return;
+    if (event.scope === 'school' || event.scope === 'hr' || event.scope === 'accounting') return;
     const target = event.key ? historyAuditTarget(event) : null;
     if (!target) {
       this.logger.warn(`Ignored settings.changed with scope "${event.scope}" key "${event.key}"`);
