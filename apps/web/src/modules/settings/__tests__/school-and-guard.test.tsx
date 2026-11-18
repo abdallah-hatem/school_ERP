@@ -288,6 +288,14 @@ describe('Settings screen — change history (owner, 2026-11-17)', () => {
     );
   });
 
+  it('the Accounting section shows only to someone who may see the accounting rules (§10)', () => {
+    renderScreen();
+    expect(screen.getByRole('navigation', { name: 'Settings sections' }).textContent).toContain('Accounting');
+    cleanup();
+    renderScreen('en', sessionWithout('accounting.settings.view'));
+    expect(screen.getByRole('navigation', { name: 'Settings sections' }).textContent).not.toContain('Accounting');
+  });
+
   it('the link is hidden from someone who may not read the activity log (can(), view only)', () => {
     renderScreen('en', sessionWithout('core.audit.view'));
     expect(screen.queryByRole('link', { name: 'View change history' })).toBeNull();

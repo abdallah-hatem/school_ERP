@@ -4,11 +4,12 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useState, type ReactNode } from 'react';
 import { settingsActivityHref } from '@/core/audit';
-import { Can } from '@/core/auth';
+import { Can, useCan } from '@/core/auth';
 import { PageHeader } from '@/shared/components/layout/page-header';
 import { Button } from '@/shared/components/ui/button';
 import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import {
+  AccountingModuleIcon,
   ChevronEndIcon,
   ChevronStartIcon,
   HistoryIcon,
@@ -23,6 +24,7 @@ import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { DirtyReporterProvider, useLeaveGuard } from '../hooks/unsaved-changes';
 import { SETTINGS_SECTIONS, type SettingsSectionId } from '../sections';
+import { AccountingRulesSection } from './accounting-rules-section';
 import { CatalogueSection } from './catalogue-section';
 import { HrRulesSection } from './hr-rules-section';
 import { ListManager } from './list-manager';
@@ -34,6 +36,7 @@ const ICONS: Record<SettingsSectionId, AppIcon> = {
   lists: ListsIcon,
   hrRules: RulesIcon,
   catalogue: PenaltiesIcon,
+  accounting: AccountingModuleIcon,
 };
 
 function SectionBody({ id }: { id: SettingsSectionId }): ReactNode {
@@ -53,6 +56,8 @@ function SectionBody({ id }: { id: SettingsSectionId }): ReactNode {
       return <HrRulesSection />;
     case 'catalogue':
       return <CatalogueSection />;
+    case 'accounting':
+      return <AccountingRulesSection />;
   }
 }
 
@@ -66,6 +71,7 @@ type Leave = { to: SettingsSectionId | null } | { href: string } | { proceed: ()
  */
 export function SettingsScreen({ initialSection }: { initialSection: SettingsSectionId | null }) {
   const { t, locale } = useTranslation();
+  const can = useCan();
   const router = useRouter();
   const pathname = usePathname();
   const [section, setSection] = useState<SettingsSectionId | null>(initialSection);
@@ -124,7 +130,7 @@ export function SettingsScreen({ initialSection }: { initialSection: SettingsSec
       <div className="grid items-start gap-6 md:grid-cols-[15rem_minmax(0,1fr)] xl:grid-cols-[17rem_minmax(0,1fr)]">
         <nav aria-label={t('settings.sectionsLabel')} className={cn('md:sticky md:top-6', section && 'max-md:hidden')}>
           <ul className="flex flex-col gap-1 rounded-3xl bg-card p-2 shadow-card">
-            {SETTINGS_SECTIONS.map((id) => {
+            {SETTINGS_SECTIONS.filter((id) => id !== 'accounting' || can('accounting.settings.view')).map((id) => {
               const Icon = ICONS[id];
               const current = id === shown;
               return (

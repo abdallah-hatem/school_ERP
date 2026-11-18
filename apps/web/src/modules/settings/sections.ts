@@ -1,5 +1,5 @@
 /** The Settings screen's sections, in menu order (`?section=` in the URL). */
-export const SETTINGS_SECTIONS = ['school', 'structure', 'lists', 'hrRules', 'catalogue'] as const;
+export const SETTINGS_SECTIONS = ['school', 'structure', 'lists', 'hrRules', 'catalogue', 'accounting'] as const;
 export type SettingsSectionId = (typeof SETTINGS_SECTIONS)[number];
 
 /** `?section=` → a known section, or null (phone: the section list; wider: the first section). */

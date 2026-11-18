@@ -58,6 +58,11 @@ catalogue, a month of penalties (some pending) and lateness, and a DRAFT payroll
 - Open the payslip of the employee from step 3. ✔ Each penalty is listed with its level, days and
   amount, and they add up to the line's penalty total; lateness, adjustments and net match the line.
 - Print → one A4 page, in Arabic and in English.
+- Settings → **Accounting** (signed in as System admin or Accountant): the payroll tax rule —
+  monthly slices, martyrs' fund, insurance share. ✔ The example shows net 10,000.00 → income tax
+  1,017.00 · fund 5.51 · gross 11,022.51. By hand: taxable 11,022.51; tax = 125 + 187.50 +
+  (11,022.51 − 7,500) × 20% = 1,017.00; fund = 11,022.51 × 0.05% = 5.51; 11,022.51 − 1,017.00 −
+  5.51 = 10,000.00 (the net is what the employee is paid).
 - Click the employee's name (on the payslip, or in the run's "Employees this month") → ✔ their
   profile opens. Every employee name in the app does this (penalties, lateness, Activity).
 - On the profile, **Details** shows the social insurance, bank account, emergency contact and
