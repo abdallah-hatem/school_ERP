@@ -180,6 +180,11 @@ phase live in `docs/build-log/`.
   parts (masked real forms, `SkeletonProse` for wrapping text, route groups so a page never shows a
   parent's skeleton); `23-skeletons*.spec.ts` compares skeleton and loaded blocks on desktop EN and
   phone AR (±8px). All four checks green; dev re-checked.
+- 2026-11-18 — Roles leftovers (`fix/roles-leftovers`): every Settings section is read-only without
+  its edit key (School, HR rules, lists, catalogue, as Accounting already was); payroll adjustments
+  stay gated on `hr.payroll.adjust` (API already guarded and audited; now e2e-tested, and the web
+  says why a draft's adjustments are read-only); Home without `hr.dashboard.view` is a welcome with
+  the user's name and links to their screens (§2, GUESS). Who holds what is unchanged.
 
 - 2026-11-18 — #88 leftovers fixed → #94: the Add user password is made once by the server screen
   (no hydration mismatch); the Users list uses the shared Clear filters.
@@ -219,8 +224,6 @@ phase live in `docs/build-log/`.
 - Write the settings history in the same transaction as the change (outbox), instead of right after.
 
 - Hosting the demo on the Contabo server (owner: later; local demo is the fallback).
-- Roles leftovers: read-only settings for view-only users; gate payroll adjust on `hr.payroll.adjust`;
-  what Home shows without `hr.dashboard.view`.
 - Audit log T28 (Waleed: auth, settings, employees, lists) and T29 (Tamer: penalties, lateness,
   payroll), then T31 verify. Optional CI ratchet that forbids touching an unwired endpoint (owner: docs only for now). Follow-ups from T30: id fields
   (`departmentId`) show raw ids unless T28 stores names; penalties don't appear on the employee's

@@ -39,13 +39,14 @@ export interface AdjustmentsTarget {
 
 /**
  * One employee's one-off additions and deductions for the run's month. On a draft: add (type,
- * amount, reason — all required) and remove; the run comes back recalculated. On an approved run
- * the list is read-only.
+ * amount, reason — all required) and remove; the run comes back recalculated. On an approved run,
+ * or for someone without `hr.payroll.adjust`, the list is read-only and says why.
  */
 export function AdjustmentsDialog({
   runId,
   month,
   editable,
+  readOnlyReason = 'approved',
   target,
   adjustments,
   onOpenChange,
@@ -54,6 +55,8 @@ export function AdjustmentsDialog({
   runId: Uuid;
   month: Month;
   editable: boolean;
+  /** Why a read-only list can't change: the run is approved, or the viewer may not adjust. */
+  readOnlyReason?: 'approved' | 'permission';
   /** `null` = closed. */
   target: AdjustmentsTarget | null;
   /** The employee's adjustments. */
@@ -232,7 +235,9 @@ export function AdjustmentsDialog({
               />
             </Form>
           ) : (
-            <p className="text-muted-foreground text-sm">{t('payroll.adjustments.readOnly')}</p>
+            <p className="text-muted-foreground text-sm">
+              {t(readOnlyReason === 'permission' ? 'payroll.adjustments.readOnlyNoPermission' : 'payroll.adjustments.readOnly')}
+            </p>
           )}
         </div>
       </DialogContent>

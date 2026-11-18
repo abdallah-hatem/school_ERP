@@ -6,6 +6,13 @@
   grace taken off ("130 minutes − 30 minutes grace = 100 minutes = 0.75 day"). The once-per-day
   message shows once after Save (under the date). Every page's tab title names the school,
   the dashboard's included.
+- 2026-11-18 — Roles leftovers (§2, §6, §7): **Home** without the dashboard permission (the
+  Accountant, a stage head, a direct manager) is now a welcome with the person's name and a link to
+  each screen they may open — no HR figures. **Settings** sections someone may view but not change
+  are read-only everywhere (School, HR rules, Structure and lists, penalty catalogue, Accounting):
+  no typing, no adding or removing, no Save. **Payroll adjustments** can be added or removed only
+  with "Adjust payroll" (System admin, HR manager, HR officer — unchanged); others see them
+  read-only, with the reason.
 - 2026-11-18 — Rules on Lateness and payroll runs (§5, §6, owner): the Principal's Lateness screen
   now shows the days, and the Principal's and Accountant's payroll run shows "Rules applied" — the
   rules come with the lateness list and the run instead of from HR settings, which those roles

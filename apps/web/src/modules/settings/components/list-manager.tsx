@@ -119,7 +119,8 @@ export function ListManager({ kind }: { kind: ListKind }) {
           <StatusPill tone="neutral">{t('settings.lists.hidden')}</StatusPill>
         ),
     },
-    rowActionsColumn(t('settings.lists.actions'), (item) => (
+    // View only (no manage key): no actions column at all, rather than an empty one.
+    ...(canManage ? [rowActionsColumn(t('settings.lists.actions'), (item: ManagedListItem) => (
       <RowActions
         label={t('ui.table.actionsFor', { name: localName(item, locale) })}
         busy={toggling === item.id}
@@ -131,7 +132,7 @@ export function ListManager({ kind }: { kind: ListKind }) {
             : { id: 'show', label: t('settings.lists.show'), icon: ShowIcon, hidden: !canManage, onSelect: () => void toggle(item) },
         ]}
       />
-    )),
+    ))] : []),
   ];
 
   const addButton = canManage ? (

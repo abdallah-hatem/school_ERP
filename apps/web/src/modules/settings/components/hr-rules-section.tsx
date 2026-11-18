@@ -13,7 +13,7 @@ import {
   type UpdateHrSettingsRequest,
 } from '@school-erp/shared';
 import { useId, useRef, useState } from 'react';
-import { Can } from '@/core/auth';
+import { Can, useCan } from '@/core/auth';
 import { useFieldArray, useForm, useWatch, type Control } from 'react-hook-form';
 import { callApi } from '@/lib/callApi';
 import { NumberField, SelectField } from '@/shared/components/form/fields';
@@ -88,6 +88,8 @@ export function HrRulesSection() {
 
 function HrRulesForm({ initial, onSaved }: { initial: HrSettings; onSaved: (next: HrSettings) => void }) {
   const { t } = useTranslation();
+  // Without the edit permission the rules are shown read-only: no typing, no adding or removing steps.
+  const canEdit = useCan()('hr.settings.edit');
   const [saved, setSaved] = useState(false);
   const busy = useRef(false);
   const form = useForm<HrRulesFormValues>({
@@ -147,6 +149,7 @@ function HrRulesForm({ initial, onSaved }: { initial: HrSettings; onSaved: (next
             placeholder={t('settings.hrRules.lateness.gracePlaceholder')}
             suffix={t('settings.units.minutes')}
             required
+            disabled={!canEdit}
           />
           <NumberField
             control={form.control}
@@ -157,6 +160,7 @@ function HrRulesForm({ initial, onSaved }: { initial: HrSettings; onSaved: (next
             suffix={t('ui.units.days')}
             decimals={2}
             required
+            disabled={!canEdit}
           />
         </div>
 
@@ -174,33 +178,38 @@ function HrRulesForm({ initial, onSaved }: { initial: HrSettings; onSaved: (next
                   suffix={t('ui.units.days')}
                   decimals={2}
                   required
+                  disabled={!canEdit}
                   className="flex-1"
                 />
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="mt-7"
-                  aria-label={t('settings.hrRules.lateness.removeStep', { hour: i + 1 })}
-                  disabled={steps.fields.length <= 1}
-                  onClick={() => steps.remove(i)}
-                >
-                  <RemoveIcon />
-                </Button>
+                {canEdit ? (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="mt-7"
+                    aria-label={t('settings.hrRules.lateness.removeStep', { hour: i + 1 })}
+                    disabled={steps.fields.length <= 1}
+                    onClick={() => steps.remove(i)}
+                  >
+                    <RemoveIcon />
+                  </Button>
+                ) : null}
               </li>
             ))}
           </ol>
           {stepsError ? <p className="text-xs font-semibold text-destructive-ink">{t(stepsError)}</p> : null}
-          <div>
-            <Button
-              variant="soft"
-              size="sm"
-              disabled={steps.fields.length >= MAX_STEPS}
-              onClick={() => steps.append({ days: 0.5 })}
-            >
-              <AddIcon />
-              {t('settings.hrRules.lateness.addStep')}
-            </Button>
-          </div>
+          {canEdit ? (
+            <div>
+              <Button
+                variant="soft"
+                size="sm"
+                disabled={steps.fields.length >= MAX_STEPS}
+                onClick={() => steps.append({ days: 0.5 })}
+              >
+                <AddIcon />
+                {t('settings.hrRules.lateness.addStep')}
+              </Button>
+            </div>
+          ) : null}
         </fieldset>
 
         <LatenessExample control={form.control} />
@@ -215,6 +224,7 @@ function HrRulesForm({ initial, onSaved }: { initial: HrSettings; onSaved: (next
             hint={t('settings.hrRules.payroll.divisorHint')}
             placeholder={t('settings.hrRules.payroll.divisorPlaceholder')}
             required
+            disabled={!canEdit}
           />
         </div>
         <div className="grid gap-5 sm:grid-cols-3">
@@ -227,6 +237,7 @@ function HrRulesForm({ initial, onSaved }: { initial: HrSettings; onSaved: (next
               placeholder={t('settings.hrRules.payroll.percentPlaceholder')}
               suffix="%"
               required
+              disabled={!canEdit}
             />
           ))}
         </div>
@@ -241,6 +252,7 @@ function HrRulesForm({ initial, onSaved }: { initial: HrSettings; onSaved: (next
             label={t('settings.hrRules.penalties.window')}
             options={REPETITION_WINDOWS.map((w) => ({ value: w, label: t(`common.enums.repetitionWindow.${w}`) }))}
             required
+            disabled={!canEdit}
           />
         </div>
       </SectionPanel>

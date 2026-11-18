@@ -38,6 +38,18 @@
   shown only to those who may use it.
 - **GUESS** — The payroll tax rule (§10) belongs to the Accountant (view and change) and the
   System admin (owner, 2026-11-18).
+- **GUESS** (enforced, 2026-11-18) — **Home** is the HR dashboard (headcount, this month's payroll,
+  penalties, quick links) only for someone allowed to see it (System admin, HR manager, HR officer,
+  principal). Anyone else — the Accountant, a stage head, a direct manager — gets a welcome with
+  their name and a link to each screen they may open (the same screens as their menu, then My
+  account), and no HR figures. Recommended by Claude, owner to confirm.
+- **GUESS** (enforced, 2026-11-18) — Someone who may see a Settings section but not change it sees
+  it read-only (§7): a stage head and a direct manager see Structure and the penalty catalogue, the
+  principal sees the lists. They keep Settings in their menu for now (owner hasn't decided
+  otherwise).
+- **GUESS** (enforced, 2026-11-18) — Adding or removing a payroll adjustment needs its own
+  permission ("Adjust payroll"), held by the System admin, HR manager and HR officer (§6). Anyone
+  else who sees the run sees its adjustments without being able to change them.
 - **DECIDED** — The last System admin can't be removed or deactivated.
 - **Planned** — Legal affairs, medical clinic and security desk roles, with their modules.
 - **DECIDED** — Viewing the activity log is its own permission (§9): System admin, HR manager and
