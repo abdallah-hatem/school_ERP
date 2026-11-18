@@ -168,6 +168,13 @@ phase live in `docs/build-log/`.
 - 2026-11-18 — Started: demo dry run on a copy of the demo DB (migrations since the 17th + the script
   in AR/EN/phone, money by hand); skeletons-match PR #88; a role-access smoke spec (every built-in
   role × every screen).
+- 2026-11-18 — Role-access smoke spec merged → #89: one shared list (`packages/shared/src/screens.ts`)
+  drives page guards, sidebar and Settings sections; real fixes: Settings lists only the viewer's
+  sections, Users/Roles/Activity got page guards, "Edit rules" on the run only with `hr.settings.view`.
+- 2026-11-18 — Demo dry run on a copy (`docs/demo/dry-runs/2026-11-18.md`) merged → #90: the script
+  passes in AR, EN and phone; every money figure matched by hand. Blocker: run the seed once on the
+  demo DB after `migrate deploy` (owner). Arabic plural counts and Arabic names on older Activity
+  entries (read-time fallback, no backfill) fixed → #91.
 
 ## Next up
 
@@ -178,6 +185,17 @@ phase live in `docs/build-log/`.
   reads inside the write's transaction, but two simultaneous saves can still overwrite each other
   (needs a row lock or a version check); the settings e2e checks the audit entry exists but not its
   before/after values.
+- **Before Sunday (owner):** on the demo DB run `prisma migrate deploy`, then `db:seed` once with the
+  same `SEED_ADMIN_PASSWORD`. Until T28/T29 land, open Activity in the demo only for a settings change.
+- Access decisions from #89: Principal/Accountant can't read HR rules on Lateness and the payroll run
+  (recommended: the endpoints return the rule they used); should Stage head / Direct manager see
+  Settings (Structure, Catalogue, read-only)?
+- Dry-run follow-ups (2026-11-18): payslip doesn't say grace minutes were taken off; bank sheet lacks
+  bank/account/IBAN and a total row; dashboard tab title lacks the school name; desktop sidebar cuts
+  the Arabic school name; photo help text still says "neutral silhouette"; no Recalculate hint after
+  HR rules change; phone cancelled-penalty card squeezes the name; once-per-day message shows twice.
+  Activity search in Arabic doesn't find pre-17th entries.
+
 - The client should check the Arabic penalty catalogue against the printed regulations (copied from the scans).
 
 - Login rate limiting (T2 left it out; security baseline).
@@ -187,13 +205,12 @@ phase live in `docs/build-log/`.
 - Roles leftovers: read-only settings for view-only users; gate payroll adjust on `hr.payroll.adjust`;
   what Home shows without `hr.dashboard.view`.
 - Audit log T28 (Waleed: auth, settings, employees, lists) and T29 (Tamer: penalties, lateness,
-  payroll), then T31 verify. Optional CI ratchet that forbids touching an unwired endpoint (owner: docs only for now). Follow-ups from T30: entries keep one
-  name snapshot, so list/catalogue names show in English inside Arabic sentences; id fields
+  payroll), then T31 verify. Optional CI ratchet that forbids touching an unwired endpoint (owner: docs only for now). Follow-ups from T30: id fields
   (`departmentId`) show raw ids unless T28 stores names; penalties don't appear on the employee's
   History; payroll run page has no History tab yet; smoke History check still asserts the empty
   state (`TODO(T28)`).
 
 - Optional: server-side paging for lateness (loads the whole month today) and column sorting.
 - The stage "None" band is detected by its English name; key it by an id instead.
-- Skeletons match their components + the layout spec that enforces it (agent paused mid-way; its
-  worktree `fix/skeletons-match` has uncommitted work to resume).
+- Skeletons match their components + the layout spec that enforces it → #88 (open: desktop green,
+  9 phone screens still mismatch).
