@@ -19,7 +19,9 @@ function makeService(found: Stage | null = stage(), marked: Stage | null = null)
   const repo = {
     findById: jest.fn(() => Promise.resolve(found)),
     findNoStage: jest.fn(() => Promise.resolve(marked)),
-    setNoStage: jest.fn((id: string) => Promise.resolve({ ...(found as Stage), id, isNoStage: true })),
+    setNoStage: jest.fn((id: string) =>
+      Promise.resolve({ ...(found as Stage), id, isNoStage: true }),
+    ),
     nextSortOrder: jest.fn(() => Promise.resolve(4)),
     create: jest.fn((data: Partial<Stage>) => Promise.resolve(stage({ ...data, id: 'new' }))),
     update: jest.fn((_id: string, data: Partial<Stage>) => {
@@ -82,7 +84,10 @@ describe('StagesService', () => {
   describe('the "no stage" entry (keyed by its flag, not its name)', () => {
     it('ensureNoStage marks the stage when none carries the mark yet', async () => {
       const { service, repo } = makeService(stage({ id: 'none', nameEn: 'None' }));
-      await expect(service.ensureNoStage('none')).resolves.toMatchObject({ id: 'none', isNoStage: true });
+      await expect(service.ensureNoStage('none')).resolves.toMatchObject({
+        id: 'none',
+        isNoStage: true,
+      });
       expect(repo.setNoStage).toHaveBeenCalledWith('none');
     });
 
@@ -101,15 +106,19 @@ describe('StagesService', () => {
 
     it('renaming (or hiding) the "no stage" entry keeps its role: the edit never touches the flag', async () => {
       const { service, repo } = makeService(stage({ id: 'none', nameEn: 'None', isNoStage: true }));
-      const renamed = await service.update('none', { nameEn: 'No stage', nameAr: 'لا مرحلة', isActive: false }, 'u');
+      const renamed = await service.update(
+        'none',
+        { nameEn: 'No stage', nameAr: 'لا مرحلة', isActive: false },
+        'u',
+      );
       expect(renamed).toMatchObject({ nameEn: 'No stage', isNoStage: true });
-      expect(repo.update.mock.calls[0]![1]).not.toHaveProperty('isNoStage');
+      expect(repo.update.mock.calls[0][1]).not.toHaveProperty('isNoStage');
     });
 
     it('a new stage is never the "no stage" entry, whatever its name', async () => {
       const { service, repo } = makeService();
       await service.create({ nameEn: 'None', nameAr: 'بدون مرحلة' }, 'u');
-      expect(repo.create.mock.calls[0]![0]).not.toHaveProperty('isNoStage');
+      expect(repo.create.mock.calls[0][0]).not.toHaveProperty('isNoStage');
     });
   });
 });

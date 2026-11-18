@@ -15,7 +15,8 @@ const MIGRATIONS = join(__dirname, '..', 'prisma', 'migrations');
 const MIGRATION = '20261118210000_stage_no_stage_flag';
 const dbUrl = e2eDatabaseUrl();
 
-const migrationSql = (name: string) => readFileSync(join(MIGRATIONS, name, 'migration.sql'), 'utf8');
+const migrationSql = (name: string) =>
+  readFileSync(join(MIGRATIONS, name, 'migration.sql'), 'utf8');
 const before = readdirSync(MIGRATIONS)
   .filter((n) => /^\d{14}_/.test(n) && n < MIGRATION)
   .sort();
