@@ -48,7 +48,25 @@ export const SecuritySettingKey = {
 } as const;
 export type SecuritySettingKey = (typeof SecuritySettingKey)[keyof typeof SecuritySettingKey];
 
-export type SettingKey = SchoolSettingKey | HrSettingKey | AccountingSettingKey | SecuritySettingKey;
+/**
+ * Notification retention (core/notifications, §11, DECIDED owner 2026-11-18): read notifications are
+ * deleted `readDays` after they were read, resolved ones `resolvedDays` after they were resolved, and
+ * any notification after `maxDays` — by the nightly `core.notifications.purge` job.
+ */
+export const NotificationSettingKey = {
+  RETENTION_READ_DAYS: 'notifications.retention.readDays',
+  RETENTION_RESOLVED_DAYS: 'notifications.retention.resolvedDays',
+  RETENTION_MAX_DAYS: 'notifications.retention.maxDays',
+} as const;
+export type NotificationSettingKey =
+  (typeof NotificationSettingKey)[keyof typeof NotificationSettingKey];
+
+export type SettingKey =
+  | SchoolSettingKey
+  | HrSettingKey
+  | AccountingSettingKey
+  | SecuritySettingKey
+  | NotificationSettingKey;
 
 /**
  * History keys for HR list edits (§7: list create / edit writes a history row, scope `lists`).
@@ -108,6 +126,9 @@ export interface SettingValueMap {
   'security.login.maxAttempts': number;
   'security.login.windowMinutes': number;
   'security.login.lockMinutes': number;
+  'notifications.retention.readDays': number;
+  'notifications.retention.resolvedDays': number;
+  'notifications.retention.maxDays': number;
 }
 
 /**
@@ -150,6 +171,10 @@ export const SETTING_DEFAULTS: { [K in SettingKey]: SettingValueMap[K] } = {
   'security.login.maxAttempts': 5,
   'security.login.windowMinutes': 15,
   'security.login.lockMinutes': 15,
+  // Notification retention (owner 2026-11-18): read 90 days, resolved 30 days, anything 365 days.
+  'notifications.retention.readDays': 90,
+  'notifications.retention.resolvedDays': 30,
+  'notifications.retention.maxDays': 365,
 };
 
 /**

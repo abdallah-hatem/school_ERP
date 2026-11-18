@@ -34,6 +34,8 @@ export const AuditEntityType = {
   ACCOUNTING_SETTINGS: 'accounting_settings',
   ACCOUNTING_PAYROLL: 'accounting_payroll',
   OUTBOX_DELIVERY: 'outbox_delivery',
+  NOTIFICATION_PREFERENCES: 'notification_preferences',
+  NOTIFICATION_SETTINGS: 'notification_settings',
 } as const;
 export type AuditEntityType = (typeof AuditEntityType)[keyof typeof AuditEntityType];
 export const AUDIT_ENTITY_TYPES = Object.values(AuditEntityType) as AuditEntityType[];
@@ -104,6 +106,17 @@ export const AUDIT_ACTIONS = {
   'core.role.delete': { module: 'core', entityType: E.ROLE, kind: 'status' },
   // core — must-deliver events (core/events): an admin sends a dead delivery again
   'core.outbox.retry': { module: 'core', entityType: E.OUTBOX_DELIVERY, kind: 'status' },
+  // core — notifications (§11): a person's own preferences; the school's defaults and retention
+  'core.notification_preferences.update': {
+    module: 'core',
+    entityType: E.NOTIFICATION_PREFERENCES,
+    kind: 'update',
+  },
+  'core.notification_settings.update': {
+    module: 'core',
+    entityType: E.NOTIFICATION_SETTINGS,
+    kind: 'update',
+  },
   // hr — employees
   'hr.employee.create': {
     module: 'hr',
@@ -249,6 +262,7 @@ export const SETTINGS_HISTORY_ACTIONS = {
   'hr.penalty_group.update': 'catalogue',
   'hr.violation.create': 'catalogue',
   'hr.violation.update': 'catalogue',
+  'core.notification_settings.update': 'notifications',
 } as const satisfies Partial<Record<AuditAction, SettingsChangeScope>>;
 export type SettingsHistoryAction = keyof typeof SETTINGS_HISTORY_ACTIONS;
 export const SETTINGS_HISTORY_ACTION_KEYS = Object.keys(

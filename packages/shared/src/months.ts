@@ -1,3 +1,4 @@
+import { SCHOOL_TIME_ZONE } from './settings';
 import type { IsoDate, Month } from './types/common';
 
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
@@ -22,4 +23,19 @@ export function shiftMonth(month: Month, delta: number): Month {
   const index = y * 12 + (m - 1) + delta;
   const year = Math.floor(index / 12);
   return `${year}-${String(index - year * 12 + 1).padStart(2, '0')}`;
+}
+
+const SCHOOL_DAY_FORMAT = new Intl.DateTimeFormat('en-CA', {
+  timeZone: SCHOOL_TIME_ZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+/**
+ * The school's calendar day of an instant: `YYYY-MM-DD` on the school's clock (`SCHOOL_TIME_ZONE`).
+ * 22:30 UTC on 30 November is already 1 December in Cairo. Jobs and notifications use it as "today".
+ */
+export function schoolDayOf(at: Date): IsoDate {
+  return SCHOOL_DAY_FORMAT.format(at);
 }

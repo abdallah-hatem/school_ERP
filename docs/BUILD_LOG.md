@@ -273,6 +273,20 @@ phase live in `docs/build-log/`.
 - 2026-11-18 — Ownership (owner): Abdallah now does T29/T31 (penalties audit, Activity search),
   the accounting payroll-taxes screen, notifications and events/outbox; Tamer does the payroll-run
   rules snapshot and reviews his listener in #119. T29 started.
+- 2026-11-18 — N0 merged → #124: each employee has a probation end date (default hire date +
+  the HR setting `defaultProbationMonths`, 3, minus a day; editable, clearable, never before the
+  hire date; existing employees backfilled); Settings → HR rules → Employees card. Business
+  alignment review: aligned. Screens checked in EN desktop and AR phone on a throwaway DB (one Job
+  card layout fix made).
+- 2026-11-18 — N1 merged → #127: core notifications (`core/notifications`): tables for
+  notifications, items, deliveries, school defaults and personal preferences; `notify`/`resolve`
+  join the caller's transaction (or an outbox listener); recipients by permission + scope with
+  modules registering scope resolvers; grouping per type per day while unread, dedupe, resolve for
+  everyone, access re-checked on every read; preferences over school defaults, approvals locked on;
+  nightly purge 90/30/365 days; permissions `core.notifications.view`/`.manage` granted by
+  migration. API only — screens are N4. N2 (approvals), N3 (reminders) and N4 (screens) started.
+- 2026-11-18 — Accounting payroll-taxes mockups (three options) → #129; waiting for the owner's
+  pick (recommended: A, two pages).
 
 ## Next up
 

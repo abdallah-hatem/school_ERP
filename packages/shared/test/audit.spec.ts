@@ -10,6 +10,7 @@ import {
   HrCatalogueKey,
   HrListKey,
   HrSettingKey,
+  NotificationSettingKey,
   SchoolSettingKey,
   SETTINGS_HISTORY_ACTION_KEYS,
   AUDIT_MONEY_ACTIONS,
@@ -82,6 +83,7 @@ describe('audit action registry (D5)', () => {
     const fields = [
       ...Object.values(SchoolSettingKey),
       ...Object.values(HrSettingKey),
+      ...Object.values(NotificationSettingKey),
       ...Object.values(HrListKey),
       ...Object.values(HrCatalogueKey),
       'lists.stages',

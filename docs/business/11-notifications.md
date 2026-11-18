@@ -1,7 +1,9 @@
 # §11 Notifications
 
 Telling staff, inside the ERP, that something waits for them or is due. Spec:
-`docs/specs/2026-11-18-notifications.md`. **Planned** — layout picked (option A, below); not built yet.
+`docs/specs/2026-11-18-notifications.md`. **Partly built** — the mechanism is built (who is told,
+grouping, never twice, done approvals, access, preferences, retention); nothing sends a notification
+yet (HR's come next) and the screens are Planned (layout option A, below).
 
 ## What and how
 

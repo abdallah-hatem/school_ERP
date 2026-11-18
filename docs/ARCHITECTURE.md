@@ -506,7 +506,7 @@ Roles are rows, not code (spec P2, R2 / R5 / R8 / R9). A school changes them thr
   the rest of the transaction, so two such changes at once can't both pass.
 - Every user and role write is `@Audited` (`core.user.*`, `core.role.*`); passwords are never in the
   log (the entry says only that one was set or changed).
-- Area order inside core: `audit` ← `permissions` ← `roles` ← `users` ← `auth`, and `audit` ← `settings` ← `sign-in-limit` ← `users`, `auth`; `jobs` depends on no other area (a job lives in its own area and only uses `@ScheduledJob`). `core/audit` reads
+- Area order inside core: `audit` ← `permissions` ← `roles` ← `users` ← `auth`, and `audit` ← `settings` ← `sign-in-limit` ← `users`, `auth`; `jobs` depends on no other area (a job lives in its own area and only uses `@ScheduledJob`); `audit`, `permissions`, `settings` ← `notifications` (no other area imports it — `.dependency-cruiser.cjs`). `core/audit` reads
   an actor's name from `users` itself, so it depends on no other core area.
 - **Screens (P3, option A of `design/mockups/access.html`)** — `apps/web/src/modules/access`:
   Administration → **Users** (`core.users.view`; table with search, role and status filters, 10 per
@@ -612,6 +612,77 @@ Work on a clock — backups, reminders, reports (`core/jobs`, `@nestjs/schedule`
   deletes `login_attempts` rows whose window and lock both ended more than a day ago.
   `outbox.deliver` (`core/events`, every 30 s, `lock: false`): delivers due outbox deliveries.
   `outbox.cleanup` (`core/events`, 03:30, `lock: false`): deletes delivered events older than 30 days.
+  `core.notifications.purge` (`core/notifications`, 02:30): deletes expired notifications (below).
+
+### Notifications
+
+The in-app bell (`core/notifications`, §11, spec `docs/specs/2026-11-18-notifications.md`, plan
+`docs/plans/2026-11-18-notifications-plan.md`). **Core owns the mechanism; each module owns its
+types** and sends through core's exported `NotificationsService` — core never imports a module.
+
+- **Types** are typed keys in `packages/shared/src/notifications.ts` (`NOTIFICATION_TYPES`,
+  `<module>.<thing>.<event>`): module, category (`approval` / `reminder`), `canTurnOff` (approvals
+  can't be turned off, owner 2026-11-18), default channels, the permission a recipient needs, a
+  dedupe prefix and a link builder (a `SCREENS` id + record / query). Texts in
+  `locales/<lang>/notifications.json` (`types.<key>.name` / `title` / `body` / `group`, six plural
+  forms on `count`); the shared tests fail on a type without them. A notification stores the type key
+  and its values (names as `{ en, ar }`), never a sentence (N3). `NotificationTypes` in core is the
+  registry (`register` adds one — the tests' test-only type).
+- **Sending.** `notify({ type, subject: { entityType, entityId, employeeId? }, params, dedupeKey,
+  actorId?, groupKey? })` and `resolve({ type, subject, resolution, byUserId? })` write in the
+  **current** transaction and throw outside one (`NotificationOutsideTransactionError`), like
+  `audit.record()`: a module calls them inside its own change's transaction, so the change and its
+  notifications commit or roll back together (N4). A module reacting to *another* module's event does
+  it in a must-deliver `@OutboxListener`, whose delivery transaction they join (idempotent through the
+  dedupe keys). A job wraps them in `afterCommit.inTransaction`.
+- **Recipients (N5)**: active users holding the type's permission through any role (the System admin
+  holds every key), at their widest scope (`PermissionsService.scopeFor`), minus the actor (GUESS).
+  Scope `all` covers everything; another scope needs the user's linked employee (none → nothing
+  scoped, R5) and the **`NotificationScopeResolver`** the module registered for the subject's entity
+  type with `registerScopeResolver` — a scoped holder with no resolver makes `notify()` throw (never
+  "send to everyone"). Zero recipients is fine.
+- **Tables.** `notifications` (recipient kind + id — `user` now, a parent `contact` later, no foreign
+  key —, type, group key, actor, `updated_at` = latest item, `read_at`, `resolved_at`),
+  `notification_items` (subject, `params` jsonb, dedupe key, resolution, the resolver's name
+  `{ en, ar }`; unique `(recipient_kind, recipient_id, type, dedupe_key)`), `notification_deliveries`
+  (one per channel enabled when it was made; `in_app` is `sent` at once), `notification_defaults`
+  (the school's, per type and channel) and `notification_preferences` (each person's).
+- **Dedupe and grouping (N9, N17).** Per recipient, under a transaction-scoped advisory lock on
+  (recipient, type, group key): an item whose dedupe key exists is a no-op; otherwise it joins the
+  recipient's open (unread, unresolved) notification of the type and group key (default: today on
+  the school's clock, `schoolDayOf`), or starts a new one. The unique index settles a race across
+  group keys (the loser drops the notification it made). Recipients go in id order, so two
+  transactions take the locks in one order.
+- **Resolve (N10)**: every open item of the type about the subject, for every recipient, gets
+  `resolved_at`, the resolution and who did it (their linked employee's two names, else the account
+  name); a notification left with no open item is resolved and stops counting.
+- **Reading (N11).** Every route is the signed-in user's own (`@SignedIn`; the recipient comes from
+  the token; another person's id → 404): `GET /notifications` (page, limit ≤ 50, `status=all|unread`,
+  `category`), `GET /notifications/unread-count`, `POST /notifications/:id/read` / `unread`,
+  `POST /notifications/read-all` (`{ upTo }`: only those whose latest item came by then). Each read
+  re-checks every item against the reader's **current** permission and scope with the same resolver;
+  an item they may no longer see is left out of `items`, `openCount` and the count (the row stays), and
+  a notification with none left is absent (and 404 on read). Read state is `@NotAudited('personal
+  read state, not school data')`.
+- **Preferences (N13)**: effective = can't be turned off → on in the app; else the person's choice;
+  else the school's default; else the type's. `GET` / `PUT /notifications/preferences` (`@SignedIn`,
+  `@Audited('core.notification_preferences.update')`; `enabled: null` deletes the personal row) and
+  `GET /settings/notifications` (`core.notifications.view`: System admin, HR manager) / `PUT`
+  (`core.notifications.manage`: System admin; `@Audited('core.notification_settings.update')` — the
+  school defaults and the retention keys, one entry through `SettingsService.setValues`, owner
+  `notifications`). A switch's audit line is `<type>:<channel>`, before → after. Errors:
+  `NOTIFICATION_TYPE_REQUIRED` (409), `CHANNEL_NOT_AVAILABLE` (409, anything but `in_app`), unknown
+  type → 400. A person with the type off in the app gets no notification at all (GUESS).
+- **Channels (N7)**: `NotificationChannelAdapter` (`key`, `available()`, how a delivery starts) in
+  `channels.ts`; only `InAppChannel`. Email / WhatsApp / SMS later = an adapter, a value in
+  `NOTIFICATION_CHANNELS` and a job sending `pending` deliveries after the commit — no module changes.
+  The UI shows the in-app channel only (owner, 2026-11-18).
+- **Retention (N14)**: core settings `notifications.retention.readDays` / `resolvedDays` / `maxDays`
+  (90 / 30 / 365, each 1–3650); the nightly `core.notifications.purge` (02:30, advisory lock) deletes
+  what is past them, with items and deliveries. Not audited.
+- **Not yet:** no module sends (HR's types come with N2 / N3, which register HR's scope resolver);
+  the bell, My account tab and Settings section are N4 (the `SETTINGS_SECTION_ACCESS` entry for
+  Settings → Notifications comes with that screen).
 
 ### Deliberate shortcuts
 

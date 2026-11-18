@@ -58,6 +58,16 @@
           "label": "Manage event deliveries",
           "description": "See event deliveries that failed for good and send them again."
         }
+      },
+      "notifications": {
+        "view": {
+          "label": "View notification settings",
+          "description": "See the school's default for each kind of notification and how long notifications are kept."
+        },
+        "manage": {
+          "label": "Manage notification settings",
+          "description": "Change the school's default for each kind of notification and how long notifications are kept."
+        }
       }
     },
     "hr": {

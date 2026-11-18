@@ -65,6 +65,15 @@ module.exports = {
       },
     },
     {
+      name: 'api-core-notifications-above-its-areas',
+      severity: 'error',
+      comment:
+        'core/notifications reads users and permissions and sits above them (spec → Where it lives): ' +
+        'audit, permissions, roles, users, settings, jobs, events and school structure never import it.',
+      from: { path: `${API}core/(audit|permissions|roles|users|settings|jobs|events|school-structure|sign-in-limit)/` },
+      to: { path: `${API}core/notifications/` },
+    },
+    {
       name: 'api-outside-into-core-front-door-only',
       severity: 'error',
       comment: 'Modules reach core only through each core area’s index.ts.',

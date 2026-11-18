@@ -89,6 +89,14 @@ describe('every endpoint declares its permission (R4)', () => {
         // My account: see your own account, change your own password (R9, P3).
         'GET /account',
         'POST /account/password',
+        // The bell and My account → Notifications: each person's own notifications (§11).
+        'GET /notifications',
+        'GET /notifications/unread-count',
+        'POST /notifications/read-all',
+        'POST /notifications/:id/read',
+        'POST /notifications/:id/unread',
+        'GET /notifications/preferences',
+        'PUT /notifications/preferences',
       ].sort(),
     );
   });

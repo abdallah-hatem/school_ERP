@@ -85,6 +85,17 @@ probation length and editable. Business: §3 (Planned row, becomes DECIDED with 
 
 ## N1 — core notifications foundation (`logic`, backend + shared)
 
+**Done** (`feature/n1-notifications-core`): `apps/api/src/core/notifications/`, migration
+`20261119010000_notifications` (tables + the grants), every v1 type and its EN / AR texts in
+`packages/shared`, the API below, the nightly purge. Edge cases 1–29 are tested in
+`notifications.*.spec.ts` (unit) and `apps/api/test/notifications.e2e-spec.ts` (with a test-only
+type), the grants in `apps/api/test/notifications-grant-migration.e2e-spec.ts`. Left to N4: the
+`SETTINGS_SECTION_ACCESS` entry for Settings → Notifications (adding it without its screen would
+break the Settings screen and the role-access smoke spec). Choices made here: `read-all` marks what
+was last updated by `upTo` (a group that grew after it stays unread); the unread count counts
+notifications with at least one open item the reader may see; an audit line for a switch is
+`<type>:<channel>`; a locked switch sent "on" is ignored.
+
 - Tables + migration: `notifications`, `notification_items`, `notification_deliveries`, `notification_defaults`,
   `notification_preferences`, the indexes and the unique dedupe index from the spec (Entities).
 - `packages/shared/src/notifications.ts`: `NOTIFICATION_TYPES` (module, category, `canTurnOff`,
