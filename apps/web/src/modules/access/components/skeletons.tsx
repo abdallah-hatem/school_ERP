@@ -14,6 +14,8 @@ import { useTranslation } from '@/shared/providers/i18n-provider';
 import { parseUsersQuery } from '../lib/users-query';
 import { AccessI18n } from '../messages';
 import { ChangePasswordCard } from './account-view';
+import { AccountTabs } from './account-tabs';
+import { NotificationPreferencesSkeleton, NotificationsI18n } from '@/core/notifications';
 import { FormCard, FormColumns } from './form-card';
 import { PermissionGroups } from './permission-groups';
 import { RoleScopesCard } from './role-form';
@@ -70,6 +72,22 @@ export function FormPageSkeleton({ kind }: { kind: 'user' | 'role' | 'account' }
         <LoadingStatus />
         {kind === 'account' ? <AccountSkeleton /> : kind === 'user' ? <UserSkeleton adding={adding} /> : <RoleSkeleton adding={adding} />}
       </div>
+    </AccessI18n>
+  );
+}
+
+/** My account → Notifications while it loads: the header, the tabs and the switch list itself. */
+export function AccountNotificationsSkeleton() {
+  const { t, locale } = useTranslation();
+  return (
+    <AccessI18n locale={locale}>
+      <NotificationsI18n locale={locale}>
+        <div aria-busy="true" className="flex flex-col gap-6">
+          <Header title={t('access.account.title')} description={t('access.account.notificationsDescription')} />
+          <AccountTabs />
+          <NotificationPreferencesSkeleton />
+        </div>
+      </NotificationsI18n>
     </AccessI18n>
   );
 }
@@ -289,6 +307,7 @@ function AccountSkeleton() {
   return (
     <>
       <Header title={t('access.account.title')} description={t('access.account.description')} />
+      <AccountTabs />
       <FormColumns
         main={
           <>

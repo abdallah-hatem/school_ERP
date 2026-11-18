@@ -21,7 +21,7 @@ describe('SCREENS (who may open each page)', () => {
   });
 
   it('every signed-in user opens the dashboard and My account; nobody without keys opens anything else', () => {
-    expect(SCREEN_IDS.filter((id) => canOpenScreen([], id))).toEqual(['dashboard', 'account']);
+    expect(SCREEN_IDS.filter((id) => canOpenScreen([], id))).toEqual(['dashboard', 'account', 'accountNotifications']);
   });
 
   it('all keys open every screen and every Settings section', () => {

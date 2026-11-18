@@ -273,7 +273,13 @@
     "passwordChanged": "Password changed",
     "unknown": "Not recorded",
     "signOut": "Sign out",
-    "loadFailed": "Your account couldn't load."
+    "loadFailed": "Your account couldn't load.",
+    "tabs": {
+      "label": "My account sections",
+      "profile": "Profile",
+      "notifications": "Notifications"
+    },
+    "notificationsDescription": "Choose what you are told about."
   },
   "noAccess": {
     "usersTitle": "You can't see the users",

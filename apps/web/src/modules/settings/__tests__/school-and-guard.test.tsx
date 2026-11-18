@@ -308,9 +308,9 @@ describe('Settings screen — change history (owner, 2026-11-17)', () => {
     expect(api.GET_SCHOOL_SETTINGS_FOR_EDIT).not.toHaveBeenCalled();
   });
 
-  it('with every permission: all six sections', () => {
+  it('with every permission: all seven sections', () => {
     renderScreen();
-    expect(within(screen.getByRole('navigation', { name: 'Settings sections' })).getAllByRole('button')).toHaveLength(6);
+    expect(within(screen.getByRole('navigation', { name: 'Settings sections' })).getAllByRole('button')).toHaveLength(7);
   });
 
   it('the link is hidden from someone who may not read the activity log (can(), view only)', () => {

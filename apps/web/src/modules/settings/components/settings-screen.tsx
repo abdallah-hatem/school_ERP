@@ -15,6 +15,7 @@ import {
   ChevronStartIcon,
   HistoryIcon,
   ListsIcon,
+  NotificationsIcon,
   PenaltiesIcon,
   RulesIcon,
   SchoolIcon,
@@ -29,6 +30,7 @@ import { AccountingRulesSection } from './accounting-rules-section';
 import { CatalogueSection } from './catalogue-section';
 import { HrRulesSection } from './hr-rules-section';
 import { ListManager } from './list-manager';
+import { NotificationsSection } from './notifications-section';
 import { SchoolSection } from './school-section';
 
 const ICONS: Record<SettingsSectionId, AppIcon> = {
@@ -38,6 +40,7 @@ const ICONS: Record<SettingsSectionId, AppIcon> = {
   hrRules: RulesIcon,
   catalogue: PenaltiesIcon,
   accounting: AccountingModuleIcon,
+  notifications: NotificationsIcon,
 };
 
 function SectionBody({ id }: { id: SettingsSectionId }): ReactNode {
@@ -59,6 +62,8 @@ function SectionBody({ id }: { id: SettingsSectionId }): ReactNode {
       return <CatalogueSection />;
     case 'accounting':
       return <AccountingRulesSection />;
+    case 'notifications':
+      return <NotificationsSection />;
   }
 }
 

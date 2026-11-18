@@ -40,7 +40,8 @@
             "few": "{count} penalties waiting for your approval",
             "many": "{count} penalties waiting for your approval",
             "other": "{count} penalties waiting for your approval"
-          }
+          },
+          "description": "A penalty is recorded for someone whose penalties you may approve."
         }
       },
       "payroll": {
@@ -70,7 +71,8 @@
             "few": "{count} payroll months are ready to approve",
             "many": "{count} payroll months are ready to approve",
             "other": "{count} payroll months are ready to approve"
-          }
+          },
+          "description": "A month is calculated and has no pending penalties."
         },
         "not_prepared": {
           "name": "Payroll not prepared",
@@ -82,7 +84,8 @@
             "few": "{count} payroll months haven't been prepared",
             "many": "{count} payroll months haven't been prepared",
             "other": "{count} payroll months haven't been prepared"
-          }
+          },
+          "description": "From the check day, while the month has no payroll run."
         },
         "not_approved": {
           "name": "Payroll still a draft",
@@ -94,7 +97,8 @@
             "few": "{count} payroll months are still drafts",
             "many": "{count} payroll months are still drafts",
             "other": "{count} payroll months are still drafts"
-          }
+          },
+          "description": "From the check day, while the month's payroll is still a draft."
         }
       },
       "contract": {
@@ -116,7 +120,8 @@
             "few": "{count} contracts end within {days} days",
             "many": "{count} contracts end within {days} days",
             "other": "{count} contracts end within {days} days"
-          }
+          },
+          "description": "Before an employee's contract ends, and again closer to the day."
         }
       },
       "probation": {
@@ -130,7 +135,8 @@
             "few": "{count} probation periods end within {days} days",
             "many": "{count} probation periods end within {days} days",
             "other": "{count} probation periods end within {days} days"
-          }
+          },
+          "description": "Before an employee's probation ends."
         }
       },
       "lateness": {
@@ -145,9 +151,136 @@
             "few": "{count} months' lateness isn't entered yet",
             "many": "{count} months' lateness isn't entered yet",
             "other": "{count} months' lateness isn't entered yet"
-          }
+          },
+          "description": "From the check day, while the month's lateness is missing."
         }
       }
+    }
+  },
+  "screen": {
+    "markAllRead": "Mark all as read",
+    "markAllReadShort": "Mark all read",
+    "close": "Close notifications",
+    "tabs": {
+      "label": "Show",
+      "all": "All",
+      "unread": "Unread"
+    },
+    "settingsLink": "Notification settings",
+    "latest": "Showing the latest {n}",
+    "showAll": "Show all {n}",
+    "andMore": {
+      "zero": "and {count} more",
+      "one": "and {count} more",
+      "two": "and {count} more",
+      "few": "and {count} more",
+      "many": "and {count} more",
+      "other": "and {count} more"
+    },
+    "allOn": "All on {date}",
+    "inDays": {
+      "zero": "today",
+      "one": "in {count} day",
+      "two": "in {count} days",
+      "few": "in {count} days",
+      "many": "in {count} days",
+      "other": "in {count} days"
+    },
+    "unread": "Unread",
+    "empty": {
+      "title": "You're all caught up",
+      "body": "New notifications appear here."
+    },
+    "emptyUnread": {
+      "title": "No unread notifications",
+      "body": "Everything here has been read."
+    },
+    "loadFailed": "Notifications couldn't load.",
+    "time": {
+      "justNow": "Just now",
+      "minutesAgo": {
+        "zero": "{count} min ago",
+        "one": "{count} min ago",
+        "two": "{count} min ago",
+        "few": "{count} min ago",
+        "many": "{count} min ago",
+        "other": "{count} min ago"
+      },
+      "hoursAgo": {
+        "zero": "{count} h ago",
+        "one": "{count} h ago",
+        "two": "{count} h ago",
+        "few": "{count} h ago",
+        "many": "{count} h ago",
+        "other": "{count} h ago"
+      },
+      "today": "Today, {time}",
+      "yesterday": "Yesterday, {time}",
+      "earlier": "{date}, {time}"
+    },
+    "violationLevel": "{violation}, level {level}"
+  },
+  "preferences": {
+    "groups": {
+      "approval": "Waiting for you",
+      "reminder": "Reminders"
+    },
+    "notification": "Notification",
+    "tellMe": "Tell me",
+    "forEveryone": "For everyone",
+    "schoolDefault": "School default",
+    "changed": "Changed from school default",
+    "reset": "Reset to school default",
+    "onByDefault": "On by default",
+    "offByDefault": "Off by default",
+    "noTypes": {
+      "title": "Nothing to choose yet",
+      "body": "Your roles don't receive any notifications yet."
+    }
+  },
+  "settings": {
+    "defaults": {
+      "title": "What everyone receives",
+      "description": "Each person can change their own in My account. Required ones stay on."
+    },
+    "readOnly": "You can see these settings; a System admin changes them.",
+    "timing": {
+      "title": "Reminder timing",
+      "description": "HR rules — changed by whoever may change HR rules.",
+      "contractEndDays": "Contract reminder",
+      "contractEndDaysHint": "Days before a contract ends.",
+      "contractEndSecondDays": "Second contract reminder",
+      "contractEndSecondDaysHint": "Days before it ends; 0 = no second reminder.",
+      "probationEndDays": "Probation reminder",
+      "probationEndDaysHint": "Days before probation ends.",
+      "probationMonths": "Default probation length",
+      "probationMonthsHint": "Fills a new employee's probation end.",
+      "latenessCheckDay": "Lateness check day",
+      "latenessCheckDayHint": "The day of the month lateness is due.",
+      "payrollCheckDay": "Payroll check day",
+      "payrollCheckDayHint": "The day of the month payroll is due."
+    },
+    "retention": {
+      "title": "Keep notifications",
+      "description": "Older ones are removed every night.",
+      "readDays": "Keep read notifications",
+      "readDaysHint": "Days after they were read.",
+      "resolvedDays": "Keep done approvals",
+      "resolvedDaysHint": "Days after they were done.",
+      "maxDays": "Keep any notification at most",
+      "maxDaysHint": "Days after it arrived."
+    },
+    "units": {
+      "days": "days",
+      "ofMonth": "of the month",
+      "months": "months"
+    },
+    "errors": {
+      "retention": "Between 1 and 3,650 days.",
+      "contractEndDays": "Between 1 and 120 days.",
+      "contractEndSecondDays": "0 to 60 days, and fewer than the first reminder.",
+      "probationEndDays": "Between 1 and 60 days.",
+      "checkDay": "A day from 1 to 31."
     }
   }
 }
