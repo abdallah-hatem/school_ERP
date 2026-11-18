@@ -26,6 +26,16 @@ export const HrSettingKey = {
   PENALTIES_REPETITION_WINDOW: 'hr.penalties.repetitionWindow',
   /** §3, §7 (N0): a new employee's probation length; 0 = no probation. */
   EMPLOYEES_DEFAULT_PROBATION_MONTHS: 'hr.employees.defaultProbationMonths',
+  /** §11 (N3): days before a contract ends for the first reminder. */
+  REMINDERS_CONTRACT_END_DAYS: 'hr.reminders.contractEndDays',
+  /** §11 (N3): days before a contract ends for the second reminder; 0 = none; less than the first. */
+  REMINDERS_CONTRACT_END_SECOND_DAYS: 'hr.reminders.contractEndSecondDays',
+  /** §11 (N3): days before an employee's probation end for its reminder. */
+  REMINDERS_PROBATION_END_DAYS: 'hr.reminders.probationEndDays',
+  /** §11 (N3): from this day of the month, remind while the month's lateness was never saved. */
+  REMINDERS_LATENESS_CHECK_DAY: 'hr.reminders.latenessCheckDay',
+  /** §11 (N3): from this day of the month, remind while the month's payroll isn't prepared / approved. */
+  REMINDERS_PAYROLL_CHECK_DAY: 'hr.reminders.payrollCheckDay',
 } as const;
 export type HrSettingKey = (typeof HrSettingKey)[keyof typeof HrSettingKey];
 
@@ -120,6 +130,11 @@ export interface SettingValueMap {
   'hr.payroll.partTime': Record<PartTimeWorkSystem, number>;
   'hr.penalties.repetitionWindow': RepetitionWindow;
   'hr.employees.defaultProbationMonths': number;
+  'hr.reminders.contractEndDays': number;
+  'hr.reminders.contractEndSecondDays': number;
+  'hr.reminders.probationEndDays': number;
+  'hr.reminders.latenessCheckDay': number;
+  'hr.reminders.payrollCheckDay': number;
   'accounting.payroll.taxBrackets': TaxBracket[];
   'accounting.payroll.martyrPercent': number;
   'accounting.payroll.insurancePercent': number;
@@ -154,6 +169,13 @@ export const SETTING_DEFAULTS: { [K in SettingKey]: SettingValueMap[K] } = {
   'hr.penalties.repetitionWindow': 'CONTRACT_YEAR',
   // §7 (owner 2026-11-18): 3 months; 0 = no probation.
   'hr.employees.defaultProbationMonths': 3,
+  // Reminders (§11, owner 2026-11-18): contracts 30 and again 7 days before the end (DECIDED);
+  // probation 7 days before (GUESS); lateness from the 25th, payroll from the 28th (the days GUESS).
+  'hr.reminders.contractEndDays': 30,
+  'hr.reminders.contractEndSecondDays': 7,
+  'hr.reminders.probationEndDays': 7,
+  'hr.reminders.latenessCheckDay': 25,
+  'hr.reminders.payrollCheckDay': 28,
   // §10 GUESS (the school's previous HR system; to confirm with the accountant): Egypt's annual
   // scale ÷ 12 — 60,000 at 0%, 15,000 at 10%, 15,000 at 15%, 130,000 at 20%, 200,000 at 22.5%,
   // the rest at 25%.
@@ -195,6 +217,16 @@ export const SETTING_LIMITS = {
   latenessMinutesMax: 6000,
   probationMonthsMin: 0,
   probationMonthsMax: 6,
+  /** §11 reminders (spec → Reminder settings). The second contract reminder is also below the first. */
+  contractEndDaysMin: 1,
+  contractEndDaysMax: 120,
+  contractEndSecondDaysMin: 0,
+  contractEndSecondDaysMax: 60,
+  probationEndDaysMin: 1,
+  probationEndDaysMax: 60,
+  /** A check day past the month's end means its last day (31 → 28 February). */
+  checkDayMin: 1,
+  checkDayMax: 31,
 } as const;
 
 /**

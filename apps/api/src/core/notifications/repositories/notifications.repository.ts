@@ -181,14 +181,26 @@ export class NotificationsRepository {
     await this.db.notification.deleteMany({ where: { id: notificationId } });
   }
 
+  /** The distinct open items of a type — subject and dedupe key, whoever received them. */
+  async openItems(type: string): Promise<{ entityType: string; entityId: string; dedupeKey: string }[]> {
+    return this.db.notificationItem.findMany({
+      where: { type, resolvedAt: null },
+      distinct: ['entityType', 'entityId', 'dedupeKey'],
+      orderBy: [{ entityType: 'asc' }, { entityId: 'asc' }, { dedupeKey: 'asc' }],
+      select: { entityType: true, entityId: true, dedupeKey: true },
+    });
+  }
+
   /**
    * Resolves every open item of a type about one record, for every recipient (N10), then every
-   * notification left with no open item. Returns how many items were resolved.
+   * notification left with no open item. With `dedupeKey`, only the items with that key (one
+   * reminder about the record, e.g. its 30-day contract reminder). Returns how many items were resolved.
    */
   async resolve(input: {
     type: string;
     entityType: string;
     entityId: string;
+    dedupeKey?: string;
     resolution: NotificationResolution;
     byName: NotificationName | null;
     now: Date;
@@ -198,6 +210,7 @@ export class NotificationsRepository {
         type: input.type,
         entityType: input.entityType,
         entityId: input.entityId,
+        ...(input.dedupeKey !== undefined ? { dedupeKey: input.dedupeKey } : {}),
         resolvedAt: null,
       },
       select: { id: true, notificationId: true },

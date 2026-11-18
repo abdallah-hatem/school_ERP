@@ -1,19 +1,33 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import {
+  ErrorCode,
   HrSettingKey,
   PART_TIME_WORK_SYSTEMS,
   SETTING_DEFAULTS,
   type HrSettings,
   type LatenessStep,
   type PartTimeWorkSystem,
+  type ReminderRule,
   type SettingValueMap,
 } from '@school-erp/shared';
+import { CodedException } from '../../../common/errors/coded.exception';
 import { SettingsService } from '../../../core/settings';
 import { UpdateHrSettingsDto } from './dto/update-hr-settings.dto';
 
 type HrValues = { [K in HrSettingKey]: SettingValueMap[K] };
 
 const HR_KEYS = Object.values(HrSettingKey);
+
+/** Where each reminder timing is stored (§11, N3). */
+const REMINDER_KEYS = {
+  contractEndDays: HrSettingKey.REMINDERS_CONTRACT_END_DAYS,
+  contractEndSecondDays: HrSettingKey.REMINDERS_CONTRACT_END_SECOND_DAYS,
+  probationEndDays: HrSettingKey.REMINDERS_PROBATION_END_DAYS,
+  latenessCheckDay: HrSettingKey.REMINDERS_LATENESS_CHECK_DAY,
+  payrollCheckDay: HrSettingKey.REMINDERS_PAYROLL_CHECK_DAY,
+} as const satisfies Record<keyof ReminderRule, HrSettingKey>;
+
+const REMINDER_FIELDS = Object.keys(REMINDER_KEYS) as (keyof ReminderRule)[];
 
 /**
  * The keys a payroll line is calculated from (§5, §6): the lateness rule and the payroll rule. The
@@ -41,8 +55,8 @@ function sortSteps(steps: readonly LatenessStep[]): LatenessStep[] {
 }
 
 /**
- * HR rule settings (§3, §5, §6, §7): lateness rule, payroll rule, penalty repetition window, a new
- * employee's default probation length. Stored one
+ * HR rule settings (§3, §5, §6, §7, §11): lateness rule, payroll rule, penalty repetition window, a
+ * new employee's default probation length, the reminder timings. Stored one
  * row per key with the §7 defaults behind them, through core's `SettingsService` (HR never writes
  * core's table). A save is one `hr.settings.update` audit entry listing the changed keys — the
  * Settings history (D9).
@@ -60,6 +74,11 @@ export class HrSettingsService {
     return (await this.load())[HrSettingKey.EMPLOYEES_DEFAULT_PROBATION_MONTHS];
   }
 
+  /** When HR's reminders go out (§11, N3) — read by the daily reminders job. */
+  async reminders(): Promise<ReminderRule> {
+    return this.toResponse(await this.load()).reminders;
+  }
+
   /** When the rules a payroll run is calculated from last changed, or null (never: defaults). */
   payrollRulesChangedAt(): Promise<Date | null> {
     return this.settings.lastChangedAt(PAYROLL_RULE_KEYS);
@@ -69,7 +88,7 @@ export class HrSettingsService {
     const old = await this.load();
     const next: HrValues = { ...old };
 
-    const { lateness, payroll, penalties, employees } = dto;
+    const { lateness, payroll, penalties, employees, reminders } = dto;
     if (lateness?.graceMinutes !== undefined) {
       next[HrSettingKey.LATENESS_GRACE_MINUTES] = lateness.graceMinutes;
     }
@@ -94,6 +113,16 @@ export class HrSettingsService {
     }
     if (employees?.defaultProbationMonths !== undefined) {
       next[HrSettingKey.EMPLOYEES_DEFAULT_PROBATION_MONTHS] = employees.defaultProbationMonths;
+    }
+    for (const field of REMINDER_FIELDS) {
+      const value = reminders?.[field];
+      if (value !== undefined) next[REMINDER_KEYS[field]] = value;
+    }
+    // The second contract reminder comes after the first: fewer days before the end (0 = none).
+    // Checked on the merged values, so sending one of the two is checked against the stored other.
+    const second = next[HrSettingKey.REMINDERS_CONTRACT_END_SECOND_DAYS];
+    if (second !== 0 && second >= next[HrSettingKey.REMINDERS_CONTRACT_END_DAYS]) {
+      throw new CodedException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_REMINDER_DAYS);
     }
 
     const changed = HR_KEYS.filter((key) => canonical(old[key]) !== canonical(next[key]));
@@ -130,6 +159,13 @@ export class HrSettingsService {
       ) as Record<PartTimeWorkSystem, number>,
       [HrSettingKey.PENALTIES_REPETITION_WINDOW]: pick(HrSettingKey.PENALTIES_REPETITION_WINDOW),
       [HrSettingKey.EMPLOYEES_DEFAULT_PROBATION_MONTHS]: pick(HrSettingKey.EMPLOYEES_DEFAULT_PROBATION_MONTHS),
+      [HrSettingKey.REMINDERS_CONTRACT_END_DAYS]: pick(HrSettingKey.REMINDERS_CONTRACT_END_DAYS),
+      [HrSettingKey.REMINDERS_CONTRACT_END_SECOND_DAYS]: pick(
+        HrSettingKey.REMINDERS_CONTRACT_END_SECOND_DAYS,
+      ),
+      [HrSettingKey.REMINDERS_PROBATION_END_DAYS]: pick(HrSettingKey.REMINDERS_PROBATION_END_DAYS),
+      [HrSettingKey.REMINDERS_LATENESS_CHECK_DAY]: pick(HrSettingKey.REMINDERS_LATENESS_CHECK_DAY),
+      [HrSettingKey.REMINDERS_PAYROLL_CHECK_DAY]: pick(HrSettingKey.REMINDERS_PAYROLL_CHECK_DAY),
     };
   }
 
@@ -146,6 +182,13 @@ export class HrSettingsService {
       },
       penalties: { repetitionWindow: v[HrSettingKey.PENALTIES_REPETITION_WINDOW] },
       employees: { defaultProbationMonths: v[HrSettingKey.EMPLOYEES_DEFAULT_PROBATION_MONTHS] },
+      reminders: {
+        contractEndDays: v[REMINDER_KEYS.contractEndDays],
+        contractEndSecondDays: v[REMINDER_KEYS.contractEndSecondDays],
+        probationEndDays: v[REMINDER_KEYS.probationEndDays],
+        latenessCheckDay: v[REMINDER_KEYS.latenessCheckDay],
+        payrollCheckDay: v[REMINDER_KEYS.payrollCheckDay],
+      },
     };
   }
 }

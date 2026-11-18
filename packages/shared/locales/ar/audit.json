@@ -210,6 +210,13 @@
       "employees": {
         "defaultProbationMonths": "مدة فترة الاختبار الافتراضية"
       },
+      "reminders": {
+        "contractEndDays": "التذكير بانتهاء العقد (قبله بأيام)",
+        "contractEndSecondDays": "التذكير الثاني بانتهاء العقد (قبله بأيام)",
+        "probationEndDays": "التذكير بانتهاء فترة الاختبار (قبلها بأيام)",
+        "latenessCheckDay": "يوم مراجعة التأخير",
+        "payrollCheckDay": "يوم مراجعة الرواتب"
+      },
       "departments": "القسم",
       "jobTitles": "المسمى الوظيفي",
       "penaltyGroups": "مجموعة الجزاءات",

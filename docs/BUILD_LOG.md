@@ -296,6 +296,12 @@ phase live in `docs/build-log/`.
   now allows no "wired in" placeholder. Checked in screenshots (EN desktop, AR phone). Two display
   issues found → a fix in progress (payroll totals shown as JSON on Activity; the AR phone results
   count cut off).
+- 2026-11-18 — N3 merged → #134: one daily job `hr.reminders.daily` (07:00 Cairo) sends contract
+  ending (30 and 7 days), probation ending (7 days), lateness not entered (from the 25th), payroll
+  not prepared / still a draft (from the 28th); resolved the moment the thing is done; dedupe keys +
+  the job lock prevent repeats; recipients by permission and scope. Days are HR settings (shown in
+  N4's Settings → Notifications). GUESS: past dates aren't chased; only the current month's
+  lateness/payroll reminders are sent.
 
 ## Next up
 

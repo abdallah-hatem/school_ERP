@@ -34,12 +34,19 @@ import { CodedException } from '../../../../common/errors/coded.exception';
 import { AuditService } from '../../../../core/audit';
 import { DomainEvents } from '../../../../core/events';
 import { AfterCommit } from '../../../../database/transactions';
-import { inScope, withoutFields, type EmployeeScope } from '../../access/employee-scope.pure';
+import type { UserScope } from '../../../../core/permissions';
+import {
+  inScope,
+  toEmployeeScope,
+  withoutFields,
+  type EmployeeScope,
+} from '../../access/employee-scope.pure';
 import { HrAccessService } from '../../access/hr-access.service';
 import { checkImageUpload, FileStorageService, type UploadedFileLike } from '../../../../core/settings';
 import { fromIsoDate, todayIsoDate, toIsoDate } from '../../../../common/utils/dates.util';
 import { DepartmentsService } from '../../lists/services/departments.service';
 import { JobTitlesService } from '../../lists/services/job-titles.service';
+import { HrRemindersService } from '../../reminders/hr-reminders.service';
 import { HrSettingsService } from '../../settings/hr-settings.service';
 import { CreateEmployeeDto, ListEmployeesQueryDto, UpdateEmployeeDto } from '../dto/employee.dto';
 import {
@@ -139,6 +146,7 @@ export class EmployeesService {
     private readonly audit: AuditService,
     private readonly afterCommit: AfterCommit,
     private readonly hrSettings: HrSettingsService,
+    private readonly reminders: HrRemindersService,
   ) {}
 
   /** The employees `hr.employees.view` covers for the user (R5), salary per row (R7). */
@@ -226,6 +234,21 @@ export class EmployeesService {
       this.repository.findScopeFieldsMany([...new Set(ids)]),
     ]);
     return new Set(rows.filter((row) => inScope(scope, row)).map((row) => row.id));
+  }
+
+  /**
+   * Whether `scope` — someone else's, e.g. a notification recipient's (§11, N5) — covers each of
+   * `ids`, in order. Unknown ids are not covered. Not the signed-in user's scope: no request needed.
+   */
+  async coveredBy(scope: UserScope, ids: readonly Uuid[]): Promise<boolean[]> {
+    const employeeScope = toEmployeeScope(scope);
+    const rows = new Map(
+      (await this.repository.findScopeFieldsMany([...new Set(ids)])).map((row) => [row.id, row]),
+    );
+    return ids.map((id) => {
+      const row = rows.get(id);
+      return !!row && inScope(employeeScope, row);
+    });
   }
 
   /** Every active employee, ordered by code — for month-wide lists (lateness, payroll). */
@@ -408,6 +431,11 @@ export class EmployeesService {
       const row = await this.repository.updateEmployee(id, data);
       // Always recorded: a save that changes nothing writes no entry but still answers `@Audited`.
       await this.record('hr.employee.update', current, row);
+      // §11 (N3): a moved contract or probation end ends its open reminder; the daily job sends a
+      // new one if the new date is inside a window.
+      const day = (d: Date | null) => (d ? toIsoDate(d) : null);
+      if (day(current.contractEnd) !== day(row.contractEnd)) await this.reminders.contractChanged(id);
+      if (day(current.probationEnd) !== day(row.probationEnd)) await this.reminders.probationChanged(id);
       await this.publishUpdated(current, row);
       return this.present(row);
     });
@@ -485,6 +513,8 @@ export class EmployeesService {
       const row = await this.repository.updateEmployee(id, { status });
       await this.record(action, current, row);
       if (status === EmployeeStatus.INACTIVE) {
+        // §11 (N3): no reminder about an inactive employee stays open.
+        await this.reminders.employeeDeactivated(id);
         await this.events.publish(
           HrEvent.EMPLOYEE_DEACTIVATED,
           { employeeId: id, at: new Date().toISOString() },
