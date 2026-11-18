@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { BuiltInRole } from '@school-erp/shared';
 import { Api } from './support/api';
 import { t } from './support/i18n';
-import { recordPenaltyToday } from './support/penalties';
+import { recordOpenPenalty } from './support/penalties';
 import { makeRoleUser, settled, signInAsRoleUser } from './support/role-access';
 import { settle, shoot } from './support/ui';
 
@@ -29,7 +29,7 @@ test('a recorded penalty reaches the principal’s bell, opens on itself, and re
   const hrPage = await signInAsRoleUser(browser, hrManager, locale, viewport);
 
   const api = await Api.asAdmin();
-  const penalty = await recordPenaltyToday(api);
+  const penalty = await recordOpenPenalty(api);
   await api.dispose();
   const employee = penalty.employee.nameEn;
 

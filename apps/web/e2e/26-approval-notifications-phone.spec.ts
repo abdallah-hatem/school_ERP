@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { Api } from './support/api';
 import { t } from './support/i18n';
-import { recordPenaltyToday } from './support/penalties';
+import { recordOpenPenalty } from './support/penalties';
 import { expectNoHorizontalScroll, settle, shoot, signIn } from './support/ui';
 
 /**
@@ -14,7 +14,7 @@ const locale = 'ar' as const;
 test('a penalty link opens that penalty in Arabic on a phone', async ({ page }, info) => {
   test.setTimeout(120_000);
   const api = await Api.asAdmin();
-  const penalty = await recordPenaltyToday(api);
+  const penalty = await recordOpenPenalty(api);
   await api.dispose();
 
   await signIn(page, locale);
