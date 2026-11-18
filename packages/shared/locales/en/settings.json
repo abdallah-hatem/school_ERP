@@ -155,7 +155,14 @@
       "label": "Example:",
       "minutes": "Minutes in a month",
       "minutesPlaceholder": "90",
-      "line": "{minutes} minutes → {days}",
+      "line": {
+        "zero": "{count} minutes → {days}",
+        "one": "{count} minute → {days}",
+        "two": "{count} minutes → {days}",
+        "few": "{count} minutes → {days}",
+        "many": "{count} minutes → {days}",
+        "other": "{count} minutes → {days}"
+      },
       "enterMinutes": "Enter minutes to see the days they cost.",
       "invalidRule": "Fix the rule above to see an example."
     },
@@ -184,7 +191,14 @@
     "groupRetiredNote": "This group is retired, so its violations can't be used for new penalties. Restore the group to use them again.",
     "groupPlaceholderEn": "General violations",
     "groupPlaceholderAr": "المخالفات العامة",
-    "violationCount": "{count} violations",
+    "violationCount": {
+      "zero": "{count} violations",
+      "one": "{count} violation",
+      "two": "{count} violations",
+      "few": "{count} violations",
+      "many": "{count} violations",
+      "other": "{count} violations"
+    },
     "noViolations": "No violations in this group yet.",
     "emptyTitle": "No penalty groups yet",
     "emptyBody": "Add a group, then the violations it holds.",
@@ -209,9 +223,23 @@
     "searchShortcut": "Press / to search",
     "noMatchesTitle": "No violations match",
     "noMatchesBody": "Try another word, or clear the search to see the whole catalogue.",
-    "matchCount": "{count} matching",
+    "matchCount": {
+      "zero": "{count} matching",
+      "one": "{count} matching",
+      "two": "{count} matching",
+      "few": "{count} matching",
+      "many": "{count} matching",
+      "other": "{count} matching"
+    },
     "levels": "Levels",
-    "levelsHint": "The 1st to the {max}th time it happens ({min} to {max} levels). After the last level, the last one repeats.",
+    "levelsHint": {
+      "zero": "The 1st to the {max}th time it happens ({min} to {max} levels). After the last level, the last one repeats.",
+      "one": "The 1st to the {max}th time it happens ({min} to {max} level). After the last level, the last one repeats.",
+      "two": "The 1st to the {max}th time it happens ({min} to {max} levels). After the last level, the last one repeats.",
+      "few": "The 1st to the {max}th time it happens ({min} to {max} levels). After the last level, the last one repeats.",
+      "many": "The 1st to the {max}th time it happens ({min} to {max} levels). After the last level, the last one repeats.",
+      "other": "The 1st to the {max}th time it happens ({min} to {max} levels). After the last level, the last one repeats."
+    },
     "levelAction": "Level {level} action",
     "levelDays": "Level {level} days",
     "daysOptional": "Optional for an investigation.",

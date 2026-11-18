@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { requirePermission } from '@/core/auth';
+import { requireScreen } from '@/core/auth';
 import type { ReactNode } from 'react';
 import { EmployeeProfileShell, EmployeesI18n } from '@/modules/hr/employees';
 import { loadEmployee } from '@/modules/hr/employees/lib/load-employee';
@@ -20,7 +20,7 @@ export default async function EmployeeProfileLayout({
   const { locale, id } = await params;
   if (!isLocale(locale)) notFound();
   // R6: a page the viewer's roles can't open is the not-found screen.
-  await requirePermission('hr.employees.view');
+  await requireScreen('employee');
   const employee = await loadEmployee(id);
   return (
     <EmployeesI18n locale={locale}>

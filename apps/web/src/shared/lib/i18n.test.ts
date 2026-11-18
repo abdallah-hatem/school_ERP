@@ -1,5 +1,10 @@
+import arEmployees from '@school-erp/shared/locales/ar/employees.json';
+import arLateness from '@school-erp/shared/locales/ar/lateness.json';
+import arSettings from '@school-erp/shared/locales/ar/settings.json';
+import enSettings from '@school-erp/shared/locales/en/settings.json';
 import { describe, expect, it } from 'vitest';
 import {
+  type MessageTree,
   createTranslator,
   dirFor,
   getBaseMessages,
@@ -53,6 +58,44 @@ describe('i18n', () => {
     ]);
     // No count: the "other" form.
     expect(ar('x.n')).toBe('{count} other');
+  });
+
+  it('Arabic counts agree with their noun in every plural category (dry run 2026-11-18)', () => {
+    const counts = [1, 2, 3, 10, 11, 100];
+    const ar = createTranslator(
+      { settings: arSettings, employees: arEmployees, lateness: arLateness } as unknown as MessageTree,
+      'ar',
+    );
+    // one, two, few (3–10), many (11–99), other (100).
+    expect(counts.map((count) => ar('settings.catalogue.violationCount', { count }))).toEqual([
+      'مخالفة واحدة',
+      'مخالفتان',
+      '3 مخالفات',
+      '10 مخالفات',
+      '11 مخالفة',
+      '100 مخالفة',
+    ]);
+    expect(counts.map((count) => ar('employees.list.count', { count }))).toEqual([
+      'موظف واحد',
+      'موظفان',
+      '3 موظفين',
+      '10 موظفين',
+      '11 موظفًا',
+      '100 موظف',
+    ]);
+    expect(ar('employees.list.count', { count: 0 })).toBe('لا موظفين');
+    // The lateness summary's own copy: "38 موظفًا", not "38 موظف".
+    expect(ar('lateness.summaryEmployees', { count: 38 })).toBe('38 موظفًا');
+    // From 100 the last two digits decide: 103 → few, 111 → many.
+    expect(ar('settings.catalogue.violationCount', { count: '1,103' })).toBe('1,103 مخالفات');
+    expect(ar('settings.catalogue.violationCount', { count: 111 })).toBe('111 مخالفة');
+
+    const en = createTranslator({ settings: enSettings } as unknown as MessageTree, 'en');
+    expect([1, 2, 11].map((count) => en('settings.catalogue.violationCount', { count }))).toEqual([
+      '1 violation',
+      '2 violations',
+      '11 violations',
+    ]);
   });
 
   it('lets a module add its namespace on top of the base ones', () => {

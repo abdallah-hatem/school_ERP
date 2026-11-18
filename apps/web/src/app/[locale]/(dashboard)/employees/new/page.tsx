@@ -1,6 +1,6 @@
 import { sectionMetadata } from '@/core/navigation/section-metadata';
 import { notFound } from 'next/navigation';
-import { requirePermission } from '@/core/auth';
+import { requireScreen } from '@/core/auth';
 import { EmployeeForm, EmployeesI18n } from '@/modules/hr/employees';
 import { GET_DEPARTMENTS, GET_JOB_TITLES, GET_MANAGER_OPTIONS, GET_STAGES } from '@/modules/hr/employees/apis';
 import { isLocale } from '@/shared/lib/i18n';
@@ -12,7 +12,7 @@ export default async function NewEmployeePage({ params }: { params: Promise<{ lo
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   // R6: a page the viewer's roles can't open is the not-found screen.
-  await requirePermission('hr.employees.create');
+  await requireScreen('employeeNew');
 
   const [departments, stages, jobTitles, managers] = await Promise.all([
     GET_DEPARTMENTS(),

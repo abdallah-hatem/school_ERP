@@ -80,7 +80,14 @@
     "adjustFor": "تسويات {name}",
     "payslip": "قسيمة الراتب",
     "payslipFor": "قسيمة راتب {name}",
-    "days": "{days} يوم"
+    "days": {
+      "zero": "{count} يوم",
+      "one": "يوم واحد",
+      "two": "يومان",
+      "few": "{count} أيام",
+      "many": "{count} يومًا",
+      "other": "{count} يوم"
+    }
   },
   "filters": {
     "searchLabel": "البحث عن موظف",
@@ -164,7 +171,14 @@
     "noPenalties": "لا توجد جزاءات هذا الشهر.",
     "penaltyShareNote": "مبلغ كل جزاء هو نصيبه من خصم الجزاءات؛ والإجمالي هو ما يُخصم.",
     "lateness": "التأخير",
-    "latenessDetail": "{minutes} دقيقة = {days}",
+    "latenessDetail": {
+      "zero": "{count} دقيقة = {days}",
+      "one": "دقيقة واحدة = {days}",
+      "two": "دقيقتان = {days}",
+      "few": "{count} دقائق = {days}",
+      "many": "{count} دقيقة = {days}",
+      "other": "{count} دقيقة = {days}"
+    },
     "adjustments": "التسويات",
     "noAdjustments": "لا توجد تسويات هذا الشهر.",
     "totalPenalties": "خصم الجزاءات",

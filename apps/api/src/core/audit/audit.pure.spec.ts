@@ -1,4 +1,4 @@
-import { cleanChanges, diffChanges, hideSalaryValues, isSecretField, toStoredValue } from './audit.pure';
+import { cleanChanges, diffChanges, hideSalaryValues, isSecretField, readLabel, toStoredValue } from './audit.pure';
 
 describe('diffChanges (D7)', () => {
   it('keeps only the changed fields, each with before and after', () => {
@@ -110,5 +110,51 @@ describe('isSecretField / toStoredValue', () => {
     expect(toStoredValue(Number.NaN)).toBeNull();
     expect(toStoredValue(new Date('nope'))).toBeNull();
     expect(toStoredValue(BigInt(12))).toBe('12');
+  });
+});
+
+describe('readLabel (dry run 2026-11-18: older entries in Arabic)', () => {
+  const violation = { id: 'v1', nameEn: 'Late to class', nameAr: 'التأخر عن الحصة' };
+  const entry = (over: Partial<Parameters<typeof readLabel>[0]> = {}) => ({
+    entityLabel: 'Late to class',
+    entityLabelAr: null,
+    changes: [{ field: 'hr.violations', before: violation, after: { ...violation, isActive: false } }],
+    ...over,
+  });
+  const plain = (label: string) => ({ en: label, ar: label });
+
+  it('a stored Arabic label wins', () => {
+    expect(readLabel(entry({ entityLabelAr: 'مخزّن' }))).toEqual({ en: 'Late to class', ar: 'مخزّن' });
+  });
+
+  it('an older list / catalogue edit takes the Arabic name from its own snapshot', () => {
+    expect(readLabel(entry())).toEqual({ en: 'Late to class', ar: 'التأخر عن الحصة' });
+  });
+
+  it('a create (no before) reads the new value; a rename reads the name it was given then', () => {
+    const created = [{ field: 'hr.violations', before: null, after: violation }];
+    expect(readLabel(entry({ changes: created }))).toEqual({ en: 'Late to class', ar: 'التأخر عن الحصة' });
+    const renamed = { ...violation, nameEn: 'Late', nameAr: 'متأخر' };
+    const changes = [{ field: 'hr.violations', before: violation, after: renamed }];
+    expect(readLabel(entry({ entityLabel: 'Late', changes }))).toEqual({ en: 'Late', ar: 'متأخر' });
+  });
+
+  it('a snapshot of another item (its English name is not the label) is not used', () => {
+    expect(readLabel(entry({ entityLabel: 'Something else' }))).toEqual(plain('Something else'));
+  });
+
+  it('per-field or several changes, no label, no Arabic name: the one label in both', () => {
+    const phone = [{ field: 'phone', before: '010', after: '011' }];
+    expect(readLabel(entry({ entityLabel: 'Mona Khalil', changes: phone }))).toEqual(plain('Mona Khalil'));
+    const two = [
+      { field: 'hr.violations', before: violation, after: violation },
+      { field: 'b', before: 1, after: 2 },
+    ];
+    expect(readLabel(entry({ changes: two }))).toEqual(plain('Late to class'));
+    const settings = [{ field: 'x', before: null, after: { nameAr: 'س' } }];
+    expect(readLabel(entry({ entityLabel: '', changes: settings }))).toEqual(plain(''));
+    const noArabic = [{ field: 'hr.violations', before: null, after: { nameEn: 'Late to class' } }];
+    expect(readLabel(entry({ changes: noArabic }))).toEqual(plain('Late to class'));
+    expect(readLabel(entry({ changes: null }))).toEqual(plain('Late to class'));
   });
 });

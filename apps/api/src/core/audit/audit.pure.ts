@@ -105,3 +105,36 @@ export function labelColumns(label: string | AuditLabel): { entityLabel: string;
   const ar = label.ar || label.en;
   return { entityLabel: en, entityLabelAr: ar === en ? null : ar };
 }
+
+const nameField = (value: unknown, name: 'nameEn' | 'nameAr'): string | undefined => {
+  const v = value && typeof value === 'object' ? (value as Record<string, unknown>)[name] : undefined;
+  return typeof v === 'string' && v !== '' ? v : undefined;
+};
+
+/**
+ * A stored entry's label in both languages. `entityLabelAr` when it was stored. Entries written
+ * before it existed (2026-11-17, copied from the old settings history) are list and catalogue
+ * edits whose one change holds the item's whole snapshot: its `nameAr` is the Arabic name **as it
+ * was at that moment**, so it is read from there — only when that snapshot is the same item (its
+ * English name is the stored label). Anything else reads as its one label in both languages.
+ *
+ * Read time, not a backfill: the table is append-only (D8), and the record's *current* Arabic name
+ * may postdate the entry (renamed since), which would rewrite history.
+ */
+export function readLabel(row: {
+  entityLabel: string;
+  entityLabelAr: string | null;
+  changes: unknown;
+}): AuditLabel {
+  if (row.entityLabelAr) return { en: row.entityLabel, ar: row.entityLabelAr };
+  const changes = Array.isArray(row.changes) ? (row.changes as { before?: unknown; after?: unknown }[]) : [];
+  if (changes.length === 1 && row.entityLabel !== '') {
+    const { before, after } = changes[0] ?? {};
+    // The snapshot the label was taken from (as the T27 migration did): the new value, else the old.
+    const snapshot = after && typeof after === 'object' ? after : before;
+    const en = nameField(snapshot, 'nameEn') ?? nameField(snapshot, 'nameAr');
+    const ar = nameField(snapshot, 'nameAr');
+    if (ar && en === row.entityLabel) return { en: row.entityLabel, ar };
+  }
+  return { en: row.entityLabel, ar: row.entityLabel };
+}

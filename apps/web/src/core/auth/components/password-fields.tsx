@@ -99,7 +99,7 @@ export function NewPasswordFields({
   const min = PASSWORD_MIN_LENGTH;
 
   const rules: { key: string; met: boolean; broken: boolean; text: string }[] = [
-    { key: 'length', met: check.longEnough, broken: showErrors && !check.longEnough, text: t('auth.password.ruleLength', { min }) },
+    { key: 'length', met: check.longEnough, broken: showErrors && !check.longEnough, text: t('auth.password.ruleLength', { count: min }) },
     ...(temporary
       ? [{ key: 'different', met: value.next.length > 0 && !sameAsCurrent, broken: sameAsCurrent, text: t('auth.password.ruleDifferent') }]
       : []),
@@ -116,7 +116,7 @@ export function NewPasswordFields({
           sameAsCurrent
             ? 'errors.SAME_PASSWORD'
             : showErrors && !check.longEnough
-              ? t('auth.password.errors.tooShort', { min })
+              ? t('auth.password.errors.tooShort', { count: min })
               : undefined
         }
       >
@@ -126,7 +126,7 @@ export function NewPasswordFields({
               {...a11y}
               value={value.next}
               onChange={(next) => onChange({ ...value, next })}
-              placeholder={t('auth.password.newPlaceholder', { min })}
+              placeholder={t('auth.password.newPlaceholder', { count: min })}
               autoComplete="new-password"
               disabled={disabled}
               autoFocus={autoFocus}

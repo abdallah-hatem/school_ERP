@@ -18,11 +18,34 @@
     "label": "Search employees",
     "placeholder": "Name or code, like EMP-0012"
   },
-  "summary": "{employees} employees · {minutes} minutes · {days}",
+  "summary": "{employees} · {minutes} · {days}",
+  "summaryEmployees": {
+    "zero": "{count} employees",
+    "one": "{count} employee",
+    "two": "{count} employees",
+    "few": "{count} employees",
+    "many": "{count} employees",
+    "other": "{count} employees"
+  },
+  "summaryMinutes": {
+    "zero": "{count} minutes",
+    "one": "{count} minute",
+    "two": "{count} minutes",
+    "few": "{count} minutes",
+    "many": "{count} minutes",
+    "other": "{count} minutes"
+  },
   "rule": "Rule: {rule}",
   "ruleStep": "hour {hour} = {days} d",
   "ruleExtra": "each later hour = {days} d",
-  "ruleGrace": "{minutes} grace minutes first",
+  "ruleGrace": {
+    "zero": "{count} grace minutes first",
+    "one": "{count} grace minute first",
+    "two": "{count} grace minutes first",
+    "few": "{count} grace minutes first",
+    "many": "{count} grace minutes first",
+    "other": "{count} grace minutes first"
+  },
   "save": "Save all",
   "saveCount": "Save all ({count})",
   "saved": "Lateness saved.",
@@ -32,7 +55,14 @@
   },
   "discard": {
     "title": "Discard unsaved minutes?",
-    "body": "You changed {count} rows in {month} without saving. Switching month discards them.",
+    "body": {
+      "zero": "You changed {count} rows in {month} without saving. Switching month discards them.",
+      "one": "You changed {count} row in {month} without saving. Switching month discards it.",
+      "two": "You changed {count} rows in {month} without saving. Switching month discards them.",
+      "few": "You changed {count} rows in {month} without saving. Switching month discards them.",
+      "many": "You changed {count} rows in {month} without saving. Switching month discards them.",
+      "other": "You changed {count} rows in {month} without saving. Switching month discards them."
+    },
     "confirm": "Discard and switch"
   },
   "empty": {

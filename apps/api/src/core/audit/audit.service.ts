@@ -18,7 +18,7 @@ import type { Request } from 'express';
 import { CLS_REQ, ClsService } from 'nestjs-cls';
 import type { DbAdapter } from '../../database/transactions';
 import { PermissionsService } from '../permissions';
-import { cleanChanges, diffChanges, hideSalaryValues, labelColumns } from './audit.pure';
+import { cleanChanges, diffChanges, hideSalaryValues, labelColumns, readLabel } from './audit.pure';
 import { AuditRecordAccess } from './audit-record-access';
 import {
   AuditEntryRepository,
@@ -243,8 +243,8 @@ function toAuditEntry(row: AuditEntryRow, linked: ReadonlyMap<string, string>): 
     module: row.module as AuditModule,
     entityType: row.entityType as AuditEntityType,
     entityId: row.entityId,
-    // Older entries (and one-name records) have no Arabic label: the same name in both.
-    entityLabel: { en: row.entityLabel, ar: row.entityLabelAr ?? row.entityLabel },
+    // Older entries have no Arabic label stored: read from their own snapshot, else the one name.
+    entityLabel: readLabel(row),
     actor: row.actorId
       ? { id: row.actorId, name: row.actorName ?? '', employeeId: linked.get(row.actorId) ?? null }
       : null,
