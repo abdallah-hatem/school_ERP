@@ -21,7 +21,7 @@ import {
 import { seedAdmin } from './admin';
 import { EMPLOYEES, generatedFields } from './data/employees';
 import { levelsOf, loadSeedData } from './data/load';
-import { DEPARTMENTS, JOB_TITLES, STAGES, type SeedListItem } from './data/lists';
+import { DEPARTMENTS, JOB_TITLES, NO_STAGE_KEY, STAGES, type SeedListItem } from './data/lists';
 import { ADJUSTMENTS, DEMO_MONTH, LATENESS, PENALTIES } from './data/november';
 import type { SeedCatalogue, SeedData } from './data/types';
 
@@ -101,6 +101,8 @@ async function seedAll(app: INestApplicationContext): Promise<SeedSummary> {
   const stages = await ensureList(STAGES, db.stage.findMany({ select: listSelect }), (item) =>
     get(StagesService).create({ nameEn: item.nameEn, nameAr: item.nameAr }, admin.id),
   );
+  // No-op when a stage already carries the mark (the migration set it, or an earlier run).
+  await get(StagesService).ensureNoStage(stages.get(NO_STAGE_KEY)!);
   const departments = await ensureList(
     DEPARTMENTS,
     db.department.findMany({ select: listSelect }),

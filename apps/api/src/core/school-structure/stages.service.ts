@@ -52,6 +52,19 @@ export class StagesService {
     return stage;
   }
 
+  /**
+   * Marks `id` as the "no stage" entry (§3) unless a stage already carries the mark — then that one
+   * is returned unchanged, so there is never more than one. Seed only (no endpoint): the role is
+   * the school's data, not something a user re-assigns. Neither the create nor the edit endpoint
+   * can set or clear it, so renaming or hiding the stage keeps it.
+   */
+  async ensureNoStage(id: string): Promise<Stage> {
+    const marked = await this.stages.findNoStage();
+    if (marked) return marked;
+    await this.getById(id);
+    return this.stages.setNoStage(id);
+  }
+
   /** Hiding a stage in use is allowed: existing employees keep it, new choices can't pick it. */
   async update(id: string, dto: UpdateListItemDto, changedById: string | null): Promise<Stage> {
     const before = await this.getById(id);

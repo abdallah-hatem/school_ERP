@@ -307,6 +307,9 @@ describe('Seed (e2e)', () => {
     if (data.logoPath) expect(school.logoUrl).toMatch(/^\/files\/logo\/logo-.+\.png$/);
 
     expect(await db.stage.count()).toBe(4);
+    // §3: exactly one stage is the "no stage" entry, marked by the seed — the "None" one.
+    const noStage = await db.stage.findMany({ where: { isNoStage: true }, select: { nameEn: true } });
+    expect(noStage).toEqual([{ nameEn: 'None' }]);
     expect(await db.department.count()).toBeGreaterThanOrEqual(10);
     expect(await db.jobTitle.count()).toBeGreaterThanOrEqual(15);
     expect(await db.employee.count({ where: { status: 'INACTIVE' } })).toBe(2);

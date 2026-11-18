@@ -200,6 +200,9 @@ phase live in `docs/build-log/`.
   typecheck, unit tests and module rules always run; CI also runs on PRs into `demo` → #100.
 - 2026-11-18 — `demo` branch cut from dev at 0d07713 (after #97–#101) and protected like testing
   (PR, four green checks, owner approval); Sunday's demo runs from it (ARCHITECTURE → Environments).
+- 2026-11-18 — The "no stage" entry is a flag, not a name (`fix/none-stage-by-id`): `stages.is_no_stage`,
+  set on the stage named "None" by its migration and by the seed (`StagesService.ensureNoStage`, no
+  endpoint); the card band reads the flag. Was the only name check in api/web/shared/seed.
 
 ## Next up
 
@@ -233,6 +236,5 @@ phase live in `docs/build-log/`.
   state (`TODO(T28)`).
 
 - Optional: server-side paging for lateness (loads the whole month today) and column sorting.
-- The stage "None" band is detected by its English name; key it by an id instead.
 - Leftover from #88: the History tab's skeleton assumes entries, so it still jumps while History is
   empty (until T28); then compare the timeline in full.

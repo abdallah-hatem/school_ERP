@@ -9,6 +9,7 @@ const stageSelect = {
   nameAr: true,
   sortOrder: true,
   isActive: true,
+  isNoStage: true,
 } satisfies Prisma.StageSelect;
 
 /** Stages (school structure). Never deleted — hidden with `isActive: false` (§3). */
@@ -26,6 +27,15 @@ export class StageRepository {
 
   findById(id: string): Promise<Stage | null> {
     return this.db.stage.findUnique({ where: { id }, select: stageSelect });
+  }
+
+  /** The stage marked as the "no stage" entry, if any. */
+  findNoStage(): Promise<Stage | null> {
+    return this.db.stage.findFirst({ where: { isNoStage: true }, select: stageSelect });
+  }
+
+  setNoStage(id: string): Promise<Stage> {
+    return this.db.stage.update({ where: { id }, data: { isNoStage: true }, select: stageSelect });
   }
 
   async nextSortOrder(): Promise<number> {
