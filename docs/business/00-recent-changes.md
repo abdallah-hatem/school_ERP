@@ -1,5 +1,17 @@
 # Recent changes
 
+- 2026-11-18 — Notifications decisions (§11, §3, owner: "go with your recommended answers"): many of
+  one kind at once make one grouped notification; probation becomes a date on each employee's
+  record (hire date + 3 months by default, editable — Planned in §3); lateness due by the 25th and
+  payroll by the 28th (settings); approvals can't be turned off; read notifications kept 90 days,
+  done approvals 30, any at most 365; contract reminders at 30 and 7 days; Settings →
+  Notifications changed by the System admin, seen by the HR manager.
+- 2026-11-18 — Notifications (§11, new, owner): an in-app bell for staff — approvals waiting (penalties,
+  payroll) for whoever may approve within their stage or team, and daily reminders (contract and
+  probation ending, lateness not entered, payroll not prepared or approved), never sent twice.
+  Preferences per person, kind and channel, with school defaults; approvals can't be turned off.
+  Other channels and parents are Planned. Layout picked by the owner: the bell opens a short list
+  over the page; each kind is one on/off switch on screen. Not built yet.
 - 2026-11-18 — The "no stage" entry (§3) is marked, not matched by name: renaming the "None" stage
   (or a school naming it differently) no longer gives its staff a stage colour on the employee
   cards. Existing databases mark the stage named "None" once, when they update.
