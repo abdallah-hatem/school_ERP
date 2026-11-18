@@ -28,6 +28,12 @@ export interface NewAuditEntry {
   at: Date;
 }
 
+/** Some records of one type (`AuditRecordSet` without core's type). */
+export interface RecordSet {
+  entityType: string;
+  ids: readonly string[];
+}
+
 export interface AuditEntryFilter {
   actorId?: string;
   module?: string;
@@ -35,9 +41,12 @@ export interface AuditEntryFilter {
   actions?: readonly string[];
   from?: Date;
   to?: Date;
+  /** The record's name in either language, or (`qRecords`) a record matched by a field kept elsewhere. */
   q?: string;
-  entityType?: string;
-  entityId?: string;
+  /** With `q`: the records it matches outside the labels (an employee's code — `searchMatches`). */
+  qRecords?: readonly RecordSet[];
+  /** Only entries about these records (a History: the record and its related ones). */
+  records?: readonly RecordSet[];
   /** Only entries that changed this field. */
   field?: string;
   /** Leave out entries about records of these types outside their ids (the viewer's scope, P4). */
@@ -79,13 +88,29 @@ const paginated = <T>(data: T[], total: number, current: number, take: number): 
   hasPreviousPage: current > 1,
 });
 
+const inRecords = (records: readonly RecordSet[]): Prisma.AuditEntryWhereInput[] =>
+  records.map((r) => ({ entityType: r.entityType, entityId: { in: [...r.ids] } }));
+
 function whereOf(filter: AuditEntryFilter): Prisma.AuditEntryWhereInput {
+  const and: Prisma.AuditEntryWhereInput[] = [];
+  if (filter.records) and.push({ OR: inRecords(filter.records) });
+  // The record's name in either language, or a record the search matched by its code.
+  if (filter.q) {
+    and.push({
+      OR: [
+        { entityLabel: { contains: filter.q, mode: 'insensitive' } },
+        { entityLabelAr: { contains: filter.q, mode: 'insensitive' } },
+        ...inRecords(filter.qRecords ?? []),
+      ],
+    });
+  }
+  for (const r of filter.restricted ?? []) {
+    and.push({ NOT: { entityType: r.entityType, entityId: { notIn: [...r.ids] } } });
+  }
   return {
     ...(filter.actorId ? { actorId: filter.actorId } : {}),
     ...(filter.module ? { module: filter.module } : {}),
     ...(filter.actions ? { action: { in: [...filter.actions] } } : {}),
-    ...(filter.entityType ? { entityType: filter.entityType } : {}),
-    ...(filter.entityId ? { entityId: filter.entityId } : {}),
     ...(filter.from || filter.to
       ? {
           at: {
@@ -94,25 +119,20 @@ function whereOf(filter: AuditEntryFilter): Prisma.AuditEntryWhereInput {
           },
         }
       : {}),
-    // The record's name in either language.
-    ...(filter.q
-      ? {
-          OR: [
-            { entityLabel: { contains: filter.q, mode: 'insensitive' } },
-            { entityLabelAr: { contains: filter.q, mode: 'insensitive' } },
-          ],
-        }
-      : {}),
     // jsonb containment: the changes array holds an element with this field.
     ...(filter.field ? { changes: { array_contains: [{ field: filter.field }] } } : {}),
-    ...(filter.restricted?.length
-      ? {
-          AND: filter.restricted.map((r) => ({
-            NOT: { entityType: r.entityType, entityId: { notIn: [...r.ids] } },
-          })),
-        }
-      : {}),
+    ...(and.length ? { AND: and } : {}),
   };
+}
+
+/** `AND (type = t1 AND id IN ids1 OR …)` — the raw-SQL twin of `whereOf`'s `records`. */
+function recordsSql(records: readonly RecordSet[] | undefined, alias?: string): Prisma.Sql {
+  if (!records) return Prisma.empty;
+  const col = (name: string) => Prisma.raw(alias ? `${alias}."${name}"` : `"${name}"`);
+  const any = records.map(
+    (r) => Prisma.sql`(${col('entity_type')} = ${r.entityType} AND ${col('entity_id')} = ANY(${[...r.ids]}::text[]))`,
+  );
+  return any.length ? Prisma.sql`AND (${Prisma.join(any, ' OR ')})` : Prisma.sql`AND FALSE`;
 }
 
 /**
@@ -209,13 +229,10 @@ export class AuditEntryRepository {
    * most recently active first. People who were never signed in (failed sign-ins) are not people.
    */
   async findActors(
-    filter: { entityType?: string; entityId?: string },
+    filter: { records?: readonly RecordSet[] },
     restricted: AuditEntryFilter['restricted'] = [],
   ): Promise<AuditActor[]> {
-    const record =
-      filter.entityType && filter.entityId
-        ? Prisma.sql`AND "entity_type" = ${filter.entityType} AND "entity_id" = ${filter.entityId}`
-        : Prisma.empty;
+    const record = recordsSql(filter.records);
     const scope = restrictionSql(restricted);
     const rows = await this.txHost.tx.$queryRaw<{ id: string; name: string | null }[]>`
       SELECT id, name FROM (
@@ -229,14 +246,16 @@ export class AuditEntryRepository {
     return rows.map((r) => ({ id: r.id, name: r.name ?? '' }));
   }
 
-  /** The fields one record's entries changed, alphabetically (the History tab's field filter). */
-  async findFields(entityType: string, entityId: string): Promise<string[]> {
+  /**
+   * The fields the entries about these records changed, alphabetically (the History tab's field
+   * filter: the record and its related ones).
+   */
+  async findFields(records: readonly RecordSet[]): Promise<string[]> {
     const rows = await this.txHost.tx.$queryRaw<{ field: string }[]>`
       SELECT DISTINCT c.value->>'field' AS field
       FROM "audit_entries" e
       CROSS JOIN LATERAL jsonb_array_elements(e."changes") AS c(value)
-      WHERE e."entity_type" = ${entityType} AND e."entity_id" = ${entityId}
-        AND c.value->>'field' IS NOT NULL
+      WHERE c.value->>'field' IS NOT NULL ${recordsSql(records, 'e')}
       ORDER BY field`;
     return rows.map((r) => r.field);
   }
