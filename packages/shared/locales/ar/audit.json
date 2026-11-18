@@ -236,6 +236,20 @@
       }
     }
   },
+  "totals": {
+    "net": "الصافي",
+    "employees": "الموظفون",
+    "flagged": "للمراجعة",
+    "monthSalary": "الرواتب",
+    "gross": "إجمالي الرواتب",
+    "penaltyAmount": "الجزاءات",
+    "latenessAmount": "التأخير",
+    "adjustmentAdditions": "الإضافات",
+    "adjustmentDeductions": "الخصومات",
+    "incomeTax": "ضريبة الدخل",
+    "martyrTax": "صندوق الشهداء",
+    "insuranceAmount": "تأمينات الموظف"
+  },
   "activity": {
     "description": "كل تغيير وكل تسجيل دخول في المدرسة، الأحدث أولًا. لا يمكن تعديل السجلات أو حذفها.",
     "label": "الخط الزمني للنشاط",

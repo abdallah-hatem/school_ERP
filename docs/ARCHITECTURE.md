@@ -388,6 +388,10 @@ module through core's exported `AuditService` — never through its repository.
 - **Change lines** (`changeRows`, `core/audit/lib/entry-text.ts`): a list item edited in place
   (`{ nameEn, nameAr, isActive, sortOrder }` before and after, same id) shows one line per changed
   part — "Violation · Name (Arabic)" — never "Strike → Strike"; a different item picked stays one line.
+  Any other object value is split into one line per part that changed, never shown as JSON: a payroll
+  run's `totals` as "Totals · Net" etc. (`AUDIT_TOTAL_PARTS` in shared: order, money or count; labels
+  under `audit.totals.*`), a role's `permissions` as "Permissions · View payroll: Everyone → Their
+  stage". A `totals` the viewer may not see (R7) stays one "changed" line.
 - **Filters** on both audit screens: a side panel on wide screens (first in the page's tab order,
   drawn in the second column), else one Filters button opening `AuditFiltersSheet` — from the
   bottom on a phone, from the inline-end edge on a tablet.
