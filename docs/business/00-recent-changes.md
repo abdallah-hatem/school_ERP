@@ -5,6 +5,9 @@
   HR payroll ends at the net and salaries are net, grossed up (owner, 2026-11-17). Defaults from
   the school's previous HR system (GUESS — to confirm with the accountant). Accountant and System
   admin see and change it. Working each approved month out follows.
+- 2026-11-18 — Audit log (§9, T29): penalties (record, approve, cancel), monthly lateness (one entry
+  per saved month, a line per changed employee) and payroll runs (create, recalculate, approve with
+  the totals; adjustments added and removed) are now recorded, together with the change.
 - 2026-11-18 — What each role sees (§2, P4, owner: "I still see salaries, all employees, every
   detail"): stage and team limits and salary visibility are now enforced. A stage head sees only
   their stage's employees, a direct manager only their team — in every list, count, picker,

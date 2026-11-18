@@ -151,7 +151,8 @@ phase live in `docs/build-log/`.
   `hr.employees.view_salary`; Users, Roles and My account screens (mockups first); read-only settings
   for view-only users; gate payroll adjust on `hr.payroll.adjust`; what Home shows without
   `hr.dashboard.view`.
-- Audit log T28 (Tamer) and T29 (Waleed), then T31 verify. Follow-ups from T30: entries keep one
+- Audit log T28 (Tamer), then T31 verify. (T29 done by Claude on the owner's request, 2026-11-18:
+  three PRs — groundwork, penalties, lateness + payroll.) Follow-ups from T30: entries keep one
   name snapshot, so list/catalogue names show in English inside Arabic sentences; id fields
   (`departmentId`) show raw ids unless T28 stores names; penalties don't appear on the employee's
   History; payroll run page has no History tab yet; smoke History check still asserts the empty

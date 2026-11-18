@@ -1,4 +1,4 @@
-import { cleanChanges, diffChanges, isSecretField, toStoredValue } from './audit.pure';
+import { cleanChanges, diffChanges, hideSalaryValues, isSecretField, toStoredValue } from './audit.pure';
 
 describe('diffChanges (D7)', () => {
   it('keeps only the changed fields, each with before and after', () => {
@@ -73,6 +73,23 @@ describe('cleanChanges', () => {
         { field: 'hr.payroll.partTime', before: { b: 1, a: 2 }, after: { a: 2, b: 1 } },
       ]),
     ).toEqual([{ field: 'school.workStart', before: '07:30', after: '08:00' }]);
+  });
+
+  it('keeps the subject a line is about (one employee of a lateness month, spec 7), names only', () => {
+    const subject = { en: 'Mona Khalil', ar: 'منى خليل' };
+    expect(
+      cleanChanges([
+        { field: 'minutes', before: 60, after: 0, subject: { ...subject, extra: 1 } as typeof subject },
+        { field: 'minutes', before: 30, after: 30, subject },
+      ]),
+    ).toEqual([{ field: 'minutes', before: 60, after: 0, subject }]);
+  });
+
+  it('a hidden salary line keeps its subject but loses its values', () => {
+    const subject = { en: 'Mona Khalil', ar: 'منى خليل' };
+    expect(hideSalaryValues([{ field: 'net', before: 1, after: 2, subject }])).toEqual([
+      { field: 'net', hidden: true, subject },
+    ]);
   });
 });
 

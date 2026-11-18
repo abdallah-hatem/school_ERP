@@ -35,7 +35,9 @@ function makeService(over: {
       return Promise.resolve();
     }),
   };
+  const audit = { record: jest.fn().mockResolvedValue(undefined) };
   const employees = {
+    listActiveRefs: jest.fn().mockResolvedValue([emp('1'), emp('2')]),
     listActiveWithDepartments: jest.fn().mockResolvedValue([
       { employee: emp('1'), department: DEPT },
       { employee: emp('2'), department: DEPT },
@@ -70,8 +72,10 @@ function makeService(over: {
     employees as unknown as EmployeesService,
     settings as unknown as HrSettingsService,
     monthLock as unknown as MonthLockService,
+    audit as never,
+    { inTransaction: (fn: () => unknown) => fn(), run: (fn: () => unknown) => Promise.resolve(fn()) } as never,
   );
-  return { service, repository, employees, monthLock, calls };
+  return { service, repository, employees, monthLock, calls, audit };
 }
 
 describe('LatenessService', () => {
