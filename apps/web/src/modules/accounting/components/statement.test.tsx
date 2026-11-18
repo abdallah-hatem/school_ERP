@@ -13,7 +13,7 @@ vi.mock('../apis', () => ({ GET_PAYROLL_TAXES_EXCEL: (month: string) => GET_PAYR
 const saveDownloadedFile = vi.fn();
 vi.mock('@/shared/lib/download', () => ({ saveDownloadedFile: (f: unknown) => saveDownloadedFile(f) }));
 
-import { LIMITED_MONTH, MONTH, renderAccounting } from '../test/fixtures';
+import { BIG_MONTH, LIMITED_MONTH, MONTH, renderAccounting } from '../test/fixtures';
 import { Statement, STATEMENT_PRINT_CSS } from './statement';
 
 afterEach(cleanup);
@@ -49,8 +49,8 @@ describe('Statement', () => {
     expect(within(insured).getByText('Hana Nabil')).toBeTruthy();
     expect(within(insured).queryByText('Salma Adel')).toBeNull();
     // Subtotal under each column: net, insurance share, tax, fund, gross (the insurance pill column is hidden in the table).
-    expect(lastRowCells('Insured')).toEqual(['Subtotal', '', '', '12,000.00', '1,100.00', '1,517.38', '7.32', '14,624.70']);
-    expect(lastRowCells('Not insured')).toEqual(['Subtotal', '', '12,000.00', '1,517.32', '6.76', '13,524.08']);
+    expect(lastRowCells('Insured')).toEqual(['Subtotal · all 2', '', '', '12,000.00', '1,100.00', '1,517.38', '7.32', '14,624.70']);
+    expect(lastRowCells('Not insured')).toEqual(['Subtotal · 1 employee', '', '12,000.00', '1,517.32', '6.76', '13,524.08']);
     // A net floored at 0 says so.
     expect(within(insured).getByText('Net 0 — floored in HR')).toBeTruthy();
   });
@@ -62,8 +62,8 @@ describe('Statement', () => {
     const omar = within(group('Insured')).getByText('Omar Fathy').closest('tr') as HTMLElement;
     expect(omar.textContent).toContain('Salary hidden');
     expect(within(omar).getAllByLabelText('Amount hidden').length).toBeGreaterThan(0);
-    expect(lastRowCells('Insured')).toEqual(['Subtotal', 'Only for someone who sees every salary']);
-    expect(lastRowCells('Not insured')).toEqual(['Subtotal', 'Only for someone who sees every salary']);
+    expect(lastRowCells('Insured')).toEqual(['Subtotal · all 2', 'Only for someone who sees every salary']);
+    expect(lastRowCells('Not insured')).toEqual(['Subtotal · 1 employee', 'Only for someone who sees every salary']);
   });
 
   it('the rule used, and whether it is still today\'s', () => {
@@ -121,7 +121,76 @@ describe('Statement', () => {
     expect(screen.getByRole('table', { name: 'مؤمَّن عليهم' })).toBeTruthy();
     expect(screen.getByText('مدرسة تجريبية · بيان ضرائب الرواتب')).toBeTruthy();
     expect(screen.getByText('مطابقة لقاعدة اليوم')).toBeTruthy();
-    expect(lastRowCells('غير مؤمَّن عليهم')[0]).toBe('المجموع الفرعي');
+    expect(lastRowCells('غير مؤمَّن عليهم')[0]).toBe('المجموع الفرعي · موظف واحد');
+    expect(lastRowCells('مؤمَّن عليهم')[0]).toBe('المجموع الفرعي · الاثنان');
+  });
+
+  describe('a month of many employees (paging, search, print)', () => {
+    // Paging and Clear filters bring the list's top back into view.
+    beforeEach(() => vi.stubGlobal('scrollTo', vi.fn()));
+    afterEach(() => vi.unstubAllGlobals());
+    // The group (heading, count) around its DataTable region of the same name.
+    const insured = () => screen.getAllByRole('region', { name: 'Insured' })[0]!;
+    const notInsured = () => screen.getAllByRole('region', { name: 'Not insured' })[0]!;
+    const bodyNames = (name: string) =>
+      within(group(name))
+        .getAllByRole('row')
+        .slice(1, -1)
+        .map((r) => within(r).getAllByRole('cell')[0]!.textContent);
+    const searchBox = () => screen.getByRole('searchbox', { name: "Search the statement's employees" }) as HTMLInputElement;
+
+    it("each group pages by the app's default of 10; the subtotal covers the whole group and says so", async () => {
+      const user = userEvent.setup();
+      renderAccounting(<Statement {...props} month={BIG_MONTH} todayRule={null} />);
+      // 26 insured: rows 1–10, and the subtotal of all 26 (26 × 100.00 gross).
+      expect(bodyNames('Insured')).toHaveLength(10);
+      expect(bodyNames('Insured')[0]).toContain('Insured 01');
+      expect(within(insured()).getByText('Showing 1–10 of 26')).toBeTruthy();
+      const subtotal = lastRowCells('Insured');
+      expect(subtotal[0]).toBe('Subtotal · all 26');
+      expect(subtotal.at(-1)).toBe('2,600.00');
+      // Page 2: the next ten; the subtotal is unchanged (the group, not the page).
+      await user.click(within(insured()).getByRole('button', { name: 'Page 2' }));
+      expect(bodyNames('Insured')).toHaveLength(10);
+      expect(bodyNames('Insured')[0]).toContain('Insured 11');
+      expect(within(insured()).getByText('Showing 11–20 of 26')).toBeTruthy();
+      expect(lastRowCells('Insured')).toEqual(subtotal);
+      // The other group pages on its own.
+      expect(within(notInsured()).getByText('Showing 1–3 of 3')).toBeTruthy();
+    });
+
+    it("one search (name or code) narrows both groups and goes back to page 1; the subtotals stay the whole group's", async () => {
+      const user = userEvent.setup();
+      renderAccounting(<Statement {...props} month={BIG_MONTH} todayRule={null} />);
+      await user.click(within(insured()).getByRole('button', { name: 'Page 3' }));
+      await user.type(searchBox(), 'EMP-0105');
+      expect(bodyNames('Insured')).toEqual([expect.stringContaining('Insured 05')]);
+      expect(within(insured()).getByText('1 of 26')).toBeTruthy();
+      expect(lastRowCells('Insured')[0]).toBe('Subtotal · all 26');
+      expect(lastRowCells('Insured').at(-1)).toBe('2,600.00');
+      // No one in the other group matches: it says so, with Clear filters.
+      expect(within(notInsured()).getByText('No one in this group matches')).toBeTruthy();
+      // An Arabic name matches too, with its letter variants folded (أخر / اخر).
+      await user.clear(searchBox());
+      await user.type(searchBox(), 'اخر 3');
+      expect(bodyNames('Not insured')).toEqual([expect.stringContaining('Other 3')]);
+      // Clear filters: everyone again, from page 1.
+      await user.click(screen.getAllByRole('button', { name: /Clear filters/ })[0]!);
+      expect(searchBox().value).toBe('');
+      expect(within(insured()).getByText('Showing 1–10 of 26')).toBeTruthy();
+    });
+
+    it('print / PDF lists everyone in each group, whatever the page or the search', async () => {
+      const user = userEvent.setup();
+      const { container } = renderAccounting(<Statement {...props} month={BIG_MONTH} todayRule={null} />);
+      await user.click(within(insured()).getByRole('button', { name: 'Page 2' }));
+      await user.type(searchBox(), 'Insured 05');
+      const printed = [...container.querySelectorAll<HTMLElement>('[data-print-rows]')];
+      expect(printed.map((p) => p.querySelectorAll('tbody tr').length)).toEqual([26, 3]);
+      expect(printed[0]!.querySelector('tfoot')?.textContent).toContain('Subtotal · all 26');
+      // The search box stays off the printout.
+      expect(screen.getByRole('search').classList.contains('no-print')).toBe(true);
+    });
   });
 
   it('worst-case totals (break-ui): every term of the sum is drawn whole, its label apart from it', () => {

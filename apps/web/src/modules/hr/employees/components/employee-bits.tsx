@@ -1,7 +1,8 @@
 'use client';
 
 import { EmployeeStatus, type Gender, type Names } from '@school-erp/shared';
-import { EmployeeAvatar, EmployeeLink } from '@/core/employees';
+import { EmployeeLink } from '@/core/employees';
+import { PersonAvatar } from '@/shared/components/ui/person-avatar';
 import { StatusPill } from '@/shared/components/ui/status-pill';
 import { localName } from '@/shared/lib/i18n';
 import { cn } from '@/shared/lib/utils';
@@ -20,7 +21,7 @@ export function EmployeeIdentity({
   const nameClass = cn('font-bold break-words', size === 'lg' ? 'text-base' : 'text-sm');
   return (
     <div className="flex min-w-0 items-center gap-3">
-      <EmployeeAvatar photoUrl={employee.photoUrl} gender={employee.gender} size={size === 'lg' ? 'md' : 'sm'} />
+      <PersonAvatar photoUrl={employee.photoUrl} gender={employee.gender} size={size === 'lg' ? 'md' : 'sm'} />
       <EmployeeLink
         employeeId={employee.id}
         name={name}

@@ -55,11 +55,14 @@ export function Pagination({
   onPageChange,
   disabled = false,
   loading = false,
+  skeletonBlock = true,
   className,
 }: PaginationState & {
   disabled?: boolean;
   /** First load: the summary is a bar (no "0 of 0" before the count is known). */
   loading?: boolean;
+  /** `false`: no `data-skeleton-block` (its table is measured as part of the block around it). */
+  skeletonBlock?: boolean;
   className?: string;
 }) {
   const { t } = useTranslation();
@@ -92,7 +95,7 @@ export function Pagination({
   return (
     <div
       ref={rootRef}
-      data-skeleton-block="pagination"
+      data-skeleton-block={skeletonBlock ? 'pagination' : undefined}
       className={cn(
         'flex min-w-0 flex-wrap items-center gap-x-4 gap-y-3 border-t border-border px-4 py-3.5 text-sm text-muted-foreground sm:px-5',
         className,

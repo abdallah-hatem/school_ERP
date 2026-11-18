@@ -2,17 +2,19 @@
 
 import {
   DEFAULT_TAX_RULE,
+  PAGINATION,
   type AccountingPayrollLine,
   type AccountingPayrollMonth,
   type Month,
   type Piastres,
   type TaxRule,
 } from '@school-erp/shared';
-import { Fragment, useState, type ReactNode } from 'react';
+import { Fragment, useMemo, useState, type ReactNode } from 'react';
 import { callApi } from '@/lib/callApi';
 import { EmployeeLink } from '@/core/employees';
 import { useSchoolBranding } from '@/core/settings';
 import { DataTable, type DataTableColumn, type DataTableFooter } from '@/shared/components/data-table/data-table';
+import { ClearFilters, SearchInput } from '@/shared/components/form/filter-controls';
 import { EmptyState } from '@/shared/components/layout/empty-state';
 import { PageHeader } from '@/shared/components/layout/page-header';
 import { Button } from '@/shared/components/ui/button';
@@ -25,6 +27,7 @@ import {
   OtherRuleIcon,
   PdfIcon,
   SameRuleIcon,
+  SearchIcon,
 } from '@/shared/components/ui/icons';
 import { SkeletonButton, SkeletonPill, SkeletonProse, SkeletonText } from '@/shared/components/ui/skeleton';
 import { StatusPill } from '@/shared/components/ui/status-pill';
@@ -37,6 +40,7 @@ import { GET_PAYROLL_TAXES_EXCEL } from '../apis';
 import {
   formatPercent,
   groupByInsurance,
+  matchesLine,
   ruleSlices,
   sameRule,
   SUBTOTAL_FIELDS,
@@ -89,6 +93,18 @@ export function Statement({ monthKey, month, todayRule, basePath }: StatementPro
   const groups = groupByInsurance(month?.lines ?? []);
   const seen = month?.lines.filter((l) => l.salaryVisible).length ?? 0;
   const school = nameIn(branding, locale) || t('ui.shell.productName');
+  // On screen each group pages and the search narrows both (the whole month is loaded, so both
+  // happen here, as on the lateness board); the subtotals, print and Excel always cover everyone.
+  const [search, setSearch] = useState('');
+  const [pages, setPages] = useState({ insured: 1, notInsured: 1 });
+  const searching = search.trim().length > 0;
+  function onSearch(text: string) {
+    setSearch(text);
+    setPages({ insured: 1, notInsured: 1 });
+  }
+  function clearSearch() {
+    onSearch('');
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -155,17 +171,36 @@ export function Statement({ monthKey, month, todayRule, basePath }: StatementPro
           )}
         </div>
 
+        <div data-skeleton-block="statement-search" role="search" className="no-print flex flex-wrap items-center gap-2.5">
+          <SearchInput
+            aria-label={t('accounting.payrollTaxes.statement.search.label')}
+            placeholder={t('accounting.payrollTaxes.statement.search.placeholder')}
+            value={search}
+            disabled={loading}
+            onChange={(e) => onSearch(e.target.value)}
+          />
+          <ClearFilters count={searching ? 1 : 0} onClear={clearSearch} disabled={loading} />
+        </div>
+
         <Group
           title={t('accounting.payrollTaxes.statement.insured')}
           lines={loading ? undefined : groups.insured}
           insured
           everySalary={month?.salaryVisible ?? true}
+          search={search}
+          onClearSearch={clearSearch}
+          page={pages.insured}
+          onPageChange={(page) => setPages((p) => ({ ...p, insured: page }))}
         />
         <Group
           title={t('accounting.payrollTaxes.statement.notInsured')}
           lines={loading ? undefined : groups.notInsured}
           insured={false}
           everySalary={month?.salaryVisible ?? true}
+          search={search}
+          onClearSearch={clearSearch}
+          page={pages.notInsured}
+          onPageChange={(page) => setPages((p) => ({ ...p, notInsured: page }))}
         />
 
         <footer
@@ -306,23 +341,45 @@ function Operator({ children, wide = false }: { children: ReactNode; wide?: bool
   );
 }
 
-/** One insurance group: its heading and count, its DataTable and the subtotal row. */
+const PAGE_SIZE = PAGINATION.defaultLimit;
+
+/**
+ * One insurance group: its heading and count, its DataTable paged like every list (the search's
+ * matches on screen), and the subtotal row — always the whole group, never the page, and saying
+ * so. Print lists the whole group (`printRows`).
+ */
 function Group({
   title,
   lines,
   insured,
   everySalary,
+  search,
+  onClearSearch,
+  page,
+  onPageChange,
 }: {
   title: string;
+  /** The whole group; `undefined` while loading. */
   lines: AccountingPayrollLine[] | undefined;
   insured: boolean;
   everySalary: boolean;
+  search: string;
+  onClearSearch: () => void;
+  page: number;
+  onPageChange: (page: number) => void;
 }) {
   const { t, locale } = useTranslation();
   const columns = groupColumns(t, locale, insured);
   const sums = lines ? subtotals(lines) : null;
+  const searching = search.trim().length > 0;
+  const shown = useMemo(() => (lines ?? []).filter((l) => matchesLine(l, search)), [lines, search]);
+  const pageCount = Math.max(1, Math.ceil(shown.length / PAGE_SIZE));
+  const currentPage = Math.min(Math.max(1, page), pageCount);
+  const pageLines = shown.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
   const footer: DataTableFooter = {
-    label: t('accounting.payrollTaxes.statement.subtotal'),
+    label: lines
+      ? t('accounting.payrollTaxes.statement.subtotalAll', { count: formatCount(lines.length) })
+      : t('accounting.payrollTaxes.statement.subtotal'),
     ...(sums && everySalary
       ? {
           cells: Object.fromEntries(
@@ -345,21 +402,41 @@ function Group({
       <div className="flex items-center gap-2.5">
         <h3 className="font-display text-base font-extrabold">{title}</h3>
         <span className="text-sm text-muted-foreground tabular">
-          {lines ? formatCount(lines.length) : <SkeletonText className="text-sm" width="w-6" />}
+          {!lines ? (
+            <SkeletonText className="text-sm" width="w-6" />
+          ) : searching ? (
+            t('accounting.payrollTaxes.statement.groupCount', { shown: formatCount(shown.length), total: formatCount(lines.length) })
+          ) : (
+            formatCount(lines.length)
+          )}
         </span>
       </div>
       <DataTable
         label={title}
         columns={columns}
-        rows={lines}
+        rows={lines ? pageLines : undefined}
+        printRows={lines}
         loading={!lines}
         getRowId={(l) => l.employeeId}
         footer={footer}
+        pagination={{ page: currentPage, limit: PAGE_SIZE, total: shown.length, onPageChange }}
         // A group can be empty one month (an empty state) and full the next: no skeleton can know,
         // so the tables are measured as part of the statement (width only).
         skeletonBlocks={false}
         cardsBelow={insured ? 900 : 740}
-        empty={<EmptyState className="py-8" title={t('accounting.payrollTaxes.statement.noneInGroup')} description="" />}
+        empty={
+          searching && lines?.length ? (
+            <EmptyState
+              className="py-8"
+              icon={SearchIcon}
+              title={t('accounting.payrollTaxes.statement.noMatch.title')}
+              description={t('accounting.payrollTaxes.statement.noMatch.body')}
+              action={<ClearFilters placement="empty" count={1} onClear={onClearSearch} />}
+            />
+          ) : (
+            <EmptyState className="py-8" title={t('accounting.payrollTaxes.statement.noneInGroup')} description="" />
+          )
+        }
         className="border border-border shadow-none"
       />
     </section>

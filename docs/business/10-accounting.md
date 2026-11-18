@@ -82,6 +82,12 @@ For each employee in the approved run:
   for someone who may view the rule in Settings.
 - **DECIDED** — The tables are the app's shared tables (cards on a phone, like every list), not the
   mockup's drawn ones.
+- **DECIDED** (owner, 2026-11-19) — A month can hold 100+ employees, so **on screen** each group pages
+  like every list (the shared pagination, 10 a page) and one search box above the groups finds an
+  employee by name (English or Arabic) or code in both. Each **subtotal still covers the whole
+  group**, never the page or the search, and says so ("Subtotal · all 26"). **Print / PDF and the
+  Excel always contain everyone** — no pages and no search on paper. Paging and the search are kept
+  on the screen only, as on the lateness board (the whole month is loaded), not in the address.
 - **DECIDED** — **Excel**: the month's lines as the viewer sees them (one row each, with insurance,
   insured salary, net, insurance share, income tax, fund and gross; a total row only for someone who
   sees every salary) and a second sheet with the tax rule. **Download PDF**: the browser prints the

@@ -1,5 +1,5 @@
 import type { AnchorHTMLAttributes, ReactElement, ReactNode } from 'react';
-import type { AuditEntry, SessionUser } from '@school-erp/shared';
+import type { AuditActor, AuditEntry, SessionUser } from '@school-erp/shared';
 import { renderWithI18n, TEST_SESSION } from '@/test/render';
 import { AuditI18n } from '../messages';
 
@@ -17,6 +17,8 @@ type EntryActor = NonNullable<AuditEntry['actor']>;
 /** People in the log (as actors, and as `AuditActor` picker items). Neither is linked to an employee. */
 export const MONA: EntryActor = { id: '11111111-1111-4111-8111-111111111111', name: 'Mona Ibrahim', employeeId: null };
 export const AHMED: EntryActor = { id: '22222222-2222-4222-8222-222222222222', name: 'Ahmed Mahmoud', employeeId: null };
+/** The same two as the Person filter lists them (`GET /audit/actors`). */
+export const ACTORS: AuditActor[] = [MONA, AHMED].map(({ id, name }) => ({ id, name, employee: null }));
 
 let seq = 0;
 /** An entry: an employee edit by Mona unless told otherwise. */

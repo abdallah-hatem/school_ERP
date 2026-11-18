@@ -3,7 +3,7 @@
 import { EMPLOYEE_PHOTO_UPLOAD, type Employee, type Gender } from '@school-erp/shared';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import { EmployeeAvatar } from '@/core/employees';
+import { PersonAvatar } from '@/shared/components/ui/person-avatar';
 import { callApi } from '@/lib/callApi';
 import { Button } from '@/shared/components/ui/button';
 import { FileButton } from '@/shared/components/ui/file-button';
@@ -104,7 +104,7 @@ export function EmployeePhotoField({
 
   return (
     <div className="flex flex-wrap items-center gap-5 sm:col-span-2">
-      <EmployeeAvatar photoUrl={shown} gender={gender} size="xl" />
+      <PersonAvatar photoUrl={shown} gender={gender} size="xl" />
       <div className="flex min-w-0 flex-1 basis-56 flex-col gap-3">
         <p className="text-sm text-muted-foreground">{t('employees.photo.description', { max: MAX_MB })}</p>
         <p className="text-sm font-semibold break-words" data-testid="photo-status">

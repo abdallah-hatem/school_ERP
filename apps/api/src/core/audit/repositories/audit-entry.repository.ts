@@ -9,6 +9,7 @@ import {
   type AuditActor,
   type AuditChange,
   type AuditSummary,
+  type Gender,
   type Paginated,
 } from '@school-erp/shared';
 import type { DbAdapter } from '../../../database/transactions';
@@ -234,16 +235,26 @@ export class AuditEntryRepository {
   ): Promise<AuditActor[]> {
     const record = recordsSql(filter.records);
     const scope = restrictionSql(restricted);
-    const rows = await this.txHost.tx.$queryRaw<{ id: string; name: string | null }[]>`
-      SELECT id, name FROM (
-        SELECT DISTINCT ON ("actor_id") "actor_id"::text AS id, "actor_name" AS name, "at", "seq"
+    // The avatar comes from the account's linked employee (core's users and HR's employees tables:
+    // reading is allowed, writing is not); none when the account is unlinked or gone.
+    const rows = await this.txHost.tx.$queryRaw<
+      { id: string; name: string | null; employee_id: string | null; photo_url: string | null; gender: Gender | null }[]
+    >`
+      SELECT latest.id, latest.name, e."id"::text AS employee_id, e."photo_url", e."gender"::text AS gender FROM (
+        SELECT DISTINCT ON ("actor_id") "actor_id" AS actor, "actor_id"::text AS id, "actor_name" AS name, "at", "seq"
         FROM "audit_entries"
         WHERE "actor_id" IS NOT NULL ${record} ${scope}
         ORDER BY "actor_id", "at" DESC, "seq" DESC
       ) latest
-      ORDER BY "at" DESC, "seq" DESC
+      LEFT JOIN "users" u ON u."id" = latest.actor
+      LEFT JOIN "employees" e ON e."id" = u."employee_id"
+      ORDER BY latest."at" DESC, latest."seq" DESC
       LIMIT ${ACTORS_CAP}`;
-    return rows.map((r) => ({ id: r.id, name: r.name ?? '' }));
+    return rows.map((r) => ({
+      id: r.id,
+      name: r.name ?? '',
+      employee: r.employee_id && r.gender ? { photoUrl: r.photo_url, gender: r.gender } : null,
+    }));
   }
 
   /**

@@ -219,6 +219,8 @@ describe('auth (e2e)', () => {
       email: user.email,
       name: user.name,
       mustChangePassword: false,
+      // No linked employee: the avatar is the neutral silhouette (#147).
+      employee: null,
       // System admin + HR manager hold every key (P2); the web app's can() reads them.
       permissions: PERMISSION_KEYS,
       // The roles that grant them, starting roles first (the user chip, P3).

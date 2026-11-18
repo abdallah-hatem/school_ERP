@@ -65,11 +65,17 @@ plain status colour is for icons, bars and large figures only.
 - **Tables follow their container, not the window:** a table at 740px of container width and up,
   stacked cards below (name and status on top, the key amount as a teal band, the rest as a
   label/value grid).
+- **Every table row runs edge to edge of its card**, both directions: the header band, row hover,
+  hairlines and a totals row meet the card's inner edge. A table's scroller reserves no scrollbar
+  gutter (it only ever scrolls sideways; a real scrollbar takes its own space under the rows).
 - **A totals row is part of the table** (`DataTable`'s `footer`): a subtotal or total sits under
   its own columns on a `muted` row with a heavier top rule, the label in the first column; on a
   phone it is one more card after the cards, on `muted`, with the key amount as the teal band. When
   the viewer may not see the totals, one muted note spans the columns instead. Never a hand-drawn
-  `<tfoot>` or a total line outside the table.
+  `<tfoot>` or a total line outside the table. On a paged list it is the
+  total of the whole list, not the page, and its label says so ("Subtotal · all 26").
+- **A paged list that prints lists everyone** (`DataTable`'s `printRows`): the screen shows the page,
+  the printout every row with the totals, without the pagination or the search.
 - English is the default language; Arabic is fully mirrored. Logical classes only; chevrons flip with `flip-rtl`.
 - No horizontal scroll at 375px in either language.
 - **The notification bell** (§11) sits beside the language switch on every width, its unread
@@ -109,6 +115,11 @@ Motion explains a change and never delays it.
   display face, a close button; top inline-end corner (top-right in English, top-left in Arabic),
   under the top bar, stacked with gaps (owner, 2026-11-19: keep top right). Always in the screen's
   language (pass a translated `successMessage`, never the API's English).
+- **Avatars:** one avatar for every person, never initials (owner, 2026-11-18; 2026-11-19) —
+  `PersonAvatar`. An employee shows their photo, else the male or female silhouette by gender; a
+  user account shows its linked employee's (the API sends `employee.photoUrl` / `gender` on users,
+  the session and Activity's people), else a neutral silhouette. No photo: a white figure on the
+  `avatar-tile` grey. Inactive people are greyed (photo in grayscale).
 - **Take away / give back:** Deactivate is a destructive outline (red in ⋯ menus), Reactivate a
   soft success button (green in ⋯ menus) — `StatusChangeButton`, different icons, never the same
   neutral button with different words.

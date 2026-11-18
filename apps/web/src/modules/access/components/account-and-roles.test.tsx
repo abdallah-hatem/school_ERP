@@ -62,7 +62,7 @@ describe('Roles list', () => {
 
   it('built-in roles can’t be deleted; a custom role nobody holds can; System admin only opens', async () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 });
-    renderAccess(<RolesList basePath="/en/roles" roles={roles} holderNames={{ [ROLES[0]!.id]: ['Hany Saad'] }} />);
+    renderAccess(<RolesList basePath="/en/roles" roles={roles} holders={{ [ROLES[0]!.id]: [{ id: 'u1', employee: null, isActive: true }] }} />);
     expect(screen.getAllByText('Every permission').length).toBeGreaterThan(0);
     expect(menuItemNames(await openRowActions(user, 'System admin'))).toEqual(['Open']);
     await user.keyboard('{Escape}');
@@ -73,7 +73,7 @@ describe('Roles list', () => {
 
   it('without core.roles.manage: no Add custom role, the ⋯ only opens', async () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 });
-    renderAccess(<RolesList basePath="/en/roles" roles={roles} holderNames={{}} />, 'en', sessionWithout('core.roles.manage'));
+    renderAccess(<RolesList basePath="/en/roles" roles={roles} holders={{}} />, 'en', sessionWithout('core.roles.manage'));
     expect(screen.queryByRole('link', { name: 'Add custom role' })).toBeNull();
     expect(menuItemNames(await openRowActions(user, 'Front desk'))).toEqual(['Open']);
   });
