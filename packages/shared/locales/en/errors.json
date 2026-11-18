@@ -52,7 +52,7 @@
   "UNKNOWN_ROLE": "One of the chosen roles does not exist.",
   "UNKNOWN_EMPLOYEE": "The chosen employee does not exist.",
   "EMPLOYEE_ALREADY_LINKED": "This employee is already linked to another user.",
-  "BUILT_IN_ROLE": "A starting role can be edited but not deleted.",
+  "SYSTEM_ADMIN_UNDELETABLE": "The System admin role can’t be deleted: someone must always hold every permission.",
   "ROLE_IN_USE": "Users still hold this role. Take it away from them first.",
   "SYSTEM_ADMIN_FIXED": "The System admin always holds every permission; its permissions can't be changed.",
   "DUPLICATE_PERMISSION": "A permission is listed more than once.",

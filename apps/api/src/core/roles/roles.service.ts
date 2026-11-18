@@ -19,7 +19,8 @@ const fromRow = (row: RoleRow): Role =>
 
 /**
  * Roles as data (R2): named sets of permissions with a scope each (R5). Built-in roles (the
- * spec's starting roles) can be edited, never deleted; the System admin always holds every key.
+ * spec's starting roles) can be edited, and deleted once unused like any other; the System admin
+ * can't be deleted and always holds every key.
  * Also owns who holds which role (`user_roles`) and the last-System-admin rule (R8) — core/users
  * calls those when it changes a user.
  */
@@ -82,10 +83,15 @@ export class RolesService {
     return after;
   }
 
-  /** Custom roles only, and only once nobody holds them. */
+  /**
+   * Any role but the System admin, once nobody holds it (owner 2026-11-19) — starting roles
+   * included. Grant migrations join on the role's key, so they skip a deleted starting role.
+   */
   async remove(id: string): Promise<void> {
     const role = await this.get(id);
-    if (role.builtIn) throw new CodedException(HttpStatus.CONFLICT, ErrorCode.BUILT_IN_ROLE);
+    if (role.key === SYSTEM_ADMIN_ROLE) {
+      throw new CodedException(HttpStatus.CONFLICT, ErrorCode.SYSTEM_ADMIN_UNDELETABLE);
+    }
     if (role.userCount > 0) throw new CodedException(HttpStatus.CONFLICT, ErrorCode.ROLE_IN_USE);
     await this.roles.delete(id);
     await this.audit.record({

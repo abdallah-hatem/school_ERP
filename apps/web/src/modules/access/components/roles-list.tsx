@@ -11,7 +11,6 @@ import { RowActions, rowActionsColumn } from '@/shared/components/data-table/row
 import { EmptyState } from '@/shared/components/layout/empty-state';
 import { PageHeader } from '@/shared/components/layout/page-header';
 import { Button } from '@/shared/components/ui/button';
-import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { AddIcon, CopyIcon, EditIcon, OpenIcon, ReadyIcon, RemoveIcon } from '@/shared/components/ui/icons';
 import { SkeletonIdentity, SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
 import { formatCount } from '@/shared/lib/format';
@@ -19,6 +18,7 @@ import { localName, otherName } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { DELETE_ROLE } from '../apis';
 import { AvatarStack, RoleKindBadge, RoleTile } from './role-bits';
+import { RoleDeleteDialog } from './role-delete-dialog';
 
 export interface RolesListProps {
   /** `/en/roles`. */
@@ -32,7 +32,8 @@ export interface RolesListProps {
 
 /**
  * Administration → Roles (P3, option A): every role with its kind, how many permissions it grants
- * and who holds it. Built-in roles can be edited, not deleted; a custom role once nobody holds it.
+ * and who holds it. Any role but the System admin can be deleted once nobody holds it (owner
+ * 2026-11-19); a held one's Delete says who still holds it.
  */
 export function RolesList({ basePath, roles, holderNames, error = false }: RolesListProps) {
   const { t, locale } = useTranslation();
@@ -132,8 +133,8 @@ export function RolesList({ basePath, roles, holderNames, error = false }: Roles
             label: t('access.roles.actions.delete'),
             icon: RemoveIcon,
             destructive: true,
-            // Built-in roles are never deleted; a custom role only once nobody holds it.
-            hidden: !canManage || r.builtIn || r.userCount > 0,
+            // Never the System admin; a held role opens the refusal instead of the confirm.
+            hidden: !canManage || r.key === SYSTEM_ADMIN_ROLE,
             onSelect: () => setDeleting(r),
           },
         ]}
@@ -181,13 +182,10 @@ export function RolesList({ basePath, roles, holderNames, error = false }: Roles
           {t('access.roles.note')}
         </p>
       )}
-      <ConfirmDialog
-        open={deleting !== null}
+      <RoleDeleteDialog
+        role={deleting}
+        holderName={deleting ? holderNames[deleting.id]?.[0] : undefined}
         onOpenChange={(o) => (o ? null : setDeleting(null))}
-        tone="destructive"
-        title={t('access.roles.delete.title', { name: deleting ? localName(deleting, locale) : '' })}
-        description={t('access.roles.delete.body')}
-        confirmLabel={t('access.roles.delete.confirm')}
         onConfirm={confirmDelete}
       />
     </div>
