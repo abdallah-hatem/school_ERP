@@ -266,14 +266,21 @@ phase live in `docs/build-log/`.
   returned in 0.05–0.09 s with accounting's table locked, taxes appeared once the lock was
   released (38/38 lines); normal approve delivered 6 ms after commit; retries at +10 s/+1 min/+5 min
   from each tick; dead after 10; admin retry answered in 9 ms and is audited.
+- 2026-11-18 — Decided (owner): who sees Settings stays a role setting — a System admin removes
+  "View school structure" / "View penalty catalogue" from Stage head or Direct manager in
+  Administration → Roles if a school wants; no code change. Notifications N0 (probation end) and
+  N1 (core) started.
+- 2026-11-18 — Ownership (owner): Abdallah now does T29/T31 (penalties audit, Activity search),
+  the accounting payroll-taxes screen, notifications and events/outbox; Tamer does the payroll-run
+  rules snapshot and reviews his listener in #119. T29 started.
 
 ## Next up
 
 - Outbox nits (from #121's live test, cosmetic): the "dead after 10 failures" log line always says
   10 (after an admin retry it's 11); a dead row still gets a `next_attempt_at`. A lock held longer
   than Prisma's 15 s transaction timeout counts as one failure, then the next tick delivers it.
-- **Notifications — spec, plan and option A decided (PR #106). Build after the events + outbox work
-  lands; tasks N0 (probation field) … N5.** Spec
+- **Notifications — spec, plan and option A decided (PR #106). Events + outbox and jobs are in; N0 (probation
+  field) and N1 (core) are being built; then N2, N3, N4 in parallel, then N5.** Spec
   `docs/specs/2026-11-18-notifications.md`, plan `docs/plans/2026-11-18-notifications-plan.md`,
   business §11, mockup `design/mockups/notifications.html` (option A · bell popover; B and C dropped). The
   UI shows the in-app channel only — one switch per type; the API keeps a `channel` field (`in_app`). Owner decisions (2026-11-18): in-app bell only (channels addable later), staff users now
@@ -281,10 +288,9 @@ phase live in `docs/build-log/`.
   with school defaults, some types can't be turned off. Owner answers (2026-11-18): grouped notifications, probation end per
   employee (N0), lateness by the 25th and payroll by the 28th (settings), approvals can't be turned
   off, retention 90 / 30 / 365 days, contract reminders at 30 and 7 days, Settings → Notifications
-  changed by the System admin and seen by the HR manager. Also waits on the jobs foundation
-  (`feature/login-rate-limit-and-jobs`).
+  changed by the System admin and seen by the HR manager.
 
-- **Accounting payroll taxes screen** — a page per approved month (net, insurance share, income tax,
+- **Accounting payroll taxes screen** (Abdallah) — a page per approved month (net, insurance share, income tax,
   fund, gross per employee) and a sidebar entry: **mockups first** (CLAUDE.md rule 9). The API
   (`GET /accounting/payroll[/:month]`) is built. Tax defaults are GUESS until the accountant confirms.
 - Accounting settings, from the #84 review (optional): `AccountingSettingsService.update()` now
@@ -292,10 +298,9 @@ phase live in `docs/build-log/`.
   (needs a row lock or a version check); the settings e2e checks the audit entry exists but not its
   before/after values.
 - **Before Sunday (owner):** on the demo DB run `prisma migrate deploy`, then `db:seed` once with the
-  same `SEED_ADMIN_PASSWORD`. Until T28/T29 land, open Activity in the demo only for a settings change.
-- Access decision from #89: should Stage head / Direct manager see Settings (Structure, Catalogue,
-  read-only)? (Principal/Accountant reading HR rules on Lateness and the run: done in #97.)
-- Payroll runs could keep a snapshot of the rules they were calculated with (Tamer to decide); today
+  same `SEED_ADMIN_PASSWORD`. Activity in the demo: settings, sign-ins, employees and HR rules are recorded; penalties, lateness
+  and payroll only once T29 lands.
+- Payroll runs could keep a snapshot of the rules they were calculated with (**Tamer**, told 2026-11-18); today
   an approved run shows current rules.
 - Dry-run follow-ups (2026-11-18): the eight polish items are fixed in #99. Still open: Activity
   search in Arabic doesn't find pre-17th entries; the lateness page itself doesn't show
@@ -307,12 +312,7 @@ phase live in `docs/build-log/`.
   no screen yet; add them to Settings → School if a school wants to change them.
 
 - Hosting the demo on the Contabo server (owner: later; local demo is the fallback).
-- Audit log T28 done (#107); T29 (Tamer: penalties, lateness,
-  payroll), then T31 verify. Optional CI ratchet that forbids touching an unwired endpoint (owner: docs only for now). Follow-ups from T30: id fields
-  (`departmentId`) show raw ids unless T28 stores names; penalties don't appear on the employee's
-  History; payroll run page has no History tab yet; smoke History check still asserts the empty
-  state (`TODO(T28)`).
+- Audit log T28 done (#107); T29 (Abdallah, being built: penalties) and T31 verify. Optional CI ratchet that forbids touching an unwired endpoint (owner: docs only for now). Follow-ups from T30 still open: penalties don't appear on the employee's History (T29); the payroll
+  run page has no History tab yet.
 
 - Optional: server-side paging for lateness (loads the whole month today) and column sorting.
-- Leftover from #88: the History tab's skeleton assumes entries, so it still jumps while History is
-  empty (until T28); then compare the timeline in full.
