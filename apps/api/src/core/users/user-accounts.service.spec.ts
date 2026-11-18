@@ -215,7 +215,7 @@ describe('UserAccountsService', () => {
     expect(afterCommit.inTransaction).not.toHaveBeenCalled();
 
     const order: string[] = [];
-    users.update.mockImplementation(() => (order.push(tx.open ? 'update in tx' : 'update'), Promise.resolve()) as never);
+    users.update.mockImplementation(() => (order.push(tx.open ? 'update in tx' : 'update'), Promise.resolve()));
     audit.record.mockImplementation(() => (order.push(tx.open ? 'audit in tx' : 'audit'), Promise.resolve()));
     await service.changeOwnPassword(me, { currentPassword: 'the-right-one', newPassword: 'new-password-1' });
     expect(afterCommit.inTransaction).toHaveBeenCalledTimes(1);

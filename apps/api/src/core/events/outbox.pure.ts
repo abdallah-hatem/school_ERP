@@ -27,7 +27,7 @@ export const OUTBOX_ERROR_MAX_LENGTH = 4000;
 /** How long to wait after the `failures`-th failure (1-based). */
 export function retryDelayMs(failures: number): number {
   const index = Math.min(Math.max(failures, 1), RETRY_DELAYS_MS.length) - 1;
-  return RETRY_DELAYS_MS[index]!;
+  return RETRY_DELAYS_MS[index];
 }
 
 /** What a failure does: retry at `nextAttemptAt`, or give up (dead) at the 10th. */

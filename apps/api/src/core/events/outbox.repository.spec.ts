@@ -27,7 +27,7 @@ describe('OutboxRepository', () => {
   it('claims with FOR UPDATE SKIP LOCKED, oldest event first, and takes a lease in the same statement', async () => {
     const { repository, sql } = makeRepository();
     await repository.claim({ now: NOW, leaseUntil: new Date(NOW.getTime() + 300_000), limit: 50 });
-    const statement = sql[0]!.replace(/\s+/g, ' ');
+    const statement = sql[0].replace(/\s+/g, ' ');
     expect(statement).toContain(`WHERE d."status" = 'pending' AND d."next_attempt_at" <=`);
     expect(statement).toContain('ORDER BY e."seq", d."listener"');
     expect(statement).toContain('FOR UPDATE OF d SKIP LOCKED');
@@ -49,8 +49,8 @@ describe('OutboxRepository', () => {
     await repository.insertEvent('hr.employee.deactivated', { employeeId: 'x' }, [], NOW);
     await repository.insertEvent('hr.payroll.approved', { runId: 'r' }, ['accounting.payroll-taxes'], NOW);
     const calls = tx.outboxEvent.create.mock.calls as unknown as { data: Record<string, unknown> }[][];
-    expect(calls[0]![0]!.data).toMatchObject({ status: 'delivered', deliveries: { create: [] } });
-    expect(calls[1]![0]!.data).toMatchObject({
+    expect(calls[0][0].data).toMatchObject({ status: 'delivered', deliveries: { create: [] } });
+    expect(calls[1][0].data).toMatchObject({
       status: 'pending',
       deliveries: {
         create: [{ listener: 'accounting.payroll-taxes', status: 'pending', nextAttemptAt: NOW }],

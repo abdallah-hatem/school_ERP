@@ -84,7 +84,7 @@ up-to-date branch.
 - [ ] Schema changes include their migration. Never edit a migration that has been applied.
 - [ ] No school name, school-specific rule or hardcoded setting in code.
 - [ ] Nothing duplicated that already exists in `common/`, `shared/` or another module.
-- [ ] Events emitted only after the write is committed; listeners are idempotent.
+- [ ] Events sent only through `DomainEvents.publish` (after the commit); must-deliver ones (`MUST_DELIVER_EVENTS`) through the outbox; listeners idempotent; `docs/EVENTS.md` updated.
 - [ ] Added/changed an event, listener or transaction boundary → `docs/EVENTS.md` updated in the
       same PR; the events-doc test (`apps/api/src/common/events/events-doc.spec.ts`) checks it.
 - [ ] Every new endpoint declares who may use it: `@Permission('<key>')` (or, rarely,

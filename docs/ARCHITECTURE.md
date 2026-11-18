@@ -133,8 +133,8 @@ services to run), not full DDD (most of the system is well-understood CRUD).
    **events**. Never import another module's repository. Reading other modules' tables is allowed;
    writing them is not (see Table ownership).
 2. **Each module owns its tables.** Only the fees module writes fee tables.
-3. **Side effects go through events** (NestJS `EventEmitter`): fees emits `payment.recorded`,
-   communication sends the SMS.
+3. **Side effects go through events** (`DomainEvents.publish`, core/events): fees publishes
+   `fees.payment.recorded`, communication sends the SMS.
 4. **Optional modules and features** (transport, library, payroll, penalties…) register themselves
    and are switched on by feature flag.
 5. **No circular dependencies.** Dependencies point one way, down the module order below. If two
@@ -169,7 +169,8 @@ accounting        ← the payroll tax rule and the payroll taxes of approved mon
 - **Settings ownership:** `core/settings` holds school-wide values (identity, hours, language). Each
   module owns its own rule settings (HR: lateness, payroll, penalty catalogue; accounting: the payroll
   tax rule). The one Settings screen shows a section per module.
-- **Accounting** sits at the top. It listens to `payroll.approved` (and later `payment.recorded`)
+- **Accounting** sits at the top. It listens to `hr.payroll.approved` (must-deliver, through the
+  outbox; later `fees.payment.recorded`)
   and creates its own records — today each approved month's payroll taxes, idempotent per HR run,
   worked out with the tax-rule version in force at the approval (`accounting_tax_rule_versions`)
   and the insurance HR's approved lines snapshot, so a late calculation gives the same answer; its pure tax maths live in `packages/shared/src/rules/payroll-tax.ts`. It
@@ -209,24 +210,51 @@ Use it to get data with the owner's rules applied, or to ask the owner to change
 **2. Event: "something happened; whoever cares can react."** The lower module announces it and
 doesn't know who listens. This is how a lower module triggers work in a higher one.
 
-**Every event, its emitters and listeners, and every transaction boundary: `docs/EVENTS.md`**
-(kept in step with the code by `apps/api/src/common/events/events-doc.spec.ts`).
+**Every event, its publishers and listeners, and every transaction boundary: `docs/EVENTS.md`**
+(kept in step with the code by `apps/api/src/common/events/events-doc.spec.ts`). The design (owner,
+2026-11-18): `docs/plans/2026-11-18-events-outbox-plan.md`.
 
 ```ts
-// hr
-this.events.emit('employee.deactivated', { employeeId, at: new Date() });
+// hr — inside the deactivation's transaction
+await this.events.publish(
+  HrEvent.EMPLOYEE_DEACTIVATED,
+  { employeeId, at: new Date().toISOString() },
+  { mustDeliver: true },
+);
 
-// academics
-@OnEvent('employee.deactivated')
-async handle(e: EmployeeDeactivatedEvent) { await this.assignments.unassignAll(e.employeeId); }
+// academics — a must-deliver listener, handled once per event
+@OutboxListener({ event: HrEvent.EMPLOYEE_DEACTIVATED, name: 'academics.unassign-teacher' })
+@Injectable()
+export class UnassignOnDeactivation implements OutboxEventListener<typeof HrEvent.EMPLOYEE_DEACTIVATED> {
+  async handle(e: EmployeeDeactivatedEvent) { await this.assignments.unassignAll(e.employeeId); }
+}
 ```
 
-- Emit **after the write is committed**. Inside a transaction, emit after it commits, never
-  inside it: `AfterCommit.run(() => this.events.emit(...))` (see Transactions and the audit log).
-- Names: `<module>.<thing>.<past-tense>`. Payload types live in `packages/shared`.
-- Listeners are **idempotent** (safe to run twice) and log their failures.
-- Events are in memory: fine for notifications and side effects. Side effects that must never be
-  lost (invoices, payroll entries) get an **outbox** table when needed (see below).
+- **One way to send an event: `DomainEvents.publish(name, payload, options)`** (`core/events`,
+  global). Names and payloads come from one map in `packages/shared` (`DomainEventMap`): a wrong
+  name or payload fails typecheck. Nobody uses NestJS's `EventEmitter2` or calls `.emit(` — a scan
+  fails the build (`core/events/events-usage.spec.ts`).
+- **Always after the commit.** Inside a transaction `publish` queues on `AfterCommit` (dropped on
+  rollback); outside one it runs now; inside a plain `txHost.withTransaction` (no queue) it throws.
+- Names: `<module>.<thing>.<past-tense>` (`hr.payroll.approved`, `core.settings.changed`).
+- **Two kinds — rule: if losing it leaves data wrong or someone not told, it is must-deliver**
+  (`MUST_DELIVER_EVENTS`; the wrong `options` fail typecheck):
+  - **Fire-and-forget** (`@OnDomainEvent(name)` listeners): in memory, after the commit, each listener
+    awaited in turn; a throw is logged and never fails the request; not retried. Cache refreshes,
+    notices (`core.settings.changed`, `core.user.sessions_ended`, `hr.employee.hired` / `updated`).
+  - **Must-deliver** (`@OutboxListener({ event, name })` listeners): the **outbox**. An
+    `outbox_events` row and one `outbox_deliveries` row per listener are written **in the change's
+    transaction**; delivered by a nudge right after the commit and by the `outbox.deliver` poll every
+    30 s (claims with `FOR UPDATE SKIP LOCKED`, creation order); retried after 10 s, 1 min, 5 min,
+    30 min, then every 2 h; **dead after 10 failures** (logged; an admin retries it with
+    `POST /outbox/deliveries/:id/retry`, `core.outbox.manage`, audited). Delivered events are
+    deleted after 30 days (`outbox.cleanup`); dead ones are kept. `hr.payroll.approved`,
+    `hr.employee.deactivated`, and every notification event.
+- **Listeners are idempotent.** An outbox listener's `handle` runs in the delivery's transaction,
+  which first marks that (event, listener) delivered — a redelivery finds it marked and does
+  nothing — so the listener's writes (through `txHost.tx`) and the mark commit together; a throw rolls
+  both back. A listener never opens a `RequiresNew` (a second pooled connection while the delivery's
+  is held). Fire-and-forget listeners must be safe to run twice on their own.
 
 **3. Read: "I just need to show data."** A repository may read other modules' tables for lists,
 display and reports. **Never for writes.**
@@ -252,8 +280,18 @@ UUID) and `@nestjs-cls/transactional` with the Prisma adapter keeps the open tra
   move a repository over when its writes must be audited (#105 moved stages, the HR lists and the
   penalty catalogue; T28 refresh tokens and employees; T29 penalties, lateness and payroll).
 - Never pass options to a nested `withTransaction`; only the request transaction sets them.
-- **After-commit work** (events): `AfterCommit.run(fn)` queues `fn` until the open request
-  transaction commits (dropped on rollback), or runs it at once when none is open.
+- **After-commit work** (events): `AfterCommit.run(fn)` queues `fn` until the open transaction
+  commits (dropped on rollback), or runs it at once when none is open. Inside a transaction opened
+  without a queue (a plain `txHost.withTransaction` outside a request) it **throws**
+  (`AfterCommitWithoutQueueError`): open it with `afterCommit.inTransaction` instead.
+  `AfterCommit.onRollback(fn)` is the opposite: work for a rollback (a file written for the change
+  is deleted again — the logo, an employee's photo).
+- **One pooled connection at a time.** Nothing may hold a connection while it waits for another: an
+  `@Audited` handler holds the request transaction's for the whole request, so under it no
+  `Propagation.RequiresNew` and no write on the plain client (#109's starvation).
+  `src/database/connections.spec.ts` lists every `RequiresNew` and plain-client write with why it is
+  safe; a new one fails until it is justified there. `POST /auth/login` and `POST /account/password`
+  are `@NotAudited` for this reason and record their own entries in one `afterCommit.inTransaction`.
 
 **The audit log** (`core/audit`, §9). One append-only table, `audit_entries`, written by every
 module through core's exported `AuditService` — never through its repository.
@@ -326,8 +364,9 @@ module through core's exported `AuditService` — never through its repository.
   entry keeps the old history shape (the history key as the field, whole snapshots as before /
   after, both names as the label), and a failing entry rolls the change back. Their repositories
   use `txHost.tx` so they join that transaction. `settings.changed` still fires, after the commit,
-  for real changes only; nothing records history from it. No outbox: the history row is core's own
-  table written in the same transaction, and no other module needs the event to arrive.
+  for real changes only; nothing records history from it. Fire-and-forget, not the outbox: the
+  history row is core's own table written in the same transaction, and no other module needs the
+  event to arrive.
 - **Dates** on the audit screens are read in the school's time zone (`SCHOOL_TIME_ZONE`, Cairo, in
   `core/audit/lib/time.ts`): day headers, times and the date filter's day edges. Calendars start the
   week on Sunday in both languages (the school's working week, `WEEK_STARTS_ON`).
@@ -543,15 +582,21 @@ Work on a clock — backups, reminders, reports (`core/jobs`, `@nestjs/schedule`
   of `pg_try_advisory_lock`, held by a transaction open for the run (up to 60 minutes). It is released
   when the transaction ends, also if the process dies, and can't be left behind on a pooled
   connection. A container that doesn't get the lock skips the run (`skipped`, nothing recorded).
+  A job that is safe to run in two containers at once declares `lock: false` and runs without it —
+  the outbox's jobs, which claim rows with `FOR UPDATE SKIP LOCKED`; the lock's transaction would
+  otherwise hold a pooled connection for the whole run while the job's work needs another.
 - **`job_runs`** (job name, `started_at`, `finished_at`, `status` `success` | `failed`, `error` text):
   one row per run that took the lock. A failing job is logged and recorded with its error (stack, cut
   to 4,000 characters); a failure to take the lock or to record is logged too. A job never throws
-  into the API.
+  into the API. A run whose `run()` returns `'idle'` (nothing to do — a frequent poll) is not
+  recorded.
 - **Tests.** Jobs are on their clocks only when `jobs.enabled` (env `JOBS_ENABLED`, default on, **off
   under `NODE_ENV=test`**), so unit and e2e tests never run one by itself. A test runs one by name:
-  `app.get(JobRunner).run('<name>')` → `'success' | 'failed' | 'skipped'`.
+  `app.get(JobRunner).run('<name>')` → `'success' | 'failed' | 'skipped' | 'idle'`.
 - **Jobs today:** `login-attempts.cleanup` (`core/sign-in-limit`), nightly at 03:00 school time:
   deletes `login_attempts` rows whose window and lock both ended more than a day ago.
+  `outbox.deliver` (`core/events`, every 30 s, `lock: false`): delivers due outbox deliveries.
+  `outbox.cleanup` (`core/events`, 03:30, `lock: false`): deletes delivered events older than 30 days.
 
 ### Deliberate shortcuts
 
@@ -563,7 +608,7 @@ not mistakes:
 | Our choice | Strict version | Why ours is fine here | Cost, and how to tighten later |
 |---|---|---|---|
 | Read other modules' tables directly | Only through the owner's API or a copied read model | One team, one database; saves a lot of code | A column change can break another module's query. Tests and review catch it. Move a hot spot behind a service if it keeps breaking |
-| In-memory events, no outbox yet | Outbox table, so no event is ever lost | Fine for notifications; simpler to start | A crash between write and event loses the side effect. Add an outbox for critical events when needed |
+| Fire-and-forget events stay in memory | Every event through the outbox | Only notices and cache refreshes are fire-and-forget; anything whose loss leaves data wrong or someone untold is must-deliver (outbox) | A crash between the commit and a fire-and-forget listener loses that side effect. Move the event to `MUST_DELIVER_EVENTS` if that ever matters |
 
 The strict versions mainly pay off for systems that will be split into separate services, or that are
 built by many teams. Neither applies here.
@@ -592,8 +637,9 @@ The first module built, and the first demo for the client (payroll and penalties
      table.
   3. **Dependency inversion:** HR defines an interface ("extra paid hours for employee X this
      month"); academics implements and registers it.
-- **Events HR emits** (for higher modules to react): `employee.hired`, `employee.deactivated`,
-  `employee.updated`.
+- **Events HR publishes** (for higher modules to react): `hr.employee.hired`,
+  `hr.employee.updated` (fire-and-forget), `hr.employee.deactivated` and `hr.payroll.approved`
+  (must-deliver). Details: `docs/EVENTS.md`.
 
 ### Enforcing the module rules
 
@@ -716,7 +762,7 @@ apps/api/
 │   ├── core/                         ← business foundation
 │   │   ├── auth/  users/  roles/  sign-in-limit/
 │   │   ├── settings/  feature-flags/  school-structure/
-│   │   ├── audit/  jobs/  notifications/  files/
+│   │   ├── audit/  jobs/  events/  notifications/  files/
 │   │   └── core.module.ts
 │   └── modules/
 │       ├── hr/                       ← employees, departments, contracts, staff attendance,
@@ -744,7 +790,7 @@ modules/fees/
 ├── interfaces/                       ← IFeePlansRepository, IPaymentsRepository
 ├── repositories/                     ← every Prisma call, extends BaseRepository
 ├── dto/                              ← class-validator request contracts
-├── events/                           ← emitted events + listeners/
+├── events/                           ← its listeners (events are published through core/events)
 └── __tests__/
 ```
 

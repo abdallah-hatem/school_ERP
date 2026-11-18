@@ -4,15 +4,18 @@ import * as shared from '@school-erp/shared';
 
 /*
  * docs/EVENTS.md stays true to the code (owner, 2026-11-18). A source scan, like the audit and
- * permission scans: every event constant in packages/shared, every emit site and every
- * `@OnEvent` listener in apps/api/src, and every file that opens or joins a transaction must be
- * in the doc — and everything the doc names must still exist.
+ * permission scans: every event constant in packages/shared, every publish site and every listener
+ * (`@OnDomainEvent`, `@OutboxListener`) in apps/api/src, and every file that opens or joins a
+ * transaction must be in the doc — and everything the doc names must still exist. Each event's
+ * kind (must-deliver or fire-and-forget) must match `MUST_DELIVER_EVENTS`.
  */
 
 const ROOT = join(__dirname, '..', '..', '..', '..', '..');
 const SRC = join(ROOT, 'apps', 'api', 'src');
 const DOC_PATH = 'docs/EVENTS.md';
 const FIX = `Update ${DOC_PATH} (see its "How to update this file").`;
+/** core/events defines DomainEvents and the decorators: not a publisher or a listener itself. */
+const MECHANISM = 'apps/api/src/core/events/';
 
 const rel = (path: string): string => relative(ROOT, path).split('\\').join('/');
 
@@ -24,7 +27,7 @@ function sourceFiles(dir: string): string[] {
   });
 }
 
-/** `HrEvent.PAYROLL_APPROVED` → `'payroll.approved'`, for every `*Event` constant group. */
+/** `HrEvent.PAYROLL_APPROVED` → `'hr.payroll.approved'`, for every `*Event` constant group. */
 function eventConstants(): Map<string, string> {
   const out = new Map<string, string>();
   for (const [group, value] of Object.entries(shared)) {
@@ -38,15 +41,18 @@ function eventConstants(): Map<string, string> {
 
 const EVENT_REF = /\b([A-Z]\w*Event)\.([A-Z][A-Z0-9_]*)\b/g;
 const TRANSACTION_SITE =
-  /withTransaction\(|\.inTransaction\(|afterCommit\.transaction\(|afterCommit\.run\(|Propagation\.RequiresNew|\$transaction\(/;
+  /withTransaction\(|\.inTransaction\(|afterCommit\.transaction\(|afterCommit\.run\(|afterCommit\.onRollback\(|Propagation\.RequiresNew|\$transaction\(/;
+const LISTENER = /@(OnDomainEvent|OutboxListener)\(\s*(?:\{\s*event:\s*)?([A-Z]\w*Event\.[A-Z0-9_]+)/g;
 
 interface Listener {
   event: string;
+  kind: 'OnDomainEvent' | 'OutboxListener';
   className: string;
   file: string;
 }
 
 const events = eventConstants();
+const mustDeliver = new Set<string>(shared.MUST_DELIVER_EVENTS);
 const files = sourceFiles(SRC).map((path) => ({ path: rel(path), text: readFileSync(path, 'utf8') }));
 const doc = readFileSync(join(ROOT, DOC_PATH), 'utf8');
 
@@ -70,10 +76,12 @@ function catalogue(): { ref: string; name: string; text: string }[] {
     });
 }
 
-/** Event refs used by every file that injects `EventEmitter2` (they emit those events). */
-function emitters(): Map<string, string[]> {
+/** The files that publish (inject `DomainEvents`), with the event refs each uses. */
+const publishers = files.filter((f) => !f.path.startsWith(MECHANISM) && /:\s*DomainEvents\b/.test(f.text));
+
+function publishSites(): Map<string, string[]> {
   const out = new Map<string, string[]>();
-  for (const { path, text } of files.filter((f) => f.text.includes('EventEmitter2'))) {
+  for (const { path, text } of publishers) {
     const refs = [...text.matchAll(EVENT_REF)].map((m) => `${m[1]}.${m[2]}`).filter((r) => events.has(r));
     for (const ref of new Set(refs)) out.set(ref, [...(out.get(ref) ?? []), path]);
   }
@@ -81,47 +89,62 @@ function emitters(): Map<string, string[]> {
 }
 
 function listeners(): Listener[] {
-  return files.flatMap(({ path, text }) =>
-    [...text.matchAll(/@OnEvent\(\s*([^),]+)/g)].map((m) => {
-      const classes = [...text.slice(0, m.index).matchAll(/class\s+(\w+)/g)];
-      return { event: m[1].trim(), className: classes.at(-1)?.[1] ?? '?', file: path };
-    }),
-  );
+  return files
+    .filter((f) => !f.path.startsWith(MECHANISM))
+    .flatMap(({ path, text }) =>
+      [...text.matchAll(LISTENER)].map((m) => {
+        // A class decorator: the class it marks comes after it.
+        const after = /class\s+(\w+)/.exec(text.slice(m.index));
+        return {
+          kind: m[1] as Listener['kind'],
+          event: m[2],
+          className: after?.[1] ?? '?',
+          file: path,
+        };
+      }),
+    );
 }
 
 describe(`${DOC_PATH} matches the code`, () => {
   const sections = catalogue();
   const byRef = new Map(sections.map((s) => [s.ref, s]));
-  const emitSites = emitters();
+  const sites = publishSites();
   const listenerList = listeners();
 
-  it('finds the events, emit sites and listeners', () => {
+  it('finds the events, publish sites and listeners', () => {
     expect(events.size).toBeGreaterThan(3);
-    expect(emitSites.size).toBeGreaterThan(3);
-    expect(listenerList.length).toBeGreaterThan(0);
+    expect(sites.size).toBeGreaterThan(3);
+    expect(listenerList.length).toBeGreaterThan(1);
   });
 
-  it('emits and listens by the shared constants, never by a string', () => {
+  it('publishes and listens by the shared constants, never by a string', () => {
     const literal = files
-      .filter((f) => /\.emit(?:Async)?\(\s*['"`]|@OnEvent\(\s*['"`]/.test(f.text))
+      .filter((f) => /\.publish\(\s*['"`]|@OnDomainEvent\(\s*['"`]|@OutboxListener\(\s*\{\s*event:\s*['"`]/.test(f.text))
       .map((f) => f.path);
     expect(literal).toEqual([]);
     const unknown = listenerList.filter((l) => !events.has(l.event)).map((l) => `${l.file}: ${l.event}`);
     expect(unknown).toEqual([]);
-    const silent = files
-      .filter((f) => f.text.includes('EventEmitter2'))
+    const silent = publishers
       .filter((f) => ![...f.text.matchAll(EVENT_REF)].some((m) => events.has(`${m[1]}.${m[2]}`)))
       .map((f) => f.path);
     expect(silent).toEqual([]);
   });
 
-  it('every event constant has its catalogue section, with the right name', () => {
+  it('every event constant has its catalogue section, with the right name and kind', () => {
     const missing = [...events].filter(([ref]) => !byRef.has(ref)).map(([ref, name]) => `${ref} ('${name}')`);
     expect({ missing, fix: FIX }).toEqual({ missing: [], fix: FIX });
     const wrong = sections
       .filter((s) => events.has(s.ref) && events.get(s.ref) !== s.name)
       .map((s) => `${s.ref}: doc says '${s.name}', code says '${events.get(s.ref)}'`);
     expect({ wrong, fix: FIX }).toEqual({ wrong: [], fix: FIX });
+    const kinds = sections
+      .filter((s) => events.has(s.ref))
+      .flatMap((s) => {
+        const row = s.text.split('\n').find((line) => line.startsWith('| Kind |')) ?? '';
+        const expected = mustDeliver.has(events.get(s.ref)!) ? 'must-deliver' : 'fire-and-forget';
+        return row.includes(`**${expected}**`) ? [] : [`${s.ref}: its "| Kind |" row must say **${expected}**`];
+      });
+    expect({ kinds, fix: FIX }).toEqual({ kinds: [], fix: FIX });
   });
 
   it('the catalogue names no event that no longer exists', () => {
@@ -129,17 +152,17 @@ describe(`${DOC_PATH} matches the code`, () => {
     expect({ gone, fix: FIX }).toEqual({ gone: [], fix: FIX });
   });
 
-  it("every emit site is in its event's section, and every emitter named there still emits it", () => {
-    const missing = [...emitSites].flatMap(([ref, paths]) =>
-      paths.filter((p) => !byRef.get(ref)?.text.includes(p)).map((p) => `${ref} emitted by ${p}`),
+  it("every publish site is in its event's section, and every publisher named there still publishes it", () => {
+    const missing = [...sites].flatMap(([ref, paths]) =>
+      paths.filter((p) => !byRef.get(ref)?.text.includes(p)).map((p) => `${ref} published by ${p}`),
     );
     expect({ missing, fix: FIX }).toEqual({ missing: [], fix: FIX });
     const stale = sections.flatMap((s) => {
-      const row = s.text.split('\n').find((line) => line.startsWith('| Emitted by |')) ?? '';
+      const row = s.text.split('\n').find((line) => line.startsWith('| Published by |')) ?? '';
       return [...row.matchAll(/`(apps\/[\w./-]+\.ts)`/g)]
         .map((m) => m[1])
-        .filter((p) => !(emitSites.get(s.ref) ?? []).includes(p))
-        .map((p) => `${s.ref}: ${p} no longer emits it`);
+        .filter((p) => !(sites.get(s.ref) ?? []).includes(p))
+        .map((p) => `${s.ref}: ${p} no longer publishes it`);
     });
     expect({ stale, fix: FIX }).toEqual({ stale: [], fix: FIX });
   });

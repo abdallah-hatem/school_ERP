@@ -74,8 +74,9 @@ describe('AfterCommit', () => {
   it('a commit drops the rollback work', async () => {
     const { afterCommit } = makeAfterCommit();
     const seen: string[] = [];
-    await afterCommit.transaction(async () => {
+    await afterCommit.transaction(() => {
       afterCommit.onRollback(() => seen.push('rolled back'));
+      return Promise.resolve();
     });
     expect(seen).toEqual([]);
   });

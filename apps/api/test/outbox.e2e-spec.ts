@@ -173,7 +173,7 @@ describe('Outbox — must-deliver events (e2e)', () => {
     });
     const [event] = await outboxEvents(db, HrEvent.PAYROLL_APPROVED, { runId: run.id });
     expect(event?.status).toBe('delivered');
-    expect(await deliveryOf(event!.id, PAYROLL_TAXES_LISTENER)).toMatchObject({
+    expect(await deliveryOf(event.id, PAYROLL_TAXES_LISTENER)).toMatchObject({
       status: 'delivered',
       attempts: 1,
       deliveredAt: expect.any(Date),
@@ -188,8 +188,8 @@ describe('Outbox — must-deliver events (e2e)', () => {
     const [event] = await outboxEvents(db, HrEvent.EMPLOYEE_DEACTIVATED, { employeeId: emp });
     expect(event?.status).toBe('pending');
     // The other listener is not held back by the failing one.
-    expect(await deliveryOf(event!.id, COUNTER)).toMatchObject({ status: 'delivered', attempts: 1 });
-    const failed = await deliveryOf(event!.id, FLAKY);
+    expect(await deliveryOf(event.id, COUNTER)).toMatchObject({ status: 'delivered', attempts: 1 });
+    const failed = await deliveryOf(event.id, FLAKY);
     expect(failed).toMatchObject({ status: 'pending', attempts: 1 });
     expect(failed.lastError).toContain('flaky listener says no');
     const wait = failed.nextAttemptAt.getTime() - Date.now();
@@ -199,13 +199,13 @@ describe('Outbox — must-deliver events (e2e)', () => {
     // Not due yet: the poll leaves it alone.
     const runs = () => db.jobRun.count({ where: { jobName: OUTBOX_DELIVER_JOB } });
     await app.get(OutboxDelivery).deliverDue();
-    expect((await deliveryOf(event!.id, FLAKY)).attempts).toBe(1);
+    expect((await deliveryOf(event.id, FLAKY)).attempts).toBe(1);
 
     // Due: the poll delivers it, and records that run.
     await db.outboxDelivery.update({ where: { id: failed.id }, data: { nextAttemptAt: new Date(Date.now() - 1000) } });
     const before = await runs();
     await expect(app.get(JobRunner).run(OUTBOX_DELIVER_JOB)).resolves.toBe('success');
-    expect(await deliveryOf(event!.id, FLAKY)).toMatchObject({ status: 'delivered', attempts: 2 });
+    expect(await deliveryOf(event.id, FLAKY)).toMatchObject({ status: 'delivered', attempts: 2 });
     expect((await outboxEvents(db, HrEvent.EMPLOYEE_DEACTIVATED, { employeeId: emp }))[0]?.status).toBe('delivered');
     expect(callsOf(FLAKY, emp)).toBe(2);
     expect(callsOf(COUNTER, emp)).toBe(1);
@@ -249,7 +249,7 @@ describe('Outbox — must-deliver events (e2e)', () => {
 
     // A redelivery of a handled delivery (its lease ran out, say) is a no-op.
     await delivery.deliver({
-      id: event.deliveries[0]!.id,
+      id: event.deliveries[0].id,
       eventId: event.id,
       listener: COUNTER,
       attempts: 0,
@@ -264,7 +264,7 @@ describe('Outbox — must-deliver events (e2e)', () => {
   it('an admin retries a dead delivery: audited (dead → pending), delivered right after; only a dead one; core.outbox.manage only', async () => {
     const marker = randomUUID();
     const event = await stored(marker, { status: 'dead', attempts: 10 });
-    const id = event.deliveries[0]!.id;
+    const id = event.deliveries[0].id;
 
     const dead = (await http(app).get('/outbox/deliveries?status=dead&limit=100').expect(200)).body
       .data as OutboxDeliveryView[];
@@ -304,7 +304,7 @@ describe('Outbox — must-deliver events (e2e)', () => {
       entityLabel: `${HrEvent.EMPLOYEE_DEACTIVATED} → ${COUNTER}`,
       actorId: user.id,
     });
-    expect(entries[0]!.changes as unknown as AuditChange[]).toEqual([
+    expect(entries[0].changes as unknown as AuditChange[]).toEqual([
       { field: 'status', before: 'dead', after: 'pending' },
     ]);
 

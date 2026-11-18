@@ -56,7 +56,7 @@ export class DomainEvents {
       );
     }
     if (isMustDeliver(name)) await this.toOutbox(name, payload);
-    else await this.afterCommit.run(() => this.dispatch(name as FireAndForgetEventName, payload));
+    else await this.afterCommit.run(() => this.dispatch(name, payload));
   }
 
   /** Runs every fire-and-forget listener of `name`, in order; logs each failure and goes on. */
