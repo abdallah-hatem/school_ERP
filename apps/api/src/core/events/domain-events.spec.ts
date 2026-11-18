@@ -2,8 +2,9 @@ import { CoreEvent, HrEvent, SettingsEvent, type PayrollApprovedEvent } from '@s
 import type { AfterCommit } from '../../database/transactions';
 import { DomainEvents } from './domain-events';
 import { EventListeners } from './event-listeners';
-import type { OutboxDelivery } from './outbox-delivery.service';
-import type { OutboxRepository } from './repositories/outbox.repository';
+import { OutboxDelivery } from './outbox-delivery.service';
+import type { ClaimedDelivery, OutboxRepository } from './repositories/outbox.repository';
+import type { ClsService } from 'nestjs-cls';
 
 /**
  * `AfterCommit`, faked as one open transaction: `run()` queues until `commit()`, `rollback()`
@@ -37,7 +38,7 @@ function makeEvents(opts: { open?: boolean } = {}) {
   };
   const listeners = new EventListeners({} as never);
   const outbox = { insertEvent: jest.fn(() => Promise.resolve('event-1')) };
-  const delivery = { nudge: jest.fn(() => Promise.resolve({ delivered: 1, failed: 0 })) };
+  const delivery = { nudgeSoon: jest.fn(), idle: jest.fn(() => Promise.resolve()) };
   const events = new DomainEvents(
     afterCommit as unknown as AfterCommit,
     listeners,
@@ -145,9 +146,9 @@ describe('DomainEvents.publish — must-deliver', () => {
       ['accounting.payroll-taxes'],
       expect.any(Date),
     );
-    expect(delivery.nudge).not.toHaveBeenCalled();
+    expect(delivery.nudgeSoon).not.toHaveBeenCalled();
     await commit();
-    expect(delivery.nudge).toHaveBeenCalledWith('event-1');
+    expect(delivery.nudgeSoon).toHaveBeenCalledWith('event-1');
   });
 
   it('a rollback: no nudge (and the outbox row rolls back with the change)', async () => {
@@ -155,7 +156,7 @@ describe('DomainEvents.publish — must-deliver', () => {
     listeners.addOutbox(HrEvent.PAYROLL_APPROVED, 'accounting.payroll-taxes', { handle: jest.fn() });
     await events.publish(HrEvent.PAYROLL_APPROVED, approved, { mustDeliver: true });
     rollback();
-    expect(delivery.nudge).not.toHaveBeenCalled();
+    expect(delivery.nudgeSoon).not.toHaveBeenCalled();
   });
 
   it('outside a transaction: written in one of its own and nudged at once', async () => {
@@ -163,7 +164,7 @@ describe('DomainEvents.publish — must-deliver', () => {
     listeners.addOutbox(HrEvent.PAYROLL_APPROVED, 'accounting.payroll-taxes', { handle: jest.fn() });
     await events.publish(HrEvent.PAYROLL_APPROVED, approved, { mustDeliver: true });
     expect(outbox.insertEvent).toHaveBeenCalledTimes(1);
-    expect(delivery.nudge).toHaveBeenCalledWith('event-1');
+    expect(delivery.nudgeSoon).toHaveBeenCalledWith('event-1');
   });
 
   it('no outbox listener: the event is still written (delivered at once), nothing to nudge', async () => {
@@ -180,7 +181,87 @@ describe('DomainEvents.publish — must-deliver', () => {
       expect.any(Date),
     );
     await commit();
-    expect(delivery.nudge).not.toHaveBeenCalled();
+    expect(delivery.nudgeSoon).not.toHaveBeenCalled();
+  });
+});
+
+describe('DomainEvents.publish — the nudge never holds the request', () => {
+  /**
+   * The real `OutboxDelivery` over a fake repository (one due delivery) and a listener that hangs
+   * until released — a stuck accounting listener, say. Outside a transaction, so "after the
+   * commit" is now.
+   */
+  function withSlowListener() {
+    const { afterCommit, listeners, outbox } = makeEvents({ open: false });
+    const row: ClaimedDelivery = {
+      id: 'd1',
+      eventId: 'event-1',
+      listener: 'accounting.payroll-taxes',
+      attempts: 0,
+      eventName: HrEvent.PAYROLL_APPROVED,
+      payload: approved,
+      seq: BigInt(1),
+      publishedAt: new Date(),
+    };
+    const repository = {
+      claim: jest.fn(() => Promise.resolve([row])),
+      markDelivered: jest.fn(() => Promise.resolve(true)),
+      settleEvent: jest.fn(() => Promise.resolve()),
+    };
+    const contexts: string[] = [];
+    const cls = {
+      run: (opts: { ifNested?: string }, fn: () => unknown) => (contexts.push(opts.ifNested ?? ''), fn()),
+    };
+    const tx = { transaction: (fn: () => Promise<unknown>) => fn() };
+    const delivery = new OutboxDelivery(
+      repository as unknown as OutboxRepository,
+      listeners,
+      tx as unknown as AfterCommit,
+      cls as unknown as ClsService,
+    );
+    const events = new DomainEvents(
+      afterCommit as unknown as AfterCommit,
+      listeners,
+      outbox as unknown as OutboxRepository,
+      delivery,
+    );
+    let release!: () => void;
+    const handled = jest.fn();
+    listeners.addOutbox(HrEvent.PAYROLL_APPROVED, 'accounting.payroll-taxes', {
+      handle: () =>
+        new Promise<void>((resolve) => {
+          release = () => (handled(), resolve());
+        }),
+    });
+    return { events, repository, handled, contexts, release: () => release() };
+  }
+
+  it('publish (and the request) resolves while the listener is still running; idle() waits for it', async () => {
+    const { events, repository, handled, contexts, release } = withSlowListener();
+    await events.publish(HrEvent.PAYROLL_APPROVED, approved, { mustDeliver: true });
+    // Returned before the nudge even claimed: it starts on the next turn of the event loop.
+    expect(repository.claim).not.toHaveBeenCalled();
+    let idle = false;
+    const waiting = events.idle().then(() => (idle = true));
+    await new Promise((r) => setImmediate(r));
+    await new Promise((r) => setImmediate(r));
+    expect(repository.claim).toHaveBeenCalledTimes(1);
+    expect(handled).not.toHaveBeenCalled();
+    expect(idle).toBe(false);
+    release();
+    await waiting;
+    expect(handled).toHaveBeenCalledTimes(1);
+    expect(repository.settleEvent).toHaveBeenCalledWith('event-1');
+    // The nudge and its delivery each run in a context of their own, never the request's.
+    expect(contexts).toEqual(['override', 'override']);
+  });
+
+  it('a nudge that fails (database down) is logged, never thrown at the request; idle() still resolves', async () => {
+    const { events, repository, handled } = withSlowListener();
+    repository.claim.mockRejectedValueOnce(new Error('connection refused'));
+    await expect(events.publish(HrEvent.PAYROLL_APPROVED, approved, { mustDeliver: true })).resolves.toBeUndefined();
+    await expect(events.idle()).resolves.toBeUndefined();
+    expect(handled).not.toHaveBeenCalled();
   });
 });
 

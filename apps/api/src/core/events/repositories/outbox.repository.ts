@@ -10,7 +10,7 @@ export interface ClaimedDelivery {
   id: string;
   eventId: string;
   listener: string;
-  /** Tries made before this one. */
+  /** Failed tries before this one (a delivered row keeps the count it had: 0 when it never failed). */
   attempts: number;
   eventName: string;
   payload: unknown;
@@ -77,13 +77,14 @@ export class OutboxRepository {
   }
 
   /**
-   * Claims up to `limit` due pending deliveries (of one event, or of all), oldest event first: one
+   * Claims up to `limit` pending deliveries due by `dueBy` (inclusive; the pass's start plus a small
+   * tolerance, `claimDueBy`) — of one event, or of all — oldest event first: one
    * statement that locks them with `FOR UPDATE SKIP LOCKED` — rows another worker is claiming are
    * skipped, never waited for — and moves their `next_attempt_at` to `leaseUntil`, so no other pass
    * takes them while this one delivers. A worker that dies lets the lease run out: they are retried.
    */
   async claim(options: {
-    now: Date;
+    dueBy: Date;
     leaseUntil: Date;
     limit: number;
     eventId?: string;
@@ -94,7 +95,7 @@ export class OutboxRepository {
         SELECT d."id"
         FROM "outbox_deliveries" d
         JOIN "outbox_events" e ON e."id" = d."event_id"
-        WHERE d."status" = 'pending' AND d."next_attempt_at" <= ${utc(options.now)} ${ofEvent}
+        WHERE d."status" = 'pending' AND d."next_attempt_at" <= ${utc(options.dueBy)} ${ofEvent}
         ORDER BY e."seq", d."listener"
         LIMIT ${options.limit}
         FOR UPDATE OF d SKIP LOCKED
@@ -112,14 +113,15 @@ export class OutboxRepository {
   }
 
   /**
-   * The idempotency mark, inside the listener's transaction: pending → delivered. False when it was
+   * The idempotency mark, inside the listener's transaction: pending → delivered (`attempts`, the
+   * failures, unchanged). False when it was
    * already delivered (or dead) — this (event, listener) is handled: do nothing. A second worker
    * holding the same delivery waits here on the row lock until the first commits, then gets false.
    */
   async markDelivered(id: string, now: Date): Promise<boolean> {
     const { count } = await this.db.outboxDelivery.updateMany({
       where: { id, status: 'pending' },
-      data: { status: 'delivered', deliveredAt: now, attempts: { increment: 1 } },
+      data: { status: 'delivered', deliveredAt: now },
     });
     return count === 1;
   }

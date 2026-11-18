@@ -18,7 +18,7 @@ import type { Response } from 'supertest';
 import { monthOf, todayIsoDate } from '../src/common/utils/dates.util';
 import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
-import { outboxEvents } from './helpers/events';
+import { outboxEvents, outboxIdle } from './helpers/events';
 import { createAppAsTestUser, giveRoles } from './helpers/as-test-user';
 
 const DEDUCT = (days: number): ViolationLevelInput[] => [{ level: 1, action: 'DEDUCT_DAYS', days }];
@@ -114,7 +114,12 @@ describe('HR payroll and dashboard (e2e)', () => {
       .data as PayrollRun;
   const recalculate = (id: string) => http(app).post(`/hr/payroll-runs/${id}/recalculate`);
   const approve = (id: string) => http(app).post(`/hr/payroll-runs/${id}/approve`);
-  const approveOk = async (id: string) => (await approve(id).expect(200)).body.data as PayrollRun;
+  /** Approves, then waits for the outbox nudge (accounting's taxes) that runs after the response. */
+  const approveOk = async (id: string) => {
+    const run = (await approve(id).expect(200)).body.data as PayrollRun;
+    await outboxIdle(app);
+    return run;
+  };
   const addAdjustment = (id: string, body: Record<string, unknown>) =>
     http(app).post(`/hr/payroll-runs/${id}/adjustments`).send(body);
   const payslip = (id: string, lineId: string) =>
@@ -363,7 +368,8 @@ describe('HR payroll and dashboard (e2e)', () => {
 
     const approved = await approveOk(run.id);
     expect(approved.approvedAt).not.toBeNull();
-    // Must-deliver: one outbox row, written with the approval and delivered (accounting's taxes).
+    // Must-deliver: one outbox row, written with the approval and delivered (accounting's taxes) by
+    // the nudge `approveOk` waited for.
     expect(await outboxEvents(db, HrEvent.PAYROLL_APPROVED, { runId: run.id })).toEqual([
       {
         id: expect.any(String),

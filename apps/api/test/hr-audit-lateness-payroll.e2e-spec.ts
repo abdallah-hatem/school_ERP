@@ -8,6 +8,7 @@ import {
 import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
 import { outboxEvents } from './helpers/events';
+import { outboxIdle } from './helpers/events';
 import { createAppAsTestUser } from './helpers/as-test-user';
 import { historyMark } from './helpers/history';
 
@@ -65,16 +66,13 @@ describe('HR audit wiring — lateness and payroll (T29, e2e)', () => {
     });
   const changesOf = (e: { changes: unknown }) => e.changes as AuditChange[];
   /**
-   * Approves a run, then waits for accounting's listener (§10) to work out the month: it writes its
-   * own `accounting.payroll.record` entry just after the approval returns, which would otherwise
-   * land inside a later "no entry" window on a slow machine.
+   * Approves a run, then waits for accounting's listener (§10) to work out the month: it runs in
+   * the nudge after the approval returns and writes its own `accounting.payroll.record` entry,
+   * which would otherwise land inside a later "no entry" window.
    */
   const approve = async (run: PayrollRun) => {
     const res = await http(app).post(`/hr/payroll-runs/${run.id}/approve`).expect(200);
-    for (let i = 0; i < 50; i += 1) {
-      if (await db.accountingPayrollRun.findUnique({ where: { month: run.month } })) break;
-      await new Promise((r) => setTimeout(r, 100));
-    }
+    await outboxIdle(app);
     return res.body.data as PayrollRun;
   };
   const field = (e: { changes: unknown }, name: string) => changesOf(e).find((c) => c.field === name);

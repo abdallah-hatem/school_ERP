@@ -56,8 +56,8 @@ export class OutboxAdmin {
   /**
    * A dead delivery gets one more try: back to pending, due now, recorded as
    * `core.outbox.retry` (status dead → pending) in the request's transaction, and tried right
-   * after the commit. Its attempts are kept, so another failure makes it dead again. 404 for an
-   * unknown id; 409 `OUTBOX_NOT_DEAD` for one that isn't dead.
+   * after the commit (a nudge the response doesn't wait for). Its attempts are kept, so another
+   * failure makes it dead again. 404 for an unknown id; 409 `OUTBOX_NOT_DEAD` for one that isn't dead.
    */
   async retry(id: string): Promise<OutboxDeliveryView> {
     return this.afterCommit.inTransaction(async () => {
@@ -77,9 +77,7 @@ export class OutboxAdmin {
         before: { status: 'dead' },
         after: { status: 'pending' },
       });
-      await this.afterCommit.run(async () => {
-        await this.delivery.nudge(row.eventId);
-      });
+      await this.afterCommit.run(() => this.delivery.nudgeSoon(row.eventId));
       return toView((await this.repository.findDelivery(id))!);
     });
   }
