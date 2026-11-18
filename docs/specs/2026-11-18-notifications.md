@@ -458,7 +458,7 @@ later modules        ← the same: own types, call core
 - New **§11 Notifications** (`docs/business/11-notifications.md`): what notifies whom, can't-turn-off
   types, preferences and defaults, reminder timings, dedupe, resolve, access, retention, not the
   audit log.
-- **Index** line for §11 in `docs/BUSINESS_LOGIC.md`; a dated line in `00-recent-changes.md`.
+- **Index** line for §11 in `docs/BUSINESS_LOGIC.md`; a file in `docs/business/recent-changes/`.
 - Later, with the build: §7 gets the reminder timings and Settings → Notifications; §2 the new
   permissions (`core.notifications.view` / `.manage`); §8 moves notifications from Planned to Built.
 

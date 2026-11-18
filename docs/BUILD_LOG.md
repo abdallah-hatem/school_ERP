@@ -232,11 +232,21 @@ phase live in `docs/build-log/`.
   passwords in 15 minutes lock that account for 15 minutes (per account, `login_attempts`, one atomic
   upsert; 429 `TOO_MANY_ATTEMPTS`; sign-in and both password-change paths), admin unlock from Users
   (`POST /users/:id/unlock-sign-in`, audited), lockouts audited; `core/jobs` (`@nestjs/schedule`,
-  advisory lock per job, `job_runs`) with the nightly `login-attempts.cleanup` at 03:00 Cairo.
+  advisory lock per job, `job_runs`) with the nightly `login-attempts.cleanup` at 03:00 Cairo →
+  #109. Its concurrency test exposed pool starvation (a request transaction holding one connection
+  while a `RequiresNew` audit write needs a second): sign-in now records itself in one transaction
+  with the session. `POST /account/password` had the same risk — assigned to the events + outbox
+  build (gap 10). Checked in the browser (EN/AR, desktop/phone): lockout message, locked pill,
+  user-page notice and unlock all work; three small layout fixes are in progress.
 - 2026-11-18 — `docs/EVENTS.md` (owner): every event (name, payload, emitter, listeners, after-commit
   or not, emit vs emitAsync, planned kind) and every transaction boundary, from the code; a unit
   test fails when the doc and the code disagree. Eleven gaps listed there (the `employee.*` events fire
-  inside the transaction; four events have no listener; emit/emitAsync mixed) → `docs/events-catalogue`.
+  inside the transaction; four events have no listener; emit/emitAsync mixed) → #114. All are
+  assigned to the events + outbox build except #9 (token refresh's own transaction, deliberate).
+- 2026-11-18 — Events + outbox build started (owner, the approved design).
+- 2026-11-18 — Docs flow (owner): the build log has one writer, whoever merges (PRs carry a "Log
+  entry" in their body instead); business changes are one file each in
+  `docs/business/recent-changes/`. Stops the docs-only conflicts between parallel PRs.
 
 ## Next up
 
