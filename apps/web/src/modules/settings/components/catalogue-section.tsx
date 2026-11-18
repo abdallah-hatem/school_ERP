@@ -456,6 +456,8 @@ function ViolationRow({
  */
 function CatalogueSkeleton() {
   const { t } = useTranslation();
+  // A view-only user's loaded groups have no ⋯ menu, so neither does their skeleton.
+  const canManage = useCan()('hr.penalty_catalogue.manage');
   const groupHeader = () => (
     <div className="flex flex-wrap items-center gap-3 p-3 sm:p-4">
       <div className="flex min-w-0 flex-1 basis-56 items-center gap-3">
@@ -465,7 +467,7 @@ function CatalogueSkeleton() {
           <SkeletonText className="text-xs" width="w-20" />
         </span>
       </div>
-      <RowActionsSkeleton />
+      {canManage ? <RowActionsSkeleton /> : null}
     </div>
   );
   return (

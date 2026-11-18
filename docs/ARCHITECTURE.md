@@ -382,7 +382,9 @@ Roles are rows, not code (spec P2, R2 / R5 / R8 / R9). A school changes them thr
   `employees.user_id` was copied into it by the migration and was dropped in P4.
 - **The `users.role` enum column is gone** (P3 migration `users_drop_role_add_sign_in`): access
   comes only from `user_roles`, the access token carries only the user's id, the user chip shows the
-  names of their roles and every signed-in user's home is the dashboard (`homeFor(locale)`).
+  names of their roles and every signed-in user's home is the dashboard (`homeFor(locale)`). Without
+  `hr.dashboard.view` the dashboard route renders a welcome instead (`WelcomeView`: the user's name and
+  a link per screen they may open, from `SIDEBAR_SCREENS` + `canOpenScreen`, then My account).
 - **Forced password change** (R9, P3). A temporary password (set on Add user or by "Set temporary
   password") sets `users.must_change_password`. `AuthUser.mustChangePassword` comes with the user on
   every request (and in the sign-in response and `/auth/me`). While it is set, the global

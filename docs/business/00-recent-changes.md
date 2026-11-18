@@ -1,5 +1,12 @@
 # Recent changes
 
+- 2026-11-18 — Roles leftovers (§2, §6, §7): **Home** without the dashboard permission (the
+  Accountant, a stage head, a direct manager) is now a welcome with the person's name and a link to
+  each screen they may open — no HR figures. **Settings** sections someone may view but not change
+  are read-only everywhere (School, HR rules, Structure and lists, penalty catalogue, Accounting):
+  no typing, no adding or removing, no Save. **Payroll adjustments** can be added or removed only
+  with "Adjust payroll" (System admin, HR manager, HR officer — unchanged); others see them
+  read-only, with the reason.
 - 2026-11-18 — Payroll taxes frozen at approval, even when late (§10, §6, review of #85): a month
   whose taxes are worked out after its approval (a missed event) now uses the tax rule in force at
   the approval, not today's. Every change to the tax rule is kept with the moment it took effect.

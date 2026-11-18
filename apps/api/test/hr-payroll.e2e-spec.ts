@@ -1,8 +1,10 @@
 import { INestApplication } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
+  BuiltInRole,
   ErrorCode,
   HrEvent,
+  type AuthUser,
   type CreateEmployeeRequest,
   type EmployeePayrollLine,
   type HrDashboard,
@@ -17,7 +19,7 @@ import type { Response } from 'supertest';
 import { monthOf, todayIsoDate } from '../src/common/utils/dates.util';
 import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
-import { createAppAsTestUser } from './helpers/as-test-user';
+import { createAppAsTestUser, giveRoles } from './helpers/as-test-user';
 
 const DEDUCT = (days: number): ViolationLevelInput[] => [{ level: 1, action: 'DEDUCT_DAYS', days }];
 
@@ -44,6 +46,7 @@ const binary = (res: Response, cb: (err: Error | null, body: Buffer) => void) =>
 
 describe('HR payroll and dashboard (e2e)', () => {
   let app: INestApplication;
+  let user: AuthUser;
   let db: DatabaseService;
   let stageId: string;
   let departmentId: string;
@@ -138,7 +141,7 @@ describe('HR payroll and dashboard (e2e)', () => {
     lines.reduce((n, l) => n + (l[key] as number), 0);
 
   beforeAll(async () => {
-    ({ app } = await createAppAsTestUser());
+    ({ app, user } = await createAppAsTestUser());
     db = app.get(DatabaseService);
     stageId = (await db.stage.create({ data: { nameEn: 'Primary', nameAr: 'ابتدائي' } })).id;
     const mk = async (path: string) =>
@@ -574,6 +577,59 @@ describe('HR payroll and dashboard (e2e)', () => {
       .delete(`/hr/payroll-runs/${run.id}/adjustments/${again.adjustments[0].id}`)
       .expect(409);
     expect(res.body.error).toBe(ErrorCode.PAYROLL_APPROVED);
+  });
+
+  it('hr.payroll.adjust: an HR officer adds and removes an adjustment; a Principal (views payroll, no adjust) → 403 on both, nothing changes', async () => {
+    const emp = await employee();
+    const run = await createRun(nextMonth());
+    const roleUser = async (role: string) => {
+      const row = await db.user.create({
+        data: { email: `${unique(role)}@example.test`, name: role, passwordHash: 'x' },
+        select: { id: true },
+      });
+      await giveRoles(db, row.id, [role]);
+      return row.id;
+    };
+    const officer = await roleUser(BuiltInRole.HR_OFFICER);
+    const principal = await roleUser(BuiltInRole.PRINCIPAL);
+    const as = async <T>(userId: string, fn: () => Promise<T>): Promise<T> => {
+      const own = user.id;
+      user.id = userId;
+      try {
+        return await fn();
+      } finally {
+        user.id = own;
+      }
+    };
+    const body = { employeeId: emp, type: 'ADDITION', amount: 5_000, reason: 'Overtime' };
+    try {
+      // Refused: the Principal may view the run but not adjust it (403 before the run is read).
+      await as(principal, async () => {
+        await http(app).get(`/hr/payroll-runs/${run.id}`).expect(200);
+        const res = await addAdjustment(run.id, body).expect(403);
+        expect(res.body.success).toBe(false);
+      });
+      expect((await getRun(run.id)).adjustments).toHaveLength(0);
+
+      // Allowed: the HR officer adds one…
+      const added = await as(officer, async () => (await addAdjustment(run.id, body).expect(201)).body.data as PayrollRun);
+      const adjId = added.adjustments.find((a) => a.employeeId === emp)!.id;
+      expect(lineOf(added, emp).adjustmentAdditions).toBe(5_000);
+
+      // …which the Principal can't remove either.
+      await as(principal, () => http(app).delete(`/hr/payroll-runs/${run.id}/adjustments/${adjId}`).expect(403));
+      expect((await getRun(run.id)).adjustments.map((a) => a.id)).toEqual([adjId]);
+
+      // The HR officer removes it.
+      const removed = await as(
+        officer,
+        async () => (await http(app).delete(`/hr/payroll-runs/${run.id}/adjustments/${adjId}`).expect(200)).body.data as PayrollRun,
+      );
+      expect(removed.adjustments).toHaveLength(0);
+      expect(lineOf(removed, emp).adjustmentAdditions).toBe(0);
+    } finally {
+      await db.user.deleteMany({ where: { id: { in: [officer, principal] } } });
+    }
   });
 
   it('Approve an APPROVED run → 409; no DELETE route for runs; malformed month → 400', async () => {

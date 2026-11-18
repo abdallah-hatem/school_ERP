@@ -133,6 +133,7 @@
     "listLabel": "Adjustments recorded",
     "none": "No adjustments for this employee this month.",
     "readOnly": "The run is approved: adjustments can't change.",
+    "readOnlyNoPermission": "You can view these adjustments. Changing them needs the Adjust payroll permission.",
     "add": "Add adjustment",
     "type": "Type",
     "amount": "Amount",

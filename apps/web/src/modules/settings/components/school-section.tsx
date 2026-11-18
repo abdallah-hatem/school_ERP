@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { SchoolSettingKey, SETTING_DEFAULTS, WEEKDAYS, workTimeOptions, type SchoolSettings, type UpdateSchoolSettingsRequest } from '@school-erp/shared';
 import { useRef, useState } from 'react';
-import { Can } from '@/core/auth';
+import { Can, useCan } from '@/core/auth';
 import { useForm } from 'react-hook-form';
 import { brandingFrom, useSchoolBranding } from '@/core/settings';
 import { SelectField, TextField, ToggleGroupField } from '@/shared/components/form/fields';
@@ -79,6 +79,8 @@ export function SchoolSection() {
 function SchoolForm({ initial, onSaved }: { initial: SchoolSettings; onSaved: (next: SchoolSettings) => void }) {
   const { t, locale } = useTranslation();
   const { branding, setBranding } = useSchoolBranding();
+  // Without the edit permission the section is shown read-only: fields disabled, no Save bar.
+  const canEdit = useCan()('core.settings.edit');
   const [saved, setSaved] = useState(false);
   const busy = useRef(false);
 
@@ -138,6 +140,7 @@ function SchoolForm({ initial, onSaved }: { initial: SchoolSettings; onSaved: (n
             maxLength={NAME_MAX.school}
             dir="ltr"
             required
+            disabled={!canEdit}
           />
           <TextField
             control={form.control}
@@ -147,6 +150,7 @@ function SchoolForm({ initial, onSaved }: { initial: SchoolSettings; onSaved: (n
             maxLength={NAME_MAX.school}
             dir="rtl"
             required
+            disabled={!canEdit}
           />
           <SelectField
             control={form.control}
@@ -155,6 +159,7 @@ function SchoolForm({ initial, onSaved }: { initial: SchoolSettings; onSaved: (n
             hint={t('settings.school.defaultLanguageHint')}
             options={languageOptions}
             required
+            disabled={!canEdit}
           />
           <div className="grid grid-cols-2 gap-4">
             <SelectField
@@ -165,6 +170,7 @@ function SchoolForm({ initial, onSaved }: { initial: SchoolSettings; onSaved: (n
               hint={t('settings.school.timeHint')}
               options={timeOptions(initial.workStart)}
               required
+              disabled={!canEdit}
             />
             <SelectField
               control={form.control}
@@ -173,6 +179,7 @@ function SchoolForm({ initial, onSaved }: { initial: SchoolSettings; onSaved: (n
               placeholder={t('settings.school.workEndPlaceholder')}
               options={timeOptions(initial.workEnd)}
               required
+              disabled={!canEdit}
             />
           </div>
         </div>
@@ -182,6 +189,7 @@ function SchoolForm({ initial, onSaved }: { initial: SchoolSettings; onSaved: (n
           label={t('settings.school.workingDays')}
           options={weekdayOptions}
           required
+          disabled={!canEdit}
         />
         <Can permission="core.settings.edit">
           <SaveBar

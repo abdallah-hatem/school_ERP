@@ -295,7 +295,7 @@ export function RunPage({
               // Draft: adjust. Approved: recorded adjustments stay viewable; with none, nothing to show.
               {
                 id: 'adjust',
-                label: draft ? t('payroll.table.adjust') : t('payroll.table.columns.adjustments'),
+                label: draft && canAdjust ? t('payroll.table.adjust') : t('payroll.table.columns.adjustments'),
                 icon: AdjustIcon,
                 count,
                 // R6: adjusting needs `hr.payroll.adjust`; without it a draft's adjustments are only viewable.
@@ -533,6 +533,7 @@ export function RunPage({
         runId={run.id}
         month={run.month}
         editable={draft && canAdjust}
+        readOnlyReason={draft ? 'permission' : 'approved'}
         target={adjusting}
         adjustments={adjusting ? adjustmentsOf(run.adjustments, adjusting.employeeId) : []}
         onOpenChange={(open) => {
