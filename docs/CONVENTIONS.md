@@ -65,7 +65,9 @@ faster when Turbo's cache hits). A failure stops the push and prints the error; 
 `.ci-local/`. CI calls the same script, so passing locally means passing in CI. Before a PR that
 touches the API, the database or a screen, also run `pnpm ci:local --full` (adds API e2e and the
 smoke specs; needs Docker). Don't skip the hook with `--no-verify`; if it's wrong, fix the hook.
-GitHub also runs API e2e and the smoke specs (desktop-en and phone-ar shards) on every PR.
+GitHub also runs API e2e and the smoke specs (desktop-en and phone-ar shards) on every PR. A PR
+whose own changes are all docs (`docs/`, `design/mockups/`, any `*.md`) passes those two in seconds
+without running them; lint, typecheck, unit tests and module rules still run in full.
 
 - [ ] **Your branch has the latest `dev` merged in** (owner, 2026-11-17): `git fetch origin && git
       merge origin/dev`, resolve conflicts, re-run the checks, then open the PR. GitHub refuses to
