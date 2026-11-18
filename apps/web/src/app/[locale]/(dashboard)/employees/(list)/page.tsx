@@ -1,6 +1,6 @@
 import { sectionMetadata } from '@/core/navigation/section-metadata';
 import { notFound } from 'next/navigation';
-import { requirePermission } from '@/core/auth';
+import { requireScreen } from '@/core/auth';
 import { EmployeesI18n, EmployeesList, parseEmployeesQuery, type SearchParamsRecord } from '@/modules/hr/employees';
 import { GET_DEPARTMENTS, GET_EMPLOYEES, GET_STAGES } from '@/modules/hr/employees/apis';
 import { isLocale } from '@/shared/lib/i18n';
@@ -18,7 +18,7 @@ export default async function EmployeesPage({
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   // R6: a page the viewer's roles can't open is the not-found screen.
-  await requirePermission('hr.employees.view');
+  await requireScreen('employees');
   const query = parseEmployeesQuery(await searchParams);
 
   // Filters list hidden departments and stages too: hidden items can still have employees.
