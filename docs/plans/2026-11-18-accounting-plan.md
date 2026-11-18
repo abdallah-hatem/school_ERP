@@ -30,8 +30,9 @@ and the System admin. Tax, insurance and gross are salary data: they are hidden 
 | C | Settings → Accounting panel: slices ("the rest" last), fund, insurance share, live example from the shared maths, EN/AR | `ui` | B |
 | D | Taxes on approval: listener on `payroll.approved`, `accounting_payroll_runs/lines`, `GET /accounting/payroll[/:month]`, salary visibility, audit `accounting.payroll.record`, §10 (calculation), §6 | `logic` | B, T29 |
 
-Later (not planned yet): the months' screen (mockups first), journal entries, the employer's
-insurance share.
+| E | Payroll taxes screen (mockup option C): year board (`GET /accounting/payroll/year/:year`, drafts read through HR's `PayrollService`), the month's statement, Excel (`GET /accounting/payroll/:month/export`) and print, `DataTable` totals row, sidebar Accounting live, §10 (screen) | `ui` | D |
+
+Later (not planned yet): journal entries, the employer's insurance share.
 
 ## Edge cases (expected outcome · source)
 

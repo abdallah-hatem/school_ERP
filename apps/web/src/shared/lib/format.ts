@@ -49,6 +49,13 @@ export function formatMonth(month: Month, locale: Locale): string {
   }).format(parseIsoDate(`${month}-01`));
 }
 
+/** `2026-11` → `November` / `نوفمبر` (the year shown elsewhere, e.g. a year board's heading). */
+export function formatMonthName(month: Month, locale: Locale): string {
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], { month: 'long', timeZone: 'UTC' }).format(
+    parseIsoDate(`${month}-01`),
+  );
+}
+
 /** A JS Date (from a picker) → `YYYY-MM-DD` of the day the person picked, in their local calendar. */
 export function toIsoDate(date: Date): IsoDate {
   const y = date.getFullYear();

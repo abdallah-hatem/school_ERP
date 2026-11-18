@@ -90,7 +90,7 @@ describe('SidebarNav (grouped by module)', () => {
 
   it('coming modules are shown with "Soon" and are not links', () => {
     renderNav();
-    for (const name of ['Accounting', 'Inventory', 'Students']) {
+    for (const name of ['Inventory', 'Students']) {
       expect(screen.queryByRole('link', { name: new RegExp(name) })).toBeNull();
       expect(screen.queryByRole('button', { name: new RegExp(name) })).toBeNull();
       const row = screen.getByText(name).closest('[aria-disabled="true"]');
@@ -104,7 +104,9 @@ describe('SidebarNav (grouped by module)', () => {
     pathname = '/en/employees';
     renderNav('rail');
     expect(screen.getByRole('link', { name: 'Dashboard' }).getAttribute('href')).toBe('/en');
-    expect(screen.getByRole('img', { name: 'Accounting — coming soon' })).toBeTruthy();
+    expect(screen.getByRole('img', { name: 'Inventory — coming soon' })).toBeTruthy();
+    // Accounting has one page: the rail links to it.
+    expect(screen.getByRole('link', { name: 'Payroll taxes' }).getAttribute('href')).toBe('/en/accounting/payroll-taxes');
     expect(screen.queryByRole('link', { name: 'Penalties' })).toBeNull();
 
     await user.click(screen.getByRole('button', { name: 'HR' }));
@@ -123,10 +125,24 @@ describe('SidebarNav (grouped by module)', () => {
     expect(hr.getAttribute('aria-expanded')).toBe('true');
     expect(screen.getByRole('link', { name: 'التأخير' }).getAttribute('href')).toBe('/ar/lateness');
     expect(screen.getByRole('link', { name: 'التأخير' }).getAttribute('aria-current')).toBe('page');
-    expect(screen.queryByRole('link', { name: /الحسابات/ })).toBeNull();
-    expect(screen.getAllByText('قريبًا')).toHaveLength(3);
+    expect(screen.getByRole('link', { name: 'ضرائب الرواتب' }).getAttribute('href')).toBe('/ar/accounting/payroll-taxes');
+    expect(screen.getAllByText('قريبًا')).toHaveLength(2);
     await user.click(hr);
     expect(screen.queryByRole('link', { name: 'التأخير' })).toBeNull();
+  });
+
+  it('Accounting is live: its one page, Payroll taxes, for whoever holds accounting.payroll.view', () => {
+    pathname = '/en/accounting/payroll-taxes/2026-10';
+    renderNav();
+    const link = screen.getByRole('link', { name: 'Payroll taxes' });
+    expect(link.getAttribute('href')).toBe('/en/accounting/payroll-taxes');
+    expect(link.getAttribute('aria-current')).toBe('page');
+    // HR's Payroll is a different page: not current on /accounting/payroll-taxes.
+    expect(screen.getByRole('link', { name: 'Payroll' }).getAttribute('aria-current')).toBeNull();
+    cleanup();
+    renderNav('full', 'en', sessionWithout('accounting.payroll.view'));
+    expect(screen.queryByRole('link', { name: 'Payroll taxes' })).toBeNull();
+    expect(screen.queryByText('Accounting')).toBeNull();
   });
 
   describe('only what the user may see (can(), view only)', () => {
@@ -147,7 +163,7 @@ describe('SidebarNav (grouped by module)', () => {
     it('a module with no visible page is not drawn; coming modules still are', () => {
       renderNav('full', 'en', sessionWithout('hr.employees.view', 'hr.penalties.view', 'hr.lateness.view', 'hr.payroll.view'));
       expect(screen.queryByRole('button', { name: 'HR' })).toBeNull();
-      expect(screen.getAllByText('Soon')).toHaveLength(3);
+      expect(screen.getAllByText('Soon')).toHaveLength(2);
       cleanup();
       renderNav('rail', 'en', sessionWithout('hr.employees.view', 'hr.penalties.view', 'hr.lateness.view', 'hr.payroll.view'));
       expect(screen.queryByRole('button', { name: 'HR' })).toBeNull();

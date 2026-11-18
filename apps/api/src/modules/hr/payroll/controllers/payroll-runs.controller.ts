@@ -10,19 +10,17 @@ import {
   ParseUUIDPipe,
   Post,
   Query,
-  StreamableFile,
 } from '@nestjs/common';
 import type { AuthUser } from '@school-erp/shared';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
 import { PaginationQueryDto } from '../../../../common/dto/pagination-query.dto';
 import { resolveLanguage } from '../../../../common/i18n/i18n';
 import { ResponseUtil } from '../../../../common/utils/response.util';
+import { xlsxFile } from '../../../../common/utils/xlsx-file.util';
 import { CreateAdjustmentDto, CreatePayrollRunDto, PayrollRunQueryDto } from '../dto/payroll.dto';
 import { PayrollService } from '../services/payroll.service';
 import { Audited } from '../../../../core/audit';
 import { Permission } from '../../../../core/permissions';
-
-const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 /**
  * Payroll runs (contract: "Payroll — hr"). No DELETE route for runs: an approved run is never
@@ -73,12 +71,7 @@ export class PayrollRunsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Headers('accept-language') acceptLanguage?: string,
   ) {
-    const { fileName, content } = await this.payroll.bankSheet(id, resolveLanguage(acceptLanguage));
-    return new StreamableFile(content, {
-      type: XLSX,
-      disposition: `attachment; filename="${fileName}"`,
-      length: content.length,
-    });
+    return xlsxFile(await this.payroll.bankSheet(id, resolveLanguage(acceptLanguage)));
   }
 
   @Get(':id/lines/:lineId')

@@ -66,8 +66,32 @@ For each employee in the approved run:
   Accounting, which the Accountant opens from the menu; someone who may only view it sees it
   read-only — and see each approved month's payroll taxes.
 
+## The payroll taxes screen (Accounting → Payroll taxes)
+
+- **DECIDED** (owner, 2026-11-18) — **Option C** of the mockups (`design/mockups/accounting-taxes.html`):
+  a **year board** and each month as a **printable statement**.
+- **DECIDED** — The year board shows the year's twelve months, each **approved** (its gross, and
+  the number of employees; it opens the statement), **draft in HR** (HR has a run that isn't
+  approved yet — nothing in accounting until it is) or **nothing yet** ("no payroll in the system";
+  a month still ahead: "not started"). Previous / next year, never past this year. A year with no
+  approved month says so and points to HR payroll.
+- **DECIDED** — The statement: the month's sum across the top — **net + insurance share + income
+  tax + martyrs' fund = gross** — then the employees in two tables, **Insured** and **Not
+  insured**, each with a **subtotal** row; at the foot, the tax rule the month was worked out with
+  and how each line is worked out, with "Same as today's rule" (or "Today's rule is different")
+  for someone who may view the rule in Settings.
+- **DECIDED** — The tables are the app's shared tables (cards on a phone, like every list), not the
+  mockup's drawn ones.
+- **DECIDED** — **Excel**: the month's lines as the viewer sees them (one row each, with insurance,
+  insured salary, net, insurance share, income tax, fund and gross; a total row only for someone who
+  sees every salary) and a second sheet with the tax rule. **Download PDF**: the browser prints the
+  statement on landscape A4, without the menu.
+- **DECIDED** (P4, §2) — An employee outside the viewer's salary scope shows name, code and
+  insurance status; the amounts are hidden ("Salary hidden"), and so are the month's totals, the
+  sum line and the subtotals ("only for someone who sees every salary").
+- **DECIDED** — Only the Accountant and the System admin open it (`accounting.payroll.view`); a
+  school can grant it to another role in Roles. Anyone else gets the not-found page.
+
 ## Planned
 
-- A screen for each approved month's payroll taxes (mockups first). Today they are available to
-  the system but not shown.
 - Journal entries from approved payroll (and later fee payments); the employer's insurance share.

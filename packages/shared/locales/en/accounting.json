@@ -1,0 +1,106 @@
+{
+  "payrollTaxes": {
+    "title": "Payroll taxes",
+    "description": "The school's year at a glance: every approved month with its gross — what it cost on top of the net.",
+    "year": {
+      "label": "Year",
+      "previous": "Previous year",
+      "next": "Next year"
+    },
+    "board": {
+      "label": "Months of {year}",
+      "approved": "Approved",
+      "draft": "Draft in HR",
+      "draftHint": "Shows here once HR approves it.",
+      "none": "No payroll in the system",
+      "notStarted": "Not started",
+      "gross": "Gross",
+      "totalsHidden": "Totals hidden",
+      "notWorkedOut": "Open to see its taxes",
+      "employees": {
+        "zero": "{count} employees",
+        "one": "{count} employee",
+        "two": "{count} employees",
+        "few": "{count} employees",
+        "many": "{count} employees",
+        "other": "{count} employees"
+      }
+    },
+    "empty": {
+      "title": "No approved month in {year}",
+      "body": "A month's statement appears on its tile as soon as HR approves its payroll.",
+      "action": "Open HR payroll"
+    },
+    "statement": {
+      "label": "Payroll taxes statement",
+      "kicker": "{school} · Payroll taxes statement",
+      "approvedOn": "Approved in HR",
+      "insured": "Insured",
+      "notInsured": "Not insured",
+      "insuredOne": "Insured",
+      "notInsuredOne": "Not insured",
+      "subtotal": "Subtotal",
+      "totalsHidden": "Only for someone who sees every salary",
+      "salaryHidden": "Salary hidden",
+      "noneInGroup": "Nobody in this group this month.",
+      "netZero": "Net 0 — floored in HR",
+      "limitedTitle": "You see the amounts of {seen} of {total} employees.",
+      "limitedBody": "Salaries outside your role's scope are hidden, so the month's totals are hidden too. They show only to someone who sees every salary.",
+      "ruleTitle": "Tax rule used",
+      "methodTitle": "How each line is worked out",
+      "method": "The taxable amount is the one that, after its income tax and the martyrs' fund, leaves exactly the net. Gross = net + insurance share + income tax + martyrs' fund. Frozen at approval: a later change to the rule or to anyone's insurance never changes this statement.",
+      "sameRule": "Same as today's rule",
+      "otherRule": "Today's rule is different",
+      "printNote": "Printed from the school's system. Amounts in EGP."
+    },
+    "columns": {
+      "employee": "Employee",
+      "insurance": "Insurance",
+      "insuredSalary": "Insured salary",
+      "net": "Net paid",
+      "insuranceAmount": "Insurance share",
+      "incomeTax": "Income tax",
+      "martyrTax": "Martyrs' fund",
+      "gross": "Gross"
+    },
+    "rule": {
+      "first": "First {amount}",
+      "next": "Next {amount}",
+      "rest": "Above {amount}",
+      "all": "All of it",
+      "insurance": "Employee insurance share (of the insured salary)",
+      "martyr": "Martyrs' fund (of the gross)"
+    },
+    "actions": {
+      "excel": "Excel",
+      "print": "Download PDF",
+      "backToYear": "Payroll taxes"
+    }
+  },
+  "sheet": {
+    "linesName": "Payroll taxes",
+    "ruleName": "Tax rule",
+    "month": "Month",
+    "code": "Employee code",
+    "nameEn": "Name (English)",
+    "nameAr": "Name (Arabic)",
+    "insurance": "Insurance",
+    "insured": "Insured",
+    "notInsured": "Not insured",
+    "insuredSalary": "Insured salary (EGP)",
+    "net": "Net paid (EGP)",
+    "insuranceAmount": "Insurance share (EGP)",
+    "incomeTax": "Income tax (EGP)",
+    "martyrTax": "Martyrs' fund (EGP)",
+    "gross": "Gross (EGP)",
+    "salaryHidden": "Salary hidden",
+    "total": "Total",
+    "slice": "Monthly income-tax slice",
+    "from": "From (EGP)",
+    "width": "Width (EGP)",
+    "rate": "Rate (%)",
+    "rest": "The rest",
+    "insurancePercent": "Employee insurance share (% of the insured salary)",
+    "martyrPercent": "Martyrs' fund (% of the gross)"
+  }
+}
