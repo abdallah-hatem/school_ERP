@@ -9,6 +9,8 @@ import {
   PenaltyAction,
   RepetitionWindow,
   SETTING_LIMITS,
+  TAX_BRACKETS_MAX,
+  taxRuleIssues,
   violationLevelsProblem,
   Weekday,
 } from '@school-erp/shared';
@@ -80,6 +82,45 @@ export const hrRulesSchema = z.object({
   repetitionWindow: z.enum(RepetitionWindow, { error: required }),
 });
 export type HrRulesFormValues = z.infer<typeof hrRulesSchema>;
+
+// ── Accounting rules (§10) ───────────────────────────────────────────────────
+
+/** A rate from 0 up to (not including) 100, with at most 2 decimals. */
+const rate = z
+  .number({ error: required })
+  .min(0, 'settings.errors.rate')
+  .lt(100, 'settings.errors.rate')
+  .refine((v) => Math.abs(v * 100 - Math.round(v * 100)) < 1e-6, 'settings.errors.rate');
+
+/**
+ * The payroll tax rule. Every slice has a width except the last ("the rest"), whose width the
+ * form keeps as null. The whole rule is checked by the shared `taxRuleIssues` — the API's check.
+ */
+export const accountingRulesSchema = z.object({
+  payroll: z
+    .object({
+      brackets: z
+        .array(z.object({ width: z.number({ error: required }).nullable(), percent: rate }))
+        .min(1)
+        .max(TAX_BRACKETS_MAX),
+      martyrPercent: rate,
+      insurancePercent: rate,
+    })
+    .superRefine((value, ctx) => {
+      value.brackets.forEach((b, i) => {
+        const last = i === value.brackets.length - 1;
+        if (!last && (b.width == null || !Number.isInteger(b.width) || b.width <= 0)) {
+          ctx.addIssue({ code: 'custom', path: ['brackets', i, 'width'], message: 'settings.errors.bracketWidth' });
+        }
+      });
+      for (const { issue, index } of taxRuleIssues(value)) {
+        if (issue === 'bracketPlusFund' && index !== undefined) {
+          ctx.addIssue({ code: 'custom', path: ['brackets', index, 'percent'], message: 'settings.errors.bracketPlusFund' });
+        }
+      }
+    }),
+});
+export type AccountingRulesFormValues = z.infer<typeof accountingRulesSchema>;
 
 // ── Violation (catalogue) ────────────────────────────────────────────────────
 

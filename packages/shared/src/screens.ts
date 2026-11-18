@@ -22,6 +22,8 @@ export const SETTINGS_SECTION_ACCESS = {
   lists: 'hr.lists.view',
   hrRules: 'hr.settings.view',
   catalogue: 'hr.penalty_catalogue.view',
+  // The payroll tax rule (§10): the Accountant's section.
+  accounting: 'accounting.settings.view',
 } as const satisfies Record<string, PermissionKey>;
 export type SettingsSectionId = keyof typeof SETTINGS_SECTION_ACCESS;
 export const SETTINGS_SECTIONS = Object.keys(SETTINGS_SECTION_ACCESS) as SettingsSectionId[];

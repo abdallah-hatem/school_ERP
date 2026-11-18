@@ -10,6 +10,7 @@ import { PageHeader } from '@/shared/components/layout/page-header';
 import { Button } from '@/shared/components/ui/button';
 import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import {
+  AccountingModuleIcon,
   ChevronEndIcon,
   ChevronStartIcon,
   HistoryIcon,
@@ -24,6 +25,7 @@ import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { DirtyReporterProvider, useLeaveGuard } from '../hooks/unsaved-changes';
 import type { SettingsSectionId } from '../sections';
+import { AccountingRulesSection } from './accounting-rules-section';
 import { CatalogueSection } from './catalogue-section';
 import { HrRulesSection } from './hr-rules-section';
 import { ListManager } from './list-manager';
@@ -35,6 +37,7 @@ const ICONS: Record<SettingsSectionId, AppIcon> = {
   lists: ListsIcon,
   hrRules: RulesIcon,
   catalogue: PenaltiesIcon,
+  accounting: AccountingModuleIcon,
 };
 
 function SectionBody({ id }: { id: SettingsSectionId }): ReactNode {
@@ -54,6 +57,8 @@ function SectionBody({ id }: { id: SettingsSectionId }): ReactNode {
       return <HrRulesSection />;
     case 'catalogue':
       return <CatalogueSection />;
+    case 'accounting':
+      return <AccountingRulesSection />;
   }
 }
 

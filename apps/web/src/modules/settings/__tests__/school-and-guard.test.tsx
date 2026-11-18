@@ -287,6 +287,14 @@ describe('Settings screen — change history (owner, 2026-11-17)', () => {
     );
   });
 
+  it('the Accounting section shows only to someone who may see the accounting rules (§10)', () => {
+    renderScreen();
+    expect(screen.getByRole('navigation', { name: 'Settings sections' }).textContent).toContain('Accounting');
+    cleanup();
+    renderScreen('en', sessionWithout('accounting.settings.view'));
+    expect(screen.getByRole('navigation', { name: 'Settings sections' }).textContent).not.toContain('Accounting');
+  });
+
   it('a Stage head sees Structure and the catalogue only, and a School link opens Structure instead', async () => {
     api.GET_LIST_ITEMS.mockImplementation(() => ok([]));
     api.GET_PENALTY_GROUPS.mockImplementation(() => ok([]));
@@ -300,9 +308,9 @@ describe('Settings screen — change history (owner, 2026-11-17)', () => {
     expect(api.GET_SCHOOL_SETTINGS_FOR_EDIT).not.toHaveBeenCalled();
   });
 
-  it('with every permission: all five sections', () => {
+  it('with every permission: all six sections', () => {
     renderScreen();
-    expect(within(screen.getByRole('navigation', { name: 'Settings sections' })).getAllByRole('button')).toHaveLength(5);
+    expect(within(screen.getByRole('navigation', { name: 'Settings sections' })).getAllByRole('button')).toHaveLength(6);
   });
 
   it('the link is hidden from someone who may not read the activity log (can(), view only)', () => {
