@@ -72,7 +72,13 @@ export interface ListItem extends Names {
   isActive: boolean;
 }
 
-export type Stage = ListItem;
+export interface Stage extends ListItem {
+  /**
+   * The "no stage" entry (§3: staff not tied to a stage): at most one stage, marked by the seed. It
+   * keeps the role when renamed; employee cards give it the neutral band.
+   */
+  isNoStage: boolean;
+}
 
 export interface CreateListItemRequest extends Names {
   sortOrder?: number;

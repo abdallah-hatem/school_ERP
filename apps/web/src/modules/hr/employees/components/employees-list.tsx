@@ -6,6 +6,7 @@ import {
   WORK_SYSTEMS,
   type EmployeeSummary,
   type ListItem,
+  type Stage,
 } from '@school-erp/shared';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -43,7 +44,7 @@ export interface EmployeesListProps {
   total: number;
   /** Every department and stage, hidden ones too — hidden items can still have employees. */
   departments: ListItem[];
-  stages: ListItem[];
+  stages: Stage[];
   error?: boolean;
 }
 
