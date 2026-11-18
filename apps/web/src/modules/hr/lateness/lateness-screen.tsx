@@ -8,7 +8,7 @@ import { latenessMessages } from './messages';
 
 export { latenessMessages, resolveMonth };
 
-/** Server: loads the month's list (with departments and its lock) and the live rule for the grid. */
+/** Server: loads the month's list (with departments, its lock and the rule its days use). */
 export async function LatenessScreen({ locale, month: requested }: { locale: Locale; month?: string | string[] }) {
   const current = monthOf(new Date());
   const month = resolveMonth(requested, current);

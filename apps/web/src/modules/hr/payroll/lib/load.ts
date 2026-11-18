@@ -1,7 +1,6 @@
 import type {
   Department,
   EmployeePayrollLine,
-  HrSettings,
   PayrollRun,
   PayrollRunQuery,
   PayrollRunSummary,
@@ -10,7 +9,6 @@ import type {
 } from '@school-erp/shared';
 import { notFound } from 'next/navigation';
 import { GET_DEPARTMENTS } from '../../employees/apis';
-import { GET_HR_SETTINGS } from '../../lateness/apis';
 import { GET_EMPLOYEE_PAYROLL_LINES, GET_PAYROLL_RUN, GET_PAYROLL_RUNS, GET_PAYSLIP } from '../apis';
 import type { RunsListQuery } from './run-query';
 
@@ -33,25 +31,20 @@ export interface RunPageData {
   asOf: number;
   /** Every department, hidden ones too (a line keeps the department it had). */
   departments: Department[];
-  /** `null` when the HR settings failed to load (the rules panel says so). */
-  settings: HrSettings | null;
 }
 
 /** An unknown or malformed run id is the not-found page; any other failure throws to the boundary. */
 export async function loadRun(id: Uuid, query: PayrollRunQuery): Promise<RunPageData> {
   const asOf = Date.now();
-  const [res, departments, settings] = await Promise.all([
-    GET_PAYROLL_RUN(id, query),
-    GET_DEPARTMENTS(true),
-    GET_HR_SETTINGS(),
-  ]);
+  // The run carries the HR rules its panel shows: no separate settings read (Principal and
+  // Accountant may view runs without holding `hr.settings.view`).
+  const [res, departments] = await Promise.all([GET_PAYROLL_RUN(id, query), GET_DEPARTMENTS(true)]);
   if (res.success === false && (res.status === 404 || res.status === 400)) notFound();
   if (!res.success || !res.data) throw new Error(res.message ?? 'Payroll run failed to load');
   return {
     run: res.data,
     asOf,
     departments: departments.success && Array.isArray(departments.data) ? departments.data : [],
-    settings: settings.success && settings.data ? settings.data : null,
   };
 }
 

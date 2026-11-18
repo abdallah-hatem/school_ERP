@@ -18,6 +18,7 @@ import {
   type PayrollRunSummary,
   type PayrollTotals,
   type EmployeePayrollLine,
+  type HrSettings,
   type InsuranceStatus,
   type Payslip,
   type Uuid,
@@ -54,6 +55,22 @@ import {
   type LineRow,
   type RunRow,
 } from '../repositories/payroll-runs.repository';
+
+/**
+ * The rules a run's panel shows, field by field: exactly the HR rules (§5, §6, §7), so a setting
+ * added to `HrSettings` later never reaches run viewers without being chosen here.
+ */
+function runRules(s: HrSettings): HrSettings {
+  return {
+    lateness: {
+      graceMinutes: s.lateness.graceMinutes,
+      steps: s.lateness.steps.map(({ hour, days }) => ({ hour, days })),
+      extraHourDays: s.lateness.extraHourDays,
+    },
+    payroll: { dayDivisor: s.payroll.dayDivisor, partTime: { ...s.payroll.partTime } },
+    penalties: { repetitionWindow: s.penalties.repetitionWindow },
+  };
+}
 
 const conflict = (code: ErrorCode) => new CodedException(HttpStatus.CONFLICT, code);
 
@@ -188,18 +205,21 @@ export class PayrollService {
    */
   /**
    * Only the lines and adjustments of the employees the viewer's `hr.payroll.view` covers (R5),
-   * each with money only where their salary scope covers the employee (R7).
+   * each with money only where their salary scope covers the employee (R7). `rules` are the HR
+   * rules behind the figures, so the run's panel needs no `hr.settings.view`: today's rules, since
+   * a run keeps no copy of them (on an approved run the screen says so).
    */
   async get(id: Uuid, query: PayrollRunQueryDto = {}): Promise<PayrollRun> {
     const run = await this.findRun(id);
     const view = await this.view();
     const scope = employeeWhere(view.lines);
-    const [totals, lines, adjustments, inRun, pendingPenalties] = await Promise.all([
+    const [totals, lines, adjustments, inRun, pendingPenalties, rules] = await Promise.all([
       this.repository.totalsFor([id], scope),
       this.repository.findLines(id, query, scope),
       this.repository.findAdjustments(id, undefined, scope),
       this.repository.lineEmployeeIds(id),
       run.status === PayrollStatus.DRAFT ? this.penalties.pendingCountInMonth(run.month) : 0,
+      this.hrSettings.get().then(runRules),
     ]);
     const paid = await this.salaryVisibleFor(view, [
       ...lines.map((l) => l.employeeId),
@@ -208,6 +228,7 @@ export class PayrollService {
     return {
       ...this.toSummary(run, totals.get(id)!, view),
       pendingPenalties,
+      rules,
       lines: lines.map((l) => toLine(l, paid.has(l.employeeId))),
       adjustments: adjustments.map((a) => toAdjustment(a, inRun, paid.has(a.employeeId))),
     };
