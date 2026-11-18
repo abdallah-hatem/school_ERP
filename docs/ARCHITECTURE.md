@@ -152,16 +152,19 @@ students          ← students, guardians, enrolment
   ↑
 admissions · attendance · fees · exams · communication · transport
   ↑
-accounting        ← journal entries from approved payroll and fee payments (Planned)
+accounting        ← the payroll tax rule (built); payroll taxes of approved months, journal entries
+                     from approved payroll and fee payments (Planned)
 ```
 
 - **Stages** (KG, Primary, Preparatory) are a list in `core/` ("school structure"). HR uses them now
   and academics and students later, so they sit below all three.
 - **Settings ownership:** `core/settings` holds school-wide values (identity, hours, language). Each
-  module owns its own rule settings (HR: lateness, payroll, penalty catalogue). The one Settings
-  screen shows a section per module.
-- **Accounting (Planned)** sits at the top. It listens to `payroll.approved` and `payment.recorded`
-  and creates its own entries. No module below depends on it.
+  module owns its own rule settings (HR: lateness, payroll, penalty catalogue; accounting: the payroll
+  tax rule). The one Settings screen shows a section per module.
+- **Accounting** sits at the top. It will listen to `payroll.approved` and `payment.recorded` and
+  create its own records; its pure tax maths live in `packages/shared/src/rules/payroll-tax.ts`. It
+  reads other modules only through their exported services. No module below depends on it
+  (`.dependency-cruiser.cjs` enforces it). Plan: `docs/plans/2026-11-18-accounting-plan.md`.
 
 - A module may depend only on modules **below** it, through their `index.ts`. Lower modules
   never know about higher ones: they emit events, and higher modules react.

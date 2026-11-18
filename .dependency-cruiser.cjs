@@ -2,7 +2,8 @@
  * Module rules (docs/ARCHITECTURE.md → Enforcing the module rules), checked on every PR.
  * A second line of defence behind the ESLint boundary rules, in case one is disabled locally.
  *
- * Module order: common ← core ← hr ← academics ← students ← the rest. Changing it is a reviewed PR.
+ * Module order: common ← core ← hr ← academics ← students ← the rest ← accounting. Changing it is
+ * a reviewed PR.
  * What never changes: no cycles, front doors (index.ts) only, only the owner writes.
  *
  * Run per app so each uses its own tsconfig path aliases: `pnpm deps:check`.
@@ -35,6 +36,13 @@ module.exports = {
       comment: 'common has no business meaning: it imports neither core nor modules.',
       from: { path: `${API}common/` },
       to: { path: `${API}(core|modules)/` },
+    },
+    {
+      name: 'api-nothing-into-accounting',
+      severity: 'error',
+      comment: 'Accounting is the top of the module order: it reacts to the others; none depends on it.',
+      from: { path: `${API}`, pathNot: `${API}(modules/accounting/|app\\.module\\.ts$)` },
+      to: { path: `${API}modules/accounting/` },
     },
     {
       name: 'api-module-front-door-only',

@@ -9,12 +9,16 @@ import {
 } from '@school-erp/shared';
 import { RadioGroup } from 'radix-ui';
 import { Switch } from '@/shared/components/ui/switch';
-import { CheckIcon, CoreModuleIcon, HrModuleIcon, type AppIcon } from '@/shared/components/ui/icons';
+import { AccountingModuleIcon, CheckIcon, CoreModuleIcon, HrModuleIcon, type AppIcon } from '@/shared/components/ui/icons';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { isChanged, moduleGroups, type GrantMap } from '../lib/role-grants';
 
-const MODULE_ICON: Record<PermissionModule, AppIcon> = { core: CoreModuleIcon, hr: HrModuleIcon };
+const MODULE_ICON: Record<PermissionModule, AppIcon> = {
+  core: CoreModuleIcon,
+  hr: HrModuleIcon,
+  accounting: AccountingModuleIcon,
+};
 
 /**
  * A role's permissions grouped by module (P3, option A): a switch per permission with its label

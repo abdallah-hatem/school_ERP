@@ -8,7 +8,8 @@ import { clientForSchema, e2eDatabaseUrl } from './helpers/setup-db';
 /*
  * The P2 migration (roles as data): replays the real migration files in a throwaway schema of the
  * e2e database — the migrations before P2, existing HR admins (one linked to an employee through
- * HR's old `employees.user_id`), then the P2 migration — and checks the seeded roles against
+ * HR's old `employees.user_id`), then the P2 migration and every later one (they add keys to the
+ * starting roles) — and checks the seeded roles against
  * `BUILT_IN_ROLES` (the spec table) and how existing users were mapped.
  */
 
@@ -18,9 +19,12 @@ const dbUrl = e2eDatabaseUrl();
 
 const migrationSql = (name: string) =>
   readFileSync(join(MIGRATIONS, name, 'migration.sql'), 'utf8');
-const before = readdirSync(MIGRATIONS)
-  .filter((n) => /^\d{14}_/.test(n) && n < P2)
+const all = readdirSync(MIGRATIONS)
+  .filter((n) => /^\d{14}_/.test(n))
   .sort();
+const before = all.filter((n) => n < P2);
+/** Later migrations grant new keys to the starting roles (e.g. accounting, §10): replay them too. */
+const after = all.filter((n) => n > P2);
 
 function runSql(schema: string, sql: string): void {
   execFileSync('pnpm', ['exec', 'prisma', 'db', 'execute', '--stdin', '--url', dbUrl], {
@@ -62,6 +66,7 @@ describe('roles as data (P2 migration, e2e)', () => {
          '${U2}',now());`,
     );
     runSql(schema, migrationSql(P2));
+    for (const m of after) runSql(schema, migrationSql(m));
     db = clientForSchema(schema);
   });
 
