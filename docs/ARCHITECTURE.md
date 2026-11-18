@@ -281,7 +281,8 @@ UUID) and `@nestjs-cls/transactional` with the Prisma adapter keeps the open tra
   writes use `txHost.withTransaction(...)`, which joins an open transaction or opens one.
   Repositories still on `DatabaseService` keep working but always run outside any transaction —
   move a repository over when its writes must be audited (#105 moved stages, the HR lists and the
-  penalty catalogue; T28 refresh tokens and employees; T29 penalties, lateness and payroll).
+  penalty catalogue; T28 refresh tokens and employees; T29 penalties, lateness and payroll — every
+  write endpoint is now `@Audited`, or `@NotAudited` with a real reason).
 - Never pass options to a nested `withTransaction`; only the request transaction sets them.
 - **After-commit work** (events): `AfterCommit.run(fn)` queues `fn` until the open transaction
   commits (dropped on rollback), or runs it at once when none is open. Inside a transaction opened
@@ -312,7 +313,18 @@ module through core's exported `AuditService` — never through its repository.
   own snapshot: those entries are list and catalogue edits whose one change holds the whole item, so
   its `nameAr` is the name as it was then (used only when its `nameEn` is the stored label). Anything
   else reads as its one label in both languages. Search (`q`) matches either stored name (so not
-  those older entries' Arabic names).
+  those older entries' Arabic names), or a record the owning module matches by a field the entry
+  doesn't store (below).
+- **Related records and search** (`AuditRecordAccess`, where HR also says who may see what): a
+  module registers, at start-up, a parent's related records — `registerRelated(employee, penalty,
+  id → the employee's penalty ids)`, so a History (`GET /audit/records/…`, its `/fields` and
+  `/audit/actors?entityType&entityId`) lists the record's entries and its related records', each
+  still filtered by the viewer's scope — and search resolvers — `registerSearch(type, q → ids)`:
+  HR matches an employee by code and a penalty by its employee's code, so Activity's "name or code"
+  search (and its day totals) finds them. Both are read live from the owning module's tables at
+  query time: entries never store the code or the link, so nothing is duplicated, renamed codes
+  can't go stale and older entries are found too (the log is never rewritten). Core never imports
+  HR: HR calls core's registry.
 - Who (id + name snapshot), IP, user agent and request id come from the request (D4). `actor` is
   passed only where the request has no user yet (a successful sign-in) or none applies (`null`).
 - **A service records in its own write's transaction** even when called outside a request (the

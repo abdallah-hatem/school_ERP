@@ -191,6 +191,11 @@ export class EmployeesService {
     return this.repository.findIdsInScope(await this.access.where('hr.employees.view'));
   }
 
+  /** The employees whose code contains `q` (Activity's search: entries store names, not codes). */
+  idsWithCode(q: string): Promise<Uuid[]> {
+    return this.repository.findIdsByCode(q);
+  }
+
   /**
    * The scope check that comes before any other check on a write keyed by employees (edge case 3):
    * a scoped user gets 404 for any id `key` doesn't cover — unknown, inactive or someone else's alike

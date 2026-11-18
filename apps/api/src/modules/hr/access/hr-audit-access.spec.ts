@@ -13,8 +13,15 @@ function setup(scopes: Parameters<typeof fakeAccess>[0]) {
   new HrAuditAccess(
     audit,
     fakeAccess(scopes),
-    { idsInViewScope: jest.fn().mockResolvedValue(['e1']) } as unknown as EmployeesService,
-    { idsInViewScope: jest.fn().mockResolvedValue('all') } as unknown as PenaltyRecordsService,
+    {
+      idsInViewScope: jest.fn().mockResolvedValue(['e1']),
+      idsWithCode: jest.fn((q: string) => Promise.resolve(q === 'EMP-0001' ? ['e1'] : [])),
+    } as unknown as EmployeesService,
+    {
+      idsInViewScope: jest.fn().mockResolvedValue('all'),
+      idsOfEmployee: jest.fn((id: string) => Promise.resolve(id === 'e1' ? ['p1'] : [])),
+      idsWithEmployeeCode: jest.fn((q: string) => Promise.resolve(q === 'EMP-0001' ? ['p1'] : [])),
+    } as unknown as PenaltyRecordsService,
   ).onModuleInit();
   return audit;
 }
@@ -36,5 +43,19 @@ describe('HrAuditAccess', () => {
     const audit = setup({});
     await expect(audit.canSee('lateness_month', '2026-11')).resolves.toBe(true);
     await expect(audit.canSee('payroll_run', 'r1')).resolves.toBe(true);
+  });
+
+  it('an employee’s History takes in their penalties; search finds both by the employee’s code (T29, T31)', async () => {
+    const audit = setup({});
+    await expect(audit.historyRecords('employee', 'e1')).resolves.toEqual([
+      { entityType: 'employee', ids: ['e1'] },
+      { entityType: 'penalty', ids: ['p1'] },
+    ]);
+    await expect(audit.historyRecords('employee', 'e2')).resolves.toEqual([{ entityType: 'employee', ids: ['e2'] }]);
+    await expect(audit.searchMatches('EMP-0001')).resolves.toEqual([
+      { entityType: 'employee', ids: ['e1'] },
+      { entityType: 'penalty', ids: ['p1'] },
+    ]);
+    await expect(audit.searchMatches('nobody')).resolves.toEqual([]);
   });
 });

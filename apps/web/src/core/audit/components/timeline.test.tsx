@@ -203,6 +203,43 @@ describe('AuditTimeline', () => {
     expect(within(item).getByText('Salma Adel · Minutes')).toBeTruthy();
   });
 
+  it('a penalty reads with the employee and violation by name and its status in the screen\'s language (T29)', () => {
+    const cancelled = entry({
+      action: 'hr.penalty.cancel',
+      entityType: 'penalty',
+      entityLabel: { en: 'Omar Fathy', ar: 'عمر فتحي' },
+      changes: [
+        { field: 'status', before: 'APPROVED', after: 'CANCELLED' },
+        { field: 'cancelReason', before: null, after: 'Recorded twice' },
+      ],
+    });
+    const recorded = entry({
+      action: 'hr.penalty.record',
+      entityType: 'penalty',
+      entityLabel: { en: 'Omar Fathy', ar: 'عمر فتحي' },
+      changes: [
+        { field: 'violationId', before: null, after: { nameEn: 'Late arrival', nameAr: 'التأخر' } },
+        { field: 'action', before: null, after: 'DEDUCT_DAYS' },
+      ],
+    });
+    renderAudit(<AuditTimeline entries={[cancelled, recorded]} grouping="day" now={NOW} label="Activity timeline" />);
+    const [first, second] = screen.getAllByTestId('audit-entry');
+    expect(first!.textContent).toContain('cancelled the penalty for Omar Fathy');
+    expect(within(first!).getByText('Approved')).toBeTruthy();
+    expect(within(first!).getByText('Cancelled')).toBeTruthy();
+    expect(within(first!).getByText('Cancellation reason')).toBeTruthy();
+    expect(second!.textContent).toContain('recorded a penalty for Omar Fathy');
+    expect(within(second!).getByText('Late arrival')).toBeTruthy();
+    expect(within(second!).getByText('Deduct days')).toBeTruthy();
+    cleanup();
+
+    renderAudit(<AuditTimeline entries={[cancelled]} grouping="day" now={NOW} label="Activity timeline" />, 'ar');
+    const item = screen.getByTestId('audit-entry');
+    expect(item.textContent).toContain('إلغاء جزاء عمر فتحي');
+    expect(within(item).getByText('معتمد')).toBeTruthy();
+    expect(within(item).getByText('ملغى')).toBeTruthy();
+  });
+
   it('renaming only the Arabic name shows that part with its own label, never "Strike → Strike"', () => {
     const before = { id: 'v1', nameEn: 'Strike', nameAr: 'إضراب قديم', isActive: true, sortOrder: 2 };
     const renamed = entry({
