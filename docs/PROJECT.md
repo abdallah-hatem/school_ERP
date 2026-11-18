@@ -20,7 +20,7 @@ small per-school adjustments.
 |---|---|---|
 | Abdallah (`abdallah-hatem`) | Lead developer | Architecture, infrastructure, shared code (`core/`, `common/`, `shared/`, `packages/`, schema, deploy), final review on shared code, technical scope calls |
 | Tamer (`Fawrama`) | Developer | Business modules, end to end (backend + frontend + tests); **owns payroll** (§6), including how it uses social insurance and bank details |
-| Waleed (`AbdelrahmanHassib`) | Developer | Business modules, end to end (backend + frontend + tests) |
+| Waleed (`AbdelrahmanHassib`) | Developer | Business modules, end to end (backend + frontend + tests) — paused for now (owner, 2026-11-18) |
 | Hafez | Operations | Implementation, project management, QA, client training (exact split with Arousi to agree) |
 | Arousi | Operations | Implementation, project management, QA, client training (exact split with Hafez to agree) |
 
