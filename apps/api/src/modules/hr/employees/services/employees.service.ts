@@ -228,6 +228,16 @@ export class EmployeesService {
     return new Set(rows.filter((row) => inScope(scope, row)).map((row) => row.id));
   }
 
+  /**
+   * Which of `ids` a given scope covers — someone else's, not the request user's (notification
+   * recipients and readers, §11). Unknown ids are left out; the employees as they are now.
+   */
+  async filterCoveredBy(scope: EmployeeScope, ids: readonly Uuid[]): Promise<Set<Uuid>> {
+    if (scope.kind === 'none' || ids.length === 0) return new Set();
+    const rows = await this.repository.findScopeFieldsMany([...new Set(ids)]);
+    return new Set(rows.filter((row) => inScope(scope, row)).map((row) => row.id));
+  }
+
   /** Every active employee, ordered by code — for month-wide lists (lateness, payroll). */
   listActiveRefs(): Promise<EmployeeRef[]> {
     return this.repository.findActiveRefs();

@@ -44,6 +44,7 @@ import {
 } from '../../access/employee-scope.pure';
 import { HrAccessService, VIEW_SALARY } from '../../access/hr-access.service';
 import { EmployeesService } from '../../employees/services/employees.service';
+import { HrNotificationsService } from '../../notifications/hr-notifications.service';
 import { PenaltyRecordsService } from '../../penalties/services/penalty-records.service';
 import { HrSettingsService } from '../../settings/hr-settings.service';
 import { LatenessService } from '../../staff-attendance/services/lateness.service';
@@ -184,6 +185,7 @@ export class PayrollService {
     private readonly access: HrAccessService,
     private readonly audit: AuditService,
     private readonly afterCommit: AfterCommit,
+    private readonly notifications: HrNotificationsService,
   ) {}
 
   /** Every run (runs are school-wide); totals over the lines the viewer may see (R5, R7). */
@@ -284,13 +286,15 @@ export class PayrollService {
       const id = await this.repository.createRun(month, createdById, lines);
       // Two creates for one month at once: the unique month decides, the loser gets the 409.
       if (!id) throw conflict(ErrorCode.PAYROLL_RUN_EXISTS);
-      await this.recordRun('hr.payroll.create', id, month, undefined, await this.wholeTotals(id));
+      const totals = await this.wholeTotals(id);
+      await this.recordRun('hr.payroll.create', id, month, undefined, totals);
+      await this.notifyCalculated(id, totals, createdById);
       return this.get(id);
     });
   }
 
   /** Rebuilds every line of a DRAFT run from current data; adjustments survive. */
-  async recalculate(id: Uuid): Promise<PayrollRun> {
+  async recalculate(id: Uuid, recalculatedById: Uuid | null = null): Promise<PayrollRun> {
     // The change and its audit entry commit together (audit D2).
     return this.afterCommit.inTransaction(async () => {
       const run = await this.findDraft(id);
@@ -298,13 +302,9 @@ export class PayrollService {
       const lines = await this.buildLines(run.month, await this.repository.findAdjustments(id));
       if (!(await this.repository.replaceLines(id, lines)))
         throw conflict(ErrorCode.PAYROLL_APPROVED);
-      await this.recordRun(
-        'hr.payroll.recalculate',
-        id,
-        run.month,
-        before,
-        await this.wholeTotals(id),
-      );
+      const after = await this.wholeTotals(id);
+      await this.recordRun('hr.payroll.recalculate', id, run.month, before, after);
+      await this.notifyCalculated(id, after, recalculatedById);
       return this.get(id);
     });
   }
@@ -344,6 +344,8 @@ export class PayrollService {
       };
       // Must-deliver: written to the outbox in this transaction, delivered after the commit.
       await this.events.publish(HrEvent.PAYROLL_APPROVED, event, { mustDeliver: true });
+      // Everyone's "ready" and "still a draft" read "Approved by …" (§11, N10), in this transaction.
+      await this.notifications.payrollApproved(id, approvedById);
       return approved;
     });
   }
@@ -576,6 +578,30 @@ export class PayrollService {
     if (view.salary.kind === 'all') return new Set(employeeIds);
     if (view.salary.kind === 'none') return new Set();
     return this.employees.filterInScope(VIEW_SALARY, employeeIds);
+  }
+
+  /**
+   * After a draft's lines were (re)built: "ready to approve" when its month has no pending
+   * penalty (§6, §11), in this transaction. The net is the whole run's, shown only to readers
+   * who see it (the notifications service decides per reader, R7).
+   */
+  private async notifyCalculated(
+    id: Uuid,
+    totals: PayrollTotals,
+    actorId: Uuid | null,
+  ): Promise<void> {
+    const run = await this.findRun(id);
+    await this.notifications.payrollCalculated(
+      {
+        id,
+        month: run.month,
+        calculatedAt: run.calculatedAt,
+        count: totals.employees,
+        net: totals.net ?? 0,
+        pendingPenalties: await this.penalties.pendingCountInMonth(run.month),
+      },
+      actorId,
+    );
   }
 
   /** The whole run's totals (every line), whoever is asking. */

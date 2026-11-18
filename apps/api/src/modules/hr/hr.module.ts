@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuditModule } from '../../core/audit';
+import { NotificationsModule } from '../../core/notifications';
 import { PermissionsModule } from '../../core/permissions';
 import { SettingsModule } from '../../core/settings';
 import { HrAccessService } from './access/hr-access.service';
@@ -17,6 +18,7 @@ import { DepartmentsService } from './lists/services/departments.service';
 import { JobTitlesService } from './lists/services/job-titles.service';
 import { MonthLockService } from './month-lock/month-lock.service';
 import { MonthLockRepository } from './month-lock/repositories/month-lock.repository';
+import { HrNotificationsService } from './notifications/hr-notifications.service';
 import { EmployeePayrollController } from './payroll/controllers/employee-payroll.controller';
 import { PayrollRunsController } from './payroll/controllers/payroll-runs.controller';
 import { PayrollRunsRepository } from './payroll/repositories/payroll-runs.repository';
@@ -38,7 +40,7 @@ import { LatenessService } from './staff-attendance/services/lateness.service';
  * Sub-folders add their controllers / providers here (additive). Export only public services.
  */
 @Module({
-  imports: [SettingsModule, PermissionsModule, AuditModule],
+  imports: [SettingsModule, PermissionsModule, AuditModule, NotificationsModule],
   controllers: [
     // settings (T6)
     HrSettingsController,
@@ -62,6 +64,9 @@ import { LatenessService } from './staff-attendance/services/lateness.service';
     HrAuditAccess,
     // settings (T6)
     HrSettingsService,
+    // approval notifications (§11, N2) — penalties and payroll send through it; registers HR's
+    // notification scope resolvers
+    HrNotificationsService,
     // month lock (T6) — used by penalties, lateness and payroll
     MonthLockService,
     MonthLockRepository,

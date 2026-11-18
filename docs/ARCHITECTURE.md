@@ -629,7 +629,8 @@ types** and sends through core's exported `NotificationsService` — core never 
   and its values (names as `{ en, ar }`), never a sentence (N3). `NotificationTypes` in core is the
   registry (`register` adds one — the tests' test-only type).
 - **Sending.** `notify({ type, subject: { entityType, entityId, employeeId? }, params, dedupeKey,
-  actorId?, groupKey? })` and `resolve({ type, subject, resolution, byUserId? })` write in the
+  actorId?, groupKey? })` (or `paramsFor(userId)` instead of `params` when a value depends on the
+  reader — asked once per new item) and `resolve({ type, subject, resolution, byUserId? })` write in the
   **current** transaction and throw outside one (`NotificationOutsideTransactionError`), like
   `audit.record()`: a module calls them inside its own change's transaction, so the change and its
   notifications commit or roll back together (N4). A module reacting to *another* module's event does
@@ -680,9 +681,19 @@ types** and sends through core's exported `NotificationsService` — core never 
 - **Retention (N14)**: core settings `notifications.retention.readDays` / `resolvedDays` / `maxDays`
   (90 / 30 / 365, each 1–3650); the nightly `core.notifications.purge` (02:30, advisory lock) deletes
   what is past them, with items and deliveries. Not audited.
-- **Not yet:** no module sends (HR's types come with N2 / N3, which register HR's scope resolver);
-  the bell, My account tab and Settings section are N4 (the `SETTINGS_SECTION_ACCESS` entry for
-  Settings → Notifications comes with that screen).
+- **HR's approvals (N2)** — `modules/hr/notifications/hr-notifications.service.ts`, called by the
+  penalty and payroll services inside their own write's transaction (no `RequiresNew`). It registers
+  HR's scope resolvers at start-up: `employee` and `penalty` subjects by the employee's stage / team
+  **as the employee is now** (`EmployeesService.filterCoveredBy`, the same `inScope` rule as every
+  HR read), `payroll_run` covered by scope `all` only. `hr.penalty.awaiting_approval` (dedupe
+  `penalty:<id>`) on record; resolved `approved` / `cancelled` (pending only).
+  `hr.payroll.ready_to_approve` (dedupe `payroll_ready:<month>:<calculatedAt>`) after create /
+  recalculate with no pending penalty in the month, the previous one resolved `done` first;
+  resolved `done` by a penalty recorded in the month, `approved` (with `hr.payroll.not_approved`)
+  on approval. Its `net` is per reader through `notify({ paramsFor })` — only for a holder of
+  `hr.payroll.view` at `all` (R7); absent otherwise.
+- **Not yet:** HR's reminders (N3); the bell, My account tab and Settings section are N4 (the
+  `SETTINGS_SECTION_ACCESS` entry for Settings → Notifications comes with that screen).
 
 ### Deliberate shortcuts
 

@@ -2,8 +2,9 @@
 
 Telling staff, inside the ERP, that something waits for them or is due. Spec:
 `docs/specs/2026-11-18-notifications.md`. **Partly built** — the mechanism is built (who is told,
-grouping, never twice, done approvals, access, preferences, retention); nothing sends a notification
-yet (HR's come next) and the screens are Planned (layout option A, below).
+grouping, never twice, done approvals, access, preferences, retention), and HR sends its two
+approvals ("Penalty waiting for your approval", "Payroll ready to approve", 2026-11-18); the
+reminders and the screens are Planned (layout option A, below).
 
 ## What and how
 
@@ -44,6 +45,21 @@ yet (HR's come next) and the screens are Planned (layout option A, below).
 
 - **GUESS** — When an approval is done by one person, everyone else who was told sees it as done
   ("Approved by Laila Hassan") and it no longer counts as unread.
+- **DECIDED** — A penalty's notification is sent the moment it is recorded, together
+  with the recording: a recording that is refused (the same violation twice in a day, an inactive
+  employee, a month whose payroll is approved) tells no one. Approving or cancelling it marks it
+  done for everyone; cancelling an already approved penalty changes nothing (there is nothing
+  waiting). Deactivating the employee leaves it waiting: the penalty can still be approved (§4).
+- **GUESS** — An approver whose employee moves to another stage after a penalty was recorded:
+  the old stage's approver stops seeing it, and the new stage's approver isn't told about the old
+  penalty (only about new ones).
+- **DECIDED** — "Payroll ready to approve" is sent when a draft month is created or
+  recalculated and no penalty dated in that month is pending (§6: it can't be approved before).
+  A penalty recorded in the month marks it done (the month isn't ready any more); the next
+  recalculation with nothing pending sends it again. Approving the month marks it, and "Payroll
+  still a draft", as approved.
+- **GUESS** — Each calculation that leaves the month ready sends its own "ready" and marks the
+  previous one done, so only the latest stays open.
 - **DECIDED** (owner, 2026-11-18) — Many of one kind at once make **one notification** that groups
   them ("12 contracts end within 30 days", "3 penalties waiting for your approval") and opens into
   the list of them. One on its own reads as itself. Once read, the next one starts a new
@@ -97,7 +113,9 @@ yet (HR's come next) and the screens are Planned (layout option A, below).
   notifications (they leave the list and the count). Opening one shows "This page isn't here", as
   for any record outside their reach.
 - **GUESS** — Payroll notifications show the month's net only to someone who may see the school's
-  payroll totals (§2).
+  payroll totals (§2): whoever sees payroll for the whole school (the HR manager, the principal,
+  the accountant). Someone who may approve payroll but not see it reads the month and the number of
+  employees only. Decided when the notification is sent.
 
 ## Not the audit log
 
