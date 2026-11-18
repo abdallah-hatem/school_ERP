@@ -77,8 +77,9 @@ their ten endpoints are `@Audited`, and the listener is deleted.
 - [x] Penalties: record, approve, cancel are `@Audited('hr.penalty.record' | 'approve' | 'cancel')`;
   `PenaltyRecordsService` records in its write's `afterCommit.inTransaction` (the seed's too, with
   no actor). The entry is on the penalty (`entityType: penalty`), labelled with the employee's two
-  names; the employee and violation are stored by name (`employeeId: { nameEn, nameAr }`,
-  `violationId: …`), with date, level, action, days, status, note and cancel reason — only the
+  names (the label only — a line for the employee repeated the sentence on screen); the violation
+  is stored by name (`violationId: { nameEn, nameAr }`), with date, level, action, days, status,
+  note and cancel reason — only the
   changed ones (approve: status, plus level / action / days if fixed differently; cancel: status and
   reason). No money: a penalty is days, so nothing is salary-hidden.
 - [x] The employee's **History** lists their penalties' entries: HR registers the employee →

@@ -245,10 +245,8 @@ describe('PenaltyRecordsService — scopes (R5, edge case 3)', () => {
 describe('PenaltyRecordsService — audit entries (§9, T29)', () => {
   const dto = { employeeId: 'e1', violationId: 'v1', date: '2025-11-10', note: 'Came at 9' };
   const label = { en: 'A', ar: 'أ' };
-  const names = {
-    employeeId: { nameEn: 'A', nameAr: 'أ' },
-    violationId: { nameEn: 'Late', nameAr: 'تأخر' },
-  };
+  // The employee is the label only (not a line repeating the sentence).
+  const names = { violationId: { nameEn: 'Late', nameAr: 'تأخر' } };
 
   it('recording: one hr.penalty.record entry on the penalty, from nothing, by names — in one transaction', async () => {
     const { service, audit, tx } = makeService({ createRecord: jest.fn().mockResolvedValue(row({ note: 'Came at 9' })) });
