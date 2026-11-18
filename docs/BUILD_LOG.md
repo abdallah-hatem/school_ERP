@@ -285,8 +285,17 @@ phase live in `docs/build-log/`.
   everyone, access re-checked on every read; preferences over school defaults, approvals locked on;
   nightly purge 90/30/365 days; permissions `core.notifications.view`/`.manage` granted by
   migration. API only — screens are N4. N2 (approvals), N3 (reminders) and N4 (screens) started.
-- 2026-11-18 — Accounting payroll-taxes mockups (three options) → #129; waiting for the owner's
-  pick (recommended: A, two pages).
+- 2026-11-18 — Accounting payroll-taxes mockups (three options) → #129. Owner picked **C** (year
+  board + printable statement), **with the draft state** on the board, and every table built from
+  the shared `DataTable` (the mockup's tables were hand-drawn). The draft state needs a small
+  read-only addition to accounting's API (through HR's exported payroll service) for Tamer to review.
+  Build started.
+- 2026-11-18 — T29 + T31 merged → #126: recording, approving and cancelling a penalty are on
+  Activity (names, not ids; refused writes leave none); penalties show on the employee's History;
+  Activity search finds entries by employee code (live lookup, older entries too); the audit scan
+  now allows no "wired in" placeholder. Checked in screenshots (EN desktop, AR phone). Two display
+  issues found → a fix in progress (payroll totals shown as JSON on Activity; the AR phone results
+  count cut off).
 
 ## Next up
 
@@ -304,7 +313,7 @@ phase live in `docs/build-log/`.
   off, retention 90 / 30 / 365 days, contract reminders at 30 and 7 days, Settings → Notifications
   changed by the System admin and seen by the HR manager.
 
-- **Accounting payroll taxes screen** (Abdallah) — a page per approved month (net, insurance share, income tax,
+- **Accounting payroll taxes screen** (Abdallah, option C, being built) — a page per approved month (net, insurance share, income tax,
   fund, gross per employee) and a sidebar entry: **mockups first** (CLAUDE.md rule 9). The API
   (`GET /accounting/payroll[/:month]`) is built. Tax defaults are GUESS until the accountant confirms.
 - Accounting settings, from the #84 review (optional): `AccountingSettingsService.update()` now
@@ -326,7 +335,7 @@ phase live in `docs/build-log/`.
   no screen yet; add them to Settings → School if a school wants to change them.
 
 - Hosting the demo on the Contabo server (owner: later; local demo is the fallback).
-- Audit log T28 done (#107); T29 (Abdallah, being built: penalties) and T31 verify. Optional CI ratchet that forbids touching an unwired endpoint (owner: docs only for now). Follow-ups from T30 still open: penalties don't appear on the employee's History (T29); the payroll
+- Audit log T28 (#107), T29 + T31 (#126) done. Optional CI ratchet that forbids touching an unwired endpoint (owner: docs only for now). Follow-ups from T30 still open: penalties don't appear on the employee's History (T29); the payroll
   run page has no History tab yet.
 
 - Optional: server-side paging for lateness (loads the whole month today) and column sorting.

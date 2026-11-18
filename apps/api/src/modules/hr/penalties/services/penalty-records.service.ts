@@ -92,14 +92,14 @@ const positionOf = (row: RecordRow): PenaltyTarget => ({
 const storedLevel = (row: RecordRow): CatalogueLevel => toLevel(row);
 
 /**
- * A record as its audit entries store it (§9): the employee and violation by their two names, not
- * their ids, and the level, action and days stored on it (fixed at recording, then at approval).
- * No money: a penalty is days, priced only by payroll.
+ * A record as its audit entries store it (§9): the violation by its two names, not its id, and the
+ * level, action and days stored on it (fixed at recording, then at approval). The employee is the
+ * entry's label, so not a line of its own (it would repeat the sentence — the screen check of
+ * #126). No money: a penalty is days, priced only by payroll.
  */
 function penaltyAuditSnapshot(row: RecordRow) {
   const { level, action, days } = storedLevel(row);
   return {
-    employeeId: { nameEn: row.employee.nameEn, nameAr: row.employee.nameAr },
     violationId: { nameEn: row.violation.nameEn, nameAr: row.violation.nameAr },
     date: toIsoDate(row.date),
     level,

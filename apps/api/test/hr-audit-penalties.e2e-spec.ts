@@ -49,6 +49,7 @@ describe('HR audit wiring — penalties (T29, e2e)', () => {
       orderBy: { seq: 'asc' },
     });
   const changesOf = (e: { changes: unknown }) => e.changes as AuditChange[];
+  const field = (e: { changes: unknown }, name: string) => changesOf(e).find((c) => c.field === name);
 
   async function asUser<T>(userId: string, fn: () => Promise<T>): Promise<T> {
     const own = user.id;
@@ -168,7 +169,6 @@ describe('HR audit wiring — penalties (T29, e2e)', () => {
     });
     expect(changesOf(recorded[0])).toEqual(
       expect.arrayContaining([
-        { field: 'employeeId', before: null, after: { nameEn: emp.nameEn, nameAr: emp.nameAr } },
         { field: 'violationId', before: null, after: { nameEn: v.nameEn, nameAr: v.nameAr } },
         { field: 'date', before: null, after: date },
         { field: 'level', before: null, after: 1 },
@@ -177,7 +177,8 @@ describe('HR audit wiring — penalties (T29, e2e)', () => {
         { field: 'note', before: null, after: 'Came at 9' },
       ]),
     );
-    // No raw ids anywhere in the entry's values.
+    // The employee is the label, not a line repeating it; no raw ids anywhere in the values.
+    expect(field(recorded[0], 'employeeId')).toBeUndefined();
     expect(JSON.stringify(recorded[0].changes)).not.toContain(emp.id);
     expect(JSON.stringify(recorded[0].changes)).not.toContain(v.id);
   });
@@ -258,6 +259,7 @@ describe('HR audit wiring — penalties (T29, e2e)', () => {
     expect(status.map((x) => x.action)).toEqual(['hr.penalty.cancel']);
     const fields = (await http(app).get(`/audit/records/employee/${emp.id}/fields`).expect(200)).body.data as string[];
     expect(fields).toEqual(expect.arrayContaining(['basicSalary', 'cancelReason', 'violationId']));
+    expect(fields).not.toContain('employeeId');
     const people = (
       await http(app).get('/audit/actors').query({ entityType: 'employee', entityId: emp.id }).expect(200)
     ).body.data as AuditActor[];
