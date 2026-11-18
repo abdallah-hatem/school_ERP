@@ -294,8 +294,12 @@ phase live in `docs/build-log/`.
   Activity (names, not ids; refused writes leave none); penalties show on the employee's History;
   Activity search finds entries by employee code (live lookup, older entries too); the audit scan
   now allows no "wired in" placeholder. Checked in screenshots (EN desktop, AR phone). Two display
-  issues found → a fix in progress (payroll totals shown as JSON on Activity; the AR phone results
-  count cut off).
+  issues found, fixed in #135.
+- 2026-11-18 — Activity display fixes merged → #135: no entry shows JSON any more (payroll and
+  accounting totals as labelled lines, role permission changes as "View payroll: Everyone → Their
+  stage"); payroll and lateness months in words ("November 2026" / "نوفمبر 2026"), never broken
+  across lines; the AR phone results count sits outside the scrolling chip row. Checked in
+  screenshots (EN desktop, AR phone).
 - 2026-11-18 — N3 merged → #134: one daily job `hr.reminders.daily` (07:00 Cairo) sends contract
   ending (30 and 7 days), probation ending (7 days), lateness not entered (from the 25th), payroll
   not prepared / still a draft (from the 28th); resolved the moment the thing is done; dedupe keys +
