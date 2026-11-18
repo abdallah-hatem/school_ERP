@@ -344,6 +344,7 @@ export function UserForm({ basePath, user, roles, lastAdmin = false, initialPass
       />
       <Form onSubmit={(e) => void form.handleSubmit(onSubmit)(e)} aria-label={title}>
         <FormColumns
+          sideFirst={Boolean(user)}
           main={
             user ? (
               <>

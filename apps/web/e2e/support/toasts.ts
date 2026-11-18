@@ -54,7 +54,7 @@ async function raise(page: Page, kind: Kind, title: string, options: RaiseOption
   );
 }
 
-/** Every toast has its tone badge with an icon, and sits at the top end of the screen. */
+/** Every toast has its tone badge with an icon, and sits at the inline end of the screen (bottom on desktop, top on a phone). */
 async function expectCampusToast(page: Page, toast: Locator, locale: Language, closable = true) {
   await expect(toast).toBeVisible();
   await expect(toast.locator('[data-icon] svg')).toHaveCount(1);
@@ -63,9 +63,11 @@ async function expectCampusToast(page: Page, toast: Locator, locale: Language, c
   const width = page.viewportSize()!.width;
   const centre = box.x + box.width / 2;
   if (width >= 600) {
-    // Desktop: the inline-end corner — right in English, left in Arabic.
+    // Desktop: the bottom inline-end corner — right in English, left in Arabic — clear of the
+    // page header's actions.
     if (locale === 'ar') expect(centre).toBeLessThan(width / 2);
     else expect(centre).toBeGreaterThan(width / 2);
+    expect(box.y).toBeGreaterThan(page.viewportSize()!.height / 2);
   }
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(width);

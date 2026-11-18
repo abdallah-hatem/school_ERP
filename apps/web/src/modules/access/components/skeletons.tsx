@@ -187,6 +187,7 @@ function UserSkeleton({ adding }: { adding: boolean }) {
       />
       <Form aria-hidden="true" inert className="skeleton-mask">
         <FormColumns
+          sideFirst={!adding}
           main={
             adding ? (
               <>
