@@ -127,11 +127,12 @@ export class AuditService {
     page: number,
     limit: number,
   ): Promise<Paginated<AuditEntry>> {
-    const [restricted, values] = await Promise.all([
+    const [restricted, values, searched] = await Promise.all([
       this.recordAccess.restrictions(),
       this.valueVisibility(),
+      this.withSearch(filter),
     ]);
-    const result = await this.entries.findPage({ ...filter, restricted }, page, limit);
+    const result = await this.entries.findPage({ ...searched, restricted }, page, limit);
     const actorIds = [...new Set(result.data.flatMap((row) => (row.actorId ? [row.actorId] : [])))];
     const linked = await this.entries.findLinkedEmployees(actorIds);
     return {
@@ -147,8 +148,9 @@ export class AuditService {
   }
 
   /**
-   * A record's History, optionally narrowed to one person or one changed field. 404 when the
-   * viewer may not see the record (outside their scope — edge case 3).
+   * A record's History, optionally narrowed to one person or one changed field: its own entries and
+   * its related records' (an employee's penalties), each still within the viewer's scope. 404 when
+   * the viewer may not see the record (outside their scope — edge case 3).
    */
   async listForRecord(
     entityType: AuditEntityType,
@@ -158,7 +160,8 @@ export class AuditService {
     filter: { actorId?: string; field?: string } = {},
   ): Promise<Paginated<AuditEntry>> {
     await this.assertCanSee(entityType, entityId);
-    return this.list({ entityType, entityId, ...filter }, page, limit);
+    const records = await this.recordAccess.historyRecords(entityType, entityId);
+    return this.list({ records, ...filter }, page, limit);
   }
 
   /**
@@ -166,14 +169,16 @@ export class AuditService {
    * only people with an entry the viewer may see (P4).
    */
   async listActors(record?: { entityType: AuditEntityType; entityId: string }): Promise<AuditActor[]> {
-    if (record) await this.assertCanSee(record.entityType, record.entityId);
-    return this.entries.findActors(record ?? {}, await this.recordAccess.restrictions());
+    if (!record) return this.entries.findActors({}, await this.recordAccess.restrictions());
+    await this.assertCanSee(record.entityType, record.entityId);
+    const records = await this.recordAccess.historyRecords(record.entityType, record.entityId);
+    return this.entries.findActors({ records }, await this.recordAccess.restrictions());
   }
 
   /** The fields a record's entries changed (its History field filter). 404 outside the scope. */
   async listFields(entityType: AuditEntityType, entityId: string): Promise<string[]> {
     await this.assertCanSee(entityType, entityId);
-    return this.entries.findFields(entityType, entityId);
+    return this.entries.findFields(await this.recordAccess.historyRecords(entityType, entityId));
   }
 
   /**
@@ -181,8 +186,20 @@ export class AuditService {
    * counting only what `list` would show the viewer.
    */
   async countPerPeriod(filter: AuditEntryFilter, periods: readonly { from: Date; to: Date }[]): Promise<number[]> {
-    const restricted = await this.recordAccess.restrictions();
-    return this.entries.countPerPeriod({ ...filter, restricted }, periods);
+    const [restricted, searched] = await Promise.all([
+      this.recordAccess.restrictions(),
+      this.withSearch(filter),
+    ]);
+    return this.entries.countPerPeriod({ ...searched, restricted }, periods);
+  }
+
+  /**
+   * The search also matches records by what their entries don't store (an employee's code, asked
+   * of the module that owns them — `AuditRecordAccess.searchMatches`).
+   */
+  private async withSearch(filter: AuditEntryFilter): Promise<AuditEntryFilter> {
+    if (!filter.q) return filter;
+    return { ...filter, qRecords: await this.recordAccess.searchMatches(filter.q) };
   }
 
   /** "Today at a glance" for `[from, to)` — counting only what `list` would show the viewer (P4). */

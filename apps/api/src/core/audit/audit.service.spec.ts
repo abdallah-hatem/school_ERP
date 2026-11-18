@@ -42,6 +42,8 @@ function makeService(
     }),
     findPage: jest.fn(),
     findActors: jest.fn().mockResolvedValue([]),
+    findFields: jest.fn().mockResolvedValue([]),
+    countPerPeriod: jest.fn().mockResolvedValue([0]),
     summary: jest.fn().mockResolvedValue({ actions: 0, people: 0, money: 0, failedSignIns: 0 }),
     findLinkedEmployees: jest.fn((ids: readonly string[]) =>
       Promise.resolve(new Map(ids.includes('u1') ? [['u1', 'emp-1']] : [])),
@@ -79,6 +81,10 @@ function makeService(
   };
   const recordAccess = new AuditRecordAccess();
   if (visibleEmployees) recordAccess.register('employee', () => Promise.resolve(visibleEmployees));
+  // HR's registrations, as HrAuditAccess makes them: e1's penalties; search by employee code.
+  recordAccess.registerRelated('employee', 'penalty', (id) => Promise.resolve(id === 'e1' ? ['p1', 'p2'] : []));
+  recordAccess.registerSearch('employee', (q) => Promise.resolve(q === 'EMP-0007' ? ['e7'] : []));
+  recordAccess.registerSearch('penalty', (q) => Promise.resolve(q === 'EMP-0007' ? ['p7'] : []));
   const service = new AuditService(
     entries as unknown as AuditEntryRepository,
     txHost as unknown as TransactionHost<DbAdapter>,
@@ -350,10 +356,54 @@ describe('AuditService reads', () => {
     entries.findPage.mockResolvedValueOnce(pageOf([]));
     await service.listForRecord('payroll_run', 'r1', 2, 5);
     expect(entries.findPage).toHaveBeenCalledWith(
-      { entityType: 'payroll_run', entityId: 'r1', restricted: [] },
+      { records: [{ entityType: 'payroll_run', ids: ['r1'] }], restricted: [] },
       2,
       5,
     );
+  });
+
+  it('an employee’s History lists their penalties’ entries too (T29) — list, people and fields', async () => {
+    const { service, entries } = makeService();
+    entries.findPage.mockResolvedValueOnce(pageOf([]));
+    await service.listForRecord('employee', 'e1', 1, 10, { field: 'status' });
+    const records = [
+      { entityType: 'employee', ids: ['e1'] },
+      { entityType: 'penalty', ids: ['p1', 'p2'] },
+    ];
+    expect(entries.findPage).toHaveBeenCalledWith({ records, field: 'status', restricted: [] }, 1, 10);
+    await service.listActors({ entityType: 'employee', entityId: 'e1' });
+    expect(entries.findActors).toHaveBeenCalledWith({ records }, []);
+    await service.listFields('employee', 'e1');
+    expect(entries.findFields).toHaveBeenCalledWith(records);
+    // An employee with no penalties: only their own entries.
+    entries.findPage.mockResolvedValueOnce(pageOf([]));
+    await service.listForRecord('employee', 'e2', 1, 10);
+    expect(entries.findPage).toHaveBeenLastCalledWith(
+      { records: [{ entityType: 'employee', ids: ['e2'] }], restricted: [] },
+      1,
+      10,
+    );
+  });
+
+  it('T31 — search matches employee codes: the employee’s entries and their penalties’ (list and day totals)', async () => {
+    const { service, entries } = makeService();
+    entries.findPage.mockResolvedValueOnce(pageOf([]));
+    await service.list({ q: 'EMP-0007' }, 1, 10);
+    const qRecords = [
+      { entityType: 'employee', ids: ['e7'] },
+      { entityType: 'penalty', ids: ['p7'] },
+    ];
+    expect(entries.findPage).toHaveBeenCalledWith({ q: 'EMP-0007', qRecords, restricted: [] }, 1, 10);
+    const periods = [{ from: new Date('2026-11-17T00:00:00Z'), to: new Date('2026-11-18T00:00:00Z') }];
+    await service.countPerPeriod({ q: 'EMP-0007' }, periods);
+    expect(entries.countPerPeriod).toHaveBeenCalledWith(
+      { q: 'EMP-0007', qRecords, restricted: [] },
+      periods,
+    );
+    // No code matches: the labels alone.
+    entries.findPage.mockResolvedValueOnce(pageOf([]));
+    await service.list({ q: 'Mona' }, 1, 10);
+    expect(entries.findPage).toHaveBeenLastCalledWith({ q: 'Mona', qRecords: [], restricted: [] }, 1, 10);
   });
 
   describe('P4 — what the viewer may see', () => {
