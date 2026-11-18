@@ -7,9 +7,7 @@ import { loadEmployee } from './lib/load-employee';
 /**
  * Server: the profile's History tab — the employee's audit entries by month, with field and person
  * filters (core/audit's record History). The employee comes from the layout's cached load.
- *
- * TODO(T28): employee edits start writing `hr.employee.*` entries once T28 wires the HR employee
- * service; until then the tab shows its empty state.
+ * Every edit, status change and photo change is an `hr.employee.*` entry (T28).
  */
 export async function EmployeeHistoryScreen({
   locale,

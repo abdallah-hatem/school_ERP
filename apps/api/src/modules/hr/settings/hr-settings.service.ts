@@ -43,8 +43,8 @@ function sortSteps(steps: readonly LatenessStep[]): LatenessStep[] {
 /**
  * HR rule settings (§5, §6, §7): lateness rule, payroll rule, penalty repetition window. Stored one
  * row per key with the §7 defaults behind them, through core's `SettingsService` (HR never writes
- * core's table). Every changed key emits one `settings.changed` after the write commits; core's
- * listener records the history row.
+ * core's table). A save is one `hr.settings.update` audit entry listing the changed keys — the
+ * Settings history (D9).
  */
 @Injectable()
 export class HrSettingsService {
@@ -88,15 +88,14 @@ export class HrSettingsService {
     }
 
     const changed = HR_KEYS.filter((key) => canonical(old[key]) !== canonical(next[key]));
-    if (changed.length > 0) {
-      // Core writes the changed keys in one transaction, then emits one `settings.changed` per
-      // key after the commit; its listener records exactly one history row each.
-      await this.settings.setValues(
-        'hr',
-        Object.fromEntries(changed.map((key) => [key, next[key]])),
-        changedById,
-      );
-    }
+    // Core writes the changed keys and records one `hr.settings.update` entry listing them, in the
+    // request's transaction (D2). Always called, so an unchanged save still answers `@Audited`
+    // (core records nothing then).
+    await this.settings.setValues(
+      'hr',
+      Object.fromEntries(changed.map((key) => [key, next[key]])),
+      changedById,
+    );
 
     return this.toResponse(next);
   }

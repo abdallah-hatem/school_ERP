@@ -254,4 +254,26 @@ describe('AuditTimeline', () => {
     const after = within(item).getByText('Maths');
     expect(after.closest('dd > span')?.textContent).toContain('→');
   });
+
+  it('an employee moved to another department (names stored without ids, T28) reads Department: Science → Maths', () => {
+    const moved = entry({
+      action: 'hr.employee.update',
+      changes: [
+        {
+          field: 'departmentId',
+          before: { nameEn: 'Science', nameAr: 'العلوم' },
+          after: { nameEn: 'Maths', nameAr: 'الرياضيات' },
+        },
+        { field: 'photoUrl', before: null, after: '/files/employee-photos/e1-abc.png' },
+      ],
+    });
+    renderAudit(<AuditTimeline entries={[moved]} grouping="day" now={NOW} label="Activity timeline" />);
+    const item = screen.getByTestId('audit-entry');
+    expect(within(item).getByText('Department')).toBeTruthy();
+    expect(within(item).getByText('Science')).toBeTruthy();
+    expect(within(item).getByText('Maths')).toBeTruthy();
+    expect(within(item).queryByText(/Name \(English\)/)).toBeNull();
+    // A new photo reads as its file name, not the whole path.
+    expect(within(item).getByText('e1-abc.png')).toBeTruthy();
+  });
 });

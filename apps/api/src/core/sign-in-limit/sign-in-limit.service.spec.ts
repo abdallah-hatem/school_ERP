@@ -19,7 +19,7 @@ const DEFAULTS = {
 };
 
 function makeService(
-  opts: { lockedUntil?: Date | null; failedCount?: number; userId?: string | null } = {},
+  opts: { lockedUntil?: Date | null; failedCount?: number } = {},
 ) {
   const attempts = {
     findLockedUntil: jest.fn(() => Promise.resolve(opts.lockedUntil ?? null)),
@@ -29,7 +29,6 @@ function makeService(
     ),
     clear: jest.fn(() => Promise.resolve(1)),
     deleteEndedBefore: jest.fn(() => Promise.resolve(3)),
-    findUserId: jest.fn(() => Promise.resolve(opts.userId === undefined ? 'u-1' : opts.userId)),
   };
   const settings = { getValues: jest.fn(() => Promise.resolve(DEFAULTS)) };
   const audit = { record: jest.fn(() => Promise.resolve()) };
@@ -124,14 +123,14 @@ describe('SignInLimitService', () => {
     expect(txHost.withTransaction).toHaveBeenCalledTimes(1);
     expect(audit.record).toHaveBeenCalledWith({
       action: 'core.auth.locked_out',
-      entity: { type: 'user', id: 'u-1', label: 'mona@school.test' },
+      entity: { type: 'user', id: 'mona@school.test', label: 'mona@school.test' },
       after: { lockedUntil: at(15).toISOString() },
       actor: null,
     });
   });
 
   it('an unknown email locks the same way; its entry is keyed by the email typed', async () => {
-    const { service, audit } = makeService({ failedCount: 5, userId: null });
+    const { service, audit } = makeService({ failedCount: 5 });
     await service.recordFailure('nobody@school.test', { actor: null }, NOW);
     expect(audit.record).toHaveBeenCalledWith(
       expect.objectContaining({

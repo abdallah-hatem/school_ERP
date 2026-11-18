@@ -108,13 +108,4 @@ export class LoginAttemptsRepository {
     });
     return count;
   }
-
-  /** The account behind an email, when there is one (the lockout's audit entry names it). */
-  async findUserId(email: string): Promise<string | null> {
-    const row = await this.db.user.findFirst({
-      where: { email: { equals: email, mode: 'insensitive' } },
-      select: { id: true },
-    });
-    return row?.id ?? null;
-  }
 }

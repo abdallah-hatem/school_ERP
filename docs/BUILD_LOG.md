@@ -217,6 +217,17 @@ phase live in `docs/build-log/`.
   and the recommended answers to the spec's open questions (grouping, a per-employee probation end
   date, deadlines 25th/28th as settings, approvals always on, retention 90/30/365 days, contract
   reminders at 30 and 7 days, System admin edits Notifications settings) — recorded in #106.
+- 2026-11-18 — Notifications spec, plan, §11 and the option A mockup merged → #106 (build waits for
+  events + outbox).
+- 2026-11-18 — CI (owner): PRs into `dev` no longer have to be up to date with `dev`; instead the
+  full suite runs on `dev` after every merge → #111 (branch protection: dev strict off; testing,
+  production and demo still strict). A red run on `dev` is fixed before anything else.
+- 2026-11-18 — T28 merged → #107 (Abdallah): sign-in, sign-out and failed sign-in (same entry
+  whether the email exists), employees (create/edit/deactivate/reactivate/photo, names instead of
+  ids, salary hidden without the permission) and HR settings now on Activity; the employee History
+  tab fills in; smoke History checks and the skeleton History comparison are full. Left: T29
+  penalties (Tamer), then T31 (scan expects no placeholders, dry-run check, Activity search by
+  employee code).
 - 2026-11-18 — Login rate limiting (owner-approved rules) and the scheduled-jobs foundation: 5 wrong
   passwords in 15 minutes lock that account for 15 minutes (per account, `login_attempts`, one atomic
   upsert; 429 `TOO_MANY_ATTEMPTS`; sign-in and both password-change paths), admin unlock from Users
@@ -278,7 +289,7 @@ phase live in `docs/build-log/`.
   no screen yet; add them to Settings → School if a school wants to change them.
 
 - Hosting the demo on the Contabo server (owner: later; local demo is the fallback).
-- Audit log T28 (Abdallah, was Waleed's: auth, settings, employees, lists) and T29 (Tamer: penalties, lateness,
+- Audit log T28 done (#107); T29 (Tamer: penalties, lateness,
   payroll), then T31 verify. Optional CI ratchet that forbids touching an unwired endpoint (owner: docs only for now). Follow-ups from T30: id fields
   (`departmentId`) show raw ids unless T28 stores names; penalties don't appear on the employee's
   History; payroll run page has no History tab yet; smoke History check still asserts the empty

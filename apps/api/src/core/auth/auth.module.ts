@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import type { AppConfig } from '../../config';
+import { AuditModule } from '../audit';
 import { PermissionsModule } from '../permissions';
 import { SignInLimitModule } from '../sign-in-limit';
 import { UsersModule } from '../users';
@@ -19,6 +20,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 @Module({
   imports: [
     PassportModule,
+    AuditModule,
     UsersModule,
     PermissionsModule,
     SignInLimitModule,

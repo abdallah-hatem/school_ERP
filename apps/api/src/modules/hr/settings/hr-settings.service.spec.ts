@@ -77,10 +77,10 @@ describe('HrSettingsService', () => {
     );
   });
 
-  it('a value equal to the current one is not a change: no write row, no event', async () => {
+  it('a value equal to the current one is not a change: core gets no keys (records nothing, still answers @Audited)', async () => {
     const { service, settings } = makeService();
     await service.update({ payroll: { dayDivisor: 30, partTime: { PART_TIME_4: 80 } } }, 'user-1');
-    expect(settings.setValues).not.toHaveBeenCalled();
+    expect(settings.setValues).toHaveBeenCalledWith('hr', {}, 'user-1');
   });
 
   it('stores steps sorted by hour, and steps given in another order are not a change', async () => {
@@ -97,11 +97,10 @@ describe('HrSettingsService', () => {
       null,
     );
     expect(res.lateness.steps).toEqual(DEFAULTS.lateness.steps);
-    expect(settings.setValues).not.toHaveBeenCalled();
+    expect(settings.setValues).toHaveBeenCalledWith('hr', {}, null);
   });
 
-  it('does not emit when the write fails', async () => {
-    // Core emits only after its write commits (settings.service.spec); HR passes the failure on.
+  it('passes a failed write on (core records nothing then: same transaction)', async () => {
     const { service, settings } = makeService();
     settings.setValues.mockRejectedValueOnce(new Error('db down'));
     await expect(service.update({ payroll: { dayDivisor: 26 } }, 'user-1')).rejects.toThrow(

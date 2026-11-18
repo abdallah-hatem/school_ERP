@@ -2,10 +2,11 @@ import { expect, test } from '@playwright/test';
 import {
   adminName,
   changeWorkingDays,
-  employeeEntries,
+  expectGradeEntry,
   expectWorkingDaysEntry,
   firstEntry,
   renameDepartmentAr,
+  setEmployeeGrade,
   shootSkeleton,
   someDepartment,
 } from './support/activity';
@@ -79,26 +80,29 @@ test('activity: empty filters, the loading skeleton, then the person filter', as
 });
 
 for (const locale of ['en', 'ar'] as const) {
-  test(`employee History tab (${locale}): the employee's timeline, by month`, async ({ browser, page }, info) => {
+  test(`employee History tab (${locale}): an edit of the employee is at the top of their timeline`, async ({
+    browser,
+    page,
+  }, info) => {
     const employee = await activeEmployee();
-    const entries = await employeeEntries(employee.id);
-    await signIn(page, locale);
-    await page.goto(`/${locale}/employees/${employee.id}`);
-    const tabs = page.getByRole('navigation', { name: t(locale, 'employees.profile.tabs') });
-    await tabs.getByRole('link', { name: t(locale, 'employees.profile.history'), exact: true }).click();
-    await expect(page).toHaveURL(new RegExp(`/employees/${employee.id}/history$`));
-    await expect(page.getByRole('heading', { level: 2, name: t(locale, 'audit.history.title') })).toBeVisible();
-    if (entries.length === 0) {
-      // TODO(T28): employee edits record `hr.employee.update` once T28 wires the HR employee
-      // service — then edit the employee here and assert the entry at the top of the tab.
-      await expect(page.getByText(t(locale, 'audit.history.emptyTitle'))).toBeVisible();
-    } else {
-      await expect(firstEntry(page)).toBeVisible();
+    const grade = `Smoke ${locale} ${Date.now()}`;
+    await setEmployeeGrade(employee.id, grade);
+    try {
+      await signIn(page, locale);
+      await page.goto(`/${locale}/employees/${employee.id}`);
+      const tabs = page.getByRole('navigation', { name: t(locale, 'employees.profile.tabs') });
+      await tabs.getByRole('link', { name: t(locale, 'employees.profile.history'), exact: true }).click();
+      await expect(page).toHaveURL(new RegExp(`/employees/${employee.id}/history$`));
+      await expect(page.getByRole('heading', { level: 2, name: t(locale, 'audit.history.title') })).toBeVisible();
+      // T28 records `hr.employee.update` in the edit's transaction: the entry is there at once.
+      await expectGradeEntry(firstEntry(page), locale, grade);
+      await expectNoHorizontalScroll(page);
+      await settle(page);
+      await shoot(page, info, `history-${locale}-desktop`);
+      await shootSkeleton(browser, page, info, `/${locale}/employees/${employee.id}/history`, `history-loading-${locale}-desktop`);
+    } finally {
+      await setEmployeeGrade(employee.id, employee.grade);
     }
-    await expectNoHorizontalScroll(page);
-    await settle(page);
-    await shoot(page, info, `history-${locale}-desktop`);
-    await shootSkeleton(browser, page, info, `/${locale}/employees/${employee.id}/history`, `history-loading-${locale}-desktop`);
   });
 }
 

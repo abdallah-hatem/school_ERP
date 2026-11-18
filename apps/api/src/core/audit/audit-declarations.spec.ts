@@ -70,12 +70,47 @@ describe('every write endpoint declares its audit (D6)', () => {
         expect.stringMatching(/^POST \/settings\/school\/logo /),
       ]),
     );
-    const pending = writes.filter(
-      (w) =>
-        w.declaration.kind === 'not-audited' && /^wired in T(28|29)$/.test(w.declaration.reason),
+    const pending = (task: string) =>
+      writes
+        .filter((w) => w.declaration.kind === 'not-audited' && w.declaration.reason === `wired in ${task}`)
+        .map((w) => w.route.replace(/ \(.*\)$/, ''));
+    // T28 is done: no core or HR-people handler waits any more.
+    expect(pending('T28')).toEqual([]);
+    // Only the penalty records remain for T29; T31 changes this to `toEqual([])`.
+    expect(pending('T29').every((route) => / \/hr\/penalties\b/.test(route))).toBe(true);
+  });
+
+  it('every core and HR-people write records its action (T28)', () => {
+    const declared = new Map(
+      writes.map((w) => [
+        w.route.replace(/ \(.*\)$/, ''),
+        w.declaration.kind === 'audited' ? w.declaration.action : w.declaration.kind,
+      ]),
     );
-    // Shrinks as T28 and T29 replace them with @Audited; T31 changes this to `toEqual([])`.
-    expect(pending.length).toBeGreaterThan(0);
+    const expected: [string, string][] = [
+      ['POST /auth/login', 'core.auth.sign_in'],
+      ['POST /auth/logout', 'core.auth.sign_out'],
+      ['POST /stages', 'core.stage.create'],
+      ['PATCH /stages/:id', 'core.stage.update'],
+      ['PATCH /hr/settings', 'hr.settings.update'],
+      ['POST /hr/departments', 'hr.department.create'],
+      ['PATCH /hr/departments/:id', 'hr.department.update'],
+      ['POST /hr/job-titles', 'hr.job_title.create'],
+      ['PATCH /hr/job-titles/:id', 'hr.job_title.update'],
+      ['POST /hr/penalty-groups', 'hr.penalty_group.create'],
+      ['PATCH /hr/penalty-groups/:id', 'hr.penalty_group.update'],
+      ['POST /hr/penalty-groups/:groupId/violations', 'hr.violation.create'],
+      ['PATCH /hr/violations/:id', 'hr.violation.update'],
+      ['POST /hr/employees', 'hr.employee.create'],
+      ['PATCH /hr/employees/:id', 'hr.employee.update'],
+      ['POST /hr/employees/:id/deactivate', 'hr.employee.deactivate'],
+      ['POST /hr/employees/:id/reactivate', 'hr.employee.reactivate'],
+      ['POST /hr/employees/:id/photo', 'hr.employee.update'],
+      ['DELETE /hr/employees/:id/photo', 'hr.employee.update'],
+    ];
+    expect(expected.map(([route]) => [route, declared.get(route)])).toEqual(expected);
+    // A token refresh rotates the session; it is deliberately not recorded (D11).
+    expect(declared.get('POST /auth/refresh')).toBe('not-audited');
   });
 
   it('every user and role write records its core.user.* / core.role.* action (R8, P2)', () => {

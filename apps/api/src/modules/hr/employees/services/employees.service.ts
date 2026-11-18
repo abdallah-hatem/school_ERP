@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
+  AuditEntityType,
   applyInsuranceStatus,
   contractYearFor,
   Employee,
@@ -27,8 +28,11 @@ import {
   socialInsuranceIssues,
   type SocialInsurance,
   Uuid,
+  type AuditAction,
 } from '@school-erp/shared';
 import { CodedException } from '../../../../common/errors/coded.exception';
+import { AuditService } from '../../../../core/audit';
+import { AfterCommit } from '../../../../database/transactions';
 import { inScope, withoutFields, type EmployeeScope } from '../../access/employee-scope.pure';
 import { HrAccessService } from '../../access/hr-access.service';
 import { checkImageUpload, FileStorageService, type UploadedFileLike } from '../../../../core/settings';
@@ -44,6 +48,7 @@ import {
   EmployeeUpdateData,
   PayrollSnapshotRow,
 } from '../repositories/employees.repository';
+import { employeeAuditLabel, employeeAuditSnapshot } from './employee-audit.pure';
 
 /** Fields a PATCH may change but never clear (§3 "required"). */
 const REQUIRED_FIELDS = [
@@ -115,7 +120,8 @@ export function toEmployee(row: EmployeeDetailRow, salaryVisible: boolean): Empl
 
 /**
  * §3 employee records. Never deleted — deactivated. Codes come from the repository's counter.
- * Emits `employee.hired` / `employee.updated` / `employee.deactivated` after each write.
+ * Every write is recorded in the audit log in its transaction (`hr.employee.*`, §9) with the
+ * changed fields; emits `employee.hired` / `employee.updated` / `employee.deactivated`.
  */
 @Injectable()
 export class EmployeesService {
@@ -126,6 +132,8 @@ export class EmployeesService {
     private readonly events: EventEmitter2,
     private readonly files: FileStorageService,
     private readonly access: HrAccessService,
+    private readonly audit: AuditService,
+    private readonly afterCommit: AfterCommit,
   ) {}
 
   /** The employees `hr.employees.view` covers for the user (R5), salary per row (R7). */
@@ -274,52 +282,56 @@ export class EmployeesService {
   }
 
   async create(dto: CreateEmployeeDto): Promise<Employee> {
-    // A new employee's pay is set on create, so only someone who sees every salary may create (R7).
-    if ((await this.access.salaryScope()).kind !== 'all') throw new ForbiddenException();
-    await this.assertSelectable(dto);
-    const insurance = this.resolveInsurance(dto, null);
-    await this.assertUnique({ ...dto, insuranceNumber: insurance.insuranceNumber }, null);
-    if (dto.managerId) {
-      await this.assertManagerVisible(dto.managerId);
-      await this.assertManager(null, dto.managerId, true);
-    }
-    const contract = this.resolveContract(dto.contractStart, dto.contractEnd);
+    // The change and its audit entry commit together (audit D2), for the seed too.
+    return this.afterCommit.inTransaction(async () => {
+      // A new employee's pay is set on create, so only someone who sees every salary may create (R7).
+      if ((await this.access.salaryScope()).kind !== 'all') throw new ForbiddenException();
+      await this.assertSelectable(dto);
+      const insurance = this.resolveInsurance(dto, null);
+      await this.assertUnique({ ...dto, insuranceNumber: insurance.insuranceNumber }, null);
+      if (dto.managerId) {
+        await this.assertManagerVisible(dto.managerId);
+        await this.assertManager(null, dto.managerId, true);
+      }
+      const contract = this.resolveContract(dto.contractStart, dto.contractEnd);
 
-    const row = await this.repository.createWithCode({
-      nameEn: dto.nameEn,
-      nameAr: dto.nameAr,
-      nationalId: dto.nationalId ?? null,
-      gender: dto.gender,
-      dateOfBirth: fromIsoDate(dto.dateOfBirth),
-      phone: dto.phone,
-      email: dto.email ?? null,
-      address: dto.address ?? null,
-      hireDate: fromIsoDate(dto.hireDate),
-      stageId: dto.stageId,
-      departmentId: dto.departmentId,
-      jobTitleId: dto.jobTitleId,
-      managerId: dto.managerId ?? null,
-      grade: dto.grade ?? null,
-      workSystem: dto.workSystem,
-      basicSalary: dto.basicSalary,
-      fingerprintId: dto.fingerprintId ?? null,
-      contractStart: fromIsoDate(contract.start),
-      contractEnd: fromIsoDate(contract.end),
-      usesBus: dto.usesBus ?? false,
-      ...this.insuranceData(insurance),
-      bankName: dto.bankName ?? null,
-      bankAccountNumber: dto.bankAccountNumber ?? null,
-      iban: dto.iban ?? null,
-      emergencyContactName: dto.emergencyContactName ?? null,
-      emergencyContactRelationship: dto.emergencyContactRelationship ?? null,
-      emergencyContactPhone: dto.emergencyContactPhone ?? null,
-      highestDegree: dto.highestDegree ?? null,
-      major: dto.major ?? null,
-      university: dto.university ?? null,
-      graduationYear: dto.graduationYear ?? null,
+      const row = await this.repository.createWithCode({
+        nameEn: dto.nameEn,
+        nameAr: dto.nameAr,
+        nationalId: dto.nationalId ?? null,
+        gender: dto.gender,
+        dateOfBirth: fromIsoDate(dto.dateOfBirth),
+        phone: dto.phone,
+        email: dto.email ?? null,
+        address: dto.address ?? null,
+        hireDate: fromIsoDate(dto.hireDate),
+        stageId: dto.stageId,
+        departmentId: dto.departmentId,
+        jobTitleId: dto.jobTitleId,
+        managerId: dto.managerId ?? null,
+        grade: dto.grade ?? null,
+        workSystem: dto.workSystem,
+        basicSalary: dto.basicSalary,
+        fingerprintId: dto.fingerprintId ?? null,
+        contractStart: fromIsoDate(contract.start),
+        contractEnd: fromIsoDate(contract.end),
+        usesBus: dto.usesBus ?? false,
+        ...this.insuranceData(insurance),
+        bankName: dto.bankName ?? null,
+        bankAccountNumber: dto.bankAccountNumber ?? null,
+        iban: dto.iban ?? null,
+        emergencyContactName: dto.emergencyContactName ?? null,
+        emergencyContactRelationship: dto.emergencyContactRelationship ?? null,
+        emergencyContactPhone: dto.emergencyContactPhone ?? null,
+        highestDegree: dto.highestDegree ?? null,
+        major: dto.major ?? null,
+        university: dto.university ?? null,
+        graduationYear: dto.graduationYear ?? null,
+      });
+      await this.record('hr.employee.create', null, row);
+      this.emit(HrEvent.EMPLOYEE_HIRED, row.id);
+      return this.present(row);
     });
-    this.emit(HrEvent.EMPLOYEE_HIRED, row.id);
-    return this.present(row);
   }
 
   /**
@@ -327,46 +339,51 @@ export class EmployeesService {
    * salary field (`EMPLOYEE_SALARY_FIELDS`) for an employee whose salary the user can't see (R7).
    */
   async update(id: Uuid, dto: UpdateEmployeeDto): Promise<Employee> {
-    const current = await this.repository.findDetail(id, await this.access.where('hr.employees.edit'));
-    if (!current) throw new NotFoundException();
-    const sendsSalary = EMPLOYEE_SALARY_FIELDS.some((f) => dto[f] !== undefined);
-    if (sendsSalary && !inScope(await this.access.salaryScope(), detailScopeFields(current))) {
-      throw new ForbiddenException();
-    }
+    // The change and its audit entry commit together (audit D2), for the seed too.
+    return this.afterCommit.inTransaction(async () => {
+      const current = await this.repository.findDetail(id, await this.access.where('hr.employees.edit'));
+      if (!current) throw new NotFoundException();
+      const sendsSalary = EMPLOYEE_SALARY_FIELDS.some((f) => dto[f] !== undefined);
+      if (sendsSalary && !inScope(await this.access.salaryScope(), detailScopeFields(current))) {
+        throw new ForbiddenException();
+      }
 
-    const cleared = REQUIRED_FIELDS.filter((f) => dto[f] === null);
-    if (cleared.length) throw new BadRequestException(`${cleared.join(', ')} cannot be empty`);
-    await this.assertStaysInScope(current, dto);
+      const cleared = REQUIRED_FIELDS.filter((f) => dto[f] === null);
+      if (cleared.length) throw new BadRequestException(`${cleared.join(', ')} cannot be empty`);
+      await this.assertStaysInScope(current, dto);
 
-    // Only a newly chosen list item must be selectable — an item hidden after the employee got it
-    // stays valid on unrelated edits.
-    await this.assertSelectable({
-      stageId: dto.stageId !== current.stage.id ? dto.stageId : undefined,
-      departmentId: dto.departmentId !== current.department.id ? dto.departmentId : undefined,
-      jobTitleId: dto.jobTitleId !== current.jobTitle.id ? dto.jobTitleId : undefined,
+      // Only a newly chosen list item must be selectable — an item hidden after the employee got it
+      // stays valid on unrelated edits.
+      await this.assertSelectable({
+        stageId: dto.stageId !== current.stage.id ? dto.stageId : undefined,
+        departmentId: dto.departmentId !== current.department.id ? dto.departmentId : undefined,
+        jobTitleId: dto.jobTitleId !== current.jobTitle.id ? dto.jobTitleId : undefined,
+      });
+      const insurance = this.resolveInsurance(dto, current);
+      await this.assertUnique({ ...dto, insuranceNumber: insurance.insuranceNumber }, id);
+      // The existing manager left unchanged is kept even if they no longer manage people (§3).
+      if (dto.managerId) {
+        await this.assertManager(id, dto.managerId, dto.managerId !== current.manager?.id);
+      }
+      if (dto.contractStart !== undefined || dto.contractEnd !== undefined) {
+        this.assertContractOrder(
+          dto.contractStart ?? toIsoDate(current.contractStart),
+          dto.contractEnd ?? toIsoDate(current.contractEnd),
+        );
+      }
+
+      const data: EmployeeUpdateData = { ...dto };
+      for (const f of DATE_FIELDS) {
+        const v = dto[f];
+        if (v) data[f] = fromIsoDate(v);
+      }
+      Object.assign(data, this.insuranceData(insurance));
+      const row = await this.repository.updateEmployee(id, data);
+      // Always recorded: a save that changes nothing writes no entry but still answers `@Audited`.
+      await this.record('hr.employee.update', current, row);
+      this.emit(HrEvent.EMPLOYEE_UPDATED, id);
+      return this.present(row);
     });
-    const insurance = this.resolveInsurance(dto, current);
-    await this.assertUnique({ ...dto, insuranceNumber: insurance.insuranceNumber }, id);
-    // The existing manager left unchanged is kept even if they no longer manage people (§3).
-    if (dto.managerId) {
-      await this.assertManager(id, dto.managerId, dto.managerId !== current.manager?.id);
-    }
-    if (dto.contractStart !== undefined || dto.contractEnd !== undefined) {
-      this.assertContractOrder(
-        dto.contractStart ?? toIsoDate(current.contractStart),
-        dto.contractEnd ?? toIsoDate(current.contractEnd),
-      );
-    }
-
-    const data: EmployeeUpdateData = { ...dto };
-    for (const f of DATE_FIELDS) {
-      const v = dto[f];
-      if (v) data[f] = fromIsoDate(v);
-    }
-    Object.assign(data, this.insuranceData(insurance));
-    const row = await this.repository.updateEmployee(id, data);
-    this.emit(HrEvent.EMPLOYEE_UPDATED, id);
-    return this.present(row);
   }
 
   /**
@@ -374,27 +391,39 @@ export class EmployeesService {
    * file is deleted once the record points at the new one.
    */
   async setPhoto(id: Uuid, file: UploadedFileLike | undefined): Promise<Employee> {
-    await this.assertInScope('hr.employees.edit', id);
-    const previous = await this.repository.findPhotoUrl(id);
-    if (previous === undefined) throw new NotFoundException();
-    const { type, buffer } = checkImageUpload(file, EMPLOYEE_PHOTO_UPLOAD);
-    const photoUrl = await this.files.save(EMPLOYEE_PHOTO_FOLDER, `${id}-${randomUUID()}.${type}`, buffer);
-    const row = await this.repository.updateEmployee(id, { photoUrl });
-    if (previous) await this.files.remove(previous);
-    this.emit(HrEvent.EMPLOYEE_UPDATED, id);
-    return this.present(row);
+    // The change and its audit entry commit together (audit D2), for the seed too.
+    return this.afterCommit.inTransaction(async () => {
+      await this.assertInScope('hr.employees.edit', id);
+      const before = await this.repository.findDetail(id);
+      if (!before) throw new NotFoundException();
+      const { type, buffer } = checkImageUpload(file, EMPLOYEE_PHOTO_UPLOAD);
+      const photoUrl = await this.files.save(EMPLOYEE_PHOTO_FOLDER, `${id}-${randomUUID()}.${type}`, buffer);
+      const row = await this.repository.updateEmployee(id, { photoUrl });
+      await this.record('hr.employee.update', before, row);
+      this.removeFileAfterCommit(before.photoUrl);
+      this.emit(HrEvent.EMPLOYEE_UPDATED, id);
+      return this.present(row);
+    });
   }
 
   /** Removes the photo; the employee shows the silhouette again. No photo → nothing changes. */
   async removePhoto(id: Uuid): Promise<Employee> {
-    await this.assertInScope('hr.employees.edit', id);
-    const previous = await this.repository.findPhotoUrl(id);
-    if (previous === undefined) throw new NotFoundException();
-    if (!previous) return this.get(id);
-    const row = await this.repository.updateEmployee(id, { photoUrl: null });
-    await this.files.remove(previous);
-    this.emit(HrEvent.EMPLOYEE_UPDATED, id);
-    return this.present(row);
+    // The change and its audit entry commit together (audit D2), for the seed too.
+    return this.afterCommit.inTransaction(async () => {
+      await this.assertInScope('hr.employees.edit', id);
+      const before = await this.repository.findDetail(id);
+      if (!before) throw new NotFoundException();
+      if (!before.photoUrl) {
+        // Nothing to remove: no entry, but the request still answers `@Audited`.
+        await this.record('hr.employee.update', before, before);
+        return this.present(before);
+      }
+      const row = await this.repository.updateEmployee(id, { photoUrl: null });
+      await this.record('hr.employee.update', before, row);
+      this.removeFileAfterCommit(before.photoUrl);
+      this.emit(HrEvent.EMPLOYEE_UPDATED, id);
+      return this.present(row);
+    });
   }
 
   /** Inactive: kept with all history, left out of new payroll runs, penalties and lateness. */
@@ -407,15 +436,46 @@ export class EmployeesService {
     return this.setStatus(id, EmployeeStatus.ACTIVE, HrEvent.EMPLOYEE_UPDATED);
   }
 
-  /** Idempotent: setting the status an employee already has changes nothing and emits nothing. */
+  /**
+   * Idempotent: setting the status an employee already has changes nothing, records no entry and
+   * emits nothing.
+   */
   private async setStatus(id: Uuid, status: EmployeeStatus, event: HrEvent): Promise<Employee> {
-    await this.assertInScope('hr.employees.change_status', id);
-    const current = await this.repository.findState(id);
-    if (!current) throw new NotFoundException();
-    if (current.status === status) return this.get(id);
-    const row = await this.repository.updateEmployee(id, { status });
-    this.emit(event, id);
-    return this.present(row);
+    // The change and its audit entry commit together (audit D2), for the seed too.
+    return this.afterCommit.inTransaction(async () => {
+      await this.assertInScope('hr.employees.change_status', id);
+      const current = await this.repository.findDetail(id);
+      if (!current) throw new NotFoundException();
+      const action: AuditAction =
+        status === EmployeeStatus.INACTIVE ? 'hr.employee.deactivate' : 'hr.employee.reactivate';
+      if (current.status === status) {
+        await this.record(action, current, current);
+        return this.present(current);
+      }
+      const row = await this.repository.updateEmployee(id, { status });
+      await this.record(action, current, row);
+      this.emit(event, id);
+      return this.present(row);
+    });
+  }
+
+  /**
+   * One audit entry about the employee, in the write's transaction (D2): the fields that differ
+   * between the two snapshots (all of them on create). Equal snapshots write nothing.
+   */
+  private record(action: AuditAction, before: EmployeeDetailRow | null, after: EmployeeDetailRow): Promise<void> {
+    return this.audit.record({
+      action,
+      entity: { type: AuditEntityType.EMPLOYEE, id: after.id, label: employeeAuditLabel(after) },
+      before: before ? employeeAuditSnapshot(before) : null,
+      after: employeeAuditSnapshot(after),
+    });
+  }
+
+  /** A replaced photo's file goes only once the record no longer points at it (committed). */
+  private removeFileAfterCommit(url: string | null): void {
+    if (!url) return;
+    void this.afterCommit.run(() => this.files.remove(url));
   }
 
   /** The record as this user may see it: salary fields only when their salary scope covers it. */

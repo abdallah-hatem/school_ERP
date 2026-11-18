@@ -69,13 +69,13 @@ export class SignInLimitService {
     const result = await this.attempts.recordFailure(key, now, limits);
     if (!justLocked(result.failedCount, limits)) return;
 
-    const userId = await this.attempts.findUserId(key);
     try {
       await this.txHost.withTransaction(Propagation.RequiresNew, () =>
         this.audit.record({
           action: 'core.auth.locked_out',
-          // The account when there is one; else the email typed (like a failed sign-in).
-          entity: { type: AuditEntityType.USER, id: userId ?? key, label: key },
+          // The email typed, like T28's failed sign-in: the same entry whether an account has it,
+          // so neither the answer nor the log tells the two apart.
+          entity: { type: AuditEntityType.USER, id: key, label: key },
           after: { lockedUntil: result.lockedUntil?.toISOString() ?? null },
           ...('actor' in options ? { actor: options.actor } : {}),
         }),

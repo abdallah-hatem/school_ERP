@@ -108,17 +108,23 @@ describe('sign-in limit and scheduled jobs (e2e)', () => {
       expect(row?.failedCount).toBe(5); // refused attempts are not counted (nothing was checked)
       expect(row!.lockedUntil!.getTime() - Date.now()).toBeGreaterThan(14 * MINUTE);
 
-      // The lockout is in the audit log once, with no actor (nobody was signed in).
+      // The lockout is in the audit log once, keyed by the email typed (as T28's failed sign-in),
+      // with no actor (nobody was signed in).
       const entries = await db.auditEntry.findMany({
         where: { seq: { gt: mark }, action: 'core.auth.locked_out' },
       });
       expect(entries).toHaveLength(1);
       expect(entries[0]).toMatchObject({
         entityType: 'user',
-        entityId: person.id,
+        entityId: person.email,
         entityLabel: person.email,
         actorId: null,
       });
+      // Every attempt is a failed sign-in (T28) — the 5 wrong ones and the 2 refused while locked.
+      const failed = await db.auditEntry.findMany({
+        where: { seq: { gt: mark }, action: 'core.auth.sign_in_failed', entityId: person.email },
+      });
+      expect(failed).toHaveLength(7);
     });
 
     it('the attempts after the lock say the minutes still left (rounded up)', async () => {
@@ -202,7 +208,7 @@ describe('sign-in limit and scheduled jobs (e2e)', () => {
       expect(counted).toBeGreaterThanOrEqual(5);
       await login(person.email, PASSWORD).expect(429);
       const lockouts = await db.auditEntry.count({
-        where: { seq: { gt: mark }, action: 'core.auth.locked_out', entityId: person.id },
+        where: { seq: { gt: mark }, action: 'core.auth.locked_out', entityId: person.email },
       });
       expect(lockouts).toBe(1);
     });
