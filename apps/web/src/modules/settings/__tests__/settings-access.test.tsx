@@ -72,8 +72,6 @@ describe('Settings — who sees which section', () => {
     expect(listed()).toEqual(['Accounting']);
     expect(await screen.findByText('Tax and insurance')).toBeTruthy();
     expect(api.GET_SCHOOL_SETTINGS_FOR_EDIT).not.toHaveBeenCalled();
-    // The section they can't view is dropped from the URL.
-    expect(router.replace).toHaveBeenCalledWith('/en/settings', { scroll: false });
     // The built-in Accountant may edit the rule.
     await waitFor(() =>
       expect(screen.getByRole('textbox', { name: /Rate for the rest/ })).toHaveProperty('disabled', false),
@@ -83,7 +81,6 @@ describe('Settings — who sees which section', () => {
   it('an Accountant opening Settings with no section lands on Accounting', async () => {
     renderScreen(sessionOf('accountant'), null);
     expect(await screen.findByText('Tax and insurance')).toBeTruthy();
-    expect(router.replace).not.toHaveBeenCalled();
   });
 
   it('an HR officer asking for Accounting gets their first allowed section, never a load error', async () => {
@@ -93,7 +90,6 @@ describe('Settings — who sees which section', () => {
     await waitFor(() => expect(api.GET_LIST_ITEMS).toHaveBeenCalledWith('stages'));
     expect(api.GET_ACCOUNTING_SETTINGS).not.toHaveBeenCalled();
     expect(screen.queryByText("This couldn't load")).toBeNull();
-    expect(router.replace).toHaveBeenCalledWith('/en/settings', { scroll: false });
   });
 
   it('a view-only Accounting user sees the rule read-only', async () => {

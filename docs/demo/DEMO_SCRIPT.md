@@ -5,14 +5,19 @@ The story we show a school, in order. Each step lists what to do and what must b
 
 Demo data: the seed (`pnpm --filter api db:seed`) — about 40 employees, the school's penalty
 catalogue, a month of penalties (some pending) and lateness, and a DRAFT payroll run for that month.
+After `prisma migrate deploy` on an older demo database, **run the seed once more** (same
+`SEED_ADMIN_PASSWORD`): it switches off "once per day" for the violations that repeat in a day,
+marks the managing job titles and stores the principal's photo, without touching the month.
 
 ## 1. Sign in
-- Open the app in Arabic. The sign-in page shows the school's logo and name before signing in.
+- Open the app in Arabic (`/ar` — the default language is English). The sign-in page shows the school's logo and name before signing in.
 - Wrong password → a clear Arabic message; correct password → the dashboard.
 
 ## 2. Dashboard
 - Active headcount with the split by stage; this month's payroll (status + net); pending and
   approved penalties this month; quick links.
+- The menu is grouped by module: HR (Employees, Penalties, Lateness, Payroll), Accounting,
+  Inventory and Students marked "Soon", Administration (Settings, Activity, Users, Roles).
 - Switch **ع ↔ EN**: the whole layout mirrors without a reload and stays on the same page.
 
 ## 3. Penalties — the rules come from the school's own regulations
@@ -46,6 +51,8 @@ catalogue, a month of penalties (some pending) and lateness, and a DRAFT payroll
   (90 min → 0.25 day). Save.
 - **View change history** (top of Settings) → Activity, filtered to Settings: ✔ the grace-minutes
   change is at the top, with who made it and old → new (Administration → Activity shows it too).
+  Activity holds settings and catalogue changes for now; penalties, lateness, payroll and sign-ins
+  join it with the HR audit work (T28) — don't promise them yet.
 - Back to the run → **Recalculate** → ✔ the same employee's lateness drops (0.25 × 20,000 ÷ 30 =
   166.67) and the totals follow.
 - Put the rule back afterwards if the demo continues on the same data.
@@ -67,14 +74,14 @@ catalogue, a month of penalties (some pending) and lateness, and a DRAFT payroll
   only section listed; the rule can be changed. An HR officer opening `?section=accounting` → ✔
   lands on their first section, no error.
 - Click the employee's name (on the payslip, or in the run's "Employees this month") → ✔ their
-  profile opens. Every employee name in the app does this (penalties, lateness, Activity).
+  profile opens. Every employee name in the app does this (penalties, lateness, the run).
 - On the profile, **Details** shows the social insurance, bank account, emergency contact and
   qualification cards. **Edit** → choose *Insured*: the insurance number, registration date and
   insured salary appear and are required; choose *Not insured*: they disappear and are cleared.
   ✔ The insured salary groups as you type (9,000.00). A wrong IBAN is refused with a clear message.
 - The seeded principal (employee 1) shows his photo on his card and profile; every other employee
-  shows a neutral silhouette. On **Edit** you can upload a photo (PNG, JPG or WebP, up to 2 MB)
-  or remove it.
+  shows a male or female silhouette. On **Edit** choose a photo (PNG, JPG or WebP, up to 2 MB),
+  then **Upload photo**; **Remove photo** takes it off. Another file type is refused.
 
 ## 9. Phone
 - Same app at phone width: top bar with the school name and the menu, drawer navigation, cards

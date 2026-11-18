@@ -1,3 +1,4 @@
+import { SCREENS, type ScreenAccess } from '@school-erp/shared';
 import type { PermissionRequirement } from '@/core/auth/permissions';
 import {
   AccountingModuleIcon,
@@ -54,12 +55,14 @@ export interface NavModule {
   status: 'live' | 'soon';
 }
 
-const page = (
-  key: NavItem['key'],
-  path: string,
-  icon: AppIcon,
-  anyOf?: readonly PermissionRequirement[],
-): NavItem => (anyOf ? { key, path, icon, anyOf } : { key, path, icon });
+/**
+ * A sidebar page: its path and who sees it come from `SCREENS` (`@school-erp/shared`), the same
+ * entry its page guard (`requireScreen`) reads — so the link and the page can't disagree.
+ */
+const page = (key: NavItem['key'], icon: AppIcon): NavItem => {
+  const { path, anyOf } = SCREENS[key] as ScreenAccess;
+  return anyOf ? { key, path, icon, anyOf } : { key, path, icon };
+};
 
 /**
  * The menu, one entry per module (docs/ARCHITECTURE.md → core/navigation). Adding a module is one
@@ -72,7 +75,7 @@ export const NAV_MODULES: readonly NavModule[] = [
     nameKey: 'common.nav.modules.home',
     icon: DashboardIcon,
     tone: 'neutral',
-    items: [page('dashboard', '', DashboardIcon)],
+    items: [page('dashboard', DashboardIcon)],
     status: 'live',
   },
   {
@@ -81,10 +84,10 @@ export const NAV_MODULES: readonly NavModule[] = [
     icon: HrModuleIcon,
     tone: 'primary',
     items: [
-      page('employees', '/employees', StaffIcon, ['hr.employees.view']),
-      page('penalties', '/penalties', PenaltiesIcon, ['hr.penalties.view']),
-      page('lateness', '/lateness', LatenessIcon, ['hr.lateness.view']),
-      page('payroll', '/payroll', PayrollIcon, ['hr.payroll.view']),
+      page('employees', StaffIcon),
+      page('penalties', PenaltiesIcon),
+      page('lateness', LatenessIcon),
+      page('payroll', PayrollIcon),
     ],
     status: 'live',
   },
@@ -98,18 +101,12 @@ export const NAV_MODULES: readonly NavModule[] = [
     icon: AdministrationModuleIcon,
     tone: 'accent',
     items: [
-      page('settings', '/settings', SettingsIcon, [
-        'core.settings.view',
-        'hr.settings.view',
-        'hr.lists.view',
-        'core.stages.view',
-        'hr.penalty_catalogue.view',
-        'accounting.settings.view',
-      ]),
-      page('activity', '/activity', ActivityIcon, ['core.audit.view']),
+      // Settings: anyone who may view one of its sections (SETTINGS_SECTION_ACCESS).
+      page('settings', SettingsIcon),
+      page('activity', ActivityIcon),
       // Who can sign in and what each role may do (spec roles-permissions, P3).
-      page('users', '/users', UsersIcon, ['core.users.view']),
-      page('roles', '/roles', RolesIcon, ['core.roles.view']),
+      page('users', UsersIcon),
+      page('roles', RolesIcon),
     ],
     status: 'live',
   },
