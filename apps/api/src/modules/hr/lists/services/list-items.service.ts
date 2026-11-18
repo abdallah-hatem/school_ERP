@@ -1,15 +1,8 @@
 import { HttpStatus, NotFoundException } from '@nestjs/common';
-import {
-  ErrorCode,
-  HrListKey,
-  ListItem,
-  Uuid,
-  type AuditAction,
-  type AuditEntityType,
-} from '@school-erp/shared';
+import { ErrorCode, HrListKey, ListItem, Uuid } from '@school-erp/shared';
 import { CodedException } from '../../../../common/errors/coded.exception';
-import type { AuditService } from '../../../../core/audit';
-import type { AfterCommit } from '../../../../database/transactions';
+import { SettingsHistory } from '../../../../core/settings';
+import { AfterCommit } from '../../../../database/transactions';
 import type { CreateListItemDto, UpdateListItemDto } from '../dto/list-item.dto';
 import type {
   ListItemData,
@@ -17,18 +10,10 @@ import type {
   ListItemUpdateData,
 } from '../repositories/list-items.repository';
 
-/** What a list records in the audit log: its record type and its two actions. */
-export interface ListAudit {
-  type: AuditEntityType;
-  create: AuditAction;
-  update: AuditAction;
-}
-
 /**
  * Departments and job titles (§3 lists). No delete: an item is hidden (`isActive: false`) and
- * stays on the employees that use it. Every create / change is recorded in the audit log in the
- * write's transaction (D2), shaped like the old history row — the field is the list's history key
- * (`hr.departments`), the values whole snapshots — so Settings history reads as before (§7).
+ * stays on the employees that use it. Every create / change records its history entry (§7) through
+ * core's `SettingsHistory`, in the write's own transaction — both commit or neither does.
  */
 export abstract class ListItemsService<
   T extends ListItem = ListItem,
@@ -37,18 +22,16 @@ export abstract class ListItemsService<
 > {
   protected constructor(
     protected readonly repository: ListItemsRepository<T, ListItemData, ListItemUpdateData>,
-    private readonly audit: AuditService,
+    private readonly history: SettingsHistory,
     private readonly afterCommit: AfterCommit,
     private readonly historyKey: HrListKey,
-    private readonly auditAs: ListAudit,
   ) {}
 
   list(includeHidden = false): Promise<T[]> {
     return this.repository.findAllOrdered(includeHidden);
   }
 
-  async create(dto: C): Promise<T> {
-    // The change and its audit entry commit together (audit D2), for the seed too.
+  create(dto: C, changedById: Uuid | null): Promise<T> {
     return this.afterCommit.inTransaction(async () => {
       const item = await this.repository.createItem({
         nameEn: dto.nameEn,
@@ -56,7 +39,7 @@ export abstract class ListItemsService<
         ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
         ...this.extraCreateData(dto),
       });
-      await this.record(null, item);
+      await this.recordChange(null, item, changedById);
       return item;
     });
   }
@@ -66,14 +49,13 @@ export abstract class ListItemsService<
     return {};
   }
 
-  async update(id: Uuid, dto: U): Promise<T> {
-    // The change and its audit entry commit together (audit D2), for the seed too.
+  /** A save that changes nothing writes no history entry. */
+  update(id: Uuid, dto: U, changedById: Uuid | null): Promise<T> {
     return this.afterCommit.inTransaction(async () => {
       const before = await this.repository.findOne(id);
       if (!before) throw new NotFoundException();
       const after = await this.repository.updateItem(id, dto);
-      // Always recorded: an unchanged save writes no entry but still answers `@Audited` (D6b).
-      await this.record(before, after);
+      await this.recordChange(before, after, changedById);
       return after;
     });
   }
@@ -90,11 +72,13 @@ export abstract class ListItemsService<
     return item;
   }
 
-  private record(before: T | null, after: T): Promise<void> {
-    return this.audit.record({
-      action: before ? this.auditAs.update : this.auditAs.create,
-      entity: { type: this.auditAs.type, id: after.id, label: { en: after.nameEn, ar: after.nameAr } },
-      changes: [{ field: this.historyKey, before, after }],
+  private recordChange(oldValue: T | null, newValue: T, changedById: Uuid | null) {
+    return this.history.record({
+      scope: 'lists',
+      key: this.historyKey,
+      oldValue,
+      newValue,
+      changedById,
     });
   }
 }

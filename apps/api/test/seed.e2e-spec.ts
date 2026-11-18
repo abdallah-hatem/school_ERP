@@ -136,7 +136,7 @@ describe('Seed (e2e)', () => {
       where: { groupId: group.id, nameEn: seedViolation.nameEn },
     });
     // Stand-in for an older seed's wording and levels.
-    await catalogue.updateGroup(group.id, { nameAr: 'اسم قديم للمجموعة' });
+    await catalogue.updateGroup(group.id, { nameAr: 'اسم قديم للمجموعة' }, null);
     await catalogue.updateViolation(
       violation.id,
       {
@@ -145,6 +145,7 @@ describe('Seed (e2e)', () => {
         oncePerDay: !(seedViolation.oncePerDay ?? true),
         levels: [{ level: 1, action: 'NOTICE' }],
       },
+      null,
     );
 
     await runSeed({ app });

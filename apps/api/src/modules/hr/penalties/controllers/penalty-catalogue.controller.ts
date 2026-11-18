@@ -1,4 +1,6 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post } from '@nestjs/common';
+import type { AuthUser } from '@school-erp/shared';
+import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
 import {
   CreatePenaltyGroupDto,
   CreateViolationDto,
@@ -26,8 +28,8 @@ export class PenaltyCatalogueController {
   @Audited('hr.penalty_group.create')
   @Post('penalty-groups')
   @Permission('hr.penalty_catalogue.manage')
-  createGroup(@Body() dto: CreatePenaltyGroupDto) {
-    return this.catalogue.createGroup(dto);
+  createGroup(@Body() dto: CreatePenaltyGroupDto, @CurrentUser() user?: AuthUser) {
+    return this.catalogue.createGroup(dto, user?.id ?? null);
   }
 
   @Audited('hr.penalty_group.update')
@@ -36,8 +38,9 @@ export class PenaltyCatalogueController {
   updateGroup(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdatePenaltyGroupDto,
+    @CurrentUser() user?: AuthUser,
   ) {
-    return this.catalogue.updateGroup(id, dto);
+    return this.catalogue.updateGroup(id, dto, user?.id ?? null);
   }
 
   @Audited('hr.violation.create')
@@ -46,8 +49,9 @@ export class PenaltyCatalogueController {
   createViolation(
     @Param('groupId', ParseUUIDPipe) groupId: string,
     @Body() dto: CreateViolationDto,
+    @CurrentUser() user?: AuthUser,
   ) {
-    return this.catalogue.createViolation(groupId, dto);
+    return this.catalogue.createViolation(groupId, dto, user?.id ?? null);
   }
 
   @Audited('hr.violation.update')
@@ -56,7 +60,8 @@ export class PenaltyCatalogueController {
   updateViolation(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateViolationDto,
+    @CurrentUser() user?: AuthUser,
   ) {
-    return this.catalogue.updateViolation(id, dto);
+    return this.catalogue.updateViolation(id, dto, user?.id ?? null);
   }
 }

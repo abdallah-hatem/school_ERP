@@ -244,8 +244,8 @@ UUID) and `@nestjs-cls/transactional` with the Prisma adapter keeps the open tra
   uses `txHost.tx` (the transaction client inside one, the plain client outside). Its multi-row
   writes use `txHost.withTransaction(...)`, which joins an open transaction or opens one.
   Repositories still on `DatabaseService` keep working but always run outside any transaction —
-  move a repository over when its writes must be audited (T28 moved stages, refresh tokens, the HR
-  lists, the penalty catalogue and employees; T29 penalties, lateness and payroll).
+  move a repository over when its writes must be audited (#105 moved stages, the HR lists and the
+  penalty catalogue; T28 refresh tokens and employees; T29 penalties, lateness and payroll).
 - Never pass options to a nested `withTransaction`; only the request transaction sets them.
 - **After-commit work** (events): `AfterCommit.run(fn)` queues `fn` until the open request
   transaction commits (dropped on rollback), or runs it at once when none is open.
@@ -271,15 +271,11 @@ module through core's exported `AuditService` — never through its repository.
   passed only where the request has no user yet (a successful sign-in) or none applies (`null`).
 - **A service records in its own write's transaction** even when called outside a request (the
   seed): it wraps the write in `AfterCommit.inTransaction(...)`, which joins the request's
-  transaction or opens one. Entries written by the seed have no actor ("System").
+  transaction or opens one. An employee entry written by the seed has no actor ("System").
 - **A failed sign-in** (spec 5, `AuthService`) is recorded in a transaction of its own
   (`Propagation.RequiresNew`), since the request's rolls back with the 401. Its record is the typed
   email (normalised) as id and label, never a user id — the same entry whether or not the email
   belongs to an account — with no actor and no password.
-- **List and catalogue edits** (stages, departments, job titles, penalty groups, violations) keep the
-  old history shape: one change whose field is the history key (`lists.stages.<id>`,
-  `hr.departments`, `hr.violations`…) holding the whole item before and after. The temporary
-  `settings.changed` → history listener is gone (T28).
 - **Employee entries** store the record as `employeeAuditSnapshot` (`hr/employees`) builds it: dates
   as `YYYY-MM-DD`, money in piastres, and the stage, department, job title and direct manager by
   their two names under their id fields (`departmentId: { nameEn, nameAr }`), so the timeline reads
@@ -317,6 +313,16 @@ module through core's exported `AuditService` — never through its repository.
   Settings has no history section of its own — "View change history" opens Activity with
   `module=settings` (the settings actions of both modules). `GET /settings/history` was removed.
   The old `setting_changes` rows were copied by the T27 migration (same id, value, person, time).
+  **History is written in the change's own transaction** — never after it, so a crash between the
+  two can't lose it. School, HR and accounting settings: `SettingsService.setValues` writes the keys
+  and their entry together. Lists and catalogue (stages, departments, job titles, penalty groups,
+  violations): the owning service wraps its write in `AfterCommit.inTransaction` and calls core's
+  exported `SettingsHistory.record({ scope, key, oldValue, newValue, changedById })` inside it — the
+  entry keeps the old history shape (the history key as the field, whole snapshots as before /
+  after, both names as the label), and a failing entry rolls the change back. Their repositories
+  use `txHost.tx` so they join that transaction. `settings.changed` still fires, after the commit,
+  for real changes only; nothing records history from it. No outbox: the history row is core's own
+  table written in the same transaction, and no other module needs the event to arrive.
 - **Dates** on the audit screens are read in the school's time zone (`SCHOOL_TIME_ZONE`, Cairo, in
   `core/audit/lib/time.ts`): day headers, times and the date filter's day edges. Calendars start the
   week on Sunday in both languages (the school's working week, `WEEK_STARTS_ON`).

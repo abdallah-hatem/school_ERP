@@ -71,13 +71,13 @@ export type ViolationUpdateData = Partial<ViolationData> & { isActive?: boolean 
 /**
  * The penalty catalogue (§4): groups → violations → levels. Nothing is ever deleted — groups and
  * violations are retired with `isActive: false`. Levels are replaced as a whole on edit (they're
- * values of the violation; approved records copy what they need).
+ * values of the violation; approved records copy what they need). Runs in the caller's
+ * transaction when one is open, so an edit and its history commit together.
  */
 @Injectable()
 export class PenaltyCatalogueRepository {
   constructor(private readonly txHost: TransactionHost<DbAdapter>) {}
 
-  /** The open transaction (an audited write's), so a change and its audit entry commit together. */
   private get db(): DbClient {
     return this.txHost.tx;
   }

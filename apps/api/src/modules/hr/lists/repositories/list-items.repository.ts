@@ -1,6 +1,6 @@
+import type { TransactionHost } from '@nestjs-cls/transactional';
 import type { ListItem } from '@school-erp/shared';
 import { BaseRepository, ModelName } from '../../../../common/repositories/base.repository';
-import type { TransactionHost } from '@nestjs-cls/transactional';
 import { DatabaseService } from '../../../../database/database.service';
 import type { DbAdapter } from '../../../../database/transactions';
 
@@ -38,6 +38,8 @@ interface ListDelegate<T, D, U> {
 /**
  * Departments and job titles share one table shape, so one repository class serves both. A list
  * with extra columns (job titles' `managesPeople`) passes its own wider types and `select`.
+ * Its own queries run in the caller's transaction when one is open, so an edit and its history
+ * commit together.
  */
 export abstract class ListItemsRepository<
   T extends ListItem = ListItem,
@@ -53,7 +55,6 @@ export abstract class ListItemsRepository<
     super(databaseService, modelName);
   }
 
-  /** Through the open transaction (an audited write's), so the change and its entry commit together. */
   private get list(): ListDelegate<T, D, U> {
     return this.txHost.tx[this.modelName] as unknown as ListDelegate<T, D, U>;
   }

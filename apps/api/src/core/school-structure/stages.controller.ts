@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
-import type { Stage } from '@school-erp/shared';
+import type { AuthUser, Stage } from '@school-erp/shared';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { CreateListItemDto, ListItemsQueryDto, UpdateListItemDto } from './dto/list-item.dto';
 import { StagesService } from './stages.service';
 import { Audited } from '../audit';
@@ -19,8 +20,11 @@ export class StagesController {
   @Audited('core.stage.create')
   @Post()
   @Permission('core.stages.manage')
-  create(@Body() dto: CreateListItemDto): Promise<Stage> {
-    return this.stages.create(dto);
+  create(
+    @Body() dto: CreateListItemDto,
+    @CurrentUser() user: AuthUser | undefined,
+  ): Promise<Stage> {
+    return this.stages.create(dto, user?.id ?? null);
   }
 
   @Audited('core.stage.update')
@@ -29,7 +33,8 @@ export class StagesController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateListItemDto,
+    @CurrentUser() user: AuthUser | undefined,
   ): Promise<Stage> {
-    return this.stages.update(id, dto);
+    return this.stages.update(id, dto, user?.id ?? null);
   }
 }

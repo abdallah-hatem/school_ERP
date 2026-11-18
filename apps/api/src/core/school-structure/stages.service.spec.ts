@@ -1,8 +1,8 @@
 import { NotFoundException } from '@nestjs/common';
 import { ErrorCode, type Stage } from '@school-erp/shared';
 import { CodedException } from '../../common/errors/coded.exception';
-import type { AfterCommit } from '../../database/transactions';
-import type { AuditService } from '../audit';
+import { fakeTransaction } from '../../common/testing/fake-transaction';
+import type { SettingsHistory } from '../settings';
 import type { StageRepository } from './repositories/stage.repository';
 import { StagesService } from './stages.service';
 
@@ -16,22 +16,32 @@ const stage = (over: Partial<Stage> = {}): Stage => ({
 });
 
 function makeService(found: Stage | null = stage()) {
+  const tx = fakeTransaction();
   const repo = {
     findById: jest.fn(() => Promise.resolve(found)),
     nextSortOrder: jest.fn(() => Promise.resolve(4)),
-    create: jest.fn((data: Partial<Stage>) => Promise.resolve(stage({ ...data, id: 'new' }))),
+    create: jest.fn((data: Partial<Stage>) => {
+      tx.write('stage');
+      return Promise.resolve(stage({ ...data, id: 'new' }));
+    }),
     update: jest.fn((_id: string, data: Partial<Stage>) => {
+      tx.write('stage');
       const clean = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined));
       return Promise.resolve({ ...(found as Stage), ...clean });
     }),
   };
-  const audit = { record: jest.fn(() => Promise.resolve()) };
+  const history = {
+    record: jest.fn(() => {
+      tx.write('history');
+      return Promise.resolve();
+    }),
+  };
   const service = new StagesService(
     repo as unknown as StageRepository,
-    audit as unknown as AuditService,
-    { inTransaction: (fn: () => Promise<unknown>) => fn() } as unknown as AfterCommit,
+    history as unknown as SettingsHistory,
+    tx.afterCommit,
   );
-  return { service, repo, audit };
+  return { service, repo, history, tx };
 }
 
 describe('StagesService', () => {
@@ -54,48 +64,65 @@ describe('StagesService', () => {
 
   it('a new stage without sortOrder goes last', async () => {
     const { service, repo } = makeService();
-    await service.create({ nameEn: 'KG', nameAr: 'روضة' });
+    await service.create({ nameEn: 'KG', nameAr: 'روضة' }, 'u');
     expect(repo.create).toHaveBeenCalledWith({ nameEn: 'KG', nameAr: 'روضة', sortOrder: 4 });
   });
 
-  it('a new stage records core.stage.create with both names and its snapshot under its history key', async () => {
-    const { service, audit } = makeService();
-    await service.create({ nameEn: 'KG', nameAr: 'روضة' });
-    expect(audit.record).toHaveBeenCalledWith({
-      action: 'core.stage.create',
-      entity: { type: 'stage', id: 'new', label: { en: 'KG', ar: 'روضة' } },
-      changes: [
-        { field: 'lists.stages.new', before: null, after: expect.objectContaining({ nameEn: 'KG' }) },
-      ],
+  it('a change records one history entry with old and new, in the same transaction', async () => {
+    const { service, history, tx } = makeService();
+    await service.update('stage-1', { isActive: false }, 'u');
+    expect(history.record).toHaveBeenCalledTimes(1);
+    expect(history.record).toHaveBeenCalledWith({
+      scope: 'lists',
+      key: 'lists.stages.stage-1',
+      oldValue: expect.objectContaining({ isActive: true }),
+      newValue: expect.objectContaining({ isActive: false }),
+      changedById: 'u',
     });
+    expect(tx.state).toEqual({ committed: ['stage', 'history'], commits: 1, rollbacks: 0 });
   });
 
-  it('an edit records core.stage.update with old and new snapshots; an unchanged save still records (no entry)', async () => {
-    const { service, audit } = makeService();
-    await service.update('stage-1', { isActive: false });
-    expect(audit.record).toHaveBeenCalledWith({
-      action: 'core.stage.update',
-      entity: { type: 'stage', id: 'stage-1', label: { en: 'Primary', ar: 'ابتدائي' } },
-      changes: [
-        {
-          field: 'lists.stages.stage-1',
-          before: expect.objectContaining({ isActive: true }),
-          after: expect.objectContaining({ isActive: false }),
-        },
-      ],
-    });
-
-    audit.record.mockClear();
-    await service.update('stage-1', { nameEn: 'Primary' });
-    // AuditService drops a change whose before equals its after, so nothing is written.
-    const [[input]] = audit.record.mock.calls as unknown as [[{ changes: { before: unknown; after: unknown }[] }]];
-    expect(input.changes[0]?.before).toEqual(input.changes[0]?.after);
+  it('a create and its history entry commit together', async () => {
+    const { service, history, tx } = makeService();
+    await service.create({ nameEn: 'KG', nameAr: 'روضة' }, 'u');
+    expect(history.record).toHaveBeenCalledWith(
+      expect.objectContaining({ key: 'lists.stages.new', oldValue: null, changedById: 'u' }),
+    );
+    expect(tx.state).toEqual({ committed: ['stage', 'history'], commits: 1, rollbacks: 0 });
   });
 
-  it('a failed write records nothing', async () => {
-    const { service, repo, audit } = makeService();
-    repo.update.mockRejectedValueOnce(new Error('db down'));
-    await expect(service.update('stage-1', { isActive: false })).rejects.toThrow('db down');
-    expect(audit.record).not.toHaveBeenCalled();
+  it('the history write fails → the stage change rolls back with it', async () => {
+    const { service, history, tx } = makeService();
+    history.record.mockImplementation(() => Promise.reject(new Error('audit down')));
+    await expect(service.update('stage-1', { isActive: false }, 'u')).rejects.toThrow('audit down');
+    await expect(service.create({ nameEn: 'KG', nameAr: 'روضة' }, 'u')).rejects.toThrow(
+      'audit down',
+    );
+    expect(tx.state).toEqual({ committed: [], commits: 0, rollbacks: 2 });
+  });
+
+  it('the stage write fails → no history entry is written', async () => {
+    const { service, repo, history, tx } = makeService();
+    repo.update.mockImplementationOnce(() => Promise.reject(new Error('db down')));
+    await expect(service.update('stage-1', { isActive: false }, 'u')).rejects.toThrow('db down');
+    expect(history.record).not.toHaveBeenCalled();
+    expect(tx.state).toEqual({ committed: [], commits: 0, rollbacks: 1 });
+  });
+
+  it('a save that changes nothing still goes through history (which writes no entry for it)', async () => {
+    const { service, history } = makeService();
+    await service.update('stage-1', { nameEn: 'Primary' }, 'u');
+    expect(history.record).toHaveBeenCalledWith(
+      expect.objectContaining({ oldValue: stage(), newValue: stage() }),
+    );
+  });
+
+  it('update of a missing stage → 404, nothing written', async () => {
+    const { service, history, tx } = makeService(null);
+    await expect(service.update('x', { nameEn: 'A' }, 'u')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(history.record).not.toHaveBeenCalled();
+    expect(tx.state.committed).toEqual([]);
   });
 });

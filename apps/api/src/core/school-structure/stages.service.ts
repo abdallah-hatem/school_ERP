@@ -1,12 +1,12 @@
 import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
-import { AuditEntityType, ErrorCode, type Stage } from '@school-erp/shared';
+import { ErrorCode, type Stage } from '@school-erp/shared';
 import { CodedException } from '../../common/errors/coded.exception';
 import { AfterCommit } from '../../database/transactions';
-import { AuditService } from '../audit';
+import { SettingsHistory } from '../settings';
 import type { CreateListItemDto, UpdateListItemDto } from './dto/list-item.dto';
 import { StageRepository } from './repositories/stage.repository';
 
-/** History key of a stage's change (the field of its audit entry, as Settings history read it). */
+/** History key of a stage's change rows. */
 export const stageHistoryKey = (id: string) => `lists.stages.${id}`;
 
 /**
@@ -17,7 +17,7 @@ export const stageHistoryKey = (id: string) => `lists.stages.${id}`;
 export class StagesService {
   constructor(
     private readonly stages: StageRepository,
-    private readonly audit: AuditService,
+    private readonly history: SettingsHistory,
     private readonly afterCommit: AfterCommit,
   ) {}
 
@@ -39,22 +39,22 @@ export class StagesService {
     return stage;
   }
 
-  async create(dto: CreateListItemDto): Promise<Stage> {
-    // The change and its audit entry commit together (audit D2), for the seed too.
+  /** The stage and its history entry commit together (audit D2). */
+  create(dto: CreateListItemDto, changedById: string | null): Promise<Stage> {
     return this.afterCommit.inTransaction(async () => {
       const stage = await this.stages.create({
         nameEn: dto.nameEn,
         nameAr: dto.nameAr,
         sortOrder: dto.sortOrder ?? (await this.stages.nextSortOrder()),
       });
-      await this.recordChange(null, stage);
+      await this.recordChange(stage.id, null, stage, changedById);
       return stage;
     });
   }
 
   /** Hiding a stage in use is allowed: existing employees keep it, new choices can't pick it. */
-  async update(id: string, dto: UpdateListItemDto): Promise<Stage> {
-    // The change and its audit entry commit together (audit D2), for the seed too.
+  /** The change and its history entry commit together; a save that changes nothing writes none. */
+  update(id: string, dto: UpdateListItemDto, changedById: string | null): Promise<Stage> {
     return this.afterCommit.inTransaction(async () => {
       const before = await this.getById(id);
       const stage = await this.stages.update(id, {
@@ -63,21 +63,24 @@ export class StagesService {
         sortOrder: dto.sortOrder,
         isActive: dto.isActive,
       });
-      // Always recorded: an unchanged save writes no entry but still answers `@Audited` (D6b).
-      await this.recordChange(before, stage);
+      await this.recordChange(id, before, stage, changedById);
       return stage;
     });
   }
 
-  /**
-   * One audit entry in the write's transaction (D2), shaped like the old history row: the field is
-   * the stage's history key, the values whole snapshots — so Settings history reads as before.
-   */
-  private recordChange(before: Stage | null, after: Stage): Promise<void> {
-    return this.audit.record({
-      action: before ? 'core.stage.update' : 'core.stage.create',
-      entity: { type: AuditEntityType.STAGE, id: after.id, label: { en: after.nameEn, ar: after.nameAr } },
-      changes: [{ field: stageHistoryKey(after.id), before, after }],
+  /** In the write's transaction: one history entry (core/settings → the audit log). */
+  private recordChange(
+    id: string,
+    oldValue: Stage | null,
+    newValue: Stage,
+    changedById: string | null,
+  ): Promise<void> {
+    return this.history.record({
+      scope: 'lists',
+      key: stageHistoryKey(id),
+      oldValue,
+      newValue,
+      changedById,
     });
   }
 }

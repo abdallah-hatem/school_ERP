@@ -11,7 +11,7 @@ import {
 import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
 import { ANONYMOUS_HEADER, createAppAsTestUser } from './helpers/as-test-user';
-import { historyMark, historyRows, waitForCount } from './helpers/history';
+import { historyMark, historyRows } from './helpers/history';
 
 const PNG = Buffer.concat([
   Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
@@ -193,28 +193,34 @@ describe('core settings and school structure (e2e)', () => {
       await http(app).get('/settings/history').expect(404);
     });
 
-    it('a settings.changed event alone writes nothing: every setting, list and catalogue change is recorded with its write (T28)', async () => {
-      const events: SettingsChangedEvent[] = [
-        {
-          scope: 'hr',
-          key: 'hr.payroll.dayDivisor',
-          oldValue: 30,
-          newValue: 26,
-          changedById: TEST_USER.id,
-          changedAt: new Date().toISOString(),
-        },
-        {
-          scope: 'lists',
-          key: 'hr.departments',
-          oldValue: null,
-          newValue: { id: '22222222-2222-4222-8222-222222222222', nameEn: 'Art', nameAr: 'الفنون' },
-          changedById: TEST_USER.id,
-          changedAt: new Date().toISOString(),
-        },
-      ];
-      for (const event of events) await app.get(EventEmitter2).emitAsync(SettingsEvent.CHANGED, event);
+    it('a settings.changed event alone writes no history: every change is recorded in its own transaction', async () => {
+      const item = { id: '22222222-2222-4222-8222-222222222222', nameEn: 'Art', nameAr: 'الفنون', sortOrder: 1, isActive: true };
+      const event: SettingsChangedEvent = {
+        scope: 'lists',
+        key: 'hr.departments',
+        oldValue: null,
+        newValue: item,
+        changedById: TEST_USER.id,
+        changedAt: new Date().toISOString(),
+      };
+      await app.get(EventEmitter2).emitAsync(SettingsEvent.CHANGED, event);
+      const rows = (await historyFor('hr.departments')).filter(
+        (r) => (r.newValue as { id?: string } | null)?.id === item.id,
+      );
+      expect(rows).toHaveLength(0);
+    });
+
+    it('an HR or school settings.changed event alone writes nothing: those are recorded with their write', async () => {
+      const event: SettingsChangedEvent = {
+        scope: 'hr',
+        key: 'hr.payroll.dayDivisor',
+        oldValue: 30,
+        newValue: 26,
+        changedById: TEST_USER.id,
+        changedAt: new Date().toISOString(),
+      };
+      await app.get(EventEmitter2).emitAsync(SettingsEvent.CHANGED, event);
       expect(await historyFor('hr.payroll.dayDivisor')).toHaveLength(0);
-      expect(await historyFor('hr.departments')).toHaveLength(0);
     });
   });
 
@@ -372,9 +378,10 @@ describe('core settings and school structure (e2e)', () => {
       await http(app).patch(`/stages/${b.id}`).send({ isActive: false }).expect(200);
       await http(app).patch(`/stages/${b.id}`).send({ isActive: true }).expect(200);
 
+      // Written in each request's own transaction: there when the response is, no waiting.
       const key = `lists.stages.${b.id}`;
-      expect(await waitForCount(async () => (await historyFor(key)).length, 4)).toBe(4);
       const rows = await historyFor(key);
+      expect(rows).toHaveLength(4);
       expect(rows.map((r) => r.scope)).toEqual(['LISTS', 'LISTS', 'LISTS', 'LISTS']);
       expect(rows.map((r) => r.action)).toEqual([
         'core.stage.create',
@@ -388,6 +395,27 @@ describe('core settings and school structure (e2e)', () => {
         newValue: expect.objectContaining({ nameAr: 'بيتا' }),
         changedById: TEST_USER.id,
       });
+    });
+
+    it('a normal change writes exactly one history entry and one audit entry; a no-op save writes none', async () => {
+      const stage = await createStage({ nameEn: unique('Stage'), nameAr: 'مرحلة' });
+      const before = await historyMark(db);
+      await http(app).patch(`/stages/${stage.id}`).send({ nameAr: 'مرحلة ٢' }).expect(200);
+      await http(app).patch(`/stages/${stage.id}`).send({ nameAr: 'مرحلة ٢' }).expect(200);
+
+      const history = await historyRows(db, before, `lists.stages.${stage.id}`);
+      expect(history).toHaveLength(1);
+      expect(history[0]).toMatchObject({ action: 'core.stage.update', changedById: TEST_USER.id });
+      const entries = await db.auditEntry.findMany({
+        where: { seq: { gt: before }, entityType: 'stage', entityId: stage.id },
+      });
+      expect(entries).toHaveLength(1);
+      expect(entries[0].id).toBe(history[0].entryId);
+
+      const record = await http(app).get(`/audit/records/stage/${stage.id}`).expect(200);
+      expect(
+        (record.body.data as { action: string }[]).map((e) => e.action).sort(),
+      ).toEqual(['core.stage.create', 'core.stage.update']);
     });
   });
 });

@@ -22,7 +22,7 @@ Who did what, to which record, and when — for the whole system. Spec:
 - **DECIDED** — An employee's change shows the names of what was picked, not codes: "Department:
   Science → Maths", "Direct manager: Omar → Mona", as they were named then. A new photo, a status
   change and every edited field are entries on the employee's History tab.
-- **DECIDED** — Changes made by the demo seed are recorded with no person ("System").
+- **DECIDED** — Employees added by the demo seed are recorded with no person ("System").
 - **DECIDED** — A month's lateness is one entry: one line per employee whose minutes changed,
   named, with the minutes before and after. Approving a payroll run is one entry with the run's
   totals, not one per employee.

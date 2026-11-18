@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
-import { AuditModule } from '../audit';
+import { SettingsModule } from '../settings';
 import { StageRepository } from './repositories/stage.repository';
 import { StagesController } from './stages.controller';
 import { StagesService } from './stages.service';
 
 /** core/school-structure — stages. */
 @Module({
-  imports: [AuditModule],
+  imports: [SettingsModule],
   controllers: [StagesController],
   providers: [StagesService, StageRepository],
   exports: [StagesService],

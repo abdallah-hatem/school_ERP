@@ -13,14 +13,13 @@ const stageSelect = {
 } satisfies Prisma.StageSelect;
 
 /**
- * Stages (school structure). Writes join the request's transaction, so a change and its audit
- * entry commit together. Never deleted — hidden with `isActive: false` (§3).
+ * Stages (school structure). Never deleted — hidden with `isActive: false` (§3). Runs in the
+ * caller's transaction when one is open, so a stage edit and its history commit together.
  */
 @Injectable()
 export class StageRepository {
   constructor(private readonly txHost: TransactionHost<DbAdapter>) {}
 
-  /** The open transaction (an audited write's), or the plain client. */
   private get db(): DbClient {
     return this.txHost.tx;
   }

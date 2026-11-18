@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { AuditEntityType, HrListKey, JobTitle } from '@school-erp/shared';
-import { AuditService } from '../../../../core/audit';
+import { HrListKey, JobTitle } from '@school-erp/shared';
+import { SettingsHistory } from '../../../../core/settings';
 import { AfterCommit } from '../../../../database/transactions';
 import type { CreateJobTitleDto, UpdateJobTitleDto } from '../dto/list-item.dto';
 import { JobTitlesRepository } from '../repositories/job-titles.repository';
@@ -13,12 +13,8 @@ export class JobTitlesService extends ListItemsService<
   CreateJobTitleDto,
   UpdateJobTitleDto
 > {
-  constructor(repository: JobTitlesRepository, audit: AuditService, afterCommit: AfterCommit) {
-    super(repository, audit, afterCommit, HrListKey.JOB_TITLES, {
-      type: AuditEntityType.JOB_TITLE,
-      create: 'hr.job_title.create',
-      update: 'hr.job_title.update',
-    });
+  constructor(repository: JobTitlesRepository, history: SettingsHistory, afterCommit: AfterCommit) {
+    super(repository, history, afterCommit, HrListKey.JOB_TITLES);
   }
 
   protected override extraCreateData(dto: CreateJobTitleDto): Record<string, unknown> {
