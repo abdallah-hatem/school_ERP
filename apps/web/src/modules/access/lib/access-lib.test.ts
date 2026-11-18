@@ -6,7 +6,7 @@ import { changedCount, setModule, setScope, toGrantMap, toGrants, toggle } from 
 import { formatSignIn } from './sign-in-time';
 import { generateTemporaryPassword } from './temp-password';
 import { changedFields, formToUpdate, type UserFormValues } from './user-form';
-import { hasActiveFilters, parseUsersQuery, usersQueryString } from './users-query';
+import { activeFilterCount, hasActiveFilters, parseUsersQuery, usersQueryString } from './users-query';
 
 describe('users list URL', () => {
   it('keeps known filters, drops a malformed role id, a bad status and page', () => {
@@ -32,6 +32,8 @@ describe('users list URL', () => {
     expect(usersQueryString({ ...parseUsersQuery({}), status: 'active', page: 3 })).toBe('?status=active&page=3');
     expect(hasActiveFilters(parseUsersQuery({}))).toBe(false);
     expect(hasActiveFilters(parseUsersQuery({ status: 'active' }))).toBe(true);
+    expect(activeFilterCount(parseUsersQuery({}))).toBe(0);
+    expect(activeFilterCount(parseUsersQuery({ search: 'ra', roleId: '11111111-1111-4111-8111-111111111111', status: 'active', page: '3' }))).toBe(3);
   });
 });
 

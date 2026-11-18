@@ -122,7 +122,7 @@ describe('UsersList', () => {
       <UsersList basePath="/en/users" query={parseUsersQuery({ search: 'samy' })} rows={[]} total={0} roles={ROLES} lastAdminId={null} now={NOW} />,
     );
     expect(screen.getByText('No users match these filters')).toBeTruthy();
-    await user.click(screen.getAllByRole('button', { name: 'Clear filters' })[0]!);
+    await user.click(screen.getAllByRole('button', { name: /Clear filters/ })[0]!);
     expect(push).toHaveBeenLastCalledWith('/en/users', { scroll: false });
   });
 

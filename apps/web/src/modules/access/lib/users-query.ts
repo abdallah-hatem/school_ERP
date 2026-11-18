@@ -36,7 +36,12 @@ export function parseUsersQuery(params: SearchParamsRecord): UsersListQuery {
 
 /** Whether a search or a filter narrows the list — "no results" rather than "nobody yet". */
 export function hasActiveFilters(query: UsersListQuery): boolean {
-  return FILTER_KEYS.some((key) => Boolean(query[key]));
+  return activeFilterCount(query) > 0;
+}
+
+/** The search plus each filter in use, for "Clear filters · n". */
+export function activeFilterCount(query: UsersListQuery): number {
+  return FILTER_KEYS.filter((key) => Boolean(query[key])).length;
 }
 
 /** The query string for `query`, leaving out defaults so URLs stay short. */
