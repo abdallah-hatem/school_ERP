@@ -55,6 +55,8 @@ export interface UserFormProps {
    * deactivated (R8, edge case 5). The API refuses both anyway.
    */
   lastAdmin?: boolean;
+  /** Adding: the first temporary password, made by the server screen so both renders agree. */
+  initialPassword?: string;
   /** The server's clock ("Today, 09:12"). */
   now: IsoDateTime;
 }
@@ -65,7 +67,7 @@ export interface UserFormProps {
  * temporary password to give the person; editing keeps Save disabled until something changes.
  * Without `core.users.manage` the page is read-only.
  */
-export function UserForm({ basePath, user, roles, lastAdmin = false, now }: UserFormProps) {
+export function UserForm({ basePath, user, roles, lastAdmin = false, initialPassword, now }: UserFormProps) {
   const { t, has, locale } = useTranslation();
   const router = useRouter();
   const canManage = useCan()('core.users.manage');
@@ -75,7 +77,9 @@ export function UserForm({ basePath, user, roles, lastAdmin = false, now }: User
   const { control, setError } = form;
   const values = useWatch({ control }) as UserFormValues;
   const changed = user ? changedFields(initial, { ...initial, ...values }) : [];
-  const [password, setPassword] = useState(() => (user ? '' : generateTemporaryPassword()));
+  // The server screen makes the first one and passes it down: one made during render here would
+  // differ between the server and the browser (a hydration mismatch). Regenerate makes new ones.
+  const [password, setPassword] = useState(() => (user ? '' : (initialPassword ?? generateTemporaryPassword())));
   const inFlight = useRef(false);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);

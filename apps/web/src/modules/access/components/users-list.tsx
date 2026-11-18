@@ -8,13 +8,12 @@ import { Can, useCan } from '@/core/auth';
 import { EmployeeLink } from '@/core/employees';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-table/data-table';
 import { RowActions, rowActionsColumn } from '@/shared/components/data-table/row-actions';
-import { FilterSelect, SearchInput } from '@/shared/components/form/filter-controls';
+import { ClearFilters, FilterSelect, SearchInput } from '@/shared/components/form/filter-controls';
 import { EmptyState } from '@/shared/components/layout/empty-state';
 import { PageHeader } from '@/shared/components/layout/page-header';
 import { Button } from '@/shared/components/ui/button';
 import {
   AddIcon,
-  CloseIcon,
   DeactivateIcon,
   EditIcon,
   LinkedEmployeeIcon,
@@ -29,7 +28,7 @@ import { formatCount } from '@/shared/lib/format';
 import { localName } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { formatSignIn } from '../lib/sign-in-time';
-import { hasActiveFilters, usersQueryString, type UsersFilterKey, type UsersListQuery } from '../lib/users-query';
+import { activeFilterCount, usersQueryString, type UsersFilterKey, type UsersListQuery } from '../lib/users-query';
 import { Avatar, RoleChips } from './role-bits';
 import { useUserActions } from './user-actions';
 
@@ -82,6 +81,7 @@ export function UsersList({ basePath, query, rows, total, roles, lastAdminId, no
     searchTimer.current = setTimeout(() => setFilter('search', text.trim()), SEARCH_DEBOUNCE_MS);
   }
   function clearFilters() {
+    if (searchTimer.current) clearTimeout(searchTimer.current);
     setSearch('');
     go({ page: PAGINATION.defaultPage, limit: query.limit });
   }
@@ -228,18 +228,14 @@ export function UsersList({ basePath, query, rows, total, roles, lastAdminId, no
   ];
 
   const loading = rows === undefined;
-  const filtered = hasActiveFilters(query);
+  const filterCount = activeFilterCount(query);
+  const filtered = filterCount > 0;
   const emptyState = filtered ? (
     <EmptyState
       icon={SearchIcon}
       title={t('access.users.noResultsTitle')}
       description={t('access.users.noResultsBody')}
-      action={
-        <Button variant="secondary" onClick={clearFilters}>
-          <CloseIcon />
-          {t('access.users.clearFilters')}
-        </Button>
-      }
+      action={<ClearFilters placement="empty" count={filterCount} onClear={clearFilters} />}
     />
   ) : (
     <EmptyState title={t('access.users.emptyTitle')} description={t('access.users.emptyBody')} action={addButton} />
@@ -298,11 +294,7 @@ export function UsersList({ basePath, query, rows, total, roles, lastAdminId, no
                   {t('access.users.count', { count: formatCount(total) })}
                 </p>
               )}
-              {filtered ? (
-                <Button variant="ghost" size="sm" onClick={clearFilters} className="text-primary">
-                  {t('access.users.clearFilters')}
-                </Button>
-              ) : null}
+              <ClearFilters count={filterCount} onClear={clearFilters} disabled={loading || pending} className="ms-auto" />
             </div>
           )}
         </div>
