@@ -85,6 +85,8 @@ up-to-date branch.
 - [ ] No school name, school-specific rule or hardcoded setting in code.
 - [ ] Nothing duplicated that already exists in `common/`, `shared/` or another module.
 - [ ] Events emitted only after the write is committed; listeners are idempotent.
+- [ ] Added/changed an event, listener or transaction boundary → `docs/EVENTS.md` updated in the
+      same PR; the events-doc test (`apps/api/src/common/events/events-doc.spec.ts`) checks it.
 - [ ] Every new endpoint declares who may use it: `@Permission('<key>')` (or, rarely,
   `@SignedIn()` / `@Public()`) — see Permissions below.
 - [ ] Every new write endpoint (POST / PATCH / PUT / DELETE) is `@Audited('<action>')` and calls

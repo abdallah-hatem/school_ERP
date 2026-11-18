@@ -233,6 +233,10 @@ phase live in `docs/build-log/`.
   upsert; 429 `TOO_MANY_ATTEMPTS`; sign-in and both password-change paths), admin unlock from Users
   (`POST /users/:id/unlock-sign-in`, audited), lockouts audited; `core/jobs` (`@nestjs/schedule`,
   advisory lock per job, `job_runs`) with the nightly `login-attempts.cleanup` at 03:00 Cairo.
+- 2026-11-18 — `docs/EVENTS.md` (owner): every event (name, payload, emitter, listeners, after-commit
+  or not, emit vs emitAsync, planned kind) and every transaction boundary, from the code; a unit
+  test fails when the doc and the code disagree. Eleven gaps listed there (the `employee.*` events fire
+  inside the transaction; four events have no listener; emit/emitAsync mixed) → `docs/events-catalogue`.
 
 ## Next up
 
