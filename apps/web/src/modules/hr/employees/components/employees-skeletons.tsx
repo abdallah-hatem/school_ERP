@@ -67,9 +67,9 @@ const DETAILS_SKELETON: { title: string; className?: string; fields: { key: stri
       { key: 'department' },
       { key: 'jobTitle' },
       { key: 'workSystem' },
-      { key: 'manager', wide: true },
       { key: 'grade' },
-      { key: 'fingerprintId' },
+      { key: 'manager', wide: true },
+      { key: 'fingerprintId', wide: true },
     ],
   },
   {
