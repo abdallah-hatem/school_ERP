@@ -11,3 +11,8 @@ recalculated and none of its penalties is pending; a penalty recorded in the mon
 (the next recalculation sends it again), and approving the month marks it approved. Its net shows
 only to people who see the school's payroll totals. Neither can be turned off. Nothing is shown
 yet: the bell comes with the screens.
+
+Opening a penalty's notification now opens **that penalty**: the Penalties screen shows its month
+with the penalty over the list — who, when, the violation, level and action, its status, and
+Approve / Cancel for whoever may. Closing it leaves the list. A penalty the reader may not see is
+"This page isn't here" (§2).

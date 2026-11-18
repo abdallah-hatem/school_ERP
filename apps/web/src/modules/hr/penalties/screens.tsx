@@ -1,17 +1,36 @@
-import { EmployeeStatus, monthOf, PAGINATION, type Uuid } from '@school-erp/shared';
+import { EmployeeStatus, monthOf, PAGINATION, type PenaltyRecord, type Uuid } from '@school-erp/shared';
+import { notFound } from 'next/navigation';
 import type { Locale } from '@/shared/lib/i18n';
 import { GET_EMPLOYEES } from '../employees/apis';
-import { GET_PENALTIES, GET_PENALTY_GROUPS } from './apis';
+import { GET_PENALTIES, GET_PENALTY, GET_PENALTY_GROUPS } from './apis';
 import { ProfileEmployeePenalties } from './components/employee-penalties';
 import { PenaltiesList } from './components/penalties-list';
-import { parsePagingQuery, parsePenaltiesQuery, type SearchParamsRecord } from './lib/list-query';
+import { focusedPenaltyId, parsePagingQuery, parsePenaltiesQuery, type SearchParamsRecord } from './lib/list-query';
 import { employeeOptions, violationGroups } from './lib/penalty-text';
 import { PenaltiesI18n } from './messages';
 
-/** Server: the penalties list for the URL's month / status / search, plus the record dialog's pickers. */
+/**
+ * Server: one penalty a link opens (`?penalty=<id>`, a notification's, §11). Unknown or outside the
+ * viewer's scope (404), or malformed (400) → the not-found page, like any record they can't see (§2);
+ * any other failure throws to the route's error boundary.
+ */
+async function loadFocused(id: Uuid): Promise<PenaltyRecord> {
+  const res = await GET_PENALTY(id);
+  if (res.success === false && (res.status === 404 || res.status === 400)) notFound();
+  if (!res.success || !res.data) throw new Error(res.message ?? 'Penalty failed to load');
+  return res.data;
+}
+
+/**
+ * Server: the penalties list for the URL's month / status / search, plus the record dialog's pickers.
+ * With `?penalty=<id>` the list shows that penalty's month and opens the penalty over it.
+ */
 export async function PenaltiesScreen({ locale, searchParams }: { locale: Locale; searchParams: SearchParamsRecord }) {
   const currentMonth = monthOf(new Date());
-  const query = parsePenaltiesQuery(searchParams, currentMonth);
+  const focusId = focusedPenaltyId(searchParams);
+  const focused = focusId ? await loadFocused(focusId) : undefined;
+  const parsed = parsePenaltiesQuery(searchParams, currentMonth);
+  const query = focused ? { ...parsed, month: monthOf(focused.date) } : parsed;
   const [penalties, employees, groups] = await Promise.all([
     GET_PENALTIES(query),
     GET_EMPLOYEES({ status: EmployeeStatus.ACTIVE, limit: PAGINATION.maxLimit }),
@@ -28,6 +47,7 @@ export async function PenaltiesScreen({ locale, searchParams }: { locale: Locale
         error={!penalties.success}
         employees={employeeOptions(employees.success ? (employees.data ?? []) : [], locale)}
         violations={violationGroups(groups.success ? (groups.data ?? []) : [], locale)}
+        focused={focused}
       />
     </PenaltiesI18n>
   );

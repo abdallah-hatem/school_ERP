@@ -46,6 +46,17 @@ export function penaltiesQueryString(query: PenaltiesListQuery, current: Month):
   return s ? `?${s}` : '';
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * The penalty a link opens (`?penalty=<id>`, a notification's, §11), or undefined. Not part of the
+ * list's query: closing it, or any list control, leaves it out of the URL.
+ */
+export function focusedPenaltyId(params: SearchParamsRecord): string | undefined {
+  const id = one(params.penalty);
+  return id && UUID.test(id) ? id : undefined;
+}
+
 /** The profile tab's paging (`?page&limit`); it lists every month. */
 export function parsePagingQuery(params: SearchParamsRecord): { page: number; limit: number } {
   return {
