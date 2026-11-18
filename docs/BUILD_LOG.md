@@ -222,6 +222,12 @@ phase live in `docs/build-log/`.
 - 2026-11-18 — CI (owner): PRs into `dev` no longer have to be up to date with `dev`; instead the
   full suite runs on `dev` after every merge → #111 (branch protection: dev strict off; testing,
   production and demo still strict). A red run on `dev` is fixed before anything else.
+- 2026-11-18 — T28 merged → #107 (Abdallah): sign-in, sign-out and failed sign-in (same entry
+  whether the email exists), employees (create/edit/deactivate/reactivate/photo, names instead of
+  ids, salary hidden without the permission) and HR settings now on Activity; the employee History
+  tab fills in; smoke History checks and the skeleton History comparison are full. Left: T29
+  penalties (Tamer), then T31 (scan expects no placeholders, dry-run check, Activity search by
+  employee code).
 
 ## Next up
 
@@ -277,7 +283,7 @@ phase live in `docs/build-log/`.
 - Login rate limiting (T2 left it out; security baseline).
 
 - Hosting the demo on the Contabo server (owner: later; local demo is the fallback).
-- Audit log T28 (Abdallah, was Waleed's: auth, settings, employees, lists) and T29 (Tamer: penalties, lateness,
+- Audit log T28 done (#107); T29 (Tamer: penalties, lateness,
   payroll), then T31 verify. Optional CI ratchet that forbids touching an unwired endpoint (owner: docs only for now). Follow-ups from T30: id fields
   (`departmentId`) show raw ids unless T28 stores names; penalties don't appear on the employee's
   History; payroll run page has no History tab yet; smoke History check still asserts the empty
