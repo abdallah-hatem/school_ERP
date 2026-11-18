@@ -251,9 +251,22 @@ phase live in `docs/build-log/`.
   (with the sign-in lock and Unlock) first; Users cards put status pills on their own line so the
   email shows in full; toasts sit bottom-end on desktop (clear of header actions and the Save bar),
   full width under the top bar on a phone. Checked in screenshots (EN desktop, AR phone).
+- 2026-11-18 — Events + outbox merged → #119: one typed `DomainEvents.publish()` (always after
+  commit; `@nestjs/event-emitter` removed; a scan bans direct emits); must-deliver events go through
+  `outbox_events`/`outbox_deliveries` (nudge after commit + 30 s poll, SKIP LOCKED, retries, dead
+  after 10, admin retry `core.outbox.manage`, nightly cleanup); `hr.payroll.approved` →
+  accounting is must-deliver (Tamer to review his listener; his late path stays). EVENTS.md gaps
+  1, 3–8, 10, 11 fixed. Tested live before merge (jobs on, throwaway DB): approve → taxes 3 ms
+  after commit; kill -9 mid-delivery and after commit both recovered by the poll, taxes once;
+  job_runs only on work; retry schedule, dead after 10, admin retry audited, non-admin 403;
+  no-op employee save publishes nothing.
 
 ## Next up
 
+- Outbox follow-ups from the live test (#119): the approve request waits for the accounting
+  listener (the nudge is awaited) — a stuck listener holds HR's response open; make the nudge run
+  in the background after the response. Retries land on the next 30 s poll tick (≈30 s instead of
+  10 s); compute the next try from the poll tick. `attempts` also counts the successful try.
 - **Notifications — spec, plan and option A decided (PR #106). Build after the events + outbox work
   lands; tasks N0 (probation field) … N5.** Spec
   `docs/specs/2026-11-18-notifications.md`, plan `docs/plans/2026-11-18-notifications-plan.md`,
@@ -266,24 +279,6 @@ phase live in `docs/build-log/`.
   changed by the System admin and seen by the HR manager. Also waits on the jobs foundation
   (`feature/login-rate-limit-and-jobs`).
 
-- **Events + outbox (owner, 2026-11-18) — start once the scheduled-jobs PR is merged.** Decided:
-  - `DomainEvents.publish(name, payload, { mustDeliver? })` in core, typed by one name→payload map
-    in `packages/shared`; always after commit; every existing emit moves to it; a lint check bans
-    calling `EventEmitter2` directly.
-  - Fire-and-forget: in memory after commit (cache refresh, `user.sessions_ended`,
-    `settings.changed`). Must-deliver: an `outbox_events` row written in the same transaction,
-    delivered per listener (`outbox_deliveries`) — rule: if losing it leaves data wrong or someone
-    not told, it's must-deliver (`hr.payroll.approved`, every notification event,
-    `employee.deactivated`).
-  - Delivery: a nudge right after commit (instant) + a poll every **30 s** on the jobs foundation as
-    the safety net; `FOR UPDATE SKIP LOCKED`; in creation order. The poll writes to `job_runs` only
-    when it delivered or failed.
-  - Retries 10 s, 1 min, 5 min, 30 min, then every 2 h; **dead after 10 failures** (logged, later a
-    system notification to admins); an admin can retry a dead event.
-  - Listeners are idempotent through a base class that records handled event ids.
-  - Nightly cleanup of delivered events older than 30 days; dead ones kept.
-  - `hr.payroll.approved` → accounting moves to must-deliver (Tamer reviews; his late path stays as
-    a second guard). ARCHITECTURE's events section rewritten. Notifications builds on it.
 - **Accounting payroll taxes screen** — a page per approved month (net, insurance share, income tax,
   fund, gross per employee) and a sidebar entry: **mockups first** (CLAUDE.md rule 9). The API
   (`GET /accounting/payroll[/:month]`) is built. Tax defaults are GUESS until the accountant confirms.
