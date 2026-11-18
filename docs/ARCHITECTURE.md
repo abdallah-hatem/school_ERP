@@ -423,10 +423,16 @@ Roles are rows, not code (spec P2, R2 / R5 / R8 / R9). A school changes them thr
   (`AuthUser` + `permissions` + `roles`). The dashboard layout reads it on the server and passes it to
   `SessionProvider`; `can(user, key)`, `useCan()` and `<Can permission="…">` in
   `apps/web/src/core/auth` hide menu items and action buttons. **`can()` is only the view** — the
-  guard is the protection, and a hidden button's endpoint still refuses the call. A page the
-  viewer's roles can't open calls `await requirePermission(key, …)` (server; any one of the options
-  opens it) and renders the shell's not-found screen (`(dashboard)/not-found.tsx`) — the same screen
-  as a record outside their scope, so it never tells whether something exists (P4). Tabs, sections,
+  guard is the protection, and a hidden button's endpoint still refuses the call. **Who may open
+  each page is one list, `SCREENS` in `packages/shared/src/screens.ts`** (route → the options that
+  open it; Settings opens for anyone who may view one of `SETTINGS_SECTION_ACCESS`'s sections). Every
+  page under `(dashboard)` calls `await requireScreen('<id>')` (server; any one of the options opens
+  it), the sidebar (`nav-items.ts`), the dashboard's Settings quick link and the Settings section
+  list read the same entries, and `e2e/24-role-access.spec.ts` signs in as each built-in role and
+  checks the whole matrix. `screen-guards.test.ts` fails on a page without the guard. A page the
+  viewer can't open renders the shell's not-found screen (`(dashboard)/not-found.tsx`) — the same
+  screen as a record outside their scope, so it never tells whether something exists (P4). A new
+  page or Settings section: add it to `SCREENS` / `SETTINGS_SECTION_ACCESS` first. Tabs, sections,
   card fields, quick links and dashboard tiles are gated the same way, and their skeletons follow.
 
 ### Deliberate shortcuts

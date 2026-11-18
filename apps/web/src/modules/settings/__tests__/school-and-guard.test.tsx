@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '@/test/dom-polyfills';
-import { cleanup, screen, waitFor } from '@testing-library/react';
+import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { AnchorHTMLAttributes, ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -42,9 +42,8 @@ import { SchoolBrand } from '@/core/settings/school-brand';
 import { LocaleSwitch } from '@/shared/components/layout/locale-switch';
 import { SettingsScreen } from '../components/settings-screen';
 import type { SessionUser } from '@school-erp/shared';
-import { sessionWithout, TEST_SESSION } from '@/test/render';
+import { sessionWith, sessionWithout, STAGE_HEAD_KEYS, TEST_SESSION } from '@/test/render';
 import { deferred, hrSettings, ok, renderSettings, school } from './helpers';
-
 function renderScreen(locale: 'en' | 'ar' = 'en', session: SessionUser = TEST_SESSION) {
   return renderSettings(
     <>
@@ -286,6 +285,24 @@ describe('Settings screen — change history (owner, 2026-11-17)', () => {
     expect(screen.getByRole('link', { name: 'View change history' }).getAttribute('href')).toBe(
       '/en/activity?module=settings',
     );
+  });
+
+  it('a Stage head sees Structure and the catalogue only, and a School link opens Structure instead', async () => {
+    api.GET_LIST_ITEMS.mockImplementation(() => ok([]));
+    api.GET_PENALTY_GROUPS.mockImplementation(() => ok([]));
+    renderSettings(<SettingsScreen initialSection="school" />, 'en', sessionWith(...STAGE_HEAD_KEYS));
+    const sections = within(screen.getByRole('navigation', { name: 'Settings sections' }));
+    const buttons = sections.getAllByRole('button');
+    expect(buttons.map((b) => b.querySelector('span > span')?.textContent)).toEqual(['School structure', 'Penalty catalogue']);
+    expect(buttons[0]?.getAttribute('aria-current')).toBe('page');
+    // The School section (core.settings.view) is never asked for: the API would refuse it.
+    await waitFor(() => expect(api.GET_LIST_ITEMS).toHaveBeenCalledWith('stages'));
+    expect(api.GET_SCHOOL_SETTINGS_FOR_EDIT).not.toHaveBeenCalled();
+  });
+
+  it('with every permission: all five sections', () => {
+    renderScreen();
+    expect(within(screen.getByRole('navigation', { name: 'Settings sections' })).getAllByRole('button')).toHaveLength(5);
   });
 
   it('the link is hidden from someone who may not read the activity log (can(), view only)', () => {
