@@ -175,7 +175,8 @@ describe('Once per day (§4)', { timeout: 20_000 }, () => {
     api.GET_PENALTY_GROUPS.mockImplementation(() => ok(catalogue));
     renderSettings(<CatalogueSection />);
     await user.type(await screen.findByRole('searchbox', { name: 'Search violations' }), 'lesson');
-    expect(screen.getAllByText('Can repeat in a day')).toHaveLength(1);
+    // The search filters (and opens the matching groups) after typing: wait for it, don't race it.
+    await waitFor(() => expect(screen.getAllByText('Can repeat in a day')).toHaveLength(1));
     const lateRow = screen.getByText('Late to', { exact: false }).closest('li')!;
     expect(within(lateRow).getByText('Can repeat in a day')).toBeTruthy();
   });
