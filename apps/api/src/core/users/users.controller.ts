@@ -92,6 +92,18 @@ export class UsersController {
     return this.accounts.reactivate(id);
   }
 
+  /**
+   * Unlocks a sign-in locked by too many wrong passwords before the lock ends (owner 2026-11-18).
+   * Answers the account (`lockedUntil: null`); an account that wasn't locked is left as it was.
+   */
+  @Post(':id/unlock-sign-in')
+  @Permission('core.users.manage')
+  @Audited('core.user.unlock_sign_in')
+  @HttpCode(HttpStatus.OK)
+  unlockSignIn(@Param('id', ParseUUIDPipe) id: string): Promise<UserAccount> {
+    return this.accounts.unlockSignIn(id);
+  }
+
   /** A temporary password: the user must change it, and their sessions end. */
   @Post(':id/password')
   @Permission('core.users.manage')

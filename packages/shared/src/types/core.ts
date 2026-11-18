@@ -138,6 +138,11 @@ export interface UserAccount {
   lastSignInAt: IsoDateTime | null;
   /** When the password was last set (by an admin, or changed by the user); null before P3. */
   passwordChangedAt: IsoDateTime | null;
+  /**
+   * Until when sign-in is locked after too many wrong passwords, or null when it isn't locked now.
+   * A System admin can unlock it early (`POST /users/:id/unlock-sign-in`).
+   */
+  lockedUntil: IsoDateTime | null;
 }
 
 /**

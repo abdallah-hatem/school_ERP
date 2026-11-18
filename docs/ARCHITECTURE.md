@@ -424,7 +424,7 @@ Roles are rows, not code (spec P2, R2 / R5 / R8 / R9). A school changes them thr
   the rest of the transaction, so two such changes at once can't both pass.
 - Every user and role write is `@Audited` (`core.user.*`, `core.role.*`); passwords are never in the
   log (the entry says only that one was set or changed).
-- Area order inside core: `audit` ← `permissions` ← `roles` ← `users` ← `auth`. `core/audit` reads
+- Area order inside core: `audit` ← `permissions` ← `roles` ← `users` ← `auth`, and `audit` ← `settings` ← `sign-in-limit` ← `users`, `auth`; `jobs` depends on no other area (a job lives in its own area and only uses `@ScheduledJob`). `core/audit` reads
   an actor's name from `users` itself, so it depends on no other core area.
 - **Screens (P3, option A of `design/mockups/access.html`)** — `apps/web/src/modules/access`:
   Administration → **Users** (`core.users.view`; table with search, role and status filters, 10 per
@@ -452,6 +452,67 @@ Roles are rows, not code (spec P2, R2 / R5 / R8 / R9). A school changes them thr
   screen as a record outside their scope, so it never tells whether something exists (P4). A new
   page or Settings section: add it to `SCREENS` / `SETTINGS_SECTION_ACCESS` first. Tabs, sections,
   card fields, quick links and dashboard tiles are gated the same way, and their skeletons follow.
+
+### Sign-in limits
+
+Wrong-password counting per account (`core/sign-in-limit`, owner 2026-11-18, §2). **Per account
+only — no per-IP limit.**
+
+- **Rule.** `security.login.maxAttempts` wrong passwords within `security.login.windowMinutes` lock
+  that account's sign-in for `security.login.lockMinutes` — core settings, defaults 5 / 15 / 15
+  (`SETTING_DEFAULTS`, each read as at least 1; no screen yet).
+- **Table** `login_attempts` (email PK, `failed_count`, `window_started_at`, `locked_until`; index on
+  `window_started_at`), keyed by the **lower-cased email typed**. An email nobody has gets a row too,
+  so the answer never says whether an account exists. No foreign key to `users`.
+- **One atomic write per wrong password**: `INSERT … ON CONFLICT (email) DO UPDATE` — a window that
+  started more than `windowMinutes` ago, or whose lock has ended, starts over at 1; the attempt
+  whose count reaches the limit sets `locked_until` (so concurrent attempts are all counted and lock
+  once). Timestamps go in as UTC `timestamp(3)` literals, never depending on the connection's time
+  zone. That write uses the plain client, outside the request's transaction, so a wrong current
+  password on the `@Audited` `POST /account/password` stays counted when the request rolls back;
+  the repository's other calls join the caller's transaction (`txHost.tx`).
+- **While locked**, `POST /auth/login` and `POST /account/password` (both the forced new-password
+  path and My account) answer **429 `TOO_MANY_ATTEMPTS`** before any password is checked, with
+  `params: { count: <minutes left, rounded up> }` in the envelope. A correct sign-in deletes the row;
+  so does a verified current password on a password change. Sign-in never deletes stale rows — the
+  nightly `login-attempts.cleanup` job does (below).
+- **Coded errors with values.** `CodedException.withParams(status, code, params)` carries `params`
+  to the envelope; the filter's `translateError(code, lang, params)` fills `{name}` slots and picks a
+  plural form by `params.count` (`Intl.PluralRules`), so `errors.json` may hold a six-form plural
+  message like the web app's. The web's `apiErrorText` passes `params` to `t()` the same way.
+- **Audit.** The attempt that locks records `core.auth.locked_out` (entity: the user, or the email
+  typed when there is none; label: the email; no actor on sign-in) in **its own transaction**
+  (`Propagation.RequiresNew`), so it stays though the request fails; a failure to record is logged,
+  never turned into a 500. Failed sign-ins themselves are T28's `core.auth.sign_in_failed`.
+- **Unlock.** `POST /users/:id/unlock-sign-in` (`core.users.manage`, `@Audited('core.user.unlock_sign_in')`,
+  change `lockedUntil` → `null`; nothing written when it wasn't locked). `UserAccount.lockedUntil` is
+  set while a lock holds; the Users list shows "Sign-in locked" and ⋯ → Unlock sign-in, the user's
+  page a notice with the button.
+
+### Scheduled jobs
+
+Work on a clock — backups, reminders, reports (`core/jobs`, `@nestjs/schedule` + `cron`).
+
+- **A job** is a provider in its own module, marked `@ScheduledJob({ name, cron })` and implementing
+  `JobHandler.run()`. `name` is `<area>.<what>`, unique (a duplicate fails at boot); `cron` is read on
+  the **school's clock**, `SCHOOL_TIME_ZONE` (`Africa/Cairo`, `packages/shared`; a time-zone setting
+  can replace it later). `JobRunner` finds every marked provider at boot (`DiscoveryService`);
+  `JobScheduler` puts each on its clock through `@nestjs/schedule`'s `SchedulerRegistry`
+  (`waitForCompletion`, so a slow run isn't overlapped in one container).
+- **Single run across containers.** Every run first takes a Postgres advisory lock keyed by the job
+  name — `pg_try_advisory_xact_lock(hashtextextended('job:<name>', 0))`, the transaction-scoped form
+  of `pg_try_advisory_lock`, held by a transaction open for the run (up to 60 minutes). It is released
+  when the transaction ends, also if the process dies, and can't be left behind on a pooled
+  connection. A container that doesn't get the lock skips the run (`skipped`, nothing recorded).
+- **`job_runs`** (job name, `started_at`, `finished_at`, `status` `success` | `failed`, `error` text):
+  one row per run that took the lock. A failing job is logged and recorded with its error (stack, cut
+  to 4,000 characters); a failure to take the lock or to record is logged too. A job never throws
+  into the API.
+- **Tests.** Jobs are on their clocks only when `jobs.enabled` (env `JOBS_ENABLED`, default on, **off
+  under `NODE_ENV=test`**), so unit and e2e tests never run one by itself. A test runs one by name:
+  `app.get(JobRunner).run('<name>')` → `'success' | 'failed' | 'skipped'`.
+- **Jobs today:** `login-attempts.cleanup` (`core/sign-in-limit`), nightly at 03:00 school time:
+  deletes `login_attempts` rows whose window and lock both ended more than a day ago.
 
 ### Deliberate shortcuts
 
@@ -614,9 +675,9 @@ apps/api/
 │   │   ├── i18n/                     ← server messages (en, ar)
 │   │   └── utils/                    ← pure: dates, money, numbers
 │   ├── core/                         ← business foundation
-│   │   ├── auth/  users/  roles/
+│   │   ├── auth/  users/  roles/  sign-in-limit/
 │   │   ├── settings/  feature-flags/  school-structure/
-│   │   ├── audit/  notifications/  files/
+│   │   ├── audit/  jobs/  notifications/  files/
 │   │   └── core.module.ts
 │   └── modules/
 │       ├── hr/                       ← employees, departments, contracts, staff attendance,

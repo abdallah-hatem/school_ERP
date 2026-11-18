@@ -35,7 +35,18 @@ export const AccountingSettingKey = {
 } as const;
 export type AccountingSettingKey = (typeof AccountingSettingKey)[keyof typeof AccountingSettingKey];
 
-export type SettingKey = SchoolSettingKey | HrSettingKey | AccountingSettingKey;
+/**
+ * Sign-in limits (core/sign-in-limit, owner 2026-11-18): `maxAttempts` wrong passwords within
+ * `windowMinutes` lock that account's sign-in for `lockMinutes`. Per account only, never per IP.
+ */
+export const SecuritySettingKey = {
+  LOGIN_MAX_ATTEMPTS: 'security.login.maxAttempts',
+  LOGIN_WINDOW_MINUTES: 'security.login.windowMinutes',
+  LOGIN_LOCK_MINUTES: 'security.login.lockMinutes',
+} as const;
+export type SecuritySettingKey = (typeof SecuritySettingKey)[keyof typeof SecuritySettingKey];
+
+export type SettingKey = SchoolSettingKey | HrSettingKey | AccountingSettingKey | SecuritySettingKey;
 
 /**
  * History keys for HR list edits (§7: list create / edit writes a history row, scope `lists`).
@@ -91,6 +102,9 @@ export interface SettingValueMap {
   'accounting.payroll.taxBrackets': TaxBracket[];
   'accounting.payroll.martyrPercent': number;
   'accounting.payroll.insurancePercent': number;
+  'security.login.maxAttempts': number;
+  'security.login.windowMinutes': number;
+  'security.login.lockMinutes': number;
 }
 
 /**
@@ -127,7 +141,17 @@ export const SETTING_DEFAULTS: { [K in SettingKey]: SettingValueMap[K] } = {
   ],
   'accounting.payroll.martyrPercent': 0.05,
   'accounting.payroll.insurancePercent': 11,
+  // Sign-in limits (owner 2026-11-18): 5 wrong passwords in 15 minutes lock sign-in for 15 minutes.
+  'security.login.maxAttempts': 5,
+  'security.login.windowMinutes': 15,
+  'security.login.lockMinutes': 15,
 };
+
+/**
+ * The school's time zone: scheduled jobs run on its clock and the audit screens read dates in it.
+ * One school per deployment; a time-zone setting can replace this later (no per-school code).
+ */
+export const SCHOOL_TIME_ZONE = 'Africa/Cairo';
 
 /** Validation bounds from §7. */
 export const SETTING_LIMITS = {

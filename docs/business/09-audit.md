@@ -4,7 +4,8 @@ Who did what, to which record, and when — for the whole system. Spec:
 `docs/specs/2026-11-17-audit-log.md`.
 
 - **DECIDED** — Every action that changes data or access is recorded: sign-in, sign-out and failed
-  sign-ins; users (create, edit, deactivate, reactivate, temporary password, own password change)
+  sign-ins; a sign-in locked by too many wrong passwords (with the email typed, §2) and its unlock
+  by a System admin; users (create, edit, deactivate, reactivate, temporary password, own password change)
   and roles (create, edit, delete); school settings, logo and stages; employees (create, edit, deactivate, reactivate);
   departments and job titles; HR rules and the penalty catalogue; penalties (record, approve,
   cancel); monthly lateness (per employee, minutes before and after); payroll runs (create,

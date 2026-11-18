@@ -1,6 +1,7 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { ErrorCode, type AuthUser } from '@school-erp/shared';
 import { CodedException } from '../../../common/errors/coded.exception';
+import { SignInLimitService } from '../../sign-in-limit';
 import { UsersService } from '../../users';
 import { IssuedSession } from '../session';
 import { TokensService } from './tokens.service';
@@ -11,12 +12,22 @@ export class AuthService {
   constructor(
     private readonly users: UsersService,
     private readonly tokens: TokensService,
+    private readonly signInLimit: SignInLimitService,
   ) {}
 
-  /** Wrong password, unknown email and inactive user all get the same 401 (no hint). */
+  /**
+   * Wrong password, unknown email and inactive user all get the same 401 (no hint), and each
+   * counts towards the account's sign-in limit; while it is locked, every attempt gets the same 429
+   * without the password being checked. A correct sign-in clears the count.
+   */
   async login(email: string, password: string): Promise<IssuedSession> {
+    await this.signInLimit.assertNotLocked(email);
     const user = await this.users.verifyCredentials(email, password);
-    if (!user) throw new CodedException(HttpStatus.UNAUTHORIZED, ErrorCode.INVALID_CREDENTIALS);
+    if (!user) {
+      await this.signInLimit.recordFailure(email, { actor: null });
+      throw new CodedException(HttpStatus.UNAUTHORIZED, ErrorCode.INVALID_CREDENTIALS);
+    }
+    await this.signInLimit.clear(email);
     await this.users.recordSignIn(user.id);
     return this.issue(user, await this.tokens.issueRefresh(user.id));
   }

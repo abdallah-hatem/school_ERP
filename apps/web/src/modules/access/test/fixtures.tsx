@@ -59,6 +59,7 @@ export function account(overrides: Partial<UserAccount> = {}): UserAccount {
     createdAt: '2026-11-01T08:00:00.000Z',
     lastSignInAt: '2026-11-17T07:12:00.000Z',
     passwordChangedAt: null,
+    lockedUntil: null,
     ...overrides,
   };
 }

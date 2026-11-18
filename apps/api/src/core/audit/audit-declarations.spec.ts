@@ -93,6 +93,7 @@ describe('every write endpoint declares its audit (D6)', () => {
       ['PATCH /users/:id', 'core.user.update'],
       ['POST /users/:id/deactivate', 'core.user.deactivate'],
       ['POST /users/:id/reactivate', 'core.user.reactivate'],
+      ['POST /users/:id/unlock-sign-in', 'core.user.unlock_sign_in'],
       ['POST /users/:id/password', 'core.user.set_password'],
       ['POST /account/password', 'core.user.change_password'],
     ]);

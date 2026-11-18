@@ -17,10 +17,11 @@ vi.mock('../apis', () => ({
   DEACTIVATE_USER: vi.fn(),
   REACTIVATE_USER: vi.fn(),
   SET_TEMPORARY_PASSWORD: vi.fn(),
+  UNLOCK_SIGN_IN: vi.fn(),
   GET_EMPLOYEE_OPTIONS: vi.fn(),
 }));
 
-import { CREATE_USER, GET_EMPLOYEE_OPTIONS, UPDATE_USER } from '../apis';
+import { CREATE_USER, GET_EMPLOYEE_OPTIONS, UNLOCK_SIGN_IN, UPDATE_USER } from '../apis';
 import { sessionWithout } from '@/test/render';
 import { account, fail, NOW, ok, renderAccess, role, ROLES } from '../test/fixtures';
 import { UserForm } from './user-form';
@@ -166,6 +167,32 @@ describe('UserForm', () => {
     await user.click(screen.getByRole('option', { name: /Rana Mostafa/ }));
     expect(screen.getByRole('combobox', { name: 'Employee' }).textContent).toContain('Rana Mostafa · EMP-0072');
     expect(screen.getByText('1 unsaved change')).toBeTruthy();
+  });
+
+  it('a locked sign-in: the Status card says until when, and Unlock sign-in asks first', async () => {
+    const unlock = vi.mocked(UNLOCK_SIGN_IN);
+    unlock.mockResolvedValue(ok({ ...officer, lockedUntil: null }) as Res<typeof UNLOCK_SIGN_IN>);
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    const locked = { ...officer, lockedUntil: '2026-11-17T12:15:00.000Z' };
+    renderAccess(<UserForm basePath="/en/users" user={locked} roles={ROLES} now={NOW} />);
+    expect(screen.getByText('Sign-in locked')).toBeTruthy();
+    expect(
+      screen.getByText('Too many wrong passwords. Sign-in is locked until 14:15, unless you unlock it.'),
+    ).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Unlock sign-in' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Unlock sign-in for Rania Magdy?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Unlock' }));
+    await waitFor(() => expect(unlock).toHaveBeenCalledWith(officer.id));
+  });
+
+  it('a locked sign-in without core.users.manage: the notice, no Unlock button', () => {
+    renderAccess(
+      <UserForm basePath="/en/users" user={{ ...officer, lockedUntil: '2026-11-17T12:15:00.000Z' }} roles={ROLES} now={NOW} />,
+      'en',
+      sessionWithout('core.users.manage'),
+    );
+    expect(screen.getByText('Sign-in locked')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Unlock sign-in' })).toBeNull();
   });
 
   it('without core.users.manage the page is read-only', () => {

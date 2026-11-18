@@ -21,13 +21,15 @@ import {
   ReactivateIcon,
   SearchIcon,
   TemporaryPasswordIcon,
+  LockedIcon,
+  UnlockIcon,
 } from '@/shared/components/ui/icons';
 import { SkeletonIdentity, SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
 import { StatusPill } from '@/shared/components/ui/status-pill';
 import { formatCount } from '@/shared/lib/format';
 import { localName } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
-import { formatSignIn } from '../lib/sign-in-time';
+import { formatLockEnd, formatSignIn } from '../lib/sign-in-time';
 import { activeFilterCount, usersQueryString, type UsersFilterKey, type UsersListQuery } from '../lib/users-query';
 import { Avatar, RoleChips } from './role-bits';
 import { useUserActions } from './user-actions';
@@ -177,6 +179,15 @@ export function UsersList({ basePath, query, rows, total, roles, lastAdminId, no
               {t('access.users.temporaryPassword')}
             </StatusPill>
           ) : null}
+          {u.lockedUntil ? (
+            <StatusPill
+              tone="danger"
+              icon={LockedIcon}
+              title={t('access.users.lockedTitle', { time: formatLockEnd(u.lockedUntil, locale) })}
+            >
+              {t('access.users.locked')}
+            </StatusPill>
+          ) : null}
         </span>
       ),
     },
@@ -205,6 +216,14 @@ export function UsersList({ basePath, query, rows, total, roles, lastAdminId, no
             icon: TemporaryPasswordIcon,
             hidden: !canManage || !u.isActive,
             onSelect: () => actions.setPassword(u),
+          },
+          {
+            id: 'unlock',
+            label: t('access.users.actions.unlock'),
+            icon: UnlockIcon,
+            positive: true,
+            hidden: !canManage || !u.lockedUntil,
+            onSelect: () => actions.unlock(u),
           },
           {
             id: 'deactivate',

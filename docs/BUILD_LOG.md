@@ -202,6 +202,11 @@ phase live in `docs/build-log/`.
   (PR, four green checks, owner approval); Sunday's demo runs from it (ARCHITECTURE → Environments).
 - 2026-11-18 — Team (owner): Waleed is paused for now; the work is split between Abdallah and
   Tamer. Waleed's T28 (audit wiring for auth, settings, employees, lists) moves to Abdallah.
+- 2026-11-18 — Login rate limiting (owner-approved rules) and the scheduled-jobs foundation: 5 wrong
+  passwords in 15 minutes lock that account for 15 minutes (per account, `login_attempts`, one atomic
+  upsert; 429 `TOO_MANY_ATTEMPTS`; sign-in and both password-change paths), admin unlock from Users
+  (`POST /users/:id/unlock-sign-in`, audited), lockouts audited; `core/jobs` (`@nestjs/schedule`,
+  advisory lock per job, `job_runs`) with the nightly `login-attempts.cleanup` at 03:00 Cairo.
 
 ## Next up
 
@@ -224,8 +229,9 @@ phase live in `docs/build-log/`.
 
 - The client should check the Arabic penalty catalogue against the printed regulations (copied from the scans).
 
-- Login rate limiting (T2 left it out; security baseline).
 - Write the settings history in the same transaction as the change (outbox), instead of right after.
+- Sign-in limit numbers (5 wrong passwords / 15-minute window / 15-minute lock) are core settings with
+  no screen yet; add them to Settings → School if a school wants to change them.
 
 - Hosting the demo on the Contabo server (owner: later; local demo is the fallback).
 - Audit log T28 (Abdallah, was Waleed's: auth, settings, employees, lists) and T29 (Tamer: penalties, lateness,

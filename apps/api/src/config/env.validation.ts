@@ -79,6 +79,17 @@ export class EnvironmentVariables {
   )
   @IsBoolean()
   COOKIE_SECURE?: boolean;
+
+  /**
+   * Whether scheduled jobs (core/jobs) run on their clock. Defaults to on, except under
+   * NODE_ENV=test: unit and e2e tests run a job only by triggering it (`JobRunner.run(name)`).
+   */
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    value === undefined ? undefined : value === true || value === 'true',
+  )
+  @IsBoolean()
+  JOBS_ENABLED?: boolean;
 }
 
 /** Used by `ConfigModule.forRoot({ validate })`. Throws with every problem listed. */

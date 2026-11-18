@@ -34,7 +34,8 @@
       "auth": {
         "sign_in": "Signed in",
         "sign_out": "Signed out",
-        "sign_in_failed": "Failed sign-in attempt for {entity}"
+        "sign_in_failed": "Failed sign-in attempt for {entity}",
+        "locked_out": "Sign-in locked for {entity} after too many wrong passwords"
       },
       "settings": {
         "update": "Changed the school settings",
@@ -50,7 +51,8 @@
         "deactivate": "Deactivated the user {entity}",
         "reactivate": "Reactivated the user {entity}",
         "set_password": "Set a temporary password for {entity}",
-        "change_password": "Changed the password of {entity}"
+        "change_password": "Changed the password of {entity}",
+        "unlock_sign_in": "Unlocked sign-in for {entity}"
       },
       "role": {
         "create": "Added the role {entity}",
@@ -151,6 +153,7 @@
     "graduationYear": "Graduation year",
     "status": "Status",
     "userId": "User account",
+    "lockedUntil": "Sign-in locked until",
     "groupId": "Penalty group",
     "note": "Note",
     "levels": "Levels",

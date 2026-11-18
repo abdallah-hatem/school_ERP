@@ -126,6 +126,36 @@ model RefreshToken {
   @@map("refresh_tokens")
 }
 
+/// Wrong passwords per account (core/sign-in-limit, owner 2026-11-18), keyed by the lower-cased
+/// email typed — an email nobody has gets a row too, so the answer never tells whether an account
+/// exists. Per account only, never per IP. Written by one atomic upsert per wrong password; a
+/// correct sign-in deletes the row; the nightly `login-attempts.cleanup` job deletes stale ones.
+/// No foreign key: the email may belong to no user.
+model LoginAttempt {
+  email           String    @id
+  failedCount     Int       @map("failed_count")
+  windowStartedAt DateTime  @map("window_started_at")
+  lockedUntil     DateTime? @map("locked_until")
+
+  @@index([windowStartedAt])
+  @@map("login_attempts")
+}
+
+/// One run of a scheduled job (core/jobs): written when it finishes, `success` or `failed` with
+/// the error text. A run skipped because another API container held the job's lock writes nothing.
+model JobRun {
+  id         String   @id @default(uuid()) @db.Uuid
+  jobName    String   @map("job_name")
+  startedAt  DateTime @map("started_at")
+  finishedAt DateTime @map("finished_at")
+  /// `success` | `failed` (`JOB_RUN_STATUSES` in core/jobs).
+  status     String
+  error      String?
+
+  @@index([jobName, startedAt])
+  @@map("job_runs")
+}
+
 /// Named monotonic counters (e.g. 'employee_code'). Incremented atomically; values never reused.
 model Counter {
   name      String   @id

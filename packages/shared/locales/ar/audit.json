@@ -34,7 +34,8 @@
       "auth": {
         "sign_in": "تسجيل الدخول",
         "sign_out": "تسجيل الخروج",
-        "sign_in_failed": "محاولة دخول فاشلة بالبريد {entity}"
+        "sign_in_failed": "محاولة دخول فاشلة بالبريد {entity}",
+        "locked_out": "قفل الدخول بالبريد {entity} بعد محاولات خاطئة كثيرة"
       },
       "settings": {
         "update": "تعديل إعدادات المدرسة",
@@ -50,7 +51,8 @@
         "deactivate": "إيقاف المستخدم {entity}",
         "reactivate": "إعادة تفعيل المستخدم {entity}",
         "set_password": "تعيين كلمة مرور مؤقتة للمستخدم {entity}",
-        "change_password": "تغيير كلمة مرور المستخدم {entity}"
+        "change_password": "تغيير كلمة مرور المستخدم {entity}",
+        "unlock_sign_in": "فتح قفل الدخول للمستخدم {entity}"
       },
       "role": {
         "create": "إضافة الدور {entity}",
@@ -151,6 +153,7 @@
     "graduationYear": "سنة التخرج",
     "status": "الحالة",
     "userId": "حساب المستخدم",
+    "lockedUntil": "الدخول مقفل حتى",
     "groupId": "مجموعة الجزاءات",
     "note": "ملاحظة",
     "levels": "المستويات",
