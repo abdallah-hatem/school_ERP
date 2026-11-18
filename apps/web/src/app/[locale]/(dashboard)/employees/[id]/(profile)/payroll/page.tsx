@@ -1,6 +1,6 @@
 import { sectionMetadata } from '@/core/navigation/section-metadata';
 import { notFound } from 'next/navigation';
-import { requirePermission } from '@/core/auth';
+import { requireScreen } from '@/core/auth';
 import { EmployeePayrollSection, type SearchParamsRecord } from '@/modules/hr/payroll';
 import { isLocale } from '@/shared/lib/i18n';
 
@@ -17,6 +17,6 @@ export default async function EmployeePayrollPage({
   const [{ locale, id }, query] = await Promise.all([params, searchParams]);
   if (!isLocale(locale)) notFound();
   // R6: a page the viewer's roles can't open is the not-found screen.
-  await requirePermission('hr.payroll.view');
+  await requireScreen('employeePayroll');
   return <EmployeePayrollSection locale={locale} employee={{ id }} searchParams={query} />;
 }
