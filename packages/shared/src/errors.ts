@@ -49,6 +49,8 @@ export const ErrorCode = {
   INVALID_WORK_HOURS: 'INVALID_WORK_HOURS',
   /** §7: the merged tax rule breaks a rule `taxRuleIssues` checks (e.g. bracket % + fund ≥ 100). */
   INVALID_TAX_RULE: 'INVALID_TAX_RULE',
+  /** §11 (N3): the second contract reminder isn't fewer days before the end than the first. */
+  INVALID_REMINDER_DAYS: 'INVALID_REMINDER_DAYS',
   INVALID_FILE_TYPE: 'INVALID_FILE_TYPE',
   FILE_TOO_LARGE: 'FILE_TOO_LARGE',
 

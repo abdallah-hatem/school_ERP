@@ -281,7 +281,8 @@ UUID) and `@nestjs-cls/transactional` with the Prisma adapter keeps the open tra
   writes use `txHost.withTransaction(...)`, which joins an open transaction or opens one.
   Repositories still on `DatabaseService` keep working but always run outside any transaction —
   move a repository over when its writes must be audited (#105 moved stages, the HR lists and the
-  penalty catalogue; T28 refresh tokens and employees; T29 penalties, lateness and payroll).
+  penalty catalogue; T28 refresh tokens and employees; T29 penalties, lateness and payroll — every
+  write endpoint is now `@Audited`, or `@NotAudited` with a real reason).
 - Never pass options to a nested `withTransaction`; only the request transaction sets them.
 - **After-commit work** (events): `AfterCommit.run(fn)` queues `fn` until the open transaction
   commits (dropped on rollback), or runs it at once when none is open. Inside a transaction opened
@@ -312,7 +313,18 @@ module through core's exported `AuditService` — never through its repository.
   own snapshot: those entries are list and catalogue edits whose one change holds the whole item, so
   its `nameAr` is the name as it was then (used only when its `nameEn` is the stored label). Anything
   else reads as its one label in both languages. Search (`q`) matches either stored name (so not
-  those older entries' Arabic names).
+  those older entries' Arabic names), or a record the owning module matches by a field the entry
+  doesn't store (below).
+- **Related records and search** (`AuditRecordAccess`, where HR also says who may see what): a
+  module registers, at start-up, a parent's related records — `registerRelated(employee, penalty,
+  id → the employee's penalty ids)`, so a History (`GET /audit/records/…`, its `/fields` and
+  `/audit/actors?entityType&entityId`) lists the record's entries and its related records', each
+  still filtered by the viewer's scope — and search resolvers — `registerSearch(type, q → ids)`:
+  HR matches an employee by code and a penalty by its employee's code, so Activity's "name or code"
+  search (and its day totals) finds them. Both are read live from the owning module's tables at
+  query time: entries never store the code or the link, so nothing is duplicated, renamed codes
+  can't go stale and older entries are found too (the log is never rewritten). Core never imports
+  HR: HR calls core's registry.
 - Who (id + name snapshot), IP, user agent and request id come from the request (D4). `actor` is
   passed only where the request has no user yet (a successful sign-in) or none applies (`null`).
 - **A service records in its own write's transaction** even when called outside a request (the
@@ -601,6 +613,9 @@ Work on a clock — backups, reminders, reports (`core/jobs`, `@nestjs/schedule`
   `outbox.deliver` (`core/events`, every 30 s, `lock: false`): delivers due outbox deliveries.
   `outbox.cleanup` (`core/events`, 03:30, `lock: false`): deletes delivered events older than 30 days.
   `core.notifications.purge` (`core/notifications`, 02:30): deletes expired notifications (below).
+  `hr.reminders.daily` (`modules/hr/reminders`, 07:00): HR's reminders — contracts and probation
+  ending soon, lateness not entered, payroll not prepared / still a draft (Notifications → HR's
+  reminders).
 
 ### Notifications
 
@@ -668,8 +683,23 @@ types** and sends through core's exported `NotificationsService` — core never 
 - **Retention (N14)**: core settings `notifications.retention.readDays` / `resolvedDays` / `maxDays`
   (90 / 30 / 365, each 1–3650); the nightly `core.notifications.purge` (02:30, advisory lock) deletes
   what is past them, with items and deliveries. Not audited.
-- **Not yet:** no module sends (HR's types come with N2 / N3, which register HR's scope resolver);
-  the bell, My account tab and Settings section are N4 (the `SETTINGS_SECTION_ACCESS` entry for
+- **HR's reminders (N3, `modules/hr/reminders`).** The daily job `hr.reminders.daily` (07:00 school
+  time, advisory lock) works out **today on the school's clock** (`schoolDayOf`), reads the timings
+  (HR settings `hr.reminders.*`: contract 30 and 7 days, probation 7 days, lateness check day 25,
+  payroll check day 28) and, **one `afterCommit.inTransaction` per type in turn**, the type's open
+  items (`NotificationsService.openItems`) and HR's facts. The pure `reminders.pure.ts` decides what
+  is due (today or overdue — a missed day is caught up once) and which open items no longer hold;
+  those are resolved `done` (`resolve` with a `dedupeKey` for one reminder of a subject: the 30-day
+  contract item when the 7-day one is sent), then the due ones are sent. Dedupe keys
+  `contract_end:<employee>:<date>:<days>`, `probation_end:<employee>:<date>`,
+  `lateness_missing:<month>`, `payroll_missing:<month>`, `payroll_unapproved:<month>`; contract items
+  group per school day and window (`2027-05-01:30`). A check day past the month's end is its last
+  day. HR's services resolve at the change too, in their own transactions (`HrRemindersService`): a
+  moved contract / probation end, a deactivation, a saved lateness month, a created run, an
+  approved run ("Approved by …"). Subjects: `employee` (scoped through `HrNotificationScopes` with
+  HR's stage / team rule), `lateness_month`, `payroll_month`, `payroll_run` (whole-school: a scoped
+  holder is never told).
+- **Not yet:** HR's approval notifications (N2); the bell, My account tab and Settings section are N4 (the `SETTINGS_SECTION_ACCESS` entry for
   Settings → Notifications comes with that screen).
 
 ### Deliberate shortcuts

@@ -23,6 +23,7 @@
   },
   "INVALID_WORK_HOURS": "Work end must be after work start.",
   "INVALID_TAX_RULE": "The tax rule isn't valid: only the last bracket is open-ended, widths are above 0, and each bracket's rate plus the martyrs' fund stays under 100%.",
+  "INVALID_REMINDER_DAYS": "The second contract reminder must come fewer days before the end than the first (or 0 for none).",
   "INVALID_FILE_TYPE": "Only PNG, JPG or SVG files are allowed.",
   "FILE_TOO_LARGE": "The file must be 2 MB or smaller.",
   "LIST_ITEM_HIDDEN": "This item is hidden and can't be chosen.",

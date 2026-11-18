@@ -37,6 +37,8 @@ export interface NotifyInput {
 export interface ResolveInput {
   type: NotificationTypeKey;
   subject: Pick<NotificationSubject, 'entityType' | 'entityId'>;
+  /** Only the items with this dedupe key (one of several reminders about the subject). */
+  dedupeKey?: string;
   resolution: NotificationResolution;
   /** Who did it ("Approved by …"); null or absent for no person (a job, a change elsewhere). */
   byUserId?: string | null;
@@ -119,11 +121,26 @@ export class NotificationsService {
       type: input.type,
       entityType: input.subject.entityType,
       entityId: input.subject.entityId,
+      ...(input.dedupeKey !== undefined ? { dedupeKey: input.dedupeKey } : {}),
       resolution: input.resolution,
       byName,
       now: input.now ?? new Date(),
     });
     return { resolved };
+  }
+
+  /**
+   * What is still open of `type` — each subject and dedupe key once, whoever received it. A job
+   * that sends reminders reads it to resolve the ones whose condition no longer holds (N16).
+   * Runs in the current transaction like `notify()` / `resolve()`.
+   */
+  async openItems(
+    type: NotificationTypeKey,
+  ): Promise<{ entityType: string; entityId: string; dedupeKey: string }[]> {
+    if (!this.txHost.isTransactionActive())
+      throw new NotificationOutsideTransactionError('openItems', type);
+    this.types.get(type);
+    return this.notifications.openItems(type);
   }
 
   /**

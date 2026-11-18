@@ -360,11 +360,26 @@ export interface EmployeeRule {
   defaultProbationMonths: number;
 }
 
+/** §11 (N3): when HR's reminders are sent. Days before a date, or a day of the month (1–31). */
+export interface ReminderRule {
+  /** First contract reminder, days before the end (1–120). */
+  contractEndDays: number;
+  /** Second contract reminder (0 = none; 0–60, less than the first). */
+  contractEndSecondDays: number;
+  /** Days before an employee's probation end (1–60). */
+  probationEndDays: number;
+  /** From this day of each month while its lateness was never saved (past the month's end = its last day). */
+  latenessCheckDay: number;
+  /** From this day of each month while its payroll isn't prepared or approved (same). */
+  payrollCheckDay: number;
+}
+
 export interface HrSettings {
   lateness: LatenessRule;
   payroll: PayrollRule;
   penalties: PenaltyRule;
   employees: EmployeeRule;
+  reminders: ReminderRule;
 }
 
 /** The HR rules a payroll run's panel shows (§5, §6, §7): only those its figures depend on. */
@@ -375,6 +390,7 @@ export interface UpdateHrSettingsRequest {
   payroll?: { dayDivisor?: number; partTime?: Partial<Record<PartTimeWorkSystem, number>> };
   penalties?: Partial<PenaltyRule>;
   employees?: Partial<EmployeeRule>;
+  reminders?: Partial<ReminderRule>;
 }
 
 // ── Payroll ────────────────────────────────────────────────────────────────

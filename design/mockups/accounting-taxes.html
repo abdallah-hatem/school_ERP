@@ -1,0 +1,608 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Payroll Taxes Mockups</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Tajawal:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/duotone/style.css">
+<style>
+/* Tokens copied from apps/web/src/app/globals.css (direction "Campus"). Light theme only. */
+:root{
+  --radius:14px;
+  --background:#f2f8f6; --foreground:#11302b; --card:#ffffff;
+  --muted:#f5faf8; --muted-foreground:#587069; --secondary:#eaf4f1;
+  --primary:#0b7a68; --primary-foreground:#ffffff; --primary-soft:#d5efe8; --primary-hover:#096656;
+  --accent:#ffc43d; --accent-foreground:#4a3400; --accent-soft:#fff1c9;
+  --success:#1f9a62; --success-soft:#ddf4e7; --success-ink:#126b42;
+  --warning:#d9771c; --warning-soft:#ffe8d2; --warning-ink:#8f4608;
+  --destructive:#d9473a; --destructive-soft:#fde3df; --destructive-ink:#a82d22;
+  --info:#2f6fb3; --info-soft:#e0eefb; --info-ink:#24578e;
+  --border:#dce9e5; --input:#cfe0db;
+  --overlay:rgb(9 40 35 / .42);
+  --shadow-card:0 1px 2px rgb(11 72 62 / .06),0 10px 30px -12px rgb(11 72 62 / .18);
+  --shadow-raised:0 2px 4px rgb(11 72 62 / .05),0 30px 60px -24px rgb(11 72 62 / .28);
+  --shadow-primary:0 8px 20px -8px rgb(11 122 104 / .7);
+  --bar:#0f2f2a; --bar-ink:#e7f4f0;
+  --font-latin:"Plus Jakarta Sans",system-ui,sans-serif;
+  --font-ar:"IBM Plex Sans Arabic","Plus Jakarta Sans",system-ui,sans-serif;
+  --font-ar-display:"Tajawal","IBM Plex Sans Arabic",system-ui,sans-serif;
+  --font:var(--font-latin); --font-display:var(--font-latin);
+  color-scheme:light;
+}
+:root[lang="ar"]{--font:var(--font-ar);--font-display:var(--font-ar-display)}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:#e4efec;color:var(--foreground);font-family:var(--font);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:inherit}
+:focus-visible{outline:3px solid color-mix(in srgb,var(--primary) 55%,transparent);outline-offset:2px}
+.num{direction:ltr;unicode-bidi:isolate;font-family:var(--font-latin);font-variant-numeric:tabular-nums lining-nums;white-space:nowrap}
+[dir="rtl"] .flip{transform:scaleX(-1)}
+.ph-duotone{line-height:1;display:inline-block}
+bdi{unicode-bidi:isolate}
+.muted{color:var(--muted-foreground)}
+
+/* ---------- mockup bar ---------- */
+.mockbar{background:var(--bar);color:var(--bar-ink);display:flex;align-items:center;gap:14px;padding:10px 24px;position:sticky;top:0;z-index:80;flex-wrap:wrap;font-size:13px}
+.mockbar strong{font-size:14px}
+.mockbar .sp{flex:1}
+.seg{display:inline-flex;background:rgb(255 255 255 / .08);border-radius:999px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;color:inherit;padding:5px 14px;border-radius:999px;font-weight:700;font-size:13px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#3a2900}
+.seg .ar{font-family:var(--font-ar-display);font-size:15px}
+.optnote{padding:18px 24px 0;max-width:1488px;margin-inline:auto;color:var(--muted-foreground);font-size:13.5px}
+.optnote b{color:var(--foreground)}
+.optnote ul{margin:6px 0 0;padding-inline-start:18px}
+.section-title{max-width:1488px;margin:26px auto 10px;padding-inline:24px;font-family:var(--font-display);font-weight:800;font-size:16px}
+.section-title small{font-family:var(--font);font-weight:500;color:var(--muted-foreground);font-size:13px;margin-inline-start:8px}
+
+/* ---------- frames ---------- */
+.desk-scroll{overflow-x:auto;padding:6px 24px 8px}
+.desk{width:1440px;margin-inline:auto;position:relative;background:var(--background);border-radius:22px;box-shadow:var(--shadow-raised);overflow:hidden;border:1px solid var(--border);display:flex;min-height:860px}
+.phones{display:flex;gap:32px;justify-content:center;flex-wrap:wrap;padding:6px 24px 40px;align-items:flex-start}
+.phone-wrap{display:flex;flex-direction:column;gap:8px;align-items:center}
+.phone-cap{font-size:12.5px;color:var(--muted-foreground);font-weight:600}
+.phone{width:390px;min-height:844px;background:var(--background);border-radius:44px;border:10px solid #1b2e2a;box-shadow:var(--shadow-raised);overflow:hidden;position:relative;display:flex;flex-direction:column}
+.phone .pbody{padding:16px;display:flex;flex-direction:column;gap:14px;flex:1}
+
+/* ---------- shell ---------- */
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:38px;height:38px;flex:none;border-radius:12px;background:var(--primary);color:#fff;display:grid;place-items:center;font-size:22px;position:relative}
+.logo::after{content:"";position:absolute;width:9px;height:9px;border-radius:50%;background:var(--accent);inset-block-start:-2px;inset-inline-end:-2px;box-shadow:0 0 0 2px var(--card)}
+.brand-name{font-family:var(--font-display);font-weight:800;font-size:14.5px;line-height:1.25}
+.brand-sub{font-size:11.5px;color:var(--muted-foreground)}
+.sb{width:272px;flex:none;background:var(--card);border-inline-end:1px solid var(--border);padding:22px 14px;display:flex;flex-direction:column;gap:20px}
+.sb nav{display:flex;flex-direction:column;gap:6px}
+.navlink{display:flex;align-items:center;gap:11px;min-height:38px;padding:7px 10px;border-radius:12px;color:var(--muted-foreground);text-decoration:none;font-weight:600;font-size:13.5px}
+.navlink .ph-duotone{font-size:19px}
+.navlink[aria-current="page"]{background:var(--primary-soft);color:var(--primary)}
+.navlink[aria-current="page"]::after{content:"";width:7px;height:7px;border-radius:50%;background:var(--accent);margin-inline-start:auto}
+.single{display:flex;align-items:center;gap:11px;min-height:46px;padding:8px 10px;border-radius:14px;font-weight:700;font-size:14.5px;color:var(--foreground);text-decoration:none}
+.single.soon{opacity:.7;filter:grayscale(1)}
+.single .tag{margin-inline-start:auto;font-size:11px;font-weight:700;background:var(--secondary);color:var(--muted-foreground);border-radius:999px;padding:1px 8px}
+.mi{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;font-size:18px;flex:none;background:var(--secondary);color:var(--muted-foreground)}
+.grp{border-radius:16px;background:var(--muted);box-shadow:inset 0 0 0 1px var(--border);padding-bottom:8px}
+.grp .gh{display:flex;align-items:center;gap:11px;min-height:46px;padding:8px 10px;font-weight:700;font-size:14.5px}
+.grp .kids{display:flex;flex-direction:column;gap:2px;margin-inline-start:34px;border-inline-start:2px solid var(--border);padding-inline:8px}
+.grp.cur{background:color-mix(in srgb,var(--primary-soft) 40%,var(--card));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--primary) 25%,var(--border))}
+.user{display:flex;align-items:center;gap:10px;padding:10px;border-radius:16px;background:var(--muted);border:1px solid var(--border);margin-top:auto;text-decoration:none;color:inherit}
+.user .n{font-weight:700;font-size:13px;line-height:1.2}
+.user .r{font-size:11.5px;color:var(--muted-foreground)}
+.av{border-radius:12px;background:var(--secondary);color:var(--muted-foreground);display:grid;place-items:center;flex:none;width:34px;height:34px;font-size:18px}
+.main{flex:1;min-width:0;padding:20px 36px 36px;display:flex;flex-direction:column;gap:18px;position:relative}
+.topline{display:flex;align-items:center;gap:10px;min-height:42px}
+.topline .sp{flex:1}
+.lang{display:inline-flex;background:var(--secondary);border-radius:999px;padding:3px}
+.lang span{padding:4px 12px;border-radius:999px;font-weight:700;font-size:12.5px}
+.lang span.on{background:var(--accent);color:var(--accent-foreground)}
+.lang .ar{font-family:var(--font-ar-display);font-size:14px}
+.bell{width:42px;height:42px;border-radius:13px;border:1px solid var(--border);background:var(--card);display:grid;place-items:center;font-size:21px}
+.mbar{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--card);border-bottom:1px solid var(--border);flex:none}
+.mbar .menub{width:38px;height:38px;border-radius:12px;border:1px solid var(--border);background:var(--card);display:grid;place-items:center;font-size:20px}
+.mbar .brand-name{font-size:14px;flex:1;min-width:0}
+.mbar .bell{width:38px;height:38px;font-size:19px;border-radius:12px}
+.crumbs{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted-foreground);font-weight:600}
+.crumbs a{color:var(--primary);text-decoration:none}
+.head{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.head h1{margin:0;font-family:var(--font-display);font-size:28px;font-weight:800;line-height:1.15;letter-spacing:-.01em}
+:root[lang="ar"] .head h1{letter-spacing:0}
+.head p{margin:4px 0 0;color:var(--muted-foreground);font-size:14px;max-width:640px}
+.head .acts{margin-inline-start:auto;display:flex;gap:10px;align-items:center}
+.phone .head h1{font-size:23px}
+.phone .meta .pill{white-space:normal}
+.phone .head p{font-size:13px}
+.phone .head .acts{margin-inline-start:0;width:100%}
+.phone .head .acts .btn{flex:1}
+.meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.card{background:var(--card);border-radius:22px;box-shadow:var(--shadow-card)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:var(--radius);padding:9px 15px;font-weight:700;font-size:13.5px;border:1px solid var(--input);background:var(--card);white-space:nowrap;text-decoration:none;min-height:40px}
+.btn .ph-duotone{font-size:18px}
+.btn-primary{background:var(--primary);color:#fff;border-color:transparent;box-shadow:var(--shadow-primary)}
+.btn-sm{padding:6px 11px;font-size:12.5px;border-radius:11px;min-height:34px}
+.btn-ghost{border-color:transparent;background:transparent;color:var(--primary)}
+.iconbtn{width:40px;height:40px;border-radius:12px;border:1px solid var(--input);background:var(--card);display:grid;place-items:center;font-size:18px;flex:none}
+.pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2px 9px;font-size:11.5px;font-weight:700;white-space:nowrap}
+.pill .ph-duotone{font-size:13px}
+.p-ok{background:var(--success-soft);color:var(--success-ink)}
+.p-neutral{background:var(--secondary);color:var(--muted-foreground)}
+.p-info{background:var(--info-soft);color:var(--info-ink)}
+.p-draft{background:var(--accent-soft);color:#6b4b00}
+.lock{display:inline-flex;align-items:center;gap:6px;color:var(--muted-foreground);font-size:12.5px;font-weight:600;white-space:nowrap}
+.lock .ph-duotone{font-size:15px}
+
+/* ---------- tiles ---------- */
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.tile{position:relative;border-radius:22px;padding:18px 20px 20px;background:var(--card);box-shadow:var(--shadow-card);overflow:hidden;display:flex;flex-direction:column;gap:12px}
+.tile .tt{display:flex;align-items:center;gap:12px}
+.tile .ic{flex:none;width:40px;height:40px;border-radius:14px;display:grid;place-items:center;font-size:22px;background:var(--secondary);color:var(--muted-foreground)}
+.tile .lbl{font-size:14px;color:var(--muted-foreground);font-weight:600}
+.tile .val{font-size:26px;font-weight:800;line-height:1;letter-spacing:-.02em;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.tile .cur{font-size:13px;font-weight:700;color:var(--muted-foreground);letter-spacing:0;font-family:var(--font)}
+.tile .sub{font-size:12.5px;color:var(--muted-foreground);line-height:1.4}
+.tile > *{position:relative;z-index:1}
+.t-feat{background:var(--primary);color:#fff}
+.t-feat::after{content:"";position:absolute;width:150px;height:150px;inset-block-start:-70px;inset-inline-end:-50px;border-radius:50%;background:color-mix(in srgb,var(--accent) 85%,transparent);z-index:0}
+.t-feat .ic{background:rgb(255 255 255 / .16);color:#fff}
+.t-feat .lbl,.t-feat .cur,.t-feat .sub{color:rgb(255 255 255 / .82)}
+.phone .tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.phone .tile{padding:14px;gap:8px;border-radius:18px}
+.phone .tile .ic{width:32px;height:32px;border-radius:11px;font-size:18px}
+.phone .tile .tt{gap:8px}
+.phone .tile .lbl{font-size:12.5px;line-height:1.3}
+.phone .tile .val{font-size:18px}
+.phone .tile .cur{font-size:11px}
+.phone .tile .sub{font-size:11.5px}
+.phone .tile.wide{grid-column:1/-1}
+.phone .tile.wide .val{font-size:26px}
+
+/* ---------- tables ---------- */
+.tablecard{padding:18px 0 6px;overflow:hidden}
+.tbar{display:flex;align-items:center;gap:12px;padding:0 20px 14px;flex-wrap:wrap}
+.tbar h2{margin:0;font-family:var(--font-display);font-size:18px;font-weight:800}
+.tbar .count{font-size:13px;color:var(--muted-foreground);font-weight:600}
+.tbar .tools{margin-inline-start:auto;display:flex;gap:8px;align-items:center}
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:13.5px}
+thead th{font-weight:600;color:var(--muted-foreground);font-size:12.5px;text-align:start;padding:10px 10px;background:var(--muted);white-space:nowrap;border-block:1px solid var(--border)}
+thead th:first-child,tbody td:first-child,tfoot td:first-child{padding-inline-start:20px}
+thead th:last-child,tbody td:last-child,tfoot td:last-child{padding-inline-end:20px}
+th.n,td.n{text-align:end}
+tbody td{padding:11px 10px;border-block-end:1px solid var(--border);white-space:nowrap;vertical-align:middle}
+tbody tr.link:hover td{background:color-mix(in srgb,var(--primary-soft) 45%,transparent)}
+tfoot td{padding:12px 10px;font-weight:800;background:var(--muted);white-space:nowrap}
+td.strong{font-weight:800}
+td.gross{font-weight:800;color:var(--primary)}
+.emp .nm{font-weight:700}
+.emp .cd{font-size:12px;color:var(--muted-foreground)}
+td.hiddencell{text-align:center;background:repeating-linear-gradient(135deg,var(--muted) 0 8px,var(--card) 8px 16px)}
+.zero{font-size:11.5px;color:var(--muted-foreground);display:block;font-weight:500}
+
+/* stacked employee cards (phone) */
+.ecards{display:flex;flex-direction:column;gap:10px}
+.ecard{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:14px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.ecard .top{grid-column:1/-1;display:flex;gap:10px;align-items:flex-start}
+.ecard .top .emp{flex:1;min-width:0}
+.ecard .band{grid-column:1/-1;display:flex;align-items:baseline;gap:8px;padding:10px 12px;background:var(--primary-soft);border-radius:12px;color:var(--primary);font-weight:800;font-size:19px}
+.ecard .band .l{font-family:var(--font);font-size:13px;font-weight:700;margin-inline-end:auto}
+.ecard .kv{display:flex;flex-direction:column;gap:2px;background:var(--muted);border-radius:12px;padding:8px 10px;font-size:13.5px;font-weight:700;min-width:0}
+.ecard .kv .l{font-size:12px;font-weight:500;color:var(--muted-foreground)}
+.ecard .hid{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border-radius:12px;background:repeating-linear-gradient(135deg,var(--muted) 0 8px,var(--card) 8px 16px);color:var(--muted-foreground);font-weight:600;font-size:13px}
+
+/* ---------- tax rule ---------- */
+.rule{padding:20px 22px}
+.rule h3{margin:0;font-family:var(--font-display);font-size:17px;font-weight:800}
+.rule .why{font-size:12.5px;color:var(--muted-foreground);margin:3px 0 14px}
+.slices{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;align-items:end}
+.slice{border-radius:12px;background:var(--muted);border:1px solid var(--border);padding:10px 12px;display:flex;flex-direction:column;gap:2px;position:relative;overflow:hidden}
+.slice .r{font-size:20px;font-weight:800;color:var(--primary)}
+.slice .w{font-size:12px;color:var(--muted-foreground);font-weight:600}
+.slice::before{content:"";position:absolute;inset-inline:0;inset-block-end:0;height:var(--h);background:color-mix(in srgb,var(--primary-soft) 80%,transparent);z-index:0}
+.slice > *{position:relative}
+.rates{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.rate{display:flex;align-items:center;gap:8px;background:var(--muted);border:1px solid var(--border);border-radius:12px;padding:8px 12px;font-size:13px}
+.rate b{font-weight:800}
+.phone .slices{grid-template-columns:repeat(3,minmax(0,1fr))}
+.phone .slice .r{font-size:17px}
+.ruletable{width:100%;font-size:13px}
+.ruletable td{padding:7px 0;border-block-end:1px dashed var(--border);white-space:normal}
+.ruletable td:first-child{padding-inline-start:0}
+.ruletable td:last-child{padding-inline-end:0;text-align:end;font-weight:800}
+
+/* ---------- empty ---------- */
+.empty{padding:48px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px}
+.empty .eic{width:64px;height:64px;border-radius:20px;background:var(--primary-soft);color:var(--primary);display:grid;place-items:center;font-size:32px;position:relative}
+.empty .eic::after{content:"";position:absolute;width:12px;height:12px;border-radius:50%;background:var(--accent);inset-block-start:-3px;inset-inline-end:-3px;box-shadow:0 0 0 3px var(--card)}
+.empty h3{margin:6px 0 0;font-family:var(--font-display);font-size:19px;font-weight:800}
+.empty p{margin:0;color:var(--muted-foreground);max-width:440px}
+.notice{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:16px;background:var(--info-soft);color:var(--info-ink);font-size:13px}
+.notice .ph-duotone{font-size:22px;flex:none}
+.notice b{display:block;font-size:13.5px}
+
+/* ---------- option B ---------- */
+.mdl{display:grid;grid-template-columns:250px minmax(0,1fr);overflow:hidden}
+.mdl{grid-template-columns:220px minmax(0,1fr)}
+.rail{border-inline-end:1px solid var(--border);background:var(--muted);padding:16px 10px;display:flex;flex-direction:column;gap:4px}
+.rail .yr{font-size:12px;font-weight:800;color:var(--muted-foreground);padding:6px 10px 4px}
+.mrow{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;text-decoration:none}
+.mrow .mt{font-weight:700}
+.mrow .ms{font-size:12px;color:var(--muted-foreground)}
+.mrow .mv{margin-inline-start:auto;font-weight:800;font-size:13px;text-align:end}
+.mrow[aria-current="true"]{background:var(--card);box-shadow:var(--shadow-card);color:var(--primary)}
+.mrow[aria-current="true"] .mt::after{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-inline-start:7px;vertical-align:middle}
+.pane{padding:20px 22px;display:flex;flex-direction:column;gap:18px;min-width:0}
+.panehead{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.panehead h2{margin:0;font-family:var(--font-display);font-size:24px;font-weight:800;line-height:1.2}
+.panehead .acts{margin-inline-start:auto;display:flex;gap:8px}
+.buildup .bar{display:flex;height:16px;border-radius:999px;overflow:hidden;gap:2px;background:var(--card)}
+.buildup .bar span{display:block;min-width:5px}
+.buildup .legend{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) auto;gap:10px;margin-top:12px;align-items:stretch}
+.lg{display:flex;flex-direction:column;gap:2px;padding:8px 0}
+.lg .l{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted-foreground);font-weight:600}
+.lg .l i{width:10px;height:10px;border-radius:3px;display:inline-block;flex:none}
+.lg .v{font-size:17px;font-weight:800}
+.lg.total{background:var(--primary);color:#fff;border-radius:16px;padding:10px 16px;min-width:190px;position:relative;overflow:hidden}
+.lg.total::after{content:"";position:absolute;width:70px;height:70px;border-radius:50%;background:color-mix(in srgb,var(--accent) 85%,transparent);inset-block-start:-34px;inset-inline-end:-24px}
+.lg.total .l{color:rgb(255 255 255 / .85)}
+.lg.total .v{font-size:21px;position:relative}
+.c-net{background:var(--primary)} .c-ins{background:var(--info)} .c-tax{background:color-mix(in srgb,var(--info) 45%,var(--primary-soft))} .c-fund{background:var(--muted-foreground)}
+.rulestrip{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 14px;border-radius:16px;background:var(--muted);border:1px solid var(--border);font-size:13px}
+.rulestrip b{font-weight:800}
+.rulestrip .sp{flex:1}
+.popover{position:absolute;z-index:5;width:380px;background:var(--card);border-radius:18px;box-shadow:var(--shadow-raised),0 0 0 1px var(--border);padding:16px 18px}
+.monthsw{display:flex;gap:8px;align-items:center}
+.monthsw .mbtn{flex:1;display:flex;align-items:center;gap:8px;justify-content:center;min-height:44px;border-radius:14px;border:1px solid var(--input);background:var(--card);font-weight:800;font-size:15px}
+.sheet{position:absolute;inset-inline:0;inset-block-end:0;background:var(--card);border-radius:24px 24px 0 0;box-shadow:var(--shadow-raised);padding:10px 14px 18px;z-index:6}
+.sheet .grab{width:44px;height:5px;border-radius:99px;background:var(--input);margin:2px auto 10px}
+.dim{position:absolute;inset:0;background:var(--overlay);z-index:5}
+.mini{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;align-items:center;font-size:12px;color:var(--muted-foreground)}
+.mini .pill{grid-column:1/-1;justify-self:start}
+.mini > span:not(.pill){display:flex;justify-content:space-between;gap:6px}
+.mini b{color:var(--foreground);font-weight:700}
+
+/* ---------- option C ---------- */
+.yearbar{display:flex;align-items:center;gap:10px}
+.yearbar .y{font-family:var(--font-display);font-weight:800;font-size:20px;min-width:70px;text-align:center}
+.board{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.mtile{border-radius:20px;padding:16px 18px;display:flex;flex-direction:column;gap:8px;min-height:136px;text-decoration:none}
+.mtile.done{background:var(--card);box-shadow:var(--shadow-card)}
+.mtile.done:hover{box-shadow:var(--shadow-card),0 0 0 2px var(--primary-soft)}
+.mtile.wait{border:2px dashed var(--input);background:color-mix(in srgb,var(--card) 50%,transparent)}
+.mtile.none{background:color-mix(in srgb,var(--card) 40%,transparent);border:1px solid var(--border)}
+.mtile .mn{font-family:var(--font-display);font-weight:800;font-size:16px;display:flex;align-items:center;gap:8px}
+.mtile .mn .pill{margin-inline-start:auto}
+.mtile .g{font-size:20px;font-weight:800;color:var(--primary);margin-top:auto}
+.mtile .gs{font-size:12px;color:var(--muted-foreground)}
+.mtile.none .mn,.mtile.wait .mn{color:var(--muted-foreground)}
+.phone .board{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.phone .mtile{min-height:112px;padding:12px 14px;border-radius:16px}
+.phone .mtile .g{font-size:15px}
+.doc{background:var(--card);border-radius:24px;box-shadow:var(--shadow-card);padding:30px 34px;display:flex;flex-direction:column;gap:22px;max-width:1040px;width:100%;margin-inline:auto}
+.dochead{display:flex;gap:16px;align-items:flex-start;padding-bottom:18px;border-bottom:2px solid var(--foreground)}
+.dochead .t{flex:1}
+.dochead h2{margin:0;font-family:var(--font-display);font-weight:800;font-size:24px;line-height:1.2}
+.dochead .s{color:var(--muted-foreground);font-size:13px;margin-top:2px}
+.stamp{border:2px solid var(--success);color:var(--success-ink);border-radius:14px;padding:6px 12px;text-align:center;font-weight:800;font-size:12.5px;transform:rotate(-3deg);background:var(--success-soft)}
+[dir="rtl"] .stamp{transform:rotate(3deg)}
+.stamp small{display:block;font-weight:600;font-size:11.5px}
+.eq{display:flex;align-items:stretch;gap:8px}
+.eq .term{flex:1;min-width:0;border-radius:16px;background:var(--muted);border:1px solid var(--border);padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.eq .term .l{font-size:12.5px;color:var(--muted-foreground);font-weight:600}
+.eq .term .v{font-size:17px;font-weight:800;white-space:nowrap}
+.eq .term .v .c{font-family:var(--font);font-size:12px;color:var(--muted-foreground);font-weight:700}
+.eq .op{display:grid;place-items:center;font-size:20px;font-weight:800;color:var(--muted-foreground);flex:none;width:18px}
+.eq .term.res{background:var(--primary);color:#fff;border-color:transparent;flex:1.3;position:relative;overflow:hidden}
+.eq .term.res::after{content:"";position:absolute;width:90px;height:90px;border-radius:50%;background:color-mix(in srgb,var(--accent) 85%,transparent);inset-block-start:-46px;inset-inline-end:-30px}
+.eq .term.res .l,.eq .term.res .v .c{color:rgb(255 255 255 / .85)}
+.eq .term.res .v{font-size:23px;position:relative}
+.phone .doc{padding:18px 16px;border-radius:20px;gap:16px}
+.phone .dochead h2{font-size:19px}
+.phone .eq{flex-direction:column;gap:0}
+.phone .eq .op{display:none}
+.phone .eq .term{flex-direction:row;align-items:baseline;justify-content:space-between;border-radius:0;border-width:0 0 1px;background:transparent;padding:9px 2px}
+.phone .eq .term .v{font-size:15px}
+.phone .eq .term.res{background:var(--primary);border:0;border-radius:14px;margin-top:8px;padding:12px 14px}
+.phone .eq .term.res .v{font-size:19px}
+.phone .eq .term.res::after{width:44px;height:44px;inset-block-start:-24px;inset-inline-start:-16px;inset-inline-end:auto}
+.grouph{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.grouph h3{margin:0;font-family:var(--font-display);font-size:16px;font-weight:800}
+.doctable thead th{background:transparent;border-block:0 0;border-bottom:1px solid var(--foreground)}
+.doctable thead th:first-child,.doctable tbody td:first-child,.doctable tfoot td:first-child{padding-inline-start:0}
+.doctable thead th:last-child,.doctable tbody td:last-child,.doctable tfoot td:last-child{padding-inline-end:0}
+.doctable tfoot td{background:transparent;border-top:1px solid var(--foreground)}
+.docfoot{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:28px;padding-top:18px;border-top:1px solid var(--border)}
+.docfoot h4{margin:0 0 6px;font-family:var(--font-display);font-size:14.5px;font-weight:800}
+.phone .docfoot{grid-template-columns:1fr;gap:16px}
+.drawer{position:absolute;inset-block:0;inset-inline-start:0;width:300px;background:var(--card);z-index:6;padding:18px 12px;display:flex;flex-direction:column;gap:16px;box-shadow:var(--shadow-raised)}
+</style>
+</head>
+<body>
+<div class="mockbar">
+  <strong>Accounting → Payroll taxes · three options</strong>
+  <div class="seg" id="optSeg" aria-label="Option"><button data-o="a">A · Two pages</button><button data-o="b">B · Month rail</button><button data-o="c">C · Year board</button></div>
+  <div class="seg" id="langSeg" aria-label="Language"><button data-l="en">EN</button><button data-l="ar" class="ar">ع</button></div>
+  <div class="seg" id="viewSeg" aria-label="Width"><button data-v="desktop">Desktop</button><button data-v="phone">Phone</button></div>
+  <span class="sp"></span><span style="opacity:.7">Sample data · generic names · EGP</span>
+</div>
+<div id="app"></div>
+
+<script>
+let opt="a", lang="en", view="desktop";
+const AR=()=>lang==="ar";
+const s=(en,ar)=>AR()?ar:en;
+const v=x=>Array.isArray(x)?(AR()?x[1]:x[0]):x;
+const ic=(n,extra="")=>`<i class="ph-duotone ph-${n} ${extra}" aria-hidden="true"></i>`;
+const num=x=>`<span class="num">${x}</span>`;
+const fmt=c=>(c/100).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+window.money=c=>`<span style="white-space:nowrap">${AR()?`<span class="num">${fmt(c)}</span> ج.م`:`EGP <span class="num">${fmt(c)}</span>`}</span>`;
+window.moneyBig=c=>AR()?`<span class="num">${fmt(c)}</span><span class="cur c">ج.م</span>`:`<span class="cur c">EGP</span><span class="num">${fmt(c)}</span>`;
+const arForm=n=>{if(n===0)return "zero";if(n===1)return "one";if(n===2)return "two";const m=n%100;if(m>=3&&m<=10)return "few";if(m>=11&&m<=99)return "many";return "other";};
+const plural=(n,en,ar)=>AR()?ar[arForm(n)].replace("#",num(n)):(n===1?en[0]:en[1]).replace("#",num(n));
+const empN=n=>plural(n,["# employee","# employees"],{zero:"لا موظفين",one:"موظف واحد",two:"موظفان",few:"# موظفين",many:"# موظفًا",other:"# موظف"});
+const MONTHS=[["January","يناير"],["February","فبراير"],["March","مارس"],["April","أبريل"],["May","مايو"],["June","يونيو"],["July","يوليو"],["August","أغسطس"],["September","سبتمبر"],["October","أكتوبر"],["November","نوفمبر"],["December","ديسمبر"]];
+const mName=(m,y=2026)=>`${v(MONTHS[m-1])} ${num(y)}`;
+const mShort=m=>AR()?v(MONTHS[m-1]):v(MONTHS[m-1]).slice(0,3);
+
+/* ---------- the tax rule (§10 defaults) and the solver, so every line balances ---------- */
+const RULE={brackets:[[500000,0],[125000,10],[125000,15],[1083333,20],[1666667,22.5],[null,25]],fund:0.05,ins:11};
+function taxOn(T){let rem=T,tax=0;for(const [w,p] of RULE.brackets){const part=w==null?rem:Math.min(rem,w);tax+=part*p/100;rem-=part;if(rem<=0)break;}return tax;}
+function work(e,net){ // all in piastres
+ const ins=e.insured?Math.round(e.insSal*RULE.ins/100):0;
+ const f=RULE.fund/100;
+ let T;
+ if(net===0){T=0;} else {let lo=net,hi=net*2+ins+100000;for(let i=0;i<80;i++){const m=(lo+hi)/2;(m-taxOn(m)-f*(m+ins)-net>0)?hi=m:lo=m;}T=Math.round((lo+hi)/2);}
+ const tax=Math.round(taxOn(T)), fund=Math.round(f*(T+ins));
+ return {...e,net,ins,tax,fund,gross:net+ins+tax+fund};
+}
+const EMP=[
+ {id:"0007",n:["Mona Ibrahim","منى إبراهيم"],insured:1,insSal:700000,net:985000},
+ {id:"0012",n:["Omar Khalil","عمر خليل"],insured:1,insSal:900000,net:1420000},
+ {id:"0015",n:["Salma Nabil","سلمى نبيل"],insured:1,insSal:500000,net:640000},
+ {id:"0021",n:["Youssef Adel","يوسف عادل"],insured:1,insSal:1200000,net:2250000,hide:1},
+ {id:"0024",n:["Hana Fathy","هناء فتحي"],insured:0,net:475000},
+ {id:"0028",n:["Khaled Mostafa","خالد مصطفى"],insured:1,insSal:1450000,net:3180000,hide:1},
+ {id:"0031",n:["Rana Samy","رنا سامي"],insured:1,insSal:600000,net:812000},
+ {id:"0034",n:["Tarek Nabil","طارق نبيل"],insured:0,net:1265000,hide:1},
+ {id:"0036",n:["Laila Hassan","ليلى حسن"],insured:1,insSal:1050000,net:1830000,hide:1},
+ {id:"0040",n:["Amr Fawzy","عمرو فوزي"],insured:1,insSal:550000,net:0,floored:1},
+ {id:"0043",n:["Nour Adel","نور عادل"],insured:0,net:560000,newIn:10},
+ {id:"0047",n:["Ahmed Mahmoud","أحمد محمود"],insured:1,insSal:800000,net:1140000},
+];
+const r10=x=>Math.round(x/1000)*1000;
+const MONTH_DATA={
+ 10:{m:10,at:["28 Oct 2026, 14:05","28 أكتوبر 2026، 14:05"],lines:EMP.map(e=>work(e,e.net))},
+ 9:{m:9,at:["29 Sep 2026, 11:20","29 سبتمبر 2026، 11:20"],lines:EMP.filter(e=>!e.newIn).map(e=>work(e,e.floored?310000:r10(e.net*0.98)))},
+ 8:{m:8,at:["30 Aug 2026, 10:02","30 أغسطس 2026، 10:02"],lines:EMP.filter(e=>!e.newIn).map(e=>work(e,e.floored?420000:r10(e.net*0.96)))},
+};
+const totals=L=>L.reduce((a,l)=>({net:a.net+l.net,ins:a.ins+l.ins,tax:a.tax+l.tax,fund:a.fund+l.fund,gross:a.gross+l.gross}),{net:0,ins:0,tax:0,fund:0,gross:0});
+const ORDER=[10,9,8];
+
+/* ---------- shared pieces ---------- */
+const insPill=l=>l.insured?`<span class="pill p-info">${ic("shield-check")}${s("Insured","مؤمَّن عليه")}</span>`:`<span class="pill p-neutral">${s("Not insured","غير مؤمَّن عليه")}</span>`;
+const hiddenTxt=()=>`<span class="lock">${ic("lock-simple")}${s("Salary hidden","الراتب مخفي")}</span>`;
+const empCell=l=>`<div class="emp"><div class="nm"><bdi>${v(l.n)}</bdi></div><div class="cd"><span class="num">EMP-${l.id}</span></div></div>`;
+const zeroNote=l=>l.floored&&!l.hidden?`<span class="zero">${s("Net 0 — floored in HR","الصافي 0 — حدّ أدنى في الرواتب")}</span>`:"";
+const withHidden=(L,limited)=>L.map(l=>({...l,hidden:limited&&l.hide}));
+const exportHint=()=>s("Excel: one row per employee as you see it, plus a sheet with the tax rule used.","Excel: صف لكل موظف كما تراه، وورقة بقاعدة الضريبة المستخدمة.");
+const langT=()=>`<span class="lang"><span class="${!AR()?"on":""}">EN</span><span class="ar ${AR()?"on":""}">ع</span></span>`;
+const brand=()=>`<div class="brand"><div class="logo">${ic("graduation-cap")}</div><div><div class="brand-name">${s("Green Valley School","مدرسة الوادي الأخضر")}</div><div class="brand-sub">${s("School ERP","نظام إدارة المدرسة")}</div></div></div>`;
+const who=limited=>limited?[s("Sara Adel","سارة عادل"),s("Stage accountant (custom role)","محاسب مرحلة (دور مخصص)")]:[s("Dina Samir","دينا سمير"),s("Accountant","المحاسب")];
+function navInner(limited){
+ const l=(i,t,cur)=>`<a class="navlink" href="#" ${cur?'aria-current="page"':""}>${ic(i)}<span>${t}</span></a>`;
+ return `<nav>
+ <a class="single" href="#"><span class="mi">${ic("house")}</span>${s("Home","الرئيسية")}</a>
+ <div class="grp"><div class="gh"><span class="mi" style="background:var(--primary-soft);color:var(--primary)">${ic("users-three")}</span>${s("HR","الموارد البشرية")}</div><div class="kids">
+ ${l("users",s("Employees","الموظفون"))}${l("wallet",s("Payroll","الرواتب"))}</div></div>
+ <div class="grp cur"><div class="gh"><span class="mi" style="background:var(--primary);color:#fff">${ic("calculator")}</span>${s("Accounting","الحسابات")}</div><div class="kids">
+ ${l("receipt",s("Payroll taxes","ضرائب الرواتب"),true)}</div></div>
+ <a class="single soon" href="#" aria-disabled="true"><span class="mi">${ic("package")}</span>${s("Inventory","المخازن")}<span class="tag">${s("Soon","قريبًا")}</span></a>
+ <a class="single soon" href="#" aria-disabled="true"><span class="mi">${ic("student")}</span>${s("Students","الطلاب")}<span class="tag">${s("Soon","قريبًا")}</span></a>
+ <div class="grp"><div class="gh"><span class="mi" style="background:var(--accent-soft);color:#6b4b00">${ic("buildings")}</span>${s("Administration","الإدارة")}</div><div class="kids">
+ ${l("gear-six",s("Settings","الإعدادات"))}</div></div></nav>`;
+}
+const userCard=limited=>{const [n,r]=who(limited);return `<a href="#" class="user"><div class="av">${ic("user")}</div><div style="min-width:0;flex:1"><div class="n">${n}</div><div class="r">${r}</div></div>${ic("caret-up-down")}</a>`;};
+const side=limited=>`<aside class="sb">${brand()}${navInner(limited)}${userCard(limited)}</aside>`;
+const topline=()=>`<div class="topline"><span class="sp"></span><button class="bell" aria-label="${s("Notifications","الإشعارات")}">${ic("bell")}</button>${langT()}</div>`;
+const mbar=()=>`<div class="mbar"><button class="menub" aria-label="${s("Menu","القائمة")}">${ic("list")}</button><div class="brand-name">${s("Green Valley School","مدرسة الوادي الأخضر")}</div><button class="bell" aria-label="${s("Notifications","الإشعارات")}">${ic("bell")}</button>${langT()}</div>`;
+const desk=(inner,limited)=>`<div class="desk">${side(limited)}<div class="main">${topline()}${inner}</div></div>`;
+const phone=(inner,extra="")=>`<div class="phone">${mbar()}<div class="pbody">${inner}</div>${extra}</div>`;
+const drawerPhone=()=>`<div class="phone">${mbar()}<div class="pbody"><div class="card" style="height:200px"></div><div class="card" style="height:300px"></div></div><div class="dim"></div><div class="drawer">${brand()}${navInner(false)}${userCard(false)}</div></div>`;
+const crumbs=m=>`<div class="crumbs"><a href="#">${s("Payroll taxes","ضرائب الرواتب")}</a>${ic("caret-right","flip")}<span>${mName(m)}</span></div>`;
+const approvedPill=d=>`<span class="pill p-ok">${ic("check-circle")}${s("Approved in HR","معتمد في الموارد البشرية")} · <bdi>${v(d.at)}</bdi></span>`;
+const limitedNotice=(d,L)=>{const seen=L.filter(l=>!l.hidden).length;return `<div class="notice">${ic("eye-slash")}<div><b>${s(`You see the amounts of ${seen} of ${L.length} employees.`,`ترى مبالغ ${seen} من ${L.length} موظفًا.`)}</b>${s("Salaries outside your role's scope are hidden, so the month's totals are hidden too. They show only to someone who sees every salary.","الرواتب خارج نطاق دورك مخفية، لذلك تُخفى إجماليات الشهر أيضًا. تظهر فقط لمن يرى جميع الرواتب.")}</div></div>`;};
+
+/* rule card (A), compact rule list (B, C) */
+const sliceRows=()=>{let from=0;return RULE.brackets.map(([w,p],i)=>{const row={p,w,from};if(w!=null)from+=w;return row;});};
+const sliceLabel=r=>r.w==null?s(`Above ${fmt(r.from)}`,`ما فوق ${fmt(r.from)}`).replace(fmt(r.from),num(fmt(r.from))):(r.from===0?s(`First ${num(fmt(r.w))}`,`أول ${num(fmt(r.w))}`):s(`Next ${num(fmt(r.w))}`,`التالي ${num(fmt(r.w))}`));
+const ruleSame=()=>`<span class="pill p-ok">${ic("equals")}${s("Same as today's rule","مطابقة لقاعدة اليوم")}</span>`;
+function ruleCard(d,phoneMode){
+ const rows=sliceRows();
+ return `<div class="card rule"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><h3>${s("Tax rule used","قاعدة الضريبة المستخدمة")}</h3>${ruleSame()}${phoneMode?"":`<a href="#" class="btn btn-ghost btn-sm" style="margin-inline-start:auto">${ic("gear-six")}${s("Today's rule in Settings","قاعدة اليوم في الإعدادات")}</a>`}</div>
+ <div class="why">${s(`The rule in force when HR approved the month (${v(d.at)}). Later changes to the rule or to anyone's insurance never change this month.`,`القاعدة السارية عند اعتماد الموارد البشرية للشهر (${v(d.at)}). أي تغيير لاحق في القاعدة أو في تأمين أي موظف لا يغيّر هذا الشهر.`)}</div>
+ <div class="muted" style="font-size:12.5px;font-weight:700;margin-bottom:6px">${s("Monthly income-tax slices (EGP)","شرائح ضريبة كسب العمل الشهرية (ج.م)")}</div>
+ <div class="slices">${rows.map(r=>`<div class="slice" style="--h:${Math.max(8,r.p*3.2)}px"><span class="r num">${r.p}%</span><span class="w">${sliceLabel(r)}</span></div>`).join("")}</div>
+ <div class="rates"><span class="rate">${ic("shield-check")}${s("Employee insurance share","حصة العامل في التأمينات")} <b class="num">${RULE.ins}%</b> <span class="muted">${s("of the insured salary","من الأجر التأميني")}</span></span>
+ <span class="rate">${ic("hand-heart")}${s("Martyrs' fund","صندوق الشهداء")} <b class="num">${RULE.fund}%</b> <span class="muted">${s("of the gross","من الإجمالي")}</span></span></div></div>`;
+}
+const ruleList=()=>`<table class="ruletable"><tbody>${sliceRows().map(r=>`<tr><td>${sliceLabel(r)}</td><td><span class="num">${r.p}%</span></td></tr>`).join("")}
+ <tr><td>${s("Employee insurance share (of the insured salary)","حصة العامل في التأمينات (من الأجر التأميني)")}</td><td><span class="num">${RULE.ins}%</span></td></tr>
+ <tr><td>${s("Martyrs' fund (of the gross)","صندوق الشهداء (من الإجمالي)")}</td><td><span class="num">${RULE.fund}%</span></td></tr></tbody></table>`;
+
+/* desktop per-employee table: cols = full (A) or compact (B) */
+function empTable(L,T,mode,limited){
+ const hidCols=mode==="full"?6:5;
+ const money=mode==="full"?window.money:(c=>num(fmt(c)));
+ const head=mode==="full"
+  ?`<th>${s("Employee","الموظف")}</th><th>${s("Insurance","التأمين")}</th><th class="n">${s("Insured salary","الأجر التأميني")}</th><th class="n">${s("Net paid","الصافي المدفوع")}</th><th class="n">${s("Insurance share","حصة التأمينات")}</th><th class="n">${s("Income tax","ضريبة كسب العمل")}</th><th class="n">${s("Martyrs' fund","صندوق الشهداء")}</th><th class="n">${s("Gross","الإجمالي")}</th>`
+  :`<th>${s("Employee","الموظف")} <span style="font-weight:500">· ${s("amounts in EGP","المبالغ بالجنيه")}</span></th><th class="n">${s("Net paid","الصافي المدفوع")}</th><th class="n">${s("Insurance share","حصة التأمينات")}</th><th class="n">${s("Income tax","ضريبة كسب العمل")}</th><th class="n">${s("Martyrs' fund","صندوق الشهداء")}</th><th class="n">${s("Gross","الإجمالي")}</th>`;
+ const row=l=>{
+  const first=mode==="full"?`<td>${empCell(l)}</td><td>${insPill(l)}</td>`:`<td>${empCell(l)}<div style="display:flex;gap:8px;align-items:center;margin-top:4px;flex-wrap:wrap">${insPill(l)}${l.insured&&!l.hidden?`<span class="muted" style="font-size:12px">${s("Insured salary","الأجر التأميني")} ${window.money(l.insSal)}</span>`:""}</div></td>`;
+  if(l.hidden) return `<tr>${first}<td colspan="${hidCols}" class="hiddencell">${hiddenTxt()}</td></tr>`;
+  return `<tr>${first}${mode==="full"?`<td class="n">${l.insured?money(l.insSal):`<span class="muted">—</span>`}</td>`:""}<td class="n strong">${money(l.net)}${zeroNote(l)}</td><td class="n">${l.ins?money(l.ins):`<span class="muted">—</span>`}</td><td class="n">${l.tax?money(l.tax):money(0)}</td><td class="n">${money(l.fund)}</td><td class="n gross">${money(l.gross)}</td></tr>`;
+ };
+ const foot=limited?`<tr><td colspan="${mode==="full"?2:1}">${s("Total","الإجمالي")} · ${empN(L.length)}</td><td colspan="${hidCols}" class="n"><span class="lock">${ic("lock-simple")}${s("Only for someone who sees every salary","فقط لمن يرى جميع الرواتب")}</span></td></tr>`
+  :`<tr><td colspan="${mode==="full"?2:1}">${s("Total","الإجمالي")} · ${empN(L.length)}</td>${mode==="full"?`<td></td>`:""}<td class="n">${money(T.net)}</td><td class="n">${money(T.ins)}</td><td class="n">${money(T.tax)}</td><td class="n">${money(T.fund)}</td><td class="n gross">${money(T.gross)}</td></tr>`;
+ return `<table><thead><tr>${head}</tr></thead><tbody>${L.map(row).join("")}</tbody><tfoot>${foot}</tfoot></table>`;
+}
+/* phone employee cards */
+const ecards=L=>`<div class="ecards">${L.map(l=>`<div class="ecard"><div class="top">${empCell(l)}${insPill(l)}</div>
+ ${l.hidden?`<div class="hid">${ic("lock-simple")}${s("Salary hidden","الراتب مخفي")}</div>`:`<div class="band"><span class="l">${s("Gross","الإجمالي")}</span>${money(l.gross)}</div>
+ <div class="kv"><span class="l">${s("Net paid","الصافي المدفوع")}</span>${money(l.net)}${zeroNote(l)}</div><div class="kv"><span class="l">${s("Insurance share","حصة التأمينات")}</span>${l.ins?money(l.ins):"—"}</div>
+ <div class="kv"><span class="l">${s("Income tax","ضريبة كسب العمل")}</span>${money(l.tax)}</div><div class="kv"><span class="l">${s("Martyrs' fund","صندوق الشهداء")}</span>${money(l.fund)}</div>
+ ${l.insured?`<div class="kv" style="grid-column:1/-1;flex-direction:row;justify-content:space-between;align-items:center"><span class="l">${s("Insured salary","الأجر التأميني")}</span>${money(l.insSal)}</div>`:""}`}</div>`).join("")}</div>`;
+
+/* tiles (A) */
+function tilesA(T,L,limited,phoneMode){
+ if(limited) return `<div class="tiles" style="${phoneMode?"":"grid-template-columns:minmax(0,1fr) minmax(0,3fr)"}"><div class="tile ${phoneMode?"wide":""}"><div class="tt"><span class="ic" style="background:var(--info-soft);color:var(--info)">${ic("users-three")}</span><span class="lbl">${s("Employees","الموظفون")}</span></div><div class="val"><span class="num">${L.length}</span></div></div><div class="${phoneMode?"tile wide":""}" style="${phoneMode?"padding:0;box-shadow:none;background:transparent":""}">${limitedNotice(null,L)}</div></div>`;
+ const feat=`<div class="tile t-feat ${phoneMode?"wide":""}"><div class="tt"><span class="ic">${ic("buildings")}</span><span class="lbl">${s("Gross","الإجمالي")}</span></div><div class="val">${moneyBig(T.gross)}</div><div class="sub">${s("What the month costs the school: net + insurance share + income tax + martyrs' fund","تكلفة الشهر على المدرسة: الصافي + حصة التأمينات + ضريبة كسب العمل + صندوق الشهداء")}</div></div>`;
+ const t=(icn,tone,lbl,val,sub)=>`<div class="tile"><div class="tt"><span class="ic" style="${tone}">${ic(icn)}</span><span class="lbl">${lbl}</span></div><div class="val">${moneyBig(val)}</div><div class="sub">${sub}</div></div>`;
+ const net=t("wallet","background:var(--primary-soft);color:var(--primary)",s("Net paid","الصافي المدفوع"),T.net,`${empN(L.length)} · ${s("from HR payroll","من رواتب الموارد البشرية")}`);
+ const ins=t("shield-check","background:var(--info-soft);color:var(--info)",s("Insurance share","حصة التأمينات"),T.ins,`${empN(L.filter(l=>l.insured).length)} ${s("insured","مؤمَّن عليهم")}`);
+ const tax=t("receipt","background:var(--secondary);color:var(--muted-foreground)",s("Income tax","ضريبة كسب العمل"),T.tax,`${s("Martyrs' fund","صندوق الشهداء")} ${money(T.fund)}`);
+ return phoneMode?`<div class="tiles">${feat}${net}${ins}${tax.replace('class="tile"','class="tile wide"')}</div>`:`<div class="tiles">${net}${ins}${tax}${feat}</div>`;
+}
+
+/* months list table (A) */
+function monthsTableA(limited){
+ const rows=ORDER.map(m=>{const d=MONTH_DATA[m],T=totals(d.lines);
+  const cells=limited?`<td colspan="5" class="n"><span class="lock">${ic("lock-simple")}${s("Totals only for someone who sees every salary","الإجماليات فقط لمن يرى جميع الرواتب")}</span></td>`:`<td class="n">${money(T.net)}</td><td class="n">${money(T.ins)}</td><td class="n">${money(T.tax)}</td><td class="n">${money(T.fund)}</td><td class="n gross">${money(T.gross)}</td>`;
+  return `<tr class="link"><td><a href="#" style="font-weight:800;text-decoration:none;color:var(--primary)">${mName(m)}</a></td><td class="muted"><bdi>${v(d.at)}</bdi></td><td class="n">${num(d.lines.length)}</td>${cells}<td style="width:30px">${ic("caret-right","flip")}</td></tr>`;}).join("");
+ return `<div class="card tablecard"><div class="tbar"><h2>${s("Approved months","الأشهر المعتمدة")}</h2><span class="count">${num(3)}</span></div>
+ <table><thead><tr><th>${s("Month","الشهر")}</th><th>${s("Approved in HR","اعتُمد في الموارد البشرية")}</th><th class="n">${s("Employees","الموظفون")}</th><th class="n">${s("Net paid","الصافي المدفوع")}</th><th class="n">${s("Insurance share","حصة التأمينات")}</th><th class="n">${s("Income tax","ضريبة كسب العمل")}</th><th class="n">${s("Martyrs' fund","صندوق الشهداء")}</th><th class="n">${s("Gross","الإجمالي")}</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+ ${pager()}</div>`;
+}
+const pager=()=>`<div style="display:flex;align-items:center;gap:8px;padding:12px 20px 8px;font-size:12.5px;color:var(--muted-foreground)"><span>${s("Showing 1–3 of 3","عرض 1–3 من 3")}</span><span style="margin-inline-start:auto;display:flex;gap:4px"><span class="iconbtn" style="width:32px;height:32px;opacity:.5">${ic("caret-left","flip")}</span><span class="iconbtn" style="width:32px;height:32px;background:var(--primary);color:#fff;border-color:transparent;font-weight:800;font-size:13px">1</span><span class="iconbtn" style="width:32px;height:32px;opacity:.5">${ic("caret-right","flip")}</span></span></div>`;
+const monthCardsA=limited=>`<div class="ecards">${ORDER.map(m=>{const d=MONTH_DATA[m],T=totals(d.lines);return `<a href="#" class="ecard" style="text-decoration:none"><div class="top"><div class="emp"><div class="nm" style="font-size:15px">${mName(m)}</div><div class="cd">${s("Approved","اعتُمد")} <bdi>${v(d.at)}</bdi></div></div>${ic("caret-right","flip")}</div>
+ ${limited?`<div class="hid">${ic("lock-simple")}${s("Totals hidden","الإجماليات مخفية")}</div>`:`<div class="band"><span class="l">${s("Gross","الإجمالي")}</span>${money(T.gross)}</div><div class="kv"><span class="l">${s("Income tax","ضريبة كسب العمل")}</span>${money(T.tax)}</div><div class="kv"><span class="l">${s("Employees","الموظفون")}</span>${num(d.lines.length)}</div>`}</a>`;}).join("")}</div>`;
+
+const pageHeadList=(phoneMode)=>`<div class="head"><div><h1>${s("Payroll taxes","ضرائب الرواتب")}</h1><p>${s("What the school pays on top of each approved month's net: the employees' insurance share, income tax and the martyrs' fund.","ما تدفعه المدرسة فوق صافي كل شهر معتمد: حصة العاملين في التأمينات وضريبة كسب العمل وصندوق الشهداء.")}</p></div></div>`;
+const emptyCard=(compact)=>`<div class="card empty"><div class="eic">${ic("receipt")}</div><h3>${s("No approved month yet","لا يوجد شهر معتمد بعد")}</h3><p>${s("A month's payroll taxes appear here as soon as HR approves its payroll. Draft months don't show here.","تظهر ضرائب رواتب الشهر هنا فور اعتماد الموارد البشرية لرواتبه. الأشهر المسودة لا تظهر هنا.")}</p><a href="#" class="btn" style="margin-top:6px">${ic("wallet")}${s("Open HR payroll","فتح رواتب الموارد البشرية")}</a><span class="muted" style="font-size:12px">${s("The button shows only to someone who may view HR payroll.","يظهر الزر فقط لمن يحق له عرض رواتب الموارد البشرية.")}</span></div>`;
+const exportBtn=(label,icn="microsoft-excel-logo",primary=true)=>`<button class="btn ${primary?"btn-primary":""}" title="${exportHint()}">${ic(icn)}${label}</button>`;
+
+/* ================= OPTION A — two pages ================= */
+const A={
+ list:(ph,limited)=>ph?phone(`${pageHeadList(true)}${monthCardsA(limited)}`):desk(`${pageHeadList()}${monthsTableA(limited)}`,limited),
+ detail:(ph,limited)=>{const d=MONTH_DATA[10],L=withHidden(d.lines,limited),T=totals(d.lines);
+  const head=`${crumbs(10)}<div class="head"><div><h1>${mName(10)}</h1><div class="meta">${approvedPill(d)}<span class="pill p-neutral">${ic("users-three")}${empN(L.length)}</span></div></div><div class="acts">${ph?"":`<a href="#" class="btn btn-ghost">${ic("wallet")}${s("Open in HR payroll","فتح في الرواتب")}</a>`}${exportBtn(s("Export to Excel","تصدير إلى Excel"))}</div></div>`;
+  if(ph) return phone(`${head}${tilesA(T,L,limited,true)}<div class="tbar" style="padding:4px 2px 0"><h2>${s("Employees","الموظفون")}</h2><span class="count">${num(L.length)}</span></div>${ecards(L)}${ruleCard(d,true)}`);
+  return desk(`${head}${tilesA(T,L,limited,false)}<div class="card tablecard"><div class="tbar"><h2>${s("Per employee","لكل موظف")}</h2><span class="count">${num(L.length)}</span><div class="tools"><span class="muted" style="font-size:12.5px">${s("Snapshot at approval","لقطة عند الاعتماد")}</span></div></div>${empTable(L,T,"full",limited)}</div>${ruleCard(d,false)}`,limited);},
+ empty:ph=>ph?phone(`${pageHeadList(true)}${emptyCard()}`):desk(`${pageHeadList()}${emptyCard()}`),
+ note:{t:["Option A — Two pages: a months table, then one month's page","الخيار أ — صفحتان: جدول الأشهر، ثم صفحة الشهر"],p:[
+  ["Mirrors HR Payroll (list → run): a table of approved months with their totals; a month opens its own page with four tiles (gross is the feature tile), the per-employee table and the frozen tax rule as slice blocks.","يحاكي شاشة الرواتب (قائمة ← مسير): جدول بالأشهر المعتمدة وإجمالياتها، وكل شهر يفتح صفحته بأربع بطاقات (الإجمالي هو البطاقة البارزة) وجدول لكل موظف وقاعدة الضريبة المجمدة كشرائح."],
+  ["Trade-off: familiar and the cheapest to build from shared parts, but comparing two months means going back and forth.","المقابل: مألوف والأرخص في البناء من المكونات المشتركة، لكن المقارنة بين شهرين تتطلب الرجوع والتنقل."],
+  ["Export: Excel of the month — one row per employee as the viewer sees it (hidden lines without amounts) and a sheet with the rule used.","التصدير: ملف Excel للشهر — صف لكل موظف كما يراه المستخدم (الصفوف المخفية بلا مبالغ) وورقة بالقاعدة المستخدمة."]]},
+};
+
+/* ================= OPTION B — one screen, month rail ================= */
+function buildup(T,limited,ph){
+ if(limited) return "";
+ const seg=(c,x)=>`<span class="${c}" style="flex:${x}"></span>`;
+ const lg=(c,l,x)=>`<div class="lg"><span class="l"><i class="${c}"></i>${l}</span><span class="v">${money(x)}</span></div>`;
+ const legend=ph?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-top:10px">${lg("c-net",s("Net paid","الصافي المدفوع"),T.net)}${lg("c-ins",s("Insurance share","حصة التأمينات"),T.ins)}${lg("c-tax",s("Income tax","ضريبة كسب العمل"),T.tax)}${lg("c-fund",s("Martyrs' fund","صندوق الشهداء"),T.fund)}</div><div class="lg total" style="margin-top:6px"><span class="l">${s("Gross — what the month costs","الإجمالي — تكلفة الشهر")}</span><span class="v">${money(T.gross)}</span></div>`
+  :`<div class="legend">${lg("c-net",s("Net paid","الصافي المدفوع"),T.net)}${lg("c-ins",s("Insurance share","حصة التأمينات"),T.ins)}${lg("c-tax",s("Income tax","ضريبة كسب العمل"),T.tax)}${lg("c-fund",s("Martyrs' fund","صندوق الشهداء"),T.fund)}<div class="lg total"><span class="l">${s("Gross","الإجمالي")}</span><span class="v">${money(T.gross)}</span></div></div>`;
+ return `<div class="buildup"><div class="bar" role="img" aria-label="${s("How the gross builds up","كيف يتكوّن الإجمالي")}">${seg("c-net",T.net)}${seg("c-ins",T.ins)}${seg("c-tax",T.tax)}${seg("c-fund",T.fund)}</div>${legend}</div>`;
+}
+const ruleStrip=(d,open)=>`<div style="position:relative"><div class="rulestrip">${ic("scales")}<span>${s("Rule used:","القاعدة المستخدمة:")} <b>${s("6 slices, 0–25%","6 شرائح، 0–25%").replace(/(\d+)/g,'<span class="num">$1</span>')}</b> · ${s("insurance","التأمينات")} <b class="num">${RULE.ins}%</b> · ${s("martyrs' fund","صندوق الشهداء")} <b class="num">${RULE.fund}%</b></span>${ruleSame()}<span class="sp"></span><button class="btn btn-sm" aria-expanded="${open}">${s("Show the slices","عرض الشرائح")}${ic(open?"caret-up":"caret-down")}</button></div>
+ ${open?`<div class="popover" style="inset-inline-end:0;inset-block-end:58px"><div style="font-weight:800;font-family:var(--font-display);font-size:15px">${s("Tax rule used","قاعدة الضريبة المستخدمة")}</div><div class="muted" style="font-size:12px;margin-bottom:6px">${s(`Frozen at approval, ${v(d.at)}.`,`مجمدة عند الاعتماد، ${v(d.at)}.`)}</div>${ruleList()}</div>`:""}</div>`;
+const railRows=(limited,cur)=>ORDER.map(m=>{const d=MONTH_DATA[m],T=totals(d.lines);return `<a href="#" class="mrow" aria-current="${m===cur}"><div><div class="mt">${v(MONTHS[m-1])}</div><div class="ms">${empN(d.lines.length)}</div></div><div class="mv">${limited?`<span class="lock">${ic("lock-simple")}</span>`:`<span class="num">${fmt(T.gross)}</span>`}</div></a>`;}).join("");
+const B={
+ screen:(limited,popOpen)=>{const d=MONTH_DATA[10],L=withHidden(d.lines,limited),T=totals(d.lines);
+  return `<div class="head"><div><h1>${s("Payroll taxes","ضرائب الرواتب")}</h1><p>${s("Each approved month's insurance share, income tax and martyrs' fund — paid by the school on top of the net.","حصة التأمينات وضريبة كسب العمل وصندوق الشهداء لكل شهر معتمد — تدفعها المدرسة فوق الصافي.")}</p></div></div>
+  <div class="card mdl"><div class="rail"><div class="yr"><span class="num">2026</span></div>${railRows(limited,10)}<div class="muted" style="font-size:11.5px;padding:10px 10px 0">${s("Gross per month, EGP. Only approved months are listed.","الإجمالي لكل شهر بالجنيه. تظهر الأشهر المعتمدة فقط.")}</div></div>
+  <div class="pane"><div class="panehead"><div><h2>${mName(10)}</h2><div class="meta">${approvedPill(d)}</div></div><div class="acts"><a href="#" class="btn btn-ghost btn-sm">${ic("wallet")}${s("HR payroll","الرواتب")}</a>${exportBtn(s("Download CSV","تنزيل CSV"),"file-csv")}</div></div>
+  ${limited?limitedNotice(d,L):buildup(T,false,false)}
+  <div style="border:1px solid var(--border);border-radius:16px;overflow:hidden">${empTable(L,T,"compact",limited)}</div>
+  ${ruleStrip(d,popOpen)}</div></div>`;},
+ list:(ph,limited)=>{
+  if(!ph) return desk(B.screen(limited,false),limited);
+  const d=MONTH_DATA[10];
+  return phone(`<div class="head"><div><h1>${s("Payroll taxes","ضرائب الرواتب")}</h1></div></div><div class="monthsw"><span class="iconbtn" style="width:44px;height:44px">${ic("caret-left","flip")}</span><span class="mbtn">${mName(10)}${ic("caret-down")}</span><span class="iconbtn" style="width:44px;height:44px;opacity:.45">${ic("caret-right","flip")}</span></div><div class="card" style="height:150px"></div><div class="card" style="height:300px"></div>`,
+   `<div class="dim"></div><div class="sheet"><div class="grab"></div><div style="font-family:var(--font-display);font-weight:800;font-size:17px;padding:0 6px 8px">${s("Choose a month","اختر شهرًا")}</div><div class="yr muted" style="font-size:12px;font-weight:800;padding:0 6px 4px">2026</div>${railRows(limited,10).replace(/class="mrow"/g,'class="mrow" style="min-height:52px"')}<div class="muted" style="font-size:12px;padding:8px 6px 0">${s("Gross per month, EGP. Only approved months are listed.","الإجمالي لكل شهر بالجنيه. تظهر الأشهر المعتمدة فقط.")}</div></div>`);},
+ detail:(ph,limited)=>{const d=MONTH_DATA[10],L=withHidden(d.lines,limited),T=totals(d.lines);
+  if(!ph) return desk(B.screen(limited,!limited),limited);
+  const cards=`<div class="ecards">${L.map(l=>`<div class="ecard" style="grid-template-columns:1fr"><div class="top">${empCell(l)}<div style="text-align:end">${l.hidden?hiddenTxt():`<div style="font-weight:800;color:var(--primary)">${money(l.gross)}</div><div class="muted" style="font-size:11.5px">${s("gross","الإجمالي")}</div>`}</div></div>
+   <div class="mini">${insPill(l)}${l.hidden?"":`<span>${s("Net","الصافي")} <b>${money(l.net)}</b></span><span>${s("Insurance","التأمينات")} <b>${l.ins?money(l.ins):"—"}</b></span><span>${s("Tax","الضريبة")} <b>${money(l.tax)}</b></span><span>${s("Fund","الصندوق")} <b>${money(l.fund)}</b></span>`}</div></div>`).join("")}</div>`;
+  return phone(`<div class="head"><div><h1>${s("Payroll taxes","ضرائب الرواتب")}</h1></div></div>
+   <div class="monthsw"><span class="iconbtn" style="width:44px;height:44px">${ic("caret-left","flip")}</span><span class="mbtn">${mName(10)}${ic("caret-down")}</span><span class="iconbtn" style="width:44px;height:44px;opacity:.45">${ic("caret-right","flip")}</span></div>
+   <div>${approvedPill(d)}</div>
+   ${limited?limitedNotice(d,L):`<div class="card" style="padding:16px">${buildup(T,false,true)}</div>`}
+   ${cards}
+   <div class="card" style="padding:16px"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px"><b style="font-family:var(--font-display);font-size:15px">${s("Tax rule used","قاعدة الضريبة المستخدمة")}</b>${ruleSame()}</div>${ruleList()}</div>
+   ${exportBtn(s("Download CSV","تنزيل CSV"),"file-csv")}`);},
+ empty:ph=>{const body=`<div class="head"><div><h1>${s("Payroll taxes","ضرائب الرواتب")}</h1></div></div>`;
+  if(ph) return phone(body+emptyCard());
+  return desk(body+`<div class="card mdl"><div class="rail"><div class="yr"><span class="num">2026</span></div><div class="muted" style="font-size:12.5px;padding:8px 10px">${s("No approved months yet.","لا أشهر معتمدة بعد.")}</div></div><div class="pane">${emptyCard().replace('class="card empty"','class="empty"')}</div></div>`);},
+ note:{t:["Option B — One screen: a month rail beside the month","الخيار ب — شاشة واحدة: شريط الأشهر بجانب الشهر"],p:[
+  ["The months are a rail inside the page (gross per month); the latest opens by default. The month shows how its gross builds up (net + insurance + tax + fund) as one bar, a compact table, and the rule as one line that opens the slices. On a phone: a month switcher with previous / next and a sheet.","الأشهر شريط داخل الصفحة (الإجمالي لكل شهر)، ويفتح أحدثها تلقائيًا. يعرض الشهر كيف يتكوّن إجماليه (الصافي + التأمينات + الضريبة + الصندوق) في شريط واحد، وجدولًا مضغوطًا، والقاعدة في سطر يفتح الشرائح. على الهاتف: مبدّل للشهر مع السابق / التالي ونافذة سفلية."],
+  ["Trade-off: fastest for flicking month to month, but the rail costs table width (insured salary moves under the name) and the URL has to carry the month.","المقابل: الأسرع للتنقل بين الأشهر، لكن الشريط يأخذ من عرض الجدول (ينتقل الأجر التأميني تحت الاسم) ويجب أن يحمل الرابط الشهر."],
+  ["Export: CSV of the selected month, the same rows as on screen.","التصدير: ملف CSV للشهر المحدد، بنفس الصفوف الظاهرة."]]},
+};
+
+/* ================= OPTION C — year board + statement ================= */
+function board(limited,empty){
+ return `<div class="board">${MONTHS.map((_,i)=>{const m=i+1,d=!empty&&MONTH_DATA[m];
+  if(d){const T=totals(d.lines);return `<a href="#" class="mtile done"><div class="mn">${v(MONTHS[i])}<span class="pill p-ok">${ic("check")}${s("Approved","معتمد")}</span></div><div class="gs">${empN(d.lines.length)}</div>${limited?`<div class="g" style="font-size:13px">${ic("lock-simple")} <span class="lock">${s("Totals hidden","الإجماليات مخفية")}</span></div>`:`<div><div class="gs">${s("Gross","الإجمالي")}</div><div class="g" style="margin:0">${money(T.gross)}</div></div>`}</a>`;}
+  if(m===11||(empty&&m===10)) return `<div class="mtile wait"><div class="mn">${v(MONTHS[i])}<span class="pill p-draft">${s("Draft in HR","مسودة في الموارد البشرية")}</span></div><div class="gs" style="margin-top:auto">${s("Shows here once HR approves it.","يظهر هنا بعد اعتماد الموارد البشرية.")}</div></div>`;
+  return `<div class="mtile none"><div class="mn">${v(MONTHS[i])}</div><div class="gs" style="margin-top:auto">${m===12?s("Not started","لم يبدأ"):s("No payroll in the system","لا رواتب في النظام")}</div></div>`;}).join("")}</div>`;
+}
+const yearbar=()=>`<div class="yearbar"><span class="iconbtn">${ic("caret-left","flip")}</span><span class="y num">2026</span><span class="iconbtn" style="opacity:.45">${ic("caret-right","flip")}</span></div>`;
+function statement(d,L,T,limited,ph){
+ const eqTerm=(l,x,res)=>`<div class="term ${res?"res":""}"><span class="l">${l}</span><span class="v">${AR()?`${num(fmt(x))} <span class="c">ج.م</span>`:`<span class="c">EGP</span> ${num(fmt(x))}`}</span></div>`;
+ const eq=limited?limitedNotice(d,L):`<div class="eq">${eqTerm(s("Net paid","الصافي المدفوع"),T.net)}<span class="op">+</span>${eqTerm(s("Insurance share","حصة التأمينات"),T.ins)}<span class="op">+</span>${eqTerm(s("Income tax","ضريبة كسب العمل"),T.tax)}<span class="op">+</span>${eqTerm(s("Martyrs' fund","صندوق الشهداء"),T.fund)}<span class="op">=</span>${eqTerm(s("Gross","الإجمالي"),T.gross,true)}</div>`;
+ const ins=L.filter(l=>l.insured), not=L.filter(l=>!l.insured);
+ const grp=(title,rows,insured)=>{const GT=totals(rows.filter(r=>!r.hidden));
+  if(ph) return `<div><div class="grouph"><h3>${title}</h3><span class="count muted">${num(rows.length)}</span></div>${ecards(rows)}</div>`;
+  const hc=insured?6:4;
+  const head=`<th>${s("Employee","الموظف")}</th>${insured?`<th class="n">${s("Insured salary","الأجر التأميني")}</th>`:""}<th class="n">${s("Net paid","الصافي المدفوع")}</th>${insured?`<th class="n">${s("Insurance share","حصة التأمينات")}</th>`:""}<th class="n">${s("Income tax","ضريبة كسب العمل")}</th><th class="n">${s("Martyrs' fund","صندوق الشهداء")}</th><th class="n">${s("Gross","الإجمالي")}</th>`;
+  const body=rows.map(l=>l.hidden?`<tr><td>${empCell(l)}</td><td colspan="${hc-1}" class="hiddencell">${hiddenTxt()}</td></tr>`:`<tr><td>${empCell(l)}</td>${insured?`<td class="n">${money(l.insSal)}</td>`:""}<td class="n strong">${money(l.net)}${zeroNote(l)}</td>${insured?`<td class="n">${money(l.ins)}</td>`:""}<td class="n">${money(l.tax)}</td><td class="n">${money(l.fund)}</td><td class="n gross">${money(l.gross)}</td></tr>`).join("");
+  const foot=limited?`<tr><td>${s("Subtotal","المجموع الفرعي")}</td><td colspan="${hc-1}" class="n"><span class="lock">${ic("lock-simple")}${s("Hidden","مخفي")}</span></td></tr>`:`<tr><td>${s("Subtotal","المجموع الفرعي")}</td>${insured?"<td></td>":""}<td class="n">${money(GT.net)}</td>${insured?`<td class="n">${money(GT.ins)}</td>`:""}<td class="n">${money(GT.tax)}</td><td class="n">${money(GT.fund)}</td><td class="n gross">${money(GT.gross)}</td></tr>`;
+  return `<div><div class="grouph"><h3>${title}</h3><span class="count muted">${num(rows.length)}</span></div><table class="doctable"><thead><tr>${head}</tr></thead><tbody>${body}</tbody><tfoot>${foot}</tfoot></table></div>`;};
+ return `<div class="doc"><div class="dochead"><div class="t"><div class="s">${s("Green Valley School · Payroll taxes statement","مدرسة الوادي الأخضر · بيان ضرائب الرواتب")}</div><h2>${mName(d.m)}</h2><div class="s">${empN(L.length)}</div></div><div class="stamp">${s("Approved in HR","معتمد في الموارد البشرية")}<small><bdi>${v(d.at)}</bdi></small></div></div>
+ ${eq}
+ ${grp(s("Insured","مؤمَّن عليهم"),ins,true)}
+ ${grp(s("Not insured","غير مؤمَّن عليهم"),not,false)}
+ <div class="docfoot"><div><h4>${s("Tax rule used","قاعدة الضريبة المستخدمة")}</h4>${ruleList()}</div><div><h4>${s("How each line is worked out","كيف يُحسب كل سطر")}</h4><div class="muted" style="font-size:12.5px;line-height:1.6">${s("The taxable amount is the one that, after its income tax and the martyrs' fund, leaves exactly the net. Gross = net + insurance share + income tax + martyrs' fund. Frozen at approval: a later change to the rule or to anyone's insurance never changes this statement.","المبلغ الخاضع للضريبة هو الذي يتبقى منه الصافي بالضبط بعد ضريبة كسب العمل وصندوق الشهداء. الإجمالي = الصافي + حصة التأمينات + ضريبة كسب العمل + صندوق الشهداء. مجمّد عند الاعتماد: أي تغيير لاحق في القاعدة أو في تأمين أي موظف لا يغيّر هذا البيان.")}</div><div style="margin-top:10px">${ruleSame()}</div></div></div></div>`;
+}
+const C={
+ list:(ph,limited)=>{const h=`<div class="head"><div><h1>${s("Payroll taxes","ضرائب الرواتب")}</h1>${ph?"":`<p>${s("The school's year at a glance: every approved month with its gross — what it cost on top of the net.","سنة المدرسة في لمحة: كل شهر معتمد مع إجماليه — تكلفته فوق الصافي.")}</p>`}</div><div class="acts">${yearbar()}</div></div>`;
+  return ph?phone(h+board(limited)):desk(h+board(limited),limited);},
+ detail:(ph,limited)=>{const d=MONTH_DATA[10],L=withHidden(d.lines,limited),T=totals(d.lines);
+  const h=`${crumbs(10)}<div class="head"><div><h1>${mName(10)}</h1></div><div class="acts">${exportBtn(s("Excel","Excel"),"microsoft-excel-logo",false)}${exportBtn(s("Download PDF","تنزيل PDF"),"file-pdf")}</div></div>`;
+  return ph?phone(h+statement(d,L,T,limited,true)):desk(h+statement(d,L,T,limited,false),limited);},
+ empty:ph=>{const h=`<div class="head"><div><h1>${s("Payroll taxes","ضرائب الرواتب")}</h1></div><div class="acts">${yearbar()}</div></div>`;
+  const msg=`<div class="notice" style="background:var(--primary-soft);color:var(--primary)">${ic("receipt")}<div><b>${s("No approved month yet","لا يوجد شهر معتمد بعد")}</b>${s("A month's statement appears on its tile as soon as HR approves its payroll.","يظهر بيان الشهر على بطاقته فور اعتماد الموارد البشرية لرواتبه.")} <a href="#" style="font-weight:700">${s("Open HR payroll","فتح رواتب الموارد البشرية")}</a></div></div>`;
+  return ph?phone(h+msg+board(false,true)):desk(h+msg+board(false,true));},
+ note:{t:["Option C — Year board, and each month as a printable statement","الخيار ج — لوحة السنة، وكل شهر بيان قابل للطباعة"],p:[
+  ["Months are a 12-tile year board (approved, draft in HR, nothing yet), so gaps are visible. A month opens as a statement: the sum net + insurance + tax + fund = gross across the top, employees grouped insured / not insured, the rule and the method printed at the foot.","الأشهر لوحة من 12 بطاقة للسنة (معتمد، مسودة في الموارد البشرية، لا شيء بعد) فتظهر الفجوات. الشهر يفتح كبيان: معادلة الصافي + التأمينات + الضريبة + الصندوق = الإجمالي في الأعلى، والموظفون مقسومون مؤمَّن عليهم / غير مؤمَّن عليهم، والقاعدة وطريقة الحساب في الأسفل."],
+  ["Trade-off: reads like the paper the accountant files and prints well, but the board needs to know which months are drafts in HR (one more API field) and the grouping splits the list.","المقابل: يشبه الورقة التي يحفظها المحاسب ويُطبع جيدًا، لكن اللوحة تحتاج معرفة الأشهر المسودة في الموارد البشرية (حقل إضافي في الواجهة البرمجية) والتقسيم يفصل القائمة."],
+  ["Export: PDF of the statement as shown (for filing) and Excel of the lines.","التصدير: PDF للبيان كما يظهر (للحفظ) وExcel للصفوف."]]},
+};
+
+const OPTS={a:A,b:B,c:C};
+function render(){
+ document.documentElement.lang=lang; document.documentElement.dir=AR()?"rtl":"ltr";
+ const O=OPTS[opt], ph=view==="phone";
+ const sec=(id,title,sub,html)=>`<section id="${id}"><div class="section-title">${title}${sub?`<small>${sub}</small>`:""}</div>${ph?`<div class="phones"><div class="phone-wrap">${html}</div>${id==="s-list"?`<div class="phone-wrap"><span class="phone-cap">${s("Menu","القائمة")}</span>${drawerPhone()}</div>`:""}</div>`:`<div class="desk-scroll">${html}</div>`}</section>`;
+ document.getElementById("app").innerHTML=`<div class="optnote"><b style="font-size:15px">${v(O.note.t)}</b><ul>${O.note.p.map(x=>`<li>${v(x)}</li>`).join("")}</ul></div>
+ ${sec("s-list",s("Months","الأشهر"),s("Accountant — sees every salary","المحاسب — يرى جميع الرواتب"),O.list(ph,false))}
+ ${sec("s-detail",s("One approved month — October 2026","شهر معتمد — أكتوبر 2026"),s("Accountant","المحاسب"),O.detail(ph,false))}
+ ${sec("s-empty",s("Empty — no approved month yet","فارغ — لا يوجد شهر معتمد بعد"),"",O.empty(ph))}
+ ${sec("s-limited",s("A viewer who can't see some salaries","مستخدم لا يرى بعض الرواتب"),s("e.g. a custom role with payroll-taxes access limited to one stage: names and insurance status show, amounts and totals don't","مثل دور مخصص بصلاحية ضرائب الرواتب محصور في مرحلة: تظهر الأسماء وحالة التأمين، ولا تظهر المبالغ والإجماليات"),O.detail(ph,true))}`;
+ document.querySelectorAll("#optSeg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.o===opt));
+ document.querySelectorAll("#langSeg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.l===lang));
+ document.querySelectorAll("#viewSeg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===view));
+ history.replaceState(null,"",`#opt=${opt}&lang=${lang}&view=${view}`);
+}
+const h=new URLSearchParams(location.hash.slice(1));
+if(["a","b","c"].includes(h.get("opt")))opt=h.get("opt");
+if(["en","ar"].includes(h.get("lang")))lang=h.get("lang");
+if(["desktop","phone"].includes(h.get("view")))view=h.get("view");
+document.getElementById("optSeg").onclick=e=>{const b=e.target.closest("button");if(b){opt=b.dataset.o;render();}};
+document.getElementById("langSeg").onclick=e=>{const b=e.target.closest("button");if(b){lang=b.dataset.l;render();}};
+document.getElementById("viewSeg").onclick=e=>{const b=e.target.closest("button");if(b){view=b.dataset.v;render();}};
+render();
+</script>
+</body>
+</html>

@@ -1,6 +1,7 @@
 export { AuditModule } from './audit.module';
 export {
   AuditRecordAccess,
+  type AuditRecordSet,
   type AuditRestriction,
   type VisibleRecords,
   type VisibleRecordsResolver,

@@ -11,6 +11,7 @@ import type {
   EmployeesRepository,
   EmployeeSummaryRow,
 } from '../repositories/employees.repository';
+import type { HrRemindersService } from '../../reminders/hr-reminders.service';
 import type { HrSettingsService } from '../../settings/hr-settings.service';
 import { EmployeesService } from './employees.service';
 
@@ -115,6 +116,11 @@ function makeService(scopes: Parameters<typeof fakeAccess>[0], repo: Record<stri
     { record: jest.fn(() => Promise.resolve()) } as unknown as AuditService,
     { run: jest.fn(), inTransaction: (fn: () => Promise<unknown>) => fn() } as unknown as AfterCommit,
     { defaultProbationMonths: jest.fn().mockResolvedValue(3) } as unknown as HrSettingsService,
+    {
+      contractChanged: jest.fn(),
+      probationChanged: jest.fn(),
+      employeeDeactivated: jest.fn(),
+    } as unknown as HrRemindersService,
   );
   return { service, repository };
 }

@@ -232,6 +232,15 @@ export class EmployeesRepository extends BaseRepository<
     return rows.map((r) => r.id);
   }
 
+  /** The ids of the employees (any status) whose code contains `q`, any case (Activity's search). */
+  async findIdsByCode(q: string): Promise<string[]> {
+    const rows = await this.db.employee.findMany({
+      where: { code: { contains: q, mode: 'insensitive' } },
+      select: { id: true },
+    });
+    return rows.map((r) => r.id);
+  }
+
   /** Every active employee as a compact reference, by code (lateness and payroll lists). */
   findActiveRefs(): Promise<{ id: string; code: string; nameEn: string; nameAr: string }[]> {
     return this.db.employee.findMany({

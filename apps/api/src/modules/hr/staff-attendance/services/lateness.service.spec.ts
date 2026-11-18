@@ -36,6 +36,7 @@ function makeService(over: {
     }),
   };
   const audit = { record: jest.fn().mockResolvedValue(undefined) };
+  const reminders = { latenessSaved: jest.fn().mockResolvedValue(undefined) };
   const employees = {
     listActiveRefs: jest.fn().mockResolvedValue([emp('1'), emp('2')]),
     listActiveWithDepartments: jest.fn().mockResolvedValue([
@@ -82,8 +83,9 @@ function makeService(over: {
     monthLock as unknown as MonthLockService,
     audit as never,
     { inTransaction: (fn: () => unknown) => fn(), run: (fn: () => unknown) => Promise.resolve(fn()) } as never,
+    reminders as never,
   );
-  return { service, repository, employees, monthLock, calls, audit };
+  return { service, repository, employees, monthLock, calls, audit, reminders };
 }
 
 describe('LatenessService', () => {
@@ -137,6 +139,22 @@ describe('LatenessService', () => {
       [{ employeeId: '1', minutes: 120 }],
       'u1',
     );
+  });
+
+  it('N3 edges 7 / 8 — a save (even all zeros) resolves the month’s lateness reminder; an empty save or a refused one does not', async () => {
+    const zeros = makeService();
+    await zeros.service.put('2026-11', { entries: [{ employeeId: '1', minutes: 0 }] }, 'u1');
+    expect(zeros.reminders.latenessSaved).toHaveBeenCalledWith('2026-11', 'u1');
+
+    const empty = makeService();
+    await empty.service.put('2026-11', { entries: [] }, 'u1');
+    expect(empty.reminders.latenessSaved).not.toHaveBeenCalled();
+
+    const locked = makeService({ locked: true });
+    await expect(
+      locked.service.put('2026-11', { entries: [{ employeeId: '1', minutes: 5 }] }, 'u1'),
+    ).rejects.toMatchObject({ code: ErrorCode.PAYROLL_APPROVED });
+    expect(locked.reminders.latenessSaved).not.toHaveBeenCalled();
   });
 
   it('the month list asks for the employees hr.lateness.view covers (R5)', async () => {
