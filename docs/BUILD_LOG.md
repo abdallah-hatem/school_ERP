@@ -157,6 +157,17 @@ phase live in `docs/build-log/`.
   any change to it (CLAUDE.md, CONVENTIONS) → #79. A new module needs a plan in `docs/plans/` (CI) → #81.
   Tamer owns payroll and accounting decisions (owner). His #78 (payroll tax → new accounting module)
   is open: needs an accounting plan, the T29 payroll audit wiring and CLAUDE.md's module line.
+- 2026-11-18 — Payroll run-page race fixed → #80. Audit-wiring rule in CLAUDE.md/CONVENTIONS → #79.
+  New-module plan check in CI → #81 (fix: never makes a developer's clone shallow). CLAUDE.md module
+  order: accounting exists for payroll taxes → #87.
+- 2026-11-18 — Tamer's accounting stack (owner merges, not Tamer): #86 shared tax maths and #84
+  accounting module + tax-rule API merged after review and all four checks; dev re-checked after each.
+  #83 (Settings → Accounting) waits: the Accountant can't open Settings (page guard + sidebar lack
+  `accounting.settings.view`; sections not filtered per permission). #85 (taxes on approval) waits: a
+  missed month must use the rule and insurance as of approval, not today's. #78 is replaced by these.
+- 2026-11-18 — Started: demo dry run on a copy of the demo DB (migrations since the 17th + the script
+  in AR/EN/phone, money by hand); skeletons-match PR #88; a role-access smoke spec (every built-in
+  role × every screen).
 
 ## Next up
 
