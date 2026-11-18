@@ -224,7 +224,7 @@ describe('OutboxDelivery passes', () => {
     });
   });
 
-  it('a retry due at a poll tick is claimed by that tick, even when the tick fires a little early or late', async () => {
+  it('a retry due at a poll tick is claimed by that tick, even when the tick fires a little early or late', () => {
     // Failed in the pass of the tick at NOW: due exactly one interval later, on a tick.
     const due = afterFailure(2, NOW).nextAttemptAt;
     const tick = NOW.getTime() + 60 * SECOND;
