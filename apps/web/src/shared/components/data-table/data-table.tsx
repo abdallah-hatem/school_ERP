@@ -94,8 +94,16 @@ export interface DataTableProps<Row> {
    * compares their width only. Rows (the table view) are still compared in full.
    */
   cardHeightsVary?: boolean;
-  /** A totals row under the rows (and a summary card under the cards). Not drawn on an empty list. */
+  /**
+   * A totals row under the rows (and a summary card under the cards). Not drawn on an empty list.
+   * Like every row, it spans the table's full width in both directions.
+   */
   footer?: DataTableFooter;
+  /**
+   * Every row, for print: the screen shows `rows` (a page, a search's matches) and the printout
+   * (`@media print`) lists all of these instead, as a table with the footer and no pagination.
+   */
+  printRows?: Row[];
   /**
    * `false`: the table and its parts carry no `data-skeleton-block`, so the skeleton spec measures
    * them as part of the block around them. For a table whose very presence is data — a statement's
@@ -135,6 +143,7 @@ export function DataTable<Row>({
   cardsBelow = 740,
   cardHeightsVary = false,
   footer,
+  printRows,
   skeletonBlocks = true,
   className,
 }: DataTableProps<Row>) {
@@ -185,6 +194,21 @@ export function DataTable<Row>({
       </div>
     );
   }
+  // Print lists every row: the screen's view (a page, a search's matches) is left out of the
+  // printout and this copy, hidden on screen (and from assistive tech), stands in for it.
+  const printAll = !showSkeleton && !error && (printRows?.length ?? 0) > 0;
+  if (printAll) {
+    body = (
+      <>
+        <div className="print:hidden">{body}</div>
+        <div data-print-rows="" aria-hidden="true" className="hidden print:block">
+          <BlocksContext.Provider value={false}>
+            <Table columns={columns} rows={printRows ?? []} getRowId={getRowId} label={label} rowTone={rowTone} viewClass="" footer={footer} />
+          </BlocksContext.Provider>
+        </div>
+      </>
+    );
+  }
 
   return (
     <BlocksContext.Provider value={skeletonBlocks}>
@@ -198,7 +222,15 @@ export function DataTable<Row>({
       >
         {toolbar ? <div data-skeleton-block={skeletonBlocks ? 'table-toolbar' : undefined} className="flex flex-wrap items-center gap-3 px-5 pt-5 pb-4">{toolbar}</div> : null}
         {body}
-        {pagination && !error ? <Pagination {...pagination} disabled={loading || refreshing} loading={showSkeleton} /> : null}
+        {pagination && !error ? (
+          <Pagination
+            {...pagination}
+            disabled={loading || refreshing}
+            loading={showSkeleton}
+            skeletonBlock={skeletonBlocks}
+            className={printRows ? 'print:hidden' : undefined}
+          />
+        ) : null}
       </section>
     </BlocksContext.Provider>
   );
@@ -244,7 +276,14 @@ function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass, footer
         hidden={!edges.end}
         className="pointer-events-none absolute inset-y-0 end-0 z-10 w-8 from-card to-transparent ltr:bg-linear-to-l rtl:bg-linear-to-r"
       />
-      <div ref={ref} className="scrollbar-clean overflow-x-auto">
+      {/*
+        A table only scrolls sideways, so the vertical gutter `scrollbar-clean` keeps would be an
+        empty strip at the inline-end edge: the header, the rows' hover and hairlines and a totals
+        row stopped short of the card's edge there (right in LTR, left in RTL). No gutter: they
+        reach both edges. A scrollbar that is really needed still takes its own space (the
+        sideways one under the rows), so it never covers a cell.
+      */}
+      <div ref={ref} data-table-scroll="" className="scrollbar-clean overflow-x-auto [scrollbar-gutter:auto]!">
       <table aria-label={label} className="w-full border-separate border-spacing-0 text-sm">
         <thead data-skeleton-block={head}>
           <tr>
@@ -299,6 +338,8 @@ function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass, footer
                     'first:ps-5 last:pe-5',
                     alignClass[column.align ?? 'start'],
                     column.className,
+                    // The label stays on one line even in a column whose names wrap.
+                    i === 0 && 'whitespace-nowrap',
                   )}
                 >
                   {i === 0 ? footer.label : footer.cells?.[column.id]}

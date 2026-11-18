@@ -40,9 +40,26 @@
       "insuredOne": "Insured",
       "notInsuredOne": "Not insured",
       "subtotal": "Subtotal",
+      "subtotalAll": {
+        "zero": "Subtotal",
+        "one": "Subtotal · 1 employee",
+        "two": "Subtotal · all {count}",
+        "few": "Subtotal · all {count}",
+        "many": "Subtotal · all {count}",
+        "other": "Subtotal · all {count}"
+      },
       "totalsHidden": "Only for someone who sees every salary",
       "salaryHidden": "Salary hidden",
       "noneInGroup": "Nobody in this group this month.",
+      "groupCount": "{shown} of {total}",
+      "search": {
+        "label": "Search the statement's employees",
+        "placeholder": "Name or code, like EMP-0012"
+      },
+      "noMatch": {
+        "title": "No one in this group matches",
+        "body": "Try another name or code. The subtotal still covers the whole group."
+      },
       "netZero": "Net 0 — floored in HR",
       "limitedTitle": "You see the amounts of {seen} of {total} employees.",
       "limitedBody": "Salaries outside your role's scope are hidden, so the month's totals are hidden too. They show only to someone who sees every salary.",
