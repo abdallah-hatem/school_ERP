@@ -132,7 +132,7 @@ export function ViolationDialog({
           <fieldset className="flex flex-col gap-3">
             <legend className="mb-1 text-sm font-semibold">{t('settings.catalogue.levels')}</legend>
             <p className="text-xs text-muted-foreground">
-              {t('settings.catalogue.levelsHint', { min: MIN_VIOLATION_LEVELS, max: MAX_VIOLATION_LEVELS })}
+              {t('settings.catalogue.levelsHint', { count: MAX_VIOLATION_LEVELS, min: MIN_VIOLATION_LEVELS, max: MAX_VIOLATION_LEVELS })}
             </p>
             <ol className="flex flex-col gap-3">
               {levels.fields.map((row, i) => {
