@@ -290,6 +290,12 @@ phase live in `docs/build-log/`.
   the shared `DataTable` (the mockup's tables were hand-drawn). The draft state needs a small
   read-only addition to accounting's API (through HR's exported payroll service) for Tamer to review.
   Build started.
+- 2026-11-18 — T29 + T31 merged → #126: recording, approving and cancelling a penalty are on
+  Activity (names, not ids; refused writes leave none); penalties show on the employee's History;
+  Activity search finds entries by employee code (live lookup, older entries too); the audit scan
+  now allows no "wired in" placeholder. Checked in screenshots (EN desktop, AR phone). Two display
+  issues found → a fix in progress (payroll totals shown as JSON on Activity; the AR phone results
+  count cut off).
 
 ## Next up
 
@@ -329,7 +335,7 @@ phase live in `docs/build-log/`.
   no screen yet; add them to Settings → School if a school wants to change them.
 
 - Hosting the demo on the Contabo server (owner: later; local demo is the fallback).
-- Audit log T28 done (#107); T29 (Abdallah, being built: penalties) and T31 verify. Optional CI ratchet that forbids touching an unwired endpoint (owner: docs only for now). Follow-ups from T30 still open: penalties don't appear on the employee's History (T29); the payroll
+- Audit log T28 (#107), T29 + T31 (#126) done. Optional CI ratchet that forbids touching an unwired endpoint (owner: docs only for now). Follow-ups from T30 still open: penalties don't appear on the employee's History (T29); the payroll
   run page has no History tab yet.
 
 - Optional: server-side paging for lateness (loads the whole month today) and column sorting.
