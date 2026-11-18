@@ -47,7 +47,7 @@ for (const locale of ['ar', 'en'] as const) {
 
     await page.goto(`/${locale}/settings?section=notifications`);
     await settled(page);
-    await expect(page.getByText(t(locale, 'notifications.settings.defaults.title'))).toBeVisible();
+    await expect(page.getByRole('heading', { name: t(locale, 'notifications.settings.defaults.title') })).toBeVisible();
     await expectNoHorizontalScroll(page);
     await settle(page);
     await shoot(page, info, `notifications-settings-${locale}-phone`);
