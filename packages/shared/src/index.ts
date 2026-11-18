@@ -1,5 +1,6 @@
 export * from './enums';
 export * from './settings';
+export * from './hr-settings-defaults';
 export * from './errors';
 export * from './auth';
 export * from './events';
