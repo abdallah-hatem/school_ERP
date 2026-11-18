@@ -700,6 +700,23 @@ types** and sends through core's exported `NotificationsService` — core never 
   approved run ("Approved by …"). Subjects: `employee` and `penalty` (N2) (scoped through `HrNotificationScopes` with
   HR's stage / team rule), `lateness_month`, `payroll_month`, `payroll_run` (whole-school: a scoped
   holder is never told).
+- **Screens (N4, option A of `design/mockups/notifications.html`)** — `apps/web/src/core/notifications`:
+  the **bell** beside the language switch in the shell (both the phone top bar and the desktop row
+  draw one; `NotificationInbox` in `AppShell` holds their one state, so one poll), the unread count
+  polled every 60 s while the tab is visible and on focus (`99+`), and the list — a popover anchored
+  to the bell from 768px, a full-screen `Sheet` (`side="full"`) below — with All / Unread, the latest
+  20, groups opening into their items, deep links (`linkHref`: `SCREENS` path + record + query),
+  done rows and Mark all as read (`upTo` = the newest the list showed). Sentences are drawn in
+  `lib/text.ts` from the type key and values (names `{ en, ar }`, months, dates, money with its
+  label); a single item reads from its own values. **My account → Notifications**
+  (`/account/notifications`, `SCREENS.accountNotifications`; My account's routes are `account/(profile)`
+  and `account/notifications`, each with its skeleton) is `TypeSwitchList`: one switch per type,
+  grouped by module and category, required ones locked, each change saved at once and put back on
+  failure, "Reset to school default" (`enabled: null`). **Settings → Notifications**
+  (`modules/settings`, `SETTINGS_SECTION_ACCESS.notifications = 'core.notifications.view'`) is the
+  same list for the defaults plus the reminder timing (HR rules: `PUT /hr/settings`,
+  `hr.settings.edit`) and the retention; defaults and retention follow `core.notifications.manage`,
+  so the HR manager sees them read-only. In-app only: no other channel appears in the UI.
 - **HR's approvals (N2)** — `modules/hr/notifications/hr-notifications.service.ts`, called by the
   penalty and payroll services inside their own write's transaction (no `RequiresNew`).
   `hr.penalty.awaiting_approval` (subject `penalty` + its `employeeId`, dedupe `penalty:<id>`) on
@@ -710,9 +727,9 @@ types** and sends through core's exported `NotificationsService` — core never 
   per reader through `notify({ paramsFor })` — only for a holder of `hr.payroll.view` at `all` (R7);
   absent otherwise. A `penalty` subject is scoped by `HrNotificationScopes` with the employee rule,
   on the penalty's employee **as the employee is now** (a stage move takes it from the old stage's
-  approver).
-- **Not yet:** the bell, My account tab and Settings section are N4 (the `SETTINGS_SECTION_ACCESS`
-  entry for Settings → Notifications comes with that screen).
+  approver). The Penalties screen opens the
+  linked penalty (`?penalty=<id>`: its month's list with `PenaltyDetailsDialog` over it; unknown or
+  out of scope → not found).
 
 ### Deliberate shortcuts
 
@@ -935,6 +952,8 @@ apps/web/src/
 │   │                                   (plain text without hr.employees.view)
 │   ├── audit/                        ← activity log pieces: apis.ts (GET /audit…), timeline,
 │   │                                   entry text (sentences, field labels), record History
+│   ├── notifications/                ← the bell and its list, the per-type switch list,
+│   │                                   My account → Notifications (§11, N4)
 │   └── academic-year/                ← year switcher, current-year context
 ├── shared/                           ← shared technical pieces
 │   ├── components/ui/                ← shadcn kit

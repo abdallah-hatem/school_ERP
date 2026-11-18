@@ -30,6 +30,8 @@ const sides = {
     'inset-x-0 bottom-0 max-h-[calc(100dvh-2rem)] rounded-t-2xl border-t',
     'data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom',
   ),
+  /** The whole screen (a phone's notification list): fades in, nothing behind it to slide over. */
+  full: cn('inset-0 h-dvh w-full', 'data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0'),
 } as const;
 
 export function SheetContent({

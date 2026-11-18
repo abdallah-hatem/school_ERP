@@ -3,8 +3,9 @@
 Telling staff, inside the ERP, that something waits for them or is due. Spec:
 `docs/specs/2026-11-18-notifications.md`. **Partly built** — the mechanism is built (who is told,
 grouping, never twice, done approvals, access, preferences, retention), and so are HR's **reminders**
-(contracts, probation, lateness, payroll — below) and its two **approvals** ("Penalty waiting for
-your approval", "Payroll ready to approve"). The screens are Planned (layout option A, below).
+(contracts, probation, lateness, payroll — below), its two **approvals** ("Penalty waiting for
+your approval", "Payroll ready to approve"), and the **screens** (layout option A, below: the bell
+and its list, My account → Notifications, Settings → Notifications).
 
 ## What and how
 
@@ -23,6 +24,11 @@ your approval", "Payroll ready to approve"). The screens are Planned (layout opt
   English, with the right plural form), says when it happened, and opens the record it is about.
   Switching language shows old notifications in the new language too.
 - **GUESS** — The bell updates within a minute, and as soon as the person comes back to the tab.
+- **Built** (2026-11-18) — The bell sits beside the language switch and shows the unread count
+  ("99+" past 99). Opening a notification marks it read and opens its record; a group ("3
+  penalties waiting for your approval") opens into its items first, each opening its own record.
+  "Mark all as read" leaves anything that arrived after the list was opened unread. Done ones stay
+  in the list, greyed, with who did them ("Approved by Laila Hassan").
 
 ## Who is told what
 
@@ -73,7 +79,7 @@ your approval", "Payroll ready to approve"). The screens are Planned (layout opt
 
 ## Reminders
 
-**Built** (N3). The bell that shows them is Planned (the screens).
+**Built** (N3); they show in the bell (N4).
 
 - **DECIDED** (owner, 2026-11-18) — Reminders are checked every day by the system on its own.
 - **GUESS** — The check runs at 07:00 school time (Cairo). "Today" and "this month" are the school's.

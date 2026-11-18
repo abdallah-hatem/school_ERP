@@ -15,6 +15,7 @@ import { localName } from '@/shared/lib/i18n';
 import { initialsOf } from '@/shared/lib/initials';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { formatSignIn } from '../lib/sign-in-time';
+import { AccountTabs } from './account-tabs';
 import { FormCard, FormColumns } from './form-card';
 import { RoleChips } from './role-bits';
 
@@ -31,6 +32,7 @@ export function AccountView({ account, now }: { account: UserAccount; now: IsoDa
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title={t('access.account.title')} description={t('access.account.description')} />
+      <AccountTabs />
       <FormColumns
         main={
           <>

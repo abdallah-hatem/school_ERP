@@ -176,11 +176,13 @@ export const SKELETON_SCREENS = [
   'role-new',
   'role-edit',
   'account',
+  'account-notifications',
   'settings-school',
   'settings-structure',
   'settings-lists',
   'settings-hr-rules',
   'settings-catalogue',
+  'settings-notifications',
 ] as const;
 export type SkeletonScreenName = (typeof SKELETON_SCREENS)[number];
 
@@ -251,11 +253,13 @@ async function readPaths(): Promise<Record<SkeletonScreenName, string | null>> {
       'role-new': '/roles/new',
       'role-edit': `/roles/${role.id}`,
       account: '/account',
+      'account-notifications': '/account/notifications',
       'settings-school': '/settings?section=school',
       'settings-structure': '/settings?section=structure',
       'settings-lists': '/settings?section=lists',
       'settings-hr-rules': '/settings?section=hrRules',
       'settings-catalogue': '/settings?section=catalogue',
+      'settings-notifications': '/settings?section=notifications',
     };
   } finally {
     await api.dispose();

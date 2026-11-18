@@ -24,6 +24,9 @@ export const SETTINGS_SECTION_ACCESS = {
   catalogue: 'hr.penalty_catalogue.view',
   // The payroll tax rule (§10): the Accountant's section.
   accounting: 'accounting.settings.view',
+  // The school's notification defaults, reminder timing and retention (§11): the System admin
+  // changes it, the HR manager sees it read-only (owner, 2026-11-18).
+  notifications: 'core.notifications.view',
 } as const satisfies Record<string, PermissionKey>;
 export type SettingsSectionId = keyof typeof SETTINGS_SECTION_ACCESS;
 export const SETTINGS_SECTIONS = Object.keys(SETTINGS_SECTION_ACCESS) as SettingsSectionId[];
@@ -45,6 +48,7 @@ const profileTab = (path: string, key: PermissionKey) => screen(path, ['hr.emplo
 export const SCREENS = {
   dashboard: screen(''),
   account: screen('/account'),
+  accountNotifications: screen('/account/notifications'),
   employees: screen('/employees', 'hr.employees.view'),
   employeeNew: screen('/employees/new', 'hr.employees.create'),
   employee: screen('/employees/:id', 'hr.employees.view'),

@@ -294,7 +294,20 @@ rule (one registration per entity type).
 18. A failed job run (database error) is logged in `job_runs` as failed, sends nothing half-way
     for that type (one transaction per type), and the next run catches up. — jobs foundation, N16
 
-## N4 — screens (`ui`, frontend) — option A
+## N4 — screens (`ui`, frontend) — option A — ✅ done (PR `feature/n4-notification-screens`)
+
+**Done:** the bell (`apps/web/src/core/notifications`), My account → Notifications
+(`/account/notifications`) and Settings → Notifications (`modules/settings`, with its
+`SETTINGS_SECTION_ACCESS` entry and icon). Choices made here: My account has two tabs, Profile
+(sign-in details and password together, as before) and Notifications — the mockup's separate
+Password tab isn't split out; the registry's seven types are seven rows (the mockup merged "not
+prepared" and "still a draft" into one); the retention is its own card with all three values, next
+to the reminder timing card (which also holds the default probation length); the HR manager can
+still change the reminder timing there (HR rules, `hr.settings.edit`) while the defaults and the
+retention are read-only for them; the list's footer link opens My account → Notifications. The
+penalty landing (`?penalty=` opening that penalty) and the smoke flow "record → principal → approve
+→ Approved by …" need N2; the smoke specs cover the bell, both preference screens and the HR
+manager's read-only view (`e2e/25-notifications*.spec.ts`), and the skeleton spec has both screens.
 
 - The bell in the app shell's top bar (desktop row beside the language switch; phone top bar), the
   unread count (polling 60 s while visible + on focus, `99+`), and the **popover** anchored to the

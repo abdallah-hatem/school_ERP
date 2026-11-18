@@ -67,6 +67,12 @@ plain status colour is for icons, bars and large figures only.
   label/value grid).
 - English is the default language; Arabic is fully mirrored. Logical classes only; chevrons flip with `flip-rtl`.
 - No horizontal scroll at 375px in either language.
+- **The notification bell** (§11) sits beside the language switch on every width, its unread
+  count a sunflower badge. Its list is a popover anchored to the bell (about 430px, `raised`
+  shadow, the body scrolls) from 768px, and the whole screen below it. Unread rows sit on a
+  `primary-soft` tint with a sunflower dot; done rows are dimmed with their "Approved by …" in
+  `success-ink`. Each kind's icon chip takes its role's soft tone (penalties `warning`, payroll
+  `primary`, employee reminders `info`, lateness `accent-soft`).
 
 ## Icons
 
