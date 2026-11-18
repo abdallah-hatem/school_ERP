@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import { INestApplication } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   LOGO_UPLOAD,
   SETTINGS_HISTORY_ACTION_KEYS,
@@ -8,6 +7,7 @@ import {
   type AuthUser,
   type SettingsChangedEvent,
 } from '@school-erp/shared';
+import { DomainEvents } from '../src/core/events';
 import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
 import { ANONYMOUS_HEADER, createAppAsTestUser } from './helpers/as-test-user';
@@ -193,7 +193,7 @@ describe('core settings and school structure (e2e)', () => {
       await http(app).get('/settings/history').expect(404);
     });
 
-    it('a settings.changed event alone writes no history: every change is recorded in its own transaction', async () => {
+    it('a core.settings.changed event alone writes no history: every change is recorded in its own transaction', async () => {
       const item = { id: '22222222-2222-4222-8222-222222222222', nameEn: 'Art', nameAr: 'الفنون', sortOrder: 1, isActive: true };
       const event: SettingsChangedEvent = {
         scope: 'lists',
@@ -203,14 +203,14 @@ describe('core settings and school structure (e2e)', () => {
         changedById: TEST_USER.id,
         changedAt: new Date().toISOString(),
       };
-      await app.get(EventEmitter2).emitAsync(SettingsEvent.CHANGED, event);
+      await app.get(DomainEvents).publish(SettingsEvent.CHANGED, event);
       const rows = (await historyFor('hr.departments')).filter(
         (r) => (r.newValue as { id?: string } | null)?.id === item.id,
       );
       expect(rows).toHaveLength(0);
     });
 
-    it('an HR or school settings.changed event alone writes nothing: those are recorded with their write', async () => {
+    it('an HR or school core.settings.changed event alone writes nothing: those are recorded with their write', async () => {
       const event: SettingsChangedEvent = {
         scope: 'hr',
         key: 'hr.payroll.dayDivisor',
@@ -219,7 +219,7 @@ describe('core settings and school structure (e2e)', () => {
         changedById: TEST_USER.id,
         changedAt: new Date().toISOString(),
       };
-      await app.get(EventEmitter2).emitAsync(SettingsEvent.CHANGED, event);
+      await app.get(DomainEvents).publish(SettingsEvent.CHANGED, event);
       expect(await historyFor('hr.payroll.dayDivisor')).toHaveLength(0);
     });
   });

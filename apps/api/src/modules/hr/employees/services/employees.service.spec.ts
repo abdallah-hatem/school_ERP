@@ -1,8 +1,8 @@
 import { BadRequestException } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { contractYearFor, ErrorCode, HrEvent } from '@school-erp/shared';
 import { todayIsoDate } from '../../../../common/utils/dates.util';
 import type { AuditService } from '../../../../core/audit';
+import type { DomainEvents } from '../../../../core/events';
 import type { FileStorageService } from '../../../../core/settings';
 import type { AfterCommit } from '../../../../database/transactions';
 import { DepartmentsService } from '../../lists/services/departments.service';
@@ -92,22 +92,33 @@ function makeService(repo: Record<string, jest.Mock> = {}, access: HrAccessServi
     ...repo,
   };
   const lists = { getSelectable: jest.fn().mockResolvedValue({}) };
-  const events = { emit: jest.fn() };
+  // DomainEvents holds each event until the commit (its own spec); here: what was published.
+  const events = { publish: jest.fn(() => Promise.resolve()) };
   const files = {
     save: jest.fn().mockImplementation((folder: string, name: string) => Promise.resolve(`/files/${folder}/${name}`)),
     remove: jest.fn().mockResolvedValue(undefined),
   };
   const audit = { record: jest.fn(() => Promise.resolve()) };
-  // Runs after-commit work at once, as it does outside a transaction.
+  // Runs after-commit work at once, as it does outside a transaction; a throw from the
+  // transaction runs the rollback work.
+  const rollback: (() => unknown)[] = [];
   const afterCommit = {
     run: jest.fn((fn: () => unknown) => Promise.resolve(fn())),
-    inTransaction: (fn: () => Promise<unknown>) => fn(),
+    onRollback: jest.fn((fn: () => unknown) => void rollback.push(fn)),
+    inTransaction: async (fn: () => Promise<unknown>) => {
+      try {
+        return await fn();
+      } catch (e) {
+        for (const f of rollback.splice(0)) await f();
+        throw e;
+      }
+    },
   };
   const service = new EmployeesService(
     repository as unknown as EmployeesRepository,
     lists as unknown as DepartmentsService,
     lists as unknown as JobTitlesService,
-    events as unknown as EventEmitter2,
+    events as unknown as DomainEvents,
     files as unknown as FileStorageService,
     access,
     audit as unknown as AuditService,
@@ -253,18 +264,67 @@ describe('EmployeesService — photo (§3)', () => {
     expect(repository.updateEmployee).not.toHaveBeenCalled();
     expect(files.remove).not.toHaveBeenCalled();
   });
+
+  it('gap 8 — the photo change rolls back: the new file is deleted, the old one kept', async () => {
+    const { service, files, audit } = makeService({
+      findDetail: jest.fn().mockResolvedValue(row({ photoUrl: '/files/employee-photos/old.png' })),
+    });
+    audit.record.mockRejectedValueOnce(new Error('audit down'));
+    await expect(service.setPhoto('e1', file())).rejects.toThrow('audit down');
+    const saved = await (files.save.mock.results[0]?.value as Promise<string>);
+    expect(files.remove).toHaveBeenCalledWith(saved);
+    expect(files.remove).not.toHaveBeenCalledWith('/files/employee-photos/old.png');
+  });
 });
 
 describe('EmployeesService', () => {
-  it('create fills the current contract year and emits employee.hired after the write', async () => {
+  it('create fills the current contract year and publishes hr.employee.hired', async () => {
     const { service, repository, events } = makeService();
     await service.create(dto());
     const current = contractYearFor(todayIsoDate());
     const data = repository.createWithCode.mock.calls[0]![0];
     expect(data.contractStart).toEqual(d(current.start));
     expect(data.contractEnd).toEqual(d(current.end));
-    expect(events.emit).toHaveBeenCalledWith(HrEvent.EMPLOYEE_HIRED, {
+    expect(events.publish).toHaveBeenCalledWith(HrEvent.EMPLOYEE_HIRED, {
       employeeId: 'e1',
+      hireDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+      at: expect.any(String),
+    });
+  });
+
+  it('gap 3 — an edit that changes nothing publishes no hr.employee.updated; a real one names its fields', async () => {
+    const same = makeService();
+    await same.service.update('e1', { grade: 'A' });
+    expect(same.events.publish).not.toHaveBeenCalled();
+
+    const changed = makeService({
+      updateEmployee: jest.fn().mockResolvedValue(row({ phone: '01000000999' })),
+    });
+    await changed.service.update('e1', { phone: '01000000999' });
+    expect(changed.events.publish).toHaveBeenCalledWith(HrEvent.EMPLOYEE_UPDATED, {
+      employeeId: 'e1',
+      fields: ['phone'],
+      at: expect.any(String),
+    });
+  });
+
+  it('deactivating publishes hr.employee.deactivated as must-deliver; reactivating, hr.employee.updated with status', async () => {
+    const off = makeService({ updateEmployee: jest.fn().mockResolvedValue(row({ status: 'INACTIVE' })) });
+    await off.service.deactivate('e1');
+    expect(off.events.publish).toHaveBeenCalledWith(
+      HrEvent.EMPLOYEE_DEACTIVATED,
+      { employeeId: 'e1', at: expect.any(String) },
+      { mustDeliver: true },
+    );
+
+    const on = makeService({
+      findDetail: jest.fn().mockResolvedValue(row({ status: 'INACTIVE' })),
+      updateEmployee: jest.fn().mockResolvedValue(row({ status: 'ACTIVE' })),
+    });
+    await on.service.reactivate('e1');
+    expect(on.events.publish).toHaveBeenCalledWith(HrEvent.EMPLOYEE_UPDATED, {
+      employeeId: 'e1',
+      fields: ['status'],
       at: expect.any(String),
     });
   });
@@ -437,7 +497,7 @@ describe('EmployeesService', () => {
     });
     await expect(service.deactivate('e1')).resolves.toMatchObject({ status: 'INACTIVE' });
     expect(repository.updateEmployee).not.toHaveBeenCalled();
-    expect(events.emit).not.toHaveBeenCalled();
+    expect(events.publish).not.toHaveBeenCalled();
   });
 
   it('maps dates to YYYY-MM-DD', async () => {

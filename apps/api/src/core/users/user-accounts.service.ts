@@ -1,5 +1,4 @@
 import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   AuditEntityType,
   CoreEvent,
@@ -15,6 +14,7 @@ import { CodedException } from '../../common/errors/coded.exception';
 import { hashPassword, normalizeEmail, verifyPassword } from '../../common/utils/password.util';
 import { AfterCommit } from '../../database/transactions';
 import { AuditService } from '../audit';
+import { DomainEvents } from '../events';
 import { RolesService } from '../roles';
 import { SignInLimitService } from '../sign-in-limit';
 import type {
@@ -40,7 +40,7 @@ export class UserAccountsService {
     private readonly roles: RolesService,
     private readonly audit: AuditService,
     private readonly afterCommit: AfterCommit,
-    private readonly events: EventEmitter2,
+    private readonly events: DomainEvents,
     private readonly signInLimit: SignInLimitService,
   ) {}
 
@@ -206,14 +206,19 @@ export class UserAccountsService {
     if (await verifyPassword(dto.newPassword, hash)) {
       throw new CodedException(HttpStatus.BAD_REQUEST, ErrorCode.SAME_PASSWORD);
     }
-    await this.users.update(me.id, {
-      passwordHash: await hashPassword(dto.newPassword),
-      mustChangePassword: false,
-      passwordChangedAt: new Date(),
-    });
-    await this.audit.record({
-      action: 'core.user.change_password',
-      entity: { type: AuditEntityType.USER, id: me.id, label: me.name },
+    const passwordHash = await hashPassword(dto.newPassword);
+    // The new password and its entry commit together, in a transaction opened only now: the checks
+    // above (and a wrong password's count and lockout entry) hold no connection meanwhile (gap 10).
+    await this.afterCommit.inTransaction(async () => {
+      await this.users.update(me.id, {
+        passwordHash,
+        mustChangePassword: false,
+        passwordChangedAt: new Date(),
+      });
+      await this.audit.record({
+        action: 'core.user.change_password',
+        entity: { type: AuditEntityType.USER, id: me.id, label: me.name },
+      });
     });
   }
 
@@ -237,7 +242,8 @@ export class UserAccountsService {
     reason: UserSessionsEndedEvent['reason'],
   ): Promise<void> {
     const event: UserSessionsEndedEvent = { userId, reason, at: new Date().toISOString() };
-    await this.afterCommit.run(() => this.events.emitAsync(CoreEvent.USER_SESSIONS_ENDED, event));
+    // Fire-and-forget, after the commit.
+    await this.events.publish(CoreEvent.USER_SESSIONS_ENDED, event);
   }
 
   private async row(id: string): Promise<UserAccountRow> {

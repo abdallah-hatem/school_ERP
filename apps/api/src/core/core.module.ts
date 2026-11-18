@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AuditModule } from './audit';
 import { AuthModule } from './auth';
+import { EventsModule } from './events';
 import { JobsModule } from './jobs';
 import { PermissionsModule } from './permissions';
 import { RolesModule } from './roles';
@@ -13,6 +14,7 @@ import { UsersModule } from './users';
 @Module({
   imports: [
     JobsModule,
+    EventsModule,
     AuditModule,
     PermissionsModule,
     RolesModule,
@@ -24,6 +26,7 @@ import { UsersModule } from './users';
   ],
   exports: [
     JobsModule,
+    EventsModule,
     AuditModule,
     PermissionsModule,
     RolesModule,

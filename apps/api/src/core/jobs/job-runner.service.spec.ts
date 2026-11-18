@@ -50,6 +50,29 @@ describe('JobRunner', () => {
     expect(recorded).toEqual([]);
   });
 
+  it("lock: false — runs without the advisory lock's transaction (no connection held for the run)", async () => {
+    const { runner, runs, recorded, clock } = makeRunner();
+    const run = jest.fn(() => Promise.resolve());
+    runner.register({ name: 'demo.poll', cron: '*/30 * * * * *', lock: false }, { run });
+
+    await expect(runner.run('demo.poll', clock)).resolves.toBe('success');
+    expect(runs.withLock).not.toHaveBeenCalled();
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(recorded).toHaveLength(1);
+  });
+
+  it("a job that returns 'idle' had nothing to do: not recorded in job_runs", async () => {
+    const { runner, recorded } = makeRunner();
+    runner.register(
+      { name: 'demo.poll', cron: '*/30 * * * * *', lock: false },
+      { run: () => Promise.resolve('idle' as const) },
+    );
+    runner.register({ name: 'demo.locked', cron: '* * * * *' }, { run: () => Promise.resolve('idle' as const) });
+    await expect(runner.run('demo.poll')).resolves.toBe('idle');
+    await expect(runner.run('demo.locked')).resolves.toBe('idle');
+    expect(recorded).toEqual([]);
+  });
+
   it('a failing job is recorded as failed with its error, and never throws', async () => {
     const { runner, recorded, clock } = makeRunner();
     runner.register(

@@ -1,5 +1,4 @@
 import { INestApplication } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   BuiltInRole,
   ErrorCode,
@@ -19,6 +18,7 @@ import type { Response } from 'supertest';
 import { monthOf, todayIsoDate } from '../src/common/utils/dates.util';
 import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
+import { outboxEvents } from './helpers/events';
 import { createAppAsTestUser, giveRoles } from './helpers/as-test-user';
 
 const DEDUCT = (days: number): ViolationLevelInput[] => [{ level: 1, action: 'DEDUCT_DAYS', days }];
@@ -361,12 +361,15 @@ describe('HR payroll and dashboard (e2e)', () => {
       }).expect(201)
     ).body.data.adjustments[0].id as string;
 
-    const emitted: unknown[] = [];
-    app.get(EventEmitter2).on(HrEvent.PAYROLL_APPROVED, (e: unknown) => emitted.push(e));
     const approved = await approveOk(run.id);
     expect(approved.approvedAt).not.toBeNull();
-    expect(emitted).toEqual([
-      expect.objectContaining({ runId: run.id, month, totals: approved.totals }),
+    // Must-deliver: one outbox row, written with the approval and delivered (accounting's taxes).
+    expect(await outboxEvents(db, HrEvent.PAYROLL_APPROVED, { runId: run.id })).toEqual([
+      {
+        id: expect.any(String),
+        status: 'delivered',
+        payload: expect.objectContaining({ runId: run.id, month, totals: approved.totals }),
+      },
     ]);
 
     const codes = await Promise.all([

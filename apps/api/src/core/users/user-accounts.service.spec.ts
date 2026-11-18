@@ -1,8 +1,8 @@
-import type { EventEmitter2 } from '@nestjs/event-emitter';
 import { CoreEvent, ErrorCode, type AuthUser, type RoleRef } from '@school-erp/shared';
 import { hashPassword } from '../../common/utils/password.util';
 import type { AfterCommit } from '../../database/transactions';
 import type { AuditService } from '../audit';
+import type { DomainEvents } from '../events';
 import type { RolesService } from '../roles';
 import type { SignInLimitService } from '../sign-in-limit';
 import type { UserAccountRow, UsersRepository } from './repositories/users.repository';
@@ -63,14 +63,26 @@ function makeService(
     ),
   };
   const audit = { record: jest.fn(() => Promise.resolve()) };
-  const queued: Array<() => unknown> = [];
+  /** Events published (DomainEvents sends them after the commit — its own spec). */
+  const queued: unknown[][] = [];
+  /** Whether the code runs inside `afterCommit.inTransaction` right now. */
+  const tx = { open: false, seen: [] as string[] };
   const afterCommit = {
-    run: jest.fn((fn: () => unknown) => {
-      queued.push(fn);
+    inTransaction: jest.fn(async (fn: () => Promise<unknown>) => {
+      tx.open = true;
+      try {
+        return await fn();
+      } finally {
+        tx.open = false;
+      }
+    }),
+  };
+  const events = {
+    publish: jest.fn((...args: unknown[]) => {
+      queued.push(args);
       return Promise.resolve();
     }),
   };
-  const events = { emitAsync: jest.fn(() => Promise.resolve([])) };
   const signInLimit = {
     lockedUntil: jest.fn((emails: string[]) =>
       Promise.resolve(new Map(lockedUntil ? emails.map((e) => [e, lockedUntil as Date]) : [])),
@@ -85,7 +97,10 @@ function makeService(
         ? Promise.reject(Object.assign(new Error('locked'), { code: ErrorCode.TOO_MANY_ATTEMPTS }))
         : Promise.resolve(),
     ),
-    recordFailure: jest.fn(() => Promise.resolve()),
+    recordFailure: jest.fn(() => {
+      tx.seen.push(tx.open ? 'failure in a transaction' : 'failure outside a transaction');
+      return Promise.resolve();
+    }),
     clear: jest.fn(() => Promise.resolve()),
   };
   const service = new UserAccountsService(
@@ -93,10 +108,10 @@ function makeService(
     roles as unknown as RolesService,
     audit as unknown as AuditService,
     afterCommit as unknown as AfterCommit,
-    events as unknown as EventEmitter2,
+    events as unknown as DomainEvents,
     signInLimit as unknown as SignInLimitService,
   );
-  return { service, users, roles, audit, queued, events, signInLimit };
+  return { service, users, roles, audit, queued, events, signInLimit, afterCommit, tx };
 }
 
 describe('UserAccountsService', () => {
@@ -142,11 +157,9 @@ describe('UserAccountsService', () => {
     const result = await service.deactivate('u-1');
     expect(result.isActive).toBe(false);
     expect(users.update).toHaveBeenCalledWith('u-1', { isActive: false });
-    // Queued for after the commit, not emitted inside the transaction.
-    expect(events.emitAsync).not.toHaveBeenCalled();
+    // Fire-and-forget: DomainEvents holds it until the commit.
     expect(queued).toHaveLength(1);
-    await queued[0]();
-    expect(events.emitAsync).toHaveBeenCalledWith(
+    expect(events.publish).toHaveBeenCalledWith(
       CoreEvent.USER_SESSIONS_ENDED,
       expect.objectContaining({ userId: 'u-1', reason: 'deactivated' }),
     );
@@ -189,6 +202,24 @@ describe('UserAccountsService', () => {
       'u-1',
       expect.objectContaining({ mustChangePassword: false }),
     );
+  });
+
+  it('gap 10 — a wrong current password is counted outside any transaction; the new password and its entry are written in one', async () => {
+    const { service, users, audit, afterCommit, tx } = makeService();
+    users.findPasswordHash.mockResolvedValue(await hashPassword('the-right-one', 4));
+    const me = { id: 'u-1', name: 'Mona' } as AuthUser;
+    await expect(
+      service.changeOwnPassword(me, { currentPassword: 'wrong', newPassword: 'new-password-1' }),
+    ).rejects.toMatchObject({ code: ErrorCode.WRONG_PASSWORD });
+    expect(tx.seen).toEqual(['failure outside a transaction']);
+    expect(afterCommit.inTransaction).not.toHaveBeenCalled();
+
+    const order: string[] = [];
+    users.update.mockImplementation(() => (order.push(tx.open ? 'update in tx' : 'update'), Promise.resolve()) as never);
+    audit.record.mockImplementation(() => (order.push(tx.open ? 'audit in tx' : 'audit'), Promise.resolve()));
+    await service.changeOwnPassword(me, { currentPassword: 'the-right-one', newPassword: 'new-password-1' });
+    expect(afterCommit.inTransaction).toHaveBeenCalledTimes(1);
+    expect(order).toEqual(['update in tx', 'audit in tx']);
   });
 
   it('change own password: no current password without a temporary one → WRONG_PASSWORD', async () => {

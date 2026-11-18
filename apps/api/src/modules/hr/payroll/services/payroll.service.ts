@@ -1,5 +1,4 @@
 import { ForbiddenException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   AuditEntityType,
   ErrorCode,
@@ -24,6 +23,7 @@ import {
   type Uuid,
 } from '@school-erp/shared';
 import { AuditService } from '../../../../core/audit';
+import { DomainEvents } from '../../../../core/events';
 import { SettingsService } from '../../../../core/settings';
 import { AfterCommit } from '../../../../database/transactions';
 import { CodedException } from '../../../../common/errors/coded.exception';
@@ -179,7 +179,7 @@ export class PayrollService {
     private readonly lateness: LatenessService,
     private readonly hrSettings: HrSettingsService,
     private readonly schoolSettings: SettingsService,
-    private readonly events: EventEmitter2,
+    private readonly events: DomainEvents,
     private readonly access: HrAccessService,
     private readonly audit: AuditService,
     private readonly afterCommit: AfterCommit,
@@ -311,8 +311,8 @@ export class PayrollService {
   /**
    * DRAFT → APPROVED: recalculates the lines from current data and locks the run (and with it the
    * month's penalties, lateness and adjustments) in one transaction. Refused with 409
-   * `PENDING_PENALTIES` while a penalty dated in the month is pending. Emits `payroll.approved`
-   * after the commit.
+   * `PENDING_PENALTIES` while a penalty dated in the month is pending. Publishes
+   * `hr.payroll.approved` (must-deliver: an outbox row in this transaction, delivered after the commit).
    */
   async approve(id: Uuid, approvedById: Uuid | null): Promise<PayrollRun> {
     // The change and its audit entry commit together (audit D2).
@@ -341,8 +341,8 @@ export class PayrollService {
         approvedById,
         at: approved.approvedAt ?? new Date().toISOString(),
       };
-      // Only once the approval has committed (it runs in the request's transaction now).
-      await this.afterCommit.run(() => this.events.emit(HrEvent.PAYROLL_APPROVED, event));
+      // Must-deliver: written to the outbox in this transaction, delivered after the commit.
+      await this.events.publish(HrEvent.PAYROLL_APPROVED, event, { mustDeliver: true });
       return approved;
     });
   }

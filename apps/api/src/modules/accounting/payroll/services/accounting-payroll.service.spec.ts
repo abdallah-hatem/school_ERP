@@ -50,7 +50,8 @@ function makeService(
   };
   const settings = { taxRuleAt: jest.fn((_at: Date) => Promise.resolve(DEFAULT_TAX_RULE)) };
   const audit = { record: jest.fn(() => Promise.resolve()) };
-  const txHost = { withTransaction: jest.fn((_p: unknown, fn: () => unknown) => fn()) };
+  // Joins the delivery's (or the read path's) transaction: no propagation option.
+  const txHost = { withTransaction: jest.fn((fn: () => unknown) => fn()) };
   const service = new AccountingPayrollService(
     repository as unknown as AccountingPayrollRepository,
     settings as unknown as AccountingSettingsService,

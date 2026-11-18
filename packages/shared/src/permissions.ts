@@ -40,6 +40,8 @@ export const PERMISSIONS = {
   // core — roles (Administration → Roles)
   'core.roles.view': core,
   'core.roles.manage': core,
+  // core — event deliveries (the outbox): see the dead ones and retry them
+  'core.outbox.manage': core,
 
   // hr — dashboard
   'hr.dashboard.view': hr,

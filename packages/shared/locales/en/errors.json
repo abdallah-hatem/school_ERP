@@ -56,5 +56,6 @@
   "DUPLICATE_PERMISSION": "A permission is listed more than once.",
   "INVALID_SCOPE": "This permission is about the whole school; it can only cover everyone.",
   "PASSWORD_CHANGE_REQUIRED": "Choose your own password first. You signed in with a temporary one.",
-  "SAME_PASSWORD": "Choose a password different from the one you signed in with."
+  "SAME_PASSWORD": "Choose a password different from the one you signed in with.",
+  "OUTBOX_NOT_DEAD": "Only a delivery that failed for good can be retried."
 }

@@ -52,6 +52,12 @@
           "label": "Manage roles",
           "description": "Add custom roles and change which permissions a role grants, and for which rows."
         }
+      },
+      "outbox": {
+        "manage": {
+          "label": "Manage event deliveries",
+          "description": "See event deliveries that failed for good and send them again."
+        }
       }
     },
     "hr": {

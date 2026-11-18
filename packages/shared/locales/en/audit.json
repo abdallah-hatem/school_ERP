@@ -27,7 +27,8 @@
     "lateness_month": "Monthly lateness",
     "payroll_run": "Payroll run",
     "accounting_settings": "Accounting rules",
-    "accounting_payroll": "Payroll taxes"
+    "accounting_payroll": "Payroll taxes",
+    "outbox_delivery": "Event delivery"
   },
   "actions": {
     "core": {
@@ -58,6 +59,9 @@
         "create": "Added the role {entity}",
         "update": "Edited the role {entity}",
         "delete": "Deleted the role {entity}"
+      },
+      "outbox": {
+        "retry": "Retried the event delivery {entity}"
       }
     },
     "hr": {
