@@ -1,9 +1,14 @@
 import { Module } from '@nestjs/common';
 import { AuditModule } from '../../core/audit';
+import { NotificationsModule } from '../../core/notifications';
 import { PermissionsModule } from '../../core/permissions';
 import { SettingsModule } from '../../core/settings';
 import { HrAccessService } from './access/hr-access.service';
 import { HrAuditAccess } from './access/hr-audit-access';
+import { HrNotificationScopes } from './access/hr-notification-scopes';
+import { HrRemindersJob } from './reminders/hr-reminders.job';
+import { HrRemindersService } from './reminders/hr-reminders.service';
+import { RemindersRepository } from './reminders/repositories/reminders.repository';
 import { DashboardController } from './dashboard/controllers/dashboard.controller';
 import { DashboardService } from './dashboard/services/dashboard.service';
 import { EmployeesController } from './employees/controllers/employees.controller';
@@ -38,7 +43,7 @@ import { LatenessService } from './staff-attendance/services/lateness.service';
  * Sub-folders add their controllers / providers here (additive). Export only public services.
  */
 @Module({
-  imports: [SettingsModule, PermissionsModule, AuditModule],
+  imports: [SettingsModule, PermissionsModule, AuditModule, NotificationsModule],
   controllers: [
     // settings (T6)
     HrSettingsController,
@@ -60,6 +65,12 @@ import { LatenessService } from './staff-attendance/services/lateness.service';
     // who sees which employees, and whose salary (P4: scopes R5, salary R7)
     HrAccessService,
     HrAuditAccess,
+    // which scoped recipients cover an HR notification's subject (§11, N5)
+    HrNotificationScopes,
+    // reminders (§11, N3): resolved at the change, sent by the daily job
+    HrRemindersService,
+    RemindersRepository,
+    HrRemindersJob,
     // settings (T6)
     HrSettingsService,
     // month lock (T6) — used by penalties, lateness and payroll

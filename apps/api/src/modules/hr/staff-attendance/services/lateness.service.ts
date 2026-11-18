@@ -14,6 +14,7 @@ import { AfterCommit } from '../../../../database/transactions';
 import { latenessDays } from '../../domain';
 import { EmployeesService } from '../../employees/services/employees.service';
 import { MonthLockService } from '../../month-lock/month-lock.service';
+import { HrRemindersService } from '../../reminders/hr-reminders.service';
 import { HrSettingsService } from '../../settings/hr-settings.service';
 import { LatenessRepository } from '../repositories/lateness.repository';
 
@@ -30,6 +31,7 @@ export class LatenessService {
     private readonly monthLock: MonthLockService,
     private readonly audit: AuditService,
     private readonly tx: AfterCommit,
+    private readonly reminders: HrRemindersService,
   ) {}
 
   /**
@@ -91,6 +93,9 @@ export class LatenessService {
         body.entries.map(({ employeeId, minutes }) => ({ employeeId, minutes })),
         userId,
       );
+      // §11 (N3): the month's lateness is entered (even all zeros) — its reminder is done. An
+      // empty save stores nothing, so it doesn't count.
+      if (body.entries.length > 0) await this.reminders.latenessSaved(month, userId);
       // One entry for the month (spec edge case 7): a line per employee whose minutes changed.
       const names = new Map((await this.employees.listActiveRefs()).map((e) => [e.id, e]));
       const changes: AuditChange[] = body.entries

@@ -601,6 +601,9 @@ Work on a clock — backups, reminders, reports (`core/jobs`, `@nestjs/schedule`
   `outbox.deliver` (`core/events`, every 30 s, `lock: false`): delivers due outbox deliveries.
   `outbox.cleanup` (`core/events`, 03:30, `lock: false`): deletes delivered events older than 30 days.
   `core.notifications.purge` (`core/notifications`, 02:30): deletes expired notifications (below).
+  `hr.reminders.daily` (`modules/hr/reminders`, 07:00): HR's reminders — contracts and probation
+  ending soon, lateness not entered, payroll not prepared / still a draft (Notifications → HR's
+  reminders).
 
 ### Notifications
 
@@ -668,8 +671,23 @@ types** and sends through core's exported `NotificationsService` — core never 
 - **Retention (N14)**: core settings `notifications.retention.readDays` / `resolvedDays` / `maxDays`
   (90 / 30 / 365, each 1–3650); the nightly `core.notifications.purge` (02:30, advisory lock) deletes
   what is past them, with items and deliveries. Not audited.
-- **Not yet:** no module sends (HR's types come with N2 / N3, which register HR's scope resolver);
-  the bell, My account tab and Settings section are N4 (the `SETTINGS_SECTION_ACCESS` entry for
+- **HR's reminders (N3, `modules/hr/reminders`).** The daily job `hr.reminders.daily` (07:00 school
+  time, advisory lock) works out **today on the school's clock** (`schoolDayOf`), reads the timings
+  (HR settings `hr.reminders.*`: contract 30 and 7 days, probation 7 days, lateness check day 25,
+  payroll check day 28) and, **one `afterCommit.inTransaction` per type in turn**, the type's open
+  items (`NotificationsService.openItems`) and HR's facts. The pure `reminders.pure.ts` decides what
+  is due (today or overdue — a missed day is caught up once) and which open items no longer hold;
+  those are resolved `done` (`resolve` with a `dedupeKey` for one reminder of a subject: the 30-day
+  contract item when the 7-day one is sent), then the due ones are sent. Dedupe keys
+  `contract_end:<employee>:<date>:<days>`, `probation_end:<employee>:<date>`,
+  `lateness_missing:<month>`, `payroll_missing:<month>`, `payroll_unapproved:<month>`; contract items
+  group per school day and window (`2027-05-01:30`). A check day past the month's end is its last
+  day. HR's services resolve at the change too, in their own transactions (`HrRemindersService`): a
+  moved contract / probation end, a deactivation, a saved lateness month, a created run, an
+  approved run ("Approved by …"). Subjects: `employee` (scoped through `HrNotificationScopes` with
+  HR's stage / team rule), `lateness_month`, `payroll_month`, `payroll_run` (whole-school: a scoped
+  holder is never told).
+- **Not yet:** HR's approval notifications (N2); the bell, My account tab and Settings section are N4 (the `SETTINGS_SECTION_ACCESS` entry for
   Settings → Notifications comes with that screen).
 
 ### Deliberate shortcuts

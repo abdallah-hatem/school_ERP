@@ -9,6 +9,7 @@ import { DepartmentsService } from '../../lists/services/departments.service';
 import { JobTitlesService } from '../../lists/services/job-titles.service';
 import type { CreateEmployeeDto } from '../dto/employee.dto';
 import { EmployeeDetailRow, EmployeesRepository } from '../repositories/employees.repository';
+import type { HrRemindersService } from '../../reminders/hr-reminders.service';
 import type { HrSettingsService } from '../../settings/hr-settings.service';
 import { EmployeesService } from './employees.service';
 import { fakeAccess } from '../../access/hr-access.testing';
@@ -105,6 +106,11 @@ function makeService(
     remove: jest.fn().mockResolvedValue(undefined),
   };
   const audit = { record: jest.fn(() => Promise.resolve()) };
+  const reminders = {
+    contractChanged: jest.fn(() => Promise.resolve()),
+    probationChanged: jest.fn(() => Promise.resolve()),
+    employeeDeactivated: jest.fn(() => Promise.resolve()),
+  };
   // Runs after-commit work at once, as it does outside a transaction; a throw from the
   // transaction runs the rollback work.
   const rollback: (() => unknown)[] = [];
@@ -130,8 +136,9 @@ function makeService(
     audit as unknown as AuditService,
     afterCommit as unknown as AfterCommit,
     { defaultProbationMonths: jest.fn().mockResolvedValue(probationMonths) } as unknown as HrSettingsService,
+    reminders as unknown as HrRemindersService,
   );
-  return { service, repository, events, files, audit, afterCommit };
+  return { service, repository, events, files, audit, afterCommit, reminders };
 }
 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0]);
@@ -699,5 +706,51 @@ describe('EmployeesService — probation end (§3, N0)', () => {
     expect((await service.get('e1')).probationEnd).toBeNull();
     const dated = makeService();
     expect((await dated.service.get('e1')).probationEnd).toBe('2024-03-31');
+  });
+});
+
+describe('EmployeesService — reminders resolved at the change (§11, N3)', () => {
+  it('N3 edge 2 — a moved contract end resolves its open reminder; an unchanged one does not', async () => {
+    const moved = makeService({
+      updateEmployee: jest.fn().mockResolvedValue(row({ contractEnd: d('2026-08-31') })),
+    });
+    await moved.service.update('e1', { contractEnd: '2026-08-31' });
+    expect(moved.reminders.contractChanged).toHaveBeenCalledWith('e1');
+    expect(moved.reminders.probationChanged).not.toHaveBeenCalled();
+
+    const same = makeService({ updateEmployee: jest.fn().mockResolvedValue(row({ grade: 'B' })) });
+    await same.service.update('e1', { grade: 'B' });
+    expect(same.reminders.contractChanged).not.toHaveBeenCalled();
+    expect(same.reminders.probationChanged).not.toHaveBeenCalled();
+  });
+
+  it('N3 edge 11 / N0 edge 5 — a moved or cleared probation end resolves its open reminder', async () => {
+    const cleared = makeService({
+      updateEmployee: jest.fn().mockResolvedValue(row({ probationEnd: null })),
+    });
+    await cleared.service.update('e1', { probationEnd: null });
+    expect(cleared.reminders.probationChanged).toHaveBeenCalledWith('e1');
+    expect(cleared.reminders.contractChanged).not.toHaveBeenCalled();
+  });
+
+  it('N3 edge 12 — deactivating resolves the reminders about the employee; a no-op deactivation and a reactivation do not', async () => {
+    const active = makeService({
+      updateEmployee: jest.fn().mockResolvedValue(row({ status: 'INACTIVE' })),
+    });
+    await active.service.deactivate('e1');
+    expect(active.reminders.employeeDeactivated).toHaveBeenCalledWith('e1');
+
+    const inactive = makeService({ findDetail: jest.fn().mockResolvedValue(row({ status: 'INACTIVE' })) });
+    await inactive.service.deactivate('e1');
+    await inactive.service.reactivate('e1');
+    expect(inactive.reminders.employeeDeactivated).not.toHaveBeenCalled();
+  });
+
+  it('a refused edit resolves nothing (the resolve rides on the change)', async () => {
+    const { service, reminders } = makeService();
+    await expect(service.update('e1', { probationEnd: '2023-12-31' })).rejects.toMatchObject({
+      code: ErrorCode.PROBATION_BEFORE_HIRE,
+    });
+    expect(reminders.probationChanged).not.toHaveBeenCalled();
   });
 });
