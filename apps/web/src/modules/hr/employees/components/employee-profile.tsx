@@ -202,6 +202,9 @@ export function EmployeeDetails({ employee }: { employee: Employee }) {
       <DetailsCard title={t('employees.sections.job')}>
         <DetailsItem label={t('employees.fields.code')}>{ltr(employee.code)}</DetailsItem>
         <DetailsItem label={t('employees.fields.hireDate')}>{date(employee.hireDate)}</DetailsItem>
+        <DetailsItem label={t('employees.fields.probationEnd')}>
+          {employee.probationEnd ? date(employee.probationEnd) : t('employees.noProbation')}
+        </DetailsItem>
         <DetailsItem label={t('employees.fields.stage')}>{localName(employee.stage, locale)}</DetailsItem>
         <DetailsItem label={t('employees.fields.department')}>{localName(employee.department, locale)}</DetailsItem>
         <DetailsItem label={t('employees.fields.jobTitle')}>{localName(employee.jobTitle, locale)}</DetailsItem>

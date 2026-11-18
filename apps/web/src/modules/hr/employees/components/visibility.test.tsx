@@ -80,6 +80,23 @@ describe('profile Details (R7)', () => {
     expect(screen.getByText('123')).toBeTruthy();
   });
 
+  it('N0 edge 9 — the probation end is not salary-type: a Stage head sees it; empty reads "No probation"', () => {
+    renderEmployees(<EmployeeDetails employee={withoutSalary} />, 'en', STAGE_HEAD);
+    const item = screen.getByText('Probation ends').closest('div')!;
+    expect(within(item).getByText('30 Nov 2020')).toBeTruthy();
+    cleanup();
+    renderEmployees(<EmployeeDetails employee={{ ...withoutSalary, probationEnd: null }} />, 'ar', STAGE_HEAD);
+    const ar = screen.getByText('نهاية فترة الاختبار').closest('div')!;
+    expect(within(ar).getByText('بدون فترة اختبار')).toBeTruthy();
+  });
+
+  it('the Details skeleton has the probation line in the same place', () => {
+    renderEmployees(<EmployeeDetailsSkeleton />, 'en', STAGE_HEAD);
+    const job = screen.getByRole('heading', { name: 'Job' }).closest('section')!;
+    const labels = within(job).getAllByRole('term').map((t) => t.textContent);
+    expect(labels.slice(0, 3)).toEqual(['Employee code', 'Hire date', 'Probation ends']);
+  });
+
   it('with the salary: every salary field and the bank card', () => {
     renderEmployees(<EmployeeDetails employee={withSalary} />);
     expect(screen.getByText('Basic monthly salary')).toBeTruthy();

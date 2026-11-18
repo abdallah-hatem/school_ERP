@@ -254,6 +254,19 @@ describe('core + HR people audit wiring (T28, e2e)', () => {
     ]);
   });
 
+  it('N0 edge 8 — an edit changing only the probation end is one hr.employee.update with that field; other edits don’t list it', async () => {
+    const e = await createEmployee();
+    const created = (await entries('hr.employee.create')).find((x) => x.entityId === e.id);
+    expect(field(created!, 'probationEnd')).toEqual({ field: 'probationEnd', before: null, after: '2010-11-30' });
+    mark = await historyMark(db);
+    await http(app).patch(`/hr/employees/${e.id}`).send({ probationEnd: '2010-12-31' }).expect(200);
+    await http(app).patch(`/hr/employees/${e.id}`).send({ phone: '01333333333' }).expect(200);
+    const list = await entries('hr.employee.update');
+    expect(list).toHaveLength(2);
+    expect(changesOf(list[0])).toEqual([{ field: 'probationEnd', before: '2010-11-30', after: '2010-12-31' }]);
+    expect(changesOf(list[1]).map((c) => c.field)).toEqual(['phone']);
+  });
+
   it('a refused employee edit (duplicate national ID) leaves no entry and no change', async () => {
     const nationalId = String(Date.now()).padStart(14, '2').slice(-14);
     await createEmployee({ nationalId });

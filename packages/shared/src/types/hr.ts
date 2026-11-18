@@ -104,6 +104,11 @@ export interface CreateEmployeeRequest extends Names {
   contractStart?: IsoDate;
   /** Defaults to 31 May of the next year. */
   contractEnd?: IsoDate;
+  /**
+   * §3 (N0): on or after the hire date. Left out or empty on create → hire date + the school's
+   * default probation length (none when it is 0). Empty on edit → no probation.
+   */
+  probationEnd?: IsoDate | null;
   usesBus?: boolean;
   /** Defaults to NOT_INSURED, which clears the three insurance fields below. */
   insuranceStatus?: InsuranceStatus;
@@ -167,6 +172,8 @@ export interface Employee extends Names, SalaryVisibility {
   fingerprintId: string | null;
   contractStart: IsoDate;
   contractEnd: IsoDate;
+  /** §3 (N0): null = no probation. Not salary-type: shown to whoever sees the employee. */
+  probationEnd: IsoDate | null;
   usesBus: boolean;
   /** Signed-in-only image URL; null → the silhouette avatar. */
   photoUrl: string | null;
@@ -347,16 +354,27 @@ export interface PenaltyRule {
   repetitionWindow: RepetitionWindow;
 }
 
+/** §3, §7 (N0): the length a new employee's probation end is filled from. */
+export interface EmployeeRule {
+  /** Whole months, 0–6; 0 = no probation (the field is left empty). */
+  defaultProbationMonths: number;
+}
+
 export interface HrSettings {
   lateness: LatenessRule;
   payroll: PayrollRule;
   penalties: PenaltyRule;
+  employees: EmployeeRule;
 }
+
+/** The HR rules a payroll run's panel shows (§5, §6, §7): only those its figures depend on. */
+export type PayrollRunRules = Pick<HrSettings, 'lateness' | 'payroll' | 'penalties'>;
 
 export interface UpdateHrSettingsRequest {
   lateness?: Partial<LatenessRule>;
   payroll?: { dayDivisor?: number; partTime?: Partial<Record<PartTimeWorkSystem, number>> };
   penalties?: Partial<PenaltyRule>;
+  employees?: Partial<EmployeeRule>;
 }
 
 // ── Payroll ────────────────────────────────────────────────────────────────
@@ -464,7 +482,7 @@ export interface PayrollRun extends PayrollRunSummary {
    * TODAY's rules: on a draft they are exactly what the next calculation uses; on an approved run
    * the screen words them as the current rules, not the ones it was approved with. No money.
    */
-  rules: HrSettings;
+  rules: PayrollRunRules;
   lines: PayrollLine[];
   adjustments: PayrollAdjustment[];
 }

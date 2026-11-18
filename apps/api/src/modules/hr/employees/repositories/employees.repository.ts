@@ -80,6 +80,7 @@ export const EMPLOYEE_DETAIL_SELECT = {
   fingerprintId: true,
   contractStart: true,
   contractEnd: true,
+  probationEnd: true,
   usesBus: true,
   photoUrl: true,
   insuranceStatus: true,

@@ -143,6 +143,14 @@ export class CreateEmployeeDto implements CreateEmployeeRequest {
   @IsIsoDate()
   contractEnd?: string;
 
+  /**
+   * §3 (N0): on or after the hire date (service check, 400 `PROBATION_BEFORE_HIRE`). Left out or
+   * null on create → hire date + the default probation length; null on edit → no probation.
+   */
+  @IsOptional()
+  @IsIsoDate()
+  probationEnd?: string | null;
+
   @IsOptional()
   @IsBoolean()
   usesBus?: boolean;

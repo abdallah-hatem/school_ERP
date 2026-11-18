@@ -63,6 +63,8 @@ export const ErrorCode = {
   INVALID_MANAGER: 'INVALID_MANAGER',
   MANAGER_LOOP: 'MANAGER_LOOP',
   MANAGER_NOT_MANAGING: 'MANAGER_NOT_MANAGING',
+  /** §3 (N0): the probation end is before the hire date. */
+  PROBATION_BEFORE_HIRE: 'PROBATION_BEFORE_HIRE',
 
   // penalties
   VIOLATION_RETIRED: 'VIOLATION_RETIRED',

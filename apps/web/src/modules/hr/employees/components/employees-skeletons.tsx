@@ -62,6 +62,7 @@ const DETAILS_SKELETON: { title: string; className?: string; fields: { key: stri
     fields: [
       { key: 'code' },
       { key: 'hireDate' },
+      { key: 'probationEnd' },
       { key: 'stage' },
       { key: 'department' },
       { key: 'jobTitle' },

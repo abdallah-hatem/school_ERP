@@ -1,6 +1,6 @@
 import {
   SETTING_DEFAULTS,
-  type HrSettings,
+  type PayrollRunRules,
   type PayrollAdjustment,
   type PayrollLine,
   type PayrollRun,
@@ -118,7 +118,7 @@ export function summary(r: PayrollRun = run()): PayrollRunSummary {
   };
 }
 
-export const SETTINGS: HrSettings = {
+export const SETTINGS: PayrollRunRules = {
   lateness: {
     graceMinutes: SETTING_DEFAULTS['hr.lateness.graceMinutes'],
     steps: SETTING_DEFAULTS['hr.lateness.steps'],

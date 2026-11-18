@@ -7,7 +7,6 @@ import {
   PayrollStatus,
   PenaltyStatus,
   type Department,
-  type HrSettings,
   type PayrollLine,
   type PayrollRun,
   type PayrollRunQuery,
