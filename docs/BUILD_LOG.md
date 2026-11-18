@@ -181,6 +181,14 @@ phase live in `docs/build-log/`.
   parent's skeleton); `23-skeletons*.spec.ts` compares skeleton and loaded blocks on desktop EN and
   phone AR (±8px). All four checks green; dev re-checked.
 
+- 2026-11-18 — #88 leftovers fixed → #94: the Add user password is made once by the server screen
+  (no hydration mismatch); the Users list uses the shared Clear filters.
+- 2026-11-18 — Tamer's accounting stack done (owner merges): #83 Settings → Accounting (the
+  Accountant opens it through the shared screen list; read-only without edit) and #85 taxes on
+  approval (tax rule versions + insurance snapshot on HR's approved lines, so a month worked out
+  late matches approval day) merged after review and all four checks; #85's docs conflicts with
+  #83 resolved by us. #78 is replaced by the stack.
+
 ## Next up
 
 - **Accounting payroll taxes screen** — a page per approved month (net, insurance share, income tax,
@@ -217,6 +225,5 @@ phase live in `docs/build-log/`.
 
 - Optional: server-side paging for lateness (loads the whole month today) and column sorting.
 - The stage "None" band is detected by its English name; key it by an id instead.
-- Small leftovers from #88: UserForm makes its temporary password during render (hydration
-  mismatch); the Users list uses its own Clear filters instead of the shared one; the History tab's
-  skeleton assumes entries, so it still jumps while History is empty (until T28).
+- Leftover from #88: the History tab's skeleton assumes entries, so it still jumps while History is
+  empty (until T28); then compare the timeline in full.
