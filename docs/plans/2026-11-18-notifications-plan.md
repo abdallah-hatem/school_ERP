@@ -178,7 +178,7 @@ notifications with at least one open item the reader may see; an audit line for 
 29. The HR manager opens Settings → Notifications → everything read-only; PUT → 403. The System
     admin can save. — owner 2026-11-18
 
-## N2 — HR approval notifications (`logic`, backend)
+## N2 — HR approval notifications (`logic`, backend) — ✅ done (PR `feature/n2-approval-notifications`)
 
 - Register HR's `NotificationScopeResolver` for `employee` and `penalty` subjects (from
   `modules/hr/access`: `inScope`), and `payroll_run` (scope `all` only).
@@ -191,8 +191,9 @@ notifications with at least one open item the reader may see; an audit line for 
   `payroll_ready:<month>:<calculatedAt>`)`; approve → `resolve(..., 'approved')`; a penalty recorded
   in a month whose run has an open "ready" → `resolve(..., 'done')`.
 - The net goes in `params` only for readers who see the run totals: core stores one row per
-  recipient, so HR passes `params` per recipient through a `paramsFor(user)` callback (GUESS — or two
-  variants; settle in the task).
+  recipient, so HR passes `params` per recipient through a `paramsFor(user)` callback — **settled
+  (N2): `notify({ paramsFor })`**; the net goes to holders of `hr.payroll.view` at `all`, absent for
+  anyone else (decided at send time).
 
 **Edge cases** (expected outcome — source):
 

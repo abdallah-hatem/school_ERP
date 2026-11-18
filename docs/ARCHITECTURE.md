@@ -638,7 +638,8 @@ types** and sends through core's exported `NotificationsService` — core never 
   and its values (names as `{ en, ar }`), never a sentence (N3). `NotificationTypes` in core is the
   registry (`register` adds one — the tests' test-only type).
 - **Sending.** `notify({ type, subject: { entityType, entityId, employeeId? }, params, dedupeKey,
-  actorId?, groupKey? })` and `resolve({ type, subject, resolution, byUserId? })` write in the
+  actorId?, groupKey? })` (or `paramsFor(userId)` instead of `params` when a value depends on the
+  reader — asked once per new item) and `resolve({ type, subject, resolution, byUserId? })` write in the
   **current** transaction and throw outside one (`NotificationOutsideTransactionError`), like
   `audit.record()`: a module calls them inside its own change's transaction, so the change and its
   notifications commit or roll back together (N4). A module reacting to *another* module's event does
@@ -702,7 +703,7 @@ types** and sends through core's exported `NotificationsService` — core never 
   group per school day and window (`2027-05-01:30`). A check day past the month's end is its last
   day. HR's services resolve at the change too, in their own transactions (`HrRemindersService`): a
   moved contract / probation end, a deactivation, a saved lateness month, a created run, an
-  approved run ("Approved by …"). Subjects: `employee` (scoped through `HrNotificationScopes` with
+  approved run ("Approved by …"). Subjects: `employee` and `penalty` (N2) (scoped through `HrNotificationScopes` with
   HR's stage / team rule), `lateness_month`, `payroll_month`, `payroll_run` (whole-school: a scoped
   holder is never told).
 - **Screens (N4, option A of `design/mockups/notifications.html`)** — `apps/web/src/core/notifications`:
@@ -722,7 +723,19 @@ types** and sends through core's exported `NotificationsService` — core never 
   same list for the defaults plus the reminder timing (HR rules: `PUT /hr/settings`,
   `hr.settings.edit`) and the retention; defaults and retention follow `core.notifications.manage`,
   so the HR manager sees them read-only. In-app only: no other channel appears in the UI.
-- **Not yet:** HR's approval notifications (N2).
+- **HR's approvals (N2)** — `modules/hr/notifications/hr-notifications.service.ts`, called by the
+  penalty and payroll services inside their own write's transaction (no `RequiresNew`).
+  `hr.penalty.awaiting_approval` (subject `penalty` + its `employeeId`, dedupe `penalty:<id>`) on
+  record; resolved `approved` / `cancelled` (pending only). `hr.payroll.ready_to_approve` (subject
+  `payroll_run`, dedupe `payroll_ready:<month>:<calculatedAt>`) after create / recalculate with no
+  pending penalty in the month, the previous one resolved `done` first; resolved `done` by a penalty
+  recorded in the month, `approved` on approval ("still a draft" is the reminders'). Its `net` is
+  per reader through `notify({ paramsFor })` — only for a holder of `hr.payroll.view` at `all` (R7);
+  absent otherwise. A `penalty` subject is scoped by `HrNotificationScopes` with the employee rule,
+  on the penalty's employee **as the employee is now** (a stage move takes it from the old stage's
+  approver). The Penalties screen opens the
+  linked penalty (`?penalty=<id>`: its month's list with `PenaltyDetailsDialog` over it; unknown or
+  out of scope → not found).
 
 ### Deliberate shortcuts
 

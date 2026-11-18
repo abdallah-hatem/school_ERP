@@ -185,6 +185,19 @@ describe('NotificationsService.notify', () => {
     expect(notifications.touch).toHaveBeenCalledWith('n-open', expect.any(Date));
   });
 
+  it('paramsFor: each recipient gets their own values; a repeat never asks (HR payroll net, §2 R7)', async () => {
+    const { service, notifications } = make({ holders: ['u-1', 'u-2'], existing: new Set(['u-2']) });
+    const paramsFor = jest.fn((id: string) => Promise.resolve({ who: id }));
+    expect(await notify(service, { paramsFor })).toEqual({ created: 1 });
+    expect(paramsFor).toHaveBeenCalledTimes(1);
+    expect(notifications.insertItem).toHaveBeenCalledWith(
+      expect.any(String),
+      { kind: 'user', id: 'u-1' },
+      expect.objectContaining({ params: { who: 'u-1' } }),
+      expect.any(Date),
+    );
+  });
+
   it('lost the race for the dedupe key → the empty notification it made is dropped (edge case 4)', async () => {
     const { service, notifications } = make({ holders: ['u-1'], insertOk: false });
     expect(await notify(service)).toEqual({ created: 0 });

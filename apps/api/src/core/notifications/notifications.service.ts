@@ -24,6 +24,11 @@ export interface NotifyInput {
   subject: NotificationSubject;
   /** The sentence's values: names as `{ en, ar }`, months, counts, dates — never a sentence (N3). */
   params?: Record<string, unknown>;
+  /**
+   * The values for one recipient, when they differ by reader (instead of `params`): a salary-type
+   * value only for someone who may see it (HR's payroll net, §2 R7). Asked once per recipient.
+   */
+  paramsFor?: (userId: string) => Promise<Record<string, unknown>>;
   /** Built with `notificationDedupeKey(type, ...)`: the same key twice for a person is a no-op (N9). */
   dedupeKey: string;
   /** Who caused it: left out of the recipients (GUESS). Null or absent for a reminder. */
@@ -215,7 +220,7 @@ export class NotificationsService {
       entityType: input.subject.entityType,
       entityId: input.subject.entityId,
       employeeId: input.subject.employeeId ?? null,
-      params: input.params ?? {},
+      params: input.paramsFor ? await input.paramsFor(to.id) : (input.params ?? {}),
       dedupeKey: input.dedupeKey,
     };
     if (!(await this.notifications.insertItem(notificationId, to, item, now))) {

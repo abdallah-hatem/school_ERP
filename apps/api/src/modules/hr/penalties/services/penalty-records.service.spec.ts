@@ -3,6 +3,7 @@ import type { AuditService } from '../../../../core/audit';
 import type { AfterCommit } from '../../../../database/transactions';
 import type { EmployeesService } from '../../employees/services/employees.service';
 import type { MonthLockService } from '../../month-lock/month-lock.service';
+import type { HrNotificationsService } from '../../notifications/hr-notifications.service';
 import type { HrSettingsService } from '../../settings/hr-settings.service';
 import type { PenaltyRecordsRepository } from '../repositories/penalty-records.repository';
 import type { PenaltyCatalogueService } from './penalty-catalogue.service';
@@ -61,6 +62,11 @@ function makeService(repo: Record<string, jest.Mock> = {}, oncePerDay = true, ac
   const audit = { record: jest.fn().mockResolvedValue(undefined) };
   // Stands in for the request transaction: runs the work, counting how often one was opened.
   const tx = { inTransaction: jest.fn((fn: () => Promise<unknown>) => fn()) };
+  const notifications = {
+    penaltyRecorded: jest.fn().mockResolvedValue(undefined),
+    penaltyApproved: jest.fn().mockResolvedValue(undefined),
+    penaltyCancelled: jest.fn().mockResolvedValue(undefined),
+  };
   const service = new PenaltyRecordsService(
     repository as unknown as PenaltyRecordsRepository,
     {
@@ -72,8 +78,9 @@ function makeService(repo: Record<string, jest.Mock> = {}, oncePerDay = true, ac
     access,
     audit as unknown as AuditService,
     tx as unknown as AfterCommit,
+    notifications as unknown as HrNotificationsService,
   );
-  return { service, repository, monthLock, audit, tx };
+  return { service, repository, monthLock, audit, tx, notifications };
 }
 
 describe('PenaltyRecordsService', () => {
@@ -314,6 +321,60 @@ describe('PenaltyRecordsService — audit entries (§9, T29)', () => {
     locked.monthLock.assertMonthOpen.mockRejectedValue(new Error('locked'));
     await expect(locked.service.cancel('r1', { reason: 'x' }, 'u1')).rejects.toThrow('locked');
     expect(locked.audit.record).not.toHaveBeenCalled();
+  });
+
+  describe('approval notifications (§11, plan N2)', () => {
+    it('recording tells the approvers, in the recording transaction, with the names and the level', async () => {
+      const { service, notifications, tx } = makeService();
+      await service.create(dto, 'u1');
+      expect(tx.inTransaction).toHaveBeenCalledTimes(1);
+      expect(notifications.penaltyRecorded).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'r1',
+          employee: expect.objectContaining({ id: 'e1', nameEn: 'A', nameAr: 'أ' }),
+          violation: expect.objectContaining({ nameEn: 'Late', nameAr: 'تأخر' }),
+          level: 1,
+          month: '2025-11',
+        }),
+        'u1',
+      );
+    });
+
+    it('approving resolves it as approved by the approver (edge 4)', async () => {
+      const { service, notifications } = makeService();
+      await service.approve('r1', 'u1');
+      expect(notifications.penaltyApproved).toHaveBeenCalledWith('r1', 'u1');
+    });
+
+    it('cancelling a pending one resolves it as cancelled (edge 5); an approved one sends nothing (edge 6)', async () => {
+      const pending = makeService();
+      await pending.service.cancel('r1', { reason: 'x' }, 'u1');
+      expect(pending.notifications.penaltyCancelled).toHaveBeenCalledWith('r1', 'u1');
+
+      const approved = makeService({
+        findOne: jest.fn().mockResolvedValue(row({ status: 'APPROVED' })),
+      });
+      await approved.service.cancel('r1', { reason: 'x' }, 'u1');
+      expect(approved.notifications.penaltyCancelled).not.toHaveBeenCalled();
+    });
+
+    it('a refused recording or approval tells no one (edge 7)', async () => {
+      const sameDay = makeService({ createRecord: jest.fn().mockResolvedValue(null) });
+      await expect(sameDay.service.create(dto, 'u1')).rejects.toMatchObject({ status: 409 });
+      expect(sameDay.notifications.penaltyRecorded).not.toHaveBeenCalled();
+
+      const locked = makeService();
+      locked.monthLock.assertMonthOpen.mockRejectedValue(new Error('locked'));
+      await expect(locked.service.create(dto, 'u1')).rejects.toThrow('locked');
+      expect(locked.notifications.penaltyRecorded).not.toHaveBeenCalled();
+
+      const race = makeService({
+        approve: jest.fn().mockResolvedValue('NOT_PENDING'),
+        findStatus: jest.fn().mockResolvedValue({ status: 'APPROVED', date: '2025-11-10' }),
+      });
+      await expect(race.service.approve('r1', 'u1')).rejects.toMatchObject({ status: 409 });
+      expect(race.notifications.penaltyApproved).not.toHaveBeenCalled();
+    });
   });
 
   it('an employee History asked for a non-UUID record id has no penalties (no query on the uuid column)', async () => {

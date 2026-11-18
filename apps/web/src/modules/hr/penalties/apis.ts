@@ -39,6 +39,18 @@ export async function GET_PENALTIES(query: ListPenaltiesQuery = {}) {
   return handleResponse({ response, showErrorToast: false });
 }
 
+/**
+ * `GET /hr/penalties/:id` — one record (a notification's link, `?penalty=<id>`). 404 when unknown or
+ * outside the viewer's scope (§2: "This page isn't here").
+ */
+export async function GET_PENALTY(id: Uuid) {
+  const response = await apiFetch<PenaltyRecord>(`/hr/penalties/${encodeURIComponent(id)}`, {
+    method: 'GET',
+    next: { tags: [PENALTIES_TAG] },
+  });
+  return handleResponse({ response, showErrorToast: false });
+}
+
 /** `GET /hr/penalties/preview` — the level and action a new penalty would get. Saves nothing. */
 export async function GET_PENALTY_PREVIEW(query: PenaltyPreviewQuery) {
   const response = await apiFetch<PenaltyPreview>('/hr/penalties/preview', {

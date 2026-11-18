@@ -31,6 +31,7 @@ import {
 import { HrAccessService } from '../../access/hr-access.service';
 import { EmployeesService } from '../../employees/services/employees.service';
 import { MonthLockService } from '../../month-lock/month-lock.service';
+import { HrNotificationsService } from '../../notifications/hr-notifications.service';
 import { HrSettingsService } from '../../settings/hr-settings.service';
 import type {
   CancelPenaltyDto,
@@ -133,6 +134,7 @@ export class PenaltyRecordsService {
     private readonly access: HrAccessService,
     private readonly audit: AuditService,
     private readonly tx: AfterCommit,
+    private readonly notifications: HrNotificationsService,
   ) {}
 
   /** The records of the employees `hr.penalties.view` covers for the user (R5). */
@@ -194,7 +196,10 @@ export class PenaltyRecordsService {
     );
     if (!row) this.throwOncePerDay();
     await this.record('hr.penalty.record', null, row);
-    return this.present(row);
+    const recorded = await this.present(row);
+    // In the same transaction (§11, N4): a refused or rolled-back recording tells no one.
+    await this.notifications.penaltyRecorded({ ...recorded, month: monthOf(dto.date) }, createdById);
+    return recorded;
   }
 
   /** PENDING → APPROVED, fixing level, action and days from today's catalogue and count. */
@@ -228,6 +233,7 @@ export class PenaltyRecordsService {
     if (outcome === 'ONCE_PER_DAY') this.throwOncePerDay();
     if (outcome === 'NOT_PENDING') await this.throwStatusConflict(id);
     await this.record('hr.penalty.approve', current, await this.findWritten(id));
+    await this.notifications.penaltyApproved(id, approvedById);
     return this.get(id);
   }
 
@@ -254,6 +260,8 @@ export class PenaltyRecordsService {
       await this.throwStatusConflict(id);
     }
     await this.record('hr.penalty.cancel', current, await this.findWritten(id));
+    if (current.status === PenaltyStatus.PENDING)
+      await this.notifications.penaltyCancelled(id, cancelledById);
     return this.get(id);
   }
 

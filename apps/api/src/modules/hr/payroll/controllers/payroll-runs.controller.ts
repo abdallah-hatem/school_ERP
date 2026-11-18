@@ -53,8 +53,8 @@ export class PayrollRunsController {
   @Post(':id/recalculate')
   @Permission('hr.payroll.recalculate')
   @HttpCode(HttpStatus.OK)
-  recalculate(@Param('id', ParseUUIDPipe) id: string) {
-    return this.payroll.recalculate(id);
+  recalculate(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user?: AuthUser) {
+    return this.payroll.recalculate(id, user?.id ?? null);
   }
 
   @Audited('hr.payroll.approve')

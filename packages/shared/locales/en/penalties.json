@@ -92,5 +92,9 @@
       "other": "{count} earlier approved penalties for this violation in the repetition window."
     },
     "failed": "The level couldn't be worked out."
+  },
+  "details": {
+    "title": "Penalty",
+    "note": "Note"
   }
 }
