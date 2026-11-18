@@ -26,7 +26,7 @@ import {
   PdfIcon,
   SameRuleIcon,
 } from '@/shared/components/ui/icons';
-import { SkeletonButton, SkeletonProse, SkeletonText } from '@/shared/components/ui/skeleton';
+import { SkeletonButton, SkeletonPill, SkeletonProse, SkeletonText } from '@/shared/components/ui/skeleton';
 import { StatusPill } from '@/shared/components/ui/status-pill';
 import { saveDownloadedFile } from '@/shared/lib/download';
 import { formatCount, formatMoney, formatMonth } from '@/shared/lib/format';
@@ -115,7 +115,12 @@ export function Statement({ monthKey, month, todayRule, basePath }: StatementPro
         >
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
             <p className="text-sm break-words text-muted-foreground">
-              {loading ? <SkeletonText className="text-sm" width="w-64" /> : t('accounting.payrollTaxes.statement.kicker', { school })}
+              {/* The school's name is known while loading: drawn as its own text, it wraps the same way. */}
+              {loading ? (
+                <SkeletonProse>{t('accounting.payrollTaxes.statement.kicker', { school })}</SkeletonProse>
+              ) : (
+                t('accounting.payrollTaxes.statement.kicker', { school })
+              )}
             </p>
             <h2 className="font-display text-xl leading-tight font-extrabold @min-[740px]:text-2xl">{title}</h2>
             <p className="text-sm text-muted-foreground">
@@ -191,6 +196,11 @@ export function Statement({ monthKey, month, todayRule, basePath }: StatementPro
                     {t('accounting.payrollTaxes.statement.otherRule')}
                   </StatusPill>
                 )}
+              </span>
+            ) : loading ? (
+              // The badge's place: the Accountant and the System admin, who open this, see it.
+              <span className="mt-1">
+                <SkeletonPill className="w-40" />
               </span>
             ) : null}
           </div>
@@ -330,6 +340,9 @@ function Group({
         loading={!lines}
         getRowId={(l) => l.employeeId}
         footer={footer}
+        // A group can be empty one month (an empty state) and full the next: no skeleton can know,
+        // so the tables are measured as part of the statement (width only).
+        skeletonBlocks={false}
         cardsBelow={insured ? 900 : 740}
         empty={<EmptyState className="py-8" title={t('accounting.payrollTaxes.statement.noneInGroup')} description="" />}
         className="border border-border shadow-none"

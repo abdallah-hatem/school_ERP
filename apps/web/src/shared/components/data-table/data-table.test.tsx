@@ -160,6 +160,26 @@ describe('DataTable totals row (footer)', () => {
     expect(cells[1]!.getAttribute('colspan')).toBe('1');
   });
 
+  it('skeletonBlocks={false}: the table and its parts carry no skeleton block names', () => {
+    const { container } = renderWithI18n(
+      <DataTable
+        label="Employees"
+        columns={columns}
+        rows={people}
+        getRowId={(p) => p.id}
+        footer={{ label: 'Subtotal', cells: { salary: '2,630,000' } }}
+        skeletonBlocks={false}
+      />,
+    );
+    expect(container.querySelectorAll('[data-skeleton-block], [data-skeleton-each]')).toHaveLength(0);
+    cleanup();
+    const marked = renderWithI18n(
+      <DataTable label="Employees" columns={columns} rows={people} getRowId={(p) => p.id} footer={{ label: 'Subtotal' }} />,
+    );
+    const names = [...marked.container.querySelectorAll<HTMLElement>('[data-skeleton-block]')].map((el) => el.dataset.skeletonBlock);
+    expect(new Set(names)).toEqual(new Set(['table', 'table-head', 'table-row', 'table-foot', 'table-card', 'table-card-foot']));
+  });
+
   it('keeps its place in the skeleton and is not drawn on an empty list', () => {
     const footer = { label: 'Subtotal', cells: { salary: '2,630,000' } };
     const { container, unmount } = renderWithI18n(

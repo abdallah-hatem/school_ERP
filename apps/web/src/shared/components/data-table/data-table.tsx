@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { createContext, useContext, type ReactNode } from 'react';
 import { EmptyState, ErrorState } from '@/shared/components/layout/empty-state';
 import { SkeletonText } from '@/shared/components/ui/skeleton';
 import { useScrollEdges } from '@/shared/hooks/use-scroll-edges';
@@ -96,10 +96,22 @@ export interface DataTableProps<Row> {
   cardHeightsVary?: boolean;
   /** A totals row under the rows (and a summary card under the cards). Not drawn on an empty list. */
   footer?: DataTableFooter;
+  /**
+   * `false`: the table and its parts carry no `data-skeleton-block`, so the skeleton spec measures
+   * them as part of the block around them. For a table whose very presence is data — a statement's
+   * group that is empty one month (an empty state) and full the next — which no skeleton can know.
+   */
+  skeletonBlocks?: boolean;
   className?: string;
 }
 
 const alignClass = { start: 'text-start', end: 'text-end', center: 'text-center' } as const;
+
+/** Whether this table's parts carry their `data-skeleton-block` names (`skeletonBlocks`). */
+const BlocksContext = createContext(true);
+function useBlock(name: string): string | undefined {
+  return useContext(BlocksContext) ? name : undefined;
+}
 const SKELETON_CAP = 20;
 
 function cardLabel<Row>(column: DataTableColumn<Row>): ReactNode {
@@ -123,6 +135,7 @@ export function DataTable<Row>({
   cardsBelow = 740,
   cardHeightsVary = false,
   footer,
+  skeletonBlocks = true,
   className,
 }: DataTableProps<Row>) {
   const view = VIEW_CLASSES[cardsBelow];
@@ -174,18 +187,20 @@ export function DataTable<Row>({
   }
 
   return (
-    <section
-      aria-label={label}
-      data-cards-below={cardsBelow}
-      // Its height follows the row count; the head, a row and the pagination are measured instead.
-      data-skeleton-block="table"
-      data-skeleton-measure="width"
-      className={cn('@container min-w-0 overflow-hidden rounded-3xl bg-card shadow-card', className)}
-    >
-      {toolbar ? <div data-skeleton-block="table-toolbar" className="flex flex-wrap items-center gap-3 px-5 pt-5 pb-4">{toolbar}</div> : null}
-      {body}
-      {pagination && !error ? <Pagination {...pagination} disabled={loading || refreshing} loading={showSkeleton} /> : null}
-    </section>
+    <BlocksContext.Provider value={skeletonBlocks}>
+      <section
+        aria-label={label}
+        data-cards-below={cardsBelow}
+        // Its height follows the row count; the head, a row and the pagination are measured instead.
+        data-skeleton-block={skeletonBlocks ? 'table' : undefined}
+        data-skeleton-measure={skeletonBlocks ? 'width' : undefined}
+        className={cn('@container min-w-0 overflow-hidden rounded-3xl bg-card shadow-card', className)}
+      >
+        {toolbar ? <div data-skeleton-block={skeletonBlocks ? 'table-toolbar' : undefined} className="flex flex-wrap items-center gap-3 px-5 pt-5 pb-4">{toolbar}</div> : null}
+        {body}
+        {pagination && !error ? <Pagination {...pagination} disabled={loading || refreshing} loading={showSkeleton} /> : null}
+      </section>
+    </BlocksContext.Provider>
   );
 }
 
@@ -211,6 +226,9 @@ const toneBar = {
 
 function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass, footer }: RowsProps<Row>) {
   const { ref, edges } = useScrollEdges<HTMLDivElement>();
+  const head = useBlock('table-head');
+  const rowBlock = useBlock('table-row');
+  const foot = useBlock('table-foot');
   return (
     <div data-view="table" className={cn('relative', viewClass)}>
       {/* Edge fades only on a side that hides columns, so a sideways scroll is never missed. */}
@@ -228,7 +246,7 @@ function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass, footer
       />
       <div ref={ref} className="scrollbar-clean overflow-x-auto">
       <table aria-label={label} className="w-full border-separate border-spacing-0 text-sm">
-        <thead data-skeleton-block="table-head">
+        <thead data-skeleton-block={head}>
           <tr>
             {columns.map((column) => (
               <th
@@ -250,7 +268,7 @@ function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass, footer
           {rows.map((row) => {
             const tone = rowTone?.(row);
             return (
-              <tr key={getRowId(row)} data-skeleton-block="table-row" data-skeleton-each className="group/row">
+              <tr key={getRowId(row)} data-skeleton-block={rowBlock} data-skeleton-each={rowBlock ? '' : undefined} className="group/row">
                 {columns.map((column, i) => (
                   <td
                     key={column.id}
@@ -271,7 +289,7 @@ function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass, footer
           })}
         </tbody>
         {footer ? (
-          <tfoot data-skeleton-block="table-foot">
+          <tfoot data-skeleton-block={foot}>
             <tr>
               {(footer.note === undefined ? columns : columns.slice(0, 1)).map((column, i) => (
                 <td
@@ -313,6 +331,7 @@ function Cards<Row>({ columns, rows, getRowId, label, rowTone, viewClass, height
   const fields = columns.filter((c) => (c.card ?? 'field') === 'field' || c.card === 'wide');
   const actions = columns.filter((c) => c.card === 'actions');
   const menus = columns.filter((c) => c.card === 'menu');
+  const card = useBlock('table-card');
 
   return (
     <ul data-view="cards" aria-label={label} className={cn('grid gap-3 px-4 pb-4', viewClass)}>
@@ -321,9 +340,9 @@ function Cards<Row>({ columns, rows, getRowId, label, rowTone, viewClass, height
         return (
           <li
             key={getRowId(row)}
-            data-skeleton-block="table-card"
-            data-skeleton-each
-            data-skeleton-measure={heightsVary ? 'width' : undefined}
+            data-skeleton-block={card}
+            data-skeleton-each={card ? '' : undefined}
+            data-skeleton-measure={card && heightsVary ? 'width' : undefined}
             className={cn(
               'flex min-w-0 flex-col gap-2.5 rounded-2xl border border-border bg-card p-3.5 shadow-xs',
               tone === 'warning' && 'border-s-4 border-s-warning',
@@ -406,9 +425,10 @@ function FooterCard<Row>({ columns, footer }: { columns: DataTableColumn<Row>[];
   const valued = footer.note === undefined ? columns.filter((c) => footer.cells?.[c.id] !== undefined) : [];
   const highlights = valued.filter((c) => c.card === 'highlight');
   const fields = valued.filter((c) => c.card !== 'highlight');
+  const block = useBlock('table-card-foot');
   return (
     <li
-      data-skeleton-block="table-card-foot"
+      data-skeleton-block={block}
       className="flex min-w-0 flex-col gap-2.5 rounded-2xl border border-border bg-muted p-3.5"
     >
       <div className="font-bold break-words">{footer.label}</div>

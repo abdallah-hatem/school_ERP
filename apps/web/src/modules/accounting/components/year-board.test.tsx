@@ -72,11 +72,13 @@ describe('YearBoard', () => {
     expect(screen.getByRole('link', { name: 'Next year' }).getAttribute('href')).toBe('/en/accounting/payroll-taxes?year=2026');
   });
 
-  it('loading: twelve skeleton tiles, nothing clickable, no empty notice', () => {
+  it('loading: twelve skeleton tiles, busy, nothing clickable, no empty notice', () => {
     const { container } = renderAccounting(<YearBoard year={2026} data={undefined} {...props} />);
     expect(tiles(container)).toHaveLength(12);
+    expect(board().getAttribute('aria-busy')).toBe('true');
+    expect(within(board()).getByRole('status').textContent).toBe('Loading…');
     expect(within(board()).queryAllByRole('link')).toHaveLength(0);
-    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.queryByText(/No approved month/)).toBeNull();
   });
 
   it('Arabic (RTL): Arabic month names and states, Latin figures', () => {

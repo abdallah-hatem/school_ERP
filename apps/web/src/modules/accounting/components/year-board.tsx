@@ -68,9 +68,17 @@ export function YearBoard({ year, data, basePath, payrollHref, currentMonth }: Y
       ) : null}
       <section
         aria-label={t('accounting.payrollTaxes.board.label', { year: String(year) })}
+        aria-busy={data ? undefined : true}
         data-skeleton-block="year-board"
+        // Its rows grow with what each month holds (an approved tile is taller): the tiles are measured.
+        data-skeleton-measure="width"
         className="grid grid-cols-2 gap-2.5 @min-[640px]:grid-cols-3 @min-[640px]:gap-3.5 @min-[960px]:grid-cols-4"
       >
+        {data ? null : (
+          <span role="status" className="sr-only">
+            {t('ui.states.loading')}
+          </span>
+        )}
         {(data?.months ?? placeholderMonths(year)).map((m) =>
           data ? (
             <MonthTile key={m.month} month={m} basePath={basePath} future={m.month > currentMonth} />

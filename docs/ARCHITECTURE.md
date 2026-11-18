@@ -997,7 +997,10 @@ doesn't update its skeleton fails CI (owner, 2026-11-18).
   `data-skeleton-measure="width"` on a block whose height follows the data (a table, the timeline);
   everything else must match (the History tab's pagination too, since T28 gives every record
   entries). A `DataTable` whose phone cards grow
-  with their text passes `cardHeightsVary` (penalties: long violation names).
+  with their text passes `cardHeightsVary` (penalties: long violation names). A `DataTable` whose
+  very presence is data — the payroll taxes statement's Insured / Not insured groups, either of
+  which can be empty (an empty state) one month — passes `skeletonBlocks={false}` and is measured
+  as part of the block around it.
 - **Text that wraps is drawn as its own text.** A bar can't wrap, so where a loaded line usually
   wraps (a header description, a tile's sub line, the History sentence) the skeleton renders the
   same sentence — worded with typical values — through `SkeletonProse` (transparent text on a bar
