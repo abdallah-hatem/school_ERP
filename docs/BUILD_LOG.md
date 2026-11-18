@@ -200,6 +200,8 @@ phase live in `docs/build-log/`.
   typecheck, unit tests and module rules always run; CI also runs on PRs into `demo` → #100.
 - 2026-11-18 — `demo` branch cut from dev at 0d07713 (after #97–#101) and protected like testing
   (PR, four green checks, owner approval); Sunday's demo runs from it (ARCHITECTURE → Environments).
+- 2026-11-18 — Team (owner): Waleed is paused for now; the work is split between Abdallah and
+  Tamer. Waleed's T28 (audit wiring for auth, settings, employees, lists) moves to Abdallah.
 
 ## Next up
 
@@ -226,7 +228,7 @@ phase live in `docs/build-log/`.
 - Write the settings history in the same transaction as the change (outbox), instead of right after.
 
 - Hosting the demo on the Contabo server (owner: later; local demo is the fallback).
-- Audit log T28 (Waleed: auth, settings, employees, lists) and T29 (Tamer: penalties, lateness,
+- Audit log T28 (Abdallah, was Waleed's: auth, settings, employees, lists) and T29 (Tamer: penalties, lateness,
   payroll), then T31 verify. Optional CI ratchet that forbids touching an unwired endpoint (owner: docs only for now). Follow-ups from T30: id fields
   (`departmentId`) show raw ids unless T28 stores names; penalties don't appear on the employee's
   History; payroll run page has no History tab yet; smoke History check still asserts the empty
