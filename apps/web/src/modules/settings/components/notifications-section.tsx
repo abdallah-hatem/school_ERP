@@ -29,13 +29,8 @@ import { useResource } from '../hooks/use-resource';
 import { notificationSettingsSchema, type NotificationSettingsFormValues, type ReminderTimingValues } from '../schemas';
 import { SaveBar, SectionPanel } from './section-panel';
 
-/**
- * The HR rules this screen shows. `reminders` are the reminder timings (`hr.reminders.*`, task N3);
- * until the API sends them only the probation length is shown, and the five fields appear on their
- * own once it does (the form sends back only what the API sent).
- */
-type HrRules = HrSettings & { reminders?: ReminderTimingValues };
-type HrUpdate = UpdateHrSettingsRequest & { reminders?: Partial<ReminderTimingValues> };
+/** The HR rules this screen shows: the probation length and the reminder timings (`hr.reminders.*`). */
+type HrRules = HrSettings;
 
 /** The registry's types at their defaults, as the form's skeleton while the settings load. */
 const PLACEHOLDER: NotificationSettings = {
@@ -80,7 +75,7 @@ export function NotificationsSection() {
   const readsHr = can('hr.settings.view');
   const settings = useResource('notification-settings', () => GET_NOTIFICATION_SETTINGS());
   const hr = useResource<HrRules | null>(readsHr ? 'hr-settings' : 'no-hr-settings', () =>
-    readsHr ? (GET_HR_SETTINGS() as Promise<ApiResult<HrRules>>) : noHrRules(),
+    readsHr ? GET_HR_SETTINGS() : noHrRules(),
   );
 
   return (
@@ -97,7 +92,7 @@ export function NotificationsSection() {
         <SkeletonMask>
           <NotificationSettingsForm
             initial={PLACEHOLDER}
-            hr={readsHr ? (HR_SETTINGS_DEFAULTS as HrRules) : null}
+            hr={readsHr ? HR_SETTINGS_DEFAULTS : null}
             onSaved={() => undefined}
           />
         </SkeletonMask>
@@ -175,7 +170,7 @@ function NotificationSettingsForm({
         next = res.data;
       }
 
-      const body: HrUpdate = {};
+      const body: UpdateHrSettingsRequest = {};
       if (dirtyFields.hr?.defaultProbationMonths && values.hr) {
         body.employees = { defaultProbationMonths: values.hr.defaultProbationMonths };
       }
@@ -193,7 +188,7 @@ function NotificationSettingsForm({
           onSaved(next, null);
           return;
         }
-        nextHr = res.data as HrRules;
+        nextHr = res.data;
       }
       form.reset(toForm(next, nextHr));
       setSaved(true);

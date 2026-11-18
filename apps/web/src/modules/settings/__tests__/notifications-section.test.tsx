@@ -101,7 +101,7 @@ describe('Settings → Notifications (§11, option A)', () => {
     expect(api.GET_HR_SETTINGS).not.toHaveBeenCalled();
   });
 
-  it('once the API sends the reminder timings they are fields, saved as HR rules; the second must be fewer days', async () => {
+  it('the reminder timings are saved as HR rules (only what changed); the second must be fewer days', async () => {
     const user = userEvent.setup();
     api.GET_HR_SETTINGS.mockImplementation(() => ok({ ...hrSettings, reminders: REMINDERS }));
     api.UPDATE_HR_SETTINGS.mockImplementation(() => ok({ ...hrSettings, reminders: { ...REMINDERS, latenessCheckDay: 20 } }));

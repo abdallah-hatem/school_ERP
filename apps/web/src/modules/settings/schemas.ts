@@ -174,7 +174,7 @@ export function toLevelInputs(levels: ViolationFormValues['levels']) {
 
 const retentionDays = () =>
   wholeNumber(NOTIFICATION_RETENTION_LIMITS.min, NOTIFICATION_RETENTION_LIMITS.max, 'notifications.settings.errors.retention');
-const checkDay = () => wholeNumber(1, 31, 'notifications.settings.errors.checkDay');
+const checkDay = () => wholeNumber(SETTING_LIMITS.checkDayMin, SETTING_LIMITS.checkDayMax, 'notifications.settings.errors.checkDay');
 
 /**
  * The reminder timings (HR rules, spec → Reminder settings): the first contract reminder 1–120
@@ -182,9 +182,21 @@ const checkDay = () => wholeNumber(1, 31, 'notifications.settings.errors.checkDa
  */
 export const reminderTimingSchema = z
   .object({
-    contractEndDays: wholeNumber(1, 120, 'notifications.settings.errors.contractEndDays'),
-    contractEndSecondDays: wholeNumber(0, 60, 'notifications.settings.errors.contractEndSecondDays'),
-    probationEndDays: wholeNumber(1, 60, 'notifications.settings.errors.probationEndDays'),
+    contractEndDays: wholeNumber(
+      SETTING_LIMITS.contractEndDaysMin,
+      SETTING_LIMITS.contractEndDaysMax,
+      'notifications.settings.errors.contractEndDays',
+    ),
+    contractEndSecondDays: wholeNumber(
+      SETTING_LIMITS.contractEndSecondDaysMin,
+      SETTING_LIMITS.contractEndSecondDaysMax,
+      'notifications.settings.errors.contractEndSecondDays',
+    ),
+    probationEndDays: wholeNumber(
+      SETTING_LIMITS.probationEndDaysMin,
+      SETTING_LIMITS.probationEndDaysMax,
+      'notifications.settings.errors.probationEndDays',
+    ),
     latenessCheckDay: checkDay(),
     payrollCheckDay: checkDay(),
   })
