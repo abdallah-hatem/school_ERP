@@ -1,14 +1,8 @@
 import { HttpStatus, NotFoundException } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import {
-  ErrorCode,
-  HrListKey,
-  ListItem,
-  SettingsChangedEvent,
-  SettingsEvent,
-  Uuid,
-} from '@school-erp/shared';
+import { ErrorCode, HrListKey, ListItem, Uuid } from '@school-erp/shared';
 import { CodedException } from '../../../../common/errors/coded.exception';
+import { SettingsHistory } from '../../../../core/settings';
+import { AfterCommit } from '../../../../database/transactions';
 import type { CreateListItemDto, UpdateListItemDto } from '../dto/list-item.dto';
 import type {
   ListItemData,
@@ -16,14 +10,10 @@ import type {
   ListItemUpdateData,
 } from '../repositories/list-items.repository';
 
-/** Every column the item carries (job titles add `managesPeople`) is the same. */
-const sameItem = <T extends ListItem>(a: T, b: T) =>
-  (Object.keys(b) as (keyof T)[]).every((k) => a[k] === b[k]);
-
 /**
  * Departments and job titles (§3 lists). No delete: an item is hidden (`isActive: false`) and
- * stays on the employees that use it. Every create / change emits `settings.changed` (scope
- * `lists`) after the write, and core's listener records the history row (§7).
+ * stays on the employees that use it. Every create / change records its history entry (§7) through
+ * core's `SettingsHistory`, in the write's own transaction — both commit or neither does.
  */
 export abstract class ListItemsService<
   T extends ListItem = ListItem,
@@ -32,7 +22,8 @@ export abstract class ListItemsService<
 > {
   protected constructor(
     protected readonly repository: ListItemsRepository<T, ListItemData, ListItemUpdateData>,
-    private readonly events: EventEmitter2,
+    private readonly history: SettingsHistory,
+    private readonly afterCommit: AfterCommit,
     private readonly historyKey: HrListKey,
   ) {}
 
@@ -40,15 +31,17 @@ export abstract class ListItemsService<
     return this.repository.findAllOrdered(includeHidden);
   }
 
-  async create(dto: C, changedById: Uuid | null): Promise<T> {
-    const item = await this.repository.createItem({
-      nameEn: dto.nameEn,
-      nameAr: dto.nameAr,
-      ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
-      ...this.extraCreateData(dto),
+  create(dto: C, changedById: Uuid | null): Promise<T> {
+    return this.afterCommit.inTransaction(async () => {
+      const item = await this.repository.createItem({
+        nameEn: dto.nameEn,
+        nameAr: dto.nameAr,
+        ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
+        ...this.extraCreateData(dto),
+      });
+      await this.recordChange(null, item, changedById);
+      return item;
     });
-    this.emitChange(null, item, changedById);
-    return item;
   }
 
   /** A list's own columns on create (job titles: `managesPeople`). */
@@ -56,12 +49,15 @@ export abstract class ListItemsService<
     return {};
   }
 
-  async update(id: Uuid, dto: U, changedById: Uuid | null): Promise<T> {
-    const before = await this.repository.findOne(id);
-    if (!before) throw new NotFoundException();
-    const after = await this.repository.updateItem(id, dto);
-    if (!sameItem(before, after)) this.emitChange(before, after, changedById);
-    return after;
+  /** A save that changes nothing writes no history entry. */
+  update(id: Uuid, dto: U, changedById: Uuid | null): Promise<T> {
+    return this.afterCommit.inTransaction(async () => {
+      const before = await this.repository.findOne(id);
+      if (!before) throw new NotFoundException();
+      const after = await this.repository.updateItem(id, dto);
+      await this.recordChange(before, after, changedById);
+      return after;
+    });
   }
 
   /**
@@ -76,15 +72,13 @@ export abstract class ListItemsService<
     return item;
   }
 
-  private emitChange(oldValue: T | null, newValue: T, changedById: Uuid | null) {
-    const event: SettingsChangedEvent = {
+  private recordChange(oldValue: T | null, newValue: T, changedById: Uuid | null) {
+    return this.history.record({
       scope: 'lists',
       key: this.historyKey,
       oldValue,
       newValue,
       changedById,
-      changedAt: new Date().toISOString(),
-    };
-    this.events.emit(SettingsEvent.CHANGED, event);
+    });
   }
 }
