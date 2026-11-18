@@ -123,6 +123,7 @@ function makeService(scopes: Parameters<typeof fakeAccess>[0], salaryIds: string
     fakeAccess(scopes),
     { record: jest.fn() } as never,
     { inTransaction: (fn: () => unknown) => fn(), run: (fn: () => unknown) => Promise.resolve(fn()) } as never,
+    { payrollRunCreated: jest.fn(), payrollRunApproved: jest.fn() } as never,
     {} as never,
   );
   return { service, repository, employees };

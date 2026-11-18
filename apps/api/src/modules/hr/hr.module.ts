@@ -5,6 +5,10 @@ import { PermissionsModule } from '../../core/permissions';
 import { SettingsModule } from '../../core/settings';
 import { HrAccessService } from './access/hr-access.service';
 import { HrAuditAccess } from './access/hr-audit-access';
+import { HrNotificationScopes } from './access/hr-notification-scopes';
+import { HrRemindersJob } from './reminders/hr-reminders.job';
+import { HrRemindersService } from './reminders/hr-reminders.service';
+import { RemindersRepository } from './reminders/repositories/reminders.repository';
 import { DashboardController } from './dashboard/controllers/dashboard.controller';
 import { DashboardService } from './dashboard/services/dashboard.service';
 import { EmployeesController } from './employees/controllers/employees.controller';
@@ -62,6 +66,12 @@ import { LatenessService } from './staff-attendance/services/lateness.service';
     // who sees which employees, and whose salary (P4: scopes R5, salary R7)
     HrAccessService,
     HrAuditAccess,
+    // which scoped recipients cover an HR notification's subject (§11, N5)
+    HrNotificationScopes,
+    // reminders (§11, N3): resolved at the change, sent by the daily job
+    HrRemindersService,
+    RemindersRepository,
+    HrRemindersJob,
     // settings (T6)
     HrSettingsService,
     // approval notifications (§11, N2) — penalties and payroll send through it; registers HR's

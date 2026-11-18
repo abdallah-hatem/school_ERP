@@ -46,6 +46,7 @@ import { HrAccessService, VIEW_SALARY } from '../../access/hr-access.service';
 import { EmployeesService } from '../../employees/services/employees.service';
 import { HrNotificationsService } from '../../notifications/hr-notifications.service';
 import { PenaltyRecordsService } from '../../penalties/services/penalty-records.service';
+import { HrRemindersService } from '../../reminders/hr-reminders.service';
 import { HrSettingsService } from '../../settings/hr-settings.service';
 import { LatenessService } from '../../staff-attendance/services/lateness.service';
 import { buildBankSheet } from '../bank-sheet';
@@ -185,6 +186,7 @@ export class PayrollService {
     private readonly access: HrAccessService,
     private readonly audit: AuditService,
     private readonly afterCommit: AfterCommit,
+    private readonly reminders: HrRemindersService,
     private readonly notifications: HrNotificationsService,
   ) {}
 
@@ -288,6 +290,9 @@ export class PayrollService {
       if (!id) throw conflict(ErrorCode.PAYROLL_RUN_EXISTS);
       const totals = await this.wholeTotals(id);
       await this.recordRun('hr.payroll.create', id, month, undefined, totals);
+      // §11 (N3): the month is prepared — "payroll not prepared" is done.
+      await this.reminders.payrollRunCreated(month, createdById);
+      // §11 (N2): "ready to approve" when the month has no pending penalty.
       await this.notifyCalculated(id, totals, createdById);
       return this.get(id);
     });
@@ -335,6 +340,8 @@ export class PayrollService {
         before: PayrollStatus.DRAFT,
         after: PayrollStatus.APPROVED,
       });
+      // §11 (N3): "still a draft" reads "Approved by …"; the month's lateness reminder is done (§5).
+      await this.reminders.payrollRunApproved(id, run.month, approvedById);
       const event: PayrollApprovedEvent = {
         runId: id,
         month: approved.month,
@@ -344,7 +351,8 @@ export class PayrollService {
       };
       // Must-deliver: written to the outbox in this transaction, delivered after the commit.
       await this.events.publish(HrEvent.PAYROLL_APPROVED, event, { mustDeliver: true });
-      // Everyone's "ready" and "still a draft" read "Approved by …" (§11, N10), in this transaction.
+      // Everyone's "ready" reads "Approved by …" (§11, N10), in this transaction ("still a draft"
+      // is the reminders' — above).
       await this.notifications.payrollApproved(id, approvedById);
       return approved;
     });

@@ -1,14 +1,12 @@
-import type { NotificationSubject } from '@school-erp/shared';
-import type { NotificationScopeResolver, NotificationsService } from '../../../core/notifications';
+import type { NotificationsService } from '../../../core/notifications';
 import type { PermissionsService, UserScope } from '../../../core/permissions';
-import type { EmployeesService } from '../employees/services/employees.service';
 import type { PayrollRunsRepository } from '../payroll/repositories/payroll-runs.repository';
-import { payrollReadyParams, subjectsCovered } from './hr-notifications.pure';
+import { payrollReadyParams } from './hr-notifications.pure';
 import { HrNotificationsService, type CalculatedRun } from './hr-notifications.service';
 
 /*
  * HR's approval notifications (§11, plan N2 edge cases) with core's NotificationsService mocked:
- * what is sent and resolved, when, and the scope resolvers HR registers. The database behaviour
+ * what is sent and resolved, and when (HR's scope resolvers: access/hr-notification-scopes.spec.ts). The database behaviour
  * (recipients, read re-check) is in test/hr-approval-notifications.e2e-spec.ts.
  */
 
@@ -26,34 +24,24 @@ function make(
   opts: {
     run?: { id: string; status: 'DRAFT' | 'APPROVED' } | null;
     payrollView?: Record<string, UserScope | null>;
-    covered?: string[];
   } = {},
 ) {
-  const resolvers = new Map<string, NotificationScopeResolver>();
   const notifications = {
     notify: jest.fn().mockResolvedValue({ created: 1 }),
     resolve: jest.fn().mockResolvedValue({ resolved: 1 }),
-    registerScopeResolver: jest.fn((type: string, r: NotificationScopeResolver) =>
-      resolvers.set(type, r),
-    ),
   };
   const permissions = {
     scopeFor: jest.fn(({ id }: { id: string }) =>
       Promise.resolve(opts.payrollView && id in opts.payrollView ? opts.payrollView[id] : null),
     ),
   };
-  const employees = {
-    filterCoveredBy: jest.fn(() => Promise.resolve(new Set(opts.covered ?? []))),
-  };
   const runs = { findByMonth: jest.fn().mockResolvedValue(opts.run ?? null) };
   const service = new HrNotificationsService(
     notifications as unknown as NotificationsService,
     permissions as unknown as PermissionsService,
-    employees as unknown as EmployeesService,
     runs as unknown as PayrollRunsRepository,
   );
-  service.onModuleInit();
-  return { service, notifications, permissions, employees, runs, resolvers };
+  return { service, notifications, permissions, runs };
 }
 
 const PENALTY = {
@@ -167,7 +155,7 @@ describe('HrNotificationsService — payroll', () => {
     expect(await paramsFor('u-none')).not.toHaveProperty('net');
   });
 
-  it('approving the run resolves "ready" and "still a draft" as approved (edge 14)', async () => {
+  it('approving the run resolves "ready" as approved (edge 14; "still a draft" is the reminders\')', async () => {
     const { service, notifications } = make();
     await service.payrollApproved('run-1', 'u-hr');
     expect(notifications.resolve).toHaveBeenCalledWith({
@@ -176,80 +164,11 @@ describe('HrNotificationsService — payroll', () => {
       resolution: 'approved',
       byUserId: 'u-hr',
     });
-    expect(notifications.resolve).toHaveBeenCalledWith({
-      type: 'hr.payroll.not_approved',
-      subject: { entityType: 'payroll_run', entityId: 'run-1' },
-      resolution: 'approved',
-      byUserId: 'u-hr',
-    });
-  });
-});
-
-describe('HrNotificationsService — scope resolvers (N5, N11)', () => {
-  const penalty = (employeeId: string | null): NotificationSubject => ({
-    entityType: 'penalty',
-    entityId: `p-${employeeId}`,
-    employeeId,
-  });
-
-  it('registers employee, penalty and payroll_run at start-up', () => {
-    const { resolvers } = make();
-    expect([...resolvers.keys()].sort()).toEqual(['employee', 'payroll_run', 'penalty']);
-  });
-
-  it("a penalty is covered when its employee is in the reader's stage / team, as the employee is now (edges 1, 2, 9)", async () => {
-    const { resolvers, employees } = make({ covered: ['e-1'] });
-    const answers = await resolvers.get('penalty')!(scope('own_stage', 'me', 'st-primary'), [
-      penalty('e-1'),
-      penalty('e-2'),
-      penalty(null),
-    ]);
-    expect(answers).toEqual([true, false, false]);
-    expect(employees.filterCoveredBy).toHaveBeenCalledWith(
-      { kind: 'stage', stageId: 'st-primary' },
-      ['e-1', 'e-2'],
-    );
-
-    await resolvers.get('penalty')!(scope('own_team', 'boss'), [penalty('e-1')]);
-    expect(employees.filterCoveredBy).toHaveBeenLastCalledWith(
-      { kind: 'team', managerId: 'boss' },
-      ['e-1'],
-    );
-  });
-
-  it('an employee subject is about the employee itself', async () => {
-    const { resolvers } = make({ covered: ['e-9'] });
-    expect(
-      await resolvers.get('employee')!(scope('own_stage'), [
-        { entityType: 'employee', entityId: 'e-9' },
-      ]),
-    ).toEqual([true]);
-  });
-
-  it('a payroll run: no scoped reader covers it (only scope all, which core answers itself)', async () => {
-    const { resolvers } = make();
-    expect(
-      await resolvers.get('payroll_run')!(scope('own_stage'), [
-        { entityType: 'payroll_run', entityId: 'r' },
-      ]),
-    ).toEqual([false]);
+    expect(notifications.resolve).toHaveBeenCalledTimes(1);
   });
 });
 
 describe('hr-notifications.pure', () => {
-  it('subjectsCovered: no employee → not covered (fail closed)', () => {
-    expect(
-      subjectsCovered(
-        [
-          { entityType: 'penalty', entityId: 'p', employeeId: 'e-1' },
-          { entityType: 'penalty', entityId: 'q' },
-          { entityType: 'employee', entityId: 'e-1' },
-        ],
-        new Set(['e-1']),
-      ),
-    ).toEqual([true, false, true]);
-  });
-
   it('payrollReadyParams leaves the net out — absent, not null — for a salary-blind reader', () => {
     const facts = { month: '2026-11', count: 1, net: 5 };
     expect(payrollReadyParams(facts, true)).toEqual({ month: '2026-11', count: 1, net: 5 });

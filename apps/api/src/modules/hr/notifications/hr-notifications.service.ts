@@ -1,5 +1,6 @@
-import { Injectable, type OnModuleInit } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import {
+  AuditEntityType,
   PayrollStatus,
   notificationDedupeKey,
   type Month,
@@ -7,17 +8,10 @@ import {
   type Uuid,
 } from '@school-erp/shared';
 import { NotificationsService } from '../../../core/notifications';
-import { PermissionsService, type UserScope } from '../../../core/permissions';
+import { PermissionsService } from '../../../core/permissions';
 import { toEmployeeScope } from '../access/employee-scope.pure';
-import { EmployeesService } from '../employees/services/employees.service';
 import { PayrollRunsRepository } from '../payroll/repositories/payroll-runs.repository';
-import {
-  HR_SUBJECT,
-  payrollReadyParams,
-  subjectEmployee,
-  subjectsCovered,
-  type PayrollReadyFacts,
-} from './hr-notifications.pure';
+import { payrollReadyParams, type PayrollReadyFacts } from './hr-notifications.pure';
 
 /** A recorded penalty, as its "waiting for approval" sentence needs it. */
 export interface RecordedPenalty {
@@ -39,10 +33,9 @@ export interface CalculatedRun extends PayrollReadyFacts {
 
 const PENALTY_WAITING = 'hr.penalty.awaiting_approval';
 const PAYROLL_READY = 'hr.payroll.ready_to_approve';
-const PAYROLL_STILL_DRAFT = 'hr.payroll.not_approved';
 
 const runSubject = (id: Uuid): NotificationSubject => ({
-  entityType: HR_SUBJECT.PAYROLL_RUN,
+  entityType: AuditEntityType.PAYROLL_RUN,
   entityId: id,
 });
 
@@ -54,28 +47,17 @@ const runSubject = (id: Uuid): NotificationSubject => ({
  * nothing. No `RequiresNew`: one pooled connection (ARCHITECTURE → Transactions).
  *
  * Who receives is core's (N5): holders of the type's permission whose scope covers the subject,
- * minus the actor. For a scoped holder core asks the resolvers HR registers here at start-up —
- * an employee's stage or team (R5), as the employee is now (a re-check at read, N11).
+ * minus the actor. For a scoped holder core asks HR's scope resolvers (`access/hr-notification-
+ * scopes.ts`): a penalty by its employee's stage or team (R5), as the employee is now (a re-check
+ * at read, N11); a payroll run only at scope `all`.
  */
 @Injectable()
-export class HrNotificationsService implements OnModuleInit {
+export class HrNotificationsService {
   constructor(
     private readonly notifications: NotificationsService,
     private readonly permissions: PermissionsService,
-    private readonly employees: EmployeesService,
     private readonly runs: PayrollRunsRepository,
   ) {}
-
-  onModuleInit(): void {
-    const byEmployee = (scope: UserScope, subjects: readonly NotificationSubject[]) =>
-      this.coveredByEmployee(scope, subjects);
-    this.notifications.registerScopeResolver(HR_SUBJECT.EMPLOYEE, byEmployee);
-    this.notifications.registerScopeResolver(HR_SUBJECT.PENALTY, byEmployee);
-    // A run lists everyone's pay: only scope `all` covers it (core answers `all` itself).
-    this.notifications.registerScopeResolver(HR_SUBJECT.PAYROLL_RUN, (_scope, subjects) =>
-      Promise.resolve(subjects.map(() => false)),
-    );
-  }
 
   /**
    * A penalty was recorded (pending): its approvers are told (§4, §11), and the month's payroll
@@ -85,7 +67,7 @@ export class HrNotificationsService implements OnModuleInit {
     await this.notifications.notify({
       type: PENALTY_WAITING,
       subject: {
-        entityType: HR_SUBJECT.PENALTY,
+        entityType: AuditEntityType.PENALTY,
         entityId: penalty.id,
         employeeId: penalty.employee.id,
       },
@@ -142,16 +124,17 @@ export class HrNotificationsService implements OnModuleInit {
     });
   }
 
-  /** The run was approved: its "ready" and "still a draft" read "Approved by …" (N10). */
+  /**
+   * The run was approved: its "ready" reads "Approved by …" (N10). "Still a draft" is the
+   * reminders' (`HrRemindersService.payrollRunApproved`).
+   */
   async payrollApproved(id: Uuid, byUserId: Uuid | null): Promise<void> {
-    for (const type of [PAYROLL_READY, PAYROLL_STILL_DRAFT] as const) {
-      await this.notifications.resolve({
-        type,
-        subject: runSubject(id),
-        resolution: 'approved',
-        byUserId,
-      });
-    }
+    await this.notifications.resolve({
+      type: PAYROLL_READY,
+      subject: runSubject(id),
+      resolution: 'approved',
+      byUserId,
+    });
   }
 
   private async resolvePenalty(
@@ -161,7 +144,7 @@ export class HrNotificationsService implements OnModuleInit {
   ): Promise<void> {
     await this.notifications.resolve({
       type: PENALTY_WAITING,
-      subject: { entityType: HR_SUBJECT.PENALTY, entityId: id },
+      subject: { entityType: AuditEntityType.PENALTY, entityId: id },
       resolution,
       byUserId,
     });
@@ -173,15 +156,5 @@ export class HrNotificationsService implements OnModuleInit {
       toEmployeeScope(await this.permissions.scopeFor({ id: userId }, 'hr.payroll.view')).kind ===
       'all'
     );
-  }
-
-  /** Whether a scoped user covers each subject's employee — as the employee is now (R5, N11). */
-  private async coveredByEmployee(
-    scope: UserScope,
-    subjects: readonly NotificationSubject[],
-  ): Promise<boolean[]> {
-    const ids = subjects.map(subjectEmployee).filter((id): id is Uuid => id !== null);
-    const covered = await this.employees.filterCoveredBy(toEmployeeScope(scope), ids);
-    return subjectsCovered(subjects, covered);
   }
 }

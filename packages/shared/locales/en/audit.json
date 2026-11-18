@@ -210,6 +210,13 @@
       "employees": {
         "defaultProbationMonths": "Default probation length"
       },
+      "reminders": {
+        "contractEndDays": "Contract reminder (days before)",
+        "contractEndSecondDays": "Second contract reminder (days before)",
+        "probationEndDays": "Probation reminder (days before)",
+        "latenessCheckDay": "Lateness check day",
+        "payrollCheckDay": "Payroll check day"
+      },
       "departments": "Department",
       "jobTitles": "Job title",
       "penaltyGroups": "Penalty group",

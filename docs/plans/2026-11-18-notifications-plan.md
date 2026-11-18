@@ -227,7 +227,22 @@ notifications with at least one open item the reader may see; an audit line for 
 18. Approval types can't be turned off: a preference PUT turning one off → 409; every approver gets
     them. — owner 2026-11-18
 
-## N3 — HR reminders (`logic`, backend)
+## N3 — HR reminders (`logic`, backend) — ✅ done (PR `feature/n3-hr-reminders`)
+
+**Done:** HR settings `hr.reminders.*` (the second contract reminder fewer days than the first, else
+400 `INVALID_REMINDER_DAYS`); `modules/hr/reminders` — `reminders.pure.ts`, the `hr.reminders.daily`
+job (07:00 Cairo, one `afterCommit.inTransaction` per type in turn), `HrRemindersService` (resolves at
+the change), `HrNotificationScopes` (`employee` by HR's scope rule; `lateness_month`,
+`payroll_month`, `payroll_run` whole-school only). Core gained `resolve({ dedupeKey })` (one
+reminder of a subject) and `openItems(type)`. Edge cases 1–18 are tested in `reminders.pure.spec.ts`,
+`hr-reminders.job.spec.ts`, `hr-reminders.service.spec.ts`, the HR service specs and
+`apps/api/test/hr-reminders.e2e-spec.ts` (+ `hr-settings.e2e-spec.ts` for edge 15). Choices: contract
+items group per school day **and window** (`2027-05-01:30`), so the 30- and 7-day ones never share a
+group; the job sends only the current month's lateness / payroll reminders (an open one from an
+earlier month stays until done); a timing change never sends a second reminder of the same stage
+for the same date; N2's `employee` / `payroll_run` resolvers, if registered again, must keep this
+rule (one registration per entity type).
+
 
 - HR settings keys `hr.reminders.contractEndDays` (30), `contractEndSecondDays` (7; 0 = none; less
   than the first), `probationEndDays` (7), `latenessCheckDay` (25), `payrollCheckDay` (28), validated
