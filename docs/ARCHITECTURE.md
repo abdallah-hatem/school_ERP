@@ -300,6 +300,16 @@ module through core's exported `AuditService` — never through its repository.
   Settings has no history section of its own — "View change history" opens Activity with
   `module=settings` (the settings actions of both modules). `GET /settings/history` was removed.
   The old `setting_changes` rows were copied by the T27 migration (same id, value, person, time).
+  **History is written in the change's own transaction** — never after it, so a crash between the
+  two can't lose it. School, HR and accounting settings: `SettingsService.setValues` writes the keys
+  and their entry together. Lists and catalogue (stages, departments, job titles, penalty groups,
+  violations): the owning service wraps its write in `AfterCommit.inTransaction` and calls core's
+  exported `SettingsHistory.record({ scope, key, oldValue, newValue, changedById })` inside it — the
+  entry keeps the old history shape (the history key as the field, whole snapshots as before /
+  after, both names as the label), and a failing entry rolls the change back. Their repositories
+  use `txHost.tx` so they join that transaction. `settings.changed` still fires, after the commit,
+  for real changes only; nothing records history from it. No outbox: the history row is core's own
+  table written in the same transaction, and no other module needs the event to arrive.
 - **Dates** on the audit screens are read in the school's time zone (`SCHOOL_TIME_ZONE`, Cairo, in
   `core/audit/lib/time.ts`): day headers, times and the date filter's day edges. Calendars start the
   week on Sunday in both languages (the school's working week, `WEEK_STARTS_ON`).

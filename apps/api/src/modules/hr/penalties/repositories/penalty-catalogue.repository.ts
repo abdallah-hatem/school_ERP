@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import type { PenaltyAction } from '@school-erp/shared';
-import { DatabaseService } from '../../../../database/database.service';
+import { TransactionHost } from '@nestjs-cls/transactional';
+import type { DbAdapter, DbClient } from '../../../../database/transactions';
 
 export const LEVEL_SELECT = {
   level: true,
@@ -70,11 +71,16 @@ export type ViolationUpdateData = Partial<ViolationData> & { isActive?: boolean 
 /**
  * The penalty catalogue (§4): groups → violations → levels. Nothing is ever deleted — groups and
  * violations are retired with `isActive: false`. Levels are replaced as a whole on edit (they're
- * values of the violation; approved records copy what they need).
+ * values of the violation; approved records copy what they need). Runs in the caller's
+ * transaction when one is open, so an edit and its history commit together.
  */
 @Injectable()
 export class PenaltyCatalogueRepository {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(private readonly txHost: TransactionHost<DbAdapter>) {}
+
+  private get db(): DbClient {
+    return this.txHost.tx;
+  }
 
   findGroupsWithViolations(): Promise<GroupWithViolationsRow[]> {
     return this.db.penaltyGroup.findMany({

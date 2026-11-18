@@ -12,12 +12,15 @@ import { todayIsoDate } from '../src/common/utils/dates.util';
 import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
 import { createAppAsTestUser } from './helpers/as-test-user';
+import { historyMark, historyRows } from './helpers/history';
 
 describe('HR lists and employees (e2e)', () => {
   let app: INestApplication;
   let userId: string;
   let db: DatabaseService;
   let emitSpy: jest.SpyInstance;
+  // settings.changed fires with emitAsync, after the change and its history commit.
+  let emitAsyncSpy: jest.SpyInstance;
 
   let stageId: string;
   let hiddenStageId: string;
@@ -59,7 +62,7 @@ describe('HR lists and employees (e2e)', () => {
   };
 
   const settingsEvents = () =>
-    emitSpy.mock.calls
+    emitAsyncSpy.mock.calls
       .filter(([name]) => name === SettingsEvent.CHANGED)
       .map(([, payload]) => payload);
 
@@ -70,6 +73,7 @@ describe('HR lists and employees (e2e)', () => {
     } = await createAppAsTestUser());
     db = app.get(DatabaseService);
     emitSpy = jest.spyOn(app.get(EventEmitter2), 'emit');
+    emitAsyncSpy = jest.spyOn(app.get(EventEmitter2), 'emitAsync');
 
     stageId = (await db.stage.create({ data: { nameEn: 'Primary', nameAr: 'ابتدائي' } })).id;
     hiddenStageId = (
@@ -104,7 +108,10 @@ describe('HR lists and employees (e2e)', () => {
       .expect(200);
   });
 
-  beforeEach(() => emitSpy.mockClear());
+  beforeEach(() => {
+    emitSpy.mockClear();
+    emitAsyncSpy.mockClear();
+  });
 
   afterAll(async () => {
     await db.employee.updateMany({ data: { managerId: null } });
@@ -157,6 +164,7 @@ describe('HR lists and employees (e2e)', () => {
     });
 
     it('list create / PATCH writes a history row (settings.changed emitted with old and new value)', async () => {
+      const mark = await historyMark(db);
       const created = await http(app)
         .post('/hr/job-titles')
         .send({ nameEn: 'Driver', nameAr: 'سائق', sortOrder: 3 })
@@ -165,6 +173,14 @@ describe('HR lists and employees (e2e)', () => {
       await http(app).patch(`/hr/job-titles/${item.id}`).send({ nameEn: 'Bus driver' }).expect(200);
       // An empty PATCH changes nothing and records nothing.
       await http(app).patch(`/hr/job-titles/${item.id}`).send({}).expect(200);
+
+      // One history entry per real change, written with it: there when the response is.
+      const rows = await historyRows(db, mark, HrListKey.JOB_TITLES);
+      expect(rows.map((r) => r.action)).toEqual(['hr.job_title.create', 'hr.job_title.update']);
+      const entries = await db.auditEntry.findMany({
+        where: { seq: { gt: mark }, entityType: 'job_title', entityId: item.id },
+      });
+      expect(entries.map((e) => e.id)).toEqual(rows.map((r) => r.entryId));
 
       const events = settingsEvents();
       expect(events).toHaveLength(2);
@@ -191,7 +207,7 @@ describe('HR lists and employees (e2e)', () => {
         changedById: userId,
       });
 
-      emitSpy.mockClear();
+      emitAsyncSpy.mockClear();
       await http(app)
         .post('/hr/departments')
         .send({ nameEn: 'Finance', nameAr: 'مالية' })
@@ -411,7 +427,7 @@ describe('HR lists and employees (e2e)', () => {
       ).body.data;
       expect(lead.managesPeople).toBe(true);
 
-      emitSpy.mockClear();
+      emitAsyncSpy.mockClear();
       const on = await http(app)
         .patch(`/hr/job-titles/${plain.id}`)
         .send({ managesPeople: true })
