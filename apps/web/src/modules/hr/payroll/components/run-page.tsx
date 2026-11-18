@@ -50,7 +50,7 @@ import { Switch } from '@/shared/components/ui/switch';
 import { useNewestServerState } from '@/shared/hooks/use-newest-server-state';
 import { apiErrorText } from '@/shared/lib/api-error';
 import { saveDownloadedFile } from '@/shared/lib/download';
-import { formatCount, formatDate, formatMoney, formatMonth, sumMoney } from '@/shared/lib/format';
+import { formatCount, formatDate, formatMoney, formatMoneyText, formatMonth, sumMoney } from '@/shared/lib/format';
 import { localName, nameIn } from '@/shared/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
@@ -477,6 +477,7 @@ export function RunPage({
             getRowId={(line) => line.id}
             refreshing={navigating}
             rowTone={(line) => (line.flags.length > 0 ? 'warning' : undefined)}
+            cardsBelow={RUN_LINES_CARDS_BELOW}
             empty={
               filtered ? (
                 <EmptyState
@@ -610,6 +611,13 @@ const RUN_COLUMN_LAYOUT: Record<RunColumnId, Omit<DataTableColumn<PayrollLine>, 
   actions: { align: 'end', className: 'w-16', card: 'menu', skeleton: <RowActionsSkeleton /> },
 };
 
+/**
+ * The lines' columns need ~900px once a line holds eight-digit amounts (EGP 21,474,836.47, the
+ * largest salary allowed): narrower, the table scrolled sideways and squeezed the name to one word
+ * a line. Below it the lines are cards. The skeleton passes the same value.
+ */
+export const RUN_LINES_CARDS_BELOW = 900;
+
 /** A line column's id, header and layout (the cell is the caller's). */
 export function runColumn(id: RunColumnId, t: Translate) {
   const label = t(`payroll.table.columns.${id}`);
@@ -634,8 +642,8 @@ const TYPICAL_TOTALS: PayrollRun['totals'] = {
 };
 
 export function RunTiles({ totals }: { totals: PayrollRun['totals'] | undefined }) {
-  const { t } = useTranslation();
-  const money = (value: number | undefined) => (value === undefined ? formatMoney(value) : `${t('ui.units.currency')} ${formatMoney(value)}`);
+  const { t, locale } = useTranslation();
+  const money = (value: number | undefined) => formatMoneyText(value, locale, t('ui.units.currency'));
   const loading = totals === undefined;
   // While loading: each sub line is its own sentence worded with typical figures, drawn as bars,
   // so it wraps onto as many lines as the loaded one in every tile width and language.

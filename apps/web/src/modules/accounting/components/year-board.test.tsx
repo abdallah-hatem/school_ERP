@@ -91,4 +91,20 @@ describe('YearBoard', () => {
     expect(screen.getByText('مسودة في الموارد البشرية')).toBeTruthy();
     expect(MONTH.month).toBe('2026-10');
   });
+
+  it('worst-case gross (break-ui): a ten-digit month drawn whole in its tile, in both languages', () => {
+    const totals = { ...MONTH.totals, employees: 500, gross: 1_073_741_823_500 };
+    const data = {
+      ...YEAR,
+      months: YEAR.months.map((m) => (m.summary ? { ...m, summary: { ...m.summary, totals } } : m)),
+    };
+    for (const locale of ['en', 'ar'] as const) {
+      renderAccounting(<YearBoard year={2026} data={data} {...props} basePath={`/${locale}/accounting/payroll-taxes`} />, locale);
+      const figures = screen.getAllByText('10,737,418,235.00');
+      expect(figures).toHaveLength(2);
+      for (const figure of figures) expect(figure.previousElementSibling?.textContent).toBe(locale === 'ar' ? 'ج.م' : 'EGP');
+      expect(screen.getAllByText(locale === 'ar' ? '500 موظف' : '500 employees')).toHaveLength(2);
+      cleanup();
+    }
+  });
 });

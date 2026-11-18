@@ -35,7 +35,7 @@ import type { Locale } from '@/shared/lib/i18n';
 import { ADJ_MONA, MONA, renderPayroll, run, RUN_ID, SALMA, SETTINGS } from '../test/fixtures';
 import { renderWithI18n, sessionWithout } from '@/test/render';
 import { PayrollI18n } from '../messages';
-import { RunPage, type RunPageProps } from './run-page';
+import { RunPage, RunTiles, type RunPageProps } from './run-page';
 
 const DEPARTMENTS = [
   {
@@ -570,5 +570,39 @@ describe('RunPage — a navigation landing after a mutation', () => {
     );
     expect(router.push).toHaveBeenCalledTimes(1);
     expect(searchbox.disabled).toBe(false);
+  });
+});
+
+describe('RunTiles — worst-case amounts (break-ui)', () => {
+  // 500 employees at the largest salary the API accepts (EGP 21,474,836.47), deductions above a
+  // salary, a net floored at 0.
+  const WORST = {
+    employees: 500,
+    flagged: 1,
+    monthSalary: 1_073_741_823_500,
+    penaltyAmount: 999_999_999,
+    latenessAmount: 1,
+    adjustmentAdditions: 1_000_000_000,
+    adjustmentDeductions: 99_999_999_999,
+    net: 0,
+  };
+  const NBSP = ' ';
+
+  it('each tile shows its whole figure; a sub line never leaves "EGP" apart from its amount', () => {
+    const { container } = renderPayroll(<RunTiles totals={WORST} />);
+    expect(screen.getByText('10,737,418,235.00')).toBeTruthy();
+    expect(screen.getByText('1,009,999,999.99')).toBeTruthy(); // 9,999,999.99 + 0.01 + 999,999,999.99
+    expect(screen.getByText('0.00')).toBeTruthy();
+    // Exact text (the matchers would fold the no-break space into a plain one).
+    const text = container.textContent ?? '';
+    expect(text).toContain(`Penalties EGP${NBSP}9,999,999.99 · Lateness EGP${NBSP}0.01 · Adjustments EGP${NBSP}999,999,999.99`);
+    expect(text).toContain(`Salaries minus deductions, plus additions EGP${NBSP}10,000,000.00`);
+  });
+
+  it('in Arabic the label sits left of each amount (figure first in the text), Latin digits', () => {
+    const { container } = renderPayroll(<RunTiles totals={WORST} />, 'ar');
+    const text = container.textContent ?? '';
+    expect(text).toContain(`الجزاءات 9,999,999.99${NBSP}ج.م · التأخير 0.01${NBSP}ج.م · التسويات 999,999,999.99${NBSP}ج.م`);
+    expect(text).toContain(`الرواتب ناقص الخصومات، زائد الإضافات 10,000,000.00${NBSP}ج.م`);
   });
 });

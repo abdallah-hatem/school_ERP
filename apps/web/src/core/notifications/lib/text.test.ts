@@ -70,10 +70,10 @@ describe('notification sentences (N3, N17)', () => {
     // The single item's own count (38 employees), not the group's 1.
     expect(notificationText(run({ month: '2026-11', count: 38, net: 41_256_000 }), deps('en'))).toEqual({
       title: 'November 2026 payroll is ready to approve',
-      body: '38 employees, net EGP 412,560.00',
+      body: '38 employees, net EGP\u00a0412,560.00',
     });
     expect(notificationText(run({ month: '2026-11', count: 38, net: 41_256_000 }), deps('ar')).body).toBe(
-      '38 موظفًا، الصافي 412,560.00 ج.م',
+      '38 موظفًا، الصافي 412,560.00\u00a0ج.م',
     );
     expect(notificationText(run({ month: '2026-11', count: 1 }), deps('ar')).body).toBe('موظف واحد');
     expect(notificationText(run({ month: '2026-11', count: 2 }), deps('ar')).body).toBe('موظفان');

@@ -113,6 +113,13 @@ export interface DataTableProps<Row> {
   className?: string;
 }
 
+/**
+ * A card's label/value grid. Sized for eight-digit amounts (`21,474,836.47`, the largest salary):
+ * one column in the narrowest list (a 320px phone), two from 340px, four only from 600px — at four
+ * across from 500px, or two across under 340px, such a figure overflowed its cell.
+ */
+const CARD_FIELDS = 'grid grid-cols-1 gap-2 @min-[340px]:grid-cols-2 @min-[600px]:grid-cols-4';
+
 const alignClass = { start: 'text-start', end: 'text-end', center: 'text-center' } as const;
 
 /** Whether this table's parts carry their `data-skeleton-block` names (`skeletonBlocks`). */
@@ -433,7 +440,7 @@ function Cards<Row>({ columns, rows, getRowId, label, rowTone, viewClass, height
               </div>
             ))}
             {fields.length ? (
-              <dl className="grid grid-cols-2 gap-2 @min-[500px]:grid-cols-4">
+              <dl className={CARD_FIELDS}>
                 {fields.map((c) => (
                   <div
                     key={c.id}
@@ -484,7 +491,7 @@ function FooterCard<Row>({ columns, footer }: { columns: DataTableColumn<Row>[];
         </div>
       ))}
       {fields.length ? (
-        <dl className="grid grid-cols-2 gap-2 @min-[500px]:grid-cols-4">
+        <dl className={CARD_FIELDS}>
           {fields.map((c) => (
             <div key={c.id} className="flex min-w-0 flex-col gap-0.5 rounded-xl bg-card px-2.5 py-2">
               <dt className="text-xs text-muted-foreground">{cardLabel(c)}</dt>

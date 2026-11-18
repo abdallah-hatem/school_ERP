@@ -192,4 +192,27 @@ describe('Statement', () => {
       expect(screen.getByRole('search').classList.contains('no-print')).toBe(true);
     });
   });
+
+  it('worst-case totals (break-ui): every term of the sum is drawn whole, its label apart from it', () => {
+    // A month of 500 employees near the largest salary: nine- and ten-digit totals.
+    const totals = {
+      employees: 500,
+      net: 99_999_999_999,
+      insuranceAmount: 1,
+      incomeTax: 3_595_275_932,
+      martyrTax: 0,
+      gross: 1_073_741_823_500,
+    };
+    for (const locale of ['en', 'ar'] as const) {
+      const { container } = renderAccounting(<Statement {...props} month={{ ...MONTH, totals }} todayRule={DEFAULT_TAX_RULE} />, locale);
+      const sum = container.querySelector('[data-statement-sum]') as HTMLElement;
+      for (const figure of ['999,999,999.99', '0.01', '35,952,759.32', '0.00', '10,737,418,235.00']) {
+        const piece = within(sum).getByText(figure);
+        // One piece, the currency label a separate one before it (it may wrap above, never split it).
+        expect(piece.childNodes).toHaveLength(1);
+        expect(piece.previousElementSibling?.textContent).toBe(locale === 'ar' ? 'ج.م' : 'EGP');
+      }
+      cleanup();
+    }
+  });
 });
