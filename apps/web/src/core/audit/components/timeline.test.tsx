@@ -185,6 +185,7 @@ describe('AuditTimeline', () => {
     expect(within(item).getByText('5,000.00 at 0%, the rest at 25%')).toBeTruthy();
     expect(within(item).getByText('3,000.00 at 0%, the rest at 12.5%')).toBeTruthy();
     expect(within(item).getByText('0.1%')).toBeTruthy();
+  });
 
   it('a lateness month reads one line per changed employee, named in the screen\'s language', () => {
     const saved = entry({
