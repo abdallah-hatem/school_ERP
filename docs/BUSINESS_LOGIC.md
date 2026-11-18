@@ -24,3 +24,4 @@ is its own file; "§N" means the file listed for N below. Dated changes go in
 | 7 | [business/07-settings.md](business/07-settings.md) | Which rules the school can change, and their defaults |
 | 8 | [business/08-scope.md](business/08-scope.md) | Built, Planned, and deliberately left out |
 | 9 | [business/09-audit.md](business/09-audit.md) | Audit log: what is recorded, who sees it, append-only |
+| 10 | [business/10-accounting.md](business/10-accounting.md) | Accounting: the payroll tax rule (income-tax slices, martyrs' fund, insurance share) and the taxes of each approved month |

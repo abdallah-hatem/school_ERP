@@ -141,6 +141,7 @@ export const WEEKDAYS = values(Weekday);
 export const SettingScope = {
   SCHOOL: 'SCHOOL',
   HR: 'HR',
+  ACCOUNTING: 'ACCOUNTING',
   LISTS: 'LISTS',
   CATALOGUE: 'CATALOGUE',
 } as const;

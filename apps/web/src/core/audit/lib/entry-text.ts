@@ -1,6 +1,7 @@
 import {
   AUDIT_FAILED_SIGN_IN,
   AUDIT_MONEY_FIELDS,
+  AccountingSettingKey,
   HrSettingKey,
   LANGUAGES,
   SchoolSettingKey,
@@ -11,7 +12,7 @@ import {
   type AuditLabel,
   type Names,
 } from '@school-erp/shared';
-import { formatDate, formatDayCount, formatDays } from '@/shared/lib/format';
+import { formatDate, formatDayCount, formatDays, formatMoney } from '@/shared/lib/format';
 import { localName, type Locale, type Translate } from '@/shared/lib/i18n';
 import { formatSchoolDateTime } from './time';
 
@@ -64,6 +65,15 @@ function isNames(value: unknown): value is Names & { isActive?: boolean } {
     value !== null &&
     typeof (value as Names).nameEn === 'string' &&
     typeof (value as Names).nameAr === 'string'
+  );
+}
+
+function isBracket(value: unknown): value is { width: number | null; percent: number } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'width' in value &&
+    typeof (value as { percent?: unknown }).percent === 'number'
   );
 }
 
@@ -125,6 +135,9 @@ export function formatAuditValue(
   }
   if (typeof value === 'number') {
     if (field === HrSettingKey.LATENESS_EXTRA_HOUR_DAYS || field === 'days') return formatDayCount(value, locale);
+    if (field === AccountingSettingKey.PAYROLL_MARTYR_PERCENT || field === AccountingSettingKey.PAYROLL_INSURANCE_PERCENT) {
+      return `${value}%`;
+    }
     if (field === HrSettingKey.LATENESS_GRACE_MINUTES || field === 'minutes') {
       return t('audit.values.minutes', { count: value });
     }
@@ -136,6 +149,15 @@ export function formatAuditValue(
     if (value.length === 0) return EMPTY;
     if (value.every((v) => typeof v === 'string' && (WEEKDAYS as readonly string[]).includes(v))) {
       return value.map((d: string) => t(`common.enums.weekday.${d}`)).join(list);
+    }
+    if (field === AccountingSettingKey.PAYROLL_TAX_BRACKETS && value.every(isBracket)) {
+      return value
+        .map((b: { width: number | null; percent: number }) =>
+          b.width === null
+            ? t('audit.values.bracketRest', { percent: b.percent })
+            : t('audit.values.bracket', { amount: formatMoney(b.width), percent: b.percent }),
+        )
+        .join(list);
     }
     if (value.every(isStep)) {
       return value

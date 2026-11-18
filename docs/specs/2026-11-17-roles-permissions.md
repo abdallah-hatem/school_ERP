@@ -39,7 +39,7 @@ each endpoint from its first line of code.
 | **System admin** | Everything, plus users, roles, school settings. | all |
 | **HR manager** | All of HR: employees (incl. salary), lists, rules, catalogue; record, **approve** and cancel penalties; lateness; create, recalculate and **approve payroll**; bank sheet; Activity log. | all |
 | **HR officer** | Employees (incl. salary), lateness, **record** penalties (stay pending), create and recalculate payroll drafts, adjustments. No approvals, no rules or catalogue edits. | all |
-| **Accountant** | View payroll runs, payslips and bank sheet; view employees **with** salary. Nothing else. | all |
+| **Accountant** | View payroll runs, payslips and bank sheet; view employees **with** salary; the payroll tax rule (view and edit) and, once built, the approved months' payroll taxes (view) — §10, owner 2026-11-18. Nothing else. | all |
 | **Principal / administrative director** | View employees (no salary), penalties, lateness, payroll totals; **approve** and cancel penalties; Activity log. | all |
 | **Stage head** | View employees (no salary) and penalties; record penalties (pending). | own_stage |
 | **Direct manager** | View their team (no salary) and its penalties; record penalties (pending). | own_team |
