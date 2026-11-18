@@ -2,8 +2,9 @@
 
 Telling staff, inside the ERP, that something waits for them or is due. Spec:
 `docs/specs/2026-11-18-notifications.md`. **Partly built** — the mechanism is built (who is told,
-grouping, never twice, done approvals, access, preferences, retention); nothing sends a notification
-yet (HR's come next) and the screens are Planned (layout option A, below).
+grouping, never twice, done approvals, access, preferences, retention), and so are HR's **reminders**
+(contracts, probation, lateness, payroll — below). The approval notifications come next, and the
+screens are Planned (layout option A, below).
 
 ## What and how
 
@@ -57,12 +58,31 @@ yet (HR's come next) and the screens are Planned (layout option A, below).
 
 ## Reminders
 
+**Built** (N3). The bell that shows them is Planned (the screens).
+
 - **DECIDED** (owner, 2026-11-18) — Reminders are checked every day by the system on its own.
 - **GUESS** — The check runs at 07:00 school time (Cairo). "Today" and "this month" are the school's.
   A check day past the month's end means the month's last day (the 31st → 28 February).
 - **DECIDED** — A reminder is never sent twice for the same thing. If the system was down on the
   day, the next day's check sends it once.
 - **GUESS** — A month counts as having its lateness entered once it was saved, even with all zeros.
+- **DECIDED** (owner, 2026-11-18) — The first contract reminder is marked done when the second one
+  (7 days before) is sent. With the second reminder set to 0 there is only one.
+- **GUESS** — A contract that has already ended is not chased: its open reminder is marked done the
+  day after the end, and none is sent for it. The same for a probation end that has passed.
+- **GUESS** — A reminder goes away by itself as soon as the thing is done: the contract end or the
+  probation end is changed (a new date inside the window gets a new reminder at the next daily
+  check), the employee is deactivated, the month's lateness is saved, a payroll run is created, or
+  the run is approved ("Approved by …"; approving also ends the month's lateness reminder, since the
+  month is then locked, §5).
+- **GUESS** — The lateness and payroll reminders are about the **current** month: from the check day
+  to the month's end. One already sent stays until it is done, even into the next month; a month
+  that was never reminded by its last day isn't reminded later.
+- **GUESS** — Contract and probation reminders go to whoever may edit that employee (their stage or
+  team, or the whole school, §2). Lateness and payroll reminders are about the whole school, so only
+  people who may do that for the whole school get them.
+- **GUESS** — Changing a timing takes effect at the next daily check; a reminder already sent stays
+  (and isn't sent a second time under the new timing).
 
 ## Preferences
 
@@ -81,11 +101,11 @@ yet (HR's come next) and the screens are Planned (layout option A, below).
 
 | Setting | Default | Source |
 |---|---|---|
-| Remind before a contract ends | 30 days, and again 7 days | DECIDED (owner, 2026-11-18) |
+| Remind before a contract ends | 30 days (1–120), and again 7 days (0 = no second reminder; 0–60, fewer than the first) | DECIDED (owner, 2026-11-18) |
 | Default probation length (fills a new employee's probation end) | 3 months (0 = no probation) | DECIDED (owner, 2026-11-18) |
-| Remind before probation ends | 7 days | GUESS |
-| Lateness due by (day of the month) | 25 | DECIDED setting; day GUESS until the school confirms |
-| Payroll prepared and approved by (day of the month) | 28 | DECIDED setting; day GUESS until the school confirms |
+| Remind before probation ends | 7 days (1–60) | GUESS |
+| Lateness due by (day of the month) | 25 (1–31; past the month's end = its last day) | DECIDED setting; day GUESS until the school confirms |
+| Payroll prepared and approved by (day of the month) | 28 (1–31; same) | DECIDED setting; day GUESS until the school confirms |
 | Keep read notifications | 90 days | DECIDED (owner, 2026-11-18) |
 | Keep done approvals | 30 days | DECIDED (owner, 2026-11-18) |
 | Keep any notification at most | 365 days (old ones are removed every night) | DECIDED (owner, 2026-11-18) |

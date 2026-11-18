@@ -45,6 +45,7 @@ import {
 import { HrAccessService, VIEW_SALARY } from '../../access/hr-access.service';
 import { EmployeesService } from '../../employees/services/employees.service';
 import { PenaltyRecordsService } from '../../penalties/services/penalty-records.service';
+import { HrRemindersService } from '../../reminders/hr-reminders.service';
 import { HrSettingsService } from '../../settings/hr-settings.service';
 import { LatenessService } from '../../staff-attendance/services/lateness.service';
 import { buildBankSheet } from '../bank-sheet';
@@ -184,6 +185,7 @@ export class PayrollService {
     private readonly access: HrAccessService,
     private readonly audit: AuditService,
     private readonly afterCommit: AfterCommit,
+    private readonly reminders: HrRemindersService,
   ) {}
 
   /** Every run (runs are school-wide); totals over the lines the viewer may see (R5, R7). */
@@ -285,6 +287,8 @@ export class PayrollService {
       // Two creates for one month at once: the unique month decides, the loser gets the 409.
       if (!id) throw conflict(ErrorCode.PAYROLL_RUN_EXISTS);
       await this.recordRun('hr.payroll.create', id, month, undefined, await this.wholeTotals(id));
+      // §11 (N3): the month is prepared — "payroll not prepared" is done.
+      await this.reminders.payrollRunCreated(month, createdById);
       return this.get(id);
     });
   }
@@ -335,6 +339,8 @@ export class PayrollService {
         before: PayrollStatus.DRAFT,
         after: PayrollStatus.APPROVED,
       });
+      // §11 (N3): "still a draft" reads "Approved by …"; the month's lateness reminder is done (§5).
+      await this.reminders.payrollRunApproved(id, run.month, approvedById);
       const event: PayrollApprovedEvent = {
         runId: id,
         month: approved.month,
