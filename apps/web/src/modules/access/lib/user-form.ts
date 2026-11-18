@@ -1,4 +1,4 @@
-import { ErrorCode, type CreateUserRequest, type UpdateUserRequest, type UserAccount } from '@school-erp/shared';
+import { ErrorCode, GENDERS, type CreateUserRequest, type UpdateUserRequest, type UserAccount } from '@school-erp/shared';
 import { z } from 'zod';
 
 /*
@@ -7,7 +7,14 @@ import { z } from 'zod';
  */
 
 const linkedEmployee = z
-  .object({ id: z.string(), code: z.string(), nameEn: z.string(), nameAr: z.string() })
+  .object({
+    id: z.string(),
+    code: z.string(),
+    nameEn: z.string(),
+    nameAr: z.string(),
+    photoUrl: z.string().nullable(),
+    gender: z.enum(GENDERS),
+  })
   .nullable();
 
 export const userFormSchema = z.object({

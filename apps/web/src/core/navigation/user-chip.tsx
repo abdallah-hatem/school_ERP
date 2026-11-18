@@ -5,8 +5,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from '@/core/auth';
 import { SignOutIcon } from '@/shared/components/ui/icons';
+import { PersonAvatar } from '@/shared/components/ui/person-avatar';
 import { localName } from '@/shared/lib/i18n';
-import { initialsOf as initials } from '@/shared/lib/initials';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 
@@ -14,9 +14,10 @@ import { useTranslation } from '@/shared/providers/i18n-provider';
 export const ACCOUNT_PATH = '/account';
 
 /**
- * The signed-in person at the bottom of the menu: initials, name and the names of their roles
+ * The signed-in person at the bottom of the menu: their avatar (the linked employee's photo or
+ * silhouette), name and the names of their roles
  * (in the screen's language), opening My account, with a sign-out button beside it.
- * `compact` (the tablet icon rail): only the initials (the name is their tooltip) with sign-out
+ * `compact` (the tablet icon rail): only the avatar (the name is their tooltip) with sign-out
  * under them.
  */
 export function UserChip({ user, compact = false }: { user: SessionUser; compact?: boolean }) {
@@ -45,15 +46,11 @@ export function UserChip({ user, compact = false }: { user: SessionUser; compact
           compact && 'flex-none p-0 hover:bg-transparent',
         )}
       >
-        <span
-          aria-hidden="true"
-          className={cn(
-            'grid size-9 shrink-0 place-items-center rounded-xl bg-accent font-display text-[0.8rem] font-extrabold text-accent-foreground',
-            compact && current && 'ring-2 ring-primary',
-          )}
-        >
-          {initials(user.name)}
-        </span>
+        <PersonAvatar
+          photoUrl={user.employee?.photoUrl}
+          gender={user.employee?.gender}
+          className={cn(compact && current && 'ring-2 ring-primary')}
+        />
         <span className={cn('flex min-w-0 flex-1 flex-col', compact && 'sr-only')}>
           <span className="truncate text-[0.8rem] leading-tight font-bold">{user.name}</span>
           <span data-testid="user-chip-roles" className="truncate text-xs text-muted-foreground" title={roles}>

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { createContext, useContext, type ReactNode } from 'react';
 import { Can, useCan } from '@/core/auth';
-import { EmployeeAvatar } from '@/core/employees';
+import { PersonAvatar } from '@/shared/components/ui/person-avatar';
 import { PageHeader } from '@/shared/components/layout/page-header';
 import { Button } from '@/shared/components/ui/button';
 import { Money } from '@/shared/components/ui/figures';
@@ -117,7 +117,7 @@ export function EmployeeProfileShell({
       <div className="flex flex-col gap-6">
         <PageHeader
           title={localName(employee, locale)}
-          leading={<EmployeeAvatar photoUrl={employee.photoUrl} gender={employee.gender} size="lg" muted={employee.status !== EmployeeStatus.ACTIVE} />}
+          leading={<PersonAvatar photoUrl={employee.photoUrl} gender={employee.gender} size="lg" muted={employee.status !== EmployeeStatus.ACTIVE} />}
           status={<EmployeeStatusPill status={employee.status} />}
           description={
             <span className="flex flex-wrap items-center gap-x-2">

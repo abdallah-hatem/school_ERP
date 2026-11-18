@@ -28,6 +28,8 @@ export function toEmployeeOption(row: EmployeeOptionRow): EmployeeOption {
     code: row.code,
     nameEn: row.nameEn,
     nameAr: row.nameAr,
+    photoUrl: row.photoUrl,
+    gender: row.gender,
     jobTitle: row.jobTitle,
     isActive: row.status === EmployeeStatus.ACTIVE,
     linkedUser: row.linkedUser,

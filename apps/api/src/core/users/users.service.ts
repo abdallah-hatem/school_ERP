@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { AuthUser, RoleRef } from '@school-erp/shared';
+import type { AuthUser, PersonAvatarRef, RoleRef } from '@school-erp/shared';
 import { normalizeEmail, verifyPassword } from '../../common/utils/password.util';
 import { UsersRepository } from './repositories/users.repository';
 
@@ -38,6 +38,11 @@ export class UsersService {
   /** Notes a successful sign-in (the Users screen's "Last sign-in", P3). */
   async recordSignIn(id: string, at: Date = new Date()): Promise<void> {
     await this.users.update(id, { lastSignInAt: at });
+  }
+
+  /** The linked employee's photo and gender (the user chip's avatar), or null: not linked. */
+  avatarOf(id: string): Promise<PersonAvatarRef | null> {
+    return this.users.avatarOf(id);
   }
 
   /** The roles a user holds, starting roles first (the user chip under the menu). */

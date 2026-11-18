@@ -111,6 +111,19 @@ describe('UsersList', () => {
     expect(screen.getAllByText('Today, 09:12').length).toBeGreaterThan(0);
   });
 
+  it('each user has an avatar, never initials: the linked employee’s photo or silhouette, else the neutral one; inactive greyed', () => {
+    const withPhoto = account({ employee: { ...admin.employee!, photoUrl: '/files/employee-photos/hany.jpg' } });
+    renderAccess(
+      <UsersList basePath="/en/users" query={parseUsersQuery({})} rows={[withPhoto, officer, gone]} total={3} roles={ROLES} lastAdminId={admin.id} now={NOW} />,
+    );
+    const avatarIn = (name: string) => screen.getAllByRole('link', { name })[0]!.closest('span.flex')!.parentElement!.querySelector('[data-avatar]') as HTMLElement;
+    expect(avatarIn('Hany Saad').dataset.avatar).toBe('photo');
+    expect(avatarIn('Rania Magdy').querySelector('[data-silhouette]')?.getAttribute('data-silhouette')).toBe('neutral');
+    expect(avatarIn('Youssef Kamal').querySelector('[data-silhouette]')?.getAttribute('data-silhouette')).toBe('male');
+    expect(avatarIn('Youssef Kamal').className).toContain('opacity-70');
+    for (const name of ['Hany Saad', 'Rania Magdy', 'Youssef Kamal']) expect(avatarIn(name).textContent).toBe('');
+  });
+
   it('without core.users.manage: no Add user, and the ⋯ only opens the user', async () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 });
     renderList({}, { session: sessionWithout('core.users.manage') });

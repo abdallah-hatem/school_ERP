@@ -16,6 +16,7 @@ export const TEST_SESSION: SessionUser = {
     { id: '00000000-0000-4000-8000-0000000000r1', key: 'system_admin', nameEn: 'System admin', nameAr: 'مدير النظام' },
     { id: '00000000-0000-4000-8000-0000000000r2', key: 'hr_manager', nameEn: 'HR manager', nameAr: 'مدير شؤون الموظفين' },
   ],
+  employee: null,
 };
 
 /**

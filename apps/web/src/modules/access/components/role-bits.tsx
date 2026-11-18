@@ -1,16 +1,16 @@
 'use client';
 
-import { SYSTEM_ADMIN_ROLE, isBuiltInRole, type RoleRef } from '@school-erp/shared';
+import { SYSTEM_ADMIN_ROLE, isBuiltInRole, type RoleRef, type UserAccount } from '@school-erp/shared';
+import { PersonAvatar } from '@/shared/components/ui/person-avatar';
 import { StatusPill } from '@/shared/components/ui/status-pill';
 import { CustomRoleIcon, LockedIcon, RolesIcon, SystemAdminIcon, type AppIcon } from '@/shared/components/ui/icons';
 import { localName } from '@/shared/lib/i18n';
-import { initialsOf } from '@/shared/lib/initials';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 
 /*
- * Small pieces the Users and Roles screens share: a role's chip, its kind (built-in / custom), a
- * person's initials tile and a stack of them.
+ * Small pieces the Users and Roles screens share: a role's chip, its kind (built-in / custom) and
+ * a stack of the avatars of who holds it.
  */
 
 export type RoleKind = 'system' | 'builtIn' | 'custom';
@@ -88,30 +88,23 @@ export function RoleTile({ role, className }: { role: Pick<RoleRef, 'key'>; clas
   );
 }
 
-/** A person's initials on the sunflower tile (greyed when inactive). */
-export function Avatar({ name, inactive = false, size = 'md', className }: { name: string; inactive?: boolean; size?: 'sm' | 'md'; className?: string }) {
-  return (
-    <span
-      aria-hidden="true"
-      className={cn(
-        'grid shrink-0 place-items-center rounded-xl font-display font-extrabold',
-        size === 'md' ? 'size-9 text-[0.8rem]' : 'size-7 rounded-lg text-[0.7rem]',
-        inactive ? 'bg-secondary text-muted-foreground' : 'bg-accent text-accent-foreground',
-        className,
-      )}
-    >
-      {initialsOf(name)}
-    </span>
-  );
-}
+/** A user who holds a role, as its avatar stack needs them. */
+export type RoleHolder = Pick<UserAccount, 'id' | 'employee' | 'isActive'>;
 
-/** Up to `max` initials tiles, overlapping (who holds a role). */
-export function AvatarStack({ names, max = 3 }: { names: string[]; max?: number }) {
-  if (names.length === 0) return null;
+/** Up to `max` holders' avatars, overlapping (who holds a role); inactive ones greyed. */
+export function AvatarStack({ people, max = 3 }: { people: RoleHolder[]; max?: number }) {
+  if (people.length === 0) return null;
   return (
     <span aria-hidden="true" className="flex -space-x-2 rtl:space-x-reverse">
-      {names.slice(0, max).map((n, i) => (
-        <Avatar key={`${n}-${i}`} name={n} size="sm" className="ring-2 ring-card" />
+      {people.slice(0, max).map((p) => (
+        <PersonAvatar
+          key={p.id}
+          photoUrl={p.employee?.photoUrl}
+          gender={p.employee?.gender}
+          muted={!p.isActive}
+          size="xs"
+          className="ring-2 ring-card"
+        />
       ))}
     </span>
   );

@@ -12,7 +12,7 @@ vi.mock('next/navigation', () => ({
 vi.mock('next/link', async () => ({ default: (await import('@/core/audit/test/fixtures')).MockLink }));
 
 import type { AuditEntry } from '@school-erp/shared';
-import { AHMED, entry, MONA, NOW, renderAudit } from '@/core/audit/test/fixtures';
+import { ACTORS, AHMED, entry, MONA, NOW, renderAudit } from '@/core/audit/test/fixtures';
 import { parseActivityQuery } from '../lib/query';
 import { ActivityView } from './activity-view';
 
@@ -29,7 +29,7 @@ function renderView(
       query={parseActivityQuery(params)}
       entries={entries}
       total={total}
-      actors={[MONA, AHMED]}
+      actors={ACTORS}
       summary={summary}
       now={NOW}
       error={error}

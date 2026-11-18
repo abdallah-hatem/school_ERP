@@ -962,7 +962,8 @@ apps/web/src/
 │   │                                   My account → Notifications (§11, N4)
 │   └── academic-year/                ← year switcher, current-year context
 ├── shared/                           ← shared technical pieces
-│   ├── components/ui/                ← shadcn kit
+│   ├── components/ui/                ← shadcn kit, plus PersonAvatar: the one avatar for every
+│   │                                   person (employees, and users through their linked employee)
 │   ├── components/layout/            ← Sidebar, Topbar, PageHeader, EmptyState
 │   ├── components/form/              ← fields for react-hook-form + zod
 │   ├── hooks/
