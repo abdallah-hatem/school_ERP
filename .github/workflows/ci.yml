@@ -2,7 +2,7 @@ name: CI
 
 on:
   pull_request:
-    branches: [dev, testing, production]
+    branches: [dev, testing, production, demo]
 
 # A new push to a PR cancels the run it supersedes.
 concurrency:
@@ -17,6 +17,29 @@ env:
   E2E_PG_URL: postgresql://postgres:postgres@localhost:5432
 
 jobs:
+  # Docs-only PRs (every changed file under docs/, design/mockups/ or a *.md) skip API e2e and smoke:
+  # those jobs still run and report success, because branch protection requires them by name and a
+  # job skipped with a job-level `if` would never report a matrix job's real name.
+  changes:
+    name: Changed files
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      docs_only: ${{ steps.diff.outputs.docs_only }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: diff
+        run: |
+          files=$(git diff --name-only "${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}")
+          echo "$files"
+          if [ -n "$files" ] && ! echo "$files" | grep -qvE '^(docs/|design/mockups/)|\.md$'; then
+            echo "docs_only=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          fi
+
   checks:
     # Branch protection requires this job by name — don't rename it.
     name: Lint, typecheck, unit tests, module rules
@@ -60,6 +83,7 @@ jobs:
 
   e2e:
     name: API e2e
+    needs: changes
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -73,16 +97,24 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
+      - name: Docs only — nothing to test
+        if: needs.changes.outputs.docs_only == 'true'
+        run: echo "Only docs changed; skipped."
+
       - uses: actions/checkout@v4
+        if: needs.changes.outputs.docs_only != 'true'
 
       - uses: pnpm/action-setup@v4
+        if: needs.changes.outputs.docs_only != 'true'
 
       - uses: actions/setup-node@v4
+        if: needs.changes.outputs.docs_only != 'true'
         with:
           node-version: 22
           cache: pnpm
 
       - name: Turbo cache
+        if: needs.changes.outputs.docs_only != 'true'
         uses: actions/cache@v4
         with:
           path: .turbo/cache
@@ -90,13 +122,16 @@ jobs:
           restore-keys: turbo-e2e-${{ runner.os }}-
 
       - name: Install
+        if: needs.changes.outputs.docs_only != 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Create and migrate school_erp_e2e_ci
+        if: needs.changes.outputs.docs_only != 'true'
         run: scripts/e2e-db.sh ci
 
       # setup-env.ts supplies the throwaway JWT secret and seed password; PORT 0 picks a free port.
       - name: API e2e
+        if: needs.changes.outputs.docs_only != 'true'
         run: pnpm test:e2e
         env:
           DATABASE_URL: ${{ env.E2E_PG_URL }}/school_erp_e2e_ci?schema=public
@@ -104,6 +139,7 @@ jobs:
   smoke:
     # Sharded by Playwright project: each shard has its own runner, database and servers.
     name: Smoke (${{ matrix.project }})
+    needs: changes
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -121,16 +157,24 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
+      - name: Docs only — nothing to test
+        if: needs.changes.outputs.docs_only == 'true'
+        run: echo "Only docs changed; skipped."
+
       - uses: actions/checkout@v4
+        if: needs.changes.outputs.docs_only != 'true'
 
       - uses: pnpm/action-setup@v4
+        if: needs.changes.outputs.docs_only != 'true'
 
       - uses: actions/setup-node@v4
+        if: needs.changes.outputs.docs_only != 'true'
         with:
           node-version: 22
           cache: pnpm
 
       - name: Next.js build cache
+        if: needs.changes.outputs.docs_only != 'true'
         uses: actions/cache@v4
         with:
           path: apps/web/.next/cache
@@ -138,13 +182,16 @@ jobs:
           restore-keys: next-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
 
       - name: Install
+        if: needs.changes.outputs.docs_only != 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Playwright version
+        if: needs.changes.outputs.docs_only != 'true'
         id: pw
         run: echo "version=$(node -p "require('./apps/web/node_modules/@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
 
       - name: Playwright browser cache
+        if: needs.changes.outputs.docs_only != 'true'
         id: pw-cache
         uses: actions/cache@v4
         with:
@@ -152,22 +199,23 @@ jobs:
           key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
 
       - name: Install Chromium
-        if: steps.pw-cache.outputs.cache-hit != 'true'
+        if: needs.changes.outputs.docs_only != 'true' && (steps.pw-cache.outputs.cache-hit != 'true')
         run: pnpm --filter web exec playwright install --with-deps chromium
 
       - name: Install Chromium system dependencies
-        if: steps.pw-cache.outputs.cache-hit == 'true'
+        if: needs.changes.outputs.docs_only != 'true' && (steps.pw-cache.outputs.cache-hit == 'true')
         run: pnpm --filter web exec playwright install-deps chromium
 
       # Generic seed only: CI has no prisma/seed-data.local/ (git-ignored client data), so nothing in
       # the screenshots or report is client material. smoke.sh generates the admin password per run.
       - name: Smoke specs
+        if: needs.changes.outputs.docs_only != 'true'
         run: bash scripts/smoke.sh --project=${{ matrix.project }}
         env:
           SMOKE_DB: ci_${{ matrix.project == 'desktop-en' && 'desktop' || 'phone' }}
 
       - name: Upload Playwright report, screenshots and logs
-        if: failure()
+        if: needs.changes.outputs.docs_only != 'true' && (failure())
         uses: actions/upload-artifact@v4
         with:
           name: smoke-${{ matrix.project }}
