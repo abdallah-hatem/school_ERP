@@ -13,6 +13,13 @@ PR `feature/login-rate-limit-and-jobs`) merged — N1's retention job and N3 use
 with a cron and a key, run under a Postgres advisory lock per key (one container runs it), each run
 logged in `job_runs` (key, started, finished, status, error), cron evaluated in `Africa/Cairo`.
 
+**With events + outbox** (BUILD_LOG → Next up, owner 2026-11-18: every notification event is
+must-deliver): a module that notifies about **its own** change calls `notify()` inside its
+transaction (N4 — the rows commit with the change, nothing to lose). A module that reacts to
+**another** module's event does it in a `DomainEvents` must-deliver listener (outbox), which calls
+`notify()` in its own transaction — idempotent through the dedupe keys (N9). Outside channels later
+read their pending deliveries the same way.
+
 **Collision rule:** N1 creates the whole foundation, including **every v1 type key** with its EN and
 AR texts and link builder in `packages/shared`, the new permission keys
 (`core.notifications.view`, `core.notifications.manage`) and audit action keys

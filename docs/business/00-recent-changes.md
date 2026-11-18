@@ -12,6 +12,10 @@
   Preferences per person, kind and channel, with school defaults; approvals can't be turned off.
   Other channels and parents are Planned. Layout picked by the owner: the bell opens a short list
   over the page; each kind is one on/off switch on screen. Not built yet.
+- 2026-11-18 — The "no stage" entry (§3) is marked, not matched by name: renaming the "None" stage
+  (or a school naming it differently) no longer gives its staff a stage colour on the employee
+  cards. Existing databases mark the stage named "None" once, when they update.
+
 - 2026-11-18 — Demo dry-run polish (§6, §5, §4): the **bank sheet** now has each employee's bank,
   account number and IBAN, and a Total row. A **draft run** says when the lateness or payroll rules
   changed after its last calculation and offers Recalculate. The **payslip**'s lateness shows the

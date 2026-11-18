@@ -4,6 +4,10 @@
 
 - **DECIDED** — **Stages:** Kindergarten, Primary, Preparatory, plus "None" for staff not tied to a
   stage (all four come from the seed). **Departments** and **job titles** are lists the school manages in Settings (§7).
+- **DECIDED** (2026-11-18) — The **"no stage" entry** is one stage marked as such by the seed, not
+  recognised by its name: the school can rename it (or call it anything in either language) and it
+  keeps its role — employee cards still give it the neutral colour and leave it out of the stage
+  colour order. At most one stage carries the mark, and no screen sets or moves it.
   Each item has an English and an Arabic name.
 - **DECIDED** — A list item in use by an employee can't be deleted, only hidden from new choices.
 - **DECIDED** — Hidden items are left out of lists unless asked for. An employee who already has a
