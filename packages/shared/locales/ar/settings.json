@@ -244,6 +244,7 @@
       "widthLabel": "الشريحة {n}: المبلغ التالي",
       "widthPlaceholder": "5,000.00",
       "rateLabel": "نسبة الشريحة {n}",
+      "restRateLabel": "نسبة ما تبقى",
       "ratePlaceholder": "10",
       "restLabel": "ما تبقى",
       "restHint": "كل ما يزيد على الشرائح السابقة.",

@@ -9,6 +9,7 @@ vi.mock('../apis', () => api);
 vi.mock('next/navigation', () => ({ redirect: vi.fn() }));
 
 import { AccountingRulesSection } from '../components/accounting-rules-section';
+import { sessionWithout } from '@/test/render';
 import { ok, renderSettings } from './helpers';
 
 const SETTINGS: AccountingSettings = { payroll: DEFAULT_TAX_RULE };
@@ -35,9 +36,13 @@ describe('Settings → Accounting — payroll tax rule (§10)', () => {
     renderSettings(<AccountingRulesSection />);
     await loaded();
     expect(value(/Slice 1: the next amount/)).toBe('5,000.00');
-    expect(value(/Slice 6 rate/)).toBe('25');
-    expect(screen.queryByRole('textbox', { name: /Slice 6: the next amount/ })).toBeNull(); // "The rest"
+    expect(value(/Slice 5 rate/)).toBe('22.5');
+    // "The rest": no amount, its rate named as such, and no remove button (it always stays).
+    expect(value(/Rate for the rest/)).toBe('25');
+    expect(screen.queryByRole('textbox', { name: /Slice 6/ })).toBeNull();
     expect(screen.getByText('The rest')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Remove slice 5' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Remove slice 6' })).toBeNull();
     expect(value(/Martyrs' fund/)).toBe('0.05');
     expect(value(/Employee insurance share/)).toBe('11');
     // Net 10,000.00 → 1,017.00 tax, 5.51 fund, 11,022.51 gross (the same numbers as the API's tests).
@@ -48,7 +53,7 @@ describe('Settings → Accounting — payroll tax rule (§10)', () => {
     const user = userEvent.setup();
     renderSettings(<AccountingRulesSection />);
     await loaded();
-    const rate = screen.getByRole('textbox', { name: /Slice 6 rate/ });
+    const rate = screen.getByRole('textbox', { name: /Rate for the rest/ });
     await user.clear(rate);
     await user.type(rate, '99.99');
     expect(await screen.findByText("This rate plus the martyrs' fund must stay under 100%.")).toBeTruthy();
@@ -63,6 +68,8 @@ describe('Settings → Accounting — payroll tax rule (§10)', () => {
     await loaded();
     await user.click(screen.getByRole('button', { name: 'Add a slice' }));
     expect(value(/Slice 6: the next amount/)).toBe('1,000.00');
+    // The new slice starts at the rate of the slice before it (slice 5: 22.5%), not 0%.
+    expect(value(/Slice 6 rate/)).toBe('22.5');
     const rate = screen.getByRole('textbox', { name: /Slice 6 rate/ });
     await user.clear(rate);
     await user.type(rate, '24');
@@ -99,13 +106,16 @@ describe('Settings → Accounting — payroll tax rule (§10)', () => {
     expect(await screen.findByText('أدخل نسبة من 0 إلى 99.99، بحد أقصى رقمين عشريين.')).toBeTruthy();
   });
 
-  it('without accounting.settings.edit there is no Save bar (view only)', async () => {
-    const { TEST_SESSION } = await import('@/test/render');
-    renderSettings(<AccountingRulesSection />, 'en', {
-      ...TEST_SESSION,
-      permissions: TEST_SESSION.permissions.filter((p) => p !== 'accounting.settings.edit'),
-    });
+  it('without accounting.settings.edit the rule is read-only: no typing, no adding or removing slices, no Save bar', async () => {
+    renderSettings(<AccountingRulesSection />, 'en', sessionWithout('accounting.settings.edit'));
     await loaded();
+    for (const name of [/Slice 1: the next amount/, /Slice 1 rate/, /Rate for the rest/, /Martyrs' fund/, /Employee insurance share/]) {
+      expect(screen.getByRole('textbox', { name })).toHaveProperty('disabled', true);
+    }
+    expect(screen.queryByRole('button', { name: 'Add a slice' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Remove slice/ })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
+    // The example is a calculator, not a setting: it still works.
+    expect(example()).toContain('gross 11,022.51');
   });
 });

@@ -1,5 +1,10 @@
 # Recent changes
 
+- 2026-11-18 — Settings access (§7, §10, review of the accounting panel): the Accountant now has
+  Settings in the menu and lands on Accounting. Settings lists only the sections a user may view; a
+  link to another section opens their first allowed one. Without the right to change the tax rule,
+  it is shown read-only. The last slice's rate reads "Rate for the rest", and a new slice starts at
+  the rate of the slice before it.
 - 2026-11-18 — Accounting (§10, §2, §7, owner): a new **accounting** module owns the payroll tax
   rule — monthly income-tax slices, the martyrs' fund and the employee's insurance share — since
   HR payroll ends at the net and salaries are net, grossed up (owner, 2026-11-17). Defaults from

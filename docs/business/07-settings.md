@@ -13,6 +13,10 @@ affects only **draft** payroll runs (approved runs never change).
   stages, lists and the catalogue follow when their audit entries are wired (until then their
   history is written right after the change). Every change recorded before the move is kept, with
   its value, person and time.
+- **DECIDED** (§2) — Settings lists only the sections the user may view, and opens on the first of
+  them; a link to a section they can't view opens their first allowed one instead. Anyone who may
+  view at least one section (e.g. the Accountant, for Accounting) has Settings in the menu. A
+  section they may view but not change is shown read-only: no typing, adding or removing.
 - **DECIDED** — The logo must be PNG, JPG or SVG and at most 2 MB. School names are at most 200
   characters; stage, department and job-title names at most 100.
 

@@ -104,6 +104,7 @@ export const NAV_MODULES: readonly NavModule[] = [
         'hr.lists.view',
         'core.stages.view',
         'hr.penalty_catalogue.view',
+        'accounting.settings.view',
       ]),
       page('activity', '/activity', ActivityIcon, ['core.audit.view']),
       // Who can sign in and what each role may do (spec roles-permissions, P3).

@@ -28,7 +28,9 @@ in; working each approved month out follows (plan `docs/plans/2026-11-18-account
 
 ## Who
 
-- **GUESS** — The Accountant and the System admin see and change the tax rule (§2).
+- **GUESS** — The Accountant and the System admin see and change the tax rule (§2) — in Settings →
+  Accounting, which the Accountant opens from the menu. Someone who may only view it sees it
+  read-only.
 
 ## Planned
 

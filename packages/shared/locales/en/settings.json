@@ -244,6 +244,7 @@
       "widthLabel": "Slice {n}: the next amount",
       "widthPlaceholder": "5,000.00",
       "rateLabel": "Slice {n} rate",
+      "restRateLabel": "Rate for the rest",
       "ratePlaceholder": "10",
       "restLabel": "The rest",
       "restHint": "Everything above the slices before it.",

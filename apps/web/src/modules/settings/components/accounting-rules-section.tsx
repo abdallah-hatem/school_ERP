@@ -12,7 +12,7 @@ import {
 } from '@school-erp/shared';
 import { useId, useRef, useState } from 'react';
 import { useFieldArray, useForm, useWatch, type Control } from 'react-hook-form';
-import { Can } from '@/core/auth';
+import { Can, useCan } from '@/core/auth';
 import { callApi } from '@/lib/callApi';
 import { MoneyField, NumberField } from '@/shared/components/form/fields';
 import { Form } from '@/shared/components/form/form';
@@ -97,6 +97,8 @@ function AccountingRulesForm({
   onSaved: (next: AccountingSettings) => void;
 }) {
   const { t } = useTranslation();
+  // Without the edit permission the rule is shown read-only: no typing, no adding or removing slices.
+  const canEdit = useCan()('accounting.settings.edit');
   const [saved, setSaved] = useState(false);
   const busy = useRef(false);
   const form = useForm<AccountingRulesFormValues>({
@@ -164,44 +166,60 @@ function AccountingRulesForm({
                       label={t('settings.accounting.tax.widthLabel', { n: i + 1 })}
                       placeholder={t('settings.accounting.tax.widthPlaceholder')}
                       required
+                      disabled={!canEdit}
                       className="min-w-40 flex-1 basis-48"
                     />
                   )}
                   <NumberField
                     control={form.control}
                     name={`payroll.brackets.${i}.percent`}
-                    label={t('settings.accounting.tax.rateLabel', { n: i + 1 })}
+                    label={
+                      last
+                        ? t('settings.accounting.tax.restRateLabel')
+                        : t('settings.accounting.tax.rateLabel', { n: i + 1 })
+                    }
                     placeholder={t('settings.accounting.tax.ratePlaceholder')}
                     suffix="%"
                     decimals={2}
                     required
+                    disabled={!canEdit}
                     className="w-36"
                   />
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="mt-7"
-                    aria-label={t('settings.accounting.tax.removeBracket', { n: i + 1 })}
-                    disabled={last || brackets.fields.length <= 1}
-                    onClick={() => brackets.remove(i)}
-                  >
-                    <RemoveIcon />
-                  </Button>
+                  {/* "The rest" always stays, so it has no remove button. */}
+                  {canEdit && !last ? (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="mt-7"
+                      aria-label={t('settings.accounting.tax.removeBracket', { n: i + 1 })}
+                      disabled={brackets.fields.length <= 1}
+                      onClick={() => brackets.remove(i)}
+                    >
+                      <RemoveIcon />
+                    </Button>
+                  ) : null}
                 </li>
               );
             })}
           </ol>
-          <div>
-            <Button
-              variant="soft"
-              size="sm"
-              disabled={brackets.fields.length >= TAX_BRACKETS_MAX}
-              onClick={() => brackets.insert(brackets.fields.length - 1, { width: 100_000, percent: 0 })}
-            >
-              <AddIcon />
-              {t('settings.accounting.tax.addBracket')}
-            </Button>
-          </div>
+          {canEdit ? (
+            <div>
+              <Button
+                variant="soft"
+                size="sm"
+                disabled={brackets.fields.length >= TAX_BRACKETS_MAX}
+                onClick={() => {
+                  // Inserted before "the rest", at the rate of the slice it follows.
+                  const at = brackets.fields.length - 1;
+                  const before = form.getValues(`payroll.brackets.${Math.max(at - 1, 0)}.percent`);
+                  brackets.insert(at, { width: 100_000, percent: before ?? 0 });
+                }}
+              >
+                <AddIcon />
+                {t('settings.accounting.tax.addBracket')}
+              </Button>
+            </div>
+          ) : null}
         </fieldset>
 
         <div className="grid gap-5 md:grid-cols-2">
@@ -214,6 +232,7 @@ function AccountingRulesForm({
             suffix="%"
             decimals={2}
             required
+            disabled={!canEdit}
           />
           <NumberField
             control={form.control}
@@ -224,6 +243,7 @@ function AccountingRulesForm({
             suffix="%"
             decimals={2}
             required
+            disabled={!canEdit}
           />
         </div>
 

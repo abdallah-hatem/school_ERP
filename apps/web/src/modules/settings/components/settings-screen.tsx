@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useCallback, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { settingsActivityHref } from '@/core/audit';
 import { Can, useCan } from '@/core/auth';
 import { PageHeader } from '@/shared/components/layout/page-header';
@@ -23,7 +23,7 @@ import {
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { DirtyReporterProvider, useLeaveGuard } from '../hooks/unsaved-changes';
-import { SETTINGS_SECTIONS, type SettingsSectionId } from '../sections';
+import { SECTION_VIEW_PERMISSION, SETTINGS_SECTIONS, type SettingsSectionId } from '../sections';
 import { AccountingRulesSection } from './accounting-rules-section';
 import { CatalogueSection } from './catalogue-section';
 import { HrRulesSection } from './hr-rules-section';
@@ -67,18 +67,28 @@ type Leave = { to: SettingsSectionId | null } | { href: string } | { proceed: ()
  * The one Settings screen (§7): a section per area. Desktop and tablet show the sections as a side
  * list beside the open one; a phone shows the list first, then the chosen section with a way back.
  * Leaving a section with unsaved edits — another section, a menu link, the language switch,
- * closing the tab — asks first.
+ * closing the tab — asks first. Only the sections the user may view are listed; a section they can't
+ * view (from the URL) opens their first allowed one instead.
  */
 export function SettingsScreen({ initialSection }: { initialSection: SettingsSectionId | null }) {
   const { t, locale } = useTranslation();
   const can = useCan();
   const router = useRouter();
   const pathname = usePathname();
-  const [section, setSection] = useState<SettingsSectionId | null>(initialSection);
+  const visible = useMemo(() => SETTINGS_SECTIONS.filter((id) => can(SECTION_VIEW_PERMISSION[id])), [can]);
+  const refused = initialSection !== null && !visible.includes(initialSection);
+  const [section, setSection] = useState<SettingsSectionId | null>(refused ? null : initialSection);
   const [dirtyBy, setDirtyBy] = useState<Record<string, boolean>>({});
   const [leaving, setLeaving] = useState<Leave | null>(null);
   const dirty = Object.values(dirtyBy).some(Boolean);
-  const shown = section ?? SETTINGS_SECTIONS[0];
+  // The page itself needs one of the sections' permissions, so there is always a first one.
+  const first = visible[0] ?? SETTINGS_SECTIONS[0];
+  const shown = section ?? first;
+
+  // A section they can't view was asked for: drop it from the URL (the first allowed one shows).
+  useEffect(() => {
+    if (refused) router.replace(pathname ?? '', { scroll: false });
+  }, [refused, router, pathname]);
 
   const report = useCallback((source: string, isDirty: boolean) => {
     setDirtyBy((prev) => (Boolean(prev[source]) === isDirty ? prev : { ...prev, [source]: isDirty }));
@@ -97,7 +107,7 @@ export function SettingsScreen({ initialSection }: { initialSection: SettingsSec
 
   function choose(to: SettingsSectionId | null) {
     if (to === section) return;
-    if (dirty && (to ?? SETTINGS_SECTIONS[0]) !== shown) setLeaving({ to });
+    if (dirty && (to ?? first) !== shown) setLeaving({ to });
     else open(to);
   }
 
@@ -130,7 +140,7 @@ export function SettingsScreen({ initialSection }: { initialSection: SettingsSec
       <div className="grid items-start gap-6 md:grid-cols-[15rem_minmax(0,1fr)] xl:grid-cols-[17rem_minmax(0,1fr)]">
         <nav aria-label={t('settings.sectionsLabel')} className={cn('md:sticky md:top-6', section && 'max-md:hidden')}>
           <ul className="flex flex-col gap-1 rounded-3xl bg-card p-2 shadow-card">
-            {SETTINGS_SECTIONS.filter((id) => id !== 'accounting' || can('accounting.settings.view')).map((id) => {
+            {visible.map((id) => {
               const Icon = ICONS[id];
               const current = id === shown;
               return (
