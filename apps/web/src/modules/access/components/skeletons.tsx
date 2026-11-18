@@ -57,7 +57,7 @@ export function RolesListSkeleton() {
   const { locale } = useTranslation();
   return (
     <AccessI18n locale={locale}>
-      <RolesList basePath={`/${locale}/roles`} roles={undefined} holderNames={{}} />
+      <RolesList basePath={`/${locale}/roles`} roles={undefined} holders={{}} />
     </AccessI18n>
   );
 }
@@ -313,7 +313,7 @@ function AccountSkeleton() {
           <>
             <section data-skeleton-block="account-profile" className="@container flex flex-col gap-5 rounded-3xl bg-card p-5 shadow-card md:p-6">
               <div className="flex min-w-0 items-center gap-4">
-                <Skeleton className="size-14 shrink-0 rounded-2xl" />
+                <Skeleton className="size-12 shrink-0 rounded-2xl" />
                 <div className="flex min-w-0 flex-col">
                   <SkeletonText className="font-display text-xl" width="w-40" />
                   <SkeletonText className="text-sm" width="w-52" />

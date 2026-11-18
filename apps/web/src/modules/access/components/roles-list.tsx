@@ -18,15 +18,15 @@ import { formatCount } from '@/shared/lib/format';
 import { localName, otherName } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { DELETE_ROLE } from '../apis';
-import { AvatarStack, RoleKindBadge, RoleTile } from './role-bits';
+import { AvatarStack, RoleKindBadge, RoleTile, type RoleHolder } from './role-bits';
 
 export interface RolesListProps {
   /** `/en/roles`. */
   basePath: string;
   /** `undefined` while the roles load: the table draws skeleton rows. */
   roles: Role[] | undefined;
-  /** The names of (some of) each role's holders, for the avatar stack. */
-  holderNames: Record<string, string[]>;
+  /** (Some of) each role's holders, for the avatar stack. */
+  holders: Record<string, RoleHolder[]>;
   error?: boolean;
 }
 
@@ -34,7 +34,7 @@ export interface RolesListProps {
  * Administration → Roles (P3, option A): every role with its kind, how many permissions it grants
  * and who holds it. Built-in roles can be edited, not deleted; a custom role once nobody holds it.
  */
-export function RolesList({ basePath, roles, holderNames, error = false }: RolesListProps) {
+export function RolesList({ basePath, roles, holders, error = false }: RolesListProps) {
   const { t, locale } = useTranslation();
   const router = useRouter();
   const canManage = useCan()('core.roles.manage');
@@ -103,7 +103,7 @@ export function RolesList({ basePath, roles, holderNames, error = false }: Roles
       className: 'w-48',
       cell: (r) => (
         <span className="flex items-center gap-2">
-          <AvatarStack names={holderNames[r.id] ?? []} />
+          <AvatarStack people={holders[r.id] ?? []} />
           <span className="text-muted-foreground">{r.userCount === 0
               ? t('access.roles.userCount.zero')
               : t('access.roles.userCount', { count: formatCount(r.userCount) })}</span>

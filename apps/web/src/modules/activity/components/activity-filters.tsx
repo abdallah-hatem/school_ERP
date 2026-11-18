@@ -16,9 +16,9 @@ import {
 } from '@/shared/components/ui/icons';
 import { ClearFilters } from '@/shared/components/form/filter-controls';
 import { controlClasses } from '@/shared/components/ui/input';
+import { PersonAvatar } from '@/shared/components/ui/person-avatar';
 import { SkeletonText } from '@/shared/components/ui/skeleton';
 import { formatCount } from '@/shared/lib/format';
-import { initialsOf } from '@/shared/lib/initials';
 import { matchesSearch } from '@/shared/lib/search';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
@@ -200,12 +200,7 @@ function PersonPicker({
             a.id,
             value === a.id,
             () => onChange(value === a.id ? undefined : a.id),
-            <span
-              aria-hidden="true"
-              className="grid size-7 shrink-0 place-items-center rounded-full bg-accent-soft text-[0.6875rem] font-extrabold text-accent-foreground"
-            >
-              {initialsOf(a.name)}
-            </span>,
+            <PersonAvatar photoUrl={a.employee?.photoUrl} gender={a.employee?.gender} size="xs" />,
             a.name,
           ),
         )}

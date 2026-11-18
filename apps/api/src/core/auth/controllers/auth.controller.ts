@@ -55,17 +55,19 @@ export class AuthController {
   /**
    * The signed-in user with the permission keys their roles grant now — the web app's `can()`
    * reads them (R6) — and the roles themselves (the user chip). Read fresh on every request, so a
-   * role change shows without a new sign-in. Also answered while `mustChangePassword` is set: the
+   * role change shows without a new sign-in. `employee`: the linked employee's photo and gender
+   * (the chip's avatar). Also answered while `mustChangePassword` is set: the
    * web app reads the flag here and sends the user to "Set a new password".
    */
   @Get('me')
   @SignedIn()
   @AllowedBeforePasswordChange()
   async me(@CurrentUser() user: AuthUser): Promise<SessionUser> {
-    const [permissions, roles] = await Promise.all([
+    const [permissions, roles, employee] = await Promise.all([
       this.permissions.permissionsFor(user),
       this.users.rolesOf(user.id),
+      this.users.avatarOf(user.id),
     ]);
-    return { ...user, permissions, roles };
+    return { ...user, permissions, roles, employee };
   }
 }

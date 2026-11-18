@@ -5,6 +5,7 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { callApi } from '@/lib/callApi';
 import { controlClasses } from '@/shared/components/ui/input';
 import { CheckIcon, ChevronDownIcon, LinkedEmployeeIcon, SearchIcon } from '@/shared/components/ui/icons';
+import { PersonAvatar } from '@/shared/components/ui/person-avatar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover';
 import { Skeleton } from '@/shared/components/ui/skeleton';
 import { formatCount } from '@/shared/lib/format';
@@ -12,7 +13,6 @@ import { localName } from '@/shared/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { GET_EMPLOYEE_OPTIONS } from '../apis';
-import { Avatar } from './role-bits';
 
 /** The linked employee as the form holds it. */
 export type LinkedEmployee = NonNullable<UserAccount['employee']>;
@@ -86,7 +86,7 @@ export function EmployeePicker({
 
   function pick(o: EmployeeOption | null) {
     if (o && taken(o)) return;
-    onChange(o ? { id: o.id, code: o.code, nameEn: o.nameEn, nameAr: o.nameAr } : null);
+    onChange(o ? { id: o.id, code: o.code, nameEn: o.nameEn, nameAr: o.nameAr, photoUrl: o.photoUrl, gender: o.gender } : null);
     setOpen(false);
   }
 
@@ -200,7 +200,7 @@ export function EmployeePicker({
               >
                 {o ? (
                   <>
-                    <Avatar name={localName(o, locale)} size="sm" inactive={!o.isActive} />
+                    <PersonAvatar photoUrl={o.photoUrl} gender={o.gender} size="xs" muted={!o.isActive} />
                     <span className="flex min-w-0 flex-1 flex-col">
                       <span className="truncate font-bold">{localName(o, locale)}</span>
                       <span className="truncate text-xs text-muted-foreground">

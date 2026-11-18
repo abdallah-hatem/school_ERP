@@ -109,6 +109,11 @@ Motion explains a change and never delays it.
   display face, a close button; top inline-end corner (top-right in English, top-left in Arabic),
   under the top bar, stacked with gaps (owner, 2026-11-19: keep top right). Always in the screen's
   language (pass a translated `successMessage`, never the API's English).
+- **Avatars:** one avatar for every person, never initials (owner, 2026-11-18; 2026-11-19) —
+  `PersonAvatar`. An employee shows their photo, else the male or female silhouette by gender; a
+  user account shows its linked employee's (the API sends `employee.photoUrl` / `gender` on users,
+  the session and Activity's people), else a neutral silhouette. No photo: a white figure on the
+  `avatar-tile` grey. Inactive people are greyed (photo in grayscale).
 - **Take away / give back:** Deactivate is a destructive outline (red in ⋯ menus), Reactivate a
   soft success button (green in ⋯ menus) — `StatusChangeButton`, different icons, never the same
   neutral button with different words.
