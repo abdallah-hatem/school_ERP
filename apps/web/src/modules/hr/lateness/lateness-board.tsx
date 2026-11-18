@@ -32,7 +32,7 @@ export interface LatenessBoardProps {
   maxMonth: Month;
   /** `null` when the list failed to load; `undefined` on first load (the route's skeleton). */
   rows: LatenessRow[] | null | undefined;
-  /** `null` when the HR settings failed to load; `undefined` on first load. */
+  /** The rule the list came with; `null` when it is missing; `undefined` on first load. */
   rule: LatenessRule | null | undefined;
   /** The month's payroll is approved: open read-only. */
   locked: boolean;
@@ -43,13 +43,15 @@ export interface LatenessBoardProps {
  * while typing, "Save all" sends only the changed rows. A locked month (approved payroll) opens
  * read-only; a 409 `PAYROLL_APPROVED` on save turns it read-only too.
  */
-export function LatenessBoard({ month, maxMonth, rows: initialRows, rule, locked: initialLocked }: LatenessBoardProps) {
+export function LatenessBoard({ month, maxMonth, rows: initialRows, rule: initialRule, locked: initialLocked }: LatenessBoardProps) {
   const { t, locale } = useTranslation();
   const router = useRouter();
   const [navigating, startNavigation] = useTransition();
   const [retrying, startRetry] = useTransition();
 
   const [rows, setRows] = useState<LatenessRow[] | null | undefined>(initialRows);
+  // The rule comes with each list (load and save), so the preview always matches the saved days.
+  const [rule, setRule] = useState<LatenessRule | null | undefined>(initialRule);
   const loading = rows === undefined;
   const [drafts, setDrafts] = useState<Drafts>({});
   const [search, setSearch] = useState('');
@@ -98,6 +100,7 @@ export function LatenessBoard({ month, maxMonth, rows: initialRows, rule, locked
         if (res.data && Array.isArray(res.data.rows)) {
           setRows(res.data.rows);
           setLocked(res.data.locked);
+          if (res.data.rule) setRule(res.data.rule);
         }
         setDrafts({});
       } else if (res.status === 409 && res.error === ErrorCode.PAYROLL_APPROVED) {

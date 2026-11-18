@@ -20,6 +20,12 @@ lines each role sees: §2 Roles (enforced, P4).
   penalties, lateness and adjustments. An approved run
   is never edited or deleted; corrections go into the next month as adjustments.
 - **DECIDED** — A month can't be approved while it still has **pending** penalties.
+- **DECIDED** (owner, 2026-11-18) — Anyone who may view a run also sees the HR rules behind it (day
+  divisor, part-time percentages, the lateness rule, the penalty repetition window), so the
+  Principal and the Accountant see them without the right to see HR settings. No salary comes with
+  them. A run keeps no copy of the rules, so these are today's: on a draft they are what the next
+  calculation uses; on an approved run they are shown as the current rules, which may differ from
+  the ones it was approved with. "Edit in settings" shows only to those who may see HR settings.
 
 ## Calculating a line
 

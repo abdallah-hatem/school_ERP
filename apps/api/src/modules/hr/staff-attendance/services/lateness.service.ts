@@ -3,6 +3,7 @@ import {
   AuditEntityType,
   type AuditChange,
   type LatenessMonth,
+  type LatenessRule,
   type LatenessRow,
   type Month,
   type PermissionKey,
@@ -33,31 +34,39 @@ export class LatenessService {
 
   /**
    * The month's list — the employees `hr.lateness.view` covers for the user (R5) — plus whether its
-   * payroll is approved (the screen opens read-only).
+   * payroll is approved (the screen opens read-only) and the lateness rule its days were computed
+   * with: the screen previews days from it, so a viewer needs no `hr.settings.view`. Only the
+   * lateness rule leaves here — no payroll or penalty setting.
    */
   async month(month: Month): Promise<LatenessMonth> {
-    const [locked, rows] = await Promise.all([
+    const [locked, settings] = await Promise.all([
       this.monthLock.isMonthLocked(month),
-      this.list(month, 'hr.lateness.view'),
+      this.settings.get(),
     ]);
-    return { locked, rows };
+    const rule = settings.lateness;
+    const rows = await this.list(month, 'hr.lateness.view', rule);
+    return {
+      locked,
+      rule: { graceMinutes: rule.graceMinutes, steps: rule.steps, extraHourDays: rule.extraHourDays },
+      rows,
+    };
   }
 
   /**
    * Every ACTIVE employee with their department, stored minutes (0 when none) and the days they
    * cost. With `scopeKey`, only the employees it covers for the user; without, all of them
-   * (payroll's calculation is school-wide).
+   * (payroll's calculation is school-wide). `rule` is today's lateness rule, read when not given.
    */
-  async list(month: Month, scopeKey?: PermissionKey): Promise<LatenessRow[]> {
-    const [employees, stored, settings] = await Promise.all([
+  async list(month: Month, scopeKey?: PermissionKey, rule?: LatenessRule): Promise<LatenessRow[]> {
+    const [employees, stored, lateness] = await Promise.all([
       this.employees.listActiveWithDepartments(scopeKey),
       this.repository.findByMonth(month),
-      this.settings.get(),
+      rule ?? this.settings.get().then((s) => s.lateness),
     ]);
     const minutesOf = new Map(stored.map((e) => [e.employeeId, e.minutes]));
     return employees.map(({ employee, department }) => {
       const minutes = minutesOf.get(employee.id) ?? 0;
-      return { employee, department, minutes, days: latenessDays(minutes, settings.lateness) };
+      return { employee, department, minutes, days: latenessDays(minutes, lateness) };
     });
   }
 

@@ -56,6 +56,10 @@ for (const role of BUILT_IN_ROLES) {
         await expect(main.getByRole('heading', { level: 1 }).first(), `${role.key} should open ${id}`).toBeVisible();
         await expect(notFound, `${role.key} should open ${id}`).toHaveCount(0);
         await expect(failed, `${id} should load for ${role.key}`).toHaveCount(0);
+        // The rules a screen shows come with its own data, not from HR settings (which the
+        // Principal and the Accountant can't read): no "rules couldn't load" warning for any role.
+        await expect(main.getByText(t(locale, 'lateness.settingsError')), `${id}: lateness rule for ${role.key}`).toHaveCount(0);
+        await expect(main.getByText(t(locale, 'payroll.rules.error')), `${id}: payroll rules for ${role.key}`).toHaveCount(0);
       } else {
         refused.push(id);
         await expect(notFound, `${role.key} should be refused ${id}`).toBeVisible();

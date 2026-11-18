@@ -205,9 +205,10 @@ phase live in `docs/build-log/`.
   before/after values.
 - **Before Sunday (owner):** on the demo DB run `prisma migrate deploy`, then `db:seed` once with the
   same `SEED_ADMIN_PASSWORD`. Until T28/T29 land, open Activity in the demo only for a settings change.
-- Access decisions from #89: Principal/Accountant can't read HR rules on Lateness and the payroll run
-  (recommended: the endpoints return the rule they used); should Stage head / Direct manager see
-  Settings (Structure, Catalogue, read-only)?
+- Access decision from #89: should Stage head / Direct manager see Settings (Structure, Catalogue,
+  read-only)? (Principal/Accountant reading HR rules on Lateness and the run: done in #97.)
+- Payroll runs could keep a snapshot of the rules they were calculated with (Tamer to decide); today
+  an approved run shows current rules.
 - Dry-run follow-ups (2026-11-18): payslip doesn't say grace minutes were taken off; bank sheet lacks
   bank/account/IBAN and a total row; dashboard tab title lacks the school name; desktop sidebar cuts
   the Arabic school name; photo help text still says "neutral silhouette"; no Recalculate hint after

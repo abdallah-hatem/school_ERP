@@ -9,6 +9,7 @@ import {
   type Employee,
   type EmployeeSummary,
   type HrDashboard,
+  type HrSettings,
   type LatenessMonth,
   type PayrollRun,
   type PenaltyRecord,
@@ -43,7 +44,7 @@ describe('P4 — scopes and salary in HR (e2e)', () => {
   let jobTitleId: string;
   let groupId: string;
   const ids = { boss: '', head: '', p1: '', k1: '', k2: '' };
-  const users = { stageHead: '', directManager: '', self: '', unlinked: '', hrManager: '', principal: '' };
+  const users = { stageHead: '', directManager: '', self: '', unlinked: '', hrManager: '', principal: '', accountant: '' };
   let selfRoleId: string;
   let runId: string;
   const penalty: Record<string, string> = {};
@@ -155,6 +156,7 @@ describe('P4 — scopes and salary in HR (e2e)', () => {
     users.unlinked = await newUser('unlinked-head', null, [BuiltInRole.STAGE_HEAD]);
     users.hrManager = await newUser('hr-manager', null, [BuiltInRole.HR_MANAGER]);
     users.principal = await newUser('principal', null, [BuiltInRole.PRINCIPAL]);
+    users.accountant = await newUser('accountant', null, [BuiltInRole.ACCOUNTANT]);
 
     // One pending penalty per employee, this month.
     const violationId = (
@@ -362,6 +364,36 @@ describe('P4 — scopes and salary in HR (e2e)', () => {
         expect(payslip).not.toHaveProperty('net');
         const lines = (await http(app).get(`/hr/employees/${ids.p1}/payroll-lines`).expect(200)).body.data;
         expect(lines[0]).not.toHaveProperty('net');
+      });
+    });
+
+    // The HR rules each screen needs come with its own read: a role without `hr.settings.view`
+    // (Principal, Accountant) still sees them, and gets nothing beyond the HR rules.
+    it('the run carries its rules for the principal and the accountant — the HR rules only, no money', async () => {
+      const settings = (await http(app).get('/hr/settings').expect(200)).body.data as HrSettings;
+      for (const who of [users.principal, users.accountant]) {
+        await asUser(who, async () => {
+          await http(app).get('/hr/settings').expect(403);
+          const run = (await http(app).get(`/hr/payroll-runs/${runId}`).expect(200)).body.data as PayrollRun;
+          expect(run.rules).toEqual(settings);
+          expect(Object.keys(run.rules).sort()).toEqual(['lateness', 'payroll', 'penalties']);
+          expect(Object.keys(run.rules.payroll).sort()).toEqual(['dayDivisor', 'partTime']);
+          expect(Object.keys(run.rules.penalties)).toEqual(['repetitionWindow']);
+        });
+      }
+      await asUser(users.principal, async () => {
+        const run = (await http(app).get(`/hr/payroll-runs/${runId}`).expect(200)).body.data as PayrollRun;
+        for (const line of run.lines) for (const f of PAYROLL_LINE_MONEY_FIELDS) expect(line).not.toHaveProperty(f);
+      });
+    });
+
+    it('lateness carries the rule its days use for the principal — only the lateness rule', async () => {
+      const settings = (await http(app).get('/hr/settings').expect(200)).body.data as HrSettings;
+      await asUser(users.principal, async () => {
+        await http(app).get('/hr/settings').expect(403);
+        const list = (await http(app).get('/hr/lateness').query({ month }).expect(200)).body.data as LatenessMonth;
+        expect(Object.keys(list).sort()).toEqual(['locked', 'rows', 'rule']);
+        expect(list.rule).toEqual(settings.lateness);
       });
     });
 
