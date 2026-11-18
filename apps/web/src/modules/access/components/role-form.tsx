@@ -53,6 +53,31 @@ const SCOPE_ICON: Record<PermissionScope, AppIcon> = {
   self: PersonIcon,
 };
 
+/** What each scope means (the side card of a role's page; static, so its skeleton draws it too). */
+export function RoleScopesCard() {
+  const { t } = useTranslation();
+  return (
+    <FormCard title={t('access.roleForm.scopesTitle')}>
+      <ul className="flex flex-col gap-3.5">
+        {PERMISSION_SCOPES.map((s) => {
+          const Icon = SCOPE_ICON[s];
+          return (
+            <li key={s} className="flex items-start gap-2.5">
+              <span aria-hidden="true" className="grid size-7 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground">
+                <Icon className="size-4" />
+              </span>
+              <span className="flex flex-col">
+                <span className="text-sm font-bold">{t(`permissions.scopes.${s}`)}</span>
+                <span className="text-xs text-muted-foreground">{t(`access.roleForm.scopes.${s}`)}</span>
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </FormCard>
+  );
+}
+
 /**
  * A role's page (P3, option A): its names in both languages, its permissions grouped by module (a
  * switch and, for row-level ones, a scope each), who holds it and what the scopes mean. Save stays
@@ -177,6 +202,7 @@ export function RoleForm({ basePath, usersPath, role, copyFrom, holders = [], ho
   const holdersCard = role ? (
     <FormCard
       title={t('access.roleForm.holders')}
+      measure="width"
       aside={
         <span className="tabular text-sm font-semibold text-muted-foreground">
           {holdersTotal === 0
@@ -217,26 +243,7 @@ export function RoleForm({ basePath, usersPath, role, copyFrom, holders = [], ho
     </FormCard>
   ) : null;
 
-  const scopesCard = systemAdmin ? null : (
-    <FormCard title={t('access.roleForm.scopesTitle')}>
-      <ul className="flex flex-col gap-3.5">
-        {PERMISSION_SCOPES.map((s) => {
-          const Icon = SCOPE_ICON[s];
-          return (
-            <li key={s} className="flex items-start gap-2.5">
-              <span aria-hidden="true" className="grid size-7 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground">
-                <Icon className="size-4" />
-              </span>
-              <span className="flex flex-col">
-                <span className="text-sm font-bold">{t(`permissions.scopes.${s}`)}</span>
-                <span className="text-xs text-muted-foreground">{t(`access.roleForm.scopes.${s}`)}</span>
-              </span>
-            </li>
-          );
-        })}
-      </ul>
-    </FormCard>
-  );
+  const scopesCard = systemAdmin ? null : <RoleScopesCard />;
 
   const main = (
     <>
@@ -256,7 +263,13 @@ export function RoleForm({ basePath, usersPath, role, copyFrom, holders = [], ho
           </div>
         </FormCard>
       )}
-      <section aria-labelledby="role-permissions" className="overflow-hidden rounded-3xl bg-card shadow-card">
+      <section
+        aria-labelledby="role-permissions"
+        // Its height follows the grants (a granted key shows its scope picker).
+        data-skeleton-block="permissions"
+        data-skeleton-measure="width"
+        className="overflow-hidden rounded-3xl bg-card shadow-card"
+      >
         <div className="flex flex-col gap-1 px-5 pt-5 pb-3 md:px-6">
           <h2 id="role-permissions" className="font-display text-lg font-extrabold">
             {t('access.roleForm.permissions')}

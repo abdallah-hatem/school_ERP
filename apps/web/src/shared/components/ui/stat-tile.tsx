@@ -27,6 +27,7 @@ export function StatTile({
   icon: Icon,
   tone = 'primary',
   loading = false,
+  placeholder,
   href,
   className,
 }: {
@@ -38,6 +39,11 @@ export function StatTile({
   icon?: AppIcon;
   tone?: StatTone;
   loading?: boolean;
+  /**
+   * While loading: a typical figure, laid out invisibly with the unit under the bar, so a narrow
+   * tile wraps the figure onto a second line just as the loaded one does.
+   */
+  placeholder?: ReactNode;
   /** The whole tile links to the screen behind the figure (e.g. the filtered list). */
   href?: string;
   className?: string;
@@ -70,9 +76,10 @@ export function StatTile({
         </span>
       </div>
       {loading ? (
-        // The figure's own line box (an invisible digit) with the bar over it: same height as loaded.
-        <div aria-hidden="true" className="relative flex items-baseline leading-none">
-          <span className={cn(VALUE_TEXT, 'invisible')}>0</span>
+        // The figure's own line box (an invisible figure) with the bar over it: same height as loaded.
+        <div aria-hidden="true" dir="ltr" className="relative flex flex-wrap items-baseline gap-1.5 leading-none rtl:justify-end">
+          {placeholder !== undefined && unit ? <span className="invisible text-sm font-bold">{unit}</span> : null}
+          <span className={cn(VALUE_TEXT, 'invisible')}>{placeholder ?? '0'}</span>
           <Skeleton className={cn('absolute inset-y-0 start-0 w-32', feature && 'bg-primary-foreground/20')} />
         </div>
       ) : (
@@ -94,11 +101,13 @@ export function StatTile({
     </>
   );
   return href ? (
-    <Link href={href} className={classes}>
+    <Link href={href} data-skeleton-block="tile" className={classes}>
       {body}
     </Link>
   ) : (
-    <div className={classes}>{body}</div>
+    <div data-skeleton-block="tile" className={classes}>
+      {body}
+    </div>
   );
 }
 

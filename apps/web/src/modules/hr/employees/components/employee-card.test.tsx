@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
 }));
 vi.mock('next/link', async () => ({ default: (await import('../test/fixtures')).MockLink }));
 
@@ -83,11 +84,14 @@ describe('stageBandOf', () => {
 describe('EmployeesListSkeleton', () => {
   afterEach(cleanup);
 
-  it('a full page of card skeletons in the card frame and grid', () => {
+  it('the list itself, with a full page of card skeletons in the card frame and grid', () => {
     renderEmployees(<EmployeesListSkeleton />);
     const region = screen.getByRole('region', { name: 'Employees' });
-    expect(region.getAttribute('aria-busy')).toBe('true');
+    // The list's own header, search and pagination, the cards busy.
+    expect(screen.getByRole('heading', { level: 1, name: 'Employees' })).toBeTruthy();
+    expect(within(region).getByRole('search')).toBeTruthy();
     const skeletons = within(region).getAllByTestId('employee-card-skeleton');
+    expect(skeletons[0]?.closest('[aria-busy="true"]')).not.toBeNull();
     expect(skeletons).toHaveLength(EMPLOYEES_PAGE_SIZE);
     // Same frame as a real card: an article in a list item of the same grid.
     expect(skeletons[0]?.querySelector('article')).not.toBeNull();

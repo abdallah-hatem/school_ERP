@@ -39,7 +39,8 @@ export interface UsersListProps {
   /** `/en/users` — the list's own path, for links and URL updates. */
   basePath: string;
   query: UsersListQuery;
-  rows: UserAccount[];
+  /** `undefined` while the first page loads: the list draws itself with skeleton rows. */
+  rows: UserAccount[] | undefined;
   total: number;
   /** Every role, for the role filter. */
   roles: Role[];
@@ -226,6 +227,7 @@ export function UsersList({ basePath, query, rows, total, roles, lastAdminId, no
     )),
   ];
 
+  const loading = rows === undefined;
   const filtered = hasActiveFilters(query);
   const emptyState = filtered ? (
     <EmptyState
@@ -255,13 +257,14 @@ export function UsersList({ basePath, query, rows, total, roles, lastAdminId, no
         actions={addButton}
       />
       <section aria-label={t('access.users.label')} className="@container flex min-w-0 flex-col gap-4.5">
-        <div className="flex flex-col gap-3 rounded-[1.25rem] bg-card p-3.5 shadow-card">
+        <div data-skeleton-block="filters" className="flex flex-col gap-3 rounded-[1.25rem] bg-card p-3.5 shadow-card">
           <div role="search" className="flex w-full flex-col gap-2.5 @min-[900px]:flex-row @min-[900px]:items-center">
             <SearchInput
               aria-label={t('access.users.searchLabel')}
               placeholder={t('access.users.searchPlaceholder')}
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
+              disabled={loading}
               wrapperClassName="basis-auto"
             />
             <FilterSelect
@@ -270,6 +273,7 @@ export function UsersList({ basePath, query, rows, total, roles, lastAdminId, no
               value={query.roleId}
               options={roleOptions}
               onChange={(v) => setFilter('roleId', v)}
+              disabled={loading}
               className="w-full sm:w-full @min-[900px]:w-60"
             />
             <FilterSelect
@@ -281,14 +285,19 @@ export function UsersList({ basePath, query, rows, total, roles, lastAdminId, no
                 { value: 'inactive', label: t('access.users.statuses.inactive') },
               ]}
               onChange={(v) => setFilter('status', v)}
+              disabled={loading}
               className="w-full sm:w-full @min-[900px]:w-52"
             />
           </div>
           {error ? null : (
             <div className="flex items-center justify-between gap-3 px-1">
-              <p aria-live="polite" data-testid="users-count" className="text-[0.8rem] text-muted-foreground">
-                {t('access.users.count', { count: formatCount(total) })}
-              </p>
+              {loading ? (
+                <SkeletonText className="text-[0.8rem]" width="w-16" />
+              ) : (
+                <p aria-live="polite" data-testid="users-count" className="text-[0.8rem] text-muted-foreground">
+                  {t('access.users.count', { count: formatCount(total) })}
+                </p>
+              )}
               {filtered ? (
                 <Button variant="ghost" size="sm" onClick={clearFilters} className="text-primary">
                   {t('access.users.clearFilters')}
@@ -302,6 +311,7 @@ export function UsersList({ basePath, query, rows, total, roles, lastAdminId, no
           columns={columns}
           rows={rows}
           getRowId={(u) => u.id}
+          loading={loading}
           refreshing={pending}
           error={error}
           onRetry={() => startTransition(() => router.refresh())}

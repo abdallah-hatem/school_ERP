@@ -1,6 +1,6 @@
 'use client';
 
-import type { HrSettings, IsoDateTime } from '@school-erp/shared';
+import { HR_SETTINGS_DEFAULTS, type HrSettings, type IsoDateTime } from '@school-erp/shared';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { Can } from '@/core/auth';
@@ -15,7 +15,7 @@ import {
   SettingsIcon,
   type AppIcon,
 } from '@/shared/components/ui/icons';
-import { SkeletonText } from '@/shared/components/ui/skeleton';
+import { SkeletonProse } from '@/shared/components/ui/skeleton';
 import { formatCount, formatDateTime } from '@/shared/lib/format';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { describeLatenessRule } from '../../lateness/describe-rule';
@@ -39,9 +39,14 @@ export function RulesPanel({
 }) {
   const { t, locale } = useTranslation();
   const approved = approvedAt !== null;
+  // While the settings load: the rules worded with §7's defaults, each sentence a bar per line —
+  // the same cards and line count the loaded rules take.
+  const loading = settings === undefined;
+  const rules = settings ?? (loading ? HR_SETTINGS_DEFAULTS : null);
   return (
     <aside
       aria-labelledby="payroll-rules-title"
+      data-skeleton-block="rules-panel"
       className="@container from-accent-soft to-card shadow-card flex flex-col gap-4 self-start rounded-3xl bg-linear-to-b to-35% p-5"
     >
       <div className="flex items-start gap-3">
@@ -59,41 +64,29 @@ export function RulesPanel({
           </p>
         </div>
       </div>
-      {settings === undefined ? (
-        <ul aria-hidden="true" className="grid gap-2.5 @min-[640px]:grid-cols-2 @min-[960px]:grid-cols-3">
-          {RULE_SKELETONS.map(({ icon, title, lines }) => (
-            <Rule key={title} icon={icon} title={t(`payroll.rules.${title}`)}>
-              <span className="flex flex-col">
-                {Array.from({ length: lines }, (_, i) => (
-                  <SkeletonText key={i} width={i === lines - 1 ? 'w-28' : 'w-44'} />
-                ))}
-              </span>
-            </Rule>
-          ))}
-        </ul>
-      ) : settings ? (
-        <ul className="grid gap-2.5 @min-[640px]:grid-cols-2 @min-[960px]:grid-cols-3">
-          <Rule icon={DeductionsIcon} title={t('payroll.rules.dayValue')}>
+      {rules ? (
+        <ul aria-hidden={loading || undefined} className="grid gap-2.5 @min-[640px]:grid-cols-2 @min-[960px]:grid-cols-3">
+          <Rule loading={loading} icon={DeductionsIcon} title={t('payroll.rules.dayValue')}>
             {t('payroll.rules.dayValueRule', {
-              divisor: formatCount(settings.payroll.dayDivisor),
+              divisor: formatCount(rules.payroll.dayDivisor),
             })}
           </Rule>
-          <Rule icon={EmployeesIcon} title={t('payroll.rules.workSystem')}>
+          <Rule loading={loading} icon={EmployeesIcon} title={t('payroll.rules.workSystem')}>
             {t('payroll.rules.workSystemRule', {
-              pt4: settings.payroll.partTime.PART_TIME_4,
-              pt3: settings.payroll.partTime.PART_TIME_3,
-              pt2: settings.payroll.partTime.PART_TIME_2,
+              pt4: rules.payroll.partTime.PART_TIME_4,
+              pt3: rules.payroll.partTime.PART_TIME_3,
+              pt2: rules.payroll.partTime.PART_TIME_2,
             })}
           </Rule>
-          <Rule icon={LatenessIcon} title={t('payroll.rules.lateness')}>
-            {describeLatenessRule(settings.lateness, t, locale)}
+          <Rule loading={loading} icon={LatenessIcon} title={t('payroll.rules.lateness')}>
+            {describeLatenessRule(rules.lateness, t, locale)}
           </Rule>
-          <Rule icon={PenaltiesIcon} title={t('payroll.rules.penalties')}>
+          <Rule loading={loading} icon={PenaltiesIcon} title={t('payroll.rules.penalties')}>
             {t('payroll.rules.penaltiesRule', {
-              window: t(`common.enums.repetitionWindow.${settings.penalties.repetitionWindow}`),
+              window: t(`common.enums.repetitionWindow.${rules.penalties.repetitionWindow}`),
             })}
           </Rule>
-          <Rule icon={BlockedIcon} title={t('payroll.rules.netFloor')}>
+          <Rule loading={loading} icon={BlockedIcon} title={t('payroll.rules.netFloor')}>
             {t('payroll.rules.netFloorRule')}
           </Rule>
         </ul>
@@ -119,16 +112,7 @@ export function RulesPanel({
   );
 }
 
-/** The five rules with the lines their text usually takes (the panel's loading shape). */
-const RULE_SKELETONS: { icon: AppIcon; title: string; lines: number }[] = [
-  { icon: DeductionsIcon, title: 'dayValue', lines: 2 },
-  { icon: EmployeesIcon, title: 'workSystem', lines: 2 },
-  { icon: LatenessIcon, title: 'lateness', lines: 3 },
-  { icon: PenaltiesIcon, title: 'penalties', lines: 2 },
-  { icon: BlockedIcon, title: 'netFloor', lines: 2 },
-];
-
-function Rule({ icon: Icon, title, children }: { icon: AppIcon; title: string; children: ReactNode }) {
+function Rule({ icon: Icon, title, loading = false, children }: { icon: AppIcon; title: string; loading?: boolean; children: ReactNode }) {
   return (
     <li className="border-border bg-card flex items-start gap-3 rounded-2xl border px-3.5 py-3">
       <span className="bg-primary-soft text-primary grid size-9 shrink-0 place-items-center rounded-lg">
@@ -136,7 +120,7 @@ function Rule({ icon: Icon, title, children }: { icon: AppIcon; title: string; c
       </span>
       <div className="flex min-w-0 flex-col gap-0.5">
         <p className="text-sm font-bold">{title}</p>
-        <p className="text-muted-foreground text-sm break-words">{children}</p>
+        <p className="text-muted-foreground text-sm break-words">{loading ? <SkeletonProse>{children}</SkeletonProse> : children}</p>
       </div>
     </li>
   );

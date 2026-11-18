@@ -41,7 +41,7 @@ export function PayslipView({ payslip, backHref }: { payslip: Payslip; backHref:
   return (
     <div className="flex flex-col gap-5">
       <style>{PAYSLIP_PRINT_CSS}</style>
-      <div className="no-print flex flex-wrap items-center justify-between gap-3">
+      <div data-skeleton-block="payslip-actions" className="no-print flex flex-wrap items-center justify-between gap-3">
         <Button asChild variant="ghost" className="cursor-pointer">
           <Link href={backHref}>
             <ChevronStartIcon className="flip-rtl" />
@@ -55,11 +55,14 @@ export function PayslipView({ payslip, backHref }: { payslip: Payslip; backHref:
       </div>
 
       <article
+        // Its height follows the penalties and adjustments listed.
+        data-skeleton-block="payslip"
+        data-skeleton-measure="width"
         data-payslip=""
         aria-label={t('payroll.payslip.title')}
         className="bg-card shadow-card mx-auto flex w-full max-w-[210mm] flex-col gap-4 rounded-3xl p-5 text-sm md:p-8 print:gap-3 print:text-xs"
       >
-        <header className="border-border flex flex-wrap items-start justify-between gap-4 border-b pb-4">
+        <header data-skeleton-block="payslip-header" className="border-border flex flex-wrap items-start justify-between gap-4 border-b pb-4">
           <div className="flex min-w-0 items-center gap-3">
             {payslip.school.logoUrl ? (
               <Image
@@ -88,7 +91,7 @@ export function PayslipView({ payslip, backHref }: { payslip: Payslip; backHref:
           </div>
         </header>
 
-        <section className="flex flex-col gap-2">
+        <section data-skeleton-block="payslip-employee" className="flex flex-col gap-2">
           <h1 className="font-display text-xl leading-tight font-extrabold break-words">
             <EmployeeLink employeeId={payslip.employeeId} name={localName(payslip, locale)} />
           </h1>
@@ -254,7 +257,7 @@ export function PayslipView({ payslip, backHref }: { payslip: Payslip; backHref:
           ) : null}
         </Section>
 
-        <div className="bg-primary text-primary-foreground print:border-foreground print:bg-card print:text-foreground flex flex-wrap items-baseline justify-between gap-2 rounded-2xl px-5 py-4 print:border">
+        <div data-skeleton-block="payslip-net" className="bg-primary text-primary-foreground print:border-foreground print:bg-card print:text-foreground flex flex-wrap items-baseline justify-between gap-2 rounded-2xl px-5 py-4 print:border">
           <span className="font-display text-lg font-extrabold">{t('payroll.payslip.net')}</span>
           <Money value={payslip.net} className="text-2xl font-extrabold" />
         </div>
@@ -279,15 +282,17 @@ export function PayslipSkeleton() {
       <span role="status" className="sr-only">
         {t('ui.states.loading')}
       </span>
-      <div aria-hidden="true" className="flex flex-wrap items-center justify-between gap-3">
+      <div aria-hidden="true" data-skeleton-block="payslip-actions" className="flex flex-wrap items-center justify-between gap-3">
         <Skeleton className="h-11 w-36 rounded-lg" />
         <Skeleton className="h-11 w-28 rounded-lg" />
       </div>
       <div
         aria-hidden="true"
+        data-skeleton-block="payslip"
+        data-skeleton-measure="width"
         className="bg-card shadow-card mx-auto flex w-full max-w-[210mm] flex-col gap-4 rounded-3xl p-5 text-sm md:p-8"
       >
-        <div className="border-border flex flex-wrap items-start justify-between gap-4 border-b pb-4">
+        <div data-skeleton-block="payslip-header" className="border-border flex flex-wrap items-start justify-between gap-4 border-b pb-4">
           <div className="flex min-w-0 items-center gap-3">
             <Skeleton className="size-12 shrink-0 rounded-xl" />
             <div className="min-w-0">
@@ -300,7 +305,7 @@ export function PayslipSkeleton() {
             <SkeletonText className="font-display text-lg font-extrabold" width="w-32" />
           </div>
         </div>
-        <section className="flex flex-col gap-2">
+        <section data-skeleton-block="payslip-employee" className="flex flex-col gap-2">
           <SkeletonText className="font-display text-xl leading-tight font-extrabold" width="w-56" />
           <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {(['code', 'nationalId', 'department', 'workSystem', 'basicSalary', 'dayValue'] as const).map((key) => (
@@ -323,7 +328,7 @@ export function PayslipSkeleton() {
         <Section title={t('payroll.payslip.adjustments')}>
           <SkeletonText width="w-40" />
         </Section>
-        <div className="bg-primary text-primary-foreground flex flex-wrap items-baseline justify-between gap-2 rounded-2xl px-5 py-4">
+        <div data-skeleton-block="payslip-net" className="bg-primary text-primary-foreground flex flex-wrap items-baseline justify-between gap-2 rounded-2xl px-5 py-4">
           <span className="font-display text-lg font-extrabold">{t('payroll.payslip.net')}</span>
           <SkeletonText className="text-2xl font-extrabold" width="w-40" barClassName="bg-primary-foreground/20" />
         </div>

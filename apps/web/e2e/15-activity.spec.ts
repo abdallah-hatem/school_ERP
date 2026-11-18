@@ -62,7 +62,7 @@ test('activity: empty filters, the loading skeleton, then the person filter', as
   await settle(page);
   await shoot(page, info, 'activity-empty-en-desktop');
 
-  // The skeleton, as the server streams it first (JavaScript off keeps it on screen; 09-skeletons).
+  // The skeleton, as the server streams it first (JavaScript off keeps it on screen; 23-skeletons).
   for (const locale of ['en', 'ar'] as const) {
     await shootSkeleton(browser, page, info, `/${locale}/activity`, `activity-loading-${locale}-desktop`);
   }

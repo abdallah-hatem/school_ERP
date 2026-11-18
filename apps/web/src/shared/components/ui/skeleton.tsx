@@ -37,6 +37,26 @@ export function SkeletonText({ className, width = 'w-24', barClassName }: { clas
 }
 
 /**
+ * Running text as its skeleton: the text is laid out (so it wraps onto as many lines as the loaded
+ * text will) but drawn as a bar per line. Pass the text the screen usually shows, e.g. a rule
+ * worded with the §7 defaults.
+ */
+export function SkeletonProse({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <span
+      data-slot="skeleton"
+      aria-hidden="true"
+      className={cn(
+        'rounded-md bg-secondary text-transparent box-decoration-clone select-none motion-safe:animate-pulse motion-safe:[animation-duration:1.8s]',
+        className,
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+/**
  * A form as its own skeleton: the real form (rendered with placeholder values, e.g. the §7
  * defaults) keeps its exact layout and labels while every control is a pulsing block and nothing
  * can be used. For forms, where hand-drawn bars would never line up with the fields.

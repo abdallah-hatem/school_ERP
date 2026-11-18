@@ -713,6 +713,45 @@ Frontend rules:
   page in one URL update and brings the list's top back into view. A period (a month) is not a filter.
 - Branding (name, logo, colours) loads from settings into CSS variables.
 
+#### Skeletons match their screens (`data-skeleton-block`)
+
+Every skeleton has the shape of the screen it stands in for, and a change to a component that
+doesn't update its skeleton fails CI (owner, 2026-11-18).
+
+- **Build skeletons from the screen itself.** A list or table screen takes `rows={undefined}` (or
+  `entries`, `roles`…) for its first load and draws its own header, toolbar, filters, count, skeleton
+  rows and pagination — the route's `loading.tsx` renders that component (`EmployeesList`,
+  `UsersList`, `RolesList`, `ActivityView`, `PenaltiesList`, `LatenessBoard`, `RunsList`). A form
+  renders itself under `SkeletonMask` with empty values (`EmployeePageSkeleton`, the settings
+  forms). Hand-drawn skeletons are the exception and use the screen's own frames (`PageHeader`,
+  `FormCard`, `DetailsCard`, `StatTile`, the payslip card).
+- **Mark the main blocks.** The screen and its skeleton carry the same `data-skeleton-block="<name>"`
+  on their main content blocks. The shared pieces already do: `PageHeader` (`header`), `DataTable`
+  (`table`, `table-toolbar`, `table-head`, `table-row`, `table-card`), `Pagination`
+  (`pagination`), `StatTile` (`tile`), `FormActionBar` (`form-actions`), `SectionPanel`
+  (`section-panel`), `FormCard` (`form-card`); screens mark their own cards, panels and filters.
+  Three optional attributes: `data-skeleton-each` on a list's items (a run of them counts once, as
+  tall as its shortest item — how many arrive and whose name wraps is data),
+  `data-skeleton-measure="width"` on a block whose height follows the data (a table, the timeline),
+  and `data-skeleton-optional` around a block that exists only with data (the History tab's
+  pagination) — use it sparingly; everything else must match. A `DataTable` whose phone cards grow
+  with their text passes `cardHeightsVary` (penalties: long violation names).
+- **Text that wraps is drawn as its own text.** A bar can't wrap, so where a loaded line usually
+  wraps (a header description, a tile's sub line, the History sentence) the skeleton renders the
+  same sentence — worded with typical values — through `SkeletonProse` (transparent text on a bar
+  per line), and `StatTile` lays a typical figure out invisibly under its bar (`placeholder`).
+- **The check:** `apps/web/e2e/23-skeletons.spec.ts` (desktop) and `23-skeletons-phone.spec.ts`
+  (phone), in English and Arabic, one pass per screen (`e2e/support/skeletons.ts`). It opens the
+  screen with JavaScript off — the server streams the skeleton first and the real content stays
+  hidden — reads every visible block, then opens it normally and reads them again. Same blocks, same
+  order, each width and height within ±8px (or ±5% above 160px), else it fails with the list of
+  differences. A new screen with a skeleton is added to `SKELETON_SCREENS` there.
+- **A nested route's skeleton is its parent boundary's on a hard load.** A `loading.tsx` wraps every
+  route below it, and a first visit shows the outermost one. So lists live in a `(list)` route group
+  (`employees/(list)`, `payroll/(list)`, `users/(list)`, `roles/(list)`) to keep their skeleton off
+  `new` and `[id]`, and `employees/[id]/loading.tsx` draws the page being opened (the edit form, or
+  the profile over the opened tab's skeleton).
+
 ### `packages/shared`
 
 Plain TypeScript, no framework imports.
