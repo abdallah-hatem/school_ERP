@@ -1,0 +1,153 @@
+{
+  "title": "Notifications",
+  "bell": {
+    "label": "Notifications",
+    "unread": {
+      "zero": "No unread notifications",
+      "one": "{count} unread notification",
+      "two": "{count} unread notifications",
+      "few": "{count} unread notifications",
+      "many": "{count} unread notifications",
+      "other": "{count} unread notifications"
+    }
+  },
+  "modules": {
+    "core": "General",
+    "hr": "HR"
+  },
+  "categories": {
+    "approval": "Needs action",
+    "reminder": "Reminders"
+  },
+  "required": "Required",
+  "resolved": {
+    "approved": "Approved by {name}",
+    "cancelled": "Cancelled by {name}",
+    "done": "Done",
+    "allDone": "All done"
+  },
+  "types": {
+    "hr": {
+      "penalty": {
+        "awaiting_approval": {
+          "name": "Penalty waiting for approval",
+          "title": "Penalty waiting for your approval",
+          "body": "{employee} · {violation}, level {level}",
+          "group": {
+            "zero": "No penalties waiting for your approval",
+            "one": "{count} penalty waiting for your approval",
+            "two": "{count} penalties waiting for your approval",
+            "few": "{count} penalties waiting for your approval",
+            "many": "{count} penalties waiting for your approval",
+            "other": "{count} penalties waiting for your approval"
+          }
+        }
+      },
+      "payroll": {
+        "ready_to_approve": {
+          "name": "Payroll ready to approve",
+          "title": "{month} payroll is ready to approve",
+          "body": {
+            "zero": "No employees, net {net}",
+            "one": "{count} employee, net {net}",
+            "two": "{count} employees, net {net}",
+            "few": "{count} employees, net {net}",
+            "many": "{count} employees, net {net}",
+            "other": "{count} employees, net {net}"
+          },
+          "bodyWithoutNet": {
+            "zero": "No employees",
+            "one": "{count} employee",
+            "two": "{count} employees",
+            "few": "{count} employees",
+            "many": "{count} employees",
+            "other": "{count} employees"
+          },
+          "group": {
+            "zero": "No payroll months ready to approve",
+            "one": "{count} payroll month is ready to approve",
+            "two": "{count} payroll months are ready to approve",
+            "few": "{count} payroll months are ready to approve",
+            "many": "{count} payroll months are ready to approve",
+            "other": "{count} payroll months are ready to approve"
+          }
+        },
+        "not_prepared": {
+          "name": "Payroll not prepared",
+          "title": "{month} payroll hasn't been prepared",
+          "group": {
+            "zero": "No payroll months waiting to be prepared",
+            "one": "{count} payroll month hasn't been prepared",
+            "two": "{count} payroll months haven't been prepared",
+            "few": "{count} payroll months haven't been prepared",
+            "many": "{count} payroll months haven't been prepared",
+            "other": "{count} payroll months haven't been prepared"
+          }
+        },
+        "not_approved": {
+          "name": "Payroll still a draft",
+          "title": "{month} payroll is still a draft",
+          "group": {
+            "zero": "No payroll months still drafts",
+            "one": "{count} payroll month is still a draft",
+            "two": "{count} payroll months are still drafts",
+            "few": "{count} payroll months are still drafts",
+            "many": "{count} payroll months are still drafts",
+            "other": "{count} payroll months are still drafts"
+          }
+        }
+      },
+      "contract": {
+        "ending_soon": {
+          "name": "Contract ends soon",
+          "title": "{employee}'s contract ends {date}",
+          "body": {
+            "zero": "today",
+            "one": "in {count} day",
+            "two": "in {count} days",
+            "few": "in {count} days",
+            "many": "in {count} days",
+            "other": "in {count} days"
+          },
+          "group": {
+            "zero": "No contracts end within {days} days",
+            "one": "{count} contract ends within {days} days",
+            "two": "{count} contracts end within {days} days",
+            "few": "{count} contracts end within {days} days",
+            "many": "{count} contracts end within {days} days",
+            "other": "{count} contracts end within {days} days"
+          }
+        }
+      },
+      "probation": {
+        "ending_soon": {
+          "name": "Probation ends soon",
+          "title": "{employee}'s probation ends {date}",
+          "group": {
+            "zero": "No probation periods end within {days} days",
+            "one": "{count} probation period ends within {days} days",
+            "two": "{count} probation periods end within {days} days",
+            "few": "{count} probation periods end within {days} days",
+            "many": "{count} probation periods end within {days} days",
+            "other": "{count} probation periods end within {days} days"
+          }
+        }
+      },
+      "lateness": {
+        "not_entered": {
+          "name": "Lateness not entered",
+          "title": "{month} lateness isn't entered yet",
+          "body": "Payroll needs it",
+          "group": {
+            "zero": "No months waiting for lateness",
+            "one": "{count} month's lateness isn't entered yet",
+            "two": "{count} months' lateness isn't entered yet",
+            "few": "{count} months' lateness isn't entered yet",
+            "many": "{count} months' lateness isn't entered yet",
+            "other": "{count} months' lateness isn't entered yet"
+          }
+        }
+      }
+    }
+  }
+}

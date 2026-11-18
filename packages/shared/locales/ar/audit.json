@@ -28,7 +28,9 @@
     "payroll_run": "مسيّر رواتب",
     "accounting_settings": "قواعد المحاسبة",
     "accounting_payroll": "ضرائب الرواتب",
-    "outbox_delivery": "تسليم حدث"
+    "outbox_delivery": "تسليم حدث",
+    "notification_preferences": "تفضيلات الإشعارات",
+    "notification_settings": "إعدادات الإشعارات"
   },
   "actions": {
     "core": {
@@ -62,6 +64,12 @@
       },
       "outbox": {
         "retry": "إعادة محاولة تسليم الحدث {entity}"
+      },
+      "notification_preferences": {
+        "update": "تعديل تفضيلات الإشعارات لـ {entity}"
+      },
+      "notification_settings": {
+        "update": "تعديل إعدادات الإشعارات"
       }
     },
     "hr": {
@@ -214,6 +222,13 @@
         "taxBrackets": "شرائح ضريبة كسب العمل",
         "martyrPercent": "نسبة صندوق الشهداء",
         "insurancePercent": "حصة العامل في التأمينات"
+      }
+    },
+    "notifications": {
+      "retention": {
+        "readDays": "مدة الاحتفاظ بالإشعارات المقروءة (أيام)",
+        "resolvedDays": "مدة الاحتفاظ بالموافقات المنتهية (أيام)",
+        "maxDays": "أقصى مدة للاحتفاظ بأي إشعار (أيام)"
       }
     }
   },

@@ -57,5 +57,7 @@
   "INVALID_SCOPE": "This permission is about the whole school; it can only cover everyone.",
   "PASSWORD_CHANGE_REQUIRED": "Choose your own password first. You signed in with a temporary one.",
   "SAME_PASSWORD": "Choose a password different from the one you signed in with.",
-  "OUTBOX_NOT_DEAD": "Only a delivery that failed for good can be retried."
+  "OUTBOX_NOT_DEAD": "Only a delivery that failed for good can be retried.",
+  "NOTIFICATION_TYPE_REQUIRED": "This kind of notification can't be turned off.",
+  "CHANNEL_NOT_AVAILABLE": "This channel isn't available."
 }

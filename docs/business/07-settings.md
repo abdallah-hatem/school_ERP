@@ -43,6 +43,8 @@ affects only **draft** payroll runs (approved runs never change).
 | Currency | EGP | DECIDED |
 | Payroll tax rule (income-tax slices, martyrs' fund, insurance share) | See §10 | GUESS — Settings → Accounting |
 | Sign-in limit: wrong passwords, within minutes, lock minutes (§2) | 5, 15, 15 | DECIDED (owner, 2026-11-18) — no screen yet; each at least 1 |
+| Keep read notifications / done approvals / any notification (§11) | 90 / 30 / 365 days (each 1–3650) | DECIDED (owner, 2026-11-18) — Settings → Notifications (screen Planned) |
+| Each kind of notification on or off by default (§11) | On; approvals always on | DECIDED (owner, 2026-11-18) — Settings → Notifications (screen Planned) |
 
 - **DECIDED** (owner, 2026-11-18) — Each job title in the job-titles list has a **Manages people**
   switch (set when adding or editing the title; the list shows a "Manages people" badge on those
