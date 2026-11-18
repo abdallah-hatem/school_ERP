@@ -14,6 +14,15 @@ import { StageRepository } from './repositories/stage.repository';
 export const stageHistoryKey = (id: string) => `lists.stages.${id}`;
 
 /**
+ * A stage as its history keeps it: what a user can edit. `isNoStage` is left out — no screen sets
+ * it (seed and migration only), so it is never a change of the user's.
+ */
+export function stageHistoryValue(stage: Stage): Omit<Stage, 'isNoStage'> {
+  const { isNoStage: _isNoStage, ...value } = stage;
+  return value;
+}
+
+/**
  * Stages (school structure, §3). Other modules use `getActiveById` to accept a stage for a new
  * choice (an employee's stage) and `getById` to show one that may be hidden.
  */
@@ -90,8 +99,8 @@ export class StagesService {
     const event: SettingsChangedEvent = {
       scope: 'lists',
       key: stageHistoryKey(id),
-      oldValue,
-      newValue,
+      oldValue: oldValue && stageHistoryValue(oldValue),
+      newValue: stageHistoryValue(newValue),
       changedById,
       changedAt: new Date().toISOString(),
     };

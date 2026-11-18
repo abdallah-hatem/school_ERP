@@ -1,6 +1,11 @@
 import { NotFoundException } from '@nestjs/common';
 import type { EventEmitter2 } from '@nestjs/event-emitter';
-import { SettingsEvent, ErrorCode, type Stage } from '@school-erp/shared';
+import {
+  SettingsEvent,
+  ErrorCode,
+  type SettingsChangedEvent,
+  type Stage,
+} from '@school-erp/shared';
 import { CodedException } from '../../common/errors/coded.exception';
 import type { StageRepository } from './repositories/stage.repository';
 import { StagesService } from './stages.service';
@@ -119,6 +124,25 @@ describe('StagesService', () => {
       const { service, repo } = makeService();
       await service.create({ nameEn: 'None', nameAr: 'بدون مرحلة' }, 'u');
       expect(repo.create.mock.calls[0][0]).not.toHaveProperty('isNoStage');
+    });
+
+    it("a stage's history never includes isNoStage (create and edit, marked or not)", async () => {
+      const marked = makeService(stage({ id: 'none', nameEn: 'None', isNoStage: true }));
+      await marked.service.update('none', { nameEn: 'No stage' }, 'u');
+      const plain = makeService();
+      await plain.service.create({ nameEn: 'KG', nameAr: 'روضة' }, 'u');
+
+      const events = [
+        ...marked.events.emitAsync.mock.calls,
+        ...plain.events.emitAsync.mock.calls,
+      ].map((c) => (c as unknown[])[1] as SettingsChangedEvent);
+      expect(events).toHaveLength(2);
+      for (const e of events) {
+        expect(e.newValue).not.toHaveProperty('isNoStage');
+        if (e.oldValue !== null) expect(e.oldValue).not.toHaveProperty('isNoStage');
+      }
+      expect(events[0].oldValue).toMatchObject({ nameEn: 'None' });
+      expect(events[0].newValue).toMatchObject({ nameEn: 'No stage' });
     });
   });
 });
