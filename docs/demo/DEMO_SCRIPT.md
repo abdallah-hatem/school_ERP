@@ -55,9 +55,12 @@ marks the managing job titles and stores the principal's photo, without touching
   **Recalculate now** (it goes once recalculated).
 - **View change history** (top of Settings) → Activity, filtered to Settings: ✔ the grace-minutes
   change is at the top, with who made it and old → new (Administration → Activity shows it too).
-  Activity also holds sign-ins (and failed ones), employee edits, the lists, lateness and payroll;
-  an employee's **History** tab lists their edits ("Department: Science → Maths"). Recording,
-  approving and cancelling penalties join it with T29 — don't promise those yet.
+  Activity also holds sign-ins (and failed ones), employee edits, the lists, lateness, payroll and
+  penalties; an employee's **History** tab lists their edits ("Department: Science → Maths") and
+  their penalties. ✔ Open the History of the employee from step 3: the penalty you recorded and
+  approved is there twice — "Recorded a penalty for …" (the violation by name, the level, Pending)
+  and "Approved the penalty for …" (Pending → Approved). ✔ On Activity, search the employee's code
+  (e.g. EMP-0007): their entries and their penalties' show.
 - Back to the run → **Recalculate** → ✔ the same employee's lateness drops (0.25 × 20,000 ÷ 30 =
   166.67) and the totals follow.
 - Put the rule back afterwards if the demo continues on the same data.
