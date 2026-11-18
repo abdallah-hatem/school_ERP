@@ -191,6 +191,11 @@ phase live in `docs/build-log/`.
 
 ## Next up
 
+- **`demo` branch (owner, 2026-11-18):** once the rules-in-lateness/run, dry-run polish and roles
+  leftovers PRs are merged and dev is green, cut `demo` from dev and run Sunday's demo from it, so
+  untested work on dev never reaches the demo. Protected like testing/production (PR, four green
+  checks, owner approval; fixes land in dev first). CI runs on PRs into `demo`. Document in
+  ARCHITECTURE → branches.
 - **Accounting payroll taxes screen** — a page per approved month (net, insurance share, income tax,
   fund, gross per employee) and a sidebar entry: **mockups first** (CLAUDE.md rule 9). The API
   (`GET /accounting/payroll[/:month]`) is built. Tax defaults are GUESS until the accountant confirms.
