@@ -1,6 +1,8 @@
 import type { ListItem } from '@school-erp/shared';
 import { BaseRepository, ModelName } from '../../../../common/repositories/base.repository';
+import type { TransactionHost } from '@nestjs-cls/transactional';
 import { DatabaseService } from '../../../../database/database.service';
+import type { DbAdapter } from '../../../../database/transactions';
 
 export interface ListItemData {
   nameEn: string;
@@ -44,14 +46,16 @@ export abstract class ListItemsRepository<
 > extends BaseRepository<T, D, U> {
   protected constructor(
     databaseService: DatabaseService,
+    private readonly txHost: TransactionHost<DbAdapter>,
     modelName: ModelName,
     private readonly select: ListItemSelect = LIST_ITEM_SELECT,
   ) {
     super(databaseService, modelName);
   }
 
+  /** Through the open transaction (an audited write's), so the change and its entry commit together. */
   private get list(): ListDelegate<T, D, U> {
-    return this.databaseService[this.modelName] as unknown as ListDelegate<T, D, U>;
+    return this.txHost.tx[this.modelName] as unknown as ListDelegate<T, D, U>;
   }
 
   findAllOrdered(includeHidden: boolean): Promise<T[]> {

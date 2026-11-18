@@ -1,14 +1,15 @@
 import { HttpStatus, NotFoundException } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   ErrorCode,
   HrListKey,
   ListItem,
-  SettingsChangedEvent,
-  SettingsEvent,
   Uuid,
+  type AuditAction,
+  type AuditEntityType,
 } from '@school-erp/shared';
 import { CodedException } from '../../../../common/errors/coded.exception';
+import type { AuditService } from '../../../../core/audit';
+import type { AfterCommit } from '../../../../database/transactions';
 import type { CreateListItemDto, UpdateListItemDto } from '../dto/list-item.dto';
 import type {
   ListItemData,
@@ -16,14 +17,18 @@ import type {
   ListItemUpdateData,
 } from '../repositories/list-items.repository';
 
-/** Every column the item carries (job titles add `managesPeople`) is the same. */
-const sameItem = <T extends ListItem>(a: T, b: T) =>
-  (Object.keys(b) as (keyof T)[]).every((k) => a[k] === b[k]);
+/** What a list records in the audit log: its record type and its two actions. */
+export interface ListAudit {
+  type: AuditEntityType;
+  create: AuditAction;
+  update: AuditAction;
+}
 
 /**
  * Departments and job titles (§3 lists). No delete: an item is hidden (`isActive: false`) and
- * stays on the employees that use it. Every create / change emits `settings.changed` (scope
- * `lists`) after the write, and core's listener records the history row (§7).
+ * stays on the employees that use it. Every create / change is recorded in the audit log in the
+ * write's transaction (D2), shaped like the old history row — the field is the list's history key
+ * (`hr.departments`), the values whole snapshots — so Settings history reads as before (§7).
  */
 export abstract class ListItemsService<
   T extends ListItem = ListItem,
@@ -32,23 +37,28 @@ export abstract class ListItemsService<
 > {
   protected constructor(
     protected readonly repository: ListItemsRepository<T, ListItemData, ListItemUpdateData>,
-    private readonly events: EventEmitter2,
+    private readonly audit: AuditService,
+    private readonly afterCommit: AfterCommit,
     private readonly historyKey: HrListKey,
+    private readonly auditAs: ListAudit,
   ) {}
 
   list(includeHidden = false): Promise<T[]> {
     return this.repository.findAllOrdered(includeHidden);
   }
 
-  async create(dto: C, changedById: Uuid | null): Promise<T> {
-    const item = await this.repository.createItem({
-      nameEn: dto.nameEn,
-      nameAr: dto.nameAr,
-      ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
-      ...this.extraCreateData(dto),
+  async create(dto: C): Promise<T> {
+    // The change and its audit entry commit together (audit D2), for the seed too.
+    return this.afterCommit.inTransaction(async () => {
+      const item = await this.repository.createItem({
+        nameEn: dto.nameEn,
+        nameAr: dto.nameAr,
+        ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
+        ...this.extraCreateData(dto),
+      });
+      await this.record(null, item);
+      return item;
     });
-    this.emitChange(null, item, changedById);
-    return item;
   }
 
   /** A list's own columns on create (job titles: `managesPeople`). */
@@ -56,12 +66,16 @@ export abstract class ListItemsService<
     return {};
   }
 
-  async update(id: Uuid, dto: U, changedById: Uuid | null): Promise<T> {
-    const before = await this.repository.findOne(id);
-    if (!before) throw new NotFoundException();
-    const after = await this.repository.updateItem(id, dto);
-    if (!sameItem(before, after)) this.emitChange(before, after, changedById);
-    return after;
+  async update(id: Uuid, dto: U): Promise<T> {
+    // The change and its audit entry commit together (audit D2), for the seed too.
+    return this.afterCommit.inTransaction(async () => {
+      const before = await this.repository.findOne(id);
+      if (!before) throw new NotFoundException();
+      const after = await this.repository.updateItem(id, dto);
+      // Always recorded: an unchanged save writes no entry but still answers `@Audited` (D6b).
+      await this.record(before, after);
+      return after;
+    });
   }
 
   /**
@@ -76,15 +90,11 @@ export abstract class ListItemsService<
     return item;
   }
 
-  private emitChange(oldValue: T | null, newValue: T, changedById: Uuid | null) {
-    const event: SettingsChangedEvent = {
-      scope: 'lists',
-      key: this.historyKey,
-      oldValue,
-      newValue,
-      changedById,
-      changedAt: new Date().toISOString(),
-    };
-    this.events.emit(SettingsEvent.CHANGED, event);
+  private record(before: T | null, after: T): Promise<void> {
+    return this.audit.record({
+      action: before ? this.auditAs.update : this.auditAs.create,
+      entity: { type: this.auditAs.type, id: after.id, label: { en: after.nameEn, ar: after.nameAr } },
+      changes: [{ field: this.historyKey, before, after }],
+    });
   }
 }

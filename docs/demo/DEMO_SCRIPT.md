@@ -55,8 +55,9 @@ marks the managing job titles and stores the principal's photo, without touching
   **Recalculate now** (it goes once recalculated).
 - **View change history** (top of Settings) → Activity, filtered to Settings: ✔ the grace-minutes
   change is at the top, with who made it and old → new (Administration → Activity shows it too).
-  Activity holds settings and catalogue changes for now; penalties, lateness, payroll and sign-ins
-  join it with the HR audit work (T28) — don't promise them yet.
+  Activity also holds sign-ins (and failed ones), employee edits, the lists, lateness and payroll;
+  an employee's **History** tab lists their edits ("Department: Science → Maths"). Recording,
+  approving and cancelling penalties join it with T29 — don't promise those yet.
 - Back to the run → **Recalculate** → ✔ the same employee's lateness drops (0.25 × 20,000 ÷ 30 =
   166.67) and the totals follow.
 - Put the rule back afterwards if the demo continues on the same data.

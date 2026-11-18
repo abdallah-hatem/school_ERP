@@ -40,7 +40,13 @@ commit touching only the registry and say so in the PR).
 nothing and still returns its own error; a request with no signed-in user (sign-in) records a null
 actor; two writes in one request record two entries in order; a diff of equal values is empty.
 
-## T28 — wire core + HR people (`logic`)
+## T28 — wire core + HR people (`logic`) — ✅ done (PR `feature/t28-audit-wiring`, Abdallah)
+
+Done: sign-in, sign-out and failed sign-in (own transaction, the typed email as the record — no
+account hint); employees (create, edit, deactivate, reactivate, photo upload / removal) with id
+fields stored by name; HR settings through core's `setValues` on every save; the scan test now
+expects no `wired in T28`. Stages, lists and the catalogue: #105 (settings history in the write's
+transaction). Users, roles and password changes were already wired (P2).
 
 Auth (sign in, sign out, failed sign-in — spec 5), school settings, logo, stages; employees (create,
 edit, deactivate, reactivate), departments, job titles, HR settings, penalty catalogue. One test per
@@ -99,13 +105,13 @@ Field labels: `audit.fields.<field>` (stage keys: strip the id, use `fields.list
 Activity page and dry-run on a copy; spot-check 10 entries by hand against what was done.
 
 **From T30:**
-- The smoke's employee History check (`e2e/15-activity`, `16-activity-phone`) asserts the empty
-  state while the employee has no entries (`TODO(T28)`): once T28 records `hr.employee.update`, edit
-  an employee in the spec and assert the entry at the top of the tab.
+- ~~The smoke's employee History check asserts the empty state (`TODO(T28)`)~~ — done in T28: the
+  specs edit the employee's grade and assert the entry at the top; the skeleton spec compares the
+  History tab's pagination too (no more `data-skeleton-optional`).
 - ~~`entityLabel` is one snapshot string~~ — done in `fix/activity-ui`: labels keep both names
   (`{ en, ar }`, column `entity_label_ar`); see T28's note for how callers pass them.
-- Employee field changes holding ids (`departmentId`, `jobTitleId`, `stageId`, `managerId`) show the
-  raw value unless T28 records `{ nameEn, nameAr }` snapshots (the timeline names those).
+- ~~Employee field changes holding ids show the raw value~~ — done in T28: `departmentId`,
+  `jobTitleId`, `stageId` and `managerId` are stored as `{ nameEn, nameAr }`.
 - A penalty's entries are on the penalty, not on the employee: the employee History shows only
   `entityType=employee`. If penalties should appear there, record them with a link to the employee.
 - "Open record" for a penalty goes to the Penalties list (there is no penalty page).

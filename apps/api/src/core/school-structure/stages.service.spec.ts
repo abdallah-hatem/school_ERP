@@ -1,7 +1,8 @@
 import { NotFoundException } from '@nestjs/common';
-import type { EventEmitter2 } from '@nestjs/event-emitter';
-import { SettingsEvent, ErrorCode, type Stage } from '@school-erp/shared';
+import { ErrorCode, type Stage } from '@school-erp/shared';
 import { CodedException } from '../../common/errors/coded.exception';
+import type { AfterCommit } from '../../database/transactions';
+import type { AuditService } from '../audit';
 import type { StageRepository } from './repositories/stage.repository';
 import { StagesService } from './stages.service';
 
@@ -24,12 +25,13 @@ function makeService(found: Stage | null = stage()) {
       return Promise.resolve({ ...(found as Stage), ...clean });
     }),
   };
-  const events = { emitAsync: jest.fn(() => Promise.resolve([])) };
+  const audit = { record: jest.fn(() => Promise.resolve()) };
   const service = new StagesService(
     repo as unknown as StageRepository,
-    events as unknown as EventEmitter2,
+    audit as unknown as AuditService,
+    { inTransaction: (fn: () => Promise<unknown>) => fn() } as unknown as AfterCommit,
   );
-  return { service, repo, events };
+  return { service, repo, audit };
 }
 
 describe('StagesService', () => {
@@ -52,27 +54,48 @@ describe('StagesService', () => {
 
   it('a new stage without sortOrder goes last', async () => {
     const { service, repo } = makeService();
-    await service.create({ nameEn: 'KG', nameAr: 'روضة' }, 'u');
+    await service.create({ nameEn: 'KG', nameAr: 'روضة' });
     expect(repo.create).toHaveBeenCalledWith({ nameEn: 'KG', nameAr: 'روضة', sortOrder: 4 });
   });
 
-  it('a change emits one settings.changed with old and new; no change emits nothing', async () => {
-    const { service, events } = makeService();
-    await service.update('stage-1', { isActive: false }, 'u');
-    expect(events.emitAsync).toHaveBeenCalledTimes(1);
-    expect(events.emitAsync).toHaveBeenCalledWith(
-      SettingsEvent.CHANGED,
-      expect.objectContaining({
-        scope: 'lists',
-        key: 'lists.stages.stage-1',
-        oldValue: expect.objectContaining({ isActive: true }),
-        newValue: expect.objectContaining({ isActive: false }),
-        changedById: 'u',
-      }),
-    );
+  it('a new stage records core.stage.create with both names and its snapshot under its history key', async () => {
+    const { service, audit } = makeService();
+    await service.create({ nameEn: 'KG', nameAr: 'روضة' });
+    expect(audit.record).toHaveBeenCalledWith({
+      action: 'core.stage.create',
+      entity: { type: 'stage', id: 'new', label: { en: 'KG', ar: 'روضة' } },
+      changes: [
+        { field: 'lists.stages.new', before: null, after: expect.objectContaining({ nameEn: 'KG' }) },
+      ],
+    });
+  });
 
-    events.emitAsync.mockClear();
-    await service.update('stage-1', { nameEn: 'Primary' }, 'u');
-    expect(events.emitAsync).not.toHaveBeenCalled();
+  it('an edit records core.stage.update with old and new snapshots; an unchanged save still records (no entry)', async () => {
+    const { service, audit } = makeService();
+    await service.update('stage-1', { isActive: false });
+    expect(audit.record).toHaveBeenCalledWith({
+      action: 'core.stage.update',
+      entity: { type: 'stage', id: 'stage-1', label: { en: 'Primary', ar: 'ابتدائي' } },
+      changes: [
+        {
+          field: 'lists.stages.stage-1',
+          before: expect.objectContaining({ isActive: true }),
+          after: expect.objectContaining({ isActive: false }),
+        },
+      ],
+    });
+
+    audit.record.mockClear();
+    await service.update('stage-1', { nameEn: 'Primary' });
+    // AuditService drops a change whose before equals its after, so nothing is written.
+    const [[input]] = audit.record.mock.calls as unknown as [[{ changes: { before: unknown; after: unknown }[] }]];
+    expect(input.changes[0]?.before).toEqual(input.changes[0]?.after);
+  });
+
+  it('a failed write records nothing', async () => {
+    const { service, repo, audit } = makeService();
+    repo.update.mockRejectedValueOnce(new Error('db down'));
+    await expect(service.update('stage-1', { isActive: false })).rejects.toThrow('db down');
+    expect(audit.record).not.toHaveBeenCalled();
   });
 });

@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import type { Stage } from '@school-erp/shared';
-import { DatabaseService } from '../../../database/database.service';
+import { TransactionHost } from '@nestjs-cls/transactional';
+import type { DbAdapter, DbClient } from '../../../database/transactions';
 
 const stageSelect = {
   id: true,
@@ -11,10 +12,18 @@ const stageSelect = {
   isActive: true,
 } satisfies Prisma.StageSelect;
 
-/** Stages (school structure). Never deleted — hidden with `isActive: false` (§3). */
+/**
+ * Stages (school structure). Writes join the request's transaction, so a change and its audit
+ * entry commit together. Never deleted — hidden with `isActive: false` (§3).
+ */
 @Injectable()
 export class StageRepository {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(private readonly txHost: TransactionHost<DbAdapter>) {}
+
+  /** The open transaction (an audited write's), or the plain client. */
+  private get db(): DbClient {
+    return this.txHost.tx;
+  }
 
   findMany(includeHidden: boolean): Promise<Stage[]> {
     return this.db.stage.findMany({

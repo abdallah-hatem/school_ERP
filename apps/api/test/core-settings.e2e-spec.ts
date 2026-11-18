@@ -193,42 +193,28 @@ describe('core settings and school structure (e2e)', () => {
       await http(app).get('/settings/history').expect(404);
     });
 
-    it('an emitted HR list settings.changed event produces a history row (until T28)', async () => {
-      const item = { id: '22222222-2222-4222-8222-222222222222', nameEn: 'Art', nameAr: 'الفنون', sortOrder: 1, isActive: true };
-      const event: SettingsChangedEvent = {
-        scope: 'lists',
-        key: 'hr.departments',
-        oldValue: null,
-        newValue: item,
-        changedById: TEST_USER.id,
-        changedAt: new Date().toISOString(),
-      };
-      await app.get(EventEmitter2).emitAsync(SettingsEvent.CHANGED, event);
-
-      const rows = (await historyFor('hr.departments')).filter(
-        (r) => (r.newValue as { id?: string } | null)?.id === item.id,
-      );
-      expect(rows).toHaveLength(1);
-      expect(rows[0]).toMatchObject({
-        action: 'hr.department.create',
-        scope: 'LISTS',
-        oldValue: null,
-        newValue: item,
-        changedById: TEST_USER.id,
-      });
-    });
-
-    it('an HR or school settings.changed event alone writes nothing: those are recorded with their write', async () => {
-      const event: SettingsChangedEvent = {
-        scope: 'hr',
-        key: 'hr.payroll.dayDivisor',
-        oldValue: 30,
-        newValue: 26,
-        changedById: TEST_USER.id,
-        changedAt: new Date().toISOString(),
-      };
-      await app.get(EventEmitter2).emitAsync(SettingsEvent.CHANGED, event);
+    it('a settings.changed event alone writes nothing: every setting, list and catalogue change is recorded with its write (T28)', async () => {
+      const events: SettingsChangedEvent[] = [
+        {
+          scope: 'hr',
+          key: 'hr.payroll.dayDivisor',
+          oldValue: 30,
+          newValue: 26,
+          changedById: TEST_USER.id,
+          changedAt: new Date().toISOString(),
+        },
+        {
+          scope: 'lists',
+          key: 'hr.departments',
+          oldValue: null,
+          newValue: { id: '22222222-2222-4222-8222-222222222222', nameEn: 'Art', nameAr: 'الفنون' },
+          changedById: TEST_USER.id,
+          changedAt: new Date().toISOString(),
+        },
+      ];
+      for (const event of events) await app.get(EventEmitter2).emitAsync(SettingsEvent.CHANGED, event);
       expect(await historyFor('hr.payroll.dayDivisor')).toHaveLength(0);
+      expect(await historyFor('hr.departments')).toHaveLength(0);
     });
   });
 

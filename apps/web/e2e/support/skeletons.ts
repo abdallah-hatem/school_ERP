@@ -22,8 +22,7 @@ import { signIn } from './ui';
  * and expects the same blocks in the same order, each as wide and as tall as the other within
  * tolerance(). A list's items carry `data-skeleton-each` too: a run of them counts once, as tall
  * as its shortest item (how many arrive, and whose name wraps, is data). `data-skeleton-measure="width"` on a block compares its
- * width only (a list whose height follows its row count). Blocks inside `data-skeleton-optional`
- * are not compared: they exist only when there is data (the History tab's pagination).
+ * width only (a list whose height follows its row count).
  */
 
 export interface MeasuredBlock {
@@ -48,8 +47,6 @@ async function blocksOf(page: Page): Promise<MeasuredBlock[]> {
       const r = el.getBoundingClientRect();
       // Not drawn: the other view of a table (cards on desktop), a hidden streamed tree.
       if (r.width === 0 || r.height === 0) continue;
-      // Drawn only when there is data (a pagination under a list that may be empty).
-      if (el.closest('[data-skeleton-optional]')) continue;
       const name = el.dataset.skeletonBlock ?? '';
       // One of many (a row, a card in a list): one entry for the run, as tall as its shortest item —
       // a skeleton row traces a plain row, not one whose name or chips wrap onto a second line.
@@ -221,6 +218,14 @@ async function readPaths(): Promise<Record<SkeletonScreenName, string | null>> {
     // adds a "can't deactivate" note).
     const plain = users.find((u) => u.id !== admin.id && !u.mustChangePassword) ?? (await settledUser(api, roles.get('hr_officer')?.id ?? ''));
     const role = roles.get('direct_manager') ?? [...roles.values()][0]!;
+    // The History tab compares its pagination too, which shows only with entries: an employee
+    // has one from their first write (T28); on an older database, a grade edit put back adds two.
+    const history = await api.get<unknown[]>(`/audit/records/employee/${employee.id}`, { limit: 1 });
+    if (history.length === 0) {
+      const { grade } = await api.get<{ grade: string | null }>(`/hr/employees/${employee.id}`);
+      await api.patch(`/hr/employees/${employee.id}`, { grade: 'Skeleton check' });
+      await api.patch(`/hr/employees/${employee.id}`, { grade });
+    }
     const e = `/employees/${employee.id}`;
     return {
       dashboard: '',

@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, type RefreshToken } from '@prisma/client';
 import { BaseRepository } from '../../../common/repositories/base.repository';
+import { TransactionHost } from '@nestjs-cls/transactional';
 import { DatabaseService } from '../../../database/database.service';
+import type { DbAdapter, DbClient } from '../../../database/transactions';
 
 export interface NewRefreshToken {
   userId: string;
@@ -17,8 +19,16 @@ export class RefreshTokensRepository extends BaseRepository<
   Prisma.RefreshTokenUncheckedCreateInput,
   Prisma.RefreshTokenUncheckedUpdateInput
 > {
-  constructor(databaseService: DatabaseService) {
+  constructor(
+    databaseService: DatabaseService,
+    private readonly txHost: TransactionHost<DbAdapter>,
+  ) {
     super(databaseService, 'refreshToken');
+  }
+
+  /** The open transaction (a sign-in's or sign-out's), so the token and its audit entry commit together. */
+  private get db(): DbClient {
+    return this.txHost.tx;
   }
 
   findByHash(tokenHash: string): Promise<RefreshToken | null> {
@@ -26,7 +36,7 @@ export class RefreshTokensRepository extends BaseRepository<
   }
 
   insert(data: NewRefreshToken): Promise<RefreshToken> {
-    return this.databaseService.refreshToken.create({ data });
+    return this.db.refreshToken.create({ data });
   }
 
   /**
@@ -45,7 +55,7 @@ export class RefreshTokensRepository extends BaseRepository<
   }
 
   async revokeFamily(familyId: string, at: Date): Promise<void> {
-    await this.databaseService.refreshToken.updateMany({
+    await this.db.refreshToken.updateMany({
       where: { familyId, revokedAt: null },
       data: { revokedAt: at },
     });
@@ -53,7 +63,7 @@ export class RefreshTokensRepository extends BaseRepository<
 
   /** Ends every sign-in of a user (deactivated, or given a temporary password). */
   async revokeAllOf(userId: string, at: Date): Promise<number> {
-    const { count } = await this.databaseService.refreshToken.updateMany({
+    const { count } = await this.db.refreshToken.updateMany({
       where: { userId, revokedAt: null },
       data: { revokedAt: at },
     });

@@ -1,9 +1,7 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
-import type { AuthUser } from '@school-erp/shared';
-import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
 import { CreateJobTitleDto, ListItemsQueryDto, UpdateJobTitleDto } from '../dto/list-item.dto';
 import { JobTitlesService } from '../services/job-titles.service';
-import { NotAudited } from '../../../../core/audit';
+import { Audited } from '../../../../core/audit';
 import { Permission } from '../../../../core/permissions';
 
 /**
@@ -20,21 +18,20 @@ export class JobTitlesController {
     return this.jobTitles.list(query.includeHidden);
   }
 
-  @NotAudited('wired in T28')
+  @Audited('hr.job_title.create')
   @Post()
   @Permission('hr.lists.manage')
-  create(@Body() dto: CreateJobTitleDto, @CurrentUser() user?: AuthUser) {
-    return this.jobTitles.create(dto, user?.id ?? null);
+  create(@Body() dto: CreateJobTitleDto) {
+    return this.jobTitles.create(dto);
   }
 
-  @NotAudited('wired in T28')
+  @Audited('hr.job_title.update')
   @Patch(':id')
   @Permission('hr.lists.manage')
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateJobTitleDto,
-    @CurrentUser() user?: AuthUser,
   ) {
-    return this.jobTitles.update(id, dto, user?.id ?? null);
+    return this.jobTitles.update(id, dto);
   }
 }

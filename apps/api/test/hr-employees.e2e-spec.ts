@@ -5,13 +5,13 @@ import {
   ErrorCode,
   HrEvent,
   HrListKey,
-  SettingsEvent,
   type CreateEmployeeRequest,
 } from '@school-erp/shared';
 import { todayIsoDate } from '../src/common/utils/dates.util';
 import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
 import { createAppAsTestUser } from './helpers/as-test-user';
+import { historyMark, historyRows } from './helpers/history';
 
 describe('HR lists and employees (e2e)', () => {
   let app: INestApplication;
@@ -58,10 +58,16 @@ describe('HR lists and employees (e2e)', () => {
     return res.body.data as { id: string; code: string; status: string };
   };
 
-  const settingsEvents = () =>
-    emitSpy.mock.calls
-      .filter(([name]) => name === SettingsEvent.CHANGED)
-      .map(([, payload]) => payload);
+  /** The audit log is append-only: list and catalogue history written after `mark` (T28). */
+  let mark = BigInt(0);
+  const settingsEvents = async () =>
+    (await historyRows(db, mark)).map((r) => ({
+      scope: r.scope.toLowerCase(),
+      key: r.key,
+      oldValue: r.oldValue,
+      newValue: r.newValue,
+      changedById: r.changedById,
+    }));
 
   beforeAll(async () => {
     ({
@@ -104,7 +110,10 @@ describe('HR lists and employees (e2e)', () => {
       .expect(200);
   });
 
-  beforeEach(() => emitSpy.mockClear());
+  beforeEach(async () => {
+    emitSpy.mockClear();
+    mark = await historyMark(db);
+  });
 
   afterAll(async () => {
     await db.employee.updateMany({ data: { managerId: null } });
@@ -156,7 +165,7 @@ describe('HR lists and employees (e2e)', () => {
       await http(app).patch(`/hr/employees/${emp.id}`).send({ grade: 'B' }).expect(200);
     });
 
-    it('list create / PATCH writes a history row (settings.changed emitted with old and new value)', async () => {
+    it('list create / PATCH writes a history row in its transaction (old and new value, the user)', async () => {
       const created = await http(app)
         .post('/hr/job-titles')
         .send({ nameEn: 'Driver', nameAr: 'سائق', sortOrder: 3 })
@@ -166,7 +175,7 @@ describe('HR lists and employees (e2e)', () => {
       // An empty PATCH changes nothing and records nothing.
       await http(app).patch(`/hr/job-titles/${item.id}`).send({}).expect(200);
 
-      const events = settingsEvents();
+      const events = await settingsEvents();
       expect(events).toHaveLength(2);
       expect(events[0]).toEqual({
         scope: 'lists',
@@ -181,7 +190,6 @@ describe('HR lists and employees (e2e)', () => {
           managesPeople: false,
         },
         changedById: userId,
-        changedAt: expect.any(String),
       });
       expect(events[1]).toMatchObject({
         scope: 'lists',
@@ -191,12 +199,12 @@ describe('HR lists and employees (e2e)', () => {
         changedById: userId,
       });
 
-      emitSpy.mockClear();
+      mark = await historyMark(db);
       await http(app)
         .post('/hr/departments')
         .send({ nameEn: 'Finance', nameAr: 'مالية' })
         .expect(201);
-      expect(settingsEvents()).toEqual([
+      expect(await settingsEvents()).toEqual([
         expect.objectContaining({ scope: 'lists', key: HrListKey.DEPARTMENTS, oldValue: null }),
       ]);
     });
@@ -411,13 +419,13 @@ describe('HR lists and employees (e2e)', () => {
       ).body.data;
       expect(lead.managesPeople).toBe(true);
 
-      emitSpy.mockClear();
+      mark = await historyMark(db);
       const on = await http(app)
         .patch(`/hr/job-titles/${plain.id}`)
         .send({ managesPeople: true })
         .expect(200);
       expect(on.body.data).toMatchObject({ id: plain.id, managesPeople: true, nameEn: 'Clerk' });
-      expect(settingsEvents()).toEqual([
+      expect(await settingsEvents()).toEqual([
         expect.objectContaining({
           key: HrListKey.JOB_TITLES,
           oldValue: expect.objectContaining({ managesPeople: false }),

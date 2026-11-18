@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import type { PenaltyAction } from '@school-erp/shared';
-import { DatabaseService } from '../../../../database/database.service';
+import { TransactionHost } from '@nestjs-cls/transactional';
+import type { DbAdapter, DbClient } from '../../../../database/transactions';
 
 export const LEVEL_SELECT = {
   level: true,
@@ -74,7 +75,12 @@ export type ViolationUpdateData = Partial<ViolationData> & { isActive?: boolean 
  */
 @Injectable()
 export class PenaltyCatalogueRepository {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(private readonly txHost: TransactionHost<DbAdapter>) {}
+
+  /** The open transaction (an audited write's), so a change and its audit entry commit together. */
+  private get db(): DbClient {
+    return this.txHost.tx;
+  }
 
   findGroupsWithViolations(): Promise<GroupWithViolationsRow[]> {
     return this.db.penaltyGroup.findMany({

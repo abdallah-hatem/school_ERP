@@ -1,5 +1,7 @@
 import type { EventEmitter2 } from '@nestjs/event-emitter';
+import type { AuditService } from '../../../../core/audit';
 import type { FileStorageService } from '../../../../core/settings';
+import type { AfterCommit } from '../../../../database/transactions';
 import { fakeAccess } from '../../access/hr-access.testing';
 import type { EmployeeScope } from '../../access/employee-scope.pure';
 import type { DepartmentsService } from '../../lists/services/departments.service';
@@ -93,7 +95,6 @@ function makeService(scopes: Parameters<typeof fakeAccess>[0], repo: Record<stri
     }),
     findDetail: jest.fn().mockResolvedValue(detail()),
     findScopeFields: jest.fn().mockResolvedValue({ id: 'e1', stageId: 'primary', managerId: null }),
-    findState: jest.fn().mockResolvedValue({ id: 'e1', status: 'ACTIVE' }),
     updateEmployee: jest.fn().mockResolvedValue(detail()),
     countActiveByStage: jest.fn().mockResolvedValue([]),
     findIdsInScope: jest.fn().mockResolvedValue(['e1']),
@@ -109,6 +110,8 @@ function makeService(scopes: Parameters<typeof fakeAccess>[0], repo: Record<stri
     { emit: jest.fn() } as unknown as EventEmitter2,
     {} as unknown as FileStorageService,
     fakeAccess(scopes),
+    { record: jest.fn(() => Promise.resolve()) } as unknown as AuditService,
+    { run: jest.fn(), inTransaction: (fn: () => Promise<unknown>) => fn() } as unknown as AfterCommit,
   );
   return { service, repository };
 }

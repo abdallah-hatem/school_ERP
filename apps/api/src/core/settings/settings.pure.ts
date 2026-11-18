@@ -1,14 +1,8 @@
 import { isDeepStrictEqual } from 'node:util';
 import {
-  AuditEntityType,
-  HrCatalogueKey,
-  HrListKey,
   SETTING_DEFAULTS,
   SchoolSettingKey,
-  type AuditAction,
-  type AuditLabel,
   type SchoolSettings,
-  type SettingsChangedEvent,
   type SettingKey,
   type SettingValueMap,
   type TimeOfDay,
@@ -103,71 +97,4 @@ export function detectImageType(buffer: Buffer): ImageType | null {
     return 'svg';
   }
   return null;
-}
-
-/** Stage edits are keyed per stage: `lists.stages.<id>` (core/school-structure). */
-export const STAGE_HISTORY_PREFIX = 'lists.stages.';
-
-/** The audit action and record of a list / catalogue `settings.changed` event. */
-export interface HistoryAuditTarget {
-  action: AuditAction;
-  /** Both names of the item (UI audit finding 3): Arabic sentences show the Arabic name. */
-  entity: { type: AuditEntityType; id: string; label: AuditLabel };
-}
-
-const LIST_ACTIONS: Record<string, { type: AuditEntityType; create: AuditAction; update: AuditAction }> = {
-  [HrListKey.DEPARTMENTS]: {
-    type: AuditEntityType.DEPARTMENT,
-    create: 'hr.department.create',
-    update: 'hr.department.update',
-  },
-  [HrListKey.JOB_TITLES]: {
-    type: AuditEntityType.JOB_TITLE,
-    create: 'hr.job_title.create',
-    update: 'hr.job_title.update',
-  },
-  [HrCatalogueKey.PENALTY_GROUPS]: {
-    type: AuditEntityType.PENALTY_GROUP,
-    create: 'hr.penalty_group.create',
-    update: 'hr.penalty_group.update',
-  },
-  [HrCatalogueKey.VIOLATIONS]: {
-    type: AuditEntityType.VIOLATION,
-    create: 'hr.violation.create',
-    update: 'hr.violation.update',
-  },
-};
-
-const field = (value: unknown, name: string): string | undefined => {
-  const v = value && typeof value === 'object' ? (value as Record<string, unknown>)[name] : undefined;
-  return typeof v === 'string' && v !== '' ? v : undefined;
-};
-
-/**
- * Maps a list / catalogue history event (stages, departments, job titles, penalty groups,
- * violations) to its audit action and record — the same mapping the T27 migration used for the
- * old rows. `null` for anything else (school and HR settings are recorded in their transaction).
- */
-export function historyAuditTarget(event: SettingsChangedEvent): HistoryAuditTarget | null {
-  const created = event.oldValue === null || event.oldValue === undefined;
-  const snapshot = created ? event.newValue : (event.newValue ?? event.oldValue);
-  const en = field(snapshot, 'nameEn') ?? field(snapshot, 'nameAr') ?? '';
-  const label: AuditLabel = { en, ar: field(snapshot, 'nameAr') ?? en };
-
-  if (event.scope === 'lists' && event.key.startsWith(STAGE_HISTORY_PREFIX)) {
-    return {
-      action: created ? 'core.stage.create' : 'core.stage.update',
-      entity: { type: AuditEntityType.STAGE, id: event.key.slice(STAGE_HISTORY_PREFIX.length), label },
-    };
-  }
-  const target = LIST_ACTIONS[event.key];
-  const scopeOk =
-    (event.scope === 'lists' && (event.key === HrListKey.DEPARTMENTS || event.key === HrListKey.JOB_TITLES)) ||
-    (event.scope === 'catalogue' &&
-      (event.key === HrCatalogueKey.PENALTY_GROUPS || event.key === HrCatalogueKey.VIOLATIONS));
-  if (!target || !scopeOk) return null;
-  return {
-    action: created ? target.create : target.update,
-    entity: { type: target.type, id: field(snapshot, 'id') ?? '', label },
-  };
 }

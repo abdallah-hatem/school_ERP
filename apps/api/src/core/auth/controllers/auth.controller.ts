@@ -7,7 +7,7 @@ import { LoginDto } from '../dto/login.dto';
 import { AuthCookiesInterceptor } from '../interceptors/auth-cookies.interceptor';
 import { AuthService } from '../services/auth.service';
 import { ClearedSession, type IssuedSession } from '../session';
-import { NotAudited } from '../../audit';
+import { Audited, NotAudited } from '../../audit';
 import { AllowedBeforePasswordChange, PermissionsService, SignedIn } from '../../permissions';
 import { UsersService } from '../../users';
 
@@ -22,7 +22,7 @@ export class AuthController {
   ) {}
 
   @Public()
-  @NotAudited('wired in T28')
+  @Audited('core.auth.sign_in')
   @Post('login')
   @HttpCode(HttpStatus.OK)
   login(@Body() dto: LoginDto): Promise<IssuedSession> {
@@ -37,7 +37,7 @@ export class AuthController {
     return this.auth.refresh(refreshToken);
   }
 
-  @NotAudited('wired in T28')
+  @Audited('core.auth.sign_out')
   @Post('logout')
   @SignedIn()
   @AllowedBeforePasswordChange()

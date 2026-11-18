@@ -3,7 +3,6 @@ import { AuditModule } from '../audit';
 import { FileStorageService } from './files/file-storage.service';
 import { FilesController } from './files/files.controller';
 import { SchoolSettingRepository } from './repositories/school-setting.repository';
-import { SettingsHistoryListener } from './settings-history.listener';
 import { SettingsController } from './settings.controller';
 import { SettingsService } from './settings.service';
 
@@ -14,7 +13,6 @@ import { SettingsService } from './settings.service';
   providers: [
     SettingsService,
     FileStorageService,
-    SettingsHistoryListener,
     SchoolSettingRepository,
   ],
   exports: [SettingsService, FileStorageService],

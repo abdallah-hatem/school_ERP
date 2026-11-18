@@ -69,12 +69,7 @@ export async function runSeed(
   try {
     return await seedAll(app);
   } finally {
-    if (!options.app) {
-      // List and catalogue services emit `settings.changed` without awaiting; let the history
-      // listener finish before the database connection closes.
-      await new Promise((r) => setTimeout(r, 500));
-      await app.close();
-    }
+    if (!options.app) await app.close();
   }
 }
 
@@ -99,24 +94,25 @@ async function seedAll(app: INestApplicationContext): Promise<SeedSummary> {
   await seedSchool(get(SettingsService), data, admin.id);
 
   const stages = await ensureList(STAGES, db.stage.findMany({ select: listSelect }), (item) =>
-    get(StagesService).create({ nameEn: item.nameEn, nameAr: item.nameAr }, admin.id),
+    get(StagesService).create({ nameEn: item.nameEn, nameAr: item.nameAr }),
   );
   const departments = await ensureList(
     DEPARTMENTS,
     db.department.findMany({ select: listSelect }),
     (item) =>
-      get(DepartmentsService).create({ nameEn: item.nameEn, nameAr: item.nameAr }, admin.id),
+      get(DepartmentsService).create({ nameEn: item.nameEn, nameAr: item.nameAr }),
   );
   const jobTitles = await ensureList(
     JOB_TITLES,
     db.jobTitle.findMany({ select: listSelect }),
     (item) =>
-      get(JobTitlesService).create(
-        { nameEn: item.nameEn, nameAr: item.nameAr, managesPeople: item.managesPeople ?? false },
-        admin.id,
-      ),
+      get(JobTitlesService).create({
+        nameEn: item.nameEn,
+        nameAr: item.nameAr,
+        managesPeople: item.managesPeople ?? false,
+      }),
   );
-  await ensureManagingTitles(get(JobTitlesService), jobTitles, admin.id);
+  await ensureManagingTitles(get(JobTitlesService), jobTitles);
   log(
     `lists ready (${stages.size} stages, ${departments.size} departments, ${jobTitles.size} job titles)`,
   );
@@ -165,12 +161,7 @@ async function seedAll(app: INestApplicationContext): Promise<SeedSummary> {
   log(`employees ready (${EMPLOYEES.length}, ${created} new)`);
   await seedPortrait(employees, db, employeeIds);
 
-  const violationIds = await seedCatalogue(
-    get(PenaltyCatalogueService),
-    db,
-    data.catalogue,
-    admin.id,
-  );
+  const violationIds = await seedCatalogue(get(PenaltyCatalogueService), db, data.catalogue);
   const violationCount = data.catalogue.groups.reduce((n, g) => n + g.violations.length, 0);
   log(
     `penalty catalogue ready (${data.catalogue.groups.length} groups, ${violationCount} violations)`,
@@ -231,13 +222,12 @@ const listSelect = { id: true, nameEn: true } as const;
 async function ensureManagingTitles(
   service: JobTitlesService,
   ids: Map<string, string>,
-  adminId: string,
 ): Promise<void> {
   const current = new Map((await service.list(true)).map((t) => [t.id, t.managesPeople]));
   for (const item of JOB_TITLES) {
     const id = ids.get(item.key);
     if (!('managesPeople' in item) || !item.managesPeople || !id || current.get(id)) continue;
-    await service.update(id, { managesPeople: true }, adminId);
+    await service.update(id, { managesPeople: true });
   }
 }
 
@@ -276,7 +266,6 @@ async function seedCatalogue(
   catalogue: PenaltyCatalogueService,
   db: DatabaseService,
   data: SeedCatalogue,
-  adminId: string,
 ): Promise<Map<string, string>> {
   const bySeedKey = new Map<string, string>();
   for (const [index, group] of data.groups.entries()) {
@@ -287,13 +276,10 @@ async function seedCatalogue(
     let groupId = existingGroup?.id;
     if (!groupId) {
       groupId = (
-        await catalogue.createGroup(
-          { nameEn: group.nameEn, nameAr: group.nameAr, sortOrder: index },
-          adminId,
-        )
+        await catalogue.createGroup({ nameEn: group.nameEn, nameAr: group.nameAr, sortOrder: index })
       ).id;
     } else if (existingGroup!.nameAr !== group.nameAr) {
-      await catalogue.updateGroup(groupId, { nameAr: group.nameAr }, adminId);
+      await catalogue.updateGroup(groupId, { nameAr: group.nameAr });
     }
 
     for (const v of group.violations) {
@@ -310,7 +296,7 @@ async function seedCatalogue(
       let violationId = existing?.id;
       if (!existing) {
         violationId = (
-          await catalogue.createViolation(groupId, { nameEn: v.nameEn, ...wanted }, adminId)
+          await catalogue.createViolation(groupId, { nameEn: v.nameEn, ...wanted })
         ).id;
       } else if (
         existing.nameAr !== wanted.nameAr ||
@@ -318,7 +304,7 @@ async function seedCatalogue(
         existing.oncePerDay !== wanted.oncePerDay ||
         JSON.stringify(storedLevels(existing.levels)) !== JSON.stringify(wanted.levels)
       ) {
-        await catalogue.updateViolation(existing.id, wanted, adminId);
+        await catalogue.updateViolation(existing.id, wanted);
       }
       if (v.seedKey) bySeedKey.set(v.seedKey, violationId!);
     }
