@@ -313,6 +313,13 @@ phase live in `docs/build-log/`.
   edits, HR manager reads; timings follow HR-rules editing). Checked in screenshots. The phone smoke
   spec's ambiguous heading locator fixed by us. Left for N2: a penalty notification opens that
   penalty; the full record → bell → approve smoke flow.
+- 2026-11-19 — Accounting payroll taxes screen merged → #138 (option C): year board (approved /
+  draft in HR / nothing yet), a printable statement per month with Insured / Not insured tables on
+  the shared `DataTable` (new optional totals row), the tax rule used, Excel export and print/PDF;
+  Accounting is live in the sidebar (Accountant, System admin). Accounting API gained read-only
+  `GET /accounting/payroll/year/:year` (via HR's `PayrollService.runStatusesInYear`) and the month
+  export — for Tamer to review. Checked in screenshots. Tamer can now start the payroll-run rules
+  snapshot (merge dev first; N2 touches `payroll.service.ts`).
 
 ## Next up
 
@@ -330,7 +337,9 @@ phase live in `docs/build-log/`.
   off, retention 90 / 30 / 365 days, contract reminders at 30 and 7 days, Settings → Notifications
   changed by the System admin and seen by the HR manager.
 
-- **Accounting payroll taxes screen** (Abdallah, option C, being built) — a page per approved month (net, insurance share, income tax,
+- ~~Accounting payroll taxes screen~~ done (#138). Follow-ups: the "Approved in HR" stamp has no date
+  (accounting doesn't store HR's approval time); a phone statement with many employees is long.
+- (was) **Accounting payroll taxes screen** — a page per approved month (net, insurance share, income tax,
   fund, gross per employee) and a sidebar entry: **mockups first** (CLAUDE.md rule 9). The API
   (`GET /accounting/payroll[/:month]`) is built. Tax defaults are GUESS until the accountant confirms.
 - Accounting settings, from the #84 review (optional): `AccountingSettingsService.update()` now
