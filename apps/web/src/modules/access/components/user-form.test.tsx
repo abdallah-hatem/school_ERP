@@ -185,6 +185,12 @@ describe('UserForm', () => {
     await waitFor(() => expect(unlock).toHaveBeenCalledWith(officer.id));
   });
 
+  it('editing: Status and Password come before Account, so a phone reads a locked sign-in first', () => {
+    renderAccess(<UserForm basePath="/en/users" user={{ ...officer, lockedUntil: '2026-11-17T12:15:00.000Z' }} roles={ROLES} now={NOW} />);
+    const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
+    expect(headings.slice(0, 3)).toEqual(['Status', 'Password', 'Account']);
+  });
+
   it('a locked sign-in without core.users.manage: the notice, no Unlock button', () => {
     renderAccess(
       <UserForm basePath="/en/users" user={{ ...officer, lockedUntil: '2026-11-17T12:15:00.000Z' }} roles={ROLES} now={NOW} />,

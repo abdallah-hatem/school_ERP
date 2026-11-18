@@ -95,7 +95,8 @@ Motion explains a change and never delays it.
   penalty or deactivating someone requires a reason.
 - **Toasts:** the shared `Toaster` only — a `card` surface with the `raised` shadow, the tone icon
   in a soft round badge (success, destructive, warning; info in primary-soft), the title in the
-  display face, a close button; top inline-end corner, stacked with gaps. Always in the screen's
+  display face, a close button; stacked with gaps, never over a page header's actions: the bottom
+  inline-end corner from 600px (above a form's sticky Save bar), under the top bar on a phone. Always in the screen's
   language (pass a translated `successMessage`, never the API's English).
 - **Take away / give back:** Deactivate is a destructive outline (red in ⋯ menus), Reactivate a
   soft success button (green in ⋯ menus) — `StatusChangeButton`, different icons, never the same
