@@ -408,7 +408,7 @@ function Group({
         // A group can be empty one month (an empty state) and full the next: no skeleton can know,
         // so the tables are measured as part of the statement (width only).
         skeletonBlocks={false}
-        cardsBelow={insured ? 900 : 740}
+        cardsBelow={insured ? 960 : 740}
         empty={
           searching && lines?.length ? (
             <EmptyState
