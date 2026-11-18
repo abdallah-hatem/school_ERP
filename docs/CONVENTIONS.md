@@ -68,10 +68,15 @@ smoke specs; needs Docker). Don't skip the hook with `--no-verify`; if it's wron
 GitHub also runs API e2e and the smoke specs (desktop-en and phone-ar shards) on every PR. A PR
 whose own changes are all docs (`docs/`, `design/mockups/`, any `*.md`) passes those two in seconds
 without running them; lint, typecheck, unit tests and module rules still run in full.
+Into `dev`, a PR merges once its own four checks pass; it doesn't have to be up to date with `dev`
+(owner, 2026-11-18). The full suite then runs again on `dev` after every merge; if that run fails,
+fixing `dev` comes before anything else. `testing`, `production` and `demo` still require an
+up-to-date branch.
 
 - [ ] **Your branch has the latest `dev` merged in** (owner, 2026-11-17): `git fetch origin && git
-      merge origin/dev`, resolve conflicts, re-run the checks, then open the PR. GitHub refuses to
-      merge a branch that is behind, and `pnpm ci:local` warns when it is.
+      merge origin/dev`, resolve conflicts, re-run the checks, then open the PR, so conflicts are
+      solved on your branch. Later merges into `dev` don't make you update it again; `testing`,
+      `production` and `demo` still refuse a branch that is behind. `pnpm ci:local` warns when it is.
 - [ ] A new module? Its plan is in `docs/plans/` (see Plans below).
 - [ ] One task per PR, small — aim for under ~400 changed lines. Split big features.
 - [ ] The push went through the local CI hook (and `pnpm ci:local --full` for API, DB or UI changes).
