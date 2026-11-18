@@ -94,6 +94,45 @@ export const LIMITED_MONTH: AccountingPayrollMonth = {
   ],
 };
 
+/**
+ * A month of 29: 26 insured ("Insured 01"… codes EMP-0101…, three pages) and 3 not insured
+ * ("Other 1"… / "موظف أخر 1"…), every gross 100.00.
+ */
+export const BIG_MONTH: AccountingPayrollMonth = {
+  ...MONTH,
+  totals: { employees: 29, net: 2_900, insuranceAmount: 0, incomeTax: 0, martyrTax: 0, gross: 290_000 },
+  lines: [
+    ...Array.from({ length: 26 }, (_, i) => {
+      const n = String(i + 1).padStart(2, '0');
+      return line({
+        employeeId: `00000000-0000-4000-8000-0000000001${n}`,
+        employeeCode: `EMP-01${n}`,
+        nameEn: `Insured ${n}`,
+        nameAr: `مؤمن ${n}`,
+        insuranceStatus: 'INSURED',
+        insuredSalary: 10_000,
+        net: 10_000,
+        insuranceAmount: 0,
+        incomeTax: 0,
+        martyrTax: 0,
+        gross: 10_000,
+      });
+    }),
+    ...Array.from({ length: 3 }, (_, i) =>
+      line({
+        employeeId: `00000000-0000-4000-8000-0000000002${String(i + 1).padStart(2, '0')}`,
+        employeeCode: `EMP-020${i + 1}`,
+        nameEn: `Other ${i + 1}`,
+        nameAr: `موظف أخر ${i + 1}`,
+        net: 10_000,
+        incomeTax: 0,
+        martyrTax: 0,
+        gross: 10_000,
+      }),
+    ),
+  ],
+};
+
 /** 2026: September and October approved, November a draft in HR, the rest nothing. */
 export const YEAR: AccountingPayrollYear = {
   year: 2026,
