@@ -1,10 +1,11 @@
 import type { Language, PartTimeWorkSystem, RepetitionWindow, Weekday } from './enums';
+import type { Piastres } from './types/common';
 import type { HrSettings } from './types/hr';
 
 /**
  * Setting keys. Each key is one row in `SchoolSetting` (value stored as JSON) and one row per
  * change in `SettingChange`. School-wide keys are owned by core/settings; `hr.*` keys by the HR
- * module (§7).
+ * module (§7); `accounting.*` keys by the accounting module (§10).
  */
 export const SchoolSettingKey = {
   NAME_EN: 'school.nameEn',
@@ -27,7 +28,15 @@ export const HrSettingKey = {
 } as const;
 export type HrSettingKey = (typeof HrSettingKey)[keyof typeof HrSettingKey];
 
-export type SettingKey = SchoolSettingKey | HrSettingKey;
+/** Accounting's rule settings (§10): the payroll tax rule. */
+export const AccountingSettingKey = {
+  PAYROLL_TAX_BRACKETS: 'accounting.payroll.taxBrackets',
+  PAYROLL_MARTYR_PERCENT: 'accounting.payroll.martyrPercent',
+  PAYROLL_INSURANCE_PERCENT: 'accounting.payroll.insurancePercent',
+} as const;
+export type AccountingSettingKey = (typeof AccountingSettingKey)[keyof typeof AccountingSettingKey];
+
+export type SettingKey = SchoolSettingKey | HrSettingKey | AccountingSettingKey;
 
 /**
  * History keys for HR list edits (§7: list create / edit writes a history row, scope `lists`).
@@ -56,6 +65,15 @@ export interface LatenessStep {
   days: number;
 }
 
+/**
+ * One monthly income-tax slice (§10): the next `width` piastres of taxable pay are taxed at
+ * `percent` (0–100, up to 2 decimals). Only the last slice is open-ended (`width` null).
+ */
+export interface TaxBracket {
+  width: Piastres | null;
+  percent: number;
+}
+
 /** Value type stored under each key. */
 export interface SettingValueMap {
   'school.nameEn': string;
@@ -71,6 +89,9 @@ export interface SettingValueMap {
   'hr.payroll.dayDivisor': number;
   'hr.payroll.partTime': Record<PartTimeWorkSystem, number>;
   'hr.penalties.repetitionWindow': RepetitionWindow;
+  'accounting.payroll.taxBrackets': TaxBracket[];
+  'accounting.payroll.martyrPercent': number;
+  'accounting.payroll.insurancePercent': number;
 }
 
 /**
@@ -94,6 +115,19 @@ export const SETTING_DEFAULTS: { [K in SettingKey]: SettingValueMap[K] } = {
   'hr.payroll.dayDivisor': 30,
   'hr.payroll.partTime': { PART_TIME_4: 80, PART_TIME_3: 60, PART_TIME_2: 40 },
   'hr.penalties.repetitionWindow': 'CONTRACT_YEAR',
+  // §10 GUESS (the school's previous HR system; to confirm with the accountant): Egypt's annual
+  // scale ÷ 12 — 60,000 at 0%, 15,000 at 10%, 15,000 at 15%, 130,000 at 20%, 200,000 at 22.5%,
+  // the rest at 25%.
+  'accounting.payroll.taxBrackets': [
+    { width: 500_000, percent: 0 },
+    { width: 125_000, percent: 10 },
+    { width: 125_000, percent: 15 },
+    { width: 1_083_333, percent: 20 },
+    { width: 1_666_667, percent: 22.5 },
+    { width: null, percent: 25 },
+  ],
+  'accounting.payroll.martyrPercent': 0.05,
+  'accounting.payroll.insurancePercent': 11,
 };
 
 /**
