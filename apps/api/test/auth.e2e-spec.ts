@@ -439,7 +439,8 @@ describe('auth (e2e)', () => {
         actorName: null,
         changes: [],
       });
-      expect(JSON.stringify(list[0])).not.toContain('wrong-password');
+      const { seq: _seq, ...stored } = list[0];
+      expect(JSON.stringify(stored)).not.toContain('wrong-password');
     });
 
     it('a failed sign-in for a known and for an unknown email write the same shape of entry (nothing tells them apart)', async () => {
@@ -448,7 +449,8 @@ describe('auth (e2e)', () => {
       const known = await login(user.email, 'wrong-password').set('Accept-Language', 'en');
       const unknown = await login(unknownEmail).set('Accept-Language', 'en');
       expect([known.status, unknown.status]).toEqual([401, 401]);
-      expect(unknown.body).toEqual(known.body);
+      const answer = ({ timestamp: _at, ...body }: Record<string, unknown>) => body;
+      expect(answer(unknown.body as Record<string, unknown>)).toEqual(answer(known.body as Record<string, unknown>));
 
       const shape = (e: { action: string; entityType: string; entityId: string; entityLabel: string; actorId: string | null; changes: unknown }) => ({
         action: e.action,
