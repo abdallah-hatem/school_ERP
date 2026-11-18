@@ -244,9 +244,12 @@ export class UnassignOnDeactivation implements OutboxEventListener<typeof HrEven
     notices (`core.settings.changed`, `core.user.sessions_ended`, `hr.employee.hired` / `updated`).
   - **Must-deliver** (`@OutboxListener({ event, name })` listeners): the **outbox**. An
     `outbox_events` row and one `outbox_deliveries` row per listener are written **in the change's
-    transaction**; delivered by a nudge right after the commit and by the `outbox.deliver` poll every
-    30 s (claims with `FOR UPDATE SKIP LOCKED`, creation order); retried after 10 s, 1 min, 5 min,
-    30 min, then every 2 h; **dead after 10 failures** (logged; an admin retries it with
+    transaction**; delivered by a nudge started right after the commit (not awaited: the response
+    never waits for an outbox listener; tests wait with `DomainEvents.idle()`) and by the
+    `outbox.deliver` poll every 30 s (claims with `FOR UPDATE SKIP LOCKED`, creation order, due up
+    to 1 s after the pass's start); retried after 10 s, 1 min, 5 min, 30 min, then every 2 h,
+    counted from the claim; **dead after 10 failures** (`attempts` counts failures only; logged; an
+    admin retries it with
     `POST /outbox/deliveries/:id/retry`, `core.outbox.manage`, audited). Delivered events are
     deleted after 30 days (`outbox.cleanup`); dead ones are kept. `hr.payroll.approved`,
     `hr.employee.deactivated`, and every notification event.

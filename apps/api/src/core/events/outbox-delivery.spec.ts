@@ -3,7 +3,14 @@ import type { ClsService } from 'nestjs-cls';
 import type { AfterCommit } from '../../database/transactions';
 import { EventListeners } from './event-listeners';
 import { OutboxDelivery } from './outbox-delivery.service';
-import { afterFailure, MAX_FAILURES, retryDelayMs, RETRY_DELAYS_MS } from './outbox.pure';
+import {
+  afterFailure,
+  CLAIM_TOLERANCE_MS,
+  claimDueBy,
+  MAX_FAILURES,
+  retryDelayMs,
+  RETRY_DELAYS_MS,
+} from './outbox.pure';
 import type { ClaimedDelivery, OutboxRepository } from './repositories/outbox.repository';
 
 const NOW = new Date('2026-11-18T10:00:00.000Z');
@@ -36,7 +43,7 @@ function makeDelivery(rows: Record<string, { status: string; attempts: number }>
     markDelivered: jest.fn((id: string) => {
       const row = table.get(id);
       if (!row || row.status !== 'pending') return Promise.resolve(false);
-      write(() => table.set(id, { status: 'delivered', attempts: row.attempts + 1 }));
+      write(() => table.set(id, { status: 'delivered', attempts: row.attempts }));
       return Promise.resolve(true);
     }),
     settleEvent: jest.fn((eventId: string) => (write(() => events.set(eventId, 'delivered')), Promise.resolve())),
@@ -87,7 +94,7 @@ describe('retry schedule (owner, 2026-11-18)', () => {
     expect(RETRY_DELAYS_MS).toHaveLength(5);
   });
 
-  it('dead at the 10th failure, not before', () => {
+  it('dead at the 10th failure, not before (attempts counts failures)', () => {
     expect(MAX_FAILURES).toBe(10);
     expect(afterFailure(9, NOW)).toEqual({
       status: 'pending',
@@ -108,12 +115,30 @@ describe('OutboxDelivery.deliver', () => {
       { runId: 'r1' },
       { eventId: 'e1', deliveryId: 'd1', attempt: 1, publishedAt: NOW },
     );
-    expect(table.get('d1')).toEqual({ status: 'delivered', attempts: 1 });
+    // attempts counts failures: delivered at the first try, it stays 0.
+    expect(table.get('d1')).toEqual({ status: 'delivered', attempts: 0 });
     expect(events.get('e1')).toBe('delivered');
   });
 
+  it('attempts counts failures only: two failures then a success → 2, and the listener saw tries 1, 2, 3', async () => {
+    const { service, listeners, table } = makeDelivery({ d1: { status: 'pending', attempts: 0 } });
+    const tries: number[] = [];
+    listeners.addOutbox(HrEvent.PAYROLL_APPROVED, 'accounting.payroll-taxes', {
+      handle: (_p: unknown, ctx: unknown) => {
+        const { attempt } = ctx as { attempt: number };
+        tries.push(attempt);
+        return attempt < 3 ? Promise.reject(new Error('not yet')) : Promise.resolve();
+      },
+    });
+    await expect(service.deliver(claimed({ attempts: 0 }), () => NOW)).resolves.toBe('failed');
+    await expect(service.deliver(claimed({ attempts: 1 }), () => NOW)).resolves.toBe('failed');
+    await expect(service.deliver(claimed({ attempts: 2 }), () => NOW)).resolves.toBe('delivered');
+    expect(tries).toEqual([1, 2, 3]);
+    expect(table.get('d1')).toEqual({ status: 'delivered', attempts: 2 });
+  });
+
   it('idempotent — a redelivery of a handled (event, listener) is a no-op: the listener does not run again', async () => {
-    const { service, listeners } = makeDelivery({ d1: { status: 'delivered', attempts: 1 } });
+    const { service, listeners } = makeDelivery({ d1: { status: 'delivered', attempts: 0 } });
     const handle = jest.fn(() => Promise.resolve());
     listeners.addOutbox(HrEvent.PAYROLL_APPROVED, 'accounting.payroll-taxes', { handle });
     await expect(service.deliver(claimed(), () => NOW)).resolves.toBe('already_handled');
@@ -165,21 +190,50 @@ describe('OutboxDelivery.deliver', () => {
 });
 
 describe('OutboxDelivery passes', () => {
-  it('the nudge claims only its event; the poll claims everything due, with a 5-minute lease', async () => {
+  it('the nudge claims only its event; the poll claims everything due (1 s tolerance), with a 5-minute lease', async () => {
     const { service, repository } = makeDelivery();
     await service.nudge('e1', () => NOW);
     await service.deliverDue(() => NOW);
     expect(repository.claim).toHaveBeenNthCalledWith(1, {
       eventId: 'e1',
-      now: NOW,
+      dueBy: new Date(NOW.getTime() + SECOND),
       leaseUntil: new Date(NOW.getTime() + 5 * 60 * SECOND),
       limit: 50,
     });
     expect(repository.claim).toHaveBeenNthCalledWith(2, {
-      now: NOW,
+      dueBy: new Date(NOW.getTime() + SECOND),
       leaseUntil: new Date(NOW.getTime() + 5 * 60 * SECOND),
       limit: 50,
     });
+  });
+
+  it('the backoff counts from the claim (the pass start), not from the failure a few ms later', async () => {
+    const { service, repository, listeners } = makeDelivery({ d1: { status: 'pending', attempts: 1 } });
+    listeners.addOutbox(HrEvent.PAYROLL_APPROVED, 'accounting.payroll-taxes', {
+      handle: () => Promise.reject(new Error('down')),
+    });
+    repository.claim.mockResolvedValueOnce([claimed({ attempts: 1 })]);
+    // The clock moves on while the pass works: 7 ms by the time the listener has failed.
+    let t = NOW.getTime();
+    const clock = () => new Date((t += 7) - 7);
+    await service.deliverDue(clock);
+    expect(repository.recordFailure).toHaveBeenCalledWith('d1', 1, {
+      status: 'pending',
+      nextAttemptAt: new Date(NOW.getTime() + 60 * SECOND), // 2nd failure: exactly 1 min after the claim
+      error: expect.stringContaining('down'),
+    });
+  });
+
+  it('a retry due at a poll tick is claimed by that tick, even when the tick fires a little early or late', async () => {
+    // Failed in the pass of the tick at NOW: due exactly one interval later, on a tick.
+    const due = afterFailure(2, NOW).nextAttemptAt;
+    const tick = NOW.getTime() + 60 * SECOND;
+    for (const jitter of [-5, 0, 3, 250, CLAIM_TOLERANCE_MS]) {
+      expect(due.getTime()).toBeLessThanOrEqual(claimDueBy(new Date(tick + jitter)).getTime());
+    }
+    // …but never claimed more than the tolerance early.
+    expect(due.getTime()).toBeGreaterThan(claimDueBy(new Date(tick - CLAIM_TOLERANCE_MS - 1)).getTime());
+    expect(CLAIM_TOLERANCE_MS).toBe(SECOND);
   });
 
   it('delivers the claimed rows in the order claimed and counts the outcomes', async () => {

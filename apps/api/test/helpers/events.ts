@@ -1,4 +1,4 @@
-import { Injectable, Module } from '@nestjs/common';
+import { Injectable, Module, type INestApplication } from '@nestjs/common';
 import {
   CoreEvent,
   HrEvent,
@@ -7,13 +7,15 @@ import {
   type FireAndForgetEventName,
   type MustDeliverEventName,
 } from '@school-erp/shared';
-import { OnDomainEvent } from '../../src/core/events';
+import { DomainEvents, OnDomainEvent } from '../../src/core/events';
 import type { DatabaseService } from '../../src/database/database.service';
 
 /*
  * Events in e2e. Fire-and-forget events are recorded by real listeners (so only what was delivered
  * after a commit shows up): pass `EventRecorderModule` in `createAppAsTestUser`'s extra imports and
  * read `recorded(name)`. Must-deliver events are rows in `outbox_events`: `outboxEvents(db, name)`.
+ * Their after-commit nudge runs after the response has gone: `await outboxIdle(app)` before
+ * checking what an outbox listener did (e.g. accounting's taxes after HR's approval).
  */
 
 const log: { name: FireAndForgetEventName; payload: unknown }[] = [];
@@ -85,4 +87,9 @@ export async function outboxEvents<N extends MustDeliverEventName>(
     .filter((r) =>
       Object.entries(where).every(([k, v]) => (r.payload as unknown as Record<string, unknown>)[k] === v),
     );
+}
+
+/** Waits until every after-commit outbox nudge started so far has finished (its listeners ran). */
+export function outboxIdle(app: INestApplication): Promise<void> {
+  return app.get(DomainEvents).idle();
 }

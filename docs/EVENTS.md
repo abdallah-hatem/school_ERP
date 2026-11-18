@@ -44,15 +44,24 @@ add. Keep the `###` heading format: `` `Group.KEY` — `'name'` ``.
   `status`, `attempts`, `next_attempt_at`, `last_error`, `delivered_at`) are written **in the
   publisher's transaction** — the event exists exactly when the change does. Delivery
   (`apps/api/src/core/events/outbox-delivery.service.ts`):
-  - **the nudge**: right after the commit, that event's deliveries are delivered (awaited, so the
-    response usually returns with the listener's work done);
+  - **the nudge**: right after the commit, that event's deliveries are delivered — **started, not
+    awaited** (`OutboxDelivery.nudgeSoon`): the request answers at once and never waits for an
+    outbox listener (a stuck one, e.g. on a lock, can't hang HR's approval); delivery follows within
+    milliseconds. It starts on the next turn of the event loop in a context of its own (`cls.run`
+    with `ifNested: 'override'`), so it never sees the request's CLS store, transaction or user; a
+    failure is logged (`nudge` itself never throws). `DomainEvents.idle()` waits for every nudge
+    started so far — e2e tests call it (`outboxIdle(app)` in `apps/api/test/helpers/events.ts`)
+    before checking a listener's work, and shutdown waits for it too;
   - **the poll**: job `outbox.deliver` every 30 s (`apps/api/src/core/events/outbox.jobs.ts`), the
     safety net (a crash, a retry coming due, a lease that ran out). It runs **without** the job
     advisory lock (`lock: false`): `FOR UPDATE SKIP LOCKED` is the concurrency control, and the
     lock's transaction would hold a connection while the deliveries need another. It writes
     `job_runs` only when it delivered or failed something (`'idle'` otherwise);
   - **claim**: one statement locks due pending rows `FOR UPDATE OF d SKIP LOCKED`, oldest event first
-    (`seq`), and moves their `next_attempt_at` 5 minutes ahead (a lease) so no other pass takes them;
+    (`seq`), and moves their `next_attempt_at` 5 minutes ahead (a lease) so no other pass takes them.
+    "Due" is `next_attempt_at <=` the pass's start **plus 1 s** (`CLAIM_TOLERANCE_MS`, `claimDueBy`
+    in `apps/api/src/core/events/outbox.pure.ts`): the poll's ticks wander by milliseconds, and a
+    retry due at a tick is taken by that tick, not the next one 30 s later;
   - **deliver**: per row, one transaction (with its own after-commit queue, in a fresh request
     context) that first marks the delivery delivered — `UPDATE … WHERE status = 'pending'` — and
     stops if that touched nothing (already handled: **a redelivery is a no-op**), then runs the
@@ -60,13 +69,18 @@ add. Keep the `###` heading format: `` `Group.KEY` — `'name'` ``.
     The listener's writes join this transaction, so its work and the "handled" mark commit
     together. A second worker holding the same row waits on its lock and then finds it delivered;
   - **failure**: that transaction rolls back; then (one statement) `attempts + 1`, `last_error`,
-    and the next try after 10 s, 1 min, 5 min, 30 min, then every 2 h — counted only if nobody else
-    touched the row since the claim. At **10 failures** the delivery and its event are `dead`
-    (logged; a system notification to admins comes with notifications);
+    and the next try after 10 s, 1 min, 5 min, 30 min, then every 2 h — **counted from the claim**
+    (the pass's start), not from the failure a few ms later, so a retry lands on a poll tick — counted
+    only if nobody else touched the row since the claim. At **10 failures** the delivery and its
+    event are `dead` (logged; a system notification to admins comes with notifications);
+  - **`attempts` counts failures only**: a delivery delivered at its first try shows 0, one that
+    failed twice and then went through shows 2 (being delivered doesn't add one). The dead-after-10
+    rule counts these failures. The listener's `context.attempt` is the try number (`attempts + 1`);
   - **admin**: `GET /outbox/deliveries?status=dead` and `POST /outbox/deliveries/:id/retry`
     (`core.outbox.manage`, `@Audited('core.outbox.retry')`, `apps/api/src/core/events/outbox.controller.ts`):
     a dead delivery goes back to pending with its attempts kept (one more try; another failure
-    makes it dead again), recorded dead → pending, and is nudged after the commit;
+    makes it dead again), recorded dead → pending, and is nudged after the commit (not awaited: the
+    response shows it pending);
   - **cleanup**: job `outbox.cleanup` nightly at 03:30 deletes delivered events older than 30 days
     with their deliveries; dead and pending ones stay.
 - **Listeners** are providers marked `@OnDomainEvent(name)` or
@@ -191,7 +205,7 @@ How a write gets its transaction:
 | `apps/api/src/database/transactions.ts` | `AfterCommit.transaction` / `inTransaction` / `run` / `onRollback` | defines them; `run` / `onRollback` throw in a transaction with no queue | — | runs the queue in order, logs failures; on rollback runs the rollback work |
 | `apps/api/src/core/audit/interceptors/audited.interceptor.ts` | every `@Audited` handler | `afterCommit.transaction` | the handler's writes + its `audit.record()` + any outbox rows; `AUDIT_NOT_RECORDED` rolls all back | the queued work (events, nudges) |
 | `apps/api/src/core/audit/audit.service.ts` | `audit.record()` | requires an open transaction (throws `AuditOutsideTransactionError`) | one `audit_entries` row | — |
-| `apps/api/src/core/events/domain-events.ts` | `publish` | fire-and-forget: `afterCommit.run`; must-deliver: `afterCommit.inTransaction` (joins the caller's) | must-deliver: the `outbox_events` row + one `outbox_deliveries` row per listener | fire-and-forget listeners; the nudge |
+| `apps/api/src/core/events/domain-events.ts` | `publish` | fire-and-forget: `afterCommit.run`; must-deliver: `afterCommit.inTransaction` (joins the caller's) | must-deliver: the `outbox_events` row + one `outbox_deliveries` row per listener | fire-and-forget listeners; the nudge (`nudgeSoon`: started, not awaited) |
 | `apps/api/src/core/events/outbox-delivery.service.ts` | deliver one claimed delivery (nudge and poll) | `afterCommit.transaction` in a fresh request context, after a one-statement claim (`FOR UPDATE SKIP LOCKED` + lease, `apps/api/src/core/events/repositories/outbox.repository.ts`); a failure is recorded in one statement after the rollback | the delivered mark + the listener's writes + the event's status | the listener's own queued work |
 | `apps/api/src/core/events/outbox-admin.service.ts` | `POST /outbox/deliveries/:id/retry` | request transaction (`@Audited`) via `afterCommit.inTransaction` | the delivery back to pending, the event to pending, the `core.outbox.retry` entry | the nudge |
 | `apps/api/src/core/auth/services/auth.service.ts` | sign-in (`login`) | **no request transaction**: `POST /auth/login` is `@NotAudited` (with the reason); on success `afterCommit.inTransaction` | `recordSignIn`, the refresh token and the `core.auth.sign_in` entry, together | — |

@@ -26,7 +26,7 @@ function makeRepository(returned: Partial<ClaimedDelivery>[] = []) {
 describe('OutboxRepository', () => {
   it('claims with FOR UPDATE SKIP LOCKED, oldest event first, and takes a lease in the same statement', async () => {
     const { repository, sql } = makeRepository();
-    await repository.claim({ now: NOW, leaseUntil: new Date(NOW.getTime() + 300_000), limit: 50 });
+    await repository.claim({ dueBy: NOW, leaseUntil: new Date(NOW.getTime() + 300_000), limit: 50 });
     const statement = sql[0].replace(/\s+/g, ' ');
     expect(statement).toContain(`WHERE d."status" = 'pending' AND d."next_attempt_at" <=`);
     expect(statement).toContain('ORDER BY e."seq", d."listener"');
@@ -40,7 +40,7 @@ describe('OutboxRepository', () => {
       { id: 'b2', seq: BigInt(2), listener: 'z' },
       { id: 'b1', seq: BigInt(2), listener: 'a' },
     ]);
-    const rows = await repository.claim({ now: NOW, leaseUntil: NOW, limit: 50 });
+    const rows = await repository.claim({ dueBy: NOW, leaseUntil: NOW, limit: 50 });
     expect(rows.map((r) => r.id)).toEqual(['b1', 'b2', 'c']);
   });
 

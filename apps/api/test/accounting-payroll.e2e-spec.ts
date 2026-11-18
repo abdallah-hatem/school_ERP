@@ -8,6 +8,7 @@ import {
 } from '@school-erp/shared';
 import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
+import { outboxIdle } from './helpers/events';
 import { createAppAsTestUser, giveRoles } from './helpers/as-test-user';
 
 /*
@@ -101,13 +102,15 @@ describe('Accounting — payroll taxes of approved months (e2e)', () => {
   const approve = async (id: string) =>
     (await http(app).post(`/hr/payroll-runs/${id}/approve`).expect(200)).body.data as PayrollRun;
 
-  /** The listener runs after HR's approval returns: wait until it has stored the month. */
+  /**
+   * The listener runs in the outbox nudge, after HR's approval has returned: wait for the nudge,
+   * then the month must be stored.
+   */
   const recorded = async (month: string) => {
-    for (let i = 0; i < 50; i += 1) {
-      if (await db.accountingPayrollRun.findUnique({ where: { month } })) return;
-      await new Promise((r) => setTimeout(r, 100));
+    await outboxIdle(app);
+    if (!(await db.accountingPayrollRun.findUnique({ where: { month } }))) {
+      throw new Error(`accounting never recorded ${month}`);
     }
-    throw new Error(`accounting never recorded ${month}`);
   };
   const monthOf = async (month: string) =>
     (await http(app).get(`/accounting/payroll/${month}`).expect(200)).body.data as AccountingPayrollMonth;

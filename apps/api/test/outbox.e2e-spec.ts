@@ -17,7 +17,7 @@ import { DatabaseService } from '../src/database/database.service';
 import { AfterCommit } from '../src/database/transactions';
 import { http, unique } from './helpers';
 import { createAppAsTestUser } from './helpers/as-test-user';
-import { outboxEvents } from './helpers/events';
+import { outboxEvents, outboxIdle } from './helpers/events';
 import { historyMark } from './helpers/history';
 
 /*
@@ -161,13 +161,14 @@ describe('Outbox — must-deliver events (e2e)', () => {
     await app.close();
   });
 
-  it('HR approves a month → accounting has its taxes when the response returns, delivered through the outbox', async () => {
+  it('HR approves a month → accounting has its taxes right after the response, delivered through the outbox', async () => {
     const month = nextMonth();
     await employee();
     const run = (await http(app).post('/hr/payroll-runs').send({ month }).expect(201)).body.data as PayrollRun;
     await http(app).post(`/hr/payroll-runs/${run.id}/approve`).expect(200);
 
-    // The nudge ran after the commit, before the response: no waiting.
+    // The nudge starts after the commit and the response doesn't wait for it: wait for it here.
+    await outboxIdle(app);
     expect(await db.accountingPayrollRun.findUnique({ where: { month }, select: { hrRunId: true } })).toEqual({
       hrRunId: run.id,
     });
@@ -175,7 +176,7 @@ describe('Outbox — must-deliver events (e2e)', () => {
     expect(event?.status).toBe('delivered');
     expect(await deliveryOf(event.id, PAYROLL_TAXES_LISTENER)).toMatchObject({
       status: 'delivered',
-      attempts: 1,
+      attempts: 0, // failures only: delivered at the first try
       deliveredAt: expect.any(Date),
     });
   });
@@ -184,11 +185,12 @@ describe('Outbox — must-deliver events (e2e)', () => {
     const emp = await employee();
     failNext.add(emp);
     await http(app).post(`/hr/employees/${emp}/deactivate`).expect(200);
+    await outboxIdle(app);
 
     const [event] = await outboxEvents(db, HrEvent.EMPLOYEE_DEACTIVATED, { employeeId: emp });
     expect(event?.status).toBe('pending');
     // The other listener is not held back by the failing one.
-    expect(await deliveryOf(event.id, COUNTER)).toMatchObject({ status: 'delivered', attempts: 1 });
+    expect(await deliveryOf(event.id, COUNTER)).toMatchObject({ status: 'delivered', attempts: 0 });
     const failed = await deliveryOf(event.id, FLAKY);
     expect(failed).toMatchObject({ status: 'pending', attempts: 1 });
     expect(failed.lastError).toContain('flaky listener says no');
@@ -205,7 +207,8 @@ describe('Outbox — must-deliver events (e2e)', () => {
     await db.outboxDelivery.update({ where: { id: failed.id }, data: { nextAttemptAt: new Date(Date.now() - 1000) } });
     const before = await runs();
     await expect(app.get(JobRunner).run(OUTBOX_DELIVER_JOB)).resolves.toBe('success');
-    expect(await deliveryOf(event.id, FLAKY)).toMatchObject({ status: 'delivered', attempts: 2 });
+    // One failure, then delivered: attempts counts the failure only.
+    expect(await deliveryOf(event.id, FLAKY)).toMatchObject({ status: 'delivered', attempts: 1 });
     expect((await outboxEvents(db, HrEvent.EMPLOYEE_DEACTIVATED, { employeeId: emp }))[0]?.status).toBe('delivered');
     expect(callsOf(FLAKY, emp)).toBe(2);
     expect(callsOf(COUNTER, emp)).toBe(1);
@@ -235,6 +238,7 @@ describe('Outbox — must-deliver events (e2e)', () => {
         .get(DomainEvents)
         .publish(HrEvent.EMPLOYEE_DEACTIVATED, { employeeId: marker, at: new Date().toISOString() }, { mustDeliver: true }),
     );
+    await outboxIdle(app);
     expect(await outboxEvents(db, HrEvent.EMPLOYEE_DEACTIVATED, { employeeId: marker })).toHaveLength(1);
     expect(callsOf(COUNTER, marker)).toBe(1);
   });
@@ -245,7 +249,7 @@ describe('Outbox — must-deliver events (e2e)', () => {
     const delivery = app.get(OutboxDelivery);
     await Promise.all([delivery.deliverDue(), delivery.deliverDue(), delivery.nudge(event.id)]);
     expect(callsOf(COUNTER, marker)).toBe(1);
-    expect(await deliveryOf(event.id, COUNTER)).toMatchObject({ status: 'delivered', attempts: 1 });
+    expect(await deliveryOf(event.id, COUNTER)).toMatchObject({ status: 'delivered', attempts: 0 });
 
     // A redelivery of a handled delivery (its lease ran out, say) is a no-op.
     await delivery.deliver({
@@ -290,7 +294,9 @@ describe('Outbox — must-deliver events (e2e)', () => {
     const mark = await historyMark(db);
     const res = await http(app).post(`/outbox/deliveries/${id}/retry`).expect(200);
     expect(res.body.data).toMatchObject({ id, status: 'pending' });
-    expect(await deliveryOf(event.id, COUNTER)).toMatchObject({ status: 'delivered', attempts: 11 });
+    await outboxIdle(app);
+    // Delivered at its 11th try: the 10 failures stay counted.
+    expect(await deliveryOf(event.id, COUNTER)).toMatchObject({ status: 'delivered', attempts: 10 });
     expect(callsOf(COUNTER, marker)).toBe(1);
     expect((await outboxEvents(db, HrEvent.EMPLOYEE_DEACTIVATED, { employeeId: marker }))[0]?.status).toBe(
       'delivered',

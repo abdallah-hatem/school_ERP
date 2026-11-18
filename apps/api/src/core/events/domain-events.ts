@@ -31,7 +31,8 @@ export type PublishOptions<N extends DomainEventName> = N extends MustDeliverEve
  * - **Must-deliver** (`MUST_DELIVER_EVENTS`): an `outbox_events` row and one `outbox_deliveries` row
  *   per `@OutboxListener`, written **in the caller's transaction** (or one of their own outside
  *   one), so the event exists exactly when the change does; delivered right after the commit (the
- *   nudge) and by the 30-second poll, with retries.
+ *   nudge — started then, not awaited: the request never waits for an outbox listener) and by the
+ *   30-second poll, with retries. `idle()` waits for the started nudges (tests).
  */
 @Injectable()
 export class DomainEvents {
@@ -59,6 +60,14 @@ export class DomainEvents {
     else await this.afterCommit.run(() => this.dispatch(name, payload));
   }
 
+  /**
+   * Resolves once every after-commit nudge started so far has finished — the outbox listeners have
+   * run (or failed and been recorded). For tests: a request returns before its nudge is done.
+   */
+  idle(): Promise<void> {
+    return this.delivery.idle();
+  }
+
   /** Runs every fire-and-forget listener of `name`, in order; logs each failure and goes on. */
   private async dispatch(name: FireAndForgetEventName, payload: unknown): Promise<void> {
     for (const listener of this.listeners.inMemoryOf(name)) {
@@ -75,9 +84,7 @@ export class DomainEvents {
     await this.afterCommit.inTransaction(async () => {
       const eventId = await this.outbox.insertEvent(name, payload, listeners, new Date());
       if (listeners.length > 0) {
-        await this.afterCommit.run(async () => {
-          await this.delivery.nudge(eventId);
-        });
+        await this.afterCommit.run(() => this.delivery.nudgeSoon(eventId));
       }
     });
   }
