@@ -206,6 +206,9 @@ phase live in `docs/build-log/`.
   departments, job titles, penalty groups and violations record through core's `SettingsHistory`
   inside their write, so a failed entry rolls the change back; the after-commit listener is gone and
   those ten endpoints are `@Audited` → `fix/settings-history-in-transaction`.
+- 2026-11-18 — The "no stage" entry is a flag, not a name (`fix/none-stage-by-id`): `stages.is_no_stage`,
+  set on the stage named "None" by its migration and by the seed (`StagesService.ensureNoStage`, no
+  endpoint); the card band reads the flag. Was the only name check in api/web/shared/seed.
 - 2026-11-18 — Login rate limiting (owner-approved rules) and the scheduled-jobs foundation: 5 wrong
   passwords in 15 minutes lock that account for 15 minutes (per account, `login_attempts`, one atomic
   upsert; 429 `TOO_MANY_ATTEMPTS`; sign-in and both password-change paths), admin unlock from Users
@@ -262,6 +265,5 @@ phase live in `docs/build-log/`.
   state (`TODO(T28)`).
 
 - Optional: server-side paging for lateness (loads the whole month today) and column sorting.
-- The stage "None" band is detected by its English name; key it by an id instead.
 - Leftover from #88: the History tab's skeleton assumes entries, so it still jumps while History is
   empty (until T28); then compare the timeline in full.

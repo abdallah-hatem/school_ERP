@@ -217,6 +217,9 @@ model Stage {
   nameAr    String   @map("name_ar")
   sortOrder Int      @default(0) @map("sort_order")
   isActive  Boolean  @default(true) @map("is_active")
+  /// The "no stage" entry (staff not tied to a stage, §3): at most one stage, marked by the seed (or
+  /// by the migration that added the flag), never recognised by name. Renaming it keeps the role.
+  isNoStage Boolean  @default(false) @map("is_no_stage")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

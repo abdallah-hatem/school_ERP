@@ -1,10 +1,10 @@
 import { NotFoundException } from '@nestjs/common';
-import { ErrorCode, type Stage } from '@school-erp/shared';
+import { ErrorCode, type SettingsChangedEvent, type Stage } from '@school-erp/shared';
 import { CodedException } from '../../common/errors/coded.exception';
 import { fakeTransaction } from '../../common/testing/fake-transaction';
 import type { SettingsHistory } from '../settings';
 import type { StageRepository } from './repositories/stage.repository';
-import { StagesService } from './stages.service';
+import { StagesService, stageHistoryValue } from './stages.service';
 
 const stage = (over: Partial<Stage> = {}): Stage => ({
   id: 'stage-1',
@@ -12,13 +12,18 @@ const stage = (over: Partial<Stage> = {}): Stage => ({
   nameAr: 'ابتدائي',
   sortOrder: 1,
   isActive: true,
+  isNoStage: false,
   ...over,
 });
 
-function makeService(found: Stage | null = stage()) {
+function makeService(found: Stage | null = stage(), marked: Stage | null = null) {
   const tx = fakeTransaction();
   const repo = {
     findById: jest.fn(() => Promise.resolve(found)),
+    findNoStage: jest.fn(() => Promise.resolve(marked)),
+    setNoStage: jest.fn((id: string) =>
+      Promise.resolve({ ...(found as Stage), id, isNoStage: true }),
+    ),
     nextSortOrder: jest.fn(() => Promise.resolve(4)),
     create: jest.fn((data: Partial<Stage>) => {
       tx.write('stage');
@@ -113,7 +118,10 @@ describe('StagesService', () => {
     const { service, history } = makeService();
     await service.update('stage-1', { nameEn: 'Primary' }, 'u');
     expect(history.record).toHaveBeenCalledWith(
-      expect.objectContaining({ oldValue: stage(), newValue: stage() }),
+      expect.objectContaining({
+        oldValue: stageHistoryValue(stage()),
+        newValue: stageHistoryValue(stage()),
+      }),
     );
   });
 
@@ -124,5 +132,64 @@ describe('StagesService', () => {
     );
     expect(history.record).not.toHaveBeenCalled();
     expect(tx.state.committed).toEqual([]);
+  });
+
+  describe('the "no stage" entry (keyed by its flag, not its name)', () => {
+    it('ensureNoStage marks the stage when none carries the mark yet', async () => {
+      const { service, repo } = makeService(stage({ id: 'none', nameEn: 'None' }));
+      await expect(service.ensureNoStage('none')).resolves.toMatchObject({
+        id: 'none',
+        isNoStage: true,
+      });
+      expect(repo.setNoStage).toHaveBeenCalledWith('none');
+    });
+
+    it('ensureNoStage keeps an existing mark (never two): returns it, marks nothing', async () => {
+      const existing = stage({ id: 'old', nameEn: 'Without stage', isNoStage: true });
+      const { service, repo } = makeService(stage({ id: 'none', nameEn: 'None' }), existing);
+      await expect(service.ensureNoStage('none')).resolves.toBe(existing);
+      expect(repo.setNoStage).not.toHaveBeenCalled();
+    });
+
+    it('ensureNoStage → 404 for a missing stage', async () => {
+      const { service, repo } = makeService(null);
+      await expect(service.ensureNoStage('x')).rejects.toBeInstanceOf(NotFoundException);
+      expect(repo.setNoStage).not.toHaveBeenCalled();
+    });
+
+    it('renaming (or hiding) the "no stage" entry keeps its role: the edit never touches the flag', async () => {
+      const { service, repo } = makeService(stage({ id: 'none', nameEn: 'None', isNoStage: true }));
+      const renamed = await service.update(
+        'none',
+        { nameEn: 'No stage', nameAr: 'لا مرحلة', isActive: false },
+        'u',
+      );
+      expect(renamed).toMatchObject({ nameEn: 'No stage', isNoStage: true });
+      expect(repo.update.mock.calls[0][1]).not.toHaveProperty('isNoStage');
+    });
+
+    it('a new stage is never the "no stage" entry, whatever its name', async () => {
+      const { service, repo } = makeService();
+      await service.create({ nameEn: 'None', nameAr: 'بدون مرحلة' }, 'u');
+      expect(repo.create.mock.calls[0][0]).not.toHaveProperty('isNoStage');
+    });
+
+    it("a stage's history never includes isNoStage (create and edit, marked or not)", async () => {
+      const marked = makeService(stage({ id: 'none', nameEn: 'None', isNoStage: true }));
+      await marked.service.update('none', { nameEn: 'No stage' }, 'u');
+      const plain = makeService();
+      await plain.service.create({ nameEn: 'KG', nameAr: 'روضة' }, 'u');
+
+      const events = [...marked.history.record.mock.calls, ...plain.history.record.mock.calls].map(
+        (c) => (c as unknown[])[0] as Omit<SettingsChangedEvent, 'changedAt'>,
+      );
+      expect(events).toHaveLength(2);
+      for (const e of events) {
+        expect(e.newValue).not.toHaveProperty('isNoStage');
+        if (e.oldValue !== null) expect(e.oldValue).not.toHaveProperty('isNoStage');
+      }
+      expect(events[0].oldValue).toMatchObject({ nameEn: 'None' });
+      expect(events[0].newValue).toMatchObject({ nameEn: 'No stage' });
+    });
   });
 });

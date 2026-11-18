@@ -163,7 +163,9 @@ accounting        ← the payroll tax rule and the payroll taxes of approved mon
 ```
 
 - **Stages** (KG, Primary, Preparatory) are a list in `core/` ("school structure"). HR uses them now
-  and academics and students later, so they sit below all three.
+  and academics and students later, so they sit below all three. The "no stage" entry is the stage
+  with `isNoStage` (set by the seed and its migration, never by an endpoint); code never matches a
+  stage by name.
 - **Settings ownership:** `core/settings` holds school-wide values (identity, hours, language). Each
   module owns its own rule settings (HR: lateness, payroll, penalty catalogue; accounting: the payroll
   tax rule). The one Settings screen shows a section per module.
