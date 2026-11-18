@@ -63,7 +63,7 @@ describe('Roles list', () => {
 
   it('every role but System admin has Delete (owner 2026-11-19); System admin only opens', async () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 });
-    renderAccess(<RolesList basePath="/en/roles" roles={roles} holderNames={{ [ROLES[0]!.id]: ['Hany Saad'] }} />);
+    renderAccess(<RolesList basePath="/en/roles" roles={roles} holders={{ [ROLES[0]!.id]: [{ id: 'u1', employee: null, isActive: true }] }} />);
     expect(screen.getAllByText('Every permission').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Starting role').length).toBeGreaterThan(0);
     expect(menuItemNames(await openRowActions(user, 'System admin'))).toEqual(['Open']);
@@ -75,7 +75,7 @@ describe('Roles list', () => {
 
   it('deleting an unused starting role warns it won’t get future permissions; a custom role doesn’t', async () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 });
-    renderAccess(<RolesList basePath="/en/roles" roles={roles} holderNames={{}} />);
+    renderAccess(<RolesList basePath="/en/roles" roles={roles} holders={{}} />);
     await chooseRowAction(user, 'Stage head', 'Delete');
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText(/future updates add new permissions to starting roles/)).toBeTruthy();
@@ -90,7 +90,7 @@ describe('Roles list', () => {
   it('a held role’s Delete says who still holds it, with no way to delete', async () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 });
     const held = [...ROLES.map((r) => (r.key === 'hr_manager' ? { ...r, userCount: 3 } : r)), customRole];
-    renderAccess(<RolesList basePath="/en/roles" roles={held} holderNames={{}} />);
+    renderAccess(<RolesList basePath="/en/roles" roles={held} holders={{}} />);
     await chooseRowAction(user, 'HR manager', 'Delete');
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText("“HR manager” can't be deleted yet")).toBeTruthy();
@@ -101,7 +101,7 @@ describe('Roles list', () => {
 
   it('without core.roles.manage: no Add custom role, the ⋯ only opens', async () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 });
-    renderAccess(<RolesList basePath="/en/roles" roles={roles} holderNames={{}} />, 'en', sessionWithout('core.roles.manage'));
+    renderAccess(<RolesList basePath="/en/roles" roles={roles} holders={{}} />, 'en', sessionWithout('core.roles.manage'));
     expect(screen.queryByRole('link', { name: 'Add custom role' })).toBeNull();
     expect(menuItemNames(await openRowActions(user, 'Front desk'))).toEqual(['Open']);
   });

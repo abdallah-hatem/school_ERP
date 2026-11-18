@@ -13,7 +13,7 @@ import { localName } from '@/shared/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import type { StageBand } from '../lib/stage-band';
-import { EmployeeAvatar } from '@/core/employees';
+import { PersonAvatar } from '@/shared/components/ui/person-avatar';
 import { EmployeeStatusPill } from './employee-bits';
 
 /*
@@ -123,7 +123,7 @@ export function EmployeeCard({
       }
       avatar={
         <>
-          <EmployeeAvatar photoUrl={employee.photoUrl} gender={employee.gender} size="lg" muted={inactive} className="ring-4 ring-card" />
+          <PersonAvatar photoUrl={employee.photoUrl} gender={employee.gender} size="lg" muted={inactive} className="ring-4 ring-card" />
           <span className="ms-auto mb-1">
             <EmployeeStatusPill status={employee.status} />
           </span>

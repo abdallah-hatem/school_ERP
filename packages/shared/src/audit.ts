@@ -1,5 +1,6 @@
 import type { SettingsChangeScope } from './events';
 import type { IsoDateTime, Uuid } from './types/common';
+import type { PersonAvatarRef } from './types/core';
 
 /*
  * The audit log (§9, spec docs/specs/2026-11-17-audit-log.md). Every action that changes data or
@@ -357,6 +358,8 @@ export interface AuditRecordQuery {
 export interface AuditActor {
   id: Uuid;
   name: string;
+  /** Their account's linked employee (the avatar), or null: not linked, or the account is gone. */
+  employee: PersonAvatarRef | null;
 }
 
 /** `GET /audit/actors` query: everyone in the log, or only the people who touched one record. */

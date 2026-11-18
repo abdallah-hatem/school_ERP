@@ -333,6 +333,11 @@ phase live in `docs/build-log/`.
 - 2026-11-19 — Started: payroll taxes statement fixes (subtotal row to the table's right edge;
   pagination + search per group on screen, print/Excel complete) and a break-ui pass over every
   money screen with worst-case amounts (owner).
+- 2026-11-19 — One avatar for every person → #147: user accounts no longer show initials (sidebar
+  chip, Users list, My account, role holders, Activity's Person filter, the employee picker); a
+  linked account shows its employee's photo or male/female silhouette, an unlinked one a neutral
+  silhouette; inactive people greyed. Users, session and activity actors gained read-only
+  `employee: { photoUrl, gender }`. Checked in screenshots (EN desktop, AR phone, tablet rail).
 
 ## Next up
 

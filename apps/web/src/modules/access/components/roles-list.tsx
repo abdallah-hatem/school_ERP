@@ -17,7 +17,7 @@ import { formatCount } from '@/shared/lib/format';
 import { localName, otherName } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { DELETE_ROLE } from '../apis';
-import { AvatarStack, RoleKindBadge, RoleTile } from './role-bits';
+import { AvatarStack, RoleKindBadge, RoleTile, type RoleHolder } from './role-bits';
 import { RoleDeleteDialog } from './role-delete-dialog';
 
 export interface RolesListProps {
@@ -25,8 +25,8 @@ export interface RolesListProps {
   basePath: string;
   /** `undefined` while the roles load: the table draws skeleton rows. */
   roles: Role[] | undefined;
-  /** The names of (some of) each role's holders, for the avatar stack. */
-  holderNames: Record<string, string[]>;
+  /** (Some of) each role's holders, for the avatar stack. */
+  holders: Record<string, RoleHolder[]>;
   error?: boolean;
 }
 
@@ -35,7 +35,7 @@ export interface RolesListProps {
  * and who holds it. Any role but the System admin can be deleted once nobody holds it (owner
  * 2026-11-19); a held one's Delete says who still holds it.
  */
-export function RolesList({ basePath, roles, holderNames, error = false }: RolesListProps) {
+export function RolesList({ basePath, roles, holders, error = false }: RolesListProps) {
   const { t, locale } = useTranslation();
   const router = useRouter();
   const canManage = useCan()('core.roles.manage');
@@ -105,7 +105,7 @@ export function RolesList({ basePath, roles, holderNames, error = false }: Roles
       className: 'w-48',
       cell: (r) => (
         <span className="flex items-center gap-2">
-          <AvatarStack names={holderNames[r.id] ?? []} />
+          <AvatarStack people={holders[r.id] ?? []} />
           <span className="text-muted-foreground">{r.userCount === 0
               ? t('access.roles.userCount.zero')
               : t('access.roles.userCount', { count: formatCount(r.userCount) })}</span>
@@ -185,7 +185,6 @@ export function RolesList({ basePath, roles, holderNames, error = false }: Roles
       )}
       <RoleDeleteDialog
         role={deleting}
-        holderName={deleting ? holderNames[deleting.id]?.[0] : undefined}
         onOpenChange={(o) => (o ? null : setDeleting(null))}
         onConfirm={confirmDelete}
       />

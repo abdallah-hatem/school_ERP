@@ -68,7 +68,7 @@ describe('user form diff', () => {
 
   it('role order and email case are not changes; only what changed is sent', () => {
     expect(changedFields(saved, { ...saved, roleIds: ['b', 'a'], email: 'MONA@school.test' })).toEqual([]);
-    const next = { ...saved, roleIds: ['a'], employee: { id: 'e', code: 'E', nameEn: 'E', nameAr: 'E' } };
+    const next = { ...saved, roleIds: ['a'], employee: { id: 'e', code: 'E', nameEn: 'E', nameAr: 'E', photoUrl: null, gender: 'FEMALE' as const } };
     expect(formToUpdate(saved, next)).toEqual({ roleIds: ['a'], employeeId: 'e' });
     expect(formToUpdate(next, saved)).toEqual({ roleIds: ['a', 'b'], employeeId: null });
   });

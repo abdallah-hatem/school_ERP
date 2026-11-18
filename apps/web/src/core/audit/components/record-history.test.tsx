@@ -12,7 +12,7 @@ vi.mock('next/link', async () => ({ default: (await import('../test/fixtures')).
 
 import type { AuditEntry } from '@school-erp/shared';
 import { parseHistoryQuery } from '../lib/history-query';
-import { AHMED, entry, MONA, NOW, renderAudit } from '../test/fixtures';
+import { ACTORS, AHMED, entry, NOW, renderAudit } from '../test/fixtures';
 import { RecordHistory } from './record-history';
 
 const BASE = '/en/employees/33333333-3333-4333-8333-333333333333/history';
@@ -26,7 +26,7 @@ function renderHistory(params: Record<string, string> = {}, entries: AuditEntry[
       entries={entries}
       total={entries.length}
       fields={['phone', 'basicSalary']}
-      actors={[MONA, AHMED]}
+      actors={ACTORS}
       now={NOW}
     />,
     locale,

@@ -55,7 +55,7 @@ export function account(overrides: Partial<UserAccount> = {}): UserAccount {
     isActive: true,
     mustChangePassword: false,
     roles: [ref(role('system_admin')), ref(role('hr_manager'))],
-    employee: { id: id(500), code: 'EMP-0002', nameEn: 'Hany Saad', nameAr: 'هاني سعد' },
+    employee: { id: id(500), code: 'EMP-0002', nameEn: 'Hany Saad', nameAr: 'هاني سعد', photoUrl: null, gender: 'MALE' },
     createdAt: '2026-11-01T08:00:00.000Z',
     lastSignInAt: '2026-11-17T07:12:00.000Z',
     passwordChangedAt: null,

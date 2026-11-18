@@ -966,7 +966,8 @@ apps/web/src/
 │   │                                   My account → Notifications (§11, N4)
 │   └── academic-year/                ← year switcher, current-year context
 ├── shared/                           ← shared technical pieces
-│   ├── components/ui/                ← shadcn kit
+│   ├── components/ui/                ← shadcn kit, plus PersonAvatar: the one avatar for every
+│   │                                   person (employees, and users through their linked employee)
 │   ├── components/layout/            ← Sidebar, Topbar, PageHeader, EmptyState
 │   ├── components/form/              ← fields for react-hook-form + zod
 │   ├── hooks/
@@ -1041,7 +1042,7 @@ doesn't update its skeleton fails CI (owner, 2026-11-18).
   with their text passes `cardHeightsVary` (penalties: long violation names). A `DataTable` whose
   very presence is data — the payroll taxes statement's Insured / Not insured groups, either of
   which can be empty (an empty state) one month — passes `skeletonBlocks={false}` and is measured
-  as part of the block around it.
+  as part of the block around it (its pagination too, which an empty group doesn't draw).
 - **Text that wraps is drawn as its own text.** A bar can't wrap, so where a loaded line usually
   wraps (a header description, a tile's sub line, the History sentence) the skeleton renders the
   same sentence — worded with typical values — through `SkeletonProse` (transparent text on a bar

@@ -168,6 +168,7 @@ describe('DataTable totals row (footer)', () => {
         rows={people}
         getRowId={(p) => p.id}
         footer={{ label: 'Subtotal', cells: { salary: '2,630,000' } }}
+        pagination={pagination()}
         skeletonBlocks={false}
       />,
     );
@@ -178,6 +179,63 @@ describe('DataTable totals row (footer)', () => {
     );
     const names = [...marked.container.querySelectorAll<HTMLElement>('[data-skeleton-block]')].map((el) => el.dataset.skeletonBlock);
     expect(new Set(names)).toEqual(new Set(['table', 'table-head', 'table-row', 'table-foot', 'table-card', 'table-card-foot']));
+  });
+
+  it.each(['en', 'ar'] as const)('spans the full width (%s): no table reserves a scrollbar gutter at its inline end, with or without totals', (locale) => {
+    // `scrollbar-clean` keeps a vertical gutter at the inline end (right in LTR, left in RTL); a
+    // table only scrolls sideways, and the gutter left the header, the rows and the totals row
+    // short of that edge on every list. The geometry itself is checked in a real browser by
+    // e2e/27-table-footer.spec.ts (the statement and plain lists, EN and AR).
+    const withFooter = renderWithI18n(
+      <DataTable label="Employees" columns={columns} rows={people} getRowId={(p) => p.id} footer={{ label: 'Subtotal', cells: { salary: '2,630,000' } }} />,
+      { locale },
+    );
+    expect(document.documentElement.dir).toBe(locale === 'ar' ? 'rtl' : 'ltr');
+    const scroller = withFooter.container.querySelector<HTMLElement>('[data-table-scroll]')!;
+    expect(scroller.contains(withFooter.container.querySelector('thead'))).toBe(true);
+    expect(scroller.contains(withFooter.container.querySelector('tfoot'))).toBe(true);
+    expect(scroller.className).toContain('[scrollbar-gutter:auto]!');
+    // Still a clean sideways scroller when the columns don't fit.
+    expect(scroller.className).toContain('scrollbar-clean');
+    expect(scroller.className).toContain('overflow-x-auto');
+    cleanup();
+    const plain = renderWithI18n(<DataTable label="Employees" columns={columns} rows={people} getRowId={(p) => p.id} />, { locale });
+    expect(plain.container.querySelector<HTMLElement>('[data-table-scroll]')!.className).toBe(scroller.className);
+  });
+
+  it('printRows: the screen shows its page, the printout lists every row with the totals and no pagination', () => {
+    const everyone: Person[] = Array.from({ length: 12 }, (_, i) => ({ id: String(i + 1), name: `Person ${i + 1}`, salary: 1000 }));
+    const { container } = renderWithI18n(
+      <DataTable
+        label="Employees"
+        columns={columns}
+        rows={everyone.slice(0, 10)}
+        printRows={everyone}
+        getRowId={(p) => p.id}
+        footer={{ label: 'Subtotal · all 12', cells: { salary: '12,000' } }}
+        pagination={pagination({ total: 12 })}
+      />,
+    );
+    // On screen (assistive tech too): one table of the page's ten rows.
+    const table = screen.getByRole('table', { name: 'Employees' });
+    expect(within(table).getAllByRole('row')).toHaveLength(12); // head, 10 rows, totals
+    expect(table.closest('.print\\:hidden')).toBeTruthy();
+    // In print: all twelve, the totals row, and the pagination left out.
+    const print = container.querySelector<HTMLElement>('[data-print-rows]')!;
+    expect(print.className).toContain('print:block');
+    expect(print.getAttribute('aria-hidden')).toBe('true');
+    expect(print.querySelectorAll('tbody tr')).toHaveLength(12);
+    expect(print.querySelector('tfoot')?.textContent).toContain('Subtotal · all 12');
+    expect(print.querySelectorAll('[data-skeleton-block]')).toHaveLength(0);
+    expect(screen.getByRole('navigation', { name: 'Pagination' }).closest('.print\\:hidden')).toBeTruthy();
+  });
+
+  it('printRows with no match on screen: the empty state shows, and print still lists everyone', () => {
+    const { container } = renderWithI18n(
+      <DataTable label="Employees" columns={columns} rows={[]} printRows={people} getRowId={(p) => p.id} empty={<p>No one matches</p>} />,
+    );
+    expect(screen.getByText('No one matches').closest('.print\\:hidden')).toBeTruthy();
+    expect(container.querySelectorAll('[data-print-rows] tbody tr')).toHaveLength(2);
   });
 
   it('keeps its place in the skeleton and is not drawn on an empty list', () => {

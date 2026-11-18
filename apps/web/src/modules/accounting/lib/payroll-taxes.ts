@@ -5,6 +5,7 @@ import {
   type Piastres,
   type TaxRule,
 } from '@school-erp/shared';
+import { matchesSearch } from '@/shared/lib/search';
 
 /** Pure helpers of the payroll taxes screens (§10): the URL's year, the statement's groups and rule. */
 
@@ -30,6 +31,11 @@ export function groupByInsurance(lines: readonly AccountingPayrollLine[]): {
     insured: lines.filter((l) => l.insuranceStatus === InsuranceStatus.INSURED),
     notInsured: lines.filter((l) => l.insuranceStatus !== InsuranceStatus.INSURED),
   };
+}
+
+/** The statement's search: an employee's English or Arabic name, or code (an empty search matches all). */
+export function matchesLine(line: AccountingPayrollLine, search: string): boolean {
+  return matchesSearch(search, [line.nameEn, line.nameAr, line.employeeCode]);
 }
 
 export const SUBTOTAL_FIELDS = ['net', 'insuranceAmount', 'incomeTax', 'martyrTax', 'gross'] as const;

@@ -24,6 +24,7 @@ import {
   LockedIcon,
   UnlockIcon,
 } from '@/shared/components/ui/icons';
+import { PersonAvatar } from '@/shared/components/ui/person-avatar';
 import { SkeletonIdentity, SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
 import { StatusPill } from '@/shared/components/ui/status-pill';
 import { formatCount } from '@/shared/lib/format';
@@ -31,7 +32,7 @@ import { localName } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { formatLockEnd, formatSignIn } from '../lib/sign-in-time';
 import { activeFilterCount, usersQueryString, type UsersFilterKey, type UsersListQuery } from '../lib/users-query';
-import { Avatar, RoleChips } from './role-bits';
+import { RoleChips } from './role-bits';
 import { useUserActions } from './user-actions';
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -108,7 +109,7 @@ export function UsersList({ basePath, query, rows, total, roles, lastAdminId, no
       skeleton: <SkeletonIdentity />,
       cell: (u) => (
         <span className="flex min-w-0 items-center gap-3">
-          <Avatar name={u.name} inactive={!u.isActive} />
+          <PersonAvatar photoUrl={u.employee?.photoUrl} gender={u.employee?.gender} muted={!u.isActive} />
           <span className="flex min-w-0 flex-col">
             <Link
               href={`${basePath}/${u.id}`}
