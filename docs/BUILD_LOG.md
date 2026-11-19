@@ -344,9 +344,23 @@ phase live in `docs/build-log/`.
   scrollbar gutter made them stop 10px short) — measured 0px on payroll runs, penalties, users and
   the statement, EN and AR. The Insured table switches to cards below 960px so it never scrolls
   sideways → #151.
+- 2026-11-19 — Money worst-case pass (break-ui) → #149: amounts up to EGP 21,474,836.47 and month
+  totals over EGP 146M checked on every money screen, EN/AR, 320–1440px and print; fixed the
+  statement sum line (four terms + gross band between 740 and 960px — owner to look), `Money`
+  wrapping, the run lines table (cards below 900px), card grids at 320–600px, the year board at
+  320, "EGP" splitting from its amount in sentences, notification line caps.
+- 2026-11-19 — Deleting roles → #148 (owner): System admin can't be deleted (and keeps every
+  permission); every other role, starting or custom, can be deleted once nobody holds it ("Starting
+  role" badge, a warning that future permissions won't reach a replacement); grant migrations skip a
+  deleted role (replay test).
 
 ## Next up
 
+- **Owner decision — money limits (from #149):** payroll money is stored in 32-bit integers; a
+  salary near EGP 21M plus a large addition returns a 500, and an employee net above ~EGP 15.5M
+  never gets its taxes worked out. Recommended: cap salary, insured salary and adjustments at EGP
+  1,000,000 a month (`MAX_PIASTRES` / `MAX_ADJUSTMENT_PIASTRES`); the alternative is BigInt
+  columns (accounting part is Tamer's).
 - Outbox nits (from #121's live test, cosmetic): the "dead after 10 failures" log line always says
   10 (after an admin retry it's 11); a dead row still gets a `next_attempt_at`. A lock held longer
   than Prisma's 15 s transaction timeout counts as one failure, then the next tick delivers it.
