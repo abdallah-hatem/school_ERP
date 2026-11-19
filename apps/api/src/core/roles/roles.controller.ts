@@ -56,7 +56,7 @@ export class RolesController {
     return this.roles.update(id, dto);
   }
 
-  /** Custom roles nobody holds. Built-in roles → 409 `BUILT_IN_ROLE`. */
+  /** A role nobody holds (held → 409 `ROLE_IN_USE`); the System admin → 409 `SYSTEM_ADMIN_UNDELETABLE`. */
   @Delete(':id')
   @Permission('core.roles.manage')
   @Audited('core.role.delete')

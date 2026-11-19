@@ -74,6 +74,15 @@
   permission ("Adjust payroll"), held by the System admin, HR manager and HR officer (§6). Anyone
   else who sees the run sees its adjustments without being able to change them.
 - **DECIDED** — The last System admin can't be removed or deactivated.
+- **DECIDED** (owner, 2026-11-19) — **Any role but the System admin can be deleted once nobody holds
+  it** — a starting role as well as a custom one. A role someone still holds can't be deleted: Delete
+  says who still holds it ("3 users still hold it"), and the role must be taken away from them on
+  their user pages first; there is no "move everyone to another role" step. The **System admin** can
+  never be deleted and its permissions never change (it always holds every permission). On the
+  Roles screen the starting roles carry a **"Starting role"** badge; deleting one warns that future
+  updates add new permissions to starting roles automatically, and a role made to replace it won't
+  get them. A deleted starting role stays deleted: updates don't bring it back. Deleting a role is
+  recorded in the activity log (§9).
 - **Planned** — Legal affairs, medical clinic and security desk roles, with their modules.
 - **DECIDED** — Viewing the activity log is its own permission (§9): System admin, HR manager and
   principal hold it.

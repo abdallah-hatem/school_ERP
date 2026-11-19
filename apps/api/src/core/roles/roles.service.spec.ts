@@ -125,19 +125,35 @@ describe('RolesService', () => {
     });
   });
 
-  it('built-in roles can’t be deleted; custom roles only when nobody holds them', async () => {
-    await expect(makeService(row({ builtIn: true })).service.remove('r-1')).rejects.toMatchObject({
-      code: ErrorCode.BUILT_IN_ROLE,
+  it('the System admin can’t be deleted, even unused (owner 2026-11-19)', async () => {
+    const { service, repo, audit } = makeService(row({ key: 'system_admin', builtIn: true }));
+    await expect(service.remove('r-1')).rejects.toMatchObject({
+      code: ErrorCode.SYSTEM_ADMIN_UNDELETABLE,
     });
-    await expect(
-      makeService(row({ _count: { users: 2 } })).service.remove('r-1'),
-    ).rejects.toMatchObject({ code: ErrorCode.ROLE_IN_USE });
-    const { service, repo, audit } = makeService();
-    await service.remove('r-1');
-    expect(repo.delete).toHaveBeenCalledWith('r-1');
-    expect(audit.record).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'core.role.delete' }),
-    );
+    expect(repo.delete).not.toHaveBeenCalled();
+    expect(audit.record).not.toHaveBeenCalled();
+  });
+
+  it('a held role can’t be deleted, starting or custom → ROLE_IN_USE', async () => {
+    for (const builtIn of [true, false]) {
+      const { service, repo } = makeService(row({ builtIn, _count: { users: 2 } }));
+      await expect(service.remove('r-1')).rejects.toMatchObject({ code: ErrorCode.ROLE_IN_USE });
+      expect(repo.delete).not.toHaveBeenCalled();
+    }
+  });
+
+  it('an unused role is deleted and recorded — a starting role too (owner 2026-11-19)', async () => {
+    for (const builtIn of [true, false]) {
+      const { service, repo, audit } = makeService(row({ key: 'hr_officer', builtIn }));
+      await service.remove('r-1');
+      expect(repo.delete).toHaveBeenCalledWith('r-1');
+      expect(audit.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'core.role.delete',
+          before: expect.objectContaining({ key: 'hr_officer' }),
+        }),
+      );
+    }
   });
 
   it('edge case 5 — the last-admin check locks the role row, then refuses when nobody else is left', async () => {

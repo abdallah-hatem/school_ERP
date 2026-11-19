@@ -105,13 +105,27 @@ function LoadingStatus() {
  * The page header with the loaded title and description drawn as bars of their own text, so they
  * wrap where the loaded ones do; a record's name (not known yet) is a short bar.
  */
-function Header({ crumb, title, description, status }: { crumb?: 'users' | 'roles'; title?: string; description: string; status?: boolean }) {
+function Header({
+  crumb,
+  title,
+  description,
+  status,
+  action,
+}: {
+  crumb?: 'users' | 'roles';
+  title?: string;
+  description: string;
+  status?: boolean;
+  /** A button in the header (a role's Delete: every role but the System admin has one). */
+  action?: boolean;
+}) {
   const { t } = useTranslation();
   return (
     <PageHeader
       title={title ? <SkeletonProse>{title}</SkeletonProse> : <SkeletonText width="w-40" />}
       status={status ? <SkeletonPill /> : undefined}
       description={<SkeletonProse>{description}</SkeletonProse>}
+      actions={action ? <Skeleton className="h-11 w-32 rounded-lg" /> : undefined}
       breadcrumbs={
         crumb ? [{ label: t('access.administration') }, { label: t(`access.${crumb}.title`) }, { label: ' ' }] : undefined
       }
@@ -259,6 +273,7 @@ function RoleSkeleton({ adding }: { adding: boolean }) {
         crumb="roles"
         title={adding ? t('access.roleForm.addTitle') : undefined}
         status={!adding}
+        action={!adding}
         description={t(adding ? 'access.roleForm.addDescription' : 'access.roleForm.description')}
       />
       <Form aria-hidden="true" inert className="skeleton-mask">

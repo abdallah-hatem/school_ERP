@@ -435,7 +435,11 @@ Roles are rows, not code (spec P2, R2 / R5 / R8 / R9). A school changes them thr
 - **Starting roles** are `BUILT_IN_ROLES` in `packages/shared/src/roles.ts` (the spec's table, GUESS):
   System admin, HR manager, HR officer, Accountant, Principal, Stage head, Direct manager. The P2
   migration copied them into the tables once and gave every HR admin **System admin + HR manager**;
-  from then on they are data. Built-in roles can be edited (names, permissions) but not deleted.
+  from then on they are data. Built-in roles can be edited (names, permissions) and, once nobody
+  holds them, deleted like a custom role — except the System admin (owner, 2026-11-19). A migration
+  that grants a new key to starting roles must `JOIN "roles"` on the key (never assume the role
+  exists), so it skips a deleted one; `test/deleted-starting-roles-migration.e2e-spec.ts` replays
+  every migration after the roles one with the starting roles deleted.
   The **System admin always holds every key** with scope `all`, whatever its rows say — a key added
   later reaches it without a migration, and its permission list can't be edited (no lock-out).
 - **Union and scopes.** A user's permissions are the union of their roles' (edge case 2). Each grant

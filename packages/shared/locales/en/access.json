@@ -166,7 +166,7 @@
       "heldBy": "Held by",
       "actions": "Actions"
     },
-    "builtIn": "Built-in",
+    "builtIn": "Starting role",
     "custom": "Custom",
     "everyPermission": "Every permission",
     "permissionCount": {
@@ -185,7 +185,7 @@
       "many": "{count} users",
       "other": "{count} users"
     },
-    "note": "Built-in roles can be edited but not deleted. A custom role can be deleted once nobody holds it. System admin always holds every permission.",
+    "note": "Starting roles and custom roles can be edited, and deleted once nobody holds them. System admin always holds every permission and can't be deleted.",
     "actions": {
       "edit": "Edit",
       "view": "Open",
@@ -204,8 +204,11 @@
     "delete": {
       "title": "Delete the role “{name}”?",
       "body": "Nobody holds it. Deleting it can't be undone; the activity log keeps what it granted.",
+      "startingRole": "It's a starting role: future updates add new permissions to starting roles automatically. A role you make to replace it won't get them.",
       "confirm": "Delete role",
-      "done": "The role “{name}” was deleted."
+      "done": "The role “{name}” was deleted.",
+      "blockedTitle": "“{name}” can't be deleted yet",
+      "blockedBody": "Take the role away from them in Users first."
     },
     "emptyTitle": "No roles yet",
     "emptyBody": "Add a custom role to group the permissions some users need."

@@ -198,14 +198,38 @@ describe('users and roles (e2e)', () => {
       expect([dup.status, dup.body.error]).toEqual([400, ErrorCode.DUPLICATE_PERMISSION]);
     });
 
-    it('built-in roles can’t be deleted; the System admin’s permissions can’t be narrowed', async () => {
-      const del = await http(app).delete(`/roles/${roleId('hr_officer')}`).expect(409);
-      expect(del.body.error).toBe(ErrorCode.BUILT_IN_ROLE);
+    it('the System admin can’t be deleted, nor its permissions narrowed', async () => {
+      const del = await http(app).delete(`/roles/${roleId('system_admin')}`).expect(409);
+      expect(del.body.error).toBe(ErrorCode.SYSTEM_ADMIN_UNDELETABLE);
+      expect(await db.role.count({ where: { key: 'system_admin' } })).toBe(1);
       const fixed = await http(app)
         .patch(`/roles/${roleId('system_admin')}`)
         .send({ permissions: [] })
         .expect(409);
       expect(fixed.body.error).toBe(ErrorCode.SYSTEM_ADMIN_FIXED);
+    });
+
+    it('a starting role is deleted once nobody holds it, and the deletion is audited (owner 2026-11-19)', async () => {
+      // A starting role of its own, so the shared ones other specs sign in with stay.
+      const role = await db.role.create({
+        data: { key: unique('starting').toLowerCase(), nameEn: 'Starting', nameAr: 'أساسي', builtIn: true },
+      });
+      roleIds.push(role.id);
+      await db.rolePermission.create({
+        data: { roleId: role.id, permissionKey: 'hr.employees.view', scope: 'all' },
+      });
+      const holder = await makeUser();
+      await db.userRoleAssignment.create({ data: { userId: holder.id, roleId: role.id } });
+      const held = await http(app).delete(`/roles/${role.id}`).expect(409);
+      expect(held.body.error).toBe(ErrorCode.ROLE_IN_USE);
+      await db.userRoleAssignment.deleteMany({ where: { roleId: role.id } });
+
+      const mark = await historyMark(db);
+      await http(app).delete(`/roles/${role.id}`).expect(204);
+      await http(app).get(`/roles/${role.id}`).expect(404);
+      expect(await db.rolePermission.count({ where: { roleId: role.id } })).toBe(0);
+      const [entry] = await entriesAfter(mark, 'core.role.delete');
+      expect(entry).toMatchObject({ entityType: 'role', entityId: role.id, actorId: user.id });
     });
 
     it('a custom role is deleted only when nobody holds it', async () => {
