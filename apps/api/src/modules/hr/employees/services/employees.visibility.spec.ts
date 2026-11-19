@@ -1,5 +1,6 @@
 import type { DomainEvents } from '../../../../core/events';
 import type { AuditService } from '../../../../core/audit';
+import type { UsersService } from '../../../../core/users';
 import type { FileStorageService } from '../../../../core/settings';
 import type { AfterCommit } from '../../../../database/transactions';
 import { fakeAccess } from '../../access/hr-access.testing';
@@ -121,6 +122,7 @@ function makeService(scopes: Parameters<typeof fakeAccess>[0], repo: Record<stri
       probationChanged: jest.fn(),
       employeeDeactivated: jest.fn(),
     } as unknown as HrRemindersService,
+    { accountOfEmployee: jest.fn().mockResolvedValue(null) } as unknown as UsersService,
   );
   return { service, repository };
 }

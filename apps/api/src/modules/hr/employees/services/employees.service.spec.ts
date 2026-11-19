@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { contractYearFor, ErrorCode, HrEvent } from '@school-erp/shared';
 import { todayIsoDate } from '../../../../common/utils/dates.util';
 import type { AuditService } from '../../../../core/audit';
+import type { UsersService } from '../../../../core/users';
 import type { DomainEvents } from '../../../../core/events';
 import type { FileStorageService } from '../../../../core/settings';
 import type { AfterCommit } from '../../../../database/transactions';
@@ -106,6 +107,7 @@ function makeService(
     remove: jest.fn().mockResolvedValue(undefined),
   };
   const audit = { record: jest.fn(() => Promise.resolve()) };
+  const users = { accountOfEmployee: jest.fn().mockResolvedValue(null) };
   const reminders = {
     contractChanged: jest.fn(() => Promise.resolve()),
     probationChanged: jest.fn(() => Promise.resolve()),
@@ -137,8 +139,9 @@ function makeService(
     afterCommit as unknown as AfterCommit,
     { defaultProbationMonths: jest.fn().mockResolvedValue(probationMonths) } as unknown as HrSettingsService,
     reminders as unknown as HrRemindersService,
+    users as unknown as UsersService,
   );
-  return { service, repository, events, files, audit, afterCommit, reminders };
+  return { service, repository, events, files, audit, afterCommit, reminders, users };
 }
 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0]);
@@ -441,6 +444,15 @@ describe('EmployeesService', () => {
       await expect(service.get('e1')).resolves.toMatchObject({
         manager: { id: 'm1', code: 'EMP-0009', nameEn: 'M', nameAr: 'م', managesPeople: false, gender: 'FEMALE' },
       });
+    });
+
+    it('get says who signs in as the employee, through core’s users service; null when nobody', async () => {
+      const linked = makeService();
+      linked.users.accountOfEmployee.mockResolvedValue({ id: 'u1', name: 'Mona Adel' });
+      await expect(linked.service.get('e1')).resolves.toMatchObject({ signInAccount: { id: 'u1', name: 'Mona Adel' } });
+      expect(linked.users.accountOfEmployee).toHaveBeenCalledWith('e1');
+      const unlinked = makeService();
+      expect((await unlinked.service.get('e1')).signInAccount).toBeNull();
     });
 
     it('list passes the picker filters to the repository', async () => {

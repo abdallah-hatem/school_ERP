@@ -36,7 +36,7 @@
       "users": {
         "view": {
           "label": "View users",
-          "description": "See the user accounts, their roles and linked employees."
+          "description": "See the user accounts, their roles and their employee records."
         },
         "manage": {
           "label": "Manage users",

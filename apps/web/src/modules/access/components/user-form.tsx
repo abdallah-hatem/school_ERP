@@ -21,6 +21,7 @@ import {
   ReadyIcon,
   TemporaryPasswordIcon,
   UnlockIcon,
+  WarningIcon,
 } from '@/shared/components/ui/icons';
 import { StatusChangeButton } from '@/shared/components/ui/status-change-button';
 import { StatusPill } from '@/shared/components/ui/status-pill';
@@ -34,6 +35,7 @@ import {
   fieldForError,
   formToCreate,
   formToUpdate,
+  rolesNeedEmployee,
   userFormSchema,
   userToForm,
   type UserFormValues,
@@ -63,8 +65,8 @@ export interface UserFormProps {
 }
 
 /**
- * Add or edit a user (P3, option A): a full page — Account, Roles (searchable checklist), Linked
- * employee (searchable picker) and, at the side, the status and the password. Adding shows the
+ * Add or edit a user (P3, option A): a full page — Account, Roles (searchable checklist), "Who is
+ * this person in HR?" (their employee record, a searchable picker) and, at the side, the status and the password. Adding shows the
  * temporary password to give the person; editing keeps Save disabled until something changes.
  * Without `core.users.manage` the page is read-only.
  */
@@ -87,6 +89,8 @@ export function UserForm({ basePath, user, roles, lastAdmin = false, initialPass
   const actions = useUserActions();
   const rolesTitleId = useId();
   const employeeFieldId = useId();
+  // Stage, team or self scopes work from the employee record: warn when the roles need one (R5).
+  const employeeNeeded = !values.employee && rolesNeedEmployee(roles, values.roleIds ?? []);
 
   async function onSubmit(next: UserFormValues) {
     if (inFlight.current || readOnly) return;
@@ -223,6 +227,14 @@ export function UserForm({ basePath, user, roles, lastAdmin = false, initialPass
           </FieldShell>
         )}
       />
+      {employeeNeeded ? (
+        <p
+          className="flex items-start gap-2.5 rounded-xl bg-warning-soft p-3 text-sm font-semibold text-warning-ink"
+        >
+          <WarningIcon className="mt-0.5 size-5 shrink-0" />
+          {t('access.userForm.employeeNeeded')}
+        </p>
+      ) : null}
     </FormCard>
   );
 

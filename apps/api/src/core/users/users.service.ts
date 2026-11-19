@@ -45,6 +45,14 @@ export class UsersService {
     return this.users.avatarOf(id);
   }
 
+  /**
+   * The account whose employee record `employeeId` is (R9: at most one), or null — the "Signs in
+   * as" line on HR's employee profile. Name and id only.
+   */
+  accountOfEmployee(employeeId: string): Promise<{ id: string; name: string } | null> {
+    return this.users.accountOfEmployee(employeeId);
+  }
+
   /** The roles a user holds, starting roles first (the user chip under the menu). */
   rolesOf(id: string): Promise<RoleRef[]> {
     return this.users.roleRefsOf(id);

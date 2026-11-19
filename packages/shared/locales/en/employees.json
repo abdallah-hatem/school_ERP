@@ -168,7 +168,9 @@
     "details": "Details",
     "history": "History",
     "notSet": "Not set",
-    "edit": "Edit"
+    "edit": "Edit",
+    "signsInAs": "Signs in as:",
+    "noAccount": "No sign-in account"
   },
   "status": {
     "deactivate": "Deactivate",

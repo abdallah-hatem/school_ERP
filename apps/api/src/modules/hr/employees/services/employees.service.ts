@@ -32,6 +32,7 @@ import {
 } from '@school-erp/shared';
 import { CodedException } from '../../../../common/errors/coded.exception';
 import { AuditService } from '../../../../core/audit';
+import { UsersService } from '../../../../core/users';
 import { DomainEvents } from '../../../../core/events';
 import { AfterCommit } from '../../../../database/transactions';
 import type { UserScope } from '../../../../core/permissions';
@@ -99,7 +100,7 @@ export function toEmployeeSummary(row: EmployeeSummaryRow, salaryVisible: boolea
 }
 
 /** The full record; the salary fields (`EMPLOYEE_SALARY_FIELDS`) left out unless `salaryVisible` (R7). */
-export function toEmployee(row: EmployeeDetailRow, salaryVisible: boolean): Employee {
+export function toEmployee(row: EmployeeDetailRow, salaryVisible: boolean): Omit<Employee, 'signInAccount'> {
   const { manager, ...rest } = row;
   return {
     ...withoutFields(rest, EMPLOYEE_SALARY_FIELDS, salaryVisible),
@@ -147,6 +148,7 @@ export class EmployeesService {
     private readonly afterCommit: AfterCommit,
     private readonly hrSettings: HrSettingsService,
     private readonly reminders: HrRemindersService,
+    private readonly users: UsersService,
   ) {}
 
   /** The employees `hr.employees.view` covers for the user (R5), salary per row (R7). */
@@ -547,8 +549,14 @@ export class EmployeesService {
   }
 
   /** The record as this user may see it: salary fields only when their salary scope covers it. */
+  /**
+   * The record as the API returns it, with who signs in as this employee — read through core's
+   * exported service (HR never reads the users table). Shown to whoever may see the employee; the
+   * web links it to the user page only with `core.users.view`.
+   */
   private async present(row: EmployeeDetailRow): Promise<Employee> {
-    return toEmployee(row, this.salaryVisible(await this.access.salaryScope(), row));
+    const [salary, signInAccount] = await Promise.all([this.access.salaryScope(), this.users.accountOfEmployee(row.id)]);
+    return { ...toEmployee(row, this.salaryVisible(salary, row)), signInAccount };
   }
 
   private salaryVisible(salary: EmployeeScope, row: EmployeeDetailRow): boolean {

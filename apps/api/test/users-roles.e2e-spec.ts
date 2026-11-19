@@ -275,6 +275,9 @@ describe('users and roles (e2e)', () => {
         employee: { id: listRefs.employee, nameEn: 'Linked Person' },
       });
       expect(JSON.stringify(res.body)).not.toMatch(/password_hash|passwordHash|\$2[aby]\$/);
+      // HR's employee profile says who signs in as this employee ("Signs in as: …"), name and id only.
+      const profile = await http(app).get(`/hr/employees/${listRefs.employee}`).expect(200);
+      expect(profile.body.data.signInAccount).toEqual({ id: created.id, name: 'Nadia Samir' });
 
       const [entry] = await entriesAfter(mark, 'core.user.create');
       expect(entry).toMatchObject({ entityType: 'user', entityId: created.id });
@@ -298,6 +301,8 @@ describe('users and roles (e2e)', () => {
       const list = await http(app).get('/users?search=nadia%20samir').expect(200);
       expect((list.body.data as UserAccount[]).map((u) => u.id)).toContain(created.id);
       expect((list.body.data as UserAccount[])[0]?.employee).toBeNull();
+      const unlinked = await http(app).get(`/hr/employees/${listRefs.employee}`).expect(200);
+      expect(unlinked.body.data.signInAccount).toBeNull();
     });
 
     it('refuses unknown roles (400), a short password (400) and an unknown employee (400)', async () => {
