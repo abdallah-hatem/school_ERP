@@ -8,7 +8,6 @@
     "build": "nest build",
     "prestart": "pnpm --filter @school-erp/shared build",
     "start": "nest start",
-    "predev": "pnpm --filter @school-erp/shared build",
     "dev": "nest start --watch",
     "start:prod": "node dist/main",
     "lint": "eslint .",
@@ -16,11 +15,11 @@
     "test": "jest",
     "test:e2e": "jest --config test/jest-e2e.json --runInBand",
     "db:generate": "prisma generate",
-    "db:migrate": "DATABASE_URL=\"postgresql://postgres:postgres@localhost:5442/school_erp?schema=public\" prisma migrate dev",
-    "db:migrate:create": "DATABASE_URL=\"postgresql://postgres:postgres@localhost:5442/school_erp?schema=public\" prisma migrate dev --create-only",
-    "db:deploy": "DATABASE_URL=\"postgresql://postgres:postgres@localhost:5442/school_erp?schema=public\" prisma migrate deploy",
-    "db:seed": "DATABASE_URL=\"postgresql://postgres:postgres@localhost:5442/school_erp?schema=public\" ts-node --transpile-only prisma/seed/index.ts",
-    "db:studio": "DATABASE_URL=\"postgresql://postgres:postgres@localhost:5442/school_erp?schema=public\" prisma studio"
+    "db:migrate": "DATABASE_URL=\"postgresql://postgres:postgres@localhost:${DB_PORT:-5442}/school_erp?schema=public\" prisma migrate dev",
+    "db:migrate:create": "DATABASE_URL=\"postgresql://postgres:postgres@localhost:${DB_PORT:-5442}/school_erp?schema=public\" prisma migrate dev --create-only",
+    "db:deploy": "DATABASE_URL=\"postgresql://postgres:postgres@localhost:${DB_PORT:-5442}/school_erp?schema=public\" prisma migrate deploy",
+    "db:seed": "DATABASE_URL=\"postgresql://postgres:postgres@localhost:${DB_PORT:-5442}/school_erp?schema=public\" ts-node --transpile-only prisma/seed/index.ts",
+    "db:studio": "DATABASE_URL=\"postgresql://postgres:postgres@localhost:${DB_PORT:-5442}/school_erp?schema=public\" prisma studio"
   },
   "dependencies": {
     "@nestjs-cls/transactional": "4.0.2",
