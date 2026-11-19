@@ -2,9 +2,10 @@ import { monthOf, type Month } from '@school-erp/shared';
 import ar from '@school-erp/shared/locales/ar/dashboard.json';
 import en from '@school-erp/shared/locales/en/dashboard.json';
 import { Suspense } from 'react';
-import { can, getSession } from '@/core/auth';
+import { getSession } from '@/core/auth';
 import type { Locale, MessageTree } from '@/shared/lib/i18n';
 import { I18nProvider } from '@/shared/providers/i18n-provider';
+import { seesDashboardFigures } from './dashboard-tiles';
 import { DashboardHeader, DashboardSkeleton, DashboardView } from './dashboard-view';
 import { loadDashboard } from './load-dashboard';
 import { WelcomeView } from './welcome-view';
@@ -19,7 +20,7 @@ export function dashboardMessages(locale: Locale): MessageTree {
   return MESSAGES[locale];
 }
 
-/** The figures (only reached with `hr.dashboard.view`; without it Home is the welcome). */
+/** The figures (only reached with `hr.dashboard.view` and a tile to show; otherwise Home is the welcome). */
 async function DashboardFigures({ month }: { month: Month }) {
   return <DashboardView data={await loadDashboard()} month={month} />;
 }
@@ -30,9 +31,10 @@ async function DashboardFigures({ month }: { month: Month }) {
  * nested under the dashboard group.
  */
 export async function DashboardScreen({ locale }: { locale: Locale }) {
-  // Without `hr.dashboard.view`, Home is a welcome with links to the viewer's screens (§2): no
-  // figures, so nothing to stream and no skeleton.
-  if (!can(await getSession(), 'hr.dashboard.view')) {
+  // Without `hr.dashboard.view` — or with it but none of the tiles' view permissions, which would
+  // leave a bare greeting — Home is a welcome with links to the viewer's screens (§2): no figures
+  // fetched, so nothing to stream and no skeleton.
+  if (!seesDashboardFigures(await getSession())) {
     return (
       <I18nProvider messages={dashboardMessages(locale)}>
         <WelcomeView />
