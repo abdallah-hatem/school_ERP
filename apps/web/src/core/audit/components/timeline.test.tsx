@@ -116,6 +116,37 @@ describe('AuditTimeline', () => {
     expect(within(failed!).queryByRole('link')).toBeNull();
   });
 
+  it('an insurance edit reads its status label and the insured salary as money (EN and AR)', () => {
+    const insured = entry({
+      changes: [
+        { field: 'insuranceStatus', before: 'NOT_INSURED', after: 'INSURED' },
+        { field: 'insuredSalary', before: null, after: 650000 },
+      ],
+    });
+    renderAudit(<AuditTimeline entries={[insured]} grouping="month" now={NOW} label="Record history" />);
+    let item = screen.getByTestId('audit-entry');
+    expect(within(item).getByText('Not insured')).toBeTruthy();
+    expect(within(item).getByText('Insured')).toBeTruthy();
+    expect(within(item).getByText('6,500.00')).toBeTruthy();
+    expect(item.textContent).not.toContain('NOT_INSURED');
+    expect(item.textContent).not.toContain('650000');
+    cleanup();
+
+    renderAudit(<AuditTimeline entries={[insured]} grouping="month" now={NOW} label="Record history" />, 'ar');
+    item = screen.getByTestId('audit-entry');
+    expect(within(item).getByText('غير مؤمَّن عليه')).toBeTruthy();
+    expect(within(item).getByText('مؤمَّن عليه')).toBeTruthy();
+    expect(within(item).getByText('6,500.00')).toBeTruthy();
+    expect(item.textContent).not.toContain('650000');
+    cleanup();
+
+    // On Activity the entry is tagged Money.
+    renderAudit(<AuditTimeline entries={[insured]} grouping="day" now={NOW} label="Activity timeline" />);
+    item = screen.getByTestId('audit-entry');
+    expect(within(item).getByText('Money')).toBeTruthy();
+    expect(within(item).getByText('Insured')).toBeTruthy();
+  });
+
   it('Arabic: verbal-noun sentences joined to the actor, Latin digits, month grouping on History', () => {
     renderAudit(
       <AuditTimeline
@@ -310,7 +341,36 @@ describe('AuditTimeline', () => {
     expect(within(item).getByText('Science')).toBeTruthy();
     expect(within(item).getByText('Maths')).toBeTruthy();
     expect(within(item).queryByText(/Name \(English\)/)).toBeNull();
-    // A new photo reads as its file name, not the whole path.
-    expect(within(item).getByText('e1-abc.png')).toBeTruthy();
+    // A new photo reads in words, never its file name or path.
+    expect(within(item).getByText('Photo added')).toBeTruthy();
+    expect(item.textContent).not.toContain('e1-abc');
+  });
+
+  it('a photo change reads "Photo changed / removed" in words, also behind "+ n more" and in Arabic', async () => {
+    const user = userEvent.setup();
+    const many = entry({
+      changes: [
+        { field: 'phone', before: '010', after: '011' },
+        { field: 'email', before: null, after: 'omar@school.test' },
+        { field: 'address', before: null, after: 'Cairo' },
+        { field: 'grade', before: null, after: 'A' },
+        { field: 'photoUrl', before: '/files/employee-photos/old-1.jpg', after: '/files/employee-photos/new-2.jpg' },
+      ],
+    });
+    const removed = entry({ changes: [{ field: 'photoUrl', before: '/files/employee-photos/old-1.jpg', after: null }] });
+    renderAudit(<AuditTimeline entries={[many, removed]} grouping="month" now={NOW} label="Record history" />);
+    const [first, second] = screen.getAllByTestId('audit-entry');
+    await user.click(within(first!).getByRole('button', { name: /more/ }));
+    expect(within(first!).getByText('Photo changed')).toBeTruthy();
+    expect(within(second!).getByText('Photo removed')).toBeTruthy();
+    for (const item of [first!, second!]) {
+      expect(item.textContent).not.toMatch(/old-1|new-2|\.jpg/);
+    }
+    cleanup();
+
+    renderAudit(<AuditTimeline entries={[removed]} grouping="month" now={NOW} label="Record history" />, 'ar');
+    const item = screen.getByTestId('audit-entry');
+    expect(within(item).getByText('حُذفت الصورة')).toBeTruthy();
+    expect(item.textContent).not.toContain('.jpg');
   });
 });
