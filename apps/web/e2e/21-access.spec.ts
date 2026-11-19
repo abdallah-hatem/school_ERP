@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
-import type { Role } from '@school-erp/shared';
-import { Api, adminAccount, makeUser, rolesByKey, sidebarLink, signInAs, uniqueEmail } from './support/access';
+import { PERMISSION_KEYS, type Role } from '@school-erp/shared';
+import { Api, adminAccount, makeUser, openPermissionModule, permissionModule, rolesByKey, sidebarLink, signInAs, uniqueEmail } from './support/access';
 import { t } from './support/i18n';
 import { expectNoHorizontalScroll, settle, shoot, signIn } from './support/ui';
 
@@ -96,6 +96,7 @@ test('as admin, editing a custom role’s permission applies to its holder on th
   const rowFor = page.locator('[data-permission="core.audit.view"]');
   const save = page.getByRole('button', { name: t(locale, 'access.roleForm.save') });
   await expect(save).toBeDisabled();
+  await openPermissionModule(page, locale, 'core');
   await rowFor.getByRole('switch').click();
   await expect(page.getByText(t(locale, 'access.userForm.unsaved', { count: 1 }))).toBeVisible();
   await expect(save).toBeEnabled();
@@ -162,6 +163,7 @@ for (const locale of ['en', 'ar'] as const) {
     await shoot(page, info, `roles-${locale}-desktop`);
 
     await page.goto(`/${locale}/roles/${roles.get('stage_head')?.id}`);
+    await openPermissionModule(page, locale, 'hr');
     await expect(page.locator('[data-permission="hr.employees.view"]').getByRole('radio', { checked: true })).toHaveText(
       t(locale, 'permissions.scopes.own_stage'),
     );
@@ -173,6 +175,10 @@ for (const locale of ['en', 'ar'] as const) {
 
     await page.goto(`/${locale}/roles/${roles.get('system_admin')?.id}`);
     await expect(page.getByText(t(locale, 'access.roleForm.systemAdminTitle'))).toBeVisible();
+    // Its modules start closed too; open, every permission is locked on, no switches.
+    await expect(permissionModule(page, locale, 'core')).toHaveAttribute('aria-expanded', 'false');
+    for (const group of ['core', 'hr', 'accounting'] as const) await openPermissionModule(page, locale, group);
+    await expect(page.locator('[data-permission]')).toHaveCount(PERMISSION_KEYS.length);
     await expect(page.getByRole('switch')).toHaveCount(0);
     await expect(page.getByRole('button', { name: t(locale, 'access.roleForm.save') })).toHaveCount(0);
     await settle(page);
