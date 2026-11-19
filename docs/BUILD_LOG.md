@@ -370,6 +370,10 @@ phase live in `docs/build-log/`.
   root README with prerequisites, logins, ports and troubleshooting; ports/DB overridable for a second
   copy. Proven on a fresh clone (setup twice, dev, headless sign-in). Note: `pnpm setup` alone is
   pnpm's own command — use `pnpm run setup`.
+- 2026-11-19 — Setup fix → #160: setup and `pnpm dev` stopped when `school-erp-db` had been
+  created by another compose project (compose won't reuse the name); `start_db` now starts an
+  existing container and uses `docker compose up` only when there is none. Proven on the owner's
+  machine (setup ran, migrations applied, seed skipped, app up on 3000/3001).
 
 ## Next up
 
