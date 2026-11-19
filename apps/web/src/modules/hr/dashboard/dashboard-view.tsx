@@ -4,7 +4,7 @@ import { PayrollStatus, SCREENS, type HrDashboard, type Month } from '@school-er
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTransition, type ReactNode } from 'react';
-import { canAny, useCan, useSession, type PermissionRequirement } from '@/core/auth';
+import { canAny, useSession, type PermissionRequirement } from '@/core/auth';
 import { useSchoolBranding } from '@/core/settings';
 import { ErrorState } from '@/shared/components/layout/empty-state';
 import { PageHeader } from '@/shared/components/layout/page-header';
@@ -28,6 +28,7 @@ import { formatCount, formatMoney, formatMonth } from '@/shared/lib/format';
 import { nameIn } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { dashboardLinks, type DashboardLinks } from './dashboard-links';
+import { anyTile, seesDashboardFigures, tilesShown, type DashboardTilesShown } from './dashboard-tiles';
 
 /** Phone 2×2 (1 column below 360px), tablet 2, desktop 4. */
 const TILE_GRID = 'grid grid-cols-1 gap-4 min-[360px]:grid-cols-2 xl:grid-cols-4';
@@ -54,25 +55,13 @@ function CtaLine({ children }: { children: ReactNode }) {
 }
 
 /**
- * Which tiles the viewer gets (R6): each needs the view permission of what it counts. The API
- * sends null for a widget the viewer can't see; the skeleton uses the same rule, so nothing shifts.
+ * Which tiles the viewer gets (R6): each needs the view permission of what it counts
+ * (`TILE_PERMISSIONS`). The API sends null for a widget the viewer can't see; the skeleton uses the
+ * same rule, so nothing shifts.
  */
-export interface DashboardTilesShown {
-  headcount: boolean;
-  payroll: boolean;
-  penalties: boolean;
-}
-
 export function useTilesShown(): DashboardTilesShown {
-  const can = useCan();
-  return {
-    headcount: can('hr.employees.view'),
-    payroll: can('hr.payroll.view'),
-    penalties: can('hr.penalties.view'),
-  };
+  return tilesShown(useSession());
 }
-
-const anyTile = (shown: DashboardTilesShown) => shown.headcount || shown.payroll || shown.penalties;
 
 function DashboardTiles({ data, month, links }: { data: HrDashboard; month: Month; links: DashboardLinks }) {
   const { t, locale } = useTranslation();
@@ -256,7 +245,7 @@ export function DashboardView({ data, month }: DashboardViewProps) {
 export function DashboardSkeleton() {
   const { t, locale } = useTranslation();
   const shown = useTilesShown();
-  const seesFigures = useCan()('hr.dashboard.view') && anyTile(shown);
+  const seesFigures = seesDashboardFigures(useSession());
   const quick = useQuickLinks();
   return (
     // `contents`: the tiles and quick links stay direct items of the screen's column, as loaded.

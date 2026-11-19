@@ -66,6 +66,10 @@
   principal). Anyone else — the Accountant, a stage head, a direct manager — gets a welcome with
   their name and a link to each screen they may open (the same screens as their menu, then My
   account), and no HR figures. Recommended by Claude, owner to confirm.
+- **GUESS** (enforced, 2026-11-19) — Each dashboard tile needs the permission of the screen it comes
+  from: headcount needs "View employees", the payroll tile "View payroll", the penalty tiles "View
+  penalties". A role allowed to see the dashboard but none of those three gets the welcome above
+  instead of an empty page. Recommended by Claude (owner found the empty page), owner to confirm.
 - **GUESS** (enforced, 2026-11-18) — Someone who may see a Settings section but not change it sees
   it read-only (§7): a stage head and a direct manager see Structure and the penalty catalogue, the
   principal sees the lists. They keep Settings in their menu for now (owner hasn't decided
