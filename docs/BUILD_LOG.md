@@ -357,13 +357,20 @@ phase live in `docs/build-log/`.
   most EGP 1,000,000.00 a month — one shared constant `MAX_MONTHLY_PIASTRES`, enforced by the API
   DTOs and the web forms ("At most EGP 1,000,000.00 a month."). Removes the overflow #149 found.
   N5 (live notifications check) started.
+- 2026-11-19 — N5 (live notifications check) passed all six flows: approvals by scope, grouping,
+  deep link, resolve for everyone; reminders sent once, resolved when done, dedupe across runs and
+  two containers; preferences and Settings → Notifications; access loss; bell/popover/sheet EN+AR;
+  jobs and retention purge. Its four small findings fixed → #156: group titles count open items
+  ("2 penalties waiting…", "3 penalties — all handled · Approved by …"); the Unread tab equals the
+  bell count and refreshes after Mark all read; every role sees the school's name and logo (shell
+  reads the public endpoint); AR phone preference switches aligned. Notifications N0–N5 done.
 
 ## Next up
 
 - Outbox nits (from #121's live test, cosmetic): the "dead after 10 failures" log line always says
   10 (after an admin retry it's 11); a dead row still gets a `next_attempt_at`. A lock held longer
   than Prisma's 15 s transaction timeout counts as one failure, then the next tick delivers it.
-- **Notifications — spec, plan and option A decided (PR #106). Events + outbox and jobs are in; N0–N4 are merged (#124, #127, #131, #134, #137); N5 (verify) next.** Spec
+- **Notifications — spec, plan and option A decided (PR #106). Events + outbox and jobs are in; N0–N5 done (#124, #127, #131, #134, #137, #156).** Spec
   `docs/specs/2026-11-18-notifications.md`, plan `docs/plans/2026-11-18-notifications-plan.md`,
   business §11, mockup `design/mockups/notifications.html` (option A · bell popover; B and C dropped). The
   UI shows the in-app channel only — one switch per type; the API keeps a `channel` field (`in_app`). Owner decisions (2026-11-18): in-app bell only (channels addable later), staff users now
