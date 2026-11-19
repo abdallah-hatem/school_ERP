@@ -24,6 +24,11 @@ const create = vi.mocked(CREATE_ROLE);
 type Res<F extends (...a: never[]) => unknown> = Awaited<ReturnType<F>>;
 
 const row = (key: string) => document.querySelector(`[data-permission="${key}"]`) as HTMLElement;
+/** A module's fold button (its header: name and "n of total"). */
+const moduleButton = (name: 'School' | 'HR' | 'Accounting') => screen.getByRole('button', { name: new RegExp(`^${name}\\b`) });
+const openModules = async (user: ReturnType<typeof userEvent.setup>, ...names: ('School' | 'HR' | 'Accounting')[]) => {
+  for (const name of names) await user.click(moduleButton(name));
+};
 
 describe('RoleForm', () => {
   beforeEach(() => {
@@ -39,6 +44,7 @@ describe('RoleForm', () => {
     renderAccess(<RoleForm basePath="/en/roles" usersPath="/en/users" role={customRole} />);
     const save = screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement;
     expect(save.disabled).toBe(true);
+    await openModules(user, 'HR');
 
     // Off: its scope can't be chosen.
     const penalties = row('hr.penalties.view');
@@ -68,32 +74,71 @@ describe('RoleForm', () => {
   it('switching a permission back off leaves no change; "Turn all on" turns the module on', async () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 });
     renderAccess(<RoleForm basePath="/en/roles" usersPath="/en/users" role={customRole} />);
+    await openModules(user, 'HR');
     const sw = within(row('hr.lateness.view')).getByRole('switch');
     await user.click(sw);
     await user.click(sw);
     expect(screen.getByText('No changes yet')).toBeTruthy();
     await user.click(screen.getAllByRole('button', { name: 'Turn all on' })[0]!);
+    await openModules(user, 'School');
     expect(within(row('core.settings.view')).getByRole('switch').getAttribute('aria-checked')).toBe('true');
     // Every core key was off on this role: one change each.
     const coreKeys = PERMISSION_KEYS.filter((k) => k.startsWith('core.')).length;
     expect(screen.getByText(`${coreKeys} unsaved changes`)).toBeTruthy();
   });
 
-  it('a stage head’s scoped permission shows its scope', () => {
+  it('a stage head’s scoped permission shows its scope', async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     renderAccess(<RoleForm basePath="/en/roles" usersPath="/en/users" role={role('stage_head')} />);
+    await openModules(user, 'HR');
     expect(within(row('hr.employees.view')).getByRole('radio', { checked: true }).textContent).toBe('Their stage');
   });
 
-  it('System admin is read-only: every permission locked on, no switches, no Save', () => {
+  it('System admin is read-only: every permission locked on, no switches, no Save', async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     renderAccess(
       <RoleForm basePath="/en/roles" usersPath="/en/users" role={role('system_admin')} holders={[account()]} holdersTotal={1} />,
     );
+    // Its modules start closed too.
+    expect(document.querySelectorAll('[data-permission]')).toHaveLength(0);
+    await openModules(user, 'School', 'HR', 'Accounting');
     expect(screen.getByText('Holds every permission')).toBeTruthy();
     expect(screen.queryAllByRole('switch')).toHaveLength(0);
     expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Turn all on' })).toBeNull();
     expect(document.querySelectorAll('[data-permission]')).toHaveLength(PERMISSION_KEYS.length);
     expect(screen.getByRole('link', { name: 'Hany Saad' }).getAttribute('href')).toBe(`/en/users/${account().id}`);
+  });
+
+  it('a module starts closed; opening it shows its switches; "Turn all on" works while closed without opening it', async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    renderAccess(<RoleForm basePath="/en/roles" usersPath="/en/users" role={customRole} />);
+    const hrKeys = PERMISSION_KEYS.filter((k) => k.startsWith('hr.')).length;
+    const hr = moduleButton('HR');
+    expect(hr.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryAllByRole('switch')).toHaveLength(0);
+    expect(hr.textContent).toContain(`1 of ${hrKeys}`);
+
+    // "Turn all on" sits outside the fold button: the count changes, the module stays closed.
+    const section = hr.closest('section') as HTMLElement;
+    await user.click(within(section).getByRole('button', { name: 'Turn all on' }));
+    expect(hr.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryAllByRole('switch')).toHaveLength(0);
+    expect(hr.textContent).toContain(`${hrKeys} of ${hrKeys}`);
+    expect(within(section).getByRole('button', { name: 'Turn all off' })).toBeTruthy();
+    expect(screen.getByText(`${hrKeys - 1} unsaved changes`)).toBeTruthy();
+
+    // Opening it (from the keyboard too: it is a button) shows its switches, all on.
+    hr.focus();
+    await user.keyboard('{Enter}');
+    expect(hr.getAttribute('aria-expanded')).toBe('true');
+    const panel = document.getElementById(hr.getAttribute('aria-controls') ?? '') as HTMLElement;
+    const switches = within(panel).getAllByRole('switch');
+    expect(switches).toHaveLength(hrKeys);
+    expect(switches.every((s) => s.getAttribute('aria-checked') === 'true')).toBe(true);
+    await user.click(hr);
+    expect(hr.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryAllByRole('switch')).toHaveLength(0);
   });
 
   it('adding a role needs both names; Duplicate starts from the other role’s permissions', async () => {
@@ -112,8 +157,11 @@ describe('RoleForm', () => {
     expect(create.mock.calls[0]?.[0].permissions.map((p) => p.key)).toEqual(role('accountant').permissions.map((p) => p.key));
   });
 
-  it('without core.roles.manage the page is read-only', () => {
+  it('without core.roles.manage the page is read-only', async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     renderAccess(<RoleForm basePath="/en/roles" usersPath="/en/users" role={customRole} />, 'en', sessionWithout('core.roles.manage'));
+    await openModules(user, 'School', 'HR', 'Accounting');
+    expect(document.querySelectorAll('[data-permission]')).toHaveLength(PERMISSION_KEYS.length);
     expect(screen.queryAllByRole('switch')).toHaveLength(0);
     expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
   });

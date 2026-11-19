@@ -1,5 +1,5 @@
 import { expect, type Page } from '@playwright/test';
-import type { Language, Role, UserAccount } from '@school-erp/shared';
+import type { Language, PermissionModule, Role, UserAccount } from '@school-erp/shared';
 import { Api } from './api';
 import { t } from './i18n';
 
@@ -13,6 +13,20 @@ let counter = 0;
 export function uniqueEmail(prefix: string): string {
   counter += 1;
   return `${prefix}-${Date.now().toString(36)}-${counter}@smoke.test`;
+}
+
+/** A module's fold button on a role page (its header: name and "n of total"). */
+export function permissionModule(page: Page, locale: Language, module: PermissionModule) {
+  const name = t(locale, `permissions.modules.${module}`).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return page.getByRole('button', { name: new RegExp(`^${name}`) });
+}
+
+/** Opens a module on a role page — they start closed — and waits for its permissions. */
+export async function openPermissionModule(page: Page, locale: Language, module: PermissionModule): Promise<void> {
+  const button = permissionModule(page, locale, module);
+  await expect(button).toHaveAttribute('aria-expanded', 'false');
+  await button.click();
+  await expect(button).toHaveAttribute('aria-expanded', 'true');
 }
 
 /** Signs in through the login page as anyone; does not wait for where it lands. */
