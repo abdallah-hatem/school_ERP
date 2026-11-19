@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createTranslator, getBaseMessages, hasMessage, mergeMessages, type Locale } from '@/shared/lib/i18n';
 import { auditMessages } from '../messages';
-import { changeRows, formatAuditValue, isMoneyField } from './entry-text';
+import { changeRows, fileChangeText, formatAuditValue, isMoneyField } from './entry-text';
 
 const NBSP = ' ';
 
@@ -71,5 +71,63 @@ describe('changeRows: an insurance edit', () => {
       'حالة التأمين',
       'الأجر التأميني',
     ]);
+  });
+});
+
+describe('stored files read in words, never their file names', () => {
+  const PHOTO = '/files/employee-photos/37af9816-ca92-4608-89d2-be9666bc1289.jpg';
+  const NEW_PHOTO = '/files/employee-photos/70df5c73-e190-4881-aa0b-188ba94c1e6a.jpg';
+  const LOGO = '/files/school/logo-1a2b.png';
+
+  it.each([
+    ['en', null, PHOTO, 'Photo added'],
+    ['en', PHOTO, NEW_PHOTO, 'Photo changed'],
+    ['en', PHOTO, null, 'Photo removed'],
+    ['ar', null, PHOTO, 'أُضيفت صورة'],
+    ['ar', PHOTO, NEW_PHOTO, 'تغيّرت الصورة'],
+    ['ar', PHOTO, '', 'حُذفت الصورة'],
+  ] as const)('photo (%s): %s → %s reads "%s"', (locale, before, after, text) => {
+    const { t, has } = deps(locale);
+    expect(fileChangeText('photoUrl', before, after, t)).toBe(text);
+    const rows = changeRows([{ field: 'photoUrl', before, after }], t, has, locale, 'employee');
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.text).toBe(text);
+  });
+
+  it.each([
+    ['en', null, LOGO, 'School logo added'],
+    ['en', LOGO, '/files/school/logo-9z.png', 'School logo changed'],
+    ['en', LOGO, null, 'School logo removed'],
+    ['ar', null, LOGO, 'أُضيف شعار المدرسة'],
+    ['ar', LOGO, '/files/school/logo-9z.png', 'تغيّر شعار المدرسة'],
+    ['ar', LOGO, null, 'حُذف شعار المدرسة'],
+  ] as const)('school logo (%s): %s → %s reads "%s"', (locale, before, after, text) => {
+    const { t, has } = deps(locale);
+    const rows = changeRows([{ field: 'school.logoUrl', before, after }], t, has, locale, 'school_settings');
+    expect(rows.map((r) => r.text)).toEqual([text]);
+  });
+
+  it('a new employee with a photo: "Photo added" among the other lines; no file name anywhere', () => {
+    const { t, has } = deps('en');
+    const rows = changeRows(
+      [
+        { field: 'code', before: null, after: 'EMP-0001' },
+        { field: 'photoUrl', before: null, after: PHOTO },
+      ],
+      t,
+      has,
+      'en',
+      'employee',
+    );
+    expect(rows.map((r) => r.text ?? r.label)).toEqual(['Code', 'Photo added']);
+    expect(formatAuditValue('photoUrl', PHOTO, t, has, 'en', 'employee')).toBe('Uploaded');
+    expect(formatAuditValue('school.logoUrl', LOGO, t, has, 'en')).not.toContain('logo-1a2b');
+  });
+
+  it('no file on either side writes no line; other fields are not file fields', () => {
+    const { t, has } = deps('en');
+    expect(fileChangeText('photoUrl', null, '', t)).toBeNull();
+    expect(fileChangeText('phone', null, '011', t)).toBeNull();
+    expect(changeRows([{ field: 'photoUrl', before: null, after: null }], t, has, 'en', 'employee')).toEqual([]);
   });
 });

@@ -398,6 +398,19 @@
       "other": "{count} min"
     },
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "file": {
+      "photo": {
+        "added": "Photo added",
+        "changed": "Photo changed",
+        "removed": "Photo removed"
+      },
+      "logo": {
+        "added": "School logo added",
+        "changed": "School logo changed",
+        "removed": "School logo removed"
+      },
+      "uploaded": "Uploaded"
+    }
   }
 }

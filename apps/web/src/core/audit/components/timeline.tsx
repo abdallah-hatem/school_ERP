@@ -180,7 +180,14 @@ function Changes({ entry, inline }: { entry: AuditEntry; inline: number }) {
         id={listId}
         className="grid gap-y-1 @min-[34rem]:grid-cols-[fit-content(11rem)_minmax(0,1fr)] @min-[34rem]:gap-x-3"
       >
-        {shown.map((row) => (
+        {shown.map((row) =>
+          row.text ? (
+            // A line in words ("Photo changed"): the label is in the sentence, read once.
+            <div key={row.key} className="@min-[34rem]:contents">
+              <dt className="sr-only">{row.label}</dt>
+              <dd className="leading-snug font-bold break-words @min-[34rem]:col-span-2">{row.text}</dd>
+            </div>
+          ) : (
           <div key={row.key} className="grid gap-y-0.5 @min-[34rem]:contents">
             <dt className="font-semibold leading-snug text-muted-foreground break-words">{row.label}</dt>
             <dd className="min-w-0 leading-snug break-words [overflow-wrap:anywhere]">
@@ -211,7 +218,8 @@ function Changes({ entry, inline }: { entry: AuditEntry; inline: number }) {
               )}
             </dd>
           </div>
-        ))}
+          ),
+        )}
       </dl>
       {hidden > 0 ? (
         <button
