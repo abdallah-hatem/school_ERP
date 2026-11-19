@@ -382,9 +382,14 @@ phase live in `docs/build-log/`.
   each tile also needs its screen's view permission (by design); a role with the dashboard but no
   tile now gets the welcome with its screens instead of an empty Home; the permission's text says
   so (EN/AR). Checked in screenshots.
-- 2026-11-19 — Owner: "linked employee is kinda confusing" → approved rework (in progress): label
-  "Who is this person in HR?", a warning when a scoped role has no employee record, "Signs in as"
-  on the employee profile, and a welcome text that no longer says "ask for a role".
+- 2026-11-19 — Employee record → #165 (owner: "linked employee is kinda confusing"): the field is
+  "Who is this person in HR?" ("Employee record" in lists; AR ملف الموظف) with a hint on why scoped
+  roles need it; a non-blocking warning when a scoped role has none; "Signs in as" / "No sign-in
+  account" on the employee profile (`signInAccount` on the API employee, through core's
+  UsersService); the welcome no longer tells someone with a role to ask for one. Smoke caught two
+  skeleton-height mismatches from the new rows; fixed in the skeletons, check unchanged. Checked
+  in screenshots (EN desktop, AR phone).
+- 2026-11-19 — Owner: refresh `demo` from `dev` → dev→demo PR opened; dry run on a DB copy started.
 
 ## Next up
 
