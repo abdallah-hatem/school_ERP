@@ -374,6 +374,17 @@ phase live in `docs/build-log/`.
   created by another compose project (compose won't reuse the name); `start_db` now starts an
   existing container and uses `docker compose up` only when there is none. Proven on the owner's
   machine (setup ran, migrations applied, seed skipped, app up on 3000/3001).
+- 2026-11-19 — Collapsible permissions → #162 (owner: "needs to be collapsable like Penalty
+  catalogue"): a role's Core/HR/Accounting groups fold open and shut, start closed (open when they
+  hold unsaved changes); "Turn all on/off" works on a closed group. Checked in screenshots (EN
+  desktop, AR phone).
+- 2026-11-19 — Dashboard with no tiles → #163 (owner: had "View the HR dashboard" but saw nothing):
+  each tile also needs its screen's view permission (by design); a role with the dashboard but no
+  tile now gets the welcome with its screens instead of an empty Home; the permission's text says
+  so (EN/AR). Checked in screenshots.
+- 2026-11-19 — Owner: "linked employee is kinda confusing" → approved rework (in progress): label
+  "Who is this person in HR?", a warning when a scoped role has no employee record, "Signs in as"
+  on the employee profile, and a welcome text that no longer says "ask for a role".
 
 ## Next up
 
