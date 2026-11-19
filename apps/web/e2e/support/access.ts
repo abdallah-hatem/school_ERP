@@ -18,7 +18,10 @@ export function uniqueEmail(prefix: string): string {
 /** A module's fold button on a role page (its header: name and "n of total"). */
 export function permissionModule(page: Page, locale: Language, module: PermissionModule) {
   const name = t(locale, `permissions.modules.${module}`).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return page.getByRole('button', { name: new RegExp(`^${name}`) });
+  // Inside the Permissions card: the sidebar has an "HR" group button too.
+  return page
+    .getByRole('region', { name: t(locale, 'access.roleForm.permissions'), exact: true })
+    .getByRole('button', { name: new RegExp(`^${name}`) });
 }
 
 /** Opens a module on a role page — they start closed — and waits for its permissions. */
