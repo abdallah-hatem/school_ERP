@@ -164,7 +164,28 @@ describe('HrNotificationsService — payroll', () => {
       resolution: 'approved',
       byUserId: 'u-hr',
     });
-    expect(notifications.resolve).toHaveBeenCalledTimes(1);
+    // A return from Accounting still open is done too.
+    expect(notifications.resolve).toHaveBeenCalledWith({
+      type: 'hr.payroll.returned_by_accounting',
+      subject: { entityType: 'payroll_run', entityId: 'run-1' },
+      resolution: 'approved',
+      byUserId: 'u-hr',
+    });
+    expect(notifications.resolve).toHaveBeenCalledTimes(2);
+  });
+
+  it('returned by Accounting: HR\'s approvers are told the month and the reason, one item per return', async () => {
+    const { service, notifications } = make();
+    await service.payrollReturned({ id: 'run-1', month: '2026-10', reason: 'Fix EMP-0003' }, 'u-acc');
+    expect(notifications.notify).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'hr.payroll.returned_by_accounting',
+        subject: { entityType: 'payroll_run', entityId: 'run-1' },
+        params: { month: '2026-10', reason: 'Fix EMP-0003' },
+        dedupeKey: expect.stringMatching(/^payroll_returned:run-1:/),
+        actorId: 'u-acc',
+      }),
+    );
   });
 });
 

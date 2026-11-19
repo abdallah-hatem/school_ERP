@@ -17,6 +17,8 @@ import {
 const LOOKS: Record<string, { icon: AppIcon; tone: string }> = {
   'hr.penalty.awaiting_approval': { icon: PenaltiesIcon, tone: 'bg-warning-soft text-warning-ink' },
   'hr.payroll.ready_to_approve': { icon: PayrollIcon, tone: 'bg-primary-soft text-primary' },
+  // Sent back by Accounting: needs a look before it is approved again.
+  'hr.payroll.returned_by_accounting': { icon: PayrollIcon, tone: 'bg-warning-soft text-warning-ink' },
   'hr.contract.ending_soon': { icon: ContractEndIcon, tone: 'bg-info-soft text-info-ink' },
   'hr.probation.ending_soon': { icon: ProbationEndIcon, tone: 'bg-info-soft text-info-ink' },
   'hr.lateness.not_entered': { icon: LatenessDueIcon, tone: 'bg-accent-soft text-accent-foreground' },

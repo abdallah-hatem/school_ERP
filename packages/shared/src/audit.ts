@@ -234,6 +234,18 @@ export const AUDIT_ACTIONS = {
     entityType: E.ACCOUNTING_PAYROLL,
     kind: 'create',
   },
+  // accounting — an approved month sent back to HR (its run a draft again, the taxes dropped)
+  'accounting.payroll.return': {
+    module: 'accounting',
+    entityType: E.ACCOUNTING_PAYROLL,
+    kind: 'update',
+  },
+  // accounting — the salaries were transferred: the month is final, never returned to HR
+  'accounting.payroll.finalize': {
+    module: 'accounting',
+    entityType: E.ACCOUNTING_PAYROLL,
+    kind: 'update',
+  },
 } as const satisfies Record<string, AuditActionDefinition>;
 
 export type AuditAction = keyof typeof AUDIT_ACTIONS;

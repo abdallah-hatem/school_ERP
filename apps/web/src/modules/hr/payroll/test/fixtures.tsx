@@ -85,6 +85,8 @@ export function run(overrides: Partial<PayrollRun> = {}): PayrollRun {
     month: '2026-11',
     status: 'DRAFT',
     approvedAt: null,
+    transferredAt: null,
+    returned: null,
     totals: {
       employees: lines.length,
       monthSalary: lines.reduce((s, l) => s + (l.monthSalary ?? 0), 0),
@@ -115,6 +117,8 @@ export function summary(r: PayrollRun = run()): PayrollRunSummary {
     totals: r.totals,
     salaryVisible: r.salaryVisible,
     approvedAt: r.approvedAt,
+    transferredAt: r.transferredAt,
+    returned: r.returned,
   };
 }
 

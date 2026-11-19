@@ -332,6 +332,28 @@ describe('RunPage — approve', () => {
   });
 });
 
+describe('RunPage — returned by Accounting (§10)', () => {
+  it('a draft Accounting sent back says when and why; approved again, the notice is gone', () => {
+    renderRun({ run: run({ returned: { at: '2026-11-19T10:00:00.000Z', reason: 'Penalty for EMP-0012 missing' } }) });
+    const note = screen.getByTestId('returned-notice');
+    expect(note.textContent).toContain('Returned by Accounting on 19 Nov 2026');
+    expect(note.textContent).toContain('Reason: Penalty for EMP-0012 missing.');
+    cleanup();
+    renderRun({ run: run({ status: 'APPROVED', approvedAt: '2026-11-20T10:00:00.000Z', returned: null }) });
+    expect(screen.queryByTestId('returned-notice')).toBeNull();
+  });
+
+  it('Arabic: the notice in Arabic', () => {
+    renderRun({ run: run({ returned: { at: '2026-11-19T10:00:00.000Z', reason: 'جزاء ناقص' } }) }, 'ar');
+    expect(screen.getByTestId('returned-notice').textContent).toContain('السبب: جزاء ناقص');
+  });
+
+  it('a transferred run reads "Finalized · transferred"', () => {
+    renderRun({ run: run({ status: 'APPROVED', approvedAt: '2026-11-20T10:00:00.000Z', transferredAt: '2026-11-21T10:00:00.000Z' }) });
+    expect(screen.getByText('Finalized · transferred')).toBeTruthy();
+  });
+});
+
 describe('RunPage — draft', () => {
   it('shows the four tiles from the run totals, net highlighted, and flags on lines that need review', () => {
     renderRun();

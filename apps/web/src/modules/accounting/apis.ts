@@ -1,6 +1,13 @@
 'use server';
 
-import type { AccountingPayrollMonth, AccountingPayrollYear, Month } from '@school-erp/shared';
+import type {
+  AccountingPayrollMonth,
+  AccountingPayrollMonthSummary,
+  AccountingPayrollYear,
+  Month,
+  ReturnPayrollMonthRequest,
+  Uuid,
+} from '@school-erp/shared';
 import { apiFetch } from '@/lib/api';
 import { handleResponse } from '@/lib/handleResponse';
 import type { DownloadedFile } from '@/lib/types';
@@ -34,6 +41,45 @@ export async function GET_PAYROLL_TAXES_EXCEL(month: Month) {
     method: 'GET',
     cache: 'no-store',
     responseType: 'file',
+  });
+  return handleResponse({ response });
+}
+
+/** `GET /accounting/payroll` — the approved months, newest first, with their totals (Accounting → Payroll). */
+export async function GET_ACCOUNTING_PAYROLL(query: { page?: number; limit?: number } = {}) {
+  const response = await apiFetch<AccountingPayrollMonthSummary[]>('/accounting/payroll', {
+    method: 'GET',
+    params: {
+      page: query.page ? String(query.page) : undefined,
+      limit: query.limit ? String(query.limit) : undefined,
+    },
+    cache: 'no-store',
+  });
+  return handleResponse({ response, showErrorToast: false });
+}
+
+/*
+ * Returning a month to HR changes HR's run (a draft again, the month unlocked); finalizing marks it
+ * transferred. HR's cached screens are re-read: the runs list, the run, lateness and the dashboard
+ * (the tags HR's own payroll writes revalidate, `modules/hr/payroll/apis.ts`).
+ */
+const HR_TAGS = (hrRunId: Uuid) => ['hr-payroll-runs', `hr-payroll-run-${hrRunId}`, 'hr-lateness', 'hr-dashboard'];
+
+/** `POST /accounting/payroll/:month/return` — back to HR as a draft, with a reason; 409 once finalized. */
+export async function RETURN_PAYROLL_MONTH(month: Month, hrRunId: Uuid, body: ReturnPayrollMonthRequest) {
+  const response = await apiFetch<null>(`/accounting/payroll/${encodeURIComponent(month)}/return`, {
+    method: 'POST',
+    body: { reason: body.reason },
+    revalidateTags: HR_TAGS(hrRunId),
+  });
+  return handleResponse({ response });
+}
+
+/** `POST /accounting/payroll/:month/finalize` — the salaries were transferred: final, never returned. */
+export async function FINALIZE_PAYROLL_MONTH(month: Month, hrRunId: Uuid) {
+  const response = await apiFetch<AccountingPayrollMonth>(`/accounting/payroll/${encodeURIComponent(month)}/finalize`, {
+    method: 'POST',
+    revalidateTags: HR_TAGS(hrRunId),
   });
   return handleResponse({ response });
 }

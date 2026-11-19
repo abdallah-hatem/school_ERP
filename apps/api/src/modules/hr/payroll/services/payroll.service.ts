@@ -28,7 +28,7 @@ import { DomainEvents } from '../../../../core/events';
 import { SettingsService } from '../../../../core/settings';
 import { AfterCommit } from '../../../../database/transactions';
 import { CodedException } from '../../../../common/errors/coded.exception';
-import type { PaginationQueryDto } from '../../../../common/dto/pagination-query.dto';
+import type { PayrollPaginationQueryDto } from '../../../../common/dto/pagination-query.dto';
 import {
   calculateLine,
   deductedDays,
@@ -53,6 +53,7 @@ import { buildBankSheet } from '../bank-sheet';
 import type { CreateAdjustmentDto, PayrollRunQueryDto } from '../dto/payroll.dto';
 import {
   PayrollRunsRepository,
+  type AccountingBreakdownSource,
   type AdjustmentRow,
   type LineData,
   type LineRow,
@@ -191,7 +192,7 @@ export class PayrollService {
   ) {}
 
   /** Every run (runs are school-wide); totals over the lines the viewer may see (R5, R7). */
-  async list(query: PaginationQueryDto): Promise<Paginated<PayrollRunSummary>> {
+  async list(query: PayrollPaginationQueryDto): Promise<Paginated<PayrollRunSummary>> {
     const view = await this.view();
     const result = await this.repository.list(query.page, query.limit);
     const totals = await this.repository.totalsFor(
@@ -249,7 +250,7 @@ export class PayrollService {
    */
   async employeeLines(
     employeeId: Uuid,
-    query: PaginationQueryDto,
+    query: PayrollPaginationQueryDto,
   ): Promise<Paginated<EmployeePayrollLine>> {
     await this.employees.assertInScope('hr.payroll.view', employeeId);
     const [result, paid] = await Promise.all([
@@ -494,6 +495,46 @@ export class PayrollService {
   }
 
   /**
+   * Accounting sends an APPROVED run back to HR (§10): a DRAFT again — the month unlocked, so HR
+   * can fix penalties, lateness or adjustments and approve it again — with the reason, and HR's
+   * approvers told. Refused with 409 `PAYROLL_FINALIZED` once the salaries were transferred, and
+   * `PAYROLL_NOT_APPROVED` for a run that isn't approved. Runs in the caller's transaction, which
+   * records the audit entry (`accounting.payroll.return`).
+   */
+  async returnFromAccounting(id: Uuid, reason: string, actorId: Uuid | null): Promise<void> {
+    const run = await this.findRun(id);
+    if (run.transferredAt) throw conflict(ErrorCode.PAYROLL_FINALIZED);
+    if (run.status !== PayrollStatus.APPROVED) throw conflict(ErrorCode.PAYROLL_NOT_APPROVED);
+    if (!(await this.repository.returnToDraft(id, reason))) throw conflict(ErrorCode.PAYROLL_FINALIZED);
+    await this.notifications.payrollReturned({ id, month: run.month, reason }, actorId);
+  }
+
+  /**
+   * Accounting marked an APPROVED run's salaries transferred (finalized, §10): it is final — never
+   * returned. 409 `PAYROLL_NOT_APPROVED` when it isn't approved, `PAYROLL_FINALIZED` when already
+   * transferred. Runs in the caller's transaction (its audit entry is `accounting.payroll.finalize`).
+   */
+  async markTransferred(id: Uuid, at: Date): Promise<void> {
+    const run = await this.findRun(id);
+    if (run.transferredAt) throw conflict(ErrorCode.PAYROLL_FINALIZED);
+    if (run.status !== PayrollStatus.APPROVED) throw conflict(ErrorCode.PAYROLL_NOT_APPROVED);
+    if (!(await this.repository.markTransferred(id, at))) throw conflict(ErrorCode.PAYROLL_FINALIZED);
+  }
+
+  /**
+   * How each line of an APPROVED run reached its net (department, month salary, penalties,
+   * lateness, adjustments), keyed by employee — for accounting's HR-style payroll view (§10). A
+   * system read like `approvedLinesForAccounting`: accounting hides the money by the viewer's salary
+   * scope. Null when the run is unknown or not approved.
+   */
+  async approvedLineBreakdowns(id: Uuid): Promise<Map<Uuid, ApprovedLineBreakdown> | null> {
+    const run = await this.repository.findRun(id);
+    if (run?.status !== PayrollStatus.APPROVED) return null;
+    const rows = await this.repository.findAccountingBreakdowns(id);
+    return new Map(rows.map(({ employeeId, ...r }) => [employeeId, toBreakdown(r)]));
+  }
+
+  /**
    * The `.xlsx` bank sheet of an APPROVED run, with its file name. It lists every employee's net,
    * so it also needs every salary (`hr.employees.view_salary` at scope `all`, R7) — 403 otherwise.
    */
@@ -575,6 +616,11 @@ export class PayrollService {
       salaryVisible,
       totals: withoutFields(totals, TOTALS_MONEY_FIELDS, salaryVisible),
       approvedAt: run.approvedAt?.toISOString() ?? null,
+      transferredAt: run.transferredAt?.toISOString() ?? null,
+      returned:
+        run.returnedAt && run.returnReason !== null
+          ? { at: run.returnedAt.toISOString(), reason: run.returnReason }
+          : null,
     };
   }
 
@@ -661,4 +707,21 @@ export class PayrollService {
     if (run.status !== PayrollStatus.APPROVED) throw conflict(ErrorCode.PAYROLL_NOT_APPROVED);
     return run;
   }
+}
+
+/** How an approved line reached its net, for accounting (§10). Amounts in piastres. */
+export interface ApprovedLineBreakdown {
+  departmentNameEn: string;
+  departmentNameAr: string;
+  monthSalary: number;
+  penaltyDays: number;
+  penaltyAmount: number;
+  latenessDays: number;
+  latenessAmount: number;
+  adjustmentAdditions: number;
+  adjustmentDeductions: number;
+}
+
+function toBreakdown(row: Omit<AccountingBreakdownSource, 'employeeId'>): ApprovedLineBreakdown {
+  return { ...row, penaltyDays: Number(row.penaltyDays), latenessDays: Number(row.latenessDays) };
 }

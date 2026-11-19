@@ -1,5 +1,5 @@
 import { Controller, Get, Param, ParseUUIDPipe, Query } from '@nestjs/common';
-import { PaginationQueryDto } from '../../../../common/dto/pagination-query.dto';
+import { PayrollPaginationQueryDto } from '../../../../common/dto/pagination-query.dto';
 import { ResponseUtil } from '../../../../common/utils/response.util';
 import { PayrollService } from '../services/payroll.service';
 import { Permission } from '../../../../core/permissions';
@@ -14,7 +14,7 @@ export class EmployeePayrollController {
 
   @Get(':id/payroll-lines')
   @Permission('hr.payroll.view')
-  async list(@Param('id', ParseUUIDPipe) id: string, @Query() query: PaginationQueryDto) {
+  async list(@Param('id', ParseUUIDPipe) id: string, @Query() query: PayrollPaginationQueryDto) {
     return ResponseUtil.paginated(await this.payroll.employeeLines(id, query));
   }
 }

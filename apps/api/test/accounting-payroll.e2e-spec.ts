@@ -257,6 +257,15 @@ describe('Accounting — payroll taxes of approved months (e2e)', () => {
     await http(app).get('/accounting/payroll/2026-13').expect(400);
   });
 
+  it('payroll tables page up to 500 rows (owner, 2026-11-19); 501 → 400; other lists keep 100', async () => {
+    for (const path of ['/accounting/payroll', '/hr/payroll-runs']) {
+      const body = (await http(app).get(path).query({ limit: 500 }).expect(200)).body as { meta: { limit: number } };
+      expect(body.meta.limit).toBe(500);
+      await http(app).get(path).query({ limit: 501 }).expect(400);
+    }
+    await http(app).get('/hr/employees').query({ limit: 101 }).expect(400);
+  });
+
   it('a month whose event was missed is worked out when first read', async () => {
     const month = nextMonth();
     const emp = await employee();
@@ -335,6 +344,67 @@ describe('Accounting — payroll taxes of approved months (e2e)', () => {
     expect(res.headers['content-type']).toContain('spreadsheetml');
     expect(res.headers['content-disposition']).toContain(`payroll-taxes-${month}.xlsx`);
     await http(app).get('/accounting/payroll/2099-12/export').expect(404);
+  });
+
+  // ── return to HR / finalize (owner, 2026-11-19) ─────────────────────────────
+
+  it('return to HR: the run is a draft again with the reason, the month leaves accounting; approved again → back, PENDING, the return cleared', async () => {
+    const month = nextMonth();
+    await employee();
+    const run = await createRun(month);
+    await approve(run.id);
+    await recorded(month);
+    expect(await monthOf(month)).toMatchObject({ status: 'PENDING', finalizedAt: null });
+
+    await http(app).post(`/accounting/payroll/${month}/return`).send({ reason: '  Penalty missing  ' }).expect(204);
+    const draft = (await http(app).get(`/hr/payroll-runs/${run.id}`).expect(200)).body.data as PayrollRun;
+    expect(draft).toMatchObject({ status: 'DRAFT', approvedAt: null, transferredAt: null, returned: { reason: 'Penalty missing' } });
+    await http(app).get(`/accounting/payroll/${month}`).expect(404);
+    expect(await db.auditEntry.count({ where: { action: 'accounting.payroll.return' } })).toBeGreaterThan(0);
+
+    // HR fixes and approves again: accounting works the month out again.
+    const again = await approve(run.id);
+    expect(again.returned).toBeNull();
+    await recorded(month);
+    expect(await monthOf(month)).toMatchObject({ status: 'PENDING' });
+  });
+
+  it('finalize: FINALIZED, HR\'s run transferred; it can then never be returned or finalized again (409 PAYROLL_FINALIZED)', async () => {
+    const month = nextMonth();
+    await employee();
+    const run = await createRun(month);
+    await approve(run.id);
+    await recorded(month);
+
+    const done = (await http(app).post(`/accounting/payroll/${month}/finalize`).expect(200)).body.data as AccountingPayrollMonth;
+    expect(done.status).toBe('FINALIZED');
+    expect(done.finalizedAt).not.toBeNull();
+    const hr = (await http(app).get(`/hr/payroll-runs/${run.id}`).expect(200)).body.data as PayrollRun;
+    expect(hr).toMatchObject({ status: 'APPROVED' });
+    expect(hr.transferredAt).not.toBeNull();
+
+    const back = await http(app).post(`/accounting/payroll/${month}/return`).send({ reason: 'too late' }).expect(409);
+    expect(back.body.error).toBe('PAYROLL_FINALIZED');
+    await http(app).post(`/accounting/payroll/${month}/finalize`).expect(409);
+    expect((await monthOf(month)).status).toBe('FINALIZED');
+  });
+
+  it('return needs a reason (400); a month not in accounting → 404; without the permissions → 403', async () => {
+    const month = nextMonth();
+    await employee();
+    const run = await createRun(month);
+    await approve(run.id);
+    await recorded(month);
+    await http(app).post(`/accounting/payroll/${month}/return`).send({ reason: '   ' }).expect(400);
+    await http(app).post(`/accounting/payroll/${month}/return`).send({}).expect(400);
+    await http(app).post('/accounting/payroll/2099-01/return').send({ reason: 'x' }).expect(404);
+    await http(app).post('/accounting/payroll/2099-01/finalize').expect(404);
+    // Viewing the month is not enough.
+    await as(noSalary, async () => {
+      await http(app).post(`/accounting/payroll/${month}/return`).send({ reason: 'x' }).expect(403);
+      await http(app).post(`/accounting/payroll/${month}/finalize`).expect(403);
+    });
+    expect((await monthOf(month)).status).toBe('PENDING');
   });
 
   // ── who sees it (§2, P4) ──────────────────────────────────────────────────

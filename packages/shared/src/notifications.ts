@@ -96,6 +96,15 @@ export const NOTIFICATION_TYPES = {
     dedupePrefix: 'payroll_ready',
     link: (s) => ({ screen: 'payrollRun', recordId: s.entityId }),
   },
+  'hr.payroll.returned_by_accounting': {
+    module: 'hr',
+    category: 'approval',
+    canTurnOff: false,
+    defaultChannels: IN_APP,
+    permission: 'hr.payroll.approve',
+    dedupePrefix: 'payroll_returned',
+    link: (s) => ({ screen: 'payrollRun', recordId: s.entityId }),
+  },
   'hr.contract.ending_soon': {
     module: 'hr',
     category: 'reminder',

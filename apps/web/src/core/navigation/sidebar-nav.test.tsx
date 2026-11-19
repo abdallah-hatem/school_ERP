@@ -34,6 +34,9 @@ function renderNav(variant: 'full' | 'rail' = 'full', locale: 'en' | 'ar' = 'en'
 }
 
 const hrButton = (name = 'HR') => screen.getByRole('button', { name });
+/** HR's and Accounting's pages are both "Payroll": tell them apart by where they go. */
+const payrollLink = (href = '/en/payroll') =>
+  screen.queryAllByRole('link', { name: 'Payroll' }).find((l) => l.getAttribute('href') === href) ?? null;
 
 describe('SidebarNav (grouped by module)', () => {
   beforeEach(() => {
@@ -49,11 +52,11 @@ describe('SidebarNav (grouped by module)', () => {
     const user = userEvent.setup();
     renderNav();
     expect(hrButton().getAttribute('aria-expanded')).toBe('true');
-    expect(screen.getByRole('link', { name: 'Payroll' })).toBeTruthy();
+    expect(payrollLink()).toBeTruthy();
 
     await user.click(hrButton());
     expect(hrButton().getAttribute('aria-expanded')).toBe('false');
-    expect(screen.queryByRole('link', { name: 'Payroll' })).toBeNull();
+    expect(payrollLink()).toBeNull();
     expect(JSON.parse(window.localStorage.getItem('nav.groups') ?? '{}')).toEqual({ hr: false });
 
     cleanup();
@@ -70,7 +73,7 @@ describe('SidebarNav (grouped by module)', () => {
     pathname = '/en/payroll/2026-11';
     renderNav();
     expect(hrButton().getAttribute('aria-expanded')).toBe('true');
-    expect(screen.getByRole('link', { name: 'Payroll' }).getAttribute('aria-current')).toBe('page');
+    expect(payrollLink()?.getAttribute('aria-current')).toBe('page');
     expect(screen.getByRole('link', { name: 'Dashboard' }).getAttribute('aria-current')).toBeNull();
   });
 
@@ -105,9 +108,16 @@ describe('SidebarNav (grouped by module)', () => {
     renderNav('rail');
     expect(screen.getByRole('link', { name: 'Dashboard' }).getAttribute('href')).toBe('/en');
     expect(screen.getByRole('img', { name: 'Inventory — coming soon' })).toBeTruthy();
-    // Accounting has one page: the rail links to it.
-    expect(screen.getByRole('link', { name: 'Payroll taxes' }).getAttribute('href')).toBe('/en/accounting/payroll-taxes');
+    // Accounting has two pages now: like HR, the rail opens them in a flyout.
+    expect(screen.queryByRole('link', { name: 'Payroll taxes' })).toBeNull();
     expect(screen.queryByRole('link', { name: 'Penalties' })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Accounting' }));
+    const accounting = await screen.findByRole('dialog', { name: 'Accounting pages' });
+    expect(within(accounting).getAllByRole('link').map((l) => l.getAttribute('href'))).toEqual([
+      '/en/accounting/payroll',
+      '/en/accounting/payroll-taxes',
+    ]);
+    await user.keyboard('{Escape}');
 
     await user.click(screen.getByRole('button', { name: 'HR' }));
     const flyout = await screen.findByRole('dialog', { name: 'HR pages' });
@@ -131,32 +141,46 @@ describe('SidebarNav (grouped by module)', () => {
     expect(screen.queryByRole('link', { name: 'التأخير' })).toBeNull();
   });
 
-  it('Accounting is live: its one page, Payroll taxes, for whoever holds accounting.payroll.view', () => {
+  it('Accounting is live: Payroll and Payroll taxes, for whoever holds accounting.payroll.view', () => {
     pathname = '/en/accounting/payroll-taxes/2026-10';
     renderNav();
+    const accounting = screen.getByRole('button', { name: 'Accounting' });
+    const list = document.getElementById(accounting.getAttribute('aria-controls') ?? '') as HTMLElement;
+    expect(within(list).getAllByRole('link').map((l) => l.textContent)).toEqual(['Payroll', 'Payroll taxes']);
     const link = screen.getByRole('link', { name: 'Payroll taxes' });
     expect(link.getAttribute('href')).toBe('/en/accounting/payroll-taxes');
     expect(link.getAttribute('aria-current')).toBe('page');
-    // HR's Payroll is a different page: not current on /accounting/payroll-taxes.
-    expect(screen.getByRole('link', { name: 'Payroll' }).getAttribute('aria-current')).toBeNull();
+    // Neither Payroll page is current on /accounting/payroll-taxes (a prefix, not a parent).
+    expect(payrollLink()?.getAttribute('aria-current')).toBeNull();
+    expect(payrollLink('/en/accounting/payroll')?.getAttribute('aria-current')).toBeNull();
     cleanup();
+
+    pathname = '/en/accounting/payroll/2026-10';
+    renderNav();
+    expect(payrollLink('/en/accounting/payroll')?.getAttribute('aria-current')).toBe('page');
+    expect(payrollLink()?.getAttribute('aria-current')).toBeNull();
+    cleanup();
+
     renderNav('full', 'en', sessionWithout('accounting.payroll.view'));
     expect(screen.queryByRole('link', { name: 'Payroll taxes' })).toBeNull();
+    expect(payrollLink('/en/accounting/payroll')).toBeNull();
     expect(screen.queryByText('Accounting')).toBeNull();
   });
 
   describe('only what the user may see (can(), view only)', () => {
     it('the HR admin sees every page and Settings', () => {
       renderNav();
-      for (const name of ['Dashboard', 'Employees', 'Penalties', 'Lateness', 'Payroll', 'Settings']) {
+      for (const name of ['Dashboard', 'Employees', 'Penalties', 'Lateness', 'Settings']) {
         expect(screen.getByRole('link', { name })).toBeTruthy();
       }
+      expect(payrollLink()).toBeTruthy();
+      expect(payrollLink('/en/accounting/payroll')).toBeTruthy();
     });
 
     it('a page without its view permission is left out', () => {
       renderNav('full', 'en', sessionWithout('hr.payroll.view', 'hr.lateness.view'));
       expect(screen.getByRole('link', { name: 'Employees' })).toBeTruthy();
-      expect(screen.queryByRole('link', { name: 'Payroll' })).toBeNull();
+      expect(payrollLink()).toBeNull();
       expect(screen.queryByRole('link', { name: 'Lateness' })).toBeNull();
     });
 

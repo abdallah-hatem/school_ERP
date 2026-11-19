@@ -7,5 +7,5 @@ export { JobTitlesService } from './lists/services/job-titles.service';
 export { PenaltyCatalogueService } from './penalties/services/penalty-catalogue.service';
 export { PenaltyRecordsService } from './penalties/services/penalty-records.service';
 export { LatenessService } from './staff-attendance/services/lateness.service';
-export { PayrollService } from './payroll/services/payroll.service';
+export { PayrollService, type ApprovedLineBreakdown } from './payroll/services/payroll.service';
 export { MonthLockService } from './month-lock/month-lock.service';

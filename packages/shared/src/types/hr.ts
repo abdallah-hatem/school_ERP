@@ -460,6 +460,10 @@ export interface PayrollRunSummary extends SalaryVisibility {
   status: PayrollStatus;
   totals: PayrollTotals;
   approvedAt: IsoDateTime | null;
+  /** When Accounting marked the salaries transferred (finalized): the run is final. */
+  transferredAt: IsoDateTime | null;
+  /** The last time Accounting sent this run back to HR, and why; cleared when it is approved again. */
+  returned: { at: IsoDateTime; reason: string } | null;
 }
 
 export interface PayrollAdjustment {

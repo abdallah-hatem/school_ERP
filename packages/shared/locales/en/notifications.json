@@ -135,6 +135,28 @@
             "other": "{count} payroll months — all handled"
           },
           "description": "From the check day, while the month's payroll is still a draft."
+        },
+        "returned_by_accounting": {
+          "name": "Payroll returned by Accounting",
+          "title": "{month} payroll was returned by Accounting",
+          "body": "Reason: {reason}",
+          "group": {
+            "zero": "No payroll months returned",
+            "one": "{count} payroll month returned by Accounting",
+            "two": "{count} payroll months returned by Accounting",
+            "few": "{count} payroll months returned by Accounting",
+            "many": "{count} payroll months returned by Accounting",
+            "other": "{count} payroll months returned by Accounting"
+          },
+          "groupDone": {
+            "zero": "No payroll months",
+            "one": "{count} payroll month — handled",
+            "two": "{count} payroll months — all handled",
+            "few": "{count} payroll months — all handled",
+            "many": "{count} payroll months — all handled",
+            "other": "{count} payroll months — all handled"
+          },
+          "description": "Accounting sends an approved month back to HR to fix before approving it again."
         }
       },
       "contract": {

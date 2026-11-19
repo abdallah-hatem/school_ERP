@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { Prisma } from '@prisma/client';
-import { PAGINATION, type AccountingPayrollTotals, type InsuranceStatus } from '@school-erp/shared';
+import { PAGINATION, PAYROLL_PAGINATION, type AccountingPayrollTotals, type InsuranceStatus } from '@school-erp/shared';
 import type { DbAdapter } from '../../../../database/transactions';
 
 export const ACCOUNTING_RUN_SELECT = {
@@ -10,6 +10,7 @@ export const ACCOUNTING_RUN_SELECT = {
   month: true,
   taxRule: true,
   recordedAt: true,
+  finalizedAt: true,
 } satisfies Prisma.AccountingPayrollRunSelect;
 export type AccountingRunRow = Prisma.AccountingPayrollRunGetPayload<{
   select: typeof ACCOUNTING_RUN_SELECT;
@@ -71,6 +72,21 @@ export class AccountingPayrollRepository {
     return this.db.accountingPayrollRun.findUnique({ where: { hrRunId }, select: ACCOUNTING_RUN_SELECT });
   }
 
+  /** Drops a PENDING month and its lines (returned to HR). False when it was finalized meanwhile. */
+  async deletePending(id: string): Promise<boolean> {
+    const { count } = await this.db.accountingPayrollRun.deleteMany({ where: { id, finalizedAt: null } });
+    return count === 1;
+  }
+
+  /** Marks a PENDING month finalized. False when it already was. */
+  async finalize(id: string, finalizedById: string | null, at: Date): Promise<boolean> {
+    const { count } = await this.db.accountingPayrollRun.updateMany({
+      where: { id, finalizedAt: null },
+      data: { finalizedAt: at, finalizedById },
+    });
+    return count === 1;
+  }
+
   findByMonth(month: string): Promise<AccountingRunRow | null> {
     return this.db.accountingPayrollRun.findUnique({ where: { month }, select: ACCOUNTING_RUN_SELECT });
   }
@@ -120,7 +136,7 @@ export class AccountingPayrollRepository {
     page: number = PAGINATION.defaultPage,
     limit: number = PAGINATION.defaultLimit,
   ): Promise<{ rows: AccountingRunRow[]; total: number; page: number; limit: number }> {
-    const take = Math.min(limit, PAGINATION.maxLimit);
+    const take = Math.min(Math.max(1, limit), PAYROLL_PAGINATION.maxLimit);
     const [rows, total] = await Promise.all([
       this.db.accountingPayrollRun.findMany({
         select: ACCOUNTING_RUN_SELECT,

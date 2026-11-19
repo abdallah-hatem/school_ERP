@@ -17,7 +17,8 @@ HR payroll ends at the net. The new `accounting` module — the top of the modul
   accounting works out each line's insurance share, income tax, martyrs' fund and gross. It uses
   the rule and the employees' insurance at that moment and keeps the result frozen.
 
-Permissions: `accounting.settings.view` / `.edit` and `accounting.payroll.view`, for the Accountant
+Permissions: `accounting.settings.view` / `.edit`, `accounting.payroll.view`, and (2026-11-19)
+`accounting.payroll.return` / `.finalize`, for the Accountant
 and the System admin. Tax, insurance and gross are salary data: they are hidden without
 `hr.employees.view_salary`, as P4 does for HR payroll.
 

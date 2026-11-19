@@ -1,7 +1,7 @@
 'use client';
 
 import { useCan } from '@/core/auth';
-import type { Month, PayrollRunSummary } from '@school-erp/shared';
+import { PAYROLL_PAGINATION, type Month, type PayrollRunSummary } from '@school-erp/shared';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useRef, useState, useTransition } from 'react';
@@ -69,7 +69,7 @@ export function RunsList({ basePath, query, runs, total, currentMonth }: RunsLis
       className: 'w-36',
       card: 'status',
       skeleton: <SkeletonPill />,
-      cell: (run) => <RunStatusPill status={run.status} />,
+      cell: (run) => <RunStatusPill status={run.status} transferred={run.transferredAt !== null} />,
     },
     {
       id: 'employees',
@@ -141,7 +141,10 @@ export function RunsList({ basePath, query, runs, total, currentMonth }: RunsLis
           limit: query.limit,
           total,
           onPageChange: (page) => go({ ...query, page }),
+          pageSizes: PAYROLL_PAGINATION.pageSizes,
+          onLimitChange: (limit) => go({ page: 1, limit }),
         }}
+        scrollHeight="screen"
       />
       <CreateRunDialog
         open={creating}

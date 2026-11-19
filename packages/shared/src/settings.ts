@@ -246,6 +246,15 @@ export const PAGINATION = {
   maxLimit: 100,
 } as const;
 
+/**
+ * Payroll tables (HR runs, a run's lines, an employee's payroll, accounting's months and lines) let
+ * the reader pick the page size, up to 500 (owner, 2026-11-19): a school's whole staff on one page.
+ */
+export const PAYROLL_PAGINATION = {
+  pageSizes: [10, 25, 50, 100, 250, 500],
+  maxLimit: 500,
+} as const;
+
 /** Logo upload rules from the contract. */
 export const LOGO_UPLOAD = {
   maxBytes: 2 * 1024 * 1024,

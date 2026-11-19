@@ -3,6 +3,7 @@
 import {
   AdjustmentType,
   PAGINATION,
+  PAYROLL_PAGINATION,
   PayrollFlag,
   PayrollStatus,
   PenaltyStatus,
@@ -40,6 +41,7 @@ import {
   PayslipIcon,
   PendingIcon,
   RecalculateIcon,
+  RestoreIcon,
   SearchIcon,
 } from '@/shared/components/ui/icons';
 import { SkeletonPill, SkeletonProse, SkeletonText } from '@/shared/components/ui/skeleton';
@@ -112,7 +114,7 @@ export function RunPage({
     [],
   );
   const [page, setPage] = useState(1);
-  const limit = PAGINATION.defaultLimit;
+  const [limit, setLimit] = useState<number>(PAGINATION.defaultLimit);
 
   const [recalculating, setRecalculating] = useState(false);
   /** Recalculate / Approve is in flight: search and filters wait, so no navigation overlaps it. */
@@ -160,6 +162,7 @@ export function RunPage({
   // beside the "stale" notice, which already offers Recalculate.
   const rulesNotice = draft && !approveError && run.rulesChanged && pendingNotice !== 'stale';
   const rulesTitleId = useId();
+  const returnedTitleId = useId();
 
   const pageCount = Math.max(1, Math.ceil(run.lines.length / limit));
   const currentPage = Math.min(page, pageCount);
@@ -323,7 +326,7 @@ export function RunPage({
     <div className="flex flex-col gap-6">
       <PageHeader
         title={t('payroll.runTitle', { month: monthLabel })}
-        status={<RunStatusPill status={run.status} />}
+        status={<RunStatusPill status={run.status} transferred={run.transferredAt !== null} />}
         description={
           draft
             ? t('payroll.runDescription')
@@ -366,6 +369,26 @@ export function RunPage({
           </>
         }
       />
+
+      {draft && run.returned ? (
+        // Accounting sent the approved month back (§10): why, until it is approved again.
+        <div
+          role="note"
+          aria-labelledby={returnedTitleId}
+          data-testid="returned-notice"
+          className="bg-warning-soft text-warning-ink flex items-start gap-3 rounded-2xl px-4 py-3.5"
+        >
+          <RestoreIcon className="mt-0.5 size-5 shrink-0" />
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <p id={returnedTitleId} className="font-bold">
+              {t('payroll.returned.title', { date: formatDate(run.returned.at.slice(0, 10), locale) })}
+            </p>
+            <p className="text-sm break-words">
+              <BidiText>{t('payroll.returned.body', { reason: run.returned.reason })}</BidiText>
+            </p>
+          </div>
+        </div>
+      ) : null}
 
       {pendingNotice === 'pending' ? (
         // Told before Approve is pressed; the button still sends (the server decides, 409).
@@ -511,7 +534,13 @@ export function RunPage({
               limit,
               total: run.lines.length,
               onPageChange: setPage,
+              pageSizes: PAYROLL_PAGINATION.pageSizes,
+              onLimitChange: (next) => {
+                setLimit(next);
+                setPage(1);
+              },
             }}
+            scrollHeight="screen"
           />
 
           {notApplied.length > 0 ? (

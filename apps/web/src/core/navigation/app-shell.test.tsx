@@ -78,7 +78,8 @@ describe('AppShell drawer (phone)', () => {
 
   it('marks the current section in the menu', async () => {
     const { drawer } = await openDrawer();
-    expect(within(drawer).getByRole('link', { name: 'Payroll' }).getAttribute('aria-current')).toBe('page');
+    const payroll = within(drawer).getAllByRole('link', { name: 'Payroll' }).find((l) => l.getAttribute('href') === '/en/payroll');
+    expect(payroll?.getAttribute('aria-current')).toBe('page');
     expect(within(drawer).getByRole('link', { name: 'Employees' }).getAttribute('aria-current')).toBeNull();
   });
 });

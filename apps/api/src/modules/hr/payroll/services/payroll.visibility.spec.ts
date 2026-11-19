@@ -61,6 +61,22 @@ const TOTALS = {
 function makeService(scopes: Parameters<typeof fakeAccess>[0], salaryIds: string[] = []) {
   const repository = {
     findRun: jest.fn().mockResolvedValue({ id: 'r1', month: '2026-10', status: 'APPROVED', approvedAt: new Date(), calculatedAt: new Date() }),
+    returnToDraft: jest.fn().mockResolvedValue(true),
+    markTransferred: jest.fn().mockResolvedValue(true),
+    findAccountingBreakdowns: jest.fn().mockResolvedValue([
+      {
+        employeeId: 'e1',
+        departmentNameEn: 'Teaching',
+        departmentNameAr: 'التدريس',
+        monthSalary: 1_000_000,
+        penaltyDays: '1.5',
+        penaltyAmount: 50_000,
+        latenessDays: '0',
+        latenessAmount: 0,
+        adjustmentAdditions: 0,
+        adjustmentDeductions: 0,
+      },
+    ]),
     list: jest.fn().mockResolvedValue({
       data: [{ id: 'r1', month: '2026-10', status: 'APPROVED', approvedAt: null }],
       total: 1,
@@ -110,6 +126,7 @@ function makeService(scopes: Parameters<typeof fakeAccess>[0], salaryIds: string
       },
     ]),
   };
+  const notifications = { payrollReturned: jest.fn().mockResolvedValue(undefined) };
   const school = { getSchoolSettings: jest.fn().mockResolvedValue({ nameEn: 'S', nameAr: 'S', logoUrl: null }) };
   const service = new PayrollService(
     repository as unknown as PayrollRunsRepository,
@@ -124,9 +141,9 @@ function makeService(scopes: Parameters<typeof fakeAccess>[0], salaryIds: string
     { record: jest.fn() } as never,
     { inTransaction: (fn: () => unknown) => fn(), run: (fn: () => unknown) => Promise.resolve(fn()) } as never,
     { payrollRunCreated: jest.fn(), payrollRunApproved: jest.fn() } as never,
-    {} as never,
+    notifications as never,
   );
-  return { service, repository, employees };
+  return { service, repository, employees, notifications };
 }
 
 const PRINCIPAL = { 'hr.employees.view_salary': null } as const;
@@ -246,5 +263,51 @@ describe('payroll — scopes (R5)', () => {
     expect(totalsMoneyVisible({ lines: PRIMARY, salary: { kind: 'none' } })).toBe(false);
     expect(totalsMoneyVisible({ lines: PRIMARY, salary: PRIMARY })).toBe(true);
     expect(totalsMoneyVisible({ lines: PRIMARY, salary: { kind: 'all' } })).toBe(true);
+  });
+});
+
+describe('payroll — approvedLineBreakdowns (for accounting, §10)', () => {
+  it("an approved run: each line's breakdown keyed by employee, days as numbers", async () => {
+    const { service } = makeService({});
+    const map = await service.approvedLineBreakdowns('r1');
+    expect(map?.get('e1')).toEqual(expect.objectContaining({ monthSalary: 1_000_000, penaltyDays: 1.5, latenessDays: 0 }));
+    expect(map?.get('e1')).not.toHaveProperty('employeeId');
+  });
+
+  it('a draft run → null', async () => {
+    const { service, repository } = makeService({});
+    repository.findRun.mockResolvedValueOnce({ id: 'r1', month: '2026-10', status: 'DRAFT', approvedAt: null, calculatedAt: new Date() });
+    await expect(service.approvedLineBreakdowns('r1')).resolves.toBeNull();
+    expect(repository.findAccountingBreakdowns).not.toHaveBeenCalled();
+  });
+});
+
+describe('payroll — returned by / transferred in Accounting (§10)', () => {
+  const approved = (over: Record<string, unknown> = {}) => ({
+    id: 'r1', month: '2026-10', status: 'APPROVED', approvedAt: new Date(), calculatedAt: new Date(),
+    transferredAt: null, returnedAt: null, returnReason: null, ...over,
+  });
+
+  it('return: the approved run is a draft again with the reason, and its approvers are told', async () => {
+    const { service, repository, notifications } = makeService({});
+    repository.findRun.mockResolvedValueOnce(approved());
+    await service.returnFromAccounting('r1', 'Fix EMP-0003', 'u1');
+    expect(repository.returnToDraft).toHaveBeenCalledWith('r1', 'Fix EMP-0003');
+    expect(notifications.payrollReturned).toHaveBeenCalledWith({ id: 'r1', month: '2026-10', reason: 'Fix EMP-0003' }, 'u1');
+  });
+
+  it('a transferred run is never returned (409 PAYROLL_FINALIZED)', async () => {
+    const { service, repository } = makeService({});
+    repository.findRun.mockResolvedValueOnce(approved({ transferredAt: new Date() }));
+    await expect(service.returnFromAccounting('r1', 'x', 'u1')).rejects.toMatchObject({ status: 409 });
+    expect(repository.returnToDraft).not.toHaveBeenCalled();
+  });
+
+  it('a draft can be neither returned nor transferred (409 PAYROLL_NOT_APPROVED)', async () => {
+    const { service, repository } = makeService({});
+    repository.findRun.mockResolvedValue(approved({ status: 'DRAFT', approvedAt: null }));
+    await expect(service.returnFromAccounting('r1', 'x', 'u1')).rejects.toMatchObject({ status: 409 });
+    await expect(service.markTransferred('r1', new Date())).rejects.toMatchObject({ status: 409 });
+    expect(repository.markTransferred).not.toHaveBeenCalled();
   });
 });

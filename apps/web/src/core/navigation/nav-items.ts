@@ -27,6 +27,7 @@ export interface NavItem {
     | 'penalties'
     | 'lateness'
     | 'payroll'
+    | 'accountingPayroll'
     | 'payrollTaxes'
     | 'settings'
     | 'activity'
@@ -94,12 +95,12 @@ export const NAV_MODULES: readonly NavModule[] = [
     status: 'live',
   },
   {
-    // §10: each approved month's payroll taxes (the Accountant's screen).
+    // §10 (the Accountant's screens): HR's approved months with their taxes, and the payroll-taxes year board.
     key: 'accounting',
     nameKey: 'common.nav.modules.accounting',
     icon: AccountingModuleIcon,
     tone: 'primary',
-    items: [page('payrollTaxes', PayrollTaxesIcon)],
+    items: [page('accountingPayroll', PayrollIcon), page('payrollTaxes', PayrollTaxesIcon)],
     status: 'live',
   },
   { key: 'inventory', nameKey: 'common.nav.modules.inventory', icon: InventoryModuleIcon, tone: 'neutral', items: [], status: 'soon' },

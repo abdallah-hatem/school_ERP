@@ -63,6 +63,15 @@ describe('RunsList', () => {
     expect(table.getByText('Not yet')).toBeTruthy();
   });
 
+  it('a run Accounting finalized reads "Finalized · transferred" (EN and AR)', () => {
+    const transferred = { ...approved, transferredAt: '2026-11-05T09:00:00.000Z' };
+    renderList([transferred]);
+    expect(within(document.querySelector<HTMLElement>('[data-view="table"]')!).getByText('Finalized · transferred')).toBeTruthy();
+    cleanup();
+    renderList([transferred], 'ar');
+    expect(within(document.querySelector<HTMLElement>('[data-view="table"]')!).getByText('مُنهى · تم التحويل')).toBeTruthy();
+  });
+
   it('creates a run for the chosen month and opens it', async () => {
     const user = userEvent.setup();
     apis.CREATE_PAYROLL_RUN.mockResolvedValue({

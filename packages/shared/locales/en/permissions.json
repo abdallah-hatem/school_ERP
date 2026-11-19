@@ -199,6 +199,14 @@
         "view": {
           "label": "View payroll taxes",
           "description": "See each approved month's insurance, income tax, martyrs' fund and gross per employee."
+        },
+        "return": {
+          "label": "Return payroll to HR",
+          "description": "Send an approved month back to HR as a draft, with a reason, before the salaries are transferred."
+        },
+        "finalize": {
+          "label": "Finalize payroll",
+          "description": "Mark an approved month's salaries as transferred. A finalized month can't go back to HR."
         }
       }
     }

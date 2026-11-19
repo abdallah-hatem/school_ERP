@@ -119,7 +119,9 @@
         "update": "Changed the accounting rules"
       },
       "payroll": {
-        "record": "Worked out the payroll taxes for {entity}"
+        "record": "Worked out the payroll taxes for {entity}",
+        "return": "Returned the payroll for {entity} to HR",
+        "finalize": "Finalized the payroll for {entity} (transfer made)"
       }
     }
   },

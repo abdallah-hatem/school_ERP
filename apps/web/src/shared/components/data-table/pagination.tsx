@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useId, useRef } from 'react';
 import { Button } from '@/shared/components/ui/button';
 import {
   ChevronEndIcon,
@@ -8,6 +8,7 @@ import {
   ChevronLastIcon,
   ChevronStartIcon,
 } from '@/shared/components/ui/icons';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select';
 import { SkeletonText } from '@/shared/components/ui/skeleton';
 import { formatCount } from '@/shared/lib/format';
 import { cn } from '@/shared/lib/utils';
@@ -18,6 +19,12 @@ export interface PaginationState {
   limit: number;
   total: number;
   onPageChange: (page: number) => void;
+  /**
+   * A "Rows per page" picker with these sizes (payroll tables). Both or neither: the caller changes
+   * the size (and goes back to page 1); without them the page size is fixed.
+   */
+  pageSizes?: readonly number[];
+  onLimitChange?: (limit: number) => void;
 }
 
 /** Up to five page numbers around the current one. */
@@ -31,8 +38,8 @@ export function pageWindow(page: number, pageCount: number, size = 5): number[] 
 /**
  * Always visible while there is something to page, even when everything fits on one page: summary,
  * first / previous / numbers / next / last. An empty result has nothing to page and draws nothing
- * (no "Showing 0–0 of 0" under an empty state). No rows-per-page control: the page size is fixed
- * by the caller. Callers update the URL with `scroll: false`; on a page change this component
+ * (no "Showing 0–0 of 0" under an empty state). A rows-per-page picker only when the caller passes
+ * `pageSizes` and `onLimitChange`; otherwise the page size is fixed by the caller. Callers update the URL with `scroll: false`; on a page change this component
  * brings the top of its list back into view (owner, 2026-11-18): the paged list is the closest
  * `[data-paged-list]` or `<section>` around it, scrolled to just below the sticky top bar, and only
  * when its top is above the screen — a short list that's already in view doesn't jump.
@@ -53,6 +60,8 @@ export function Pagination({
   limit,
   total,
   onPageChange,
+  pageSizes,
+  onLimitChange,
   disabled = false,
   loading = false,
   skeletonBlock = true,
@@ -67,6 +76,7 @@ export function Pagination({
 }) {
   const { t } = useTranslation();
   const rootRef = useRef<HTMLDivElement>(null);
+  const sizeLabelId = useId();
   const goTo = (target: number) => {
     onPageChange(target);
     scrollListIntoView(rootRef.current);
@@ -108,6 +118,30 @@ export function Pagination({
           {t('ui.table.showing', { from: formatCount(from), to: formatCount(to), total: formatCount(total) })}
         </p>
       )}
+      {pageSizes?.length && onLimitChange ? (
+        <div data-page-size="" className="flex items-center gap-2">
+          <span id={sizeLabelId}>{t('ui.table.rowsPerPage')}</span>
+          <Select
+            value={String(limit)}
+            disabled={disabled}
+            onValueChange={(value) => {
+              onLimitChange(Number(value));
+              scrollListIntoView(rootRef.current);
+            }}
+          >
+            <SelectTrigger aria-labelledby={sizeLabelId} className="tabular h-9 w-24 text-foreground">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {pageSizes.map((size) => (
+                <SelectItem key={size} value={String(size)} className="tabular">
+                  {formatCount(size)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      ) : null}
       {/*
         Phones (< 768px): first · previous · "Page X of Y" · next · last across the whole row — nine
         buttons don't fit a 326px card. From 768px: first / previous / page numbers / next / last.

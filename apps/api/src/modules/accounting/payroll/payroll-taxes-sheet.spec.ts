@@ -4,6 +4,8 @@ import { buildPayrollTaxesSheet } from './payroll-taxes-sheet';
 
 const month = (over: Partial<AccountingPayrollMonth> = {}): AccountingPayrollMonth => ({
   month: '2026-10',
+  status: 'PENDING',
+  finalizedAt: null,
   hrRunId: 'hr-run',
   recordedAt: '2026-11-02T10:00:00.000Z',
   salaryVisible: true,

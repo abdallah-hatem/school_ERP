@@ -110,6 +110,11 @@ export interface DataTableProps<Row> {
    * group that is empty one month (an empty state) and full the next — which no skeleton can know.
    */
   skeletonBlocks?: boolean;
+  /**
+   * The table view scrolls inside a box at most this tall and its column names stay on top while
+   * the rows scroll (payroll tables, owner 2026-11-19). Cards and print are unaffected.
+   */
+  scrollHeight?: 'screen';
   className?: string;
 }
 
@@ -152,6 +157,7 @@ export function DataTable<Row>({
   footer,
   printRows,
   skeletonBlocks = true,
+  scrollHeight,
   className,
 }: DataTableProps<Row>) {
   const view = VIEW_CLASSES[cardsBelow];
@@ -183,7 +189,7 @@ export function DataTable<Row>({
           {t('ui.states.loading')}
         </span>
         <div aria-hidden="true">
-          <Table columns={skeletonColumns} rows={placeholders} getRowId={String} label={label} viewClass={view.table} footer={skeletonFooter} />
+          <Table columns={skeletonColumns} rows={placeholders} getRowId={String} label={label} viewClass={view.table} footer={skeletonFooter} scrollHeight={scrollHeight} />
           <Cards columns={skeletonColumns} rows={placeholders} getRowId={String} label={label} viewClass={view.cards} heightsVary={cardHeightsVary} footer={skeletonFooter} />
         </div>
       </div>
@@ -196,7 +202,7 @@ export function DataTable<Row>({
         aria-busy={refreshing || undefined}
         className={cn('transition-opacity duration-150', refreshing && 'pointer-events-none opacity-55')}
       >
-        <Table columns={columns} rows={rows ?? []} getRowId={getRowId} label={label} rowTone={rowTone} viewClass={view.table} footer={footer} />
+        <Table columns={columns} rows={rows ?? []} getRowId={getRowId} label={label} rowTone={rowTone} viewClass={view.table} footer={footer} scrollHeight={scrollHeight} />
         <Cards columns={columns} rows={rows ?? []} getRowId={getRowId} label={label} rowTone={rowTone} viewClass={view.cards} heightsVary={cardHeightsVary} footer={footer} />
       </div>
     );
@@ -256,6 +262,8 @@ interface RowsProps<Row> {
   /** Cards only: their height follows their text (`cardHeightsVary`). */
   heightsVary?: boolean;
   footer?: DataTableFooter;
+  /** Table only: a capped, vertically scrolling body under a sticky header (`scrollHeight`). */
+  scrollHeight?: 'screen';
 }
 
 const toneBar = {
@@ -263,7 +271,8 @@ const toneBar = {
   danger: 'shadow-[inset_4px_0_0_var(--destructive)] rtl:shadow-[inset_-4px_0_0_var(--destructive)]',
 } as const;
 
-function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass, footer }: RowsProps<Row>) {
+function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass, footer, scrollHeight }: RowsProps<Row>) {
+  const capped = scrollHeight === 'screen';
   const { ref, edges } = useScrollEdges<HTMLDivElement>();
   const head = useBlock('table-head');
   const rowBlock = useBlock('table-row');
@@ -290,7 +299,17 @@ function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass, footer
         reach both edges. A scrollbar that is really needed still takes its own space (the
         sideways one under the rows), so it never covers a cell.
       */}
-      <div ref={ref} data-table-scroll="" className="scrollbar-clean overflow-x-auto [scrollbar-gutter:auto]!">
+      <div
+        ref={ref}
+        data-table-scroll=""
+        data-scroll-capped={capped ? '' : undefined}
+        className={cn(
+          'scrollbar-clean overflow-x-auto [scrollbar-gutter:auto]!',
+          // The screen less the top bar, page title and pagination; never under ~8 rows. Print
+          // drops the cap so every row is on paper.
+          capped && 'max-h-[max(26rem,calc(100dvh-14rem))] overflow-y-auto overscroll-y-contain print:max-h-none print:overflow-visible',
+        )}
+      >
       <table aria-label={label} className="w-full border-separate border-spacing-0 text-sm">
         <thead data-skeleton-block={head}>
           <tr>
@@ -301,6 +320,8 @@ function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass, footer
                 className={cn(
                   'bg-muted px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted-foreground',
                   'first:rounded-s-xl first:ps-5 last:rounded-e-xl last:pe-5',
+                  // Sticky column names: opaque, over the rows (and the edge fades) as they pass.
+                  capped && 'sticky top-0 z-20 print:static',
                   alignClass[column.align ?? 'start'],
                   column.className,
                 )}
