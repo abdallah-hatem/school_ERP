@@ -24,7 +24,11 @@
     "approved": "Approved by {name}",
     "cancelled": "Cancelled by {name}",
     "done": "Done",
-    "allDone": "All done"
+    "allDone": "All done",
+    "group": {
+      "approved": "Approved by {name}",
+      "cancelled": "Cancelled by {name}"
+    }
   },
   "types": {
     "hr": {
@@ -40,6 +44,14 @@
             "few": "{count} penalties waiting for your approval",
             "many": "{count} penalties waiting for your approval",
             "other": "{count} penalties waiting for your approval"
+          },
+          "groupDone": {
+            "zero": "No penalties",
+            "one": "{count} penalty — handled",
+            "two": "{count} penalties — all handled",
+            "few": "{count} penalties — all handled",
+            "many": "{count} penalties — all handled",
+            "other": "{count} penalties — all handled"
           },
           "description": "A penalty is recorded for someone whose penalties you may approve."
         }
@@ -72,6 +84,14 @@
             "many": "{count} payroll months are ready to approve",
             "other": "{count} payroll months are ready to approve"
           },
+          "groupDone": {
+            "zero": "No payroll months",
+            "one": "{count} payroll month — handled",
+            "two": "{count} payroll months — all handled",
+            "few": "{count} payroll months — all handled",
+            "many": "{count} payroll months — all handled",
+            "other": "{count} payroll months — all handled"
+          },
           "description": "A month is calculated and has no pending penalties."
         },
         "not_prepared": {
@@ -85,6 +105,14 @@
             "many": "{count} payroll months haven't been prepared",
             "other": "{count} payroll months haven't been prepared"
           },
+          "groupDone": {
+            "zero": "No payroll months",
+            "one": "{count} payroll month — handled",
+            "two": "{count} payroll months — all handled",
+            "few": "{count} payroll months — all handled",
+            "many": "{count} payroll months — all handled",
+            "other": "{count} payroll months — all handled"
+          },
           "description": "From the check day, while the month has no payroll run."
         },
         "not_approved": {
@@ -97,6 +125,14 @@
             "few": "{count} payroll months are still drafts",
             "many": "{count} payroll months are still drafts",
             "other": "{count} payroll months are still drafts"
+          },
+          "groupDone": {
+            "zero": "No payroll months",
+            "one": "{count} payroll month — handled",
+            "two": "{count} payroll months — all handled",
+            "few": "{count} payroll months — all handled",
+            "many": "{count} payroll months — all handled",
+            "other": "{count} payroll months — all handled"
           },
           "description": "From the check day, while the month's payroll is still a draft."
         }
@@ -121,6 +157,14 @@
             "many": "{count} contracts end within {days} days",
             "other": "{count} contracts end within {days} days"
           },
+          "groupDone": {
+            "zero": "No contracts",
+            "one": "{count} contract — handled",
+            "two": "{count} contracts — all handled",
+            "few": "{count} contracts — all handled",
+            "many": "{count} contracts — all handled",
+            "other": "{count} contracts — all handled"
+          },
           "description": "Before an employee's contract ends, and again closer to the day."
         }
       },
@@ -135,6 +179,14 @@
             "few": "{count} probation periods end within {days} days",
             "many": "{count} probation periods end within {days} days",
             "other": "{count} probation periods end within {days} days"
+          },
+          "groupDone": {
+            "zero": "No probation periods",
+            "one": "{count} probation period — handled",
+            "two": "{count} probation periods — all handled",
+            "few": "{count} probation periods — all handled",
+            "many": "{count} probation periods — all handled",
+            "other": "{count} probation periods — all handled"
           },
           "description": "Before an employee's probation ends."
         }
@@ -151,6 +203,14 @@
             "few": "{count} months' lateness isn't entered yet",
             "many": "{count} months' lateness isn't entered yet",
             "other": "{count} months' lateness isn't entered yet"
+          },
+          "groupDone": {
+            "zero": "No months",
+            "one": "{count} month — handled",
+            "two": "{count} months — all handled",
+            "few": "{count} months — all handled",
+            "many": "{count} months — all handled",
+            "other": "{count} months — all handled"
           },
           "description": "From the check day, while the month's lateness is missing."
         }

@@ -3,14 +3,14 @@ import { notFound } from 'next/navigation';
 import { SetPasswordPage } from '@/core/auth';
 import { getAuthMessages } from '@/core/auth/i18n';
 import { titleTemplateFor } from '@/core/settings';
-import { getPublicSchoolBranding } from '@/core/settings/get-branding';
+import { getSchoolBranding } from '@/core/settings/get-branding';
 import { isLocale } from '@/shared/lib/i18n';
 
 /** "Set a new password · <school name>" in the current language. */
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
   if (!isLocale(locale)) return {};
-  const { template } = titleTemplateFor(await getPublicSchoolBranding(), locale);
+  const { template } = titleTemplateFor(await getSchoolBranding(), locale);
   return { title: { absolute: template.replace('%s', getAuthMessages(locale).setPassword.pageTitle) } };
 }
 

@@ -15,6 +15,7 @@ import { settle, shoot } from './support/ui';
  */
 
 const locale = 'en' as const;
+const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const bell = (page: Page) => page.getByTestId('notification-bell').filter({ visible: true });
 const list = (page: Page) => page.getByRole('dialog', { name: t(locale, 'notifications.title') });
 
@@ -30,12 +31,16 @@ test('a recorded penalty reaches the principal’s bell, opens on itself, and re
 
   const api = await Api.asAdmin();
   const penalty = await recordOpenPenalty(api);
+  const school = await api.get<{ nameEn: string }>('/settings/school/public');
   await api.dispose();
   const employee = penalty.employee.nameEn;
 
   // The principal: the count on the bell (on focus / reload), the row in the list.
   await principalPage.reload();
   await settled(principalPage);
+  // The school's name, not the product's, though the principal can't open Settings (N5 check).
+  await expect(principalPage).toHaveTitle(new RegExp(`· ${escapeRegExp(school.nameEn)}$`));
+  await expect(principalPage.getByTestId('sidebar-column')).toContainText(school.nameEn);
   await expect(bell(principalPage)).toHaveAccessibleName(new RegExp(t(locale, 'notifications.bell.unread', { count: 1 })));
   await bell(principalPage).click();
   const row = list(principalPage).getByTestId('notification-row').filter({ hasText: employee });
@@ -74,6 +79,10 @@ test('a recorded penalty reaches the principal’s bell, opens on itself, and re
   await expect(done).toContainText(t(locale, 'notifications.resolved.approved', { name: 'Smoke Principal / administrative director' }));
   await settle(hrPage);
   await shoot(hrPage, info, 'penalty-approved-by-en-desktop');
+  // Unread lists what the bell counts: the done one, though never read, isn't there.
+  await list(hrPage).getByRole('tab', { name: t(locale, 'notifications.screen.tabs.unread') }).click();
+  await expect(list(hrPage).getByText(t(locale, 'notifications.screen.emptyUnread.title'))).toBeVisible();
+  await expect(list(hrPage).getByTestId('notification-row')).toHaveCount(0);
 
   await principalPage.context().close();
   await hrPage.context().close();

@@ -133,14 +133,23 @@ function groupBody(items: readonly NotificationItemEntry[], { t, locale }: TextD
   return rest > 0 ? `${shown} ${t('notifications.screen.andMore', { count: rest })}` : shown;
 }
 
-/** The notification as it reads in the bell: its title and the line under it. */
+/**
+ * The notification as it reads in the bell: its title and the line under it. A group counts what
+ * still waits (`openCount`: "2 penalties waiting for your approval" once one of three is approved),
+ * names those, and lists the handled ones struck through when opened; with nothing left it reads
+ * "3 penalties — all handled".
+ */
 export function notificationText(n: NotificationItem, deps: TextDeps): { title: string; body: string | null } {
   const first = n.items[0];
   if (n.items.length > 1) {
-    const title = deps.has(`${typePath(n.type)}.group`)
-      ? deps.t(`${typePath(n.type)}.group`, { ...sentenceValues(first?.params ?? {}, deps.locale, deps.t), count: n.items.length })
+    const open = n.items.filter((i) => !i.resolved);
+    const values = sentenceValues(first?.params ?? {}, deps.locale, deps.t);
+    const waiting = n.openCount > 0;
+    const key = waiting ? 'group' : 'groupDone';
+    const title = deps.has(`${typePath(n.type)}.${key}`)
+      ? deps.t(`${typePath(n.type)}.${key}`, { ...values, count: waiting ? n.openCount : n.items.length })
       : deps.t('notifications.title');
-    return { title, body: groupBody(n.items, deps) };
+    return { title, body: groupBody(waiting && open.length > 0 ? open : n.items, deps) };
   }
   // A single item: its own values (the notification's carry the group's `count`).
   const params = first?.params ?? n.params;
@@ -162,13 +171,23 @@ export function groupItemText(type: string, item: NotificationItemEntry, deps: T
   return { main: employee, detail: itemBody(type, params, deps) };
 }
 
-/** "Approved by Laila Hassan", "Cancelled by …", "Done" — how an item or a notification ended. */
+/**
+ * "Approved by Laila Hassan", "Cancelled by …", "Done" — how an item or a notification ended. A
+ * group (its `items`) reads like one item when one person handled every item the same way
+ * ("Approved by Laila Hassan"), else "All done".
+ */
 export function resolvedText(
   resolved: NonNullable<NotificationItem['resolved']>,
   { t, locale }: Pick<TextDeps, 't' | 'locale'>,
-  group = false,
+  items?: readonly NotificationItemEntry[],
 ): string {
-  if (group) return t('notifications.resolved.allDone');
+  if (items) {
+    const [one, ...rest] = items.map((i) => i.resolved);
+    const by = one?.resolution !== 'done' ? one?.by : null;
+    const same = !!by && rest.every((e) => e?.resolution === one?.resolution && e?.by?.en === by.en && e?.by?.ar === by.ar);
+    const name = same && by ? nameOf(by, locale) : null;
+    return name && one ? t(`notifications.resolved.group.${one.resolution}`, { name }) : t('notifications.resolved.allDone');
+  }
   const name = resolved.by ? nameOf(resolved.by, locale) : null;
   if (resolved.resolution === 'done' || !name) return t('notifications.resolved.done');
   return t(`notifications.resolved.${resolved.resolution}`, { name });

@@ -168,6 +168,7 @@ describe('the bell (option A)', () => {
       { ...group.items[0]!, id: 'i2', params: { employee: { en: 'Salma Nabil', ar: 'سلمى نبيل' }, violation: late, level: 2 }, link: { screen: 'penalties', query: { penalty: 'p-2' } } },
     ];
     group.link = null;
+    group.openCount = 2;
     api.GET_NOTIFICATIONS.mockImplementation(() => ok([group], { total: 1, page: 1, limit: 20 }));
     renderWithI18n(<NotificationBell />);
     await user.click(bell());
@@ -203,5 +204,114 @@ describe('the bell (option A)', () => {
     expect(await screen.findByText("Notifications couldn't load.")).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Try again' }));
     expect(await screen.findAllByTestId('notification-row')).toHaveLength(2);
+  });
+});
+
+/*
+ * Unread lists what the bell counts (live N5 check): the API's `status=unread` holds only
+ * notifications with an open item, and the open list follows a read at once instead of keeping
+ * the rows until the next reload.
+ */
+describe('the Unread tab follows the bell', () => {
+  /** A fake inbox: `unread` lists what the count counts (unread, with an open item). */
+  function serve(rows: NotificationItem[]) {
+    const state = rows.map((r) => ({ ...r }));
+    const counted = () => state.filter((r) => !r.readAt && r.openCount > 0);
+    api.GET_UNREAD_NOTIFICATIONS_COUNT.mockImplementation(() => ok({ count: counted().length }));
+    api.GET_NOTIFICATIONS.mockImplementation(({ status }: { status: 'all' | 'unread' }) => {
+      const list = status === 'unread' ? counted() : state;
+      return ok(list.map((r) => ({ ...r })), { total: list.length, page: 1, limit: 20 });
+    });
+    api.MARK_ALL_NOTIFICATIONS_READ.mockImplementation(() => {
+      for (const r of state) r.readAt ??= NOW;
+      return ok({ updated: state.length });
+    });
+    api.MARK_NOTIFICATION_READ.mockImplementation((id: string) => {
+      const row = state.find((r) => r.id === id);
+      if (row) row.readAt = NOW;
+      return ok(row);
+    });
+  }
+  const done = { at: NOW, by: { en: 'Laila Hassan', ar: 'ليلى حسن' }, resolution: 'approved' as const };
+  const resolvedPenalty = (id: string) => {
+    const n = penalty(id, { openCount: 0, resolved: done });
+    n.items = n.items.map((i) => ({ ...i, resolved: done }));
+    return n;
+  };
+
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  it('shows as many rows as the badge counts — a done one nobody read is in All only', async () => {
+    const user = userEvent.setup();
+    serve([penalty('a'), penalty('b'), resolvedPenalty('c')]);
+    renderWithI18n(<NotificationBell />);
+    expect((await screen.findByTestId('notification-badge')).textContent).toBe('2');
+    await user.click(bell());
+    expect(await screen.findAllByTestId('notification-row')).toHaveLength(3);
+    await user.click(screen.getByRole('tab', { name: /Unread/ }));
+    await waitFor(() => expect(api.GET_NOTIFICATIONS).toHaveBeenLastCalledWith({ status: 'unread' }));
+    await waitFor(() => expect(screen.getAllByTestId('notification-row')).toHaveLength(2));
+  });
+
+  it('"Mark all as read" on Unread empties the open list at once, and the badge', async () => {
+    const user = userEvent.setup();
+    serve([penalty('a'), penalty('b')]);
+    renderWithI18n(<NotificationBell />);
+    await screen.findByTestId('notification-badge');
+    await user.click(bell());
+    await screen.findAllByTestId('notification-row');
+    await user.click(screen.getByRole('tab', { name: /Unread/ }));
+    await waitFor(() => expect(screen.getAllByTestId('notification-row')).toHaveLength(2));
+    await user.click(screen.getByRole('button', { name: 'Mark all as read' }));
+    expect(await screen.findByText('Everything here has been read.')).toBeTruthy();
+    expect(screen.queryAllByTestId('notification-row')).toHaveLength(0);
+    expect(screen.queryByTestId('notification-badge')).toBeNull();
+  });
+
+  it('"Mark all as read" on All keeps the rows, now read', async () => {
+    const user = userEvent.setup();
+    serve([penalty('a'), penalty('b')]);
+    renderWithI18n(<NotificationBell />);
+    await screen.findByTestId('notification-badge');
+    await user.click(bell());
+    await screen.findAllByTestId('notification-row');
+    await user.click(screen.getByRole('button', { name: 'Mark all as read' }));
+    await waitFor(() => expect(screen.queryByTestId('notification-badge')).toBeNull());
+    expect(screen.getAllByTestId('notification-row')).toHaveLength(2);
+    expect(screen.queryAllByRole('img', { name: 'Unread' })).toHaveLength(0);
+  });
+
+  it('marking one read on Unread takes it out of the list; a group being opened stays until the next load', async () => {
+    const user = userEvent.setup();
+    const single = penalty('s', { link: null });
+    single.items = single.items.map((i) => ({ ...i, link: null }));
+    const group = penalty('g', { link: null, openCount: 2 });
+    group.items = [
+      { ...group.items[0]!, id: 'g1' },
+      { ...group.items[0]!, id: 'g2', params: { employee: { en: 'Salma Nabil', ar: 'سلمى نبيل' }, violation: late, level: 2 } },
+    ];
+    serve([single, group]);
+    renderWithI18n(<NotificationBell />);
+    await screen.findByTestId('notification-badge');
+    await user.click(bell());
+    await screen.findAllByTestId('notification-row');
+    await user.click(screen.getByRole('tab', { name: /Unread/ }));
+    await waitFor(() => expect(screen.getAllByTestId('notification-row')).toHaveLength(2));
+
+    // The group: opened, read, still there with its items.
+    const toggle = screen.getByRole('button', { name: /2 penalties waiting for your approval/ });
+    await user.click(toggle);
+    await waitFor(() => expect(api.GET_NOTIFICATIONS).toHaveBeenCalledTimes(3));
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(screen.getByText('Salma Nabil')).toBeTruthy();
+    expect(screen.getByTestId('notification-badge').textContent).toBe('1');
+
+    // The single one (no link): read, and gone from Unread — as is the group, now read.
+    await user.click(screen.getByRole('button', { name: /^Penalty waiting for your approval/ }));
+    await waitFor(() => expect(screen.queryAllByTestId('notification-row')).toHaveLength(0));
+    expect(screen.queryByTestId('notification-badge')).toBeNull();
   });
 });

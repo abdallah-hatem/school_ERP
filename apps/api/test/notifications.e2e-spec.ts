@@ -395,6 +395,7 @@ describe('Notifications — core mechanism (e2e)', () => {
           resolution: 'approved',
         });
         expect(await count(id)).toBe(1);
+        expect((await list(id, '?status=unread')).meta.total).toBe(1);
       }
       await afterCommit.transaction(() =>
         notifications.resolve({ type: TYPE, subject: s2, resolution: 'cancelled' }),
@@ -403,6 +404,10 @@ describe('Notifications — core mechanism (e2e)', () => {
         const [view] = await mine(id);
         expect(view).toMatchObject({ openCount: 0, resolved: { resolution: 'done', by: null } });
         expect(await count(id)).toBe(0);
+        // Unread lists what the bell counts: done and never read, it is in All only (N5 check).
+        expect(view?.readAt).toBeNull();
+        expect((await list(id, '?status=unread')).meta.total).toBe(0);
+        expect((await list(id)).meta.total).toBe(1);
       }
       // Nothing open → 0, no error.
       expect(

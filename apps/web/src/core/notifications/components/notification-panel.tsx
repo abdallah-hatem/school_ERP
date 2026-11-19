@@ -253,7 +253,7 @@ function NotificationRow({
               <span aria-hidden="true">·</span>
               <span className="inline-flex items-center gap-1 font-bold text-success-ink">
                 <ReadyIcon className="size-3.5" />
-                <bdi>{resolvedText(n.resolved, deps, group)}</bdi>
+                <bdi>{resolvedText(n.resolved, deps, group ? n.items : undefined)}</bdi>
               </span>
             </>
           ) : null}

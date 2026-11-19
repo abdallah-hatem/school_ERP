@@ -673,7 +673,9 @@ types** and sends through core's exported `NotificationsService` — core never 
 - **Reading (N11).** Every route is the signed-in user's own (`@SignedIn`; the recipient comes from
   the token; another person's id → 404): `GET /notifications` (page, limit ≤ 50, `status=all|unread`,
   `category`), `GET /notifications/unread-count`, `POST /notifications/:id/read` / `unread`,
-  `POST /notifications/read-all` (`{ upTo }`: only those whose latest item came by then). Each read
+  `POST /notifications/read-all` (`{ upTo }`: only those whose latest item came by then).
+  `status=unread` is the count's rule (unread, unresolved, an open item the reader may see), so the
+  Unread tab and the bell always agree. Each read
   re-checks every item against the reader's **current** permission and scope with the same resolver;
   an item they may no longer see is left out of `items`, `openCount` and the count (the row stays), and
   a notification with none left is absent (and 404 on read). Read state is `@NotAudited('personal
@@ -716,7 +718,9 @@ types** and sends through core's exported `NotificationsService` — core never 
   polled every 60 s while the tab is visible and on focus (`99+`), and the list — a popover anchored
   to the bell from 768px, a full-screen `Sheet` (`side="full"`) below — with All / Unread, the latest
   20, groups opening into their items, deep links (`linkHref`: `SCREENS` path + record + query),
-  done rows and Mark all as read (`upTo` = the newest the list showed). Sentences are drawn in
+  done rows and Mark all as read (`upTo` = the newest the list showed; on Unread the list is asked
+  again at once, as after reading one there — a group being opened stays until the next load). A
+  group's title counts its open items (`openCount`); all handled, `types.<key>.groupDone`. Sentences are drawn in
   `lib/text.ts` from the type key and values (names `{ en, ar }`, months, dates, money with its
   label); a single item reads from its own values. **My account → Notifications**
   (`/account/notifications`, `SCREENS.accountNotifications`; My account's routes are `account/(profile)`
@@ -1014,7 +1018,10 @@ Frontend rules:
   owner 2026-11-18): "Clear filters · n" at the toolbar's inline end and in its "No results" state,
   shown only while something narrows the list; one click resets the search, every filter and the
   page in one URL update and brings the list's top back into view. A period (a month) is not a filter.
-- Branding (name, logo, colours) loads from settings into CSS variables.
+- Branding (name, logo, colours) loads from settings into CSS variables — for the shell, the
+  dashboard and the tab titles always from `GET /settings/school/public` (`getSchoolBranding`), so a
+  user without `core.settings.view` sees the school's name too; only the Settings screen reads
+  `GET /settings/school`.
 
 #### Skeletons match their screens (`data-skeleton-block`)
 

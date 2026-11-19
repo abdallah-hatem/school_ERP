@@ -26,9 +26,7 @@ export interface NewItem {
 }
 
 export interface ReaderFilter {
-  /** Only notifications not read yet. */
-  unread?: boolean;
-  /** Only notifications neither read nor resolved (the bell's count). */
+  /** Only notifications neither read nor resolved (the bell's count and the Unread tab). */
   open?: boolean;
   /** Only these types (a category's). */
   types?: readonly string[];
@@ -243,8 +241,7 @@ export class NotificationsRepository {
       where: {
         recipientKind: to.kind,
         recipientId: to.id,
-        ...(filter.unread || filter.open ? { readAt: null } : {}),
-        ...(filter.open ? { resolvedAt: null } : {}),
+        ...(filter.open ? { readAt: null, resolvedAt: null } : {}),
         ...(filter.types ? { type: { in: [...filter.types] } } : {}),
       },
       orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],

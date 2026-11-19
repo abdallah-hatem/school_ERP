@@ -1,5 +1,5 @@
 import { SchoolBrandingProvider } from '@/core/settings';
-import { getPublicSchoolBranding } from '@/core/settings/get-branding';
+import { getSchoolBranding } from '@/core/settings/get-branding';
 import { SchoolBrand } from '@/core/settings/school-brand';
 import { LocaleSwitch } from '@/shared/components/layout/locale-switch';
 import type { Locale, MessageTree } from '@/shared/lib/i18n';
@@ -13,7 +13,7 @@ import { LoginForm } from './LoginForm';
  * back to the product name when they can't be read.
  */
 export async function LoginPage({ locale, next }: { locale: Locale; next?: string }) {
-  const branding = await getPublicSchoolBranding();
+  const branding = await getSchoolBranding();
   const auth = getAuthMessages(locale);
 
   return (

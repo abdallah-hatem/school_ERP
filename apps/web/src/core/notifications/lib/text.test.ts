@@ -1,4 +1,4 @@
-import type { NotificationItem, NotificationItemEntry } from '@school-erp/shared';
+import type { NotificationItem, NotificationItemEntry, NotificationResolved } from '@school-erp/shared';
 import { describe, expect, it } from 'vitest';
 import { createTranslator, getBaseMessages, hasMessage, mergeMessages, type Locale } from '@/shared/lib/i18n';
 import { notificationMessages } from '../messages';
@@ -95,12 +95,70 @@ describe('notification sentences (N3, N17)', () => {
     expect(notificationText(notification('fees.invoice.overdue', [entry({})]), deps('en')).title).toBe('Notifications');
   });
 
-  it('resolved: "Approved by …" for one item, "All done" for a group', () => {
+  it('resolved: "Approved by …" for one item; a group by one person reads the same, else "All done"', () => {
     const resolved = { at: NOW, by: { en: 'Laila Hassan', ar: 'ليلى حسن' }, resolution: 'approved' as const };
     expect(resolvedText(resolved, deps('en'))).toBe('Approved by Laila Hassan');
     expect(resolvedText(resolved, deps('ar'))).toBe('اعتمده ليلى حسن');
     expect(resolvedText({ ...resolved, resolution: 'cancelled' }, deps('en'))).toBe('Cancelled by Laila Hassan');
-    expect(resolvedText(resolved, deps('en'), true)).toBe('All done');
+    const items = (ends: NotificationResolved[]) => ends.map((r, i) => ({ ...entry({ employee: omar }, `i${i}`), resolved: r }));
+    const byLaila = items([resolved, resolved, resolved]);
+    expect(resolvedText(resolved, deps('en'), byLaila)).toBe('Approved by Laila Hassan');
+    expect(resolvedText(resolved, deps('ar'), byLaila)).toBe('اعتمدها ليلى حسن');
+    const cancelled = { ...resolved, resolution: 'cancelled' as const };
+    expect(resolvedText(cancelled, deps('ar'), items([cancelled, cancelled]))).toBe('ألغاها ليلى حسن');
+    // Two people, or two ways (one approved, one cancelled), or reminders done by themselves.
+    const sara = { ...resolved, by: { en: 'Sara Adel', ar: 'سارة عادل' } };
+    expect(resolvedText(resolved, deps('en'), items([resolved, sara]))).toBe('All done');
+    expect(resolvedText(resolved, deps('en'), items([resolved, cancelled]))).toBe('All done');
+    const done = { at: NOW, by: null, resolution: 'done' as const };
+    expect(resolvedText(done, deps('ar'), items([done, done]))).toBe('تم الكل');
+  });
+});
+
+describe('a group counts what still waits (N17, N10)', () => {
+  const approved = { at: NOW, by: { en: 'Laila Hassan', ar: 'ليلى حسن' }, resolution: 'approved' as const };
+  const penalties = (handled: number) => {
+    const items = [omar, salma, amr].map((employee, i) => ({
+      ...entry({ employee, violation: late, level: 1 }, `i${i}`),
+      resolved: i < handled ? approved : null,
+    }));
+    return notification('hr.penalty.awaiting_approval', items, {
+      openCount: 3 - handled,
+      resolved: handled === 3 ? approved : null,
+    });
+  };
+
+  it('one of three approved → "2 penalties waiting…", naming the two still waiting', () => {
+    expect(notificationText(penalties(1), deps('en'))).toEqual({
+      title: '2 penalties waiting for your approval',
+      body: 'Salma Nabil, Amr Fawzy',
+    });
+    expect(notificationText(penalties(1), deps('ar')).title).toBe('جزاءان في انتظار اعتمادك');
+  });
+
+  it('two of three approved → "1 penalty waiting…" / "جزاء واحد…"', () => {
+    expect(notificationText(penalties(2), deps('en')).title).toBe('1 penalty waiting for your approval');
+    expect(notificationText(penalties(2), deps('ar')).title).toBe('جزاء واحد في انتظار اعتمادك');
+  });
+
+  it('all handled → "3 penalties — all handled", with every name', () => {
+    expect(notificationText(penalties(3), deps('en'))).toEqual({
+      title: '3 penalties — all handled',
+      body: 'Omar Khalil, Salma Nabil and 1 more',
+    });
+    expect(notificationText(penalties(3), deps('ar')).title).toBe('3 جزاءات — تمت معالجتها كلها');
+  });
+
+  it('Arabic plural forms of a handled group', () => {
+    const many = (count: number) =>
+      notification(
+        'hr.contract.ending_soon',
+        Array.from({ length: count }, (_, i) => ({ ...entry({ employee: omar, date: '2026-12-31' }, `c${i}`), resolved: approved })),
+        { openCount: 0, resolved: approved },
+      );
+    expect(notificationText(many(2), deps('ar')).title).toBe('عقدان — تمت معالجتهما');
+    expect(notificationText(many(11), deps('ar')).title).toBe('11 عقدًا — تمت معالجتها كلها');
+    expect(notificationText(many(2), deps('en')).title).toBe('2 contracts — all handled');
   });
 });
 

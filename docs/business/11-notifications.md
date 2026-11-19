@@ -29,6 +29,17 @@ and its list, My account → Notifications, Settings → Notifications).
   penalties waiting for your approval") opens into its items first, each opening its own record.
   "Mark all as read" leaves anything that arrived after the list was opened unread. Done ones stay
   in the list, greyed, with who did them ("Approved by Laila Hassan").
+- **Built** (2026-11-19, from the live check) — A group's title counts **what still waits**: one of
+  "3 penalties waiting for your approval" approved reads "2 penalties waiting for your approval",
+  with the handled one still listed, struck through. With every item handled it reads "3 penalties
+  — all handled", and "Approved by Laila Hassan" when one person approved them all (else "All
+  done").
+- **Built** (2026-11-19) — **Unread shows exactly what the bell counts**: unread notifications with
+  something still waiting that the person may see. A done one that was never read is under All
+  only. "Mark all as read", or reading one, takes it out of the open Unread list at once.
+- **Built** (2026-11-19) — Everyone sees the school's name and logo in the app (side bar, top bar,
+  dashboard, browser tab), whatever they may do; only the Settings screen needs the right to view
+  settings.
 
 ## Who is told what
 

@@ -83,8 +83,14 @@ describe('notification types (N2)', () => {
         expect({ lang, part, type: typeof text }).toEqual({ lang, part, type: 'string' });
         if (lang === 'ar') expect(text).toMatch(/[؀-ۿ]/);
       }
-      const group = at(tree, `types.${key}.group`) as Tree;
-      expect(Object.keys(group).sort()).toEqual(['few', 'many', 'one', 'other', 'two', 'zero']);
+      // `group`: what still waits; `groupDone`: a group with every item handled.
+      for (const part of ['group', 'groupDone']) {
+        const forms = at(tree, `types.${key}.${part}`) as Tree;
+        expect({ part, forms: Object.keys(forms ?? {}).sort() }).toEqual({
+          part,
+          forms: ['few', 'many', 'one', 'other', 'two', 'zero'],
+        });
+      }
     }
   });
 
