@@ -78,8 +78,14 @@ start_db() {
       "Stop whatever uses it (lsof -i :$DB_PORT), or pick another port:" \
       "  DB_PORT=5443 pnpm run setup      (or edit DB_PORT in the root .env)"
   fi
-  (cd "$root" && docker compose up -d db >/dev/null 2>&1) || (cd "$root" && docker compose up -d db) \
-    || die "Could not start the database container ($DB_CONTAINER)."
+  if [[ -n "$state" ]]; then
+    # The container already exists (maybe made by another compose project): start it as it is.
+    [[ "$state" == "running" ]] || docker start "$DB_CONTAINER" >/dev/null \
+      || die "Could not start the database container ($DB_CONTAINER)." "See: docker logs $DB_CONTAINER"
+  else
+    (cd "$root" && docker compose up -d db >/dev/null 2>&1) || (cd "$root" && docker compose up -d db) \
+      || die "Could not start the database container ($DB_CONTAINER)."
+  fi
   local i
   for ((i = 0; i < 60; i++)); do
     if docker exec "$DB_CONTAINER" psql -U postgres -h 127.0.0.1 -d postgres -tAc 'select 1' >/dev/null 2>&1; then
