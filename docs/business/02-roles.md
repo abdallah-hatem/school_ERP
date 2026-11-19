@@ -14,6 +14,14 @@
   the current password.
 - **DECIDED** — Deactivating a user, or giving them a temporary password, signs them out everywhere
   at once.
+- **DECIDED** (owner, 2026-11-19) — A user account and an employee are separate: a user may have
+  **one employee record** (who they are in HR), and an employee at most one account. The user form
+  asks **"Who is this person in HR?"**; the users list calls it **Employee record** ("No employee
+  record" when there is none). Only roles limited to *their stage*, *their team* or *themselves*
+  need it: when such a role is picked without an employee record, the form warns "This person will
+  see no records until you pick who they are in HR" — a warning, not a blocker. An employee's
+  profile says **"Signs in as: <name>"** (a link to the user's page for those who may open users)
+  or **"No sign-in account"**, to anyone who may see the employee.
 
 ### Security: sign-in limits
 
@@ -57,7 +65,7 @@
   the employees they directly manage. That covers every list, count, search, picker and dashboard
   figure, their penalties, lateness and payroll lines, and the activity log's entries about them.
   Opening anyone else shows "This page isn't here", as for a record that doesn't exist. Someone in
-  such a role who isn't linked to an employee sees nobody. Each screen, tab, section and button is
+  such a role who has no employee record sees nobody. Each screen, tab, section and button is
   shown only to those who may use it.
 - **GUESS** — The payroll tax rule (§10) belongs to the Accountant (view and change) and the
   System admin (owner, 2026-11-18).
