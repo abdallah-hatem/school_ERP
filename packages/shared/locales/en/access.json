@@ -239,7 +239,7 @@
     "scopes": {
       "all": "Every employee in the school.",
       "own_stage": "Employees of the stage of the user's employee record.",
-      "own_team": "Employees whose direct manager is the user's employee record.",
+      "own_team": "Employees this user manages directly, through their employee record.",
       "self": "Only the user's own employee record."
     },
     "systemAdminTitle": "Holds every permission",
