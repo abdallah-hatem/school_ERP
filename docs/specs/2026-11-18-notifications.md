@@ -232,7 +232,9 @@ change fails too (GUESS: correctness over availability, as the audit log). Zero 
 - **Bell**: the number of unread, unresolved notifications the reader may still see (N11). Over 99
   → "99+".
 - **List**: newest first, server-paged (20 per page), filter All / Unread, and by category (Needs
-  action / Reminders). Each row: icon of its type, the sentence in the reader's language, how long
+  action / Reminders). Unread lists exactly what the bell counts (a done one, read or not, is under
+  All only); a group's title counts its open items ("2 penalties waiting…"; all handled: "3
+  penalties — all handled"). Each row: icon of its type, the sentence in the reader's language, how long
   ago ("3 min ago", "Yesterday 14:20" — school time zone), unread dot, resolved line.
 - **Open** a notification → it is marked read and the app goes to its link (a group opens into its
   items first; each item has its own link). A link the reader

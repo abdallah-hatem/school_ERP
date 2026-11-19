@@ -113,7 +113,7 @@ export function TypeSwitchList({
                     </span>
                   ) : null}
                 </span>
-                <RowSwitch row={row} />
+                <RowSwitch row={row} align="end" />
               </div>
             ))}
           </Fragment>
@@ -168,13 +168,17 @@ function ChangedPill() {
   );
 }
 
-/** The switch with its note under it; a required type's is on, locked and says "Required". */
-function RowSwitch({ row }: { row: TypeSwitchRow }) {
+/**
+ * The switch with its note under it; a required type's is on, locked and says "Required". In the
+ * table it is centred under its column; on a card (`align="end"`) it keeps to the card's inline end,
+ * so a long note ("Reset to school default") doesn't push the switch inward on that one row.
+ */
+function RowSwitch({ row, align = 'center' }: { row: TypeSwitchRow; align?: 'center' | 'end' }) {
   const { t } = useTranslation();
   const id = useId();
   const name = t(`notifications.types.${row.type}.name`);
   return (
-    <span className="flex shrink-0 flex-col items-center gap-1">
+    <span className={cn('flex shrink-0 flex-col gap-1', align === 'end' ? 'items-end' : 'items-center')}>
       <Switch
         id={id}
         aria-label={name}
@@ -191,7 +195,7 @@ function RowSwitch({ row }: { row: TypeSwitchRow }) {
           {t('notifications.required')}
         </small>
       ) : row.note ? (
-        <small className="text-center text-[0.6875rem] text-muted-foreground">{row.note}</small>
+        <small className={cn('text-[0.6875rem] text-muted-foreground', align === 'end' ? 'text-end' : 'text-center')}>{row.note}</small>
       ) : null}
     </span>
   );

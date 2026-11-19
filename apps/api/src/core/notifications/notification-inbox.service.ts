@@ -23,6 +23,12 @@ export interface InboxQuery {
 const me = (user: Who): Recipient => ({ kind: 'user', id: user.id });
 
 /**
+ * What the bell counts and the Unread tab lists — one rule for both: unread, unresolved (the
+ * query's `open`), with at least one open item the reader may still see.
+ */
+const countsInBell = (view: NotificationItem): boolean => view.openCount > 0;
+
+/**
  * The bell (spec → Reading): a person's own notifications only — the recipient is always the
  * signed-in user, never a parameter; another person's id answers 404. Every read re-checks each
  * item against the reader's current permission and scope (N11): an item they may no longer see is
@@ -44,11 +50,14 @@ export class NotificationInbox {
    * 90 / 30 / 365 days, N14).
    */
   async list(user: Who, query: InboxQuery): Promise<Paginated<NotificationItem>> {
+    const unread = query.status === 'unread';
     const rows = await this.notifications.findForReader(me(user), {
-      unread: query.status === 'unread',
+      // Unread is exactly what the bell counts (`unreadCount`): a done one, unread or not, isn't.
+      open: unread,
       types: query.category ? this.typesOf(query.category) : undefined,
     });
-    const views = await this.visible(user, rows);
+    const visible = await this.visible(user, rows);
+    const views = unread ? visible.filter(countsInBell) : visible;
     const total = views.length;
     const start = (query.page - 1) * query.limit;
     return {
@@ -68,7 +77,7 @@ export class NotificationInbox {
   async unreadCount(user: Who): Promise<NotificationUnreadCount> {
     const rows = await this.notifications.findForReader(me(user), { open: true });
     const views = await this.visible(user, rows);
-    return { count: views.filter((v) => v.openCount > 0).length };
+    return { count: views.filter(countsInBell).length };
   }
 
   async markRead(user: Who, id: string): Promise<NotificationItem> {

@@ -174,15 +174,28 @@ function useInbox() {
     };
   }, [refreshCount]);
 
-  const load = useCallback(async (which: InboxStatus) => {
+  /**
+   * The tab's first page. `keep`: a group the reader just opened on Unread stays where it was
+   * (read now, so the API leaves it out) while they look through its items; the next load drops it.
+   */
+  const load = useCallback(async (which: InboxStatus, keep?: NotificationItem) => {
     const seq = ++loadSeq.current;
     const res = await callApi(GET_NOTIFICATIONS({ status: which }), { showErrorToast: false });
     if (seq !== loadSeq.current) return;
     setRetrying(false);
     if (res.unauthorized) return;
     if (res.success) {
-      setItems(res.data ?? []);
-      setTotal(res.meta?.total ?? res.data?.length ?? 0);
+      const fresh = res.data ?? [];
+      setItems((old) => {
+        if (!keep || fresh.some((x) => x.id === keep.id)) return fresh;
+        const at = old?.findIndex((x) => x.id === keep.id) ?? -1;
+        const kept = at >= 0 ? old?.[at] : undefined;
+        if (!kept) return fresh;
+        const next = [...fresh];
+        next.splice(Math.min(at, next.length), 0, kept);
+        return next;
+      });
+      setTotal(res.meta?.total ?? fresh.length);
       setFailed(false);
       setNow(new Date().toISOString());
     } else {
@@ -213,12 +226,15 @@ function useInbox() {
       if (n.readAt) return;
       const at = new Date().toISOString();
       setItems((list) => list?.map((x) => (x.id === n.id ? { ...x, readAt: at } : x)));
-      // A resolved one no longer counts (N10), so only an open one lowers the number.
-      if (!n.resolved) setCount((c) => Math.max(0, c - 1));
+      // Unread lists what the bell counts (open items only), so an open one lowers the number.
+      if (n.openCount > 0) setCount((c) => Math.max(0, c - 1));
       const res = await callApi(MARK_NOTIFICATION_READ(n.id), { showErrorToast: false });
       if (!res.success) void refreshCount();
+      // Unread is what the bell counts: the one just read leaves it (a group being opened stays
+      // until the next load, so its items don't vanish under the reader).
+      else if (status === 'unread') void load('unread', n.items.length > 1 ? n : undefined);
     },
-    [refreshCount],
+    [load, refreshCount, status],
   );
 
   const markAll = useCallback(async () => {
@@ -231,13 +247,15 @@ function useInbox() {
       if (res.success) {
         const at = new Date().toISOString();
         setItems((list) => list?.map((x) => (x.readAt || x.updatedAt > upTo ? x : { ...x, readAt: at })));
+        // On Unread the list is asked again at once: what was read leaves it, a newer one stays.
+        if (status === 'unread') await load('unread');
       }
       await refreshCount();
     } finally {
       markingRef.current = false;
       setMarkingAll(false);
     }
-  }, [items, refreshCount]);
+  }, [items, load, refreshCount, status]);
 
   const retry = useCallback(() => {
     setRetrying(true);
