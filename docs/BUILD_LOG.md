@@ -353,14 +353,13 @@ phase live in `docs/build-log/`.
   permission); every other role, starting or custom, can be deleted once nobody holds it ("Starting
   role" badge, a warning that future permissions won't reach a replacement); grant migrations skip a
   deleted role (replay test).
+- 2026-11-19 — Money cap → #154 (owner): salary, insured salary and each payroll adjustment are at
+  most EGP 1,000,000.00 a month — one shared constant `MAX_MONTHLY_PIASTRES`, enforced by the API
+  DTOs and the web forms ("At most EGP 1,000,000.00 a month."). Removes the overflow #149 found.
+  N5 (live notifications check) started.
 
 ## Next up
 
-- **Owner decision — money limits (from #149):** payroll money is stored in 32-bit integers; a
-  salary near EGP 21M plus a large addition returns a 500, and an employee net above ~EGP 15.5M
-  never gets its taxes worked out. Recommended: cap salary, insured salary and adjustments at EGP
-  1,000,000 a month (`MAX_PIASTRES` / `MAX_ADJUSTMENT_PIASTRES`); the alternative is BigInt
-  columns (accounting part is Tamer's).
 - Outbox nits (from #121's live test, cosmetic): the "dead after 10 failures" log line always says
   10 (after an admin retry it's 11); a dead row still gets a `next_attempt_at`. A lock held longer
   than Prisma's 15 s transaction timeout counts as one failure, then the next tick delivers it.
