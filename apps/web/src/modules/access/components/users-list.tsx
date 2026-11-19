@@ -148,6 +148,8 @@ export function UsersList({ basePath, query, rows, total, roles, lastAdminId, no
     {
       id: 'employee',
       header: t('access.users.columns.employee'),
+      // Across the card: "No employee record" in half a card wraps to two lines on a phone.
+      card: 'wide',
       className: 'w-40',
       cell: (u) =>
         u.employee ? (
