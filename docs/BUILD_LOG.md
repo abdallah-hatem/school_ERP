@@ -364,6 +364,12 @@ phase live in `docs/build-log/`.
   ("2 penalties waiting…", "3 penalties — all handled · Approved by …"); the Unread tab equals the
   bell count and refreshes after Mark all read; every role sees the school's name and logo (shell
   reads the public endpoint); AR phone preference switches aligned. Notifications N0–N5 done.
+- 2026-11-19 — Fresh-clone setup → #158 (owner: it didn't run on a friend's PC): `pnpm run setup`
+  (checks Node/pnpm/Docker, starts Postgres, creates the env files with generated secrets only if
+  missing, builds shared, migrates, seeds once) and `pnpm dev` (API + web + shared watch together);
+  root README with prerequisites, logins, ports and troubleshooting; ports/DB overridable for a second
+  copy. Proven on a fresh clone (setup twice, dev, headless sign-in). Note: `pnpm setup` alone is
+  pnpm's own command — use `pnpm run setup`.
 
 ## Next up
 
