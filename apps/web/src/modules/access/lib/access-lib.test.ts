@@ -5,7 +5,7 @@ import en from '@school-erp/shared/locales/en/access.json';
 import { changedCount, setModule, setScope, toGrantMap, toGrants, toggle } from './role-grants';
 import { formatSignIn } from './sign-in-time';
 import { generateTemporaryPassword } from './temp-password';
-import { changedFields, formToUpdate, type UserFormValues } from './user-form';
+import { changedFields, formToUpdate, rolesNeedEmployee, type UserFormValues } from './user-form';
 import { activeFilterCount, hasActiveFilters, parseUsersQuery, usersQueryString } from './users-query';
 
 describe('users list URL', () => {
@@ -71,6 +71,30 @@ describe('user form diff', () => {
     const next = { ...saved, roleIds: ['a'], employee: { id: 'e', code: 'E', nameEn: 'E', nameAr: 'E', photoUrl: null, gender: 'FEMALE' as const } };
     expect(formToUpdate(saved, next)).toEqual({ roleIds: ['a'], employeeId: 'e' });
     expect(formToUpdate(next, saved)).toEqual({ roleIds: ['a', 'b'], employeeId: null });
+  });
+});
+
+describe('roles that need an employee record', () => {
+  const roles = [
+    { id: 'whole', permissions: [{ key: 'hr.employees.view' as const, scope: 'all' as const }] },
+    { id: 'stage', permissions: [{ key: 'hr.dashboard.view' as const, scope: 'all' as const }, { key: 'hr.employees.view' as const, scope: 'own_stage' as const }] },
+    { id: 'team', permissions: [{ key: 'hr.employees.view' as const, scope: 'own_team' as const }] },
+    { id: 'self', permissions: [{ key: 'hr.payroll.view' as const, scope: 'self' as const }] },
+    { id: 'empty', permissions: [] },
+  ];
+
+  it('any picked role with a stage, team or self scope needs one', () => {
+    expect(rolesNeedEmployee(roles, ['stage'])).toBe(true);
+    expect(rolesNeedEmployee(roles, ['team'])).toBe(true);
+    expect(rolesNeedEmployee(roles, ['self'])).toBe(true);
+    expect(rolesNeedEmployee(roles, ['whole', 'team'])).toBe(true);
+  });
+
+  it('whole-school roles, no roles, or a scoped role that is not picked: no need', () => {
+    expect(rolesNeedEmployee(roles, ['whole'])).toBe(false);
+    expect(rolesNeedEmployee(roles, ['whole', 'empty'])).toBe(false);
+    expect(rolesNeedEmployee(roles, [])).toBe(false);
+    expect(rolesNeedEmployee(roles, ['gone'])).toBe(false);
   });
 });
 

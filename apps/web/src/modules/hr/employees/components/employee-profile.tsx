@@ -120,14 +120,17 @@ export function EmployeeProfileShell({
           leading={<PersonAvatar photoUrl={employee.photoUrl} gender={employee.gender} size="lg" muted={employee.status !== EmployeeStatus.ACTIVE} />}
           status={<EmployeeStatusPill status={employee.status} />}
           description={
-            <span className="flex flex-wrap items-center gap-x-2">
-              <bdi dir="ltr" className="tabular">
-                {employee.code}
-              </bdi>
-              <span aria-hidden="true">·</span>
-              <span>{localName(employee.jobTitle, locale)}</span>
-              <span aria-hidden="true">·</span>
-              <span>{localName(employee.department, locale)}</span>
+            <span className="flex flex-col gap-1">
+              <span className="flex flex-wrap items-center gap-x-2">
+                <bdi dir="ltr" className="tabular">
+                  {employee.code}
+                </bdi>
+                <span aria-hidden="true">·</span>
+                <span>{localName(employee.jobTitle, locale)}</span>
+                <span aria-hidden="true">·</span>
+                <span>{localName(employee.department, locale)}</span>
+              </span>
+              <SignInAccountLine account={employee.signInAccount} />
             </span>
           }
           breadcrumbs={[{ label: t('employees.title'), href: basePath }, { label: localName(employee, locale) }]}
@@ -152,6 +155,34 @@ export function EmployeeProfileShell({
         {children}
       </div>
     </ProfileEmployeeContext.Provider>
+  );
+}
+
+/**
+ * Who signs in as this employee: "Signs in as: <name>" or "No sign-in account". Everyone who sees
+ * the employee reads it; the name links to the user page only for viewers who may open users.
+ */
+export function SignInAccountLine({ account }: { account: Employee['signInAccount'] }) {
+  const { t, locale } = useTranslation();
+  const canOpenUsers = useCan()('core.users.view');
+  if (!account) return <span>{t('employees.profile.noAccount')}</span>;
+  return (
+    <span className="flex flex-wrap items-center gap-x-1.5">
+      <span>{t('employees.profile.signsInAs')}</span>
+      {canOpenUsers ? (
+        <Link
+          href={`/${locale}/users/${account.id}`}
+          className={cn(
+            'tap-target cursor-pointer rounded-sm font-semibold break-words text-foreground decoration-2 underline-offset-3 transition-colors duration-150',
+            'hover:text-primary hover:underline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring/55',
+          )}
+        >
+          <bdi>{account.name}</bdi>
+        </Link>
+      ) : (
+        <bdi className="font-semibold break-words text-foreground">{account.name}</bdi>
+      )}
+    </span>
   );
 }
 

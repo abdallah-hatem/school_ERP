@@ -477,7 +477,10 @@ Roles are rows, not code (spec P2, R2 / R5 / R8 / R9). A school changes them thr
   leave the rest out, and a record's History answers 404. A payroll run's `totals` stay visible to
   an `hr.payroll.view` holder at scope `all`, as on the Payroll screen.
 - **Linked employee.** `users.employee_id` (unique, core-owned) is the link (R9). HR's older
-  `employees.user_id` was copied into it by the migration and was dropped in P4.
+  `employees.user_id` was copied into it by the migration and was dropped in P4. On screen it is the
+  user's **employee record** ("Who is this person in HR?"). HR's `Employee` carries
+  `signInAccount` (`{ id, name }` or null) for the profile's "Signs in as" line, read through core's
+  exported `UsersService.accountOfEmployee` — HR never reads the users table itself.
 - **The `users.role` enum column is gone** (P3 migration `users_drop_role_add_sign_in`): access
   comes only from `user_roles`, the access token carries only the user's id, the user chip shows the
   names of their roles and every signed-in user's home is the dashboard (`homeFor(locale)`). Without

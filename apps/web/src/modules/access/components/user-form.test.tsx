@@ -147,7 +147,7 @@ describe('UserForm', () => {
     );
   });
 
-  it('the linked-employee picker asks the API and won’t pick an employee who has an account', async () => {
+  it('the employee-record picker asks the API and won’t pick an employee who has an account', async () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 });
     options.mockResolvedValue(
       ok(
@@ -167,6 +167,40 @@ describe('UserForm', () => {
     await user.click(screen.getByRole('option', { name: /Rana Mostafa/ }));
     expect(screen.getByRole('combobox', { name: 'Employee' }).textContent).toContain('Rana Mostafa · EMP-0072');
     expect(screen.getByText('1 unsaved change')).toBeTruthy();
+  });
+
+  it('roles limited to a stage, team or self without an employee record: a warning by the field, Save still works', async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    update.mockResolvedValue(ok(officer) as Res<typeof UPDATE_USER>);
+    const warning = 'This person will see no records until you pick who they are in HR.';
+    renderAccess(<UserForm basePath="/en/users" user={officer} roles={ROLES} now={NOW} />);
+    expect(screen.getByRole('heading', { level: 2, name: /^Who is this person in HR\?/ })).toBeTruthy();
+    // HR officer sees the whole school: no warning.
+    expect(screen.queryByText(warning)).toBeNull();
+
+    await user.click(roleBox('Stage head'));
+    expect(screen.getByText(warning)).toBeTruthy();
+    await user.click(roleBox('Stage head'));
+    expect(screen.queryByText(warning)).toBeNull();
+
+    await user.click(roleBox('Direct manager'));
+    expect(screen.getByText(warning)).toBeTruthy();
+    const save = screen.getByRole('button', { name: 'Save' });
+    expect((save as HTMLButtonElement).disabled).toBe(false);
+    await user.click(save);
+    await waitFor(() =>
+      expect(update).toHaveBeenCalledWith(officer.id, { roleIds: [role('hr_officer').id, role('direct_manager').id] }),
+    );
+  });
+
+  it('a scoped role with an employee record picked: no warning', () => {
+    const head = account({
+      ...officer,
+      roles: [{ ...role('stage_head') }],
+      employee: { id: 'e-2', code: 'EMP-0072', nameEn: 'Rana Mostafa', nameAr: 'رنا', photoUrl: null, gender: 'FEMALE' },
+    });
+    renderAccess(<UserForm basePath="/en/users" user={head} roles={ROLES} now={NOW} />);
+    expect(screen.queryByText('This person will see no records until you pick who they are in HR.')).toBeNull();
   });
 
   it('a locked sign-in: the Status card says until when, and Unlock sign-in asks first', async () => {

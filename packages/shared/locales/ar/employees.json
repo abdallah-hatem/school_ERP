@@ -168,7 +168,9 @@
     "details": "البيانات",
     "history": "السجل",
     "notSet": "غير محدد",
-    "edit": "تعديل"
+    "edit": "تعديل",
+    "signsInAs": "يدخل باسم:",
+    "noAccount": "ليس له حساب دخول"
   },
   "status": {
     "deactivate": "إيقاف",

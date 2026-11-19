@@ -60,6 +60,8 @@ describe('Home without hr.dashboard.view', () => {
   it('no permission at all: says so, and still offers My account', () => {
     renderAs(sessionWith());
     expect(screen.getByText('No screens yet')).toBeTruthy();
+    // They may already hold a role: the hint never claims they have none.
+    expect(screen.getByText("Your roles don't open any screen yet. Ask the system admin if you need one.")).toBeTruthy();
     expect(links()).toEqual([['My account', '/en/account']]);
   });
 

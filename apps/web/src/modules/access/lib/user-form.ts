@@ -1,4 +1,12 @@
-import { ErrorCode, GENDERS, type CreateUserRequest, type UpdateUserRequest, type UserAccount } from '@school-erp/shared';
+import {
+  ErrorCode,
+  GENDERS,
+  PermissionScope,
+  type CreateUserRequest,
+  type Role,
+  type UpdateUserRequest,
+  type UserAccount,
+} from '@school-erp/shared';
 import { z } from 'zod';
 
 /*
@@ -86,4 +94,14 @@ export function fieldForError(code: unknown): keyof UserFormValues | null {
     default:
       return null;
   }
+}
+
+/**
+ * Whether the picked roles grant anything limited to the user's stage, team or self (R5). Such a
+ * scope works from the user's employee record; without one the person sees no records under it, so
+ * the form warns (not a blocker — Save still works).
+ */
+export function rolesNeedEmployee(roles: readonly Pick<Role, 'id' | 'permissions'>[], roleIds: readonly string[]): boolean {
+  const picked = new Set(roleIds);
+  return roles.some((role) => picked.has(role.id) && role.permissions.some((g) => g.scope !== PermissionScope.ALL));
 }
