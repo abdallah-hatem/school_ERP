@@ -370,6 +370,36 @@ phase live in `docs/build-log/`.
   root README with prerequisites, logins, ports and troubleshooting; ports/DB overridable for a second
   copy. Proven on a fresh clone (setup twice, dev, headless sign-in). Note: `pnpm setup` alone is
   pnpm's own command — use `pnpm run setup`.
+- 2026-11-19 — Setup fix → #160: setup and `pnpm dev` stopped when `school-erp-db` had been
+  created by another compose project (compose won't reuse the name); `start_db` now starts an
+  existing container and uses `docker compose up` only when there is none. Proven on the owner's
+  machine (setup ran, migrations applied, seed skipped, app up on 3000/3001).
+- 2026-11-19 — Collapsible permissions → #162 (owner: "needs to be collapsable like Penalty
+  catalogue"): a role's Core/HR/Accounting groups fold open and shut, start closed (open when they
+  hold unsaved changes); "Turn all on/off" works on a closed group. Checked in screenshots (EN
+  desktop, AR phone).
+- 2026-11-19 — Dashboard with no tiles → #163 (owner: had "View the HR dashboard" but saw nothing):
+  each tile also needs its screen's view permission (by design); a role with the dashboard but no
+  tile now gets the welcome with its screens instead of an empty Home; the permission's text says
+  so (EN/AR). Checked in screenshots.
+- 2026-11-19 — Employee record → #165 (owner: "linked employee is kinda confusing"): the field is
+  "Who is this person in HR?" ("Employee record" in lists; AR ملف الموظف) with a hint on why scoped
+  roles need it; a non-blocking warning when a scoped role has none; "Signs in as" / "No sign-in
+  account" on the employee profile (`signInAccount` on the API employee, through core's
+  UsersService); the welcome no longer tells someone with a role to ask for one. Smoke caught two
+  skeleton-height mismatches from the new rows; fixed in the skeletons, check unchanged. Checked
+  in screenshots (EN desktop, AR phone).
+- 2026-11-19 — Owner: refresh `demo` from `dev` → dev→demo PR #167 (green, waits for the owner's
+  approval). Dry run → #168 (`docs/demo/dry-runs/2026-11-19.md`, DEMO_SCRIPT updated): AR, EN, phone
+  on two DB copies; every money figure matched by hand (payslips, run totals, bank sheet, 76 tax
+  lines). Must fix: (1) raw values in History/Activity → fixed in #169; (2–4) demo-database data,
+  the owner's: re-run the seed (set SEED_ADMIN_PASSWORD to the current admin password first —
+  the reseed resets it), remove "Test User" and "Test Role AR", insure 2–3 employees and add an HR
+  officer and an Accountant login before the demo. 7 later items in the record.
+- 2026-11-19 — Audit values → #169: History and Activity show insurance status and highest degree
+  as labels, insured salary as money (EGP 6,500.00, counted as money and hidden without salary
+  access), and a photo or school-logo change as "Photo added / changed / removed" — never a file
+  name. Checked in screenshots (EN desktop, AR phone).
 
 ## Next up
 

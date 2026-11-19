@@ -8,8 +8,9 @@ import {
   type PermissionScope,
 } from '@school-erp/shared';
 import { RadioGroup } from 'radix-ui';
+import { useState } from 'react';
 import { Switch } from '@/shared/components/ui/switch';
-import { AccountingModuleIcon, CheckIcon, CoreModuleIcon, HrModuleIcon, type AppIcon } from '@/shared/components/ui/icons';
+import { AccountingModuleIcon, CheckIcon, ChevronDownIcon, CoreModuleIcon, HrModuleIcon, type AppIcon } from '@/shared/components/ui/icons';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { isChanged, moduleGroups, type GrantMap } from '../lib/role-grants';
@@ -24,6 +25,9 @@ const MODULE_ICON: Record<PermissionModule, AppIcon> = {
  * A role's permissions grouped by module (P3, option A): a switch per permission with its label
  * and description, and — for the row-level ones — whose records it covers, inline. Whole-school
  * permissions say "Whole school". `readOnly` (the System admin) shows every permission locked on.
+ * Each module folds open and shut like the penalty catalogue's groups. They start closed, except
+ * a module with unsaved changes (it was opened to make them); "Turn all on/off" sits outside the
+ * fold button, so it works on a closed module without opening it.
  */
 export function PermissionGroups({
   value,
@@ -42,46 +46,75 @@ export function PermissionGroups({
   readOnly?: boolean;
 }) {
   const { t } = useTranslation();
+  const groups = moduleGroups(value);
+  const [open, setOpen] = useState<Set<PermissionModule>>(
+    () => new Set(groups.filter(({ keys }) => keys.some((k) => isChanged(saved, value, k))).map((g) => g.module)),
+  );
+  function toggleOpen(module: PermissionModule) {
+    setOpen((prev) => {
+      const next = new Set(prev);
+      if (next.has(module)) next.delete(module);
+      else next.add(module);
+      return next;
+    });
+  }
   return (
     <div className="@container flex flex-col">
-      {moduleGroups(value).map(({ module, keys, on }) => {
+      {groups.map(({ module, keys, on }) => {
         const Icon = MODULE_ICON[module];
         const all = on === keys.length;
+        const expanded = open.has(module);
+        const panelId = `perm-module-${module}-panel`;
         return (
-          <section key={module} aria-labelledby={`perm-module-${module}`} className="flex flex-col">
-            <div className="flex items-center gap-3 border-b border-border px-5 py-3 md:px-6">
-              <span aria-hidden="true" className="grid size-8 place-items-center rounded-lg bg-primary-soft text-primary">
-                <Icon className="size-4.5" />
-              </span>
-              <h3 id={`perm-module-${module}`} className="font-display text-base font-extrabold">
-                {t(`permissions.modules.${module}`)}
+          <section key={module} aria-labelledby={`perm-module-${module}`} className="flex flex-col border-b border-border last:border-b-0">
+            <div className={cn('flex items-center gap-3 px-5 py-3 md:px-6', expanded && 'border-b border-border bg-muted')}>
+              <h3 className="flex min-w-0 flex-1">
+                <button
+                  type="button"
+                  aria-expanded={expanded}
+                  aria-controls={panelId}
+                  onClick={() => toggleOpen(module)}
+                  className="tap-target flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-lg text-start"
+                >
+                  <ChevronDownIcon
+                    className={cn('size-5 shrink-0 text-muted-foreground transition-transform duration-150', !expanded && '-rotate-90 rtl:rotate-90')}
+                  />
+                  <span aria-hidden="true" className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary-soft text-primary">
+                    <Icon className="size-4.5" />
+                  </span>
+                  <span id={`perm-module-${module}`} className="font-display text-base font-extrabold">
+                    {t(`permissions.modules.${module}`)}
+                  </span>
+                  <span className="tabular text-xs font-semibold text-muted-foreground">
+                    {t('access.roleForm.groupCount', { on, total: keys.length })}
+                  </span>
+                </button>
               </h3>
-              <span className="tabular text-xs font-semibold text-muted-foreground">
-                {t('access.roleForm.groupCount', { on, total: keys.length })}
-              </span>
               {readOnly ? null : (
                 <button
                   type="button"
                   onClick={() => onModule(module, !all)}
-                  className="tap-target ms-auto cursor-pointer rounded-md text-sm font-bold text-primary hover:underline"
+                  className="tap-target shrink-0 cursor-pointer rounded-md text-sm font-bold text-primary hover:underline"
                 >
                   {all ? t('access.roleForm.turnAllOff') : t('access.roleForm.turnAllOn')}
                 </button>
               )}
             </div>
-            <ul className="flex flex-col">
-              {keys.map((key) => (
-                <PermissionRow
-                  key={key}
-                  permission={key}
-                  scope={value[key]}
-                  changed={isChanged(saved, value, key)}
-                  readOnly={readOnly}
-                  onToggle={onToggle}
-                  onScope={onScope}
-                />
-              ))}
-            </ul>
+            {expanded ? (
+              <ul id={panelId} className="flex flex-col">
+                {keys.map((key) => (
+                  <PermissionRow
+                    key={key}
+                    permission={key}
+                    scope={value[key]}
+                    changed={isChanged(saved, value, key)}
+                    readOnly={readOnly}
+                    onToggle={onToggle}
+                    onScope={onScope}
+                  />
+                ))}
+              </ul>
+            ) : null}
           </section>
         );
       })}

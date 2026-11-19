@@ -14,7 +14,7 @@ import {
   type AuditLabel,
   type Names,
 } from '@school-erp/shared';
-import { formatCount, formatDate, formatDayCount, formatDays, formatMoney, formatMonth } from '@/shared/lib/format';
+import { formatCount, formatDate, formatDayCount, formatDays, formatMoney, formatMoneyText, formatMonth } from '@/shared/lib/format';
 import { localName, type Locale, type Translate } from '@/shared/lib/i18n';
 import { formatSchoolDateTime } from './time';
 
@@ -119,6 +119,29 @@ function isStep(value: unknown): value is { hour: number; days: number } {
   );
 }
 
+/** Fields holding a stored file: their changes read as words ("Photo changed"), never file names. */
+const FILE_FIELDS: Readonly<Record<string, 'photo' | 'logo'>> = {
+  photoUrl: 'photo',
+  [SchoolSettingKey.LOGO_URL]: 'logo',
+};
+
+function fileKind(field: string): 'photo' | 'logo' | null {
+  return FILE_FIELDS[field] ?? null;
+}
+
+/**
+ * A file field's change in words, from whether each side is empty: "Photo added" / "Photo changed" /
+ * "Photo removed" (`audit.values.file.<kind>.<what>`); null when it isn't a file field or both are empty.
+ */
+export function fileChangeText(field: string, before: unknown, after: unknown, t: Translate): string | null {
+  const kind = fileKind(field);
+  if (!kind) return null;
+  const empty = (v: unknown) => v === null || v === undefined || v === '';
+  if (empty(before) && empty(after)) return null;
+  const what = empty(before) ? 'added' : empty(after) ? 'removed' : 'changed';
+  return t(`audit.values.file.${kind}.${what}`);
+}
+
 /** Which `common.enums.*` list a field's values come from, per record type. */
 function enumOf(field: string, entityType: AuditEntityType | undefined): string | null {
   switch (field) {
@@ -126,6 +149,10 @@ function enumOf(field: string, entityType: AuditEntityType | undefined): string 
       return 'gender';
     case 'workSystem':
       return 'workSystem';
+    case 'insuranceStatus':
+      return 'insuranceStatus';
+    case 'highestDegree':
+      return 'degree';
     case 'action':
       return 'penaltyAction';
     case 'type':
@@ -140,7 +167,8 @@ function enumOf(field: string, entityType: AuditEntityType | undefined): string 
 }
 
 /**
- * A value as the timeline shows it (money is drawn by `<Money>` instead). Settings keys keep their
+ * A value as the timeline shows it (the timeline draws money with `<Money>`; as text it reads the
+ * same, "EGP 6,500.00" / "6,500.00 ج.م", never the stored piastres). Settings keys keep their
  * old history formatting (§7): weekdays, lateness steps, part-time percentages, list items.
  */
 export function formatAuditValue(
@@ -161,8 +189,9 @@ export function formatAuditValue(
     if (field === HrSettingKey.PENALTIES_REPETITION_WINDOW) return t(`common.enums.repetitionWindow.${value}`);
     // A role's permission line holds its scope: "Everyone", "Their stage".
     if (PERMISSION_PART.test(field) && has(`permissions.scopes.${value}`)) return t(`permissions.scopes.${value}`);
-    // A stored file (the school logo, an employee's photo) reads as its file name.
-    if (field === SchoolSettingKey.LOGO_URL || field === 'photoUrl') return value.split('/').pop() ?? value;
+    // A stored file (the school logo, an employee's photo) never shows its stored name
+    // (`changeRows` turns the change into "Photo changed"); a lone value reads "Uploaded".
+    if (fileKind(field)) return t('audit.values.file.uploaded');
     const enumList = enumOf(field, entityType);
     if (enumList && has(`common.enums.${enumList}.${value}`)) return t(`common.enums.${enumList}.${value}`);
     if (field === 'month' && isMonth(value)) return formatMonth(value, locale);
@@ -173,6 +202,9 @@ export function formatAuditValue(
   if (typeof value === 'number') {
     if (totalPartKind(field) === 'count') return formatCount(value);
     if (totalPartKind(field) === 'money') return formatMoney(value);
+    if (isMoneyField(field)) {
+      return has('ui.units.currency') ? formatMoneyText(value, locale, t('ui.units.currency')) : formatMoney(value);
+    }
     if (field === HrSettingKey.LATENESS_EXTRA_HOUR_DAYS || field === 'days') return formatDayCount(value, locale);
     if (field === AccountingSettingKey.PAYROLL_MARTYR_PERCENT || field === AccountingSettingKey.PAYROLL_INSURANCE_PERCENT) {
       return `${value}%`;
@@ -239,6 +271,8 @@ export interface ChangeRow {
   created: boolean;
   /** The values were left out for this viewer (salary, R7): the row says "changed" without them. */
   hidden?: boolean;
+  /** The whole line in words, drawn instead of label and values: a file's "Photo changed". */
+  text?: string;
 }
 
 type Parts = Record<string, unknown>;
@@ -311,6 +345,12 @@ export function changeRows(
     }
     const { before, after } = change;
     const created = before === null || before === undefined;
+    // A stored file: "Photo added / changed / removed", never its file name (one line, no values).
+    if (fileKind(change.field)) {
+      const text = fileChangeText(change.field, before, after, t);
+      if (text) rows.push({ key: `${change.field}-${i}`, field: change.field, label, before, after, created, text });
+      return;
+    }
     if (!created && isNames(before) && isNames(after) && editedInPlace(before, after, locale)) {
       const b = before as unknown as Record<string, unknown>;
       const a = after as unknown as Record<string, unknown>;

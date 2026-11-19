@@ -393,9 +393,10 @@ export interface AuditSummary {
 
 /**
  * Fields holding money (piastres). An entry that changed one of them, or any payroll action, is a
- * "money" entry: the Activity page tags it and the summary counts it.
+ * "money" entry: the Activity page tags it and the summary counts it; the timeline draws their
+ * values as money ("EGP 6,500.00"), never as the stored piastres.
  */
-export const AUDIT_MONEY_FIELDS = ['basicSalary', 'amount', 'totals', 'net'] as const;
+export const AUDIT_MONEY_FIELDS = ['basicSalary', 'insuredSalary', 'amount', 'totals', 'net'] as const;
 export const AUDIT_MONEY_ACTIONS: readonly AuditAction[] = AUDIT_ACTION_KEYS.filter(
   (key) => key.startsWith('hr.payroll.') || key.startsWith('accounting.payroll.'),
 );
@@ -436,7 +437,6 @@ export type AuditTotalPart = keyof typeof AUDIT_TOTAL_PARTS;
  */
 export const AUDIT_SALARY_FIELDS = [
   ...AUDIT_MONEY_FIELDS,
-  'insuredSalary',
   'bankName',
   'bankAccountNumber',
   'iban',

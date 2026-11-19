@@ -70,6 +70,7 @@ export const employee: Employee = {
   university: null,
   graduationYear: null,
   status: 'ACTIVE',
+  signInAccount: null,
   salaryVisible: true,
   createdAt: '2026-11-01T08:00:00.000Z',
   updatedAt: '2026-11-01T08:00:00.000Z',

@@ -3,6 +3,7 @@ import { AuditModule } from '../../core/audit';
 import { NotificationsModule } from '../../core/notifications';
 import { PermissionsModule } from '../../core/permissions';
 import { SettingsModule } from '../../core/settings';
+import { UsersModule } from '../../core/users';
 import { HrAccessService } from './access/hr-access.service';
 import { HrAuditAccess } from './access/hr-audit-access';
 import { HrNotificationScopes } from './access/hr-notification-scopes';
@@ -44,7 +45,7 @@ import { LatenessService } from './staff-attendance/services/lateness.service';
  * Sub-folders add their controllers / providers here (additive). Export only public services.
  */
 @Module({
-  imports: [SettingsModule, PermissionsModule, AuditModule, NotificationsModule],
+  imports: [SettingsModule, PermissionsModule, AuditModule, NotificationsModule, UsersModule],
   controllers: [
     // settings (T6)
     HrSettingsController,

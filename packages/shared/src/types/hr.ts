@@ -192,6 +192,11 @@ export interface Employee extends Names, SalaryVisibility {
   university: string | null;
   graduationYear: number | null;
   status: EmployeeStatus;
+  /**
+   * The user account whose employee record this is (`users.employee_id`, at most one), or null:
+   * nobody signs in as this employee. Shown on the profile ("Signs in as: …").
+   */
+  signInAccount: { id: Uuid; name: string } | null;
   createdAt: IsoDateTime;
   updatedAt: IsoDateTime;
 }

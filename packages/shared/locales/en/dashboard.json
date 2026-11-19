@@ -37,6 +37,6 @@
     "description": "{school}. These are the screens you can open.",
     "screensTitle": "Your screens",
     "noneTitle": "No screens yet",
-    "noneBody": "Your account can't open any screen yet. Ask the system admin to give you a role."
+    "noneBody": "Your roles don't open any screen yet. Ask the system admin if you need one."
   }
 }

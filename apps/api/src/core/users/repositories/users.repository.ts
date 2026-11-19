@@ -180,6 +180,11 @@ export class UsersRepository {
     return row?.linkedEmployee ?? null;
   }
 
+  /** The account linked to an employee (`users.employee_id` is unique), or null. */
+  accountOfEmployee(employeeId: string): Promise<{ id: string; name: string } | null> {
+    return this.db.user.findUnique({ where: { employeeId }, select: { id: true, name: true } });
+  }
+
   /** The roles a user holds, starting roles first (the user chip, `GET /auth/me`). */
   async roleRefsOf(userId: string): Promise<RoleRefRow[]> {
     const rows = await this.db.userRoleAssignment.findMany({
