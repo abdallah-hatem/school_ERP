@@ -116,6 +116,37 @@ describe('AuditTimeline', () => {
     expect(within(failed!).queryByRole('link')).toBeNull();
   });
 
+  it('an insurance edit reads its status label and the insured salary as money (EN and AR)', () => {
+    const insured = entry({
+      changes: [
+        { field: 'insuranceStatus', before: 'NOT_INSURED', after: 'INSURED' },
+        { field: 'insuredSalary', before: null, after: 650000 },
+      ],
+    });
+    renderAudit(<AuditTimeline entries={[insured]} grouping="month" now={NOW} label="Record history" />);
+    let item = screen.getByTestId('audit-entry');
+    expect(within(item).getByText('Not insured')).toBeTruthy();
+    expect(within(item).getByText('Insured')).toBeTruthy();
+    expect(within(item).getByText('6,500.00')).toBeTruthy();
+    expect(item.textContent).not.toContain('NOT_INSURED');
+    expect(item.textContent).not.toContain('650000');
+    cleanup();
+
+    renderAudit(<AuditTimeline entries={[insured]} grouping="month" now={NOW} label="Record history" />, 'ar');
+    item = screen.getByTestId('audit-entry');
+    expect(within(item).getByText('غير مؤمَّن عليه')).toBeTruthy();
+    expect(within(item).getByText('مؤمَّن عليه')).toBeTruthy();
+    expect(within(item).getByText('6,500.00')).toBeTruthy();
+    expect(item.textContent).not.toContain('650000');
+    cleanup();
+
+    // On Activity the entry is tagged Money.
+    renderAudit(<AuditTimeline entries={[insured]} grouping="day" now={NOW} label="Activity timeline" />);
+    item = screen.getByTestId('audit-entry');
+    expect(within(item).getByText('Money')).toBeTruthy();
+    expect(within(item).getByText('Insured')).toBeTruthy();
+  });
+
   it('Arabic: verbal-noun sentences joined to the actor, Latin digits, month grouping on History', () => {
     renderAudit(
       <AuditTimeline

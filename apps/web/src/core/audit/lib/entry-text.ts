@@ -14,7 +14,7 @@ import {
   type AuditLabel,
   type Names,
 } from '@school-erp/shared';
-import { formatCount, formatDate, formatDayCount, formatDays, formatMoney, formatMonth } from '@/shared/lib/format';
+import { formatCount, formatDate, formatDayCount, formatDays, formatMoney, formatMoneyText, formatMonth } from '@/shared/lib/format';
 import { localName, type Locale, type Translate } from '@/shared/lib/i18n';
 import { formatSchoolDateTime } from './time';
 
@@ -126,6 +126,10 @@ function enumOf(field: string, entityType: AuditEntityType | undefined): string 
       return 'gender';
     case 'workSystem':
       return 'workSystem';
+    case 'insuranceStatus':
+      return 'insuranceStatus';
+    case 'highestDegree':
+      return 'degree';
     case 'action':
       return 'penaltyAction';
     case 'type':
@@ -140,7 +144,8 @@ function enumOf(field: string, entityType: AuditEntityType | undefined): string 
 }
 
 /**
- * A value as the timeline shows it (money is drawn by `<Money>` instead). Settings keys keep their
+ * A value as the timeline shows it (the timeline draws money with `<Money>`; as text it reads the
+ * same, "EGP 6,500.00" / "6,500.00 ج.م", never the stored piastres). Settings keys keep their
  * old history formatting (§7): weekdays, lateness steps, part-time percentages, list items.
  */
 export function formatAuditValue(
@@ -173,6 +178,9 @@ export function formatAuditValue(
   if (typeof value === 'number') {
     if (totalPartKind(field) === 'count') return formatCount(value);
     if (totalPartKind(field) === 'money') return formatMoney(value);
+    if (isMoneyField(field)) {
+      return has('ui.units.currency') ? formatMoneyText(value, locale, t('ui.units.currency')) : formatMoney(value);
+    }
     if (field === HrSettingKey.LATENESS_EXTRA_HOUR_DAYS || field === 'days') return formatDayCount(value, locale);
     if (field === AccountingSettingKey.PAYROLL_MARTYR_PERCENT || field === AccountingSettingKey.PAYROLL_INSURANCE_PERCENT) {
       return `${value}%`;
