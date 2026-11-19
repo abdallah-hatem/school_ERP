@@ -338,6 +338,12 @@ phase live in `docs/build-log/`.
   linked account shows its employee's photo or male/female silhouette, an unlinked one a neutral
   silhouette; inactive people greyed. Users, session and activity actors gained read-only
   `employee: { photoUrl, gender }`. Checked in screenshots (EN desktop, AR phone, tablet rail).
+- 2026-11-19 — Payroll taxes statement and tables → #146: each group pages (10) with one search
+  box, the subtotal covers the whole group ("Subtotal · all 24"), print/PDF and Excel list everyone;
+  every DataTable's header, hover, hairlines and totals row now reach both card edges (an empty
+  scrollbar gutter made them stop 10px short) — measured 0px on payroll runs, penalties, users and
+  the statement, EN and AR. The Insured table switches to cards below 960px so it never scrolls
+  sideways → #151.
 
 ## Next up
 
@@ -354,8 +360,8 @@ phase live in `docs/build-log/`.
   off, retention 90 / 30 / 365 days, contract reminders at 30 and 7 days, Settings → Notifications
   changed by the System admin and seen by the HR manager.
 
-- ~~Accounting payroll taxes screen~~ done (#138). Follow-ups: the "Approved in HR" stamp has no date
-  (accounting doesn't store HR's approval time); a phone statement with many employees is long.
+- ~~Accounting payroll taxes screen~~ done (#138). Follow-up: the "Approved in HR" stamp has no date
+  (accounting doesn't store HR's approval time). The long phone statement is paged now (#146).
 - (was) **Accounting payroll taxes screen** — a page per approved month (net, insurance share, income tax,
   fund, gross per employee) and a sidebar entry: **mockups first** (CLAUDE.md rule 9). The API
   (`GET /accounting/payroll[/:month]`) is built. Tax defaults are GUESS until the accountant confirms.
