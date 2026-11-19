@@ -91,3 +91,6 @@ paying by bank transfer is Planned.
 - **DECIDED** — Deactivating an inactive employee, or reactivating an active one, changes nothing and
   reports success.
 - **DECIDED** — A required field can't be cleared when editing.
+
+- **DECIDED** (owner, 2026-11-19) — A basic salary and an insured salary are at most **EGP
+  1,000,000.00 a month**; a payroll adjustment too (§6). Higher amounts are refused.

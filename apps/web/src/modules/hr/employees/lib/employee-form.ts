@@ -11,7 +11,7 @@ import {
   isValidEgyptianIban,
   isValidGraduationYear,
   isProbationEndValid,
-  MAX_PIASTRES,
+  MAX_MONTHLY_PIASTRES,
   normalizeIban,
   socialInsuranceIssues,
   WORK_SYSTEMS,
@@ -109,7 +109,7 @@ const employeeFields = z.object({
       .superRefine((v, ctx) => {
         if (v == null) ctx.addIssue({ code: 'custom', message: REQUIRED });
         else if (!Number.isInteger(v) || v <= 0) ctx.addIssue({ code: 'custom', message: 'employees.errors.salaryPositive' });
-        else if (v > MAX_PIASTRES) ctx.addIssue({ code: 'custom', message: 'employees.errors.salaryTooLarge' });
+        else if (v > MAX_MONTHLY_PIASTRES) ctx.addIssue({ code: 'custom', message: 'employees.errors.salaryTooLarge' });
       }),
     fingerprintId: optionalText(50),
     contractStart: requiredDate,
