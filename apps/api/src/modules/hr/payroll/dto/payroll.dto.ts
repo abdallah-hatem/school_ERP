@@ -18,12 +18,13 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { MAX_MONTHLY_PIASTRES } from '@school-erp/shared';
 import { IsMonth } from '../../../../common/validators/month.validator';
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 
-/** Largest single adjustment: EGP 10,000,000.00 (keeps every line inside a 32-bit column). */
-export const MAX_ADJUSTMENT_PIASTRES = 1_000_000_000;
+/** Largest single adjustment: EGP 1,000,000.00 (`MAX_MONTHLY_PIASTRES`, owner 2026-11-19). */
+export const MAX_ADJUSTMENT_PIASTRES = MAX_MONTHLY_PIASTRES;
 
 /** `POST /hr/payroll-runs` — one run per month (§6). */
 export class CreatePayrollRunDto implements CreatePayrollRunRequest {

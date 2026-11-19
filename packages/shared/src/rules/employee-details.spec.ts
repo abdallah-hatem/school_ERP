@@ -8,8 +8,7 @@ import {
   isValidInsuranceNumber,
   normalizeIban,
   socialInsuranceIssues,
-  type SocialInsurance,
-} from './employee-details';
+  type SocialInsurance, MAX_MONTHLY_PIASTRES } from './employee-details';
 
 const IBAN = 'EG380019000500000000263180002';
 
@@ -90,7 +89,7 @@ describe('conditional social insurance', () => {
   });
   it('today is a valid registration date; too large a salary is not', () => {
     expect(socialInsuranceIssues({ ...insured, insuranceRegistrationDate: today }, today)).toEqual([]);
-    expect(socialInsuranceIssues({ ...insured, insuredSalary: 2 ** 31 }, today)).toEqual([
+    expect(socialInsuranceIssues({ ...insured, insuredSalary: MAX_MONTHLY_PIASTRES + 1 }, today)).toEqual([
       { field: 'insuredSalary', issue: 'insuredSalaryTooLarge' },
     ]);
   });

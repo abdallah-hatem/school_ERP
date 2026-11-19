@@ -38,6 +38,9 @@ describe('employee form rules (§3)', () => {
     expect(issues({ nationalId: '2900101123456' })).toEqual([['nationalId', 'employees.errors.nationalId']]);
     expect(issues({ hireDate: '2999-01-01' })).toEqual([['hireDate', 'employees.errors.hireDateFuture']]);
     expect(issues({ basicSalary: 0 })).toEqual([['basicSalary', 'employees.errors.salaryPositive']]);
+    // The monthly cap (owner 2026-11-19): EGP 1,000,000.00 is allowed, one piastre more is not.
+    expect(issues({ basicSalary: 100_000_000 })).toEqual([]);
+    expect(issues({ basicSalary: 100_000_001 })).toEqual([['basicSalary', 'employees.errors.salaryTooLarge']]);
   });
 
   it('N0 — the probation end is optional, on or after the hire date', () => {

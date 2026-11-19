@@ -11,7 +11,7 @@ import {
   isValidEgyptianIban,
   isValidGraduationYear,
   isValidInsuranceNumber,
-  MAX_PIASTRES,
+  MAX_MONTHLY_PIASTRES,
   normalizeIban,
   WORK_SYSTEMS,
   WorkSystem,
@@ -126,7 +126,7 @@ export class CreateEmployeeDto implements CreateEmployeeRequest {
   /** Monthly, integer piastres, > 0. */
   @IsInt()
   @Min(1)
-  @Max(MAX_PIASTRES)
+  @Max(MAX_MONTHLY_PIASTRES)
   basicSalary: number;
 
   @IsOptional()
@@ -179,7 +179,7 @@ export class CreateEmployeeDto implements CreateEmployeeRequest {
   @IsOptional()
   @IsInt()
   @Min(1)
-  @Max(MAX_PIASTRES)
+  @Max(MAX_MONTHLY_PIASTRES)
   insuredSalary?: number | null;
 
   // ── Bank account ──
