@@ -60,11 +60,19 @@ describe('My account → Notifications (option A, in-app only)', () => {
     await user.click(toggle('Contract ends soon'));
     expect(toggle('Contract ends soon').getAttribute('aria-checked')).toBe('false');
     expect(api.UPDATE_NOTIFICATION_PREFERENCES).toHaveBeenCalledWith([{ type: 'hr.contract.ending_soon', channel: 'in_app', enabled: false }]);
-    // While it saves, the same switch can't send a second request.
-    expect(toggle('Contract ends soon').disabled).toBe(true);
+    // While it saves: pending (busy, dimmed), not disabled — it keeps focus and doesn't look locked —
+    // and a second click sends nothing.
+    const saving = toggle('Contract ends soon');
+    expect(saving.disabled).toBe(false);
+    expect(saving.getAttribute('aria-busy')).toBe('true');
+    expect(saving.hasAttribute('data-pending')).toBe(true);
+    await user.click(saving);
+    expect(saving.getAttribute('aria-checked')).toBe('false');
+    expect(api.UPDATE_NOTIFICATION_PREFERENCES).toHaveBeenCalledTimes(1);
     fail({ success: false, status: 500, message: 'Server error' });
     await waitFor(() => expect(toggle('Contract ends soon').getAttribute('aria-checked')).toBe('true'));
-    expect(toggle('Contract ends soon').disabled).toBe(false);
+    expect(toggle('Contract ends soon').hasAttribute('data-pending')).toBe(false);
+    expect(toggle('Contract ends soon').getAttribute('aria-busy')).toBeNull();
   });
 
   it('a switch off the school default says so; "Reset to school default" sends null and shows the school’s value', async () => {

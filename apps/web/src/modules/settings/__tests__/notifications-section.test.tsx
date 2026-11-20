@@ -119,6 +119,58 @@ describe('Settings → Notifications (§11, option A)', () => {
     await waitFor(() => expect(api.UPDATE_HR_SETTINGS).toHaveBeenCalledWith({ reminders: { latenessCheckDay: 20 } }));
   });
 
+  it('the skeleton is the loaded list traced: same column headers, groups and one switch per type, each in the same place', async () => {
+    let answer: (v: unknown) => void = () => {};
+    core.GET_NOTIFICATION_SETTINGS.mockImplementation(() => new Promise((r) => (answer = r)));
+    renderSettings(<NotificationsSection />);
+    const shape = () => {
+      const list = document.querySelector('[data-skeleton-block="notification-types"]')!;
+      return {
+        headers: Array.from(list.querySelectorAll('[role="columnheader"]')).map((h) => h.textContent),
+        groups: Array.from(list.querySelectorAll('[role="rowgroup"] > [role="row"]:not([data-skeleton-each])')).map((g) => g.textContent),
+        rows: list.querySelectorAll('[data-skeleton-each]').length,
+        switches: Array.from(list.querySelectorAll('[data-slot="switch"]')).map((s) => s.getAttribute('aria-label')),
+      };
+    };
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"] [data-skeleton-block="notification-types"]')).not.toBeNull());
+    const skeleton = shape();
+    expect(skeleton.headers).toEqual(['Notification', 'For everyone']);
+    expect(skeleton.rows).toBe(NOTIFICATION_TYPE_KEYS.length * 2); // the table row and the phone card
+    expect(skeleton.switches.length).toBe(skeleton.rows);
+    // Inside the form Radix adds a hidden native checkbox per switch: aria-hidden, so the mask leaves it unpainted.
+    const twins = document.querySelectorAll('[aria-busy="true"] input[type="checkbox"]');
+    expect(twins.length).toBeGreaterThan(0);
+    twins.forEach((input) => expect(input.getAttribute('aria-hidden')).toBe('true'));
+    answer({ success: true, status: 200, data: SETTINGS });
+    await loaded();
+    expect(shape()).toEqual(skeleton);
+  });
+
+  it('while the form saves, the changed switch is pending (busy, at its new value) and no switch can be flipped', async () => {
+    const user = userEvent.setup();
+    let answer: (v: unknown) => void = () => {};
+    core.UPDATE_NOTIFICATION_SETTINGS.mockImplementation(() => new Promise((r) => (answer = r)));
+    renderSettings(<NotificationsSection />);
+    await loaded();
+    await user.click(toggle('Contract ends soon'));
+    expect(toggle('Contract ends soon').hasAttribute('data-pending')).toBe(false);
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(toggle('Contract ends soon').getAttribute('aria-busy')).toBe('true'));
+    expect(toggle('Contract ends soon').getAttribute('aria-checked')).toBe('false');
+    expect(toggle('Contract ends soon').disabled).toBe(false);
+    // Unchanged ones aren't marked, and can't be flipped mid-save either.
+    expect(toggle('Probation ends soon').hasAttribute('data-pending')).toBe(false);
+    await user.click(toggle('Probation ends soon'));
+    expect(toggle('Probation ends soon').getAttribute('aria-checked')).toBe('true');
+    answer({
+      success: true,
+      status: 200,
+      data: { ...SETTINGS, defaults: SETTINGS.defaults.map((d) => (d.type === 'hr.contract.ending_soon' ? { ...d, enabled: false } : d)) },
+    });
+    await waitFor(() => expect(toggle('Contract ends soon').hasAttribute('data-pending')).toBe(false));
+    expect(toggle('Contract ends soon').getAttribute('aria-checked')).toBe('false');
+  });
+
   it('reads in Arabic', async () => {
     renderSettings(<NotificationsSection />, 'ar');
     expect(await screen.findByText('ما يصل إلى الجميع')).toBeTruthy();
