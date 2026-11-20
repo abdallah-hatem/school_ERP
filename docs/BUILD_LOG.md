@@ -417,6 +417,13 @@ phase live in `docs/build-log/`.
   Must fix (code, in progress): the month's total row hidden inside the capped table (also the
   Payroll taxes subtotals); "Finalized · transferred" cuts the month name on a phone. Five later
   items folded into the same fix. Demo-database data steps still the owner's.
+- 2026-11-20 — Dry-run fixes → #176: capped payroll tables keep their totals pinned at the bottom of
+  the scroll box ("Month total · all N" on the Approved payroll month; Payroll taxes subtotals);
+  HR's runs cards put status pills under the month (no truncation at 320–390); `dir="auto"` on every
+  textarea; Activity → Module has Accounting; return/finalize use the status icon; the month title
+  stays on one line. A smoke check failed in CI only (Linux scrollbar pushed 1440 under the 1100px
+  cards point); spec runs at 1600. Owner (screenshots of both layouts): force cards on the Approved
+  payroll month with the month total first → follow-up PR in progress.
 
 ## Next up
 
