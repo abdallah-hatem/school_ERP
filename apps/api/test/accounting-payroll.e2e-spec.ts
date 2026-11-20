@@ -8,6 +8,7 @@ import {
   type PayrollRun,
 } from '@school-erp/shared';
 import { DatabaseService } from '../src/database/database.service';
+import { MonthLockService } from '../src/modules/hr/month-lock/month-lock.service';
 import { http, unique } from './helpers';
 import { outboxIdle } from './helpers/events';
 import { createAppAsTestUser, giveRoles } from './helpers/as-test-user';
@@ -45,6 +46,8 @@ describe('Accounting — payroll taxes of approved months (e2e)', () => {
   let user: AuthUser;
   let noSalary: string;
   let roleless: string;
+  /** The Accountant (starting role): returns and finalizes; not an HR approver. */
+  let accountant: string;
 
   /** Runs `fn` signed in as another user (the test user's id, swapped). */
   async function as(userId: string, fn: () => Promise<void>) {
@@ -138,6 +141,8 @@ describe('Accounting — payroll taxes of approved months (e2e)', () => {
       update: {},
     });
     await giveRoles(db, noSalary, [NO_SALARY_ROLE]);
+    accountant = await makeUser('e2e-acc-payroll-accountant@example.test');
+    await giveRoles(db, accountant, ['accountant']);
     stageId = (await db.stage.create({ data: { nameEn: 'Primary', nameAr: 'ابتدائي' } })).id;
     const mk = async (path: string) =>
       (await http(app).post(path).send({ nameEn: unique('x'), nameAr: unique('س') }).expect(201)).body.data
@@ -159,7 +164,7 @@ describe('Accounting — payroll taxes of approved months (e2e)', () => {
     await db.department.deleteMany({});
     await db.jobTitle.deleteMany({});
     await db.stage.deleteMany({});
-    await db.user.deleteMany({ where: { id: { in: [roleless, noSalary] } } });
+    await db.user.deleteMany({ where: { id: { in: [roleless, noSalary, accountant] } } });
     await db.role.deleteMany({ where: { key: NO_SALARY_ROLE } });
     await app.close();
   });
@@ -387,6 +392,90 @@ describe('Accounting — payroll taxes of approved months (e2e)', () => {
     expect(back.body.error).toBe('PAYROLL_FINALIZED');
     await http(app).post(`/accounting/payroll/${month}/finalize`).expect(409);
     expect((await monthOf(month)).status).toBe('FINALIZED');
+  });
+
+  it("return by the Accountant: audited on the month and on HR's run (actor, reason); the month unlocks; HR's approvers are told until they approve again", async () => {
+    const month = nextMonth();
+    await employee();
+    const run = await createRun(month);
+    await approve(run.id);
+    await recorded(month);
+    const locks = app.get(MonthLockService);
+    expect(await locks.isMonthLocked(month)).toBe(true);
+    // The audit log is append-only and outlives earlier runs of this suite: month-keyed entries
+    // are read from after the last entry before this test.
+    const since = (await db.auditEntry.aggregate({ _max: { seq: true } }))._max.seq ?? BigInt(0);
+
+    await as(accountant, async () => {
+      await http(app).post(`/accounting/payroll/${month}/return`).send({ reason: 'Lateness for EMP-0012 is missing.' }).expect(204);
+    });
+
+    // Accounting's entry is kept against the month (its row was dropped), with who and why.
+    const accEntry = await db.auditEntry.findFirstOrThrow({
+      where: { action: 'accounting.payroll.return', entityId: month, seq: { gt: since } },
+    });
+    expect(accEntry).toMatchObject({ entityType: 'accounting_payroll', entityLabel: month, actorId: accountant });
+    expect(accEntry.changes).toEqual(
+      expect.arrayContaining([
+        { field: 'status', before: 'PENDING', after: 'RETURNED' },
+        { field: 'reason', before: null, after: 'Lateness for EMP-0012 is missing.' },
+      ]),
+    );
+    // HR's run carries its own entry, so the run's history shows the return.
+    const hrEntry = await db.auditEntry.findFirstOrThrow({ where: { action: 'hr.payroll.returned', entityId: run.id } });
+    expect(hrEntry).toMatchObject({ entityType: 'payroll_run', entityLabel: month, actorId: accountant });
+    expect(hrEntry.changes).toEqual([
+      { field: 'status', before: 'APPROVED', after: 'DRAFT' },
+      { field: 'reason', before: null, after: 'Lateness for EMP-0012 is missing.' },
+    ]);
+
+    // The month is open again: HR can fix it (and recalculate the draft).
+    expect(await locks.isMonthLocked(month)).toBe(false);
+    await http(app).post(`/hr/payroll-runs/${run.id}/recalculate`).expect(200);
+
+    // HR's approvers (the test user holds hr.payroll.approve; the Accountant doesn't) are told.
+    const item = () =>
+      db.notificationItem.findFirstOrThrow({
+        where: { type: 'hr.payroll.returned_by_accounting', entityId: run.id, recipientId: user.id },
+        orderBy: { createdAt: 'desc' },
+      });
+    expect(await item()).toMatchObject({ resolvedAt: null, params: { month, reason: 'Lateness for EMP-0012 is missing.' } });
+    expect(
+      await db.notificationItem.count({ where: { type: 'hr.payroll.returned_by_accounting', recipientId: accountant } }),
+    ).toBe(0);
+
+    // Approved again: the notice is resolved, the month locked and back in accounting.
+    await approve(run.id);
+    expect(await item()).toMatchObject({ resolution: 'approved' });
+    expect((await item()).resolvedAt).not.toBeNull();
+    expect(await locks.isMonthLocked(month)).toBe(true);
+    await recorded(month);
+  });
+
+  it('a refused return (finalized month) writes no entry, on the month or on HR\'s run, and tells no one', async () => {
+    const month = nextMonth();
+    await employee();
+    const run = await createRun(month);
+    await approve(run.id);
+    await recorded(month);
+    const since = (await db.auditEntry.aggregate({ _max: { seq: true } }))._max.seq ?? BigInt(0);
+    await as(accountant, async () => {
+      await http(app).post(`/accounting/payroll/${month}/finalize`).expect(200);
+      await http(app).post(`/accounting/payroll/${month}/return`).send({ reason: 'too late' }).expect(409);
+    });
+    expect(
+      await db.auditEntry.count({ where: { action: 'accounting.payroll.return', entityId: month, seq: { gt: since } } }),
+    ).toBe(0);
+    expect(await db.auditEntry.count({ where: { action: 'hr.payroll.returned', entityId: run.id } })).toBe(0);
+    expect(await db.notificationItem.count({ where: { type: 'hr.payroll.returned_by_accounting', entityId: run.id } })).toBe(0);
+    // The finalize is on HR's run too.
+    const transferred = await db.auditEntry.findFirstOrThrow({ where: { action: 'hr.payroll.transferred', entityId: run.id } });
+    expect(transferred).toMatchObject({ entityType: 'payroll_run', actorId: accountant });
+    expect(
+      await db.auditEntry.count({
+        where: { action: 'accounting.payroll.finalize', entityId: month, actorId: accountant, seq: { gt: since } },
+      }),
+    ).toBe(1);
   });
 
   it('return needs a reason (400); a month not in accounting → 404; without the permissions → 403', async () => {

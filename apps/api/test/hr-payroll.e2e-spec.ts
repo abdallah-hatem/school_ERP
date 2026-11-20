@@ -173,7 +173,13 @@ describe('HR payroll and dashboard (e2e)', () => {
 
   afterAll(async () => {
     const current = monthOf(todayIsoDate());
-    await db.payrollRun.deleteMany({ where: { month: { in: [...usedMonths, current] } } });
+    const months = [...usedMonths, current];
+    // Accounting's taxes of the runs approved here (a plain HR run id, no cascade): left behind,
+    // they'd hold their month for the next suite (one accounting month per month). By run, and by
+    // month for a run this suite already deleted (the Dashboard case).
+    const runIds = (await db.payrollRun.findMany({ where: { month: { in: months } }, select: { id: true } })).map((r) => r.id);
+    await db.accountingPayrollRun.deleteMany({ where: { OR: [{ hrRunId: { in: runIds } }, { month: { in: months } }] } });
+    await db.payrollRun.deleteMany({ where: { month: { in: months } } });
     await db.latenessEntry.deleteMany({});
     await db.penaltyRecord.deleteMany({});
     await db.violationLevel.deleteMany({});
