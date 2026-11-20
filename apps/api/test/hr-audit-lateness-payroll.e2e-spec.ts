@@ -1,7 +1,10 @@
 import { INestApplication } from '@nestjs/common';
 import {
   HrEvent,
+  type AuditActor,
   type AuditChange,
+  type AuditEntry,
+  type AuthUser,
   type CreateEmployeeRequest,
   type PayrollRun,
 } from '@school-erp/shared';
@@ -32,10 +35,47 @@ describe('HR audit wiring — lateness and payroll (T29, e2e)', () => {
   let app: INestApplication;
   let db: DatabaseService;
   let userId: string;
+  let user: AuthUser;
   let stageId: string;
   let departmentId: string;
   let jobTitleId: string;
   let mark = BigInt(0);
+  const tempUserIds: string[] = [];
+  const tempRoleIds: string[] = [];
+
+  /** Runs `fn` signed in as another user (the test user's id swapped for the call). */
+  async function asUser<T>(id: string, fn: () => Promise<T>): Promise<T> {
+    const own = user.id;
+    user.id = id;
+    try {
+      return await fn();
+    } finally {
+      user.id = own;
+    }
+  }
+
+  /** A user holding only these keys, each at its scope (`all` unless given). */
+  async function viewerWith(keys: Record<string, string>): Promise<string> {
+    const role = await db.role.create({
+      data: {
+        key: unique('custom_viewer'),
+        nameEn: 'Viewer',
+        nameAr: 'مشاهد',
+        permissions: {
+          create: Object.entries(keys).map(([permissionKey, scope]) => ({ permissionKey, scope: scope as 'all' })),
+        },
+      },
+      select: { id: true },
+    });
+    tempRoleIds.push(role.id);
+    const viewer = await db.user.create({
+      data: { email: `${unique('viewer')}@school.test`.toLowerCase(), name: 'Viewer', passwordHash: 'x' },
+      select: { id: true },
+    });
+    tempUserIds.push(viewer.id);
+    await db.userRoleAssignment.create({ data: { userId: viewer.id, roleId: role.id } });
+    return viewer.id;
+  }
 
   const employee = async (overrides: Partial<CreateEmployeeRequest> = {}) =>
     (
@@ -78,7 +118,6 @@ describe('HR audit wiring — lateness and payroll (T29, e2e)', () => {
   const field = (e: { changes: unknown }, name: string) => changesOf(e).find((c) => c.field === name);
 
   beforeAll(async () => {
-    let user;
     ({ app, user } = await createAppAsTestUser());
     userId = user.id;
     db = app.get(DatabaseService);
@@ -95,6 +134,10 @@ describe('HR audit wiring — lateness and payroll (T29, e2e)', () => {
   });
 
   afterAll(async () => {
+    await db.userRoleAssignment.deleteMany({ where: { userId: { in: tempUserIds } } });
+    await db.user.deleteMany({ where: { id: { in: tempUserIds } } });
+    await db.rolePermission.deleteMany({ where: { roleId: { in: tempRoleIds } } });
+    await db.role.deleteMany({ where: { id: { in: tempRoleIds } } });
     await db.accountingPayrollRun.deleteMany({ where: { month: { in: usedMonths } } });
     await db.payrollRun.deleteMany({ where: { month: { in: usedMonths } } });
     await db.latenessEntry.deleteMany({});
@@ -213,5 +256,65 @@ describe('HR audit wiring — lateness and payroll (T29, e2e)', () => {
       .send({ employeeId: emp.id, type: 'ADDITION', amount: 0, reason: 'x' })
       .expect(400);
     expect(await entries()).toHaveLength(0);
+  });
+
+  // ── the run's History tab (2026-11-20) ────────────────────────────────────
+
+  it('a run’s History: create → adjust → approve, newest first, with its field and person filters', async () => {
+    const month = nextMonth();
+    const emp = await employee();
+    const run = (await http(app).post('/hr/payroll-runs').send({ month }).expect(201)).body.data as PayrollRun;
+    await http(app)
+      .post(`/hr/payroll-runs/${run.id}/adjustments`)
+      .send({ employeeId: emp.id, type: 'ADDITION', amount: 25_000, reason: 'Exam supervision' })
+      .expect(201);
+    await approve(run);
+    // Another month's run stays off this History.
+    const other = (await http(app).post('/hr/payroll-runs').send({ month: nextMonth() }).expect(201)).body
+      .data as PayrollRun;
+
+    const list = (await http(app).get(`/audit/records/payroll_run/${run.id}`).expect(200)).body.data as AuditEntry[];
+    expect(list.map((x) => x.action)).toEqual(['hr.payroll.approve', 'hr.payroll.adjustment_add', 'hr.payroll.create']);
+    expect(list.every((x) => x.entityId === run.id && x.entityLabel.en === month)).toBe(true);
+    expect(list.map((x) => x.entityId)).not.toContain(other.id);
+    // The whole-school payroll viewer reads the amounts.
+    expect(list[1]?.changes.find((c) => c.field === 'amount')).toMatchObject({ before: null, after: 25_000 });
+
+    const byField = (
+      await http(app).get(`/audit/records/payroll_run/${run.id}`).query({ field: 'amount' }).expect(200)
+    ).body.data as AuditEntry[];
+    expect(byField.map((x) => x.action)).toEqual(['hr.payroll.adjustment_add']);
+    const byPerson = (
+      await http(app).get(`/audit/records/payroll_run/${run.id}`).query({ actorId: userId }).expect(200)
+    ).body;
+    expect(byPerson.meta.total).toBe(3);
+
+    const fields = (await http(app).get(`/audit/records/payroll_run/${run.id}/fields`).expect(200)).body.data as string[];
+    expect(fields).toEqual(expect.arrayContaining(['amount', 'reason', 'status', 'totals', 'type']));
+    const people = (
+      await http(app).get('/audit/actors').query({ entityType: 'payroll_run', entityId: run.id }).expect(200)
+    ).body.data as AuditActor[];
+    expect(people.map((p) => p.id)).toEqual([userId]);
+  });
+
+  it('P4 — a run’s History needs the activity log and the whole school’s payroll; a part of it is not found', async () => {
+    const month = nextMonth();
+    await employee();
+    const run = (await http(app).post('/hr/payroll-runs').send({ month }).expect(201)).body.data as PayrollRun;
+
+    const noLog = await viewerWith({ 'hr.payroll.view': 'all' });
+    await asUser(noLog, () => http(app).get(`/audit/records/payroll_run/${run.id}`).expect(403));
+
+    const partOfSchool = await viewerWith({ 'core.audit.view': 'all', 'hr.payroll.view': 'own_stage' });
+    await asUser(partOfSchool, async () => {
+      await http(app).get(`/audit/records/payroll_run/${run.id}`).expect(404);
+      await http(app).get(`/audit/records/payroll_run/${run.id}/fields`).expect(404);
+    });
+
+    const wholeSchool = await viewerWith({ 'core.audit.view': 'all', 'hr.payroll.view': 'all' });
+    const seen = await asUser(wholeSchool, async () =>
+      (await http(app).get(`/audit/records/payroll_run/${run.id}`).expect(200)).body.data as AuditEntry[],
+    );
+    expect(seen.map((x) => x.action)).toEqual(['hr.payroll.create']);
   });
 });

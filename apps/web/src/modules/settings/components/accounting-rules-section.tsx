@@ -7,6 +7,7 @@ import {
   TAX_BRACKETS_MAX,
   taxRuleIssues,
   type AccountingSettings,
+  type Piastres,
   type TaxRule,
   type UpdateAccountingSettingsRequest,
 } from '@school-erp/shared';
@@ -14,15 +15,14 @@ import { useId, useRef, useState } from 'react';
 import { useFieldArray, useForm, useWatch, type Control } from 'react-hook-form';
 import { Can, useCan } from '@/core/auth';
 import { callApi } from '@/lib/callApi';
-import { MoneyField, NumberField } from '@/shared/components/form/fields';
+import { MoneyField, MoneyInput, NumberField } from '@/shared/components/form/fields';
 import { Form } from '@/shared/components/form/form';
 import { ErrorState } from '@/shared/components/layout/empty-state';
 import { Button } from '@/shared/components/ui/button';
 import { AddIcon, RemoveIcon } from '@/shared/components/ui/icons';
-import { Input } from '@/shared/components/ui/input';
+import { Money } from '@/shared/components/ui/figures';
 import { Label } from '@/shared/components/ui/label';
 import { SkeletonMask } from '@/shared/components/ui/skeleton';
-import { formatMoney, parseMoney } from '@/shared/lib/format';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { GET_ACCOUNTING_SETTINGS, UPDATE_ACCOUNTING_SETTINGS } from '../apis';
 import { useReportDirty } from '../hooks/unsaved-changes';
@@ -270,56 +270,63 @@ function AccountingRulesForm({
 const TAX_EXAMPLE_NET = 1_000_000;
 
 /**
- * "net 10,000.00 → income tax 1,017.00 · martyrs' fund 5.51 · gross 11,022.51", live as the rule
- * is edited. Uses the shared `payrollTax` — the same gross-up accounting runs (no second copy).
+ * The rule worked through for one net pay, written out like a receipt: net, + income tax,
+ * + martyrs' fund, then the gross the school pays — live as the rule or the net is edited. Uses the
+ * shared `payrollTax`, the same gross-up the payroll run uses (no second copy).
  */
 function TaxExample({ control }: { control: Control<AccountingRulesFormValues> }) {
   const { t } = useTranslation();
   const id = useId();
-  const [netText, setNetText] = useState(formatMoney(TAX_EXAMPLE_NET));
+  const [net, setNet] = useState<Piastres | null>(TAX_EXAMPLE_NET);
   const payroll = useWatch({ control, name: 'payroll' });
   const rule = taxRuleFromForm(payroll);
-  const net = netText === '' ? null : parseMoney(netText);
-
-  let line: string;
-  if (!rule) line = t('settings.accounting.example.invalidRule');
-  else if (net === null) line = t('settings.accounting.example.enterNet');
-  else {
-    const r = payrollTax(net, 0, rule);
-    line = t('settings.accounting.example.line', {
-      net: formatMoney(net),
-      tax: formatMoney(r.incomeTax),
-      fund: formatMoney(r.martyrTax),
-      gross: formatMoney(r.gross),
-    });
-  }
+  const result = rule && net !== null ? payrollTax(net, 0, rule) : null;
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-primary-soft bg-primary-soft/50 p-4">
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="flex w-44 flex-col gap-2">
+    <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4">
+      <div className="flex flex-wrap items-start gap-5">
+        <div className="flex w-52 flex-col gap-2">
           <Label htmlFor={id}>{t('settings.accounting.example.net')}</Label>
-          <Input
+          <MoneyInput
             id={id}
-            inputMode="decimal"
-            dir="ltr"
-            className="tabular"
             placeholder={t('settings.accounting.example.netPlaceholder')}
-            value={netText}
-            onChange={(e) => {
-              const next = e.target.value;
-              // Digits, thousands commas and up to 2 decimals; anything else is ignored.
-              if (!/^[\d,]*(\.\d{0,2})?$/.test(next)) return;
-              setNetText(next);
-            }}
+            value={net}
+            onChange={setNet}
           />
         </div>
-        <p className="min-w-0 flex-1 basis-48 pb-2.5 text-sm font-semibold" aria-live="polite" data-testid="tax-example">
-          <span className="text-muted-foreground">{t('settings.accounting.example.label')} </span>
-          <bdi>{line}</bdi>
-        </p>
+        <div className="min-w-56 flex-1 rounded-xl bg-background px-3.5 py-3 text-sm" aria-live="polite" data-testid="tax-example">
+          {result && net !== null ? (
+            <dl>
+              <ReceiptRow testId="tax-example-net" label={t('settings.accounting.example.rows.net')} value={net} />
+              <ReceiptRow testId="tax-example-tax" label={t('settings.accounting.example.rows.tax')} value={result.incomeTax} added />
+              <ReceiptRow testId="tax-example-fund" label={t('settings.accounting.example.rows.fund')} value={result.martyrTax} added />
+              <div className="mt-1 flex items-baseline justify-between gap-3 border-t border-dashed border-border pt-2.5 text-base font-extrabold">
+                <dt>{t('settings.accounting.example.rows.gross')}</dt>
+                <dd className="text-primary" data-testid="tax-example-gross">
+                  <Money value={result.gross} />
+                </dd>
+              </div>
+            </dl>
+          ) : (
+            <p className="py-1.5 font-semibold text-muted-foreground">
+              {t(rule ? 'settings.accounting.example.enterNet' : 'settings.accounting.example.invalidRule')}
+            </p>
+          )}
+        </div>
       </div>
       <p className="text-xs text-muted-foreground">{t('settings.accounting.example.hint')}</p>
+    </div>
+  );
+}
+
+/** One line of the example receipt; the amounts added on top of the net read in the danger ink. */
+function ReceiptRow({ label, value, added, testId }: { label: string; value: Piastres; added?: boolean; testId: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3 py-1.5">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className={added ? 'font-semibold text-destructive' : undefined} data-testid={testId}>
+        <Money value={value} currency={false} />
+      </dd>
     </div>
   );
 }

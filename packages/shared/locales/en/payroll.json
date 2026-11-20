@@ -220,5 +220,11 @@
     "reasonLabel": "Reason:",
     "fix": "Fix what's needed, then approve the month again.",
     "pill": "Returned"
+  },
+  "tabs": {
+    "label": "Payroll run sections",
+    "employees": "Employees",
+    "history": "History",
+    "historyDescription": "Who did what on this month's payroll — created, recalculated, adjusted, approved — newest first."
   }
 }

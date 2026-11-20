@@ -362,6 +362,18 @@ describe('AuditService reads', () => {
     );
   });
 
+  it('a payroll run’s History (its tab, 2026-11-20): only the run’s entries, with the field and person filters', async () => {
+    const { service, entries } = makeService();
+    entries.findPage.mockResolvedValueOnce(pageOf([]));
+    await service.listForRecord('payroll_run', 'r1', 1, 10, { field: 'amount', actorId: 'u1' });
+    const records = [{ entityType: 'payroll_run', ids: ['r1'] }];
+    expect(entries.findPage).toHaveBeenCalledWith({ records, field: 'amount', actorId: 'u1', restricted: [] }, 1, 10);
+    await service.listActors({ entityType: 'payroll_run', entityId: 'r1' });
+    expect(entries.findActors).toHaveBeenCalledWith({ records }, []);
+    await service.listFields('payroll_run', 'r1');
+    expect(entries.findFields).toHaveBeenCalledWith(records);
+  });
+
   it('an employee’s History lists their penalties’ entries too (T29) — list, people and fields', async () => {
     const { service, entries } = makeService();
     entries.findPage.mockResolvedValueOnce(pageOf([]));

@@ -17,7 +17,7 @@ const nav = vi.hoisted(() => ({
 vi.mock('next/navigation', () => nav);
 
 import { run, SALMA, SETTINGS } from '../test/fixtures';
-import { loadEmployeePayroll, loadPayslip, loadRun } from './load';
+import { loadEmployeePayroll, loadPayslip, loadRun, loadRunLines } from './load';
 
 const ok = <T>(data: T) => ({ success: true, status: 200, data });
 
@@ -44,6 +44,19 @@ describe('payroll loaders', () => {
     apis.GET_PAYROLL_RUN.mockResolvedValue(ok(run()));
     await loadRun('r1', {});
     expect(apis.GET_PAYROLL_RUN).toHaveBeenCalledTimes(1);
+  });
+
+  it('the Employees tab reads the run only when the URL filters (else it shows the layout’s run)', async () => {
+    employees.GET_DEPARTMENTS.mockResolvedValue(ok([{ id: 'd1' }]));
+    const unfiltered = await loadRunLines('r1', {}, false);
+    expect(apis.GET_PAYROLL_RUN).not.toHaveBeenCalled();
+    expect(unfiltered).toEqual({ filtered: null, departments: [{ id: 'd1' }] });
+
+    apis.GET_PAYROLL_RUN.mockResolvedValue(ok(run({ lines: [SALMA] })));
+    const filtered = await loadRunLines('r1', { search: 'salma' }, true);
+    expect(apis.GET_PAYROLL_RUN).toHaveBeenCalledTimes(1);
+    expect(apis.GET_PAYROLL_RUN).toHaveBeenCalledWith('r1', { search: 'salma' });
+    expect(filtered.filtered?.run.lines).toEqual([SALMA]);
   });
 
   it('an unknown run is the not-found page', async () => {

@@ -271,14 +271,19 @@ html body[data-scroll-locked] {
 @utility skeleton-mask {
   pointer-events: none;
   user-select: none;
-  & :is(input, textarea, button, [role="combobox"]) {
+  /*
+   * Only the controls a person sees. Radix draws a hidden native twin beside a switch, checkbox or
+   * select inside a form (`aria-hidden`, opacity 0, for form submission); painting it would put a
+   * browser-default checkbox next to every switch.
+   */
+  & :is(input:not([aria-hidden="true"]), textarea, button, [role="combobox"]) {
     color: transparent !important;
     border-color: transparent !important;
     background: var(--secondary) !important;
     box-shadow: none !important;
     opacity: 1 !important;
   }
-  & :is(input, textarea)::placeholder {
+  & :is(input:not([aria-hidden="true"]), textarea)::placeholder {
     color: transparent !important;
   }
   & :is(button, [role="combobox"]) * {
@@ -287,7 +292,7 @@ html body[data-scroll-locked] {
   & [role="status"] {
     visibility: hidden;
   }
-  & :is(input, textarea, button, [role="combobox"]) {
+  & :is(input:not([aria-hidden="true"]), textarea, button, [role="combobox"]) {
     @media (prefers-reduced-motion: no-preference) {
       animation: pulse 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }

@@ -2,6 +2,8 @@
 
 import { monthOf, PAGINATION, PAYROLL_PAGINATION } from '@school-erp/shared';
 import { useParams, useSearchParams } from 'next/navigation';
+import type { ReactNode } from 'react';
+import { RecordHistorySkeleton } from '@/core/audit';
 import { DataTable } from '@/shared/components/data-table/data-table';
 import { PageHeader } from '@/shared/components/layout/page-header';
 import { Skeleton, SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
@@ -12,6 +14,7 @@ import { EmployeePayroll } from './employee-payroll';
 import { PayslipSkeleton as PayslipSkeletonBody } from './payslip-view';
 import { RulesPanel } from './rules-panel';
 import { RUN_COLUMN_IDS, RUN_LINES_CARDS_BELOW, RunLinesToolbar, RunTiles, runColumn } from './run-page';
+import { RunTabs } from './run-shell';
 import { RunsList } from './runs-list';
 
 /*
@@ -39,10 +42,10 @@ export function RunsListSkeleton() {
   );
 }
 
-function RunPageSkeletonBody() {
+/** The run layout's header and tabs while the run loads, over the opened tab's skeleton. */
+function RunShellSkeleton({ children }: { children: ReactNode }) {
   const { t, locale } = useTranslation();
-  const params = useSearchParams();
-  const query = parseRunQuery(Object.fromEntries(params));
+  const { id } = useParams<{ id: string }>();
   const basePath = `/${locale}/payroll`;
   return (
     <div className="flex flex-col gap-6">
@@ -56,7 +59,7 @@ function RunPageSkeletonBody() {
             <SkeletonText className="md:hidden" width="w-40" />
           </span>
         }
-        breadcrumbs={[{ label: t('payroll.title'), href: basePath }, { label: ' ' }]}
+        breadcrumbs={[{ label: t('payroll.title'), href: basePath }, { label: ' ' }]}
         breadcrumbsLabel={t('ui.shell.breadcrumbs')}
         actions={
           <>
@@ -66,6 +69,19 @@ function RunPageSkeletonBody() {
           </>
         }
       />
+      <RunTabs runHref={`${basePath}/${id}`} />
+      {children}
+    </div>
+  );
+}
+
+/** The Employees tab's body while it loads: the four tiles, the lines table and the rules panel. */
+function RunLinesSkeletonBody() {
+  const { t, locale } = useTranslation();
+  const params = useSearchParams();
+  const query = parseRunQuery(Object.fromEntries(params));
+  return (
+    <>
       <RunTiles totals={undefined} />
       <div className="grid items-start gap-5 @min-[1380px]:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="flex min-w-0 flex-col gap-5">
@@ -100,16 +116,56 @@ function RunPageSkeletonBody() {
         </div>
         <RulesPanel rules={undefined} settingsHref={`/${locale}/settings`} />
       </div>
-    </div>
+    </>
   );
 }
 
-/** A run while it loads: header, the four tiles, the lines table and the rules panel. */
+/** The History tab's body while it loads: the record History's skeleton, with the run's sentence. */
+function RunHistorySkeletonBody() {
+  const { t } = useTranslation();
+  return <RecordHistorySkeleton description={t('payroll.tabs.historyDescription')} />;
+}
+
+/** A run's first load: header and tabs over the Employees tab (tiles, lines table, rules panel). */
 export function RunPageSkeleton() {
   const { locale } = useTranslation();
   return (
     <PayrollI18n locale={locale}>
-      <RunPageSkeletonBody />
+      <RunShellSkeleton>
+        <RunLinesSkeletonBody />
+      </RunShellSkeleton>
+    </PayrollI18n>
+  );
+}
+
+/** A run's History opened directly: header and tabs over the History tab's skeleton. */
+export function RunHistoryPageSkeleton() {
+  const { locale } = useTranslation();
+  return (
+    <PayrollI18n locale={locale}>
+      <RunShellSkeleton>
+        <RunHistorySkeletonBody />
+      </RunShellSkeleton>
+    </PayrollI18n>
+  );
+}
+
+/** Switching to the Employees tab: only the tab's body (the run layout's header stays). */
+export function RunLinesSkeleton() {
+  const { locale } = useTranslation();
+  return (
+    <PayrollI18n locale={locale}>
+      <RunLinesSkeletonBody />
+    </PayrollI18n>
+  );
+}
+
+/** Switching to the History tab: only the tab's body (the run layout's header stays). */
+export function RunHistorySkeleton() {
+  const { locale } = useTranslation();
+  return (
+    <PayrollI18n locale={locale}>
+      <RunHistorySkeletonBody />
     </PayrollI18n>
   );
 }
