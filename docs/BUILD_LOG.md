@@ -478,6 +478,12 @@ phase live in `docs/build-log/`.
   an approved payroll month. One `hr.penalty.recount` History entry per moved penalty; draft runs show
   the recalculate notice (new `recounted_at`). CI caught a real race-order bug (losers now get
   NOT_PENDING) and a wrong test. Screenshots EN + AR.
+- 2026-11-20 — `demo` refresh 2 → PR #198 (dev → demo, green, waits for the owner). Dry run of the
+  changed steps → #199 (`docs/demo/dry-runs/2026-11-20-b.md`, script wording): AR, EN, phone on DB
+  copies; money matched by hand (tax receipt, recounted deductions, run totals vs History vs
+  Accounting). Must fix: run History empty right after Recalculate until a reload — being fixed with
+  four later items (run empty-state text, approved-month refusal UI, Arabic count plural, recount
+  entry label).
 ## Next up
 
 - Custom icon set drawn (`design/mockups/icon-set.html`, style G monoline + solid when selected) —
