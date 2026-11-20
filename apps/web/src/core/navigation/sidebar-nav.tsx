@@ -181,10 +181,11 @@ function ComingPage({ item }: { item: ComingItem }) {
       aria-disabled="true"
       title={t('common.nav.soonTitle', { name })}
       data-coming={item.key}
-      className="flex min-h-9 cursor-not-allowed items-center gap-2.75 rounded-xl px-2.5 py-1.5 text-[0.84rem] font-semibold text-muted-foreground/75"
+      className="flex min-h-9 cursor-not-allowed items-center gap-2 rounded-xl px-2 py-1.5 text-[0.8rem] font-semibold text-muted-foreground/75"
     >
       <Icon className="size-5 shrink-0 opacity-70" />
-      <span className="min-w-0 flex-1 truncate">{name}</span>
+      {/* Wraps between words rather than cutting off: "Leave & permissions" takes two lines. */}
+      <span className="min-w-0 flex-1 leading-snug break-words">{name}</span>
       <SoonPill />
     </div>
   );
