@@ -22,6 +22,11 @@ export interface RecordHistoryProps {
   basePath: string;
   /** The record's name for the description ("Omar Fathy"). */
   recordName: string;
+  /**
+   * The sentence under the title, when "Who changed what on {name}'s record" doesn't fit the
+   * record (a payroll run: "Who did what on this month's payroll"). Already translated.
+   */
+  description?: string;
   query: HistoryQuery;
   entries: AuditEntry[];
   total: number;
@@ -45,6 +50,7 @@ function Panel({ className, ...props }: ComponentProps<'section'>) {
 export function RecordHistory({
   basePath,
   recordName,
+  description,
   query,
   entries,
   total,
@@ -167,7 +173,7 @@ export function RecordHistory({
         <header data-skeleton-block="timeline-header" className="flex items-start gap-3 px-4 pt-5 @min-[34rem]:px-6">
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
             <h2 className="font-display text-lg font-extrabold">{t('audit.history.title')}</h2>
-            <p className="text-sm text-muted-foreground">{t('audit.history.description', { name: recordName })}</p>
+            <p className="text-sm text-muted-foreground">{description ?? t('audit.history.description', { name: recordName })}</p>
           </div>
           <AuditFiltersSheet count={filterCount} onClear={() => go({ page: 1 })} className="shrink-0 lg:hidden">
             {selects}
@@ -194,11 +200,11 @@ export function RecordHistory({
  * The History tab while it loads: the side panel (wide screens) or the Filters button (below), and
  * a month timeline of one page. It renders before the page's messages load, so it brings them.
  */
-export function RecordHistorySkeleton() {
+export function RecordHistorySkeleton({ description }: { description?: string } = {}) {
   const { locale } = useTranslation();
   return (
     <AuditI18n locale={locale}>
-      <HistorySkeleton />
+      <HistorySkeleton description={description} />
     </AuditI18n>
   );
 }
@@ -206,7 +212,8 @@ export function RecordHistorySkeleton() {
 /** A typical record name's length in each script, for the description's shape while it loads. */
 const NAME_SHAPE = { en: 'Xxxxxx Xxxxxxx Xxxxxxx', ar: 'ممم مممم' } as const;
 
-function HistorySkeleton() {
+/** `description`: the record's own sentence (`RecordHistory`'s), drawn as bars of its shape. */
+function HistorySkeleton({ description }: { description?: string }) {
   const { t, locale } = useTranslation();
   return (
     <div aria-busy="true" className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_17.5rem]">
@@ -233,7 +240,7 @@ function HistorySkeleton() {
             <h2 className="font-display text-lg font-extrabold">{t('audit.history.title')}</h2>
             {/* The real sentence with a name-shaped gap, as bars: it wraps where the loaded one does. */}
             <p className="text-sm">
-              <SkeletonProse>{t('audit.history.description', { name: NAME_SHAPE[locale] })}</SkeletonProse>
+              <SkeletonProse>{description ?? t('audit.history.description', { name: NAME_SHAPE[locale] })}</SkeletonProse>
             </p>
           </div>
           <Skeleton className="h-11 w-12 shrink-0 rounded-lg lg:hidden" />

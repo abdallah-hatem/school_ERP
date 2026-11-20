@@ -367,7 +367,12 @@ module through core's exported `AuditService` — never through its repository.
   person pickers) and `GET /audit/records/:entityType/:entityId/fields` (the History field filter).
   "Money" entries are payroll actions or changes to `AUDIT_MONEY_FIELDS` (`packages/shared`).
 - **Settings history** (D9) lives in the audit log. The screens (T30): Administration → **Activity**
-  (`modules/activity`) and each employee's **History** tab, built on `core/audit` in the web app;
+  (`modules/activity`), each employee's **History** tab and each payroll run's **History** tab
+  (`/payroll/<id>/history`: every `hr.payroll.*` entry is filed against the run — create,
+  recalculate, adjustments, approve, returned by Accounting, transferred), built on `core/audit` in
+  the web app. The run page is a `(run)` layout (header, notices, tabs; the whole run read once and
+  shared with the tabs through `useRunState`) over its Employees and History tabs, like the employee
+  profile; the Employees tab reads the run again only when the URL filters its lines;
   Settings has no history section of its own — "View change history" opens Activity with
   `module=settings` (the settings actions of both modules). `GET /settings/history` was removed.
   The old `setting_changes` rows were copied by the T27 migration (same id, value, person, time).

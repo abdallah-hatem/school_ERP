@@ -82,11 +82,16 @@ Before the demo, on the demo database:
   (e.g. EMP-0007): their entries and their penalties' show.
 - Back to the run → **Recalculate** → ✔ the same employee's lateness drops (0.25 × 20,000 ÷ 30 =
   166.67) and the totals follow.
+- The run's **History** tab (beside **Employees**): ✔ "Created the payroll run for …", each
+  **Recalculate** with the totals before → after, and any adjustment with the employee, "Addition",
+  the amount in EGP and the reason — no codes or raw figures. Switching tabs keeps the header (no
+  flash).
 - Put the rule back afterwards if the demo continues on the same data.
 
 ## 7. Approve
 - **Approve payroll** → confirmation explains it recalculates once more and locks the month.
 - After approval: read-only, **Export bank sheet** downloads an Excel file, each row has a payslip.
+  ✔ The run's **History** tab now starts with "Approved the payroll run for …" (Draft → Approved).
   ✔ The sheet has the bank, account number and IBAN of each employee (empty where none is on file)
   and a **Total** row at the bottom equal to the run's net.
 

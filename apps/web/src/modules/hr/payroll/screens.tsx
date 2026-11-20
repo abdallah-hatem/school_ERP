@@ -2,10 +2,12 @@ import { monthOf, type Uuid } from '@school-erp/shared';
 import type { Locale } from '@/shared/lib/i18n';
 import { EmployeePayroll } from './components/employee-payroll';
 import { PayslipUnavailable, PayslipView } from './components/payslip-view';
-import { RunPage } from './components/run-page';
+import type { ReactNode } from 'react';
+import { RunLines } from './components/run-page';
+import { RunShell } from './components/run-shell';
 import { RunsList } from './components/runs-list';
-import { loadEmployeePayroll, loadPayslip, loadRun, loadRuns } from './lib/load';
-import { parseRunQuery, parseRunsQuery, type SearchParamsRecord } from './lib/run-query';
+import { loadEmployeePayroll, loadPayslip, loadRun, loadRunLines, loadRuns } from './lib/load';
+import { parseRunQuery, parseRunsQuery, runFilterCount, type SearchParamsRecord } from './lib/run-query';
 import { PayrollI18n } from './messages';
 
 /** Server screens rendered by the `payroll` routes (and the profile's payroll tab). */
@@ -34,7 +36,24 @@ export async function PayrollRunsScreen({
   );
 }
 
-export async function PayrollRunScreen({
+/**
+ * The run layout (`payroll/[id]/(run)`): loads the whole run once and draws its header, notices and
+ * tabs around the opened tab. A layout stays mounted across its tabs and filter changes, so neither
+ * reads the run again; `router.refresh()` (after a write it can't apply) does.
+ */
+export async function PayrollRunLayout({ locale, id, children }: { locale: Locale; id: Uuid; children: ReactNode }) {
+  const { run, asOf } = await loadRun(id);
+  return (
+    <PayrollI18n locale={locale}>
+      <RunShell basePath={payrollPath(locale)} penaltiesHref={`/${locale}/penalties`} run={run} asOf={asOf}>
+        {children}
+      </RunShell>
+    </PayrollI18n>
+  );
+}
+
+/** The run's Employees tab: the lines (the layout's, or read with the URL's filters) and the rules. */
+export async function PayrollRunLinesScreen({
   locale,
   id,
   searchParams,
@@ -44,16 +63,14 @@ export async function PayrollRunScreen({
   searchParams: SearchParamsRecord;
 }) {
   const query = parseRunQuery(searchParams);
-  const data = await loadRun(id, query);
+  const data = await loadRunLines(id, query, runFilterCount(query) > 0);
   return (
     <PayrollI18n locale={locale}>
-      <RunPage
+      <RunLines
         basePath={payrollPath(locale)}
         settingsHref={`/${locale}/settings`}
-        penaltiesHref={`/${locale}/penalties`}
         query={query}
-        run={data.run}
-        asOf={data.asOf}
+        filtered={data.filtered}
         departments={data.departments}
       />
     </PayrollI18n>

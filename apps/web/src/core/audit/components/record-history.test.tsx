@@ -88,6 +88,49 @@ describe('RecordHistory (employee History tab)', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
+  it('lists the employee’s penalties too: recorded → approved, in words, in English and Arabic', () => {
+    const penalty = { entityType: 'penalty' as const, entityId: '55555555-5555-4555-8555-555555555555' };
+    const recorded = entry({
+      ...penalty,
+      action: 'hr.penalty.record',
+      at: '2026-11-16T09:00:00.000Z',
+      changes: [
+        { field: 'violationId', before: null, after: { nameEn: 'Late arrival', nameAr: 'التأخر' } },
+        { field: 'date', before: null, after: '2026-11-16' },
+        { field: 'level', before: null, after: 2 },
+        { field: 'action', before: null, after: 'DEDUCT_DAYS' },
+        { field: 'days', before: null, after: 1 },
+        { field: 'status', before: null, after: 'PENDING' },
+      ],
+    });
+    const approved = entry({
+      ...penalty,
+      action: 'hr.penalty.approve',
+      actor: AHMED,
+      changes: [{ field: 'status', before: 'PENDING', after: 'APPROVED' }],
+    });
+    renderHistory({}, [approved, recorded, entry({ at: '2026-11-15T09:00:00.000Z' })]);
+    const [first, second, third] = screen.getAllByTestId('audit-entry');
+    expect(first!.textContent).toContain('Approved the penalty for Omar Fathy');
+    expect(within(first!).getByText('Pending')).toBeTruthy();
+    expect(within(first!).getByText('Approved')).toBeTruthy();
+    expect(second!.textContent).toContain('Recorded a penalty for Omar Fathy');
+    expect(within(second!).getByText('Late arrival')).toBeTruthy();
+    expect(within(second!).getByText('Deduct days')).toBeTruthy();
+    // Never the raw enums.
+    expect(second!.textContent).not.toMatch(/DEDUCT_DAYS|PENDING/);
+    // The employee's own edit is still there, below.
+    expect(third!.textContent).toContain('Omar Fathy');
+    cleanup();
+
+    renderHistory({}, [approved, recorded], 'ar');
+    const [arFirst, arSecond] = screen.getAllByTestId('audit-entry');
+    expect(arFirst!.textContent).toContain('اعتماد جزاء عمر فتحي');
+    expect(within(arFirst!).getByText('معتمد')).toBeTruthy();
+    expect(within(arSecond!).getByText('التأخر')).toBeTruthy();
+    expect(arSecond!.textContent).not.toMatch(/DEDUCT_DAYS|PENDING/);
+  });
+
   it('Arabic: translated labels and field names', () => {
     renderHistory({}, [entry()], 'ar');
     expect(screen.getByRole('heading', { name: 'سجل التغييرات' })).toBeTruthy();

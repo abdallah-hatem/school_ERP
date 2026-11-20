@@ -1,0 +1,144 @@
+// @vitest-environment jsdom
+import '@/test/dom-polyfills';
+import { cleanup, screen, within } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+const pathname = vi.hoisted(() => ({ current: '/en/payroll/11111111-1111-4111-8111-111111111111' }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
+  usePathname: () => pathname.current,
+}));
+vi.mock('next/link', async () => ({ default: (await import('@/core/audit/test/fixtures')).MockLink }));
+
+import { createTranslator } from '@/shared/lib/i18n';
+import type { AuditEntry } from '@school-erp/shared';
+import { RecordHistory } from '@/core/audit';
+import { parseHistoryQuery } from '@/core/audit/lib/history-query';
+import { ACTORS, AHMED, entry, NOW, renderAudit } from '@/core/audit/test/fixtures';
+import { sessionWithout } from '@/test/render';
+import { payrollMessages } from '../messages';
+import { renderPayroll, RUN_ID } from '../test/fixtures';
+import { RunTabs } from './run-shell';
+
+afterEach(cleanup);
+
+const RUN = `/en/payroll/${RUN_ID}`;
+const TOTALS = {
+  employees: 2,
+  flagged: 0,
+  monthSalary: 2_800_000,
+  penaltyAmount: 0,
+  latenessAmount: 0,
+  adjustmentAdditions: 25_000,
+  adjustmentDeductions: 0,
+  net: 2_825_000,
+};
+const run = { module: 'hr' as const, entityType: 'payroll_run' as const, entityId: RUN_ID, entityLabel: { en: '2026-11', ar: '2026-11' } };
+
+/** create → adjust → approve, newest first (as the API answers). */
+const ENTRIES: AuditEntry[] = [
+  entry({
+    ...run,
+    action: 'hr.payroll.approve',
+    actor: AHMED,
+    at: '2026-11-17T12:30:00.000Z',
+    changes: [
+      { field: 'status', before: 'DRAFT', after: 'APPROVED' },
+      { field: 'totals', before: null, after: TOTALS },
+    ],
+  }),
+  entry({
+    ...run,
+    action: 'hr.payroll.adjustment_add',
+    at: '2026-11-17T11:00:00.000Z',
+    changes: [
+      { field: 'employeeId', before: null, after: { nameEn: 'Salma Adel', nameAr: 'سلمى عادل' } },
+      { field: 'type', before: null, after: 'ADDITION' },
+      { field: 'amount', before: null, after: 25_000 },
+      { field: 'reason', before: null, after: 'Exam supervision' },
+    ],
+  }),
+  entry({
+    ...run,
+    action: 'hr.payroll.create',
+    at: '2026-11-17T10:00:00.000Z',
+    changes: [{ field: 'totals', before: null, after: { ...TOTALS, adjustmentAdditions: 0, net: 2_800_000 } }],
+  }),
+];
+
+function renderRunHistory(locale: 'en' | 'ar' = 'en') {
+  const t = createTranslator(payrollMessages(locale), locale);
+  return renderAudit(
+    <RecordHistory
+      basePath={`/${locale}/payroll/${RUN_ID}/history`}
+      recordName=""
+      description={t('payroll.tabs.historyDescription')}
+      query={parseHistoryQuery({})}
+      entries={ENTRIES}
+      total={ENTRIES.length}
+      fields={['amount', 'status', 'totals', 'type']}
+      actors={ACTORS}
+      now={NOW}
+    />,
+    locale,
+  );
+}
+
+describe('Payroll run — History tab', () => {
+  it('lists create → adjust → approve in words and money, with the run’s own sentence', () => {
+    renderRunHistory();
+    expect(screen.getByText("Who did what on this month's payroll — created, recalculated, adjusted, approved — newest first.")).toBeTruthy();
+    const [approved, adjusted, created] = screen.getAllByTestId('audit-entry');
+    expect(approved!.textContent).toContain('Approved the payroll run for November 2026');
+    expect(within(approved!).getByText('Draft')).toBeTruthy();
+    expect(within(approved!).getByText('Approved')).toBeTruthy();
+    expect(adjusted!.textContent).toContain('Added an adjustment to the payroll run for November 2026');
+    expect(within(adjusted!).getByText('Salma Adel')).toBeTruthy();
+    expect(within(adjusted!).getByText('Addition')).toBeTruthy();
+    // Piastres read as pounds.
+    expect(adjusted!.textContent).toMatch(/250\.00/);
+    expect(created!.textContent).toContain('Created the payroll run for November 2026');
+    for (const item of [approved, adjusted, created]) {
+      expect(item!.textContent).not.toMatch(/ADDITION|DRAFT|APPROVED|25000|2026-11(?!\d)/);
+    }
+  });
+
+  it('Arabic: the sentences, values and the run’s description in Arabic', () => {
+    renderRunHistory('ar');
+    expect(screen.getByText('من فعل ماذا في رواتب هذا الشهر — الإنشاء وإعادة الحساب والتعديلات والاعتماد — الأحدث أولًا.')).toBeTruthy();
+    const [approved, adjusted] = screen.getAllByTestId('audit-entry');
+    expect(within(approved!).getByText('معتمد')).toBeTruthy();
+    expect(within(adjusted!).getByText('سلمى عادل')).toBeTruthy();
+    expect(adjusted!.textContent).not.toMatch(/ADDITION/);
+  });
+});
+
+describe('Payroll run — tabs', () => {
+  it('Employees and History, the current one from the URL; History links to the run’s history', () => {
+    pathname.current = `${RUN}/history`;
+    renderPayroll(<RunTabs runHref={RUN} />);
+    const nav = screen.getByRole('navigation', { name: 'Payroll run sections' });
+    const employees = within(nav).getByRole('link', { name: 'Employees' });
+    const history = within(nav).getByRole('link', { name: 'History' });
+    expect(employees.getAttribute('href')).toBe(RUN);
+    expect(history.getAttribute('href')).toBe(`${RUN}/history`);
+    expect(history.getAttribute('aria-current')).toBe('page');
+    expect(employees.getAttribute('aria-current')).toBeNull();
+  });
+
+  it('no History tab without the activity log permission', () => {
+    pathname.current = RUN;
+    renderPayroll(<RunTabs runHref={RUN} />, 'en', sessionWithout('core.audit.view'));
+    const nav = screen.getByRole('navigation', { name: 'Payroll run sections' });
+    expect(within(nav).getByRole('link', { name: 'Employees' }).getAttribute('aria-current')).toBe('page');
+    expect(within(nav).queryByRole('link', { name: 'History' })).toBeNull();
+  });
+
+  it('Arabic labels', () => {
+    pathname.current = `/ar/payroll/${RUN_ID}`;
+    renderPayroll(<RunTabs runHref={`/ar/payroll/${RUN_ID}`} />, 'ar');
+    const nav = screen.getByRole('navigation', { name: 'أقسام مسيّر الرواتب' });
+    expect(within(nav).getByRole('link', { name: 'الموظفون' })).toBeTruthy();
+    expect(within(nav).getByRole('link', { name: 'السجل' })).toBeTruthy();
+  });
+});

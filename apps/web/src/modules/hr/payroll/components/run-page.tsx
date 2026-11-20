@@ -4,44 +4,30 @@ import {
   AdjustmentType,
   PAGINATION,
   PAYROLL_PAGINATION,
-  PayrollFlag,
   PayrollStatus,
-  PenaltyStatus,
   type Department,
   type PayrollLine,
   type PayrollRun,
   type PayrollRunQuery,
 } from '@school-erp/shared';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useId, useMemo, useRef, useState, useTransition } from 'react';
-import { Can, useCan } from '@/core/auth';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { useCan } from '@/core/auth';
 import { EmployeeLink } from '@/core/employees';
-import { callApi } from '@/lib/callApi';
 import { RowActions, RowActionsSkeleton } from '@/shared/components/data-table/row-actions';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-table/data-table';
 import { ClearFilters, FilterSelect, SearchInput } from '@/shared/components/form/filter-controls';
 import { EmptyState } from '@/shared/components/layout/empty-state';
-import { PageHeader } from '@/shared/components/layout/page-header';
 import { BidiText } from '@/shared/components/ui/bidi-text';
-import { Button } from '@/shared/components/ui/button';
-import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { Money } from '@/shared/components/ui/figures';
 import {
   AdjustIcon,
-  ApproveIcon,
-  BlockedIcon,
-  CloseIcon,
   DeductionsIcon,
   EmployeesIcon,
-  ExportIcon,
   GrossIcon,
   NetPayIcon,
   PayrollIcon,
   PayslipIcon,
-  PendingIcon,
-  RecalculateIcon,
-  RestoreIcon,
   SearchIcon,
 } from '@/shared/components/ui/icons';
 import { SkeletonPill, SkeletonProse, SkeletonText } from '@/shared/components/ui/skeleton';
@@ -49,61 +35,53 @@ import { SlotText, TEXT_SLOT } from '@/shared/components/ui/slot-text';
 import { StatTile } from '@/shared/components/ui/stat-tile';
 import { StatusPill } from '@/shared/components/ui/status-pill';
 import { Switch } from '@/shared/components/ui/switch';
-import { useNewestServerState } from '@/shared/hooks/use-newest-server-state';
-import { apiErrorText } from '@/shared/lib/api-error';
-import { saveDownloadedFile } from '@/shared/lib/download';
-import { formatCount, formatDate, formatMoney, formatMoneyText, formatMonth, sumMoney } from '@/shared/lib/format';
+import { formatCount, formatMoney, formatMoneyText, formatMonth, sumMoney } from '@/shared/lib/format';
 import { localName, nameIn } from '@/shared/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
-import { APPROVE_PAYROLL_RUN, GET_BANK_SHEET, RECALCULATE_PAYROLL_RUN } from '../apis';
 import { adjustmentNet, adjustmentsOf, notAppliedAdjustments, runFilterCount, runQueryString } from '../lib/run-query';
 import { AdjustmentsDialog, type AdjustmentsTarget } from './adjustments-dialog';
-import { DeductionAmount, LineStatus, RunStatusPill, SignedAmount } from './payroll-bits';
+import { DeductionAmount, LineStatus, SignedAmount } from './payroll-bits';
 import { RulesPanel } from './rules-panel';
+import { useRunState } from './run-shell';
 
 const SEARCH_DEBOUNCE_MS = 300;
 
-export interface RunPageProps {
+export interface RunLinesProps {
   /** `/ar/payroll`. */
   basePath: string;
   /** `/ar/settings` — the rules panel links there. */
   settingsHref: string;
-  /** `/ar/penalties` — the pending-penalties notice links to this month's pending ones. */
-  penaltiesHref: string;
-  run: PayrollRun;
-  /** The server's clock before `run` was read (`loadRun`): a newer mutation result wins over it. */
-  asOf: number;
+  /**
+   * With search or filters in the URL: the run read with them (its lines are the matching ones),
+   * and the server's clock before that read. Without: null — the lines are the layout's run's.
+   */
+  filtered: { run: PayrollRun; asOf: number } | null;
   departments: Department[];
   query: PayrollRunQuery;
 }
 
 /**
- * One month's run (as the mockup): status, Recalculate / Export bank sheet / Approve, four tiles,
- * the employees table (cards on narrow containers) filtered by the API, and the rules panel.
- * A draft is editable; an approved run is read-only with the bank sheet and payslips.
- * Approve is never blocked by client logic: the server decides (409 `PENDING_PENALTIES`).
+ * The run's "Employees" tab (as the mockup): four tiles, the employees table (cards on narrow
+ * containers) filtered by the API, the adjustments not applied and the rules panel. The run comes
+ * from the run layout (`useRunState`); only the filtered lines are this tab's own read. A draft is
+ * editable; an approved run is read-only with the payslips.
  */
-export function RunPage({
-  basePath,
-  settingsHref,
-  penaltiesHref,
-  run: serverRun,
-  asOf: serverAsOf,
-  departments,
-  query,
-}: RunPageProps) {
-  const { t, has, locale } = useTranslation();
+export function RunLines({ basePath, settingsHref, filtered: filteredRead, departments, query }: RunLinesProps) {
+  const { t, locale } = useTranslation();
   const router = useRouter();
   const [navigating, startNavigation] = useTransition();
+  const { run, lastWrite, applyRun, mutating, whenIdle } = useRunState();
 
-  // Server data, replaced by each mutation's response. Props read before the latest mutation (a
-  // search or filter navigation still in flight when it answered) never replace it: the page re-reads
-  // the current URL instead, so the run can't fall back to Draft after Approve.
-  const { value: run, apply: setRun, staleCount } = useNewestServerState(serverRun, serverAsOf);
+  const filterCount = runFilterCount(query);
+  const filtered = filterCount > 0;
+  // A write answered after the filtered lines were read: they're re-read for the current URL
+  // (the write's answer holds every line, not the matching ones).
+  const filteredAsOf = filteredRead?.asOf ?? 0;
   useEffect(() => {
-    if (staleCount > 0) startNavigation(() => router.refresh());
-  }, [staleCount, router]);
+    if (filtered && filteredRead && lastWrite > filteredAsOf) startNavigation(() => router.refresh());
+  }, [filtered, filteredRead, filteredAsOf, lastWrite, router]);
+  const lines = filtered && filteredRead ? filteredRead.run.lines : run.lines;
 
   const [search, setSearch] = useState(query.search ?? '');
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -115,58 +93,16 @@ export function RunPage({
   );
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState<number>(PAGINATION.defaultLimit);
-
-  const [recalculating, setRecalculating] = useState(false);
-  /** Recalculate / Approve is in flight: search and filters wait, so no navigation overlaps it. */
-  const [mutating, setMutating] = useState(false);
-  const [exporting, setExporting] = useState(false);
-  const [approveOpen, setApproveOpen] = useState(false);
-  const [approveError, setApproveError] = useState<string | null>(null);
   const [adjusting, setAdjusting] = useState<AdjustmentsTarget | null>(null);
   const canAdjust = useCan()('hr.payroll.adjust');
-  const busyRef = useRef(false);
-
-  /**
-   * Runs one run write at a time. A search still waiting for its debounce is held until the write
-   * answers (then sent), so its navigation can't start mid-write.
-   */
-  async function mutate(work: () => Promise<void>) {
-    if (busyRef.current) return;
-    busyRef.current = true;
-    setMutating(true);
-    const heldSearch = searchTimer.current !== null;
-    if (searchTimer.current) clearTimeout(searchTimer.current);
-    searchTimer.current = null;
-    try {
-      await work();
-    } finally {
-      busyRef.current = false;
-      setMutating(false);
-      if (heldSearch) go({ ...query, search: search.trim() || undefined });
-    }
-  }
 
   const draft = run.status === PayrollStatus.DRAFT;
   const monthLabel = formatMonth(run.month, locale);
-  const filterCount = runFilterCount(query);
-  const filtered = filterCount > 0;
   const notApplied = useMemo(() => notAppliedAdjustments(run.adjustments), [run.adjustments]);
-  // The live count comes from the server; the lines' flags only reflect the last calculation.
-  const staleFlags = useMemo(
-    () => run.lines.some((line) => line.flags.includes(PayrollFlag.PENDING_PENALTIES)),
-    [run.lines],
-  );
-  const pendingNotice = !draft || approveError ? null : run.pendingPenalties > 0 ? 'pending' : staleFlags ? 'stale' : null;
-  const pendingTitleId = useId();
-  // HR rules (lateness, payroll) changed after the last calculation (dry run 2026-11-18). Not shown
-  // beside the "stale" notice, which already offers Recalculate.
-  const rulesNotice = draft && !approveError && run.rulesChanged && pendingNotice !== 'stale';
-  const rulesTitleId = useId();
-  const returnedTitleId = useId();
 
-  const pageCount = Math.max(1, Math.ceil(run.lines.length / limit));
+  const pageCount = Math.max(1, Math.ceil(lines.length / limit));
   const currentPage = Math.min(page, pageCount);
-  const pageLines = run.lines.slice((currentPage - 1) * limit, currentPage * limit);
+  const pageLines = lines.slice((currentPage - 1) * limit, currentPage * limit);
 
   // ── Filters live in the URL; the API filters the lines ────────────────────
   function go(next: PayrollRunQuery) {
@@ -182,7 +118,8 @@ export function RunPage({
     if (searchTimer.current) clearTimeout(searchTimer.current);
     searchTimer.current = setTimeout(() => {
       searchTimer.current = null;
-      go({ ...query, search: text.trim() || undefined });
+      // Never mid-write: a search typed during Recalculate / Approve goes once it answers.
+      whenIdle(() => go({ ...query, search: text.trim() || undefined }));
     }, SEARCH_DEBOUNCE_MS);
   }
   /** Search, both filters and the page, in one URL update. */
@@ -191,62 +128,6 @@ export function RunPage({
     searchTimer.current = null;
     setSearch('');
     go({});
-  }
-
-  /**
-   * A mutation returned the whole (unfiltered) run, stamped `asOf`: show it, then refetch the
-   * filtered lines (the refetch is read after the write, so it replaces this).
-   */
-  function applyRun(next: PayrollRun, asOf: number) {
-    if (filtered) {
-      setRun({ ...next, lines: run.lines }, asOf);
-      startNavigation(() => router.refresh());
-    } else {
-      setRun(next, asOf);
-    }
-  }
-
-  function recalculate() {
-    return mutate(async () => {
-      setRecalculating(true);
-      try {
-        const res = await callApi(RECALCULATE_PAYROLL_RUN(run.id), {
-          showSuccessToast: true,
-          successMessage: t('payroll.actions.recalculated'),
-        });
-        if (res.unauthorized) return;
-        if (res.success && res.data) applyRun(res.data, res.asOf);
-        else if (res.success === false && res.status === 409) startNavigation(() => router.refresh());
-      } finally {
-        setRecalculating(false);
-      }
-    });
-  }
-
-  function approve() {
-    return mutate(async () => {
-      setApproveError(null);
-      // The server's message is shown on the page (e.g. 409 PENDING_PENALTIES), not as a toast.
-      const res = await callApi(APPROVE_PAYROLL_RUN(run.id), {
-        showErrorToast: false,
-        showSuccessToast: true,
-        successMessage: t('payroll.actions.approved'),
-      });
-      if (res.unauthorized) return;
-      if (res.success && res.data) applyRun(res.data, res.asOf);
-      else if (res.success === false) setApproveError(apiErrorText(res, { t, has }));
-    });
-  }
-
-  async function exportBankSheet() {
-    if (exporting) return;
-    setExporting(true);
-    try {
-      const res = await callApi(GET_BANK_SHEET(run.id));
-      if (res.success && res.data) saveDownloadedFile(res.data);
-    } finally {
-      setExporting(false);
-    }
   }
 
   // ── Table ─────────────────────────────────────────────────────────────────
@@ -323,174 +204,7 @@ export function RunPage({
   const totals = run.totals;
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader
-        title={t('payroll.runTitle', { month: monthLabel })}
-        status={<RunStatusPill status={run.status} transferred={run.transferredAt !== null} />}
-        description={
-          draft
-            ? t('payroll.runDescription')
-            : t('payroll.runDescriptionApproved', {
-                date: run.approvedAt ? formatDate(run.approvedAt.slice(0, 10), locale) : '',
-              })
-        }
-        breadcrumbs={[{ label: t('payroll.title'), href: basePath }, { label: monthLabel }]}
-        breadcrumbsLabel={t('ui.shell.breadcrumbs')}
-        actions={
-          <>
-            {draft ? (
-              <Can permission="hr.payroll.recalculate">
-                <Button className="cursor-pointer" loading={recalculating} onClick={() => void recalculate()}>
-                  {recalculating ? null : <RecalculateIcon />}
-                  {t('payroll.actions.recalculate')}
-                </Button>
-              </Can>
-            ) : null}
-            <Can permission="hr.payroll.export_bank_sheet">
-              <Button
-                className={draft ? 'cursor-not-allowed' : 'cursor-pointer'}
-                disabled={draft}
-                title={draft ? t('payroll.actions.bankSheetAfterApproval') : undefined}
-                loading={exporting}
-                onClick={() => void exportBankSheet()}
-              >
-                {exporting ? null : <ExportIcon />}
-                {t('payroll.actions.exportBankSheet')}
-              </Button>
-            </Can>
-            {draft ? (
-              <Can permission="hr.payroll.approve">
-                <Button variant="primary" className="cursor-pointer" onClick={() => setApproveOpen(true)}>
-                  <ApproveIcon />
-                  {t('payroll.actions.approve')}
-                </Button>
-              </Can>
-            ) : null}
-          </>
-        }
-      />
-
-      {draft && run.returned ? (
-        // Accounting sent the approved month back (§10): why, until it is approved again.
-        <div
-          role="note"
-          aria-labelledby={returnedTitleId}
-          data-testid="returned-notice"
-          className="bg-warning-soft text-warning-ink flex items-start gap-3 rounded-2xl px-4 py-3.5"
-        >
-          <RestoreIcon className="mt-0.5 size-5 shrink-0" />
-          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <p id={returnedTitleId} className="font-bold">
-              {t('payroll.returned.title', { date: formatDate(run.returned.at.slice(0, 10), locale) })}
-            </p>
-            {/* The reason is what Accounting typed: isolated in its own direction (like adjustment
-                reasons), and never followed by a sentence's period of ours. */}
-            <p className="text-sm break-words" data-testid="returned-reason">
-              {t('payroll.returned.reasonLabel')} <BidiText>{run.returned.reason}</BidiText>
-            </p>
-            <p className="text-sm">{t('payroll.returned.fix')}</p>
-          </div>
-        </div>
-      ) : null}
-
-      {pendingNotice === 'pending' ? (
-        // Told before Approve is pressed; the button still sends (the server decides, 409).
-        <div
-          role="note"
-          aria-labelledby={pendingTitleId}
-          className="bg-warning-soft text-warning-ink flex flex-wrap items-start gap-3 rounded-2xl px-4 py-3.5"
-        >
-          <PendingIcon className="mt-0.5 size-5 shrink-0" />
-          <div className="flex min-w-0 flex-1 basis-56 flex-col gap-0.5">
-            <p id={pendingTitleId} className="font-bold">
-              {t('payroll.approve.pendingTitle')}
-            </p>
-            <p className="text-sm">{t('payroll.approve.pendingBody', { count: formatCount(run.pendingPenalties) })}</p>
-          </div>
-          <Button asChild size="sm" variant="secondary" className="cursor-pointer">
-            <Link href={`${penaltiesHref}?${new URLSearchParams({ month: run.month, status: PenaltyStatus.PENDING }).toString()}`}>
-              {t('payroll.approve.pendingLink')}
-            </Link>
-          </Button>
-        </div>
-      ) : null}
-
-      {pendingNotice === 'stale' ? (
-        // No penalty is pending any more, but the lines were calculated while some were.
-        <div
-          role="note"
-          aria-labelledby={pendingTitleId}
-          className="bg-info-soft text-info-ink flex flex-wrap items-start gap-3 rounded-2xl px-4 py-3.5"
-        >
-          <RecalculateIcon className="mt-0.5 size-5 shrink-0" />
-          <div className="flex min-w-0 flex-1 basis-56 flex-col gap-0.5">
-            <p id={pendingTitleId} className="font-bold">
-              {t('payroll.approve.staleTitle')}
-            </p>
-            <p className="text-sm">{t('payroll.approve.staleBody')}</p>
-          </div>
-          <Button
-            size="sm"
-            variant="secondary"
-            className="cursor-pointer"
-            loading={recalculating}
-            onClick={() => void recalculate()}
-          >
-            {t('payroll.approve.staleAction')}
-          </Button>
-        </div>
-      ) : null}
-
-      {rulesNotice ? (
-        <div
-          role="note"
-          aria-labelledby={rulesTitleId}
-          data-testid="rules-changed-notice"
-          className="bg-info-soft text-info-ink flex flex-wrap items-start gap-3 rounded-2xl px-4 py-3.5"
-        >
-          <RecalculateIcon className="mt-0.5 size-5 shrink-0" />
-          <div className="flex min-w-0 flex-1 basis-56 flex-col gap-0.5">
-            <p id={rulesTitleId} className="font-bold">
-              {t('payroll.rulesChanged.title')}
-            </p>
-            <p className="text-sm">{t('payroll.rulesChanged.body')}</p>
-          </div>
-          <Can permission="hr.payroll.recalculate">
-            <Button
-              size="sm"
-              variant="secondary"
-              className="cursor-pointer"
-              loading={recalculating}
-              onClick={() => void recalculate()}
-            >
-              {t('payroll.approve.staleAction')}
-            </Button>
-          </Can>
-        </div>
-      ) : null}
-
-      {approveError && draft ? (
-        <div
-          role="alert"
-          className="bg-destructive-soft text-destructive-ink flex items-start gap-3 rounded-2xl px-4 py-3.5"
-        >
-          <BlockedIcon className="mt-0.5 size-5 shrink-0" />
-          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <p className="font-bold">{t('payroll.approve.failed')}</p>
-            <p className="text-sm">{approveError}</p>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className="cursor-pointer"
-            aria-label={t('ui.dialog.close')}
-            onClick={() => setApproveError(null)}
-          >
-            <CloseIcon />
-          </Button>
-        </div>
-      ) : null}
-
+    <>
       <RunTiles totals={totals} />
 
       {/* Rules panel beside the table only when all eight columns still fit next to it; below it otherwise. */}
@@ -519,7 +233,7 @@ export function RunPage({
             toolbar={
               <RunLinesToolbar
                 count={t('payroll.table.count', {
-                  shown: formatCount(run.lines.length),
+                  shown: formatCount(lines.length),
                   total: formatCount(totals.employees),
                 })}
                 search={search}
@@ -535,7 +249,7 @@ export function RunPage({
             pagination={{
               page: currentPage,
               limit,
-              total: run.lines.length,
+              total: lines.length,
               onPageChange: setPage,
               pageSizes: PAYROLL_PAGINATION.pageSizes,
               onLimitChange: (next) => {
@@ -603,16 +317,7 @@ export function RunPage({
         }}
         onRunChange={applyRun}
       />
-
-      <ConfirmDialog
-        open={approveOpen}
-        onOpenChange={setApproveOpen}
-        title={t('payroll.approve.title', { month: monthLabel })}
-        description={t('payroll.approve.body')}
-        confirmLabel={t('payroll.approve.confirm')}
-        onConfirm={approve}
-      />
-    </div>
+    </>
   );
 }
 

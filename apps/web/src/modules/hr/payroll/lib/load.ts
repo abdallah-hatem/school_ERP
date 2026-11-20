@@ -25,25 +25,41 @@ export async function loadRuns(query: RunsListQuery): Promise<RunsListData> {
   return { runs: res.data, total: res.meta?.total ?? res.data.length };
 }
 
-export interface RunPageData {
+export interface RunData {
   run: PayrollRun;
   /** This server's clock before the run was read: the run page keeps a newer mutation result over it. */
   asOf: number;
+}
+
+/**
+ * The run the run layout draws (every line, no filters). An unknown or malformed run id is the
+ * not-found page; any other failure throws to the boundary.
+ */
+export async function loadRun(id: Uuid, query: PayrollRunQuery = {}): Promise<RunData> {
+  const asOf = Date.now();
+  // The run carries the HR rules its panel shows: no separate settings read (Principal and
+  // Accountant may view runs without holding `hr.settings.view`).
+  const res = await GET_PAYROLL_RUN(id, query);
+  if (res.success === false && (res.status === 404 || res.status === 400)) notFound();
+  if (!res.success || !res.data) throw new Error(res.message ?? 'Payroll run failed to load');
+  return { run: res.data, asOf };
+}
+
+export interface RunLinesData {
+  /** With search or filters: the run read with them (its lines are the matching ones). */
+  filtered: RunData | null;
   /** Every department, hidden ones too (a line keeps the department it had). */
   departments: Department[];
 }
 
-/** An unknown or malformed run id is the not-found page; any other failure throws to the boundary. */
-export async function loadRun(id: Uuid, query: PayrollRunQuery): Promise<RunPageData> {
-  const asOf = Date.now();
-  // The run carries the HR rules its panel shows: no separate settings read (Principal and
-  // Accountant may view runs without holding `hr.settings.view`).
-  const [res, departments] = await Promise.all([GET_PAYROLL_RUN(id, query), GET_DEPARTMENTS(true)]);
-  if (res.success === false && (res.status === 404 || res.status === 400)) notFound();
-  if (!res.success || !res.data) throw new Error(res.message ?? 'Payroll run failed to load');
+/**
+ * The Employees tab: the departments (its filter) and, only when the URL filters, the run read
+ * with the filters — unfiltered, the tab shows the layout's run, so the run is not read twice.
+ */
+export async function loadRunLines(id: Uuid, query: PayrollRunQuery, filtered: boolean): Promise<RunLinesData> {
+  const [run, departments] = await Promise.all([filtered ? loadRun(id, query) : null, GET_DEPARTMENTS(true)]);
   return {
-    run: res.data,
-    asOf,
+    filtered: run,
     departments: departments.success && Array.isArray(departments.data) ? departments.data : [],
   };
 }
