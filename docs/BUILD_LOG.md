@@ -463,12 +463,18 @@ phase live in `docs/build-log/`.
   checked under the same advisory lock as the level; Approve shows greyed with the reason; cancel
   always allowed; approved levels never recomputed (older pairs may share a level, noted in §4).
   CI caught 9 employees leaked by hr-approval-notifications' e2e (older bug) — cleanup fixed.
+- 2026-11-20 — Sidebar coming modules → #194 (owner picked option C of three mockups): a locked School
+  group (Students, Academics, Attendance, Exams & grades), Leave & permissions locked in HR, Fees locked
+  in Accounting, Transport and Parent portal locked; Inventory removed. Locked items are never screens or
+  links. Current (Phosphor) icons — the custom icon set is on hold (owner).
+- 2026-11-20 — Owner: backdated penalty → **recount, telling them first** (heads-up when recording, an
+  explicit "Approve and update N penalties" confirmation when approving; refused if a later one is in an
+  approved payroll month). Being built.
 ## Next up
 
-- Penalties: recording a **backdated** penalty after a later one is already approved can still give
-  two the same level (outside #192). Needs the owner's call: refuse, or recount the later one.
-- Sidebar "Soon" modules: three mockups shown (`design/mockups/sidebar-soon.html`), waiting for the
-  owner's pick. Custom icon set drawn (`design/mockups/icon-set.html`), waiting for go/changes.
+- Penalties backdated recount — owner decided (recount with warning), being built.
+- Custom icon set drawn (`design/mockups/icon-set.html`, style G monoline + solid when selected) —
+  **on hold** (owner, 2026-11-20).
 
 - Outbox nits (from #121's live test, cosmetic): the "dead after 10 failures" log line always says
   10 (after an admin retry it's 11); a dead row still gets a `next_attempt_at`. A lock held longer
