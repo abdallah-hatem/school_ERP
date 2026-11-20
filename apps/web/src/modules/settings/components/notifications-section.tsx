@@ -207,8 +207,11 @@ function NotificationSettingsForm({
       checked: on,
       locked: d.locked,
       disabled: !canManage,
+      // While the form saves, the switches it is saving show it; none can be flipped until it answers.
+      pending: isSubmitting && !d.locked && on !== d.enabled,
       note: on ? t('notifications.preferences.onByDefault') : t('notifications.preferences.offByDefault'),
       onChange: (next: boolean) => {
+        if (busy.current) return;
         form.setValue(`defaults.${i}`, next, { shouldDirty: true, shouldValidate: true });
         setSaved(false);
       },

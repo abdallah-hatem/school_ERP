@@ -16,6 +16,8 @@ export interface TypeSwitchRow {
   /** Required (can't be turned off): on, locked, "Required". */
   locked: boolean;
   disabled?: boolean;
+  /** Its change is saving: shown at the new value, dimmed, not flippable until the save answers. */
+  pending?: boolean;
   /** The line under the switch ("School default", "Reset to school default", "On by default"). */
   note?: ReactNode;
   /** Differs from the school's default (My account): the pill beside the name. */
@@ -184,6 +186,7 @@ function RowSwitch({ row, align = 'center' }: { row: TypeSwitchRow; align?: 'cen
         aria-label={name}
         checked={row.locked ? true : row.checked}
         disabled={row.locked || row.disabled}
+        pending={!row.locked && row.pending}
         aria-describedby={row.locked ? `${id}-req` : undefined}
         onCheckedChange={(next) => {
           if (!row.locked) row.onChange(next);

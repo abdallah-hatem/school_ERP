@@ -75,7 +75,7 @@ export function NotificationPreferencesView({ initial }: { initial: Notification
         category: entry.category,
         checked: channel.enabled,
         locked: channel.locked,
-        disabled: pending.has(entry.type),
+        pending: pending.has(entry.type),
         changed,
         note: changed ? (
           <button
