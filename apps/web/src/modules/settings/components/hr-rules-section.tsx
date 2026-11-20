@@ -22,7 +22,7 @@ import { Form } from '@/shared/components/form/form';
 import { ErrorState } from '@/shared/components/layout/empty-state';
 import { Button } from '@/shared/components/ui/button';
 import { AddIcon, RemoveIcon } from '@/shared/components/ui/icons';
-import { Input } from '@/shared/components/ui/input';
+import { GroupedNumberInput } from '@/shared/components/ui/grouped-number-input';
 import { Label } from '@/shared/components/ui/label';
 import { formatCount, formatDayCount } from '@/shared/lib/format';
 import { useTranslation } from '@/shared/providers/i18n-provider';
@@ -302,7 +302,7 @@ function LatenessExample({ control }: { control: Control<HrRulesFormValues> }) {
   const [minutesText, setMinutesText] = useState(String(EXAMPLE_DEFAULT));
   const [graceMinutes, steps, extraHourDays] = useWatch({ control, name: ['graceMinutes', 'steps', 'extraHourDays'] });
   const rule = ruleFromForm({ graceMinutes, steps, extraHourDays });
-  const minutes = minutesText === '' ? null : Number(minutesText);
+  const minutes = minutesText === '' ? null : Number(minutesText.replace(/,/g, ''));
 
   let line: string;
   if (!rule) line = t('settings.hrRules.example.invalidRule');
@@ -314,16 +314,13 @@ function LatenessExample({ control }: { control: Control<HrRulesFormValues> }) {
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex w-40 flex-col gap-2">
           <Label htmlFor={id}>{t('settings.hrRules.example.minutes')}</Label>
-          <Input
+          <GroupedNumberInput
             id={id}
-            inputMode="numeric"
-            dir="ltr"
-            className="tabular"
             placeholder={t('settings.hrRules.example.minutesPlaceholder')}
             value={minutesText}
-            onChange={(e) => {
-              const next = e.target.value.replace(/,/g, '');
-              if (!/^\d*$/.test(next) || Number(next) > SETTING_LIMITS.latenessMinutesMax) return;
+            onValueChange={(next) => {
+              // Grouped live (`1,500`) like the lateness board; past the monthly cap is ignored.
+              if (Number(next.replace(/,/g, '')) > SETTING_LIMITS.latenessMinutesMax) return;
               setMinutesText(next);
             }}
           />

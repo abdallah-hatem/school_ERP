@@ -304,6 +304,46 @@ export function NumberField<T extends FieldValues>({
   );
 }
 
+/**
+ * Amount in EGP outside a form (a calculator, an example box): the same engine and look as
+ * `MoneyField` — `EGP` before the figure, grouped live while typing, `10,000.00` on blur. Holds
+ * integer piastres (`null` when empty). Every money input in the app is one of these two.
+ */
+export function MoneyInput({
+  value,
+  onChange,
+  onBlur,
+  allowNegative = false,
+  className,
+  ...props
+}: Omit<ComponentProps<typeof Input>, 'value' | 'onChange' | 'onBlur' | 'type' | 'inputMode'> & {
+  value: Piastres | null | undefined;
+  onChange: (value: Piastres | null) => void;
+  onBlur?: () => void;
+  allowNegative?: boolean;
+}) {
+  const { t } = useTranslation();
+  return (
+    // Currency left of the figure in both languages, like <Money>.
+    <div className={cn('relative', className)} dir="ltr">
+      <span className="pointer-events-none absolute inset-y-0 start-3.5 flex items-center text-sm font-semibold text-muted-foreground">
+        {t('ui.units.currency')}
+      </span>
+      <FormattedNumberInput
+        {...props}
+        decimals={2}
+        allowNegative={allowNegative}
+        parse={(text) => parseMoney(text)}
+        format={(v: Piastres) => formatMoney(v)}
+        value={value}
+        onChange={onChange}
+        onBlur={() => onBlur?.()}
+        className="ps-14"
+      />
+    </div>
+  );
+}
+
 /** Amount in EGP. The form holds integer piastres; the field shows `14,000.00`. */
 export function MoneyField<T extends FieldValues>({
   control,
@@ -316,34 +356,23 @@ export function MoneyField<T extends FieldValues>({
   placeholder,
   allowNegative = false,
 }: BaseFieldProps<T> & { placeholder: string; allowNegative?: boolean }) {
-  const { t } = useTranslation();
   const id = useFieldId(name);
   const { field, fieldState } = useController({ control, name });
   return (
     <FieldShell id={id} label={label} required={required} hint={hint} error={fieldState.error?.message} className={className}>
       {(a11y) => (
-        // Currency left of the figure in both languages, like <Money>.
-        <div className="relative" dir="ltr">
-          <span className="pointer-events-none absolute inset-y-0 start-3.5 flex items-center text-sm font-semibold text-muted-foreground">
-            {t('ui.units.currency')}
-          </span>
-          <FormattedNumberInput
-            {...a11y}
-            ref={field.ref}
-            name={field.name}
-            required={required}
-            disabled={disabled}
-            placeholder={placeholder}
-            decimals={2}
-            allowNegative={allowNegative}
-            parse={(text) => parseMoney(text)}
-            format={(v: Piastres) => formatMoney(v)}
-            value={field.value as Piastres | null | undefined}
-            onChange={field.onChange}
-            onBlur={field.onBlur}
-            className="ps-14"
-          />
-        </div>
+        <MoneyInput
+          {...a11y}
+          ref={field.ref}
+          name={field.name}
+          required={required}
+          disabled={disabled}
+          placeholder={placeholder}
+          allowNegative={allowNegative}
+          value={field.value as Piastres | null | undefined}
+          onChange={field.onChange}
+          onBlur={field.onBlur}
+        />
       )}
     </FieldShell>
   );

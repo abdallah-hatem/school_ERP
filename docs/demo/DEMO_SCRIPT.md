@@ -97,8 +97,10 @@ Before the demo, on the demo database:
   day" (a run calculated before this change shows it after a Recalculate).
 - Print → one A4 page, in Arabic and in English.
 - Settings → **Accounting** (signed in as System admin or Accountant): the payroll tax rule —
-  monthly slices, martyrs' fund, insurance share. ✔ The example shows net 10,000.00 → income tax
-  1,017.00 · fund 5.51 · gross 11,022.51. By hand: taxable 11,022.51; tax = 125 + 187.50 +
+  monthly slices, martyrs' fund, insurance share. ✔ The example receipt shows Net pay 10,000.00,
+  + Income tax 1,017.00, + Martyrs' fund 5.51, then "Gross the school pays" EGP 11,022.51. Typing
+  in the Net pay box groups as you type (`15000` → `15,000`) and completes to `15,000.00` on leaving
+  it; the receipt then reads 2,267.78 · 8.64 · EGP 17,276.42. By hand: taxable 11,022.51; tax = 125 + 187.50 +
   (11,022.51 − 7,500) × 20% = 1,017.00; fund = 11,022.51 × 0.05% = 5.51; 11,022.51 − 1,017.00 −
   5.51 = 10,000.00 (the net is what the employee is paid).
 - Sign in as the **Accountant** → ✔ Settings is in the menu and opens straight on Accounting, the
