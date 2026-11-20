@@ -23,3 +23,7 @@ Corrections recorded so they don't have to be repeated. Loaded at session start.
   (dev needs a CODEOWNERS approval; his account can't approve itself), and Tamer's after my review
   (code + screenshots) comes back clean — approve, then merge; otherwise report the fixes. Never
   `--admin` into `testing`/`production`/`demo`. ("I allow you to merge for me as well") — 2026-11-20
+- Don't repeat on a screen what it already shows: the payroll month's tiles already carry the
+  totals, so a "Month total" card under them was removed ("we dont need the month card its already
+  at the cards at the top"). Check the page's tiles/headers before adding a summary row or card.
+  — 2026-11-20
