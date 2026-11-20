@@ -27,6 +27,11 @@ export interface RecordHistoryProps {
    * record (a payroll run: "Who did what on this month's payroll"). Already translated.
    */
   description?: string;
+  /**
+   * The empty state's sentence, when "Edits to this employee will be listed here" doesn't fit the
+   * record (a payroll run). Already translated.
+   */
+  emptyBody?: string;
   query: HistoryQuery;
   entries: AuditEntry[];
   total: number;
@@ -51,6 +56,7 @@ export function RecordHistory({
   basePath,
   recordName,
   description,
+  emptyBody,
   query,
   entries,
   total,
@@ -130,7 +136,7 @@ export function RecordHistory({
         action={<ClearFilters placement="empty" count={filterCount} onClear={clearFilters} />}
       />
     ) : (
-      <EmptyState icon={HistoryIcon} title={t('audit.history.emptyTitle')} description={t('audit.history.emptyBody')} />
+      <EmptyState icon={HistoryIcon} title={t('audit.history.emptyTitle')} description={emptyBody ?? t('audit.history.emptyBody')} />
     );
   } else {
     body = (

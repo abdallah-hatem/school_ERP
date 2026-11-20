@@ -37,6 +37,10 @@ export interface RecordPenaltyDialogProps {
   employeeId?: string;
 }
 
+/** The error type of a rule the server refused the save on (`fieldForError`). */
+const SERVER_REFUSAL = 'server';
+const REFUSABLE_FIELDS = ['employeeId', 'violationId', 'date'] as const;
+
 type PreviewState =
   | { kind: 'idle' }
   | { kind: 'loading' }
@@ -56,7 +60,7 @@ export function RecordPenaltyDialog({ open, onOpenChange, employees, violations,
     resolver: zodResolver(recordPenaltySchema),
     defaultValues: emptyRecordForm(employeeId),
   });
-  const { control, handleSubmit, reset, setError } = form;
+  const { control, handleSubmit, reset, setError, clearErrors } = form;
   const [busy, setBusy] = useState(false);
   const inFlight = useRef(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -81,6 +85,14 @@ export function RecordPenaltyDialog({ open, onOpenChange, employees, violations,
   const previewRepeatsFieldError =
     preview.kind === 'error' &&
     Object.values(errors).some((error) => error?.message === preview.message);
+  // A save the server refused (an approved month, once per day…) stands until the employee,
+  // violation or date changes: Save waits, and the date shows only the refusal, not its "Can't be
+  // in the future" hint, which read as the cause (dry run 2026-11-20 b).
+  const refused = Object.values(errors).some((error) => error?.type === SERVER_REFUSAL);
+  const dateRefused = errors.date?.type === SERVER_REFUSAL;
+  useEffect(() => {
+    clearErrors(REFUSABLE_FIELDS.filter((name) => form.getFieldState(name).error?.type === SERVER_REFUSAL));
+  }, [watchedEmployee, watchedViolation, watchedDate, clearErrors, form]);
 
   // Live preview: one request per change of employee, violation or date; a slower earlier answer
   // never overwrites a later one.
@@ -133,7 +145,7 @@ export function RecordPenaltyDialog({ open, onOpenChange, employees, violations,
       }
       const message = errorMessage(res, t, has, t('penalties.form.saveFailed'), locale);
       const field = fieldForError(res.error);
-      if (field) setError(field, { message }, { shouldFocus: true });
+      if (field) setError(field, { type: SERVER_REFUSAL, message }, { shouldFocus: true });
       else setFormError(message);
     } finally {
       inFlight.current = false;
@@ -155,7 +167,14 @@ export function RecordPenaltyDialog({ open, onOpenChange, employees, violations,
                 {t('ui.dialog.cancel')}
               </Button>
             </DialogClose>
-            <Button type="submit" form={formId} variant="primary" className="cursor-pointer" loading={busy}>
+            <Button
+              type="submit"
+              form={formId}
+              variant="primary"
+              className={refused ? 'cursor-not-allowed' : 'cursor-pointer'}
+              loading={busy}
+              disabled={refused}
+            >
               {t('penalties.form.save')}
             </Button>
           </>
@@ -195,7 +214,7 @@ export function RecordPenaltyDialog({ open, onOpenChange, employees, violations,
             required
             disabled={busy}
             placeholder={t('penalties.form.datePlaceholder')}
-            hint={t('penalties.form.dateHint')}
+            hint={dateRefused ? undefined : t('penalties.form.dateHint')}
             max={todayIso()}
           />
           {previewRepeatsFieldError ? null : <PreviewLine state={preview} />}

@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
-import { PAGINATION, type PayrollRunSummary } from '@school-erp/shared';
+import { PAGINATION, type Employee, type Month, type PayrollRun, type PayrollRunSummary } from '@school-erp/shared';
 import { Api } from './support/api';
-import { t } from './support/i18n';
+import { prefixOf, t } from './support/i18n';
 import { expectNoHorizontalScroll, settle, shoot, signIn } from './support/ui';
 
 /*
@@ -76,3 +76,64 @@ for (const locale of ['en', 'ar'] as const) {
     }
   });
 }
+
+/** The month after `month` (`2026-12` → `2027-01`). */
+function nextMonth(month: Month): Month {
+  const [y, m] = month.split('-').map(Number) as [number, number];
+  return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`;
+}
+
+/*
+ * Dry run 2026-11-20 b, finding 1: the History tab opened straight after Recalculate said "No
+ * changes recorded yet" until a reload — the browser reused the History it already held (writes
+ * only marked their tags stale). A write now expires its tags at once and drops the router cache
+ * (`src/lib/revalidate.ts`), so History shows the new entry without a reload.
+ */
+test('payroll run: History opened straight after Recalculate lists the new entry, without a reload', async ({ page }) => {
+  const api = await Api.asAdmin();
+  let restoreSalary: (() => Promise<unknown>) | null = null;
+  try {
+    // A fresh draft (the month after the newest run): History holds only its "Created" entry.
+    const runs = await api.get<PayrollRunSummary[]>('/hr/payroll-runs', { limit: PAGINATION.maxLimit });
+    const newest = runs.map((r) => r.month).sort().pop();
+    if (!newest) throw new Error('smoke: no payroll run (05-payroll creates one)');
+    const run = await api.post<PayrollRun>('/hr/payroll-runs', { month: nextMonth(newest) });
+    const line = run.lines[0];
+    if (!line) throw new Error('smoke: the new run has no lines');
+
+    await signIn(page, 'en');
+    const href = `/en/payroll/${run.id}`;
+    await page.goto(href);
+    const tabs = page.getByRole('navigation', { name: t('en', 'payroll.tabs.label') });
+    const historyTab = tabs.getByRole('link', { name: t('en', 'payroll.tabs.history'), exact: true });
+    const employeesTab = tabs.getByRole('link', { name: t('en', 'payroll.tabs.employees'), exact: true });
+    const entries = page.getByTestId('audit-entry');
+
+    // Open History first, so the browser holds it, then go back to Employees.
+    await historyTab.click();
+    await expect(page).toHaveURL(new RegExp(`${href}/history$`));
+    await expect(entries).toHaveCount(1);
+    await employeesTab.click();
+    await expect(page).toHaveURL(new RegExp(`${href}$`));
+
+    // A salary change (made elsewhere) gives Recalculate something to record.
+    const employee = await api.get<Employee>(`/hr/employees/${line.employeeId}`);
+    if (employee.basicSalary === undefined) throw new Error('smoke: the admin cannot see salaries');
+    const salary = employee.basicSalary;
+    restoreSalary = () => api.patch(`/hr/employees/${line.employeeId}`, { basicSalary: salary });
+    await api.patch(`/hr/employees/${line.employeeId}`, { basicSalary: salary + 10_000 });
+
+    await page.getByRole('button', { name: t('en', 'payroll.actions.recalculate'), exact: true }).click();
+    await expect(page.getByText(t('en', 'payroll.actions.recalculated'))).toBeVisible();
+
+    // Straight to History: the Recalculate entry is there, newest first — no reload.
+    await historyTab.click();
+    await expect(page).toHaveURL(new RegExp(`${href}/history$`));
+    await expect(entries).toHaveCount(2);
+    await expect(entries.first()).toContainText(prefixOf('en', 'audit.actions.hr.payroll.recalculate', {}));
+    await expect(page.getByText(t('en', 'audit.history.emptyTitle'))).toHaveCount(0);
+  } finally {
+    await restoreSalary?.();
+    await api.dispose();
+  }
+});

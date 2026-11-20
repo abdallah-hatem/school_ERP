@@ -125,6 +125,29 @@ describe('EmployeesList', () => {
     expect(within(region).getByRole('article', { name: 'عمر فتحي' }).textContent).toContain('غير نشط');
   });
 
+  it('Arabic filtered count agrees with its noun: 3 موظفين, 11 موظفًا (dry run 2026-11-20 b)', () => {
+    for (const [total, text] of [
+      [3, '3 موظفين'],
+      [11, '11 موظفًا'],
+      [1, 'موظف واحد'],
+      [1284, '1,284 موظفًا'],
+    ] as const) {
+      renderEmployees(
+        <EmployeesList
+          basePath="/ar/employees"
+          query={parseEmployeesQuery({ search: 'أحمد' })}
+          rows={people}
+          total={total}
+          departments={departments}
+          stages={stages}
+        />,
+        'ar',
+      );
+      expect(screen.getByTestId('employees-count').textContent).toBe(text);
+      cleanup();
+    }
+  });
+
   it('12 per page: the URL limit is ignored, pages are counted in twelves and never sent as limit', async () => {
     const user = userEvent.setup();
     const query = parseEmployeesQuery({ limit: '50', page: '1' });

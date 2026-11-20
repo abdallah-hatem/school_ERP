@@ -21,6 +21,7 @@ export async function RecordHistoryScreen({
   entityId,
   recordName,
   description,
+  emptyBody,
   basePath,
   searchParams,
 }: {
@@ -30,6 +31,8 @@ export async function RecordHistoryScreen({
   recordName: string;
   /** The sentence under the title, when the default one doesn't fit (`RecordHistory`). */
   description?: string;
+  /** The empty state's sentence, when the employee one doesn't fit (`RecordHistory`). */
+  emptyBody?: string;
   basePath: string;
   searchParams: SearchParamsRecord;
 }) {
@@ -53,6 +56,7 @@ export async function RecordHistoryScreen({
         basePath={basePath}
         recordName={recordName}
         description={description}
+        emptyBody={emptyBody}
         query={query}
         entries={entries.success ? (entries.data ?? []) : []}
         total={entries.success ? (entries.meta?.total ?? 0) : 0}

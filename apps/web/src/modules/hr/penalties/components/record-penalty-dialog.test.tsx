@@ -243,6 +243,10 @@ describe('RecordPenaltyDialog', () => {
 
     await user.click(screen.getByRole('button', { name: 'Save as pending' }));
     expect(await screen.findByText('This employee is inactive.')).toBeTruthy();
+    // The refusal stands until the employee changes: Save waits.
+    expect((screen.getByRole('button', { name: 'Save as pending' }) as HTMLButtonElement).disabled).toBe(true);
+    await choose(user, /Employee/, 'Omar Fathy · EMP-0002');
+    await waitFor(() => expect(screen.queryByText('This employee is inactive.')).toBeNull());
     await user.click(screen.getByRole('button', { name: 'Save as pending' }));
     // Under the violation now, and only there: the preview steps aside rather than repeat it.
     await waitFor(() =>
@@ -372,6 +376,19 @@ describe('RecordPenaltyDialog', () => {
       );
       expect(screen.getAllByText(message)).toHaveLength(1);
       expect(onOpenChange).not.toHaveBeenCalledWith(false);
+      // Only the refusal under the date — not the "Can't be in the future" hint, which read as the
+      // cause — and Save waits while it stands (dry run 2026-11-20 b).
+      expect(screen.queryByText("Can't be in the future.")).toBeNull();
+      const save = screen.getByRole('button', { name: 'Save as pending' }) as HTMLButtonElement;
+      expect(save.disabled).toBe(true);
+      await user.click(save);
+      expect(apis.CREATE_PENALTY).toHaveBeenCalledTimes(1);
+      // Another violation: the refusal no longer stands, the hint is back and Save works again.
+      apis.GET_PENALTY_PREVIEW.mockResolvedValue(ok(preview()));
+      await choose(user, /Violation/, 'Using a phone in class');
+      await waitFor(() => expect(save.disabled).toBe(false));
+      expect(screen.getByText("Can't be in the future.")).toBeTruthy();
+      expect(screen.queryByText(message)).toBeNull();
     });
   });
 });

@@ -62,10 +62,13 @@ Before the demo, on the demo database:
   5 Nov). ✔ The form lists the approved penalties it would move up ("10 Nov 2026: level 2 → 3, Deduct
   0.5 day → Deduct 1 day") and says recording changes nothing. Approve it → ✔ the confirmation lists
   them again and its button reads **Approve and update 2 penalties**; after it, the list shows the
-  new levels and the employee's **History** has a "Raised the level of the penalty …" entry for each.
+  new levels and the employee's **History** has a "Raised the level of the penalty …" entry for each
+  (rows: Penalty date, Occurrence, Days, "Raised by approving the penalty dated" 5 Nov 2026).
   The draft run then says "Penalties changed since the last calculation" with **Recalculate now**
   (while a penalty of the month is still pending, the pending notice shows first). A date whose
-  later penalties sit in an **approved** payroll month is refused under the date, naming the month.
+  later penalties sit in an **approved** payroll month is refused under the date, naming the month —
+  ✔ only the refusal (no "Can't be in the future" under it) and Save stays disabled until the
+  employee, violation or date changes.
 - Open **Record a penalty** again with the same employee, violation and date. ✔ The preview says
   this violation counts once per day and the employee already has one on this date; Save moves the
   message under the date — ✔ it shows once, not twice. (Late to class is different: it can be recorded several times a day.)
@@ -107,7 +110,9 @@ Before the demo, on the demo database:
   run the seed made before the audit log existed), each **Recalculate** with only the totals that
   changed, before → after (net, penalties …), and any adjustment with the employee, "Addition",
   the amount in EGP and the reason — no codes or raw figures. ✔ The net after → equals the run's Net
-  to pay tile. Switching tabs keeps the header (no flash).
+  to pay tile. Switching tabs keeps the header (no flash). ✔ Click **Recalculate** and go straight to
+  **History** (no reload): the new entry is already at the top. An empty History says the run's
+  creating, recalculating, adjusting and approving will be listed there (not "this employee").
 - Put the rule back afterwards if the demo continues on the same data.
 
 ## 7. Approve
