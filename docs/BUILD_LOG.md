@@ -404,6 +404,14 @@ phase live in `docs/build-log/`.
   well" → `dev` protection needs one CODEOWNERS approval, so Tamer can't merge alone; Claude merges
   its own PRs with the admin bypass and reviews, approves and merges Tamer's. CLAUDE.md rule 5,
   CONVENTIONS, CODEOWNERS and learnings updated (#172).
+- 2026-11-20 — Accounting → Approved payroll → #171 (Tamer; reviewed with screenshots, fixed on top by
+  Claude with the owner's OK, approved and merged for him): months HR approved with the tax columns;
+  Return to HR (reason; HR run back to draft, month unlocks, taxes dropped and redone on re-approval,
+  HR approvers notified) and Finalize (transfer made, final); both audited on the accounting month
+  and HR's run; Rows per page 10–500 with a sticky header on payroll tables (payroll APIs allow 500,
+  every other list 100). Fixes: audit on HR's run, statuses in words, bidi of the reason, lock order,
+  docs and e2e; the hr-payroll test now cleans its accounting rows. Owner kept the screen; sidebar
+  label "Approved pay" (EN; the full name was cut off), page "Approved payroll".
 
 ## Next up
 
