@@ -28,7 +28,9 @@ skills. **Where this file differs from a skill, this file wins.**
    `dev` and `testing` auto-deploy their environments. `production` builds a versioned Docker image
    in CI that is rolled out per school. Release PRs go from `testing` to `production`, not from `dev`. Ignore the skill's Vercel preview
    steps: run the smoke specs against dev, and the full checks against testing. Server setup follows
-   `deploying-to-vps`; details are in `docs/ARCHITECTURE.md` → Hosting.
+   `deploying-to-vps`; details are in `docs/ARCHITECTURE.md` → Hosting. **One exception (owner,
+   2026-11-20): the client demo (`demo` branch) is hosted on Vercel + Neon**, deployed by CI after
+   checks pass on a push to `demo` (README → Hosted demo). The real environments stay on the VPS.
 7. **Never cache pages at Cloudflare.** Only static files. Every page is per-user.
 8. **A demo dry run is part of Verify and of every release.** Before a client demo or a release PR
    `testing` → `production`, walk `docs/demo/DEMO_SCRIPT.md` on a **copy** of the database
