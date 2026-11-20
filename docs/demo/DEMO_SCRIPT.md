@@ -26,9 +26,13 @@ Before the demo, on the demo database:
 ## 2. Dashboard
 - Active headcount with the split by stage; this month's payroll (status + net); pending and
   approved penalties this month; quick links.
-- The menu is grouped by module: HR (Employees, Penalties, Lateness, Payroll), Accounting (Approved
-  pay — "الرواتب المعتمدة" in Arabic; its page is titled Approved payroll — and Payroll taxes), Inventory and Students marked "Soon", Administration (Settings, Activity, Users,
-  Roles). The bell sits in the top bar.
+- The menu is grouped by module, in this order: Dashboard; School (المدرسة — Students, Academics,
+  Attendance, Exams & grades, all marked "Soon"); HR (Employees, Penalties, Lateness, Payroll, then
+  Leave & permissions marked "Soon"); Accounting (Approved pay — "الرواتب المعتمدة" in Arabic; its
+  page is titled Approved payroll — Payroll taxes, then Fees marked "Soon"); Transport and Parent
+  portal marked "Soon"; Administration (Settings, Activity, Users, Roles). The "Soon" rows are dimmed
+  and do nothing when tapped — they show where the coming modules will live. The bell sits in the
+  top bar.
 - Switch **ع ↔ EN**: the whole layout mirrors without a reload and stays on the same page.
 - ✔ The browser tab reads "Dashboard · <school name>" (لوحة التحكم · <اسم المدرسة> in Arabic), like
   the sign-in page; the school name in the desktop sidebar is shown whole (up to two lines).

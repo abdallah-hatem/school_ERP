@@ -18,11 +18,20 @@
     "account": "حسابي",
     "modules": {
       "home": "الرئيسية",
+      "school": "المدرسة",
       "hr": "الموارد البشرية",
       "accounting": "الحسابات",
-      "inventory": "المخازن",
-      "students": "الطلاب",
+      "transport": "النقل",
+      "parentPortal": "بوابة أولياء الأمور",
       "administration": "الإدارة"
+    },
+    "coming": {
+      "students": "الطلاب",
+      "academics": "الشؤون الأكاديمية",
+      "attendance": "الحضور",
+      "exams": "الامتحانات والدرجات",
+      "leave": "الإجازات والأذونات",
+      "fees": "المصروفات"
     },
     "soon": "قريبًا",
     "soonTitle": "{name} — قريبًا",
