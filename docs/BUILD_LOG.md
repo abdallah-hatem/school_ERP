@@ -422,8 +422,11 @@ phase live in `docs/build-log/`.
   HR's runs cards put status pills under the month (no truncation at 320–390); `dir="auto"` on every
   textarea; Activity → Module has Accounting; return/finalize use the status icon; the month title
   stays on one line. A smoke check failed in CI only (Linux scrollbar pushed 1440 under the 1100px
-  cards point); spec runs at 1600. Owner (screenshots of both layouts): force cards on the Approved
-  payroll month with the month total first → follow-up PR in progress.
+  cards point); spec runs at 1600.
+- 2026-11-20 — Approved payroll month → #178 (owner, after screenshots of both layouts): cards on
+  every screen width, and no Month total card on screen ("its already at the cards at the top" — the
+  four tiles carry the totals); print and Excel/PDF keep the total row. The hidden-totals note moved
+  under the tiles. DataTable gained `cardsBelow="always"` and `footerCard="none"`.
 
 ## Next up
 
