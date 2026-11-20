@@ -1,12 +1,15 @@
 import { sectionMetadata } from '@/core/navigation/section-metadata';
 import { notFound } from 'next/navigation';
 import { requireScreen } from '@/core/auth';
-import { PayrollRunScreen } from '@/modules/hr/payroll';
+import { PayrollRunLinesScreen } from '@/modules/hr/payroll';
 import { isLocale } from '@/shared/lib/i18n';
 
 export const generateMetadata = sectionMetadata('payroll');
 
-/** One month's payroll run. `?search&departmentId&flagged` filter its lines (API-side). */
+/**
+ * One month's run — the "Employees" tab (the layout draws the header). `?search&departmentId&flagged`
+ * filter its lines (API-side).
+ */
 export default async function PayrollRunPage({
   params,
   searchParams,
@@ -18,5 +21,5 @@ export default async function PayrollRunPage({
   if (!isLocale(locale)) notFound();
   // R6: a page the viewer's roles can't open is the not-found screen.
   await requireScreen('payrollRun');
-  return <PayrollRunScreen locale={locale} id={id} searchParams={query} />;
+  return <PayrollRunLinesScreen locale={locale} id={id} searchParams={query} />;
 }

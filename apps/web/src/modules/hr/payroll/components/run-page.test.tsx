@@ -12,8 +12,10 @@ const router = vi.hoisted(() => ({
   replace: vi.fn(),
   prefetch: vi.fn(),
 }));
+const pathname = vi.hoisted(() => ({ current: '/en/payroll/11111111-1111-4111-8111-111111111111' }));
 vi.mock('next/navigation', () => ({
   useRouter: () => router,
+  usePathname: () => pathname.current,
   redirect: vi.fn(),
 }));
 const toast = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
@@ -35,7 +37,8 @@ import type { Locale } from '@/shared/lib/i18n';
 import { ADJ_MONA, MONA, renderPayroll, run, RUN_ID, SALMA, SETTINGS } from '../test/fixtures';
 import { renderWithI18n, sessionWithout } from '@/test/render';
 import { PayrollI18n } from '../messages';
-import { RunPage, RunTiles, type RunPageProps } from './run-page';
+import { RunTiles } from './run-page';
+import { RunPage, type RunPageProps } from '../test/run-page';
 
 const DEPARTMENTS = [
   {

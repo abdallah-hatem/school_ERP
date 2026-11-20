@@ -63,6 +63,8 @@ export const SCREENS = {
   lateness: screen('/lateness', 'hr.lateness.view'),
   payroll: screen('/payroll', 'hr.payroll.view'),
   payrollRun: screen('/payroll/:id', 'hr.payroll.view'),
+  // The run's History tab: the run (its layout's guard) and the activity log.
+  payrollRunHistory: screen('/payroll/:id/history', ['hr.payroll.view', 'core.audit.view']),
   payslip: screen('/payroll/:id/payslip/:lineId', 'hr.payroll.view'),
   // Accounting (§10): the year board of payroll taxes and one month's statement (`:month` YYYY-MM).
   // Accounting → Payroll: HR's approved months as HR shows them, plus insurance and taxes.

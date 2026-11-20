@@ -369,7 +369,8 @@
     "changes": "التغييرات",
     "to": "تغيّر إلى",
     "noChanges": "لا توجد تفاصيل",
-    "part": "{field} · {part}"
+    "part": "{field} · {part}",
+    "noTotalsChange": "لا تغيير في الإجماليات"
   },
   "history": {
     "title": "سجل التغييرات",

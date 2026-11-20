@@ -31,6 +31,18 @@ Who did what, to which record, and when — for the whole system. Spec:
   An employee's **History** tab lists their penalties too, for whoever may see that employee's
   penalties (§2). A penalty has no amount (it is days; payroll prices them), so nothing in it is
   hidden as salary.
+- **DECIDED** (owner, 2026-11-20) — A payroll run has a **History** tab beside its employees: who
+  created it, recalculated it, added or removed adjustments (the employee, type, amount and reason),
+  approved it, and Accounting returning it or marking it transferred — with the same field and
+  person filters as an employee's History, amounts in pounds and statuses in words. It is shown to
+  whoever may open the run and read the activity log; like the run's entries on Activity, it needs
+  the whole school's payroll (someone who sees only part of it gets "This page isn't here").
+  An employee's History does not list lateness months or payroll runs: those entries hold several
+  employees' figures at once.
+- **DECIDED** (owner, 2026-11-20) — A run's figures in History and Activity read as a person would
+  write them: **Created** shows the net and the number of employees; **Approved** shows Draft →
+  Approved and the net; **Recalculated** shows only the figures that changed, before → after ("No
+  change in totals" if none did). "Need review" is never shown. The log itself keeps every figure.
 - **DECIDED** — Activity's search finds a person by name (either language) or by **employee code**
   (EMP-0007, any case): their own entries and their penalties'; and a payroll or lateness month by
   its month. Entries keep names; the code is looked up live, so older entries are found too.

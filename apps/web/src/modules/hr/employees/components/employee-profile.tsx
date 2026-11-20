@@ -7,6 +7,7 @@ import { createContext, useContext, type ReactNode } from 'react';
 import { Can, useCan } from '@/core/auth';
 import { PersonAvatar } from '@/shared/components/ui/person-avatar';
 import { PageHeader } from '@/shared/components/layout/page-header';
+import { RecordTabs } from '@/shared/components/layout/record-tabs';
 import { Button } from '@/shared/components/ui/button';
 import { Money } from '@/shared/components/ui/figures';
 import { EditIcon } from '@/shared/components/ui/icons';
@@ -71,29 +72,12 @@ export function ProfileTabs({ profileHref }: { profileHref: string }) {
   const active = activeProfileTab(usePathname(), profileHref);
   const tabs = PROFILE_TABS.filter((tab) => !('permission' in tab) || can(tab.permission));
   return (
-    <nav aria-label={t('employees.profile.tabs')} data-skeleton-block="tabs" className="scrollbar-clean -mb-2 overflow-x-auto">
-      <ul className="flex gap-1.5 border-b border-border">
-        {tabs.map((tab) => {
-          const current = tab.key === active;
-          return (
-            <li key={tab.key}>
-              <Link
-                href={tab.segment ? `${profileHref}/${tab.segment}` : profileHref}
-                prefetch
-                scroll={false}
-                aria-current={current ? 'page' : undefined}
-                className={cn(
-                  '-mb-px flex h-11 cursor-pointer items-center border-b-2 px-4 text-sm font-bold whitespace-nowrap transition-colors duration-150',
-                  current ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground',
-                )}
-              >
-                {t(tab.labelKey)}
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </nav>
+    <RecordTabs
+      label={t('employees.profile.tabs')}
+      recordHref={profileHref}
+      tabs={tabs.map((tab) => ({ key: tab.key, label: t(tab.labelKey), segment: tab.segment }))}
+      active={active}
+    />
   );
 }
 

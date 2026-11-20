@@ -369,7 +369,8 @@
     "changes": "Changes",
     "to": "changed to",
     "noChanges": "No field details",
-    "part": "{field} · {part}"
+    "part": "{field} · {part}",
+    "noTotalsChange": "No change in totals"
   },
   "history": {
     "title": "Change history",
