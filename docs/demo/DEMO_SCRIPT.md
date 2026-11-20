@@ -32,7 +32,11 @@ Before the demo, on the demo database:
   page is titled Approved payroll — Payroll taxes, then Fees marked "Soon"); Transport and Parent
   portal marked "Soon"; Administration (Settings, Activity, Users, Roles). The "Soon" rows are dimmed
   and do nothing when tapped — they show where the coming modules will live. The bell sits in the
-  top bar.
+  top bar; its **Notification settings** link opens My account → Notifications, where a switch
+  saves at once (dimmed while saving, "Different from default" once changed). Settings →
+  Notifications holds the school's defaults and saves with **Save**.
+- Typing in a list's search (Employees, Penalties, Users, Activity, a run's lines): ✔ a small spinner
+  takes the magnifier's place while the list reloads.
 - Switch **ع ↔ EN**: the whole layout mirrors without a reload and stays on the same page.
 - ✔ The browser tab reads "Dashboard · <school name>" (لوحة التحكم · <اسم المدرسة> in Arabic), like
   the sign-in page; the school name in the desktop sidebar is shown whole (up to two lines).
@@ -53,6 +57,15 @@ Before the demo, on the demo database:
   approved while any are pending). ✔ Where one employee has two pending for the same violation,
   the later one's **Approve** is greyed out with "Approve or cancel the … penalty for this
   violation first."; approve the earlier one, then the later one gets the next level.
+- **A backdated penalty** (before the month is approved): record one for an employee who already has
+  approved penalties for that violation, dated **before** them (e.g. EMP-0014, Unexcused absence,
+  5 Nov). ✔ The form lists the approved penalties it would move up ("10 Nov 2026: level 2 → 3, Deduct
+  0.5 day → Deduct 1 day") and says recording changes nothing. Approve it → ✔ the confirmation lists
+  them again and its button reads **Approve and update 2 penalties**; after it, the list shows the
+  new levels and the employee's **History** has a "Raised the level of the penalty …" entry for each.
+  The draft run then says "Penalties changed since the last calculation" with **Recalculate now**
+  (while a penalty of the month is still pending, the pending notice shows first). A date whose
+  later penalties sit in an **approved** payroll month is refused under the date, naming the month.
 - Open **Record a penalty** again with the same employee, violation and date. ✔ The preview says
   this violation counts once per day and the employee already has one on this date; Save moves the
   message under the date — ✔ it shows once, not twice. (Late to class is different: it can be recorded several times a day.)
@@ -90,10 +103,11 @@ Before the demo, on the demo database:
   (e.g. EMP-0007): their entries and their penalties' show.
 - Back to the run → **Recalculate** → ✔ the same employee's lateness drops (0.25 × 20,000 ÷ 30 =
   166.67) and the totals follow.
-- The run's **History** tab (beside **Employees**): ✔ "Created the payroll run for …", each
-  **Recalculate** with the totals before → after, and any adjustment with the employee, "Addition",
-  the amount in EGP and the reason — no codes or raw figures. Switching tabs keeps the header (no
-  flash).
+- The run's **History** tab (beside **Employees**): ✔ "Created the payroll run for …" (not on a
+  run the seed made before the audit log existed), each **Recalculate** with only the totals that
+  changed, before → after (net, penalties …), and any adjustment with the employee, "Addition",
+  the amount in EGP and the reason — no codes or raw figures. ✔ The net after → equals the run's Net
+  to pay tile. Switching tabs keeps the header (no flash).
 - Put the rule back afterwards if the demo continues on the same data.
 
 ## 7. Approve
