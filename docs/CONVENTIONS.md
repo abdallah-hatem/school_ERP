@@ -171,8 +171,10 @@ The API refuses anything undeclared (403) and CI fails on it (`docs/ARCHITECTURE
   doc), the test command and its result, the edge cases covered, screenshots.
 - The body ends with a **Log entry**: two or three lines for the build log — what changed, decisions
   taken, anything left open.
-- **Merging into `dev`:** green CI, no approval needed (CLAUDE.md rule 5); `testing` and `production`
-  need the owner's approval and Claude never merges them.
+- **Merging (CLAUDE.md rule 5, 2026-11-20):** into `dev`, the owner or Claude on his behalf — green
+  CI and a `CODEOWNERS` approval. Claude merges its own checked PRs with the admin bypass, and
+  reviews, approves and merges other contributors' PRs when clean. `testing`, `production` and
+  `demo`: the owner only.
 - **The build log has one writer: whoever merges** (owner, 2026-11-18). Right after a merge into
   `dev`, the merger adds the PR's log entry (and updates Next up) in a small docs-only PR. Parallel
   PRs all appending to the same spot of `docs/BUILD_LOG.md` (or `00-recent-changes.md`) is what made
