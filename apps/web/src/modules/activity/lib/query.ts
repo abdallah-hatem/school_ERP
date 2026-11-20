@@ -19,8 +19,8 @@ export type { SearchParamsRecord };
  * (`?page&q&module&type&person&from&to`). `module=settings` is the Settings link's filter.
  */
 
-/** The module switch: the two modules, plus "Settings" — the settings actions of both. */
-export const ACTIVITY_MODULES = ['core', 'hr', 'settings'] as const;
+/** The module switch: School, HR, Accounting, plus "Settings" — the settings actions of all of them. */
+export const ACTIVITY_MODULES = ['core', 'hr', 'accounting', 'settings'] as const;
 export type ActivityModule = (typeof ACTIVITY_MODULES)[number];
 
 /** The action-type chips, each a set of actions; several chips mean any of them. */

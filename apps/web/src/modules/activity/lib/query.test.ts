@@ -48,6 +48,11 @@ describe('Activity query (URL ↔ API)', () => {
     expect(toAuditListQuery(parseActivityQuery({ type: 'signIn', module: 'hr' }))).toBeNull();
   });
 
+  it('Accounting is a module filter of its own (the return and finalize entries)', () => {
+    expect(parseActivityQuery({ module: 'accounting' })).toEqual({ page: 1, types: [], module: 'accounting' });
+    expect(toAuditListQuery(parseActivityQuery({ module: 'accounting' }))).toMatchObject({ module: 'accounting' });
+  });
+
   it('"Settings" is the settings actions of both modules, narrowed further by the chips', () => {
     expect(toAuditListQuery(parseActivityQuery({ module: 'settings' }))?.action).toEqual(SETTINGS_HISTORY_ACTION_KEYS);
     const created = toAuditListQuery(parseActivityQuery({ module: 'settings', type: 'create' }));

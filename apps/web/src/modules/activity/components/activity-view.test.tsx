@@ -51,6 +51,21 @@ describe('Activity page', () => {
     vi.useRealTimers();
   });
 
+  it.each([
+    ['en', ['All', 'School', 'HR', 'Accounting', 'Settings'], 'Accounting'],
+    ['ar', ['الكل', 'المدرسة', 'الموارد البشرية', 'المحاسبة', 'الإعدادات'], 'المحاسبة'],
+  ] as const)('the module filter has Accounting, for the return and finalize entries (%s)', async (locale, names, accounting) => {
+    const user = userEvent.setup();
+    renderView({}, [entry()], { locale });
+    const group = within(screen.getByRole('complementary')).getByRole('group', { name: locale === 'en' ? 'Module' : 'القسم' });
+    const buttons = within(group).getAllByRole('button').map((b) => b.textContent);
+    expect(buttons).toEqual(names);
+    // Five segments don't fit the panel in one row: they wrap instead of running out of it.
+    expect(within(group).getByRole('button', { name: accounting }).parentElement!.className).toContain('flex-wrap');
+    await user.click(within(group).getByRole('button', { name: accounting }));
+    expect(push).toHaveBeenLastCalledWith(`/${locale}/activity?module=accounting`, { scroll: false });
+  });
+
   it('each filter goes into the URL from page 1, without scrolling', async () => {
     const user = userEvent.setup();
     renderView({ page: '3' });

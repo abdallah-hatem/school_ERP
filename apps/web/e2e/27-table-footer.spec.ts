@@ -65,6 +65,38 @@ for (const locale of ['en', 'ar'] as const) {
     }
   });
 
+  test(`capped payroll tables keep their totals row in sight at 1440 × 900 (${locale})`, async ({ page }) => {
+    // Dry run 2026-11-20: the month's total row sat under the lines of the height-capped box.
+    const month = await approvedMonth();
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await signIn(page, locale);
+    for (const path of [`/accounting/payroll/${month.month}`, `/accounting/payroll-taxes/${month.month}`]) {
+      await openSettled(page, `/${locale}${path}`);
+      // Each capped table brought to the top of the window (as a reader scrolls to it): its totals
+      // cells (sticky; the row itself keeps its place in the flow) sit inside its box and the window.
+      const boxes = await page.locator('[data-view="table"] [data-scroll-capped]').evaluateAll((scrollers) =>
+        scrollers
+          .filter((s) => s.getBoundingClientRect().height > 0 && s.querySelector('tfoot'))
+          .map((s) => {
+            s.closest('section')!.scrollIntoView({ block: 'start' });
+            const box = s.getBoundingClientRect();
+            const foot = s.querySelector('tfoot td')!.getBoundingClientRect();
+            return {
+              inBox: Math.round(foot.top - box.top) >= 0 && Math.round(box.bottom - foot.bottom) >= 0,
+              inWindow: Math.round(foot.bottom) <= window.innerHeight,
+            };
+          }),
+      );
+      expect(boxes.length, path).toBeGreaterThan(0);
+      for (const box of boxes) expect({ path, ...box }).toEqual({ path, inBox: true, inWindow: true });
+    }
+    // The month's row is the whole month's total, not a subtotal.
+    await openSettled(page, `/${locale}/accounting/payroll/${month.month}`);
+    await expect(page.locator('[data-view="table"] tfoot').first()).toContainText(
+      t(locale, 'accounting.payroll.month.totalAll', { count: String(month.lines.length) }),
+    );
+  });
+
   test(`payroll taxes statement: paging, whole-group subtotals, print lists everyone (${locale})`, async ({ page }, info) => {
     const month = await approvedMonth();
     await signIn(page, locale);

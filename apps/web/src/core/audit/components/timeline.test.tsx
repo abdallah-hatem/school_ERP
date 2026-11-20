@@ -89,6 +89,28 @@ describe('AuditTimeline', () => {
     expect(screen.queryByText('Basic salary')).toBeNull();
   });
 
+  it('the payroll return, finalize, returned and transferred entries show the status-change icon approval has, not the pencil', () => {
+    const run = { module: 'hr' as const, entityType: 'payroll_run' as const, changes: [] };
+    const month = { module: 'accounting' as const, entityType: 'accounting_payroll' as const, changes: [] };
+    renderAudit(
+      <AuditTimeline
+        entries={[
+          entry({ action: 'hr.payroll.approve', ...run }),
+          entry({ action: 'hr.payroll.returned', ...run }),
+          entry({ action: 'hr.payroll.transferred', ...run }),
+          entry({ action: 'accounting.payroll.return', ...month }),
+          entry({ action: 'accounting.payroll.finalize', ...month }),
+          entry(),
+        ]}
+        grouping="day"
+        now={NOW}
+        label="Activity timeline"
+      />,
+    );
+    const icons = screen.getAllByTestId('audit-entry').map((e) => e.querySelector('[data-entry-icon]')!.getAttribute('data-entry-icon'));
+    expect(icons).toEqual(['ApproveIcon', 'ApproveIcon', 'ApproveIcon', 'ApproveIcon', 'ApproveIcon', 'EditIcon']);
+  });
+
   it('marks money changes and failed sign-ins', () => {
     renderAudit(
       <AuditTimeline

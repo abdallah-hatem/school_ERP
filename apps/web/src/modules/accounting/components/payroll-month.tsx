@@ -100,7 +100,7 @@ export function PayrollMonth({ monthKey, month: serverMonth, basePath }: Payroll
   const footer: DataTableFooter | undefined = month
     ? totalsShown
       ? {
-          label: t('accounting.payrollTaxes.statement.subtotalAll', { count: formatCount(month.lines.length) }),
+          label: t('accounting.payroll.month.totalAll', { count: formatCount(month.lines.length) }),
           cells: {
             net: <Money value={month.totals.net} currency={false} className="font-extrabold" />,
             insuranceAmount: <Money value={month.totals.insuranceAmount} currency={false} />,
@@ -110,7 +110,7 @@ export function PayrollMonth({ monthKey, month: serverMonth, basePath }: Payroll
           },
         }
       : {
-          label: t('accounting.payrollTaxes.statement.subtotal'),
+          label: t('accounting.payroll.month.total'),
           note: (
             <span className="inline-flex items-center gap-1.5">
               <LockedIcon className="size-4" />
@@ -130,6 +130,7 @@ export function PayrollMonth({ monthKey, month: serverMonth, basePath }: Payroll
         breadcrumbs={[{ label: t('accounting.payroll.month.actions.back'), href: basePath }, { label: monthLabel }]}
         breadcrumbsLabel={t('ui.shell.breadcrumbs')}
         className="no-print"
+        keepTitleLine
         actions={
           month ? (
             <MonthActions month={month} basePath={basePath} onFinalized={setUpdated} />

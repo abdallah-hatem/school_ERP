@@ -72,6 +72,30 @@ describe('RunsList', () => {
     expect(within(document.querySelector<HTMLElement>('[data-view="table"]')!).getByText('نهائي · تم التحويل')).toBeTruthy();
   });
 
+  it.each(['en', 'ar'] as const)('on a card the month has the top line to itself; the pills sit on their own line under it (%s)', (locale) => {
+    const transferred = { ...approved, transferredAt: '2026-11-05T09:00:00.000Z' };
+    const returned = { ...draft, returned: { at: '2026-11-19T10:00:00.000Z', reason: 'Penalty missing' } };
+    renderList([transferred, returned], locale);
+    const cards = [...document.querySelectorAll<HTMLElement>('[data-view="cards"] > li')];
+    expect(cards).toHaveLength(2);
+    const pills = locale === 'en' ? ['Finalized · transferred', 'Draft', 'Returned'] : ['نهائي · تم التحويل', 'مسودة', 'مُعاد'];
+    for (const card of cards) {
+      const link = card.querySelector('a')!;
+      const titleRow = card.firstElementChild as HTMLElement;
+      expect(titleRow.contains(link)).toBe(true);
+      // No pill shares the month's line (nothing to squeeze it).
+      for (const pill of pills) expect(titleRow.textContent).not.toContain(pill);
+      const badges = titleRow.nextElementSibling as HTMLElement;
+      expect(badges.className).toContain('flex-wrap');
+      expect(badges.contains(link)).toBe(false);
+    }
+    const [finalizedCard, returnedCard] = cards as [HTMLElement, HTMLElement];
+    expect((finalizedCard.firstElementChild!.nextElementSibling as HTMLElement).textContent).toBe(
+      locale === 'en' ? 'Finalized · transferred' : 'نهائي · تم التحويل',
+    );
+    expect((returnedCard.firstElementChild!.nextElementSibling as HTMLElement).textContent).toContain(locale === 'en' ? 'Returned' : 'مُعاد');
+  });
+
   it('a draft Accounting returned shows "Returned" beside Draft (EN and AR); approved again, only the status', () => {
     const returned = { ...draft, returned: { at: '2026-11-19T10:00:00.000Z', reason: 'Penalty missing' } };
     renderList([returned]);
