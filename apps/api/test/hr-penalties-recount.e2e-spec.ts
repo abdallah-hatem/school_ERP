@@ -192,24 +192,29 @@ describe('HR penalties — backdated penalty recount (e2e, §4 owner 2026-11-20)
   it('a stale confirmation → 409 PENALTY_RECOUNT_CHANGED with the fresh list; the fresh one approves', async () => {
     const emp = await employee();
     const v = await violation();
-    await approvedOn(emp, v, day(MONTH, 10));
+    const d10 = await approvedOn(emp, v, day(MONTH, 10));
+    const d12 = await approvedOn(emp, v, day(MONTH, 12));
     const d5 = await recordOk(emp, v, day(MONTH, 5));
     const shown = d5.recount;
-    expect(shown).toHaveLength(1);
-    // Meanwhile another later one is approved: the screen's list is out of date.
-    const d12 = await approvedOn(emp, v, day(MONTH, 12));
+    expect(shown.map((c) => c.id)).toEqual([d10.id, d12.id]);
+    // Meanwhile a later one is cancelled: the screen's list is out of date. (A later one can't be
+    // approved meanwhile — the pending 5th comes first, §4 approve in date order.)
+    await http(app).post(`/hr/penalties/${d12.id}/cancel`).send({ reason: 'recorded twice' }).expect(200);
 
     const stale = await approve(d5.id, ackOf(shown)).expect(409);
     expect(stale.body.error).toBe(ErrorCode.PENALTY_RECOUNT_CHANGED);
-    expect(stale.body.params).toEqual({ count: 2 });
+    expect(stale.body.params).toEqual({ count: 1 });
     const fresh = stale.body.data.recount as PenaltyRecountChange[];
-    expect(fresh.map((c) => c.id)).toContain(d12.id);
+    expect(fresh.map((c) => c.id)).toEqual([d10.id]);
     expect((await getRecord(d5.id)).status).toBe('PENDING');
+    expect((await getRecord(d10.id)).level).toBe(1);
 
     // Confirming changes that aren't there (another level) is stale too.
     await approve(d5.id, fresh.map((c) => ({ id: c.id, ...c.after, level: c.after.level + 1 }))).expect(409);
     await approve(d5.id, ackOf(fresh)).expect(200);
-    expect((await getRecord(d12.id)).level).toBe(3);
+    expect((await getRecord(d10.id)).level).toBe(2);
+    // The cancelled one keeps the level it had.
+    expect(await getRecord(d12.id)).toMatchObject({ status: 'CANCELLED', level: 2 });
   });
 
   it('a later approved penalty in an approved payroll month: preview, recording and approval are refused naming the month', async () => {

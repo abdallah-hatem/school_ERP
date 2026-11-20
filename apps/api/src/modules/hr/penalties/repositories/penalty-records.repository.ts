@@ -352,6 +352,10 @@ export class PenaltyRecordsRepository extends BaseRepository<
     return this.txHost.withTransaction(async () => {
       const tx = this.txHost.tx;
       await lockPair(tx, key);
+      // Still pending? Checked first, under the lock: a concurrent approval that won has already
+      // recounted, so the loser must hear "not pending", not a stale-recount or order refusal.
+      const self = await tx.penaltyRecord.findUnique({ where: { id }, select: { status: true } });
+      if (self?.status !== PenaltyStatus.PENDING) return 'NOT_PENDING';
       // `window.upTo` is the record's own date.
       if (refuse(await sameDayStatuses(tx, key, window.upTo, id))) return 'ONCE_PER_DAY';
       // Every later date too: which come earlier is the domain's call; later approved ones are
