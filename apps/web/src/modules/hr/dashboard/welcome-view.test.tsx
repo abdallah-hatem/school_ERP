@@ -52,9 +52,9 @@ describe('Home without hr.dashboard.view', () => {
     expect(GET_HR_DASHBOARD).not.toHaveBeenCalled();
   });
 
-  it("the Accountant: Employees, HR's Payroll, Accounting's Approved payroll, Payroll taxes, Settings (Accounting), My account", () => {
+  it("the Accountant: Employees, HR's Payroll, Accounting's Approved pay, Payroll taxes, Settings (Accounting), My account", () => {
     renderAs(sessionWith(...keysOf('accountant')));
-    expect(links().map(([label]) => label)).toEqual(['Employees', 'Payroll', 'Approved payroll', 'Payroll taxes', 'Settings', 'My account']);
+    expect(links().map(([label]) => label)).toEqual(['Employees', 'Payroll', 'Approved pay', 'Payroll taxes', 'Settings', 'My account']);
     expect(links().map(([, href]) => href).slice(1, 3)).toEqual(['/en/payroll', '/en/accounting/payroll']);
   });
 

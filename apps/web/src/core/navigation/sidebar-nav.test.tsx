@@ -34,10 +34,10 @@ function renderNav(variant: 'full' | 'rail' = 'full', locale: 'en' | 'ar' = 'en'
 }
 
 const hrButton = (name = 'HR') => screen.getByRole('button', { name });
-/** HR's "Payroll" and Accounting's "Approved payroll", each by its name and where it goes. */
+/** HR's "Payroll" and Accounting's "Approved pay", each by its name and where it goes. */
 const payrollLink = (href = '/en/payroll') =>
   screen
-    .queryAllByRole('link', { name: href === '/en/accounting/payroll' ? 'Approved payroll' : 'Payroll' })
+    .queryAllByRole('link', { name: href === '/en/accounting/payroll' ? 'Approved pay' : 'Payroll' })
     .find((l) => l.getAttribute('href') === href) ?? null;
 
 describe('SidebarNav (grouped by module)', () => {
@@ -143,12 +143,12 @@ describe('SidebarNav (grouped by module)', () => {
     expect(screen.queryByRole('link', { name: 'التأخير' })).toBeNull();
   });
 
-  it('Accounting is live: Approved payroll and Payroll taxes, for whoever holds accounting.payroll.view', () => {
+  it('Accounting is live: Approved pay and Payroll taxes, for whoever holds accounting.payroll.view', () => {
     pathname = '/en/accounting/payroll-taxes/2026-10';
     renderNav();
     const accounting = screen.getByRole('button', { name: 'Accounting' });
     const list = document.getElementById(accounting.getAttribute('aria-controls') ?? '') as HTMLElement;
-    expect(within(list).getAllByRole('link').map((l) => l.textContent)).toEqual(['Approved payroll', 'Payroll taxes']);
+    expect(within(list).getAllByRole('link').map((l) => l.textContent)).toEqual(['Approved pay', 'Payroll taxes']);
     const link = screen.getByRole('link', { name: 'Payroll taxes' });
     expect(link.getAttribute('href')).toBe('/en/accounting/payroll-taxes');
     expect(link.getAttribute('aria-current')).toBe('page');
