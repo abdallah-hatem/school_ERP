@@ -91,26 +91,43 @@ describe('PayrollList (Accounting → Payroll)', () => {
 
 describe('PayrollMonth (Accounting → Payroll, one month)', () => {
   const props = { monthKey: '2026-10' as const, basePath: '/en/accounting/payroll' };
-  const table = () => screen.getByRole('table', { name: 'Employees in October 2026' });
+  /** The lines on screen: cards on every width (owner 2026-11-20), no screen table. */
+  const cards = () => screen.getByRole('list', { name: 'Employees in October 2026' });
+  const cardOf = (name: string) => within(cards()).getByText(name).closest('li') as HTMLElement;
 
-  it("HR's columns, then insurance and taxes, and the gross", () => {
+  it("cards on every width: HR's fields, then insurance and taxes, with the gross on the band", () => {
     renderAccounting(<PayrollMonth {...props} month={WITH_HR} />);
-    const headers = within(table()).getAllByRole('columnheader').map((h) => h.textContent);
-    expect(headers).toEqual([
-      'Employee', 'Salary', 'Penalties', 'Lateness', 'Adjustments', 'Net',
-      'Insurance share', 'Income tax', "Martyrs' fund", 'Gross',
+    // No table on screen (print keeps its own, hidden from the screen and assistive tech).
+    expect(screen.queryByRole('table')).toBeNull();
+    expect(document.querySelector('section[data-cards-below="always"]')).not.toBeNull();
+    expect(cards().className).not.toMatch(/@min-\[\d+px\]:hidden/);
+    const omar = cardOf('Omar Fathy');
+    expect([...omar.querySelectorAll('dt')].map((d) => d.textContent)).toEqual([
+      'Salary', 'Penalties', 'Lateness', 'Adjustments', 'Net', 'Insurance share', 'Income tax', "Martyrs' fund",
     ]);
-    const omar = within(table()).getByText('Omar Fathy').closest('tr') as HTMLElement;
     expect(omar.textContent).toContain('Science');
     expect(omar.textContent).toContain('13,000.00');
     expect(omar.textContent).toContain('500.00');
     expect(omar.textContent).toContain('-250.00');
     expect(omar.textContent).toContain('550.00');
-    expect(omar.textContent).toContain('14,074.42');
-    // The month's total row covers everyone.
-    const last = within(table()).getAllByRole('row').at(-1)!;
-    expect(last.textContent).toContain('28,148.78');
+    expect(omar.textContent).toContain('Gross14,074.42');
     expect(screen.getByRole('heading', { level: 1, name: 'Approved payroll · October 2026' })).toBeTruthy();
+  });
+
+  it("the month's total card comes first, above the employees, covering everyone", () => {
+    renderAccounting(<PayrollMonth {...props} month={WITH_HR} />);
+    const items = within(cards()).getAllByRole('listitem');
+    expect(items[0]!.hasAttribute('data-footer-card')).toBe(true);
+    expect(items[0]!.textContent).toContain('Month total · all 3');
+    expect(items[0]!.textContent).toContain('28,148.78');
+    expect(items.filter((li) => li.hasAttribute('data-footer-card'))).toHaveLength(1);
+    expect(items[1]!.textContent).not.toContain('Month total');
+  });
+
+  it('Arabic: the total card reads "إجمالي الشهر"', () => {
+    renderAccounting(<PayrollMonth {...props} month={WITH_HR} />, 'ar');
+    const first = within(screen.getByRole('list', { name: 'موظفو أكتوبر 2026' })).getAllByRole('listitem')[0]!;
+    expect(first.textContent).toContain('إجمالي الشهر');
   });
 
   it('salary data (§2, P4): a line outside scope shows its name only; no totals', () => {
@@ -121,26 +138,27 @@ describe('PayrollMonth (Accounting → Payroll, one month)', () => {
       ),
     };
     renderAccounting(<PayrollMonth {...props} month={limited} />);
-    const omar = within(table()).getByText('Omar Fathy').closest('tr') as HTMLElement;
+    const omar = cardOf('Omar Fathy');
     expect(omar.textContent).toContain('Salary hidden');
     expect(within(omar).getAllByLabelText('Amount hidden')).toHaveLength(9);
-    expect(screen.getAllByText('Totals show only to someone who sees every salary.').length).toBeGreaterThan(0);
-    expect(within(table()).getAllByRole('row').at(-1)!.textContent).not.toContain('28,148.78');
+    const total = within(cards()).getAllByRole('listitem')[0]!;
+    expect(total.textContent).toContain('Totals show only to someone who sees every salary.');
+    expect(total.textContent).not.toContain('28,148.78');
   });
 
   it('search narrows the employees by name or code', async () => {
     const user = userEvent.setup();
     renderAccounting(<PayrollMonth {...props} month={WITH_HR} />);
     await user.type(screen.getByRole('searchbox', { name: 'Search employees' }), 'EMP-0002');
-    expect(within(table()).getByText('Omar Fathy')).toBeTruthy();
-    expect(within(table()).queryByText('Salma Adel')).toBeNull();
+    expect(within(cards()).getByText('Omar Fathy')).toBeTruthy();
+    expect(within(cards()).queryByText('Salma Adel')).toBeNull();
     expect(screen.getByTestId('lines-count').textContent).toBe('1 of 3');
   });
 
   it('Arabic: right to left, Arabic headings and names', () => {
     renderAccounting(<PayrollMonth {...props} month={WITH_HR} />, 'ar');
     expect(document.documentElement.dir).toBe('rtl');
-    expect(screen.getByRole('columnheader', { name: 'ضريبة كسب العمل' })).toBeTruthy();
+    expect(within(screen.getByRole('list', { name: 'موظفو أكتوبر 2026' })).getAllByText('ضريبة كسب العمل').length).toBeGreaterThan(0);
     expect(screen.getAllByText('عمر فتحي').length).toBeGreaterThan(0);
     expect(screen.getAllByText('العلوم').length).toBeGreaterThan(0);
   });

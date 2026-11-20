@@ -53,9 +53,6 @@ import { matchesLine } from '../lib/payroll-taxes';
  * its own skeleton.
  */
 
-/** Ten money columns need room: cards below 1100px of page. */
-export const MONTH_LINES_CARDS_BELOW = 1100;
-
 
 /** Print: landscape A4 with no app chrome; the table lists everyone (`printRows`). */
 const PRINT_CSS = `@page { size: A4 landscape; margin: 10mm; }
@@ -157,7 +154,10 @@ export function PayrollMonth({ monthKey, month: serverMonth, basePath }: Payroll
         loading={loading}
         getRowId={(l) => l.employeeId}
         footer={footer}
-        cardsBelow={MONTH_LINES_CARDS_BELOW}
+        // Cards on every width, the month's total card first (owner 2026-11-20): ten money columns
+        // were a table only on wide screens, its total row under the lines; print stays a table.
+        cardsBelow="always"
+        footerCard="start"
         toolbar={
           <>
             <div className="flex w-full flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -209,7 +209,6 @@ export function PayrollMonth({ monthKey, month: serverMonth, basePath }: Payroll
             setPage(1);
           },
         }}
-        scrollHeight="screen"
       />
     </div>
   );

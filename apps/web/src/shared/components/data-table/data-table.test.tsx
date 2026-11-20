@@ -372,6 +372,35 @@ describe('DataTable page size and sticky header (payroll tables)', () => {
     for (const th of screen.getAllByRole('columnheader')) expect(th.className).toMatch(/\bsticky top-0\b/);
   });
 
+  it('cardsBelow="always": cards on every width, no screen table; footerCard="start" puts the totals card first', () => {
+    const footer = { label: 'Month total · all 2', cells: { salary: '2,630,000' } };
+    const { container, rerender } = renderWithI18n(
+      <DataTable label="Employees" columns={columns} rows={people} getRowId={(p) => p.id} footer={footer} />,
+    );
+    // Default: both views, the totals card last.
+    expect(container.querySelector('[data-view="table"]')).not.toBeNull();
+    expect(container.querySelector('[data-view="cards"] > li:last-child')!.hasAttribute('data-footer-card')).toBe(true);
+
+    rerender(
+      <DataTable label="Employees" columns={columns} rows={people} getRowId={(p) => p.id} footer={footer} cardsBelow="always" footerCard="start" />,
+    );
+    expect(container.querySelector('[data-view="table"]')).toBeNull();
+    expect(screen.queryByRole('table')).toBeNull();
+    const list = container.querySelector('[data-view="cards"]')!;
+    expect(list.className).not.toMatch(/hidden/);
+    const items = [...list.children];
+    expect(items[0]!.hasAttribute('data-footer-card')).toBe(true);
+    expect(items[0]!.textContent).toContain('Month total · all 2');
+    expect(items.slice(1).map((li) => li.textContent)).toEqual([expect.stringContaining('Mona Khalil'), expect.stringContaining('Omar Fathy')]);
+
+    // While loading: the same shape — no table, the totals card first.
+    rerender(
+      <DataTable label="Employees" columns={columns} rows={undefined} loading getRowId={(p) => p.id} footer={footer} cardsBelow="always" footerCard="start" />,
+    );
+    expect(container.querySelector('[data-view="table"]')).toBeNull();
+    expect(container.querySelector('[data-view="cards"] > li:first-child')!.hasAttribute('data-footer-card')).toBe(true);
+  });
+
   it('scrollHeight="screen": the totals row stays pinned to the box bottom (dry run 2026-11-20)', () => {
     const footer = { label: 'Month total · all 2', cells: { salary: '2,630,000' } };
     const { container, rerender } = renderWithI18n(
