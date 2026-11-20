@@ -86,9 +86,16 @@ export interface DataTableProps<Row> {
   rowTone?: (row: Row) => RowTone;
   /**
    * The container width below which rows become cards (default 740). A table whose columns' minimum
-   * widths add up to more than 740px passes a wider one, so it never scrolls sideways.
+   * widths add up to more than 740px passes a wider one, so it never scrolls sideways. `'always'`:
+   * cards on every width, no table on screen (print still lists the rows as a table).
    */
-  cardsBelow?: CardsBelow;
+  cardsBelow?: CardsBelow | 'always';
+  /**
+   * The totals card under the cards (`'end'`, default) or none on screen (`'none'`): the screen
+   * shows the totals elsewhere (the Approved payroll month's four tiles, owner 2026-11-20). The
+   * printout keeps its totals row either way.
+   */
+  footerCard?: 'end' | 'none';
   /**
    * The cards' height follows their text (long names that wrap on a phone): the skeleton spec
    * compares their width only. Rows (the table view) are still compared in full.
@@ -155,6 +162,7 @@ export function DataTable<Row>({
   toolbar,
   rowTone,
   cardsBelow = 740,
+  footerCard = 'end',
   cardHeightsVary = false,
   footer,
   printRows,
@@ -162,7 +170,9 @@ export function DataTable<Row>({
   scrollHeight,
   className,
 }: DataTableProps<Row>) {
-  const view = VIEW_CLASSES[cardsBelow];
+  // Cards on every width: no screen table at all, and the cards show at every container width.
+  const cardsOnly = cardsBelow === 'always';
+  const view = cardsOnly ? { table: '', cards: '' } : VIEW_CLASSES[cardsBelow];
   const { t } = useTranslation();
   const skeletonCount = Math.min(pagination?.limit ?? 8, SKELETON_CAP);
   const showSkeleton = loading && !rows?.length && !error;
@@ -191,8 +201,10 @@ export function DataTable<Row>({
           {t('ui.states.loading')}
         </span>
         <div aria-hidden="true">
-          <Table columns={skeletonColumns} rows={placeholders} getRowId={String} label={label} viewClass={view.table} footer={skeletonFooter} scrollHeight={scrollHeight} />
-          <Cards columns={skeletonColumns} rows={placeholders} getRowId={String} label={label} viewClass={view.cards} heightsVary={cardHeightsVary} footer={skeletonFooter} />
+          {cardsOnly ? null : (
+            <Table columns={skeletonColumns} rows={placeholders} getRowId={String} label={label} viewClass={view.table} footer={skeletonFooter} scrollHeight={scrollHeight} />
+          )}
+          <Cards columns={skeletonColumns} rows={placeholders} getRowId={String} label={label} viewClass={view.cards} heightsVary={cardHeightsVary} footer={skeletonFooter} footerCard={footerCard} />
         </div>
       </div>
     );
@@ -204,8 +216,10 @@ export function DataTable<Row>({
         aria-busy={refreshing || undefined}
         className={cn('transition-opacity duration-150', refreshing && 'pointer-events-none opacity-55')}
       >
-        <Table columns={columns} rows={rows ?? []} getRowId={getRowId} label={label} rowTone={rowTone} viewClass={view.table} footer={footer} scrollHeight={scrollHeight} />
-        <Cards columns={columns} rows={rows ?? []} getRowId={getRowId} label={label} rowTone={rowTone} viewClass={view.cards} heightsVary={cardHeightsVary} footer={footer} />
+        {cardsOnly ? null : (
+          <Table columns={columns} rows={rows ?? []} getRowId={getRowId} label={label} rowTone={rowTone} viewClass={view.table} footer={footer} scrollHeight={scrollHeight} />
+        )}
+        <Cards columns={columns} rows={rows ?? []} getRowId={getRowId} label={label} rowTone={rowTone} viewClass={view.cards} heightsVary={cardHeightsVary} footer={footer} footerCard={footerCard} />
       </div>
     );
   }
@@ -266,6 +280,8 @@ interface RowsProps<Row> {
   footer?: DataTableFooter;
   /** Table only: a capped, vertically scrolling body under a sticky header (`scrollHeight`). */
   scrollHeight?: 'screen';
+  /** Cards only: the totals card after the cards, or none (`footerCard`). */
+  footerCard?: 'end' | 'none';
 }
 
 const toneBar = {
@@ -403,7 +419,7 @@ function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass, footer
 
 // ── Cards (container < 740px) ────────────────────────────────────────────────
 
-function Cards<Row>({ columns, rows, getRowId, label, rowTone, viewClass, heightsVary = false, footer }: RowsProps<Row>) {
+function Cards<Row>({ columns, rows, getRowId, label, rowTone, viewClass, heightsVary = false, footer, footerCard = 'end' }: RowsProps<Row>) {
   const titles = columns.filter((c) => c.card === 'title');
   const statuses = columns.filter((c) => c.card === 'status');
   const badges = columns.filter((c) => c.card === 'badges');
@@ -495,7 +511,7 @@ function Cards<Row>({ columns, rows, getRowId, label, rowTone, viewClass, height
           </li>
         );
       })}
-      {footer ? <FooterCard columns={columns} footer={footer} /> : null}
+      {footer && footerCard === 'end' ? <FooterCard columns={columns} footer={footer} /> : null}
     </ul>
   );
 }
@@ -509,6 +525,7 @@ function FooterCard<Row>({ columns, footer }: { columns: DataTableColumn<Row>[];
   return (
     <li
       data-skeleton-block={block}
+      data-footer-card=""
       className="flex min-w-0 flex-col gap-2.5 rounded-2xl border border-border bg-muted p-3.5"
     >
       <div className="font-bold break-words">{footer.label}</div>

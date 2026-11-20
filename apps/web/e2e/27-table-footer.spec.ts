@@ -7,7 +7,8 @@ import { searchField, shoot, signIn } from './support/ui';
 /*
  * Every DataTable's header, rows and totals row reach both inner edges of their card, in English
  * and Arabic (the scroller's scrollbar gutter used to leave an empty 10px strip at the inline end:
- * right in LTR, left in RTL). Then the payroll taxes statement (§10): each group pages with the
+ * right in LTR, left in RTL). The payroll taxes statement's subtotals stay in sight; the approved
+ * payroll month is cards with its total first. Then the statement (§10): each group pages with the
  * subtotal of the whole group, and print lists everyone. Needs an approved month (05-payroll
  * approves one). The employees screen is a card grid, not a DataTable, so it isn't measured here.
  */
@@ -65,40 +66,64 @@ for (const locale of ['en', 'ar'] as const) {
     }
   });
 
-  test(`capped payroll tables keep their totals row in sight at 900px tall (${locale})`, async ({ page }) => {
-    // Dry run 2026-11-20: the month's total row sat under the lines of the height-capped box
-    // (1440 × 900 on a Mac). 1600 wide, not 1440: the month's lines are a table only from a
-    // 1100px content area, and with a classic 15px scrollbar (Linux CI, Windows) 1440 is just
-    // under it, so the month shows cards there. 900 tall keeps the box's cap the dry run's.
+  test(`payroll taxes statement: each capped group keeps its subtotal row in sight (${locale})`, async ({ page }) => {
+    // Dry run 2026-11-20: a total row sat under the lines of the height-capped box. The project's
+    // desktop window (1440px of content, 900 tall).
     const month = await approvedMonth();
-    await page.setViewportSize({ width: 1600, height: 900 });
     await signIn(page, locale);
-    for (const path of [`/accounting/payroll/${month.month}`, `/accounting/payroll-taxes/${month.month}`]) {
-      await openSettled(page, `/${locale}${path}`);
-      // Each capped table brought to the top of the window (as a reader scrolls to it): its totals
-      // cells (sticky; the row itself keeps its place in the flow) sit inside its box and the window.
-      const boxes = await page.locator('[data-view="table"] [data-scroll-capped]').evaluateAll((scrollers) =>
-        scrollers
-          .filter((s) => s.getBoundingClientRect().height > 0 && s.querySelector('tfoot'))
-          .map((s) => {
-            s.closest('section')!.scrollIntoView({ block: 'start' });
-            const box = s.getBoundingClientRect();
-            const foot = s.querySelector('tfoot td')!.getBoundingClientRect();
-            return {
-              inBox: Math.round(foot.top - box.top) >= 0 && Math.round(box.bottom - foot.bottom) >= 0,
-              inWindow: Math.round(foot.bottom) <= window.innerHeight,
-            };
-          }),
-      );
-      expect(boxes.length, path).toBeGreaterThan(0);
-      for (const box of boxes) expect({ path, ...box }).toEqual({ path, inBox: true, inWindow: true });
-    }
-    // The month's row is the whole month's total, not a subtotal.
-    await openSettled(page, `/${locale}/accounting/payroll/${month.month}`);
-    await expect(page.locator('[data-view="table"] tfoot').first()).toContainText(
-      t(locale, 'accounting.payroll.month.totalAll', { count: String(month.lines.length) }),
+    await openSettled(page, `/${locale}/accounting/payroll-taxes/${month.month}`);
+    // Each capped table brought to the top of the window (as a reader scrolls to it): its totals
+    // cells (sticky; the row itself keeps its place in the flow) sit inside its box and the window.
+    const boxes = await page.locator('[data-view="table"] [data-scroll-capped]').evaluateAll((scrollers) =>
+      scrollers
+        .filter((s) => s.getBoundingClientRect().height > 0 && s.querySelector('tfoot'))
+        .map((s) => {
+          s.closest('section')!.scrollIntoView({ block: 'start' });
+          const box = s.getBoundingClientRect();
+          const foot = s.querySelector('tfoot td')!.getBoundingClientRect();
+          return {
+            inBox: Math.round(foot.top - box.top) >= 0 && Math.round(box.bottom - foot.bottom) >= 0,
+            inWindow: Math.round(foot.bottom) <= window.innerHeight,
+          };
+        }),
     );
+    expect(boxes.length).toBeGreaterThan(0);
+    for (const box of boxes) expect(box).toEqual({ inBox: true, inWindow: true });
   });
+
+  for (const size of [
+    { name: 'desktop', viewport: undefined },
+    { name: 'phone', viewport: { width: 390, height: 844 } },
+  ] as const) {
+    test(`approved payroll month: cards on every width, no total card, an employee first (${locale}, ${size.name})`, async ({ page }) => {
+      // Owner 2026-11-20: the month's lines are cards on every width and the four tiles above are
+      // its totals, so there is no total card on screen. Paper keeps the totals row.
+      const month = await approvedMonth();
+      if (size.viewport) await page.setViewportSize(size.viewport);
+      await signIn(page, locale);
+      await openSettled(page, `/${locale}/accounting/payroll/${month.month}`);
+      const lines = page.locator('section[data-cards-below="always"]');
+      await expect(lines).toHaveCount(1);
+      // No table on screen (print's own copy of the rows stays, hidden).
+      await expect(lines.locator('[data-view="table"]:visible')).toHaveCount(0);
+      const cards = lines.locator('[data-view="cards"] > li');
+      expect(await cards.count()).toBe(Math.min(month.lines.length, PAGINATION.defaultLimit));
+      await expect(lines.locator('[data-footer-card]')).toHaveCount(0);
+      await expect(lines.locator('[data-view="cards"]')).not.toContainText(
+        t(locale, 'accounting.payroll.month.totalAll', { count: String(month.lines.length) }),
+      );
+      // The first card is an employee's: their name and their fields.
+      const first = month.lines[0]!;
+      await expect(cards.first()).toContainText(locale === 'ar' ? first.nameAr : first.nameEn);
+      await expect(cards.first().locator('dl')).toHaveCount(1);
+      // The printout still has the month's total row.
+      await page.emulateMedia({ media: 'print' });
+      await expect(lines.locator('[data-print-rows] tfoot')).toContainText(
+        t(locale, 'accounting.payroll.month.totalAll', { count: String(month.lines.length) }),
+      );
+      await page.emulateMedia({ media: 'screen' });
+    });
+  }
 
   test(`payroll taxes statement: paging, whole-group subtotals, print lists everyone (${locale})`, async ({ page }, info) => {
     const month = await approvedMonth();

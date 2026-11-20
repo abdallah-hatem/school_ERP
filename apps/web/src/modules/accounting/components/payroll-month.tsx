@@ -24,6 +24,7 @@ import {
   ApproveIcon,
   ExcelIcon,
   GrossIcon,
+  HideIcon,
   InsuredIcon,
   LockedIcon,
   NetPayIcon,
@@ -52,9 +53,6 @@ import { matchesLine } from '../lib/payroll-taxes';
  * within the viewer's salary scope; totals only with every salary (§2, P4). `month` undefined:
  * its own skeleton.
  */
-
-/** Ten money columns need room: cards below 1100px of page. */
-export const MONTH_LINES_CARDS_BELOW = 1100;
 
 
 /** Print: landscape A4 with no app chrome; the table lists everyone (`printRows`). */
@@ -149,6 +147,14 @@ export function PayrollMonth({ monthKey, month: serverMonth, basePath }: Payroll
 
       <MonthTiles month={month} />
 
+      {month && !month.salaryVisible ? (
+        // The tiles show dashes to someone who doesn't see every salary: say why, under them.
+        <p role="note" data-totals-hidden="" className="flex items-start gap-3 rounded-2xl bg-info-soft px-4 py-3.5 text-sm text-info-ink">
+          <HideIcon className="mt-0.5 size-5 shrink-0" />
+          <span>{t('accounting.payroll.month.totalsHidden')}</span>
+        </p>
+      ) : null}
+
       <DataTable
         label={t('accounting.payroll.month.tableLabel', { month: monthLabel })}
         columns={columns}
@@ -157,7 +163,10 @@ export function PayrollMonth({ monthKey, month: serverMonth, basePath }: Payroll
         loading={loading}
         getRowId={(l) => l.employeeId}
         footer={footer}
-        cardsBelow={MONTH_LINES_CARDS_BELOW}
+        // Cards on every width and no total card (owner 2026-11-20): the four tiles above are the
+        // month's totals. Print stays a table with its totals row.
+        cardsBelow="always"
+        footerCard="none"
         toolbar={
           <>
             <div className="flex w-full flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -209,7 +218,6 @@ export function PayrollMonth({ monthKey, month: serverMonth, basePath }: Payroll
             setPage(1);
           },
         }}
-        scrollHeight="screen"
       />
     </div>
   );
