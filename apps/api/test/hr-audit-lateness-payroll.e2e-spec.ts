@@ -275,7 +275,7 @@ describe('HR audit wiring — lateness and payroll (T29, e2e)', () => {
 
     const list = (await http(app).get(`/audit/records/payroll_run/${run.id}`).expect(200)).body.data as AuditEntry[];
     expect(list.map((x) => x.action)).toEqual(['hr.payroll.approve', 'hr.payroll.adjustment_add', 'hr.payroll.create']);
-    expect(list.every((x) => x.entityId === run.id && x.entityLabel === month)).toBe(true);
+    expect(list.every((x) => x.entityId === run.id && x.entityLabel.en === month)).toBe(true);
     expect(list.map((x) => x.entityId)).not.toContain(other.id);
     // The whole-school payroll viewer reads the amounts.
     expect(list[1]?.changes.find((c) => c.field === 'amount')).toMatchObject({ before: null, after: 25_000 });
