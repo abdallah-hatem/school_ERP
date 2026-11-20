@@ -21,6 +21,12 @@ async function loaded(title = 'Tax and insurance') {
 }
 
 const example = () => screen.getByTestId('tax-example').textContent ?? '';
+/** The receipt's four figures: net, + income tax, + martyrs' fund, gross (with its currency). */
+const receipt = () =>
+  ['net', 'tax', 'fund', 'gross'].map((row) =>
+    // Each part of a <Money> (currency label, figure) is its own span; read them as words.
+    Array.from(screen.getByTestId(`tax-example-${row}`).querySelectorAll('span span'), (s) => s.textContent).join(' '),
+  );
 const value = (name: RegExp) => (screen.getByRole('textbox', { name }) as HTMLInputElement).value;
 
 describe('Settings → Accounting — payroll tax rule (§10)', () => {
@@ -46,7 +52,10 @@ describe('Settings → Accounting — payroll tax rule (§10)', () => {
     expect(value(/Martyrs' fund/)).toBe('0.05');
     expect(value(/Employee insurance share/)).toBe('11');
     // Net 10,000.00 → 1,017.00 tax, 5.51 fund, 11,022.51 gross (the same numbers as the API's tests).
-    expect(example()).toContain("net 10,000.00 → income tax 1,017.00 · martyrs' fund 5.51 · gross 11,022.51");
+    expect(receipt()).toEqual(['10,000.00', '1,017.00', '5.51', 'EGP 11,022.51']);
+    expect(example()).toContain('+ Income tax');
+    expect(example()).toContain("+ Martyrs' fund");
+    expect(example()).toContain('Gross the school pays');
   });
 
   it('a slice rate plus the fund reaching 100% shows the error, pauses the example and blocks saving', async () => {
@@ -116,6 +125,81 @@ describe('Settings → Accounting — payroll tax rule (§10)', () => {
     expect(screen.queryByRole('button', { name: /Remove slice/ })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
     // The example is a calculator, not a setting: it still works.
-    expect(example()).toContain('gross 11,022.51');
+    expect(receipt()[3]).toBe('EGP 11,022.51');
+  });
+});
+
+describe('Settings → Accounting — the tax example receipt', () => {
+  beforeEach(() => {
+    api.GET_ACCOUNTING_SETTINGS.mockImplementation(() => ok(SETTINGS));
+  });
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  const netInput = (name = 'Net pay') => screen.getByRole('textbox', { name }) as HTMLInputElement;
+
+  it('Net pay groups thousands live (10000 → 10,000), completes on blur and the receipt follows', async () => {
+    const user = userEvent.setup();
+    renderSettings(<AccountingRulesSection />);
+    await loaded();
+    const net = netInput();
+    expect(net.value).toBe('10,000.00');
+    await user.clear(net);
+    await user.type(net, '1000');
+    expect(net.value).toBe('1,000');
+    expect(receipt()[0]).toBe('1,000.00');
+    await user.type(net, '0');
+    expect(net.value).toBe('10,000');
+    expect(net.selectionStart).toBe(6);
+    // Live: the receipt already shows the typed net, before the field is left.
+    expect(receipt()).toEqual(['10,000.00', '1,017.00', '5.51', 'EGP 11,022.51']);
+    await user.tab();
+    expect(net.value).toBe('10,000.00');
+  });
+
+  it('15,000 → + income tax 2,267.78, + fund 8.64, gross EGP 17,276.42', async () => {
+    const user = userEvent.setup();
+    renderSettings(<AccountingRulesSection />);
+    await loaded();
+    const net = netInput();
+    await user.clear(net);
+    await user.type(net, '15000');
+    expect(net.value).toBe('15,000');
+    expect(receipt()).toEqual(['15,000.00', '2,267.78', '8.64', 'EGP 17,276.42']);
+  });
+
+  it('an empty net asks for one; an invalid rule asks to fix it (no receipt rows either way)', async () => {
+    const user = userEvent.setup();
+    renderSettings(<AccountingRulesSection />);
+    await loaded();
+    await user.clear(netInput());
+    expect(example()).toContain('Enter a net amount to see its tax.');
+    expect(screen.queryByTestId('tax-example-gross')).toBeNull();
+
+    await user.type(netInput(), '15000');
+    const rate = screen.getByRole('textbox', { name: /Rate for the rest/ });
+    await user.clear(rate);
+    await user.type(rate, '99.99');
+    await waitFor(() => expect(example()).toContain('Fix the tax rule above to see an example.'));
+    expect(screen.queryByTestId('tax-example-gross')).toBeNull();
+    expect(screen.getByTestId('tax-example').getAttribute('aria-live')).toBe('polite');
+  });
+
+  it('Arabic: the same live grouping, the receipt in Arabic and the gross as 17,276.42 ج.م', async () => {
+    const user = userEvent.setup();
+    renderSettings(<AccountingRulesSection />, 'ar');
+    await loaded('الضرائب والتأمينات');
+    const net = netInput('صافي الراتب');
+    await user.clear(net);
+    await user.type(net, '15000');
+    expect(net.value).toBe('15,000');
+    expect(receipt()).toEqual(['15,000.00', '2,267.78', '8.64', 'ج.م 17,276.42']);
+    for (const label of ['+ ضريبة كسب العمل', '+ صندوق الشهداء', 'الإجمالي على المدرسة']) expect(example()).toContain(label);
+    await user.tab();
+    expect(net.value).toBe('15,000.00');
+    await user.clear(net);
+    expect(example()).toContain('أدخل مبلغًا صافيًا لترى ضريبته.');
   });
 });

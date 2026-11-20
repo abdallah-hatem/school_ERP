@@ -301,11 +301,15 @@
     "example": {
       "net": "Net pay",
       "netPlaceholder": "10,000.00",
-      "line": "net {net} → income tax {tax} · martyrs' fund {fund} · gross {gross}",
       "enterNet": "Enter a net amount to see its tax.",
       "invalidRule": "Fix the tax rule above to see an example.",
       "hint": "For an employee who isn't insured. An insured employee's share is added to the gross.",
-      "label": "Example:"
+      "rows": {
+        "net": "Net pay",
+        "tax": "+ Income tax",
+        "fund": "+ Martyrs' fund",
+        "gross": "Gross the school pays"
+      }
     }
   }
 }
