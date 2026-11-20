@@ -469,10 +469,17 @@ phase live in `docs/build-log/`.
   links. Current (Phosphor) icons — the custom icon set is on hold (owner).
 - 2026-11-20 — Owner: backdated penalty → **recount, telling them first** (heads-up when recording, an
   explicit "Approve and update N penalties" confirmation when approving; refused if a later one is in an
-  approved payroll month). Being built.
+  approved payroll month). Built in #196.
+- 2026-11-20 — Backdated penalty recount → #196 (owner: "recount but you tell them first"): approving a
+  penalty dated before approved ones of the same violation/employee moves each later one (in its
+  window) up one level with today's catalogue action; never down; capped at the last level. Heads-up
+  on the record form, "Approve and update N penalties" confirmation, server requires the acknowledged
+  list (409 UNCONFIRMED / CHANGED with the fresh list); refused naming the month if a later one is in
+  an approved payroll month. One `hr.penalty.recount` History entry per moved penalty; draft runs show
+  the recalculate notice (new `recounted_at`). CI caught a real race-order bug (losers now get
+  NOT_PENDING) and a wrong test. Screenshots EN + AR.
 ## Next up
 
-- Penalties backdated recount — owner decided (recount with warning), being built.
 - Custom icon set drawn (`design/mockups/icon-set.html`, style G monoline + solid when selected) —
   **on hold** (owner, 2026-11-20).
 
