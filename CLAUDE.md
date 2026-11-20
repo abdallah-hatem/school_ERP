@@ -14,11 +14,13 @@ skills. **Where this file differs from a skill, this file wins.**
 3. **`packages/shared` exists even though there is no mobile app.** It holds zod schemas, API
    types, permission / setting / module keys, enums, locale files and tokens.
 4. **Frontend is split into `core/`, `shared/` and `modules/`** — see `docs/ARCHITECTURE.md`.
-5. **Only the owner merges — into every branch** (owner, 2026-11-20; replaces "green CI, no approval"
-   for `dev`). `dev`, `testing`, `production` and `demo` need green CI and the owner's approval
-   (branch protection: one `CODEOWNERS` approval; the owner merges his own account's PRs with the
-   admin bypass). Claude and Tamer open PRs and never merge them; Claude never uses `--admin`.
-   Direct pushes are blocked. **Before opening any PR, merge the latest
+5. **Into `dev`: the owner merges, and Claude merges for him** (owner, 2026-11-20). `dev` needs green
+   CI and one `CODEOWNERS` approval, so other contributors (Tamer) can't merge on their own. Claude
+   merges its own green, screen-checked PRs with `gh pr merge --admin` (they come from the owner's
+   account, which can't approve itself), and reviews others' PRs — code plus screenshots — then
+   approves and merges them when clean, or reports what must change. **Into `testing`, `production`
+   and `demo`: only the owner** — Claude never merges there and never uses `--admin` there. Direct
+   pushes are blocked. **Before opening any PR, merge the latest
    `origin/dev` into the branch** and resolve conflicts there (GitHub refuses branches that are
    behind). Every agent brief says so.
 6. **No Vercel. Our own Contabo VPS runs Coolify with three environments: dev, testing and prod.**

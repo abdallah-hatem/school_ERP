@@ -10,8 +10,9 @@ phase live in `docs/build-log/`.
 - **Design:** direction "Campus", picked from three mockups (`design/mockups/b-campus.html`, kept
   locally, not committed). Light theme only, responsive (desktop, tablet, phone), EN and AR.
 
-- **Merging:** only the owner merges, into every branch (2026-11-20; ends Claude merging into `dev`).
-  Claude opens PRs, checks CI and screens, and tells him when one is ready.
+- **Merging:** into `dev`, the owner or Claude for him (green CI + a CODEOWNERS approval; Claude uses
+  the admin bypass for its own PRs and reviews, approves and merges Tamer's). `testing`,
+  `production` and `demo`: the owner only (2026-11-20).
 
 ## Stages
 
@@ -399,9 +400,10 @@ phase live in `docs/build-log/`.
   as labels, insured salary as money (EGP 6,500.00, counted as money and hidden without salary
   access), and a photo or school-logo change as "Photo added / changed / removed" — never a file
   name. Checked in screenshots (EN desktop, AR phone).
-- 2026-11-20 — Owner: "for dev also require me only to merge" → `dev` protection now needs one
-  CODEOWNERS approval (the owner merges his own PRs with the admin bypass); CLAUDE.md rule 5,
-  CONVENTIONS and CODEOWNERS updated. Claude opens PRs and reports them ready; it never merges.
+- 2026-11-20 — Owner: "for dev also require me only to merge", then "I allow you to merge for me as
+  well" → `dev` protection needs one CODEOWNERS approval, so Tamer can't merge alone; Claude merges
+  its own PRs with the admin bypass and reviews, approves and merges Tamer's. CLAUDE.md rule 5,
+  CONVENTIONS, CODEOWNERS and learnings updated (#172).
 
 ## Next up
 

@@ -171,12 +171,12 @@ The API refuses anything undeclared (403) and CI fails on it (`docs/ARCHITECTURE
   doc), the test command and its result, the edge cases covered, screenshots.
 - The body ends with a **Log entry**: two or three lines for the build log — what changed, decisions
   taken, anything left open.
-- **Merging:** only the owner merges, into every branch — green CI plus his approval (CLAUDE.md
-  rule 5, 2026-11-20). Claude reports a PR as ready for him when CI is green and its screens were
-  checked; it never merges.
-- **The build log has one writer: Claude** (owner, 2026-11-18; since 2026-11-20 the owner merges).
-  Right after the owner merges a PR into `dev`, Claude adds its log entry (and updates Next up) in a
-  small docs-only PR, which the owner merges too. Parallel
+- **Merging (CLAUDE.md rule 5, 2026-11-20):** into `dev`, the owner or Claude on his behalf — green
+  CI and a `CODEOWNERS` approval. Claude merges its own checked PRs with the admin bypass, and
+  reviews, approves and merges other contributors' PRs when clean. `testing`, `production` and
+  `demo`: the owner only.
+- **The build log has one writer: whoever merges** (owner, 2026-11-18). Right after a merge into
+  `dev`, the merger adds the PR's log entry (and updates Next up) in a small docs-only PR. Parallel
   PRs all appending to the same spot of `docs/BUILD_LOG.md` (or `00-recent-changes.md`) is what made
   them conflict; with one writer and one file per business change they don't. At the start of each
   session, compare the log with the PRs merged into `dev` and add any entry that's missing.

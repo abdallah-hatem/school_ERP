@@ -19,6 +19,7 @@ Corrections recorded so they don't have to be repeated. Loaded at session start.
   from a scratch copy on a throwaway database before reporting — "stay off the shared databases"
   means use a throwaway one, not skip the look. The owner wants changed screens seen before merge
   ("check in browser of course"). — 2026-11-18
-- Never merge any PR, `dev` included: the owner merges everything (2026-11-20, reversing the
-  2026-11-19 "green dev PRs are mine to merge"). When a PR is green and its screens are checked, tell
-  him it's ready with the link; never `gh pr merge`, never `--admin`. — 2026-11-20
+- Into `dev`, I merge for the owner: my own green, screen-checked PRs with `gh pr merge --admin`
+  (dev needs a CODEOWNERS approval; his account can't approve itself), and Tamer's after my review
+  (code + screenshots) comes back clean — approve, then merge; otherwise report the fixes. Never
+  `--admin` into `testing`/`production`/`demo`. ("I allow you to merge for me as well") — 2026-11-20
