@@ -412,6 +412,11 @@ phase live in `docs/build-log/`.
   every other list 100). Fixes: audit on HR's run, statuses in words, bidi of the reason, lock order,
   docs and e2e; the hr-payroll test now cleans its accounting rows. Owner kept the screen; sidebar
   label "Approved pay" (EN; the full name was cut off), page "Approved payroll".
+- 2026-11-20 — Dry run of the steps #171 changed → #174 (`docs/demo/dry-runs/2026-11-20.md`, script
+  wording): AR, EN, phone on DB copies; money matched by hand, including return → fix → re-approve.
+  Must fix (code, in progress): the month's total row hidden inside the capped table (also the
+  Payroll taxes subtotals); "Finalized · transferred" cuts the month name on a phone. Five later
+  items folded into the same fix. Demo-database data steps still the owner's.
 
 ## Next up
 
