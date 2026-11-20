@@ -59,6 +59,30 @@ DB_PORT=5452 API_PORT=4901 WEB_PORT=4900 COMPOSE_PROJECT_NAME=school-erp-2 pnpm 
 The first run writes them to a git-ignored root `.env`, which `pnpm dev` and Docker Compose read
 from then on. The `pnpm --filter api db:*` scripts use port 5442 unless `DB_PORT` is set.
 
+## Hosted demo
+
+After CI passes on a push to `demo`, GitHub Actions stages the API and web builds on Vercel, applies
+pending Prisma migrations to the hosted demo database, and promotes the builds. It checks API
+health and the web sign-in page after promotion.
+
+Before merging the workflow, the repository owner sets up the `school-erp-demo` GitHub Actions
+environment. Under **Deployment branches and tags**, select only the `demo` branch. Add these
+settings to that environment:
+
+| Setting | Name | Value |
+| --- | --- | --- |
+| Secret | `VERCEL_DEMO_TOKEN` | Deployment token scoped to the personal Hobby workspace |
+| Secret | `DEMO_DATABASE_URL` | Direct Neon connection string for `school_erp_demo` with `sslmode=require` |
+| Variable | `VERCEL_DEMO_SCOPE` | Personal Hobby workspace slug |
+| Variable | `VERCEL_DEMO_API_PROJECT` | Existing Vercel API project ID |
+| Variable | `VERCEL_DEMO_WEB_PROJECT` | Existing Vercel web project ID |
+| Variable | `DEMO_API_URL` | Public API origin, including `https://` |
+| Variable | `DEMO_WEB_URL` | Public web origin, including `https://` |
+
+Keep application runtime credentials in the two Vercel projects. Make schema changes compatible
+with the running app until the new builds are promoted. If a deployment fails after migration,
+inspect the failed step and rerun the job. Prisma skips migrations it already applied.
+
 ## Docs
 
 - [`docs/PROJECT.md`](docs/PROJECT.md) — what we are building, team, scope

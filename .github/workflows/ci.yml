@@ -6,12 +6,13 @@ on:
   # dev doesn't require PR branches to be up to date (owner, 2026-11-18), so the full suite runs
   # once more on dev itself after every merge: two PRs that pass alone but break together show here.
   push:
-    branches: [dev]
+    branches: [dev, demo]
 
 # A new push to a PR cancels the run it supersedes.
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  # A newer demo push must not interrupt migrations or promotion already in progress.
+  cancel-in-progress: ${{ github.event_name != 'push' || github.ref != 'refs/heads/demo' }}
 
 permissions:
   contents: read
@@ -36,7 +37,7 @@ jobs:
           fetch-depth: 0
       - id: diff
         run: |
-          # On a push to dev (after a merge) always run everything.
+          # On a branch push (after a merge) always run everything.
           if [ "${{ github.event_name }}" != "pull_request" ]; then
             echo "docs_only=false" >> "$GITHUB_OUTPUT"; exit 0
           fi
@@ -235,3 +236,125 @@ jobs:
           retention-days: 14
           if-no-files-found: ignore
           include-hidden-files: true
+
+  deploy-demo:
+    name: Deploy demo
+    if: github.event_name == 'push' && github.ref == 'refs/heads/demo'
+    needs: [checks, e2e, smoke]
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: bash
+    environment:
+      name: school-erp-demo
+      url: ${{ vars.DEMO_WEB_URL }}
+    env:
+      VERCEL_DEMO_SCOPE: ${{ vars.VERCEL_DEMO_SCOPE }}
+      VERCEL_CLI_VERSION: '66.1.0'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Stage API and web builds
+        id: stage
+        env:
+          VERCEL_DEMO_TOKEN: ${{ secrets.VERCEL_DEMO_TOKEN }}
+          VERCEL_DEMO_API_PROJECT: ${{ vars.VERCEL_DEMO_API_PROJECT }}
+          VERCEL_DEMO_WEB_PROJECT: ${{ vars.VERCEL_DEMO_WEB_PROJECT }}
+          DEMO_API_URL: ${{ vars.DEMO_API_URL }}
+          DEMO_WEB_URL: ${{ vars.DEMO_WEB_URL }}
+        run: |
+          latest_sha=$(git ls-remote --exit-code origin refs/heads/demo | cut -f1)
+          if [[ "$GITHUB_SHA" != "$latest_sha" ]]; then
+            echo 'A newer demo commit is available. Skipping this deployment.'
+            exit 0
+          fi
+
+          for key in VERCEL_DEMO_TOKEN VERCEL_DEMO_SCOPE VERCEL_DEMO_API_PROJECT VERCEL_DEMO_WEB_PROJECT DEMO_API_URL DEMO_WEB_URL; do
+            if [[ -z "${!key}" ]]; then
+              echo "::error::Missing $key in the school-erp-demo environment. See README.md."
+              exit 1
+            fi
+          done
+
+          source_dir=$(mktemp -d "$RUNNER_TEMP/school-erp-demo.XXXXXX")
+          git archive "$GITHUB_SHA" | tar -x -C "$source_dir"
+          cd "$source_dir"
+
+          for app in api web; do
+            if [[ "$app" == api ]]; then
+              project="$VERCEL_DEMO_API_PROJECT"
+            else
+              project="$VERCEL_DEMO_WEB_PROJECT"
+            fi
+            result=$(pnpm dlx "vercel@$VERCEL_CLI_VERSION" deploy \
+              --prod --skip-domain --yes --json --project "$project" \
+              --scope "$VERCEL_DEMO_SCOPE" --token "$VERCEL_DEMO_TOKEN" \
+              --meta sourceBranch=demo --meta "sourceCommit=$GITHUB_SHA" \
+              --meta "sourceRepository=$GITHUB_REPOSITORY")
+            deployment=$(jq -er '(.deployment // .) | select(.readyState == "READY") | .id | select(startswith("dpl_"))' <<<"$result")
+            echo "$app=$deployment" >> "$GITHUB_OUTPUT"
+          done
+
+      - name: Install Prisma dependencies
+        if: steps.stage.outputs.web != ''
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply demo database migrations
+        id: migrate
+        if: steps.stage.outputs.web != ''
+        env:
+          DATABASE_URL: ${{ secrets.DEMO_DATABASE_URL }}
+        run: |
+          latest_sha=$(git ls-remote --exit-code origin refs/heads/demo | cut -f1)
+          if [[ "$GITHUB_SHA" != "$latest_sha" ]]; then
+            echo 'A newer demo commit is available. Skipping migrations and promotion.'
+            exit 0
+          fi
+
+          if ! node -e '
+            const url = URL.parse(process.env.DATABASE_URL ?? "");
+            const directDemoUrl = url && ["postgresql:", "postgres:"].includes(url.protocol)
+              && url.hostname.endsWith(".neon.tech") && !url.hostname.split(".")[0].endsWith("-pooler")
+              && url.pathname === "/school_erp_demo" && url.searchParams.get("sslmode") === "require";
+            process.exit(directDemoUrl ? 0 : 1);
+          '; then
+            echo '::error::DEMO_DATABASE_URL must be the direct TLS connection for school_erp_demo on Neon.'
+            exit 1
+          fi
+
+          pnpm --filter api exec prisma migrate deploy
+          echo 'applied=true' >> "$GITHUB_OUTPUT"
+
+      - name: Promote and verify API
+        if: steps.migrate.outputs.applied == 'true'
+        env:
+          VERCEL_DEMO_TOKEN: ${{ secrets.VERCEL_DEMO_TOKEN }}
+          DEPLOYMENT: ${{ steps.stage.outputs.api }}
+          DEMO_API_URL: ${{ vars.DEMO_API_URL }}
+        run: |
+          pnpm dlx "vercel@$VERCEL_CLI_VERSION" promote "$DEPLOYMENT" \
+            --scope "$VERCEL_DEMO_SCOPE" --token "$VERCEL_DEMO_TOKEN" --yes
+          curl --fail --silent --show-error --retry 5 --retry-all-errors --retry-delay 2 \
+            --max-time 20 "${DEMO_API_URL%/}/health" | jq -e '(.data.status // .status) == "ok"'
+
+      - name: Promote and verify web app
+        if: steps.migrate.outputs.applied == 'true'
+        env:
+          VERCEL_DEMO_TOKEN: ${{ secrets.VERCEL_DEMO_TOKEN }}
+          DEPLOYMENT: ${{ steps.stage.outputs.web }}
+          DEMO_WEB_URL: ${{ vars.DEMO_WEB_URL }}
+        run: |
+          pnpm dlx "vercel@$VERCEL_CLI_VERSION" promote "$DEPLOYMENT" \
+            --scope "$VERCEL_DEMO_SCOPE" --token "$VERCEL_DEMO_TOKEN" --yes
+          curl --fail --silent --show-error --retry 5 --retry-all-errors --retry-delay 2 \
+            --max-time 20 --output /dev/null "${DEMO_WEB_URL%/}/en/login"
