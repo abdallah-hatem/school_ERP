@@ -274,6 +274,7 @@ export function LatenessBoard({ month, maxMonth, rows: initialRows, rule: initia
                 placeholder={t('lateness.search.placeholder')}
                 value={search}
                 disabled={loading}
+                loading={navigating}
                 onChange={(e) => {
                   setSearch(e.target.value);
                   setPage(1);

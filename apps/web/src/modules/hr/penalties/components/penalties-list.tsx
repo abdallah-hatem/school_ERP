@@ -5,13 +5,12 @@ import { PAGINATION, PENALTY_STATUSES, type Month, type PenaltyRecord, type Pena
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import type { SelectOption, SelectOptionGroup } from '@/shared/components/form/fields';
-import { ClearFilters, FilterSelect } from '@/shared/components/form/filter-controls';
+import { ClearFilters, FilterSelect, SearchInput } from '@/shared/components/form/filter-controls';
 import { MonthStepper } from '@/shared/components/form/month-stepper';
 import { EmptyState } from '@/shared/components/layout/empty-state';
 import { PageHeader } from '@/shared/components/layout/page-header';
 import { Button } from '@/shared/components/ui/button';
 import { AddIcon, SearchIcon } from '@/shared/components/ui/icons';
-import { Input } from '@/shared/components/ui/input';
 import { formatMonth } from '@/shared/lib/format';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { penaltiesQueryString, type PenaltiesListQuery } from '../lib/list-query';
@@ -142,17 +141,14 @@ export function PenaltiesList({
         }}
         toolbar={
           <div role="search" className="flex w-full flex-wrap items-center gap-2.5">
-            <div className="relative min-w-0 flex-1 basis-64">
-              <SearchIcon className="pointer-events-none absolute inset-y-0 start-3.5 my-auto size-5 text-muted-foreground" />
-              <Input
-                aria-label={t('penalties.filters.searchLabel')}
-                placeholder={t('penalties.filters.searchPlaceholder')}
-                value={search}
-                onChange={(e) => onSearchChange(e.target.value)}
-                disabled={loading}
-                className="ps-11"
-              />
-            </div>
+            <SearchInput
+              aria-label={t('penalties.filters.searchLabel')}
+              placeholder={t('penalties.filters.searchPlaceholder')}
+              value={search}
+              onChange={(e) => onSearchChange(e.target.value)}
+              disabled={loading}
+              loading={pending}
+            />
             <FilterSelect
               label={t('penalties.filters.status')}
               allLabel={t('penalties.filters.allStatuses')}

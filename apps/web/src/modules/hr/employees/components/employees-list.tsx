@@ -17,8 +17,7 @@ import { EmptyState, ErrorState } from '@/shared/components/layout/empty-state';
 import { PageHeader } from '@/shared/components/layout/page-header';
 import { Button } from '@/shared/components/ui/button';
 import { AddIcon, SearchIcon } from '@/shared/components/ui/icons';
-import { Input } from '@/shared/components/ui/input';
-import { ClearFilters, FilterSelect } from '@/shared/components/form/filter-controls';
+import { ClearFilters, FilterSelect, SearchInput } from '@/shared/components/form/filter-controls';
 import { formatCount } from '@/shared/lib/format';
 import { SkeletonText } from '@/shared/components/ui/skeleton';
 import { localName } from '@/shared/lib/i18n';
@@ -159,17 +158,15 @@ export function EmployeesList({ basePath, query, rows, total, departments, stage
         <div data-skeleton-block="filters" className="flex flex-col gap-3 rounded-[1.25rem] bg-card p-3.5 shadow-card">
           {/* One row on a wide content area; search above a row of four (tablet) or a 2 × 2 grid (phone). */}
           <div role="search" className="flex w-full flex-col gap-2.5 @min-[1000px]:flex-row @min-[1000px]:items-center">
-            <div className="relative min-w-0 flex-1">
-              <SearchIcon className="pointer-events-none absolute inset-y-0 start-3.5 my-auto size-5 text-muted-foreground" />
-              <Input
-                aria-label={t('employees.list.searchLabel')}
-                placeholder={t('employees.list.searchPlaceholder')}
-                value={search}
-                onChange={(e) => onSearchChange(e.target.value)}
-                disabled={loading}
-                className="ps-11"
-              />
-            </div>
+            <SearchInput
+              wrapperClassName="basis-[0%]"
+              aria-label={t('employees.list.searchLabel')}
+              placeholder={t('employees.list.searchPlaceholder')}
+              value={search}
+              onChange={(e) => onSearchChange(e.target.value)}
+              disabled={loading}
+              loading={pending}
+            />
             <div className="grid grid-cols-2 gap-2.5 @min-[620px]:grid-cols-4 @min-[1000px]:flex">
               <FilterSelect
                 label={t('employees.columns.department')}

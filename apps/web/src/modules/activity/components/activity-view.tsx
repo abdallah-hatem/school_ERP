@@ -279,6 +279,7 @@ export function ActivityView({
                 value={search}
                 onChange={(e) => onSearchChange(e.target.value)}
                 disabled={loading}
+                loading={pending}
                 className="border-transparent bg-card shadow-card"
               />
               <AuditFiltersSheet count={filterCount} onClear={clearFilters} className="@min-[56rem]/activity:hidden">

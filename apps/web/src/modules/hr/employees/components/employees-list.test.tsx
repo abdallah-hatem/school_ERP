@@ -70,7 +70,7 @@ describe('EmployeesList', () => {
     cleanup();
 
     renderList({ page: '3', search: 'mona', departmentId: 'd-sci', status: 'ACTIVE' }, people);
-    const search = screen.getByRole('textbox', { name: 'Search employees' }) as HTMLInputElement;
+    const search = screen.getByRole('searchbox', { name: 'Search employees' }) as HTMLInputElement;
     expect(search.value).toBe('mona');
     await user.click(screen.getByRole('button', { name: 'Clear filters · 3' }));
     expect(push).toHaveBeenCalledTimes(1);
@@ -90,7 +90,7 @@ describe('EmployeesList', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderList({ page: '2' }, people);
-    await user.type(screen.getByRole('textbox', { name: 'Search employees' }), 'mona');
+    await user.type(screen.getByRole('searchbox', { name: 'Search employees' }), 'mona');
     expect(push).not.toHaveBeenCalled();
     await act(async () => {
       vi.advanceTimersByTime(350);
