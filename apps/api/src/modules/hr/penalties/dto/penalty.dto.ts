@@ -1,13 +1,31 @@
 import {
+  PENALTY_ACTIONS,
   PENALTY_STATUSES,
+  type ApprovePenaltyRequest,
   type CancelPenaltyRequest,
   type CreatePenaltyRequest,
   type ListPenaltiesQuery,
+  type PenaltyAction,
   type PenaltyPreviewQuery,
+  type PenaltyRecountAcknowledgement,
   type PenaltyStatus,
 } from '@school-erp/shared';
-import { Transform } from 'class-transformer';
-import { IsIn, IsNotEmpty, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsIn,
+  IsInt,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Max,
+  MaxLength,
+  Min,
+  ValidateNested,
+} from 'class-validator';
 import { PaginationQueryDto } from '../../../../common/dto/pagination-query.dto';
 import { IsNotFutureDate } from '../../../../common/validators/iso-date.validator';
 import { IsMonth } from '../../../../common/validators/month.validator';
@@ -39,6 +57,37 @@ export class CreatePenaltyDto extends PenaltyPreviewQueryDto implements CreatePe
   @IsString()
   @MaxLength(1000)
   note?: string | null;
+}
+
+/** One recounted penalty as the approver's screen showed it (§4 backdated penalty). */
+export class PenaltyRecountAcknowledgementDto implements PenaltyRecountAcknowledgement {
+  @IsUUID()
+  id: string;
+
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  level: number;
+
+  @IsIn(PENALTY_ACTIONS)
+  action: PenaltyAction;
+
+  @IsOptional()
+  @IsNumber()
+  days: number | null;
+}
+
+/**
+ * `POST /hr/penalties/:id/approve` — an empty body is fine; `acknowledgedRecount` confirms the
+ * approved penalties a backdated approval moves up (§4, owner 2026-11-20).
+ */
+export class ApprovePenaltyDto implements ApprovePenaltyRequest {
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(200)
+  @ValidateNested({ each: true })
+  @Type(() => PenaltyRecountAcknowledgementDto)
+  acknowledgedRecount?: PenaltyRecountAcknowledgementDto[];
 }
 
 /** `POST /hr/penalties/:id/cancel` — the reason is required (§4). */

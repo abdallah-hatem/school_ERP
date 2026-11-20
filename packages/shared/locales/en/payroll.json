@@ -52,6 +52,7 @@
     "pendingLink": "Review pending penalties",
     "staleTitle": "Penalties changed since the last calculation",
     "staleBody": "Some lines still show pending penalties from the last calculation. Recalculate to update them.",
+    "recountedBody": "Approving a backdated penalty raised the level of approved penalties dated this month. Recalculate to update the deductions.",
     "staleAction": "Recalculate now"
   },
   "tiles": {

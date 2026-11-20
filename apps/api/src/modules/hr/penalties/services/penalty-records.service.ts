@@ -12,6 +12,9 @@ import {
   type PayslipPenalty,
   type PenaltyPreview,
   type PenaltyRecord,
+  type PenaltyRecountAcknowledgement,
+  type PenaltyRecountChange,
+  type PenaltyRecountConflict,
   type RepetitionWindow,
   type Uuid,
 } from '@school-erp/shared';
@@ -24,10 +27,14 @@ import {
   deductedDays,
   earlierPendingPenalty,
   oncePerDayRefuses,
+  recountAcknowledged,
+  recountAfterApproval,
+  recountLockedMonth,
   repetitionWindowStart,
   resolvePenalty,
   type CatalogueLevel,
   type PenaltyTarget,
+  type RecountChange,
 } from '../../domain';
 import { HrAccessService } from '../../access/hr-access.service';
 import { EmployeesService } from '../../employees/services/employees.service';
@@ -64,7 +71,17 @@ export type ApprovedMonthPenalty = Omit<PayslipPenalty, 'amount'>;
 /** What a row shows besides its stored fields: level / action / days, and what blocks approving it. */
 interface Shown extends CatalogueLevel {
   earlierPending: PenaltyRecord['earlierPending'];
+  recount: PenaltyRecountChange[];
+  recountLockedMonth: Month | null;
 }
+
+/** A domain recount change → the contract's shape. */
+const toChange = (c: RecountChange<ApprovedCandidate>): PenaltyRecountChange => ({
+  id: c.record.id,
+  date: c.record.date,
+  before: c.before,
+  after: c.after,
+});
 
 /** A record row → the contract shape, with `shown` (level / action / days, blocker) applied. */
 function toRecord(row: RecordRow, shown: Shown): PenaltyRecord {
@@ -83,6 +100,8 @@ function toRecord(row: RecordRow, shown: Shown): PenaltyRecord {
     approvedBy: row.approvedBy,
     createdAt: row.createdAt.toISOString(),
     earlierPending: shown.earlierPending,
+    recount: shown.recount,
+    recountLockedMonth: shown.recountLockedMonth,
   };
 }
 
@@ -99,7 +118,12 @@ const positionOf = (row: RecordRow): PenaltyTarget => ({
 const storedLevel = (row: RecordRow): CatalogueLevel => toLevel(row);
 
 /** A non-pending record: its stored level, and nothing blocks it (it isn't waiting for approval). */
-const storedShown = (row: RecordRow): Shown => ({ ...storedLevel(row), earlierPending: null });
+const storedShown = (row: RecordRow): Shown => ({
+  ...storedLevel(row),
+  earlierPending: null,
+  recount: [],
+  recountLockedMonth: null,
+});
 
 /**
  * A record as its audit entries store it (§9): the violation by its two names, not its id, and the
@@ -135,6 +159,16 @@ function penaltyAuditSnapshot(row: RecordRow) {
  * checked under the pair's lock; a pending row carries that blocker as `earlierPending`.
  * Recording, approving and cancelling are each one audit entry (§9) on the penalty, labelled with
  * the employee's two names, written in the change's transaction; a refused write records nothing.
+ *
+ * A backdated penalty (§4, owner 2026-11-20 — the one exception to "approved levels are never
+ * recomputed"): approving it moves each later APPROVED penalty of the pair in the window up one
+ * level, with that level's action and days from today's catalogue (`recountAfterApproval`), in the
+ * approval's transaction and under the pair's lock. The preview, the record (`recount`) and the
+ * approve confirmation list those changes first; approving needs them confirmed
+ * (`acknowledgedRecount`: 409 PENALTY_RECOUNT_UNCONFIRMED / PENALTY_RECOUNT_CHANGED with the fresh
+ * list as `data`). One of them in an approved payroll month refuses the preview, the recording and
+ * the approval (409 PENALTY_RECOUNT_MONTH_LOCKED, `params.month`). Each recounted penalty gets its
+ * own `hr.penalty.recount` audit entry. No notification: no existing type fits.
  */
 @Injectable()
 export class PenaltyRecordsService {
@@ -182,9 +216,15 @@ export class PenaltyRecordsService {
       const sameDay = await this.repository.sameDayStatuses(query, query.date);
       if (oncePerDayRefuses(oncePerDay, sameDay, 'record')) this.throwOncePerDay();
     }
-    const priorCount = await this.priorCount(query, query.date, await this.window());
+    const window = await this.window();
+    const pair = await this.pairRecords(query, query.date, window);
+    const priorCount = countPriorInWindow({ ...query, date: query.date }, window, pair);
     const { level, action, days } = resolvePenalty(priorCount, levels);
-    return { level, action, days, priorCount };
+    // §4 backdated: say before saving what approving it would change, or that it can't be.
+    const recount = await this.assertRecountOpen(
+      recountAfterApproval({ ...query, date: query.date }, window, pair, levels),
+    );
+    return { level, action, days, priorCount, recount: recount.map(toChange) };
   }
 
   async create(dto: CreatePenaltyDto, createdById: Uuid | null): Promise<PenaltyRecord> {
@@ -195,7 +235,11 @@ export class PenaltyRecordsService {
   private async createInTransaction(dto: CreatePenaltyDto, createdById: Uuid | null): Promise<PenaltyRecord> {
     const { levels, oncePerDay } = await this.assertRecordable(dto.employeeId, dto.violationId);
     await this.monthLock.assertMonthOpen(monthOf(dto.date));
-    const priorCount = await this.priorCount(dto, dto.date, await this.window());
+    const window = await this.window();
+    const pair = await this.pairRecords(dto, dto.date, window);
+    const priorCount = countPriorInWindow({ ...dto, date: dto.date }, window, pair);
+    // §4 backdated: refused when approving it could never happen (a recount in an approved month).
+    await this.assertRecountOpen(recountAfterApproval({ ...dto, date: dto.date }, window, pair, levels));
     const row = await this.repository.createRecord(
       {
         employeeId: dto.employeeId,
@@ -215,12 +259,23 @@ export class PenaltyRecordsService {
     return recorded;
   }
 
-  /** PENDING → APPROVED, fixing level, action and days from today's catalogue and count. */
-  async approve(id: Uuid, approvedById: Uuid | null): Promise<PenaltyRecord> {
-    return this.tx.inTransaction(() => this.approveInTransaction(id, approvedById));
+  /**
+   * PENDING → APPROVED, fixing level, action and days from today's catalogue and count. A
+   * backdated one also moves the later approved ones up — only as `acknowledgedRecount` confirms.
+   */
+  async approve(
+    id: Uuid,
+    approvedById: Uuid | null,
+    acknowledgedRecount?: PenaltyRecountAcknowledgement[],
+  ): Promise<PenaltyRecord> {
+    return this.tx.inTransaction(() => this.approveInTransaction(id, approvedById, acknowledgedRecount));
   }
 
-  private async approveInTransaction(id: Uuid, approvedById: Uuid | null): Promise<PenaltyRecord> {
+  private async approveInTransaction(
+    id: Uuid,
+    approvedById: Uuid | null,
+    acknowledgedRecount: PenaltyRecountAcknowledgement[] | undefined,
+  ): Promise<PenaltyRecord> {
     // Outside the user's `hr.penalties.approve` scope → 404, like an unknown record (R5).
     const current = await this.repository.findOne(id, await this.access.where('hr.penalties.approve'));
     if (!current) throw new NotFoundException();
@@ -234,6 +289,7 @@ export class PenaltyRecordsService {
     const levels = current.violation.levels.map(toLevel);
     const window = await this.window();
     const oncePerDay = current.violation.oncePerDay;
+    let recounted: RecountChange<ApprovedCandidate>[] = [];
     const outcome = await this.repository.approve(
       id,
       current,
@@ -244,6 +300,23 @@ export class PenaltyRecordsService {
       (sameDay) => oncePerDayRefuses(oncePerDay, sameDay, 'approve'),
       // §4: approve in date order — an earlier pending one of the pair goes first.
       (pairRecords) => earlierPendingPenalty(positionOf(current), window, pairRecords),
+      // §4 backdated: the later approved ones move up — not in an approved month, and only as
+      // confirmed. Worked out under the lock, so the list is what is written.
+      async (pairRecords) => {
+        const changes = await this.assertRecountOpen(
+          recountAfterApproval(positionOf(current), window, pairRecords, levels),
+        );
+        if (!recountAcknowledged(changes, acknowledgedRecount)) {
+          const code =
+            acknowledgedRecount === undefined
+              ? ErrorCode.PENALTY_RECOUNT_UNCONFIRMED
+              : ErrorCode.PENALTY_RECOUNT_CHANGED;
+          const data: PenaltyRecountConflict = { recount: changes.map(toChange) };
+          throw CodedException.withData(HttpStatus.CONFLICT, code, { count: changes.length }, data);
+        }
+        recounted = changes;
+        return changes.map((c) => ({ id: c.record.id, fromLevel: c.before.level, ...c.after }));
+      },
     );
     if (outcome === 'ONCE_PER_DAY') this.throwOncePerDay();
     if (typeof outcome === 'object') {
@@ -253,6 +326,7 @@ export class PenaltyRecordsService {
     }
     if (outcome === 'NOT_PENDING') await this.throwStatusConflict(id);
     await this.record('hr.penalty.approve', current, await this.findWritten(id));
+    for (const change of recounted) await this.recordRecount(current, date, change);
     await this.notifications.penaltyApproved(id, approvedById);
     return this.get(id);
   }
@@ -276,7 +350,8 @@ export class PenaltyRecordsService {
     if (!current) throw new NotFoundException();
     this.assertNotCancelled(current.status);
     await this.monthLock.assertMonthOpen(monthOf(toIsoDate(current.date)));
-    if (!(await this.repository.cancel(id, dto.reason, cancelledById))) {
+    // Under the pair's lock: never between a backdated approval's recount and its writes.
+    if (!(await this.repository.cancel(id, dto.reason, cancelledById, current))) {
       await this.throwStatusConflict(id);
     }
     await this.record('hr.penalty.cancel', current, await this.findWritten(id));
@@ -304,6 +379,14 @@ export class PenaltyRecordsService {
         deductingDays.set(row.employeeId, [...(deductingDays.get(row.employeeId) ?? []), days]);
     }
     return { deductingDays, pending };
+  }
+
+  /**
+   * Whether a penalty dated in `month` was recounted (§4 backdated penalty) after `since`: a draft
+   * run calculated before then is due a Recalculate (§6).
+   */
+  recountedInMonthSince(month: Month, since: Date): Promise<boolean> {
+    return this.repository.recountedInMonthSince(month, since);
   }
 
   /** How many penalties dated in a month are still PENDING right now (blocks payroll approval). */
@@ -419,16 +502,60 @@ export class PenaltyRecordsService {
   }
 
   /**
-   * Prior approved count for a penalty not recorded yet (preview, or the moment of recording): it
-   * will be recorded after every existing one, so all approved penalties on its date count.
+   * The pair's APPROVED records from `date`'s window start on, later dates included: the earlier
+   * ones count toward a penalty not recorded yet (preview, recording — it will be recorded after
+   * every existing one, so all approved ones on its date count), the later ones are what approving
+   * it would recount (§4).
    */
-  private async priorCount(key: RepeatKey, date: IsoDate, window: RepetitionWindow) {
-    const approved = await this.repository.approvedCandidates(
-      [key],
-      date,
-      repetitionWindowStart(date, window),
-    );
-    return countPriorInWindow({ ...key, date }, window, approved);
+  private pairRecords(key: RepeatKey, date: IsoDate, window: RepetitionWindow) {
+    return this.repository.approvedCandidates([key], undefined, repetitionWindowStart(date, window));
+  }
+
+  /**
+   * The months of `changes` whose payroll is approved — the earliest refuses (409
+   * PENALTY_RECOUNT_MONTH_LOCKED naming it, §4: corrections for an approved month go into the next
+   * month as adjustments, §6). Returns `changes` when none is locked.
+   */
+  private async assertRecountOpen<C extends RecountChange>(changes: C[]): Promise<C[]> {
+    const month = await this.recountLocked(changes);
+    if (month) {
+      throw CodedException.withParams(HttpStatus.CONFLICT, ErrorCode.PENALTY_RECOUNT_MONTH_LOCKED, { month });
+    }
+    return changes;
+  }
+
+  /** The earliest month among `changes` whose payroll is approved, or null. */
+  private async recountLocked(changes: readonly RecountChange[]): Promise<Month | null> {
+    if (changes.length === 0) return null;
+    const months = [...new Set(changes.map((c) => monthOf(c.record.date)))];
+    const locked = await Promise.all(months.map((m) => this.monthLock.isMonthLocked(m)));
+    return recountLockedMonth(changes, new Set(months.filter((_, i) => locked[i])));
+  }
+
+  /**
+   * One `hr.penalty.recount` entry on a recounted penalty (§9), labelled with the employee's names
+   * (so it shows in their History): level, action and days before → after, and the date of the
+   * penalty whose approval moved it (`recountedAfter`).
+   */
+  private recordRecount(
+    approved: RecordRow,
+    approvedDate: IsoDate,
+    change: RecountChange<ApprovedCandidate>,
+  ): Promise<void> {
+    return this.audit.record({
+      action: 'hr.penalty.recount',
+      entity: {
+        type: AuditEntityType.PENALTY,
+        id: change.record.id,
+        label: { en: approved.employee.nameEn, ar: approved.employee.nameAr },
+      },
+      changes: [
+        { field: 'level', before: change.before.level, after: change.after.level },
+        { field: 'action', before: change.before.action, after: change.after.action },
+        { field: 'days', before: change.before.days, after: change.after.days },
+        { field: 'recountedAfter', before: null, after: approvedDate },
+      ],
+    });
   }
 
   private async present(row: RecordRow): Promise<PenaltyRecord> {
@@ -439,7 +566,9 @@ export class PenaltyRecordsService {
   /**
    * The level / action / days each row shows: stored for APPROVED and CANCELLED, recomputed from
    * today's catalogue and approved records for PENDING (§4) — which also get the earlier pending
-   * record that blocks approving them (`earlierPending`). One query for the whole page.
+   * record that blocks approving them (`earlierPending`), and the approved ones approving them would
+   * move up (`recount`, §4 backdated penalty) with the earliest locked month among those. One query
+   * for the whole page (later dates included: what a backdated one recounts).
    */
   private async shownLevels(rows: readonly RecordRow[]): Promise<Map<Uuid, Shown>> {
     const shown = new Map<Uuid, Shown>();
@@ -449,13 +578,12 @@ export class PenaltyRecordsService {
     if (pending.length === 0) return shown;
 
     const window = await this.window();
-    const latest = pending.map((r) => toIsoDate(r.date)).reduce((a, b) => (a > b ? a : b));
     const uniqueKeys = [
       ...new Map(
         pending.map((r) => [keyOf(r), { employeeId: r.employeeId, violationId: r.violationId }]),
       ).values(),
     ];
-    const approved = await this.repository.approvedCandidates(uniqueKeys, latest, undefined, {
+    const approved = await this.repository.approvedCandidates(uniqueKeys, undefined, undefined, {
       withPending: true,
     });
     const byKey = new Map<string, ApprovedCandidate[]>();
@@ -466,11 +594,15 @@ export class PenaltyRecordsService {
     }
     for (const row of pending) {
       const pair = byKey.get(keyOf(row)) ?? [];
+      const levels = row.violation.levels.map(toLevel);
       const prior = countPriorInWindow(positionOf(row), window, pair);
       const blocker = earlierPendingPenalty(positionOf(row), window, pair);
+      const recount = recountAfterApproval(positionOf(row), window, pair, levels);
       shown.set(row.id, {
-        ...resolvePenalty(prior, row.violation.levels.map(toLevel)),
+        ...resolvePenalty(prior, levels),
         earlierPending: blocker && { id: blocker.id, date: blocker.date },
+        recount: recount.map(toChange),
+        recountLockedMonth: await this.recountLocked(recount),
       });
     }
     return shown;

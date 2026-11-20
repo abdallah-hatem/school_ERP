@@ -28,6 +28,7 @@ export class ResponseUtil {
     path?: string,
     details?: string[],
     params?: ApiResponse['params'],
+    data?: unknown,
   ): ApiResponse {
     return {
       success: false,
@@ -36,6 +37,7 @@ export class ResponseUtil {
       error,
       ...(details ? { details } : {}),
       ...(params ? { params } : {}),
+      ...(data !== undefined ? { data } : {}),
       timestamp: new Date().toISOString(),
       path,
     };

@@ -101,7 +101,8 @@
       "penalty": {
         "record": "Recorded a penalty for {entity}",
         "approve": "Approved the penalty for {entity}",
-        "cancel": "Cancelled the penalty for {entity}"
+        "cancel": "Cancelled the penalty for {entity}",
+        "recount": "Raised the level of the penalty for {entity}"
       },
       "lateness": {
         "save": "Saved the lateness for {entity}"
@@ -183,6 +184,7 @@
     "action": "Penalty",
     "days": "Days",
     "cancelReason": "Cancellation reason",
+    "recountedAfter": "Recounted after approving the penalty of",
     "minutes": "Minutes",
     "month": "Month",
     "type": "Type",

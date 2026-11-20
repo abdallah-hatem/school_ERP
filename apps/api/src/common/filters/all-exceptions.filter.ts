@@ -20,6 +20,8 @@ type Normalized = {
   error: string;
   details?: string[];
   params?: ErrorParams;
+  /** A `CodedException`'s fresh state for the client (`withData`). */
+  data?: unknown;
 };
 
 const STABLE_CODE = /^[A-Z][A-Z0-9_]+$/;
@@ -51,7 +53,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const res = ctx.getResponse<Response>();
     const req = ctx.getRequest<Request>();
 
-    const { status, message, error, details, params } = this.normalize(exception);
+    const { status, message, error, details, params, data } = this.normalize(exception);
     const translated = translateError(
       error,
       resolveLanguage(req.headers?.['accept-language']),
@@ -68,7 +70,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     res
       .status(status)
-      .json(ResponseUtil.error(translated ?? message, status, error, req.url, details, params));
+      .json(ResponseUtil.error(translated ?? message, status, error, req.url, details, params, data));
   }
 
   private normalize(exception: unknown): Normalized {
@@ -91,8 +93,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
             ? b.error
             : codeForStatus(status, isValidation);
         if (isValidation) return { status, message, error, details: (raw as unknown[]).map(String) };
-        const params = exception instanceof CodedException ? exception.params : undefined;
-        return params ? { status, message, error, params } : { status, message, error };
+        const coded = exception instanceof CodedException ? exception : undefined;
+        return {
+          status,
+          message,
+          error,
+          ...(coded?.params ? { params: coded.params } : {}),
+          ...(coded?.data !== undefined ? { data: coded.data } : {}),
+        };
       }
       return { status, message: exception.message, error: codeForStatus(status, false) };
     }

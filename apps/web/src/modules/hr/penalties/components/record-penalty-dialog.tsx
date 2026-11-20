@@ -16,6 +16,7 @@ import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { CREATE_PENALTY, GET_PENALTY_PREVIEW } from '../apis';
 import { describeAction, errorMessage } from '../lib/penalty-text';
+import { RecountList } from './recount-list';
 import {
   emptyRecordForm,
   fieldForError,
@@ -48,7 +49,7 @@ type PreviewState =
  * day"); only the latest answer is shown. Saves as pending; rule errors land on their field.
  */
 export function RecordPenaltyDialog({ open, onOpenChange, employees, violations, employeeId }: RecordPenaltyDialogProps) {
-  const { t, has } = useTranslation();
+  const { t, has, locale } = useTranslation();
   const router = useRouter();
   const formId = useId();
   const form = useForm<RecordPenaltyValues>({
@@ -96,10 +97,10 @@ export function RecordPenaltyDialog({ open, onOpenChange, employees, violations,
         state:
           res.success && res.data
             ? { kind: 'ready', preview: res.data }
-            : { kind: 'error', message: errorMessage(res, t, has, t('penalties.preview.failed')) },
+            : { kind: 'error', message: errorMessage(res, t, has, t('penalties.preview.failed'), locale) },
       });
     });
-  }, [previewKey, t, has]);
+  }, [previewKey, t, has, locale]);
 
   function change(next: boolean) {
     if (busy) return;
@@ -130,7 +131,7 @@ export function RecordPenaltyDialog({ open, onOpenChange, employees, violations,
         router.refresh();
         return;
       }
-      const message = errorMessage(res, t, has, t('penalties.form.saveFailed'));
+      const message = errorMessage(res, t, has, t('penalties.form.saveFailed'), locale);
       const field = fieldForError(res.error);
       if (field) setError(field, { message }, { shouldFocus: true });
       else setFormError(message);
@@ -198,6 +199,9 @@ export function RecordPenaltyDialog({ open, onOpenChange, employees, violations,
             max={todayIso()}
           />
           {previewRepeatsFieldError ? null : <PreviewLine state={preview} />}
+          {preview.kind === 'ready' ? (
+            <RecountList recount={preview.preview.recount} note={t('penalties.recount.recordNote')} />
+          ) : null}
           <TextareaField
             control={control}
             name="note"

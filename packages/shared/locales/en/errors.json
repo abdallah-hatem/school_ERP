@@ -41,6 +41,16 @@
   "PENALTY_CANCELLED": "This penalty is already cancelled.",
   "VIOLATION_ONCE_PER_DAY": "This violation counts once per day, and this employee already has one on this date.",
   "PENALTY_EARLIER_PENDING": "Approve or cancel the {date} penalty for this violation first.",
+  "PENALTY_RECOUNT_UNCONFIRMED": {
+    "zero": "Approving this penalty raises the level of approved penalties. Check them and confirm.",
+    "one": "Approving this penalty raises the level of 1 approved penalty. Check it and confirm.",
+    "two": "Approving this penalty raises the level of 2 approved penalties. Check them and confirm.",
+    "few": "Approving this penalty raises the level of {count} approved penalties. Check them and confirm.",
+    "many": "Approving this penalty raises the level of {count} approved penalties. Check them and confirm.",
+    "other": "Approving this penalty raises the level of {count} approved penalties. Check them and confirm."
+  },
+  "PENALTY_RECOUNT_CHANGED": "The approved penalties this approval changes are no longer the same. Check the new list and confirm again.",
+  "PENALTY_RECOUNT_MONTH_LOCKED": "This would raise the level of an approved penalty in {month}, whose payroll is approved. Corrections for an approved month go into the next month as adjustments.",
   "PAYROLL_APPROVED": "This month's payroll is approved and locked.",
   "PAYROLL_NOT_APPROVED": "Available only after the payroll is approved.",
   "PAYROLL_FINALIZED": "This month's salaries were already transferred (finalized); it can't go back to HR.",

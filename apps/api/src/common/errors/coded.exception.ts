@@ -13,8 +13,20 @@ export class CodedException extends HttpException {
     readonly code: ErrorCode,
     message: string = code,
     readonly params?: ErrorParams,
+    /** The fresh state the client needs to retry (the envelope's `data`), e.g. a 409's new list. */
+    readonly data?: unknown,
   ) {
     super({ message, error: code, statusCode: status, ...(params ? { params } : {}) }, status);
+  }
+
+  /**
+   * With `params` and the envelope's `data`: what changed, so the client can show it and retry
+   * without another request.
+   *
+   * @example throw CodedException.withData(HttpStatus.CONFLICT, ErrorCode.PENALTY_RECOUNT_CHANGED, { count: 2 }, { recount });
+   */
+  static withData(status: HttpStatus, code: ErrorCode, params: ErrorParams, data: unknown): CodedException {
+    return new CodedException(status, code, code, params, data);
   }
 
   /**

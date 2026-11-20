@@ -28,7 +28,8 @@
   date and recorded before it. So four "Late to class" on one day, recorded and approved in order,
   are levels 1, 2, 3 and 4. A penalty not recorded yet (the preview) comes after every penalty
   already on its date. Pending and cancelled penalties never count. The level is computed again at
-  approval and then fixed (approved levels are never recomputed).
+  approval and then fixed (approved levels are never recomputed — except by a backdated penalty,
+  below).
 - **DECIDED** (owner, 2026-11-20) — **Approve in date order.** A penalty can't be approved while an
   **earlier** penalty (same order as above: an earlier date, or the same date and recorded before
   it) of the **same violation** for the **same employee**, inside the repetition window, is still
@@ -39,6 +40,38 @@
   penalties on one level. The check runs inside the approval, under the same lock as the level, so
   two approvals at once can't both slip through. Penalties approved **before** this rule keep
   their levels, so older data may show two approved penalties with the same level.
+- **DECIDED** (owner, 2026-11-20) — **A backdated penalty recounts the later ones.** A penalty
+  recorded with a date **before** approved penalties of the same violation and employee (inside the
+  repetition window) would otherwise collide with them: 19 Nov level 1 and 20 Nov level 2 approved,
+  then 18 Nov recorded and approved → also level 1. So **approving** it moves each **later approved**
+  penalty of that violation and employee — in the order above, and whose own repetition window holds
+  the new date — **up one level**, with that level's action and days from the catalogue **as it is
+  today** (the source every approval uses; the catalogue keeps no history): 18 → level 1, 19 → 2,
+  20 → 3. A penalty already on the last level stays there (and isn't listed). Pending and cancelled
+  penalties don't change (a pending one already shows today's count), nor do other violations, other
+  employees, or penalties outside the window. A gap left by an earlier cancellation stays — the
+  recount adds the one penalty, it doesn't renumber. This is the one exception to "approved levels
+  are never recomputed". Recording the backdated penalty changes nothing; the move happens in the
+  approval's own transaction, under the same lock as the level.
+- **DECIDED** (owner, 2026-11-20) — **Told first, confirmed at approval.** The record dialog's
+  preview says, before saving, "Approving this will raise the level of 2 approved penalties: 19 Nov
+  2026: level 1 → 2, Deduct 0.5 day → Deduct 1 day; 20 Nov 2026: level 2 → 3, …". The approve
+  confirmation lists the same changes and its button says "Approve and update 2 penalties". The
+  approval carries that list: if approving would change approved penalties and the request didn't
+  confirm them, or confirmed a list that is no longer what approving does (another penalty was
+  approved or cancelled meanwhile), it is refused (409) with the fresh list, which the dialog shows to
+  confirm again — a stale screen can't recount silently.
+- **DECIDED** (owner, 2026-11-20) — **Not into an approved month.** If any later approved penalty
+  that would move sits in a month whose payroll is approved, the backdated penalty can't be
+  **recorded** — the preview says so as an error before saving, naming the month — and, should that
+  month be approved after it was recorded, it can't be **approved** either (Approve is greyed out
+  with the same reason). Corrections for an approved month go into the next month as adjustments
+  (§6). It can still be cancelled.
+- **DECIDED** (owner, 2026-11-20) — Each moved penalty gets its own History entry (level, action and
+  days before → after, and the date of the penalty whose approval moved it), on the employee's
+  History next to the approval. No one is notified: no existing notification fits. A **draft**
+  payroll run of a month with a moved penalty says "Penalties changed since the last calculation"
+  and offers Recalculate (§6); approving the run recalculates anyway.
 - **GUESS** — The repetition window is the **contract year** (1 June – 31 May). It's a setting (§7).
   The rolling-12-months option starts on the same date one year earlier, inclusive.
 - **DECIDED** — A new penalty starts as **pending**. HR **approves** it, or **cancels** it with a
@@ -47,7 +80,7 @@
   is not approved. Other approved penalties keep their fixed levels (nothing is recomputed). A
   cancelled penalty can't be approved or cancelled again.
 - **DECIDED** — The level and action are fixed when the penalty is approved. Later catalogue edits
-  don't change approved penalties.
+  don't change approved penalties. (Only a backdated penalty's approval moves them, above.)
 - **DECIDED** — Only approved penalties count toward the repeat level and toward payroll.
 - **DECIDED** — An approved penalty whose action is a **day deduction**, or an **investigation with
   days**, reduces pay in the payroll of the **month the violation happened** (§6).

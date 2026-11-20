@@ -322,7 +322,7 @@ describe('HR penalty catalogue and records (e2e)', () => {
     const emp = await employee();
     const v = await violation();
     const ok = await preview(emp, v, '2025-10-01').expect(200);
-    expect(ok.body.data).toEqual({ level: 1, action: 'NOTICE', days: null, priorCount: 0 });
+    expect(ok.body.data).toEqual({ level: 1, action: 'NOTICE', days: null, priorCount: 0, recount: [] });
     expect(await db.penaltyRecord.count({ where: { employeeId: emp } })).toBe(0);
 
     await preview(emp, v, tomorrow()).expect(400);
@@ -350,7 +350,7 @@ describe('HR penalty catalogue and records (e2e)', () => {
     await cancel(cancelled.id, 'entered by mistake').expect(200);
 
     const res = await preview(emp, v, '2025-09-10').expect(200);
-    expect(res.body.data).toEqual({ level: 2, action: 'WARNING', days: null, priorCount: 1 });
+    expect(res.body.data).toEqual({ level: 2, action: 'WARNING', days: null, priorCount: 1, recount: [] });
     const rec = await recordOk(emp, v, '2025-09-10');
     expect(rec).toMatchObject({ level: 2, action: 'WARNING', status: 'PENDING' });
   });
@@ -377,7 +377,15 @@ describe('HR penalty catalogue and records (e2e)', () => {
     });
     // Same date: a not-yet-recorded penalty comes after the approved one (§4).
     expect((await preview(emp, v, '2025-05-31').expect(200)).body.data.priorCount).toBe(1);
-    await approvedOn(emp, v, '2024-06-01');
+    // Backdated before the approved 31 May one, same contract year: approving it moves 31 May up
+    // a level (§4, owner 2026-11-20), so the approval confirms that.
+    const june = await recordOk(emp, v, '2024-06-01');
+    const recount = (await getRecord(june.id)).recount;
+    expect(recount.map((c) => [c.date, c.before.level, c.after.level])).toEqual([['2025-05-31', 1, 2]]);
+    await http(app)
+      .post(`/hr/penalties/${june.id}/approve`)
+      .send({ acknowledgedRecount: recount.map((c) => ({ id: c.id, ...c.after })) })
+      .expect(200);
     expect((await preview(emp, v, '2025-05-31').expect(200)).body.data.priorCount).toBe(2);
   });
 
@@ -551,7 +559,7 @@ describe('HR penalty catalogue and records (e2e)', () => {
     const v = await violation(LEVELS_5, 'doubles on repeat');
     for (let d = 1; d <= 7; d++) await approvedOn(emp, v, `2025-07-0${d}`);
     const res = await preview(emp, v, '2025-07-10').expect(200);
-    expect(res.body.data).toEqual({ level: 5, action: 'DEDUCT_DAYS', days: 5, priorCount: 7 });
+    expect(res.body.data).toEqual({ level: 5, action: 'DEDUCT_DAYS', days: 5, priorCount: 7, recount: [] });
     expect(await approvedOn(emp, v, '2025-07-10')).toMatchObject({ level: 5, days: 5 });
   });
 

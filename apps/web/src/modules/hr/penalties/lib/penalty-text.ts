@@ -1,6 +1,16 @@
-import { EmployeeStatus, PenaltyAction, PenaltyStatus, type Days, type EmployeeSummary, type PenaltyGroup, type PenaltyRecord } from '@school-erp/shared';
+import {
+  EmployeeStatus,
+  ErrorCode,
+  PenaltyAction,
+  PenaltyStatus,
+  type Days,
+  type EmployeeSummary,
+  type PenaltyGroup,
+  type PenaltyRecord,
+  type PenaltyRecountChange,
+} from '@school-erp/shared';
 import type { SelectOption, SelectOptionGroup } from '@/shared/components/form/fields';
-import { formatDate, formatDayCount } from '@/shared/lib/format';
+import { formatDate, formatDayCount, formatMonth } from '@/shared/lib/format';
 import { nameIn, type Locale, type Translate } from '@/shared/lib/i18n';
 
 /*
@@ -70,27 +80,67 @@ export function errorMessage(
 }
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 
-/** An error envelope's `params` as `t()` values: strings and numbers, ISO dates formatted. */
+/**
+ * An error envelope's `params` as `t()` values: strings and numbers, ISO dates and months
+ * (`2026-10` → "October 2026") formatted.
+ */
 function errorParams(params: unknown, locale: Locale): Record<string, string | number> | undefined {
   if (!params || typeof params !== 'object') return undefined;
   const values: Record<string, string | number> = {};
   for (const [name, value] of Object.entries(params)) {
     if (typeof value === 'number') values[name] = value;
-    else if (typeof value === 'string') values[name] = ISO_DATE.test(value) ? formatDate(value, locale) : value;
+    else if (typeof value === 'string')
+      values[name] = ISO_DATE.test(value)
+        ? formatDate(value, locale)
+        : MONTH.test(value)
+          ? formatMonth(value, locale)
+          : value;
   }
   return values;
 }
 
 /**
- * Why a pending penalty can't be approved yet (§4 approve in date order), or null: the same
- * sentence as the server's 409 `PENALTY_EARLIER_PENDING`, naming the earlier one's date.
+ * Why a pending penalty can't be approved yet, or null: an earlier one of the violation is still
+ * pending (§4 approve in date order — the server's 409 `PENALTY_EARLIER_PENDING`, naming its date),
+ * or approving it would recount an approved penalty in a month whose payroll is approved (§4
+ * backdated penalty — `PENALTY_RECOUNT_MONTH_LOCKED`, naming the month).
  */
 export function approveBlockedReason(
-  record: Pick<PenaltyRecord, 'status' | 'earlierPending'>,
+  record: Pick<PenaltyRecord, 'status' | 'earlierPending' | 'recountLockedMonth'>,
   t: Translate,
   locale: Locale,
 ): string | null {
-  if (record.status !== PenaltyStatus.PENDING || !record.earlierPending) return null;
-  return t('errors.PENALTY_EARLIER_PENDING', { date: formatDate(record.earlierPending.date, locale) });
+  if (record.status !== PenaltyStatus.PENDING) return null;
+  if (record.earlierPending) {
+    return t('errors.PENALTY_EARLIER_PENDING', { date: formatDate(record.earlierPending.date, locale) });
+  }
+  if (record.recountLockedMonth) {
+    return t('errors.PENALTY_RECOUNT_MONTH_LOCKED', { month: formatMonth(record.recountLockedMonth, locale) });
+  }
+  return null;
+}
+
+/**
+ * One approved penalty a backdated approval moves up, as the heads-up lists it (§4, owner
+ * 2026-11-20): "19 Nov 2026: level 1 → 2, Deduct 0.5 day → Deduct 1 day". The action is said once
+ * when it doesn't change.
+ */
+export function recountItem(change: PenaltyRecountChange, t: Translate, locale: Locale): string {
+  const from = describeAction(t, locale, change.before.action, change.before.days);
+  const to = describeAction(t, locale, change.after.action, change.after.days);
+  return t('penalties.recount.item', {
+    date: formatDate(change.date, locale),
+    from: change.before.level,
+    to: change.after.level,
+    action: from === to ? to : t('penalties.recount.actionChange', { from, to }),
+  });
+}
+
+/** The 409 of an unconfirmed or stale recount carries the fresh list (`data.recount`), else null. */
+export function recountFromConflict(res: { error?: unknown; data?: unknown }): PenaltyRecountChange[] | null {
+  if (res.error !== ErrorCode.PENALTY_RECOUNT_UNCONFIRMED && res.error !== ErrorCode.PENALTY_RECOUNT_CHANGED) return null;
+  const recount = (res.data as { recount?: unknown } | null | undefined)?.recount;
+  return Array.isArray(recount) ? (recount as PenaltyRecountChange[]) : null;
 }
