@@ -39,6 +39,15 @@
       },
       "salaryHidden": "Salary hidden",
       "totalsHidden": "Totals show only to someone who sees every salary.",
+      "total": "Month total",
+      "totalAll": {
+        "zero": "Month total",
+        "one": "Month total · 1 employee",
+        "two": "Month total · all {count}",
+        "few": "Month total · all {count}",
+        "many": "Month total · all {count}",
+        "other": "Month total · all {count}"
+      },
       "columns": {
         "employee": "Employee",
         "monthSalary": "Salary",

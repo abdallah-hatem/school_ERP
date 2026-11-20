@@ -116,7 +116,7 @@ Before the demo, on the demo database:
   with net, insurance, taxes and gross. Open the month from step 7 → ✔ HR's run page, read only:
   each employee's salary, penalties, lateness, adjustments and net match HR's run, then insurance
   share, income tax, martyrs' fund and gross. ✔ On two rows, net + insurance + tax + fund = gross
-  by hand; the total row under the lines ("Subtotal · all 38") has the same gross as the
+  by hand; the total row under the lines ("Month total · all 38" — AR "إجمالي الشهر · الـ 38 كلهم"; it stays in sight at the bottom of the lines box) has the same gross as the
   Payroll taxes statement. A draft month → ✔ not listed.
   ✔ The month says **Pending transfer**. **Return to HR** → the dialog won't confirm without a
   reason; give one → ✔ back on the list, the month gone. As HR: ✔ the bell says Accounting returned

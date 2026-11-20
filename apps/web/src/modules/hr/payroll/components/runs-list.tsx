@@ -67,7 +67,9 @@ export function RunsList({ basePath, query, runs, total, currentMonth }: RunsLis
       id: 'status',
       header: t('payroll.list.columns.status'),
       className: 'w-52',
-      card: 'status',
+      // On a card, the pills get their own line under the month: beside it, "Finalized ·
+      // transferred" or Draft + Returned cut the month to "November 2" (dry run 2026-11-20).
+      card: 'badges',
       skeleton: <SkeletonPill />,
       cell: (run) => (
         <RunStatusCell status={run.status} transferred={run.transferredAt !== null} returned={run.returned !== null} />

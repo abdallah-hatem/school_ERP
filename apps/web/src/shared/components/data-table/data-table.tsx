@@ -112,7 +112,9 @@ export interface DataTableProps<Row> {
   skeletonBlocks?: boolean;
   /**
    * The table view scrolls inside a box at most this tall and its column names stay on top while
-   * the rows scroll (payroll tables, owner 2026-11-19). Cards and print are unaffected.
+   * the rows scroll (payroll tables, owner 2026-11-19); a `footer` (the totals row) stays pinned to
+   * the box's bottom the same way, so it is always in sight (dry run 2026-11-20). Cards and print
+   * are unaffected.
    */
   scrollHeight?: 'screen';
   className?: string;
@@ -271,6 +273,9 @@ const toneBar = {
   danger: 'shadow-[inset_4px_0_0_var(--destructive)] rtl:shadow-[inset_-4px_0_0_var(--destructive)]',
 } as const;
 
+/** A capped table's totals cells: stuck to the scroll box's bottom, opaque, over the rows. */
+const STICKY_FOOT = 'sticky bottom-0 z-20 print:static';
+
 function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass, footer, scrollHeight }: RowsProps<Row>) {
   const capped = scrollHeight === 'screen';
   const { ref, edges } = useScrollEdges<HTMLDivElement>();
@@ -356,7 +361,7 @@ function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass, footer
           })}
         </tbody>
         {footer ? (
-          <tfoot data-skeleton-block={foot}>
+          <tfoot data-skeleton-block={foot} data-sticky-foot={capped ? '' : undefined}>
             <tr>
               {(footer.note === undefined ? columns : columns.slice(0, 1)).map((column, i) => (
                 <td
@@ -364,6 +369,9 @@ function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass, footer
                   className={cn(
                     'border-t-2 border-border bg-muted px-3 py-3 align-middle font-bold whitespace-nowrap',
                     'first:ps-5 last:pe-5',
+                    // Sticky totals: pinned to the capped box's bottom edge, over the rows, so the
+                    // total is always in sight without scrolling (dry run 2026-11-20).
+                    capped && STICKY_FOOT,
                     alignClass[column.align ?? 'start'],
                     column.className,
                     // The label stays on one line even in a column whose names wrap.
@@ -376,7 +384,10 @@ function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass, footer
               {footer.note === undefined ? null : (
                 <td
                   colSpan={Math.max(columns.length - 1, 1)}
-                  className="border-t-2 border-border bg-muted px-3 py-3 pe-5 text-end align-middle text-muted-foreground"
+                  className={cn(
+                    'border-t-2 border-border bg-muted px-3 py-3 pe-5 text-end align-middle text-muted-foreground',
+                    capped && STICKY_FOOT,
+                  )}
                 >
                   {footer.note}
                 </td>

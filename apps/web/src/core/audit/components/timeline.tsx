@@ -71,13 +71,25 @@ const TONE_CLASSES: Record<Tone, string> = {
   failed: 'bg-warning-soft text-warning',
 };
 
+/**
+ * The payroll's status changes after approval — Accounting returning or finalizing a month, and the
+ * matching entries on HR's run — show the status-change icon approval has, not the edit pencil
+ * (dry run 2026-11-20).
+ */
+const PAYROLL_STATUS_ACTIONS: ReadonlySet<string> = new Set([
+  'accounting.payroll.return',
+  'accounting.payroll.finalize',
+  'hr.payroll.returned',
+  'hr.payroll.transferred',
+]);
+
 function entryLook(entry: AuditEntry): { icon: AppIcon; tone: Tone } {
   const verb = entry.action.split('.').pop() ?? '';
   if (isFailedSignIn(entry)) return { icon: FailedSignInIcon, tone: 'failed' };
   if (entry.action === 'core.auth.sign_in') return { icon: SignInIcon, tone: 'neutral' };
   if (entry.action === 'core.auth.sign_out') return { icon: SignOutIcon, tone: 'neutral' };
   const money = isMoneyEntry(entry);
-  if (verb === 'approve') return { icon: ApproveIcon, tone: money ? 'money' : 'ok' };
+  if (verb === 'approve' || PAYROLL_STATUS_ACTIONS.has(entry.action)) return { icon: ApproveIcon, tone: money ? 'money' : 'ok' };
   if (verb === 'cancel' || verb === 'deactivate') return { icon: CancelledIcon, tone: 'neutral' };
   if (verb === 'reactivate') return { icon: ReactivateIcon, tone: 'ok' };
   if (entry.entityType === 'payroll_run') return { icon: PayrollIcon, tone: 'money' };
@@ -308,7 +320,10 @@ function Rail({ entry }: { entry: AuditEntry }) {
         'group-first/item:before:top-3.5 group-last/item:before:bottom-auto group-last/item:before:h-3.5',
       )}
     >
-      <span className={cn('relative mt-1 grid size-8 place-items-center rounded-[0.7rem] ring-4 ring-card', TONE_CLASSES[tone])}>
+      <span
+        data-entry-icon={Icon.displayName ?? Icon.name}
+        className={cn('relative mt-1 grid size-8 place-items-center rounded-[0.7rem] ring-4 ring-card', TONE_CLASSES[tone])}
+      >
         <Icon className="size-4.5" />
       </span>
     </div>

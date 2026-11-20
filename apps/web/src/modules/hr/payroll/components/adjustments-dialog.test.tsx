@@ -69,6 +69,12 @@ describe('Adjustments dialog', () => {
     expect(within(dialog).queryByText('Overtime')).toBeNull();
   });
 
+  it('the reason box follows its text\'s direction (dir="auto")', async () => {
+    renderRun();
+    const { dialog } = await openFor('Mona Khalil');
+    expect(within(dialog).getByRole('textbox', { name: /Reason/ }).getAttribute('dir')).toBe('auto');
+  });
+
   it('amount and reason are required: translated messages, nothing sent', async () => {
     renderRun();
     const { user, dialog } = await openFor('Mona Khalil');

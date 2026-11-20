@@ -371,4 +371,33 @@ describe('DataTable page size and sticky header (payroll tables)', () => {
     expect(scroller().className).toMatch(/max-h-\S+ overflow-y-auto/);
     for (const th of screen.getAllByRole('columnheader')) expect(th.className).toMatch(/\bsticky top-0\b/);
   });
+
+  it('scrollHeight="screen": the totals row stays pinned to the box bottom (dry run 2026-11-20)', () => {
+    const footer = { label: 'Month total · all 2', cells: { salary: '2,630,000' } };
+    const { container, rerender } = renderWithI18n(
+      <DataTable label="Employees" columns={columns} rows={people} getRowId={(p) => p.id} footer={footer} />,
+    );
+    const footCells = () => [...container.querySelectorAll('[data-view="table"] tfoot td')];
+    // Not capped: an ordinary last row.
+    expect(container.querySelector('tfoot')!.hasAttribute('data-sticky-foot')).toBe(false);
+    for (const td of footCells()) expect(td.className).not.toContain('sticky');
+
+    rerender(<DataTable label="Employees" columns={columns} rows={people} getRowId={(p) => p.id} footer={footer} scrollHeight="screen" />);
+    const tfoot = container.querySelector('[data-view="table"] tfoot')!;
+    expect(tfoot.hasAttribute('data-sticky-foot')).toBe(true);
+    expect(footCells()).toHaveLength(2);
+    for (const td of footCells()) {
+      expect(td.className).toMatch(/\bsticky bottom-0\b/);
+      // Opaque, so the rows pass under it; back in place on paper.
+      expect(td.className).toContain('bg-muted');
+      expect(td.className).toContain('print:static');
+    }
+    // A hidden-totals note is pinned too.
+    rerender(
+      <DataTable label="Employees" columns={columns} rows={people} getRowId={(p) => p.id} footer={{ label: 'Month total', note: 'Hidden' }} scrollHeight="screen" />,
+    );
+    for (const td of footCells()) expect(td.className).toMatch(/\bsticky bottom-0\b/);
+    // The phone's summary card is unchanged (not sticky).
+    expect(container.querySelector('[data-view="cards"] li:last-child')!.className).not.toContain('sticky');
+  });
 });
