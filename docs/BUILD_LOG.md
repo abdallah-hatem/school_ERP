@@ -434,11 +434,15 @@ phase live in `docs/build-log/`.
   officer and an Accountant login.
 - 2026-11-20 — #181 (AbdelrahmanHassib, into `demo`): CI deploys `demo` to Vercel + Neon after the
   checks pass (stage → migrate the Neon DB → promote, with health checks). Owner confirmed he asked
-  for it → CLAUDE.md rule 6 gains the demo exception. Needs before merge: the `school-erp-demo`
+  for it, temporary until the demo → CLAUDE.md rule 6 gains the exception. Needs before merge: the `school-erp-demo`
   GitHub environment with its secrets (owner).
 
 ## Next up
 
+- **After the demo (2026-11-22): remove the Vercel deploy** (owner: "just until the demo then we
+  remove vercel"): drop the `deploy-demo` job and the `demo` push trigger from `ci.yml`, the README
+  "Hosted demo" section, the `school-erp-demo` GitHub environment and its secrets, and the
+  temporary exception in CLAUDE.md rule 6. Delete or pause the Vercel projects and the Neon DB.
 - Outbox nits (from #121's live test, cosmetic): the "dead after 10 failures" log line always says
   10 (after an admin retry it's 11); a dead row still gets a `next_attempt_at`. A lock held longer
   than Prisma's 15 s transaction timeout counts as one failure, then the next tick delivers it.
@@ -475,8 +479,8 @@ phase live in `docs/build-log/`.
 - Sign-in limit numbers (5 wrong passwords / 15-minute window / 15-minute lock) are core settings with
   no screen yet; add them to Settings → School if a school wants to change them.
 
-- Hosting the demo: on Vercel + Neon (owner, 2026-11-20, done by Abdelrahman in #181), not the
-  Contabo server; the local demo stays the fallback. Open: what data the hosted demo database holds
+- Hosting the demo: on Vercel + Neon **only until the demo** (owner, 2026-11-20, done by Abdelrahman
+  in #181); the local demo stays the fallback. Open: what data the hosted demo database holds
   (client material must not reach a public URL unless the owner says so).
 - Audit log T28 (#107), T29 + T31 (#126) done. Optional CI ratchet that forbids touching an unwired endpoint (owner: docs only for now). Follow-ups from T30 still open: penalties don't appear on the employee's History (T29); the payroll
   run page has no History tab yet.
