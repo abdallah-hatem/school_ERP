@@ -14,6 +14,7 @@ import {
   moduleIsActive,
   NAV_MODULES,
   visibleModules,
+  type ComingItem,
   type NavItem,
   type NavModule,
 } from './nav-items';
@@ -22,8 +23,9 @@ import {
  * The menu, grouped by module (docs/ARCHITECTURE.md → core/navigation).
  * - `full` (≥1280px sidebar and the phone drawer): Home's one page as a link, each live module a
  *   collapsible group (open by default and whenever one of its pages is current; the choice is
- *   remembered per group), coming modules locked with a "Soon" tag. Administration (Settings and
- *   Activity) is the last group; `footer` (the signed-in user) sits at the bottom.
+ *   remembered per group), coming modules locked with a "Soon" tag. Pages still to come sit locked
+ *   where they belong (Leave in HR, Fees in Accounting, the School group's four), never links.
+ *   Administration is the last group; `footer` (the signed-in user) sits at the bottom.
  * - Only the pages the user may see (`can()`, view only — the API still refuses); a module with
  *   none left is not drawn.
  * - `rail` (768–1279px): one icon per module with its name as tooltip; a module with several pages
@@ -154,16 +156,65 @@ function SoonModule({ module, iconOnly = false }: { module: NavModule; iconOnly?
     >
       <ModuleTile module={module} />
       <span className="min-w-0 flex-1 truncate">{name}</span>
-      <span className="shrink-0 rounded-full bg-secondary px-1.75 py-px text-[0.66rem] font-bold whitespace-nowrap">
-        {t('common.nav.soon')}
-      </span>
+      <SoonPill />
     </div>
   );
 }
 
+/** The "Soon" tag. */
+function SoonPill() {
+  const { t } = useTranslation();
+  return (
+    <span className="shrink-0 rounded-full bg-secondary px-1.75 py-px text-[0.66rem] font-bold whitespace-nowrap">
+      {t('common.nav.soon')}
+    </span>
+  );
+}
+
+/** A page still to come, inside its module: dimmed, with a "Soon" tag. Not a link and not focusable. */
+function ComingPage({ item }: { item: ComingItem }) {
+  const { t } = useTranslation();
+  const name = t(`common.nav.coming.${item.key}`);
+  const Icon = item.icon;
+  return (
+    <div
+      aria-disabled="true"
+      title={t('common.nav.soonTitle', { name })}
+      data-coming={item.key}
+      className="flex min-h-9 cursor-not-allowed items-center gap-2.75 rounded-xl px-2.5 py-1.5 text-[0.84rem] font-semibold text-muted-foreground/75"
+    >
+      <Icon className="size-5 shrink-0 opacity-70" />
+      <span className="min-w-0 flex-1 truncate">{name}</span>
+      <SoonPill />
+    </div>
+  );
+}
+
+/** A module's pages, then its pages still to come (locked). */
+function ModulePages({ module, onNavigate }: { module: NavModule; onNavigate?: () => void }) {
+  return (
+    <>
+      {module.items.map((item) => (
+        <li key={item.key}>
+          <PageLink item={item} onNavigate={onNavigate} nested />
+        </li>
+      ))}
+      {(module.coming ?? []).map((item) => (
+        <li key={`coming-${item.key}`}>
+          <ComingPage item={item} />
+        </li>
+      ))}
+    </>
+  );
+}
+
+/** Whether a module has pages still to come (then it is drawn as a group, even with one page). */
+const hasComing = (module: NavModule) => (module.coming?.length ?? 0) > 0;
+
 function FullModule({ module, onNavigate }: { module: NavModule; onNavigate?: () => void }) {
-  if (module.status === 'soon') return <SoonModule module={module} />;
-  if (module.items.length === 1 && module.items[0]) return <SingleModule module={module} item={module.items[0]} onNavigate={onNavigate} />;
+  if (module.status === 'soon' && !hasComing(module)) return <SoonModule module={module} />;
+  if (module.items.length === 1 && module.items[0] && !hasComing(module))
+    return <SingleModule module={module} item={module.items[0]} onNavigate={onNavigate} />;
   return <ModuleGroup module={module} onNavigate={onNavigate} />;
 }
 
@@ -215,11 +266,7 @@ function ModuleGroup({ module, onNavigate }: { module: NavModule; onNavigate?: (
       </button>
       {open ? (
         <ul id={listId} className="ms-6 flex flex-col gap-0.5 border-s-2 border-border ps-2 pe-2.5 pb-2.5">
-          {module.items.map((item) => (
-            <li key={item.key}>
-              <PageLink item={item} onNavigate={onNavigate} nested />
-            </li>
-          ))}
+          <ModulePages module={module} onNavigate={onNavigate} />
         </ul>
       ) : null}
     </div>
@@ -238,8 +285,8 @@ function RailModule({ module }: { module: NavModule }) {
     active ? 'bg-primary-soft shadow-[inset_0_-3px_0_var(--accent)]' : 'hover:bg-muted',
   );
 
-  if (module.status === 'soon') return <SoonModule module={module} iconOnly />;
-  const only = module.items.length === 1 ? module.items[0] : undefined;
+  if (module.status === 'soon' && !hasComing(module)) return <SoonModule module={module} iconOnly />;
+  const only = module.items.length === 1 && !hasComing(module) ? module.items[0] : undefined;
   if (only) {
     const label = t(`common.nav.${only.key}`);
     return (
@@ -265,11 +312,7 @@ function RailModule({ module }: { module: NavModule }) {
       >
         <p className="px-3 pt-1.5 pb-2 font-display text-sm font-extrabold">{name}</p>
         <ul className="flex flex-col gap-0.5">
-          {module.items.map((item) => (
-            <li key={item.key}>
-              <PageLink item={item} onNavigate={() => setOpen(false)} nested />
-            </li>
-          ))}
+          <ModulePages module={module} onNavigate={() => setOpen(false)} />
         </ul>
       </PopoverContent>
     </Popover>

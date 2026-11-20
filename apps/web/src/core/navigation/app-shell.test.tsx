@@ -76,6 +76,16 @@ describe('AppShell drawer (phone)', () => {
     await waitFor(() => expect(document.activeElement).toBe(menuButton));
   });
 
+  it('Drawer: coming pages are locked rows — not links, and tapping one keeps the drawer open', async () => {
+    const { user, drawer } = await openDrawer();
+    for (const name of ['Students', 'Leave & permissions', 'Fees', 'Transport', 'Parent portal']) {
+      expect(within(drawer).queryByRole('link', { name: new RegExp(name) })).toBeNull();
+      expect(within(drawer).getByText(name).closest('[aria-disabled="true"]')).not.toBeNull();
+    }
+    await user.click(within(drawer).getByText('Fees'));
+    expect(screen.getByRole('dialog', { name: 'Main navigation' })).toBeTruthy();
+  });
+
   it('marks the current section in the menu', async () => {
     const { drawer } = await openDrawer();
     const payroll = within(drawer).getAllByRole('link', { name: 'Payroll' }).find((l) => l.getAttribute('href') === '/en/payroll');

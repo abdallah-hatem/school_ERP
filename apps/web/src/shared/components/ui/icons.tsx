@@ -9,7 +9,13 @@ import {
   CalculatorIcon as Calculator,
   ChalkboardTeacherIcon as ChalkboardTeacher,
   ClockAfternoonIcon as ClockAfternoon,
-  PackageIcon as Package,
+  BackpackIcon as Backpack,
+  GraduationCapIcon as GraduationCap,
+  ExamIcon as Exam,
+  MoneyIcon as Money,
+  SuitcaseIcon as Suitcase,
+  BusIcon as Bus,
+  UsersFourIcon as UsersFour,
   SignOutIcon as SignOut,
   StudentIcon as Student,
   UsersIcon as Users,
@@ -123,8 +129,17 @@ export const SignOutIcon = duotone(SignOut, 'SignOut');
 // Modules (sidebar groups)
 export const HrModuleIcon = duotone(UsersThree, 'HrModule');
 export const AccountingModuleIcon = duotone(Calculator, 'AccountingModule');
-export const InventoryModuleIcon = duotone(Package, 'InventoryModule');
-export const StudentsModuleIcon = duotone(Student, 'StudentsModule');
+export const SchoolModuleIcon = duotone(Backpack, 'SchoolModule');
+export const TransportModuleIcon = duotone(Bus, 'TransportModule');
+export const ParentPortalModuleIcon = duotone(UsersFour, 'ParentPortalModule');
+
+// Coming pages (locked in the sidebar until their module lands)
+export const StudentsIcon = duotone(Student, 'Students');
+export const AcademicsIcon = duotone(GraduationCap, 'Academics');
+export const AttendanceIcon = duotone(CalendarCheck, 'Attendance');
+export const ExamsIcon = duotone(Exam, 'Exams');
+export const LeaveIcon = duotone(Suitcase, 'Leave');
+export const FeesIcon = duotone(Money, 'Fees');
 
 // Employee facts
 export const DepartmentIcon = duotone(Buildings, 'Department');
