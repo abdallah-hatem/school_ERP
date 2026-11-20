@@ -742,7 +742,12 @@ types** and sends through core's exported `NotificationsService` — core never 
   pending penalty in the month, the previous one resolved `done` first; resolved `done` by a penalty
   recorded in the month, `approved` on approval ("still a draft" is the reminders'). Its `net` is
   per reader through `notify({ paramsFor })` — only for a holder of `hr.payroll.view` at `all` (R7);
-  absent otherwise. A `penalty` subject is scoped by `HrNotificationScopes` with the employee rule,
+  absent otherwise. `hr.payroll.returned_by_accounting` (subject `payroll_run`, dedupe
+  `payroll_returned:<runId>:<returned at>`, one item per return, required — it can't be turned off)
+  to the holders of `hr.payroll.approve` when Accounting returns an approved month (§10), sent in
+  accounting's return transaction with the month and the reason (`{reason}` is isolated with
+  FSI/PDI when the sentence is drawn, like any typed text); resolved `approved` when the run is
+  approved again. A `penalty` subject is scoped by `HrNotificationScopes` with the employee rule,
   on the penalty's employee **as the employee is now** (a stage move takes it from the old stage's
   approver). The Penalties screen opens the
   linked penalty (`?penalty=<id>`: its month's list with `PenaltyDetailsDialog` over it; unknown or
