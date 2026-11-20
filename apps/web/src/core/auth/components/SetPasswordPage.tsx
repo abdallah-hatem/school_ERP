@@ -2,7 +2,7 @@ import arErrors from '@school-erp/shared/locales/ar/errors.json';
 import enErrors from '@school-erp/shared/locales/en/errors.json';
 import { redirect } from 'next/navigation';
 import { SchoolBrandingProvider } from '@/core/settings';
-import { getPublicSchoolBranding } from '@/core/settings/get-branding';
+import { getSchoolBranding } from '@/core/settings/get-branding';
 import { SchoolBrand } from '@/core/settings/school-brand';
 import { LocaleSwitch } from '@/shared/components/layout/locale-switch';
 import { TemporaryPasswordIcon } from '@/shared/components/ui/icons';
@@ -22,7 +22,7 @@ const ERRORS = { en: enErrors, ar: arErrors } as const;
  * everything but this until they have chosen their own.
  */
 export async function SetPasswordPage({ locale, next }: { locale: Locale; next?: string }) {
-  const [user, branding] = await Promise.all([getSession(), getPublicSchoolBranding()]);
+  const [user, branding] = await Promise.all([getSession(), getSchoolBranding()]);
   const destination = safeNextPath(next) ?? homeFor(locale);
   if (!user) redirect(loginPathFor(locale));
   if (!user.mustChangePassword) redirect(destination);

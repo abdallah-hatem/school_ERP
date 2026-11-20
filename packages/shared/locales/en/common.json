@@ -9,6 +9,8 @@
     "penalties": "Penalties",
     "lateness": "Lateness",
     "payroll": "Payroll",
+    "accountingPayroll": "Approved pay",
+    "payrollTaxes": "Payroll taxes",
     "settings": "Settings",
     "activity": "Activity",
     "users": "Users",
@@ -88,6 +90,11 @@
     "payrollStatus": {
       "DRAFT": "Draft",
       "APPROVED": "Approved"
+    },
+    "accountingPayrollStatus": {
+      "PENDING": "Pending transfer",
+      "RETURNED": "Returned to HR",
+      "FINALIZED": "Finalized · transferred"
     },
     "adjustmentType": {
       "ADDITION": "Addition",

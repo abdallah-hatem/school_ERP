@@ -60,9 +60,31 @@ const clsRoot = ClsModule.forRoot({
 const AFTER_COMMIT = Symbol('afterCommit');
 type AfterCommitFn = () => unknown;
 
+/** The work queued on one transaction: after its commit, or on its rollback. */
+interface TransactionQueue {
+  afterCommit: AfterCommitFn[];
+  onRollback: AfterCommitFn[];
+}
+
 /**
- * Runs work after the surrounding transaction commits — e.g. emitting an event (docs/
- * ARCHITECTURE.md: "emit after the write is committed"). Outside a transaction it runs at once.
+ * `AfterCommit.run` / `onRollback` inside a transaction that has no queue: one opened by a plain
+ * `txHost.withTransaction` outside `AfterCommit.transaction`. Running the work now would run it
+ * inside the transaction (before the commit, and even if it then rolls back) — a programming error:
+ * open the transaction with `afterCommit.inTransaction` instead (docs/EVENTS.md, gap 7).
+ */
+export class AfterCommitWithoutQueueError extends Error {
+  constructor() {
+    super(
+      'AfterCommit used inside a transaction with no after-commit queue: open it with ' +
+        'afterCommit.inTransaction(...) (or afterCommit.transaction), not a plain txHost.withTransaction',
+    );
+    this.name = AfterCommitWithoutQueueError.name;
+  }
+}
+
+/**
+ * Runs work after the surrounding transaction commits — e.g. publishing an event (docs/
+ * ARCHITECTURE.md: "after the write is committed"). Outside a transaction it runs at once.
  */
 @Injectable()
 export class AfterCommit {
@@ -74,45 +96,71 @@ export class AfterCommit {
   ) {}
 
   /**
-   * Opens a transaction that owns its after-commit queue: `fn` runs inside it, the queue runs
-   * once it has committed, and is dropped if it rolls back.
+   * Opens a transaction that owns its queue: `fn` runs inside it; the after-commit work runs once
+   * it has committed, and is dropped if it rolls back (the rollback work runs instead).
    */
   async transaction<T>(fn: () => Promise<T>): Promise<T> {
-    const queue: AfterCommitFn[] = [];
-    const result = await this.cls.run({ ifNested: 'inherit' }, () => {
-      this.cls.set(AFTER_COMMIT, queue);
-      return this.txHost.withTransaction(REQUEST_TX_OPTIONS, fn);
-    });
-    await this.flush(queue);
+    const queue: TransactionQueue = { afterCommit: [], onRollback: [] };
+    let result: T;
+    try {
+      result = await this.cls.run({ ifNested: 'inherit' }, () => {
+        this.cls.set(AFTER_COMMIT, queue);
+        return this.txHost.withTransaction(REQUEST_TX_OPTIONS, fn);
+      });
+    } catch (e) {
+      await this.flush(queue.onRollback, 'Rollback work failed');
+      throw e;
+    }
+    await this.flush(queue.afterCommit, 'After-commit work failed');
     return result;
   }
 
   /**
    * Runs `fn` in the open transaction (an `@Audited` request's), or — called outside one, e.g. by
-   * the seed — in a new transaction with its own after-commit queue. A service whose write and
-   * audit entry must commit together wraps them in this.
+   * the seed or a job — in a new transaction with its own queue. A service whose write and audit
+   * entry must commit together wraps them in this.
    */
   inTransaction<T>(fn: () => Promise<T>): Promise<T> {
-    return this.cls.isActive() && this.txHost.isTransactionActive() ? fn() : this.transaction(fn);
+    return this.inOpenTransaction() ? fn() : this.transaction(fn);
   }
 
-  /** Queues `fn` for after the open transaction's commit, or runs it now when none is open. */
+  /**
+   * Queues `fn` for after the open transaction's commit, or runs it now when none is open. Throws
+   * `AfterCommitWithoutQueueError` inside a transaction that has no queue.
+   */
   async run(fn: AfterCommitFn): Promise<void> {
-    const queue =
-      this.cls.isActive() && this.txHost.isTransactionActive()
-        ? this.cls.get<AfterCommitFn[] | undefined>(AFTER_COMMIT)
-        : undefined;
-    if (queue) queue.push(fn);
-    else await this.flush([fn]);
+    const queue = this.openQueue();
+    if (queue) queue.afterCommit.push(fn);
+    else await this.flush([fn], 'After-commit work failed');
   }
 
-  private async flush(queue: AfterCommitFn[]): Promise<void> {
+  /**
+   * Queues `fn` for when the open transaction rolls back (e.g. delete a file written for it);
+   * dropped on commit. Outside a transaction there is nothing to roll back: nothing is queued.
+   */
+  onRollback(fn: AfterCommitFn): void {
+    this.openQueue()?.onRollback.push(fn);
+  }
+
+  private inOpenTransaction(): boolean {
+    return this.cls.isActive() && this.txHost.isTransactionActive();
+  }
+
+  /** The open transaction's queue; undefined outside a transaction; throws when it has none. */
+  private openQueue(): TransactionQueue | undefined {
+    if (!this.inOpenTransaction()) return undefined;
+    const queue = this.cls.get<TransactionQueue | undefined>(AFTER_COMMIT);
+    if (!queue) throw new AfterCommitWithoutQueueError();
+    return queue;
+  }
+
+  private async flush(queue: AfterCommitFn[], message: string): Promise<void> {
     for (const fn of queue) {
       try {
         await fn();
       } catch (e) {
-        // The change is committed; a failing side effect is logged, never thrown at the caller.
-        this.logger.error('After-commit work failed', e instanceof Error ? e.stack : String(e));
+        // The outcome stands; a failing side effect is logged, never thrown at the caller.
+        this.logger.error(message, e instanceof Error ? e.stack : String(e));
       }
     }
   }

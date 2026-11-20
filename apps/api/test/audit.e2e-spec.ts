@@ -481,10 +481,10 @@ describe('audit log (e2e)', () => {
       expect(ids).toContain(user.id);
       expect(new Set(ids).size).toBe(ids.length);
       // The signed-in user acted last, so they come first.
-      expect(all.body.data[0]).toEqual({ id: user.id, name: user.name });
+      expect(all.body.data[0]).toEqual({ id: user.id, name: user.name, employee: null });
 
       const onRecord = await http(app).get(`/audit/actors?entityType=employee&entityId=${id}`).expect(200);
-      expect(onRecord.body.data).toEqual([{ id: user.id, name: user.name }]);
+      expect(onRecord.body.data).toEqual([{ id: user.id, name: user.name, employee: null }]);
       const nobody = await http(app)
         .get(`/audit/actors?entityType=employee&entityId=${unique('none')}`)
         .expect(200);

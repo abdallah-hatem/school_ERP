@@ -14,6 +14,8 @@ import { HrAccessService } from './hr-access.service';
  * - a lateness month's entries list several employees' minutes, and a payroll run's entries their
  *   pay and adjustments, so they need `hr.lateness.view` / `hr.payroll.view` at scope `all` — a
  *   scoped viewer would otherwise read other people's figures in them.
+ * Also: an employee's History lists their penalties' entries, and Activity's search matches an
+ * employee's code (on their entries and their penalties').
  */
 @Injectable()
 export class HrAuditAccess implements OnModuleInit {
@@ -29,6 +31,14 @@ export class HrAuditAccess implements OnModuleInit {
     this.audit.register(AuditEntityType.PENALTY, () => this.penalties.idsInViewScope());
     this.audit.register(AuditEntityType.LATENESS_MONTH, () => this.wholeSchoolOnly('hr.lateness.view'));
     this.audit.register(AuditEntityType.PAYROLL_RUN, () => this.wholeSchoolOnly('hr.payroll.view'));
+    // An employee's History lists their penalties too (still only with `hr.penalties.view` over them).
+    this.audit.registerRelated(AuditEntityType.EMPLOYEE, AuditEntityType.PENALTY, (id) =>
+      this.penalties.idsOfEmployee(id),
+    );
+    // Entries keep names, not codes: Activity's search finds an employee's entries and their
+    // penalties' by the employee's code, read live (so older entries are found too).
+    this.audit.registerSearch(AuditEntityType.EMPLOYEE, (q) => this.employees.idsWithCode(q));
+    this.audit.registerSearch(AuditEntityType.PENALTY, (q) => this.penalties.idsWithEmployeeCode(q));
   }
 
   /** Every record of the type at scope `all`; none otherwise. */

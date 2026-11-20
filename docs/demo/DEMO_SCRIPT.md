@@ -7,7 +7,17 @@ Demo data: the seed (`pnpm --filter api db:seed`) — about 40 employees, the sc
 catalogue, a month of penalties (some pending) and lateness, and a DRAFT payroll run for that month.
 After `prisma migrate deploy` on an older demo database, **run the seed once more** (same
 `SEED_ADMIN_PASSWORD`): it switches off "once per day" for the violations that repeat in a day,
-marks the managing job titles and stores the principal's photo, without touching the month.
+marks the managing job titles and stores the principal's photo. It also adds the two same-day
+"Late to class" penalties the old rule refused and recalculates the draft run; nothing else in the
+month changes.
+
+Before the demo, on the demo database:
+- **Two more logins** (Administration → Users → Add user): an **HR officer** and an **Accountant**,
+  each with their employee record picked under "Who is this person in HR?". The seed makes only
+  the admin. Sign each in once to choose their password.
+- **Two or three employees insured** (employee → Edit → Social insurance: Insured, number, date,
+  insured salary) **before the month is approved**, so the Payroll taxes statement has an Insured
+  table and an insurance share.
 
 ## 1. Sign in
 - Open the app in Arabic (`/ar` — the default language is English). The sign-in page shows the school's logo and name before signing in.
@@ -16,8 +26,9 @@ marks the managing job titles and stores the principal's photo, without touching
 ## 2. Dashboard
 - Active headcount with the split by stage; this month's payroll (status + net); pending and
   approved penalties this month; quick links.
-- The menu is grouped by module: HR (Employees, Penalties, Lateness, Payroll), Accounting,
-  Inventory and Students marked "Soon", Administration (Settings, Activity, Users, Roles).
+- The menu is grouped by module: HR (Employees, Penalties, Lateness, Payroll), Accounting (Approved
+  pay — "الرواتب المعتمدة" in Arabic; its page is titled Approved payroll — and Payroll taxes), Inventory and Students marked "Soon", Administration (Settings, Activity, Users,
+  Roles). The bell sits in the top bar.
 - Switch **ع ↔ EN**: the whole layout mirrors without a reload and stays on the same page.
 - ✔ The browser tab reads "Dashboard · <school name>" (لوحة التحكم · <اسم المدرسة> in Arabic), like
   the sign-in page; the school name in the desktop sidebar is shown whole (up to two lines).
@@ -28,8 +39,12 @@ marks the managing job titles and stores the principal's photo, without touching
   own wording), keep today's date.
 - The **live preview** shows the repeat level and the deduction from the catalogue
   (e.g. "4th time — 2 days"). ✔ It matches the regulation table.
-- Save (pending) → approve it from the list. Approve any other pending penalties of the month
-  (payroll can't be approved while any are pending).
+- Record it **signed in as the HR officer** (second window) and Save (pending). Back as the admin:
+  ✔ the bell shows "Penalty waiting for your approval" with the employee, violation and level;
+  clicking it opens that penalty with **Approve** → approve. ✔ The bell item now reads "Approved by
+  …". (Whoever records a penalty isn't notified about it — that is why the HR officer records it.)
+- Approve any other pending penalties of the month from the list's row menu (payroll can't be
+  approved while any are pending).
 - Open **Record a penalty** again with the same employee, violation and date. ✔ The preview says
   this violation counts once per day and the employee already has one on this date; Save moves the
   message under the date — ✔ it shows once, not twice. (Late to class is different: it can be recorded several times a day.)
@@ -47,16 +62,24 @@ marks the managing job titles and stores the principal's photo, without touching
   (if the run was calculated before, it asks you to **Recalculate**).
 - **Recalculate.** ✔ Check one line by hand: lateness amount = days × month salary ÷ day divisor
   (e.g. 0.75 × 20,000 ÷ 30 = 500.00).
+- **Rows per page** under the lines → 500: ✔ every employee on one page; scrolling the lines keeps
+  the column names on top, inside the card. Every payroll table (HR runs, a run, an employee's
+  Payroll tab, Accounting → Approved payroll and its month, Payroll taxes) has the same picker (10–500).
 
 ## 6. Settings change the numbers (the key moment)
 - Settings → HR rules: change a rule, e.g. grace minutes 0 → 30. The example line updates live
-  (90 min → 0.25 day). Save.
+  (90 min → 0.25 day). Save. ✔ The last card, **Employees**, holds the default probation length
+  (3 months); an employee's profile shows **Probation ends** under the hire date.
 - Back on the draft run: ✔ a note says the HR rules changed since the last calculation, with
   **Recalculate now** (it goes once recalculated).
 - **View change history** (top of Settings) → Activity, filtered to Settings: ✔ the grace-minutes
   change is at the top, with who made it and old → new (Administration → Activity shows it too).
-  Activity holds settings and catalogue changes for now; penalties, lateness, payroll and sign-ins
-  join it with the HR audit work (T28) — don't promise them yet.
+  Activity also holds sign-ins (and failed ones), employee edits, the lists, lateness, payroll and
+  penalties; an employee's **History** tab lists their edits ("Department: Science → Maths") and
+  their penalties. ✔ Open the History of the employee from step 3: the penalty you recorded and
+  approved is there twice — "Recorded a penalty for …" (the violation by name, the level, Pending)
+  and "Approved the penalty for …" (Pending → Approved). ✔ On Activity, search the employee's code
+  (e.g. EMP-0007): their entries and their penalties' show.
 - Back to the run → **Recalculate** → ✔ the same employee's lateness drops (0.25 × 20,000 ÷ 30 =
   166.67) and the totals follow.
 - Put the rule back afterwards if the demo continues on the same data.
@@ -81,8 +104,36 @@ marks the managing job titles and stores the principal's photo, without touching
 - Sign in as the **Accountant** → ✔ Settings is in the menu and opens straight on Accounting, the
   only section listed; the rule can be changed. An HR officer opening `?section=accounting` → ✔
   lands on their first section, no error.
+- Still as the Accountant, **Payroll taxes**: the year's twelve months. ✔ The month approved in
+  step 7 shows *Approved* with its gross; a month HR hasn't approved shows *Draft in HR* (dashed);
+  the rest say there is no payroll or that they haven't started. Open the approved month → the
+  statement: ✔ net + insurance share + income tax + martyrs' fund = gross across the top, checked
+  by hand; the Insured and Not insured tables each end with a subtotal, and the two subtotals add up
+  to the gross. ✔ An insured line's insurance share = insured salary × 11% (6,500.00 → 715.00). ✔ The tax rule at the foot matches Settings → Accounting and says "Same as today's
+  rule". **Excel** downloads the lines and a sheet with the rule; **Download PDF** prints the
+  statement (landscape A4, no menu). An HR officer opening the Payroll taxes link → ✔ not found.
+- Still as the Accountant, Accounting → **Approved payroll**: ✔ only the months HR approved, newest first,
+  with net, insurance, taxes and gross. Open the month from step 7 → ✔ HR's figures, read only,
+  one card per employee on every screen: salary, penalties, lateness, adjustments and net match
+  HR's run, then insurance share, income tax, martyrs' fund, and the gross on the card's band.
+  ✔ On two cards, net + insurance + tax + fund = gross by hand. The month's totals are the four
+  tiles at the top (Net paid, Insurance share, Taxes, Gross); the Gross tile equals the Payroll
+  taxes statement's gross. The printout / PDF ends with the "Month total · all 38" row. A draft month → ✔ not listed.
+  ✔ The month says **Pending transfer**. **Return to HR** → the dialog won't confirm without a
+  reason; give one → ✔ back on the list, the month gone. As HR: ✔ the bell says Accounting returned
+  it (in Arabic too, a Latin reason reads whole), the runs list shows *Draft* + *Returned*, the run
+  says "Returned by Accounting …" with the reason; Activity (as HR or the admin — the Accountant has
+  no Activity) → ✔ the return on the month and on HR's run, "Pending transfer → Returned to HR" in
+  words; fix something the reason names (e.g. lateness), **Recalculate**, approve it again → ✔ it is
+  back in Accounting → Approved payroll, pending, the notice gone, and its net, taxes and gross are
+  the new ones. As the Accountant, **Finalize** → ✔ *Finalized ·
+  transferred*, Return and Finalize are gone; HR's run and runs list show *Finalized · transferred*.
 - Click the employee's name (on the payslip, or in the run's "Employees this month") → ✔ their
   profile opens. Every employee name in the app does this (penalties, lateness, the run).
+- Under the profile's name: ✔ **Signs in as: <user>** for the accountant's employee record (a link to
+  the user), **No sign-in account** for most employees. Administration → Users: ✔ the list's
+  **Employee record** column; a user's page asks **Who is this person in HR?** (pick their employee
+  record — only roles limited to a stage, a team or themselves need it).
 - On the profile, **Details** shows the social insurance, bank account, emergency contact and
   qualification cards. **Edit** → choose *Insured*: the insurance number, registration date and
   insured salary appear and are required; choose *Not insured*: they disappear and are cleared.
@@ -93,4 +144,5 @@ marks the managing job titles and stores the principal's photo, without touching
 
 ## 9. Phone
 - Same app at phone width: top bar with the school name and the menu, drawer navigation, cards
-  instead of tables, the payroll tiles readable without long scrolling.
+  instead of tables, the payroll tiles readable without long scrolling; the bell opens as a
+  full-screen sheet.

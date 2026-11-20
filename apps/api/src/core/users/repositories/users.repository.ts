@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { Prisma } from '@prisma/client';
-import { PAGINATION, type AuthUser, type Paginated } from '@school-erp/shared';
+import { PAGINATION, type AuthUser, type Gender, type Paginated } from '@school-erp/shared';
 import type { DbAdapter } from '../../../database/transactions';
 
 /** What may leave the API about a user. Never the password hash. */
@@ -29,7 +29,7 @@ const ACCOUNT_SELECT = {
   createdAt: true,
   lastSignInAt: true,
   passwordChangedAt: true,
-  linkedEmployee: { select: { id: true, code: true, nameEn: true, nameAr: true } },
+  linkedEmployee: { select: { id: true, code: true, nameEn: true, nameAr: true, photoUrl: true, gender: true } },
   roles: {
     select: { role: { select: { id: true, key: true, nameEn: true, nameAr: true } } },
     orderBy: [{ role: { builtIn: 'desc' } }, { role: { sortOrder: 'asc' } }],
@@ -168,6 +168,23 @@ export class UsersRepository {
     await this.db.user.update({ where: { id }, data, select: { id: true } });
   }
 
+  /**
+   * The photo and gender of the employee linked to a user (the user chip's avatar, `GET /auth/me`),
+   * or null when none is linked. Reads HR's table — reading is allowed, writing is not.
+   */
+  async avatarOf(userId: string): Promise<{ photoUrl: string | null; gender: Gender } | null> {
+    const row = await this.db.user.findUnique({
+      where: { id: userId },
+      select: { linkedEmployee: { select: { photoUrl: true, gender: true } } },
+    });
+    return row?.linkedEmployee ?? null;
+  }
+
+  /** The account linked to an employee (`users.employee_id` is unique), or null. */
+  accountOfEmployee(employeeId: string): Promise<{ id: string; name: string } | null> {
+    return this.db.user.findUnique({ where: { employeeId }, select: { id: true, name: true } });
+  }
+
   /** The roles a user holds, starting roles first (the user chip, `GET /auth/me`). */
   async roleRefsOf(userId: string): Promise<RoleRefRow[]> {
     const rows = await this.db.userRoleAssignment.findMany({
@@ -230,6 +247,8 @@ const EMPLOYEE_OPTION_SELECT = {
   nameEn: true,
   nameAr: true,
   status: true,
+  photoUrl: true,
+  gender: true,
   jobTitle: { select: { nameEn: true, nameAr: true } },
   linkedUser: { select: { id: true, name: true } },
 } satisfies Prisma.EmployeeSelect;

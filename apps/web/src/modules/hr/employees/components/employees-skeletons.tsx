@@ -62,13 +62,14 @@ const DETAILS_SKELETON: { title: string; className?: string; fields: { key: stri
     fields: [
       { key: 'code' },
       { key: 'hireDate' },
+      { key: 'probationEnd' },
       { key: 'stage' },
       { key: 'department' },
       { key: 'jobTitle' },
       { key: 'workSystem' },
-      { key: 'manager', wide: true },
       { key: 'grade' },
-      { key: 'fingerprintId' },
+      { key: 'manager', wide: true },
+      { key: 'fingerprintId', wide: true },
     ],
   },
   {
@@ -145,7 +146,13 @@ function ProfileSkeleton({ body }: { body?: ReactNode }) {
         title={<SkeletonText width="w-36 sm:w-56" />}
         leading={<Skeleton className="size-16 shrink-0 rounded-[1.25rem]" />}
         status={<SkeletonPill />}
-        description={<SkeletonText width="w-72" />}
+        // The loaded header's two lines: code · job · department, then "Signs in as" / "No sign-in account".
+        description={
+          <span className="flex flex-col gap-1">
+            <SkeletonText width="w-72" />
+            <SkeletonText width="w-40" />
+          </span>
+        }
         breadcrumbs={[{ label: t('employees.title'), href: basePath }, { label: ' ' }]}
         breadcrumbsLabel={t('ui.shell.breadcrumbs')}
         actions={

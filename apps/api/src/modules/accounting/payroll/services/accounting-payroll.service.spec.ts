@@ -2,7 +2,7 @@ import { NotFoundException } from '@nestjs/common';
 import { DEFAULT_TAX_RULE } from '@school-erp/shared';
 import type { TransactionHost } from '@nestjs-cls/transactional';
 import type { AuditService } from '../../../../core/audit';
-import type { DbAdapter } from '../../../../database/transactions';
+import type { AfterCommit, DbAdapter } from '../../../../database/transactions';
 import type { EmployeesService, PayrollService } from '../../../hr';
 import type { AccountingSettingsService } from '../../settings/accounting-settings.service';
 import type { AccountingPayrollRepository } from '../repositories/accounting-payroll.repository';
@@ -22,7 +22,24 @@ const line = (employeeId: string, net: number, insuredSalary: number | null = nu
 const APPROVED_AT = new Date('2026-11-05T10:00:00Z');
 
 function makeService(
-  opts: { status?: 'DRAFT' | 'APPROVED'; recorded?: boolean; created?: boolean; approvedRunId?: string } = {},
+  opts: {
+    status?: 'DRAFT' | 'APPROVED';
+    recorded?: boolean;
+    created?: boolean;
+    approvedRunId?: string;
+    everySalary?: boolean;
+    /** Accounting's recorded months of the year, and HR's runs of it (`runStatusesInYear`). */
+    inYear?: string[];
+    hrYear?: { month: string; status: 'DRAFT' | 'APPROVED' }[];
+    /** Accounting's stored month (`findByMonth`), its lines, and HR's breakdown of them. */
+    storedMonth?: boolean;
+    /** The stored month was finalized (transfer made). */
+    finalized?: boolean;
+    storedLines?: unknown[];
+    breakdowns?: Map<string, unknown> | null;
+    /** Employees whose salary the viewer may see, without every salary. */
+    inScope?: string[];
+  } = {},
 ) {
   const run =
     (opts.status ?? 'APPROVED') === 'APPROVED'
@@ -32,25 +49,51 @@ function makeService(
           lines: [line('a', 1_200_000), line('b', 1_200_000, 500_000), line('c', 0, 500_000)],
         }
       : null;
-  const stored = { id: 'acc-run', hrRunId: 'hr-run', month: '2026-11', taxRule: DEFAULT_TAX_RULE, recordedAt: APPROVED_AT };
+  const stored = {
+    id: 'acc-run',
+    hrRunId: 'hr-run',
+    month: '2026-11',
+    taxRule: DEFAULT_TAX_RULE,
+    recordedAt: APPROVED_AT,
+    finalizedAt: opts.finalized ? APPROVED_AT : null,
+  };
   const repository = {
     findByHrRun: jest.fn(() => Promise.resolve(opts.recorded ? { id: 'acc-run' } : null)),
-    findByMonth: jest.fn(() => Promise.resolve(null)),
-    findLines: jest.fn(() => Promise.resolve([])),
-    totalsFor: jest.fn(() => Promise.resolve(new Map([['acc-run', { employees: 3 }]]))),
+    findByMonth: jest.fn(() => Promise.resolve(opts.storedMonth ? stored : null)),
+    findInYear: jest.fn(() =>
+      Promise.resolve((opts.inYear ?? []).map((month) => ({ ...stored, id: `acc-${month}`, month }))),
+    ),
+    findLines: jest.fn(() => Promise.resolve(opts.storedLines ?? [])),
+    totalsFor: jest.fn((ids: string[]) =>
+      Promise.resolve(
+        new Map<string, unknown>([
+          ['acc-run', { employees: 3 }],
+          ...ids.map((id): [string, unknown] => [id, { employees: 3, net: 100, insuranceAmount: 10, incomeTax: 5, martyrTax: 1, gross: 116 }]),
+        ]),
+      ),
+    ),
     create: jest.fn(() => Promise.resolve(opts.created === false ? null : stored)),
+    deletePending: jest.fn(() => Promise.resolve(true)),
+    finalize: jest.fn(() => Promise.resolve(true)),
   };
   const hrPayroll = {
     approvedLinesForAccounting: jest.fn(() => Promise.resolve(run)),
     approvedRunIdForMonth: jest.fn(() => Promise.resolve(opts.approvedRunId ?? null)),
+    runStatusesInYear: jest.fn(() => Promise.resolve(opts.hrYear ?? [])),
+    approvedLineBreakdowns: jest.fn(() => Promise.resolve(opts.breakdowns ?? null)),
+    returnFromAccounting: jest.fn(() => Promise.resolve()),
+    markTransferred: jest.fn(() => Promise.resolve()),
   };
   // Today's employee record isn't read: the insurance comes from HR's approved lines.
   const employees = {
-    seesEverySalary: jest.fn(() => Promise.resolve(true)),
+    seesEverySalary: jest.fn(() => Promise.resolve(opts.everySalary ?? true)),
+    filterInScope: jest.fn(() => Promise.resolve(new Set(opts.inScope ?? []))),
   };
   const settings = { taxRuleAt: jest.fn((_at: Date) => Promise.resolve(DEFAULT_TAX_RULE)) };
   const audit = { record: jest.fn(() => Promise.resolve()) };
-  const txHost = { withTransaction: jest.fn((_p: unknown, fn: () => unknown) => fn()) };
+  // Joins the delivery's (or the read path's) transaction: no propagation option.
+  const txHost = { withTransaction: jest.fn((fn: () => unknown) => fn()) };
+  const afterCommit = { inTransaction: jest.fn((fn: () => unknown) => fn()) };
   const service = new AccountingPayrollService(
     repository as unknown as AccountingPayrollRepository,
     settings as unknown as AccountingSettingsService,
@@ -58,8 +101,9 @@ function makeService(
     employees as unknown as EmployeesService,
     audit as unknown as AuditService,
     txHost as unknown as TransactionHost<DbAdapter>,
+    afterCommit as unknown as AfterCommit,
   );
-  return { service, repository, hrPayroll, audit, settings };
+  return { service, repository, hrPayroll, audit, settings, employees };
 }
 
 describe('AccountingPayrollService.recordApprovedRun', () => {
@@ -111,5 +155,187 @@ describe('AccountingPayrollService.recordApprovedRun', () => {
   it('a month HR never approved → 404', async () => {
     const { service } = makeService();
     await expect(service.getMonth('2026-12')).rejects.toBeInstanceOf(NotFoundException);
+  });
+});
+
+describe('AccountingPayrollService.returnToHr / finalize', () => {
+  it("returns a pending month: HR's run goes back to draft with the reason, the taxes are dropped, audited", async () => {
+    const { service, repository, hrPayroll, audit } = makeService({ storedMonth: true });
+    await service.returnToHr('2026-11', 'Penalty for EMP-0003 missing', 'u1');
+    expect(hrPayroll.returnFromAccounting).toHaveBeenCalledWith('hr-run', 'Penalty for EMP-0003 missing', 'u1');
+    expect(repository.deletePending).toHaveBeenCalledWith('acc-run');
+    expect(audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'accounting.payroll.return',
+        changes: expect.arrayContaining([{ field: 'reason', before: null, after: 'Penalty for EMP-0003 missing' }]),
+      }),
+    );
+  });
+
+  it("locks like finalize: this month's row is dropped before HR's run is touched (no deadlock)", async () => {
+    const { service, repository, hrPayroll } = makeService({ storedMonth: true });
+    await service.returnToHr('2026-11', 'Penalty missing', 'u1');
+    expect(repository.deletePending.mock.invocationCallOrder[0]).toBeLessThan(
+      hrPayroll.returnFromAccounting.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('HR refusing the return fails the whole return (the drop rolls back with it), nothing audited', async () => {
+    const { service, hrPayroll, audit } = makeService({ storedMonth: true });
+    hrPayroll.returnFromAccounting.mockRejectedValueOnce(Object.assign(new Error('refused'), { status: 409 }));
+    await expect(service.returnToHr('2026-11', 'x', 'u1')).rejects.toMatchObject({ status: 409 });
+    expect(audit.record).not.toHaveBeenCalled();
+  });
+
+  it("return and finalize are recorded against the month, which outlives the dropped row", async () => {
+    const { service, audit } = makeService({ storedMonth: true });
+    await service.returnToHr('2026-11', 'Penalty missing', 'u1');
+    expect(audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({ entity: { type: 'accounting_payroll', id: '2026-11', label: '2026-11' } }),
+    );
+    const other = makeService({ storedMonth: true });
+    await other.service.finalize('2026-11', 'u1');
+    expect(other.audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({ entity: { type: 'accounting_payroll', id: '2026-11', label: '2026-11' } }),
+    );
+  });
+
+  it('a finalized month is never returned (409 PAYROLL_FINALIZED), and HR is not touched', async () => {
+    const { service, hrPayroll, repository } = makeService({ storedMonth: true, finalized: true });
+    await expect(service.returnToHr('2026-11', 'late', 'u1')).rejects.toMatchObject({ status: 409 });
+    expect(hrPayroll.returnFromAccounting).not.toHaveBeenCalled();
+    expect(repository.deletePending).not.toHaveBeenCalled();
+  });
+
+  it('a month not in accounting → 404 for both', async () => {
+    const { service } = makeService();
+    await expect(service.returnToHr('2026-12', 'x', 'u1')).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.finalize('2026-12', 'u1')).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('finalize: marks the month and HR\'s run transferred, audited; the month reads FINALIZED', async () => {
+    const { service, repository, hrPayroll, audit } = makeService({ storedMonth: true });
+    await service.finalize('2026-11', 'u1');
+    expect(repository.finalize).toHaveBeenCalledWith('acc-run', 'u1', expect.any(Date));
+    expect(hrPayroll.markTransferred).toHaveBeenCalledWith('hr-run', expect.any(Date));
+    expect(audit.record).toHaveBeenCalledWith(expect.objectContaining({ action: 'accounting.payroll.finalize' }));
+  });
+
+  it('finalize twice → 409 PAYROLL_FINALIZED', async () => {
+    const { service, repository } = makeService({ storedMonth: true, finalized: true });
+    await expect(service.finalize('2026-11', 'u1')).rejects.toMatchObject({ status: 409 });
+    expect(repository.finalize).not.toHaveBeenCalled();
+  });
+
+  it('a finalized month reads FINALIZED with its date; a pending one PENDING', async () => {
+    expect((await makeService({ storedMonth: true, finalized: true }).service.getMonth('2026-11')).status).toBe('FINALIZED');
+    const pending = await makeService({ storedMonth: true }).service.getMonth('2026-11');
+    expect(pending).toMatchObject({ status: 'PENDING', finalizedAt: null });
+  });
+});
+
+describe('AccountingPayrollService.getMonth (HR breakdown)', () => {
+  const stored = (employeeId: string) => ({
+    employeeId,
+    employeeCode: `EMP-${employeeId}`,
+    nameEn: `Name ${employeeId}`,
+    nameAr: `اسم ${employeeId}`,
+    insuranceStatus: 'NOT_INSURED',
+    insuredSalary: null,
+    net: 1_000_000,
+    insuranceAmount: 0,
+    incomeTax: 100,
+    martyrTax: 10,
+    gross: 1_000_110,
+  });
+  const breakdown = {
+    departmentNameEn: 'Teaching',
+    departmentNameAr: 'التدريس',
+    monthSalary: 1_100_000,
+    penaltyDays: 1,
+    penaltyAmount: 50_000,
+    latenessDays: 0.5,
+    latenessAmount: 25_000,
+    adjustmentAdditions: 0,
+    adjustmentDeductions: 25_000,
+  };
+
+  it("adds HR's breakdown of each approved line, read from HR's approved run", async () => {
+    const { service, hrPayroll } = makeService({
+      storedMonth: true,
+      storedLines: [stored('a')],
+      breakdowns: new Map([['a', breakdown]]),
+    });
+    const month = await service.getMonth('2026-11');
+    expect(hrPayroll.approvedLineBreakdowns).toHaveBeenCalledWith('hr-run');
+    expect(month.lines[0]).toEqual(expect.objectContaining({ employeeId: 'a', net: 1_000_000, gross: 1_000_110, hr: breakdown }));
+  });
+
+  it("outside the viewer's salary scope: HR's money is hidden with the line's, the days and department stay", async () => {
+    const { service } = makeService({
+      storedMonth: true,
+      everySalary: false,
+      inScope: ['b'],
+      storedLines: [stored('a'), stored('b')],
+      breakdowns: new Map([['a', breakdown], ['b', breakdown]]),
+    });
+    const [a, b] = (await service.getMonth('2026-11')).lines;
+    expect(a).not.toHaveProperty('net');
+    expect(a.hr).toEqual({ departmentNameEn: 'Teaching', departmentNameAr: 'التدريس', penaltyDays: 1, latenessDays: 0.5 });
+    expect(b.hr).toEqual(breakdown);
+  });
+
+  it('no breakdown from HR: the line comes without one', async () => {
+    const { service } = makeService({ storedMonth: true, storedLines: [stored('a')], breakdowns: null });
+    const [a] = (await service.getMonth('2026-11')).lines;
+    expect(a).not.toHaveProperty('hr');
+  });
+});
+
+describe('AccountingPayrollService.year (the year board)', () => {
+  it('twelve months, January first: approved with totals, a draft in HR, or nothing yet', async () => {
+    const { service, hrPayroll, repository } = makeService({
+      inYear: ['2026-09'],
+      hrYear: [
+        { month: '2026-09', status: 'APPROVED' },
+        { month: '2026-10', status: 'DRAFT' },
+      ],
+    });
+    const year = await service.year(2026);
+    expect(hrPayroll.runStatusesInYear).toHaveBeenCalledWith(2026);
+    expect(repository.findInYear).toHaveBeenCalledWith(2026);
+    expect(year.year).toBe(2026);
+    expect(year.months.map((m) => m.month)).toEqual(
+      Array.from({ length: 12 }, (_, i) => `2026-${String(i + 1).padStart(2, '0')}`),
+    );
+    expect(year.months[8]).toMatchObject({
+      month: '2026-09',
+      state: 'APPROVED',
+      summary: { salaryVisible: true, totals: { employees: 3, gross: 116 } },
+    });
+    expect(year.months[9]).toEqual({ month: '2026-10', state: 'DRAFT' });
+    expect(year.months[0]).toEqual({ month: '2026-01', state: 'NONE' });
+    // Read only: nothing is worked out or recorded from the board.
+    expect(repository.create).not.toHaveBeenCalled();
+  });
+
+  it('approved in HR but never worked out (a missed event): approved, with no summary', async () => {
+    const { service, repository } = makeService({ hrYear: [{ month: '2026-03', status: 'APPROVED' }] });
+    const year = await service.year(2026);
+    expect(year.months[2]).toEqual({ month: '2026-03', state: 'APPROVED' });
+    expect(repository.create).not.toHaveBeenCalled();
+  });
+
+  it('salary data (§2, P4): without every salary the totals are the head count only', async () => {
+    const { service } = makeService({ everySalary: false, inYear: ['2026-09'] });
+    const year = await service.year(2026);
+    expect(year.months[8]?.summary).toMatchObject({ salaryVisible: false, totals: { employees: 3 } });
+    expect(year.months[8]?.summary?.totals).not.toHaveProperty('gross');
+  });
+
+  it('an empty year: twelve months, none of them started', async () => {
+    const { service } = makeService();
+    const year = await service.year(2030);
+    expect(year.months.every((m) => m.state === 'NONE' && !m.summary)).toBe(true);
   });
 });

@@ -11,7 +11,7 @@ vi.mock('next/link', async () => ({ default: (await import('../test/fixtures')).
 
 import { EMPLOYEES_PAGE_SIZE } from '../lib/list-query';
 import { stageBandOf } from '../lib/stage-band';
-import { item, renderEmployees, summary } from '../test/fixtures';
+import { renderEmployees, stage, summary } from '../test/fixtures';
 import { EmployeeCard } from './employee-card';
 import { EmployeesListSkeleton } from './employees-skeletons';
 
@@ -69,15 +69,28 @@ describe('EmployeeCard', () => {
 
 describe('stageBandOf', () => {
   const stages = [
-    item('s-none', 'None', 'بدون مرحلة', true, 0),
-    item('s-pri', 'Primary', 'الابتدائي', true, 2),
-    item('s-kg', 'Kindergarten', 'رياض الأطفال', true, 1),
+    stage('s-none', 'None', 'بدون مرحلة', 0, true),
+    stage('s-pri', 'Primary', 'الابتدائي', 2),
+    stage('s-kg', 'Kindergarten', 'رياض الأطفال', 1),
   ];
-  it('one colour per stage in stage order, neutral for "None" and unknown stages', () => {
+  it('one colour per stage in stage order, neutral for the "no stage" entry and unknown stages', () => {
     expect(stageBandOf('s-kg', stages)).toBe('band-1');
     expect(stageBandOf('s-pri', stages)).toBe('band-2');
     expect(stageBandOf('s-none', stages)).toBe('band-neutral');
     expect(stageBandOf('s-gone', stages)).toBe('band-neutral');
+  });
+
+  it('the "no stage" entry is keyed by its flag: renamed, it stays neutral and out of the order', () => {
+    const renamed = stages.map((s) => (s.id === 's-none' ? { ...s, nameEn: 'Not tied to a stage', nameAr: 'غير مرتبط بمرحلة' } : s));
+    expect(stageBandOf('s-none', renamed)).toBe('band-neutral');
+    expect(stageBandOf('s-kg', renamed)).toBe('band-1');
+    expect(stageBandOf('s-pri', renamed)).toBe('band-2');
+  });
+
+  it('a stage merely named "None" is an ordinary stage when it is not the flagged one', () => {
+    const named = [stage('s-x', 'None', 'بدون', 0), stage('s-kg', 'Kindergarten', 'رياض الأطفال', 1)];
+    expect(stageBandOf('s-x', named)).toBe('band-1');
+    expect(stageBandOf('s-kg', named)).toBe('band-2');
   });
 });
 

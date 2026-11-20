@@ -35,7 +35,7 @@ import type { Locale } from '@/shared/lib/i18n';
 import { ADJ_MONA, MONA, renderPayroll, run, RUN_ID, SALMA, SETTINGS } from '../test/fixtures';
 import { renderWithI18n, sessionWithout } from '@/test/render';
 import { PayrollI18n } from '../messages';
-import { RunPage, type RunPageProps } from './run-page';
+import { RunPage, RunTiles, type RunPageProps } from './run-page';
 
 const DEPARTMENTS = [
   {
@@ -332,6 +332,40 @@ describe('RunPage — approve', () => {
   });
 });
 
+describe('RunPage — returned by Accounting (§10)', () => {
+  it('a draft Accounting sent back says when and why; approved again, the notice is gone', () => {
+    renderRun({ run: run({ returned: { at: '2026-11-19T10:00:00.000Z', reason: 'Penalty for EMP-0012 missing' } }) });
+    const note = screen.getByTestId('returned-notice');
+    expect(note.textContent).toContain('Returned by Accounting on 19 Nov 2026');
+    expect(note.textContent).toContain('Reason: Penalty for EMP-0012 missing');
+    expect(note.textContent).toContain("Fix what's needed, then approve the month again.");
+    // The typed reason sits in its own <bdi>, with no period of ours glued to it.
+    const reason = screen.getByTestId('returned-reason');
+    expect(reason.querySelector('bdi')?.textContent).toBe('Penalty for EMP-0012 missing');
+    expect(reason.textContent).toBe('Reason: Penalty for EMP-0012 missing');
+    cleanup();
+    renderRun({ run: run({ status: 'APPROVED', approvedAt: '2026-11-20T10:00:00.000Z', returned: null }) });
+    expect(screen.queryByTestId('returned-notice')).toBeNull();
+  });
+
+  it('Arabic: the notice in Arabic', () => {
+    renderRun({ run: run({ returned: { at: '2026-11-19T10:00:00.000Z', reason: 'جزاء ناقص' } }) }, 'ar');
+    expect(screen.getByTestId('returned-notice').textContent).toContain('السبب: جزاء ناقص');
+  });
+
+  it('Arabic with a Latin reason: the reason is isolated, never "..", never mixed into the sentence', () => {
+    renderRun({ run: run({ returned: { at: '2026-11-19T10:00:00.000Z', reason: 'Lateness for EMP-0012 is missing.' } }) }, 'ar');
+    const reason = screen.getByTestId('returned-reason');
+    expect(reason.querySelector('bdi')?.textContent).toBe('Lateness for EMP-0012 is missing.');
+    expect(screen.getByTestId('returned-notice').textContent).not.toContain('..');
+  });
+
+  it('a transferred run reads "Finalized · transferred"', () => {
+    renderRun({ run: run({ status: 'APPROVED', approvedAt: '2026-11-20T10:00:00.000Z', transferredAt: '2026-11-21T10:00:00.000Z' }) });
+    expect(screen.getByText('Finalized · transferred')).toBeTruthy();
+  });
+});
+
 describe('RunPage — draft', () => {
   it('shows the four tiles from the run totals, net highlighted, and flags on lines that need review', () => {
     renderRun();
@@ -570,5 +604,39 @@ describe('RunPage — a navigation landing after a mutation', () => {
     );
     expect(router.push).toHaveBeenCalledTimes(1);
     expect(searchbox.disabled).toBe(false);
+  });
+});
+
+describe('RunTiles — worst-case amounts (break-ui)', () => {
+  // 500 employees at the largest salary the API accepts (EGP 21,474,836.47), deductions above a
+  // salary, a net floored at 0.
+  const WORST = {
+    employees: 500,
+    flagged: 1,
+    monthSalary: 1_073_741_823_500,
+    penaltyAmount: 999_999_999,
+    latenessAmount: 1,
+    adjustmentAdditions: 1_000_000_000,
+    adjustmentDeductions: 99_999_999_999,
+    net: 0,
+  };
+  const NBSP = ' ';
+
+  it('each tile shows its whole figure; a sub line never leaves "EGP" apart from its amount', () => {
+    const { container } = renderPayroll(<RunTiles totals={WORST} />);
+    expect(screen.getByText('10,737,418,235.00')).toBeTruthy();
+    expect(screen.getByText('1,009,999,999.99')).toBeTruthy(); // 9,999,999.99 + 0.01 + 999,999,999.99
+    expect(screen.getByText('0.00')).toBeTruthy();
+    // Exact text (the matchers would fold the no-break space into a plain one).
+    const text = container.textContent ?? '';
+    expect(text).toContain(`Penalties EGP${NBSP}9,999,999.99 · Lateness EGP${NBSP}0.01 · Adjustments EGP${NBSP}999,999,999.99`);
+    expect(text).toContain(`Salaries minus deductions, plus additions EGP${NBSP}10,000,000.00`);
+  });
+
+  it('in Arabic the label sits left of each amount (figure first in the text), Latin digits', () => {
+    const { container } = renderPayroll(<RunTiles totals={WORST} />, 'ar');
+    const text = container.textContent ?? '';
+    expect(text).toContain(`الجزاءات 9,999,999.99${NBSP}ج.م · التأخير 0.01${NBSP}ج.م · التسويات 999,999,999.99${NBSP}ج.م`);
+    expect(text).toContain(`الرواتب ناقص الخصومات، زائد الإضافات 10,000,000.00${NBSP}ج.م`);
   });
 });

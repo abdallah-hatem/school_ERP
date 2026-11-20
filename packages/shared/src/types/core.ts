@@ -1,4 +1,4 @@
-import type { Language, Weekday } from '../enums';
+import type { Gender, Language, Weekday } from '../enums';
 import type { PermissionKey, PermissionScope } from '../permissions';
 import type { IsoDateTime, Names, PaginationQuery, TimeOfDay, Uuid } from './common';
 
@@ -30,6 +30,18 @@ export interface AuthUser {
 export interface SessionUser extends AuthUser {
   permissions: PermissionKey[];
   roles: RoleRef[];
+  /** The linked employee's avatar (the user chip), or null: not linked → the neutral silhouette. */
+  employee: PersonAvatarRef | null;
+}
+
+/**
+ * What a person's avatar needs from the employee linked to their account: the photo, else the
+ * male or female silhouette (owner, 2026-11-19: one avatar for every person, never initials).
+ */
+export interface PersonAvatarRef {
+  /** `/files/employee-photos/…` (signed-in only), or null. */
+  photoUrl: string | null;
+  gender: Gender;
 }
 
 export interface LoginResponse {
@@ -72,7 +84,13 @@ export interface ListItem extends Names {
   isActive: boolean;
 }
 
-export type Stage = ListItem;
+export interface Stage extends ListItem {
+  /**
+   * The "no stage" entry (§3: staff not tied to a stage): at most one stage, marked by the seed. It
+   * keeps the role when renamed; employee cards give it the neutral band.
+   */
+  isNoStage: boolean;
+}
 
 export interface CreateListItemRequest extends Names {
   sortOrder?: number;
@@ -132,19 +150,24 @@ export interface UserAccount {
   mustChangePassword: boolean;
   roles: RoleRef[];
   /** The linked employee (R9: at most one), or null. */
-  employee: { id: Uuid; code: string; nameEn: string; nameAr: string } | null;
+  employee: ({ id: Uuid; code: string; nameEn: string; nameAr: string } & PersonAvatarRef) | null;
   createdAt: IsoDateTime;
   /** Their last successful sign-in, or null (never signed in). */
   lastSignInAt: IsoDateTime | null;
   /** When the password was last set (by an admin, or changed by the user); null before P3. */
   passwordChangedAt: IsoDateTime | null;
+  /**
+   * Until when sign-in is locked after too many wrong passwords, or null when it isn't locked now.
+   * A System admin can unlock it early (`POST /users/:id/unlock-sign-in`).
+   */
+  lockedUntil: IsoDateTime | null;
 }
 
 /**
  * `GET /users/employee-options` — the linked-employee picker on the user form: employees matching
  * the search, each with the account already linked to it (one employee, at most one account).
  */
-export interface EmployeeOption {
+export interface EmployeeOption extends PersonAvatarRef {
   id: Uuid;
   code: string;
   nameEn: string;

@@ -1,16 +1,20 @@
 # Local infrastructure for school-erp.
 # Host Postgres port 5442 (offset from 5432 so it runs beside other projects' databases).
 # Local-only development values; nothing here is used outside a developer machine.
+#
+# Overridable (environment or the git-ignored root .env that `pnpm run setup` writes), so a second
+# copy of the project can run beside the first: DB_PORT (5442), DB_CONTAINER (school-erp-db),
+# DB_VOLUME (school-erp-pgdata), COMPOSE_PROJECT_NAME.
 services:
   db:
     image: postgres:16
-    container_name: school-erp-db
+    container_name: ${DB_CONTAINER:-school-erp-db}
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: school_erp
     ports:
-      - '5442:5432'
+      - '${DB_PORT:-5442}:5432'
     volumes:
       - school-erp-pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -21,4 +25,4 @@ services:
 
 volumes:
   school-erp-pgdata:
-    name: school-erp-pgdata
+    name: ${DB_VOLUME:-school-erp-pgdata}

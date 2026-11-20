@@ -43,6 +43,7 @@ function toForm(s: HrSettings): HrRulesFormValues {
     dayDivisor: s.payroll.dayDivisor,
     partTime: { ...s.payroll.partTime },
     repetitionWindow: s.penalties.repetitionWindow,
+    defaultProbationMonths: s.employees.defaultProbationMonths,
   };
 }
 
@@ -63,7 +64,7 @@ export function ruleFromForm(values: {
   };
 }
 
-/** Lateness rule, payroll rule and the penalty repetition window (§5, §6, §7). */
+/** Lateness rule, payroll rule, the penalty repetition window and the default probation length (§3, §5–§7). */
 export function HrRulesSection() {
   const { t } = useTranslation();
   const settings = useResource('hr-settings', () => GET_HR_SETTINGS());
@@ -117,6 +118,7 @@ function HrRulesForm({ initial, onSaved }: { initial: HrSettings; onSaved: (next
       if (dirtyFields.partTime) payroll.partTime = values.partTime;
       if (Object.keys(payroll).length) body.payroll = payroll;
       if (dirtyFields.repetitionWindow) body.penalties = { repetitionWindow: values.repetitionWindow };
+      if (dirtyFields.defaultProbationMonths) body.employees = { defaultProbationMonths: values.defaultProbationMonths };
 
       const res = await callApi(UPDATE_HR_SETTINGS(body));
       if (res.success && res.data) {
@@ -251,6 +253,21 @@ function HrRulesForm({ initial, onSaved }: { initial: HrSettings; onSaved: (next
             name="repetitionWindow"
             label={t('settings.hrRules.penalties.window')}
             options={REPETITION_WINDOWS.map((w) => ({ value: w, label: t(`common.enums.repetitionWindow.${w}`) }))}
+            required
+            disabled={!canEdit}
+          />
+        </div>
+      </SectionPanel>
+
+      <SectionPanel title={t('settings.hrRules.employees.title')} description={t('settings.hrRules.employees.description')}>
+        <div className="grid gap-5 md:grid-cols-2">
+          <NumberField
+            control={form.control}
+            name="defaultProbationMonths"
+            label={t('settings.hrRules.employees.probation')}
+            hint={t('settings.hrRules.employees.probationHint')}
+            placeholder={t('settings.hrRules.employees.probationPlaceholder')}
+            suffix={t('settings.units.months')}
             required
             disabled={!canEdit}
           />

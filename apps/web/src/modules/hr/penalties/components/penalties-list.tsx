@@ -16,6 +16,7 @@ import { formatMonth } from '@/shared/lib/format';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { penaltiesQueryString, type PenaltiesListQuery } from '../lib/list-query';
 import { PenaltiesTable } from './penalties-table';
+import { PenaltyDetailsDialog } from './penalty-details-dialog';
 import { RecordPenaltyDialog } from './record-penalty-dialog';
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -33,6 +34,8 @@ export interface PenaltiesListProps {
   /** For the record dialog: active employees and the violations in use. */
   employees: SelectOption[];
   violations: SelectOptionGroup[];
+  /** The penalty a link opens (`?penalty=<id>`, a notification's): shown over the list. */
+  focused?: PenaltyRecord;
 }
 
 /** The month's penalties, filtered by status and a search, with "Record a penalty". */
@@ -45,6 +48,7 @@ export function PenaltiesList({
   error = false,
   employees,
   violations,
+  focused,
 }: PenaltiesListProps) {
   const { t, locale } = useTranslation();
   const router = useRouter();
@@ -160,6 +164,10 @@ export function PenaltiesList({
             <ClearFilters count={filterCount} onClear={clearFilters} disabled={loading || pending} className="ms-auto" />
           </div>
         }
+      />
+      <PenaltyDetailsDialog
+        record={focused}
+        onClose={() => router.push(`${basePath}${penaltiesQueryString(query, currentMonth)}`, { scroll: false })}
       />
       <RecordPenaltyDialog open={recording} onOpenChange={setRecording} employees={employees} violations={violations} />
     </div>

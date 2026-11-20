@@ -62,7 +62,7 @@ describe('every write endpoint declares its audit (D6)', () => {
     expect(unknown).toEqual([]);
   });
 
-  it('settings writes are wired; the handlers still waiting for T28 / T29 are listed (T31 expects none)', () => {
+  it('settings writes are wired; no handler is left waiting for T28 / T29 (T31)', () => {
     const audited = writes.filter((w) => w.declaration.kind === 'audited').map((w) => w.route);
     expect(audited).toEqual(
       expect.arrayContaining([
@@ -70,12 +70,60 @@ describe('every write endpoint declares its audit (D6)', () => {
         expect.stringMatching(/^POST \/settings\/school\/logo /),
       ]),
     );
-    const pending = writes.filter(
-      (w) =>
-        w.declaration.kind === 'not-audited' && /^wired in T(28|29)$/.test(w.declaration.reason),
+    // Only deliberate reasons remain: no `wired in …` placeholder from the audit foundation.
+    const placeholders = writes
+      .filter((w) => w.declaration.kind === 'not-audited' && /^wired in\b/i.test(w.declaration.reason))
+      .map((w) => w.route);
+    expect(placeholders).toEqual([]);
+  });
+
+  it('every penalty write records its hr.penalty.* action (T29)', () => {
+    const declared = writes
+      .filter((w) => /^\w+ \/hr\/penalties\b/.test(w.route))
+      .map((w) => [
+        w.route.replace(/ \(.*\)$/, ''),
+        w.declaration.kind === 'audited' ? w.declaration.action : w.declaration.kind,
+      ]);
+    expect(declared).toEqual([
+      ['POST /hr/penalties', 'hr.penalty.record'],
+      ['POST /hr/penalties/:id/approve', 'hr.penalty.approve'],
+      ['POST /hr/penalties/:id/cancel', 'hr.penalty.cancel'],
+    ]);
+  });
+
+  it('every core and HR-people write records its action (T28)', () => {
+    const declared = new Map(
+      writes.map((w) => [
+        w.route.replace(/ \(.*\)$/, ''),
+        w.declaration.kind === 'audited' ? w.declaration.action : w.declaration.kind,
+      ]),
     );
-    // Shrinks as T28 and T29 replace them with @Audited; T31 changes this to `toEqual([])`.
-    expect(pending.length).toBeGreaterThan(0);
+    const expected: [string, string][] = [
+      // Sign-in records core.auth.sign_in itself, without a request transaction (AuthService.login).
+      ['POST /auth/login', 'not-audited'],
+      ['POST /auth/logout', 'core.auth.sign_out'],
+      ['POST /stages', 'core.stage.create'],
+      ['PATCH /stages/:id', 'core.stage.update'],
+      ['PATCH /hr/settings', 'hr.settings.update'],
+      ['POST /hr/departments', 'hr.department.create'],
+      ['PATCH /hr/departments/:id', 'hr.department.update'],
+      ['POST /hr/job-titles', 'hr.job_title.create'],
+      ['PATCH /hr/job-titles/:id', 'hr.job_title.update'],
+      ['POST /hr/penalty-groups', 'hr.penalty_group.create'],
+      ['PATCH /hr/penalty-groups/:id', 'hr.penalty_group.update'],
+      ['POST /hr/penalty-groups/:groupId/violations', 'hr.violation.create'],
+      ['PATCH /hr/violations/:id', 'hr.violation.update'],
+      ['POST /hr/employees', 'hr.employee.create'],
+      ['PATCH /hr/employees/:id', 'hr.employee.update'],
+      ['POST /hr/employees/:id/deactivate', 'hr.employee.deactivate'],
+      ['POST /hr/employees/:id/reactivate', 'hr.employee.reactivate'],
+      ['POST /hr/employees/:id/photo', 'hr.employee.update'],
+      ['DELETE /hr/employees/:id/photo', 'hr.employee.update'],
+      ['POST /outbox/deliveries/:id/retry', 'core.outbox.retry'],
+    ];
+    expect(expected.map(([route]) => [route, declared.get(route)])).toEqual(expected);
+    // A token refresh rotates the session; it is deliberately not recorded (D11).
+    expect(declared.get('POST /auth/refresh')).toBe('not-audited');
   });
 
   it('every user and role write records its core.user.* / core.role.* action (R8, P2)', () => {
@@ -93,8 +141,11 @@ describe('every write endpoint declares its audit (D6)', () => {
       ['PATCH /users/:id', 'core.user.update'],
       ['POST /users/:id/deactivate', 'core.user.deactivate'],
       ['POST /users/:id/reactivate', 'core.user.reactivate'],
+      ['POST /users/:id/unlock-sign-in', 'core.user.unlock_sign_in'],
       ['POST /users/:id/password', 'core.user.set_password'],
-      ['POST /account/password', 'core.user.change_password'],
+      // Records core.user.change_password itself, in one transaction with the new password: no
+      // request transaction held while a wrong password's count needs a connection (EVENTS gap 10).
+      ['POST /account/password', 'not-audited'],
     ]);
   });
 

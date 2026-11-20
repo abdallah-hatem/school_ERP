@@ -31,12 +31,12 @@
       "name": "Name",
       "email": "Email",
       "roles": "Roles",
-      "employee": "Linked employee",
+      "employee": "Employee record",
       "status": "Status",
       "lastSignIn": "Last sign-in",
       "actions": "Actions"
     },
-    "notLinked": "Not linked",
+    "notLinked": "No employee record",
     "never": "Never",
     "today": "Today, {time}",
     "mustChange": "Must change password",
@@ -45,7 +45,8 @@
       "view": "Open",
       "setPassword": "Set temporary password",
       "deactivate": "Deactivate",
-      "reactivate": "Reactivate"
+      "reactivate": "Reactivate",
+      "unlock": "Unlock sign-in"
     },
     "deactivate": {
       "title": "Deactivate {name}?",
@@ -60,13 +61,21 @@
       "done": "{name} can sign in again."
     },
     "lastAdmin": "The last System admin can't be deactivated.",
-    "temporaryPassword": "Temporary password"
+    "temporaryPassword": "Temporary password",
+    "locked": "Sign-in locked",
+    "lockedTitle": "Too many wrong passwords: sign-in is locked until {time}.",
+    "unlock": {
+      "title": "Unlock sign-in for {name}?",
+      "body": "Their wrong passwords are forgotten and they can sign in right away.",
+      "confirm": "Unlock",
+      "done": "{name} can sign in again."
+    }
   },
   "userForm": {
     "addTitle": "Add user",
     "addDescription": "New users get a temporary password and choose their own when they first sign in.",
-    "editDescription": "Edit the account, its roles and the linked employee.",
-    "viewDescription": "The account, its roles and the linked employee.",
+    "editDescription": "Edit the account, its roles and their employee record.",
+    "viewDescription": "The account, its roles and their employee record.",
     "account": "Account",
     "name": "Full name",
     "namePlaceholder": "Rana Mostafa",
@@ -79,14 +88,15 @@
     "noRoleMatches": "No role matches “{query}”.",
     "noRoles": "No role picked: this user can sign in but sees nothing yet.",
     "lockedAdmin": "{name} is the only System admin. Give the role to someone else first.",
-    "employee": "Linked employee",
+    "employee": "Who is this person in HR?",
     "employeeOptional": "Optional",
-    "employeeHint": "Scopes like “Their stage” and “Their team” use this employee.",
+    "employeeHint": "Pick their employee record. Roles limited to their stage, their team or themselves only need it — without it they see nothing.",
+    "employeeNeeded": "This person will see no records until you pick who they are in HR.",
     "employeeField": "Employee",
     "employeeFieldHint": "Search by name or employee code.",
     "chooseEmployee": "Choose an employee",
     "searchEmployees": "Type a name or code",
-    "noEmployee": "Not linked",
+    "noEmployee": "No employee record",
     "alreadyLinked": "already has an account",
     "inactiveEmployee": "has left",
     "employeesMatch": {
@@ -127,7 +137,10 @@
     "errors": {
       "name": "Enter the person's full name.",
       "email": "Enter an email like name@school.edu.eg."
-    }
+    },
+    "lockedTitle": "Sign-in locked",
+    "lockedBody": "Too many wrong passwords. Sign-in is locked until {time}, unless you unlock it.",
+    "unlock": "Unlock sign-in"
   },
   "tempPassword": {
     "label": "Temporary password",
@@ -154,7 +167,7 @@
       "heldBy": "Held by",
       "actions": "Actions"
     },
-    "builtIn": "Built-in",
+    "builtIn": "Starting role",
     "custom": "Custom",
     "everyPermission": "Every permission",
     "permissionCount": {
@@ -173,7 +186,7 @@
       "many": "{count} users",
       "other": "{count} users"
     },
-    "note": "Built-in roles can be edited but not deleted. A custom role can be deleted once nobody holds it. System admin always holds every permission.",
+    "note": "Starting roles and custom roles can be edited, and deleted once nobody holds them. System admin always holds every permission and can't be deleted.",
     "actions": {
       "edit": "Edit",
       "view": "Open",
@@ -192,8 +205,11 @@
     "delete": {
       "title": "Delete the role “{name}”?",
       "body": "Nobody holds it. Deleting it can't be undone; the activity log keeps what it granted.",
+      "startingRole": "It's a starting role: future updates add new permissions to starting roles automatically. A role you make to replace it won't get them.",
       "confirm": "Delete role",
-      "done": "The role “{name}” was deleted."
+      "done": "The role “{name}” was deleted.",
+      "blockedTitle": "“{name}” can't be deleted yet",
+      "blockedBody": "Take the role away from them in Users first."
     },
     "emptyTitle": "No roles yet",
     "emptyBody": "Add a custom role to group the permissions some users need."
@@ -222,9 +238,9 @@
     "scopesTitle": "Scopes",
     "scopes": {
       "all": "Every employee in the school.",
-      "own_stage": "Employees of the stage of the user's linked employee.",
-      "own_team": "Employees whose direct manager is the user's linked employee.",
-      "self": "Only the user's own linked employee."
+      "own_stage": "Employees of the stage of the user's employee record.",
+      "own_team": "Employees this user manages directly, through their employee record.",
+      "self": "Only the user's own employee record."
     },
     "systemAdminTitle": "Holds every permission",
     "systemAdminBody": "The System admin always has every permission, including ones added later. It can't be edited or deleted, and the last System admin can't lose the role.",
@@ -247,8 +263,8 @@
     "askAdmin": "Ask a System admin to change your name or email.",
     "yourRoles": "Your roles",
     "noRoles": "No roles yet. Ask a System admin.",
-    "linkedEmployee": "Linked employee",
-    "notLinked": "Not linked",
+    "linkedEmployee": "Employee record",
+    "notLinked": "No employee record",
     "changePassword": "Change password",
     "changePasswordHint": "Choose a password you don't use anywhere else.",
     "currentPassword": "Current password",
@@ -261,7 +277,13 @@
     "passwordChanged": "Password changed",
     "unknown": "Not recorded",
     "signOut": "Sign out",
-    "loadFailed": "Your account couldn't load."
+    "loadFailed": "Your account couldn't load.",
+    "tabs": {
+      "label": "My account sections",
+      "profile": "Profile",
+      "notifications": "Notifications"
+    },
+    "notificationsDescription": "Choose what you are told about."
   },
   "noAccess": {
     "usersTitle": "You can't see the users",

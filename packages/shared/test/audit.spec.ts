@@ -10,11 +10,13 @@ import {
   HrCatalogueKey,
   HrListKey,
   HrSettingKey,
+  NotificationSettingKey,
   SchoolSettingKey,
   SETTINGS_HISTORY_ACTION_KEYS,
   AUDIT_MONEY_ACTIONS,
   isAuditAction,
   isMoneyEntry,
+  isSalaryField,
 } from '../src';
 
 type Tree = { [k: string]: string | Tree };
@@ -82,6 +84,7 @@ describe('audit action registry (D5)', () => {
     const fields = [
       ...Object.values(SchoolSettingKey),
       ...Object.values(HrSettingKey),
+      ...Object.values(NotificationSettingKey),
       ...Object.values(HrListKey),
       ...Object.values(HrCatalogueKey),
       'lists.stages',
@@ -114,6 +117,14 @@ describe('money entries (Activity tag and summary)', () => {
         changes: [{ field: 'phone', before: '010', after: '011' }],
       }),
     ).toBe(false);
+    // The insured salary is money too (and still salary-type, hidden from viewers without every salary).
+    expect(
+      isMoneyEntry({
+        action: 'hr.employee.update',
+        changes: [{ field: 'insuredSalary', before: null, after: 650000 }],
+      }),
+    ).toBe(true);
+    expect(isSalaryField('insuredSalary')).toBe(true);
     expect(AUDIT_MONEY_ACTIONS.length).toBeGreaterThan(0);
     expect(AUDIT_MONEY_ACTIONS.every((a) => a.startsWith('hr.payroll.') || a.startsWith('accounting.payroll.'))).toBe(true);
     // §10: the taxes accounting works out for an approved month are money too.

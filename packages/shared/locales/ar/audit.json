@@ -27,14 +27,18 @@
     "lateness_month": "تأخير الشهر",
     "payroll_run": "مسيّر رواتب",
     "accounting_settings": "قواعد المحاسبة",
-    "accounting_payroll": "ضرائب الرواتب"
+    "accounting_payroll": "ضرائب الرواتب",
+    "outbox_delivery": "تسليم حدث",
+    "notification_preferences": "تفضيلات الإشعارات",
+    "notification_settings": "إعدادات الإشعارات"
   },
   "actions": {
     "core": {
       "auth": {
         "sign_in": "تسجيل الدخول",
         "sign_out": "تسجيل الخروج",
-        "sign_in_failed": "محاولة دخول فاشلة بالبريد {entity}"
+        "sign_in_failed": "محاولة دخول فاشلة بالبريد {entity}",
+        "locked_out": "قفل الدخول بالبريد {entity} بعد محاولات خاطئة كثيرة"
       },
       "settings": {
         "update": "تعديل إعدادات المدرسة",
@@ -50,12 +54,22 @@
         "deactivate": "إيقاف المستخدم {entity}",
         "reactivate": "إعادة تفعيل المستخدم {entity}",
         "set_password": "تعيين كلمة مرور مؤقتة للمستخدم {entity}",
-        "change_password": "تغيير كلمة مرور المستخدم {entity}"
+        "change_password": "تغيير كلمة مرور المستخدم {entity}",
+        "unlock_sign_in": "فتح قفل الدخول للمستخدم {entity}"
       },
       "role": {
         "create": "إضافة الدور {entity}",
         "update": "تعديل الدور {entity}",
         "delete": "حذف الدور {entity}"
+      },
+      "outbox": {
+        "retry": "إعادة محاولة تسليم الحدث {entity}"
+      },
+      "notification_preferences": {
+        "update": "تعديل تفضيلات الإشعارات لـ {entity}"
+      },
+      "notification_settings": {
+        "update": "تعديل إعدادات الإشعارات"
       }
     },
     "hr": {
@@ -96,6 +110,8 @@
         "create": "إنشاء مسيّر رواتب {entity}",
         "recalculate": "إعادة حساب مسيّر رواتب {entity}",
         "approve": "اعتماد مسيّر رواتب {entity}",
+        "returned": "إعادة مسيّر رواتب {entity} إلى مسودة (من الحسابات)",
+        "transferred": "تسجيل تحويل رواتب مسيّر {entity}",
         "adjustment_add": "إضافة تسوية إلى مسيّر رواتب {entity}",
         "adjustment_remove": "حذف تسوية من مسيّر رواتب {entity}"
       }
@@ -105,7 +121,9 @@
         "update": "تعديل قواعد المحاسبة"
       },
       "payroll": {
-        "record": "حساب ضرائب رواتب {entity}"
+        "record": "حساب ضرائب رواتب {entity}",
+        "return": "إعادة رواتب {entity} إلى الموارد البشرية",
+        "finalize": "إنهاء رواتب {entity} (تم التحويل)"
       }
     }
   },
@@ -133,6 +151,7 @@
     "fingerprintId": "رقم البصمة",
     "contractStart": "بداية العقد",
     "contractEnd": "نهاية العقد",
+    "probationEnd": "نهاية فترة الاختبار",
     "usesBus": "يستخدم أتوبيس المدرسة",
     "photoUrl": "الصورة",
     "insuranceStatus": "حالة التأمين",
@@ -150,7 +169,9 @@
     "university": "الجامعة",
     "graduationYear": "سنة التخرج",
     "status": "الحالة",
+    "transferredAt": "تاريخ التحويل",
     "userId": "حساب المستخدم",
+    "lockedUntil": "الدخول مقفل حتى",
     "groupId": "مجموعة الجزاءات",
     "note": "ملاحظة",
     "levels": "المستويات",
@@ -191,6 +212,16 @@
       "penalties": {
         "repetitionWindow": "فترة تكرار الجزاءات"
       },
+      "employees": {
+        "defaultProbationMonths": "مدة فترة الاختبار الافتراضية"
+      },
+      "reminders": {
+        "contractEndDays": "التذكير بانتهاء العقد (قبله بأيام)",
+        "contractEndSecondDays": "التذكير الثاني بانتهاء العقد (قبله بأيام)",
+        "probationEndDays": "التذكير بانتهاء فترة الاختبار (قبلها بأيام)",
+        "latenessCheckDay": "يوم مراجعة التأخير",
+        "payrollCheckDay": "يوم مراجعة الرواتب"
+      },
       "departments": "القسم",
       "jobTitles": "المسمى الوظيفي",
       "penaltyGroups": "مجموعة الجزاءات",
@@ -208,7 +239,28 @@
         "martyrPercent": "نسبة صندوق الشهداء",
         "insurancePercent": "حصة العامل في التأمينات"
       }
+    },
+    "notifications": {
+      "retention": {
+        "readDays": "مدة الاحتفاظ بالإشعارات المقروءة (أيام)",
+        "resolvedDays": "مدة الاحتفاظ بالموافقات المنتهية (أيام)",
+        "maxDays": "أقصى مدة للاحتفاظ بأي إشعار (أيام)"
+      }
     }
+  },
+  "totals": {
+    "net": "الصافي",
+    "employees": "الموظفون",
+    "flagged": "للمراجعة",
+    "monthSalary": "الرواتب",
+    "gross": "إجمالي الرواتب",
+    "penaltyAmount": "الجزاءات",
+    "latenessAmount": "التأخير",
+    "adjustmentAdditions": "الإضافات",
+    "adjustmentDeductions": "الخصومات",
+    "incomeTax": "ضريبة الدخل",
+    "martyrTax": "صندوق الشهداء",
+    "insuranceAmount": "تأمينات الموظف"
   },
   "activity": {
     "description": "كل تغيير وكل تسجيل دخول في المدرسة، الأحدث أولًا. لا يمكن تعديل السجلات أو حذفها.",
@@ -351,6 +403,19 @@
       "other": "{count} دقيقة"
     },
     "yes": "نعم",
-    "no": "لا"
+    "no": "لا",
+    "file": {
+      "photo": {
+        "added": "أُضيفت صورة",
+        "changed": "تغيّرت الصورة",
+        "removed": "حُذفت الصورة"
+      },
+      "logo": {
+        "added": "أُضيف شعار المدرسة",
+        "changed": "تغيّر شعار المدرسة",
+        "removed": "حُذف شعار المدرسة"
+      },
+      "uploaded": "مرفوع"
+    }
   }
 }

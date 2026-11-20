@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { createContext, useContext, type ReactNode } from 'react';
 import { EmptyState, ErrorState } from '@/shared/components/layout/empty-state';
 import { SkeletonText } from '@/shared/components/ui/skeleton';
 import { useScrollEdges } from '@/shared/hooks/use-scroll-edges';
@@ -32,12 +32,14 @@ export interface DataTableColumn<Row> {
   /** Width/min-width classes for the column, e.g. `w-36` or `min-w-40`. */
   className?: string;
   /**
-   * Its place on a card: `title` (top, start), `status` (top, end), `highlight` (a full-width band,
+   * Its place on a card: `title` (top, start), `status` (top, end), `badges` (a row of pills on its
+   * own line under the title, for a status of several pills that would squeeze the title — a locked
+   * user's Active · Temporary password · Sign-in locked), `highlight` (a full-width band,
    * e.g. net pay), `field` (label + value grid — the default), `wide` (a field across the whole
    * grid), `menu` (the row's ⋯ `RowActions`, in the card's top end corner), `actions` (a row of
    * buttons under a divider, no label) or `hidden`.
    */
-  card?: 'title' | 'status' | 'highlight' | 'field' | 'wide' | 'menu' | 'actions' | 'hidden';
+  card?: 'title' | 'status' | 'badges' | 'highlight' | 'field' | 'wide' | 'menu' | 'actions' | 'hidden';
   /** Label on the card; defaults to `header` when that is a string. */
   cardLabel?: ReactNode;
   /**
@@ -48,6 +50,19 @@ export interface DataTableColumn<Row> {
 }
 
 export type RowTone = 'warning' | 'danger' | undefined;
+
+/**
+ * A totals row under the rows (a subtotal, a month's total): `<tfoot>` in the table, a summary card
+ * after the cards. Each value sits under its column (by column id); the first column holds `label`.
+ */
+export interface DataTableFooter {
+  /** In the first column: "Subtotal", "Total · 12 employees". */
+  label: ReactNode;
+  /** The value under each column, by column id; a column left out is empty. */
+  cells?: Partial<Record<string, ReactNode>>;
+  /** Instead of the values: one note across the other columns (totals the viewer may not see). */
+  note?: ReactNode;
+}
 
 export interface DataTableProps<Row> {
   columns: DataTableColumn<Row>[];
@@ -71,18 +86,61 @@ export interface DataTableProps<Row> {
   rowTone?: (row: Row) => RowTone;
   /**
    * The container width below which rows become cards (default 740). A table whose columns' minimum
-   * widths add up to more than 740px passes a wider one, so it never scrolls sideways.
+   * widths add up to more than 740px passes a wider one, so it never scrolls sideways. `'always'`:
+   * cards on every width, no table on screen (print still lists the rows as a table).
    */
-  cardsBelow?: CardsBelow;
+  cardsBelow?: CardsBelow | 'always';
+  /**
+   * The totals card under the cards (`'end'`, default) or none on screen (`'none'`): the screen
+   * shows the totals elsewhere (the Approved payroll month's four tiles, owner 2026-11-20). The
+   * printout keeps its totals row either way.
+   */
+  footerCard?: 'end' | 'none';
   /**
    * The cards' height follows their text (long names that wrap on a phone): the skeleton spec
    * compares their width only. Rows (the table view) are still compared in full.
    */
   cardHeightsVary?: boolean;
+  /**
+   * A totals row under the rows (and a summary card under the cards). Not drawn on an empty list.
+   * Like every row, it spans the table's full width in both directions.
+   */
+  footer?: DataTableFooter;
+  /**
+   * Every row, for print: the screen shows `rows` (a page, a search's matches) and the printout
+   * (`@media print`) lists all of these instead, as a table with the footer and no pagination.
+   */
+  printRows?: Row[];
+  /**
+   * `false`: the table and its parts carry no `data-skeleton-block`, so the skeleton spec measures
+   * them as part of the block around them. For a table whose very presence is data — a statement's
+   * group that is empty one month (an empty state) and full the next — which no skeleton can know.
+   */
+  skeletonBlocks?: boolean;
+  /**
+   * The table view scrolls inside a box at most this tall and its column names stay on top while
+   * the rows scroll (payroll tables, owner 2026-11-19); a `footer` (the totals row) stays pinned to
+   * the box's bottom the same way, so it is always in sight (dry run 2026-11-20). Cards and print
+   * are unaffected.
+   */
+  scrollHeight?: 'screen';
   className?: string;
 }
 
+/**
+ * A card's label/value grid. Sized for eight-digit amounts (`21,474,836.47`, the largest salary):
+ * one column in the narrowest list (a 320px phone), two from 340px, four only from 600px — at four
+ * across from 500px, or two across under 340px, such a figure overflowed its cell.
+ */
+const CARD_FIELDS = 'grid grid-cols-1 gap-2 @min-[340px]:grid-cols-2 @min-[600px]:grid-cols-4';
+
 const alignClass = { start: 'text-start', end: 'text-end', center: 'text-center' } as const;
+
+/** Whether this table's parts carry their `data-skeleton-block` names (`skeletonBlocks`). */
+const BlocksContext = createContext(true);
+function useBlock(name: string): string | undefined {
+  return useContext(BlocksContext) ? name : undefined;
+}
 const SKELETON_CAP = 20;
 
 function cardLabel<Row>(column: DataTableColumn<Row>): ReactNode {
@@ -104,10 +162,17 @@ export function DataTable<Row>({
   toolbar,
   rowTone,
   cardsBelow = 740,
+  footerCard = 'end',
   cardHeightsVary = false,
+  footer,
+  printRows,
+  skeletonBlocks = true,
+  scrollHeight,
   className,
 }: DataTableProps<Row>) {
-  const view = VIEW_CLASSES[cardsBelow];
+  // Cards on every width: no screen table at all, and the cards show at every container width.
+  const cardsOnly = cardsBelow === 'always';
+  const view = cardsOnly ? { table: '', cards: '' } : VIEW_CLASSES[cardsBelow];
   const { t } = useTranslation();
   const skeletonCount = Math.min(pagination?.limit ?? 8, SKELETON_CAP);
   const showSkeleton = loading && !rows?.length && !error;
@@ -124,14 +189,22 @@ export function DataTable<Row>({
       ...column,
       cell: () => column.skeleton ?? <SkeletonText />,
     }));
+    // The totals row keeps its place: the label, and a bar where each value goes.
+    const skeletonFooter: DataTableFooter | undefined = footer && {
+      label: <SkeletonText />,
+      cells: Object.fromEntries(Object.keys(footer.cells ?? {}).map((id) => [id, <SkeletonText key={id} />])),
+      note: footer.note === undefined ? undefined : <SkeletonText />,
+    };
     body = (
       <div aria-busy="true">
         <span role="status" className="sr-only">
           {t('ui.states.loading')}
         </span>
         <div aria-hidden="true">
-          <Table columns={skeletonColumns} rows={placeholders} getRowId={String} label={label} viewClass={view.table} />
-          <Cards columns={skeletonColumns} rows={placeholders} getRowId={String} label={label} viewClass={view.cards} heightsVary={cardHeightsVary} />
+          {cardsOnly ? null : (
+            <Table columns={skeletonColumns} rows={placeholders} getRowId={String} label={label} viewClass={view.table} footer={skeletonFooter} scrollHeight={scrollHeight} />
+          )}
+          <Cards columns={skeletonColumns} rows={placeholders} getRowId={String} label={label} viewClass={view.cards} heightsVary={cardHeightsVary} footer={skeletonFooter} footerCard={footerCard} />
         </div>
       </div>
     );
@@ -143,25 +216,52 @@ export function DataTable<Row>({
         aria-busy={refreshing || undefined}
         className={cn('transition-opacity duration-150', refreshing && 'pointer-events-none opacity-55')}
       >
-        <Table columns={columns} rows={rows ?? []} getRowId={getRowId} label={label} rowTone={rowTone} viewClass={view.table} />
-        <Cards columns={columns} rows={rows ?? []} getRowId={getRowId} label={label} rowTone={rowTone} viewClass={view.cards} heightsVary={cardHeightsVary} />
+        {cardsOnly ? null : (
+          <Table columns={columns} rows={rows ?? []} getRowId={getRowId} label={label} rowTone={rowTone} viewClass={view.table} footer={footer} scrollHeight={scrollHeight} />
+        )}
+        <Cards columns={columns} rows={rows ?? []} getRowId={getRowId} label={label} rowTone={rowTone} viewClass={view.cards} heightsVary={cardHeightsVary} footer={footer} footerCard={footerCard} />
       </div>
+    );
+  }
+  // Print lists every row: the screen's view (a page, a search's matches) is left out of the
+  // printout and this copy, hidden on screen (and from assistive tech), stands in for it.
+  const printAll = !showSkeleton && !error && (printRows?.length ?? 0) > 0;
+  if (printAll) {
+    body = (
+      <>
+        <div className="print:hidden">{body}</div>
+        <div data-print-rows="" aria-hidden="true" className="hidden print:block">
+          <BlocksContext.Provider value={false}>
+            <Table columns={columns} rows={printRows ?? []} getRowId={getRowId} label={label} rowTone={rowTone} viewClass="" footer={footer} />
+          </BlocksContext.Provider>
+        </div>
+      </>
     );
   }
 
   return (
-    <section
-      aria-label={label}
-      data-cards-below={cardsBelow}
-      // Its height follows the row count; the head, a row and the pagination are measured instead.
-      data-skeleton-block="table"
-      data-skeleton-measure="width"
-      className={cn('@container min-w-0 overflow-hidden rounded-3xl bg-card shadow-card', className)}
-    >
-      {toolbar ? <div data-skeleton-block="table-toolbar" className="flex flex-wrap items-center gap-3 px-5 pt-5 pb-4">{toolbar}</div> : null}
-      {body}
-      {pagination && !error ? <Pagination {...pagination} disabled={loading || refreshing} loading={showSkeleton} /> : null}
-    </section>
+    <BlocksContext.Provider value={skeletonBlocks}>
+      <section
+        aria-label={label}
+        data-cards-below={cardsBelow}
+        // Its height follows the row count; the head, a row and the pagination are measured instead.
+        data-skeleton-block={skeletonBlocks ? 'table' : undefined}
+        data-skeleton-measure={skeletonBlocks ? 'width' : undefined}
+        className={cn('@container min-w-0 overflow-hidden rounded-3xl bg-card shadow-card', className)}
+      >
+        {toolbar ? <div data-skeleton-block={skeletonBlocks ? 'table-toolbar' : undefined} className="flex flex-wrap items-center gap-3 px-5 pt-5 pb-4">{toolbar}</div> : null}
+        {body}
+        {pagination && !error ? (
+          <Pagination
+            {...pagination}
+            disabled={loading || refreshing}
+            loading={showSkeleton}
+            skeletonBlock={skeletonBlocks}
+            className={printRows ? 'print:hidden' : undefined}
+          />
+        ) : null}
+      </section>
+    </BlocksContext.Provider>
   );
 }
 
@@ -177,6 +277,11 @@ interface RowsProps<Row> {
   viewClass: string;
   /** Cards only: their height follows their text (`cardHeightsVary`). */
   heightsVary?: boolean;
+  footer?: DataTableFooter;
+  /** Table only: a capped, vertically scrolling body under a sticky header (`scrollHeight`). */
+  scrollHeight?: 'screen';
+  /** Cards only: the totals card after the cards, or none (`footerCard`). */
+  footerCard?: 'end' | 'none';
 }
 
 const toneBar = {
@@ -184,8 +289,15 @@ const toneBar = {
   danger: 'shadow-[inset_4px_0_0_var(--destructive)] rtl:shadow-[inset_-4px_0_0_var(--destructive)]',
 } as const;
 
-function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass }: RowsProps<Row>) {
+/** A capped table's totals cells: stuck to the scroll box's bottom, opaque, over the rows. */
+const STICKY_FOOT = 'sticky bottom-0 z-20 print:static';
+
+function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass, footer, scrollHeight }: RowsProps<Row>) {
+  const capped = scrollHeight === 'screen';
   const { ref, edges } = useScrollEdges<HTMLDivElement>();
+  const head = useBlock('table-head');
+  const rowBlock = useBlock('table-row');
+  const foot = useBlock('table-foot');
   return (
     <div data-view="table" className={cn('relative', viewClass)}>
       {/* Edge fades only on a side that hides columns, so a sideways scroll is never missed. */}
@@ -201,9 +313,26 @@ function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass }: Rows
         hidden={!edges.end}
         className="pointer-events-none absolute inset-y-0 end-0 z-10 w-8 from-card to-transparent ltr:bg-linear-to-l rtl:bg-linear-to-r"
       />
-      <div ref={ref} className="scrollbar-clean overflow-x-auto">
+      {/*
+        A table only scrolls sideways, so the vertical gutter `scrollbar-clean` keeps would be an
+        empty strip at the inline-end edge: the header, the rows' hover and hairlines and a totals
+        row stopped short of the card's edge there (right in LTR, left in RTL). No gutter: they
+        reach both edges. A scrollbar that is really needed still takes its own space (the
+        sideways one under the rows), so it never covers a cell.
+      */}
+      <div
+        ref={ref}
+        data-table-scroll=""
+        data-scroll-capped={capped ? '' : undefined}
+        className={cn(
+          'scrollbar-clean overflow-x-auto [scrollbar-gutter:auto]!',
+          // The screen less the top bar, page title and pagination; never under ~8 rows. Print
+          // drops the cap so every row is on paper.
+          capped && 'max-h-[max(26rem,calc(100dvh-14rem))] overflow-y-auto overscroll-y-contain print:max-h-none print:overflow-visible',
+        )}
+      >
       <table aria-label={label} className="w-full border-separate border-spacing-0 text-sm">
-        <thead data-skeleton-block="table-head">
+        <thead data-skeleton-block={head}>
           <tr>
             {columns.map((column) => (
               <th
@@ -212,6 +341,8 @@ function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass }: Rows
                 className={cn(
                   'bg-muted px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted-foreground',
                   'first:rounded-s-xl first:ps-5 last:rounded-e-xl last:pe-5',
+                  // Sticky column names: opaque, over the rows (and the edge fades) as they pass.
+                  capped && 'sticky top-0 z-20 print:static',
                   alignClass[column.align ?? 'start'],
                   column.className,
                 )}
@@ -225,7 +356,7 @@ function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass }: Rows
           {rows.map((row) => {
             const tone = rowTone?.(row);
             return (
-              <tr key={getRowId(row)} data-skeleton-block="table-row" data-skeleton-each className="group/row">
+              <tr key={getRowId(row)} data-skeleton-block={rowBlock} data-skeleton-each={rowBlock ? '' : undefined} className="group/row">
                 {columns.map((column, i) => (
                   <td
                     key={column.id}
@@ -245,6 +376,41 @@ function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass }: Rows
             );
           })}
         </tbody>
+        {footer ? (
+          <tfoot data-skeleton-block={foot} data-sticky-foot={capped ? '' : undefined}>
+            <tr>
+              {(footer.note === undefined ? columns : columns.slice(0, 1)).map((column, i) => (
+                <td
+                  key={column.id}
+                  className={cn(
+                    'border-t-2 border-border bg-muted px-3 py-3 align-middle font-bold whitespace-nowrap',
+                    'first:ps-5 last:pe-5',
+                    // Sticky totals: pinned to the capped box's bottom edge, over the rows, so the
+                    // total is always in sight without scrolling (dry run 2026-11-20).
+                    capped && STICKY_FOOT,
+                    alignClass[column.align ?? 'start'],
+                    column.className,
+                    // The label stays on one line even in a column whose names wrap.
+                    i === 0 && 'whitespace-nowrap',
+                  )}
+                >
+                  {i === 0 ? footer.label : footer.cells?.[column.id]}
+                </td>
+              ))}
+              {footer.note === undefined ? null : (
+                <td
+                  colSpan={Math.max(columns.length - 1, 1)}
+                  className={cn(
+                    'border-t-2 border-border bg-muted px-3 py-3 pe-5 text-end align-middle text-muted-foreground',
+                    capped && STICKY_FOOT,
+                  )}
+                >
+                  {footer.note}
+                </td>
+              )}
+            </tr>
+          </tfoot>
+        ) : null}
       </table>
       </div>
     </div>
@@ -253,13 +419,15 @@ function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass }: Rows
 
 // ── Cards (container < 740px) ────────────────────────────────────────────────
 
-function Cards<Row>({ columns, rows, getRowId, label, rowTone, viewClass, heightsVary = false }: RowsProps<Row>) {
+function Cards<Row>({ columns, rows, getRowId, label, rowTone, viewClass, heightsVary = false, footer, footerCard = 'end' }: RowsProps<Row>) {
   const titles = columns.filter((c) => c.card === 'title');
   const statuses = columns.filter((c) => c.card === 'status');
+  const badges = columns.filter((c) => c.card === 'badges');
   const highlights = columns.filter((c) => c.card === 'highlight');
   const fields = columns.filter((c) => (c.card ?? 'field') === 'field' || c.card === 'wide');
   const actions = columns.filter((c) => c.card === 'actions');
   const menus = columns.filter((c) => c.card === 'menu');
+  const card = useBlock('table-card');
 
   return (
     <ul data-view="cards" aria-label={label} className={cn('grid gap-3 px-4 pb-4', viewClass)}>
@@ -268,9 +436,9 @@ function Cards<Row>({ columns, rows, getRowId, label, rowTone, viewClass, height
         return (
           <li
             key={getRowId(row)}
-            data-skeleton-block="table-card"
-            data-skeleton-each
-            data-skeleton-measure={heightsVary ? 'width' : undefined}
+            data-skeleton-block={card}
+            data-skeleton-each={card ? '' : undefined}
+            data-skeleton-measure={card && heightsVary ? 'width' : undefined}
             className={cn(
               'flex min-w-0 flex-col gap-2.5 rounded-2xl border border-border bg-card p-3.5 shadow-xs',
               tone === 'warning' && 'border-s-4 border-s-warning',
@@ -305,6 +473,11 @@ function Cards<Row>({ columns, rows, getRowId, label, rowTone, viewClass, height
                 ) : null}
               </div>
             ) : null}
+            {badges.map((c) => (
+              <div key={c.id} className="flex min-w-0 flex-wrap items-center gap-1.5">
+                {c.cell(row)}
+              </div>
+            ))}
             {highlights.map((c) => (
               <div
                 key={c.id}
@@ -315,7 +488,7 @@ function Cards<Row>({ columns, rows, getRowId, label, rowTone, viewClass, height
               </div>
             ))}
             {fields.length ? (
-              <dl className="grid grid-cols-2 gap-2 @min-[500px]:grid-cols-4">
+              <dl className={CARD_FIELDS}>
                 {fields.map((c) => (
                   <div
                     key={c.id}
@@ -338,6 +511,44 @@ function Cards<Row>({ columns, rows, getRowId, label, rowTone, viewClass, height
           </li>
         );
       })}
+      {footer && footerCard === 'end' ? <FooterCard columns={columns} footer={footer} /> : null}
     </ul>
+  );
+}
+
+/** The totals row on a phone: the label, then each column's value under its card label. */
+function FooterCard<Row>({ columns, footer }: { columns: DataTableColumn<Row>[]; footer: DataTableFooter }) {
+  const valued = footer.note === undefined ? columns.filter((c) => footer.cells?.[c.id] !== undefined) : [];
+  const highlights = valued.filter((c) => c.card === 'highlight');
+  const fields = valued.filter((c) => c.card !== 'highlight');
+  const block = useBlock('table-card-foot');
+  return (
+    <li
+      data-skeleton-block={block}
+      data-footer-card=""
+      className="flex min-w-0 flex-col gap-2.5 rounded-2xl border border-border bg-muted p-3.5"
+    >
+      <div className="font-bold break-words">{footer.label}</div>
+      {footer.note !== undefined ? <div className="text-sm text-muted-foreground">{footer.note}</div> : null}
+      {highlights.map((c) => (
+        <div
+          key={c.id}
+          className="flex flex-wrap items-baseline justify-between gap-2 rounded-xl bg-primary-soft px-3 py-2.5 text-primary"
+        >
+          <span className="text-sm font-bold">{cardLabel(c)}</span>
+          <span className="text-xl font-extrabold">{footer.cells?.[c.id]}</span>
+        </div>
+      ))}
+      {fields.length ? (
+        <dl className={CARD_FIELDS}>
+          {fields.map((c) => (
+            <div key={c.id} className="flex min-w-0 flex-col gap-0.5 rounded-xl bg-card px-2.5 py-2">
+              <dt className="text-xs text-muted-foreground">{cardLabel(c)}</dt>
+              <dd className="min-w-0 text-sm font-bold break-words">{footer.cells?.[c.id]}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+    </li>
   );
 }

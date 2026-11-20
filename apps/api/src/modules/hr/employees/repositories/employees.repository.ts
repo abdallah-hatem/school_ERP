@@ -3,7 +3,9 @@ import { EmployeeStatus, Prisma } from '@prisma/client';
 import { ErrorCode, formatEmployeeCode, Paginated } from '@school-erp/shared';
 import { CodedException } from '../../../../common/errors/coded.exception';
 import { BaseRepository } from '../../../../common/repositories/base.repository';
+import { TransactionHost } from '@nestjs-cls/transactional';
 import { DatabaseService } from '../../../../database/database.service';
+import type { DbAdapter, DbClient } from '../../../../database/transactions';
 
 /** Counter row the employee codes come from (`Counter` table, never decremented). */
 export const EMPLOYEE_CODE_COUNTER = 'employee_code';
@@ -78,6 +80,7 @@ export const EMPLOYEE_DETAIL_SELECT = {
   fingerprintId: true,
   contractStart: true,
   contractEnd: true,
+  probationEnd: true,
   usesBus: true,
   photoUrl: true,
   insuranceStatus: true,
@@ -153,14 +156,26 @@ function rethrowUnique(e: unknown): never {
   throw e;
 }
 
+/** Employees (§3). Every query runs through the request's transaction when one is open. */
 @Injectable()
 export class EmployeesRepository extends BaseRepository<
   EmployeeSummaryRow,
   EmployeeCreateData,
   EmployeeUpdateData
 > {
-  constructor(databaseService: DatabaseService) {
+  constructor(
+    databaseService: DatabaseService,
+    private readonly txHost: TransactionHost<DbAdapter>,
+  ) {
     super(databaseService, 'employee');
+  }
+
+  /**
+   * The open transaction (an audited write's), or the plain client: an employee change and its
+   * audit entry commit together, and reads inside the write see its own changes.
+   */
+  private get db(): DbClient {
+    return this.txHost.tx;
   }
 
   list(
@@ -191,7 +206,7 @@ export class EmployeesRepository extends BaseRepository<
 
   /** The employee, or null when unknown or outside `scope` (the caller answers 404 either way). */
   findDetail(id: string, scope: EmployeeScopeWhere = {}): Promise<EmployeeDetailRow | null> {
-    return this.databaseService.employee.findFirst({
+    return this.db.employee.findFirst({
       where: { AND: [{ id }, scope] },
       select: EMPLOYEE_DETAIL_SELECT,
     });
@@ -199,13 +214,13 @@ export class EmployeesRepository extends BaseRepository<
 
   /** What a scope check needs about one employee, or null when unknown. */
   findScopeFields(id: string): Promise<EmployeeScopeFields | null> {
-    return this.databaseService.employee.findUnique({ where: { id }, select: SCOPE_SELECT });
+    return this.db.employee.findUnique({ where: { id }, select: SCOPE_SELECT });
   }
 
   /** The same, for several employees (unknown ids are absent). */
   findScopeFieldsMany(ids: readonly string[]): Promise<EmployeeScopeFields[]> {
     if (!ids.length) return Promise.resolve([]);
-    return this.databaseService.employee.findMany({
+    return this.db.employee.findMany({
       where: { id: { in: [...ids] } },
       select: SCOPE_SELECT,
     });
@@ -213,20 +228,22 @@ export class EmployeesRepository extends BaseRepository<
 
   /** The ids of the employees `scope` covers (any status). */
   async findIdsInScope(scope: EmployeeScopeWhere): Promise<string[]> {
-    const rows = await this.databaseService.employee.findMany({ where: scope, select: { id: true } });
+    const rows = await this.db.employee.findMany({ where: scope, select: { id: true } });
     return rows.map((r) => r.id);
   }
 
-  findState(id: string): Promise<{ id: string; status: EmployeeStatus } | null> {
-    return this.databaseService.employee.findUnique({
-      where: { id },
-      select: { id: true, status: true },
+  /** The ids of the employees (any status) whose code contains `q`, any case (Activity's search). */
+  async findIdsByCode(q: string): Promise<string[]> {
+    const rows = await this.db.employee.findMany({
+      where: { code: { contains: q, mode: 'insensitive' } },
+      select: { id: true },
     });
+    return rows.map((r) => r.id);
   }
 
   /** Every active employee as a compact reference, by code (lateness and payroll lists). */
   findActiveRefs(): Promise<{ id: string; code: string; nameEn: string; nameAr: string }[]> {
-    return this.databaseService.employee.findMany({
+    return this.db.employee.findMany({
       where: { status: EmployeeStatus.ACTIVE },
       select: { id: true, code: true, nameEn: true, nameAr: true },
       orderBy: { code: 'asc' },
@@ -243,7 +260,7 @@ export class EmployeesRepository extends BaseRepository<
       department: { id: string; nameEn: string; nameAr: string };
     }[]
   > {
-    return this.databaseService.employee.findMany({
+    return this.db.employee.findMany({
       where: { AND: [{ status: EmployeeStatus.ACTIVE }, scope] },
       select: {
         id: true,
@@ -258,7 +275,7 @@ export class EmployeesRepository extends BaseRepository<
 
   /** Every active employee with the fields a payroll line snapshots (§6), by code. */
   findActiveForPayroll(): Promise<PayrollSnapshotRow[]> {
-    return this.databaseService.employee.findMany({
+    return this.db.employee.findMany({
       where: { status: EmployeeStatus.ACTIVE },
       select: PAYROLL_SNAPSHOT_SELECT,
       orderBy: { code: 'asc' },
@@ -269,7 +286,7 @@ export class EmployeesRepository extends BaseRepository<
   findBankDetails(
     ids: readonly string[],
   ): Promise<{ id: string; bankName: string | null; bankAccountNumber: string | null; iban: string | null }[]> {
-    return this.databaseService.employee.findMany({
+    return this.db.employee.findMany({
       where: { id: { in: [...ids] } },
       select: { id: true, bankName: true, bankAccountNumber: true, iban: true },
     });
@@ -279,13 +296,13 @@ export class EmployeesRepository extends BaseRepository<
   async countActiveByStage(scope: EmployeeScopeWhere = {}): Promise<
     { stage: { id: string; nameEn: string; nameAr: string }; count: number }[]
   > {
-    const groups = await this.databaseService.employee.groupBy({
+    const groups = await this.db.employee.groupBy({
       by: ['stageId'],
       where: { AND: [{ status: EmployeeStatus.ACTIVE }, scope] },
       _count: { _all: true },
     });
     if (!groups.length) return [];
-    const stages = await this.databaseService.stage.findMany({
+    const stages = await this.db.stage.findMany({
       where: { id: { in: groups.map((g) => g.stageId) } },
       select: { id: true, nameEn: true, nameAr: true },
       orderBy: [{ sortOrder: 'asc' }, { nameEn: 'asc' }],
@@ -298,7 +315,7 @@ export class EmployeesRepository extends BaseRepository<
   findManagerState(
     id: string,
   ): Promise<{ id: string; status: EmployeeStatus; jobTitle: { managesPeople: boolean } } | null> {
-    return this.databaseService.employee.findUnique({
+    return this.db.employee.findUnique({
       where: { id },
       select: { id: true, status: true, jobTitle: { select: { managesPeople: true } } },
     });
@@ -307,7 +324,7 @@ export class EmployeesRepository extends BaseRepository<
   /** Id and status of each existing employee among `ids` (missing ids are simply absent). */
   findStates(ids: string[]): Promise<{ id: string; status: EmployeeStatus }[]> {
     if (!ids.length) return Promise.resolve([]);
-    return this.databaseService.employee.findMany({
+    return this.db.employee.findMany({
       where: { id: { in: ids } },
       select: { id: true, status: true },
     });
@@ -315,14 +332,14 @@ export class EmployeesRepository extends BaseRepository<
 
   /** Read of core's stages table (allowed: read anything, write only your own). */
   findStage(id: string): Promise<{ id: string; isActive: boolean } | null> {
-    return this.databaseService.stage.findUnique({
+    return this.db.stage.findUnique({
       where: { id },
       select: { id: true, isActive: true },
     });
   }
 
   async findIdByNationalId(nationalId: string): Promise<string | null> {
-    const row = await this.databaseService.employee.findUnique({
+    const row = await this.db.employee.findUnique({
       where: { nationalId },
       select: { id: true },
     });
@@ -330,7 +347,7 @@ export class EmployeesRepository extends BaseRepository<
   }
 
   async findIdByFingerprintId(fingerprintId: string): Promise<string | null> {
-    const row = await this.databaseService.employee.findUnique({
+    const row = await this.db.employee.findUnique({
       where: { fingerprintId },
       select: { id: true },
     });
@@ -338,20 +355,11 @@ export class EmployeesRepository extends BaseRepository<
   }
 
   async findIdByInsuranceNumber(insuranceNumber: string): Promise<string | null> {
-    const row = await this.databaseService.employee.findUnique({
+    const row = await this.db.employee.findUnique({
       where: { insuranceNumber },
       select: { id: true },
     });
     return row?.id ?? null;
-  }
-
-  /** The employee's current photo URL (null when none), or `undefined` when there is no such employee. */
-  async findPhotoUrl(id: string): Promise<string | null | undefined> {
-    const row = await this.databaseService.employee.findUnique({
-      where: { id },
-      select: { photoUrl: true },
-    });
-    return row ? row.photoUrl : undefined;
   }
 
   /**
@@ -359,7 +367,7 @@ export class EmployeesRepository extends BaseRepository<
    * UNION (not UNION ALL) stops on an existing cycle instead of looping forever.
    */
   async managerChainIds(startId: string): Promise<string[]> {
-    const rows = await this.databaseService.$queryRaw<{ id: string }[]>(Prisma.sql`
+    const rows = await this.db.$queryRaw<{ id: string }[]>(Prisma.sql`
       WITH RECURSIVE chain(id, manager_id) AS (
         SELECT id, manager_id FROM employees WHERE id = ${startId}::uuid
         UNION
@@ -377,7 +385,9 @@ export class EmployeesRepository extends BaseRepository<
    */
   async createWithCode(data: EmployeeCreateData): Promise<EmployeeDetailRow> {
     try {
-      return await this.databaseService.$transaction(async (tx) => {
+      // Joins the request's transaction when one is open (the audit entry commits with it).
+      return await this.txHost.withTransaction(async () => {
+        const tx = this.txHost.tx;
         const [counter] = await tx.$queryRaw<{ value: number }[]>(Prisma.sql`
           INSERT INTO counters (name, value, updated_at)
           VALUES (${EMPLOYEE_CODE_COUNTER}, 1, now())
@@ -397,7 +407,7 @@ export class EmployeesRepository extends BaseRepository<
 
   async updateEmployee(id: string, data: EmployeeUpdateData): Promise<EmployeeDetailRow> {
     try {
-      return await this.databaseService.employee.update({
+      return await this.db.employee.update({
         where: { id },
         data,
         select: EMPLOYEE_DETAIL_SELECT,

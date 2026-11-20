@@ -66,13 +66,13 @@ import {
   GearSixIcon as GearSix,
   ListMagnifyingGlassIcon as ListMagnifyingGlass,
   UserCircleIcon as UserCircle,
-  UserIcon as User,
   XCircleIcon as XCircle,
   UserCircleGearIcon as UserCircleGear,
   ShieldCheckIcon as ShieldCheck,
   ShieldStarIcon as ShieldStar,
   KeyIcon as Key,
   LockSimpleIcon as LockSimple,
+  LockSimpleOpenIcon as LockSimpleOpen,
   CopyIcon as Copy,
   IdentificationCardIcon as IdentificationCard,
   SparkleIcon as Sparkle,
@@ -80,6 +80,16 @@ import {
   UserPlusIcon as UserPlus,
   UserCircleDashedIcon as UserCircleDashed,
   EraserIcon as Eraser,
+  MicrosoftExcelLogoIcon as MicrosoftExcelLogo,
+  FilePdfIcon as FilePdf,
+  EqualsIcon as EquivalentRule,
+  NotEqualsIcon as NotEquals,
+  BellIcon as Bell,
+  FileTextIcon as FileText,
+  HourglassMediumIcon as HourglassMedium,
+  ClockCountdownIcon as ClockCountdown,
+  CalendarCheckIcon as CalendarCheck,
+  ChecksIcon as Checks,
 } from '@phosphor-icons/react/ssr';
 import type { ComponentType, SVGProps } from 'react';
 import { cn } from '@/shared/lib/utils';
@@ -221,18 +231,10 @@ export const CancelledIcon = duotone(XCircle, 'Cancelled');
 export const CoreModuleIcon = duotone(GearSix, 'CoreModule');
 export const FieldIcon = duotone(ListMagnifyingGlass, 'Field');
 export const PersonIcon = duotone(UserCircle, 'Person');
-/**
- * The neutral avatar of an employee without a photo — never initials (owner, 2026-11-18). Filled,
- * not duotone: it reads as a person's silhouette inside the avatar tile.
- */
-export function SilhouetteIcon(props: IconProps) {
-  return <User weight="fill" aria-hidden="true" focusable="false" {...props} />;
-}
-
 /*
- * The gendered avatars of an employee without a photo (owner, 2026-11-18): the classic default
- * silhouette — a plain head-and-shoulders figure, the man with short hair and ears, the woman with
- * a bob. Drawn on a 64 grid to fill the whole avatar tile (`size-full`); one flat `currentColor`
+ * The avatars of a person without a photo (owner, 2026-11-18; every person, 2026-11-19): the
+ * classic default silhouette — a plain head-and-shoulders figure, the man with short hair and ears,
+ * the woman with a bob, and a neutral one (no hair) for an account with no linked employee. Drawn on a 64 grid to fill the whole avatar tile (`size-full`); one flat `currentColor`
  * shape each (the avatar paints it white on a light grey tile). Mockup: `design/mockups/avatars-basic.html`.
  */
 type SilhouetteProps = SVGProps<SVGSVGElement>;
@@ -242,6 +244,14 @@ export function MaleSilhouetteIcon(props: SilhouetteProps) {
   return (
     <svg {...SILHOUETTE_FRAME} data-silhouette="male" {...props}>
       <path d="M7 64c2-9 9-12.5 17-15.5V42c-3.5-2.5-5.6-6.6-6.6-10.4-1.9-.1-3.1-1.8-3.1-3.9 0-1.6.7-2.8 1.8-3.3-.7-5.1-.3-10.5 3.6-14C23.3 7.1 28 6 32.5 6.2c2.6.1 4.6.6 6 1.4 1.4-.4 3 .1 3.8 1.6 2.8 1.4 4 4.5 3.9 8.2 0 2.4-.4 4.6-.9 6.7 1.2.4 2 1.7 2 3.4 0 2.2-1.3 3.9-3.2 4-1 3.9-3.1 7.9-6.6 10.4v6.5c8 3 15 6.5 17 15.5z" />
+    </svg>
+  );
+}
+
+export function PersonSilhouetteIcon(props: SilhouetteProps) {
+  return (
+    <svg {...SILHOUETTE_FRAME} data-silhouette="neutral" {...props}>
+      <path d="M7 64c2-9 9-12.5 17-15.5v-6.4c-4.2-2.8-7-7.8-7-13.6C17 18.6 23.7 10 32 10s15 8.6 15 18.5c0 5.8-2.8 10.8-7 13.6v6.4c8 3 15 6.5 17 15.5z" />
     </svg>
   );
 }
@@ -264,9 +274,26 @@ export const CustomRoleIcon = duotone(Sparkle, 'CustomRole');
 export const TemporaryPasswordIcon = duotone(Key, 'TemporaryPassword');
 export const PasswordIcon = duotone(LockKey, 'Password');
 export const LockedIcon = duotone(LockSimple, 'Locked');
+// Sign-in locked by too many wrong passwords, and a System admin unlocking it (owner 2026-11-18).
+export const UnlockIcon = duotone(LockSimpleOpen, 'Unlock');
 export const CopyIcon = duotone(Copy, 'Copy');
 export const LinkedEmployeeIcon = duotone(IdentificationCard, 'LinkedEmployee');
 export const EmailIcon = duotone(EnvelopeSimple, 'Email');
 export const AddUserIcon = duotone(UserPlus, 'AddUser');
 export const NoUserIcon = duotone(UserCircleDashed, 'NoUser');
 
+// Accounting (§10): payroll taxes, its exports, and the tax rule badge.
+export const PayrollTaxesIcon = duotone(Receipt, 'PayrollTaxes');
+export const ExcelIcon = duotone(MicrosoftExcelLogo, 'Excel');
+export const PdfIcon = duotone(FilePdf, 'Pdf');
+export const InsuredIcon = duotone(ShieldCheck, 'Insured');
+export const SameRuleIcon = duotone(EquivalentRule, 'SameRule');
+export const OtherRuleIcon = duotone(NotEquals, 'OtherRule');
+// Notifications (§11): the bell, its actions and one icon per kind of notification.
+export const NotificationsIcon = duotone(Bell, 'Notifications');
+export const MarkAllReadIcon = duotone(Checks, 'MarkAllRead');
+export const NotificationSettingsIcon = duotone(GearSix, 'NotificationSettings');
+export const ContractEndIcon = duotone(FileText, 'ContractEnd');
+export const ProbationEndIcon = duotone(HourglassMedium, 'ProbationEnd');
+export const LatenessDueIcon = duotone(ClockCountdown, 'LatenessDue');
+export const PayrollDueIcon = duotone(CalendarCheck, 'PayrollDue');

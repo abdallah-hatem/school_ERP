@@ -160,4 +160,39 @@ describe('HR rules — lateness rule editor', () => {
     expect(await screen.findByText('أدخل نسبة صحيحة من 1 إلى 100.')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'حفظ' })).toHaveProperty('disabled', true);
   });
+
+  describe('default probation length (§7, N0)', () => {
+    const probation = () => screen.getByRole('textbox', { name: /Default probation length/ });
+
+    it('shows the 3-month default with its hint; saving 0 sends only that key', async () => {
+      const user = userEvent.setup();
+      api.UPDATE_HR_SETTINGS.mockImplementation(() => ok({ ...hrSettings, employees: { defaultProbationMonths: 0 } }));
+      renderSettings(<HrRulesSection />);
+      await loaded();
+      expect((probation() as HTMLInputElement).value).toBe('3');
+      expect(screen.getByText(/0 means no probation. Existing employees keep their dates./)).toBeTruthy();
+      await user.clear(probation());
+      await user.type(probation(), '0');
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+      await waitFor(() => expect(api.UPDATE_HR_SETTINGS).toHaveBeenCalledWith({ employees: { defaultProbationMonths: 0 } }));
+      expect(await screen.findByText('Saved.')).toBeTruthy();
+    });
+
+    it('7 months is refused with its message and blocks saving; Arabic too', async () => {
+      const user = userEvent.setup();
+      renderSettings(<HrRulesSection />);
+      await loaded();
+      await user.clear(probation());
+      await user.type(probation(), '7');
+      expect(await screen.findByText('Enter whole months from 0 to 6.')).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Save' })).toHaveProperty('disabled', true);
+      cleanup();
+      renderSettings(<HrRulesSection />, 'ar');
+      await loaded('قاعدة التأخير');
+      const ar = screen.getByRole('textbox', { name: /مدة فترة الاختبار الافتراضية/ });
+      await user.clear(ar);
+      await user.type(ar, '7');
+      expect(await screen.findByText('أدخل عددًا صحيحًا من الأشهر من 0 إلى 6.')).toBeTruthy();
+    });
+  });
 });

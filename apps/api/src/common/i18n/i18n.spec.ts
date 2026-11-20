@@ -34,4 +34,15 @@ describe('translateError', () => {
   it('returns undefined for a code without a message', () => {
     expect(translateError('P2034', 'en')).toBeUndefined();
   });
+
+  it('a message with plural forms picks the form for count (Arabic noun agreement)', () => {
+    const t = (lang: 'en' | 'ar', count: number) =>
+      translateError('TOO_MANY_ATTEMPTS', lang, { count });
+    expect(t('en', 1)).toBe('Too many attempts. Try again in 1 minute.');
+    expect(t('en', 15)).toBe('Too many attempts. Try again in 15 minutes.');
+    expect(t('ar', 1)).toBe('محاولات كثيرة جدًا. حاول مرة أخرى بعد دقيقة.');
+    expect(t('ar', 2)).toBe('محاولات كثيرة جدًا. حاول مرة أخرى بعد دقيقتين.');
+    expect(t('ar', 7)).toBe('محاولات كثيرة جدًا. حاول مرة أخرى بعد 7 دقائق.');
+    expect(t('ar', 15)).toBe('محاولات كثيرة جدًا. حاول مرة أخرى بعد 15 دقيقة.');
+  });
 });

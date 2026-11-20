@@ -1,24 +1,23 @@
 import { randomUUID } from 'node:crypto';
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { TransactionHost } from '@nestjs-cls/transactional';
 import {
   AuditEntityType,
   SettingsEvent,
   ErrorCode,
   LOGO_UPLOAD,
   type AuditAction,
+  type AuditChange,
   type PublicSchoolSettings,
   type SchoolSettings,
   type SettingKey,
   type SettingsChangeScope,
-  type SettingsChangedEvent,
   type SettingValueMap,
   type UploadLogoResponse,
 } from '@school-erp/shared';
 import { CodedException } from '../../common/errors/coded.exception';
-import { AfterCommit, type DbAdapter } from '../../database/transactions';
+import { AfterCommit } from '../../database/transactions';
 import { AuditService } from '../audit';
+import { DomainEvents } from '../events';
 import type { UpdateSchoolSettingsDto } from './dto/update-school-settings.dto';
 import { FileStorageService } from './files/file-storage.service';
 import { checkImageUpload, type UploadedFileLike } from './files/image-upload';
@@ -37,19 +36,24 @@ export type { UploadedFileLike };
 const SCHOOL_FIELDS = Object.keys(SCHOOL_FIELD_KEYS) as (keyof SchoolSettings)[];
 const SCHOOL_KEYS = Object.values(SCHOOL_FIELD_KEYS);
 
-/** Who owns the keys a `setValues` call writes: core's school settings, HR's or accounting's rules. */
-export type SettingsOwner = Extract<SettingsChangeScope, 'school' | 'hr' | 'accounting'>;
+/**
+ * Who owns the keys a `setValues` call writes: core's school settings, HR's or accounting's rules,
+ * or core/notifications' retention (Settings → Notifications).
+ */
+export type SettingsOwner = Extract<SettingsChangeScope, 'school' | 'hr' | 'accounting' | 'notifications'>;
 
 const OWNER_RECORD = {
   school: { type: AuditEntityType.SCHOOL_SETTINGS, id: 'school', label: '' },
   hr: { type: AuditEntityType.HR_SETTINGS, id: 'hr', label: '' },
   accounting: { type: AuditEntityType.ACCOUNTING_SETTINGS, id: 'accounting', label: '' },
+  notifications: { type: AuditEntityType.NOTIFICATION_SETTINGS, id: 'notifications', label: '' },
 } as const;
 
 const OWNER_ACTION: Record<SettingsOwner, AuditAction> = {
   school: 'core.settings.update',
   hr: 'hr.settings.update',
   accounting: 'accounting.settings.update',
+  notifications: 'core.notification_settings.update',
 };
 
 /**
@@ -62,9 +66,8 @@ export class SettingsService {
   constructor(
     private readonly settings: SchoolSettingRepository,
     private readonly files: FileStorageService,
-    private readonly events: EventEmitter2,
+    private readonly events: DomainEvents,
     private readonly audit: AuditService,
-    private readonly txHost: TransactionHost<DbAdapter>,
     private readonly afterCommit: AfterCommit,
   ) {}
 
@@ -82,13 +85,17 @@ export class SettingsService {
    * Writes the keys whose value changed and records one audit entry listing them, all in one
    * transaction (joining the caller's, if any). After the commit, emits one `settings.changed`
    * per changed key. Validate before calling. Returns what changed.
+   *
+   * `alsoChanged`: lines the owner changed in its own tables in the same save, listed in the same
+   * entry (Settings → Notifications: the school's default per type next to the retention keys).
    */
   setValues(
     owner: SettingsOwner,
     values: Partial<SettingValueMap>,
     changedById: string | null,
+    alsoChanged: readonly AuditChange[] = [],
   ): Promise<SettingKey[]> {
-    return this.writeValues(OWNER_ACTION[owner], owner, values, changedById);
+    return this.writeValues(OWNER_ACTION[owner], owner, values, changedById, alsoChanged);
   }
 
   private async writeValues(
@@ -96,9 +103,11 @@ export class SettingsService {
     owner: SettingsOwner,
     values: Partial<SettingValueMap>,
     changedById: string | null,
+    alsoChanged: readonly AuditChange[] = [],
   ): Promise<SettingKey[]> {
     const keys = Object.keys(values) as SettingKey[];
-    const diff = await this.txHost.withTransaction(async () => {
+    // Joins the caller's transaction, or (the seed) opens one with an after-commit queue.
+    return this.afterCommit.inTransaction(async () => {
       const changed = keys.length > 0 ? diffValues(await this.getValues(keys), values) : [];
       if (changed.length > 0) {
         await this.settings.upsertMany(
@@ -110,24 +119,25 @@ export class SettingsService {
       await this.audit.record({
         action,
         entity: OWNER_RECORD[owner],
-        changes: changed.map((d) => ({ field: d.key, before: d.oldValue, after: d.newValue })),
+        changes: [
+          ...changed.map((d) => ({ field: d.key, before: d.oldValue, after: d.newValue })),
+          ...alsoChanged,
+        ],
       });
-      return changed;
+      const changedAt = new Date().toISOString();
+      for (const { key, oldValue, newValue } of changed) {
+        // Fire-and-forget, after the commit.
+        await this.events.publish(SettingsEvent.CHANGED, {
+          scope: owner,
+          key,
+          oldValue,
+          newValue,
+          changedById,
+          changedAt,
+        });
+      }
+      return changed.map((d) => d.key);
     });
-
-    const changedAt = new Date().toISOString();
-    for (const { key, oldValue, newValue } of diff) {
-      const event: SettingsChangedEvent = {
-        scope: owner,
-        key,
-        oldValue,
-        newValue,
-        changedById,
-        changedAt,
-      };
-      await this.afterCommit.run(() => this.events.emitAsync(SettingsEvent.CHANGED, event));
-    }
-    return diff.map((d) => d.key);
   }
 
   async getSchoolSettings(): Promise<SchoolSettings> {
@@ -177,13 +187,17 @@ export class SettingsService {
   ): Promise<UploadLogoResponse> {
     const { type, buffer } = checkImageUpload(file, LOGO_UPLOAD);
 
-    const logoUrl = await this.files.save(LOGO_FOLDER, `logo-${randomUUID()}.${type}`, buffer);
-    await this.writeValues(
-      'core.settings.logo_change',
-      'school',
-      { 'school.logoUrl': logoUrl },
-      changedById,
-    );
-    return { logoUrl };
+    return this.afterCommit.inTransaction(async () => {
+      const logoUrl = await this.files.save(LOGO_FOLDER, `logo-${randomUUID()}.${type}`, buffer);
+      // The file is written before the commit: a rolled-back change leaves no orphan (gap 8).
+      this.afterCommit.onRollback(() => this.files.remove(logoUrl));
+      await this.writeValues(
+        'core.settings.logo_change',
+        'school',
+        { 'school.logoUrl': logoUrl },
+        changedById,
+      );
+      return { logoUrl };
+    });
   }
 }

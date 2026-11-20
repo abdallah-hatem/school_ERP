@@ -1,5 +1,4 @@
 import { INestApplication } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   contractYearFor,
   ErrorCode,
@@ -12,12 +11,13 @@ import { todayIsoDate } from '../src/common/utils/dates.util';
 import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
 import { createAppAsTestUser } from './helpers/as-test-user';
+import { clearRecorded, EventRecorderModule, outboxEvents, recorded } from './helpers/events';
+import { historyMark, historyRows } from './helpers/history';
 
 describe('HR lists and employees (e2e)', () => {
   let app: INestApplication;
   let userId: string;
   let db: DatabaseService;
-  let emitSpy: jest.SpyInstance;
 
   let stageId: string;
   let hiddenStageId: string;
@@ -58,18 +58,15 @@ describe('HR lists and employees (e2e)', () => {
     return res.body.data as { id: string; code: string; status: string };
   };
 
-  const settingsEvents = () =>
-    emitSpy.mock.calls
-      .filter(([name]) => name === SettingsEvent.CHANGED)
-      .map(([, payload]) => payload);
+  /** `core.settings.changed` as listeners received it — after the change and its history commit. */
+  const settingsEvents = () => recorded(SettingsEvent.CHANGED);
 
   beforeAll(async () => {
     ({
       app,
       user: { id: userId },
-    } = await createAppAsTestUser());
+    } = await createAppAsTestUser(undefined, [EventRecorderModule]));
     db = app.get(DatabaseService);
-    emitSpy = jest.spyOn(app.get(EventEmitter2), 'emit');
 
     stageId = (await db.stage.create({ data: { nameEn: 'Primary', nameAr: 'ابتدائي' } })).id;
     hiddenStageId = (
@@ -104,7 +101,9 @@ describe('HR lists and employees (e2e)', () => {
       .expect(200);
   });
 
-  beforeEach(() => emitSpy.mockClear());
+  beforeEach(() => {
+    clearRecorded();
+  });
 
   afterAll(async () => {
     await db.employee.updateMany({ data: { managerId: null } });
@@ -157,6 +156,7 @@ describe('HR lists and employees (e2e)', () => {
     });
 
     it('list create / PATCH writes a history row (settings.changed emitted with old and new value)', async () => {
+      const mark = await historyMark(db);
       const created = await http(app)
         .post('/hr/job-titles')
         .send({ nameEn: 'Driver', nameAr: 'سائق', sortOrder: 3 })
@@ -165,6 +165,14 @@ describe('HR lists and employees (e2e)', () => {
       await http(app).patch(`/hr/job-titles/${item.id}`).send({ nameEn: 'Bus driver' }).expect(200);
       // An empty PATCH changes nothing and records nothing.
       await http(app).patch(`/hr/job-titles/${item.id}`).send({}).expect(200);
+
+      // One history entry per real change, written with it: there when the response is.
+      const rows = await historyRows(db, mark, HrListKey.JOB_TITLES);
+      expect(rows.map((r) => r.action)).toEqual(['hr.job_title.create', 'hr.job_title.update']);
+      const entries = await db.auditEntry.findMany({
+        where: { seq: { gt: mark }, entityType: 'job_title', entityId: item.id },
+      });
+      expect(entries.map((e) => e.id)).toEqual(rows.map((r) => r.entryId));
 
       const events = settingsEvents();
       expect(events).toHaveLength(2);
@@ -191,7 +199,7 @@ describe('HR lists and employees (e2e)', () => {
         changedById: userId,
       });
 
-      emitSpy.mockClear();
+      clearRecorded();
       await http(app)
         .post('/hr/departments')
         .send({ nameEn: 'Finance', nameAr: 'مالية' })
@@ -411,7 +419,7 @@ describe('HR lists and employees (e2e)', () => {
       ).body.data;
       expect(lead.managesPeople).toBe(true);
 
-      emitSpy.mockClear();
+      clearRecorded();
       const on = await http(app)
         .patch(`/hr/job-titles/${plain.id}`)
         .send({ managesPeople: true })
@@ -593,10 +601,13 @@ describe('HR lists and employees (e2e)', () => {
       const e = await createOk({ nationalId: nationalId() });
       const res = await http(app).post(`/hr/employees/${e.id}/deactivate`).expect(200);
       expect(res.body.data).toMatchObject({ id: e.id, code: e.code, status: 'INACTIVE' });
-      expect(emitSpy).toHaveBeenCalledWith(HrEvent.EMPLOYEE_DEACTIVATED, {
-        employeeId: e.id,
-        at: expect.any(String),
-      });
+      // Must-deliver: an outbox row, written with the change (no listener yet: delivered at once).
+      expect(await outboxEvents(db, HrEvent.EMPLOYEE_DEACTIVATED, { employeeId: e.id })).toEqual([
+        { id: expect.any(String), status: 'delivered', payload: { employeeId: e.id, at: expect.any(String) } },
+      ]);
+      // Deactivating again changes nothing: no second event.
+      await http(app).post(`/hr/employees/${e.id}/deactivate`).expect(200);
+      expect(await outboxEvents(db, HrEvent.EMPLOYEE_DEACTIVATED, { employeeId: e.id })).toHaveLength(1);
       const got = await http(app).get(`/hr/employees/${e.id}`).expect(200);
       expect(got.body.data.status).toBe('INACTIVE');
 
@@ -616,6 +627,79 @@ describe('HR lists and employees (e2e)', () => {
       await http(app).patch(`/hr/employees/${MISSING_ID}`).send({ grade: 'x' }).expect(404);
       await http(app).post(`/hr/employees/${MISSING_ID}/deactivate`).expect(404);
       await http(app).get('/hr/employees/not-a-uuid').expect(400);
+    });
+  });
+
+  describe('probation end (§3, N0)', () => {
+    const PROBATION_KEY = 'hr.employees.defaultProbationMonths';
+    const setMonths = (defaultProbationMonths: number) =>
+      http(app).patch('/hr/settings').send({ employees: { defaultProbationMonths } }).expect(200);
+    const patchEmployee = (id: string, send: object) => http(app).patch(`/hr/employees/${id}`).send(send);
+
+    afterAll(async () => {
+      await db.schoolSetting.deleteMany({ where: { key: PROBATION_KEY } });
+    });
+
+    it('edge 1 — hired 1 Sep with none given → 30 Nov; edge 2 — a given one is kept', async () => {
+      const filled = await create({ hireDate: '2024-09-01' }).expect(201);
+      expect(filled.body.data.probationEnd).toBe('2024-11-30');
+      const given = await create({ hireDate: '2024-09-01', probationEnd: '2024-10-15' }).expect(201);
+      expect(given.body.data.probationEnd).toBe('2024-10-15');
+      expect(
+        (await db.employee.findUniqueOrThrow({ where: { id: given.body.data.id } })).probationEnd?.toISOString(),
+      ).toBe('2024-10-15T00:00:00.000Z');
+    });
+
+    it('edge 4 — before the hire date → 400 PROBATION_BEFORE_HIRE, nothing saved; on the hire date is fine', async () => {
+      const count = await db.employee.count();
+      const refused = await create({ hireDate: '2024-09-01', probationEnd: '2024-08-31' }).expect(400);
+      expect(refused.body.error).toBe(ErrorCode.PROBATION_BEFORE_HIRE);
+      expect(await db.employee.count()).toBe(count);
+      await create({ hireDate: '2024-09-01', probationEnd: '2024-09-01' }).expect(201);
+      await create({ probationEnd: 'not-a-date' }).expect(400);
+
+      const e = await createOk({ hireDate: '2024-09-01' });
+      const patch = await patchEmployee(e.id, { probationEnd: '2024-01-01', grade: 'Z' }).expect(400);
+      expect(patch.body.error).toBe(ErrorCode.PROBATION_BEFORE_HIRE);
+      const after = await db.employee.findUniqueOrThrow({ where: { id: e.id } });
+      expect(after.grade).toBeNull();
+      expect(after.probationEnd?.toISOString().slice(0, 10)).toBe('2024-11-30');
+    });
+
+    it('edge 5 — an edit clears it (saved empty); edge 6 — an edited hire date leaves it where it was', async () => {
+      const e = await createOk({ hireDate: '2024-09-01' });
+      const moved = await patchEmployee(e.id, { hireDate: '2024-10-01' }).expect(200);
+      expect(moved.body.data.probationEnd).toBe('2024-11-30');
+      // A hire date moved past it is refused (it would end before the hire date).
+      const past = await patchEmployee(e.id, { hireDate: '2024-12-01' }).expect(400);
+      expect(past.body.error).toBe(ErrorCode.PROBATION_BEFORE_HIRE);
+      const cleared = await patchEmployee(e.id, { probationEnd: null }).expect(200);
+      expect(cleared.body.data.probationEnd).toBeNull();
+      expect((await db.employee.findUniqueOrThrow({ where: { id: e.id } })).probationEnd).toBeNull();
+      // With none, any hire date goes.
+      await patchEmployee(e.id, { hireDate: '2024-12-01' }).expect(200);
+    });
+
+    it('edge 3 / 7 — the default length applies to employees created afterwards only; 0 leaves it empty', async () => {
+      const before = await createOk({ hireDate: '2024-09-01' });
+      await setMonths(0);
+      const none = await create({ hireDate: '2024-09-01' }).expect(201);
+      expect(none.body.data.probationEnd).toBeNull();
+      await setMonths(6);
+      const six = await create({ hireDate: '2024-09-01' }).expect(201);
+      expect(six.body.data.probationEnd).toBe('2025-02-28');
+      // Existing dates stay.
+      expect((await http(app).get(`/hr/employees/${before.id}`).expect(200)).body.data.probationEnd).toBe('2024-11-30');
+      await db.schoolSetting.deleteMany({ where: { key: PROBATION_KEY } });
+    });
+
+    it('changing only the probation end publishes hr.employee.updated naming it', async () => {
+      const e = await createOk({ hireDate: '2024-09-01' });
+      clearRecorded();
+      await patchEmployee(e.id, { probationEnd: '2024-12-31' }).expect(200);
+      expect(recorded(HrEvent.EMPLOYEE_UPDATED)).toEqual([
+        { employeeId: e.id, fields: ['probationEnd'], at: expect.any(String) },
+      ]);
     });
   });
 
@@ -697,7 +781,7 @@ describe('HR lists and employees (e2e)', () => {
     ).body.data;
     const boss = await createOk({ departmentId: dept.id });
 
-    emitSpy.mockClear();
+    clearRecorded();
     const hired = await http(app)
       .post('/hr/employees')
       .send(
@@ -734,10 +818,9 @@ describe('HR lists and employees (e2e)', () => {
       dateOfBirth: '1990-04-12',
       hireDate: '2024-09-01',
     });
-    expect(emitSpy).toHaveBeenCalledWith(HrEvent.EMPLOYEE_HIRED, {
-      employeeId: e.id,
-      at: expect.any(String),
-    });
+    expect(recorded(HrEvent.EMPLOYEE_HIRED)).toEqual([
+      { employeeId: e.id, hireDate: '2024-09-01', at: expect.any(String) },
+    ]);
 
     const view = await http(app).get(`/hr/employees/${e.id}`).expect(200);
     expect(view.body.data).toEqual(e);
@@ -751,10 +834,20 @@ describe('HR lists and employees (e2e)', () => {
       workSystem: 'FULL_TIME',
       hireDate: '2024-08-15',
     });
-    expect(emitSpy).toHaveBeenCalledWith(HrEvent.EMPLOYEE_UPDATED, {
-      employeeId: e.id,
-      at: expect.any(String),
-    });
+    expect(recorded(HrEvent.EMPLOYEE_UPDATED)).toEqual([
+      {
+        employeeId: e.id,
+        fields: expect.arrayContaining(['basicSalary', 'workSystem', 'hireDate']),
+        at: expect.any(String),
+      },
+    ]);
+    // The same values again: nothing changed, no hr.employee.updated (EVENTS gap 3).
+    clearRecorded();
+    await http(app)
+      .patch(`/hr/employees/${e.id}`)
+      .send({ basicSalary: 1000000, workSystem: 'FULL_TIME', hireDate: '2024-08-15' })
+      .expect(200);
+    expect(recorded(HrEvent.EMPLOYEE_UPDATED)).toEqual([]);
 
     const list = await http(app).get(`/hr/employees?departmentId=${dept.id}`).expect(200);
     const row = (list.body.data as { id: string }[]).find((r) => r.id === e.id);

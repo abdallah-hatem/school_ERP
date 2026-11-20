@@ -1,6 +1,6 @@
 'use client';
 
-import { PayrollStatus, type EmployeePayrollLine } from '@school-erp/shared';
+import { PAYROLL_PAGINATION, PayrollStatus, type EmployeePayrollLine } from '@school-erp/shared';
 import { useRouter } from 'next/navigation';
 import { useTransition } from 'react';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-table/data-table';
@@ -106,8 +106,11 @@ export function EmployeePayroll({ payrollPath, tabPath, rows, total, page, limit
               limit,
               total,
               onPageChange: (p) => go(p, limit),
+              pageSizes: PAYROLL_PAGINATION.pageSizes,
+              onLimitChange: (next) => go(1, next),
             }
       }
+      scrollHeight="screen"
     />
   );
 }

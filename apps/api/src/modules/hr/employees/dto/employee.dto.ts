@@ -11,7 +11,7 @@ import {
   isValidEgyptianIban,
   isValidGraduationYear,
   isValidInsuranceNumber,
-  MAX_PIASTRES,
+  MAX_MONTHLY_PIASTRES,
   normalizeIban,
   WORK_SYSTEMS,
   WorkSystem,
@@ -126,7 +126,7 @@ export class CreateEmployeeDto implements CreateEmployeeRequest {
   /** Monthly, integer piastres, > 0. */
   @IsInt()
   @Min(1)
-  @Max(MAX_PIASTRES)
+  @Max(MAX_MONTHLY_PIASTRES)
   basicSalary: number;
 
   @IsOptional()
@@ -142,6 +142,14 @@ export class CreateEmployeeDto implements CreateEmployeeRequest {
   @IsOptional()
   @IsIsoDate()
   contractEnd?: string;
+
+  /**
+   * §3 (N0): on or after the hire date (service check, 400 `PROBATION_BEFORE_HIRE`). Left out or
+   * null on create → hire date + the default probation length; null on edit → no probation.
+   */
+  @IsOptional()
+  @IsIsoDate()
+  probationEnd?: string | null;
 
   @IsOptional()
   @IsBoolean()
@@ -171,7 +179,7 @@ export class CreateEmployeeDto implements CreateEmployeeRequest {
   @IsOptional()
   @IsInt()
   @Min(1)
-  @Max(MAX_PIASTRES)
+  @Max(MAX_MONTHLY_PIASTRES)
   insuredSalary?: number | null;
 
   // ── Bank account ──

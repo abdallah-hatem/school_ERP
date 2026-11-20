@@ -3,11 +3,11 @@
 import {
   AdjustmentType,
   PAGINATION,
+  PAYROLL_PAGINATION,
   PayrollFlag,
   PayrollStatus,
   PenaltyStatus,
   type Department,
-  type HrSettings,
   type PayrollLine,
   type PayrollRun,
   type PayrollRunQuery,
@@ -41,6 +41,7 @@ import {
   PayslipIcon,
   PendingIcon,
   RecalculateIcon,
+  RestoreIcon,
   SearchIcon,
 } from '@/shared/components/ui/icons';
 import { SkeletonPill, SkeletonProse, SkeletonText } from '@/shared/components/ui/skeleton';
@@ -51,7 +52,7 @@ import { Switch } from '@/shared/components/ui/switch';
 import { useNewestServerState } from '@/shared/hooks/use-newest-server-state';
 import { apiErrorText } from '@/shared/lib/api-error';
 import { saveDownloadedFile } from '@/shared/lib/download';
-import { formatCount, formatDate, formatMoney, formatMonth, sumMoney } from '@/shared/lib/format';
+import { formatCount, formatDate, formatMoney, formatMoneyText, formatMonth, sumMoney } from '@/shared/lib/format';
 import { localName, nameIn } from '@/shared/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
@@ -113,7 +114,7 @@ export function RunPage({
     [],
   );
   const [page, setPage] = useState(1);
-  const limit = PAGINATION.defaultLimit;
+  const [limit, setLimit] = useState<number>(PAGINATION.defaultLimit);
 
   const [recalculating, setRecalculating] = useState(false);
   /** Recalculate / Approve is in flight: search and filters wait, so no navigation overlaps it. */
@@ -161,6 +162,7 @@ export function RunPage({
   // beside the "stale" notice, which already offers Recalculate.
   const rulesNotice = draft && !approveError && run.rulesChanged && pendingNotice !== 'stale';
   const rulesTitleId = useId();
+  const returnedTitleId = useId();
 
   const pageCount = Math.max(1, Math.ceil(run.lines.length / limit));
   const currentPage = Math.min(page, pageCount);
@@ -324,7 +326,7 @@ export function RunPage({
     <div className="flex flex-col gap-6">
       <PageHeader
         title={t('payroll.runTitle', { month: monthLabel })}
-        status={<RunStatusPill status={run.status} />}
+        status={<RunStatusPill status={run.status} transferred={run.transferredAt !== null} />}
         description={
           draft
             ? t('payroll.runDescription')
@@ -367,6 +369,29 @@ export function RunPage({
           </>
         }
       />
+
+      {draft && run.returned ? (
+        // Accounting sent the approved month back (§10): why, until it is approved again.
+        <div
+          role="note"
+          aria-labelledby={returnedTitleId}
+          data-testid="returned-notice"
+          className="bg-warning-soft text-warning-ink flex items-start gap-3 rounded-2xl px-4 py-3.5"
+        >
+          <RestoreIcon className="mt-0.5 size-5 shrink-0" />
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <p id={returnedTitleId} className="font-bold">
+              {t('payroll.returned.title', { date: formatDate(run.returned.at.slice(0, 10), locale) })}
+            </p>
+            {/* The reason is what Accounting typed: isolated in its own direction (like adjustment
+                reasons), and never followed by a sentence's period of ours. */}
+            <p className="text-sm break-words" data-testid="returned-reason">
+              {t('payroll.returned.reasonLabel')} <BidiText>{run.returned.reason}</BidiText>
+            </p>
+            <p className="text-sm">{t('payroll.returned.fix')}</p>
+          </div>
+        </div>
+      ) : null}
 
       {pendingNotice === 'pending' ? (
         // Told before Approve is pressed; the button still sends (the server decides, 409).
@@ -478,6 +503,7 @@ export function RunPage({
             getRowId={(line) => line.id}
             refreshing={navigating}
             rowTone={(line) => (line.flags.length > 0 ? 'warning' : undefined)}
+            cardsBelow={RUN_LINES_CARDS_BELOW}
             empty={
               filtered ? (
                 <EmptyState
@@ -511,7 +537,13 @@ export function RunPage({
               limit,
               total: run.lines.length,
               onPageChange: setPage,
+              pageSizes: PAYROLL_PAGINATION.pageSizes,
+              onLimitChange: (next) => {
+                setLimit(next);
+                setPage(1);
+              },
             }}
+            scrollHeight="screen"
           />
 
           {notApplied.length > 0 ? (
@@ -611,6 +643,13 @@ const RUN_COLUMN_LAYOUT: Record<RunColumnId, Omit<DataTableColumn<PayrollLine>, 
   actions: { align: 'end', className: 'w-16', card: 'menu', skeleton: <RowActionsSkeleton /> },
 };
 
+/**
+ * The lines' columns need ~900px once a line holds eight-digit amounts (EGP 21,474,836.47, the
+ * largest salary allowed): narrower, the table scrolled sideways and squeezed the name to one word
+ * a line. Below it the lines are cards. The skeleton passes the same value.
+ */
+export const RUN_LINES_CARDS_BELOW = 900;
+
 /** A line column's id, header and layout (the cell is the caller's). */
 export function runColumn(id: RunColumnId, t: Translate) {
   const label = t(`payroll.table.columns.${id}`);
@@ -635,8 +674,8 @@ const TYPICAL_TOTALS: PayrollRun['totals'] = {
 };
 
 export function RunTiles({ totals }: { totals: PayrollRun['totals'] | undefined }) {
-  const { t } = useTranslation();
-  const money = (value: number | undefined) => (value === undefined ? formatMoney(value) : `${t('ui.units.currency')} ${formatMoney(value)}`);
+  const { t, locale } = useTranslation();
+  const money = (value: number | undefined) => formatMoneyText(value, locale, t('ui.units.currency'));
   const loading = totals === undefined;
   // While loading: each sub line is its own sentence worded with typical figures, drawn as bars,
   // so it wraps onto as many lines as the loaded one in every tile width and language.

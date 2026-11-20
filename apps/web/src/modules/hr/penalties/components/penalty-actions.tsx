@@ -6,6 +6,7 @@ import { useRef, useState } from 'react';
 import { useCan } from '@/core/auth';
 import { callApi } from '@/lib/callApi';
 import { RowActions } from '@/shared/components/data-table/row-actions';
+import { Button } from '@/shared/components/ui/button';
 import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { ApproveIcon, CloseIcon } from '@/shared/components/ui/icons';
 import { nameIn } from '@/shared/lib/i18n';
@@ -21,8 +22,9 @@ type Pending = 'approve' | 'cancel' | null;
  * payroll is approved, it was cancelled meanwhile — the dialog stays open with the translated
  * reason and the list refreshes to show the record as it now is. Each action shows only to a user
  * holding its permission (view only — the API refuses the rest); with neither, no menu.
+ * `variant="buttons"`: the same actions as buttons (the penalty a notification opens).
  */
-export function PenaltyActions({ record }: { record: PenaltyRecord }) {
+export function PenaltyActions({ record, variant = 'menu' }: { record: PenaltyRecord; variant?: 'menu' | 'buttons' }) {
   const { t, has, locale } = useTranslation();
   const can = useCan();
   const router = useRouter();
@@ -72,8 +74,23 @@ export function PenaltyActions({ record }: { record: PenaltyRecord }) {
     </span>
   ) : null;
 
-  return (
-    <>
+  const trigger =
+    variant === 'buttons' ? (
+      <>
+        {canCancel ? (
+          <Button variant="secondary" className="cursor-pointer text-destructive-ink" onClick={() => show('cancel')}>
+            <CloseIcon />
+            {t('penalties.cancel.button')}
+          </Button>
+        ) : null}
+        {canApprove ? (
+          <Button variant="primary" className="cursor-pointer" onClick={() => show('approve')}>
+            <ApproveIcon />
+            {t('penalties.approve.button')}
+          </Button>
+        ) : null}
+      </>
+    ) : (
       <RowActions
         label={t('ui.table.actionsFor', { name: `${name} · ${violation}` })}
         actions={[
@@ -94,6 +111,11 @@ export function PenaltyActions({ record }: { record: PenaltyRecord }) {
           },
         ]}
       />
+    );
+
+  return (
+    <>
+      {trigger}
       <ConfirmDialog
         open={open === 'approve'}
         onOpenChange={(next) => (next ? show('approve') : close())}

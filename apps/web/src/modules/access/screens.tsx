@@ -1,11 +1,14 @@
 import { PAGINATION, SYSTEM_ADMIN_ROLE, type Role, type UserAccount } from '@school-erp/shared';
 import { can } from '@/core/auth/permissions';
+import { GET_NOTIFICATION_PREFERENCES, NotificationsI18n } from '@/core/notifications';
 import { getSession } from '@/core/auth/session';
 import type { Locale } from '@/shared/lib/i18n';
 import { GET_MY_ACCOUNT, GET_ROLE, GET_ROLES, GET_USER, GET_USERS } from './apis';
+import { AccountNotificationsView } from './components/account-notifications';
 import { AccountView } from './components/account-view';
 import { AccessState } from './components/no-access';
 import { RoleForm } from './components/role-form';
+import type { RoleHolder } from './components/role-bits';
 import { RolesList } from './components/roles-list';
 import { UserForm } from './components/user-form';
 import { generateTemporaryPassword } from './lib/temp-password';
@@ -107,16 +110,16 @@ export async function RolesScreen({ locale }: { locale: Locale }) {
     GET_ROLES(),
     can(session, 'core.users.view') ? GET_USERS({ limit: PAGINATION.maxLimit }) : Promise.resolve(null),
   ]);
-  const holderNames: Record<string, string[]> = {};
+  const holders: Record<string, RoleHolder[]> = {};
   for (const u of users?.success ? (users.data ?? []) : []) {
-    for (const r of u.roles) (holderNames[r.id] ??= []).push(u.name);
+    for (const r of u.roles) (holders[r.id] ??= []).push({ id: u.id, employee: u.employee, isActive: u.isActive });
   }
   return (
     <AccessI18n locale={locale}>
       <RolesList
         basePath={rolesPath(locale)}
         roles={roles.success ? (roles.data ?? []) : []}
-        holderNames={holderNames}
+        holders={holders}
         error={!roles.success}
       />
     </AccessI18n>
@@ -157,6 +160,21 @@ export async function RoleScreen({ locale, id, from }: { locale: Locale; id?: st
         holders={holderList}
         holdersTotal={holders?.success ? (holders.meta?.total ?? 0) : (found?.userCount ?? 0)}
       />
+    </AccessI18n>
+  );
+}
+
+export async function AccountNotificationsScreen({ locale }: { locale: Locale }) {
+  const preferences = await GET_NOTIFICATION_PREFERENCES();
+  return (
+    <AccessI18n locale={locale}>
+      <NotificationsI18n locale={locale}>
+        {preferences.success && preferences.data ? (
+          <AccountNotificationsView preferences={preferences.data} />
+        ) : (
+          <AccessState kind="notFound" />
+        )}
+      </NotificationsI18n>
     </AccessI18n>
   );
 }

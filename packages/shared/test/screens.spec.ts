@@ -21,7 +21,7 @@ describe('SCREENS (who may open each page)', () => {
   });
 
   it('every signed-in user opens the dashboard and My account; nobody without keys opens anything else', () => {
-    expect(SCREEN_IDS.filter((id) => canOpenScreen([], id))).toEqual(['dashboard', 'account']);
+    expect(SCREEN_IDS.filter((id) => canOpenScreen([], id))).toEqual(['dashboard', 'account', 'accountNotifications']);
   });
 
   it('all keys open every screen and every Settings section', () => {
@@ -32,6 +32,16 @@ describe('SCREENS (who may open each page)', () => {
   it('a profile tab needs the profile as well as what the tab shows', () => {
     expect(canOpenScreen(['hr.payroll.view'], 'employeePayroll')).toBe(false);
     expect(canOpenScreen(['hr.payroll.view', 'hr.employees.view'], 'employeePayroll')).toBe(true);
+  });
+
+  it('payroll taxes (§10): the Accountant and the System admin open them; the HR officer and the HR manager don\'t', () => {
+    const keysOf = (key: string) => Object.keys(BUILT_IN_ROLES.find((r) => r.key === key)?.permissions ?? {});
+    for (const id of ['payrollTaxes', 'payrollTaxesMonth'] as const) {
+      expect(canOpenScreen(keysOf('accountant'), id)).toBe(true);
+      expect(canOpenScreen(keysOf('system_admin'), id)).toBe(true);
+      expect(canOpenScreen(keysOf('hr_officer'), id)).toBe(false);
+      expect(canOpenScreen(keysOf('hr_manager'), id)).toBe(false);
+    }
   });
 
   it('every sidebar screen is a screen; every built-in role sees at least one page besides the dashboard', () => {

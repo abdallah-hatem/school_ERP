@@ -1,5 +1,8 @@
-import type { EventEmitter2 } from '@nestjs/event-emitter';
+import type { DomainEvents } from '../../../../core/events';
+import type { AuditService } from '../../../../core/audit';
+import type { UsersService } from '../../../../core/users';
 import type { FileStorageService } from '../../../../core/settings';
+import type { AfterCommit } from '../../../../database/transactions';
 import { fakeAccess } from '../../access/hr-access.testing';
 import type { EmployeeScope } from '../../access/employee-scope.pure';
 import type { DepartmentsService } from '../../lists/services/departments.service';
@@ -9,6 +12,8 @@ import type {
   EmployeesRepository,
   EmployeeSummaryRow,
 } from '../repositories/employees.repository';
+import type { HrRemindersService } from '../../reminders/hr-reminders.service';
+import type { HrSettingsService } from '../../settings/hr-settings.service';
 import { EmployeesService } from './employees.service';
 
 /*
@@ -43,6 +48,7 @@ const detail = (over: Partial<EmployeeDetailRow> = {}): EmployeeDetailRow => ({
   fingerprintId: null,
   contractStart: d('2025-06-01'),
   contractEnd: d('2026-05-31'),
+  probationEnd: d('2024-03-31'),
   usesBus: false,
   photoUrl: null,
   insuranceStatus: 'INSURED',
@@ -93,7 +99,6 @@ function makeService(scopes: Parameters<typeof fakeAccess>[0], repo: Record<stri
     }),
     findDetail: jest.fn().mockResolvedValue(detail()),
     findScopeFields: jest.fn().mockResolvedValue({ id: 'e1', stageId: 'primary', managerId: null }),
-    findState: jest.fn().mockResolvedValue({ id: 'e1', status: 'ACTIVE' }),
     updateEmployee: jest.fn().mockResolvedValue(detail()),
     countActiveByStage: jest.fn().mockResolvedValue([]),
     findIdsInScope: jest.fn().mockResolvedValue(['e1']),
@@ -106,9 +111,18 @@ function makeService(scopes: Parameters<typeof fakeAccess>[0], repo: Record<stri
     repository as unknown as EmployeesRepository,
     { getSelectable: jest.fn() } as unknown as DepartmentsService,
     { getSelectable: jest.fn() } as unknown as JobTitlesService,
-    { emit: jest.fn() } as unknown as EventEmitter2,
+    { publish: jest.fn() } as unknown as DomainEvents,
     {} as unknown as FileStorageService,
     fakeAccess(scopes),
+    { record: jest.fn(() => Promise.resolve()) } as unknown as AuditService,
+    { run: jest.fn(), inTransaction: (fn: () => Promise<unknown>) => fn() } as unknown as AfterCommit,
+    { defaultProbationMonths: jest.fn().mockResolvedValue(3) } as unknown as HrSettingsService,
+    {
+      contractChanged: jest.fn(),
+      probationChanged: jest.fn(),
+      employeeDeactivated: jest.fn(),
+    } as unknown as HrRemindersService,
+    { accountOfEmployee: jest.fn().mockResolvedValue(null) } as unknown as UsersService,
   );
   return { service, repository };
 }
@@ -183,6 +197,13 @@ describe('employees — salary (R7)', () => {
     }
     // Everything else is still there.
     expect(employee).toMatchObject({ insuranceNumber: '123', code: 'EMP-0001' });
+  });
+
+  it('N0 edge 9 — the probation end is not salary-type: a stage head sees it without salaries', async () => {
+    const { service } = makeService(STAGE_HEAD);
+    const employee = await service.get('e1');
+    expect(employee.salaryVisible).toBe(false);
+    expect(employee.probationEnd).toBe('2024-03-31');
   });
 
   it('edge case 4 — without the key, list rows (cards) have no basicSalary', async () => {

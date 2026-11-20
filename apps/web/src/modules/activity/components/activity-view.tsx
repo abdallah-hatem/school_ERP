@@ -91,8 +91,9 @@ export function noResultsCauses(query: ActivityQuery, actors: AuditActor[], t: T
 }
 
 /**
- * The results count and the filters in use as removable chips, in one row that scrolls sideways
- * (phone and tablet, where the panel sits behind a button). Each chip reaches 44px to a finger.
+ * The results count, then the filters in use as removable chips in a row that scrolls sideways
+ * (phone and tablet, where the panel sits behind a button). The count stays outside the scrolling
+ * row, so it is never cut at its edge. Each chip reaches 44px to a finger.
  */
 function FilterChips({
   query,
@@ -121,32 +122,37 @@ function FilterChips({
   const chips = activeFilters(query, actors, t, locale);
   if (!loading && !showTotal && chips.length === 0 && clearCount === 0) return null;
   return (
-    <div className="scrollbar-clean -mx-1 flex items-center gap-2 overflow-x-auto px-1 py-1.5 text-[0.8125rem] whitespace-nowrap text-muted-foreground @min-[56rem]/activity:hidden">
+    <div className="flex min-w-0 items-center gap-2 text-[0.8125rem] whitespace-nowrap text-muted-foreground @min-[56rem]/activity:hidden">
       {loading ? <SkeletonText className="shrink-0 pe-1" width="w-20" /> : null}
       {showTotal ? (
         <span aria-live="polite" data-testid="activity-total" className="tabular shrink-0 pe-1">
           {t('audit.activity.results', { count: formatCount(total) })}
         </span>
       ) : null}
-      {chips.map((chip, i) => (
-        <button
-          key={`${chip.key}-${i}`}
-          type="button"
-          aria-label={t('audit.filters.remove', { name: chip.label })}
-          onClick={() => onChange({ ...query, ...chip.clear, page: 1 })}
-          className="tap-target tabular inline-flex min-h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-primary-soft py-0.5 ps-3 pe-2.5 text-[0.8125rem] font-bold text-primary focus-visible:outline-3 focus-visible:outline-ring/55"
-        >
-          <bdi>{chip.label}</bdi>
-          <CloseIcon className="size-3.5" />
-        </button>
-      ))}
-      {/* Pinned to the row's inline end while the chips scroll under it, so a phone always shows it. */}
-      <ClearFilters
-        count={clearCount}
-        onClear={onClear}
-        disabled={disabled}
-        className="sticky end-0 ms-auto h-9 bg-background px-2.5 hover:bg-primary-soft"
-      />
+      <div
+        data-testid="activity-chips"
+        className="scrollbar-clean -me-1 flex min-w-0 flex-1 items-center gap-2 overflow-x-auto px-1 py-1.5"
+      >
+        {chips.map((chip, i) => (
+          <button
+            key={`${chip.key}-${i}`}
+            type="button"
+            aria-label={t('audit.filters.remove', { name: chip.label })}
+            onClick={() => onChange({ ...query, ...chip.clear, page: 1 })}
+            className="tap-target tabular inline-flex min-h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-primary-soft py-0.5 ps-3 pe-2.5 text-[0.8125rem] font-bold text-primary focus-visible:outline-3 focus-visible:outline-ring/55"
+          >
+            <bdi>{chip.label}</bdi>
+            <CloseIcon className="size-3.5" />
+          </button>
+        ))}
+        {/* Pinned to the row's inline end while the chips scroll under it, so a phone always shows it. */}
+        <ClearFilters
+          count={clearCount}
+          onClear={onClear}
+          disabled={disabled}
+          className="sticky end-0 ms-auto h-9 bg-background px-2.5 hover:bg-primary-soft"
+        />
+      </div>
     </div>
   );
 }

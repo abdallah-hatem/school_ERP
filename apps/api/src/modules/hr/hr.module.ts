@@ -1,9 +1,15 @@
 import { Module } from '@nestjs/common';
 import { AuditModule } from '../../core/audit';
+import { NotificationsModule } from '../../core/notifications';
 import { PermissionsModule } from '../../core/permissions';
 import { SettingsModule } from '../../core/settings';
+import { UsersModule } from '../../core/users';
 import { HrAccessService } from './access/hr-access.service';
 import { HrAuditAccess } from './access/hr-audit-access';
+import { HrNotificationScopes } from './access/hr-notification-scopes';
+import { HrRemindersJob } from './reminders/hr-reminders.job';
+import { HrRemindersService } from './reminders/hr-reminders.service';
+import { RemindersRepository } from './reminders/repositories/reminders.repository';
 import { DashboardController } from './dashboard/controllers/dashboard.controller';
 import { DashboardService } from './dashboard/services/dashboard.service';
 import { EmployeesController } from './employees/controllers/employees.controller';
@@ -17,6 +23,7 @@ import { DepartmentsService } from './lists/services/departments.service';
 import { JobTitlesService } from './lists/services/job-titles.service';
 import { MonthLockService } from './month-lock/month-lock.service';
 import { MonthLockRepository } from './month-lock/repositories/month-lock.repository';
+import { HrNotificationsService } from './notifications/hr-notifications.service';
 import { EmployeePayrollController } from './payroll/controllers/employee-payroll.controller';
 import { PayrollRunsController } from './payroll/controllers/payroll-runs.controller';
 import { PayrollRunsRepository } from './payroll/repositories/payroll-runs.repository';
@@ -38,7 +45,7 @@ import { LatenessService } from './staff-attendance/services/lateness.service';
  * Sub-folders add their controllers / providers here (additive). Export only public services.
  */
 @Module({
-  imports: [SettingsModule, PermissionsModule, AuditModule],
+  imports: [SettingsModule, PermissionsModule, AuditModule, NotificationsModule, UsersModule],
   controllers: [
     // settings (T6)
     HrSettingsController,
@@ -60,8 +67,17 @@ import { LatenessService } from './staff-attendance/services/lateness.service';
     // who sees which employees, and whose salary (P4: scopes R5, salary R7)
     HrAccessService,
     HrAuditAccess,
+    // which scoped recipients cover an HR notification's subject (§11, N5)
+    HrNotificationScopes,
+    // reminders (§11, N3): resolved at the change, sent by the daily job
+    HrRemindersService,
+    RemindersRepository,
+    HrRemindersJob,
     // settings (T6)
     HrSettingsService,
+    // approval notifications (§11, N2) — penalties and payroll send through it; registers HR's
+    // notification scope resolvers
+    HrNotificationsService,
     // month lock (T6) — used by penalties, lateness and payroll
     MonthLockService,
     MonthLockRepository,

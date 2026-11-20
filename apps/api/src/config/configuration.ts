@@ -14,6 +14,10 @@ export interface AppConfig {
     refreshReuseGraceSeconds: number;
     cookieSecure: boolean;
   };
+  jobs: {
+    /** Scheduled jobs run on their clock (off under NODE_ENV=test unless JOBS_ENABLED=true). */
+    enabled: boolean;
+  };
 }
 
 export const configuration = (): AppConfig => {
@@ -31,5 +35,6 @@ export const configuration = (): AppConfig => {
       refreshReuseGraceSeconds: env.REFRESH_REUSE_GRACE_SECONDS,
       cookieSecure: env.COOKIE_SECURE ?? env.NODE_ENV === 'production',
     },
+    jobs: { enabled: env.JOBS_ENABLED ?? env.NODE_ENV !== 'test' },
   };
 };

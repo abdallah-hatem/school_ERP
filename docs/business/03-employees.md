@@ -4,6 +4,10 @@
 
 - **DECIDED** — **Stages:** Kindergarten, Primary, Preparatory, plus "None" for staff not tied to a
   stage (all four come from the seed). **Departments** and **job titles** are lists the school manages in Settings (§7).
+- **DECIDED** (2026-11-18) — The **"no stage" entry** is one stage marked as such by the seed, not
+  recognised by its name: the school can rename it (or call it anything in either language) and it
+  keeps its role — employee cards still give it the neutral colour and leave it out of the stage
+  colour order. At most one stage carries the mark, and no screen sets or moves it.
   Each item has an English and an Arabic name.
 - **DECIDED** — A list item in use by an employee can't be deleted, only hidden from new choices.
 - **DECIDED** — Hidden items are left out of lists unless asked for. An employee who already has a
@@ -43,6 +47,7 @@
 | Work system | Full-time, or part-time 4, 3 or 2 days a week. DECIDED |
 | Basic salary | Monthly, in EGP, required, greater than 0 |
 | Fingerprint ID | Optional; unique if given (for the device integration later) |
+| Probation end | Optional date, on or after the hire date. Left empty on a new employee, it is filled with the hire date + the school's default probation length (§7, 3 months), the day before: hired 1 Sep → 30 Nov; a day the month lacks counts as its last (hired 30 Nov → 27 Feb, GUESS). Length 0 = no probation: left empty. Editable, and can be cleared (no probation). Changing the hire date doesn't move it (GUESS), but a hire date after it is refused. Changing the default length changes only employees added afterwards. Not salary-type: whoever sees the employee sees it (§2). Employees who existed before it was added got hire date + 3 months. The probation reminder (§11) follows it. DECIDED (owner, 2026-11-18) |
 | Contract start / end | Required (filled automatically when left empty). Defaults to 1 June – 31 May of the current contract year; if only a start is given, the end is one year later minus a day (e.g. 1 Sep 2026 → 31 Aug 2027). End after start. DECIDED (one-year fixed contract) |
 | Uses school bus | Yes / no, required (defaults to no) |
 | Photo | Optional; PNG, JPG or WebP, up to 2 MB, shown square-cropped. Only signed-in users can open it. Without a photo the employee shows a neutral silhouette, never initials. DECIDED (owner, 2026-11-18) |
@@ -86,3 +91,6 @@ paying by bank transfer is Planned.
 - **DECIDED** — Deactivating an inactive employee, or reactivating an active one, changes nothing and
   reports success.
 - **DECIDED** — A required field can't be cleared when editing.
+
+- **DECIDED** (owner, 2026-11-19) — A basic salary and an insured salary are at most **EGP
+  1,000,000.00 a month**; a payroll adjustment too (§6). Higher amounts are refused.

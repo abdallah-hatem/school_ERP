@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import '@/test/dom-polyfills';
 import { cleanup, fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -120,6 +121,140 @@ describe('DataTable states', () => {
   });
 });
 
+describe('DataTable totals row (footer)', () => {
+  afterEach(cleanup);
+
+  it('puts each total under its column in the table and on a summary card after the cards', () => {
+    renderWithI18n(
+      <DataTable
+        label="Employees"
+        columns={columns}
+        rows={people}
+        getRowId={(p) => p.id}
+        footer={{ label: 'Subtotal', cells: { salary: '2,630,000' } }}
+      />,
+    );
+    const table = screen.getByRole('table', { name: 'Employees' });
+    const rows = within(table).getAllByRole('row');
+    // Header, two rows, the totals row last — label in the first column, the sum under Salary.
+    expect(rows).toHaveLength(4);
+    expect(within(rows[3]!).getAllByRole('cell').map((c) => c.textContent)).toEqual(['Subtotal', '2,630,000']);
+    const cards = within(screen.getByRole('list', { name: 'Employees' })).getAllByRole('listitem');
+    expect(cards).toHaveLength(3);
+    expect(cards[2]!.textContent).toContain('Subtotal');
+    expect(cards[2]!.textContent).toContain('Salary2,630,000');
+  });
+
+  it('a note instead of the totals spans the other columns (totals the viewer may not see)', () => {
+    renderWithI18n(
+      <DataTable
+        label="Employees"
+        columns={columns}
+        rows={people}
+        getRowId={(p) => p.id}
+        footer={{ label: 'Subtotal', note: 'Hidden' }}
+      />,
+    );
+    const last = within(screen.getByRole('table', { name: 'Employees' })).getAllByRole('row').at(-1)!;
+    const cells = within(last).getAllByRole('cell');
+    expect(cells.map((c) => c.textContent)).toEqual(['Subtotal', 'Hidden']);
+    expect(cells[1]!.getAttribute('colspan')).toBe('1');
+  });
+
+  it('skeletonBlocks={false}: the table and its parts carry no skeleton block names', () => {
+    const { container } = renderWithI18n(
+      <DataTable
+        label="Employees"
+        columns={columns}
+        rows={people}
+        getRowId={(p) => p.id}
+        footer={{ label: 'Subtotal', cells: { salary: '2,630,000' } }}
+        pagination={pagination()}
+        skeletonBlocks={false}
+      />,
+    );
+    expect(container.querySelectorAll('[data-skeleton-block], [data-skeleton-each]')).toHaveLength(0);
+    cleanup();
+    const marked = renderWithI18n(
+      <DataTable label="Employees" columns={columns} rows={people} getRowId={(p) => p.id} footer={{ label: 'Subtotal' }} />,
+    );
+    const names = [...marked.container.querySelectorAll<HTMLElement>('[data-skeleton-block]')].map((el) => el.dataset.skeletonBlock);
+    expect(new Set(names)).toEqual(new Set(['table', 'table-head', 'table-row', 'table-foot', 'table-card', 'table-card-foot']));
+  });
+
+  it.each(['en', 'ar'] as const)('spans the full width (%s): no table reserves a scrollbar gutter at its inline end, with or without totals', (locale) => {
+    // `scrollbar-clean` keeps a vertical gutter at the inline end (right in LTR, left in RTL); a
+    // table only scrolls sideways, and the gutter left the header, the rows and the totals row
+    // short of that edge on every list. The geometry itself is checked in a real browser by
+    // e2e/27-table-footer.spec.ts (the statement and plain lists, EN and AR).
+    const withFooter = renderWithI18n(
+      <DataTable label="Employees" columns={columns} rows={people} getRowId={(p) => p.id} footer={{ label: 'Subtotal', cells: { salary: '2,630,000' } }} />,
+      { locale },
+    );
+    expect(document.documentElement.dir).toBe(locale === 'ar' ? 'rtl' : 'ltr');
+    const scroller = withFooter.container.querySelector<HTMLElement>('[data-table-scroll]')!;
+    expect(scroller.contains(withFooter.container.querySelector('thead'))).toBe(true);
+    expect(scroller.contains(withFooter.container.querySelector('tfoot'))).toBe(true);
+    expect(scroller.className).toContain('[scrollbar-gutter:auto]!');
+    // Still a clean sideways scroller when the columns don't fit.
+    expect(scroller.className).toContain('scrollbar-clean');
+    expect(scroller.className).toContain('overflow-x-auto');
+    cleanup();
+    const plain = renderWithI18n(<DataTable label="Employees" columns={columns} rows={people} getRowId={(p) => p.id} />, { locale });
+    expect(plain.container.querySelector<HTMLElement>('[data-table-scroll]')!.className).toBe(scroller.className);
+  });
+
+  it('printRows: the screen shows its page, the printout lists every row with the totals and no pagination', () => {
+    const everyone: Person[] = Array.from({ length: 12 }, (_, i) => ({ id: String(i + 1), name: `Person ${i + 1}`, salary: 1000 }));
+    const { container } = renderWithI18n(
+      <DataTable
+        label="Employees"
+        columns={columns}
+        rows={everyone.slice(0, 10)}
+        printRows={everyone}
+        getRowId={(p) => p.id}
+        footer={{ label: 'Subtotal · all 12', cells: { salary: '12,000' } }}
+        pagination={pagination({ total: 12 })}
+      />,
+    );
+    // On screen (assistive tech too): one table of the page's ten rows.
+    const table = screen.getByRole('table', { name: 'Employees' });
+    expect(within(table).getAllByRole('row')).toHaveLength(12); // head, 10 rows, totals
+    expect(table.closest('.print\\:hidden')).toBeTruthy();
+    // In print: all twelve, the totals row, and the pagination left out.
+    const print = container.querySelector<HTMLElement>('[data-print-rows]')!;
+    expect(print.className).toContain('print:block');
+    expect(print.getAttribute('aria-hidden')).toBe('true');
+    expect(print.querySelectorAll('tbody tr')).toHaveLength(12);
+    expect(print.querySelector('tfoot')?.textContent).toContain('Subtotal · all 12');
+    expect(print.querySelectorAll('[data-skeleton-block]')).toHaveLength(0);
+    expect(screen.getByRole('navigation', { name: 'Pagination' }).closest('.print\\:hidden')).toBeTruthy();
+  });
+
+  it('printRows with no match on screen: the empty state shows, and print still lists everyone', () => {
+    const { container } = renderWithI18n(
+      <DataTable label="Employees" columns={columns} rows={[]} printRows={people} getRowId={(p) => p.id} empty={<p>No one matches</p>} />,
+    );
+    expect(screen.getByText('No one matches').closest('.print\\:hidden')).toBeTruthy();
+    expect(container.querySelectorAll('[data-print-rows] tbody tr')).toHaveLength(2);
+  });
+
+  it('keeps its place in the skeleton and is not drawn on an empty list', () => {
+    const footer = { label: 'Subtotal', cells: { salary: '2,630,000' } };
+    const { container, unmount } = renderWithI18n(
+      <DataTable label="Employees" columns={columns} rows={undefined} getRowId={(p) => p.id} loading footer={footer} />,
+    );
+    expect(container.querySelectorAll('[aria-hidden="true"] tfoot tr')).toHaveLength(1);
+    expect(container.querySelector('[aria-hidden="true"] tfoot')?.textContent).toBe('');
+    unmount();
+    const empty = renderWithI18n(
+      <DataTable label="Employees" columns={columns} rows={[]} getRowId={(p) => p.id} footer={footer} />,
+    );
+    expect(empty.container.querySelector('tfoot')).toBeNull();
+    expect(screen.queryByText('Subtotal')).toBeNull();
+  });
+});
+
 describe('DataTable sideways scroll cue', () => {
   afterEach(() => {
     cleanup();
@@ -179,5 +314,121 @@ describe('Pagination on a phone', () => {
     expect((pageOf as Node).compareDocumentPosition(next) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     await user.click(next);
     expect(paging.onPageChange).toHaveBeenCalledWith(3);
+  });
+});
+
+describe('DataTable page size and sticky header (payroll tables)', () => {
+  afterEach(cleanup);
+
+  it('a rows-per-page picker only when the caller passes sizes, and it reports the chosen size', async () => {
+    const user = userEvent.setup();
+    const onLimitChange = vi.fn();
+    const { rerender } = renderWithI18n(
+      <DataTable label="Employees" columns={columns} rows={people} getRowId={(p) => p.id} pagination={pagination()} />,
+    );
+    expect(screen.queryByRole('combobox', { name: 'Rows per page' })).toBeNull();
+
+    rerender(
+      <DataTable
+        label="Employees"
+        columns={columns}
+        rows={people}
+        getRowId={(p) => p.id}
+        pagination={{ ...pagination(), pageSizes: [10, 25, 500], onLimitChange }}
+      />,
+    );
+    const picker = screen.getByRole('combobox', { name: 'Rows per page' });
+    expect(picker.textContent).toContain('10');
+    await user.click(picker);
+    expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['10', '25', '500']);
+    await user.click(screen.getByRole('option', { name: '500' }));
+    expect(onLimitChange).toHaveBeenCalledWith(500);
+  });
+
+  it('an unknown page size (?limit=30) shows as the nearest listed one', () => {
+    renderWithI18n(
+      <DataTable
+        label="Employees"
+        columns={columns}
+        rows={people}
+        getRowId={(p) => p.id}
+        pagination={{ ...pagination(), limit: 30, pageSizes: [10, 25, 50, 500], onLimitChange: vi.fn() }}
+      />,
+    );
+    expect(screen.getByRole('combobox', { name: 'Rows per page' }).textContent).toContain('25');
+  });
+
+  it('scrollHeight="screen": the table scrolls in a capped box under sticky column names', () => {
+    const { container, rerender } = renderWithI18n(
+      <DataTable label="Employees" columns={columns} rows={people} getRowId={(p) => p.id} />,
+    );
+    const scroller = () => container.querySelector('[data-table-scroll]')!;
+    expect(scroller().hasAttribute('data-scroll-capped')).toBe(false);
+    expect(screen.getAllByRole('columnheader')[0]!.className).not.toContain('sticky');
+
+    rerender(<DataTable label="Employees" columns={columns} rows={people} getRowId={(p) => p.id} scrollHeight="screen" />);
+    expect(scroller().hasAttribute('data-scroll-capped')).toBe(true);
+    expect(scroller().className).toMatch(/max-h-\S+ overflow-y-auto/);
+    for (const th of screen.getAllByRole('columnheader')) expect(th.className).toMatch(/\bsticky top-0\b/);
+  });
+
+  it('cardsBelow="always": cards on every width, no screen table; footerCard="none": no totals card on screen, print keeps the row', () => {
+    const footer = { label: 'Month total · all 2', cells: { salary: '2,630,000' } };
+    const { container, rerender } = renderWithI18n(
+      <DataTable label="Employees" columns={columns} rows={people} getRowId={(p) => p.id} footer={footer} />,
+    );
+    // Default: both views, the totals card last.
+    expect(container.querySelector('[data-view="table"]')).not.toBeNull();
+    expect(container.querySelector('[data-view="cards"] > li:last-child')!.hasAttribute('data-footer-card')).toBe(true);
+
+    rerender(
+      <DataTable label="Employees" columns={columns} rows={people} getRowId={(p) => p.id} footer={footer} printRows={people} cardsBelow="always" footerCard="none" />,
+    );
+    expect(screen.queryByRole('table')).toBeNull();
+    const screenPart = container.querySelector('.print\\:hidden')!;
+    expect(screenPart.querySelector('[data-view="table"]')).toBeNull();
+    const list = screenPart.querySelector('[data-view="cards"]')!;
+    expect(list.className).not.toMatch(/hidden/);
+    expect(list.querySelector('[data-footer-card]')).toBeNull();
+    expect([...list.children].map((li) => li.textContent)).toEqual([expect.stringContaining('Mona Khalil'), expect.stringContaining('Omar Fathy')]);
+    // The printout still lists the rows as a table with its totals row.
+    expect(container.querySelector('[data-print-rows] tfoot')?.textContent).toContain('Month total · all 2');
+
+    // While loading: the same shape — cards, no table, no totals card.
+    rerender(
+      <DataTable label="Employees" columns={columns} rows={undefined} loading getRowId={(p) => p.id} footer={footer} cardsBelow="always" footerCard="none" />,
+    );
+    expect(container.querySelector('[data-view="table"]')).toBeNull();
+    expect(container.querySelector('[data-view="cards"] [data-footer-card]')).toBeNull();
+    expect(container.querySelectorAll('[data-view="cards"] > li').length).toBeGreaterThan(0);
+  });
+
+  it('scrollHeight="screen": the totals row stays pinned to the box bottom (dry run 2026-11-20)', () => {
+    const footer = { label: 'Month total · all 2', cells: { salary: '2,630,000' } };
+    const { container, rerender } = renderWithI18n(
+      <DataTable label="Employees" columns={columns} rows={people} getRowId={(p) => p.id} footer={footer} />,
+    );
+    const footCells = () => [...container.querySelectorAll('[data-view="table"] tfoot td')];
+    // Not capped: an ordinary last row.
+    expect(container.querySelector('tfoot')!.hasAttribute('data-sticky-foot')).toBe(false);
+    for (const td of footCells()) expect(td.className).not.toContain('sticky');
+
+    rerender(<DataTable label="Employees" columns={columns} rows={people} getRowId={(p) => p.id} footer={footer} scrollHeight="screen" />);
+    const tfoot = container.querySelector('[data-view="table"] tfoot')!;
+    expect(tfoot.hasAttribute('data-sticky-foot')).toBe(true);
+    expect(footCells()).toHaveLength(2);
+    for (const td of footCells()) {
+      expect(td.className).toMatch(/\bsticky bottom-0\b/);
+      // Opaque, so the rows pass under it; back in place on paper.
+      expect(td.className).toContain('bg-muted');
+      expect(td.className).toContain('print:static');
+    }
+    // A hidden-totals note is pinned too.
+    rerender(
+      <DataTable label="Employees" columns={columns} rows={people} getRowId={(p) => p.id} footer={{ label: 'Month total', note: 'Hidden' }} scrollHeight="screen" />,
+    );
+    for (const td of footCells()) expect(td.className).toMatch(/\bsticky bottom-0\b/);
+    // The phone's summary card is unchanged (not sticky).
+    expect(container.querySelector('[data-view="cards"] li:last-child')!.className).not.toContain('sticky');
   });
 });

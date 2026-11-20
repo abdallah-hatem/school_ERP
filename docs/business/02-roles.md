@@ -14,6 +14,37 @@
   the current password.
 - **DECIDED** — Deactivating a user, or giving them a temporary password, signs them out everywhere
   at once.
+- **DECIDED** (owner, 2026-11-19) — A user account and an employee are separate: a user may have
+  **one employee record** (who they are in HR), and an employee at most one account. The user form
+  asks **"Who is this person in HR?"**; the users list calls it **Employee record** ("No employee
+  record" when there is none). Only roles limited to *their stage*, *their team* or *themselves*
+  need it: when such a role is picked without an employee record, the form warns "This person will
+  see no records until you pick who they are in HR" — a warning, not a blocker. An employee's
+  profile says **"Signs in as: <name>"** (a link to the user's page for those who may open users)
+  or **"No sign-in account"**, to anyone who may see the employee.
+
+### Security: sign-in limits
+
+- **DECIDED** (owner, 2026-11-18) — **5 wrong passwords within 15 minutes lock that account's
+  sign-in for 15 minutes.** The count is per account (the email typed, in any letter case), never
+  per computer or network. An email nobody has is counted and locked the same way, so the answer
+  never tells whether an account exists. Wrong passwords for a deactivated account count too.
+- **DECIDED** — While an account is locked, every sign-in is refused **without checking the
+  password** — the right one too — with one message for every case: "Too many attempts. Try again
+  in N minutes." (Arabic: "محاولات كثيرة جدًا. حاول مرة أخرى بعد N دقيقة", with the right plural
+  form), N being the minutes left, rounded up.
+- **DECIDED** — A correct sign-in before the limit clears the count. After 15 minutes without a lock
+  the count starts over; when a lock ends, the right password signs in again.
+- **DECIDED** — The forced "Set a new password" screen and the password change on My account have
+  the same limit: refused while the account is locked, and a wrong current password counts as a
+  wrong sign-in.
+- **DECIDED** — A **System admin** (or anyone with "Manage users") can **unlock** an account early
+  from its Users page: the list shows "Sign-in locked" (with the time it ends) and its ⋯ has
+  **Unlock sign-in**; the user's page has the same button. The user can sign in at once.
+- **DECIDED** — Lockouts and unlocks are recorded in the audit log (§9). The numbers (5 attempts,
+  15-minute window, 15-minute lock) are school settings with those defaults (§7).
+- **DECIDED** — Old counts are deleted every night at 03:00 school time, once both their 15 minutes
+  and their lock ended more than a day ago.
 - **GUESS** (Claude's answers until the owner and client confirm; spec
   `docs/specs/2026-11-17-roles-permissions.md`) — Starting roles: **System admin**, **HR manager**,
   **HR officer**, **Accountant**, **Principal / administrative director**, **Stage head**, **Direct
@@ -34,7 +65,7 @@
   the employees they directly manage. That covers every list, count, search, picker and dashboard
   figure, their penalties, lateness and payroll lines, and the activity log's entries about them.
   Opening anyone else shows "This page isn't here", as for a record that doesn't exist. Someone in
-  such a role who isn't linked to an employee sees nobody. Each screen, tab, section and button is
+  such a role who has no employee record sees nobody. Each screen, tab, section and button is
   shown only to those who may use it.
 - **GUESS** — The payroll tax rule (§10) belongs to the Accountant (view and change) and the
   System admin (owner, 2026-11-18).
@@ -43,6 +74,10 @@
   principal). Anyone else — the Accountant, a stage head, a direct manager — gets a welcome with
   their name and a link to each screen they may open (the same screens as their menu, then My
   account), and no HR figures. Recommended by Claude, owner to confirm.
+- **GUESS** (enforced, 2026-11-19) — Each dashboard tile needs the permission of the screen it comes
+  from: headcount needs "View employees", the payroll tile "View payroll", the penalty tiles "View
+  penalties". A role allowed to see the dashboard but none of those three gets the welcome above
+  instead of an empty page. Recommended by Claude (owner found the empty page), owner to confirm.
 - **GUESS** (enforced, 2026-11-18) — Someone who may see a Settings section but not change it sees
   it read-only (§7): a stage head and a direct manager see Structure and the penalty catalogue, the
   principal sees the lists. They keep Settings in their menu for now (owner hasn't decided
@@ -51,6 +86,18 @@
   permission ("Adjust payroll"), held by the System admin, HR manager and HR officer (§6). Anyone
   else who sees the run sees its adjustments without being able to change them.
 - **DECIDED** — The last System admin can't be removed or deactivated.
+- **DECIDED** (owner, 2026-11-19) — **Any role but the System admin can be deleted once nobody holds
+  it** — a starting role as well as a custom one. A role someone still holds can't be deleted: Delete
+  says who still holds it ("3 users still hold it"), and the role must be taken away from them on
+  their user pages first; there is no "move everyone to another role" step. The **System admin** can
+  never be deleted and its permissions never change (it always holds every permission). On the
+  Roles screen the starting roles carry a **"Starting role"** badge; deleting one warns that future
+  updates add new permissions to starting roles automatically, and a role made to replace it won't
+  get them. A deleted starting role stays deleted: updates don't bring it back. Deleting a role is
+  recorded in the activity log (§9).
 - **Planned** — Legal affairs, medical clinic and security desk roles, with their modules.
 - **DECIDED** — Viewing the activity log is its own permission (§9): System admin, HR manager and
   principal hold it.
+- **DECIDED** (owner, 2026-11-18) — Settings → Notifications (§11) has two permissions: **View
+  notification settings** (System admin, HR manager) and **Manage notification settings** (System
+  admin). Everyone sees and manages only their own notifications and their own preferences.

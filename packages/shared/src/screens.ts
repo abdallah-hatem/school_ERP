@@ -24,12 +24,18 @@ export const SETTINGS_SECTION_ACCESS = {
   catalogue: 'hr.penalty_catalogue.view',
   // The payroll tax rule (§10): the Accountant's section.
   accounting: 'accounting.settings.view',
+  // The school's notification defaults, reminder timing and retention (§11): the System admin
+  // changes it, the HR manager sees it read-only (owner, 2026-11-18).
+  notifications: 'core.notifications.view',
 } as const satisfies Record<string, PermissionKey>;
 export type SettingsSectionId = keyof typeof SETTINGS_SECTION_ACCESS;
 export const SETTINGS_SECTIONS = Object.keys(SETTINGS_SECTION_ACCESS) as SettingsSectionId[];
 
 export interface ScreenAccess {
-  /** Path after the locale segment; `''` is the dashboard, `:id` / `:lineId` a record's id. */
+  /**
+   * Path after the locale segment; `''` is the dashboard, `:id` / `:lineId` a record's id, `:month`
+   * a `YYYY-MM` month.
+   */
   path: string;
   anyOf: readonly ScreenRequirement[] | null;
 }
@@ -45,6 +51,7 @@ const profileTab = (path: string, key: PermissionKey) => screen(path, ['hr.emplo
 export const SCREENS = {
   dashboard: screen(''),
   account: screen('/account'),
+  accountNotifications: screen('/account/notifications'),
   employees: screen('/employees', 'hr.employees.view'),
   employeeNew: screen('/employees/new', 'hr.employees.create'),
   employee: screen('/employees/:id', 'hr.employees.view'),
@@ -57,6 +64,12 @@ export const SCREENS = {
   payroll: screen('/payroll', 'hr.payroll.view'),
   payrollRun: screen('/payroll/:id', 'hr.payroll.view'),
   payslip: screen('/payroll/:id/payslip/:lineId', 'hr.payroll.view'),
+  // Accounting (§10): the year board of payroll taxes and one month's statement (`:month` YYYY-MM).
+  // Accounting → Payroll: HR's approved months as HR shows them, plus insurance and taxes.
+  accountingPayroll: screen('/accounting/payroll', 'accounting.payroll.view'),
+  accountingPayrollMonth: screen('/accounting/payroll/:month', 'accounting.payroll.view'),
+  payrollTaxes: screen('/accounting/payroll-taxes', 'accounting.payroll.view'),
+  payrollTaxesMonth: screen('/accounting/payroll-taxes/:month', 'accounting.payroll.view'),
   settings: screen('/settings', ...Object.values(SETTINGS_SECTION_ACCESS)),
   activity: screen('/activity', 'core.audit.view'),
   users: screen('/users', 'core.users.view'),
@@ -79,6 +92,8 @@ export const SIDEBAR_SCREENS = [
   'penalties',
   'lateness',
   'payroll',
+  'accountingPayroll',
+  'payrollTaxes',
   'settings',
   'activity',
   'users',

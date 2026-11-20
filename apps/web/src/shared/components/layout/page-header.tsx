@@ -21,6 +21,7 @@ export function PageHeader({
   breadcrumbs,
   breadcrumbsLabel,
   actions,
+  keepTitleLine = false,
   className,
 }: {
   title: ReactNode;
@@ -32,6 +33,12 @@ export function PageHeader({
   /** Accessible name of the breadcrumb nav (translated by the caller). */
   breadcrumbsLabel?: string;
   actions?: ReactNode;
+  /**
+   * The title (and its status) keeps one line whenever the row is wide enough for it alone: the
+   * actions wrap under the title instead of squeezing it to two lines (a long title beside many
+   * buttons — Approved payroll · November 2026, dry run 2026-11-20). On a phone it still wraps.
+   */
+  keepTitleLine?: boolean;
   className?: string;
 }) {
   return (
@@ -55,7 +62,12 @@ export function PageHeader({
         </nav>
       ) : null}
       <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
-        <div className="flex min-w-0 flex-1 basis-64 items-center gap-4">
+        <div
+          data-keep-title-line={keepTitleLine ? '' : undefined}
+          // Its basis is the title row's own width (the description below adds none: `w-0 min-w-full`),
+          // so when title + actions don't fit, the actions take the next line.
+          className={cn('flex min-w-0 items-center gap-4', keepTitleLine ? 'flex-[1_1_auto]' : 'flex-1 basis-64')}
+        >
           {leading}
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             <div className="flex flex-wrap items-center gap-3">
@@ -64,7 +76,9 @@ export function PageHeader({
               </h1>
               {status}
             </div>
-            {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
+            {description ? (
+              <p className={cn('text-sm text-muted-foreground', keepTitleLine && 'w-0 min-w-full')}>{description}</p>
+            ) : null}
           </div>
         </div>
         {actions ? <div className="flex flex-wrap items-center gap-2.5">{actions}</div> : null}

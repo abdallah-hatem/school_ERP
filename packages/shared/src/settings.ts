@@ -24,6 +24,18 @@ export const HrSettingKey = {
   PAYROLL_DAY_DIVISOR: 'hr.payroll.dayDivisor',
   PAYROLL_PART_TIME: 'hr.payroll.partTime',
   PENALTIES_REPETITION_WINDOW: 'hr.penalties.repetitionWindow',
+  /** §3, §7 (N0): a new employee's probation length; 0 = no probation. */
+  EMPLOYEES_DEFAULT_PROBATION_MONTHS: 'hr.employees.defaultProbationMonths',
+  /** §11 (N3): days before a contract ends for the first reminder. */
+  REMINDERS_CONTRACT_END_DAYS: 'hr.reminders.contractEndDays',
+  /** §11 (N3): days before a contract ends for the second reminder; 0 = none; less than the first. */
+  REMINDERS_CONTRACT_END_SECOND_DAYS: 'hr.reminders.contractEndSecondDays',
+  /** §11 (N3): days before an employee's probation end for its reminder. */
+  REMINDERS_PROBATION_END_DAYS: 'hr.reminders.probationEndDays',
+  /** §11 (N3): from this day of the month, remind while the month's lateness was never saved. */
+  REMINDERS_LATENESS_CHECK_DAY: 'hr.reminders.latenessCheckDay',
+  /** §11 (N3): from this day of the month, remind while the month's payroll isn't prepared / approved. */
+  REMINDERS_PAYROLL_CHECK_DAY: 'hr.reminders.payrollCheckDay',
 } as const;
 export type HrSettingKey = (typeof HrSettingKey)[keyof typeof HrSettingKey];
 
@@ -35,7 +47,36 @@ export const AccountingSettingKey = {
 } as const;
 export type AccountingSettingKey = (typeof AccountingSettingKey)[keyof typeof AccountingSettingKey];
 
-export type SettingKey = SchoolSettingKey | HrSettingKey | AccountingSettingKey;
+/**
+ * Sign-in limits (core/sign-in-limit, owner 2026-11-18): `maxAttempts` wrong passwords within
+ * `windowMinutes` lock that account's sign-in for `lockMinutes`. Per account only, never per IP.
+ */
+export const SecuritySettingKey = {
+  LOGIN_MAX_ATTEMPTS: 'security.login.maxAttempts',
+  LOGIN_WINDOW_MINUTES: 'security.login.windowMinutes',
+  LOGIN_LOCK_MINUTES: 'security.login.lockMinutes',
+} as const;
+export type SecuritySettingKey = (typeof SecuritySettingKey)[keyof typeof SecuritySettingKey];
+
+/**
+ * Notification retention (core/notifications, §11, DECIDED owner 2026-11-18): read notifications are
+ * deleted `readDays` after they were read, resolved ones `resolvedDays` after they were resolved, and
+ * any notification after `maxDays` — by the nightly `core.notifications.purge` job.
+ */
+export const NotificationSettingKey = {
+  RETENTION_READ_DAYS: 'notifications.retention.readDays',
+  RETENTION_RESOLVED_DAYS: 'notifications.retention.resolvedDays',
+  RETENTION_MAX_DAYS: 'notifications.retention.maxDays',
+} as const;
+export type NotificationSettingKey =
+  (typeof NotificationSettingKey)[keyof typeof NotificationSettingKey];
+
+export type SettingKey =
+  | SchoolSettingKey
+  | HrSettingKey
+  | AccountingSettingKey
+  | SecuritySettingKey
+  | NotificationSettingKey;
 
 /**
  * History keys for HR list edits (§7: list create / edit writes a history row, scope `lists`).
@@ -88,9 +129,21 @@ export interface SettingValueMap {
   'hr.payroll.dayDivisor': number;
   'hr.payroll.partTime': Record<PartTimeWorkSystem, number>;
   'hr.penalties.repetitionWindow': RepetitionWindow;
+  'hr.employees.defaultProbationMonths': number;
+  'hr.reminders.contractEndDays': number;
+  'hr.reminders.contractEndSecondDays': number;
+  'hr.reminders.probationEndDays': number;
+  'hr.reminders.latenessCheckDay': number;
+  'hr.reminders.payrollCheckDay': number;
   'accounting.payroll.taxBrackets': TaxBracket[];
   'accounting.payroll.martyrPercent': number;
   'accounting.payroll.insurancePercent': number;
+  'security.login.maxAttempts': number;
+  'security.login.windowMinutes': number;
+  'security.login.lockMinutes': number;
+  'notifications.retention.readDays': number;
+  'notifications.retention.resolvedDays': number;
+  'notifications.retention.maxDays': number;
 }
 
 /**
@@ -114,6 +167,15 @@ export const SETTING_DEFAULTS: { [K in SettingKey]: SettingValueMap[K] } = {
   'hr.payroll.dayDivisor': 30,
   'hr.payroll.partTime': { PART_TIME_4: 80, PART_TIME_3: 60, PART_TIME_2: 40 },
   'hr.penalties.repetitionWindow': 'CONTRACT_YEAR',
+  // §7 (owner 2026-11-18): 3 months; 0 = no probation.
+  'hr.employees.defaultProbationMonths': 3,
+  // Reminders (§11, owner 2026-11-18): contracts 30 and again 7 days before the end (DECIDED);
+  // probation 7 days before (GUESS); lateness from the 25th, payroll from the 28th (the days GUESS).
+  'hr.reminders.contractEndDays': 30,
+  'hr.reminders.contractEndSecondDays': 7,
+  'hr.reminders.probationEndDays': 7,
+  'hr.reminders.latenessCheckDay': 25,
+  'hr.reminders.payrollCheckDay': 28,
   // §10 GUESS (the school's previous HR system; to confirm with the accountant): Egypt's annual
   // scale ÷ 12 — 60,000 at 0%, 15,000 at 10%, 15,000 at 15%, 130,000 at 20%, 200,000 at 22.5%,
   // the rest at 25%.
@@ -127,7 +189,21 @@ export const SETTING_DEFAULTS: { [K in SettingKey]: SettingValueMap[K] } = {
   ],
   'accounting.payroll.martyrPercent': 0.05,
   'accounting.payroll.insurancePercent': 11,
+  // Sign-in limits (owner 2026-11-18): 5 wrong passwords in 15 minutes lock sign-in for 15 minutes.
+  'security.login.maxAttempts': 5,
+  'security.login.windowMinutes': 15,
+  'security.login.lockMinutes': 15,
+  // Notification retention (owner 2026-11-18): read 90 days, resolved 30 days, anything 365 days.
+  'notifications.retention.readDays': 90,
+  'notifications.retention.resolvedDays': 30,
+  'notifications.retention.maxDays': 365,
 };
+
+/**
+ * The school's time zone: scheduled jobs run on its clock and the audit screens read dates in it.
+ * One school per deployment; a time-zone setting can replace this later (no per-school code).
+ */
+export const SCHOOL_TIME_ZONE = 'Africa/Cairo';
 
 /** Validation bounds from §7. */
 export const SETTING_LIMITS = {
@@ -139,6 +215,18 @@ export const SETTING_LIMITS = {
   daysMin: 0,
   daysMax: 30,
   latenessMinutesMax: 6000,
+  probationMonthsMin: 0,
+  probationMonthsMax: 6,
+  /** §11 reminders (spec → Reminder settings). The second contract reminder is also below the first. */
+  contractEndDaysMin: 1,
+  contractEndDaysMax: 120,
+  contractEndSecondDaysMin: 0,
+  contractEndSecondDaysMax: 60,
+  probationEndDaysMin: 1,
+  probationEndDaysMax: 60,
+  /** A check day past the month's end means its last day (31 → 28 February). */
+  checkDayMin: 1,
+  checkDayMax: 31,
 } as const;
 
 /**
@@ -157,6 +245,25 @@ export const PAGINATION = {
   defaultLimit: 10,
   maxLimit: 100,
 } as const;
+
+/**
+ * Payroll tables (HR runs, a run's lines, an employee's payroll, accounting's months and lines) let
+ * the reader pick the page size, up to 500 (owner, 2026-11-19): a school's whole staff on one page.
+ */
+export const PAYROLL_PAGINATION = {
+  pageSizes: [10, 25, 50, 100, 250, 500],
+  maxLimit: 500,
+} as const;
+
+/**
+ * The listed page size closest to `limit` (the smaller on a tie): an unknown `?limit=30` reads as
+ * 25, so the "Rows per page" picker always shows the size the table really uses.
+ */
+export function nearestPageSize(limit: number, sizes: readonly number[]): number {
+  let best = sizes[0] ?? limit;
+  for (const size of sizes) if (Math.abs(size - limit) < Math.abs(best - limit)) best = size;
+  return best;
+}
 
 /** Logo upload rules from the contract. */
 export const LOGO_UPLOAD = {

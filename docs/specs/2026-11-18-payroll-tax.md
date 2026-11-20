@@ -36,13 +36,33 @@ Exact text in `docs/business/10-accounting.md`. Gross-up: taxable `t` solves
   `GET /accounting/payroll/:month` → the month's lines (net, insurance status and insured salary
   snapshot, insurance share, income tax, fund, gross), totals and the frozen rule. 404 for a month
   HR hasn't approved; 400 for a malformed month (`accounting.payroll.view`).
-- Event: listens to `payroll.approved`; records `accounting.payroll.record` (system) in the audit
+- `GET /accounting/payroll/year/:year` → `{ year, months }`: the year's twelve months, January
+  first, each `{ month, state: APPROVED | DRAFT | NONE, summary? }` — `summary` (as in the list) on
+  an approved month whose taxes are worked out. DRAFT comes from HR's run status, read through HR's
+  exported `PayrollService.runStatusesInYear` (status only, no lines or money). Read only. 400 for a
+  year outside 2000–2100 (`accounting.payroll.view`; the screen's year board).
+- `GET /accounting/payroll/:month/export` → `.xlsx`: the month's lines exactly as `GET
+  /accounting/payroll/:month` gives them to the viewer (a total row only with every salary) and a
+  sheet with the tax rule; headers in the `Accept-Language` language. 404 / 400 as above
+  (`accounting.payroll.view`).
+- `POST /accounting/payroll/:month/return` `{ reason }` → 204: HR's run is a DRAFT again with the
+  reason (through HR's exported `PayrollService.returnFromAccounting`), the month's taxes are
+  dropped; 400 without a reason, 404 for a month not in accounting, 409 `PAYROLL_FINALIZED` once
+  finalized (`accounting.payroll.return`, audited `accounting.payroll.return`).
+- `POST /accounting/payroll/:month/finalize` → the month, `status: FINALIZED`; HR's run is marked
+  transferred (`PayrollService.markTransferred`). 404 as above, 409 `PAYROLL_FINALIZED` when already
+  final (`accounting.payroll.finalize`, audited `accounting.payroll.finalize`).
+- List and month rows carry `status` (`PENDING` | `FINALIZED`) and `finalizedAt`; HR's runs carry
+  `transferredAt` and `returned: { at, reason } | null`.
+- Event: listens to `hr.payroll.approved` (must-deliver, through the outbox — `docs/EVENTS.md`); records `accounting.payroll.record` (system) in the audit
   log. Idempotent per HR run.
 
 ## Data
 
-`accounting_payroll_runs` (HR run id and month unique, tax rule snapshot) and
-`accounting_payroll_lines`. HR's `payroll_lines` are unchanged.
+`accounting_payroll_runs` (HR run id and month unique, tax rule snapshot, `finalized_at` /
+`finalized_by_id`) and
+`accounting_payroll_lines`. HR's `payroll_lines` are unchanged; HR's `payroll_runs` gain
+`transferred_at`, `returned_at` and `return_reason` (written only through HR's service).
 
 ## Screens
 

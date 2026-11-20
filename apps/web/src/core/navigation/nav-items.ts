@@ -9,6 +9,7 @@ import {
   InventoryModuleIcon,
   LatenessIcon,
   PayrollIcon,
+  PayrollTaxesIcon,
   PenaltiesIcon,
   RolesIcon,
   SettingsIcon,
@@ -26,6 +27,8 @@ export interface NavItem {
     | 'penalties'
     | 'lateness'
     | 'payroll'
+    | 'accountingPayroll'
+    | 'payrollTaxes'
     | 'settings'
     | 'activity'
     | 'users'
@@ -91,7 +94,15 @@ export const NAV_MODULES: readonly NavModule[] = [
     ],
     status: 'live',
   },
-  { key: 'accounting', nameKey: 'common.nav.modules.accounting', icon: AccountingModuleIcon, tone: 'neutral', items: [], status: 'soon' },
+  {
+    // §10 (the Accountant's screens): HR's approved months with their taxes, and the payroll-taxes year board.
+    key: 'accounting',
+    nameKey: 'common.nav.modules.accounting',
+    icon: AccountingModuleIcon,
+    tone: 'primary',
+    items: [page('accountingPayroll', PayrollIcon), page('payrollTaxes', PayrollTaxesIcon)],
+    status: 'live',
+  },
   { key: 'inventory', nameKey: 'common.nav.modules.inventory', icon: InventoryModuleIcon, tone: 'neutral', items: [], status: 'soon' },
   { key: 'students', nameKey: 'common.nav.modules.students', icon: StudentsModuleIcon, tone: 'neutral', items: [], status: 'soon' },
   {

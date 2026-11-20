@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notifications Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Tajawal:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/duotone/style.css">
+<style>
+/* Tokens copied from apps/web/src/app/globals.css (direction "Campus"). Light theme only. */
+:root{
+  --radius:14px;
+  --background:#f2f8f6; --foreground:#11302b; --card:#ffffff;
+  --muted:#f5faf8; --muted-foreground:#587069; --secondary:#eaf4f1;
+  --primary:#0b7a68; --primary-foreground:#ffffff; --primary-soft:#d5efe8; --primary-hover:#096656;
+  --accent:#ffc43d; --accent-foreground:#4a3400; --accent-soft:#fff1c9;
+  --success:#1f9a62; --success-soft:#ddf4e7; --success-ink:#126b42;
+  --warning:#d9771c; --warning-soft:#ffe8d2; --warning-ink:#8f4608;
+  --destructive:#d9473a; --destructive-soft:#fde3df; --destructive-ink:#a82d22;
+  --info:#2f6fb3; --info-soft:#e0eefb; --info-ink:#24578e;
+  --border:#dce9e5; --input:#cfe0db;
+  --overlay:rgb(9 40 35 / .42);
+  --shadow-card:0 1px 2px rgb(11 72 62 / .06),0 10px 30px -12px rgb(11 72 62 / .18);
+  --shadow-raised:0 2px 4px rgb(11 72 62 / .05),0 30px 60px -24px rgb(11 72 62 / .28);
+  --shadow-primary:0 8px 20px -8px rgb(11 122 104 / .7);
+  --bar:#0f2f2a; --bar-ink:#e7f4f0;
+  --font-latin:"Plus Jakarta Sans",system-ui,sans-serif;
+  --font-ar:"IBM Plex Sans Arabic","Plus Jakarta Sans",system-ui,sans-serif;
+  --font-ar-display:"Tajawal","IBM Plex Sans Arabic",system-ui,sans-serif;
+  --font:var(--font-latin); --font-display:var(--font-latin);
+  color-scheme:light;
+}
+:root[lang="ar"]{--font:var(--font-ar);--font-display:var(--font-ar-display)}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:#e4efec;color:var(--foreground);font-family:var(--font);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:inherit}
+:focus-visible{outline:3px solid color-mix(in srgb,var(--primary) 55%,transparent);outline-offset:2px}
+.num{font-family:var(--font-latin);font-variant-numeric:tabular-nums lining-nums}
+[dir="rtl"] .flip{transform:scaleX(-1)}
+.ph-duotone{line-height:1;display:inline-block}
+bdi{unicode-bidi:isolate}
+.muted{color:var(--muted-foreground)}
+
+/* ---------- mockup bar ---------- */
+.mockbar{background:var(--bar);color:var(--bar-ink);display:flex;align-items:center;gap:16px;padding:10px 24px;position:sticky;top:0;z-index:80;flex-wrap:wrap;font-size:13px}
+.mockbar strong{font-size:14px}
+.mockbar .sp{flex:1}
+.seg{display:inline-flex;background:rgb(255 255 255 / .08);border-radius:999px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;color:inherit;padding:5px 14px;border-radius:999px;font-weight:700;font-size:13px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#3a2900}
+.seg .ar{font-family:var(--font-ar-display);font-size:15px}
+.optnote{padding:18px 24px 0;max-width:1488px;margin-inline:auto;color:var(--muted-foreground);font-size:13.5px}
+.optnote b{color:var(--foreground)}
+.optnote ul{margin:6px 0 0;padding-inline-start:18px}
+.section-title{max-width:1488px;margin:26px auto 10px;padding-inline:24px;font-family:var(--font-display);font-weight:800;font-size:16px}
+body.only-desktop .phoneSec, body.only-phone .deskSec{display:none}
+
+/* ---------- frames ---------- */
+.desk-scroll{overflow-x:auto;padding:6px 24px 8px}
+.desk{width:1440px;margin-inline:auto;position:relative;background:var(--background);border-radius:22px;box-shadow:var(--shadow-raised);overflow:hidden;border:1px solid var(--border);display:flex;min-height:900px}
+.phones{display:flex;gap:32px;justify-content:center;flex-wrap:wrap;padding:6px 24px 60px;align-items:flex-start}
+.phone-wrap{display:flex;flex-direction:column;gap:8px;align-items:center}
+.phone-cap{font-size:12.5px;color:var(--muted-foreground);font-weight:600}
+.phone{width:390px;height:844px;background:var(--background);border-radius:44px;border:10px solid #1b2e2a;box-shadow:var(--shadow-raised);overflow:hidden;position:relative;display:flex;flex-direction:column}
+.phone .scroll{overflow-y:auto;flex:1;scrollbar-width:none}
+
+/* ---------- shell ---------- */
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:38px;height:38px;flex:none;border-radius:12px;background:var(--primary);color:#fff;display:grid;place-items:center;font-size:22px;position:relative}
+.logo::after{content:"";position:absolute;width:9px;height:9px;border-radius:50%;background:var(--accent);inset-block-start:-2px;inset-inline-end:-2px;box-shadow:0 0 0 2px var(--card)}
+.brand-name{font-family:var(--font-display);font-weight:800;font-size:14.5px;line-height:1.25}
+.brand-sub{font-size:11.5px;color:var(--muted-foreground)}
+.sb{width:272px;flex:none;background:var(--card);border-inline-end:1px solid var(--border);padding:22px 14px;display:flex;flex-direction:column;gap:20px}
+.sb nav{display:flex;flex-direction:column;gap:6px}
+.navlink{display:flex;align-items:center;gap:11px;min-height:38px;padding:7px 10px;border-radius:12px;color:var(--muted-foreground);text-decoration:none;font-weight:600;font-size:13.5px}
+.navlink .ph-duotone{font-size:19px}
+.navlink[aria-current="page"]{background:var(--primary-soft);color:var(--primary)}
+.single{display:flex;align-items:center;gap:11px;min-height:46px;padding:8px 10px;border-radius:14px;font-weight:700;font-size:14.5px;color:var(--foreground);text-decoration:none}
+.single[aria-current="page"]{background:var(--primary-soft);color:var(--primary)}
+.mi{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;font-size:18px;flex:none;background:var(--secondary);color:var(--muted-foreground)}
+.single[aria-current="page"] .mi{background:var(--primary);color:#fff}
+.grp{border-radius:16px;background:var(--muted);box-shadow:inset 0 0 0 1px var(--border);padding-bottom:8px}
+.grp .gh{display:flex;align-items:center;gap:11px;min-height:46px;padding:8px 10px;font-weight:700;font-size:14.5px}
+.grp .kids{display:flex;flex-direction:column;gap:2px;margin-inline-start:34px;border-inline-start:2px solid var(--border);padding-inline:8px}
+.user{display:flex;align-items:center;gap:10px;padding:10px;border-radius:16px;background:var(--muted);border:1px solid var(--border);margin-top:auto;text-decoration:none}
+.user .n{font-weight:700;font-size:13px;line-height:1.2}
+.user .r{font-size:11.5px;color:var(--muted-foreground)}
+.av{border-radius:12px;background:var(--accent);color:var(--accent-foreground);display:grid;place-items:center;font-weight:800;flex:none;font-family:var(--font-display);width:34px;height:34px;font-size:12.5px}
+.av.sil{background:var(--secondary);color:var(--muted-foreground);font-size:18px}
+.main{flex:1;min-width:0;padding:20px 36px 36px;display:flex;flex-direction:column;gap:18px;position:relative}
+.topline{display:flex;align-items:center;gap:10px;min-height:42px}
+.topline .sp{flex:1}
+.lang{display:inline-flex;background:var(--secondary);border-radius:999px;padding:3px}
+.lang span{padding:4px 12px;border-radius:999px;font-weight:700;font-size:12.5px}
+.lang span.on{background:var(--accent);color:var(--accent-foreground)}
+.lang .ar{font-family:var(--font-ar-display);font-size:14px}
+.bell{position:relative;width:42px;height:42px;border-radius:13px;border:1px solid var(--border);background:var(--card);display:grid;place-items:center;font-size:21px;color:var(--foreground)}
+.bell.on{background:var(--primary-soft);border-color:transparent;color:var(--primary)}
+.bell .badge{position:absolute;inset-block-start:-6px;inset-inline-end:-7px;min-width:21px;height:21px;padding:0 6px;border-radius:999px;background:var(--accent);color:var(--accent-foreground);font-size:11px;font-weight:800;display:grid;place-items:center;box-shadow:0 0 0 2px var(--background)}
+.mbar{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--card);border-bottom:1px solid var(--border);flex:none}
+.mbar .menub{width:38px;height:38px;border-radius:12px;border:1px solid var(--border);background:var(--card);display:grid;place-items:center;font-size:20px}
+.mbar .brand-name{font-size:14px;flex:1;min-width:0}
+.mbar .bell{width:38px;height:38px;font-size:19px;border-radius:12px}
+.head h1{margin:0;font-family:var(--font-display);font-size:28px;font-weight:800;line-height:1.15;letter-spacing:-.01em}
+:root[lang="ar"] .head h1{letter-spacing:0}
+.head p{margin:4px 0 0;color:var(--muted-foreground);font-size:14px;max-width:640px}
+.head{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.head .acts{margin-inline-start:auto;display:flex;gap:10px}
+.card{background:var(--card);border-radius:22px;box-shadow:var(--shadow-card)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:var(--radius);padding:9px 15px;font-weight:700;font-size:13.5px;border:1px solid var(--input);background:var(--card);white-space:nowrap;text-decoration:none}
+.btn .ph-duotone{font-size:18px}
+.btn-primary{background:var(--primary);color:#fff;border-color:transparent;box-shadow:var(--shadow-primary)}
+.btn-sm{padding:6px 11px;font-size:12.5px;border-radius:11px}
+.btn-ghost{border-color:transparent;background:transparent;color:var(--primary)}
+.btn-block{width:100%}
+.pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2px 9px;font-size:11.5px;font-weight:700;white-space:nowrap}
+.pill .ph-duotone{font-size:13px}
+.p-req{background:var(--secondary);color:var(--muted-foreground)}
+.p-chg{background:var(--accent-soft);color:#6b4b00}
+.p-warn{background:var(--warning-soft);color:var(--warning-ink)}
+.p-ok{background:var(--success-soft);color:var(--success-ink)}
+.sw{width:40px;height:24px;border-radius:999px;background:var(--input);position:relative;flex:none;display:inline-block}
+.sw::after{content:"";position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;inset-block-start:3px;inset-inline-start:3px;box-shadow:0 1px 2px rgb(0 0 0 / .2)}
+.sw.on{background:var(--primary)}
+.sw.on::after{inset-inline-start:19px}
+.sw.lock{opacity:.55}
+.sw.off-ch{background:var(--secondary);opacity:.7}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border)}
+.tab{padding:9px 14px;font-weight:700;font-size:13.5px;color:var(--muted-foreground);border-bottom:2px solid transparent;margin-bottom:-1px;display:flex;gap:7px;align-items:center;white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--primary);border-color:var(--primary)}
+.tab .c{background:var(--accent);color:var(--accent-foreground);border-radius:999px;font-size:11px;padding:0 7px;font-weight:800}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--input);background:var(--card);border-radius:999px;padding:5px 12px;font-weight:700;font-size:12.5px;display:inline-flex;gap:6px;align-items:center;white-space:nowrap}
+.chip[aria-pressed="true"]{background:var(--primary);border-color:transparent;color:#fff}
+.chip .c{opacity:.8}
+.dimbg{position:absolute;inset:0;background:var(--overlay);z-index:20}
+
+/* ---------- notification rows (shared) ---------- */
+.ni{display:flex;gap:12px;padding:12px 14px;border-radius:16px;position:relative;text-decoration:none;align-items:flex-start}
+.ni + .ni{margin-top:2px}
+.ni.unread{background:color-mix(in srgb,var(--primary-soft) 45%,transparent)}
+.ni .ic{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:20px;flex:none}
+.ic.pen{background:var(--warning-soft);color:var(--warning-ink)}
+.ic.pay{background:var(--primary-soft);color:var(--primary)}
+.ic.con{background:var(--info-soft);color:var(--info-ink)}
+.ic.lat{background:var(--accent-soft);color:#6b4b00}
+.ni .tx{flex:1;min-width:0}
+.ni .t{font-weight:700;font-size:13.5px;line-height:1.35}
+.ni .b{font-size:12.5px;color:var(--muted-foreground);margin-top:2px}
+.ni .w{font-size:11.5px;color:var(--muted-foreground);margin-top:4px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.ni .dot{width:9px;height:9px;border-radius:50%;background:var(--accent);flex:none;margin-top:6px;box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 30%,transparent)}
+.ni.done{opacity:.72}
+.ni.done .t{font-weight:600}
+.ni.done .ic{filter:grayscale(.8)}
+.res{display:inline-flex;gap:4px;align-items:center;color:var(--success-ink);font-weight:700}
+.batch-kids{margin:6px 0 2px;display:flex;flex-direction:column;gap:4px;padding-inline-start:12px;border-inline-start:2px solid var(--border)}
+.batch-kids div{font-size:12.5px;display:flex;gap:8px}
+.batch-kids div span:last-child{margin-inline-start:auto;color:var(--muted-foreground)}
+.dayh{font-size:12px;font-weight:800;color:var(--muted-foreground);padding:12px 14px 4px;display:flex;align-items:center;gap:8px}
+.dayh::after{content:"";flex:1;height:1px;background:var(--border)}
+.empty{padding:34px 20px;text-align:center;color:var(--muted-foreground)}
+
+/* ---------- background dashboard (faded) ---------- */
+.ghost-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.ghost-tiles .card{height:120px;padding:18px}
+.gl{height:10px;border-radius:6px;background:var(--secondary);margin-bottom:10px}
+
+/* ---------- option A: popover ---------- */
+.pop{position:absolute;z-index:30;inset-block-start:70px;inset-inline-end:84px;width:430px;background:var(--card);border-radius:22px;box-shadow:var(--shadow-raised),0 0 0 1px var(--border);display:flex;flex-direction:column;max-height:760px}
+.pop::before{content:"";position:absolute;inset-block-start:-7px;inset-inline-end:22px;width:14px;height:14px;background:var(--card);transform:rotate(45deg);box-shadow:-1px -1px 0 var(--border)}
+.pop-h{display:flex;align-items:center;gap:8px;padding:16px 18px 8px}
+.pop-h h2{margin:0;font-family:var(--font-display);font-size:17px;font-weight:800;flex:1}
+.pop-b{overflow-y:auto;padding:6px 8px;flex:1;scrollbar-width:thin}
+.pop-f{border-top:1px solid var(--border);padding:10px 14px;display:flex;justify-content:space-between;align-items:center}
+.matrix{width:100%;border-collapse:separate;border-spacing:0}
+.matrix th{font-size:12px;font-weight:800;color:var(--muted-foreground);text-align:start;padding:12px 16px;background:var(--muted);border-bottom:1px solid var(--border)}
+.matrix th.ch{text-align:center;width:220px}
+.matrix td{padding:14px 16px;border-bottom:1px solid var(--border);vertical-align:middle}
+.matrix td.ch{text-align:center}
+.matrix tr.gr td{background:var(--background);font-weight:800;font-size:12.5px;color:var(--muted-foreground);padding:9px 16px}
+.matrix .tn{font-weight:700}
+.matrix .td{font-size:12.5px;color:var(--muted-foreground)}
+.cellsw{display:inline-flex;flex-direction:column;align-items:center;gap:4px}
+.cellsw small{font-size:11px;color:var(--muted-foreground)}
+
+/* ---------- forms, sheets ---------- */
+.formgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field .lb{font-size:13px;font-weight:700}
+.field .h{font-size:12px;color:var(--muted-foreground)}
+.input{min-height:42px;border:1px solid var(--input);border-radius:var(--radius);padding:0 12px;display:flex;align-items:center;gap:8px;background:var(--card);font-size:14px}
+.input .u{margin-inline-start:auto;color:var(--muted-foreground);font-size:12.5px}
+.fullsheet{position:absolute;inset:0;z-index:30;background:var(--card);display:flex;flex-direction:column}
+.savebar{position:sticky;bottom:0;display:flex;gap:10px;align-items:center;justify-content:flex-end;padding:12px 16px;background:var(--card);border-top:1px solid var(--border);border-radius:0 0 22px 22px}
+.savebar .st{margin-inline-end:auto;font-size:12.5px;color:var(--muted-foreground);display:flex;gap:6px;align-items:center}
+</style>
+</head>
+<body>
+<div class="mockbar">
+  <strong>Notifications — option A (picked by the owner, 2026-11-18)</strong>
+  <div class="seg" id="langSeg" aria-label="Language"><button data-l="en">EN</button><button data-l="ar" class="ar">ع</button></div>
+  <div class="seg" id="viewSeg" aria-label="View"><button data-v="both">Both</button><button data-v="desktop">Desktop</button><button data-v="phone">Phone</button></div>
+  <span class="sp"></span><span style="opacity:.7">Sample data · generic names</span>
+</div>
+<div id="app"></div>
+
+<script>
+let lang="en", view="both";
+const AR=()=>lang==="ar";
+const s=(en,ar)=>AR()?ar:en;
+const v=x=>Array.isArray(x)?(AR()?x[1]:x[0]):x;
+const ic=(n,extra="")=>`<i class="ph-duotone ph-${n} ${extra}" aria-hidden="true"></i>`;
+const num=x=>`<span class="num">${x}</span>`;
+const money=x=>AR()?`<span class="num">${x}</span> ج.م`:`EGP <span class="num">${x}</span>`;
+
+/* ---------- plural helpers (CLDR forms; Arabic: zero, one, two, few 3–10, many 11–99, other) ---------- */
+const arForm=n=>{if(n===0)return "zero";if(n===1)return "one";if(n===2)return "two";const m=n%100;if(m>=3&&m<=10)return "few";if(m>=11&&m<=99)return "many";return "other";};
+const plural=(n,en,ar)=>AR()?ar[arForm(n)].replace("#",num(n)):(n===1?en[0]:en[1]).replace("#",num(n));
+const empN=n=>plural(n,["# employee","# employees"],{zero:"لا موظفين",one:"موظف واحد",two:"موظفان",few:"# موظفين",many:"# موظفًا",other:"# موظف"});
+const daysN=n=>plural(n,["in # day","in # days"],{zero:"اليوم",one:"بعد يوم واحد",two:"بعد يومين",few:"بعد # أيام",many:"بعد # يومًا",other:"بعد # يوم"});
+const contractsN=n=>plural(n,["# contract ends","# contracts end"],{zero:"لا عقود",one:"ينتهي عقد واحد",two:"ينتهي عقدان",few:"تنتهي # عقود",many:"ينتهي # عقدًا",other:"ينتهي # عقد"});
+const unreadN=n=>plural(n,["# unread","# unread"],{zero:"لا غير مقروء",one:"إشعار واحد غير مقروء",two:"إشعاران غير مقروءين",few:"# إشعارات غير مقروءة",many:"# إشعارًا غير مقروء",other:"# إشعار غير مقروء"});
+
+/* ---------- sample notifications ---------- */
+const P={
+ omar:["Omar Khalil","عمر خليل"], salma:["Salma Nabil","سلمى نبيل"], hana:["Hana Fathy","هناء فتحي"],
+ youssef:["Youssef Adel","يوسف عادل"], laila:["Laila Hassan","ليلى حسن"], khaled:["Khaled Mostafa","خالد مصطفى"],
+ mona:["Mona Ibrahim","منى إبراهيم"], ahmed:["Ahmed Mahmoud","أحمد محمود"], tarek:["Tarek Nabil","طارق نبيل"], rana:["Rana Samy","رنا سامي"], amr:["Amr Fawzy","عمرو فوزي"]
+};
+const N=[
+ {k:"pen",cat:"approval",ic:"gavel",c:"pen",unread:1,day:"today",batch:3,more:0,
+  t:()=>s("3 penalties waiting for your approval","3 جزاءات في انتظار اعتمادك"),
+  b:()=>`<bdi>${v(P.omar)}</bdi>, <bdi>${v(P.salma)}</bdi> ${s("and 1 more","وموظف آخر")}`,w:()=>s("3 min ago","منذ 3 دقائق"),
+  kids:[[P.omar,["Late to class, level 2","التأخر عن الحصة، المرة 2"]],[P.salma,["Leaving a task early, level 1","ترك العمل قبل موعده، المرة 1"]],[P.amr,["Late to class, level 1","التأخر عن الحصة، المرة 1"]]]},
+ {k:"pay",cat:"approval",ic:"wallet",c:"pay",unread:1,day:"today",
+  t:()=>s("November 2026 payroll is ready to approve","رواتب نوفمبر 2026 جاهزة للاعتماد"),
+  b:()=>`${empN(38)} · ${s("net","الصافي")} ${money("412,560.00")}`,w:()=>s("1 h ago","منذ ساعة")},
+ {k:"lat",cat:"reminder",ic:"clock-countdown",c:"lat",unread:1,day:"today",
+  t:()=>s("November 2026 lateness isn't entered yet","لم يُدخَل تأخير شهر نوفمبر 2026 بعد"),
+  b:()=>s("Payroll needs it. Due on 25 November.","الرواتب تحتاج إليه. موعده 25 نوفمبر."),w:()=>s("Today, 07:00","اليوم، 07:00")},
+ {k:"con",cat:"reminder",ic:"file-text",c:"con",unread:0,day:"yest",batch:12,
+  t:()=>`${contractsN(12)} ${s("within 30 days","خلال 30 يومًا")}`,
+  b:()=>s("All on 31 December 2026","جميعها في 31 ديسمبر 2026"),w:()=>s("Yesterday, 07:00","أمس، 07:00"),
+  more:9,kids:[[P.mona,["31 Dec","31 ديسمبر"]],[P.tarek,["31 Dec","31 ديسمبر"]],[P.rana,["31 Dec","31 ديسمبر"]]]},
+ {k:"pro",cat:"reminder",ic:"hourglass-medium",c:"con",unread:0,day:"yest",
+  t:()=>s(`${v(P.youssef)}'s probation ends 30 November`,`تنتهي فترة اختبار ${v(P.youssef)} في 30 نوفمبر`),
+  b:()=>daysN(7),w:()=>s("Yesterday, 07:00","أمس، 07:00")},
+ {k:"pen3",cat:"approval",ic:"gavel",c:"pen",unread:0,day:"early",done:P.ahmed,
+  t:()=>s("Penalty waiting for your approval","جزاء في انتظار اعتمادك"),
+  b:()=>`<bdi>${v(P.hana)}</bdi> · ${s("Absent from an exam committee, level 1","التغيب عن لجنة الامتحان، المرة 1")}`,w:()=>s("16 Nov, 10:42","16 نوفمبر، 10:42")},
+];
+const resLine=n=>n.done?`<span class="res">${ic("check-circle")}${s("Approved by","اعتمده")} <bdi>${v(n.done)}</bdi></span>`:"";
+const row=(n,o={})=>`<a href="#" class="ni ${n.unread?"unread":""} ${n.done?"done":""} ${o.sel?"sel":""}">
+ <span class="ic ${n.c}">${ic(n.ic)}</span>
+ <span class="tx"><div class="t">${n.t()}</div><div class="b">${n.b()}</div>
+ ${n.batch&&o.expand===n.k?`<div class="batch-kids">${n.kids.map(k=>`<div><bdi>${v(k[0])}</bdi><span>${v(k[1])}</span></div>`).join("")}${n.more?`<div style="color:var(--primary);font-weight:700">${s(`and ${n.more} more`,`و${n.more} آخرون`)}</div>`:""}</div>`:""}
+ <div class="w">${n.w()}${n.batch&&o.expand!==n.k?` · <span style="color:var(--primary);font-weight:700">${s(`Show all ${n.batch}`,`عرض الكل (${n.batch})`)}</span>`:""}${n.done?" · "+resLine(n):""}</div></span>
+ ${n.unread?`<span class="dot" aria-label="${s("Unread","غير مقروء")}"></span>`:""}</a>`;
+const UNREAD=N.filter(n=>n.unread).length;
+
+/* ---------- shell ---------- */
+const langT=()=>`<span class="lang"><span class="${!AR()?"on":""}">EN</span><span class="ar ${AR()?"on":""}">ع</span></span>`;
+const bell=(on)=>`<button class="bell ${on?"on":""}" aria-label="${s("Notifications","الإشعارات")}">${ic("bell")}<span class="badge num">${UNREAD}</span></button>`;
+const brand=()=>`<div class="brand"><div class="logo">${ic("graduation-cap")}</div><div><div class="brand-name">${s("Green Valley School","مدرسة الوادي الأخضر")}</div><div class="brand-sub">${s("School ERP","نظام إدارة المدرسة")}</div></div></div>`;
+function side(page){
+ const l=(i,t,cur,extra="")=>`<a class="navlink" href="#" ${cur?'aria-current="page"':""}>${ic(i)}<span>${t}</span>${extra}</a>`;
+ return `<aside class="sb">${brand()}<nav>
+ <a class="single" href="#" ${page==="dash"?'aria-current="page"':""}><span class="mi">${ic("squares-four")}</span>${s("Dashboard","لوحة التحكم")}</a>
+ <div class="grp"><div class="gh"><span class="mi" style="background:var(--primary-soft);color:var(--primary)">${ic("users-three")}</span>${s("HR","الموارد البشرية")}</div><div class="kids">
+ ${l("users",s("Employees","الموظفون"))}${l("gavel",s("Penalties","الجزاءات"))}${l("clock-countdown",s("Lateness","التأخير"))}${l("wallet",s("Payroll","الرواتب"))}</div></div>
+ <div class="grp"><div class="gh"><span class="mi" style="background:var(--accent-soft);color:#6b4b00">${ic("buildings")}</span>${s("Administration","الإدارة")}</div><div class="kids">
+ ${l("gear-six",s("Settings","الإعدادات"),page==="settings")}${l("clock-counter-clockwise",s("Activity","سجل النشاط"))}${l("user-circle-gear",s("Users","المستخدمون"))}${l("shield-check",s("Roles","الأدوار"))}</div></div>
+ </nav><a href="#" class="user" style="color:inherit;${page==="me"?"background:var(--primary-soft);border-color:transparent":""}"><div class="av sil">${ic("user")}</div><div style="min-width:0"><div class="n">${page==="settings"?s("Hany Saad","هاني سعد"):v(P.laila)}</div><div class="r">${page==="me"?s("My account","حسابي"):page==="settings"?s("System admin","مدير النظام"):s("HR manager","مدير شؤون الموظفين")}</div></div>${ic("caret-up-down")}</a></aside>`;}
+const topline=(bellOn)=>`<div class="topline"><span class="sp"></span>${bell(bellOn)}${langT()}</div>`;
+const mbar=(bellOn,title)=>`<div class="mbar"><button class="menub" aria-label="menu">${ic("list")}</button><div class="brand-name">${title||s("Green Valley School","مدرسة الوادي الأخضر")}</div>${bell(bellOn)}${langT()}</div>`;
+const ghostDash=()=>`<div class="head"><div><h1>${s("Good morning, Laila","صباح الخير يا ليلى")}</h1><p>${s("Here is the school today.","هذه حال المدرسة اليوم.")}</p></div></div>
+<div class="ghost-tiles">${[1,2,3,4].map(()=>`<div class="card"><div class="gl" style="width:40%"></div><div class="gl" style="width:70%;height:22px"></div><div class="gl" style="width:55%"></div></div>`).join("")}</div>
+<div class="card" style="height:360px;padding:22px">${[80,60,72,50,66,58].map(w=>`<div class="gl" style="width:${w}%"></div>`).join("")}</div>`;
+
+/* ---------- preference data ---------- */
+const TYPES=[
+ {k:"pen",grp:"appr",ic:"gavel",c:"pen",req:1,n:()=>s("Penalty waiting for approval","جزاء في انتظار الاعتماد"),d:()=>s("A penalty for someone you may approve is recorded.","تسجيل جزاء على موظف يحق لك اعتماد جزاءاته."),sent:()=>s("Tell me when a penalty waits for my approval","أخبرني عندما ينتظر جزاء اعتمادي")},
+ {k:"pay",grp:"appr",ic:"wallet",c:"pay",req:1,n:()=>s("Payroll ready to approve","الرواتب جاهزة للاعتماد"),d:()=>s("A month is calculated and has no pending penalties.","احتُسب الشهر ولا جزاءات معلّقة فيه."),sent:()=>s("Tell me when a month's payroll is ready to approve","أخبرني عندما تجهز رواتب الشهر للاعتماد")},
+ {k:"con",grp:"rem",ic:"file-text",c:"con",on:1,n:()=>s("Contract ends soon","قرب انتهاء العقد"),d:()=>s("30 days, and again 7 days, before an employee's contract ends.","قبل انتهاء عقد الموظف بـ 30 يومًا ثم بـ 7 أيام."),sent:()=>s("Remind me before a contract ends","ذكّرني قبل انتهاء أي عقد")},
+ {k:"pro",grp:"rem",ic:"hourglass-medium",c:"con",on:0,chg:1,n:()=>s("Probation ends soon","قرب انتهاء فترة الاختبار"),d:()=>s("7 days before probation ends.","قبل انتهاء فترة الاختبار بـ 7 أيام."),sent:()=>s("Remind me before probation ends","ذكّرني قبل انتهاء فترة الاختبار")},
+ {k:"lat",grp:"rem",ic:"clock-countdown",c:"lat",on:1,n:()=>s("Lateness not entered","التأخير لم يُدخَل"),d:()=>s("From the 25th, while the month's lateness is missing.","من يوم 25 إذا لم يُدخَل تأخير الشهر."),sent:()=>s("Remind me when a month's lateness is missing","ذكّرني إذا لم يُدخَل تأخير الشهر")},
+ {k:"prep",grp:"rem",ic:"calendar-check",c:"pay",on:1,n:()=>s("Payroll not prepared or approved","الرواتب لم تُعَدّ أو لم تُعتمد"),d:()=>s("From the 28th, while the month has no run or only a draft.","من يوم 28 إذا لم يُنشأ مسير الشهر أو بقي مسودة."),sent:()=>s("Remind me when payroll is late","ذكّرني إذا تأخرت الرواتب")},
+];
+const grpName=g=>g==="appr"?s("HR · Waiting for you","شؤون الموظفين · في انتظارك"):s("HR · Reminders","شؤون الموظفين · تذكيرات");
+const reqPill=()=>`<span class="pill p-req">${ic("lock-simple")}${s("Required","إلزامي")}</span>`;
+const chgPill=()=>`<span class="pill p-chg">${s("Changed from school default","مختلف عن الافتراضي")}</span>`;
+const timingVals=[[30,()=>s("days before a contract ends","يومًا قبل انتهاء العقد"),()=>s("Contract reminder","تذكير العقد"),()=>s("days","يومًا")],[7,()=>s("days before a contract ends (second reminder)","أيام قبل انتهاء العقد (تذكير ثانٍ)"),()=>s("Second contract reminder","التذكير الثاني بالعقد"),()=>s("days","أيام")],[7,()=>s("days before probation ends","أيام قبل انتهاء فترة الاختبار"),()=>s("Probation reminder","تذكير فترة الاختبار"),()=>s("days","أيام")],[25,()=>s("— the day of the month lateness is due","— يوم الشهر الذي يُستحق فيه إدخال التأخير"),()=>s("Lateness check day","يوم مراجعة التأخير"),()=>s("of the month","من الشهر")],[28,()=>s("— the day of the month payroll is due","— يوم الشهر الذي تُستحق فيه الرواتب"),()=>s("Payroll check day","يوم مراجعة الرواتب"),()=>s("of the month","من الشهر")]];
+const pageHead=(school)=>school
+ ?`<div class="head"><div><h1>${s("Settings · Notifications","الإعدادات · الإشعارات")}</h1><p>${s("What everyone receives unless they change it, and when reminders go out.","ما يصل إلى الجميع ما لم يغيّروه، ومواعيد التذكيرات.")}</p></div></div>`
+ :`<div class="head"><div><h1>${s("My account","حسابي")}</h1><p>${s("Choose what you are told about.","اختر ما تريد أن تُبلَّغ به.")}</p></div></div>
+   <div class="tabs"><span class="tab">${ic("user")}${s("Profile","الملف")}</span><span class="tab">${ic("lock-key")}${s("Password","كلمة المرور")}</span><span class="tab" aria-selected="true">${ic("bell")}${s("Notifications","الإشعارات")}</span></div>`;
+
+/* ================= OPTION A — bell popover + matrix ================= */
+function A_list(phone){
+ const head=`<div class="pop-h"><h2>${s("Notifications","الإشعارات")}</h2><button class="btn btn-ghost btn-sm">${ic("checks")}${s("Mark all as read","تعليم الكل كمقروء")}</button></div>
+ <div style="padding:0 18px"><div class="tabs"><span class="tab" aria-selected="true">${s("All","الكل")}</span><span class="tab">${s("Unread","غير المقروءة")} <span class="c num">${UNREAD}</span></span></div></div>`;
+ const body=N.map(n=>row(n,{expand:"pen"})).join("");
+ const foot=`<div class="pop-f"><a href="#" class="btn btn-ghost btn-sm">${ic("gear-six")}${s("Notification settings","إعدادات الإشعارات")}</a><span class="muted" style="font-size:12px">${s("Showing the latest 20","آخر 20 إشعارًا")}</span></div>`;
+ if(phone) return `<div class="fullsheet"><div class="mbar"><button class="menub" aria-label="close">${ic("x")}</button><div class="brand-name">${s("Notifications","الإشعارات")}</div><button class="btn btn-ghost btn-sm">${ic("checks")}${s("Mark all read","قراءة الكل")}</button></div>
+  <div style="padding:6px 14px 0"><div class="tabs"><span class="tab" aria-selected="true">${s("All","الكل")}</span><span class="tab">${s("Unread","غير المقروءة")} <span class="c num">${UNREAD}</span></span></div></div>
+  <div class="scroll" style="padding:6px">${body}</div>${foot}</div>`;
+ return `<div class="pop">${head}<div class="pop-b">${body}</div>${foot}</div>`;
+}
+function A_prefs(school,phone){
+ /* In-app only (owner, 2026-11-18): one on/off per kind of notification. Required kinds are on and locked. */
+ const toggle=t=>t.req?`<span class="cellsw"><span class="sw on lock" aria-disabled="true"></span><small>${ic("lock-simple")} ${s("Required","إلزامي")}</small></span>`
+  :`<span class="cellsw"><span class="sw ${school||t.on?"on":""}"></span><small>${school?s("On by default","مفعّل افتراضيًا"):t.chg?`<a href="#" style="color:var(--primary);font-weight:700">${s("Reset to school default","استعادة افتراضي المدرسة")}</a>`:s("School default","افتراضي المدرسة")}</small></span>`;
+ const icon=(t,sz)=>`<span class="ic ${t.c}" style="width:${sz}px;height:${sz}px;border-radius:11px;display:grid;place-items:center;font-size:${sz/2}px;flex:none">${ic(t.ic)}</span>`;
+ if(phone){
+  return TYPES.map((t,i)=>`${i===0||TYPES[i-1].grp!==t.grp?`<div class="dayh">${grpName(t.grp)}</div>`:""}<div class="card" style="padding:14px 16px;margin:0 2px 10px;display:flex;gap:12px;align-items:center">
+   ${icon(t,34)}<div style="flex:1;min-width:0"><div style="font-weight:700">${t.n()}</div><div class="muted" style="font-size:12px">${t.d()}</div>${t.chg?`<div style="margin-top:6px">${chgPill()}</div>`:""}</div>${toggle(t)}</div>`).join("");
+ }
+ const rows=TYPES.map((t,i)=>`${i===0||TYPES[i-1].grp!==t.grp?`<tr class="gr"><td colspan="2">${grpName(t.grp)}</td></tr>`:""}<tr>
+  <td><div style="display:flex;gap:12px;align-items:center">${icon(t,36)}<div><div class="tn">${t.n()} ${t.chg&&!school?chgPill():""}</div><div class="td">${t.d()}</div></div></div></td>
+  <td class="ch">${toggle(t)}</td></tr>`).join("");
+ const table=`<div class="card" style="overflow:hidden"><table class="matrix"><thead><tr><th>${s("Notification","الإشعار")}</th><th class="ch">${school?s("For everyone","للجميع"):s("Tell me","أبلغني")}</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+ const timing=school?`<div class="card" style="padding:22px"><div style="font-family:var(--font-display);font-weight:800;font-size:16px;margin-bottom:4px">${s("Reminder timing","مواعيد التذكير")}</div><div class="muted" style="font-size:12.5px;margin-bottom:16px">${s("HR rules — changed by whoever may change HR rules. The HR manager sees this page read-only.","من قواعد شؤون الموظفين — يغيّرها من يحق له تعديلها. ويرى مدير شؤون الموظفين هذه الصفحة للاطلاع فقط.")}</div>
+  <div class="formgrid">${timingVals.map(x=>`<div class="field"><span class="lb">${x[2]()}</span><div class="input"><span class="num" style="font-weight:700">${x[0]}</span><span class="u">${x[3]()}</span></div></div>`).join("")}
+  <div class="field"><span class="lb">${s("Keep read notifications","مدة حفظ المقروءة")}</span><div class="input"><span class="num" style="font-weight:700">90</span><span class="u">${s("days","يومًا")}</span></div></div></div></div>`:"";
+ return table+timing;
+}
+
+/* ---------- pages ---------- */
+const deskList=()=>`<div class="desk">${side("dash")}<div class="main">${topline(true)}${ghostDash()}<div class="dimbg" style="background:transparent"></div>${A_list(false)}</div></div>`;
+const deskPrefs=(school)=>`<div class="desk">${side(school?"settings":"me")}<div class="main">${topline(false)}${pageHead(school)}${A_prefs(school,false)}${!school?"":`<div class="savebar"><span class="st">${ic("check-circle")}${s("No changes yet","لا توجد تغييرات بعد")}</span><button class="btn">${s("Cancel","إلغاء")}</button><button class="btn btn-primary" disabled style="opacity:.5;box-shadow:none">${s("Save","حفظ")}</button></div>`}</div></div>`;
+const phoneList=()=>`<div class="phone">${mbar(false)}<div class="scroll" style="padding:16px">${ghostDash()}</div>${A_list(true)}</div>`;
+const phonePrefs=()=>`<div class="phone">${mbar(false,s("My account","حسابي"))}<div class="scroll"><div style="padding:16px 16px 0"><div class="tabs"><span class="tab">${s("Profile","الملف")}</span><span class="tab">${s("Password","كلمة المرور")}</span><span class="tab" aria-selected="true">${ic("bell")}${s("Notifications","الإشعارات")}</span></div></div><div style="padding:8px 12px">${A_prefs(false,true)}</div></div></div>`;
+
+const NOTE={t:["Option A — Bell popover (picked by the owner, 2026-11-18)","الخيار أ — قائمة منسدلة من الجرس (اختيار المالك، 18 نوفمبر 2026)"],p:[
+  ["The bell sits beside the language switch; a click opens a compact list over the page (All / Unread). On a phone it opens full screen.","الجرس بجانب مفتاح اللغة، والضغط عليه يفتح قائمة صغيرة فوق الصفحة (الكل / غير المقروءة)، وعلى الهاتف تفتح بملء الشاشة."],
+  ["Notifications are shown in the app only. My account → Notifications has one switch per kind; required kinds stay on and are locked.","الإشعارات داخل النظام فقط. في حسابي ← الإشعارات مفتاح واحد لكل نوع، والأنواع الإلزامية مفعّلة ومقفلة."],
+  ["Settings → Notifications sets what everyone gets by default, the reminder timing and how long notifications are kept.","الإعدادات ← الإشعارات تحدد ما يصل إلى الجميع افتراضيًا ومواعيد التذكير ومدة حفظ الإشعارات."]]};
+function render(){
+ document.documentElement.lang=lang; document.documentElement.dir=AR()?"rtl":"ltr";
+ document.body.className=view==="desktop"?"only-desktop":view==="phone"?"only-phone":"";
+ const n=NOTE;
+ document.getElementById("app").innerHTML=`<div class="optnote"><b style="font-size:15px">${v(n.t)}</b><ul>${n.p.map(x=>`<li>${v(x)}</li>`).join("")}</ul></div>
+ <div class="deskSec"><div class="section-title">${s("Desktop · the list open","سطح المكتب · القائمة مفتوحة")}</div><div class="desk-scroll" id="d1">${deskList()}</div>
+ <div class="section-title">${s("Desktop · My account → Notifications","سطح المكتب · حسابي ← الإشعارات")}</div><div class="desk-scroll" id="d2">${deskPrefs(false)}</div>
+ <div class="section-title">${s("Desktop · Settings → Notifications (school defaults)","سطح المكتب · الإعدادات ← الإشعارات (افتراضي المدرسة)")}</div><div class="desk-scroll" id="d3">${deskPrefs(true)}</div></div>
+ <div class="phoneSec"><div class="section-title">${s("Phone","الهاتف")}</div><div class="phones" id="ph"><div class="phone-wrap"><span class="phone-cap">${s("The list","القائمة")}</span>${phoneList()}</div><div class="phone-wrap"><span class="phone-cap">${s("My preferences","تفضيلاتي")}</span>${phonePrefs()}</div></div></div>`;
+ document.querySelectorAll("#langSeg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.l===lang));
+ document.querySelectorAll("#viewSeg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===view));
+ history.replaceState(null,"",`#lang=${lang}&view=${view}`);
+}
+const h=new URLSearchParams(location.hash.slice(1));
+if(["en","ar"].includes(h.get("lang")))lang=h.get("lang");
+if(["both","desktop","phone"].includes(h.get("view")))view=h.get("view");
+document.getElementById("langSeg").onclick=e=>{const b=e.target.closest("button");if(b){lang=b.dataset.l;render();}};
+document.getElementById("viewSeg").onclick=e=>{const b=e.target.closest("button");if(b){view=b.dataset.v;render();}};
+render();
+</script>
+</body>
+</html>

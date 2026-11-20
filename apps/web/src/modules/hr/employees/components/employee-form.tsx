@@ -126,6 +126,7 @@ export function EmployeeForm({ basePath, employee, departments, stages, jobTitle
   // §3: a manager who no longer manages people is kept — noted while they are still the choice.
   const managerId = useWatch({ control, name: 'managerId' });
   const gender = useWatch({ control, name: 'gender' });
+  const hireDate = useWatch({ control, name: 'hireDate' });
   const managerHint =
     managers.currentNotManaging && managerId === employee?.manager?.id
       ? t('employees.hints.managerNotManaging')
@@ -236,6 +237,15 @@ export function EmployeeForm({ basePath, employee, departments, stages, jobTitle
 
         <Section title={t('employees.sections.job')}>
           <DateField control={control} name="hireDate" label={t('employees.fields.hireDate')} max={today} required />
+          {/* §3 (N0): left empty on a new employee, the API fills it from the hire date + the school's length. */}
+          <DateField
+            control={control}
+            name="probationEnd"
+            label={t('employees.fields.probationEnd')}
+            hint={t('employees.hints.probationEnd')}
+            min={hireDate ?? undefined}
+            clearable
+          />
           <SelectField
             control={control}
             name="workSystem"

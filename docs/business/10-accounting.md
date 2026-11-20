@@ -66,8 +66,59 @@ For each employee in the approved run:
   Accounting, which the Accountant opens from the menu; someone who may only view it sees it
   read-only — and see each approved month's payroll taxes.
 
+## The payroll taxes screen (Accounting → Payroll taxes)
+
+- **DECIDED** (owner, 2026-11-18) — **Option C** of the mockups (`design/mockups/accounting-taxes.html`):
+  a **year board** and each month as a **printable statement**.
+- **DECIDED** — The year board shows the year's twelve months, each **approved** (its gross, and
+  the number of employees; it opens the statement), **draft in HR** (HR has a run that isn't
+  approved yet — nothing in accounting until it is) or **nothing yet** ("no payroll in the system";
+  a month still ahead: "not started"). Previous / next year, never past this year. A year with no
+  approved month says so and points to HR payroll.
+- **DECIDED** — The statement: the month's sum across the top — **net + insurance share + income
+  tax + martyrs' fund = gross** — then the employees in two tables, **Insured** and **Not
+  insured**, each with a **subtotal** row; at the foot, the tax rule the month was worked out with
+  and how each line is worked out, with "Same as today's rule" (or "Today's rule is different")
+  for someone who may view the rule in Settings.
+- **DECIDED** — The tables are the app's shared tables (cards on a phone, like every list), not the
+  mockup's drawn ones.
+- **DECIDED** (owner, 2026-11-19) — A month can hold 100+ employees, so **on screen** each group pages
+  like every list (the shared pagination, 10 a page) and one search box above the groups finds an
+  employee by name (English or Arabic) or code in both. Each **subtotal still covers the whole
+  group**, never the page or the search, and says so ("Subtotal · all 26"). **Print / PDF and the
+  Excel always contain everyone** — no pages and no search on paper. Paging and the search are kept
+  on the screen only, as on the lateness board (the whole month is loaded), not in the address.
+- **DECIDED** — **Excel**: the month's lines as the viewer sees them (one row each, with insurance,
+  insured salary, net, insurance share, income tax, fund and gross; a total row only for someone who
+  sees every salary) and a second sheet with the tax rule. **Download PDF**: the browser prints the
+  statement on landscape A4, without the menu.
+- **DECIDED** (P4, §2) — An employee outside the viewer's salary scope shows name, code and
+  insurance status; the amounts are hidden ("Salary hidden"), and so are the month's totals, the
+  sum line and the subtotals ("only for someone who sees every salary").
+- **DECIDED** — Only the Accountant and the System admin open it (`accounting.payroll.view`); a
+  school can grant it to another role in Roles. Anyone else gets the not-found page.
+
+### Accounting → Approved payroll: return to HR, finalize (owner, 2026-11-19)
+
+- **DECIDED** — A second page beside Payroll taxes, **Approved payroll** (named apart from HR's
+  Payroll, 2026-11-20): HR's approved months laid out like
+  HR's payroll (the runs list, then a month with HR's columns — salary, penalties, lateness,
+  adjustments, net — followed by insurance share, income tax, martyrs' fund and gross). Read only.
+- **DECIDED** — An approved month is **Pending transfer** until Accounting **finalizes** it ("the
+  transfer is made"): then it is **Finalized · transferred**, here and on HR's run and runs list.
+  Finalizing can't be undone.
+- **DECIDED** — While pending, Accounting can **return the month to HR** with a **required reason**
+  (up to 500 characters). HR's run becomes a draft again — the month unlocked, so penalties, lateness
+  and adjustments can be fixed — and its taxes leave accounting until HR approves it again (then
+  they are worked out afresh). HR's run page shows "Returned by Accounting on …" with the reason
+  until it is approved again, HR's runs list marks that draft **Returned**, and HR's payroll approvers get an always-on notification (resolved by the
+  re-approval). A finalized month can never be returned (409 `PAYROLL_FINALIZED`).
+- **DECIDED** — Two permissions, both on the Accountant and the System admin by default:
+  `accounting.payroll.return` and `accounting.payroll.finalize`. Both writes are audited, as status
+  changes, on the accounting month (`accounting.payroll.return` with the reason,
+  `accounting.payroll.finalize`) and on HR's run, so its own history shows them (`hr.payroll.returned`
+  with the reason, `hr.payroll.transferred`) (2026-11-20).
+
 ## Planned
 
-- A screen for each approved month's payroll taxes (mockups first). Today they are available to
-  the system but not shown.
 - Journal entries from approved payroll (and later fee payments); the employer's insurance share.

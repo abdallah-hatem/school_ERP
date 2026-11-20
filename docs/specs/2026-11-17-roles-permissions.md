@@ -58,7 +58,8 @@ The seeded `admin@school.local` becomes **System admin** + **HR manager**.
 - **Administration → Users**: list (10 per page, search), add / edit (name, email, roles, linked
   employee), deactivate / reactivate, set temporary password.
 - **Administration → Roles**: list of roles; a role's page shows its permissions grouped by module
-  with a scope per permission; add a custom role; built-in roles can be edited but not deleted.
+  with a scope per permission; add a custom role; built-in roles can be edited, and — like custom roles — deleted once nobody
+  holds them, except the System admin (owner, 2026-11-19; see P2 below).
 - **My account**: change password.
 - Layout: three mockups first (CLAUDE.md rule 9), owner picks.
 
@@ -87,7 +88,12 @@ The seeded `admin@school.local` becomes **System admin** + **HR manager**.
   rule; audit actions `core.user.*` / `core.role.*`; keys `core.users.view/manage`,
   `core.roles.view/manage`. Decisions taken while building: the System admin always holds every key
   and its list can't be edited; `own_stage` counts as wider than `own_team`; custom roles get a
-  generated key and can be deleted once nobody holds them; the employee link moved to
+  generated key and can be deleted once nobody holds them (**owner, 2026-11-19:** so can a starting
+  role, except the System admin — `DELETE /roles/:id` refuses the System admin with 409
+  `SYSTEM_ADMIN_UNDELETABLE` and a held role with 409 `ROLE_IN_USE`; the `BUILT_IN_ROLE` refusal is
+  gone; migrations that grant new keys to starting roles join on the role's key, so they skip a
+  deleted one, and `test/deleted-starting-roles-migration.e2e-spec.ts` replays every later migration
+  after deleting them; the seed gives the admin only the roles still there); the employee link moved to
   `users.employee_id` (HR's `employees.user_id` deprecated); the `users.role` column is kept,
   deprecated, until P3. **Salary filtering moved to P4** (it is an HR change); until then the
   principal, stage head, direct manager and accountant see what HR endpoints return today.

@@ -5,6 +5,7 @@ import {
   levelDaysProblem,
   MAX_VIOLATION_LEVELS,
   MIN_VIOLATION_LEVELS,
+  NOTIFICATION_RETENTION_LIMITS,
   PENALTY_ACTIONS_ALLOWING_DAYS,
   PenaltyAction,
   RepetitionWindow,
@@ -80,6 +81,11 @@ export const hrRulesSchema = z.object({
   dayDivisor: wholeNumber(SETTING_LIMITS.dayDivisorMin, SETTING_LIMITS.dayDivisorMax, 'settings.errors.divisor'),
   partTime: z.object({ PART_TIME_4: percent(), PART_TIME_3: percent(), PART_TIME_2: percent() }),
   repetitionWindow: z.enum(RepetitionWindow, { error: required }),
+  defaultProbationMonths: wholeNumber(
+    SETTING_LIMITS.probationMonthsMin,
+    SETTING_LIMITS.probationMonthsMax,
+    'settings.errors.probationMonths',
+  ),
 });
 export type HrRulesFormValues = z.infer<typeof hrRulesSchema>;
 
@@ -163,3 +169,59 @@ export function toLevelInputs(levels: ViolationFormValues['levels']) {
     days: PENALTY_ACTIONS_ALLOWING_DAYS.includes(l.action) ? l.days : null,
   }));
 }
+
+// ── Notifications (§11) ──────────────────────────────────────────────────────
+
+const retentionDays = () =>
+  wholeNumber(NOTIFICATION_RETENTION_LIMITS.min, NOTIFICATION_RETENTION_LIMITS.max, 'notifications.settings.errors.retention');
+const checkDay = () => wholeNumber(SETTING_LIMITS.checkDayMin, SETTING_LIMITS.checkDayMax, 'notifications.settings.errors.checkDay');
+
+/**
+ * The reminder timings (HR rules, spec → Reminder settings): the first contract reminder 1–120
+ * days, the second 0 (none) – 60 and fewer than the first, probation 1–60, the check days 1–31.
+ */
+export const reminderTimingSchema = z
+  .object({
+    contractEndDays: wholeNumber(
+      SETTING_LIMITS.contractEndDaysMin,
+      SETTING_LIMITS.contractEndDaysMax,
+      'notifications.settings.errors.contractEndDays',
+    ),
+    contractEndSecondDays: wholeNumber(
+      SETTING_LIMITS.contractEndSecondDaysMin,
+      SETTING_LIMITS.contractEndSecondDaysMax,
+      'notifications.settings.errors.contractEndSecondDays',
+    ),
+    probationEndDays: wholeNumber(
+      SETTING_LIMITS.probationEndDaysMin,
+      SETTING_LIMITS.probationEndDaysMax,
+      'notifications.settings.errors.probationEndDays',
+    ),
+    latenessCheckDay: checkDay(),
+    payrollCheckDay: checkDay(),
+  })
+  .refine((v) => v.contractEndSecondDays === 0 || v.contractEndSecondDays < v.contractEndDays, {
+    path: ['contractEndSecondDays'],
+    error: 'notifications.settings.errors.contractEndSecondDays',
+  });
+
+/**
+ * Settings → Notifications: the school's default per type (in the registry's order), the
+ * retention, and — for whoever may read HR rules — the probation length and the reminder timings.
+ */
+export const notificationSettingsSchema = z.object({
+  defaults: z.array(z.boolean()),
+  retention: z.object({ readDays: retentionDays(), resolvedDays: retentionDays(), maxDays: retentionDays() }),
+  hr: z
+    .object({
+      defaultProbationMonths: wholeNumber(
+        SETTING_LIMITS.probationMonthsMin,
+        SETTING_LIMITS.probationMonthsMax,
+        'settings.errors.probationMonths',
+      ),
+      reminders: reminderTimingSchema.optional(),
+    })
+    .optional(),
+});
+export type NotificationSettingsFormValues = z.infer<typeof notificationSettingsSchema>;
+export type ReminderTimingValues = z.infer<typeof reminderTimingSchema>;

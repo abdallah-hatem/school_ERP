@@ -27,14 +27,18 @@
     "lateness_month": "Monthly lateness",
     "payroll_run": "Payroll run",
     "accounting_settings": "Accounting rules",
-    "accounting_payroll": "Payroll taxes"
+    "accounting_payroll": "Payroll taxes",
+    "outbox_delivery": "Event delivery",
+    "notification_preferences": "Notification preferences",
+    "notification_settings": "Notification settings"
   },
   "actions": {
     "core": {
       "auth": {
         "sign_in": "Signed in",
         "sign_out": "Signed out",
-        "sign_in_failed": "Failed sign-in attempt for {entity}"
+        "sign_in_failed": "Failed sign-in attempt for {entity}",
+        "locked_out": "Sign-in locked for {entity} after too many wrong passwords"
       },
       "settings": {
         "update": "Changed the school settings",
@@ -50,12 +54,22 @@
         "deactivate": "Deactivated the user {entity}",
         "reactivate": "Reactivated the user {entity}",
         "set_password": "Set a temporary password for {entity}",
-        "change_password": "Changed the password of {entity}"
+        "change_password": "Changed the password of {entity}",
+        "unlock_sign_in": "Unlocked sign-in for {entity}"
       },
       "role": {
         "create": "Added the role {entity}",
         "update": "Edited the role {entity}",
         "delete": "Deleted the role {entity}"
+      },
+      "outbox": {
+        "retry": "Retried the event delivery {entity}"
+      },
+      "notification_preferences": {
+        "update": "Changed the notification preferences of {entity}"
+      },
+      "notification_settings": {
+        "update": "Changed the notification settings"
       }
     },
     "hr": {
@@ -96,6 +110,8 @@
         "create": "Created the payroll run for {entity}",
         "recalculate": "Recalculated the payroll run for {entity}",
         "approve": "Approved the payroll run for {entity}",
+        "returned": "Returned the payroll run for {entity} to a draft (sent back by Accounting)",
+        "transferred": "Marked the payroll run for {entity} as transferred",
         "adjustment_add": "Added an adjustment to the payroll run for {entity}",
         "adjustment_remove": "Removed an adjustment from the payroll run for {entity}"
       }
@@ -105,7 +121,9 @@
         "update": "Changed the accounting rules"
       },
       "payroll": {
-        "record": "Worked out the payroll taxes for {entity}"
+        "record": "Worked out the payroll taxes for {entity}",
+        "return": "Returned the payroll for {entity} to HR",
+        "finalize": "Finalized the payroll for {entity} (transfer made)"
       }
     }
   },
@@ -133,6 +151,7 @@
     "fingerprintId": "Fingerprint ID",
     "contractStart": "Contract start",
     "contractEnd": "Contract end",
+    "probationEnd": "Probation end",
     "usesBus": "Uses the bus",
     "photoUrl": "Photo",
     "insuranceStatus": "Insurance status",
@@ -150,7 +169,9 @@
     "university": "University",
     "graduationYear": "Graduation year",
     "status": "Status",
+    "transferredAt": "Transferred on",
     "userId": "User account",
+    "lockedUntil": "Sign-in locked until",
     "groupId": "Penalty group",
     "note": "Note",
     "levels": "Levels",
@@ -191,6 +212,16 @@
       "penalties": {
         "repetitionWindow": "Penalty repetition window"
       },
+      "employees": {
+        "defaultProbationMonths": "Default probation length"
+      },
+      "reminders": {
+        "contractEndDays": "Contract reminder (days before)",
+        "contractEndSecondDays": "Second contract reminder (days before)",
+        "probationEndDays": "Probation reminder (days before)",
+        "latenessCheckDay": "Lateness check day",
+        "payrollCheckDay": "Payroll check day"
+      },
       "departments": "Department",
       "jobTitles": "Job title",
       "penaltyGroups": "Penalty group",
@@ -208,7 +239,28 @@
         "martyrPercent": "Martyrs' fund rate",
         "insurancePercent": "Employee insurance share"
       }
+    },
+    "notifications": {
+      "retention": {
+        "readDays": "Keep read notifications (days)",
+        "resolvedDays": "Keep done approvals (days)",
+        "maxDays": "Keep any notification at most (days)"
+      }
     }
+  },
+  "totals": {
+    "net": "Net",
+    "employees": "Employees",
+    "flagged": "Need review",
+    "monthSalary": "Salaries",
+    "gross": "Gross salaries",
+    "penaltyAmount": "Penalties",
+    "latenessAmount": "Lateness",
+    "adjustmentAdditions": "Additions",
+    "adjustmentDeductions": "Deductions",
+    "incomeTax": "Income tax",
+    "martyrTax": "Martyrs' fund",
+    "insuranceAmount": "Employee insurance"
   },
   "activity": {
     "description": "Every change and sign-in across the school, newest first. Entries can't be edited or deleted.",
@@ -351,6 +403,19 @@
       "other": "{count} min"
     },
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "file": {
+      "photo": {
+        "added": "Photo added",
+        "changed": "Photo changed",
+        "removed": "Photo removed"
+      },
+      "logo": {
+        "added": "School logo added",
+        "changed": "School logo changed",
+        "removed": "School logo removed"
+      },
+      "uploaded": "Uploaded"
+    }
   }
 }

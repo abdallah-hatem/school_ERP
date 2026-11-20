@@ -143,7 +143,7 @@
     "amount": "المبلغ",
     "amountPlaceholder": "500.00",
     "amountRequired": "أدخل مبلغًا أكبر من 0.",
-    "amountMax": "المبلغ كبير جدًا.",
+    "amountMax": "الحد الأقصى 1,000,000.00 ج.م.",
     "reason": "السبب",
     "reasonPlaceholder": "مراقبة امتحانات، 3 فترات",
     "reasonRequired": "أدخل السبب.",
@@ -213,5 +213,12 @@
     },
     "draftNote": "القسيمة بعد الاعتماد",
     "openRun": "فتح المسيّر"
+  },
+  "transferred": "نهائي · تم التحويل",
+  "returned": {
+    "title": "أعادته الحسابات في {date}",
+    "reasonLabel": "السبب:",
+    "fix": "صحّح ما يلزم ثم اعتمد الشهر من جديد.",
+    "pill": "مُعاد"
   }
 }

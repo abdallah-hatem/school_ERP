@@ -3,6 +3,7 @@ import {
   AUTH_COOKIES,
   ErrorCode,
   PERMISSION_KEYS,
+  type AuditActor,
   type AuditChange,
   type AuthUser,
   type EmployeeOption,
@@ -197,14 +198,38 @@ describe('users and roles (e2e)', () => {
       expect([dup.status, dup.body.error]).toEqual([400, ErrorCode.DUPLICATE_PERMISSION]);
     });
 
-    it('built-in roles can’t be deleted; the System admin’s permissions can’t be narrowed', async () => {
-      const del = await http(app).delete(`/roles/${roleId('hr_officer')}`).expect(409);
-      expect(del.body.error).toBe(ErrorCode.BUILT_IN_ROLE);
+    it('the System admin can’t be deleted, nor its permissions narrowed', async () => {
+      const del = await http(app).delete(`/roles/${roleId('system_admin')}`).expect(409);
+      expect(del.body.error).toBe(ErrorCode.SYSTEM_ADMIN_UNDELETABLE);
+      expect(await db.role.count({ where: { key: 'system_admin' } })).toBe(1);
       const fixed = await http(app)
         .patch(`/roles/${roleId('system_admin')}`)
         .send({ permissions: [] })
         .expect(409);
       expect(fixed.body.error).toBe(ErrorCode.SYSTEM_ADMIN_FIXED);
+    });
+
+    it('a starting role is deleted once nobody holds it, and the deletion is audited (owner 2026-11-19)', async () => {
+      // A starting role of its own, so the shared ones other specs sign in with stay.
+      const role = await db.role.create({
+        data: { key: unique('starting').toLowerCase(), nameEn: 'Starting', nameAr: 'أساسي', builtIn: true },
+      });
+      roleIds.push(role.id);
+      await db.rolePermission.create({
+        data: { roleId: role.id, permissionKey: 'hr.employees.view', scope: 'all' },
+      });
+      const holder = await makeUser();
+      await db.userRoleAssignment.create({ data: { userId: holder.id, roleId: role.id } });
+      const held = await http(app).delete(`/roles/${role.id}`).expect(409);
+      expect(held.body.error).toBe(ErrorCode.ROLE_IN_USE);
+      await db.userRoleAssignment.deleteMany({ where: { roleId: role.id } });
+
+      const mark = await historyMark(db);
+      await http(app).delete(`/roles/${role.id}`).expect(204);
+      await http(app).get(`/roles/${role.id}`).expect(404);
+      expect(await db.rolePermission.count({ where: { roleId: role.id } })).toBe(0);
+      const [entry] = await entriesAfter(mark, 'core.role.delete');
+      expect(entry).toMatchObject({ entityType: 'role', entityId: role.id, actorId: user.id });
     });
 
     it('a custom role is deleted only when nobody holds it', async () => {
@@ -250,6 +275,9 @@ describe('users and roles (e2e)', () => {
         employee: { id: listRefs.employee, nameEn: 'Linked Person' },
       });
       expect(JSON.stringify(res.body)).not.toMatch(/password_hash|passwordHash|\$2[aby]\$/);
+      // HR's employee profile says who signs in as this employee ("Signs in as: …"), name and id only.
+      const profile = await http(app).get(`/hr/employees/${listRefs.employee}`).expect(200);
+      expect(profile.body.data.signInAccount).toEqual({ id: created.id, name: 'Nadia Samir' });
 
       const [entry] = await entriesAfter(mark, 'core.user.create');
       expect(entry).toMatchObject({ entityType: 'user', entityId: created.id });
@@ -273,6 +301,8 @@ describe('users and roles (e2e)', () => {
       const list = await http(app).get('/users?search=nadia%20samir').expect(200);
       expect((list.body.data as UserAccount[]).map((u) => u.id)).toContain(created.id);
       expect((list.body.data as UserAccount[])[0]?.employee).toBeNull();
+      const unlinked = await http(app).get(`/hr/employees/${listRefs.employee}`).expect(200);
+      expect(unlinked.body.data.signInAccount).toBeNull();
     });
 
     it('refuses unknown roles (400), a short password (400) and an unknown employee (400)', async () => {
@@ -627,6 +657,65 @@ describe('users and roles (e2e)', () => {
         expect((byCode.body.data as EmployeeOption[]).map((o) => o.id)).toEqual([listRefs.employee]);
       } finally {
         await db.user.update({ where: { id: linked.id }, data: { employeeId: null } });
+      }
+    });
+
+    it('the avatar: accounts, /auth/me, the audit actors and the employee options carry the linked employee’s photo and gender', async () => {
+      const photoUrl = '/files/employee-photos/avatar-e2e.jpg';
+      const linked = await makeUser();
+      const plain = await makeUser();
+      await db.employee.update({ where: { id: listRefs.employee }, data: { photoUrl } });
+      await db.user.update({ where: { id: linked.id }, data: { employeeId: listRefs.employee } });
+      try {
+        const account = (await http(app).get(`/users/${linked.id}`).expect(200)).body.data as UserAccount;
+        expect(account.employee).toEqual({
+          id: listRefs.employee,
+          code: expect.any(String),
+          nameEn: 'Linked Person',
+          nameAr: 'شخص',
+          photoUrl,
+          gender: 'FEMALE',
+        });
+        const unlinked = (await http(app).get(`/users/${plain.id}`).expect(200)).body.data as UserAccount;
+        expect(unlinked.employee).toBeNull();
+
+        // The user chip: only the photo and gender, never more of the employee.
+        await as(linked.id, async () => {
+          const me = await http(app).get('/auth/me').expect(200);
+          expect(me.body.data.employee).toEqual({ photoUrl, gender: 'FEMALE' });
+        });
+        await as(plain.id, async () => {
+          const me = await http(app).get('/auth/me').expect(200);
+          expect(me.body.data.employee).toBeNull();
+        });
+
+        // Activity's Person filter: each actor with their account's linked employee, or null.
+        for (const u of [linked, plain]) {
+          await db.auditEntry.create({
+            data: {
+              action: 'core.user.update',
+              module: 'core',
+              entityType: 'user',
+              entityId: u.id,
+              entityLabel: u.name,
+              actorId: u.id,
+              actorName: u.name,
+            },
+          });
+        }
+        const actors = (await http(app).get('/audit/actors').expect(200)).body.data as AuditActor[];
+        expect(actors.find((a) => a.id === linked.id)).toEqual({
+          id: linked.id,
+          name: linked.name,
+          employee: { photoUrl, gender: 'FEMALE' },
+        });
+        expect(actors.find((a) => a.id === plain.id)?.employee).toBeNull();
+
+        const options = await http(app).get('/users/employee-options?search=Linked%20Person').expect(200);
+        expect((options.body.data as EmployeeOption[])[0]).toMatchObject({ photoUrl, gender: 'FEMALE' });
+      } finally {
+        await db.user.update({ where: { id: linked.id }, data: { employeeId: null } });
+        await db.employee.update({ where: { id: listRefs.employee }, data: { photoUrl: null } });
       }
     });
 

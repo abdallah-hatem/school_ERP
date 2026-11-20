@@ -16,6 +16,7 @@
     "lastPage": "الصفحة الأخيرة",
     "page": "صفحة {page}",
     "pageOf": "صفحة {page} من {count}",
+    "rowsPerPage": "عدد الصفوف في الصفحة",
     "actions": "الإجراءات",
     "actionsFor": "إجراءات {name}"
   },
@@ -46,6 +47,7 @@
     "invalidNumber": "أدخل رقمًا.",
     "invalidAmount": "أدخل مبلغًا بحد أقصى رقمين عشريين، مثل 1,250.00.",
     "pickDate": "اختر يومًا",
+    "clearDate": "مسح التاريخ",
     "chooseOption": "اختر من القائمة",
     "noOptions": "لا توجد خيارات بعد.",
     "counter": "{count} / {max}",

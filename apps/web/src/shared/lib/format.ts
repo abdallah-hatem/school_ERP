@@ -12,6 +12,19 @@ export function formatMoney(value: Piastres | undefined): string {
   return value === undefined ? '—' : formatPiastres(value);
 }
 
+/**
+ * Money inside a sentence, drawn as `<Money>` draws it — the label left of the figure in both
+ * languages: `EGP 14,000.00` / `14,000.00 ج.م` (logical order; an Arabic line shows the label on
+ * the left). The label and figure are joined by a no-break space, so a wrapping sentence never
+ * leaves "EGP" at a line's end and the figure on the next. For amounts that are never negative
+ * (totals, a net); a signed figure in Arabic text needs `<Money>`. `undefined` (hidden, R7) is a dash.
+ */
+export function formatMoneyText(value: Piastres | undefined, locale: Locale, currencyLabel: string): string {
+  if (value === undefined) return formatMoney(value);
+  const figure = formatPiastres(value);
+  return locale === 'ar' ? `${figure} ${currencyLabel}` : `${currencyLabel} ${figure}`;
+}
+
 /** The sum of amounts, or `undefined` when any of them is hidden (R7). */
 export function sumMoney(...values: (Piastres | undefined)[]): Piastres | undefined {
   return values.some((v) => v === undefined) ? undefined : values.reduce<number>((a, v) => a + (v as number), 0);
@@ -47,6 +60,13 @@ export function formatMonth(month: Month, locale: Locale): string {
     year: 'numeric',
     timeZone: 'UTC',
   }).format(parseIsoDate(`${month}-01`));
+}
+
+/** `2026-11` → `November` / `نوفمبر` (the year shown elsewhere, e.g. a year board's heading). */
+export function formatMonthName(month: Month, locale: Locale): string {
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], { month: 'long', timeZone: 'UTC' }).format(
+    parseIsoDate(`${month}-01`),
+  );
 }
 
 /** A JS Date (from a picker) → `YYYY-MM-DD` of the day the person picked, in their local calendar. */

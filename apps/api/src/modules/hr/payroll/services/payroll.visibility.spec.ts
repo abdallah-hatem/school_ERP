@@ -1,6 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import { HR_SETTINGS_DEFAULTS, PAYROLL_LINE_MONEY_FIELDS } from '@school-erp/shared';
-import type { EventEmitter2 } from '@nestjs/event-emitter';
+import type { DomainEvents } from '../../../../core/events';
 import type { SettingsService } from '../../../../core/settings';
 import { fakeAccess } from '../../access/hr-access.testing';
 import type { EmployeeScope } from '../../access/employee-scope.pure';
@@ -61,6 +61,22 @@ const TOTALS = {
 function makeService(scopes: Parameters<typeof fakeAccess>[0], salaryIds: string[] = []) {
   const repository = {
     findRun: jest.fn().mockResolvedValue({ id: 'r1', month: '2026-10', status: 'APPROVED', approvedAt: new Date(), calculatedAt: new Date() }),
+    returnToDraft: jest.fn().mockResolvedValue(true),
+    markTransferred: jest.fn().mockResolvedValue(true),
+    findAccountingBreakdowns: jest.fn().mockResolvedValue([
+      {
+        employeeId: 'e1',
+        departmentNameEn: 'Teaching',
+        departmentNameAr: 'التدريس',
+        monthSalary: 1_000_000,
+        penaltyDays: '1.5',
+        penaltyAmount: 50_000,
+        latenessDays: '0',
+        latenessAmount: 0,
+        adjustmentAdditions: 0,
+        adjustmentDeductions: 0,
+      },
+    ]),
     list: jest.fn().mockResolvedValue({
       data: [{ id: 'r1', month: '2026-10', status: 'APPROVED', approvedAt: null }],
       total: 1,
@@ -110,6 +126,8 @@ function makeService(scopes: Parameters<typeof fakeAccess>[0], salaryIds: string
       },
     ]),
   };
+  const notifications = { payrollReturned: jest.fn().mockResolvedValue(undefined) };
+  const audit = { record: jest.fn().mockResolvedValue(undefined) };
   const school = { getSchoolSettings: jest.fn().mockResolvedValue({ nameEn: 'S', nameAr: 'S', logoUrl: null }) };
   const service = new PayrollService(
     repository as unknown as PayrollRunsRepository,
@@ -119,12 +137,14 @@ function makeService(scopes: Parameters<typeof fakeAccess>[0], salaryIds: string
     // An extra key beside the HR rules: the run must pass on the rules only.
     { get: jest.fn().mockResolvedValue({ ...HR_SETTINGS_DEFAULTS, extra: { secret: 1 } }) } as unknown as HrSettingsService,
     school as unknown as SettingsService,
-    { emit: jest.fn() } as unknown as EventEmitter2,
+    { publish: jest.fn() } as unknown as DomainEvents,
     fakeAccess(scopes),
-    { record: jest.fn() } as never,
+    audit as never,
     { inTransaction: (fn: () => unknown) => fn(), run: (fn: () => unknown) => Promise.resolve(fn()) } as never,
+    { payrollRunCreated: jest.fn(), payrollRunApproved: jest.fn() } as never,
+    notifications as never,
   );
-  return { service, repository, employees };
+  return { service, repository, employees, notifications, audit };
 }
 
 const PRINCIPAL = { 'hr.employees.view_salary': null } as const;
@@ -137,7 +157,9 @@ describe('payroll — the run carries its rules (no hr.settings.view needed)', (
     ['accountant', ACCOUNTANT],
   ])('%s: the run holds the HR rules, and nothing but them', async (_who, scopes) => {
     const run = await makeService(scopes).service.get('r1');
-    expect(run.rules).toEqual(HR_SETTINGS_DEFAULTS);
+    const { lateness, payroll, penalties } = HR_SETTINGS_DEFAULTS;
+    expect(run.rules).toEqual({ lateness, payroll, penalties });
+    // Not the employee rule (N0's probation length) either: the run's figures don't use it.
     expect(Object.keys(run.rules).sort()).toEqual(['lateness', 'payroll', 'penalties']);
   });
 
@@ -242,5 +264,86 @@ describe('payroll — scopes (R5)', () => {
     expect(totalsMoneyVisible({ lines: PRIMARY, salary: { kind: 'none' } })).toBe(false);
     expect(totalsMoneyVisible({ lines: PRIMARY, salary: PRIMARY })).toBe(true);
     expect(totalsMoneyVisible({ lines: PRIMARY, salary: { kind: 'all' } })).toBe(true);
+  });
+});
+
+describe('payroll — approvedLineBreakdowns (for accounting, §10)', () => {
+  it("an approved run: each line's breakdown keyed by employee, days as numbers", async () => {
+    const { service } = makeService({});
+    const map = await service.approvedLineBreakdowns('r1');
+    expect(map?.get('e1')).toEqual(expect.objectContaining({ monthSalary: 1_000_000, penaltyDays: 1.5, latenessDays: 0 }));
+    expect(map?.get('e1')).not.toHaveProperty('employeeId');
+  });
+
+  it('a draft run → null', async () => {
+    const { service, repository } = makeService({});
+    repository.findRun.mockResolvedValueOnce({ id: 'r1', month: '2026-10', status: 'DRAFT', approvedAt: null, calculatedAt: new Date() });
+    await expect(service.approvedLineBreakdowns('r1')).resolves.toBeNull();
+    expect(repository.findAccountingBreakdowns).not.toHaveBeenCalled();
+  });
+});
+
+describe('payroll — returned by / transferred in Accounting (§10)', () => {
+  const approved = (over: Record<string, unknown> = {}) => ({
+    id: 'r1', month: '2026-10', status: 'APPROVED', approvedAt: new Date(), calculatedAt: new Date(),
+    transferredAt: null, returnedAt: null, returnReason: null, ...over,
+  });
+
+  it('return: the approved run is a draft again with the reason, and its approvers are told', async () => {
+    const { service, repository, notifications } = makeService({});
+    repository.findRun.mockResolvedValueOnce(approved());
+    await service.returnFromAccounting('r1', 'Fix EMP-0003', 'u1');
+    expect(repository.returnToDraft).toHaveBeenCalledWith('r1', 'Fix EMP-0003');
+    expect(notifications.payrollReturned).toHaveBeenCalledWith({ id: 'r1', month: '2026-10', reason: 'Fix EMP-0003' }, 'u1');
+  });
+
+  it("return is recorded on the run itself (hr.payroll.returned: APPROVED → DRAFT, with the reason)", async () => {
+    const { service, repository, audit } = makeService({});
+    repository.findRun.mockResolvedValueOnce(approved());
+    await service.returnFromAccounting('r1', 'Fix EMP-0003', 'u1');
+    expect(audit.record).toHaveBeenCalledWith({
+      action: 'hr.payroll.returned',
+      entity: { type: 'payroll_run', id: 'r1', label: '2026-10' },
+      changes: [
+        { field: 'status', before: 'APPROVED', after: 'DRAFT' },
+        { field: 'reason', before: null, after: 'Fix EMP-0003' },
+      ],
+    });
+  });
+
+  it('transfer is recorded on the run itself (hr.payroll.transferred, with the moment)', async () => {
+    const { service, repository, audit } = makeService({});
+    repository.findRun.mockResolvedValueOnce(approved());
+    const at = new Date('2026-11-20T10:00:00.000Z');
+    await service.markTransferred('r1', at);
+    expect(repository.markTransferred).toHaveBeenCalledWith('r1', at);
+    expect(audit.record).toHaveBeenCalledWith({
+      action: 'hr.payroll.transferred',
+      entity: { type: 'payroll_run', id: 'r1', label: '2026-10' },
+      changes: [{ field: 'transferredAt', before: null, after: '2026-11-20T10:00:00.000Z' }],
+    });
+  });
+
+  it('a refused return or transfer records nothing', async () => {
+    const { service, repository, audit } = makeService({});
+    repository.findRun.mockResolvedValue(approved({ transferredAt: new Date() }));
+    await expect(service.returnFromAccounting('r1', 'x', 'u1')).rejects.toMatchObject({ status: 409 });
+    await expect(service.markTransferred('r1', new Date())).rejects.toMatchObject({ status: 409 });
+    expect(audit.record).not.toHaveBeenCalled();
+  });
+
+  it('a transferred run is never returned (409 PAYROLL_FINALIZED)', async () => {
+    const { service, repository } = makeService({});
+    repository.findRun.mockResolvedValueOnce(approved({ transferredAt: new Date() }));
+    await expect(service.returnFromAccounting('r1', 'x', 'u1')).rejects.toMatchObject({ status: 409 });
+    expect(repository.returnToDraft).not.toHaveBeenCalled();
+  });
+
+  it('a draft can be neither returned nor transferred (409 PAYROLL_NOT_APPROVED)', async () => {
+    const { service, repository } = makeService({});
+    repository.findRun.mockResolvedValue(approved({ status: 'DRAFT', approvedAt: null }));
+    await expect(service.returnFromAccounting('r1', 'x', 'u1')).rejects.toMatchObject({ status: 409 });
+    await expect(service.markTransferred('r1', new Date())).rejects.toMatchObject({ status: 409 });
+    expect(repository.markTransferred).not.toHaveBeenCalled();
   });
 });

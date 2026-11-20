@@ -1,4 +1,4 @@
-import type { Employee, EmployeeSummary, ListItem, SessionUser } from '@school-erp/shared';
+import type { Employee, EmployeeSummary, ListItem, SessionUser, Stage } from '@school-erp/shared';
 import type { AnchorHTMLAttributes, ReactElement, ReactNode } from 'react';
 import type { Locale } from '@/shared/lib/i18n';
 import { renderWithI18n, TEST_SESSION } from '@/test/render';
@@ -18,9 +18,15 @@ export const departments: ListItem[] = [
   item('d-math', 'Mathematics', 'الرياضيات', true, 1),
   item('d-sci', 'Science', 'العلوم', true, 2),
 ];
-export const stages: ListItem[] = [
-  item('s-kg', 'Kindergarten', 'رياض الأطفال', true, 1),
-  item('s-pri', 'Primary', 'الابتدائي', true, 2),
+/** A stage; `isNoStage` marks the "no stage" entry (§3), whatever its name. */
+export const stage = (id: string, nameEn: string, nameAr: string, sortOrder = 1, isNoStage = false): Stage => ({
+  ...item(id, nameEn, nameAr, true, sortOrder),
+  isNoStage,
+});
+
+export const stages: Stage[] = [
+  stage('s-kg', 'Kindergarten', 'رياض الأطفال', 1),
+  stage('s-pri', 'Primary', 'الابتدائي', 2),
 ];
 export const jobTitles: ListItem[] = [item('j-teacher', 'Teacher', 'معلم', true, 1)];
 
@@ -46,6 +52,7 @@ export const employee: Employee = {
   fingerprintId: '1042',
   contractStart: '2026-06-01',
   contractEnd: '2027-05-31',
+  probationEnd: '2020-11-30',
   usesBus: false,
   photoUrl: null,
   insuranceStatus: 'NOT_INSURED',
@@ -63,6 +70,7 @@ export const employee: Employee = {
   university: null,
   graduationYear: null,
   status: 'ACTIVE',
+  signInAccount: null,
   salaryVisible: true,
   createdAt: '2026-11-01T08:00:00.000Z',
   updatedAt: '2026-11-01T08:00:00.000Z',

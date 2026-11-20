@@ -1,5 +1,6 @@
 import type { SettingsChangeScope } from './events';
 import type { IsoDateTime, Uuid } from './types/common';
+import type { PersonAvatarRef } from './types/core';
 
 /*
  * The audit log (§9, spec docs/specs/2026-11-17-audit-log.md). Every action that changes data or
@@ -33,6 +34,9 @@ export const AuditEntityType = {
   PAYROLL_RUN: 'payroll_run',
   ACCOUNTING_SETTINGS: 'accounting_settings',
   ACCOUNTING_PAYROLL: 'accounting_payroll',
+  OUTBOX_DELIVERY: 'outbox_delivery',
+  NOTIFICATION_PREFERENCES: 'notification_preferences',
+  NOTIFICATION_SETTINGS: 'notification_settings',
 } as const;
 export type AuditEntityType = (typeof AuditEntityType)[keyof typeof AuditEntityType];
 export const AUDIT_ENTITY_TYPES = Object.values(AuditEntityType) as AuditEntityType[];
@@ -59,6 +63,8 @@ export const AUDIT_ACTIONS = {
     entityType: E.USER,
     kind: 'access',
   },
+  // Too many wrong passwords locked the account's sign-in (core/sign-in-limit). Label: the email.
+  'core.auth.locked_out': { module: 'core', entityType: E.USER, kind: 'access' },
   // core — settings and school structure
   'core.settings.update': {
     module: 'core',
@@ -95,9 +101,23 @@ export const AUDIT_ACTIONS = {
     entityType: E.USER,
     kind: 'access',
   },
+  'core.user.unlock_sign_in': { module: 'core', entityType: E.USER, kind: 'access' },
   'core.role.create': { module: 'core', entityType: E.ROLE, kind: 'create' },
   'core.role.update': { module: 'core', entityType: E.ROLE, kind: 'update' },
   'core.role.delete': { module: 'core', entityType: E.ROLE, kind: 'status' },
+  // core — must-deliver events (core/events): an admin sends a dead delivery again
+  'core.outbox.retry': { module: 'core', entityType: E.OUTBOX_DELIVERY, kind: 'status' },
+  // core — notifications (§11): a person's own preferences; the school's defaults and retention
+  'core.notification_preferences.update': {
+    module: 'core',
+    entityType: E.NOTIFICATION_PREFERENCES,
+    kind: 'update',
+  },
+  'core.notification_settings.update': {
+    module: 'core',
+    entityType: E.NOTIFICATION_SETTINGS,
+    kind: 'update',
+  },
   // hr — employees
   'hr.employee.create': {
     module: 'hr',
@@ -192,6 +212,18 @@ export const AUDIT_ACTIONS = {
     entityType: E.PAYROLL_RUN,
     kind: 'status',
   },
+  // hr — Accounting sent an approved run back (a draft again, with the reason, §10)
+  'hr.payroll.returned': {
+    module: 'hr',
+    entityType: E.PAYROLL_RUN,
+    kind: 'status',
+  },
+  // hr — Accounting marked an approved run's salaries transferred (final, §10)
+  'hr.payroll.transferred': {
+    module: 'hr',
+    entityType: E.PAYROLL_RUN,
+    kind: 'status',
+  },
   'hr.payroll.adjustment_add': {
     module: 'hr',
     entityType: E.PAYROLL_RUN,
@@ -213,6 +245,18 @@ export const AUDIT_ACTIONS = {
     module: 'accounting',
     entityType: E.ACCOUNTING_PAYROLL,
     kind: 'create',
+  },
+  // accounting — an approved month sent back to HR (its run a draft again, the taxes dropped)
+  'accounting.payroll.return': {
+    module: 'accounting',
+    entityType: E.ACCOUNTING_PAYROLL,
+    kind: 'status',
+  },
+  // accounting — the salaries were transferred: the month is final, never returned to HR
+  'accounting.payroll.finalize': {
+    module: 'accounting',
+    entityType: E.ACCOUNTING_PAYROLL,
+    kind: 'status',
   },
 } as const satisfies Record<string, AuditActionDefinition>;
 
@@ -243,6 +287,7 @@ export const SETTINGS_HISTORY_ACTIONS = {
   'hr.penalty_group.update': 'catalogue',
   'hr.violation.create': 'catalogue',
   'hr.violation.update': 'catalogue',
+  'core.notification_settings.update': 'notifications',
 } as const satisfies Partial<Record<AuditAction, SettingsChangeScope>>;
 export type SettingsHistoryAction = keyof typeof SETTINGS_HISTORY_ACTIONS;
 export const SETTINGS_HISTORY_ACTION_KEYS = Object.keys(
@@ -337,6 +382,8 @@ export interface AuditRecordQuery {
 export interface AuditActor {
   id: Uuid;
   name: string;
+  /** Their account's linked employee (the avatar), or null: not linked, or the account is gone. */
+  employee: PersonAvatarRef | null;
 }
 
 /** `GET /audit/actors` query: everyone in the log, or only the people who touched one record. */
@@ -358,9 +405,10 @@ export interface AuditSummary {
 
 /**
  * Fields holding money (piastres). An entry that changed one of them, or any payroll action, is a
- * "money" entry: the Activity page tags it and the summary counts it.
+ * "money" entry: the Activity page tags it and the summary counts it; the timeline draws their
+ * values as money ("EGP 6,500.00"), never as the stored piastres.
  */
-export const AUDIT_MONEY_FIELDS = ['basicSalary', 'amount', 'totals', 'net'] as const;
+export const AUDIT_MONEY_FIELDS = ['basicSalary', 'insuredSalary', 'amount', 'totals', 'net'] as const;
 export const AUDIT_MONEY_ACTIONS: readonly AuditAction[] = AUDIT_ACTION_KEYS.filter(
   (key) => key.startsWith('hr.payroll.') || key.startsWith('accounting.payroll.'),
 );
@@ -373,6 +421,27 @@ export function isMoneyEntry(entry: Pick<AuditEntry, 'action' | 'changes'>): boo
 }
 
 /**
+ * The parts of a run's `totals` (HR's `PayrollTotals`, accounting's `AccountingPayrollTotals`), in
+ * the order the timeline lists them: money in piastres, counts as whole numbers. Each has a label
+ * under `audit.totals.<part>`. A part not listed still reads (as a plain value), after these.
+ */
+export const AUDIT_TOTAL_PARTS = {
+  net: 'money',
+  employees: 'count',
+  flagged: 'count',
+  monthSalary: 'money',
+  gross: 'money',
+  penaltyAmount: 'money',
+  latenessAmount: 'money',
+  adjustmentAdditions: 'money',
+  adjustmentDeductions: 'money',
+  incomeTax: 'money',
+  martyrTax: 'money',
+  insuranceAmount: 'money',
+} as const satisfies Record<string, 'money' | 'count'>;
+export type AuditTotalPart = keyof typeof AUDIT_TOTAL_PARTS;
+
+/**
  * Fields whose values are salary-type (R7): the money fields plus the employee's insured salary and
  * bank details. A viewer without `hr.employees.view_salary` (scope `all` — the log is school-wide)
  * gets these changes with `hidden: true` and no `before` / `after`: the timeline says the field
@@ -380,7 +449,6 @@ export function isMoneyEntry(entry: Pick<AuditEntry, 'action' | 'changes'>): boo
  */
 export const AUDIT_SALARY_FIELDS = [
   ...AUDIT_MONEY_FIELDS,
-  'insuredSalary',
   'bankName',
   'bankAccountNumber',
   'iban',

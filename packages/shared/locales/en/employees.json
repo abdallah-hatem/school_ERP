@@ -54,6 +54,7 @@
     "email": "Email",
     "address": "Address",
     "hireDate": "Hire date",
+    "probationEnd": "Probation ends",
     "stage": "Stage",
     "department": "Department",
     "jobTitle": "Job title",
@@ -123,9 +124,11 @@
     "iban": "Optional. EG followed by 27 digits.",
     "insuranceStatus": "Choosing “Not insured” clears the insurance number, date and salary.",
     "managerNotManaging": "No longer in a managing role; kept for this employee.",
-    "noManagers": "No one can be chosen yet. Turn on “Manages people” for a job title in Settings → HR lists."
+    "noManagers": "No one can be chosen yet. Turn on “Manages people” for a job title in Settings → HR lists.",
+    "probationEnd": "Filled from the hire date; change it if this employee’s probation differs."
   },
   "noManager": "No direct manager",
+  "noProbation": "No probation",
   "noDepartments": "No departments yet. Add them in Settings.",
   "noStages": "No stages yet. Add them in Settings.",
   "noJobTitles": "No job titles yet. Add them in Settings.",
@@ -136,7 +139,7 @@
     "email": "Enter a valid email, like name@example.com.",
     "hireDateFuture": "The hire date can't be in the future.",
     "salaryPositive": "The salary must be more than 0.",
-    "salaryTooLarge": "This salary is too large.",
+    "salaryTooLarge": "At most EGP 1,000,000.00 a month.",
     "contractOrder": "The contract end must be after its start.",
     "tooLong": "This is too long.",
     "saveFailed": "The employee couldn't be saved.",
@@ -144,7 +147,8 @@
     "registrationDateFuture": "The registration date can't be in the future.",
     "insuredSalaryPositive": "The insured salary must be more than 0.",
     "iban": "Enter an Egyptian IBAN: EG followed by 27 digits.",
-    "graduationYear": "Choose a year from 1950 to this year."
+    "graduationYear": "Choose a year from 1950 to this year.",
+    "probationBeforeHire": "The probation end can’t be before the hire date."
   },
   "create": {
     "title": "Add employee",
@@ -164,7 +168,9 @@
     "details": "Details",
     "history": "History",
     "notSet": "Not set",
-    "edit": "Edit"
+    "edit": "Edit",
+    "signsInAs": "Signs in as:",
+    "noAccount": "No sign-in account"
   },
   "status": {
     "deactivate": "Deactivate",

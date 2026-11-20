@@ -12,7 +12,7 @@ vi.mock('next/navigation', () => ({
 vi.mock('next/link', async () => ({ default: (await import('@/core/audit/test/fixtures')).MockLink }));
 
 import type { AuditEntry } from '@school-erp/shared';
-import { AHMED, entry, MONA, NOW, renderAudit } from '@/core/audit/test/fixtures';
+import { ACTORS, AHMED, entry, MONA, NOW, renderAudit } from '@/core/audit/test/fixtures';
 import { parseActivityQuery } from '../lib/query';
 import { ActivityView } from './activity-view';
 
@@ -29,7 +29,7 @@ function renderView(
       query={parseActivityQuery(params)}
       entries={entries}
       total={total}
-      actors={[MONA, AHMED]}
+      actors={ACTORS}
       summary={summary}
       now={NOW}
       error={error}
@@ -49,6 +49,21 @@ describe('Activity page', () => {
   afterEach(() => {
     cleanup();
     vi.useRealTimers();
+  });
+
+  it.each([
+    ['en', ['All', 'School', 'HR', 'Accounting', 'Settings'], 'Accounting'],
+    ['ar', ['الكل', 'المدرسة', 'الموارد البشرية', 'المحاسبة', 'الإعدادات'], 'المحاسبة'],
+  ] as const)('the module filter has Accounting, for the return and finalize entries (%s)', async (locale, names, accounting) => {
+    const user = userEvent.setup();
+    renderView({}, [entry()], { locale });
+    const group = within(screen.getByRole('complementary')).getByRole('group', { name: locale === 'en' ? 'Module' : 'القسم' });
+    const buttons = within(group).getAllByRole('button').map((b) => b.textContent);
+    expect(buttons).toEqual(names);
+    // Five segments don't fit the panel in one row: they wrap instead of running out of it.
+    expect(within(group).getByRole('button', { name: accounting }).parentElement!.className).toContain('flex-wrap');
+    await user.click(within(group).getByRole('button', { name: accounting }));
+    expect(push).toHaveBeenLastCalledWith(`/${locale}/activity?module=accounting`, { scroll: false });
   });
 
   it('each filter goes into the URL from page 1, without scrolling', async () => {
@@ -157,6 +172,22 @@ describe('Activity page', () => {
     cleanup();
     renderView({}, [entry()], { total: 2, locale: 'ar' });
     expect(screen.getByText('سجلان')).toBeTruthy();
+  });
+
+  it('phone row: the count stays outside the sideways-scrolling chips, so it is never cut (EN and AR)', () => {
+    for (const locale of ['en', 'ar'] as const) {
+      renderView({ module: 'hr', type: 'create,update', person: AHMED.id }, [entry()], { total: 1284, locale });
+      const count = screen.getByTestId('activity-total');
+      const chips = screen.getByTestId('activity-chips');
+      expect(count.textContent).toMatch(/1,284/);
+      expect(chips.contains(count)).toBe(false);
+      // The chips (and "Clear filters") are what scrolls.
+      expect(chips.className).toMatch(/overflow-x-auto/);
+      expect(chips.querySelectorAll('button').length).toBeGreaterThanOrEqual(4);
+      // Nothing that holds the count scrolls sideways.
+      for (let el = count.parentElement; el; el = el.parentElement) expect(el.className).not.toMatch(/overflow-x-auto/);
+      cleanup();
+    }
   });
 
   it('no results: no paging and no "0 entries"; the message names every active cause', () => {

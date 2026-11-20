@@ -10,19 +10,17 @@ import {
   ParseUUIDPipe,
   Post,
   Query,
-  StreamableFile,
 } from '@nestjs/common';
 import type { AuthUser } from '@school-erp/shared';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
-import { PaginationQueryDto } from '../../../../common/dto/pagination-query.dto';
+import { PayrollPaginationQueryDto } from '../../../../common/dto/pagination-query.dto';
 import { resolveLanguage } from '../../../../common/i18n/i18n';
 import { ResponseUtil } from '../../../../common/utils/response.util';
+import { xlsxFile } from '../../../../common/utils/xlsx-file.util';
 import { CreateAdjustmentDto, CreatePayrollRunDto, PayrollRunQueryDto } from '../dto/payroll.dto';
 import { PayrollService } from '../services/payroll.service';
 import { Audited } from '../../../../core/audit';
 import { Permission } from '../../../../core/permissions';
-
-const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 /**
  * Payroll runs (contract: "Payroll — hr"). No DELETE route for runs: an approved run is never
@@ -34,7 +32,7 @@ export class PayrollRunsController {
 
   @Get()
   @Permission('hr.payroll.view')
-  async list(@Query() query: PaginationQueryDto) {
+  async list(@Query() query: PayrollPaginationQueryDto) {
     return ResponseUtil.paginated(await this.payroll.list(query));
   }
 
@@ -55,8 +53,8 @@ export class PayrollRunsController {
   @Post(':id/recalculate')
   @Permission('hr.payroll.recalculate')
   @HttpCode(HttpStatus.OK)
-  recalculate(@Param('id', ParseUUIDPipe) id: string) {
-    return this.payroll.recalculate(id);
+  recalculate(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user?: AuthUser) {
+    return this.payroll.recalculate(id, user?.id ?? null);
   }
 
   @Audited('hr.payroll.approve')
@@ -73,12 +71,7 @@ export class PayrollRunsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Headers('accept-language') acceptLanguage?: string,
   ) {
-    const { fileName, content } = await this.payroll.bankSheet(id, resolveLanguage(acceptLanguage));
-    return new StreamableFile(content, {
-      type: XLSX,
-      disposition: `attachment; filename="${fileName}"`,
-      length: content.length,
-    });
+    return xlsxFile(await this.payroll.bankSheet(id, resolveLanguage(acceptLanguage)));
   }
 
   @Get(':id/lines/:lineId')

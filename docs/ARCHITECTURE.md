@@ -43,6 +43,12 @@ backups proven by a restore).
 | **testing** | every merge to the `testing` branch (a PR from `dev`), automatically | realistic fake data at real volume (e.g. 2,000 students, a full year of payments) | operations QA, the school's review before a release, speed and load tests |
 | **prod** | the `production` branch (`vX.Y.Z` image), one deployment per school | real school data | the schools |
 
+- **The `demo` branch** (owner, 2026-11-18) holds what client demos run from: cut from a green `dev`
+  after a demo dry run, so features still being built on `dev` never show in a demo. It is
+  protected like `testing` and `production` (a PR, all four checks green and up to date, the
+  owner's approval). A fix a demo needs lands in `dev` first, then reaches `demo` by a PR from
+  `dev` (or a branch cut from `demo` for that one fix). Run it locally: check out `demo`,
+  `prisma migrate deploy` on the demo database, then the seed once. No environment deploys it yet.
 - **Each environment is its own Coolify project** with its own containers, env vars and databases.
 - **Prod has its own Postgres container.** dev and testing share a separate one. A heavy test can
   never touch a school's data.
@@ -127,8 +133,8 @@ services to run), not full DDD (most of the system is well-understood CRUD).
    **events**. Never import another module's repository. Reading other modules' tables is allowed;
    writing them is not (see Table ownership).
 2. **Each module owns its tables.** Only the fees module writes fee tables.
-3. **Side effects go through events** (NestJS `EventEmitter`): fees emits `payment.recorded`,
-   communication sends the SMS.
+3. **Side effects go through events** (`DomainEvents.publish`, core/events): fees publishes
+   `fees.payment.recorded`, communication sends the SMS.
 4. **Optional modules and features** (transport, library, payroll, penalties…) register themselves
    and are switched on by feature flag.
 5. **No circular dependencies.** Dependencies point one way, down the module order below. If two
@@ -157,11 +163,14 @@ accounting        ← the payroll tax rule and the payroll taxes of approved mon
 ```
 
 - **Stages** (KG, Primary, Preparatory) are a list in `core/` ("school structure"). HR uses them now
-  and academics and students later, so they sit below all three.
+  and academics and students later, so they sit below all three. The "no stage" entry is the stage
+  with `isNoStage` (set by the seed and its migration, never by an endpoint); code never matches a
+  stage by name.
 - **Settings ownership:** `core/settings` holds school-wide values (identity, hours, language). Each
   module owns its own rule settings (HR: lateness, payroll, penalty catalogue; accounting: the payroll
   tax rule). The one Settings screen shows a section per module.
-- **Accounting** sits at the top. It listens to `payroll.approved` (and later `payment.recorded`)
+- **Accounting** sits at the top. It listens to `hr.payroll.approved` (must-deliver, through the
+  outbox; later `fees.payment.recorded`)
   and creates its own records — today each approved month's payroll taxes, idempotent per HR run,
   worked out with the tax-rule version in force at the approval (`accounting_tax_rule_versions`)
   and the insurance HR's approved lines snapshot, so a late calculation gives the same answer; its pure tax maths live in `packages/shared/src/rules/payroll-tax.ts`. It
@@ -201,21 +210,54 @@ Use it to get data with the owner's rules applied, or to ask the owner to change
 **2. Event: "something happened; whoever cares can react."** The lower module announces it and
 doesn't know who listens. This is how a lower module triggers work in a higher one.
 
-```ts
-// hr
-this.events.emit('employee.deactivated', { employeeId, at: new Date() });
+**Every event, its publishers and listeners, and every transaction boundary: `docs/EVENTS.md`**
+(kept in step with the code by `apps/api/src/common/events/events-doc.spec.ts`). The design (owner,
+2026-11-18): `docs/plans/2026-11-18-events-outbox-plan.md`.
 
-// academics
-@OnEvent('employee.deactivated')
-async handle(e: EmployeeDeactivatedEvent) { await this.assignments.unassignAll(e.employeeId); }
+```ts
+// hr — inside the deactivation's transaction
+await this.events.publish(
+  HrEvent.EMPLOYEE_DEACTIVATED,
+  { employeeId, at: new Date().toISOString() },
+  { mustDeliver: true },
+);
+
+// academics — a must-deliver listener, handled once per event
+@OutboxListener({ event: HrEvent.EMPLOYEE_DEACTIVATED, name: 'academics.unassign-teacher' })
+@Injectable()
+export class UnassignOnDeactivation implements OutboxEventListener<typeof HrEvent.EMPLOYEE_DEACTIVATED> {
+  async handle(e: EmployeeDeactivatedEvent) { await this.assignments.unassignAll(e.employeeId); }
+}
 ```
 
-- Emit **after the write is committed**. Inside a transaction, emit after it commits, never
-  inside it: `AfterCommit.run(() => this.events.emit(...))` (see Transactions and the audit log).
-- Names: `<module>.<thing>.<past-tense>`. Payload types live in `packages/shared`.
-- Listeners are **idempotent** (safe to run twice) and log their failures.
-- Events are in memory: fine for notifications and side effects. Side effects that must never be
-  lost (invoices, payroll entries) get an **outbox** table when needed (see below).
+- **One way to send an event: `DomainEvents.publish(name, payload, options)`** (`core/events`,
+  global). Names and payloads come from one map in `packages/shared` (`DomainEventMap`): a wrong
+  name or payload fails typecheck. Nobody uses NestJS's `EventEmitter2` or calls `.emit(` — a scan
+  fails the build (`core/events/events-usage.spec.ts`).
+- **Always after the commit.** Inside a transaction `publish` queues on `AfterCommit` (dropped on
+  rollback); outside one it runs now; inside a plain `txHost.withTransaction` (no queue) it throws.
+- Names: `<module>.<thing>.<past-tense>` (`hr.payroll.approved`, `core.settings.changed`).
+- **Two kinds — rule: if losing it leaves data wrong or someone not told, it is must-deliver**
+  (`MUST_DELIVER_EVENTS`; the wrong `options` fail typecheck):
+  - **Fire-and-forget** (`@OnDomainEvent(name)` listeners): in memory, after the commit, each listener
+    awaited in turn; a throw is logged and never fails the request; not retried. Cache refreshes,
+    notices (`core.settings.changed`, `core.user.sessions_ended`, `hr.employee.hired` / `updated`).
+  - **Must-deliver** (`@OutboxListener({ event, name })` listeners): the **outbox**. An
+    `outbox_events` row and one `outbox_deliveries` row per listener are written **in the change's
+    transaction**; delivered by a nudge started right after the commit (not awaited: the response
+    never waits for an outbox listener; tests wait with `DomainEvents.idle()`) and by the
+    `outbox.deliver` poll every 30 s (claims with `FOR UPDATE SKIP LOCKED`, creation order, due up
+    to 1 s after the pass's start); retried after 10 s, 1 min, 5 min, 30 min, then every 2 h,
+    counted from the claim; **dead after 10 failures** (`attempts` counts failures only; logged; an
+    admin retries it with
+    `POST /outbox/deliveries/:id/retry`, `core.outbox.manage`, audited). Delivered events are
+    deleted after 30 days (`outbox.cleanup`); dead ones are kept. `hr.payroll.approved`,
+    `hr.employee.deactivated`, and every notification event.
+- **Listeners are idempotent.** An outbox listener's `handle` runs in the delivery's transaction,
+  which first marks that (event, listener) delivered — a redelivery finds it marked and does
+  nothing — so the listener's writes (through `txHost.tx`) and the mark commit together; a throw rolls
+  both back. A listener never opens a `RequiresNew` (a second pooled connection while the delivery's
+  is held). Fire-and-forget listeners must be safe to run twice on their own.
 
 **3. Read: "I just need to show data."** A repository may read other modules' tables for lists,
 display and reports. **Never for writes.**
@@ -238,10 +280,22 @@ UUID) and `@nestjs-cls/transactional` with the Prisma adapter keeps the open tra
   uses `txHost.tx` (the transaction client inside one, the plain client outside). Its multi-row
   writes use `txHost.withTransaction(...)`, which joins an open transaction or opens one.
   Repositories still on `DatabaseService` keep working but always run outside any transaction —
-  move a repository over when its writes must be audited (T28 / T29 move HR's).
+  move a repository over when its writes must be audited (#105 moved stages, the HR lists and the
+  penalty catalogue; T28 refresh tokens and employees; T29 penalties, lateness and payroll — every
+  write endpoint is now `@Audited`, or `@NotAudited` with a real reason).
 - Never pass options to a nested `withTransaction`; only the request transaction sets them.
-- **After-commit work** (events): `AfterCommit.run(fn)` queues `fn` until the open request
-  transaction commits (dropped on rollback), or runs it at once when none is open.
+- **After-commit work** (events): `AfterCommit.run(fn)` queues `fn` until the open transaction
+  commits (dropped on rollback), or runs it at once when none is open. Inside a transaction opened
+  without a queue (a plain `txHost.withTransaction` outside a request) it **throws**
+  (`AfterCommitWithoutQueueError`): open it with `afterCommit.inTransaction` instead.
+  `AfterCommit.onRollback(fn)` is the opposite: work for a rollback (a file written for the change
+  is deleted again — the logo, an employee's photo).
+- **One pooled connection at a time.** Nothing may hold a connection while it waits for another: an
+  `@Audited` handler holds the request transaction's for the whole request, so under it no
+  `Propagation.RequiresNew` and no write on the plain client (#109's starvation).
+  `src/database/connections.spec.ts` lists every `RequiresNew` and plain-client write with why it is
+  safe; a new one fails until it is justified there. `POST /auth/login` and `POST /account/password`
+  are `@NotAudited` for this reason and record their own entries in one `afterCommit.inTransaction`.
 
 **The audit log** (`core/audit`, §9). One append-only table, `audit_entries`, written by every
 module through core's exported `AuditService` — never through its repository.
@@ -259,9 +313,32 @@ module through core's exported `AuditService` — never through its repository.
   own snapshot: those entries are list and catalogue edits whose one change holds the whole item, so
   its `nameAr` is the name as it was then (used only when its `nameEn` is the stored label). Anything
   else reads as its one label in both languages. Search (`q`) matches either stored name (so not
-  those older entries' Arabic names).
+  those older entries' Arabic names), or a record the owning module matches by a field the entry
+  doesn't store (below).
+- **Related records and search** (`AuditRecordAccess`, where HR also says who may see what): a
+  module registers, at start-up, a parent's related records — `registerRelated(employee, penalty,
+  id → the employee's penalty ids)`, so a History (`GET /audit/records/…`, its `/fields` and
+  `/audit/actors?entityType&entityId`) lists the record's entries and its related records', each
+  still filtered by the viewer's scope — and search resolvers — `registerSearch(type, q → ids)`:
+  HR matches an employee by code and a penalty by its employee's code, so Activity's "name or code"
+  search (and its day totals) finds them. Both are read live from the owning module's tables at
+  query time: entries never store the code or the link, so nothing is duplicated, renamed codes
+  can't go stale and older entries are found too (the log is never rewritten). Core never imports
+  HR: HR calls core's registry.
 - Who (id + name snapshot), IP, user agent and request id come from the request (D4). `actor` is
   passed only where the request has no user yet (a successful sign-in) or none applies (`null`).
+- **A service records in its own write's transaction** even when called outside a request (the
+  seed): it wraps the write in `AfterCommit.inTransaction(...)`, which joins the request's
+  transaction or opens one. An employee entry written by the seed has no actor ("System").
+- **A failed sign-in** (spec 5, `AuthService`) is recorded in a transaction of its own
+  (`Propagation.RequiresNew`), since the request's rolls back with the 401. Its record is the typed
+  email (normalised) as id and label, never a user id — the same entry whether or not the email
+  belongs to an account — with no actor and no password.
+- **Employee entries** store the record as `employeeAuditSnapshot` (`hr/employees`) builds it: dates
+  as `YYYY-MM-DD`, money in piastres, and the stage, department, job title and direct manager by
+  their two names under their id fields (`departmentId: { nameEn, nameAr }`), so the timeline reads
+  "Department: Science → Maths" and a later rename never rewrites the entry. Salary-type values are
+  stored and hidden at read time (`hideSalaryValues`, P4).
 - Only changed fields are stored, each `{ field, before, after }`; secrets (password hashes,
   tokens, anything matching the deny list in `audit.pure.ts`) are dropped at any depth; money stays
   in piastres; `id` / `createdAt` / `updatedAt` are ignored (D7). Equal before and after write
@@ -294,12 +371,29 @@ module through core's exported `AuditService` — never through its repository.
   Settings has no history section of its own — "View change history" opens Activity with
   `module=settings` (the settings actions of both modules). `GET /settings/history` was removed.
   The old `setting_changes` rows were copied by the T27 migration (same id, value, person, time).
+  **History is written in the change's own transaction** — never after it, so a crash between the
+  two can't lose it. School, HR and accounting settings: `SettingsService.setValues` writes the keys
+  and their entry together. Lists and catalogue (stages, departments, job titles, penalty groups,
+  violations): the owning service wraps its write in `AfterCommit.inTransaction` and calls core's
+  exported `SettingsHistory.record({ scope, key, oldValue, newValue, changedById })` inside it — the
+  entry keeps the old history shape (the history key as the field, whole snapshots as before /
+  after, both names as the label), and a failing entry rolls the change back. Their repositories
+  use `txHost.tx` so they join that transaction. `settings.changed` still fires, after the commit,
+  for real changes only; nothing records history from it. Fire-and-forget, not the outbox: the
+  history row is core's own table written in the same transaction, and no other module needs the
+  event to arrive.
 - **Dates** on the audit screens are read in the school's time zone (`SCHOOL_TIME_ZONE`, Cairo, in
   `core/audit/lib/time.ts`): day headers, times and the date filter's day edges. Calendars start the
   week on Sunday in both languages (the school's working week, `WEEK_STARTS_ON`).
 - **Change lines** (`changeRows`, `core/audit/lib/entry-text.ts`): a list item edited in place
   (`{ nameEn, nameAr, isActive, sortOrder }` before and after, same id) shows one line per changed
   part — "Violation · Name (Arabic)" — never "Strike → Strike"; a different item picked stays one line.
+  Any other object value is split into one line per part that changed, never shown as JSON: a payroll
+  run's `totals` as "Totals · Net" etc. (`AUDIT_TOTAL_PARTS` in shared: order, money or count; labels
+  under `audit.totals.*`), a role's `permissions` as "Permissions · View payroll: Everyone → Their
+  stage". A `totals` the viewer may not see (R7) stays one "changed" line.
+  A month record (payroll run, its taxes, a lateness month — labelled `2026-11`) reads in the
+  sentence as the app prints a month, "November 2026" / "نوفمبر 2026" (`recordLabel`), on one line.
 - **Filters** on both audit screens: a side panel on wide screens (first in the page's tab order,
   drawn in the second column), else one Filters button opening `AuditFiltersSheet` — from the
   bottom on a phone, from the inline-end edge on a tablet.
@@ -341,7 +435,11 @@ Roles are rows, not code (spec P2, R2 / R5 / R8 / R9). A school changes them thr
 - **Starting roles** are `BUILT_IN_ROLES` in `packages/shared/src/roles.ts` (the spec's table, GUESS):
   System admin, HR manager, HR officer, Accountant, Principal, Stage head, Direct manager. The P2
   migration copied them into the tables once and gave every HR admin **System admin + HR manager**;
-  from then on they are data. Built-in roles can be edited (names, permissions) but not deleted.
+  from then on they are data. Built-in roles can be edited (names, permissions) and, once nobody
+  holds them, deleted like a custom role — except the System admin (owner, 2026-11-19). A migration
+  that grants a new key to starting roles must `JOIN "roles"` on the key (never assume the role
+  exists), so it skips a deleted one; `test/deleted-starting-roles-migration.e2e-spec.ts` replays
+  every migration after the roles one with the starting roles deleted.
   The **System admin always holds every key** with scope `all`, whatever its rows say — a key added
   later reaches it without a migration, and its permission list can't be edited (no lock-out).
 - **Union and scopes.** A user's permissions are the union of their roles' (edge case 2). Each grant
@@ -379,7 +477,10 @@ Roles are rows, not code (spec P2, R2 / R5 / R8 / R9). A school changes them thr
   leave the rest out, and a record's History answers 404. A payroll run's `totals` stay visible to
   an `hr.payroll.view` holder at scope `all`, as on the Payroll screen.
 - **Linked employee.** `users.employee_id` (unique, core-owned) is the link (R9). HR's older
-  `employees.user_id` was copied into it by the migration and was dropped in P4.
+  `employees.user_id` was copied into it by the migration and was dropped in P4. On screen it is the
+  user's **employee record** ("Who is this person in HR?"). HR's `Employee` carries
+  `signInAccount` (`{ id, name }` or null) for the profile's "Signs in as" line, read through core's
+  exported `UsersService.accountOfEmployee` — HR never reads the users table itself.
 - **The `users.role` enum column is gone** (P3 migration `users_drop_role_add_sign_in`): access
   comes only from `user_roles`, the access token carries only the user's id, the user chip shows the
   names of their roles and every signed-in user's home is the dashboard (`homeFor(locale)`). Without
@@ -418,7 +519,7 @@ Roles are rows, not code (spec P2, R2 / R5 / R8 / R9). A school changes them thr
   the rest of the transaction, so two such changes at once can't both pass.
 - Every user and role write is `@Audited` (`core.user.*`, `core.role.*`); passwords are never in the
   log (the entry says only that one was set or changed).
-- Area order inside core: `audit` ← `permissions` ← `roles` ← `users` ← `auth`. `core/audit` reads
+- Area order inside core: `audit` ← `permissions` ← `roles` ← `users` ← `auth`, and `audit` ← `settings` ← `sign-in-limit` ← `users`, `auth`; `jobs` depends on no other area (a job lives in its own area and only uses `@ScheduledJob`); `audit`, `permissions`, `settings` ← `notifications` (no other area imports it — `.dependency-cruiser.cjs`). `core/audit` reads
   an actor's name from `users` itself, so it depends on no other core area.
 - **Screens (P3, option A of `design/mockups/access.html`)** — `apps/web/src/modules/access`:
   Administration → **Users** (`core.users.view`; table with search, role and status filters, 10 per
@@ -447,6 +548,211 @@ Roles are rows, not code (spec P2, R2 / R5 / R8 / R9). A school changes them thr
   page or Settings section: add it to `SCREENS` / `SETTINGS_SECTION_ACCESS` first. Tabs, sections,
   card fields, quick links and dashboard tiles are gated the same way, and their skeletons follow.
 
+### Sign-in limits
+
+Wrong-password counting per account (`core/sign-in-limit`, owner 2026-11-18, §2). **Per account
+only — no per-IP limit.**
+
+- **Rule.** `security.login.maxAttempts` wrong passwords within `security.login.windowMinutes` lock
+  that account's sign-in for `security.login.lockMinutes` — core settings, defaults 5 / 15 / 15
+  (`SETTING_DEFAULTS`, each read as at least 1; no screen yet).
+- **Table** `login_attempts` (email PK, `failed_count`, `window_started_at`, `locked_until`; index on
+  `window_started_at`), keyed by the **lower-cased email typed**. An email nobody has gets a row too,
+  so the answer never says whether an account exists. No foreign key to `users`.
+- **One atomic write per wrong password**: `INSERT … ON CONFLICT (email) DO UPDATE` — a window that
+  started more than `windowMinutes` ago, or whose lock has ended, starts over at 1; the attempt
+  whose count reaches the limit sets `locked_until` (so concurrent attempts are all counted and lock
+  once). Timestamps go in as UTC `timestamp(3)` literals, never depending on the connection's time
+  zone. That write uses the plain client, outside the request's transaction, so a wrong current
+  password on the `@Audited` `POST /account/password` stays counted when the request rolls back;
+  the repository's other calls join the caller's transaction (`txHost.tx`).
+- **While locked**, `POST /auth/login` and `POST /account/password` (both the forced new-password
+  path and My account) answer **429 `TOO_MANY_ATTEMPTS`** before any password is checked, with
+  `params: { count: <minutes left, rounded up> }` in the envelope. A correct sign-in deletes the row;
+  so does a verified current password on a password change. Sign-in never deletes stale rows — the
+  nightly `login-attempts.cleanup` job does (below).
+- **Coded errors with values.** `CodedException.withParams(status, code, params)` carries `params`
+  to the envelope; the filter's `translateError(code, lang, params)` fills `{name}` slots and picks a
+  plural form by `params.count` (`Intl.PluralRules`), so `errors.json` may hold a six-form plural
+  message like the web app's. The web's `apiErrorText` passes `params` to `t()` the same way.
+- **Audit.** The attempt that locks records `core.auth.locked_out` — keyed by the email typed, like
+  T28's `core.auth.sign_in_failed`, so the entry is the same whether an account has that email; no
+  actor on sign-in — in **its own transaction** (`Propagation.RequiresNew`), so it stays though the
+  request fails; a failure to record is logged, never turned into a 500. Every sign-in attempt that
+  fails is also a `core.auth.sign_in_failed` — wrong ones and those refused while locked (429).
+- **No request transaction around a sign-in.** `POST /auth/login` is `@NotAudited` (with the reason):
+  `AuthService.login` writes `core.auth.sign_in` in one transaction with the session it issues
+  (`afterCommit.inTransaction`), and the failure path's entries and count in their own. An
+  `@Audited` login held a pooled connection for the request while those writes waited for another;
+  with as many concurrent wrong passwords as the pool has connections (5 on CI's 2 vCPUs) every
+  request starved: they failed waiting for a connection (Prisma pool / transaction timeouts, which the
+  filter answers as a 4xx) — the e2e "concurrent wrong passwords" case (12 at once) guards it.
+  `POST /account/password` stays `@Audited`, so a wrong current password still needs a
+  second connection while its request holds one — acceptable for one person's own password, but
+  the same reason applies if it ever sees bulk traffic.
+- **Unlock.** `POST /users/:id/unlock-sign-in` (`core.users.manage`, `@Audited('core.user.unlock_sign_in')`,
+  change `lockedUntil` → `null`; nothing written when it wasn't locked). `UserAccount.lockedUntil` is
+  set while a lock holds; the Users list shows "Sign-in locked" and ⋯ → Unlock sign-in, the user's
+  page a notice with the button.
+
+### Scheduled jobs
+
+Work on a clock — backups, reminders, reports (`core/jobs`, `@nestjs/schedule` + `cron`).
+
+- **A job** is a provider in its own module, marked `@ScheduledJob({ name, cron })` and implementing
+  `JobHandler.run()`. `name` is `<area>.<what>`, unique (a duplicate fails at boot); `cron` is read on
+  the **school's clock**, `SCHOOL_TIME_ZONE` (`Africa/Cairo`, `packages/shared`; a time-zone setting
+  can replace it later). `JobRunner` finds every marked provider at boot (`DiscoveryService`);
+  `JobScheduler` puts each on its clock through `@nestjs/schedule`'s `SchedulerRegistry`
+  (`waitForCompletion`, so a slow run isn't overlapped in one container).
+- **Single run across containers.** Every run first takes a Postgres advisory lock keyed by the job
+  name — `pg_try_advisory_xact_lock(hashtextextended('job:<name>', 0))`, the transaction-scoped form
+  of `pg_try_advisory_lock`, held by a transaction open for the run (up to 60 minutes). It is released
+  when the transaction ends, also if the process dies, and can't be left behind on a pooled
+  connection. A container that doesn't get the lock skips the run (`skipped`, nothing recorded).
+  A job that is safe to run in two containers at once declares `lock: false` and runs without it —
+  the outbox's jobs, which claim rows with `FOR UPDATE SKIP LOCKED`; the lock's transaction would
+  otherwise hold a pooled connection for the whole run while the job's work needs another.
+- **`job_runs`** (job name, `started_at`, `finished_at`, `status` `success` | `failed`, `error` text):
+  one row per run that took the lock. A failing job is logged and recorded with its error (stack, cut
+  to 4,000 characters); a failure to take the lock or to record is logged too. A job never throws
+  into the API. A run whose `run()` returns `'idle'` (nothing to do — a frequent poll) is not
+  recorded.
+- **Tests.** Jobs are on their clocks only when `jobs.enabled` (env `JOBS_ENABLED`, default on, **off
+  under `NODE_ENV=test`**), so unit and e2e tests never run one by itself. A test runs one by name:
+  `app.get(JobRunner).run('<name>')` → `'success' | 'failed' | 'skipped' | 'idle'`.
+- **Jobs today:** `login-attempts.cleanup` (`core/sign-in-limit`), nightly at 03:00 school time:
+  deletes `login_attempts` rows whose window and lock both ended more than a day ago.
+  `outbox.deliver` (`core/events`, every 30 s, `lock: false`): delivers due outbox deliveries.
+  `outbox.cleanup` (`core/events`, 03:30, `lock: false`): deletes delivered events older than 30 days.
+  `core.notifications.purge` (`core/notifications`, 02:30): deletes expired notifications (below).
+  `hr.reminders.daily` (`modules/hr/reminders`, 07:00): HR's reminders — contracts and probation
+  ending soon, lateness not entered, payroll not prepared / still a draft (Notifications → HR's
+  reminders).
+
+### Notifications
+
+The in-app bell (`core/notifications`, §11, spec `docs/specs/2026-11-18-notifications.md`, plan
+`docs/plans/2026-11-18-notifications-plan.md`). **Core owns the mechanism; each module owns its
+types** and sends through core's exported `NotificationsService` — core never imports a module.
+
+- **Types** are typed keys in `packages/shared/src/notifications.ts` (`NOTIFICATION_TYPES`,
+  `<module>.<thing>.<event>`): module, category (`approval` / `reminder`), `canTurnOff` (approvals
+  can't be turned off, owner 2026-11-18), default channels, the permission a recipient needs, a
+  dedupe prefix and a link builder (a `SCREENS` id + record / query). Texts in
+  `locales/<lang>/notifications.json` (`types.<key>.name` / `title` / `body` / `group`, six plural
+  forms on `count`); the shared tests fail on a type without them. A notification stores the type key
+  and its values (names as `{ en, ar }`), never a sentence (N3). `NotificationTypes` in core is the
+  registry (`register` adds one — the tests' test-only type).
+- **Sending.** `notify({ type, subject: { entityType, entityId, employeeId? }, params, dedupeKey,
+  actorId?, groupKey? })` (or `paramsFor(userId)` instead of `params` when a value depends on the
+  reader — asked once per new item) and `resolve({ type, subject, resolution, byUserId? })` write in the
+  **current** transaction and throw outside one (`NotificationOutsideTransactionError`), like
+  `audit.record()`: a module calls them inside its own change's transaction, so the change and its
+  notifications commit or roll back together (N4). A module reacting to *another* module's event does
+  it in a must-deliver `@OutboxListener`, whose delivery transaction they join (idempotent through the
+  dedupe keys). A job wraps them in `afterCommit.inTransaction`.
+- **Recipients (N5)**: active users holding the type's permission through any role (the System admin
+  holds every key), at their widest scope (`PermissionsService.scopeFor`), minus the actor (GUESS).
+  Scope `all` covers everything; another scope needs the user's linked employee (none → nothing
+  scoped, R5) and the **`NotificationScopeResolver`** the module registered for the subject's entity
+  type with `registerScopeResolver` — a scoped holder with no resolver makes `notify()` throw (never
+  "send to everyone"). Zero recipients is fine.
+- **Tables.** `notifications` (recipient kind + id — `user` now, a parent `contact` later, no foreign
+  key —, type, group key, actor, `updated_at` = latest item, `read_at`, `resolved_at`),
+  `notification_items` (subject, `params` jsonb, dedupe key, resolution, the resolver's name
+  `{ en, ar }`; unique `(recipient_kind, recipient_id, type, dedupe_key)`), `notification_deliveries`
+  (one per channel enabled when it was made; `in_app` is `sent` at once), `notification_defaults`
+  (the school's, per type and channel) and `notification_preferences` (each person's).
+- **Dedupe and grouping (N9, N17).** Per recipient, under a transaction-scoped advisory lock on
+  (recipient, type, group key): an item whose dedupe key exists is a no-op; otherwise it joins the
+  recipient's open (unread, unresolved) notification of the type and group key (default: today on
+  the school's clock, `schoolDayOf`), or starts a new one. The unique index settles a race across
+  group keys (the loser drops the notification it made). Recipients go in id order, so two
+  transactions take the locks in one order.
+- **Resolve (N10)**: every open item of the type about the subject, for every recipient, gets
+  `resolved_at`, the resolution and who did it (their linked employee's two names, else the account
+  name); a notification left with no open item is resolved and stops counting.
+- **Reading (N11).** Every route is the signed-in user's own (`@SignedIn`; the recipient comes from
+  the token; another person's id → 404): `GET /notifications` (page, limit ≤ 50, `status=all|unread`,
+  `category`), `GET /notifications/unread-count`, `POST /notifications/:id/read` / `unread`,
+  `POST /notifications/read-all` (`{ upTo }`: only those whose latest item came by then).
+  `status=unread` is the count's rule (unread, unresolved, an open item the reader may see), so the
+  Unread tab and the bell always agree. Each read
+  re-checks every item against the reader's **current** permission and scope with the same resolver;
+  an item they may no longer see is left out of `items`, `openCount` and the count (the row stays), and
+  a notification with none left is absent (and 404 on read). Read state is `@NotAudited('personal
+  read state, not school data')`.
+- **Preferences (N13)**: effective = can't be turned off → on in the app; else the person's choice;
+  else the school's default; else the type's. `GET` / `PUT /notifications/preferences` (`@SignedIn`,
+  `@Audited('core.notification_preferences.update')`; `enabled: null` deletes the personal row) and
+  `GET /settings/notifications` (`core.notifications.view`: System admin, HR manager) / `PUT`
+  (`core.notifications.manage`: System admin; `@Audited('core.notification_settings.update')` — the
+  school defaults and the retention keys, one entry through `SettingsService.setValues`, owner
+  `notifications`). A switch's audit line is `<type>:<channel>`, before → after. Errors:
+  `NOTIFICATION_TYPE_REQUIRED` (409), `CHANNEL_NOT_AVAILABLE` (409, anything but `in_app`), unknown
+  type → 400. A person with the type off in the app gets no notification at all (GUESS).
+- **Channels (N7)**: `NotificationChannelAdapter` (`key`, `available()`, how a delivery starts) in
+  `channels.ts`; only `InAppChannel`. Email / WhatsApp / SMS later = an adapter, a value in
+  `NOTIFICATION_CHANNELS` and a job sending `pending` deliveries after the commit — no module changes.
+  The UI shows the in-app channel only (owner, 2026-11-18).
+- **Retention (N14)**: core settings `notifications.retention.readDays` / `resolvedDays` / `maxDays`
+  (90 / 30 / 365, each 1–3650); the nightly `core.notifications.purge` (02:30, advisory lock) deletes
+  what is past them, with items and deliveries. Not audited.
+- **HR's reminders (N3, `modules/hr/reminders`).** The daily job `hr.reminders.daily` (07:00 school
+  time, advisory lock) works out **today on the school's clock** (`schoolDayOf`), reads the timings
+  (HR settings `hr.reminders.*`: contract 30 and 7 days, probation 7 days, lateness check day 25,
+  payroll check day 28) and, **one `afterCommit.inTransaction` per type in turn**, the type's open
+  items (`NotificationsService.openItems`) and HR's facts. The pure `reminders.pure.ts` decides what
+  is due (today or overdue — a missed day is caught up once) and which open items no longer hold;
+  those are resolved `done` (`resolve` with a `dedupeKey` for one reminder of a subject: the 30-day
+  contract item when the 7-day one is sent), then the due ones are sent. Dedupe keys
+  `contract_end:<employee>:<date>:<days>`, `probation_end:<employee>:<date>`,
+  `lateness_missing:<month>`, `payroll_missing:<month>`, `payroll_unapproved:<month>`; contract items
+  group per school day and window (`2027-05-01:30`). A check day past the month's end is its last
+  day. HR's services resolve at the change too, in their own transactions (`HrRemindersService`): a
+  moved contract / probation end, a deactivation, a saved lateness month, a created run, an
+  approved run ("Approved by …"). Subjects: `employee` and `penalty` (N2) (scoped through `HrNotificationScopes` with
+  HR's stage / team rule), `lateness_month`, `payroll_month`, `payroll_run` (whole-school: a scoped
+  holder is never told).
+- **Screens (N4, option A of `design/mockups/notifications.html`)** — `apps/web/src/core/notifications`:
+  the **bell** beside the language switch in the shell (both the phone top bar and the desktop row
+  draw one; `NotificationInbox` in `AppShell` holds their one state, so one poll), the unread count
+  polled every 60 s while the tab is visible and on focus (`99+`), and the list — a popover anchored
+  to the bell from 768px, a full-screen `Sheet` (`side="full"`) below — with All / Unread, the latest
+  20, groups opening into their items, deep links (`linkHref`: `SCREENS` path + record + query),
+  done rows and Mark all as read (`upTo` = the newest the list showed; on Unread the list is asked
+  again at once, as after reading one there — a group being opened stays until the next load). A
+  group's title counts its open items (`openCount`); all handled, `types.<key>.groupDone`. Sentences are drawn in
+  `lib/text.ts` from the type key and values (names `{ en, ar }`, months, dates, money with its
+  label); a single item reads from its own values. **My account → Notifications**
+  (`/account/notifications`, `SCREENS.accountNotifications`; My account's routes are `account/(profile)`
+  and `account/notifications`, each with its skeleton) is `TypeSwitchList`: one switch per type,
+  grouped by module and category, required ones locked, each change saved at once and put back on
+  failure, "Reset to school default" (`enabled: null`). **Settings → Notifications**
+  (`modules/settings`, `SETTINGS_SECTION_ACCESS.notifications = 'core.notifications.view'`) is the
+  same list for the defaults plus the reminder timing (HR rules: `PUT /hr/settings`,
+  `hr.settings.edit`) and the retention; defaults and retention follow `core.notifications.manage`,
+  so the HR manager sees them read-only. In-app only: no other channel appears in the UI.
+- **HR's approvals (N2)** — `modules/hr/notifications/hr-notifications.service.ts`, called by the
+  penalty and payroll services inside their own write's transaction (no `RequiresNew`).
+  `hr.penalty.awaiting_approval` (subject `penalty` + its `employeeId`, dedupe `penalty:<id>`) on
+  record; resolved `approved` / `cancelled` (pending only). `hr.payroll.ready_to_approve` (subject
+  `payroll_run`, dedupe `payroll_ready:<month>:<calculatedAt>`) after create / recalculate with no
+  pending penalty in the month, the previous one resolved `done` first; resolved `done` by a penalty
+  recorded in the month, `approved` on approval ("still a draft" is the reminders'). Its `net` is
+  per reader through `notify({ paramsFor })` — only for a holder of `hr.payroll.view` at `all` (R7);
+  absent otherwise. `hr.payroll.returned_by_accounting` (subject `payroll_run`, dedupe
+  `payroll_returned:<runId>:<returned at>`, one item per return, required — it can't be turned off)
+  to the holders of `hr.payroll.approve` when Accounting returns an approved month (§10), sent in
+  accounting's return transaction with the month and the reason (`{reason}` is isolated with
+  FSI/PDI when the sentence is drawn, like any typed text); resolved `approved` when the run is
+  approved again. A `penalty` subject is scoped by `HrNotificationScopes` with the employee rule,
+  on the penalty's employee **as the employee is now** (a stage move takes it from the old stage's
+  approver). The Penalties screen opens the
+  linked penalty (`?penalty=<id>`: its month's list with `PenaltyDetailsDialog` over it; unknown or
+  out of scope → not found).
+
 ### Deliberate shortcuts
 
 The core rules are standard modular-monolith practice: one front door per module, one-way
@@ -457,7 +763,7 @@ not mistakes:
 | Our choice | Strict version | Why ours is fine here | Cost, and how to tighten later |
 |---|---|---|---|
 | Read other modules' tables directly | Only through the owner's API or a copied read model | One team, one database; saves a lot of code | A column change can break another module's query. Tests and review catch it. Move a hot spot behind a service if it keeps breaking |
-| In-memory events, no outbox yet | Outbox table, so no event is ever lost | Fine for notifications; simpler to start | A crash between write and event loses the side effect. Add an outbox for critical events when needed |
+| Fire-and-forget events stay in memory | Every event through the outbox | Only notices and cache refreshes are fire-and-forget; anything whose loss leaves data wrong or someone untold is must-deliver (outbox) | A crash between the commit and a fire-and-forget listener loses that side effect. Move the event to `MUST_DELIVER_EVENTS` if that ever matters |
 
 The strict versions mainly pay off for systems that will be split into separate services, or that are
 built by many teams. Neither applies here.
@@ -486,8 +792,9 @@ The first module built, and the first demo for the client (payroll and penalties
      table.
   3. **Dependency inversion:** HR defines an interface ("extra paid hours for employee X this
      month"); academics implements and registers it.
-- **Events HR emits** (for higher modules to react): `employee.hired`, `employee.deactivated`,
-  `employee.updated`.
+- **Events HR publishes** (for higher modules to react): `hr.employee.hired`,
+  `hr.employee.updated` (fire-and-forget), `hr.employee.deactivated` and `hr.payroll.approved`
+  (must-deliver). Details: `docs/EVENTS.md`.
 
 ### Enforcing the module rules
 
@@ -608,9 +915,9 @@ apps/api/
 │   │   ├── i18n/                     ← server messages (en, ar)
 │   │   └── utils/                    ← pure: dates, money, numbers
 │   ├── core/                         ← business foundation
-│   │   ├── auth/  users/  roles/
+│   │   ├── auth/  users/  roles/  sign-in-limit/
 │   │   ├── settings/  feature-flags/  school-structure/
-│   │   ├── audit/  notifications/  files/
+│   │   ├── audit/  jobs/  events/  notifications/  files/
 │   │   └── core.module.ts
 │   └── modules/
 │       ├── hr/                       ← employees, departments, contracts, staff attendance,
@@ -638,7 +945,7 @@ modules/fees/
 ├── interfaces/                       ← IFeePlansRepository, IPaymentsRepository
 ├── repositories/                     ← every Prisma call, extends BaseRepository
 ├── dto/                              ← class-validator request contracts
-├── events/                           ← emitted events + listeners/
+├── events/                           ← its listeners (events are published through core/events)
 └── __tests__/
 ```
 
@@ -667,9 +974,12 @@ apps/web/src/
 │   │                                   (plain text without hr.employees.view)
 │   ├── audit/                        ← activity log pieces: apis.ts (GET /audit…), timeline,
 │   │                                   entry text (sentences, field labels), record History
+│   ├── notifications/                ← the bell and its list, the per-type switch list,
+│   │                                   My account → Notifications (§11, N4)
 │   └── academic-year/                ← year switcher, current-year context
 ├── shared/                           ← shared technical pieces
-│   ├── components/ui/                ← shadcn kit
+│   ├── components/ui/                ← shadcn kit, plus PersonAvatar: the one avatar for every
+│   │                                   person (employees, and users through their linked employee)
 │   ├── components/layout/            ← Sidebar, Topbar, PageHeader, EmptyState
 │   ├── components/form/              ← fields for react-hook-form + zod
 │   ├── hooks/
@@ -679,6 +989,7 @@ apps/web/src/
 ├── modules/
 │   ├── hr/  academics/  students/  admissions/  attendance/
 │   ├── fees/  exams/  communication/  transport/
+│   ├── accounting/                   ← Payroll (HR's approved months + taxes) and Payroll taxes (§10)
 │   ├── settings/                     ← the Settings screen
 │   ├── access/                       ← Users, Roles, My account (P3)
 │   └── activity/                     ← the Activity screen (filters panel, today's counts, paging)
@@ -715,7 +1026,10 @@ Frontend rules:
   owner 2026-11-18): "Clear filters · n" at the toolbar's inline end and in its "No results" state,
   shown only while something narrows the list; one click resets the search, every filter and the
   page in one URL update and brings the list's top back into view. A period (a month) is not a filter.
-- Branding (name, logo, colours) loads from settings into CSS variables.
+- Branding (name, logo, colours) loads from settings into CSS variables — for the shell, the
+  dashboard and the tab titles always from `GET /settings/school/public` (`getSchoolBranding`), so a
+  user without `core.settings.view` sees the school's name too; only the Settings screen reads
+  `GET /settings/school`.
 
 #### Skeletons match their screens (`data-skeleton-block`)
 
@@ -729,17 +1043,27 @@ doesn't update its skeleton fails CI (owner, 2026-11-18).
   renders itself under `SkeletonMask` with empty values (`EmployeePageSkeleton`, the settings
   forms). Hand-drawn skeletons are the exception and use the screen's own frames (`PageHeader`,
   `FormCard`, `DetailsCard`, `StatTile`, the payslip card).
+- **Payroll tables: page size and sticky header** (owner, 2026-11-19). Every payroll table passes
+  `pagination.pageSizes = PAYROLL_PAGINATION.pageSizes` (10–500) with `onLimitChange` (a "Rows per
+  page" picker in `Pagination`) and `scrollHeight="screen"` (the table view scrolls inside a box of
+  about the screen's height with sticky column names; cards and print are unaffected). The API's
+  payroll lists (`GET /hr/payroll-runs`, `/hr/employees/:id/payroll-lines`, `/accounting/payroll`)
+  take `PayrollPaginationQueryDto` (`limit` ≤ 500); every other list keeps `limit` ≤ 100.
 - **Mark the main blocks.** The screen and its skeleton carry the same `data-skeleton-block="<name>"`
   on their main content blocks. The shared pieces already do: `PageHeader` (`header`), `DataTable`
-  (`table`, `table-toolbar`, `table-head`, `table-row`, `table-card`), `Pagination`
+  (`table`, `table-toolbar`, `table-head`, `table-row`, `table-card`, and with a `footer` totals row
+  `table-foot` / `table-card-foot`), `Pagination`
   (`pagination`), `StatTile` (`tile`), `FormActionBar` (`form-actions`), `SectionPanel`
   (`section-panel`), `FormCard` (`form-card`); screens mark their own cards, panels and filters.
-  Three optional attributes: `data-skeleton-each` on a list's items (a run of them counts once, as
-  tall as its shortest item — how many arrive and whose name wraps is data),
-  `data-skeleton-measure="width"` on a block whose height follows the data (a table, the timeline),
-  and `data-skeleton-optional` around a block that exists only with data (the History tab's
-  pagination) — use it sparingly; everything else must match. A `DataTable` whose phone cards grow
-  with their text passes `cardHeightsVary` (penalties: long violation names).
+  Two optional attributes: `data-skeleton-each` on a list's items (a run of them counts once, as
+  tall as its shortest item — how many arrive and whose name wraps is data), and
+  `data-skeleton-measure="width"` on a block whose height follows the data (a table, the timeline);
+  everything else must match (the History tab's pagination too, since T28 gives every record
+  entries). A `DataTable` whose phone cards grow
+  with their text passes `cardHeightsVary` (penalties: long violation names). A `DataTable` whose
+  very presence is data — the payroll taxes statement's Insured / Not insured groups, either of
+  which can be empty (an empty state) one month — passes `skeletonBlocks={false}` and is measured
+  as part of the block around it (its pagination too, which an empty group doesn't draw).
 - **Text that wraps is drawn as its own text.** A bar can't wrap, so where a loaded line usually
   wraps (a header description, a tile's sub line, the History sentence) the skeleton renders the
   same sentence — worded with typical values — through `SkeletonProse` (transparent text on a bar

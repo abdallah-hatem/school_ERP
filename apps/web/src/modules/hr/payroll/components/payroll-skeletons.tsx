@@ -1,6 +1,6 @@
 'use client';
 
-import { monthOf, PAGINATION } from '@school-erp/shared';
+import { monthOf, PAGINATION, PAYROLL_PAGINATION } from '@school-erp/shared';
 import { useParams, useSearchParams } from 'next/navigation';
 import { DataTable } from '@/shared/components/data-table/data-table';
 import { PageHeader } from '@/shared/components/layout/page-header';
@@ -11,7 +11,7 @@ import { PayrollI18n } from '../messages';
 import { EmployeePayroll } from './employee-payroll';
 import { PayslipSkeleton as PayslipSkeletonBody } from './payslip-view';
 import { RulesPanel } from './rules-panel';
-import { RUN_COLUMN_IDS, RunLinesToolbar, RunTiles, runColumn } from './run-page';
+import { RUN_COLUMN_IDS, RUN_LINES_CARDS_BELOW, RunLinesToolbar, RunTiles, runColumn } from './run-page';
 import { RunsList } from './runs-list';
 
 /*
@@ -74,6 +74,7 @@ function RunPageSkeletonBody() {
             loading
             rows={undefined}
             getRowId={String}
+            cardsBelow={RUN_LINES_CARDS_BELOW}
             columns={RUN_COLUMN_IDS.map((id) => ({ ...runColumn(id, t), cell: () => null }))}
             toolbar={
               <RunLinesToolbar
@@ -86,7 +87,15 @@ function RunPageSkeletonBody() {
                 disabled
               />
             }
-            pagination={{ page: 1, limit: PAGINATION.defaultLimit, total: 0, onPageChange: noop }}
+            pagination={{
+              page: 1,
+              limit: PAGINATION.defaultLimit,
+              total: 0,
+              onPageChange: noop,
+              pageSizes: PAYROLL_PAGINATION.pageSizes,
+              onLimitChange: noop,
+            }}
+            scrollHeight="screen"
           />
         </div>
         <RulesPanel rules={undefined} settingsHref={`/${locale}/settings`} />

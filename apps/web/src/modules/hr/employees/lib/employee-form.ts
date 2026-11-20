@@ -10,7 +10,8 @@ import {
   InsuranceStatus,
   isValidEgyptianIban,
   isValidGraduationYear,
-  MAX_PIASTRES,
+  isProbationEndValid,
+  MAX_MONTHLY_PIASTRES,
   normalizeIban,
   socialInsuranceIssues,
   WORK_SYSTEMS,
@@ -94,6 +95,8 @@ const employeeFields = z.object({
       .refine((v) => v === '' || z.email().safeParse(v).success, 'employees.errors.email'),
     address: optionalText(500),
     hireDate: requiredDate.refine((v) => !v || v <= todayIso(), 'employees.errors.hireDateFuture'),
+    /** §3 (N0): empty on a new employee → the API fills it from the hire date; empty on edit → none. */
+    probationEnd: z.string().nullable(),
     stageId: requiredId,
     departmentId: requiredId,
     jobTitleId: requiredId,
@@ -106,7 +109,7 @@ const employeeFields = z.object({
       .superRefine((v, ctx) => {
         if (v == null) ctx.addIssue({ code: 'custom', message: REQUIRED });
         else if (!Number.isInteger(v) || v <= 0) ctx.addIssue({ code: 'custom', message: 'employees.errors.salaryPositive' });
-        else if (v > MAX_PIASTRES) ctx.addIssue({ code: 'custom', message: 'employees.errors.salaryTooLarge' });
+        else if (v > MAX_MONTHLY_PIASTRES) ctx.addIssue({ code: 'custom', message: 'employees.errors.salaryTooLarge' });
       }),
     fingerprintId: optionalText(50),
     contractStart: requiredDate,
@@ -142,6 +145,10 @@ export function employeeFormSchemaFor({ salary }: { salary: boolean }) {
     if (v.contractStart && v.contractEnd && v.contractEnd <= v.contractStart) {
       ctx.addIssue({ code: 'custom', path: ['contractEnd'], message: 'employees.errors.contractOrder' });
     }
+    // Against a valid hire date only: a future one already has its own message.
+    if (v.hireDate && v.hireDate <= todayIso() && !isProbationEndValid(v.hireDate, v.probationEnd)) {
+      ctx.addIssue({ code: 'custom', path: ['probationEnd'], message: 'employees.errors.probationBeforeHire' });
+    }
     // §3: while insured, the number, registration date and insured salary are required (shared rule).
     const issues = socialInsuranceIssues(
       {
@@ -176,6 +183,7 @@ export function emptyEmployeeForm(today: IsoDate = todayIso()): EmployeeFormValu
     email: '',
     address: '',
     hireDate: null,
+    probationEnd: null,
     stageId: '',
     departmentId: '',
     jobTitleId: '',
@@ -228,6 +236,7 @@ export function employeeToForm(employee: Employee): EmployeeFormValues {
     email: employee.email ?? '',
     address: employee.address ?? '',
     hireDate: employee.hireDate,
+    probationEnd: employee.probationEnd,
     stageId: employee.stage.id,
     departmentId: employee.department.id,
     jobTitleId: employee.jobTitle.id,
@@ -276,6 +285,7 @@ export function formToRequest(v: EmployeeFormValues): CreateEmployeeRequest {
     email: orNull(v.email),
     address: orNull(v.address),
     hireDate: v.hireDate as IsoDate,
+    probationEnd: v.probationEnd,
     stageId: v.stageId,
     departmentId: v.departmentId,
     jobTitleId: v.jobTitleId,
@@ -323,6 +333,7 @@ const FIELD_BY_ERROR: Partial<Record<string, keyof EmployeeFormValues>> = {
   [ErrorCode.INVALID_MANAGER]: 'managerId',
   [ErrorCode.MANAGER_LOOP]: 'managerId',
   [ErrorCode.MANAGER_NOT_MANAGING]: 'managerId',
+  [ErrorCode.PROBATION_BEFORE_HIRE]: 'probationEnd',
 };
 
 export function fieldForError(code: unknown): keyof EmployeeFormValues | undefined {

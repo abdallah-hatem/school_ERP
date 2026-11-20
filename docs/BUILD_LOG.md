@@ -10,9 +10,9 @@ phase live in `docs/build-log/`.
 - **Design:** direction "Campus", picked from three mockups (`design/mockups/b-campus.html`, kept
   locally, not committed). Light theme only, responsive (desktop, tablet, phone), EN and AR.
 
-- **Merging (temporary):** the owner allowed Claude to push and merge **verified** task PRs into
-  `dev` until the demo on 2026-11-22 (2026-11-17). This overrides `CLAUDE.md` rule 5 for this build
-  only; `testing` and `production` still need the owner.
+- **Merging:** into `dev`, the owner or Claude for him (green CI + a CODEOWNERS approval; Claude uses
+  the admin bypass for its own PRs and reviews, approves and merges Tamer's). `testing`,
+  `production` and `demo`: the owner only (2026-11-20).
 
 ## Stages
 
@@ -198,15 +198,254 @@ phase live in `docs/build-log/`.
   run-page/docs conflicts with each other resolved by us, `ci:local` re-run on each merge.
 - 2026-11-18 — CI: docs-only PRs pass API e2e and smoke in seconds without running them; lint,
   typecheck, unit tests and module rules always run; CI also runs on PRs into `demo` → #100.
+- 2026-11-18 — `demo` branch cut from dev at 0d07713 (after #97–#101) and protected like testing
+  (PR, four green checks, owner approval); Sunday's demo runs from it (ARCHITECTURE → Environments).
+- 2026-11-18 — Team (owner): Waleed is paused for now; the work is split between Abdallah and
+  Tamer. Waleed's T28 (audit wiring for auth, settings, employees, lists) moves to Abdallah.
+- 2026-11-18 — Settings history written in the change's own transaction (no outbox needed): stages,
+  departments, job titles, penalty groups and violations record through core's `SettingsHistory`
+  inside their write, so a failed entry rolls the change back; the after-commit listener is gone and
+  those ten endpoints are `@Audited` → `fix/settings-history-in-transaction`.
+- 2026-11-18 — The "no stage" entry is a flag, not a name (`fix/none-stage-by-id`): `stages.is_no_stage`,
+  set on the stage named "None" by its migration and by the seed (`StagesService.ensureNoStage`, no
+  endpoint); the card band reads the flag. Was the only name check in api/web/shared/seed.
+- 2026-11-18 — Merged: #105 settings history in the same transaction as the change (stages, lists,
+  catalogue; their ten T28 endpoints now audited) and #104 the "no stage" entry found by a flag,
+  not its English name (rebuilt on #105).
+- 2026-11-18 — Decisions (owner): events + outbox design approved (nudge after commit + 30 s poll);
+  notifications use option A (bell popover), in-app only in the UI (no Email/WhatsApp/SMS "Soon"),
+  and the recommended answers to the spec's open questions (grouping, a per-employee probation end
+  date, deadlines 25th/28th as settings, approvals always on, retention 90/30/365 days, contract
+  reminders at 30 and 7 days, System admin edits Notifications settings) — recorded in #106.
+- 2026-11-18 — Notifications spec, plan, §11 and the option A mockup merged → #106 (build waits for
+  events + outbox).
+- 2026-11-18 — CI (owner): PRs into `dev` no longer have to be up to date with `dev`; instead the
+  full suite runs on `dev` after every merge → #111 (branch protection: dev strict off; testing,
+  production and demo still strict). A red run on `dev` is fixed before anything else.
+- 2026-11-18 — T28 merged → #107 (Abdallah): sign-in, sign-out and failed sign-in (same entry
+  whether the email exists), employees (create/edit/deactivate/reactivate/photo, names instead of
+  ids, salary hidden without the permission) and HR settings now on Activity; the employee History
+  tab fills in; smoke History checks and the skeleton History comparison are full. Left: T29
+  penalties (Tamer), then T31 (scan expects no placeholders, dry-run check, Activity search by
+  employee code).
+- 2026-11-18 — Login rate limiting (owner-approved rules) and the scheduled-jobs foundation: 5 wrong
+  passwords in 15 minutes lock that account for 15 minutes (per account, `login_attempts`, one atomic
+  upsert; 429 `TOO_MANY_ATTEMPTS`; sign-in and both password-change paths), admin unlock from Users
+  (`POST /users/:id/unlock-sign-in`, audited), lockouts audited; `core/jobs` (`@nestjs/schedule`,
+  advisory lock per job, `job_runs`) with the nightly `login-attempts.cleanup` at 03:00 Cairo →
+  #109. Its concurrency test exposed pool starvation (a request transaction holding one connection
+  while a `RequiresNew` audit write needs a second): sign-in now records itself in one transaction
+  with the session. `POST /account/password` had the same risk — assigned to the events + outbox
+  build (gap 10). Checked in the browser (EN/AR, desktop/phone): lockout message, locked pill,
+  user-page notice and unlock all work; three small layout fixes are in progress.
+- 2026-11-18 — `docs/EVENTS.md` (owner): every event (name, payload, emitter, listeners, after-commit
+  or not, emit vs emitAsync, planned kind) and every transaction boundary, from the code; a unit
+  test fails when the doc and the code disagree. Eleven gaps listed there (the `employee.*` events fire
+  inside the transaction; four events have no listener; emit/emitAsync mixed) → #114. All are
+  assigned to the events + outbox build except #9 (token refresh's own transaction, deliberate).
+- 2026-11-18 — Events + outbox build started (owner, the approved design).
+- 2026-11-18 — Docs flow (owner): the build log has one writer, whoever merges (PRs carry a "Log
+  entry" in their body instead); business changes are one file each in
+  `docs/business/recent-changes/`. Stops the docs-only conflicts between parallel PRs.
+- 2026-11-18 — Layout fixes from the browser check → #116: on a phone the user page shows Status
+  (with the sign-in lock and Unlock) first; Users cards put status pills on their own line so the
+  email shows in full; toasts sit bottom-end on desktop (clear of header actions and the Save bar),
+  full width under the top bar on a phone. Checked in screenshots (EN desktop, AR phone).
+- 2026-11-18 — Events + outbox merged → #119: one typed `DomainEvents.publish()` (always after
+  commit; `@nestjs/event-emitter` removed; a scan bans direct emits); must-deliver events go through
+  `outbox_events`/`outbox_deliveries` (nudge after commit + 30 s poll, SKIP LOCKED, retries, dead
+  after 10, admin retry `core.outbox.manage`, nightly cleanup); `hr.payroll.approved` →
+  accounting is must-deliver (Tamer to review his listener; his late path stays). EVENTS.md gaps
+  1, 3–8, 10, 11 fixed. Tested live before merge (jobs on, throwaway DB): approve → taxes 3 ms
+  after commit; kill -9 mid-delivery and after commit both recovered by the poll, taxes once;
+  job_runs only on work; retry schedule, dead after 10, admin retry audited, non-admin 403;
+  no-op employee save publishes nothing.
+- 2026-11-18 — Outbox follow-ups merged → #121: the nudge runs in the background after the
+  response (approve no longer waits for accounting), retries count from the claiming pass with a
+  1 s tolerance (on time), `attempts` counts failures only. Tested live before merge: approve
+  returned in 0.05–0.09 s with accounting's table locked, taxes appeared once the lock was
+  released (38/38 lines); normal approve delivered 6 ms after commit; retries at +10 s/+1 min/+5 min
+  from each tick; dead after 10; admin retry answered in 9 ms and is audited.
+- 2026-11-18 — Decided (owner): who sees Settings stays a role setting — a System admin removes
+  "View school structure" / "View penalty catalogue" from Stage head or Direct manager in
+  Administration → Roles if a school wants; no code change. Notifications N0 (probation end) and
+  N1 (core) started.
+- 2026-11-18 — Ownership (owner): Abdallah now does T29/T31 (penalties audit, Activity search),
+  the accounting payroll-taxes screen, notifications and events/outbox; Tamer does the payroll-run
+  rules snapshot and reviews his listener in #119. T29 started.
+- 2026-11-18 — N0 merged → #124: each employee has a probation end date (default hire date +
+  the HR setting `defaultProbationMonths`, 3, minus a day; editable, clearable, never before the
+  hire date; existing employees backfilled); Settings → HR rules → Employees card. Business
+  alignment review: aligned. Screens checked in EN desktop and AR phone on a throwaway DB (one Job
+  card layout fix made).
+- 2026-11-18 — N1 merged → #127: core notifications (`core/notifications`): tables for
+  notifications, items, deliveries, school defaults and personal preferences; `notify`/`resolve`
+  join the caller's transaction (or an outbox listener); recipients by permission + scope with
+  modules registering scope resolvers; grouping per type per day while unread, dedupe, resolve for
+  everyone, access re-checked on every read; preferences over school defaults, approvals locked on;
+  nightly purge 90/30/365 days; permissions `core.notifications.view`/`.manage` granted by
+  migration. API only — screens are N4. N2 (approvals), N3 (reminders) and N4 (screens) started.
+- 2026-11-18 — Accounting payroll-taxes mockups (three options) → #129. Owner picked **C** (year
+  board + printable statement), **with the draft state** on the board, and every table built from
+  the shared `DataTable` (the mockup's tables were hand-drawn). The draft state needs a small
+  read-only addition to accounting's API (through HR's exported payroll service) for Tamer to review.
+  Build started.
+- 2026-11-18 — T29 + T31 merged → #126: recording, approving and cancelling a penalty are on
+  Activity (names, not ids; refused writes leave none); penalties show on the employee's History;
+  Activity search finds entries by employee code (live lookup, older entries too); the audit scan
+  now allows no "wired in" placeholder. Checked in screenshots (EN desktop, AR phone). Two display
+  issues found, fixed in #135.
+- 2026-11-18 — Activity display fixes merged → #135: no entry shows JSON any more (payroll and
+  accounting totals as labelled lines, role permission changes as "View payroll: Everyone → Their
+  stage"); payroll and lateness months in words ("November 2026" / "نوفمبر 2026"), never broken
+  across lines; the AR phone results count sits outside the scrolling chip row. Checked in
+  screenshots (EN desktop, AR phone).
+- 2026-11-18 — N3 merged → #134: one daily job `hr.reminders.daily` (07:00 Cairo) sends contract
+  ending (30 and 7 days), probation ending (7 days), lateness not entered (from the 25th), payroll
+  not prepared / still a draft (from the 28th); resolved the moment the thing is done; dedupe keys +
+  the job lock prevent repeats; recipients by permission and scope. Days are HR settings (shown in
+  N4's Settings → Notifications). GUESS: past dates aren't chased; only the current month's
+  lateness/payroll reminders are sent.
+- 2026-11-18 — N4 merged → #137: the bell (unread count, refresh every minute and on focus),
+  the list as a popover on desktop / full-screen sheet on a phone (grouped items, done states, mark
+  all read), My account → Notifications (one switch per type, required ones locked, reset to the
+  school default), Settings → Notifications (defaults, reminder timing, retention; System admin
+  edits, HR manager reads; timings follow HR-rules editing). Checked in screenshots. The phone smoke
+  spec's ambiguous heading locator fixed by us. Left for N2: a penalty notification opens that
+  penalty; the full record → bell → approve smoke flow.
+- 2026-11-19 — Accounting payroll taxes screen merged → #138 (option C): year board (approved /
+  draft in HR / nothing yet), a printable statement per month with Insured / Not insured tables on
+  the shared `DataTable` (new optional totals row), the tax rule used, Excel export and print/PDF;
+  Accounting is live in the sidebar (Accountant, System admin). Accounting API gained read-only
+  `GET /accounting/payroll/year/:year` (via HR's `PayrollService.runStatusesInYear`) and the month
+  export — for Tamer to review. Checked in screenshots. Tamer can now start the payroll-run rules
+  snapshot (merge dev first; N2 touches `payroll.service.ts`).
+- 2026-11-19 — N2 merged → #131: approval notifications — a pending penalty tells whoever may
+  approve it within their stage or team (not the recorder); a calculated payroll month with no
+  pending penalty tells payroll approvers (net only for whole-school viewers); both resolve for
+  everyone when one person acts. `/penalties?penalty=<id>` opens that penalty with Approve/Cancel;
+  smoke covers record → bell → approve → "Approved by …". Notifications N0–N4 are done; N5
+  (verify) next.
+- 2026-11-19 — First visit opens in English → #142 (an old `/` → `/ar` redirect in next.config ran
+  before the proxy and overrode the English default; smoke now checks a fresh visitor lands on /en).
+  Toasts back at the top inline-end corner (top-right EN, top-left AR) → #143 (owner preferred it
+  over #116's bottom corner).
+- 2026-11-19 — Started: payroll taxes statement fixes (subtotal row to the table's right edge;
+  pagination + search per group on screen, print/Excel complete) and a break-ui pass over every
+  money screen with worst-case amounts (owner).
+- 2026-11-19 — One avatar for every person → #147: user accounts no longer show initials (sidebar
+  chip, Users list, My account, role holders, Activity's Person filter, the employee picker); a
+  linked account shows its employee's photo or male/female silhouette, an unlinked one a neutral
+  silhouette; inactive people greyed. Users, session and activity actors gained read-only
+  `employee: { photoUrl, gender }`. Checked in screenshots (EN desktop, AR phone, tablet rail).
+- 2026-11-19 — Payroll taxes statement and tables → #146: each group pages (10) with one search
+  box, the subtotal covers the whole group ("Subtotal · all 24"), print/PDF and Excel list everyone;
+  every DataTable's header, hover, hairlines and totals row now reach both card edges (an empty
+  scrollbar gutter made them stop 10px short) — measured 0px on payroll runs, penalties, users and
+  the statement, EN and AR. The Insured table switches to cards below 960px so it never scrolls
+  sideways → #151.
+- 2026-11-19 — Money worst-case pass (break-ui) → #149: amounts up to EGP 21,474,836.47 and month
+  totals over EGP 146M checked on every money screen, EN/AR, 320–1440px and print; fixed the
+  statement sum line (four terms + gross band between 740 and 960px — owner to look), `Money`
+  wrapping, the run lines table (cards below 900px), card grids at 320–600px, the year board at
+  320, "EGP" splitting from its amount in sentences, notification line caps.
+- 2026-11-19 — Deleting roles → #148 (owner): System admin can't be deleted (and keeps every
+  permission); every other role, starting or custom, can be deleted once nobody holds it ("Starting
+  role" badge, a warning that future permissions won't reach a replacement); grant migrations skip a
+  deleted role (replay test).
+- 2026-11-19 — Money cap → #154 (owner): salary, insured salary and each payroll adjustment are at
+  most EGP 1,000,000.00 a month — one shared constant `MAX_MONTHLY_PIASTRES`, enforced by the API
+  DTOs and the web forms ("At most EGP 1,000,000.00 a month."). Removes the overflow #149 found.
+  N5 (live notifications check) started.
+- 2026-11-19 — N5 (live notifications check) passed all six flows: approvals by scope, grouping,
+  deep link, resolve for everyone; reminders sent once, resolved when done, dedupe across runs and
+  two containers; preferences and Settings → Notifications; access loss; bell/popover/sheet EN+AR;
+  jobs and retention purge. Its four small findings fixed → #156: group titles count open items
+  ("2 penalties waiting…", "3 penalties — all handled · Approved by …"); the Unread tab equals the
+  bell count and refreshes after Mark all read; every role sees the school's name and logo (shell
+  reads the public endpoint); AR phone preference switches aligned. Notifications N0–N5 done.
+- 2026-11-19 — Fresh-clone setup → #158 (owner: it didn't run on a friend's PC): `pnpm run setup`
+  (checks Node/pnpm/Docker, starts Postgres, creates the env files with generated secrets only if
+  missing, builds shared, migrates, seeds once) and `pnpm dev` (API + web + shared watch together);
+  root README with prerequisites, logins, ports and troubleshooting; ports/DB overridable for a second
+  copy. Proven on a fresh clone (setup twice, dev, headless sign-in). Note: `pnpm setup` alone is
+  pnpm's own command — use `pnpm run setup`.
+- 2026-11-19 — Setup fix → #160: setup and `pnpm dev` stopped when `school-erp-db` had been
+  created by another compose project (compose won't reuse the name); `start_db` now starts an
+  existing container and uses `docker compose up` only when there is none. Proven on the owner's
+  machine (setup ran, migrations applied, seed skipped, app up on 3000/3001).
+- 2026-11-19 — Collapsible permissions → #162 (owner: "needs to be collapsable like Penalty
+  catalogue"): a role's Core/HR/Accounting groups fold open and shut, start closed (open when they
+  hold unsaved changes); "Turn all on/off" works on a closed group. Checked in screenshots (EN
+  desktop, AR phone).
+- 2026-11-19 — Dashboard with no tiles → #163 (owner: had "View the HR dashboard" but saw nothing):
+  each tile also needs its screen's view permission (by design); a role with the dashboard but no
+  tile now gets the welcome with its screens instead of an empty Home; the permission's text says
+  so (EN/AR). Checked in screenshots.
+- 2026-11-19 — Employee record → #165 (owner: "linked employee is kinda confusing"): the field is
+  "Who is this person in HR?" ("Employee record" in lists; AR ملف الموظف) with a hint on why scoped
+  roles need it; a non-blocking warning when a scoped role has none; "Signs in as" / "No sign-in
+  account" on the employee profile (`signInAccount` on the API employee, through core's
+  UsersService); the welcome no longer tells someone with a role to ask for one. Smoke caught two
+  skeleton-height mismatches from the new rows; fixed in the skeletons, check unchanged. Checked
+  in screenshots (EN desktop, AR phone).
+- 2026-11-19 — Owner: refresh `demo` from `dev` → dev→demo PR #167 (green, waits for the owner's
+  approval). Dry run → #168 (`docs/demo/dry-runs/2026-11-19.md`, DEMO_SCRIPT updated): AR, EN, phone
+  on two DB copies; every money figure matched by hand (payslips, run totals, bank sheet, 76 tax
+  lines). Must fix: (1) raw values in History/Activity → fixed in #169; (2–4) demo-database data,
+  the owner's: re-run the seed (set SEED_ADMIN_PASSWORD to the current admin password first —
+  the reseed resets it), remove "Test User" and "Test Role AR", insure 2–3 employees and add an HR
+  officer and an Accountant login before the demo. 7 later items in the record.
+- 2026-11-19 — Audit values → #169: History and Activity show insurance status and highest degree
+  as labels, insured salary as money (EGP 6,500.00, counted as money and hidden without salary
+  access), and a photo or school-logo change as "Photo added / changed / removed" — never a file
+  name. Checked in screenshots (EN desktop, AR phone).
+- 2026-11-20 — Owner: "for dev also require me only to merge", then "I allow you to merge for me as
+  well" → `dev` protection needs one CODEOWNERS approval, so Tamer can't merge alone; Claude merges
+  its own PRs with the admin bypass and reviews, approves and merges Tamer's. CLAUDE.md rule 5,
+  CONVENTIONS, CODEOWNERS and learnings updated (#172).
+- 2026-11-20 — Accounting → Approved payroll → #171 (Tamer; reviewed with screenshots, fixed on top by
+  Claude with the owner's OK, approved and merged for him): months HR approved with the tax columns;
+  Return to HR (reason; HR run back to draft, month unlocks, taxes dropped and redone on re-approval,
+  HR approvers notified) and Finalize (transfer made, final); both audited on the accounting month
+  and HR's run; Rows per page 10–500 with a sticky header on payroll tables (payroll APIs allow 500,
+  every other list 100). Fixes: audit on HR's run, statuses in words, bidi of the reason, lock order,
+  docs and e2e; the hr-payroll test now cleans its accounting rows. Owner kept the screen; sidebar
+  label "Approved pay" (EN; the full name was cut off), page "Approved payroll".
+- 2026-11-20 — Dry run of the steps #171 changed → #174 (`docs/demo/dry-runs/2026-11-20.md`, script
+  wording): AR, EN, phone on DB copies; money matched by hand, including return → fix → re-approve.
+  Must fix (code, in progress): the month's total row hidden inside the capped table (also the
+  Payroll taxes subtotals); "Finalized · transferred" cuts the month name on a phone. Five later
+  items folded into the same fix. Demo-database data steps still the owner's.
+- 2026-11-20 — Dry-run fixes → #176: capped payroll tables keep their totals pinned at the bottom of
+  the scroll box ("Month total · all N" on the Approved payroll month; Payroll taxes subtotals);
+  HR's runs cards put status pills under the month (no truncation at 320–390); `dir="auto"` on every
+  textarea; Activity → Module has Accounting; return/finalize use the status icon; the month title
+  stays on one line. A smoke check failed in CI only (Linux scrollbar pushed 1440 under the 1100px
+  cards point); spec runs at 1600.
+- 2026-11-20 — Approved payroll month → #178 (owner, after screenshots of both layouts): cards on
+  every screen width, and no Month total card on screen ("its already at the cards at the top" — the
+  four tiles carry the totals); print and Excel/PDF keep the total row. The hidden-totals note moved
+  under the tiles. DataTable gained `cardsBelow="always"` and `footerCard="none"`.
 
 ## Next up
 
-- **`demo` branch (owner, 2026-11-18):** once the rules-in-lateness/run, dry-run polish and roles
-  leftovers PRs are merged and dev is green, cut `demo` from dev and run Sunday's demo from it, so
-  untested work on dev never reaches the demo. Protected like testing/production (PR, four green
-  checks, owner approval; fixes land in dev first). CI runs on PRs into `demo`. Document in
-  ARCHITECTURE → branches.
-- **Accounting payroll taxes screen** — a page per approved month (net, insurance share, income tax,
+- Outbox nits (from #121's live test, cosmetic): the "dead after 10 failures" log line always says
+  10 (after an admin retry it's 11); a dead row still gets a `next_attempt_at`. A lock held longer
+  than Prisma's 15 s transaction timeout counts as one failure, then the next tick delivers it.
+- **Notifications — spec, plan and option A decided (PR #106). Events + outbox and jobs are in; N0–N5 done (#124, #127, #131, #134, #137, #156).** Spec
+  `docs/specs/2026-11-18-notifications.md`, plan `docs/plans/2026-11-18-notifications-plan.md`,
+  business §11, mockup `design/mockups/notifications.html` (option A · bell popover; B and C dropped). The
+  UI shows the in-app channel only — one switch per type; the API keeps a `channel` field (`in_app`). Owner decisions (2026-11-18): in-app bell only (channels addable later), staff users now
+  (parents later), approvals waiting + scheduled reminders, preferences per person / type / channel
+  with school defaults, some types can't be turned off. Owner answers (2026-11-18): grouped notifications, probation end per
+  employee (N0), lateness by the 25th and payroll by the 28th (settings), approvals can't be turned
+  off, retention 90 / 30 / 365 days, contract reminders at 30 and 7 days, Settings → Notifications
+  changed by the System admin and seen by the HR manager.
+
+- ~~Accounting payroll taxes screen~~ done (#138). Follow-up: the "Approved in HR" stamp has no date
+  (accounting doesn't store HR's approval time). The long phone statement is paged now (#146).
+- (was) **Accounting payroll taxes screen** — a page per approved month (net, insurance share, income tax,
   fund, gross per employee) and a sidebar entry: **mockups first** (CLAUDE.md rule 9). The API
   (`GET /accounting/payroll[/:month]`) is built. Tax defaults are GUESS until the accountant confirms.
 - Accounting settings, from the #84 review (optional): `AccountingSettingsService.update()` now
@@ -214,10 +453,9 @@ phase live in `docs/build-log/`.
   (needs a row lock or a version check); the settings e2e checks the audit entry exists but not its
   before/after values.
 - **Before Sunday (owner):** on the demo DB run `prisma migrate deploy`, then `db:seed` once with the
-  same `SEED_ADMIN_PASSWORD`. Until T28/T29 land, open Activity in the demo only for a settings change.
-- Access decision from #89: should Stage head / Direct manager see Settings (Structure, Catalogue,
-  read-only)? (Principal/Accountant reading HR rules on Lateness and the run: done in #97.)
-- Payroll runs could keep a snapshot of the rules they were calculated with (Tamer to decide); today
+  same `SEED_ADMIN_PASSWORD`. Activity in the demo: settings, sign-ins, employees and HR rules are recorded; penalties, lateness
+  and payroll only once T29 lands.
+- Payroll runs could keep a snapshot of the rules they were calculated with (**Tamer**, told 2026-11-18); today
   an approved run shows current rules.
 - Dry-run follow-ups (2026-11-18): the eight polish items are fixed in #99. Still open: Activity
   search in Arabic doesn't find pre-17th entries; the lateness page itself doesn't show
@@ -225,17 +463,11 @@ phase live in `docs/build-log/`.
 
 - The client should check the Arabic penalty catalogue against the printed regulations (copied from the scans).
 
-- Login rate limiting (T2 left it out; security baseline).
-- Write the settings history in the same transaction as the change (outbox), instead of right after.
+- Sign-in limit numbers (5 wrong passwords / 15-minute window / 15-minute lock) are core settings with
+  no screen yet; add them to Settings → School if a school wants to change them.
 
 - Hosting the demo on the Contabo server (owner: later; local demo is the fallback).
-- Audit log T28 (Waleed: auth, settings, employees, lists) and T29 (Tamer: penalties, lateness,
-  payroll), then T31 verify. Optional CI ratchet that forbids touching an unwired endpoint (owner: docs only for now). Follow-ups from T30: id fields
-  (`departmentId`) show raw ids unless T28 stores names; penalties don't appear on the employee's
-  History; payroll run page has no History tab yet; smoke History check still asserts the empty
-  state (`TODO(T28)`).
+- Audit log T28 (#107), T29 + T31 (#126) done. Optional CI ratchet that forbids touching an unwired endpoint (owner: docs only for now). Follow-ups from T30 still open: penalties don't appear on the employee's History (T29); the payroll
+  run page has no History tab yet.
 
 - Optional: server-side paging for lateness (loads the whole month today) and column sorting.
-- The stage "None" band is detected by its English name; key it by an id instead.
-- Leftover from #88: the History tab's skeleton assumes entries, so it still jumps while History is
-  empty (until T28); then compare the timeline in full.

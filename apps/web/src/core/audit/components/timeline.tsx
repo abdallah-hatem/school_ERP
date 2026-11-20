@@ -33,8 +33,9 @@ import {
   formatAuditValue,
   isFailedSignIn,
   isMoneyField,
-  labelIn,
+  isMonthRecord,
   recordHref,
+  recordLabel,
   type ChangeRow,
 } from '../lib/entry-text';
 import {
@@ -70,13 +71,25 @@ const TONE_CLASSES: Record<Tone, string> = {
   failed: 'bg-warning-soft text-warning',
 };
 
+/**
+ * The payroll's status changes after approval — Accounting returning or finalizing a month, and the
+ * matching entries on HR's run — show the status-change icon approval has, not the edit pencil
+ * (dry run 2026-11-20).
+ */
+const PAYROLL_STATUS_ACTIONS: ReadonlySet<string> = new Set([
+  'accounting.payroll.return',
+  'accounting.payroll.finalize',
+  'hr.payroll.returned',
+  'hr.payroll.transferred',
+]);
+
 function entryLook(entry: AuditEntry): { icon: AppIcon; tone: Tone } {
   const verb = entry.action.split('.').pop() ?? '';
   if (isFailedSignIn(entry)) return { icon: FailedSignInIcon, tone: 'failed' };
   if (entry.action === 'core.auth.sign_in') return { icon: SignInIcon, tone: 'neutral' };
   if (entry.action === 'core.auth.sign_out') return { icon: SignOutIcon, tone: 'neutral' };
   const money = isMoneyEntry(entry);
-  if (verb === 'approve') return { icon: ApproveIcon, tone: money ? 'money' : 'ok' };
+  if (verb === 'approve' || PAYROLL_STATUS_ACTIONS.has(entry.action)) return { icon: ApproveIcon, tone: money ? 'money' : 'ok' };
   if (verb === 'cancel' || verb === 'deactivate') return { icon: CancelledIcon, tone: 'neutral' };
   if (verb === 'reactivate') return { icon: ReactivateIcon, tone: 'ok' };
   if (entry.entityType === 'payroll_run') return { icon: PayrollIcon, tone: 'money' };
@@ -104,7 +117,10 @@ function Sentence({
   const text = entrySentence({ action: entry.action, entityLabel: TEXT_SLOT }, t, locale);
   // English sentences start with a capital; after the actor's name ("Mona changed…") it is lowered.
   const sentence = lowerFirst ? text.charAt(0).toLowerCase() + text.slice(1) : text;
-  const label = <bdi className="font-bold">{labelIn(entry.entityLabel, locale)}</bdi>;
+  // A month ("November 2026") never breaks across lines.
+  const label = (
+    <bdi className={cn('font-bold', isMonthRecord(entry) && 'whitespace-nowrap')}>{recordLabel(entry, locale)}</bdi>
+  );
   return (
     <SlotText
       text={sentence}
@@ -176,7 +192,14 @@ function Changes({ entry, inline }: { entry: AuditEntry; inline: number }) {
         id={listId}
         className="grid gap-y-1 @min-[34rem]:grid-cols-[fit-content(11rem)_minmax(0,1fr)] @min-[34rem]:gap-x-3"
       >
-        {shown.map((row) => (
+        {shown.map((row) =>
+          row.text ? (
+            // A line in words ("Photo changed"): the label is in the sentence, read once.
+            <div key={row.key} className="@min-[34rem]:contents">
+              <dt className="sr-only">{row.label}</dt>
+              <dd className="leading-snug font-bold break-words @min-[34rem]:col-span-2">{row.text}</dd>
+            </div>
+          ) : (
           <div key={row.key} className="grid gap-y-0.5 @min-[34rem]:contents">
             <dt className="font-semibold leading-snug text-muted-foreground break-words">{row.label}</dt>
             <dd className="min-w-0 leading-snug break-words [overflow-wrap:anywhere]">
@@ -207,7 +230,8 @@ function Changes({ entry, inline }: { entry: AuditEntry; inline: number }) {
               )}
             </dd>
           </div>
-        ))}
+          ),
+        )}
       </dl>
       {hidden > 0 ? (
         <button
@@ -296,7 +320,10 @@ function Rail({ entry }: { entry: AuditEntry }) {
         'group-first/item:before:top-3.5 group-last/item:before:bottom-auto group-last/item:before:h-3.5',
       )}
     >
-      <span className={cn('relative mt-1 grid size-8 place-items-center rounded-[0.7rem] ring-4 ring-card', TONE_CLASSES[tone])}>
+      <span
+        data-entry-icon={Icon.displayName ?? Icon.name}
+        className={cn('relative mt-1 grid size-8 place-items-center rounded-[0.7rem] ring-4 ring-card', TONE_CLASSES[tone])}
+      >
         <Icon className="size-4.5" />
       </span>
     </div>

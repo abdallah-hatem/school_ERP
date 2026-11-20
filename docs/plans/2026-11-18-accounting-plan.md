@@ -17,7 +17,8 @@ HR payroll ends at the net. The new `accounting` module — the top of the modul
   accounting works out each line's insurance share, income tax, martyrs' fund and gross. It uses
   the rule and the employees' insurance at that moment and keeps the result frozen.
 
-Permissions: `accounting.settings.view` / `.edit` and `accounting.payroll.view`, for the Accountant
+Permissions: `accounting.settings.view` / `.edit`, `accounting.payroll.view`, and (2026-11-19)
+`accounting.payroll.return` / `.finalize`, for the Accountant
 and the System admin. Tax, insurance and gross are salary data: they are hidden without
 `hr.employees.view_salary`, as P4 does for HR payroll.
 
@@ -30,8 +31,9 @@ and the System admin. Tax, insurance and gross are salary data: they are hidden 
 | C | Settings → Accounting panel: slices ("the rest" last), fund, insurance share, live example from the shared maths, EN/AR | `ui` | B |
 | D | Taxes on approval: listener on `payroll.approved`, `accounting_payroll_runs/lines`, `GET /accounting/payroll[/:month]`, salary visibility, audit `accounting.payroll.record`, §10 (calculation), §6 | `logic` | B, T29 |
 
-Later (not planned yet): the months' screen (mockups first), journal entries, the employer's
-insurance share.
+| E | Payroll taxes screen (mockup option C): year board (`GET /accounting/payroll/year/:year`, drafts read through HR's `PayrollService`), the month's statement, Excel (`GET /accounting/payroll/:month/export`) and print, `DataTable` totals row, sidebar Accounting live, §10 (screen) | `ui` | D |
+
+Later (not planned yet): journal entries, the employer's insurance share.
 
 ## Edge cases (expected outcome · source)
 

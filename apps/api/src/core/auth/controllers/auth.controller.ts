@@ -7,7 +7,7 @@ import { LoginDto } from '../dto/login.dto';
 import { AuthCookiesInterceptor } from '../interceptors/auth-cookies.interceptor';
 import { AuthService } from '../services/auth.service';
 import { ClearedSession, type IssuedSession } from '../session';
-import { NotAudited } from '../../audit';
+import { Audited, NotAudited } from '../../audit';
 import { AllowedBeforePasswordChange, PermissionsService, SignedIn } from '../../permissions';
 import { UsersService } from '../../users';
 
@@ -22,7 +22,9 @@ export class AuthController {
   ) {}
 
   @Public()
-  @NotAudited('wired in T28')
+  @NotAudited(
+    'records its own entries: core.auth.sign_in in one transaction with the session; failed sign-ins and lockouts each in their own, since a request transaction would hold a connection while they wait for another',
+  )
   @Post('login')
   @HttpCode(HttpStatus.OK)
   login(@Body() dto: LoginDto): Promise<IssuedSession> {
@@ -37,7 +39,7 @@ export class AuthController {
     return this.auth.refresh(refreshToken);
   }
 
-  @NotAudited('wired in T28')
+  @Audited('core.auth.sign_out')
   @Post('logout')
   @SignedIn()
   @AllowedBeforePasswordChange()
@@ -53,17 +55,19 @@ export class AuthController {
   /**
    * The signed-in user with the permission keys their roles grant now — the web app's `can()`
    * reads them (R6) — and the roles themselves (the user chip). Read fresh on every request, so a
-   * role change shows without a new sign-in. Also answered while `mustChangePassword` is set: the
+   * role change shows without a new sign-in. `employee`: the linked employee's photo and gender
+   * (the chip's avatar). Also answered while `mustChangePassword` is set: the
    * web app reads the flag here and sends the user to "Set a new password".
    */
   @Get('me')
   @SignedIn()
   @AllowedBeforePasswordChange()
   async me(@CurrentUser() user: AuthUser): Promise<SessionUser> {
-    const [permissions, roles] = await Promise.all([
+    const [permissions, roles, employee] = await Promise.all([
       this.permissions.permissionsFor(user),
       this.users.rolesOf(user.id),
+      this.users.avatarOf(user.id),
     ]);
-    return { ...user, permissions, roles };
+    return { ...user, permissions, roles, employee };
   }
 }

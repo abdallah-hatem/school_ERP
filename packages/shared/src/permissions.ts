@@ -40,6 +40,11 @@ export const PERMISSIONS = {
   // core — roles (Administration → Roles)
   'core.roles.view': core,
   'core.roles.manage': core,
+  // core — event deliveries (the outbox): see the dead ones and retry them
+  'core.outbox.manage': core,
+  // core — notifications (§11): the school's defaults per type and how long notifications are kept
+  'core.notifications.view': core,
+  'core.notifications.manage': core,
 
   // hr — dashboard
   'hr.dashboard.view': hr,
@@ -79,6 +84,9 @@ export const PERMISSIONS = {
   'accounting.settings.edit': accounting,
   // accounting — payroll taxes of approved months
   'accounting.payroll.view': accounting,
+  // accounting — send an approved month back to HR (a draft again), or finalize it (transfer made)
+  'accounting.payroll.return': accounting,
+  'accounting.payroll.finalize': accounting,
 } as const satisfies Record<string, PermissionDefinition>;
 
 export type PermissionKey = keyof typeof PERMISSIONS;

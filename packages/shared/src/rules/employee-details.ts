@@ -9,6 +9,14 @@ import type { IsoDate, Piastres } from '../types/common';
 /** Postgres `integer` upper bound — larger piastre amounts can't be stored. */
 export const MAX_PIASTRES = 2_147_483_647;
 
+/**
+ * The most a salary, an insured salary or one payroll adjustment may be: EGP 1,000,000.00 a month
+ * (owner, 2026-11-19). Far above any real school salary, it catches typos (extra zeros) and keeps
+ * every payroll line and its tax-inclusive gross well inside `MAX_PIASTRES` (#149's worst-case pass
+ * found a 500 and missing taxes above that).
+ */
+export const MAX_MONTHLY_PIASTRES = 100_000_000;
+
 /** An insurance number is digits only, up to this many. */
 export const INSURANCE_NUMBER_MAX_DIGITS = 20;
 
@@ -90,7 +98,7 @@ export function socialInsuranceIssues(
   if (v.insuredSalary == null) issues.push({ field: 'insuredSalary', issue: 'required' });
   else if (!Number.isInteger(v.insuredSalary) || v.insuredSalary <= 0) {
     issues.push({ field: 'insuredSalary', issue: 'insuredSalaryPositive' });
-  } else if (v.insuredSalary > MAX_PIASTRES) {
+  } else if (v.insuredSalary > MAX_MONTHLY_PIASTRES) {
     issues.push({ field: 'insuredSalary', issue: 'insuredSalaryTooLarge' });
   }
   return issues;

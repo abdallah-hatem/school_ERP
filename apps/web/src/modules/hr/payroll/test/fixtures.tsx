@@ -1,6 +1,6 @@
 import {
   SETTING_DEFAULTS,
-  type HrSettings,
+  type PayrollRunRules,
   type PayrollAdjustment,
   type PayrollLine,
   type PayrollRun,
@@ -85,6 +85,8 @@ export function run(overrides: Partial<PayrollRun> = {}): PayrollRun {
     month: '2026-11',
     status: 'DRAFT',
     approvedAt: null,
+    transferredAt: null,
+    returned: null,
     totals: {
       employees: lines.length,
       monthSalary: lines.reduce((s, l) => s + (l.monthSalary ?? 0), 0),
@@ -115,10 +117,12 @@ export function summary(r: PayrollRun = run()): PayrollRunSummary {
     totals: r.totals,
     salaryVisible: r.salaryVisible,
     approvedAt: r.approvedAt,
+    transferredAt: r.transferredAt,
+    returned: r.returned,
   };
 }
 
-export const SETTINGS: HrSettings = {
+export const SETTINGS: PayrollRunRules = {
   lateness: {
     graceMinutes: SETTING_DEFAULTS['hr.lateness.graceMinutes'],
     steps: SETTING_DEFAULTS['hr.lateness.steps'],

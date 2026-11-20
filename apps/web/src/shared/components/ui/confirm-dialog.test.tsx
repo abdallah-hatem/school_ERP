@@ -37,6 +37,15 @@ describe('ConfirmDialog', () => {
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
   });
 
+  it.each(['en', 'ar'] as const)('the reason box follows its text\'s direction: dir="auto" (%s)', (locale) => {
+    // A Latin reason typed on the Arabic screen read right to left, its full stop first (dry run 2026-11-20).
+    renderWithI18n(
+      <ConfirmDialog open onOpenChange={vi.fn()} title="Return" confirmLabel="Return" requireReason onConfirm={vi.fn()} />,
+      { locale },
+    );
+    expect(screen.getByRole('textbox').getAttribute('dir')).toBe('auto');
+  });
+
   it('cannot be confirmed twice while the action is running', async () => {
     const user = userEvent.setup();
     let finish: () => void = () => undefined;

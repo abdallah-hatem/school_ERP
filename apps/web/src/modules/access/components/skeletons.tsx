@@ -14,6 +14,8 @@ import { useTranslation } from '@/shared/providers/i18n-provider';
 import { parseUsersQuery } from '../lib/users-query';
 import { AccessI18n } from '../messages';
 import { ChangePasswordCard } from './account-view';
+import { AccountTabs } from './account-tabs';
+import { NotificationPreferencesSkeleton, NotificationsI18n } from '@/core/notifications';
 import { FormCard, FormColumns } from './form-card';
 import { PermissionGroups } from './permission-groups';
 import { RoleScopesCard } from './role-form';
@@ -55,7 +57,7 @@ export function RolesListSkeleton() {
   const { locale } = useTranslation();
   return (
     <AccessI18n locale={locale}>
-      <RolesList basePath={`/${locale}/roles`} roles={undefined} holderNames={{}} />
+      <RolesList basePath={`/${locale}/roles`} roles={undefined} holders={{}} />
     </AccessI18n>
   );
 }
@@ -74,6 +76,22 @@ export function FormPageSkeleton({ kind }: { kind: 'user' | 'role' | 'account' }
   );
 }
 
+/** My account → Notifications while it loads: the header, the tabs and the switch list itself. */
+export function AccountNotificationsSkeleton() {
+  const { t, locale } = useTranslation();
+  return (
+    <AccessI18n locale={locale}>
+      <NotificationsI18n locale={locale}>
+        <div aria-busy="true" className="flex flex-col gap-6">
+          <Header title={t('access.account.title')} description={t('access.account.notificationsDescription')} />
+          <AccountTabs />
+          <NotificationPreferencesSkeleton />
+        </div>
+      </NotificationsI18n>
+    </AccessI18n>
+  );
+}
+
 function LoadingStatus() {
   const { t } = useTranslation();
   return (
@@ -87,13 +105,27 @@ function LoadingStatus() {
  * The page header with the loaded title and description drawn as bars of their own text, so they
  * wrap where the loaded ones do; a record's name (not known yet) is a short bar.
  */
-function Header({ crumb, title, description, status }: { crumb?: 'users' | 'roles'; title?: string; description: string; status?: boolean }) {
+function Header({
+  crumb,
+  title,
+  description,
+  status,
+  action,
+}: {
+  crumb?: 'users' | 'roles';
+  title?: string;
+  description: string;
+  status?: boolean;
+  /** A button in the header (a role's Delete: every role but the System admin has one). */
+  action?: boolean;
+}) {
   const { t } = useTranslation();
   return (
     <PageHeader
       title={title ? <SkeletonProse>{title}</SkeletonProse> : <SkeletonText width="w-40" />}
       status={status ? <SkeletonPill /> : undefined}
       description={<SkeletonProse>{description}</SkeletonProse>}
+      actions={action ? <Skeleton className="h-11 w-32 rounded-lg" /> : undefined}
       breadcrumbs={
         crumb ? [{ label: t('access.administration') }, { label: t(`access.${crumb}.title`) }, { label: ' ' }] : undefined
       }
@@ -187,6 +219,7 @@ function UserSkeleton({ adding }: { adding: boolean }) {
       />
       <Form aria-hidden="true" inert className="skeleton-mask">
         <FormColumns
+          sideFirst={!adding}
           main={
             adding ? (
               <>
@@ -240,6 +273,7 @@ function RoleSkeleton({ adding }: { adding: boolean }) {
         crumb="roles"
         title={adding ? t('access.roleForm.addTitle') : undefined}
         status={!adding}
+        action={!adding}
         description={t(adding ? 'access.roleForm.addDescription' : 'access.roleForm.description')}
       />
       <Form aria-hidden="true" inert className="skeleton-mask">
@@ -288,12 +322,13 @@ function AccountSkeleton() {
   return (
     <>
       <Header title={t('access.account.title')} description={t('access.account.description')} />
+      <AccountTabs />
       <FormColumns
         main={
           <>
             <section data-skeleton-block="account-profile" className="@container flex flex-col gap-5 rounded-3xl bg-card p-5 shadow-card md:p-6">
               <div className="flex min-w-0 items-center gap-4">
-                <Skeleton className="size-14 shrink-0 rounded-2xl" />
+                <Skeleton className="size-12 shrink-0 rounded-2xl" />
                 <div className="flex min-w-0 flex-col">
                   <SkeletonText className="font-display text-xl" width="w-40" />
                   <SkeletonText className="text-sm" width="w-52" />

@@ -10,10 +10,12 @@ import { PageHeader } from '@/shared/components/layout/page-header';
 import { Button } from '@/shared/components/ui/button';
 import { ErrorIcon, LinkedEmployeeIcon, LockedIcon, PasswordIcon, SignOutIcon } from '@/shared/components/ui/icons';
 import { Input } from '@/shared/components/ui/input';
+import { PersonAvatar } from '@/shared/components/ui/person-avatar';
+import { apiErrorText } from '@/shared/lib/api-error';
 import { localName } from '@/shared/lib/i18n';
-import { initialsOf } from '@/shared/lib/initials';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { formatSignIn } from '../lib/sign-in-time';
+import { AccountTabs } from './account-tabs';
 import { FormCard, FormColumns } from './form-card';
 import { RoleChips } from './role-bits';
 
@@ -30,17 +32,13 @@ export function AccountView({ account, now }: { account: UserAccount; now: IsoDa
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title={t('access.account.title')} description={t('access.account.description')} />
+      <AccountTabs />
       <FormColumns
         main={
           <>
             <section data-skeleton-block="account-profile" className="@container flex flex-col gap-5 rounded-3xl bg-card p-5 shadow-card md:p-6">
               <div className="flex min-w-0 items-center gap-4">
-                <span
-                  aria-hidden="true"
-                  className="grid size-14 shrink-0 place-items-center rounded-2xl bg-accent font-display text-lg font-extrabold text-accent-foreground"
-                >
-                  {initialsOf(account.name)}
-                </span>
+                <PersonAvatar photoUrl={account.employee?.photoUrl} gender={account.employee?.gender} size="md" />
                 <div className="flex min-w-0 flex-col">
                   <h2 className="truncate font-display text-xl font-extrabold">{account.name}</h2>
                   <bdi dir="ltr" className="truncate text-sm text-muted-foreground">
@@ -169,10 +167,8 @@ export function ChangePasswordCard() {
       }
       if (res.error === ErrorCode.WRONG_PASSWORD) setWrongCurrent(true);
       else if (res.error === ErrorCode.SAME_PASSWORD) setSameAsCurrent(true);
-      else {
-        const key = `errors.${String(res.error)}`;
-        setError(has(key) ? t(key) : res.message || t('auth.password.failed'));
-      }
+      // Anything else, a sign-in lock included ("Try again in N minutes", from `params.count`).
+      else setError(apiErrorText(res, { t, has }) || t('auth.password.failed'));
     } finally {
       inFlight.current = false;
       setBusy(false);

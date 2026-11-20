@@ -1,5 +1,4 @@
 import { INestApplication } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   HrSettingKey,
   latenessDays,
@@ -8,6 +7,7 @@ import {
   type HrSettings,
   type SettingsChangedEvent,
 } from '@school-erp/shared';
+import { EventListeners } from '../src/core/events/event-listeners';
 import { DatabaseService } from '../src/database/database.service';
 import { http } from './helpers';
 import { createAppAsTestUser } from './helpers/as-test-user';
@@ -32,7 +32,10 @@ describe('HR rule settings — /hr/settings (e2e)', () => {
   beforeAll(async () => {
     ({ app, user } = await createAppAsTestUser());
     db = app.get(DatabaseService);
-    app.get(EventEmitter2).on(SettingsEvent.CHANGED, (e: SettingsChangedEvent) => events.push(e));
+    // A real listener: it hears core.settings.changed only after the commit, as any listener does.
+    app.get(EventListeners).addInMemory(SettingsEvent.CHANGED, 'HrSettingsSpec', {
+      handle: (e) => (events.push(e as SettingsChangedEvent), Promise.resolve()),
+    });
   });
 
   beforeEach(async () => {
@@ -46,7 +49,7 @@ describe('HR rule settings — /hr/settings (e2e)', () => {
     await app.close();
   });
 
-  it('Fresh database: HR settings = grace 0, steps 1→0.25 and 2→0.5, extra 0.5, divisor 30, 80/60/40, CONTRACT_YEAR', async () => {
+  it('Fresh database: HR settings = grace 0, steps 1→0.25 and 2→0.5, extra 0.5, divisor 30, 80/60/40, CONTRACT_YEAR, probation 3 months, reminders 30/7/7/25/28', async () => {
     const res = await http(app).get('/hr/settings').expect(200);
     expect(res.body).toMatchObject({ success: true, statusCode: 200 });
     expect(res.body.data).toEqual({
@@ -60,6 +63,14 @@ describe('HR rule settings — /hr/settings (e2e)', () => {
       },
       payroll: { dayDivisor: 30, partTime: { PART_TIME_4: 80, PART_TIME_3: 60, PART_TIME_2: 40 } },
       penalties: { repetitionWindow: 'CONTRACT_YEAR' },
+      employees: { defaultProbationMonths: 3 },
+      reminders: {
+        contractEndDays: 30,
+        contractEndSecondDays: 7,
+        probationEndDays: 7,
+        latenessCheckDay: 25,
+        payrollCheckDay: 28,
+      },
     });
   });
 
@@ -124,6 +135,22 @@ describe('HR rule settings — /hr/settings (e2e)', () => {
       ['null section', { lateness: null }],
       ['section as a string', { payroll: 'thirty' }],
       ['days as a string', { lateness: { extraHourDays: '0.5' } }],
+      ['probation 7 months (N0: 0–6)', { employees: { defaultProbationMonths: 7 } }],
+      ['probation −1 months', { employees: { defaultProbationMonths: -1 } }],
+      ['probation 1.5 months', { employees: { defaultProbationMonths: 1.5 } }],
+      ['probation null', { employees: { defaultProbationMonths: null } }],
+      ['unknown employees key', { employees: { probationDays: 90 } }],
+      // N3 edge 15: reminder timings (spec → Reminder settings).
+      ['lateness check day 0', { reminders: { latenessCheckDay: 0 } }],
+      ['payroll check day 32', { reminders: { payrollCheckDay: 32 } }],
+      ['contract reminder −1 days', { reminders: { contractEndDays: -1 } }],
+      ['contract reminder 121 days', { reminders: { contractEndDays: 121 } }],
+      ['second contract reminder −1', { reminders: { contractEndSecondDays: -1 } }],
+      ['probation reminder 0 days', { reminders: { probationEndDays: 0 } }],
+      ['probation reminder 2.5 days', { reminders: { probationEndDays: 2.5 } }],
+      ['reminders null', { reminders: null }],
+      ['second contract reminder = the first (30)', { reminders: { contractEndSecondDays: 30 } }],
+      ['second contract reminder above the first', { reminders: { contractEndDays: 10, contractEndSecondDays: 20 } }],
     ])('%s → 400, nothing saved', async (_label, body) => {
       const res = await patch(body).expect(400);
       expect(res.body).toMatchObject({ success: false, statusCode: 400 });
@@ -137,6 +164,20 @@ describe('HR rule settings — /hr/settings (e2e)', () => {
         lateness: { extraHourDays: 30, steps: [{ hour: 1, days: 0 }] },
       }).expect(200);
       await patch({ payroll: { dayDivisor: 31 } }).expect(200);
+      // N0: 0 (no probation) and 6 months are the bounds.
+      await patch({ employees: { defaultProbationMonths: 0 } }).expect(200);
+      await patch({ employees: { defaultProbationMonths: 6 } }).expect(200);
+      // N3: check days 1 and 31; contract 1–120 with no second reminder (0); probation 1 and 60.
+      await patch({ reminders: { latenessCheckDay: 1, payrollCheckDay: 31 } }).expect(200);
+      await patch({ reminders: { contractEndDays: 1, contractEndSecondDays: 0 } }).expect(200);
+      await patch({ reminders: { contractEndDays: 120, contractEndSecondDays: 60 } }).expect(200);
+      await patch({ reminders: { probationEndDays: 60 } }).expect(200);
+      await patch({ reminders: { probationEndDays: 1 } }).expect(200);
+    });
+
+    it('N3 edge 15 — the second contract reminder ≥ the first → 400 INVALID_REMINDER_DAYS', async () => {
+      const res = await patch({ reminders: { contractEndSecondDays: 30 } }).expect(400);
+      expect(res.body).toMatchObject({ success: false, error: 'INVALID_REMINDER_DAYS' });
     });
   });
 
@@ -152,7 +193,7 @@ describe('HR rule settings — /hr/settings (e2e)', () => {
       partTime: { PART_TIME_4: 80, PART_TIME_3: 50, PART_TIME_2: 40 },
     });
 
-    // One settings.changed per changed key; core's listener (T4) turns each into a history row.
+    // One settings.changed per changed key, after the commit (history is already written).
     const byKey = Object.fromEntries(events.map((e) => [e.key, e]));
     expect(events).toHaveLength(3);
     expect(byKey['hr.lateness.graceMinutes']).toMatchObject({
@@ -211,6 +252,14 @@ describe('HR rule settings — /hr/settings (e2e)', () => {
       },
       payroll: { dayDivisor: 26, partTime: { PART_TIME_4: 75 } },
       penalties: { repetitionWindow: 'ROLLING_12_MONTHS' },
+      employees: { defaultProbationMonths: 0 },
+      reminders: {
+        contractEndDays: 45,
+        contractEndSecondDays: 10,
+        probationEndDays: 14,
+        latenessCheckDay: 20,
+        payrollCheckDay: 31,
+      },
     }).expect(200);
 
     const after = await getSettings();
@@ -226,6 +275,14 @@ describe('HR rule settings — /hr/settings (e2e)', () => {
       },
       payroll: { dayDivisor: 26, partTime: { PART_TIME_4: 75, PART_TIME_3: 60, PART_TIME_2: 40 } },
       penalties: { repetitionWindow: 'ROLLING_12_MONTHS' },
+      employees: { defaultProbationMonths: 0 },
+      reminders: {
+        contractEndDays: 45,
+        contractEndSecondDays: 10,
+        probationEndDays: 14,
+        latenessCheckDay: 20,
+        payrollCheckDay: 31,
+      },
     });
     // 90 min − 10 grace = 80 → 2nd hour → 0.5 + 1.
     expect(latenessDays(90, after.lateness)).toBe(1.5);

@@ -45,7 +45,34 @@ export interface AccountingPayrollLine {
   martyrTax?: Piastres;
   /** net + insurance share + income tax + martyrs' fund. */
   gross?: Piastres;
+  /**
+   * HR's breakdown of the approved line (Accounting → Payroll, HR-style view), read from HR's
+   * approved run. Absent when HR's line can't be read (not expected for an approved run).
+   */
+  hr?: AccountingPayrollHrBreakdown;
 }
+
+/** HR's side of an approved line: department and how the net was reached. Money hidden as above. */
+export interface AccountingPayrollHrBreakdown {
+  departmentNameEn: string;
+  departmentNameAr: string;
+  monthSalary?: Piastres;
+  penaltyDays: number;
+  penaltyAmount?: Piastres;
+  latenessDays: number;
+  latenessAmount?: Piastres;
+  adjustmentAdditions?: Piastres;
+  adjustmentDeductions?: Piastres;
+}
+
+/** The money fields of `AccountingPayrollHrBreakdown`, hidden together with the line's. */
+export const ACCOUNTING_HR_MONEY_FIELDS = [
+  'monthSalary',
+  'penaltyAmount',
+  'latenessAmount',
+  'adjustmentAdditions',
+  'adjustmentDeductions',
+] as const;
 
 /** The money and salary fields of an accounting line, hidden together (§2, P4). */
 export const ACCOUNTING_LINE_MONEY_FIELDS = [
@@ -67,9 +94,30 @@ export interface AccountingPayrollTotals {
   gross?: Piastres;
 }
 
+/**
+ * Where an approved month stands in accounting: PENDING until the salaries are transferred, then
+ * FINALIZED — final, never returned to HR.
+ */
+export const AccountingPayrollStatus = {
+  PENDING: 'PENDING',
+  FINALIZED: 'FINALIZED',
+} as const;
+export type AccountingPayrollStatus = (typeof AccountingPayrollStatus)[keyof typeof AccountingPayrollStatus];
+
+/** `POST /accounting/payroll/:month/return` — why the month goes back to HR (shown to HR). */
+export interface ReturnPayrollMonthRequest {
+  reason: string;
+}
+
+/** The longest reason a returned month may carry. */
+export const RETURN_REASON_MAX = 500;
+
 /** `GET /accounting/payroll` rows. */
 export interface AccountingPayrollMonthSummary {
   month: Month;
+  status: AccountingPayrollStatus;
+  /** When the transfer was marked made; null while PENDING. */
+  finalizedAt: IsoDateTime | null;
   /** The HR payroll run it was worked out from. */
   hrRunId: Uuid;
   recordedAt: IsoDateTime;
@@ -84,4 +132,35 @@ export interface AccountingPayrollMonth extends AccountingPayrollMonthSummary {
   taxRule: TaxRule;
   lines: AccountingPayrollLine[];
 }
+
+/**
+ * Where a month stands for accounting (§10): HR approved it (its taxes are worked out), it is a
+ * draft in HR (nothing in accounting yet), or HR has no run for it.
+ */
+export const AccountingMonthState = {
+  APPROVED: 'APPROVED',
+  DRAFT: 'DRAFT',
+  NONE: 'NONE',
+} as const;
+export type AccountingMonthState = (typeof AccountingMonthState)[keyof typeof AccountingMonthState];
+
+/** One month of `GET /accounting/payroll/year/:year`. */
+export interface AccountingPayrollYearMonth {
+  month: Month;
+  state: AccountingMonthState;
+  /**
+   * The approved month's totals. Absent on a draft or empty month, and on an approved month whose
+   * taxes haven't been worked out yet (they are when the month is first opened).
+   */
+  summary?: AccountingPayrollMonthSummary;
+}
+
+/** `GET /accounting/payroll/year/:year` — the year board: its twelve months, January first. */
+export interface AccountingPayrollYear {
+  year: number;
+  months: AccountingPayrollYearMonth[];
+}
+
+/** Years the board can show (`/accounting/payroll/year/:year`). */
+export const ACCOUNTING_YEAR_RANGE = { min: 2000, max: 2100 } as const;
 

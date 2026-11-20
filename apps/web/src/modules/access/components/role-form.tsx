@@ -19,7 +19,7 @@ import { Form } from '@/shared/components/form/form';
 import { FormActionBar } from '@/shared/components/form/form-action-bar';
 import { PageHeader } from '@/shared/components/layout/page-header';
 import { Button } from '@/shared/components/ui/button';
-import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
+import { PersonAvatar } from '@/shared/components/ui/person-avatar';
 import { AnyoneIcon, ChevronEndIcon, ErrorIcon, LockedIcon, PersonIcon, RemoveIcon, StageIcon, StaffIcon, type AppIcon } from '@/shared/components/ui/icons';
 import { Input } from '@/shared/components/ui/input';
 import { StatusPill } from '@/shared/components/ui/status-pill';
@@ -30,7 +30,8 @@ import { CREATE_ROLE, DELETE_ROLE, UPDATE_ROLE } from '../apis';
 import { changedCount, setModule, setScope, toGrantMap, toGrants, toggle, type GrantMap } from '../lib/role-grants';
 import { FormCard, FormColumns } from './form-card';
 import { PermissionGroups } from './permission-groups';
-import { Avatar, RoleKindBadge } from './role-bits';
+import { RoleKindBadge } from './role-bits';
+import { RoleDeleteDialog } from './role-delete-dialog';
 
 export interface RoleFormProps {
   /** `/en/roles`. */
@@ -215,7 +216,7 @@ export function RoleForm({ basePath, usersPath, role, copyFrom, holders = [], ho
         <ul className="flex flex-col gap-3">
           {holders.map((u) => (
             <li key={u.id} className="flex min-w-0 items-center gap-3">
-              <Avatar name={u.name} size="sm" inactive={!u.isActive} />
+              <PersonAvatar photoUrl={u.employee?.photoUrl} gender={u.employee?.gender} muted={!u.isActive} />
               <span className="flex min-w-0 flex-1 flex-col">
                 <Link href={`${usersPath}/${u.id}`} className="truncate text-sm font-bold hover:text-primary hover:underline">
                   {u.name}
@@ -301,7 +302,7 @@ export function RoleForm({ basePath, usersPath, role, copyFrom, holders = [], ho
         ]}
         breadcrumbsLabel={t('ui.shell.breadcrumbs')}
         actions={
-          role && canManage && !role.builtIn && role.userCount === 0 ? (
+          role && canManage && !systemAdmin ? (
             <Button variant="secondary" className="text-destructive-ink" onClick={() => setDeleteOpen(true)}>
               <RemoveIcon />
               {t('access.roleForm.deleteRole')}
@@ -346,13 +347,10 @@ export function RoleForm({ basePath, usersPath, role, copyFrom, holders = [], ho
           </FormActionBar>
         )}
       </Form>
-      <ConfirmDialog
-        open={deleteOpen}
+      <RoleDeleteDialog
+        role={deleteOpen && role ? role : null}
+        holderName={holders[0]?.name}
         onOpenChange={setDeleteOpen}
-        tone="destructive"
-        title={t('access.roles.delete.title', { name: title })}
-        description={t('access.roles.delete.body')}
-        confirmLabel={t('access.roles.delete.confirm')}
         onConfirm={confirmDelete}
       />
     </div>

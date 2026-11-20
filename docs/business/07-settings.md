@@ -36,19 +36,28 @@ affects only **draft** payroll runs (approved runs never change).
 | Day value divisor | 30 | GUESS |
 | Part-time percentages | 4 days 80%, 3 days 60%, 2 days 40% | DECIDED |
 | Penalty repetition window | Contract year (1 June – 31 May); alternatives: calendar year, rolling 12 months | GUESS |
+| Default probation length (fills a new employee's probation end, §3) | 3 months; whole months 0–6, 0 = no probation | DECIDED (owner, 2026-11-18) — Settings → HR rules → Employees |
 | Penalty catalogue | The school's 4 tables (72 violations) | DECIDED |
 | Violation "Once per day" (§4) | On, except violations that repeat within a day (late to class, leaving a task early…) | DECIDED (owner, 2026-11-18) |
 | Stages (school structure), departments, job titles | From the seed | DECIDED |
 | Brand colours | Teal and sunflower (the "Campus" design), fixed for now | DECIDED |
 | Currency | EGP | DECIDED |
 | Payroll tax rule (income-tax slices, martyrs' fund, insurance share) | See §10 | GUESS — Settings → Accounting |
+| Sign-in limit: wrong passwords, within minutes, lock minutes (§2) | 5, 15, 15 | DECIDED (owner, 2026-11-18) — no screen yet; each at least 1 |
+| Remind before a contract ends (§11) | 30 days (1–120), and again 7 days (0 = none; 0–60, fewer than the first) | DECIDED (owner, 2026-11-18) — an HR rule; Settings → Notifications → Reminder timing |
+| Remind before probation ends (§11) | 7 days (1–60) | GUESS — an HR rule; same screen |
+| Lateness check day / payroll check day (§11) | 25 / 28 (1–31; past the month's end = its last day) | DECIDED settings; the days GUESS until the school confirms — HR rules; same screen |
+| Keep read notifications / done approvals / any notification (§11) | 90 / 30 / 365 days (each 1–3650) | DECIDED (owner, 2026-11-18) — Settings → Notifications |
+| Each kind of notification on or off by default (§11) | On; approvals always on | DECIDED (owner, 2026-11-18) — Settings → Notifications |
 
 - **DECIDED** (owner, 2026-11-18) — Each job title in the job-titles list has a **Manages people**
   switch (set when adding or editing the title; the list shows a "Manages people" badge on those
   that do). It decides who can be chosen as a direct manager (§3). Changing it is recorded in the
   change history like any list change.
 - **DECIDED** — Settings are validated: times in order, percentages 1–100, divisor 1–31, days in
-  quarter steps (0.25) from 0 to 30.
+  quarter steps (0.25) from 0 to 30, the default probation length in whole months from 0 to 6,
+  the reminder timings in whole days within their ranges (§11) with the second contract reminder
+  fewer days before the end than the first (or 0). Changing a timing is recorded like any HR rule.
 - **DECIDED** (owner, 2026-11-17) — Work start and work end are on a 30-minute boundary (07:00,
   07:30 — not 07:15). The Settings screen offers them as a list from 05:00 to 20:00 every half hour,
   shown in the screen's language; a time off the boundary is refused. Times already saved on a

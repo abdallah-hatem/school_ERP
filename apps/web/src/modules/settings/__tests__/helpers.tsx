@@ -50,4 +50,12 @@ export const hrSettings: HrSettings = {
     partTime: SETTING_DEFAULTS['hr.payroll.partTime'],
   },
   penalties: { repetitionWindow: SETTING_DEFAULTS['hr.penalties.repetitionWindow'] },
+  employees: { defaultProbationMonths: SETTING_DEFAULTS['hr.employees.defaultProbationMonths'] },
+  reminders: {
+    contractEndDays: SETTING_DEFAULTS['hr.reminders.contractEndDays'],
+    contractEndSecondDays: SETTING_DEFAULTS['hr.reminders.contractEndSecondDays'],
+    probationEndDays: SETTING_DEFAULTS['hr.reminders.probationEndDays'],
+    latenessCheckDay: SETTING_DEFAULTS['hr.reminders.latenessCheckDay'],
+    payrollCheckDay: SETTING_DEFAULTS['hr.reminders.payrollCheckDay'],
+  },
 };

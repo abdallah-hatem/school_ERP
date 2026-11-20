@@ -34,12 +34,68 @@ const DEFAULTS = {
   },
   payroll: { dayDivisor: 30, partTime: { PART_TIME_4: 80, PART_TIME_3: 60, PART_TIME_2: 40 } },
   penalties: { repetitionWindow: 'CONTRACT_YEAR' },
+  employees: { defaultProbationMonths: 3 },
+  reminders: {
+    contractEndDays: 30,
+    contractEndSecondDays: 7,
+    probationEndDays: 7,
+    latenessCheckDay: 25,
+    payrollCheckDay: 28,
+  },
 };
+
+describe('HrSettingsService — reminder timings (§11, N3)', () => {
+  it('defaults 30 / 7 / 7 / 25 / 28; a stored one wins', async () => {
+    await expect(makeService().service.reminders()).resolves.toEqual(DEFAULTS.reminders);
+    const stored = makeService([{ key: 'hr.reminders.latenessCheckDay', value: 20 }]);
+    await expect(stored.service.reminders()).resolves.toMatchObject({ latenessCheckDay: 20 });
+  });
+
+  it('a changed timing hands only its key to core (one hr.settings.update entry)', async () => {
+    const { service, settings } = makeService();
+    const result = await service.update({ reminders: { payrollCheckDay: 31 } }, 'user-1');
+    expect(result.reminders.payrollCheckDay).toBe(31);
+    expect(settings.setValues).toHaveBeenCalledWith('hr', { 'hr.reminders.payrollCheckDay': 31 }, 'user-1');
+  });
+
+  it('edge 15 — the second contract reminder ≥ the first → 400 INVALID_REMINDER_DAYS, nothing saved; 0 = none is fine', async () => {
+    const { service, settings } = makeService();
+    await expect(service.update({ reminders: { contractEndSecondDays: 30 } }, 'u')).rejects.toMatchObject({
+      status: 400,
+      code: 'INVALID_REMINDER_DAYS',
+    });
+    // Checked against the stored other value: lowering the first below the stored second.
+    await expect(service.update({ reminders: { contractEndDays: 7 } }, 'u')).rejects.toMatchObject({
+      code: 'INVALID_REMINDER_DAYS',
+    });
+    expect(settings.setValues).not.toHaveBeenCalled();
+    await service.update({ reminders: { contractEndDays: 5, contractEndSecondDays: 0 } }, 'u');
+    expect(settings.setValues).toHaveBeenCalledWith(
+      'hr',
+      { 'hr.reminders.contractEndDays': 5, 'hr.reminders.contractEndSecondDays': 0 },
+      'u',
+    );
+  });
+});
 
 describe('HrSettingsService', () => {
   it('returns the §7 defaults when nothing is stored', async () => {
     const { service } = makeService();
     await expect(service.get()).resolves.toEqual(DEFAULTS);
+  });
+
+  it('N0 — the default probation length is 3 months; a stored one wins', async () => {
+    await expect(makeService().service.defaultProbationMonths()).resolves.toBe(3);
+    const stored = makeService([{ key: 'hr.employees.defaultProbationMonths', value: 0 }]);
+    await expect(stored.service.defaultProbationMonths()).resolves.toBe(0);
+    expect((await stored.service.get()).employees).toEqual({ defaultProbationMonths: 0 });
+  });
+
+  it('N0 — changing the probation length hands only that key to core (one hr.settings.update entry)', async () => {
+    const { service, settings } = makeService();
+    const result = await service.update({ employees: { defaultProbationMonths: 6 } }, 'user-1');
+    expect(result.employees.defaultProbationMonths).toBe(6);
+    expect(settings.setValues).toHaveBeenCalledWith('hr', { 'hr.employees.defaultProbationMonths': 6 }, 'user-1');
   });
 
   it('stored values win over defaults; a part-time key missing from storage falls back', async () => {
@@ -77,10 +133,10 @@ describe('HrSettingsService', () => {
     );
   });
 
-  it('a value equal to the current one is not a change: no write row, no event', async () => {
+  it('a value equal to the current one is not a change: core gets no keys (records nothing, still answers @Audited)', async () => {
     const { service, settings } = makeService();
     await service.update({ payroll: { dayDivisor: 30, partTime: { PART_TIME_4: 80 } } }, 'user-1');
-    expect(settings.setValues).not.toHaveBeenCalled();
+    expect(settings.setValues).toHaveBeenCalledWith('hr', {}, 'user-1');
   });
 
   it('stores steps sorted by hour, and steps given in another order are not a change', async () => {
@@ -97,11 +153,10 @@ describe('HrSettingsService', () => {
       null,
     );
     expect(res.lateness.steps).toEqual(DEFAULTS.lateness.steps);
-    expect(settings.setValues).not.toHaveBeenCalled();
+    expect(settings.setValues).toHaveBeenCalledWith('hr', {}, null);
   });
 
-  it('does not emit when the write fails', async () => {
-    // Core emits only after its write commits (settings.service.spec); HR passes the failure on.
+  it('passes a failed write on (core records nothing then: same transaction)', async () => {
     const { service, settings } = makeService();
     settings.setValues.mockRejectedValueOnce(new Error('db down'));
     await expect(service.update({ payroll: { dayDivisor: 26 } }, 'user-1')).rejects.toThrow(

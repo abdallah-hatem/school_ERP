@@ -28,6 +28,9 @@ responsive layout.
 - **Accounting:** a screen for each approved month's payroll taxes (mockups first), journal entries
   created from approved payroll (and later fee payments), the employer's insurance share.
 - **Supervision duty roster.**
+- **Notifications** (§11) — in-app bell, approvals waiting and reminders; spec, plan and mockups
+  with the owner (2026-11-18). The mechanism, HR's reminders and the screens are built
+  (2026-11-18); HR's approval notifications next. Email, WhatsApp, SMS and parents later.
 - **Audit log** (§9) — approved 2026-11-17, being built.
 - **App logging** for developers (requests, errors) — with hosting.
 

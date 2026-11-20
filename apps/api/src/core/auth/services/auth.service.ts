@@ -1,24 +1,73 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { ErrorCode, type AuthUser } from '@school-erp/shared';
+import { Propagation, TransactionHost } from '@nestjs-cls/transactional';
+import {
+  AUDIT_FAILED_SIGN_IN,
+  AuditEntityType,
+  ErrorCode,
+  type AuthUser,
+} from '@school-erp/shared';
 import { CodedException } from '../../../common/errors/coded.exception';
+import { normalizeEmail } from '../../../common/utils/password.util';
+import { AfterCommit, type DbAdapter } from '../../../database/transactions';
+import { AuditService } from '../../audit';
+import { SignInLimitService } from '../../sign-in-limit';
 import { UsersService } from '../../users';
 import { IssuedSession } from '../session';
 import { TokensService } from './tokens.service';
 
-/** Sign-in, refresh and sign-out. Cookies are written by AuthCookiesInterceptor. */
+/**
+ * Sign-in, refresh and sign-out. Cookies are written by AuthCookiesInterceptor. Sign-in, sign-out
+ * and failed sign-ins are recorded in the audit log (D11); a refresh is not.
+ */
 @Injectable()
 export class AuthService {
   constructor(
     private readonly users: UsersService,
     private readonly tokens: TokensService,
+    private readonly audit: AuditService,
+    private readonly txHost: TransactionHost<DbAdapter>,
+    private readonly signInLimit: SignInLimitService,
+    private readonly afterCommit: AfterCommit,
   ) {}
 
-  /** Wrong password, unknown email and inactive user all get the same 401 (no hint). */
+  /**
+   * Wrong password, unknown email and inactive user all get the same 401 (no hint), and each
+   * counts towards the account's sign-in limit; while it is locked, every attempt gets the same 429
+   * without the password being checked (still recorded as a failed sign-in). A correct sign-in
+   * clears the count.
+   *
+   * No request transaction wraps a sign-in (`@NotAudited` on the handler, with the reason): the
+   * failure path writes entries that must outlive the 401/429, each in its own transaction, and a
+   * request transaction would hold one pooled connection while waiting for another — under
+   * concurrent wrong passwords (pool size or more) every request starved. Here each step holds at
+   * most one connection; the success path records `core.auth.sign_in` in one transaction with the
+   * session it issues.
+   */
   async login(email: string, password: string): Promise<IssuedSession> {
+    try {
+      await this.signInLimit.assertNotLocked(email);
+    } catch (locked) {
+      await this.recordFailedSignIn(email);
+      throw locked;
+    }
     const user = await this.users.verifyCredentials(email, password);
-    if (!user) throw new CodedException(HttpStatus.UNAUTHORIZED, ErrorCode.INVALID_CREDENTIALS);
-    await this.users.recordSignIn(user.id);
-    return this.issue(user, await this.tokens.issueRefresh(user.id));
+    if (!user) {
+      await this.recordFailedSignIn(email);
+      await this.signInLimit.recordFailure(email, { actor: null });
+      throw new CodedException(HttpStatus.UNAUTHORIZED, ErrorCode.INVALID_CREDENTIALS);
+    }
+    await this.signInLimit.clear(email);
+    return this.afterCommit.inTransaction(async () => {
+      await this.users.recordSignIn(user.id);
+      const session = await this.issue(user, await this.tokens.issueRefresh(user.id));
+      // The request has no signed-in user yet: the actor is the one signing in.
+      await this.audit.record({
+        action: 'core.auth.sign_in',
+        entity: this.entity(user),
+        actor: { id: user.id, name: user.name },
+      });
+      return session;
+    });
   }
 
   async refresh(rawRefreshToken: string | undefined): Promise<IssuedSession> {
@@ -36,6 +85,28 @@ export class AuthService {
 
   async logout(user: AuthUser, rawRefreshToken: string | undefined): Promise<void> {
     await this.tokens.revoke(rawRefreshToken, user.id);
+    await this.audit.record({ action: 'core.auth.sign_out', entity: this.entity(user) });
+  }
+
+  /**
+   * A failed sign-in (spec 5): the email as typed (normalised), no actor, never the password. The
+   * same entry whether the email is a user's or not — the record is the typed email, not an
+   * account — so neither the answer nor the log tells the two apart. Written in its own
+   * transaction, since the request's rolls back with the 401.
+   */
+  private recordFailedSignIn(email: string): Promise<void> {
+    const typed = normalizeEmail(email);
+    return this.txHost.withTransaction(Propagation.RequiresNew, () =>
+      this.audit.record({
+        action: AUDIT_FAILED_SIGN_IN,
+        entity: { type: AuditEntityType.USER, id: typed, label: typed },
+        actor: null,
+      }),
+    );
+  }
+
+  private entity(user: Pick<AuthUser, 'id' | 'name'>) {
+    return { type: AuditEntityType.USER, id: user.id, label: user.name };
   }
 
   private async issue(user: AuthUser, refreshToken: string): Promise<IssuedSession> {

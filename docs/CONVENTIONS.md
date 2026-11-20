@@ -68,10 +68,15 @@ smoke specs; needs Docker). Don't skip the hook with `--no-verify`; if it's wron
 GitHub also runs API e2e and the smoke specs (desktop-en and phone-ar shards) on every PR. A PR
 whose own changes are all docs (`docs/`, `design/mockups/`, any `*.md`) passes those two in seconds
 without running them; lint, typecheck, unit tests and module rules still run in full.
+Into `dev`, a PR merges once its own four checks pass; it doesn't have to be up to date with `dev`
+(owner, 2026-11-18). The full suite then runs again on `dev` after every merge; if that run fails,
+fixing `dev` comes before anything else. `testing`, `production` and `demo` still require an
+up-to-date branch.
 
 - [ ] **Your branch has the latest `dev` merged in** (owner, 2026-11-17): `git fetch origin && git
-      merge origin/dev`, resolve conflicts, re-run the checks, then open the PR. GitHub refuses to
-      merge a branch that is behind, and `pnpm ci:local` warns when it is.
+      merge origin/dev`, resolve conflicts, re-run the checks, then open the PR, so conflicts are
+      solved on your branch. Later merges into `dev` don't make you update it again; `testing`,
+      `production` and `demo` still refuse a branch that is behind. `pnpm ci:local` warns when it is.
 - [ ] A new module? Its plan is in `docs/plans/` (see Plans below).
 - [ ] One task per PR, small — aim for under ~400 changed lines. Split big features.
 - [ ] The push went through the local CI hook (and `pnpm ci:local --full` for API, DB or UI changes).
@@ -79,14 +84,18 @@ without running them; lint, typecheck, unit tests and module rules still run in 
 - [ ] Schema changes include their migration. Never edit a migration that has been applied.
 - [ ] No school name, school-specific rule or hardcoded setting in code.
 - [ ] Nothing duplicated that already exists in `common/`, `shared/` or another module.
-- [ ] Events emitted only after the write is committed; listeners are idempotent.
+- [ ] Events sent only through `DomainEvents.publish` (after the commit); must-deliver ones (`MUST_DELIVER_EVENTS`) through the outbox; listeners idempotent; `docs/EVENTS.md` updated.
+- [ ] Added/changed an event, listener or transaction boundary → `docs/EVENTS.md` updated in the
+      same PR; the events-doc test (`apps/api/src/common/events/events-doc.spec.ts`) checks it.
 - [ ] Every new endpoint declares who may use it: `@Permission('<key>')` (or, rarely,
   `@SignedIn()` / `@Public()`) — see Permissions below.
 - [ ] Every new write endpoint (POST / PATCH / PUT / DELETE) is `@Audited('<action>')` and calls
   `audit.record()` for that action in its service, or is `@NotAudited('<reason>')` (see below).
-- [ ] Changed an **existing** write endpoint, or the service method behind it, that is still marked
-  `@NotAudited('wired in T28')` / `('wired in T29')`? Wire its audit in this PR (see below).
 - [ ] `docs/BUSINESS_LOGIC.md` updated in the same PR if a business rule changed.
+- [ ] A business change? Add **one new file** `docs/business/recent-changes/YYYY-MM-DD-NNN-<slug>.md`
+      (never edit `00-recent-changes.md` or another PR's file).
+- [ ] **Don't edit `docs/BUILD_LOG.md`** in a feature or fix PR. Put a short "Log entry" section in the
+      PR body instead; whoever merges the PR writes the build log from it (see The PR).
 - [ ] UI changes: screenshots. New or visually changed screens: EN/AR × phone/desktop (light only).
 - [ ] Changed a component → updated its skeleton in the same PR, and the skeleton spec passes
       (`pnpm smoke 23-skeletons`; owner, 2026-11-18). A new main block gets the same
@@ -124,12 +133,10 @@ Transactions and the audit log). For a new write endpoint:
 A write that is deliberately not recorded (e.g. a token refresh) gets `@NotAudited('<why>')`. A
 handler with neither fails the controller scan in CI.
 
-**Existing writes too (owner, 2026-11-18).** Some endpoints still carry the temporary
-`@NotAudited('wired in T28')` / `('wired in T29')` placeholders from the audit foundation. Whoever
-changes one of them — the handler or the service method behind it, for any reason (a new rule, a new
-field, a fix) — wires its audit in the same PR: replace the placeholder with `@Audited('<action>')`,
-call `audit.record()` in the service (both names: `label: { en, ar }`), add the test that the entry is
-written. The placeholders are a to-do list for T28/T29, not a permission to skip.
+**No placeholders left (T29, T31).** The temporary `@NotAudited('wired in T28')` /
+`('wired in T29')` markers from the audit foundation are all wired; the scan test
+(`audit-declarations.spec.ts`) fails on any `@NotAudited('wired in …')`. `@NotAudited` is only for
+writes deliberately not recorded, with the real reason.
 
 ## Permissions: every endpoint declares who may use it
 
@@ -162,7 +169,17 @@ The API refuses anything undeclared (403) and CI fails on it (`docs/ARCHITECTURE
 - Targets `dev`. Title: `feat: <what it does>` (or `fix:` / `chore:`).
 - Body (the template fills this in): what changed and why, the business rule (§ in the business
   doc), the test command and its result, the edge cases covered, screenshots.
-- **(team rule)** Claude opens PRs but **does not merge them**. A human approval is required.
+- The body ends with a **Log entry**: two or three lines for the build log — what changed, decisions
+  taken, anything left open.
+- **Merging (CLAUDE.md rule 5, 2026-11-20):** into `dev`, the owner or Claude on his behalf — green
+  CI and a `CODEOWNERS` approval. Claude merges its own checked PRs with the admin bypass, and
+  reviews, approves and merges other contributors' PRs when clean. `testing`, `production` and
+  `demo`: the owner only.
+- **The build log has one writer: whoever merges** (owner, 2026-11-18). Right after a merge into
+  `dev`, the merger adds the PR's log entry (and updates Next up) in a small docs-only PR. Parallel
+  PRs all appending to the same spot of `docs/BUILD_LOG.md` (or `00-recent-changes.md`) is what made
+  them conflict; with one writer and one file per business change they don't. At the start of each
+  session, compare the log with the PRs merged into `dev` and add any entry that's missing.
 
 ## Review
 

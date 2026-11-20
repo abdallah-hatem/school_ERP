@@ -2,18 +2,53 @@
 
 import { PayrollStatus, type PayrollFlag } from '@school-erp/shared';
 import { Money } from '@/shared/components/ui/figures';
-import { PendingIcon, ReadyIcon } from '@/shared/components/ui/icons';
+import { LockedIcon, PendingIcon, ReadyIcon, RestoreIcon } from '@/shared/components/ui/icons';
 import { StatusPill } from '@/shared/components/ui/status-pill';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 
-/** Draft (in progress, sunflower) or Approved (done). */
-export function RunStatusPill({ status }: { status: PayrollStatus }) {
+/**
+ * Draft (in progress, sunflower), Approved (done), or — once Accounting marked the salaries
+ * transferred — Finalized · transferred.
+ */
+export function RunStatusPill({ status, transferred = false }: { status: PayrollStatus; transferred?: boolean }) {
   const { t } = useTranslation();
+  if (status === PayrollStatus.APPROVED && transferred) {
+    return (
+      <StatusPill tone="success" icon={LockedIcon}>
+        {t('payroll.transferred')}
+      </StatusPill>
+    );
+  }
   return (
     <StatusPill tone={status === PayrollStatus.APPROVED ? 'success' : 'accent'}>
       {t(`common.enums.payrollStatus.${status}`)}
     </StatusPill>
+  );
+}
+
+/**
+ * A draft Accounting sent back (§10): "Draft" with a small "Returned" beside it, so HR spots it on
+ * the runs list. Approved again, the return is cleared and only the status shows.
+ */
+export function RunStatusCell({
+  status,
+  transferred = false,
+  returned = false,
+}: {
+  status: PayrollStatus;
+  transferred?: boolean;
+  returned?: boolean;
+}) {
+  const { t } = useTranslation();
+  if (status !== PayrollStatus.DRAFT || !returned) return <RunStatusPill status={status} transferred={transferred} />;
+  return (
+    <span className="flex flex-wrap items-center gap-1.5">
+      <RunStatusPill status={status} />
+      <StatusPill tone="warning" icon={RestoreIcon}>
+        {t('payroll.returned.pill')}
+      </StatusPill>
+    </span>
   );
 }
 

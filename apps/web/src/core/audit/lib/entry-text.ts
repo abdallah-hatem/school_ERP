@@ -1,18 +1,20 @@
 import {
   AUDIT_FAILED_SIGN_IN,
   AUDIT_MONEY_FIELDS,
+  AUDIT_TOTAL_PARTS,
   AccountingSettingKey,
   HrSettingKey,
   LANGUAGES,
   SchoolSettingKey,
   WEEKDAYS,
+  isMonth,
   type AuditChange,
   type AuditEntityType,
   type AuditEntry,
   type AuditLabel,
   type Names,
 } from '@school-erp/shared';
-import { formatDate, formatDayCount, formatDays, formatMoney } from '@/shared/lib/format';
+import { formatCount, formatDate, formatDayCount, formatDays, formatMoney, formatMoneyText, formatMonth } from '@/shared/lib/format';
 import { localName, type Locale, type Translate } from '@/shared/lib/i18n';
 import { formatSchoolDateTime } from './time';
 
@@ -29,13 +31,33 @@ export function labelIn(label: AuditLabel | string, locale: Locale): string {
   return (locale === 'ar' ? label.ar : label.en) || label.en || label.ar;
 }
 
+/** Records labelled by their month (`2026-11`): a payroll run, its taxes, a lateness month. */
+const MONTH_RECORDS: readonly AuditEntityType[] = ['payroll_run', 'accounting_payroll', 'lateness_month'];
+
+/** Whether the entry's record reads as a month ("November 2026"), kept on one line. */
+export function isMonthRecord(entry: { entityType?: AuditEntityType; entityLabel: AuditLabel | string }): boolean {
+  return entry.entityType !== undefined && MONTH_RECORDS.includes(entry.entityType) && isMonth(labelIn(entry.entityLabel, 'en'));
+}
+
+/**
+ * The record's name as the sentence shows it: a month record's `2026-11` reads as the rest of the
+ * app prints a month — "November 2026" / "نوفمبر 2026" — anything else as `labelIn`.
+ */
+export function recordLabel(
+  entry: { entityType?: AuditEntityType; entityLabel: AuditLabel | string },
+  locale: Locale,
+): string {
+  const label = labelIn(entry.entityLabel, locale);
+  return isMonthRecord(entry) && isMonth(label) ? formatMonth(label, locale) : label;
+}
+
 /** The sentence, without the actor (shown beside it): "Edited the employee Omar Fathy". */
 export function entrySentence(
-  entry: { action: AuditEntry['action']; entityLabel: AuditLabel | string },
+  entry: { action: AuditEntry['action']; entityType?: AuditEntityType; entityLabel: AuditLabel | string },
   t: Translate,
   locale: Locale,
 ): string {
-  return t(`audit.actions.${entry.action}`, { entity: labelIn(entry.entityLabel, locale) });
+  return t(`audit.actions.${entry.action}`, { entity: recordLabel(entry, locale) });
 }
 
 /** Stage edits are keyed per stage (`lists.stages.<id>`, settings history format). */
@@ -47,8 +69,19 @@ export function fieldLabel(field: string, t: Translate, has: (key: string) => bo
   return has(key) ? t(key) : field;
 }
 
+/** One part of a run's totals as its own line: `totals.net`, `totals.employees`. */
+const TOTALS_PART = /^totals\.(.+)$/;
+/** One permission of a role as its own line: `permissions.hr.payroll.view`. */
+const PERMISSION_PART = /^permissions\.(.+)$/;
+
+function totalPartKind(field: string): 'money' | 'count' | null {
+  const part = TOTALS_PART.exec(field)?.[1];
+  return part && part in AUDIT_TOTAL_PARTS ? AUDIT_TOTAL_PARTS[part as keyof typeof AUDIT_TOTAL_PARTS] : null;
+}
+
+/** Money (piastres, drawn by `<Money>`): a money field, or a money part of a run's totals. */
 export function isMoneyField(field: string): boolean {
-  return (AUDIT_MONEY_FIELDS as readonly string[]).includes(field);
+  return (AUDIT_MONEY_FIELDS as readonly string[]).includes(field) || totalPartKind(field) === 'money';
 }
 
 export function isFailedSignIn(entry: Pick<AuditEntry, 'action'>): boolean {
@@ -86,6 +119,29 @@ function isStep(value: unknown): value is { hour: number; days: number } {
   );
 }
 
+/** Fields holding a stored file: their changes read as words ("Photo changed"), never file names. */
+const FILE_FIELDS: Readonly<Record<string, 'photo' | 'logo'>> = {
+  photoUrl: 'photo',
+  [SchoolSettingKey.LOGO_URL]: 'logo',
+};
+
+function fileKind(field: string): 'photo' | 'logo' | null {
+  return FILE_FIELDS[field] ?? null;
+}
+
+/**
+ * A file field's change in words, from whether each side is empty: "Photo added" / "Photo changed" /
+ * "Photo removed" (`audit.values.file.<kind>.<what>`); null when it isn't a file field or both are empty.
+ */
+export function fileChangeText(field: string, before: unknown, after: unknown, t: Translate): string | null {
+  const kind = fileKind(field);
+  if (!kind) return null;
+  const empty = (v: unknown) => v === null || v === undefined || v === '';
+  if (empty(before) && empty(after)) return null;
+  const what = empty(before) ? 'added' : empty(after) ? 'removed' : 'changed';
+  return t(`audit.values.file.${kind}.${what}`);
+}
+
 /** Which `common.enums.*` list a field's values come from, per record type. */
 function enumOf(field: string, entityType: AuditEntityType | undefined): string | null {
   switch (field) {
@@ -93,6 +149,10 @@ function enumOf(field: string, entityType: AuditEntityType | undefined): string 
       return 'gender';
     case 'workSystem':
       return 'workSystem';
+    case 'insuranceStatus':
+      return 'insuranceStatus';
+    case 'highestDegree':
+      return 'degree';
     case 'action':
       return 'penaltyAction';
     case 'type':
@@ -100,6 +160,7 @@ function enumOf(field: string, entityType: AuditEntityType | undefined): string 
     case 'status':
       if (entityType === 'penalty') return 'penaltyStatus';
       if (entityType === 'payroll_run') return 'payrollStatus';
+      if (entityType === 'accounting_payroll') return 'accountingPayrollStatus';
       return 'employeeStatus';
     default:
       return null;
@@ -107,7 +168,8 @@ function enumOf(field: string, entityType: AuditEntityType | undefined): string 
 }
 
 /**
- * A value as the timeline shows it (money is drawn by `<Money>` instead). Settings keys keep their
+ * A value as the timeline shows it (the timeline draws money with `<Money>`; as text it reads the
+ * same, "EGP 6,500.00" / "6,500.00 ج.م", never the stored piastres). Settings keys keep their
  * old history formatting (§7): weekdays, lateness steps, part-time percentages, list items.
  */
 export function formatAuditValue(
@@ -126,14 +188,24 @@ export function formatAuditValue(
       return t(value === 'ar' ? 'common.common.arabic' : 'common.common.english');
     }
     if (field === HrSettingKey.PENALTIES_REPETITION_WINDOW) return t(`common.enums.repetitionWindow.${value}`);
-    if (field === SchoolSettingKey.LOGO_URL) return value.split('/').pop() ?? value;
+    // A role's permission line holds its scope: "Everyone", "Their stage".
+    if (PERMISSION_PART.test(field) && has(`permissions.scopes.${value}`)) return t(`permissions.scopes.${value}`);
+    // A stored file (the school logo, an employee's photo) never shows its stored name
+    // (`changeRows` turns the change into "Photo changed"); a lone value reads "Uploaded".
+    if (fileKind(field)) return t('audit.values.file.uploaded');
     const enumList = enumOf(field, entityType);
     if (enumList && has(`common.enums.${enumList}.${value}`)) return t(`common.enums.${enumList}.${value}`);
+    if (field === 'month' && isMonth(value)) return formatMonth(value, locale);
     if (ISO_DAY.test(value)) return formatDate(value, locale);
     if (ISO_INSTANT.test(value) && !Number.isNaN(Date.parse(value))) return formatSchoolDateTime(value, locale);
     return value;
   }
   if (typeof value === 'number') {
+    if (totalPartKind(field) === 'count') return formatCount(value);
+    if (totalPartKind(field) === 'money') return formatMoney(value);
+    if (isMoneyField(field)) {
+      return has('ui.units.currency') ? formatMoneyText(value, locale, t('ui.units.currency')) : formatMoney(value);
+    }
     if (field === HrSettingKey.LATENESS_EXTRA_HOUR_DAYS || field === 'days') return formatDayCount(value, locale);
     if (field === AccountingSettingKey.PAYROLL_MARTYR_PERCENT || field === AccountingSettingKey.PAYROLL_INSURANCE_PERCENT) {
       return `${value}%`;
@@ -177,8 +249,15 @@ export function formatAuditValue(
         .map(([system, pct]) => `${t(`common.enums.workSystem.${system}`)}: ${pct}%`)
         .join(list);
     }
+    // Any other object reads as its labelled parts — never as JSON (`changeRows` splits the common
+    // ones into lines of their own first).
+    const parts = Object.entries(value as Record<string, unknown>);
+    if (parts.length === 0) return EMPTY;
+    return parts
+      .map(([key, v]) => `${fieldLabel(key, t, has)}: ${formatAuditValue(key, v, t, has, locale, entityType)}`)
+      .join(list);
   }
-  return JSON.stringify(value);
+  return String(value);
 }
 
 /** One line of an entry's changes as the timeline draws it. */
@@ -193,6 +272,40 @@ export interface ChangeRow {
   created: boolean;
   /** The values were left out for this viewer (salary, R7): the row says "changed" without them. */
   hidden?: boolean;
+  /** The whole line in words, drawn instead of label and values: a file's "Photo changed". */
+  text?: string;
+}
+
+type Parts = Record<string, unknown>;
+
+function isParts(value: unknown): value is Parts {
+  return typeof value === 'object' && value !== null && !Array.isArray(value) && !isNames(value);
+}
+
+/** Object values that read well as one line (`formatAuditValue`) and are never split. */
+const ONE_LINE_OBJECTS: readonly string[] = [HrSettingKey.PAYROLL_PART_TIME];
+
+/**
+ * How one part of a split object is named and formatted: a run's totals by `audit.totals.*` (in
+ * `AUDIT_TOTAL_PARTS` order), a role's permissions by their names, anything else by its field label.
+ */
+function partOf(field: string, key: string, t: Translate, has: (key: string) => boolean): { field: string; label: string } {
+  if (field === 'totals') {
+    return { field: `totals.${key}`, label: has(`audit.totals.${key}`) ? t(`audit.totals.${key}`) : key };
+  }
+  if (field === 'permissions') {
+    const name = `permissions.keys.${key}.label`;
+    return { field: `permissions.${key}`, label: has(name) ? t(name) : key };
+  }
+  return { field: key, label: fieldLabel(key, t, has) };
+}
+
+function partKeys(field: string, before: Parts | null, after: Parts | null): string[] {
+  const keys = [...new Set([...Object.keys(before ?? {}), ...Object.keys(after ?? {})])];
+  if (field !== 'totals') return keys;
+  const order = Object.keys(AUDIT_TOTAL_PARTS);
+  const rank = (k: string) => (order.includes(k) ? order.indexOf(k) : order.length);
+  return keys.sort((a, b) => rank(a) - rank(b));
 }
 
 /** The parts of a list item whose change is worth a line of its own; `id` never is. */
@@ -233,6 +346,12 @@ export function changeRows(
     }
     const { before, after } = change;
     const created = before === null || before === undefined;
+    // A stored file: "Photo added / changed / removed", never its file name (one line, no values).
+    if (fileKind(change.field)) {
+      const text = fileChangeText(change.field, before, after, t);
+      if (text) rows.push({ key: `${change.field}-${i}`, field: change.field, label, before, after, created, text });
+      return;
+    }
     if (!created && isNames(before) && isNames(after) && editedInPlace(before, after, locale)) {
       const b = before as unknown as Record<string, unknown>;
       const a = after as unknown as Record<string, unknown>;
@@ -245,6 +364,31 @@ export function changeRows(
           before: b[part],
           after: a[part],
           created: false,
+        });
+      }
+      return;
+    }
+    // An object of parts (a payroll run's totals, a role's permissions): one line per part that
+    // changed — "Totals · Net: EGP 347,705.81", "Permissions · View payroll: Everyone → Their stage".
+    const nothing = (v: unknown) => v === null || v === undefined;
+    if (
+      !ONE_LINE_OBJECTS.includes(change.field) &&
+      (isParts(before) || isParts(after)) &&
+      (isParts(before) || nothing(before)) &&
+      (isParts(after) || nothing(after))
+    ) {
+      const b = isParts(before) ? before : null;
+      const a = isParts(after) ? after : null;
+      for (const key of partKeys(change.field, b, a)) {
+        const part = partOf(change.field, key, t, has);
+        if (b && a && JSON.stringify(b[key]) === JSON.stringify(a[key])) continue;
+        rows.push({
+          key: `${change.field}-${i}-${key}`,
+          field: part.field,
+          label: t('audit.timeline.part', { field: label, part: part.label }),
+          before: b ? (b[key] ?? null) : undefined,
+          after: a ? (a[key] ?? null) : null,
+          created,
         });
       }
       return;

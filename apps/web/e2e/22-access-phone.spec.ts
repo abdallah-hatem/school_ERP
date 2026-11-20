@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { Api, adminAccount, makeUser, rolesByKey, signInAs } from './support/access';
+import { Api, adminAccount, makeUser, openPermissionModule, rolesByKey, signInAs } from './support/access';
 import { t } from './support/i18n';
 import { expectNoHorizontalScroll, settle, shoot, signIn } from './support/ui';
 
@@ -35,6 +35,7 @@ for (const locale of ['ar', 'en'] as const) {
 
     // The sticky Save bar stays on screen on a long role page.
     await page.goto(`/${locale}/roles/${roles.get('direct_manager')?.id}`);
+    await openPermissionModule(page, locale, 'hr');
     await page.locator('[data-permission="hr.lateness.view"]').getByRole('switch').tap();
     const bar = page.locator('[data-slot="form-action-bar"]');
     await expect(bar).toBeInViewport();

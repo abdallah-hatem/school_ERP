@@ -116,6 +116,49 @@ export class UpdatePenaltyRuleDto {
   repetitionWindow?: RepetitionWindow;
 }
 
+export class UpdateEmployeeRuleDto {
+  /** Whole months, 0–6 (§7, N0); 0 = no probation. */
+  @IsOptionalNotNull()
+  @IsInt()
+  @Min(SETTING_LIMITS.probationMonthsMin)
+  @Max(SETTING_LIMITS.probationMonthsMax)
+  defaultProbationMonths?: number;
+}
+
+/** §11 (N3): when HR's reminders go out. The second contract reminder is checked against the first in the service. */
+export class UpdateReminderRuleDto {
+  @IsOptionalNotNull()
+  @IsInt()
+  @Min(SETTING_LIMITS.contractEndDaysMin)
+  @Max(SETTING_LIMITS.contractEndDaysMax)
+  contractEndDays?: number;
+
+  /** 0 = no second reminder. */
+  @IsOptionalNotNull()
+  @IsInt()
+  @Min(SETTING_LIMITS.contractEndSecondDaysMin)
+  @Max(SETTING_LIMITS.contractEndSecondDaysMax)
+  contractEndSecondDays?: number;
+
+  @IsOptionalNotNull()
+  @IsInt()
+  @Min(SETTING_LIMITS.probationEndDaysMin)
+  @Max(SETTING_LIMITS.probationEndDaysMax)
+  probationEndDays?: number;
+
+  @IsOptionalNotNull()
+  @IsInt()
+  @Min(SETTING_LIMITS.checkDayMin)
+  @Max(SETTING_LIMITS.checkDayMax)
+  latenessCheckDay?: number;
+
+  @IsOptionalNotNull()
+  @IsInt()
+  @Min(SETTING_LIMITS.checkDayMin)
+  @Max(SETTING_LIMITS.checkDayMax)
+  payrollCheckDay?: number;
+}
+
 /** `PATCH /hr/settings` — any subset. Unknown keys at any level → 400 (whitelist). */
 export class UpdateHrSettingsDto implements UpdateHrSettingsRequest {
   @IsOptionalNotNull()
@@ -135,4 +178,16 @@ export class UpdateHrSettingsDto implements UpdateHrSettingsRequest {
   @ValidateNested()
   @Type(() => UpdatePenaltyRuleDto)
   penalties?: UpdatePenaltyRuleDto;
+
+  @IsOptionalNotNull()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => UpdateEmployeeRuleDto)
+  employees?: UpdateEmployeeRuleDto;
+
+  @IsOptionalNotNull()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => UpdateReminderRuleDto)
+  reminders?: UpdateReminderRuleDto;
 }

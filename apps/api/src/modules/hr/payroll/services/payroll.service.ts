@@ -1,5 +1,4 @@
 import { ForbiddenException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   AuditEntityType,
   ErrorCode,
@@ -19,15 +18,17 @@ import {
   type PayrollTotals,
   type EmployeePayrollLine,
   type HrSettings,
+  type PayrollRunRules,
   type InsuranceStatus,
   type Payslip,
   type Uuid,
 } from '@school-erp/shared';
 import { AuditService } from '../../../../core/audit';
+import { DomainEvents } from '../../../../core/events';
 import { SettingsService } from '../../../../core/settings';
 import { AfterCommit } from '../../../../database/transactions';
 import { CodedException } from '../../../../common/errors/coded.exception';
-import type { PaginationQueryDto } from '../../../../common/dto/pagination-query.dto';
+import type { PayrollPaginationQueryDto } from '../../../../common/dto/pagination-query.dto';
 import {
   calculateLine,
   deductedDays,
@@ -43,13 +44,16 @@ import {
 } from '../../access/employee-scope.pure';
 import { HrAccessService, VIEW_SALARY } from '../../access/hr-access.service';
 import { EmployeesService } from '../../employees/services/employees.service';
+import { HrNotificationsService } from '../../notifications/hr-notifications.service';
 import { PenaltyRecordsService } from '../../penalties/services/penalty-records.service';
+import { HrRemindersService } from '../../reminders/hr-reminders.service';
 import { HrSettingsService } from '../../settings/hr-settings.service';
 import { LatenessService } from '../../staff-attendance/services/lateness.service';
 import { buildBankSheet } from '../bank-sheet';
 import type { CreateAdjustmentDto, PayrollRunQueryDto } from '../dto/payroll.dto';
 import {
   PayrollRunsRepository,
+  type AccountingBreakdownSource,
   type AdjustmentRow,
   type LineData,
   type LineRow,
@@ -60,7 +64,7 @@ import {
  * The rules a run's panel shows, field by field: exactly the HR rules (§5, §6, §7), so a setting
  * added to `HrSettings` later never reaches run viewers without being chosen here.
  */
-function runRules(s: HrSettings): HrSettings {
+function runRules(s: HrSettings): PayrollRunRules {
   return {
     lateness: {
       graceMinutes: s.lateness.graceMinutes,
@@ -179,14 +183,16 @@ export class PayrollService {
     private readonly lateness: LatenessService,
     private readonly hrSettings: HrSettingsService,
     private readonly schoolSettings: SettingsService,
-    private readonly events: EventEmitter2,
+    private readonly events: DomainEvents,
     private readonly access: HrAccessService,
     private readonly audit: AuditService,
     private readonly afterCommit: AfterCommit,
+    private readonly reminders: HrRemindersService,
+    private readonly notifications: HrNotificationsService,
   ) {}
 
   /** Every run (runs are school-wide); totals over the lines the viewer may see (R5, R7). */
-  async list(query: PaginationQueryDto): Promise<Paginated<PayrollRunSummary>> {
+  async list(query: PayrollPaginationQueryDto): Promise<Paginated<PayrollRunSummary>> {
     const view = await this.view();
     const result = await this.repository.list(query.page, query.limit);
     const totals = await this.repository.totalsFor(
@@ -244,7 +250,7 @@ export class PayrollService {
    */
   async employeeLines(
     employeeId: Uuid,
-    query: PaginationQueryDto,
+    query: PayrollPaginationQueryDto,
   ): Promise<Paginated<EmployeePayrollLine>> {
     await this.employees.assertInScope('hr.payroll.view', employeeId);
     const [result, paid] = await Promise.all([
@@ -283,13 +289,18 @@ export class PayrollService {
       const id = await this.repository.createRun(month, createdById, lines);
       // Two creates for one month at once: the unique month decides, the loser gets the 409.
       if (!id) throw conflict(ErrorCode.PAYROLL_RUN_EXISTS);
-      await this.recordRun('hr.payroll.create', id, month, undefined, await this.wholeTotals(id));
+      const totals = await this.wholeTotals(id);
+      await this.recordRun('hr.payroll.create', id, month, undefined, totals);
+      // §11 (N3): the month is prepared — "payroll not prepared" is done.
+      await this.reminders.payrollRunCreated(month, createdById);
+      // §11 (N2): "ready to approve" when the month has no pending penalty.
+      await this.notifyCalculated(id, totals, createdById);
       return this.get(id);
     });
   }
 
   /** Rebuilds every line of a DRAFT run from current data; adjustments survive. */
-  async recalculate(id: Uuid): Promise<PayrollRun> {
+  async recalculate(id: Uuid, recalculatedById: Uuid | null = null): Promise<PayrollRun> {
     // The change and its audit entry commit together (audit D2).
     return this.afterCommit.inTransaction(async () => {
       const run = await this.findDraft(id);
@@ -297,13 +308,9 @@ export class PayrollService {
       const lines = await this.buildLines(run.month, await this.repository.findAdjustments(id));
       if (!(await this.repository.replaceLines(id, lines)))
         throw conflict(ErrorCode.PAYROLL_APPROVED);
-      await this.recordRun(
-        'hr.payroll.recalculate',
-        id,
-        run.month,
-        before,
-        await this.wholeTotals(id),
-      );
+      const after = await this.wholeTotals(id);
+      await this.recordRun('hr.payroll.recalculate', id, run.month, before, after);
+      await this.notifyCalculated(id, after, recalculatedById);
       return this.get(id);
     });
   }
@@ -311,8 +318,8 @@ export class PayrollService {
   /**
    * DRAFT → APPROVED: recalculates the lines from current data and locks the run (and with it the
    * month's penalties, lateness and adjustments) in one transaction. Refused with 409
-   * `PENDING_PENALTIES` while a penalty dated in the month is pending. Emits `payroll.approved`
-   * after the commit.
+   * `PENDING_PENALTIES` while a penalty dated in the month is pending. Publishes
+   * `hr.payroll.approved` (must-deliver: an outbox row in this transaction, delivered after the commit).
    */
   async approve(id: Uuid, approvedById: Uuid | null): Promise<PayrollRun> {
     // The change and its audit entry commit together (audit D2).
@@ -334,6 +341,8 @@ export class PayrollService {
         before: PayrollStatus.DRAFT,
         after: PayrollStatus.APPROVED,
       });
+      // §11 (N3): "still a draft" reads "Approved by …"; the month's lateness reminder is done (§5).
+      await this.reminders.payrollRunApproved(id, run.month, approvedById);
       const event: PayrollApprovedEvent = {
         runId: id,
         month: approved.month,
@@ -341,8 +350,11 @@ export class PayrollService {
         approvedById,
         at: approved.approvedAt ?? new Date().toISOString(),
       };
-      // Only once the approval has committed (it runs in the request's transaction now).
-      await this.afterCommit.run(() => this.events.emit(HrEvent.PAYROLL_APPROVED, event));
+      // Must-deliver: written to the outbox in this transaction, delivered after the commit.
+      await this.events.publish(HrEvent.PAYROLL_APPROVED, event, { mustDeliver: true });
+      // Everyone's "ready" reads "Approved by …" (§11, N10), in this transaction ("still a draft"
+      // is the reminders' — above).
+      await this.notifications.payrollApproved(id, approvedById);
       return approved;
     });
   }
@@ -444,6 +456,14 @@ export class PayrollService {
   }
 
   /**
+   * Each month of `year` that has a run, with its status — no lines, no money — for accounting's
+   * year board (§10), which shows drafts as "draft in HR". Read only.
+   */
+  async runStatusesInYear(year: number): Promise<{ month: Month; status: PayrollStatus }[]> {
+    return this.repository.findInYear(year);
+  }
+
+  /**
    * An APPROVED run's every line with its net and the insurance taken at approval, and when it was
    * approved, for accounting (§10) — a system read, not a
    * viewer's: it is not narrowed by whoever's request triggered it (the approver, or the accountant
@@ -472,6 +492,61 @@ export class PayrollService {
       approvedAt: run.approvedAt,
       lines: await this.repository.findAccountingLines(id),
     };
+  }
+
+  /**
+   * Accounting sends an APPROVED run back to HR (§10): a DRAFT again — the month unlocked, so HR
+   * can fix penalties, lateness or adjustments and approve it again — with the reason, and HR's
+   * approvers told. Refused with 409 `PAYROLL_FINALIZED` once the salaries were transferred, and
+   * `PAYROLL_NOT_APPROVED` for a run that isn't approved. Runs in the caller's transaction (which
+   * also records `accounting.payroll.return`) and records `hr.payroll.returned` on the run, so the
+   * run's own history shows it.
+   */
+  async returnFromAccounting(id: Uuid, reason: string, actorId: Uuid | null): Promise<void> {
+    const run = await this.findRun(id);
+    if (run.transferredAt) throw conflict(ErrorCode.PAYROLL_FINALIZED);
+    if (run.status !== PayrollStatus.APPROVED) throw conflict(ErrorCode.PAYROLL_NOT_APPROVED);
+    if (!(await this.repository.returnToDraft(id, reason))) throw conflict(ErrorCode.PAYROLL_FINALIZED);
+    await this.audit.record({
+      action: 'hr.payroll.returned',
+      entity: { type: AuditEntityType.PAYROLL_RUN, id, label: run.month },
+      changes: [
+        { field: 'status', before: PayrollStatus.APPROVED, after: PayrollStatus.DRAFT },
+        { field: 'reason', before: null, after: reason },
+      ],
+    });
+    await this.notifications.payrollReturned({ id, month: run.month, reason }, actorId);
+  }
+
+  /**
+   * Accounting marked an APPROVED run's salaries transferred (finalized, §10): it is final — never
+   * returned. 409 `PAYROLL_NOT_APPROVED` when it isn't approved, `PAYROLL_FINALIZED` when already
+   * transferred. Runs in the caller's transaction (which also records `accounting.payroll.finalize`);
+   * records `hr.payroll.transferred` on the run.
+   */
+  async markTransferred(id: Uuid, at: Date): Promise<void> {
+    const run = await this.findRun(id);
+    if (run.transferredAt) throw conflict(ErrorCode.PAYROLL_FINALIZED);
+    if (run.status !== PayrollStatus.APPROVED) throw conflict(ErrorCode.PAYROLL_NOT_APPROVED);
+    if (!(await this.repository.markTransferred(id, at))) throw conflict(ErrorCode.PAYROLL_FINALIZED);
+    await this.audit.record({
+      action: 'hr.payroll.transferred',
+      entity: { type: AuditEntityType.PAYROLL_RUN, id, label: run.month },
+      changes: [{ field: 'transferredAt', before: null, after: at.toISOString() }],
+    });
+  }
+
+  /**
+   * How each line of an APPROVED run reached its net (department, month salary, penalties,
+   * lateness, adjustments), keyed by employee — for accounting's HR-style payroll view (§10). A
+   * system read like `approvedLinesForAccounting`: accounting hides the money by the viewer's salary
+   * scope. Null when the run is unknown or not approved.
+   */
+  async approvedLineBreakdowns(id: Uuid): Promise<Map<Uuid, ApprovedLineBreakdown> | null> {
+    const run = await this.repository.findRun(id);
+    if (run?.status !== PayrollStatus.APPROVED) return null;
+    const rows = await this.repository.findAccountingBreakdowns(id);
+    return new Map(rows.map(({ employeeId, ...r }) => [employeeId, toBreakdown(r)]));
   }
 
   /**
@@ -556,6 +631,11 @@ export class PayrollService {
       salaryVisible,
       totals: withoutFields(totals, TOTALS_MONEY_FIELDS, salaryVisible),
       approvedAt: run.approvedAt?.toISOString() ?? null,
+      transferredAt: run.transferredAt?.toISOString() ?? null,
+      returned:
+        run.returnedAt && run.returnReason !== null
+          ? { at: run.returnedAt.toISOString(), reason: run.returnReason }
+          : null,
     };
   }
 
@@ -575,6 +655,30 @@ export class PayrollService {
     if (view.salary.kind === 'all') return new Set(employeeIds);
     if (view.salary.kind === 'none') return new Set();
     return this.employees.filterInScope(VIEW_SALARY, employeeIds);
+  }
+
+  /**
+   * After a draft's lines were (re)built: "ready to approve" when its month has no pending
+   * penalty (§6, §11), in this transaction. The net is the whole run's, shown only to readers
+   * who see it (the notifications service decides per reader, R7).
+   */
+  private async notifyCalculated(
+    id: Uuid,
+    totals: PayrollTotals,
+    actorId: Uuid | null,
+  ): Promise<void> {
+    const run = await this.findRun(id);
+    await this.notifications.payrollCalculated(
+      {
+        id,
+        month: run.month,
+        calculatedAt: run.calculatedAt,
+        count: totals.employees,
+        net: totals.net ?? 0,
+        pendingPenalties: await this.penalties.pendingCountInMonth(run.month),
+      },
+      actorId,
+    );
   }
 
   /** The whole run's totals (every line), whoever is asking. */
@@ -618,4 +722,21 @@ export class PayrollService {
     if (run.status !== PayrollStatus.APPROVED) throw conflict(ErrorCode.PAYROLL_NOT_APPROVED);
     return run;
   }
+}
+
+/** How an approved line reached its net, for accounting (§10). Amounts in piastres. */
+export interface ApprovedLineBreakdown {
+  departmentNameEn: string;
+  departmentNameAr: string;
+  monthSalary: number;
+  penaltyDays: number;
+  penaltyAmount: number;
+  latenessDays: number;
+  latenessAmount: number;
+  adjustmentAdditions: number;
+  adjustmentDeductions: number;
+}
+
+function toBreakdown(row: Omit<AccountingBreakdownSource, 'employeeId'>): ApprovedLineBreakdown {
+  return { ...row, penaltyDays: Number(row.penaltyDays), latenessDays: Number(row.latenessDays) };
 }

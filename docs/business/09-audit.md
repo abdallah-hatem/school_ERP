@@ -4,7 +4,8 @@ Who did what, to which record, and when — for the whole system. Spec:
 `docs/specs/2026-11-17-audit-log.md`.
 
 - **DECIDED** — Every action that changes data or access is recorded: sign-in, sign-out and failed
-  sign-ins; users (create, edit, deactivate, reactivate, temporary password, own password change)
+  sign-ins; a sign-in locked by too many wrong passwords (with the email typed, §2; attempts refused
+  while locked count as failed sign-ins) and its unlock by a System admin; users (create, edit, deactivate, reactivate, temporary password, own password change)
   and roles (create, edit, delete); school settings, logo and stages; employees (create, edit, deactivate, reactivate);
   departments and job titles; HR rules and the penalty catalogue; penalties (record, approve,
   cancel); monthly lateness (per employee, minutes before and after); payroll runs (create,
@@ -12,11 +13,27 @@ Who did what, to which record, and when — for the whole system. Spec:
 - **DECIDED** — Each entry keeps who did it (their name as it was then), when, from which IP and
   device, the record it touched, and only the fields that changed, each with the value before and
   after. Passwords and tokens are never recorded. A failed sign-in keeps the email that was typed.
-- **DECIDED** — An entry is saved together with the change: if one fails, neither is kept.
-  *Interim (until T28): changes to stages, departments, job titles and the penalty catalogue are
-  still recorded right after they are saved, not together with them (§7). Sign-ins, employees and
-  the HR lists are not recorded yet (T28). Penalties, monthly lateness and payroll are (T29,
-  2026-11-18).*
+- **DECIDED** — An entry is saved together with the change: if one fails, neither is kept. Since
+  2026-11-18 (T28) this holds for sign-ins, settings, stages, departments, job titles, the penalty
+  catalogue and employees too; monthly lateness, payroll and penalties since T29.
+- **DECIDED** — A failed sign-in is recorded with the email as typed and no person; it reads the
+  same whether or not the email belongs to an account, so neither the sign-in screen nor the log
+  tells someone which emails exist. A token refresh (staying signed in) is not recorded.
+- **DECIDED** — An employee's change shows the names of what was picked, not codes: "Department:
+  Science → Maths", "Direct manager: Omar → Mona", as they were named then. A new photo, a status
+  change and every edited field are entries on the employee's History tab.
+- **DECIDED** — Employees added by the demo seed are recorded with no person ("System").
+- **DECIDED** — A penalty's entries (recorded, approved, cancelled — one each) name the employee
+  and the violation, not codes, with the date, the level ("2nd time"), the penalty and its days,
+  and the status: approving shows "Pending → Approved" (and the level fixed at approval if it
+  differs from the one at recording), cancelling the status and the reason. A refused penalty (the
+  day already has one, the month's payroll is approved, already cancelled) leaves no entry.
+  An employee's **History** tab lists their penalties too, for whoever may see that employee's
+  penalties (§2). A penalty has no amount (it is days; payroll prices them), so nothing in it is
+  hidden as salary.
+- **DECIDED** — Activity's search finds a person by name (either language) or by **employee code**
+  (EMP-0007, any case): their own entries and their penalties'; and a payroll or lateness month by
+  its month. Entries keep names; the code is looked up live, so older entries are found too.
 - **DECIDED** — A month's lateness is one entry: one line per employee whose minutes changed,
   named, with the minutes before and after. Approving a payroll run is one entry with the run's
   totals, not one per employee.

@@ -16,6 +16,7 @@
     "lastPage": "Last page",
     "page": "Page {page}",
     "pageOf": "Page {page} of {count}",
+    "rowsPerPage": "Rows per page",
     "actions": "Actions",
     "actionsFor": "Actions for {name}"
   },
@@ -46,6 +47,7 @@
     "invalidNumber": "Enter a number.",
     "invalidAmount": "Enter an amount with up to two decimals, like 1,250.00.",
     "pickDate": "Pick a day",
+    "clearDate": "Clear the date",
     "chooseOption": "Choose an option",
     "noOptions": "Nothing to choose from yet.",
     "counter": "{count} / {max}",

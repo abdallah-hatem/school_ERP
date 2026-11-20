@@ -63,7 +63,8 @@ export const BUILT_IN_ROLES: readonly BuiltInRoleDefinition[] = [
     key: BuiltInRole.HR_MANAGER,
     nameEn: 'HR manager',
     nameAr: 'مدير شؤون الموظفين',
-    permissions: all(...HR_KEYS, 'core.stages.view', 'core.audit.view'),
+    // Settings → Notifications read-only (owner, 2026-11-18): the System admin changes it.
+    permissions: all(...HR_KEYS, 'core.stages.view', 'core.audit.view', 'core.notifications.view'),
   },
   {
     key: BuiltInRole.HR_OFFICER,
@@ -102,6 +103,8 @@ export const BUILT_IN_ROLES: readonly BuiltInRoleDefinition[] = [
       'accounting.settings.view',
       'accounting.settings.edit',
       'accounting.payroll.view',
+      'accounting.payroll.return',
+      'accounting.payroll.finalize',
     ),
   },
   {

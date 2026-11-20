@@ -1,12 +1,17 @@
 import { BadRequestException } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { contractYearFor, ErrorCode, HrEvent } from '@school-erp/shared';
 import { todayIsoDate } from '../../../../common/utils/dates.util';
+import type { AuditService } from '../../../../core/audit';
+import type { UsersService } from '../../../../core/users';
+import type { DomainEvents } from '../../../../core/events';
 import type { FileStorageService } from '../../../../core/settings';
+import type { AfterCommit } from '../../../../database/transactions';
 import { DepartmentsService } from '../../lists/services/departments.service';
 import { JobTitlesService } from '../../lists/services/job-titles.service';
 import type { CreateEmployeeDto } from '../dto/employee.dto';
 import { EmployeeDetailRow, EmployeesRepository } from '../repositories/employees.repository';
+import type { HrRemindersService } from '../../reminders/hr-reminders.service';
+import type { HrSettingsService } from '../../settings/hr-settings.service';
 import { EmployeesService } from './employees.service';
 import { fakeAccess } from '../../access/hr-access.testing';
 import type { HrAccessService } from '../../access/hr-access.service';
@@ -36,6 +41,7 @@ const row = (over: Partial<EmployeeDetailRow> = {}): EmployeeDetailRow => ({
   fingerprintId: null,
   contractStart: d('2025-06-01'),
   contractEnd: d('2026-05-31'),
+  probationEnd: d('2024-03-31'),
   usesBus: false,
   photoUrl: null,
   insuranceStatus: 'NOT_INSURED',
@@ -73,11 +79,14 @@ const dto = (over: Partial<CreateEmployeeDto> = {}): CreateEmployeeDto => ({
   ...over,
 });
 
-function makeService(repo: Record<string, jest.Mock> = {}, access: HrAccessService = fakeAccess()) {
+function makeService(
+  repo: Record<string, jest.Mock> = {},
+  access: HrAccessService = fakeAccess(),
+  probationMonths = 3,
+) {
   const repository = {
     findDetail: jest.fn().mockResolvedValue(row()),
     findScopeFields: jest.fn().mockResolvedValue({ id: 'e1', stageId: 's1', managerId: null }),
-    findState: jest.fn().mockResolvedValue({ id: 'm1', status: 'ACTIVE' }),
     findManagerState: jest
       .fn()
       .mockResolvedValue({ id: 'm1', status: 'ACTIVE', jobTitle: { managesPeople: true } }),
@@ -85,27 +94,54 @@ function makeService(repo: Record<string, jest.Mock> = {}, access: HrAccessServi
     findIdByNationalId: jest.fn().mockResolvedValue(null),
     findIdByFingerprintId: jest.fn().mockResolvedValue(null),
     findIdByInsuranceNumber: jest.fn().mockResolvedValue(null),
-    findPhotoUrl: jest.fn().mockResolvedValue(null),
     managerChainIds: jest.fn().mockResolvedValue([]),
     createWithCode: jest.fn().mockImplementation(() => Promise.resolve(row())),
     updateEmployee: jest.fn().mockImplementation(() => Promise.resolve(row())),
     ...repo,
   };
   const lists = { getSelectable: jest.fn().mockResolvedValue({}) };
-  const events = { emit: jest.fn() };
+  // DomainEvents holds each event until the commit (its own spec); here: what was published.
+  const events = { publish: jest.fn(() => Promise.resolve()) };
   const files = {
     save: jest.fn().mockImplementation((folder: string, name: string) => Promise.resolve(`/files/${folder}/${name}`)),
     remove: jest.fn().mockResolvedValue(undefined),
+  };
+  const audit = { record: jest.fn(() => Promise.resolve()) };
+  const users = { accountOfEmployee: jest.fn().mockResolvedValue(null) };
+  const reminders = {
+    contractChanged: jest.fn(() => Promise.resolve()),
+    probationChanged: jest.fn(() => Promise.resolve()),
+    employeeDeactivated: jest.fn(() => Promise.resolve()),
+  };
+  // Runs after-commit work at once, as it does outside a transaction; a throw from the
+  // transaction runs the rollback work.
+  const rollback: (() => unknown)[] = [];
+  const afterCommit = {
+    run: jest.fn((fn: () => unknown) => Promise.resolve(fn())),
+    onRollback: jest.fn((fn: () => unknown) => void rollback.push(fn)),
+    inTransaction: async (fn: () => Promise<unknown>) => {
+      try {
+        return await fn();
+      } catch (e) {
+        for (const f of rollback.splice(0)) await f();
+        throw e;
+      }
+    },
   };
   const service = new EmployeesService(
     repository as unknown as EmployeesRepository,
     lists as unknown as DepartmentsService,
     lists as unknown as JobTitlesService,
-    events as unknown as EventEmitter2,
+    events as unknown as DomainEvents,
     files as unknown as FileStorageService,
     access,
+    audit as unknown as AuditService,
+    afterCommit as unknown as AfterCommit,
+    { defaultProbationMonths: jest.fn().mockResolvedValue(probationMonths) } as unknown as HrSettingsService,
+    reminders as unknown as HrRemindersService,
+    users as unknown as UsersService,
   );
-  return { service, repository, events, files };
+  return { service, repository, events, files, audit, afterCommit, reminders, users };
 }
 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0]);
@@ -208,10 +244,11 @@ describe('EmployeesService — photo (§3)', () => {
   });
 
   it('stores the photo under employee-photos and deletes the previous one', async () => {
-    const { service, repository, files } = makeService({
-      findPhotoUrl: jest.fn().mockResolvedValue('/files/employee-photos/old.png'),
+    const { service, repository, files, afterCommit } = makeService({
+      findDetail: jest.fn().mockResolvedValue(row({ photoUrl: '/files/employee-photos/old.png' })),
     });
     await service.setPhoto('e1', file());
+    expect(afterCommit.run).toHaveBeenCalledTimes(1);
     expect(files.save).toHaveBeenCalledWith('employee-photos', expect.stringMatching(/^e1-.+\.png$/), PNG);
     expect(repository.updateEmployee).toHaveBeenCalledWith('e1', {
       photoUrl: expect.stringMatching(/^\/files\/employee-photos\/e1-/),
@@ -237,25 +274,74 @@ describe('EmployeesService — photo (§3)', () => {
   });
 
   it('unknown employee → 404; removing when there is no photo changes nothing', async () => {
-    const missing = makeService({ findPhotoUrl: jest.fn().mockResolvedValue(undefined) });
+    const missing = makeService({ findDetail: jest.fn().mockResolvedValue(null) });
     await expect(missing.service.setPhoto('x', file())).rejects.toThrow('Not Found');
     const { service, repository, files } = makeService();
     await service.removePhoto('e1');
     expect(repository.updateEmployee).not.toHaveBeenCalled();
     expect(files.remove).not.toHaveBeenCalled();
   });
+
+  it('gap 8 — the photo change rolls back: the new file is deleted, the old one kept', async () => {
+    const { service, files, audit } = makeService({
+      findDetail: jest.fn().mockResolvedValue(row({ photoUrl: '/files/employee-photos/old.png' })),
+    });
+    audit.record.mockRejectedValueOnce(new Error('audit down'));
+    await expect(service.setPhoto('e1', file())).rejects.toThrow('audit down');
+    const saved = await (files.save.mock.results[0]?.value as Promise<string>);
+    expect(files.remove).toHaveBeenCalledWith(saved);
+    expect(files.remove).not.toHaveBeenCalledWith('/files/employee-photos/old.png');
+  });
 });
 
 describe('EmployeesService', () => {
-  it('create fills the current contract year and emits employee.hired after the write', async () => {
+  it('create fills the current contract year and publishes hr.employee.hired', async () => {
     const { service, repository, events } = makeService();
     await service.create(dto());
     const current = contractYearFor(todayIsoDate());
     const data = repository.createWithCode.mock.calls[0]![0];
     expect(data.contractStart).toEqual(d(current.start));
     expect(data.contractEnd).toEqual(d(current.end));
-    expect(events.emit).toHaveBeenCalledWith(HrEvent.EMPLOYEE_HIRED, {
+    expect(events.publish).toHaveBeenCalledWith(HrEvent.EMPLOYEE_HIRED, {
       employeeId: 'e1',
+      hireDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+      at: expect.any(String),
+    });
+  });
+
+  it('gap 3 — an edit that changes nothing publishes no hr.employee.updated; a real one names its fields', async () => {
+    const same = makeService();
+    await same.service.update('e1', { grade: 'A' });
+    expect(same.events.publish).not.toHaveBeenCalled();
+
+    const changed = makeService({
+      updateEmployee: jest.fn().mockResolvedValue(row({ phone: '01000000999' })),
+    });
+    await changed.service.update('e1', { phone: '01000000999' });
+    expect(changed.events.publish).toHaveBeenCalledWith(HrEvent.EMPLOYEE_UPDATED, {
+      employeeId: 'e1',
+      fields: ['phone'],
+      at: expect.any(String),
+    });
+  });
+
+  it('deactivating publishes hr.employee.deactivated as must-deliver; reactivating, hr.employee.updated with status', async () => {
+    const off = makeService({ updateEmployee: jest.fn().mockResolvedValue(row({ status: 'INACTIVE' })) });
+    await off.service.deactivate('e1');
+    expect(off.events.publish).toHaveBeenCalledWith(
+      HrEvent.EMPLOYEE_DEACTIVATED,
+      { employeeId: 'e1', at: expect.any(String) },
+      { mustDeliver: true },
+    );
+
+    const on = makeService({
+      findDetail: jest.fn().mockResolvedValue(row({ status: 'INACTIVE' })),
+      updateEmployee: jest.fn().mockResolvedValue(row({ status: 'ACTIVE' })),
+    });
+    await on.service.reactivate('e1');
+    expect(on.events.publish).toHaveBeenCalledWith(HrEvent.EMPLOYEE_UPDATED, {
+      employeeId: 'e1',
+      fields: ['status'],
       at: expect.any(String),
     });
   });
@@ -360,6 +446,15 @@ describe('EmployeesService', () => {
       });
     });
 
+    it('get says who signs in as the employee, through core’s users service; null when nobody', async () => {
+      const linked = makeService();
+      linked.users.accountOfEmployee.mockResolvedValue({ id: 'u1', name: 'Mona Adel' });
+      await expect(linked.service.get('e1')).resolves.toMatchObject({ signInAccount: { id: 'u1', name: 'Mona Adel' } });
+      expect(linked.users.accountOfEmployee).toHaveBeenCalledWith('e1');
+      const unlinked = makeService();
+      expect((await unlinked.service.get('e1')).signInAccount).toBeNull();
+    });
+
     it('list passes the picker filters to the repository', async () => {
       const list = jest
         .fn()
@@ -424,12 +519,11 @@ describe('EmployeesService', () => {
 
   it('deactivating an inactive employee is a no-op without an event', async () => {
     const { service, repository, events } = makeService({
-      findState: jest.fn().mockResolvedValue({ id: 'e1', status: 'INACTIVE' }),
       findDetail: jest.fn().mockResolvedValue(row({ status: 'INACTIVE' })),
     });
     await expect(service.deactivate('e1')).resolves.toMatchObject({ status: 'INACTIVE' });
     expect(repository.updateEmployee).not.toHaveBeenCalled();
-    expect(events.emit).not.toHaveBeenCalled();
+    expect(events.publish).not.toHaveBeenCalled();
   });
 
   it('maps dates to YYYY-MM-DD', async () => {
@@ -440,5 +534,235 @@ describe('EmployeesService', () => {
       contractStart: '2025-06-01',
       contractEnd: '2026-05-31',
     });
+  });
+});
+
+describe('EmployeesService — audit (§9, T28)', () => {
+  type Recorded = { action: string; entity: unknown; before: Record<string, unknown> | null; after: Record<string, unknown> };
+  const recorded = (audit: { record: jest.Mock }) => audit.record.mock.calls.map(([input]) => input as Recorded);
+
+  it('create records hr.employee.create with both names, the new snapshot and no before', async () => {
+    const { service, audit } = makeService();
+    await service.create(dto());
+    const [entry] = recorded(audit);
+    expect(entry).toMatchObject({
+      action: 'hr.employee.create',
+      entity: { type: 'employee', id: 'e1', label: { en: 'A', ar: 'أ' } },
+      before: null,
+      after: expect.objectContaining({ code: 'EMP-0001', basicSalary: 100, dateOfBirth: '1990-01-01' }),
+    });
+  });
+
+  it('an edit records the before and after snapshots, with id fields stored by name', async () => {
+    const science = { id: 'd1', nameEn: 'Science', nameAr: 'علوم' };
+    const maths = { id: 'd2', nameEn: 'Maths', nameAr: 'رياضيات' };
+    const { service, audit } = makeService({
+      findDetail: jest.fn().mockResolvedValue(row({ department: science })),
+      updateEmployee: jest.fn().mockResolvedValue(row({ department: maths })),
+    });
+    await service.update('e1', { departmentId: 'd2' });
+    const [entry] = recorded(audit);
+    expect(entry?.action).toBe('hr.employee.update');
+    expect(entry?.before?.departmentId).toEqual({ nameEn: 'Science', nameAr: 'علوم' });
+    expect(entry?.after.departmentId).toEqual({ nameEn: 'Maths', nameAr: 'رياضيات' });
+    expect(entry?.after).not.toHaveProperty('department');
+  });
+
+  it('a failed write records nothing', async () => {
+    const { service, audit } = makeService({
+      updateEmployee: jest.fn().mockRejectedValue(new Error('db down')),
+    });
+    await expect(service.update('e1', { grade: 'B' })).rejects.toThrow('db down');
+    expect(audit.record).not.toHaveBeenCalled();
+  });
+
+  it('deactivate / reactivate record their own action with the status change', async () => {
+    const active = makeService({
+      updateEmployee: jest.fn().mockResolvedValue(row({ status: 'INACTIVE' })),
+    });
+    await active.service.deactivate('e1');
+    expect(recorded(active.audit)[0]).toMatchObject({
+      action: 'hr.employee.deactivate',
+      before: expect.objectContaining({ status: 'ACTIVE' }),
+      after: expect.objectContaining({ status: 'INACTIVE' }),
+    });
+
+    const inactive = makeService({
+      findDetail: jest.fn().mockResolvedValue(row({ status: 'INACTIVE' })),
+    });
+    await inactive.service.reactivate('e1');
+    expect(recorded(inactive.audit)[0]?.action).toBe('hr.employee.reactivate');
+  });
+
+  it('a no-op (already inactive, no photo to remove) records equal snapshots: no entry, @Audited answered', async () => {
+    const inactive = makeService({ findDetail: jest.fn().mockResolvedValue(row({ status: 'INACTIVE' })) });
+    await inactive.service.deactivate('e1');
+    const [entry] = recorded(inactive.audit);
+    expect(entry?.before).toEqual(entry?.after);
+
+    const noPhoto = makeService();
+    await noPhoto.service.removePhoto('e1');
+    const [photo] = recorded(noPhoto.audit);
+    expect(photo?.action).toBe('hr.employee.update');
+    expect(photo?.before).toEqual(photo?.after);
+  });
+
+  it('a new photo records the photo change and deletes the old file only after the commit', async () => {
+    const { service, audit, files, afterCommit } = makeService({
+      findDetail: jest.fn().mockResolvedValue(row({ photoUrl: '/files/employee-photos/old.png' })),
+      updateEmployee: jest.fn().mockResolvedValue(row({ photoUrl: '/files/employee-photos/e1-new.png' })),
+    });
+    await service.setPhoto('e1', { mimetype: 'image/png', size: PNG.length, buffer: PNG });
+    const [entry] = recorded(audit);
+    expect(entry?.before?.photoUrl).toBe('/files/employee-photos/old.png');
+    expect(entry?.after.photoUrl).toBe('/files/employee-photos/e1-new.png');
+    expect(afterCommit.run).toHaveBeenCalledTimes(1);
+    expect(files.remove).toHaveBeenCalledWith('/files/employee-photos/old.png');
+  });
+});
+
+describe('EmployeesService — probation end (§3, N0)', () => {
+  type Recorded = { action: string; before: Record<string, unknown> | null; after: Record<string, unknown> };
+  const recorded = (audit: { record: jest.Mock }) => audit.record.mock.calls.map(([input]) => input as Recorded);
+  /** The fields an entry lists: those whose snapshot values differ (what core's diff keeps). */
+  const changed = (e: Recorded) =>
+    Object.keys(e.after).filter((k) => JSON.stringify(e.before?.[k]) !== JSON.stringify(e.after[k]));
+  const written = (repository: { createWithCode: jest.Mock }, call = 0) =>
+    (repository.createWithCode.mock.calls[call] as [{ probationEnd: Date | null }])[0];
+
+  it('edge 1 — hired 1 Sep with no probation end → saved as 30 Nov (default 3 months)', async () => {
+    const { service, repository } = makeService();
+    await service.create(dto({ hireDate: '2026-09-01' }));
+    expect(written(repository).probationEnd).toEqual(d('2026-11-30'));
+  });
+
+  it('edge 1 — an explicit null on create is filled the same way', async () => {
+    const { service, repository } = makeService();
+    await service.create(dto({ hireDate: '2026-09-01', probationEnd: null }));
+    expect(written(repository).probationEnd).toEqual(d('2026-11-30'));
+  });
+
+  it('edge 2 — a given probation end is kept as given', async () => {
+    const { service, repository } = makeService();
+    await service.create(dto({ hireDate: '2026-09-01', probationEnd: '2026-10-15' }));
+    expect(written(repository).probationEnd).toEqual(d('2026-10-15'));
+  });
+
+  it('edge 3 / 7 — the length is read from the setting at create: 0 leaves it empty, 6 gives 28 Feb', async () => {
+    const none = makeService({}, fakeAccess(), 0);
+    await none.service.create(dto({ hireDate: '2026-09-01' }));
+    expect(written(none.repository).probationEnd).toBeNull();
+    const six = makeService({}, fakeAccess(), 6);
+    await six.service.create(dto({ hireDate: '2026-09-01' }));
+    expect(written(six.repository).probationEnd).toEqual(d('2027-02-28'));
+  });
+
+  it('edge 4 — before the hire date → 400 PROBATION_BEFORE_HIRE, nothing saved; the hire date itself is fine', async () => {
+    const { service, repository } = makeService();
+    await expect(service.create(dto({ hireDate: '2026-09-01', probationEnd: '2026-08-31' }))).rejects.toMatchObject({
+      status: 400,
+      code: ErrorCode.PROBATION_BEFORE_HIRE,
+    });
+    await expect(service.update('e1', { probationEnd: '2023-12-31' })).rejects.toMatchObject({
+      code: ErrorCode.PROBATION_BEFORE_HIRE,
+    });
+    expect(repository.createWithCode).not.toHaveBeenCalled();
+    expect(repository.updateEmployee).not.toHaveBeenCalled();
+    await service.create(dto({ hireDate: '2026-09-01', probationEnd: '2026-09-01' }));
+    expect(written(repository).probationEnd).toEqual(d('2026-09-01'));
+  });
+
+  it('edge 5 — an edit can clear it (no probation)', async () => {
+    const { service, repository } = makeService();
+    await service.update('e1', { probationEnd: null });
+    expect(repository.updateEmployee.mock.calls[0][1]).toMatchObject({ probationEnd: null });
+  });
+
+  it("edge 6 — an edited hire date doesn't move it; one moved past it is refused", async () => {
+    const { service, repository } = makeService();
+    await service.update('e1', { hireDate: '2024-02-01' });
+    expect(repository.updateEmployee.mock.calls[0][1]).not.toHaveProperty('probationEnd');
+    await expect(service.update('e1', { hireDate: '2024-04-01' })).rejects.toMatchObject({
+      code: ErrorCode.PROBATION_BEFORE_HIRE,
+    });
+    // Both sent together are checked together.
+    await service.update('e1', { hireDate: '2024-04-01', probationEnd: '2024-06-30' });
+    expect(repository.updateEmployee.mock.calls[1][1]).toMatchObject({ probationEnd: d('2024-06-30') });
+  });
+
+  it('edge 8 — an edit changing only the probation end lists only that field, before and after', async () => {
+    const { service, audit } = makeService({
+      updateEmployee: jest.fn().mockResolvedValue(row({ probationEnd: d('2024-05-31') })),
+    });
+    await service.update('e1', { probationEnd: '2024-05-31' });
+    const [entry] = recorded(audit);
+    expect(entry?.action).toBe('hr.employee.update');
+    expect(changed(entry)).toEqual(['probationEnd']);
+    expect(entry?.before?.probationEnd).toBe('2024-03-31');
+    expect(entry?.after.probationEnd).toBe('2024-05-31');
+  });
+
+  it("edge 8 — an edit that doesn't change it doesn't list it; create records it", async () => {
+    const { service, audit } = makeService({
+      updateEmployee: jest.fn().mockResolvedValue(row({ grade: 'B' })),
+    });
+    await service.update('e1', { grade: 'B' });
+    expect(changed(recorded(audit)[0])).toEqual(['grade']);
+    const created = makeService();
+    await created.service.create(dto());
+    expect(recorded(created.audit)[0]?.after).toHaveProperty('probationEnd', '2024-03-31');
+  });
+
+  it('the record carries it as YYYY-MM-DD, or null', async () => {
+    const { service } = makeService({ findDetail: jest.fn().mockResolvedValue(row({ probationEnd: null })) });
+    expect((await service.get('e1')).probationEnd).toBeNull();
+    const dated = makeService();
+    expect((await dated.service.get('e1')).probationEnd).toBe('2024-03-31');
+  });
+});
+
+describe('EmployeesService — reminders resolved at the change (§11, N3)', () => {
+  it('N3 edge 2 — a moved contract end resolves its open reminder; an unchanged one does not', async () => {
+    const moved = makeService({
+      updateEmployee: jest.fn().mockResolvedValue(row({ contractEnd: d('2026-08-31') })),
+    });
+    await moved.service.update('e1', { contractEnd: '2026-08-31' });
+    expect(moved.reminders.contractChanged).toHaveBeenCalledWith('e1');
+    expect(moved.reminders.probationChanged).not.toHaveBeenCalled();
+
+    const same = makeService({ updateEmployee: jest.fn().mockResolvedValue(row({ grade: 'B' })) });
+    await same.service.update('e1', { grade: 'B' });
+    expect(same.reminders.contractChanged).not.toHaveBeenCalled();
+    expect(same.reminders.probationChanged).not.toHaveBeenCalled();
+  });
+
+  it('N3 edge 11 / N0 edge 5 — a moved or cleared probation end resolves its open reminder', async () => {
+    const cleared = makeService({
+      updateEmployee: jest.fn().mockResolvedValue(row({ probationEnd: null })),
+    });
+    await cleared.service.update('e1', { probationEnd: null });
+    expect(cleared.reminders.probationChanged).toHaveBeenCalledWith('e1');
+    expect(cleared.reminders.contractChanged).not.toHaveBeenCalled();
+  });
+
+  it('N3 edge 12 — deactivating resolves the reminders about the employee; a no-op deactivation and a reactivation do not', async () => {
+    const active = makeService({
+      updateEmployee: jest.fn().mockResolvedValue(row({ status: 'INACTIVE' })),
+    });
+    await active.service.deactivate('e1');
+    expect(active.reminders.employeeDeactivated).toHaveBeenCalledWith('e1');
+
+    const inactive = makeService({ findDetail: jest.fn().mockResolvedValue(row({ status: 'INACTIVE' })) });
+    await inactive.service.deactivate('e1');
+    await inactive.service.reactivate('e1');
+    expect(inactive.reminders.employeeDeactivated).not.toHaveBeenCalled();
+  });
+
+  it('a refused edit resolves nothing (the resolve rides on the change)', async () => {
+    const { service, reminders } = makeService();
+    await expect(service.update('e1', { probationEnd: '2023-12-31' })).rejects.toMatchObject({
+      code: ErrorCode.PROBATION_BEFORE_HIRE,
+    });
+    expect(reminders.probationChanged).not.toHaveBeenCalled();
   });
 });

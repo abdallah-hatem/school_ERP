@@ -22,8 +22,7 @@ import { signIn } from './ui';
  * and expects the same blocks in the same order, each as wide and as tall as the other within
  * tolerance(). A list's items carry `data-skeleton-each` too: a run of them counts once, as tall
  * as its shortest item (how many arrive, and whose name wraps, is data). `data-skeleton-measure="width"` on a block compares its
- * width only (a list whose height follows its row count). Blocks inside `data-skeleton-optional`
- * are not compared: they exist only when there is data (the History tab's pagination).
+ * width only (a list whose height follows its row count).
  */
 
 export interface MeasuredBlock {
@@ -48,8 +47,6 @@ async function blocksOf(page: Page): Promise<MeasuredBlock[]> {
       const r = el.getBoundingClientRect();
       // Not drawn: the other view of a table (cards on desktop), a hidden streamed tree.
       if (r.width === 0 || r.height === 0) continue;
-      // Drawn only when there is data (a pagination under a list that may be empty).
-      if (el.closest('[data-skeleton-optional]')) continue;
       const name = el.dataset.skeletonBlock ?? '';
       // One of many (a row, a card in a list): one entry for the run, as tall as its shortest item —
       // a skeleton row traces a plain row, not one whose name or chips wrap onto a second line.
@@ -171,6 +168,8 @@ export const SKELETON_SCREENS = [
   'payroll',
   'payroll-run',
   'payslip',
+  'payroll-taxes',
+  'payroll-taxes-month',
   'activity',
   'users',
   'user-new',
@@ -179,11 +178,13 @@ export const SKELETON_SCREENS = [
   'role-new',
   'role-edit',
   'account',
+  'account-notifications',
   'settings-school',
   'settings-structure',
   'settings-lists',
   'settings-hr-rules',
   'settings-catalogue',
+  'settings-notifications',
 ] as const;
 export type SkeletonScreenName = (typeof SKELETON_SCREENS)[number];
 
@@ -221,6 +222,14 @@ async function readPaths(): Promise<Record<SkeletonScreenName, string | null>> {
     // adds a "can't deactivate" note).
     const plain = users.find((u) => u.id !== admin.id && !u.mustChangePassword) ?? (await settledUser(api, roles.get('hr_officer')?.id ?? ''));
     const role = roles.get('direct_manager') ?? [...roles.values()][0]!;
+    // The History tab compares its pagination too, which shows only with entries: an employee
+    // has one from their first write (T28); on an older database, a grade edit put back adds two.
+    const history = await api.get<unknown[]>(`/audit/records/employee/${employee.id}`, { limit: 1 });
+    if (history.length === 0) {
+      const { grade } = await api.get<{ grade: string | null }>(`/hr/employees/${employee.id}`);
+      await api.patch(`/hr/employees/${employee.id}`, { grade: 'Skeleton check' });
+      await api.patch(`/hr/employees/${employee.id}`, { grade });
+    }
     const e = `/employees/${employee.id}`;
     return {
       dashboard: '',
@@ -238,6 +247,9 @@ async function readPaths(): Promise<Record<SkeletonScreenName, string | null>> {
       payroll: '/payroll',
       'payroll-run': `/payroll/${run.id}`,
       payslip: line ? `/payroll/${run.id}/payslip/${line.id}` : null,
+      // The year of an approved month (its tiles in every state), and that month's statement (§10).
+      'payroll-taxes': `/accounting/payroll-taxes?year=${(approved?.month ?? monthOf(new Date())).slice(0, 4)}`,
+      'payroll-taxes-month': approved ? `/accounting/payroll-taxes/${approved.month}` : null,
       activity: '/activity',
       users: '/users',
       'user-new': '/users/new',
@@ -246,11 +258,13 @@ async function readPaths(): Promise<Record<SkeletonScreenName, string | null>> {
       'role-new': '/roles/new',
       'role-edit': `/roles/${role.id}`,
       account: '/account',
+      'account-notifications': '/account/notifications',
       'settings-school': '/settings?section=school',
       'settings-structure': '/settings?section=structure',
       'settings-lists': '/settings?section=lists',
       'settings-hr-rules': '/settings?section=hrRules',
       'settings-catalogue': '/settings?section=catalogue',
+      'settings-notifications': '/settings?section=notifications',
     };
   } finally {
     await api.dispose();
@@ -265,7 +279,7 @@ export function defineSkeletonSpecs(locales: readonly Language[]): void {
   for (const name of SKELETON_SCREENS) {
     test(`${name}: the skeleton has the loaded screen's blocks, in order and size`, async ({ page, browser }, info) => {
       const path = (await screenPaths())[name];
-      test.skip(path === null, 'no approved payroll run to open a payslip of');
+      test.skip(path === null, 'no approved payroll run to open (a payslip, a payroll taxes statement)');
       await signIn(page, locales[0]!);
       const problems: string[] = [];
       for (const locale of locales) {

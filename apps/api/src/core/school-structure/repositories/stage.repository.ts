@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import type { Stage } from '@school-erp/shared';
-import { DatabaseService } from '../../../database/database.service';
+import { TransactionHost } from '@nestjs-cls/transactional';
+import type { DbAdapter, DbClient } from '../../../database/transactions';
 
 const stageSelect = {
   id: true,
@@ -9,12 +10,20 @@ const stageSelect = {
   nameAr: true,
   sortOrder: true,
   isActive: true,
+  isNoStage: true,
 } satisfies Prisma.StageSelect;
 
-/** Stages (school structure). Never deleted — hidden with `isActive: false` (§3). */
+/**
+ * Stages (school structure). Never deleted — hidden with `isActive: false` (§3). Runs in the
+ * caller's transaction when one is open, so a stage edit and its history commit together.
+ */
 @Injectable()
 export class StageRepository {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(private readonly txHost: TransactionHost<DbAdapter>) {}
+
+  private get db(): DbClient {
+    return this.txHost.tx;
+  }
 
   findMany(includeHidden: boolean): Promise<Stage[]> {
     return this.db.stage.findMany({
@@ -26,6 +35,15 @@ export class StageRepository {
 
   findById(id: string): Promise<Stage | null> {
     return this.db.stage.findUnique({ where: { id }, select: stageSelect });
+  }
+
+  /** The stage marked as the "no stage" entry, if any. */
+  findNoStage(): Promise<Stage | null> {
+    return this.db.stage.findFirst({ where: { isNoStage: true }, select: stageSelect });
+  }
+
+  setNoStage(id: string): Promise<Stage> {
+    return this.db.stage.update({ where: { id }, data: { isNoStage: true }, select: stageSelect });
   }
 
   async nextSortOrder(): Promise<number> {

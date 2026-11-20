@@ -24,6 +24,8 @@ interface ModelDelegate<T> {
 export interface PaginationShape {
   select?: unknown;
   orderBy?: unknown;
+  /** A larger page cap than the contract's (payroll tables: `PAYROLL_PAGINATION.maxLimit`). */
+  maxLimit?: number;
 }
 
 /** A Prisma model delegate name on DatabaseService (e.g. 'employee', 'payrollRun'). */
@@ -74,7 +76,7 @@ export abstract class BaseRepository<T, CreateDto, UpdateDto> implements IReposi
     where?: Record<string, unknown>,
     query?: PaginationShape,
   ): Promise<Paginated<T>> {
-    const take = Math.min(Math.max(1, limit), PAGINATION.maxLimit);
+    const take = Math.min(Math.max(1, limit), query?.maxLimit ?? PAGINATION.maxLimit);
     const current = Math.max(1, page);
 
     const whereCondition: Record<string, unknown> = { ...where };

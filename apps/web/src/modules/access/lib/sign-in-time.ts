@@ -25,3 +25,8 @@ export function formatSignIn(at: IsoDateTime | null, now: IsoDateTime, locale: L
     minute: '2-digit',
   }).format(new Date(at));
 }
+
+/** When a sign-in lock ends, as a time of day on the school clock (`10:45`, Latin digits). */
+export function formatLockEnd(at: IsoDateTime, locale: Locale): string {
+  return fmt(locale, { hour: '2-digit', minute: '2-digit' }).format(new Date(at));
+}

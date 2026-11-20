@@ -1,0 +1,368 @@
+{
+  "title": "Notifications",
+  "bell": {
+    "label": "Notifications",
+    "unread": {
+      "zero": "No unread notifications",
+      "one": "{count} unread notification",
+      "two": "{count} unread notifications",
+      "few": "{count} unread notifications",
+      "many": "{count} unread notifications",
+      "other": "{count} unread notifications"
+    }
+  },
+  "modules": {
+    "core": "General",
+    "hr": "HR"
+  },
+  "categories": {
+    "approval": "Needs action",
+    "reminder": "Reminders"
+  },
+  "required": "Required",
+  "resolved": {
+    "approved": "Approved by {name}",
+    "cancelled": "Cancelled by {name}",
+    "done": "Done",
+    "allDone": "All done",
+    "group": {
+      "approved": "Approved by {name}",
+      "cancelled": "Cancelled by {name}"
+    }
+  },
+  "types": {
+    "hr": {
+      "penalty": {
+        "awaiting_approval": {
+          "name": "Penalty waiting for approval",
+          "title": "Penalty waiting for your approval",
+          "body": "{employee} · {violation}, level {level}",
+          "group": {
+            "zero": "No penalties waiting for your approval",
+            "one": "{count} penalty waiting for your approval",
+            "two": "{count} penalties waiting for your approval",
+            "few": "{count} penalties waiting for your approval",
+            "many": "{count} penalties waiting for your approval",
+            "other": "{count} penalties waiting for your approval"
+          },
+          "groupDone": {
+            "zero": "No penalties",
+            "one": "{count} penalty — handled",
+            "two": "{count} penalties — all handled",
+            "few": "{count} penalties — all handled",
+            "many": "{count} penalties — all handled",
+            "other": "{count} penalties — all handled"
+          },
+          "description": "A penalty is recorded for someone whose penalties you may approve."
+        }
+      },
+      "payroll": {
+        "ready_to_approve": {
+          "name": "Payroll ready to approve",
+          "title": "{month} payroll is ready to approve",
+          "body": {
+            "zero": "No employees, net {net}",
+            "one": "{count} employee, net {net}",
+            "two": "{count} employees, net {net}",
+            "few": "{count} employees, net {net}",
+            "many": "{count} employees, net {net}",
+            "other": "{count} employees, net {net}"
+          },
+          "bodyWithoutNet": {
+            "zero": "No employees",
+            "one": "{count} employee",
+            "two": "{count} employees",
+            "few": "{count} employees",
+            "many": "{count} employees",
+            "other": "{count} employees"
+          },
+          "group": {
+            "zero": "No payroll months ready to approve",
+            "one": "{count} payroll month is ready to approve",
+            "two": "{count} payroll months are ready to approve",
+            "few": "{count} payroll months are ready to approve",
+            "many": "{count} payroll months are ready to approve",
+            "other": "{count} payroll months are ready to approve"
+          },
+          "groupDone": {
+            "zero": "No payroll months",
+            "one": "{count} payroll month — handled",
+            "two": "{count} payroll months — all handled",
+            "few": "{count} payroll months — all handled",
+            "many": "{count} payroll months — all handled",
+            "other": "{count} payroll months — all handled"
+          },
+          "description": "A month is calculated and has no pending penalties."
+        },
+        "not_prepared": {
+          "name": "Payroll not prepared",
+          "title": "{month} payroll hasn't been prepared",
+          "group": {
+            "zero": "No payroll months waiting to be prepared",
+            "one": "{count} payroll month hasn't been prepared",
+            "two": "{count} payroll months haven't been prepared",
+            "few": "{count} payroll months haven't been prepared",
+            "many": "{count} payroll months haven't been prepared",
+            "other": "{count} payroll months haven't been prepared"
+          },
+          "groupDone": {
+            "zero": "No payroll months",
+            "one": "{count} payroll month — handled",
+            "two": "{count} payroll months — all handled",
+            "few": "{count} payroll months — all handled",
+            "many": "{count} payroll months — all handled",
+            "other": "{count} payroll months — all handled"
+          },
+          "description": "From the check day, while the month has no payroll run."
+        },
+        "not_approved": {
+          "name": "Payroll still a draft",
+          "title": "{month} payroll is still a draft",
+          "group": {
+            "zero": "No payroll months still drafts",
+            "one": "{count} payroll month is still a draft",
+            "two": "{count} payroll months are still drafts",
+            "few": "{count} payroll months are still drafts",
+            "many": "{count} payroll months are still drafts",
+            "other": "{count} payroll months are still drafts"
+          },
+          "groupDone": {
+            "zero": "No payroll months",
+            "one": "{count} payroll month — handled",
+            "two": "{count} payroll months — all handled",
+            "few": "{count} payroll months — all handled",
+            "many": "{count} payroll months — all handled",
+            "other": "{count} payroll months — all handled"
+          },
+          "description": "From the check day, while the month's payroll is still a draft."
+        },
+        "returned_by_accounting": {
+          "name": "Payroll returned by Accounting",
+          "title": "{month} payroll was returned by Accounting",
+          "body": "Reason: {reason}",
+          "group": {
+            "zero": "No payroll months returned",
+            "one": "{count} payroll month returned by Accounting",
+            "two": "{count} payroll months returned by Accounting",
+            "few": "{count} payroll months returned by Accounting",
+            "many": "{count} payroll months returned by Accounting",
+            "other": "{count} payroll months returned by Accounting"
+          },
+          "groupDone": {
+            "zero": "No payroll months",
+            "one": "{count} payroll month — handled",
+            "two": "{count} payroll months — all handled",
+            "few": "{count} payroll months — all handled",
+            "many": "{count} payroll months — all handled",
+            "other": "{count} payroll months — all handled"
+          },
+          "description": "Accounting sends an approved month back to HR to fix before approving it again."
+        }
+      },
+      "contract": {
+        "ending_soon": {
+          "name": "Contract ends soon",
+          "title": "{employee}'s contract ends {date}",
+          "body": {
+            "zero": "today",
+            "one": "in {count} day",
+            "two": "in {count} days",
+            "few": "in {count} days",
+            "many": "in {count} days",
+            "other": "in {count} days"
+          },
+          "group": {
+            "zero": "No contracts end within {days} days",
+            "one": "{count} contract ends within {days} days",
+            "two": "{count} contracts end within {days} days",
+            "few": "{count} contracts end within {days} days",
+            "many": "{count} contracts end within {days} days",
+            "other": "{count} contracts end within {days} days"
+          },
+          "groupDone": {
+            "zero": "No contracts",
+            "one": "{count} contract — handled",
+            "two": "{count} contracts — all handled",
+            "few": "{count} contracts — all handled",
+            "many": "{count} contracts — all handled",
+            "other": "{count} contracts — all handled"
+          },
+          "description": "Before an employee's contract ends, and again closer to the day."
+        }
+      },
+      "probation": {
+        "ending_soon": {
+          "name": "Probation ends soon",
+          "title": "{employee}'s probation ends {date}",
+          "group": {
+            "zero": "No probation periods end within {days} days",
+            "one": "{count} probation period ends within {days} days",
+            "two": "{count} probation periods end within {days} days",
+            "few": "{count} probation periods end within {days} days",
+            "many": "{count} probation periods end within {days} days",
+            "other": "{count} probation periods end within {days} days"
+          },
+          "groupDone": {
+            "zero": "No probation periods",
+            "one": "{count} probation period — handled",
+            "two": "{count} probation periods — all handled",
+            "few": "{count} probation periods — all handled",
+            "many": "{count} probation periods — all handled",
+            "other": "{count} probation periods — all handled"
+          },
+          "description": "Before an employee's probation ends."
+        }
+      },
+      "lateness": {
+        "not_entered": {
+          "name": "Lateness not entered",
+          "title": "{month} lateness isn't entered yet",
+          "body": "Payroll needs it",
+          "group": {
+            "zero": "No months waiting for lateness",
+            "one": "{count} month's lateness isn't entered yet",
+            "two": "{count} months' lateness isn't entered yet",
+            "few": "{count} months' lateness isn't entered yet",
+            "many": "{count} months' lateness isn't entered yet",
+            "other": "{count} months' lateness isn't entered yet"
+          },
+          "groupDone": {
+            "zero": "No months",
+            "one": "{count} month — handled",
+            "two": "{count} months — all handled",
+            "few": "{count} months — all handled",
+            "many": "{count} months — all handled",
+            "other": "{count} months — all handled"
+          },
+          "description": "From the check day, while the month's lateness is missing."
+        }
+      }
+    }
+  },
+  "screen": {
+    "markAllRead": "Mark all as read",
+    "markAllReadShort": "Mark all read",
+    "close": "Close notifications",
+    "tabs": {
+      "label": "Show",
+      "all": "All",
+      "unread": "Unread"
+    },
+    "settingsLink": "Notification settings",
+    "latest": "Showing the latest {n}",
+    "showAll": "Show all {n}",
+    "andMore": {
+      "zero": "and {count} more",
+      "one": "and {count} more",
+      "two": "and {count} more",
+      "few": "and {count} more",
+      "many": "and {count} more",
+      "other": "and {count} more"
+    },
+    "allOn": "All on {date}",
+    "inDays": {
+      "zero": "today",
+      "one": "in {count} day",
+      "two": "in {count} days",
+      "few": "in {count} days",
+      "many": "in {count} days",
+      "other": "in {count} days"
+    },
+    "unread": "Unread",
+    "empty": {
+      "title": "You're all caught up",
+      "body": "New notifications appear here."
+    },
+    "emptyUnread": {
+      "title": "No unread notifications",
+      "body": "Everything here has been read."
+    },
+    "loadFailed": "Notifications couldn't load.",
+    "time": {
+      "justNow": "Just now",
+      "minutesAgo": {
+        "zero": "{count} min ago",
+        "one": "{count} min ago",
+        "two": "{count} min ago",
+        "few": "{count} min ago",
+        "many": "{count} min ago",
+        "other": "{count} min ago"
+      },
+      "hoursAgo": {
+        "zero": "{count} h ago",
+        "one": "{count} h ago",
+        "two": "{count} h ago",
+        "few": "{count} h ago",
+        "many": "{count} h ago",
+        "other": "{count} h ago"
+      },
+      "today": "Today, {time}",
+      "yesterday": "Yesterday, {time}",
+      "earlier": "{date}, {time}"
+    },
+    "violationLevel": "{violation}, level {level}"
+  },
+  "preferences": {
+    "groups": {
+      "approval": "Waiting for you",
+      "reminder": "Reminders"
+    },
+    "notification": "Notification",
+    "tellMe": "Tell me",
+    "forEveryone": "For everyone",
+    "schoolDefault": "School default",
+    "changed": "Changed from school default",
+    "reset": "Reset to school default",
+    "onByDefault": "On by default",
+    "offByDefault": "Off by default",
+    "noTypes": {
+      "title": "Nothing to choose yet",
+      "body": "Your roles don't receive any notifications yet."
+    }
+  },
+  "settings": {
+    "defaults": {
+      "title": "What everyone receives",
+      "description": "Each person can change their own in My account. Required ones stay on."
+    },
+    "readOnly": "You can see these settings; a System admin changes them.",
+    "timing": {
+      "title": "Reminder timing",
+      "description": "HR rules — changed by whoever may change HR rules.",
+      "contractEndDays": "Contract reminder",
+      "contractEndDaysHint": "Days before a contract ends.",
+      "contractEndSecondDays": "Second contract reminder",
+      "contractEndSecondDaysHint": "Days before it ends; 0 = no second reminder.",
+      "probationEndDays": "Probation reminder",
+      "probationEndDaysHint": "Days before probation ends.",
+      "probationMonths": "Default probation length",
+      "probationMonthsHint": "Fills a new employee's probation end.",
+      "latenessCheckDay": "Lateness check day",
+      "latenessCheckDayHint": "The day of the month lateness is due.",
+      "payrollCheckDay": "Payroll check day",
+      "payrollCheckDayHint": "The day of the month payroll is due."
+    },
+    "retention": {
+      "title": "Keep notifications",
+      "description": "Older ones are removed every night.",
+      "readDays": "Keep read notifications",
+      "readDaysHint": "Days after they were read.",
+      "resolvedDays": "Keep done approvals",
+      "resolvedDaysHint": "Days after they were done.",
+      "maxDays": "Keep any notification at most",
+      "maxDaysHint": "Days after it arrived."
+    },
+    "units": {
+      "days": "days",
+      "ofMonth": "of the month",
+      "months": "months"
+    },
+    "errors": {
+      "retention": "Between 1 and 3,650 days.",
+      "contractEndDays": "Between 1 and 120 days.",
+      "contractEndSecondDays": "0 to 60 days, and fewer than the first reminder.",
+      "probationEndDays": "Between 1 and 60 days.",
+      "checkDay": "A day from 1 to 31."
+    }
+  }
+}

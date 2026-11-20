@@ -15,7 +15,7 @@ import type { ApiResponse, AuthUser, EmployeeOption, UserAccount } from '@school
 import type { Request } from 'express';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ResponseUtil } from '../../common/utils/response.util';
-import { Audited } from '../audit';
+import { Audited, NotAudited } from '../audit';
 import { AllowedBeforePasswordChange, Permission, SignedIn } from '../permissions';
 import {
   ChangePasswordDto,
@@ -92,6 +92,18 @@ export class UsersController {
     return this.accounts.reactivate(id);
   }
 
+  /**
+   * Unlocks a sign-in locked by too many wrong passwords before the lock ends (owner 2026-11-18).
+   * Answers the account (`lockedUntil: null`); an account that wasn't locked is left as it was.
+   */
+  @Post(':id/unlock-sign-in')
+  @Permission('core.users.manage')
+  @Audited('core.user.unlock_sign_in')
+  @HttpCode(HttpStatus.OK)
+  unlockSignIn(@Param('id', ParseUUIDPipe) id: string): Promise<UserAccount> {
+    return this.accounts.unlockSignIn(id);
+  }
+
   /** A temporary password: the user must change it, and their sessions end. */
   @Post(':id/password')
   @Permission('core.users.manage')
@@ -124,7 +136,11 @@ export class AccountController {
   @Post('password')
   @SignedIn()
   @AllowedBeforePasswordChange()
-  @Audited('core.user.change_password')
+  @NotAudited(
+    'records core.user.change_password itself, in one transaction with the new password ' +
+      '(UserAccountsService.changeOwnPassword): a request transaction would hold a pooled connection ' +
+      "while a wrong password's count and lockout entry need another (docs/EVENTS.md)",
+  )
   @HttpCode(HttpStatus.NO_CONTENT)
   changePassword(@CurrentUser() me: AuthUser, @Body() dto: ChangePasswordDto): Promise<void> {
     return this.accounts.changeOwnPassword(me, dto);

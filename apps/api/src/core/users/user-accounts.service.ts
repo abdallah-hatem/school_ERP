@@ -1,5 +1,4 @@
 import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   AuditEntityType,
   CoreEvent,
@@ -15,7 +14,9 @@ import { CodedException } from '../../common/errors/coded.exception';
 import { hashPassword, normalizeEmail, verifyPassword } from '../../common/utils/password.util';
 import { AfterCommit } from '../../database/transactions';
 import { AuditService } from '../audit';
+import { DomainEvents } from '../events';
 import { RolesService } from '../roles';
+import { SignInLimitService } from '../sign-in-limit';
 import type {
   ChangePasswordDto,
   CreateUserDto,
@@ -39,7 +40,8 @@ export class UserAccountsService {
     private readonly roles: RolesService,
     private readonly audit: AuditService,
     private readonly afterCommit: AfterCommit,
-    private readonly events: EventEmitter2,
+    private readonly events: DomainEvents,
+    private readonly signInLimit: SignInLimitService,
   ) {}
 
   async list(query: ListUsersQueryDto): Promise<Paginated<UserAccount>> {
@@ -52,11 +54,17 @@ export class UserAccountsService {
       query.page ?? 1,
       query.limit ?? 10,
     );
-    return { ...result, data: result.data.map(toUserAccount) };
+    const locked = await this.signInLimit.lockedUntil(result.data.map((r) => r.email));
+    return {
+      ...result,
+      data: result.data.map((r) => toUserAccount(r, locked.get(r.email) ?? null)),
+    };
   }
 
   async get(id: string): Promise<UserAccount> {
-    return toUserAccount(await this.row(id));
+    const row = await this.row(id);
+    const locked = await this.signInLimit.lockedUntil([row.email]);
+    return toUserAccount(row, locked.get(row.email) ?? null);
   }
 
   async create(dto: CreateUserDto): Promise<UserAccount> {
@@ -141,6 +149,24 @@ export class UserAccountsService {
     await this.audit.record({ action: 'core.user.set_password', entity: this.entity(user) });
   }
 
+  /**
+   * Unlocks the user's sign-in before the lock ends (a System admin, from the Users page): their
+   * wrong-password count is forgotten. Recorded as `core.user.unlock_sign_in`; nothing is written
+   * when it wasn't locked.
+   */
+  async unlockSignIn(id: string): Promise<UserAccount> {
+    const before = await this.get(id);
+    await this.signInLimit.unlock(before.email);
+    const after = await this.get(id);
+    await this.audit.record({
+      action: 'core.user.unlock_sign_in',
+      entity: this.entity(after),
+      before: { lockedUntil: before.lockedUntil },
+      after: { lockedUntil: after.lockedUntil },
+    });
+    return after;
+  }
+
   /** My account: the signed-in user's own account (roles, linked employee, sign-in facts). */
   async myAccount(me: AuthUser): Promise<UserAccount> {
     return this.get(me.id);
@@ -161,25 +187,38 @@ export class UserAccountsService {
    * after signing in with a temporary password (`mustChangePassword`), where that sign-in just
    * proved it (the forced "Set a new password" page asks only for the new one). Either way the new
    * password must differ from the one in use (`SAME_PASSWORD`), and the flag is cleared.
+   *
+   * Both paths have the sign-in limit: while the account is locked the change is refused (429)
+   * before any password is checked, and a wrong current password counts as a wrong sign-in.
    */
   async changeOwnPassword(me: AuthUser, dto: ChangePasswordDto): Promise<void> {
+    await this.signInLimit.assertNotLocked(me.email);
     const hash = await this.users.findPasswordHash(me.id);
     if (!hash) throw new CodedException(HttpStatus.BAD_REQUEST, ErrorCode.WRONG_PASSWORD);
     const proven = me.mustChangePassword && dto.currentPassword === undefined;
-    if (!proven && !(await verifyPassword(dto.currentPassword ?? '', hash))) {
-      throw new CodedException(HttpStatus.BAD_REQUEST, ErrorCode.WRONG_PASSWORD);
+    if (!proven) {
+      if (!(await verifyPassword(dto.currentPassword ?? '', hash))) {
+        await this.signInLimit.recordFailure(me.email);
+        throw new CodedException(HttpStatus.BAD_REQUEST, ErrorCode.WRONG_PASSWORD);
+      }
+      await this.signInLimit.clear(me.email);
     }
     if (await verifyPassword(dto.newPassword, hash)) {
       throw new CodedException(HttpStatus.BAD_REQUEST, ErrorCode.SAME_PASSWORD);
     }
-    await this.users.update(me.id, {
-      passwordHash: await hashPassword(dto.newPassword),
-      mustChangePassword: false,
-      passwordChangedAt: new Date(),
-    });
-    await this.audit.record({
-      action: 'core.user.change_password',
-      entity: { type: AuditEntityType.USER, id: me.id, label: me.name },
+    const passwordHash = await hashPassword(dto.newPassword);
+    // The new password and its entry commit together, in a transaction opened only now: the checks
+    // above (and a wrong password's count and lockout entry) hold no connection meanwhile (gap 10).
+    await this.afterCommit.inTransaction(async () => {
+      await this.users.update(me.id, {
+        passwordHash,
+        mustChangePassword: false,
+        passwordChangedAt: new Date(),
+      });
+      await this.audit.record({
+        action: 'core.user.change_password',
+        entity: { type: AuditEntityType.USER, id: me.id, label: me.name },
+      });
     });
   }
 
@@ -203,7 +242,8 @@ export class UserAccountsService {
     reason: UserSessionsEndedEvent['reason'],
   ): Promise<void> {
     const event: UserSessionsEndedEvent = { userId, reason, at: new Date().toISOString() };
-    await this.afterCommit.run(() => this.events.emitAsync(CoreEvent.USER_SESSIONS_ENDED, event));
+    // Fire-and-forget, after the commit.
+    await this.events.publish(CoreEvent.USER_SESSIONS_ENDED, event);
   }
 
   private async row(id: string): Promise<UserAccountRow> {

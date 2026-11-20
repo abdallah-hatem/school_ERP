@@ -20,12 +20,14 @@ import {
   LockedIcon,
   ReadyIcon,
   TemporaryPasswordIcon,
+  UnlockIcon,
+  WarningIcon,
 } from '@/shared/components/ui/icons';
 import { StatusChangeButton } from '@/shared/components/ui/status-change-button';
 import { StatusPill } from '@/shared/components/ui/status-pill';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { CREATE_USER, UPDATE_USER } from '../apis';
-import { formatSignIn } from '../lib/sign-in-time';
+import { formatLockEnd, formatSignIn } from '../lib/sign-in-time';
 import { generateTemporaryPassword } from '../lib/temp-password';
 import {
   changedFields,
@@ -33,6 +35,7 @@ import {
   fieldForError,
   formToCreate,
   formToUpdate,
+  rolesNeedEmployee,
   userFormSchema,
   userToForm,
   type UserFormValues,
@@ -62,8 +65,8 @@ export interface UserFormProps {
 }
 
 /**
- * Add or edit a user (P3, option A): a full page — Account, Roles (searchable checklist), Linked
- * employee (searchable picker) and, at the side, the status and the password. Adding shows the
+ * Add or edit a user (P3, option A): a full page — Account, Roles (searchable checklist), "Who is
+ * this person in HR?" (their employee record, a searchable picker) and, at the side, the status and the password. Adding shows the
  * temporary password to give the person; editing keeps Save disabled until something changes.
  * Without `core.users.manage` the page is read-only.
  */
@@ -86,6 +89,8 @@ export function UserForm({ basePath, user, roles, lastAdmin = false, initialPass
   const actions = useUserActions();
   const rolesTitleId = useId();
   const employeeFieldId = useId();
+  // Stage, team or self scopes work from the employee record: warn when the roles need one (R5).
+  const employeeNeeded = !values.employee && rolesNeedEmployee(roles, values.roleIds ?? []);
 
   async function onSubmit(next: UserFormValues) {
     if (inFlight.current || readOnly) return;
@@ -222,6 +227,14 @@ export function UserForm({ basePath, user, roles, lastAdmin = false, initialPass
           </FieldShell>
         )}
       />
+      {employeeNeeded ? (
+        <p
+          className="flex items-start gap-2.5 rounded-xl bg-warning-soft p-3 text-sm font-semibold text-warning-ink"
+        >
+          <WarningIcon className="mt-0.5 size-5 shrink-0" />
+          {t('access.userForm.employeeNeeded')}
+        </p>
+      ) : null}
     </FormCard>
   );
 
@@ -237,6 +250,24 @@ export function UserForm({ basePath, user, roles, lastAdmin = false, initialPass
           {t('access.userForm.lastSignIn', { when: formatSignIn(user.lastSignInAt, now, locale, t) })}
         </span>
       </div>
+      {user.lockedUntil ? (
+        // Too many wrong passwords (owner 2026-11-18): a System admin may unlock it before it ends.
+        <div className="flex flex-col gap-2.5 rounded-xl bg-destructive-soft p-3 text-destructive-ink">
+          <div className="flex items-start gap-2.5">
+            <LockedIcon className="mt-0.5 size-5 shrink-0" />
+            <div className="flex flex-col gap-0.5 text-sm">
+              <span className="font-bold">{t('access.userForm.lockedTitle')}</span>
+              <span>{t('access.userForm.lockedBody', { time: formatLockEnd(user.lockedUntil, locale) })}</span>
+            </div>
+          </div>
+          {canManage ? (
+            <Button type="button" variant="secondary" className="w-full" onClick={() => actions.unlock(user)}>
+              <UnlockIcon />
+              {t('access.userForm.unlock')}
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
       {canManage ? (
         user.isActive ? (
           <div className="flex flex-col gap-2">
@@ -325,6 +356,7 @@ export function UserForm({ basePath, user, roles, lastAdmin = false, initialPass
       />
       <Form onSubmit={(e) => void form.handleSubmit(onSubmit)(e)} aria-label={title}>
         <FormColumns
+          sideFirst={Boolean(user)}
           main={
             user ? (
               <>

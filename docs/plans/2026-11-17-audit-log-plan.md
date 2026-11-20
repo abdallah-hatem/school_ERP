@@ -40,7 +40,13 @@ commit touching only the registry and say so in the PR).
 nothing and still returns its own error; a request with no signed-in user (sign-in) records a null
 actor; two writes in one request record two entries in order; a diff of equal values is empty.
 
-## T28 — wire core + HR people (`logic`)
+## T28 — wire core + HR people (`logic`) — ✅ done (PR `feature/t28-audit-wiring`, Abdallah)
+
+Done: sign-in, sign-out and failed sign-in (own transaction, the typed email as the record — no
+account hint); employees (create, edit, deactivate, reactivate, photo upload / removal) with id
+fields stored by name; HR settings through core's `setValues` on every save; the scan test now
+expects no `wired in T28`. Stages, lists and the catalogue: #105 (settings history in the write's
+transaction). Users, roles and password changes were already wired (P2).
 
 Auth (sign in, sign out, failed sign-in — spec 5), school settings, logo, stages; employees (create,
 edit, deactivate, reactivate), departments, job titles, HR settings, penalty catalogue. One test per
@@ -60,8 +66,26 @@ catalogue still reach the log through core's temporary `SettingsHistoryListener`
 transaction, history-key + whole-snapshot change, so Settings history reads as before): record them
 in the write's transaction instead, then delete the listener and its `settings.changed` emits.
 Repositories written to in an audited request must move to `TransactionHost` (`txHost.tx`).
+**Done for stages, lists and the catalogue** (`fix/settings-history-in-transaction`): they record
+through `SettingsHistory.record()` in their write's transaction, their repositories use `txHost.tx`,
+their ten endpoints are `@Audited`, and the listener is deleted.
 
-## T29 — wire HR penalties, lateness, payroll (`logic`)
+## T29 — wire HR penalties, lateness, payroll (`logic`) — ✅ done (lateness and payroll with the events + outbox work; penalties: PR `feature/t29-penalties-audit`, Abdallah)
+
+- [x] Lateness month save (`hr.lateness.save`) and payroll create / recalculate / approve /
+  adjustments (`hr.payroll.*`) — already wired (`hr-audit-lateness-payroll.e2e-spec.ts`).
+- [x] Penalties: record, approve, cancel are `@Audited('hr.penalty.record' | 'approve' | 'cancel')`;
+  `PenaltyRecordsService` records in its write's `afterCommit.inTransaction` (the seed's too, with
+  no actor). The entry is on the penalty (`entityType: penalty`), labelled with the employee's two
+  names (the label only — a line for the employee repeated the sentence on screen); the violation
+  is stored by name (`violationId: { nameEn, nameAr }`), with date, level, action, days, status,
+  note and cancel reason — only the
+  changed ones (approve: status, plus level / action / days if fixed differently; cancel: status and
+  reason). No money: a penalty is days, so nothing is salary-hidden.
+- [x] The employee's **History** lists their penalties' entries: HR registers the employee →
+  penalty link with `AuditRecordAccess.registerRelated`; the History list, its people and its fields
+  read the employee's entries and their penalties' (each still filtered by the viewer's
+  `hr.penalties.view`). Tests: `hr-audit-penalties.e2e-spec.ts`, the service and audit unit specs.
 
 Penalties (record, approve, cancel); lateness month save (one entry, changed employees only — spec
 7); payroll run create, recalculate, approve (one entry with totals — spec 6), adjustment add/remove.
@@ -94,20 +118,29 @@ Field labels: `audit.fields.<field>` (stage keys: strip the id, use `fields.list
 
 ## T31 — verify
 
+- [x] The scan test expects **no** `@NotAudited('wired in …')` at all (only deliberate reasons) —
+  done with T29's penalties.
+- [x] Activity's search matches employee **codes** (its placeholder promised them; entries store
+  names): HR registers search resolvers (`AuditRecordAccess.registerSearch`) — an employee by their
+  code, a penalty by its employee's code — read live from HR's tables, so entries written before
+  this are found too and nothing is stored twice. Same for the day totals.
+- [ ] `pnpm ci:local --full`, smoke, the demo dry run on a copy, 10 entries checked by hand.
+
 `pnpm ci:local --full`; no `@NotAudited('wired in …')` left; `SettingsHistoryListener` and the
 `settings.changed` history path are gone; smoke; `DEMO_SCRIPT.md` updated for the
 Activity page and dry-run on a copy; spot-check 10 entries by hand against what was done.
 
 **From T30:**
-- The smoke's employee History check (`e2e/15-activity`, `16-activity-phone`) asserts the empty
-  state while the employee has no entries (`TODO(T28)`): once T28 records `hr.employee.update`, edit
-  an employee in the spec and assert the entry at the top of the tab.
+- ~~The smoke's employee History check asserts the empty state (`TODO(T28)`)~~ — done in T28: the
+  specs edit the employee's grade and assert the entry at the top; the skeleton spec compares the
+  History tab's pagination too (no more `data-skeleton-optional`).
 - ~~`entityLabel` is one snapshot string~~ — done in `fix/activity-ui`: labels keep both names
   (`{ en, ar }`, column `entity_label_ar`); see T28's note for how callers pass them.
-- Employee field changes holding ids (`departmentId`, `jobTitleId`, `stageId`, `managerId`) show the
-  raw value unless T28 records `{ nameEn, nameAr }` snapshots (the timeline names those).
-- A penalty's entries are on the penalty, not on the employee: the employee History shows only
-  `entityType=employee`. If penalties should appear there, record them with a link to the employee.
+- ~~Employee field changes holding ids show the raw value~~ — done in T28: `departmentId`,
+  `jobTitleId`, `stageId` and `managerId` are stored as `{ nameEn, nameAr }`.
+- ~~A penalty's entries are on the penalty, not on the employee~~ — done in T29: the entries stay
+  on the penalty, and the employee's History also lists their penalties' (a related-records link
+  registered by HR, read at query time — no column, no backfill).
 - "Open record" for a penalty goes to the Penalties list (there is no penalty page).
 - The payroll run page has no History tab yet; `RecordHistoryScreen` (`core/audit/screens.tsx`) is
   ready for it.

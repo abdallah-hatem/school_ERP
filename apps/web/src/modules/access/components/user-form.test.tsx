@@ -17,10 +17,11 @@ vi.mock('../apis', () => ({
   DEACTIVATE_USER: vi.fn(),
   REACTIVATE_USER: vi.fn(),
   SET_TEMPORARY_PASSWORD: vi.fn(),
+  UNLOCK_SIGN_IN: vi.fn(),
   GET_EMPLOYEE_OPTIONS: vi.fn(),
 }));
 
-import { CREATE_USER, GET_EMPLOYEE_OPTIONS, UPDATE_USER } from '../apis';
+import { CREATE_USER, GET_EMPLOYEE_OPTIONS, UNLOCK_SIGN_IN, UPDATE_USER } from '../apis';
 import { sessionWithout } from '@/test/render';
 import { account, fail, NOW, ok, renderAccess, role, ROLES } from '../test/fixtures';
 import { UserForm } from './user-form';
@@ -146,7 +147,7 @@ describe('UserForm', () => {
     );
   });
 
-  it('the linked-employee picker asks the API and won’t pick an employee who has an account', async () => {
+  it('the employee-record picker asks the API and won’t pick an employee who has an account', async () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 });
     options.mockResolvedValue(
       ok(
@@ -166,6 +167,72 @@ describe('UserForm', () => {
     await user.click(screen.getByRole('option', { name: /Rana Mostafa/ }));
     expect(screen.getByRole('combobox', { name: 'Employee' }).textContent).toContain('Rana Mostafa · EMP-0072');
     expect(screen.getByText('1 unsaved change')).toBeTruthy();
+  });
+
+  it('roles limited to a stage, team or self without an employee record: a warning by the field, Save still works', async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    update.mockResolvedValue(ok(officer) as Res<typeof UPDATE_USER>);
+    const warning = 'This person will see no records until you pick who they are in HR.';
+    renderAccess(<UserForm basePath="/en/users" user={officer} roles={ROLES} now={NOW} />);
+    expect(screen.getByRole('heading', { level: 2, name: /^Who is this person in HR\?/ })).toBeTruthy();
+    // HR officer sees the whole school: no warning.
+    expect(screen.queryByText(warning)).toBeNull();
+
+    await user.click(roleBox('Stage head'));
+    expect(screen.getByText(warning)).toBeTruthy();
+    await user.click(roleBox('Stage head'));
+    expect(screen.queryByText(warning)).toBeNull();
+
+    await user.click(roleBox('Direct manager'));
+    expect(screen.getByText(warning)).toBeTruthy();
+    const save = screen.getByRole('button', { name: 'Save' });
+    expect((save as HTMLButtonElement).disabled).toBe(false);
+    await user.click(save);
+    await waitFor(() =>
+      expect(update).toHaveBeenCalledWith(officer.id, { roleIds: [role('hr_officer').id, role('direct_manager').id] }),
+    );
+  });
+
+  it('a scoped role with an employee record picked: no warning', () => {
+    const head = account({
+      ...officer,
+      roles: [{ ...role('stage_head') }],
+      employee: { id: 'e-2', code: 'EMP-0072', nameEn: 'Rana Mostafa', nameAr: 'رنا', photoUrl: null, gender: 'FEMALE' },
+    });
+    renderAccess(<UserForm basePath="/en/users" user={head} roles={ROLES} now={NOW} />);
+    expect(screen.queryByText('This person will see no records until you pick who they are in HR.')).toBeNull();
+  });
+
+  it('a locked sign-in: the Status card says until when, and Unlock sign-in asks first', async () => {
+    const unlock = vi.mocked(UNLOCK_SIGN_IN);
+    unlock.mockResolvedValue(ok({ ...officer, lockedUntil: null }) as Res<typeof UNLOCK_SIGN_IN>);
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    const locked = { ...officer, lockedUntil: '2026-11-17T12:15:00.000Z' };
+    renderAccess(<UserForm basePath="/en/users" user={locked} roles={ROLES} now={NOW} />);
+    expect(screen.getByText('Sign-in locked')).toBeTruthy();
+    expect(
+      screen.getByText('Too many wrong passwords. Sign-in is locked until 14:15, unless you unlock it.'),
+    ).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Unlock sign-in' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Unlock sign-in for Rania Magdy?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Unlock' }));
+    await waitFor(() => expect(unlock).toHaveBeenCalledWith(officer.id));
+  });
+
+  it('editing: Status and Password come before Account, so a phone reads a locked sign-in first', () => {
+    renderAccess(<UserForm basePath="/en/users" user={{ ...officer, lockedUntil: '2026-11-17T12:15:00.000Z' }} roles={ROLES} now={NOW} />);
+    const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
+    expect(headings.slice(0, 3)).toEqual(['Status', 'Password', 'Account']);
+  });
+
+  it('a locked sign-in without core.users.manage: the notice, no Unlock button', () => {
+    renderAccess(
+      <UserForm basePath="/en/users" user={{ ...officer, lockedUntil: '2026-11-17T12:15:00.000Z' }} roles={ROLES} now={NOW} />,
+      'en',
+      sessionWithout('core.users.manage'),
+    );
+    expect(screen.getByText('Sign-in locked')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Unlock sign-in' })).toBeNull();
   });
 
   it('without core.users.manage the page is read-only', () => {

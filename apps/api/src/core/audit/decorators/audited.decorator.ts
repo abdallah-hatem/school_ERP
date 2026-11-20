@@ -15,8 +15,8 @@ export const Audited = (action: AuditAction) => SetMetadata(AUDITED_KEY, action)
 
 /**
  * Declares, with the reason, that a write endpoint records nothing (D6) — e.g. a token refresh.
- * `'wired in T28'` / `'wired in T29'` mark handlers still waiting for their action; T31 fails if
- * any remain.
+ * Only for writes deliberately not recorded: the temporary `'wired in T28'` / `'wired in T29'`
+ * placeholders are gone, and the scan test fails on any.
  */
 export const NotAudited = (reason: string) => SetMetadata(NOT_AUDITED_KEY, reason);
 

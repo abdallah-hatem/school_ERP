@@ -1,8 +1,9 @@
 # Business logic — index
 
 What is true **now** about the business and how the system behaves. Business terms only. Each section
-is its own file; "§N" means the file listed for N below. Dated changes go in
-[`business/00-recent-changes.md`](business/00-recent-changes.md).
+is its own file; "§N" means the file listed for N below. Dated changes are one file each in
+[`business/recent-changes/`](business/recent-changes/) (see
+[`00-recent-changes.md`](business/00-recent-changes.md)).
 
 ## Markers
 
@@ -16,7 +17,7 @@ is its own file; "§N" means the file listed for N below. Dated changes go in
 | § | File | Covers |
 |---|---|---|
 | 1 | [business/01-business.md](business/01-business.md) | What the product is, for whom, how it earns money |
-| 2 | [business/02-roles.md](business/02-roles.md) | Who can do what: roles as data, starting roles (GUESS), last System admin |
+| 2 | [business/02-roles.md](business/02-roles.md) | Who can do what: roles as data, starting roles (GUESS), last System admin, sign-in limits |
 | 3 | [business/03-employees.md](business/03-employees.md) | Employee records, departments, stages, job titles, work system |
 | 4 | [business/04-penalties.md](business/04-penalties.md) | Penalty catalogue, repeat levels, recording, approval, cancelling |
 | 5 | [business/05-lateness.md](business/05-lateness.md) | Monthly lateness and early-leave minutes and the days they cost |
@@ -25,3 +26,4 @@ is its own file; "§N" means the file listed for N below. Dated changes go in
 | 8 | [business/08-scope.md](business/08-scope.md) | Built, Planned, and deliberately left out |
 | 9 | [business/09-audit.md](business/09-audit.md) | Audit log: what is recorded, who sees it, append-only |
 | 10 | [business/10-accounting.md](business/10-accounting.md) | Accounting: the payroll tax rule (income-tax slices, martyrs' fund, insurance share) and the taxes of each approved month |
+| 11 | [business/11-notifications.md](business/11-notifications.md) | Notifications (partly built: the mechanism and HR's reminders; the screens Planned): the in-app bell, who is told what (approvals waiting, reminders), preferences and school defaults, dedupe, access, retention |

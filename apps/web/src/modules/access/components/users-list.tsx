@@ -21,15 +21,18 @@ import {
   ReactivateIcon,
   SearchIcon,
   TemporaryPasswordIcon,
+  LockedIcon,
+  UnlockIcon,
 } from '@/shared/components/ui/icons';
+import { PersonAvatar } from '@/shared/components/ui/person-avatar';
 import { SkeletonIdentity, SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
 import { StatusPill } from '@/shared/components/ui/status-pill';
 import { formatCount } from '@/shared/lib/format';
 import { localName } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
-import { formatSignIn } from '../lib/sign-in-time';
+import { formatLockEnd, formatSignIn } from '../lib/sign-in-time';
 import { activeFilterCount, usersQueryString, type UsersFilterKey, type UsersListQuery } from '../lib/users-query';
-import { Avatar, RoleChips } from './role-bits';
+import { RoleChips } from './role-bits';
 import { useUserActions } from './user-actions';
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -106,7 +109,7 @@ export function UsersList({ basePath, query, rows, total, roles, lastAdminId, no
       skeleton: <SkeletonIdentity />,
       cell: (u) => (
         <span className="flex min-w-0 items-center gap-3">
-          <Avatar name={u.name} inactive={!u.isActive} />
+          <PersonAvatar photoUrl={u.employee?.photoUrl} gender={u.employee?.gender} muted={!u.isActive} />
           <span className="flex min-w-0 flex-col">
             <Link
               href={`${basePath}/${u.id}`}
@@ -145,6 +148,8 @@ export function UsersList({ basePath, query, rows, total, roles, lastAdminId, no
     {
       id: 'employee',
       header: t('access.users.columns.employee'),
+      // Across the card: "No employee record" in half a card wraps to two lines on a phone.
+      card: 'wide',
       className: 'w-40',
       cell: (u) =>
         u.employee ? (
@@ -160,7 +165,8 @@ export function UsersList({ basePath, query, rows, total, roles, lastAdminId, no
     {
       id: 'status',
       header: t('access.users.columns.status'),
-      card: 'status',
+      // On a card the pills get their own line, so the name and email keep the card's width.
+      card: 'badges',
       className: 'w-52',
       skeleton: <SkeletonPill />,
       // The account's whole state in one place: active/inactive, and a temporary password still to
@@ -175,6 +181,15 @@ export function UsersList({ basePath, query, rows, total, roles, lastAdminId, no
           {u.mustChangePassword && u.isActive ? (
             <StatusPill tone="warning" icon={TemporaryPasswordIcon} title={t('access.users.mustChange')}>
               {t('access.users.temporaryPassword')}
+            </StatusPill>
+          ) : null}
+          {u.lockedUntil ? (
+            <StatusPill
+              tone="danger"
+              icon={LockedIcon}
+              title={t('access.users.lockedTitle', { time: formatLockEnd(u.lockedUntil, locale) })}
+            >
+              {t('access.users.locked')}
             </StatusPill>
           ) : null}
         </span>
@@ -205,6 +220,14 @@ export function UsersList({ basePath, query, rows, total, roles, lastAdminId, no
             icon: TemporaryPasswordIcon,
             hidden: !canManage || !u.isActive,
             onSelect: () => actions.setPassword(u),
+          },
+          {
+            id: 'unlock',
+            label: t('access.users.actions.unlock'),
+            icon: UnlockIcon,
+            positive: true,
+            hidden: !canManage || !u.lockedUntil,
+            onSelect: () => actions.unlock(u),
           },
           {
             id: 'deactivate',

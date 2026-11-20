@@ -1,8 +1,14 @@
-import { ADJUSTMENT_TYPES, AdjustmentType, type CreateAdjustmentRequest, type Uuid } from '@school-erp/shared';
+import {
+  ADJUSTMENT_TYPES,
+  AdjustmentType,
+  MAX_MONTHLY_PIASTRES,
+  type CreateAdjustmentRequest,
+  type Uuid,
+} from '@school-erp/shared';
 import { z } from 'zod';
 
-/** Largest single adjustment the API accepts: EGP 10,000,000.00 (`MAX_ADJUSTMENT_PIASTRES`). */
-export const ADJUSTMENT_MAX_PIASTRES = 1_000_000_000;
+/** Largest single adjustment the API accepts: EGP 1,000,000.00 (`MAX_MONTHLY_PIASTRES`). */
+export const ADJUSTMENT_MAX_PIASTRES = MAX_MONTHLY_PIASTRES;
 export const ADJUSTMENT_REASON_MAX = 500;
 
 /** Messages are translation keys so one schema serves both languages. */

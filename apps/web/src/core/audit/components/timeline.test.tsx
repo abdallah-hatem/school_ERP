@@ -89,6 +89,28 @@ describe('AuditTimeline', () => {
     expect(screen.queryByText('Basic salary')).toBeNull();
   });
 
+  it('the payroll return, finalize, returned and transferred entries show the status-change icon approval has, not the pencil', () => {
+    const run = { module: 'hr' as const, entityType: 'payroll_run' as const, changes: [] };
+    const month = { module: 'accounting' as const, entityType: 'accounting_payroll' as const, changes: [] };
+    renderAudit(
+      <AuditTimeline
+        entries={[
+          entry({ action: 'hr.payroll.approve', ...run }),
+          entry({ action: 'hr.payroll.returned', ...run }),
+          entry({ action: 'hr.payroll.transferred', ...run }),
+          entry({ action: 'accounting.payroll.return', ...month }),
+          entry({ action: 'accounting.payroll.finalize', ...month }),
+          entry(),
+        ]}
+        grouping="day"
+        now={NOW}
+        label="Activity timeline"
+      />,
+    );
+    const icons = screen.getAllByTestId('audit-entry').map((e) => e.querySelector('[data-entry-icon]')!.getAttribute('data-entry-icon'));
+    expect(icons).toEqual(['ApproveIcon', 'ApproveIcon', 'ApproveIcon', 'ApproveIcon', 'ApproveIcon', 'EditIcon']);
+  });
+
   it('marks money changes and failed sign-ins', () => {
     renderAudit(
       <AuditTimeline
@@ -114,6 +136,37 @@ describe('AuditTimeline', () => {
     expect(failed!.textContent).toContain('Failed sign-in attempt for admin@school.test');
     // A failed sign-in has no signed-in actor and no record page.
     expect(within(failed!).queryByRole('link')).toBeNull();
+  });
+
+  it('an insurance edit reads its status label and the insured salary as money (EN and AR)', () => {
+    const insured = entry({
+      changes: [
+        { field: 'insuranceStatus', before: 'NOT_INSURED', after: 'INSURED' },
+        { field: 'insuredSalary', before: null, after: 650000 },
+      ],
+    });
+    renderAudit(<AuditTimeline entries={[insured]} grouping="month" now={NOW} label="Record history" />);
+    let item = screen.getByTestId('audit-entry');
+    expect(within(item).getByText('Not insured')).toBeTruthy();
+    expect(within(item).getByText('Insured')).toBeTruthy();
+    expect(within(item).getByText('6,500.00')).toBeTruthy();
+    expect(item.textContent).not.toContain('NOT_INSURED');
+    expect(item.textContent).not.toContain('650000');
+    cleanup();
+
+    renderAudit(<AuditTimeline entries={[insured]} grouping="month" now={NOW} label="Record history" />, 'ar');
+    item = screen.getByTestId('audit-entry');
+    expect(within(item).getByText('غير مؤمَّن عليه')).toBeTruthy();
+    expect(within(item).getByText('مؤمَّن عليه')).toBeTruthy();
+    expect(within(item).getByText('6,500.00')).toBeTruthy();
+    expect(item.textContent).not.toContain('650000');
+    cleanup();
+
+    // On Activity the entry is tagged Money.
+    renderAudit(<AuditTimeline entries={[insured]} grouping="day" now={NOW} label="Activity timeline" />);
+    item = screen.getByTestId('audit-entry');
+    expect(within(item).getByText('Money')).toBeTruthy();
+    expect(within(item).getByText('Insured')).toBeTruthy();
   });
 
   it('Arabic: verbal-noun sentences joined to the actor, Latin digits, month grouping on History', () => {
@@ -203,6 +256,43 @@ describe('AuditTimeline', () => {
     expect(within(item).getByText('Salma Adel · Minutes')).toBeTruthy();
   });
 
+  it('a penalty reads with the employee and violation by name and its status in the screen\'s language (T29)', () => {
+    const cancelled = entry({
+      action: 'hr.penalty.cancel',
+      entityType: 'penalty',
+      entityLabel: { en: 'Omar Fathy', ar: 'عمر فتحي' },
+      changes: [
+        { field: 'status', before: 'APPROVED', after: 'CANCELLED' },
+        { field: 'cancelReason', before: null, after: 'Recorded twice' },
+      ],
+    });
+    const recorded = entry({
+      action: 'hr.penalty.record',
+      entityType: 'penalty',
+      entityLabel: { en: 'Omar Fathy', ar: 'عمر فتحي' },
+      changes: [
+        { field: 'violationId', before: null, after: { nameEn: 'Late arrival', nameAr: 'التأخر' } },
+        { field: 'action', before: null, after: 'DEDUCT_DAYS' },
+      ],
+    });
+    renderAudit(<AuditTimeline entries={[cancelled, recorded]} grouping="day" now={NOW} label="Activity timeline" />);
+    const [first, second] = screen.getAllByTestId('audit-entry');
+    expect(first!.textContent).toContain('cancelled the penalty for Omar Fathy');
+    expect(within(first!).getByText('Approved')).toBeTruthy();
+    expect(within(first!).getByText('Cancelled')).toBeTruthy();
+    expect(within(first!).getByText('Cancellation reason')).toBeTruthy();
+    expect(second!.textContent).toContain('recorded a penalty for Omar Fathy');
+    expect(within(second!).getByText('Late arrival')).toBeTruthy();
+    expect(within(second!).getByText('Deduct days')).toBeTruthy();
+    cleanup();
+
+    renderAudit(<AuditTimeline entries={[cancelled]} grouping="day" now={NOW} label="Activity timeline" />, 'ar');
+    const item = screen.getByTestId('audit-entry');
+    expect(item.textContent).toContain('إلغاء جزاء عمر فتحي');
+    expect(within(item).getByText('معتمد')).toBeTruthy();
+    expect(within(item).getByText('ملغى')).toBeTruthy();
+  });
+
   it('renaming only the Arabic name shows that part with its own label, never "Strike → Strike"', () => {
     const before = { id: 'v1', nameEn: 'Strike', nameAr: 'إضراب قديم', isActive: true, sortOrder: 2 };
     const renamed = entry({
@@ -253,5 +343,56 @@ describe('AuditTimeline', () => {
     // The arrow travels with the new value, so it never ends a line on its own.
     const after = within(item).getByText('Maths');
     expect(after.closest('dd > span')?.textContent).toContain('→');
+  });
+
+  it('an employee moved to another department (names stored without ids, T28) reads Department: Science → Maths', () => {
+    const moved = entry({
+      action: 'hr.employee.update',
+      changes: [
+        {
+          field: 'departmentId',
+          before: { nameEn: 'Science', nameAr: 'العلوم' },
+          after: { nameEn: 'Maths', nameAr: 'الرياضيات' },
+        },
+        { field: 'photoUrl', before: null, after: '/files/employee-photos/e1-abc.png' },
+      ],
+    });
+    renderAudit(<AuditTimeline entries={[moved]} grouping="day" now={NOW} label="Activity timeline" />);
+    const item = screen.getByTestId('audit-entry');
+    expect(within(item).getByText('Department')).toBeTruthy();
+    expect(within(item).getByText('Science')).toBeTruthy();
+    expect(within(item).getByText('Maths')).toBeTruthy();
+    expect(within(item).queryByText(/Name \(English\)/)).toBeNull();
+    // A new photo reads in words, never its file name or path.
+    expect(within(item).getByText('Photo added')).toBeTruthy();
+    expect(item.textContent).not.toContain('e1-abc');
+  });
+
+  it('a photo change reads "Photo changed / removed" in words, also behind "+ n more" and in Arabic', async () => {
+    const user = userEvent.setup();
+    const many = entry({
+      changes: [
+        { field: 'phone', before: '010', after: '011' },
+        { field: 'email', before: null, after: 'omar@school.test' },
+        { field: 'address', before: null, after: 'Cairo' },
+        { field: 'grade', before: null, after: 'A' },
+        { field: 'photoUrl', before: '/files/employee-photos/old-1.jpg', after: '/files/employee-photos/new-2.jpg' },
+      ],
+    });
+    const removed = entry({ changes: [{ field: 'photoUrl', before: '/files/employee-photos/old-1.jpg', after: null }] });
+    renderAudit(<AuditTimeline entries={[many, removed]} grouping="month" now={NOW} label="Record history" />);
+    const [first, second] = screen.getAllByTestId('audit-entry');
+    await user.click(within(first!).getByRole('button', { name: /more/ }));
+    expect(within(first!).getByText('Photo changed')).toBeTruthy();
+    expect(within(second!).getByText('Photo removed')).toBeTruthy();
+    for (const item of [first!, second!]) {
+      expect(item.textContent).not.toMatch(/old-1|new-2|\.jpg/);
+    }
+    cleanup();
+
+    renderAudit(<AuditTimeline entries={[removed]} grouping="month" now={NOW} label="Record history" />, 'ar');
+    const item = screen.getByTestId('audit-entry');
+    expect(within(item).getByText('حُذفت الصورة')).toBeTruthy();
+    expect(item.textContent).not.toContain('.jpg');
   });
 });

@@ -1,9 +1,10 @@
-import type { EventEmitter2 } from '@nestjs/event-emitter';
 import { CoreEvent, ErrorCode, type AuthUser, type RoleRef } from '@school-erp/shared';
 import { hashPassword } from '../../common/utils/password.util';
 import type { AfterCommit } from '../../database/transactions';
 import type { AuditService } from '../audit';
+import type { DomainEvents } from '../events';
 import type { RolesService } from '../roles';
+import type { SignInLimitService } from '../sign-in-limit';
 import type { UserAccountRow, UsersRepository } from './repositories/users.repository';
 import { UserAccountsService } from './user-accounts.service';
 
@@ -26,8 +27,12 @@ function row(overrides: Partial<UserAccountRow> = {}): UserAccountRow {
   };
 }
 
-function makeService(start: UserAccountRow = row(), opts: { otherAdmins?: number } = {}) {
+function makeService(
+  start: UserAccountRow = row(),
+  opts: { otherAdmins?: number; lockedUntil?: Date } = {},
+) {
   let current = start;
+  let lockedUntil = opts.lockedUntil;
   const users = {
     findAccount: jest.fn(() => Promise.resolve(current)),
     update: jest.fn((_id: string, data: Partial<UserAccountRow>) => {
@@ -58,22 +63,55 @@ function makeService(start: UserAccountRow = row(), opts: { otherAdmins?: number
     ),
   };
   const audit = { record: jest.fn(() => Promise.resolve()) };
-  const queued: Array<() => unknown> = [];
+  /** Events published (DomainEvents sends them after the commit — its own spec). */
+  const queued: unknown[][] = [];
+  /** Whether the code runs inside `afterCommit.inTransaction` right now. */
+  const tx = { open: false, seen: [] as string[] };
   const afterCommit = {
-    run: jest.fn((fn: () => unknown) => {
-      queued.push(fn);
+    inTransaction: jest.fn(async (fn: () => Promise<unknown>) => {
+      tx.open = true;
+      try {
+        return await fn();
+      } finally {
+        tx.open = false;
+      }
+    }),
+  };
+  const events = {
+    publish: jest.fn((...args: unknown[]) => {
+      queued.push(args);
       return Promise.resolve();
     }),
   };
-  const events = { emitAsync: jest.fn(() => Promise.resolve([])) };
+  const signInLimit = {
+    lockedUntil: jest.fn((emails: string[]) =>
+      Promise.resolve(new Map(lockedUntil ? emails.map((e) => [e, lockedUntil as Date]) : [])),
+    ),
+    unlock: jest.fn(() => {
+      const was = lockedUntil !== undefined;
+      lockedUntil = undefined;
+      return Promise.resolve(was);
+    }),
+    assertNotLocked: jest.fn(() =>
+      lockedUntil
+        ? Promise.reject(Object.assign(new Error('locked'), { code: ErrorCode.TOO_MANY_ATTEMPTS }))
+        : Promise.resolve(),
+    ),
+    recordFailure: jest.fn(() => {
+      tx.seen.push(tx.open ? 'failure in a transaction' : 'failure outside a transaction');
+      return Promise.resolve();
+    }),
+    clear: jest.fn(() => Promise.resolve()),
+  };
   const service = new UserAccountsService(
     users as unknown as UsersRepository,
     roles as unknown as RolesService,
     audit as unknown as AuditService,
     afterCommit as unknown as AfterCommit,
-    events as unknown as EventEmitter2,
+    events as unknown as DomainEvents,
+    signInLimit as unknown as SignInLimitService,
   );
-  return { service, users, roles, audit, queued, events };
+  return { service, users, roles, audit, queued, events, signInLimit, afterCommit, tx };
 }
 
 describe('UserAccountsService', () => {
@@ -119,11 +157,9 @@ describe('UserAccountsService', () => {
     const result = await service.deactivate('u-1');
     expect(result.isActive).toBe(false);
     expect(users.update).toHaveBeenCalledWith('u-1', { isActive: false });
-    // Queued for after the commit, not emitted inside the transaction.
-    expect(events.emitAsync).not.toHaveBeenCalled();
+    // Fire-and-forget: DomainEvents holds it until the commit.
     expect(queued).toHaveLength(1);
-    await queued[0]();
-    expect(events.emitAsync).toHaveBeenCalledWith(
+    expect(events.publish).toHaveBeenCalledWith(
       CoreEvent.USER_SESSIONS_ENDED,
       expect.objectContaining({ userId: 'u-1', reason: 'deactivated' }),
     );
@@ -166,6 +202,24 @@ describe('UserAccountsService', () => {
       'u-1',
       expect.objectContaining({ mustChangePassword: false }),
     );
+  });
+
+  it('gap 10 — a wrong current password is counted outside any transaction; the new password and its entry are written in one', async () => {
+    const { service, users, audit, afterCommit, tx } = makeService();
+    users.findPasswordHash.mockResolvedValue(await hashPassword('the-right-one', 4));
+    const me = { id: 'u-1', name: 'Mona' } as AuthUser;
+    await expect(
+      service.changeOwnPassword(me, { currentPassword: 'wrong', newPassword: 'new-password-1' }),
+    ).rejects.toMatchObject({ code: ErrorCode.WRONG_PASSWORD });
+    expect(tx.seen).toEqual(['failure outside a transaction']);
+    expect(afterCommit.inTransaction).not.toHaveBeenCalled();
+
+    const order: string[] = [];
+    users.update.mockImplementation(() => (order.push(tx.open ? 'update in tx' : 'update'), Promise.resolve()));
+    audit.record.mockImplementation(() => (order.push(tx.open ? 'audit in tx' : 'audit'), Promise.resolve()));
+    await service.changeOwnPassword(me, { currentPassword: 'the-right-one', newPassword: 'new-password-1' });
+    expect(afterCommit.inTransaction).toHaveBeenCalledTimes(1);
+    expect(order).toEqual(['update in tx', 'audit in tx']);
   });
 
   it('change own password: no current password without a temporary one → WRONG_PASSWORD', async () => {
@@ -221,6 +275,69 @@ describe('UserAccountsService', () => {
     users.employeeExists.mockResolvedValueOnce(false);
     await expect(service.update('u-1', { employeeId: 'e-9' })).rejects.toMatchObject({
       code: ErrorCode.UNKNOWN_EMPLOYEE,
+    });
+  });
+
+  describe('sign-in limit (owner 2026-11-18)', () => {
+    const LOCKED_UNTIL = new Date('2026-11-18T10:15:00Z');
+    const me = { id: 'u-1', name: 'Mona', email: 'mona@school.test' } as AuthUser;
+
+    it('a locked account: the password change is refused before any password is checked', async () => {
+      const { service, users, signInLimit } = makeService(row(), { lockedUntil: LOCKED_UNTIL });
+      await expect(
+        service.changeOwnPassword(me, { currentPassword: 'x', newPassword: 'new-password-1' }),
+      ).rejects.toMatchObject({ code: ErrorCode.TOO_MANY_ATTEMPTS });
+      expect(users.findPasswordHash).not.toHaveBeenCalled();
+      expect(signInLimit.recordFailure).not.toHaveBeenCalled();
+    });
+
+    it('the forced new-password path is refused while locked too', async () => {
+      const { service, users } = makeService(row(), { lockedUntil: LOCKED_UNTIL });
+      await expect(
+        service.changeOwnPassword({ ...me, mustChangePassword: true }, { newPassword: 'mine-1234567' }),
+      ).rejects.toMatchObject({ code: ErrorCode.TOO_MANY_ATTEMPTS });
+      expect(users.update).not.toHaveBeenCalled();
+    });
+
+    it('a wrong current password counts as a wrong sign-in; a right one clears the count', async () => {
+      const { service, users, signInLimit } = makeService();
+      users.findPasswordHash.mockResolvedValue(await hashPassword('the-right-one', 4));
+      await expect(
+        service.changeOwnPassword(me, { currentPassword: 'wrong', newPassword: 'new-password-1' }),
+      ).rejects.toMatchObject({ code: ErrorCode.WRONG_PASSWORD });
+      expect(signInLimit.recordFailure).toHaveBeenCalledWith('mona@school.test');
+      expect(signInLimit.clear).not.toHaveBeenCalled();
+
+      await service.changeOwnPassword(me, { currentPassword: 'the-right-one', newPassword: 'new-password-1' });
+      expect(signInLimit.clear).toHaveBeenCalledWith('mona@school.test');
+    });
+
+    it('the account shows when its lock ends', async () => {
+      const { service } = makeService(row(), { lockedUntil: LOCKED_UNTIL });
+      await expect(service.get('u-1')).resolves.toMatchObject({
+        lockedUntil: LOCKED_UNTIL.toISOString(),
+      });
+    });
+
+    it('unlock: the lock goes and the change is recorded', async () => {
+      const { service, audit, signInLimit } = makeService(row(), { lockedUntil: LOCKED_UNTIL });
+      const after = await service.unlockSignIn('u-1');
+      expect(after.lockedUntil).toBeNull();
+      expect(signInLimit.unlock).toHaveBeenCalledWith('mona@school.test');
+      expect(audit.record).toHaveBeenCalledWith({
+        action: 'core.user.unlock_sign_in',
+        entity: { type: 'user', id: 'u-1', label: 'Mona' },
+        before: { lockedUntil: LOCKED_UNTIL.toISOString() },
+        after: { lockedUntil: null },
+      });
+    });
+
+    it('unlock of an account that was not locked records no change (before = after)', async () => {
+      const { service, audit } = makeService();
+      await service.unlockSignIn('u-1');
+      expect(audit.record).toHaveBeenCalledWith(
+        expect.objectContaining({ before: { lockedUntil: null }, after: { lockedUntil: null } }),
+      );
     });
   });
 });

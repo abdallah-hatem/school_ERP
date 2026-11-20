@@ -42,9 +42,15 @@ describe('Activity query (URL ↔ API)', () => {
       to: '2026-11-17T22:00:00.000Z',
     });
     const chips = toAuditListQuery(parseActivityQuery({ type: 'signIn,failed', module: 'core' }));
-    expect(chips?.action).toEqual(['core.auth.sign_in', 'core.auth.sign_out', 'core.auth.sign_in_failed']);
+    // "Failed" also holds the lockout too many wrong passwords cause.
+    expect(chips?.action).toEqual(['core.auth.sign_in', 'core.auth.sign_out', 'core.auth.sign_in_failed', 'core.auth.locked_out']);
     // HR + sign-ins can't match anything.
     expect(toAuditListQuery(parseActivityQuery({ type: 'signIn', module: 'hr' }))).toBeNull();
+  });
+
+  it('Accounting is a module filter of its own (the return and finalize entries)', () => {
+    expect(parseActivityQuery({ module: 'accounting' })).toEqual({ page: 1, types: [], module: 'accounting' });
+    expect(toAuditListQuery(parseActivityQuery({ module: 'accounting' }))).toMatchObject({ module: 'accounting' });
   });
 
   it('"Settings" is the settings actions of both modules, narrowed further by the chips', () => {
