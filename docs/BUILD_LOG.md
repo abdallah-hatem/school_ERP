@@ -435,6 +435,13 @@ phase live in `docs/build-log/`.
 - 2026-11-20 — #181 (AbdelrahmanHassib, into `demo`: CI deploy of `demo` to Vercel + Neon) — the owner
   first confirmed he asked for it, then dropped Vercel ("never mind vercel lets remove it"): #181
   closed unmerged, CLAUDE.md rule 6 back to no Vercel (#182/#183 reverted here). The demo runs locally.
+- 2026-11-20 — Search-field loader → #185 (owner: the cards just fade while results load; "add a
+  small loader in the searchbar"): while a list refetches (typing, a filter, a tab or a page), a
+  spinner takes the magnifier's place after ~180ms and stays ≥300ms; static under reduced motion;
+  "Loading…" announced once; dropdowns get no spinner of their own; the dim stays. On Employees,
+  Penalties, Users, Activity, Lateness and the payroll run lines; lists whose search filters loaded
+  data don't refetch, so none there. DESIGN.md allows it as the second spinner. Rule added to the
+  building-frontends skill (1.62.20). Checked in screenshots (EN desktop, AR phone).
 - Outbox nits (from #121's live test, cosmetic): the "dead after 10 failures" log line always says
   10 (after an admin retry it's 11); a dead row still gets a `next_attempt_at`. A lock held longer
   than Prisma's 15 s transaction timeout counts as one failure, then the next tick delivers it.
