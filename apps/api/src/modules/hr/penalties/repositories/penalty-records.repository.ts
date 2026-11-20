@@ -93,19 +93,30 @@ const toCandidate = (
   status: r.status,
 });
 
-/** APPROVED records of the pairs dated `from <= date <= upTo` (same date included: §4). */
+/** Records of the pairs in `statuses` dated `from <= date <= upTo` (same date included: §4). */
 const candidatesWhere = (
   keys: readonly RepeatKey[],
   upTo: IsoDate,
   from?: IsoDate,
+  statuses: readonly PenaltyStatus[] = [PenaltyStatus.APPROVED],
 ): Prisma.PenaltyRecordWhereInput => ({
-  status: PenaltyStatus.APPROVED,
+  status: { in: [...statuses] },
   date: { ...(from ? { gte: fromIsoDate(from) } : {}), lte: fromIsoDate(upTo) },
   OR: keys.map((k) => ({ employeeId: k.employeeId, violationId: k.violationId })),
 });
 
-/** How an approval ended (`approve`). */
-export type ApproveOutcome = 'APPROVED' | 'NOT_PENDING' | 'ONCE_PER_DAY';
+/** How an approval ended (`approve`); `earlierPending`: the date of the penalty to approve first (§4). */
+export type ApproveOutcome =
+  | 'APPROVED'
+  | 'NOT_PENDING'
+  | 'ONCE_PER_DAY'
+  | { earlierPending: IsoDate };
+
+/** §4 approve in date order: the pair's earlier PENDING record that blocks the approval, or null. */
+export type EarlierPendingCheck = (pairRecords: ApprovedCandidate[]) => ApprovedCandidate | null;
+
+/** The statuses whose records a pending row's level and order check look at. */
+const APPROVED_OR_PENDING = [PenaltyStatus.APPROVED, PenaltyStatus.PENDING] as const;
 
 /**
  * §4 once per day: given the statuses of the OTHER records of the same pair and date, whether the
@@ -259,16 +270,18 @@ export class PenaltyRecordsRepository extends BaseRepository<
   /**
    * APPROVED records of the pairs dated up to `upTo` (and from `from`, when given), same date
    * included: which of them come earlier is the domain's call (`countPriorInWindow`, §4). One
-   * query for a whole page of rows.
+   * query for a whole page of rows. `withPending`: PENDING ones too (a pending row's order check,
+   * `earlierPendingPenalty`).
    */
   async approvedCandidates(
     keys: readonly RepeatKey[],
     upTo: IsoDate,
     from?: IsoDate,
+    { withPending = false }: { withPending?: boolean } = {},
   ): Promise<ApprovedCandidate[]> {
     if (keys.length === 0) return [];
     const rows = await this.db.penaltyRecord.findMany({
-      where: candidatesWhere(keys, upTo, from),
+      where: candidatesWhere(keys, upTo, from, withPending ? APPROVED_OR_PENDING : undefined),
       select: CANDIDATE_SELECT,
     });
     return rows.map(toCandidate);
@@ -279,8 +292,11 @@ export class PenaltyRecordsRepository extends BaseRepository<
    * records in `window` (same date included; `resolve` decides which come earlier, §4).
    * Writes of the same employee + violation are serialised with a transaction-level advisory
    * lock, so two approvals can't both read the same records, and the once-per-day rule (`refuse`,
-   * §4) is checked again inside the same transaction. NOT_PENDING when the record was no longer
-   * PENDING; ONCE_PER_DAY when another record of that day is already approved.
+   * §4) is checked again inside the same transaction. So is the date order (`earlier`, §4): under
+   * the same lock, so of two concurrent approvals of the 19th and the 20th the 20th either sees the
+   * 19th approved (and counts it) or still pending (and is refused) — never neither. NOT_PENDING
+   * when the record was no longer PENDING; ONCE_PER_DAY when another record of that day is already
+   * approved; `{ earlierPending }` when an earlier record of the pair is still pending.
    */
   async approve(
     id: string,
@@ -289,17 +305,21 @@ export class PenaltyRecordsRepository extends BaseRepository<
     approvedById: string | null,
     resolve: (approved: ApprovedCandidate[]) => LevelData,
     refuse: SameDayRefusal,
+    earlier: EarlierPendingCheck,
   ): Promise<ApproveOutcome> {
     return this.txHost.withTransaction(async () => {
       const tx = this.txHost.tx;
       await lockPair(tx, key);
       // `window.upTo` is the record's own date.
       if (refuse(await sameDayStatuses(tx, key, window.upTo, id))) return 'ONCE_PER_DAY';
-      const approved = await tx.penaltyRecord.findMany({
-        where: candidatesWhere([key], window.upTo, window.from),
+      const rows = await tx.penaltyRecord.findMany({
+        where: { ...candidatesWhere([key], window.upTo, window.from, APPROVED_OR_PENDING), id: { not: id } },
         select: CANDIDATE_SELECT,
       });
-      const fixed = resolve(approved.map(toCandidate));
+      const pairRecords = rows.map(toCandidate);
+      const blocker = earlier(pairRecords);
+      if (blocker) return { earlierPending: blocker.date };
+      const fixed = resolve(pairRecords.filter((r) => r.status === PenaltyStatus.APPROVED));
       const { count } = await tx.penaltyRecord.updateMany({
         where: { id, status: PenaltyStatus.PENDING },
         data: {

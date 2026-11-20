@@ -12,7 +12,7 @@ import { ApproveIcon, CloseIcon } from '@/shared/components/ui/icons';
 import { nameIn } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { APPROVE_PENALTY, CANCEL_PENALTY } from '../apis';
-import { describeAction, errorMessage } from '../lib/penalty-text';
+import { approveBlockedReason, describeAction, errorMessage } from '../lib/penalty-text';
 
 type Pending = 'approve' | 'cancel' | null;
 
@@ -23,6 +23,10 @@ type Pending = 'approve' | 'cancel' | null;
  * reason and the list refreshes to show the record as it now is. Each action shows only to a user
  * holding its permission (view only — the API refuses the rest); with neither, no menu.
  * `variant="buttons"`: the same actions as buttons (the penalty a notification opens).
+ * §4 approve in date order: while an earlier penalty of the same violation is still pending
+ * (`record.earlierPending`), Approve is shown disabled with the reason (the menu item says it under
+ * its label; the button is described by `approveBlockedReason`'s sentence shown with it). Cancel
+ * stays available. Should the list be out of date, the server's refusal says the same in the dialog.
  */
 export function PenaltyActions({ record, variant = 'menu' }: { record: PenaltyRecord; variant?: 'menu' | 'buttons' }) {
   const { t, has, locale } = useTranslation();
@@ -35,6 +39,7 @@ export function PenaltyActions({ record, variant = 'menu' }: { record: PenaltyRe
   const stale = useRef(false);
 
   const canApprove = can('hr.penalties.approve') && record.status === PenaltyStatus.PENDING;
+  const blockedReason = canApprove ? approveBlockedReason(record, t, locale) : null;
   const canCancel = can('hr.penalties.cancel');
   if (record.status === PenaltyStatus.CANCELLED || (!canApprove && !canCancel)) return null;
 
@@ -64,7 +69,7 @@ export function PenaltyActions({ record, variant = 'menu' }: { record: PenaltyRe
       return true;
     }
     stale.current = true;
-    setError(errorMessage(res, t, has, t('errors.INTERNAL_ERROR')));
+    setError(errorMessage(res, t, has, t('errors.INTERNAL_ERROR'), locale));
     return false;
   }
 
@@ -84,7 +89,13 @@ export function PenaltyActions({ record, variant = 'menu' }: { record: PenaltyRe
           </Button>
         ) : null}
         {canApprove ? (
-          <Button variant="primary" className="cursor-pointer" onClick={() => show('approve')}>
+          <Button
+            variant="primary"
+            className="cursor-pointer disabled:cursor-not-allowed"
+            disabled={!!blockedReason}
+            aria-describedby={blockedReason ? `penalty-${record.id}-blocked` : undefined}
+            onClick={() => show('approve')}
+          >
             <ApproveIcon />
             {t('penalties.approve.button')}
           </Button>
@@ -99,6 +110,7 @@ export function PenaltyActions({ record, variant = 'menu' }: { record: PenaltyRe
             label: t('penalties.approve.button'),
             icon: ApproveIcon,
             hidden: !canApprove,
+            disabledReason: blockedReason ?? undefined,
             onSelect: () => show('approve'),
           },
           {

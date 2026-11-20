@@ -314,6 +314,13 @@ export interface PenaltyRecord {
   createdBy: { id: Uuid; name: string } | null;
   approvedBy: { id: Uuid; name: string } | null;
   createdAt: IsoDateTime;
+  /**
+   * §4 approve in date order (owner 2026-11-20): for a PENDING record, the earliest earlier
+   * penalty of the same violation and employee (in the repetition window) that is still pending —
+   * approving this one is refused (409 `PENALTY_EARLIER_PENDING`) until it is approved or
+   * cancelled. Null otherwise (and always for approved and cancelled records).
+   */
+  earlierPending: { id: Uuid; date: IsoDate } | null;
 }
 
 // ── Monthly lateness ───────────────────────────────────────────────────────

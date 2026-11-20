@@ -90,6 +90,7 @@ export function record(overrides: Partial<PenaltyRecord> = {}): PenaltyRecord {
     createdBy: null,
     approvedBy: null,
     createdAt: '2026-11-05T09:00:00.000Z',
+    earlierPending: null,
     ...overrides,
   };
 }

@@ -76,6 +76,11 @@ export const ErrorCode = {
   PENALTY_CANCELLED: 'PENALTY_CANCELLED',
   /** §4: a once-per-day violation already has a pending or approved penalty that day. */
   VIOLATION_ONCE_PER_DAY: 'VIOLATION_ONCE_PER_DAY',
+  /**
+   * §4 (owner 2026-11-20): an earlier penalty of the same violation and employee is still pending,
+   * so this one can't be approved yet (approve in date order). `params.date`: the earlier one's date.
+   */
+  PENALTY_EARLIER_PENDING: 'PENALTY_EARLIER_PENDING',
 
   // payroll
   PAYROLL_APPROVED: 'PAYROLL_APPROVED',

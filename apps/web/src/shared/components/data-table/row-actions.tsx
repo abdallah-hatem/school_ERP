@@ -14,7 +14,9 @@ import type { DataTableColumn } from './data-table';
 /*
  * A row's actions behind one ⋯ button: a menu of icon + label items, the destructive ones (cancel,
  * retire, hide) in red at the bottom after a divider. Actions that don't apply to the row are
- * left out by the caller (`hidden`), never shown disabled. Radix gives the keyboard: Enter / Space
+ * left out by the caller (`hidden`). An action that applies but can't run YET is shown disabled
+ * with its reason under the label (`disabledReason`) — readable on a phone, unlike a tooltip
+ * (a penalty waiting for an earlier one, §4). Radix gives the keyboard: Enter / Space
  * / ↓ open, arrows move, Escape closes and focus returns to the ⋯; it mirrors under `dir="rtl"`.
  */
 
@@ -35,6 +37,8 @@ export interface RowAction {
   hidden?: boolean;
   /** A small count after the label (adjustments recorded). */
   count?: number;
+  /** Shown but not selectable, with this reason under the label: it applies, just not yet. */
+  disabledReason?: string;
 }
 
 export function RowActions({
@@ -65,9 +69,20 @@ export function RowActions({
     const content = (
       <>
         <Icon className="size-5 shrink-0" />
-        <span data-slot="row-action-label" className="min-w-0 flex-1 break-words">
-          {action.label}
-        </span>
+        {action.disabledReason ? (
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span data-slot="row-action-label" className="break-words">
+              {action.label}
+            </span>
+            <span data-slot="row-action-reason" className="text-muted-foreground text-xs font-normal break-words">
+              {action.disabledReason}
+            </span>
+          </span>
+        ) : (
+          <span data-slot="row-action-label" className="min-w-0 flex-1 break-words">
+            {action.label}
+          </span>
+        )}
         {action.count ? (
           <span className="tabular bg-primary-soft text-primary grid min-w-5 place-items-center rounded-full px-1.5 text-xs">
             {formatCount(action.count)}
@@ -77,6 +92,7 @@ export function RowActions({
     );
     const itemClass = cn(
       'flex min-h-11 cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold outline-none select-none',
+      'data-[disabled]:cursor-not-allowed data-[disabled]:text-muted-foreground data-[disabled]:[&>svg]:opacity-60',
       action.destructive
         ? 'text-destructive-ink data-[highlighted]:bg-destructive-soft'
         : action.positive
@@ -102,6 +118,7 @@ export function RowActions({
         data-positive={action.positive || undefined}
         key={action.id}
         className={itemClass}
+        disabled={!!action.disabledReason}
         onSelect={() => {
           pending.current = action.onSelect ?? null;
         }}

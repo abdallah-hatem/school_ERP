@@ -29,6 +29,16 @@
   are levels 1, 2, 3 and 4. A penalty not recorded yet (the preview) comes after every penalty
   already on its date. Pending and cancelled penalties never count. The level is computed again at
   approval and then fixed (approved levels are never recomputed).
+- **DECIDED** (owner, 2026-11-20) — **Approve in date order.** A penalty can't be approved while an
+  **earlier** penalty (same order as above: an earlier date, or the same date and recorded before
+  it) of the **same violation** for the **same employee**, inside the repetition window, is still
+  **pending**. The approval is refused with "Approve or cancel the 19 Nov 2026 penalty for this
+  violation first." (naming the earliest such one), and the screens show Approve greyed out with
+  that reason. Cancelling is always allowed (month lock aside). So 18 Nov approved, then 19 and
+  20 Nov pending: 20 Nov waits; approving 19 Nov gives level 2, then 20 Nov level 3 — never two
+  penalties on one level. The check runs inside the approval, under the same lock as the level, so
+  two approvals at once can't both slip through. Penalties approved **before** this rule keep
+  their levels, so older data may show two approved penalties with the same level.
 - **GUESS** — The repetition window is the **contract year** (1 June – 31 May). It's a setting (§7).
   The rolling-12-months option starts on the same date one year earlier, inclusive.
 - **DECIDED** — A new penalty starts as **pending**. HR **approves** it, or **cancels** it with a

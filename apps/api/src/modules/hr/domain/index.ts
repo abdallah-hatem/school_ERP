@@ -7,6 +7,7 @@ export { divRoundHalfUp, mulDivRoundHalfUp } from './rounding';
 export { oncePerDayRefuses, type OncePerDayStage } from './once-per-day';
 export {
   countPriorInWindow,
+  earlierPendingPenalty,
   isEarlierPenalty,
   penaltyLevel,
   repetitionWindowStart,

@@ -45,4 +45,15 @@ describe('translateError', () => {
     expect(t('ar', 7)).toBe('محاولات كثيرة جدًا. حاول مرة أخرى بعد 7 دقائق.');
     expect(t('ar', 15)).toBe('محاولات كثيرة جدًا. حاول مرة أخرى بعد 15 دقيقة.');
   });
+
+  it('an ISO date param reads as a date in the language (PENALTY_EARLIER_PENDING)', () => {
+    const params = { date: '2026-11-19' };
+    expect(translateError('PENALTY_EARLIER_PENDING', 'en', params)).toBe(
+      'Approve or cancel the 19 Nov 2026 penalty for this violation first.',
+    );
+    const ar = translateError('PENALTY_EARLIER_PENDING', 'ar', params);
+    expect(ar).toContain('19');
+    expect(ar).toContain('2026');
+    expect(ar).not.toContain('2026-11-19');
+  });
 });

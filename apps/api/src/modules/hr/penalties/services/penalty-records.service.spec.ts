@@ -131,6 +131,55 @@ describe('PenaltyRecordsService', () => {
     });
   });
 
+  describe('approve in date order (§4, owner 2026-11-20)', () => {
+    type Earlier = (records: unknown[]) => { id: string } | null;
+    const pendingAt = (id: string, iso: string) => ({ ...approvedAt(id, iso), status: 'PENDING' });
+
+    it('an earlier pending one → 409 PENALTY_EARLIER_PENDING naming its date; nothing audited or notified', async () => {
+      const { service, audit, notifications } = makeService({
+        approve: jest.fn().mockResolvedValue({ earlierPending: '2025-11-09' }),
+      });
+      await expect(service.approve('r1', 'u1')).rejects.toMatchObject({
+        status: 409,
+        code: ErrorCode.PENALTY_EARLIER_PENDING,
+        params: { date: '2025-11-09' },
+      });
+      expect(audit.record).not.toHaveBeenCalled();
+      expect(notifications.penaltyApproved).not.toHaveBeenCalled();
+    });
+
+    it('the check the repository runs under the lock: earlier pending blocks, approved / later do not', async () => {
+      const { service, repository } = makeService();
+      await service.approve('r1', 'u1');
+      const earlier = repository.approve.mock.calls[0][6] as Earlier;
+      // r1 is dated 2025-11-10, recorded 08:00.
+      expect(earlier([pendingAt('r0', '2025-11-09T08:00:00Z')])?.id).toBe('r0');
+      expect(earlier([pendingAt('r0', '2025-11-10T07:00:00Z')])?.id).toBe('r0');
+      expect(earlier([pendingAt('r2', '2025-11-10T09:00:00Z')])).toBeNull();
+      expect(earlier([approvedAt('r0', '2025-11-09T08:00:00Z')])).toBeNull();
+    });
+
+    it('a pending row carries its blocker; one with none (or an approved row) carries null', async () => {
+      const blocked = makeService({
+        approvedCandidates: jest.fn().mockResolvedValue([pendingAt('r0', '2025-11-09T08:00:00Z')]),
+      });
+      expect(await blocked.service.get('r1')).toMatchObject({
+        level: 1,
+        earlierPending: { id: 'r0', date: '2025-11-09' },
+      });
+      expect(blocked.repository.approvedCandidates).toHaveBeenCalledWith(
+        [{ employeeId: 'e1', violationId: 'v1' }],
+        '2025-11-10',
+        undefined,
+        { withPending: true },
+      );
+      const free = makeService();
+      expect(await free.service.get('r1')).toMatchObject({ earlierPending: null });
+      const approved = makeService({ findOne: jest.fn().mockResolvedValue(row({ status: 'APPROVED' })) });
+      expect(await approved.service.get('r1')).toMatchObject({ earlierPending: null });
+    });
+  });
+
   it('cancel checks the month lock before writing', async () => {
     const { service, repository, monthLock } = makeService();
     monthLock.assertMonthOpen.mockRejectedValue(new Error('locked'));
