@@ -28,6 +28,7 @@ export function PayrollRunHistoryScreen({
       entityId={runId}
       recordName=""
       description={t('payroll.tabs.historyDescription')}
+      emptyBody={t('payroll.tabs.historyEmptyBody')}
       basePath={`/${locale}/payroll/${runId}/history`}
       searchParams={searchParams}
     />

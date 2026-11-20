@@ -9,6 +9,8 @@ vi.mock('next/navigation', () => ({
   usePathname: () => pathname.current,
 }));
 vi.mock('next/link', async () => ({ default: (await import('@/core/audit/test/fixtures')).MockLink }));
+// The run's History screen is a server component around this one; only its props are read here.
+vi.mock('@/core/audit/screens', () => ({ RecordHistoryScreen: () => null }));
 
 import { createTranslator } from '@/shared/lib/i18n';
 import type { AuditEntry } from '@school-erp/shared';
@@ -16,6 +18,7 @@ import { RecordHistory } from '@/core/audit';
 import { parseHistoryQuery } from '@/core/audit/lib/history-query';
 import { ACTORS, AHMED, entry, NOW, renderAudit } from '@/core/audit/test/fixtures';
 import { sessionWithout } from '@/test/render';
+import { PayrollRunHistoryScreen } from '../history-screen';
 import { payrollMessages } from '../messages';
 import { renderPayroll, RUN_ID } from '../test/fixtures';
 import { RunTabs } from './run-shell';
@@ -141,6 +144,33 @@ describe('Payroll run — History tab', () => {
     expect([...approved!.querySelectorAll('dt')].map((dt) => dt.textContent)).toEqual(['الحالة', 'الصافي']);
     expect(within(adjusted!).getByText('سلمى عادل')).toBeTruthy();
     expect(adjusted!.textContent).not.toMatch(/ADDITION/);
+  });
+});
+
+describe('Payroll run — History tab, nothing recorded yet', () => {
+  it.each([
+    ['en', "Creating, recalculating, adjusting and approving this month's payroll will be listed here, with who did it.", /this employee/],
+    ['ar', 'ستُسجَّل هنا عمليات إنشاء رواتب هذا الشهر وإعادة حسابها وتعديلها واعتمادها، ومن قام بكلٍّ منها.', /هذا الموظف/],
+  ] as const)('%s: the empty state speaks of the run, not of an employee', (locale, sentence, employee) => {
+    // The screen hands the run's own sentence to the shared History (not the employee default).
+    const screenElement = PayrollRunHistoryScreen({ locale, runId: RUN_ID, searchParams: {} });
+    expect(screenElement.props.emptyBody).toBe(sentence);
+    renderAudit(
+      <RecordHistory
+        basePath={`/${locale}/payroll/${RUN_ID}/history`}
+        recordName=""
+        emptyBody={screenElement.props.emptyBody}
+        query={parseHistoryQuery({})}
+        entries={[]}
+        total={0}
+        fields={[]}
+        actors={[]}
+        now={NOW}
+      />,
+      locale,
+    );
+    expect(screen.getByText(sentence)).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(employee);
   });
 });
 

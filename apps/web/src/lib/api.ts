@@ -1,6 +1,5 @@
 'use server';
 
-import { revalidateTag } from 'next/cache';
 import { cookies, headers as nextHeaders } from 'next/headers';
 import { redirect } from 'next/navigation';
 import {
@@ -11,6 +10,7 @@ import {
   sessionCookies,
   authCookie,
 } from '@/lib/middlewareFunctions';
+import { expireTags } from '@/lib/revalidate';
 import type { ApiResult, DownloadedFile } from '@/lib/types';
 import { LOCALE_COOKIE, requestLocale } from '@/shared/lib/i18n';
 
@@ -164,7 +164,9 @@ async function executeRequest<T>(
     const attempts = API_RETRY_ENABLED && isIdempotent ? API_RETRY_ATTEMPTS : 1;
     const res = await fetchWithRetry(fullUrl, { ...options, headers, body }, attempts);
 
-    options.revalidateTags?.forEach((tag) => revalidateTag(tag, 'default'));
+    // A write's tags expire at once, and (in a Server Action) the browser drops its router cache:
+    // a tab opened right after the write reads it, never a copy from before (`expireTags`).
+    if (options.revalidateTags?.length) expireTags(options.revalidateTags, !!(await nextHeaders()).get('next-action'));
     if (options.forwardAuthCookies) await forwardAuthCookies(res);
 
     if (
