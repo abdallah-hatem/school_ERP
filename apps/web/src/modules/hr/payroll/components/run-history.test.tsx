@@ -107,6 +107,32 @@ describe('Payroll run — History tab', () => {
     }
   });
 
+  it('"Last change" names the first line the trimmed entry shows: Status for an approve, Net for a create', () => {
+    const lastChange = () => {
+      const box = screen.getByText(/^(Last change|آخر تغيير)$/).parentElement as HTMLElement;
+      return box.querySelector('p.text-xs')?.textContent;
+    };
+    renderRunHistory();
+    expect(lastChange()).toBe('Status');
+    cleanup();
+    renderRunHistory('ar');
+    expect(lastChange()).toBe('الحالة');
+    cleanup();
+    renderAudit(
+      <RecordHistory
+        basePath={`/en/payroll/${RUN_ID}/history`}
+        recordName=""
+        query={parseHistoryQuery({})}
+        entries={[ENTRIES[2]!]}
+        total={1}
+        fields={[]}
+        actors={ACTORS}
+        now={NOW}
+      />,
+    );
+    expect(lastChange()).toBe('Net');
+  });
+
   it('Arabic: the sentences, values and the run’s description in Arabic', () => {
     renderRunHistory('ar');
     expect(screen.getByText('من فعل ماذا في رواتب هذا الشهر — الإنشاء وإعادة الحساب والتعديلات والاعتماد — الأحدث أولًا.')).toBeTruthy();

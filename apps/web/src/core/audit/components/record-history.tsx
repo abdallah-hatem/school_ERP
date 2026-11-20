@@ -10,7 +10,7 @@ import { FilterIcon, HistoryIcon, SearchIcon } from '@/shared/components/ui/icon
 import { Skeleton, SkeletonProse, SkeletonText } from '@/shared/components/ui/skeleton';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
-import { fieldLabel } from '../lib/entry-text';
+import { changeRows, fieldLabel } from '../lib/entry-text';
 import { AuditI18n } from '../messages';
 import { AUDIT_PAGE_SIZE, historyQueryString, type HistoryQuery } from '../lib/history-query';
 import { AuditFiltersSheet } from './filters-sheet';
@@ -69,6 +69,10 @@ export function RecordHistory({
   }
 
   const latest = !filtered && query.page === 1 ? entries[0] : undefined;
+  // The first line the timeline shows for it (the same trimmed rows: an approve says "Status").
+  const latestField = latest
+    ? changeRows(latest.changes, t, has, locale, latest.entityType, latest.action)[0]?.label
+    : undefined;
   const fieldOptions = fields
     .map((f) => ({ value: f, label: fieldLabel(f, t, has) }))
     .sort((a, b) => a.label.localeCompare(b.label, locale));
@@ -161,9 +165,7 @@ export function RecordHistory({
                 {relativeAgo(latest.at, now, t) ?? formatShortDay(schoolDay(latest.at), locale)} ·{' '}
                 <ActorName entry={latest} className="" />
               </p>
-              {latest.changes[0] ? (
-                <p className="text-xs text-muted-foreground">{fieldLabel(latest.changes[0].field, t, has)}</p>
-              ) : null}
+              {latestField ? <p className="text-xs text-muted-foreground">{latestField}</p> : null}
             </div>
           </div>
         ) : null}
