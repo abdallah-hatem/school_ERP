@@ -484,6 +484,12 @@ phase live in `docs/build-log/`.
   Accounting). Must fix: run History empty right after Recalculate until a reload — being fixed with
   four later items (run empty-state text, approved-month refusal UI, Arabic count plural, recount
   entry label).
+- 2026-11-20 — Dry-run 11-20b fixes → #201: History was stale after a write (apiFetch expired tags with
+  `revalidateTag(tag,'default')`, which serves the old copy and never tells the browser) — now
+  `updateTag` inside Server Actions (fallback `revalidateTag(tag,'max')`), so every tagged write refreshes
+  at once; smoke test recalc → History without reload. Also: run-specific empty text, approved-month
+  refusal hides the date hint and disables Save, recount labels "Penalty date"; the Arabic count was
+  already plural (test added). `demo` PR #198 now carries all of it; waits for the owner's approval.
 ## Next up
 
 - Custom icon set drawn (`design/mockups/icon-set.html`, style G monoline + solid when selected) —
