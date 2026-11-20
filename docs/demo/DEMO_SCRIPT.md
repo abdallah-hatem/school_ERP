@@ -27,7 +27,7 @@ Before the demo, on the demo database:
 - Active headcount with the split by stage; this month's payroll (status + net); pending and
   approved penalties this month; quick links.
 - The menu is grouped by module: HR (Employees, Penalties, Lateness, Payroll), Accounting (Approved
-  payroll, Payroll taxes), Inventory and Students marked "Soon", Administration (Settings, Activity, Users,
+  pay — "الرواتب المعتمدة" in Arabic; its page is titled Approved payroll — and Payroll taxes), Inventory and Students marked "Soon", Administration (Settings, Activity, Users,
   Roles). The bell sits in the top bar.
 - Switch **ع ↔ EN**: the whole layout mirrors without a reload and stays on the same page.
 - ✔ The browser tab reads "Dashboard · <school name>" (لوحة التحكم · <اسم المدرسة> in Arabic), like
@@ -116,13 +116,16 @@ Before the demo, on the demo database:
   with net, insurance, taxes and gross. Open the month from step 7 → ✔ HR's run page, read only:
   each employee's salary, penalties, lateness, adjustments and net match HR's run, then insurance
   share, income tax, martyrs' fund and gross. ✔ On two rows, net + insurance + tax + fund = gross
-  by hand; the total row's gross equals the Payroll taxes statement's. A draft month → ✔ not listed.
+  by hand; the total row under the lines ("Subtotal · all 38") has the same gross as the
+  Payroll taxes statement. A draft month → ✔ not listed.
   ✔ The month says **Pending transfer**. **Return to HR** → the dialog won't confirm without a
   reason; give one → ✔ back on the list, the month gone. As HR: ✔ the bell says Accounting returned
   it (in Arabic too, a Latin reason reads whole), the runs list shows *Draft* + *Returned*, the run
-  says "Returned by Accounting …" with the reason; Activity → ✔ the return on the month and on HR's
-  run, "Pending transfer → Returned to HR" in words; approve it again → ✔ it is back in Accounting →
-  Approved payroll, pending, the notice gone. As the Accountant, **Finalize** → ✔ *Finalized ·
+  says "Returned by Accounting …" with the reason; Activity (as HR or the admin — the Accountant has
+  no Activity) → ✔ the return on the month and on HR's run, "Pending transfer → Returned to HR" in
+  words; fix something the reason names (e.g. lateness), **Recalculate**, approve it again → ✔ it is
+  back in Accounting → Approved payroll, pending, the notice gone, and its net, taxes and gross are
+  the new ones. As the Accountant, **Finalize** → ✔ *Finalized ·
   transferred*, Return and Finalize are gone; HR's run and runs list show *Finalized · transferred*.
 - Click the employee's name (on the payslip, or in the run's "Employees this month") → ✔ their
   profile opens. Every employee name in the app does this (penalties, lateness, the run).
