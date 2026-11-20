@@ -18,11 +18,20 @@
     "account": "My account",
     "modules": {
       "home": "Home",
+      "school": "School",
       "hr": "HR",
       "accounting": "Accounting",
-      "inventory": "Inventory",
-      "students": "Students",
+      "transport": "Transport",
+      "parentPortal": "Parent portal",
       "administration": "Administration"
+    },
+    "coming": {
+      "students": "Students",
+      "academics": "Academics",
+      "attendance": "Attendance",
+      "exams": "Exams & grades",
+      "leave": "Leave & permissions",
+      "fees": "Fees"
     },
     "soon": "Soon",
     "soonTitle": "{name} — coming soon",
