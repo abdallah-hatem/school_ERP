@@ -785,6 +785,7 @@ export function RunLinesToolbar({
           placeholder={t('payroll.filters.searchPlaceholder')}
           value={search}
           disabled={disabled}
+          loading={busy}
           onChange={(e) => onSearchChange(e.target.value)}
         />
         <FilterSelect

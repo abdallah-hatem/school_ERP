@@ -1,8 +1,8 @@
 'use client';
 
-import { useRef, type ComponentProps } from 'react';
+import { useEffect, useRef, useState, type ComponentProps } from 'react';
 import { scrollListIntoView } from '@/shared/components/data-table/pagination';
-import { Button } from '@/shared/components/ui/button';
+import { Button, Spinner } from '@/shared/components/ui/button';
 import { Combobox, needsSearch } from '@/shared/components/ui/combobox';
 import { ClearFiltersIcon, SearchIcon } from '@/shared/components/ui/icons';
 import { formatCount } from '@/shared/lib/format';
@@ -166,16 +166,61 @@ export function ClearFilters({
   );
 }
 
-/** Search box with the leading magnifier. Pass `aria-label` and a translated `placeholder`. */
+/** How long a refetch runs before the search box shows it, so instant results don't flash it. */
+export const SEARCH_LOADING_DELAY_MS = 180;
+/** Once shown, the spinner stays at least this long, so it never flickers on and off. */
+export const SEARCH_LOADING_MIN_MS = 300;
+
+/**
+ * True once `active` has lasted `SEARCH_LOADING_DELAY_MS`, then kept true for at least
+ * `SEARCH_LOADING_MIN_MS` — a refetch that ends sooner shows nothing.
+ */
+export function useDelayedLoading(active: boolean): boolean {
+  const [shown, setShown] = useState(false);
+  const shownAt = useRef(0);
+  useEffect(() => {
+    if (active === shown) return;
+    if (active) {
+      const timer = setTimeout(() => {
+        shownAt.current = Date.now();
+        setShown(true);
+      }, SEARCH_LOADING_DELAY_MS);
+      return () => clearTimeout(timer);
+    }
+    const left = Math.max(0, SEARCH_LOADING_MIN_MS - (Date.now() - shownAt.current));
+    const timer = setTimeout(() => setShown(false), left);
+    return () => clearTimeout(timer);
+  }, [active, shown]);
+  return shown;
+}
+
+/**
+ * Search box with the leading magnifier. Pass `aria-label` and a translated `placeholder`.
+ *
+ * `loading` is the list's refetch (its `useTransition` pending — from typing, a filter, a tab or
+ * a page; owner, 2026-11-20): after a short delay a spinner takes the magnifier's place, same size
+ * and spot (static under reduced motion), and "Loading…" is announced once. The list keeps dimming.
+ */
 export function SearchInput({
   className,
   wrapperClassName,
+  loading = false,
   ...props
-}: ComponentProps<typeof Input> & { wrapperClassName?: string }) {
+}: ComponentProps<typeof Input> & { wrapperClassName?: string; loading?: boolean }) {
+  const { t } = useTranslation();
+  const busy = useDelayedLoading(loading);
+  const iconClass = 'pointer-events-none absolute inset-y-0 start-3.5 my-auto size-5';
   return (
     <div className={cn('relative min-w-0 flex-1 basis-64', wrapperClassName)}>
-      <SearchIcon className="text-muted-foreground pointer-events-none absolute inset-y-0 start-3.5 my-auto size-5" />
+      {busy ? (
+        <Spinner data-testid="search-spinner" className={cn(iconClass, 'text-primary animate-none motion-safe:animate-spin')} />
+      ) : (
+        <SearchIcon data-testid="search-icon" className={cn(iconClass, 'text-muted-foreground')} />
+      )}
       <Input type="search" {...props} className={cn('ps-11', className)} />
+      <span role="status" className="sr-only">
+        {busy ? t('ui.states.loading') : null}
+      </span>
     </div>
   );
 }
