@@ -427,6 +427,11 @@ phase live in `docs/build-log/`.
   every screen width, and no Month total card on screen ("its already at the cards at the top" — the
   four tiles carry the totals); print and Excel/PDF keep the total row. The hidden-totals note moved
   under the tiles. DataTable gained `cardsBelow="always"` and `footerCard="none"`.
+- 2026-11-20 — `demo` refreshed → #167 merged (dev → demo, merge commit `7543009`; owner: "merge it
+  for me", with the admin bypass — a one-off, `demo`/`testing`/`production` stay the owner's). `demo`
+  now equals `dev` at `625de6d`. Still the owner's before Sunday: re-run the seed (set
+  SEED_ADMIN_PASSWORD first), remove "Test User" / "Test Role AR", insure 2–3 employees, add an HR
+  officer and an Accountant login.
 
 ## Next up
 
