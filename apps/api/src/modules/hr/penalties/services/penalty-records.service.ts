@@ -22,6 +22,7 @@ import { monthOf, toIsoDate } from '../../../../common/utils/dates.util';
 import {
   countPriorInWindow,
   deductedDays,
+  earlierPendingPenalty,
   oncePerDayRefuses,
   repetitionWindowStart,
   resolvePenalty,
@@ -60,8 +61,13 @@ export interface MonthPenaltyInputs {
 /** An approved penalty as the payslip itemises it (before its amount is worked out). */
 export type ApprovedMonthPenalty = Omit<PayslipPenalty, 'amount'>;
 
-/** A record row → the contract shape, with `shown` (level / action / days) applied. */
-function toRecord(row: RecordRow, shown: CatalogueLevel): PenaltyRecord {
+/** What a row shows besides its stored fields: level / action / days, and what blocks approving it. */
+interface Shown extends CatalogueLevel {
+  earlierPending: PenaltyRecord['earlierPending'];
+}
+
+/** A record row → the contract shape, with `shown` (level / action / days, blocker) applied. */
+function toRecord(row: RecordRow, shown: Shown): PenaltyRecord {
   return {
     id: row.id,
     employee: row.employee,
@@ -76,6 +82,7 @@ function toRecord(row: RecordRow, shown: CatalogueLevel): PenaltyRecord {
     createdBy: row.createdBy,
     approvedBy: row.approvedBy,
     createdAt: row.createdAt.toISOString(),
+    earlierPending: shown.earlierPending,
   };
 }
 
@@ -90,6 +97,9 @@ const positionOf = (row: RecordRow): PenaltyTarget => ({
 
 /** What a non-pending record shows: the level, action and days stored on it. */
 const storedLevel = (row: RecordRow): CatalogueLevel => toLevel(row);
+
+/** A non-pending record: its stored level, and nothing blocks it (it isn't waiting for approval). */
+const storedShown = (row: RecordRow): Shown => ({ ...storedLevel(row), earlierPending: null });
 
 /**
  * A record as its audit entries store it (§9): the violation by its two names, not its id, and the
@@ -120,6 +130,9 @@ function penaltyAuditSnapshot(row: RecordRow) {
  * Never deleted: cancelled with a reason instead, and a cancelled record is final.
  * A "once per day" violation takes at most one pending or approved record per employee per date
  * (409 VIOLATION_ONCE_PER_DAY at preview, recording and approval; a cancelled one frees the day).
+ * Approving goes in date order (§4, owner 2026-11-20): while an earlier record of the same pair
+ * (in the window) is still PENDING, approval is refused (409 PENALTY_EARLIER_PENDING, `params.date`),
+ * checked under the pair's lock; a pending row carries that blocker as `earlierPending`.
  * Recording, approving and cancelling are each one audit entry (§9) on the penalty, labelled with
  * the employee's two names, written in the change's transaction; a refused write records nothing.
  */
@@ -229,8 +242,15 @@ export class PenaltyRecordsService {
       (approved) => resolvePenalty(countPriorInWindow(positionOf(current), window, approved), levels),
       // §4: re-checked at approval, in the same transaction.
       (sameDay) => oncePerDayRefuses(oncePerDay, sameDay, 'approve'),
+      // §4: approve in date order — an earlier pending one of the pair goes first.
+      (pairRecords) => earlierPendingPenalty(positionOf(current), window, pairRecords),
     );
     if (outcome === 'ONCE_PER_DAY') this.throwOncePerDay();
+    if (typeof outcome === 'object') {
+      throw CodedException.withParams(HttpStatus.CONFLICT, ErrorCode.PENALTY_EARLIER_PENDING, {
+        date: outcome.earlierPending,
+      });
+    }
     if (outcome === 'NOT_PENDING') await this.throwStatusConflict(id);
     await this.record('hr.penalty.approve', current, await this.findWritten(id));
     await this.notifications.penaltyApproved(id, approvedById);
@@ -418,13 +438,14 @@ export class PenaltyRecordsService {
 
   /**
    * The level / action / days each row shows: stored for APPROVED and CANCELLED, recomputed from
-   * today's catalogue and approved records for PENDING (§4). One query for the whole page.
+   * today's catalogue and approved records for PENDING (§4) — which also get the earlier pending
+   * record that blocks approving them (`earlierPending`). One query for the whole page.
    */
-  private async shownLevels(rows: readonly RecordRow[]): Promise<Map<Uuid, CatalogueLevel>> {
-    const shown = new Map<Uuid, CatalogueLevel>();
+  private async shownLevels(rows: readonly RecordRow[]): Promise<Map<Uuid, Shown>> {
+    const shown = new Map<Uuid, Shown>();
     const pending = rows.filter((r) => r.status === PenaltyStatus.PENDING);
     for (const row of rows)
-      if (row.status !== PenaltyStatus.PENDING) shown.set(row.id, storedLevel(row));
+      if (row.status !== PenaltyStatus.PENDING) shown.set(row.id, storedShown(row));
     if (pending.length === 0) return shown;
 
     const window = await this.window();
@@ -434,7 +455,9 @@ export class PenaltyRecordsService {
         pending.map((r) => [keyOf(r), { employeeId: r.employeeId, violationId: r.violationId }]),
       ).values(),
     ];
-    const approved = await this.repository.approvedCandidates(uniqueKeys, latest);
+    const approved = await this.repository.approvedCandidates(uniqueKeys, latest, undefined, {
+      withPending: true,
+    });
     const byKey = new Map<string, ApprovedCandidate[]>();
     for (const a of approved) {
       const list = byKey.get(keyOf(a)) ?? [];
@@ -442,8 +465,13 @@ export class PenaltyRecordsService {
       byKey.set(keyOf(a), list);
     }
     for (const row of pending) {
-      const prior = countPriorInWindow(positionOf(row), window, byKey.get(keyOf(row)) ?? []);
-      shown.set(row.id, resolvePenalty(prior, row.violation.levels.map(toLevel)));
+      const pair = byKey.get(keyOf(row)) ?? [];
+      const prior = countPriorInWindow(positionOf(row), window, pair);
+      const blocker = earlierPendingPenalty(positionOf(row), window, pair);
+      shown.set(row.id, {
+        ...resolvePenalty(prior, row.violation.levels.map(toLevel)),
+        earlierPending: blocker && { id: blocker.id, date: blocker.date },
+      });
     }
     return shown;
   }

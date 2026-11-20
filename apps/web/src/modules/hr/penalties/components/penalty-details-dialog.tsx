@@ -9,7 +9,7 @@ import { formatDate } from '@/shared/lib/format';
 import { nameIn } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { EmployeeIdentity } from '../../employees';
-import { describeAction } from '../lib/penalty-text';
+import { approveBlockedReason, describeAction } from '../lib/penalty-text';
 import { PenaltyActions } from './penalty-actions';
 import { PenaltyStatusPill } from './penalties-table';
 
@@ -26,7 +26,9 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
  * One penalty over the list — what a notification's link opens (`?penalty=<id>`, §11): who, when,
  * which violation, the level and action, its status, and the same approve / cancel actions as the
  * row's menu (each only with its permission). After an action the page refreshes and the dialog
- * shows the record as it now is. Closing it drops `?penalty` from the URL.
+ * shows the record as it now is. Closing it drops `?penalty` from the URL. A penalty waiting for an
+ * earlier one of the same violation (§4 approve in date order) says so above the footer, where its
+ * disabled Approve points (`aria-describedby`).
  */
 export function PenaltyDetailsDialog({
   record,
@@ -36,6 +38,7 @@ export function PenaltyDetailsDialog({
   onClose: () => void;
 }) {
   const { t, locale } = useTranslation();
+  const blocked = record ? approveBlockedReason(record, t, locale) : null;
   return (
     <Dialog open={!!record} onOpenChange={(open) => (open ? undefined : onClose())}>
       {record ? (
@@ -87,6 +90,15 @@ export function PenaltyDetailsDialog({
                 </div>
               ) : null}
             </dl>
+            {blocked ? (
+              <p
+                id={`penalty-${record.id}-blocked`}
+                data-testid="penalty-approve-blocked"
+                className="rounded-xl bg-warning-soft px-3.5 py-2.5 text-sm font-semibold text-warning-ink"
+              >
+                {blocked}
+              </p>
+            ) : null}
           </div>
         </DialogContent>
       ) : null}

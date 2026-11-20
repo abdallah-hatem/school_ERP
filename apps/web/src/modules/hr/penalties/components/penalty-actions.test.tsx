@@ -136,6 +136,71 @@ describe('PenaltyActions', () => {
     await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
   });
 
+  describe('approve in date order (§4, owner 2026-11-20)', () => {
+    const waiting = () => record({ earlierPending: { id: 'p-0', date: '2026-11-04' } });
+
+    it('waiting for an earlier pending one: Approve is shown disabled with the reason; Cancel still works', async () => {
+      const user = userEvent.setup();
+      renderPenalties(<PenaltyActions record={waiting()} />);
+      const menu = await openRowActions(user, 'Mona Khalil');
+      expect(menuItemNames(menu)).toEqual(['Approve', 'Cancel']);
+      const approve = within(menu).getByRole('menuitem', { name: /Approve/ });
+      expect(approve.getAttribute('aria-disabled')).toBe('true');
+      expect(approve.textContent).toContain('Approve or cancel the 4 Nov 2026 penalty for this violation first.');
+      await user.click(approve);
+      expect(screen.queryByRole('dialog', { name: 'Approve this penalty?' })).toBeNull();
+      expect(apis.APPROVE_PENALTY).not.toHaveBeenCalled();
+
+      await user.click(within(menu).getByRole('menuitem', { name: 'Cancel' }));
+      expect(await screen.findByRole('dialog', { name: 'Cancel this penalty?' })).toBeTruthy();
+    });
+
+    it('Arabic: the reason names the date in Arabic', async () => {
+      const user = userEvent.setup();
+      renderPenalties(<PenaltyActions record={waiting()} />, 'ar');
+      const menu = await openRowActions(user, /^إجراءات منى خليل/);
+      const approve = within(menu).getByRole('menuitem', { name: /اعتماد/ });
+      expect(approve.getAttribute('aria-disabled')).toBe('true');
+      expect(approve.textContent).toContain('اعتمد أو ألغِ جزاء يوم');
+      expect(approve.textContent).toContain('نوفمبر');
+    });
+
+    it('buttons (the penalty a notification opens): Approve disabled, described by the reason', () => {
+      renderPenalties(
+        <>
+          <p id="penalty-p-1-blocked">reason</p>
+          <PenaltyActions record={waiting()} variant="buttons" />
+        </>,
+      );
+      const approve = screen.getByRole('button', { name: 'Approve' });
+      expect(approve).toHaveProperty('disabled', true);
+      expect(approve.getAttribute('aria-describedby')).toBe('penalty-p-1-blocked');
+      expect(screen.getByRole('button', { name: 'Cancel' })).toHaveProperty('disabled', false);
+    });
+
+    it('nothing waiting, or not pending: Approve is enabled as before', async () => {
+      const user = userEvent.setup();
+      renderPenalties(<PenaltyActions record={record({ earlierPending: null })} />);
+      const menu = await openRowActions(user, 'Mona Khalil');
+      expect(within(menu).getByRole('menuitem', { name: 'Approve' }).getAttribute('aria-disabled')).toBeNull();
+    });
+
+    it('the list was out of date: the server refusal names the date in the dialog', async () => {
+      const user = userEvent.setup();
+      apis.APPROVE_PENALTY.mockResolvedValue({
+        ...(failure(409, 'PENALTY_EARLIER_PENDING') as object),
+        params: { date: '2026-11-04' },
+      } as never);
+      renderPenalties(<PenaltyActions record={record()} />);
+      await chooseRowAction(user, 'Mona Khalil', 'Approve');
+      const dialog = await screen.findByRole('dialog', { name: 'Approve this penalty?' });
+      await user.click(within(dialog).getByRole('button', { name: 'Approve' }));
+      expect((await within(dialog).findByRole('alert')).textContent).toBe(
+        'Approve or cancel the 4 Nov 2026 penalty for this violation first.',
+      );
+    });
+  });
+
   it('PENALTY_CANCELLED on cancel is explained in the dialog', async () => {
     const user = userEvent.setup();
     apis.CANCEL_PENALTY.mockResolvedValue(failure(409, 'PENALTY_CANCELLED'));

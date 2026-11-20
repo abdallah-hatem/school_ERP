@@ -43,6 +43,23 @@ describe('PenaltyDetailsDialog', () => {
     expect(apis.APPROVE_PENALTY).toHaveBeenCalledWith('p-1');
   });
 
+  it('§4 date order: a penalty waiting for an earlier one says why, and its Approve is disabled (EN + AR)', () => {
+    const waiting = record({ earlierPending: { id: 'p-0', date: '2026-11-04' } });
+    const { unmount } = renderPenalties(<PenaltyDetailsDialog record={waiting} onClose={vi.fn()} />);
+    let dialog = screen.getByRole('dialog', { name: 'Penalty' });
+    const approve = within(dialog).getByRole('button', { name: 'Approve' });
+    expect(approve).toHaveProperty('disabled', true);
+    const reason = within(dialog).getByTestId('penalty-approve-blocked');
+    expect(reason.textContent).toBe('Approve or cancel the 4 Nov 2026 penalty for this violation first.');
+    expect(approve.getAttribute('aria-describedby')).toBe(reason.id);
+    expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveProperty('disabled', false);
+    unmount();
+
+    renderPenalties(<PenaltyDetailsDialog record={waiting} onClose={vi.fn()} />, 'ar');
+    dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByTestId('penalty-approve-blocked').textContent).toContain('اعتمد أو ألغِ جزاء يوم');
+  });
+
   it('an approved one has no Approve; without the permissions, no action at all', () => {
     renderPenalties(<PenaltyDetailsDialog record={record({ status: 'APPROVED' })} onClose={vi.fn()} />);
     const dialog = screen.getByRole('dialog', { name: 'Penalty' });

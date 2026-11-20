@@ -130,6 +130,40 @@ export function countPriorInWindow(
 }
 
 /**
+ * The penalty that must be approved or cancelled before `target` can be approved (§4 DECIDED,
+ * owner 2026-11-20: approve in date order): the EARLIEST still-PENDING penalty of the same
+ * employee and violation, inside `target`'s repetition window, that comes before it in the repeat
+ * order (`isEarlierPenalty`). Null when there is none — approved and cancelled ones never block,
+ * nor do other violations, other employees, or a same-date penalty recorded after `target`.
+ *
+ * Approving out of order would fix a level that ignores the earlier one (18 approved → L1; approve
+ * 20 → L2; then 19 → also L2), so the approval waits for it.
+ *
+ * @example earlierPendingPenalty(the20th, 'CONTRACT_YEAR', [the18th(APPROVED), the19th(PENDING)]) // the19th
+ */
+export function earlierPendingPenalty<R extends RecordedPenalty>(
+  target: PenaltyTarget,
+  window: RepetitionWindow,
+  records: readonly R[],
+): R | null {
+  const start = repetitionWindowStart(target.date, window);
+  const blocking = records.filter(
+    (p) =>
+      p.status === PenaltyStatus.PENDING &&
+      p.employeeId === target.employeeId &&
+      p.violationId === target.violationId &&
+      p.date >= start &&
+      // `target` itself never blocks (nor is it ever "earlier" than itself).
+      !('id' in target && p.id === target.id) &&
+      isEarlierPenalty(p, target),
+  );
+  return blocking.reduce<R | null>(
+    (earliest, p) => (earliest === null || isEarlierPenalty(p, earliest) ? p : earliest),
+    null,
+  );
+}
+
+/**
  * The level, action and days a penalty gets from its violation's catalogue levels, given the
  * number of prior approved penalties. "Doubles on repeat" stays text: days are never doubled.
  */

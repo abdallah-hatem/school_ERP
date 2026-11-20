@@ -1,5 +1,6 @@
 import {
   countPriorInWindow,
+  earlierPendingPenalty,
   isEarlierPenalty,
   penaltyLevel,
   repetitionWindowStart,
@@ -166,6 +167,83 @@ describe('isEarlierPenalty (the repeat order)', () => {
   it('a not-yet-recorded penalty comes after every one on its date', () => {
     expect(isEarlierPenalty(rec('z', '2026-11-10', '23:59'), unrecorded('2026-11-10'))).toBe(true);
     expect(isEarlierPenalty(rec('a', '2026-11-11', '00:00'), unrecorded('2026-11-10'))).toBe(false);
+  });
+});
+
+describe('earlierPendingPenalty (§4 DECIDED 2026-11-20: approve in date order)', () => {
+  const pending = (id: string, date: string, time = '08:00', over: Partial<RecordedPenalty> = {}) =>
+    rec(id, date, time, { status: 'PENDING', ...over });
+  const w = 'CONTRACT_YEAR' as const;
+
+  it("the owner's scenario: 18 approved, 19 + 20 pending → 20 waits for 19; 19 can go", () => {
+    const d18 = rec('a18', '2026-11-18');
+    const d19 = pending('a19', '2026-11-19');
+    const d20 = pending('a20', '2026-11-20');
+    const all = [d18, d19, d20];
+    expect(earlierPendingPenalty(d20, w, all)).toBe(d19);
+    expect(earlierPendingPenalty(d19, w, all)).toBeNull();
+    // Once 19 is approved, 20 is free — and its level counts 18 and 19.
+    const after = [d18, { ...d19, status: 'APPROVED' as const }, d20];
+    expect(earlierPendingPenalty(d20, w, after)).toBeNull();
+    expect(penaltyLevel(countPriorInWindow(d20, w, after), levels5)).toBe(3);
+  });
+
+  it('refuses for an earlier date pending', () => {
+    const target = pending('t', '2026-11-20');
+    expect(earlierPendingPenalty(target, w, [pending('e', '2026-11-02'), target])?.id).toBe('e');
+  });
+
+  it('refuses for a same-date penalty recorded earlier (then by id at the same instant)', () => {
+    const target = pending('m', '2026-11-20', '09:00');
+    expect(earlierPendingPenalty(target, w, [pending('z', '2026-11-20', '08:59')])?.id).toBe('z');
+    expect(earlierPendingPenalty(target, w, [pending('a', '2026-11-20', '09:00')])?.id).toBe('a');
+  });
+
+  it('a same-date penalty recorded later does not block the earlier one', () => {
+    const target = pending('m', '2026-11-20', '09:00');
+    expect(earlierPendingPenalty(target, w, [pending('x', '2026-11-20', '09:01')])).toBeNull();
+    expect(earlierPendingPenalty(target, w, [pending('z', '2026-11-20', '09:00')])).toBeNull();
+  });
+
+  it('a later date never blocks', () => {
+    expect(earlierPendingPenalty(pending('t', '2026-11-19'), w, [pending('l', '2026-11-20')])).toBeNull();
+  });
+
+  it('an earlier approved or cancelled penalty does not block', () => {
+    const target = pending('t', '2026-11-20');
+    expect(earlierPendingPenalty(target, w, [rec('a', '2026-11-19')])).toBeNull();
+    expect(earlierPendingPenalty(target, w, [rec('c', '2026-11-19', '08:00', { status: 'CANCELLED' })])).toBeNull();
+  });
+
+  it('other violations and other employees do not block', () => {
+    const target = pending('t', '2026-11-20');
+    expect(
+      earlierPendingPenalty(target, w, [
+        pending('v', '2026-11-19', '08:00', { violationId: 'absent' }),
+        pending('e', '2026-11-19', '08:00', { employeeId: 'e2' }),
+      ]),
+    ).toBeNull();
+  });
+
+  it('the penalty itself never blocks', () => {
+    const target = pending('t', '2026-11-20');
+    expect(earlierPendingPenalty(target, w, [target])).toBeNull();
+  });
+
+  it('names the earliest of several earlier pending ones', () => {
+    const target = pending('t', '2026-11-20');
+    const records = [pending('b', '2026-11-19'), pending('a', '2026-11-18', '10:00'), pending('c', '2026-11-18', '11:00')];
+    expect(earlierPendingPenalty(target, w, records)?.id).toBe('a');
+  });
+
+  it('a pending penalty before the repetition window does not block (it would not count either)', () => {
+    const target = pending('t', '2026-06-01');
+    expect(earlierPendingPenalty(target, w, [pending('may', '2026-05-31')])).toBeNull();
+    expect(earlierPendingPenalty(target, 'ROLLING_12_MONTHS', [pending('may', '2026-05-31')])?.id).toBe('may');
+  });
+
+  it('a not-yet-recorded penalty is after every one on its date', () => {
+    expect(earlierPendingPenalty(unrecorded('2026-11-20'), w, [pending('z', '2026-11-20', '23:59')])?.id).toBe('z');
   });
 });
 

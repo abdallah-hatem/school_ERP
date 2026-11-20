@@ -1,6 +1,6 @@
-import { EmployeeStatus, PenaltyAction, type Days, type EmployeeSummary, type PenaltyGroup } from '@school-erp/shared';
+import { EmployeeStatus, PenaltyAction, PenaltyStatus, type Days, type EmployeeSummary, type PenaltyGroup, type PenaltyRecord } from '@school-erp/shared';
 import type { SelectOption, SelectOptionGroup } from '@/shared/components/form/fields';
-import { formatDayCount } from '@/shared/lib/format';
+import { formatDate, formatDayCount } from '@/shared/lib/format';
 import { nameIn, type Locale, type Translate } from '@/shared/lib/i18n';
 
 /*
@@ -54,15 +54,43 @@ export function employeeOptions(employees: Pick<EmployeeSummary, 'id' | 'code' |
 /**
  * The message for a failed request: the translated `errors.<CODE>` when the code has one
  * (`PAYROLL_APPROVED`, `PENALTY_CANCELLED`, `VIOLATION_RETIRED`, `EMPLOYEE_INACTIVE`…), else the
- * server's own (already translated) message, else `fallback`.
+ * server's own (already translated) message, else `fallback`. The envelope's `params` fill the
+ * message (`PENALTY_EARLIER_PENDING`'s `{date}`), an ISO date read as a date in `locale`.
  */
 export function errorMessage(
-  res: { error?: unknown; message?: unknown },
+  res: { error?: unknown; message?: unknown; params?: unknown },
   t: Translate,
   has: (key: string) => boolean,
   fallback: string,
+  locale: Locale = 'en',
 ): string {
   const key = typeof res.error === 'string' ? `errors.${res.error}` : '';
-  if (key && has(key)) return t(key);
+  if (key && has(key)) return t(key, errorParams(res.params, locale));
   return typeof res.message === 'string' && res.message ? res.message : fallback;
+}
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** An error envelope's `params` as `t()` values: strings and numbers, ISO dates formatted. */
+function errorParams(params: unknown, locale: Locale): Record<string, string | number> | undefined {
+  if (!params || typeof params !== 'object') return undefined;
+  const values: Record<string, string | number> = {};
+  for (const [name, value] of Object.entries(params)) {
+    if (typeof value === 'number') values[name] = value;
+    else if (typeof value === 'string') values[name] = ISO_DATE.test(value) ? formatDate(value, locale) : value;
+  }
+  return values;
+}
+
+/**
+ * Why a pending penalty can't be approved yet (§4 approve in date order), or null: the same
+ * sentence as the server's 409 `PENALTY_EARLIER_PENDING`, naming the earlier one's date.
+ */
+export function approveBlockedReason(
+  record: Pick<PenaltyRecord, 'status' | 'earlierPending'>,
+  t: Translate,
+  locale: Locale,
+): string | null {
+  if (record.status !== PenaltyStatus.PENDING || !record.earlierPending) return null;
+  return t('errors.PENALTY_EARLIER_PENDING', { date: formatDate(record.earlierPending.date, locale) });
 }

@@ -43,8 +43,12 @@ Before the demo, on the demo database:
   ✔ the bell shows "Penalty waiting for your approval" with the employee, violation and level;
   clicking it opens that penalty with **Approve** → approve. ✔ The bell item now reads "Approved by
   …". (Whoever records a penalty isn't notified about it — that is why the HR officer records it.)
+  (Pick a pair with no pending penalty — not the seed's 15 Nov "Late to class" one — or approve
+  that earlier one first: penalties are approved in date order.)
 - Approve any other pending penalties of the month from the list's row menu (payroll can't be
-  approved while any are pending).
+  approved while any are pending). ✔ Where one employee has two pending for the same violation,
+  the later one's **Approve** is greyed out with "Approve or cancel the … penalty for this
+  violation first."; approve the earlier one, then the later one gets the next level.
 - Open **Record a penalty** again with the same employee, violation and date. ✔ The preview says
   this violation counts once per day and the employee already has one on this date; Save moves the
   message under the date — ✔ it shows once, not twice. (Late to class is different: it can be recorded several times a day.)

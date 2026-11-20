@@ -64,6 +64,25 @@ export function translateError(
   if (template === undefined) return undefined;
   if (!params) return template;
   return template.replace(/\{(\w+)\}/g, (slot, name: string) =>
-    name in params ? String(params[name]) : slot,
+    name in params ? paramText(params[name], lang) : slot,
   );
+}
+
+/** Same as the web app's `formatDate`: `19 Nov 2026` / `19 نوفمبر 2026` (Latin digits). */
+const DATE_FORMAT: Record<Language, Intl.DateTimeFormat> = {
+  en: new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }),
+  ar: new Intl.DateTimeFormat('ar-EG-u-nu-latn', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }),
+};
+
+/** A param as the message shows it: an ISO date (`2026-11-19`) as a date in `lang`, else as is. */
+function paramText(value: string | number, lang: Language): string {
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return DATE_FORMAT[lang].format(new Date(`${value}T00:00:00Z`));
+  }
+  return String(value);
 }
