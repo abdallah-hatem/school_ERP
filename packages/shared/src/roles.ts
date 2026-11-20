@@ -103,6 +103,8 @@ export const BUILT_IN_ROLES: readonly BuiltInRoleDefinition[] = [
       'accounting.settings.view',
       'accounting.settings.edit',
       'accounting.payroll.view',
+      'accounting.payroll.return',
+      'accounting.payroll.finalize',
     ),
   },
   {

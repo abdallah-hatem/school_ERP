@@ -67,6 +67,8 @@ const FLOORED = line({
 /** October 2026: one employee not insured, two insured (one floored at net 0). */
 export const MONTH: AccountingPayrollMonth = {
   month: '2026-10',
+  status: 'PENDING',
+  finalizedAt: null,
   hrRunId: '00000000-0000-4000-8000-0000000000f1',
   recordedAt: '2026-11-02T10:00:00.000Z',
   salaryVisible: true,
@@ -142,7 +144,7 @@ export const YEAR: AccountingPayrollYear = {
       return {
         month,
         state: 'APPROVED' as const,
-        summary: { month, hrRunId: 'x', recordedAt: '2026-11-02T10:00:00.000Z', salaryVisible: true, totals: MONTH.totals },
+        summary: { month, status: 'PENDING' as const, finalizedAt: null, hrRunId: 'x', recordedAt: '2026-11-02T10:00:00.000Z', salaryVisible: true, totals: MONTH.totals },
       };
     }
     if (month === '2026-11') return { month, state: 'DRAFT' as const };

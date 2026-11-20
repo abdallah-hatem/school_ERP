@@ -42,6 +42,7 @@
   "VIOLATION_ONCE_PER_DAY": "This violation counts once per day, and this employee already has one on this date.",
   "PAYROLL_APPROVED": "This month's payroll is approved and locked.",
   "PAYROLL_NOT_APPROVED": "Available only after the payroll is approved.",
+  "PAYROLL_FINALIZED": "This month's salaries were already transferred (finalized); it can't go back to HR.",
   "PAYROLL_RUN_EXISTS": "A payroll run already exists for this month.",
   "PENDING_PENALTIES": "Approve or cancel this month's pending penalties first.",
   "EMPLOYEE_NOT_IN_RUN": "This employee is not in this payroll run.",

@@ -48,6 +48,9 @@ function sentenceMoney(piastres: number, locale: Locale, t?: Translate): string 
   return t ? formatMoneyText(piastres, locale, t('ui.units.currency')) : formatMoney(piastres);
 }
 
+/** Params holding text someone typed, isolated (FSI … PDI) inside the sentence. */
+const FREE_TEXT_PARAMS = new Set(['reason']);
+
 /** The values a sentence fills in, each shown the way the screens show it. */
 export function sentenceValues(params: Params, locale: Locale, t?: Translate): TranslateValues {
   const out: TranslateValues = {};
@@ -56,6 +59,9 @@ export function sentenceValues(params: Params, locale: Locale, t?: Translate): T
     else if (typeof value === 'string') {
       if (key === 'month' && isMonth(value)) out[key] = formatMonth(value, locale);
       else if (ISO_DATE.test(value)) out[key] = sentenceDate(value, locale);
+      // Free text someone typed (a return reason) keeps its own direction inside the sentence:
+      // a Latin reason in an Arabic line, or the reverse, never drags the punctuation around it.
+      else if (FREE_TEXT_PARAMS.has(key)) out[key] = `\u2068${value}\u2069`;
       else out[key] = value;
     } else {
       const name = nameOf(value, locale);

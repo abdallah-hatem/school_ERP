@@ -3,6 +3,7 @@
 import {
   DEFAULT_TAX_RULE,
   PAGINATION,
+  PAYROLL_PAGINATION,
   type AccountingPayrollLine,
   type AccountingPayrollMonth,
   type Month,
@@ -341,7 +342,6 @@ function Operator({ children, wide = false }: { children: ReactNode; wide?: bool
   );
 }
 
-const PAGE_SIZE = PAGINATION.defaultLimit;
 
 /**
  * One insurance group: its heading and count, its DataTable paged like every list (the search's
@@ -372,10 +372,11 @@ function Group({
   const columns = groupColumns(t, locale, insured);
   const sums = lines ? subtotals(lines) : null;
   const searching = search.trim().length > 0;
+  const [limit, setLimit] = useState<number>(PAGINATION.defaultLimit);
   const shown = useMemo(() => (lines ?? []).filter((l) => matchesLine(l, search)), [lines, search]);
-  const pageCount = Math.max(1, Math.ceil(shown.length / PAGE_SIZE));
+  const pageCount = Math.max(1, Math.ceil(shown.length / limit));
   const currentPage = Math.min(Math.max(1, page), pageCount);
-  const pageLines = shown.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const pageLines = shown.slice((currentPage - 1) * limit, currentPage * limit);
   const footer: DataTableFooter = {
     label: lines
       ? t('accounting.payrollTaxes.statement.subtotalAll', { count: formatCount(lines.length) })
@@ -419,7 +420,18 @@ function Group({
         loading={!lines}
         getRowId={(l) => l.employeeId}
         footer={footer}
-        pagination={{ page: currentPage, limit: PAGE_SIZE, total: shown.length, onPageChange }}
+        pagination={{
+          page: currentPage,
+          limit,
+          total: shown.length,
+          onPageChange,
+          pageSizes: PAYROLL_PAGINATION.pageSizes,
+          onLimitChange: (next) => {
+            setLimit(next);
+            onPageChange(1);
+          },
+        }}
+        scrollHeight="screen"
         // A group can be empty one month (an empty state) and full the next: no skeleton can know,
         // so the tables are measured as part of the statement (width only).
         skeletonBlocks={false}

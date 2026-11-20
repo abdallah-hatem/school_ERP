@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import type { AuthUser } from '@school-erp/shared';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
-import { PaginationQueryDto } from '../../../../common/dto/pagination-query.dto';
+import { PayrollPaginationQueryDto } from '../../../../common/dto/pagination-query.dto';
 import { resolveLanguage } from '../../../../common/i18n/i18n';
 import { ResponseUtil } from '../../../../common/utils/response.util';
 import { xlsxFile } from '../../../../common/utils/xlsx-file.util';
@@ -32,7 +32,7 @@ export class PayrollRunsController {
 
   @Get()
   @Permission('hr.payroll.view')
-  async list(@Query() query: PaginationQueryDto) {
+  async list(@Query() query: PayrollPaginationQueryDto) {
     return ResponseUtil.paginated(await this.payroll.list(query));
   }
 

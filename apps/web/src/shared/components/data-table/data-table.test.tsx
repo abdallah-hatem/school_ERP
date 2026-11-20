@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import '@/test/dom-polyfills';
 import { cleanup, fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -313,5 +314,61 @@ describe('Pagination on a phone', () => {
     expect((pageOf as Node).compareDocumentPosition(next) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     await user.click(next);
     expect(paging.onPageChange).toHaveBeenCalledWith(3);
+  });
+});
+
+describe('DataTable page size and sticky header (payroll tables)', () => {
+  afterEach(cleanup);
+
+  it('a rows-per-page picker only when the caller passes sizes, and it reports the chosen size', async () => {
+    const user = userEvent.setup();
+    const onLimitChange = vi.fn();
+    const { rerender } = renderWithI18n(
+      <DataTable label="Employees" columns={columns} rows={people} getRowId={(p) => p.id} pagination={pagination()} />,
+    );
+    expect(screen.queryByRole('combobox', { name: 'Rows per page' })).toBeNull();
+
+    rerender(
+      <DataTable
+        label="Employees"
+        columns={columns}
+        rows={people}
+        getRowId={(p) => p.id}
+        pagination={{ ...pagination(), pageSizes: [10, 25, 500], onLimitChange }}
+      />,
+    );
+    const picker = screen.getByRole('combobox', { name: 'Rows per page' });
+    expect(picker.textContent).toContain('10');
+    await user.click(picker);
+    expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['10', '25', '500']);
+    await user.click(screen.getByRole('option', { name: '500' }));
+    expect(onLimitChange).toHaveBeenCalledWith(500);
+  });
+
+  it('an unknown page size (?limit=30) shows as the nearest listed one', () => {
+    renderWithI18n(
+      <DataTable
+        label="Employees"
+        columns={columns}
+        rows={people}
+        getRowId={(p) => p.id}
+        pagination={{ ...pagination(), limit: 30, pageSizes: [10, 25, 50, 500], onLimitChange: vi.fn() }}
+      />,
+    );
+    expect(screen.getByRole('combobox', { name: 'Rows per page' }).textContent).toContain('25');
+  });
+
+  it('scrollHeight="screen": the table scrolls in a capped box under sticky column names', () => {
+    const { container, rerender } = renderWithI18n(
+      <DataTable label="Employees" columns={columns} rows={people} getRowId={(p) => p.id} />,
+    );
+    const scroller = () => container.querySelector('[data-table-scroll]')!;
+    expect(scroller().hasAttribute('data-scroll-capped')).toBe(false);
+    expect(screen.getAllByRole('columnheader')[0]!.className).not.toContain('sticky');
+
+    rerender(<DataTable label="Employees" columns={columns} rows={people} getRowId={(p) => p.id} scrollHeight="screen" />);
+    expect(scroller().hasAttribute('data-scroll-capped')).toBe(true);
+    expect(scroller().className).toMatch(/max-h-\S+ overflow-y-auto/);
+    for (const th of screen.getAllByRole('columnheader')) expect(th.className).toMatch(/\bsticky top-0\b/);
   });
 });

@@ -3,7 +3,9 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   ERROR_CODES,
+  PAYROLL_PAGINATION,
   PENALTY_ACTIONS,
+  nearestPageSize,
   SETTING_DEFAULTS,
   SETTING_LIMITS,
   WORK_SYSTEMS,
@@ -105,5 +107,17 @@ describe('setting defaults (§7)', () => {
     for (const s of SETTING_DEFAULTS['hr.lateness.steps']) {
       expect((s.days / SETTING_LIMITS.daysStep) % 1).toBe(0);
     }
+  });
+});
+
+describe('payroll page sizes (owner, 2026-11-19)', () => {
+  it('an unknown size snaps to the nearest listed one (the smaller on a tie); a listed one stays', () => {
+    const sizes = PAYROLL_PAGINATION.pageSizes;
+    expect(nearestPageSize(30, sizes)).toBe(25);
+    expect(nearestPageSize(40, sizes)).toBe(50);
+    expect(nearestPageSize(175, sizes)).toBe(100);
+    expect(nearestPageSize(1, sizes)).toBe(10);
+    expect(nearestPageSize(499, sizes)).toBe(500);
+    for (const size of sizes) expect(nearestPageSize(size, sizes)).toBe(size);
   });
 });

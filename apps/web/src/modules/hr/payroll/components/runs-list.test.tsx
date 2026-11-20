@@ -63,6 +63,31 @@ describe('RunsList', () => {
     expect(table.getByText('Not yet')).toBeTruthy();
   });
 
+  it('a run Accounting finalized reads "Finalized · transferred" (EN and AR)', () => {
+    const transferred = { ...approved, transferredAt: '2026-11-05T09:00:00.000Z' };
+    renderList([transferred]);
+    expect(within(document.querySelector<HTMLElement>('[data-view="table"]')!).getByText('Finalized · transferred')).toBeTruthy();
+    cleanup();
+    renderList([transferred], 'ar');
+    expect(within(document.querySelector<HTMLElement>('[data-view="table"]')!).getByText('نهائي · تم التحويل')).toBeTruthy();
+  });
+
+  it('a draft Accounting returned shows "Returned" beside Draft (EN and AR); approved again, only the status', () => {
+    const returned = { ...draft, returned: { at: '2026-11-19T10:00:00.000Z', reason: 'Penalty missing' } };
+    renderList([returned]);
+    let table = within(document.querySelector<HTMLElement>('[data-view="table"]')!);
+    expect(table.getByText('Draft')).toBeTruthy();
+    expect(table.getByText('Returned')).toBeTruthy();
+    cleanup();
+    renderList([returned], 'ar');
+    table = within(document.querySelector<HTMLElement>('[data-view="table"]')!);
+    expect(table.getByText('مسودة')).toBeTruthy();
+    expect(table.getByText('مُعاد')).toBeTruthy();
+    cleanup();
+    renderList([draft, approved]);
+    expect(within(document.querySelector<HTMLElement>('[data-view="table"]')!).queryByText('Returned')).toBeNull();
+  });
+
   it('creates a run for the chosen month and opens it', async () => {
     const user = userEvent.setup();
     apis.CREATE_PAYROLL_RUN.mockResolvedValue({

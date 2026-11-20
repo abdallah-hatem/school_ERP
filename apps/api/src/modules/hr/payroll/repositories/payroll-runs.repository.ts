@@ -3,6 +3,7 @@ import { TransactionHost } from '@nestjs-cls/transactional';
 import { Prisma } from '@prisma/client';
 import {
   PAGINATION,
+  PAYROLL_PAGINATION,
   PayrollStatus,
   type AdjustmentType,
   type InsuranceStatus,
@@ -21,6 +22,9 @@ export const RUN_SELECT = {
   status: true,
   approvedAt: true,
   calculatedAt: true,
+  transferredAt: true,
+  returnedAt: true,
+  returnReason: true,
 } satisfies Prisma.PayrollRunSelect;
 
 export type RunRow = Prisma.PayrollRunGetPayload<{ select: typeof RUN_SELECT }>;
@@ -123,6 +127,22 @@ export const ACCOUNTING_LINE_SELECT = {
 
 export type AccountingLineSource = Prisma.PayrollLineGetPayload<{ select: typeof ACCOUNTING_LINE_SELECT }>;
 
+/** How an approved line's net was reached, for accounting's HR-style payroll view (§10). */
+export const ACCOUNTING_BREAKDOWN_SELECT = {
+  employeeId: true,
+  departmentNameEn: true,
+  departmentNameAr: true,
+  monthSalary: true,
+  penaltyDays: true,
+  penaltyAmount: true,
+  latenessDays: true,
+  latenessAmount: true,
+  adjustmentAdditions: true,
+  adjustmentDeductions: true,
+} satisfies Prisma.PayrollLineSelect;
+
+export type AccountingBreakdownSource = Prisma.PayrollLineGetPayload<{ select: typeof ACCOUNTING_BREAKDOWN_SELECT }>;
+
 export interface LineFilter {
   search?: string;
   departmentId?: string;
@@ -175,6 +195,7 @@ export class PayrollRunsRepository extends BaseRepository<
     return this.findAllWithPagination(page, limit, undefined, undefined, undefined, {
       select: RUN_SELECT,
       orderBy: { month: 'desc' },
+      maxLimit: PAYROLL_PAGINATION.maxLimit,
     });
   }
 
@@ -276,6 +297,37 @@ export class PayrollRunsRepository extends BaseRepository<
     });
   }
 
+  /**
+   * Accounting sent an APPROVED run back (§10): a DRAFT again, unlocked, with the reason. Only while
+   * it isn't transferred. False when the run was no longer approved-and-not-transferred (nothing written).
+   */
+  async returnToDraft(runId: string, reason: string): Promise<boolean> {
+    const { count } = await this.db.payrollRun.updateMany({
+      where: { id: runId, status: PayrollStatus.APPROVED, transferredAt: null },
+      data: {
+        status: PayrollStatus.DRAFT,
+        approvedAt: null,
+        approvedById: null,
+        returnedAt: new Date(),
+        returnReason: reason,
+      },
+    });
+    return count === 1;
+  }
+
+  /** Accounting marked an APPROVED run's salaries transferred. False when it wasn't approved or already was. */
+  async markTransferred(runId: string, at: Date): Promise<boolean> {
+    const { count } = await this.db.payrollRun.updateMany({
+      where: { id: runId, status: PayrollStatus.APPROVED, transferredAt: null },
+      data: { transferredAt: at },
+    });
+    return count === 1;
+  }
+
+  findAccountingBreakdowns(runId: string): Promise<AccountingBreakdownSource[]> {
+    return this.db.payrollLine.findMany({ where: { runId }, select: ACCOUNTING_BREAKDOWN_SELECT });
+  }
+
   /** One line, or null when unknown or its employee is outside `scope` (R5 — the caller 404s). */
   findLine(
     runId: string,
@@ -310,7 +362,7 @@ export class PayrollRunsRepository extends BaseRepository<
     page: number = PAGINATION.defaultPage,
     limit: number = PAGINATION.defaultLimit,
   ): Promise<Paginated<EmployeeLineRow>> {
-    const take = Math.min(Math.max(1, limit), PAGINATION.maxLimit);
+    const take = Math.min(Math.max(1, limit), PAYROLL_PAGINATION.maxLimit);
     const current = Math.max(1, page);
     const where: Prisma.PayrollLineWhereInput = { employeeId };
     const [data, total] = await Promise.all([
@@ -416,6 +468,9 @@ export class PayrollRunsRepository extends BaseRepository<
                 status: PayrollStatus.APPROVED,
                 approvedById: approve.approvedById,
                 approvedAt: new Date(),
+                // Approved again after Accounting sent it back: the return is dealt with.
+                returnedAt: null,
+                returnReason: null,
               }
             : {}),
         },

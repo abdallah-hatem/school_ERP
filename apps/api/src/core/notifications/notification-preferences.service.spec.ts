@@ -1,5 +1,5 @@
 import { HttpStatus } from '@nestjs/common';
-import { ErrorCode, SETTING_DEFAULTS, type PermissionKey } from '@school-erp/shared';
+import { ErrorCode, NOTIFICATION_TYPE_KEYS, SETTING_DEFAULTS, type PermissionKey } from '@school-erp/shared';
 import type { AuditService } from '../audit';
 import type { PermissionsService } from '../permissions';
 import type { SettingsService } from '../settings';
@@ -164,7 +164,7 @@ describe('Settings → Notifications', () => {
       enabled: false,
       locked: false,
     });
-    expect(s.defaults).toHaveLength(7);
+    expect(s.defaults).toHaveLength(NOTIFICATION_TYPE_KEYS.length);
   });
 
   it('saves changed defaults and the retention as one entry through settings (edge case 25)', async () => {

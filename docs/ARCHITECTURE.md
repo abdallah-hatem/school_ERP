@@ -742,7 +742,12 @@ types** and sends through core's exported `NotificationsService` — core never 
   pending penalty in the month, the previous one resolved `done` first; resolved `done` by a penalty
   recorded in the month, `approved` on approval ("still a draft" is the reminders'). Its `net` is
   per reader through `notify({ paramsFor })` — only for a holder of `hr.payroll.view` at `all` (R7);
-  absent otherwise. A `penalty` subject is scoped by `HrNotificationScopes` with the employee rule,
+  absent otherwise. `hr.payroll.returned_by_accounting` (subject `payroll_run`, dedupe
+  `payroll_returned:<runId>:<returned at>`, one item per return, required — it can't be turned off)
+  to the holders of `hr.payroll.approve` when Accounting returns an approved month (§10), sent in
+  accounting's return transaction with the month and the reason (`{reason}` is isolated with
+  FSI/PDI when the sentence is drawn, like any typed text); resolved `approved` when the run is
+  approved again. A `penalty` subject is scoped by `HrNotificationScopes` with the employee rule,
   on the penalty's employee **as the employee is now** (a stage move takes it from the old stage's
   approver). The Penalties screen opens the
   linked penalty (`?penalty=<id>`: its month's list with `PenaltyDetailsDialog` over it; unknown or
@@ -984,7 +989,7 @@ apps/web/src/
 ├── modules/
 │   ├── hr/  academics/  students/  admissions/  attendance/
 │   ├── fees/  exams/  communication/  transport/
-│   ├── accounting/                   ← Payroll taxes: the year board and each month's statement (§10)
+│   ├── accounting/                   ← Payroll (HR's approved months + taxes) and Payroll taxes (§10)
 │   ├── settings/                     ← the Settings screen
 │   ├── access/                       ← Users, Roles, My account (P3)
 │   └── activity/                     ← the Activity screen (filters panel, today's counts, paging)
@@ -1038,6 +1043,12 @@ doesn't update its skeleton fails CI (owner, 2026-11-18).
   renders itself under `SkeletonMask` with empty values (`EmployeePageSkeleton`, the settings
   forms). Hand-drawn skeletons are the exception and use the screen's own frames (`PageHeader`,
   `FormCard`, `DetailsCard`, `StatTile`, the payslip card).
+- **Payroll tables: page size and sticky header** (owner, 2026-11-19). Every payroll table passes
+  `pagination.pageSizes = PAYROLL_PAGINATION.pageSizes` (10–500) with `onLimitChange` (a "Rows per
+  page" picker in `Pagination`) and `scrollHeight="screen"` (the table view scrolls inside a box of
+  about the screen's height with sticky column names; cards and print are unaffected). The API's
+  payroll lists (`GET /hr/payroll-runs`, `/hr/employees/:id/payroll-lines`, `/accounting/payroll`)
+  take `PayrollPaginationQueryDto` (`limit` ≤ 500); every other list keeps `limit` ≤ 100.
 - **Mark the main blocks.** The screen and its skeleton carry the same `data-skeleton-block="<name>"`
   on their main content blocks. The shared pieces already do: `PageHeader` (`header`), `DataTable`
   (`table`, `table-toolbar`, `table-head`, `table-row`, `table-card`, and with a `footer` totals row

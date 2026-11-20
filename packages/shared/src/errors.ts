@@ -80,6 +80,8 @@ export const ErrorCode = {
   // payroll
   PAYROLL_APPROVED: 'PAYROLL_APPROVED',
   PAYROLL_NOT_APPROVED: 'PAYROLL_NOT_APPROVED',
+  /** The month's salaries were transferred (Accounting finalized it): it can't go back to HR. */
+  PAYROLL_FINALIZED: 'PAYROLL_FINALIZED',
   PAYROLL_RUN_EXISTS: 'PAYROLL_RUN_EXISTS',
   PENDING_PENALTIES: 'PENDING_PENALTIES',
   EMPLOYEE_NOT_IN_RUN: 'EMPLOYEE_NOT_IN_RUN',

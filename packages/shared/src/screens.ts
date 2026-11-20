@@ -65,6 +65,9 @@ export const SCREENS = {
   payrollRun: screen('/payroll/:id', 'hr.payroll.view'),
   payslip: screen('/payroll/:id/payslip/:lineId', 'hr.payroll.view'),
   // Accounting (§10): the year board of payroll taxes and one month's statement (`:month` YYYY-MM).
+  // Accounting → Payroll: HR's approved months as HR shows them, plus insurance and taxes.
+  accountingPayroll: screen('/accounting/payroll', 'accounting.payroll.view'),
+  accountingPayrollMonth: screen('/accounting/payroll/:month', 'accounting.payroll.view'),
   payrollTaxes: screen('/accounting/payroll-taxes', 'accounting.payroll.view'),
   payrollTaxesMonth: screen('/accounting/payroll-taxes/:month', 'accounting.payroll.view'),
   settings: screen('/settings', ...Object.values(SETTINGS_SECTION_ACCESS)),
@@ -89,6 +92,7 @@ export const SIDEBAR_SCREENS = [
   'penalties',
   'lateness',
   'payroll',
+  'accountingPayroll',
   'payrollTaxes',
   'settings',
   'activity',

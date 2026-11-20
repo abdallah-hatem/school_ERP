@@ -1,4 +1,94 @@
 {
+  "payroll": {
+    "title": "Approved payroll",
+    "description": "Every month HR approved: what each employee was paid, and the insurance and taxes the school pays on top.",
+    "list": {
+      "tableLabel": "Approved payroll months",
+      "columns": {
+        "month": "Month",
+        "status": "Status",
+        "employees": "Employees",
+        "net": "Net (EGP)",
+        "insurance": "Insurance (EGP)",
+        "taxes": "Taxes (EGP)",
+        "gross": "Gross (EGP)",
+        "actions": "Actions"
+      },
+      "open": "Open {month}",
+      "empty": {
+        "title": "No approved payroll yet",
+        "body": "A month shows here as soon as HR approves its payroll.",
+        "action": "Open HR payroll"
+      }
+    },
+    "month": {
+      "title": "Approved payroll · {month}",
+      "description": "Approved in HR. Read only: the net is HR's; insurance and taxes were worked out at approval.",
+      "tableLabel": "Employees in {month}",
+      "heading": "Employees this month",
+      "count": "{shown} of {total}",
+      "searchLabel": "Search employees",
+      "searchPlaceholder": "Name or code, like EMP-0012",
+      "noMatch": {
+        "title": "No one matches",
+        "body": "Try another name or code."
+      },
+      "empty": {
+        "title": "Nobody in this month",
+        "body": "HR's approved run had no employees."
+      },
+      "salaryHidden": "Salary hidden",
+      "totalsHidden": "Totals show only to someone who sees every salary.",
+      "columns": {
+        "employee": "Employee",
+        "monthSalary": "Salary",
+        "penalties": "Penalties",
+        "lateness": "Lateness",
+        "adjustments": "Adjustments",
+        "net": "Net",
+        "insuranceAmount": "Insurance share",
+        "incomeTax": "Income tax",
+        "martyrTax": "Martyrs' fund",
+        "gross": "Gross"
+      },
+      "tiles": {
+        "net": "Net paid",
+        "netSub": "What HR paid the employees",
+        "insurance": "Insurance share",
+        "insuranceSub": "The employees' share, paid by the school",
+        "taxes": "Taxes",
+        "taxesSub": "Income tax {incomeTax} · Martyrs' fund {martyrTax}",
+        "gross": "Gross",
+        "grossSub": "Net + insurance + taxes"
+      },
+      "actions": {
+        "excel": "Excel",
+        "print": "Download PDF",
+        "back": "Approved payroll",
+        "returnToHr": "Return to HR",
+        "finalize": "Finalize (transfer made)"
+      },
+      "status": {
+        "PENDING": "Pending transfer",
+        "FINALIZED": "Finalized · transferred"
+      },
+      "finalizedNote": "Finalized on {date}: the salaries were transferred. This month can no longer be returned to HR.",
+      "return": {
+        "title": "Return {month} to HR?",
+        "body": "HR's payroll for this month becomes a draft again, so HR can fix it and approve it again. Its taxes are dropped until then, and HR's approvers are told why.",
+        "reasonLabel": "Why is it going back?",
+        "reasonPlaceholder": "For example: a penalty for EMP-0012 is missing",
+        "confirm": "Return to HR",
+        "done": "{month} was returned to HR."
+      },
+      "finalize": {
+        "title": "Finalize {month}?",
+        "body": "Confirm that the salaries were transferred. A finalized month can't be returned to HR, and this can't be undone.",
+        "confirm": "Finalize",
+        "done": "{month} is finalized."
+      }
+    }
+  },
   "payrollTaxes": {
     "title": "Payroll taxes",
     "description": "The school's year at a glance: every approved month with its gross — what it cost on top of the net.",

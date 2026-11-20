@@ -1,6 +1,6 @@
 'use client';
 
-import { monthOf, PAGINATION } from '@school-erp/shared';
+import { monthOf, PAGINATION, PAYROLL_PAGINATION } from '@school-erp/shared';
 import { useParams, useSearchParams } from 'next/navigation';
 import { DataTable } from '@/shared/components/data-table/data-table';
 import { PageHeader } from '@/shared/components/layout/page-header';
@@ -87,7 +87,15 @@ function RunPageSkeletonBody() {
                 disabled
               />
             }
-            pagination={{ page: 1, limit: PAGINATION.defaultLimit, total: 0, onPageChange: noop }}
+            pagination={{
+              page: 1,
+              limit: PAGINATION.defaultLimit,
+              total: 0,
+              onPageChange: noop,
+              pageSizes: PAYROLL_PAGINATION.pageSizes,
+              onLimitChange: noop,
+            }}
+            scrollHeight="screen"
           />
         </div>
         <RulesPanel rules={undefined} settingsHref={`/${locale}/settings`} />

@@ -33,6 +33,7 @@ export interface CalculatedRun extends PayrollReadyFacts {
 
 const PENALTY_WAITING = 'hr.penalty.awaiting_approval';
 const PAYROLL_READY = 'hr.payroll.ready_to_approve';
+const PAYROLL_RETURNED = 'hr.payroll.returned_by_accounting';
 
 const runSubject = (id: Uuid): NotificationSubject => ({
   entityType: AuditEntityType.PAYROLL_RUN,
@@ -134,6 +135,27 @@ export class HrNotificationsService {
       subject: runSubject(id),
       resolution: 'approved',
       byUserId,
+    });
+    // Approved again after Accounting sent it back: that item is done too.
+    await this.notifications.resolve({
+      type: PAYROLL_RETURNED,
+      subject: runSubject(id),
+      resolution: 'approved',
+      byUserId,
+    });
+  }
+
+  /**
+   * Accounting sent an approved run back (§10): HR's approvers are told the month and why. One item
+   * per return (dedupe key: the run and the moment); it resolves when the run is approved again.
+   */
+  async payrollReturned(run: { id: Uuid; month: Month; reason: string }, actorId: Uuid | null): Promise<void> {
+    await this.notifications.notify({
+      type: PAYROLL_RETURNED,
+      subject: runSubject(run.id),
+      params: { month: run.month, reason: run.reason },
+      dedupeKey: notificationDedupeKey(PAYROLL_RETURNED, run.id, new Date().toISOString()),
+      actorId,
     });
   }
 

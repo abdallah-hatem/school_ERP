@@ -117,8 +117,13 @@ describe('starting roles (spec table, GUESS)', () => {
         'accounting.settings.view',
         'accounting.settings.edit',
         'accounting.payroll.view',
+        'accounting.payroll.return',
+        'accounting.payroll.finalize',
       ].sort(),
     );
+    // Sending a month back to HR, or finalizing it (transfer made), is Accounting's (owner, 2026-11-19).
+    expect(holders('accounting.payroll.return')).toEqual(['accountant', 'system_admin']);
+    expect(holders('accounting.payroll.finalize')).toEqual(['accountant', 'system_admin']);
   });
 
   it('accounting (§10): the payroll tax rule and the months\' taxes — Accountant and System admin only', () => {

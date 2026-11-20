@@ -110,6 +110,8 @@
         "create": "إنشاء مسيّر رواتب {entity}",
         "recalculate": "إعادة حساب مسيّر رواتب {entity}",
         "approve": "اعتماد مسيّر رواتب {entity}",
+        "returned": "إعادة مسيّر رواتب {entity} إلى مسودة (من الحسابات)",
+        "transferred": "تسجيل تحويل رواتب مسيّر {entity}",
         "adjustment_add": "إضافة تسوية إلى مسيّر رواتب {entity}",
         "adjustment_remove": "حذف تسوية من مسيّر رواتب {entity}"
       }
@@ -119,7 +121,9 @@
         "update": "تعديل قواعد المحاسبة"
       },
       "payroll": {
-        "record": "حساب ضرائب رواتب {entity}"
+        "record": "حساب ضرائب رواتب {entity}",
+        "return": "إعادة رواتب {entity} إلى الموارد البشرية",
+        "finalize": "إنهاء رواتب {entity} (تم التحويل)"
       }
     }
   },
@@ -165,6 +169,7 @@
     "university": "الجامعة",
     "graduationYear": "سنة التخرج",
     "status": "الحالة",
+    "transferredAt": "تاريخ التحويل",
     "userId": "حساب المستخدم",
     "lockedUntil": "الدخول مقفل حتى",
     "groupId": "مجموعة الجزاءات",

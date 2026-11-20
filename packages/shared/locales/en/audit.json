@@ -110,6 +110,8 @@
         "create": "Created the payroll run for {entity}",
         "recalculate": "Recalculated the payroll run for {entity}",
         "approve": "Approved the payroll run for {entity}",
+        "returned": "Returned the payroll run for {entity} to a draft (sent back by Accounting)",
+        "transferred": "Marked the payroll run for {entity} as transferred",
         "adjustment_add": "Added an adjustment to the payroll run for {entity}",
         "adjustment_remove": "Removed an adjustment from the payroll run for {entity}"
       }
@@ -119,7 +121,9 @@
         "update": "Changed the accounting rules"
       },
       "payroll": {
-        "record": "Worked out the payroll taxes for {entity}"
+        "record": "Worked out the payroll taxes for {entity}",
+        "return": "Returned the payroll for {entity} to HR",
+        "finalize": "Finalized the payroll for {entity} (transfer made)"
       }
     }
   },
@@ -165,6 +169,7 @@
     "university": "University",
     "graduationYear": "Graduation year",
     "status": "Status",
+    "transferredAt": "Transferred on",
     "userId": "User account",
     "lockedUntil": "Sign-in locked until",
     "groupId": "Penalty group",

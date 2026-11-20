@@ -16,6 +16,7 @@
     "lastPage": "الصفحة الأخيرة",
     "page": "صفحة {page}",
     "pageOf": "صفحة {page} من {count}",
+    "rowsPerPage": "عدد الصفوف في الصفحة",
     "actions": "الإجراءات",
     "actionsFor": "إجراءات {name}"
   },

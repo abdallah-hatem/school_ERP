@@ -16,6 +16,7 @@
     "lastPage": "Last page",
     "page": "Page {page}",
     "pageOf": "Page {page} of {count}",
+    "rowsPerPage": "Rows per page",
     "actions": "Actions",
     "actionsFor": "Actions for {name}"
   },

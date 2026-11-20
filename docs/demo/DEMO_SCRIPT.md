@@ -26,9 +26,9 @@ Before the demo, on the demo database:
 ## 2. Dashboard
 - Active headcount with the split by stage; this month's payroll (status + net); pending and
   approved penalties this month; quick links.
-- The menu is grouped by module: HR (Employees, Penalties, Lateness, Payroll), then **Payroll
-  taxes** (Accounting) on its own, Inventory and Students marked "Soon", Administration (Settings,
-  Activity, Users, Roles). The bell sits in the top bar.
+- The menu is grouped by module: HR (Employees, Penalties, Lateness, Payroll), Accounting (Approved
+  payroll, Payroll taxes), Inventory and Students marked "Soon", Administration (Settings, Activity, Users,
+  Roles). The bell sits in the top bar.
 - Switch **ع ↔ EN**: the whole layout mirrors without a reload and stays on the same page.
 - ✔ The browser tab reads "Dashboard · <school name>" (لوحة التحكم · <اسم المدرسة> in Arabic), like
   the sign-in page; the school name in the desktop sidebar is shown whole (up to two lines).
@@ -62,6 +62,9 @@ Before the demo, on the demo database:
   (if the run was calculated before, it asks you to **Recalculate**).
 - **Recalculate.** ✔ Check one line by hand: lateness amount = days × month salary ÷ day divisor
   (e.g. 0.75 × 20,000 ÷ 30 = 500.00).
+- **Rows per page** under the lines → 500: ✔ every employee on one page; scrolling the lines keeps
+  the column names on top, inside the card. Every payroll table (HR runs, a run, an employee's
+  Payroll tab, Accounting → Approved payroll and its month, Payroll taxes) has the same picker (10–500).
 
 ## 6. Settings change the numbers (the key moment)
 - Settings → HR rules: change a rule, e.g. grace minutes 0 → 30. The example line updates live
@@ -109,6 +112,18 @@ Before the demo, on the demo database:
   to the gross. ✔ An insured line's insurance share = insured salary × 11% (6,500.00 → 715.00). ✔ The tax rule at the foot matches Settings → Accounting and says "Same as today's
   rule". **Excel** downloads the lines and a sheet with the rule; **Download PDF** prints the
   statement (landscape A4, no menu). An HR officer opening the Payroll taxes link → ✔ not found.
+- Still as the Accountant, Accounting → **Approved payroll**: ✔ only the months HR approved, newest first,
+  with net, insurance, taxes and gross. Open the month from step 7 → ✔ HR's run page, read only:
+  each employee's salary, penalties, lateness, adjustments and net match HR's run, then insurance
+  share, income tax, martyrs' fund and gross. ✔ On two rows, net + insurance + tax + fund = gross
+  by hand; the total row's gross equals the Payroll taxes statement's. A draft month → ✔ not listed.
+  ✔ The month says **Pending transfer**. **Return to HR** → the dialog won't confirm without a
+  reason; give one → ✔ back on the list, the month gone. As HR: ✔ the bell says Accounting returned
+  it (in Arabic too, a Latin reason reads whole), the runs list shows *Draft* + *Returned*, the run
+  says "Returned by Accounting …" with the reason; Activity → ✔ the return on the month and on HR's
+  run, "Pending transfer → Returned to HR" in words; approve it again → ✔ it is back in Accounting →
+  Approved payroll, pending, the notice gone. As the Accountant, **Finalize** → ✔ *Finalized ·
+  transferred*, Return and Finalize are gone; HR's run and runs list show *Finalized · transferred*.
 - Click the employee's name (on the payslip, or in the run's "Employees this month") → ✔ their
   profile opens. Every employee name in the app does this (penalties, lateness, the run).
 - Under the profile's name: ✔ **Signs in as: <user>** for the accountant's employee record (a link to

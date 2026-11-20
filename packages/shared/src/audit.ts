@@ -212,6 +212,18 @@ export const AUDIT_ACTIONS = {
     entityType: E.PAYROLL_RUN,
     kind: 'status',
   },
+  // hr — Accounting sent an approved run back (a draft again, with the reason, §10)
+  'hr.payroll.returned': {
+    module: 'hr',
+    entityType: E.PAYROLL_RUN,
+    kind: 'status',
+  },
+  // hr — Accounting marked an approved run's salaries transferred (final, §10)
+  'hr.payroll.transferred': {
+    module: 'hr',
+    entityType: E.PAYROLL_RUN,
+    kind: 'status',
+  },
   'hr.payroll.adjustment_add': {
     module: 'hr',
     entityType: E.PAYROLL_RUN,
@@ -233,6 +245,18 @@ export const AUDIT_ACTIONS = {
     module: 'accounting',
     entityType: E.ACCOUNTING_PAYROLL,
     kind: 'create',
+  },
+  // accounting — an approved month sent back to HR (its run a draft again, the taxes dropped)
+  'accounting.payroll.return': {
+    module: 'accounting',
+    entityType: E.ACCOUNTING_PAYROLL,
+    kind: 'status',
+  },
+  // accounting — the salaries were transferred: the month is final, never returned to HR
+  'accounting.payroll.finalize': {
+    module: 'accounting',
+    entityType: E.ACCOUNTING_PAYROLL,
+    kind: 'status',
   },
 } as const satisfies Record<string, AuditActionDefinition>;
 

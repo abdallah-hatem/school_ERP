@@ -59,6 +59,7 @@ describe('notification types (N2)', () => {
         'hr.payroll.not_approved',
         'hr.payroll.not_prepared',
         'hr.payroll.ready_to_approve',
+        'hr.payroll.returned_by_accounting',
         'hr.penalty.awaiting_approval',
         'hr.probation.ending_soon',
       ].sort(),

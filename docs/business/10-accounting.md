@@ -98,6 +98,27 @@ For each employee in the approved run:
 - **DECIDED** — Only the Accountant and the System admin open it (`accounting.payroll.view`); a
   school can grant it to another role in Roles. Anyone else gets the not-found page.
 
+### Accounting → Approved payroll: return to HR, finalize (owner, 2026-11-19)
+
+- **DECIDED** — A second page beside Payroll taxes, **Approved payroll** (named apart from HR's
+  Payroll, 2026-11-20): HR's approved months laid out like
+  HR's payroll (the runs list, then a month with HR's columns — salary, penalties, lateness,
+  adjustments, net — followed by insurance share, income tax, martyrs' fund and gross). Read only.
+- **DECIDED** — An approved month is **Pending transfer** until Accounting **finalizes** it ("the
+  transfer is made"): then it is **Finalized · transferred**, here and on HR's run and runs list.
+  Finalizing can't be undone.
+- **DECIDED** — While pending, Accounting can **return the month to HR** with a **required reason**
+  (up to 500 characters). HR's run becomes a draft again — the month unlocked, so penalties, lateness
+  and adjustments can be fixed — and its taxes leave accounting until HR approves it again (then
+  they are worked out afresh). HR's run page shows "Returned by Accounting on …" with the reason
+  until it is approved again, HR's runs list marks that draft **Returned**, and HR's payroll approvers get an always-on notification (resolved by the
+  re-approval). A finalized month can never be returned (409 `PAYROLL_FINALIZED`).
+- **DECIDED** — Two permissions, both on the Accountant and the System admin by default:
+  `accounting.payroll.return` and `accounting.payroll.finalize`. Both writes are audited, as status
+  changes, on the accounting month (`accounting.payroll.return` with the reason,
+  `accounting.payroll.finalize`) and on HR's run, so its own history shows them (`hr.payroll.returned`
+  with the reason, `hr.payroll.transferred`) (2026-11-20).
+
 ## Planned
 
 - Journal entries from approved payroll (and later fee payments); the employer's insurance share.

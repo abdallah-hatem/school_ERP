@@ -1,5 +1,5 @@
 import { expect, type Page } from '@playwright/test';
-import type { Language, PermissionModule, Role, UserAccount } from '@school-erp/shared';
+import { SCREENS, type Language, type PermissionModule, type Role, type ScreenId, type UserAccount } from '@school-erp/shared';
 import { Api } from './api';
 import { t } from './i18n';
 
@@ -63,7 +63,11 @@ export async function makeUser(
 
 /** The sidebar's links (by accessible name). */
 export function sidebarLink(page: Page, locale: Language, key: string) {
-  return page.getByRole('navigation').getByRole('link', { name: t(locale, `common.nav.${key}`), exact: true });
+  const link = page.getByRole('navigation').getByRole('link', { name: t(locale, `common.nav.${key}`), exact: true });
+  // A sidebar screen is also told by where it goes (HR's Payroll and Accounting's Approved payroll
+  // share words; the name alone could match the wrong one).
+  const screen = SCREENS[key as ScreenId] as { path: string } | undefined;
+  return screen ? link.and(page.locator(`[href="/${locale}${screen.path}"]`)) : link;
 }
 
 /** The seeded admin's account (the only System admin in a fresh smoke database). */
