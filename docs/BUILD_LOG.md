@@ -457,7 +457,18 @@ phase live in `docs/build-log/`.
   painted the switches' hidden native checkboxes (fixed for every SkeletonMask with switches/checkboxes);
   a saving switch now shows a pending state (new value, dimmed track, crisp thumb, extra clicks
   ignored) instead of looking locked or doing nothing. Before/after screenshots EN + AR.
+- 2026-11-20 — Penalties approve in date order → #192 (owner found 19 + 20 Nov both at level 2 after
+  approving 20 first; picked option 1 of 3): approving is refused (409 PENALTY_EARLIER_PENDING) while an
+  earlier pending penalty of the same violation for the employee exists within the repeat window;
+  checked under the same advisory lock as the level; Approve shows greyed with the reason; cancel
+  always allowed; approved levels never recomputed (older pairs may share a level, noted in §4).
+  CI caught 9 employees leaked by hr-approval-notifications' e2e (older bug) — cleanup fixed.
 ## Next up
+
+- Penalties: recording a **backdated** penalty after a later one is already approved can still give
+  two the same level (outside #192). Needs the owner's call: refuse, or recount the later one.
+- Sidebar "Soon" modules: three mockups shown (`design/mockups/sidebar-soon.html`), waiting for the
+  owner's pick. Custom icon set drawn (`design/mockups/icon-set.html`), waiting for go/changes.
 
 - Outbox nits (from #121's live test, cosmetic): the "dead after 10 failures" log line always says
   10 (after an admin retry it's 11); a dead row still gets a `next_attempt_at`. A lock held longer
