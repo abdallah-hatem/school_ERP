@@ -22,7 +22,7 @@ the catalogue as it is today. So 18, 19 and 20 Nov become levels 1, 2 and 3, and
   adjustments.
 - A penalty already on the last level stays there. Pending and cancelled penalties, other
   violations, other employees and penalties outside the repetition window don't change.
-- Each moved penalty gets its own entry on the employee's History (level, action and days before →
+- Each moved penalty gets its own entry on the employee’s History (its date; level, action and days before →
   after). No notification is sent.
 - A draft payroll run of a month with a moved penalty says "Penalties changed since the last
   calculation" and offers Recalculate.

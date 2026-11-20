@@ -548,6 +548,7 @@ describe('PenaltyRecordsService — backdated penalty recount (§4, owner 2026-1
       action: 'hr.penalty.recount',
       entity: { type: 'penalty', id: 'r2', label: { en: 'A', ar: 'أ' } },
       changes: [
+        { field: 'penaltyDate', before: null, after: '2025-11-12' },
         { field: 'level', before: 1, after: 2 },
         { field: 'action', before: 'NOTICE', after: 'DEDUCT_DAYS' },
         { field: 'days', before: null, after: 2 },

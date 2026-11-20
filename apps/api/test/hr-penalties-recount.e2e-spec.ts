@@ -174,6 +174,7 @@ describe('HR penalties — backdated penalty recount (e2e, §4 owner 2026-11-20)
     });
     expect(recounts.map((e) => e.entityId)).toEqual([d19.id, d20.id]);
     expect(recounts[1]?.changes).toEqual([
+      { field: 'penaltyDate', before: null, after: day(MONTH, 20) },
       { field: 'level', before: 2, after: 3 },
       { field: 'days', before: 1, after: 2 },
       { field: 'recountedAfter', before: null, after: day(MONTH, 18) },

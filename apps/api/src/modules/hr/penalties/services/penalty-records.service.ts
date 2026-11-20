@@ -534,8 +534,9 @@ export class PenaltyRecordsService {
 
   /**
    * One `hr.penalty.recount` entry on a recounted penalty (§9), labelled with the employee's names
-   * (so it shows in their History): level, action and days before → after, and the date of the
-   * penalty whose approval moved it (`recountedAfter`).
+   * (so it shows in their History): the moved penalty's date (`penaltyDate` — the label alone
+   * doesn't say which one), level, action and days before → after, and the date of the penalty
+   * whose approval moved it (`recountedAfter`).
    */
   private recordRecount(
     approved: RecordRow,
@@ -550,6 +551,8 @@ export class PenaltyRecordsService {
         label: { en: approved.employee.nameEn, ar: approved.employee.nameAr },
       },
       changes: [
+        // Which of the employee's penalties moved (the entry's label is only their name).
+        { field: 'penaltyDate', before: null, after: change.record.date },
         { field: 'level', before: change.before.level, after: change.after.level },
         { field: 'action', before: change.before.action, after: change.after.action },
         { field: 'days', before: change.before.days, after: change.after.days },

@@ -67,7 +67,7 @@
   month be approved after it was recorded, it can't be **approved** either (Approve is greyed out
   with the same reason). Corrections for an approved month go into the next month as adjustments
   (§6). It can still be cancelled.
-- **DECIDED** (owner, 2026-11-20) — Each moved penalty gets its own History entry (level, action and
+- **DECIDED** (owner, 2026-11-20) — Each moved penalty gets its own History entry (its date, level, action and
   days before → after, and the date of the penalty whose approval moved it), on the employee's
   History next to the approval. No one is notified: no existing notification fits. A **draft**
   payroll run of a month with a moved penalty says "Penalties changed since the last calculation"
