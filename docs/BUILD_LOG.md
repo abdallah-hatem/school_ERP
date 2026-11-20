@@ -442,31 +442,22 @@ phase live in `docs/build-log/`.
   Penalties, Users, Activity, Lateness and the payroll run lines; lists whose search filters loaded
   data don't refetch, so none there. DESIGN.md allows it as the second spinner. Rule added to the
   building-frontends skill (1.62.20). Checked in screenshots (EN desktop, AR phone).
+
+## Next up
+
 - Outbox nits (from #121's live test, cosmetic): the "dead after 10 failures" log line always says
   10 (after an admin retry it's 11); a dead row still gets a `next_attempt_at`. A lock held longer
   than Prisma's 15 s transaction timeout counts as one failure, then the next tick delivers it.
-- **Notifications — spec, plan and option A decided (PR #106). Events + outbox and jobs are in; N0–N5 done (#124, #127, #131, #134, #137, #156).** Spec
-  `docs/specs/2026-11-18-notifications.md`, plan `docs/plans/2026-11-18-notifications-plan.md`,
-  business §11, mockup `design/mockups/notifications.html` (option A · bell popover; B and C dropped). The
-  UI shows the in-app channel only — one switch per type; the API keeps a `channel` field (`in_app`). Owner decisions (2026-11-18): in-app bell only (channels addable later), staff users now
-  (parents later), approvals waiting + scheduled reminders, preferences per person / type / channel
-  with school defaults, some types can't be turned off. Owner answers (2026-11-18): grouped notifications, probation end per
-  employee (N0), lateness by the 25th and payroll by the 28th (settings), approvals can't be turned
-  off, retention 90 / 30 / 365 days, contract reminders at 30 and 7 days, Settings → Notifications
-  changed by the System admin and seen by the HR manager.
-
-- ~~Accounting payroll taxes screen~~ done (#138). Follow-up: the "Approved in HR" stamp has no date
+- Payroll taxes follow-up: the "Approved in HR" stamp has no date
   (accounting doesn't store HR's approval time). The long phone statement is paged now (#146).
-- (was) **Accounting payroll taxes screen** — a page per approved month (net, insurance share, income tax,
-  fund, gross per employee) and a sidebar entry: **mockups first** (CLAUDE.md rule 9). The API
-  (`GET /accounting/payroll[/:month]`) is built. Tax defaults are GUESS until the accountant confirms.
 - Accounting settings, from the #84 review (optional): `AccountingSettingsService.update()` now
   reads inside the write's transaction, but two simultaneous saves can still overwrite each other
   (needs a row lock or a version check); the settings e2e checks the audit entry exists but not its
   before/after values.
-- **Before Sunday (owner):** on the demo DB run `prisma migrate deploy`, then `db:seed` once with the
-  same `SEED_ADMIN_PASSWORD`. Activity in the demo: settings, sign-ins, employees and HR rules are recorded; penalties, lateness
-  and payroll only once T29 lands.
+- **Before Sunday (owner):** on the demo DB re-run the seed (set `SEED_ADMIN_PASSWORD` in
+  `apps/api/.env` to the current admin password first — the reseed resets it); deactivate "Test User",
+  delete "Test Role AR"; insure 2–3 employees; add an HR officer and an Accountant login. `demo` was
+  refreshed at `625de6d` (#167); #185 (search loader) came after — refresh again if wanted.
 - Payroll runs could keep a snapshot of the rules they were calculated with (**Tamer**, told 2026-11-18); today
   an approved run shows current rules.
 - Dry-run follow-ups (2026-11-18): the eight polish items are fixed in #99. Still open: Activity
