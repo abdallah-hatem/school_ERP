@@ -449,6 +449,14 @@ phase live in `docs/build-log/`.
   input outside the shared form components. The example box is redesigned as a receipt (owner
   picked option A of three mockups): Net pay, + Income tax, + Martyrs' fund, Gross the school pays.
 
+- 2026-11-20 — Run History tab → #188: the payroll run page has Employees | History tabs (header stays
+  mounted); entries trimmed to what a person would write (approved: status + net; created: net +
+  employees; recalculated: only changed totals; no "Need review", no "Totals ·" prefix), Activity
+  the same. Penalties already showed on an employee's History (T29/T31) — the Next up item was stale.
+- 2026-11-20 — Notifications loading → #190 (owner: "looks so bad, like no css"): the skeleton mask
+  painted the switches' hidden native checkboxes (fixed for every SkeletonMask with switches/checkboxes);
+  a saving switch now shows a pending state (new value, dimmed track, crisp thumb, extra clicks
+  ignored) instead of looking locked or doing nothing. Before/after screenshots EN + AR.
 ## Next up
 
 - Outbox nits (from #121's live test, cosmetic): the "dead after 10 failures" log line always says
@@ -477,7 +485,6 @@ phase live in `docs/build-log/`.
 
 - Hosting the demo on the Contabo server (owner: later; the demo runs locally — Vercel was
   considered and dropped, 2026-11-20).
-- Audit log T28 (#107), T29 + T31 (#126) done. Optional CI ratchet that forbids touching an unwired endpoint (owner: docs only for now). Follow-ups from T30 still open: penalties don't appear on the employee's History (T29); the payroll
-  run page has no History tab yet.
+- Audit log T28 (#107), T29 + T31 (#126) done; the T30 History follow-ups are done (#188). Optional CI ratchet that forbids touching an unwired endpoint (owner: docs only for now).
 
 - Optional: server-side paging for lateness (loads the whole month today) and column sorting.
