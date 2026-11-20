@@ -432,6 +432,10 @@ phase live in `docs/build-log/`.
   now equals `dev` at `625de6d`. Still the owner's before Sunday: re-run the seed (set
   SEED_ADMIN_PASSWORD first), remove "Test User" / "Test Role AR", insure 2–3 employees, add an HR
   officer and an Accountant login.
+- 2026-11-20 — #181 (AbdelrahmanHassib, into `demo`): CI deploys `demo` to Vercel + Neon after the
+  checks pass (stage → migrate the Neon DB → promote, with health checks). Owner confirmed he asked
+  for it → CLAUDE.md rule 6 gains the demo exception. Needs before merge: the `school-erp-demo`
+  GitHub environment with its secrets (owner).
 
 ## Next up
 
@@ -471,7 +475,9 @@ phase live in `docs/build-log/`.
 - Sign-in limit numbers (5 wrong passwords / 15-minute window / 15-minute lock) are core settings with
   no screen yet; add them to Settings → School if a school wants to change them.
 
-- Hosting the demo on the Contabo server (owner: later; local demo is the fallback).
+- Hosting the demo: on Vercel + Neon (owner, 2026-11-20, done by Abdelrahman in #181), not the
+  Contabo server; the local demo stays the fallback. Open: what data the hosted demo database holds
+  (client material must not reach a public URL unless the owner says so).
 - Audit log T28 (#107), T29 + T31 (#126) done. Optional CI ratchet that forbids touching an unwired endpoint (owner: docs only for now). Follow-ups from T30 still open: penalties don't appear on the employee's History (T29); the payroll
   run page has no History tab yet.
 
