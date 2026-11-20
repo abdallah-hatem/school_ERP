@@ -10,9 +10,8 @@ phase live in `docs/build-log/`.
 - **Design:** direction "Campus", picked from three mockups (`design/mockups/b-campus.html`, kept
   locally, not committed). Light theme only, responsive (desktop, tablet, phone), EN and AR.
 
-- **Merging (temporary):** the owner allowed Claude to push and merge **verified** task PRs into
-  `dev` until the demo on 2026-11-22 (2026-11-17). This overrides `CLAUDE.md` rule 5 for this build
-  only; `testing` and `production` still need the owner.
+- **Merging:** only the owner merges, into every branch (2026-11-20; ends Claude merging into `dev`).
+  Claude opens PRs, checks CI and screens, and tells him when one is ready.
 
 ## Stages
 
@@ -400,6 +399,9 @@ phase live in `docs/build-log/`.
   as labels, insured salary as money (EGP 6,500.00, counted as money and hidden without salary
   access), and a photo or school-logo change as "Photo added / changed / removed" — never a file
   name. Checked in screenshots (EN desktop, AR phone).
+- 2026-11-20 — Owner: "for dev also require me only to merge" → `dev` protection now needs one
+  CODEOWNERS approval (the owner merges his own PRs with the admin bypass); CLAUDE.md rule 5,
+  CONVENTIONS and CODEOWNERS updated. Claude opens PRs and reports them ready; it never merges.
 
 ## Next up
 

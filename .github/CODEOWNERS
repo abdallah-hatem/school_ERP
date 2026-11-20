@@ -1,5 +1,5 @@
-# Everything reaching testing and production needs the lead's approval (enforced on those branches;
-# dev only requires green CI). The lines below name the shared code he owns.
+# Everything reaching dev, testing and production needs the lead's approval (enforced on every
+# branch since 2026-11-20). The lines below name the shared code he owns.
 *                            @abdallah-hatem
 
 /apps/api/src/core/          @abdallah-hatem
