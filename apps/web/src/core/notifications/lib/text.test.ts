@@ -51,6 +51,20 @@ describe('notification sentences (N3, N17)', () => {
     });
   });
 
+  it('returned by Accounting: the typed reason is isolated (FSI … PDI), so a Latin reason sits whole in Arabic', () => {
+    const n = notification('hr.payroll.returned_by_accounting', [
+      entry({ month: '2026-11', reason: 'A lateness entry for EMP-0012 is missing.' }),
+    ]);
+    expect(notificationText(n, deps('en'))).toEqual({
+      title: 'November 2026 payroll was returned by Accounting',
+      body: 'Reason: ⁨A lateness entry for EMP-0012 is missing.⁩',
+    });
+    expect(notificationText(n, deps('ar'))).toEqual({
+      title: 'أعادت الحسابات رواتب نوفمبر 2026',
+      body: 'السبب: ⁨A lateness entry for EMP-0012 is missing.⁩',
+    });
+  });
+
   it('three penalties read as their group with the first names and "and 1 more"', () => {
     const items = [omar, salma, amr].map((employee, i) => entry({ employee, violation: late, level: 1 }, `i${i}`));
     const n = notification('hr.penalty.awaiting_approval', items);

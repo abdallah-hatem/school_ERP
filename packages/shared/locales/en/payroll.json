@@ -217,6 +217,8 @@
   "transferred": "Finalized · transferred",
   "returned": {
     "title": "Returned by Accounting on {date}",
-    "body": "Reason: {reason}. Fix what's needed, then approve the month again."
+    "reasonLabel": "Reason:",
+    "fix": "Fix what's needed, then approve the month again.",
+    "pill": "Returned"
   }
 }

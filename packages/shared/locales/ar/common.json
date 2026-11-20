@@ -9,7 +9,7 @@
     "penalties": "الجزاءات",
     "lateness": "التأخير",
     "payroll": "الرواتب",
-    "accountingPayroll": "الرواتب",
+    "accountingPayroll": "الرواتب المعتمدة",
     "payrollTaxes": "ضرائب الرواتب",
     "settings": "الإعدادات",
     "activity": "سجل النشاط",
@@ -90,6 +90,11 @@
     "payrollStatus": {
       "DRAFT": "مسودة",
       "APPROVED": "معتمد"
+    },
+    "accountingPayrollStatus": {
+      "PENDING": "في انتظار التحويل",
+      "RETURNED": "أُعيد إلى الموارد البشرية",
+      "FINALIZED": "نهائي · تم التحويل"
     },
     "adjustmentType": {
       "ADDITION": "إضافة",

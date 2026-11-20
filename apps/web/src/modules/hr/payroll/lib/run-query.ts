@@ -1,6 +1,7 @@
 import {
   PAGINATION,
   PAYROLL_PAGINATION,
+  nearestPageSize,
   type PayrollAdjustment,
   type PayrollLine,
   type PayrollRunQuery,
@@ -26,7 +27,10 @@ export interface RunsListQuery {
 export function parseRunsQuery(params: SearchParamsRecord): RunsListQuery {
   return {
     page: positiveInt(one(params.page), PAGINATION.defaultPage),
-    limit: positiveInt(one(params.limit), PAGINATION.defaultLimit, PAYROLL_PAGINATION.maxLimit),
+    limit: nearestPageSize(
+      positiveInt(one(params.limit), PAGINATION.defaultLimit, PAYROLL_PAGINATION.maxLimit),
+      PAYROLL_PAGINATION.pageSizes,
+    ),
   };
 }
 

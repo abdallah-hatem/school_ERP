@@ -337,7 +337,12 @@ describe('RunPage — returned by Accounting (§10)', () => {
     renderRun({ run: run({ returned: { at: '2026-11-19T10:00:00.000Z', reason: 'Penalty for EMP-0012 missing' } }) });
     const note = screen.getByTestId('returned-notice');
     expect(note.textContent).toContain('Returned by Accounting on 19 Nov 2026');
-    expect(note.textContent).toContain('Reason: Penalty for EMP-0012 missing.');
+    expect(note.textContent).toContain('Reason: Penalty for EMP-0012 missing');
+    expect(note.textContent).toContain("Fix what's needed, then approve the month again.");
+    // The typed reason sits in its own <bdi>, with no period of ours glued to it.
+    const reason = screen.getByTestId('returned-reason');
+    expect(reason.querySelector('bdi')?.textContent).toBe('Penalty for EMP-0012 missing');
+    expect(reason.textContent).toBe('Reason: Penalty for EMP-0012 missing');
     cleanup();
     renderRun({ run: run({ status: 'APPROVED', approvedAt: '2026-11-20T10:00:00.000Z', returned: null }) });
     expect(screen.queryByTestId('returned-notice')).toBeNull();
@@ -346,6 +351,13 @@ describe('RunPage — returned by Accounting (§10)', () => {
   it('Arabic: the notice in Arabic', () => {
     renderRun({ run: run({ returned: { at: '2026-11-19T10:00:00.000Z', reason: 'جزاء ناقص' } }) }, 'ar');
     expect(screen.getByTestId('returned-notice').textContent).toContain('السبب: جزاء ناقص');
+  });
+
+  it('Arabic with a Latin reason: the reason is isolated, never "..", never mixed into the sentence', () => {
+    renderRun({ run: run({ returned: { at: '2026-11-19T10:00:00.000Z', reason: 'Lateness for EMP-0012 is missing.' } }) }, 'ar');
+    const reason = screen.getByTestId('returned-reason');
+    expect(reason.querySelector('bdi')?.textContent).toBe('Lateness for EMP-0012 is missing.');
+    expect(screen.getByTestId('returned-notice').textContent).not.toContain('..');
   });
 
   it('a transferred run reads "Finalized · transferred"', () => {

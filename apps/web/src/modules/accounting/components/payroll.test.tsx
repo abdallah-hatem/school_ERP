@@ -110,7 +110,7 @@ describe('PayrollMonth (Accounting → Payroll, one month)', () => {
     // The month's total row covers everyone.
     const last = within(table()).getAllByRole('row').at(-1)!;
     expect(last.textContent).toContain('28,148.78');
-    expect(screen.getByRole('heading', { level: 1, name: 'Payroll · October 2026' })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1, name: 'Approved payroll · October 2026' })).toBeTruthy();
   });
 
   it('salary data (§2, P4): a line outside scope shows its name only; no totals', () => {
@@ -204,7 +204,7 @@ describe('PayrollMonth — return to HR / finalize', () => {
       <PayrollMonth {...props} month={{ ...WITH_HR, status: 'FINALIZED', finalizedAt: '2026-11-20T09:00:00.000Z' }} />,
       'ar',
     );
-    expect(screen.getByText('مُنهى · تم التحويل')).toBeTruthy();
+    expect(screen.getByText('نهائي · تم التحويل')).toBeTruthy();
     expect(button('إعادة إلى الموارد البشرية')).toBeNull();
   });
 });

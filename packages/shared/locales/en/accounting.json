@@ -1,6 +1,6 @@
 {
   "payroll": {
-    "title": "Payroll",
+    "title": "Approved payroll",
     "description": "Every month HR approved: what each employee was paid, and the insurance and taxes the school pays on top.",
     "list": {
       "tableLabel": "Approved payroll months",
@@ -22,7 +22,7 @@
       }
     },
     "month": {
-      "title": "Payroll · {month}",
+      "title": "Approved payroll · {month}",
       "description": "Approved in HR. Read only: the net is HR's; insurance and taxes were worked out at approval.",
       "tableLabel": "Employees in {month}",
       "heading": "Employees this month",
@@ -64,7 +64,7 @@
       "actions": {
         "excel": "Excel",
         "print": "Download PDF",
-        "back": "Payroll",
+        "back": "Approved payroll",
         "returnToHr": "Return to HR",
         "finalize": "Finalize (transfer made)"
       },

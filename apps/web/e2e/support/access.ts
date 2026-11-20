@@ -64,7 +64,8 @@ export async function makeUser(
 /** The sidebar's links (by accessible name). */
 export function sidebarLink(page: Page, locale: Language, key: string) {
   const link = page.getByRole('navigation').getByRole('link', { name: t(locale, `common.nav.${key}`), exact: true });
-  // HR's and Accounting's pages are both "Payroll": a sidebar screen is also told by where it goes.
+  // A sidebar screen is also told by where it goes (HR's Payroll and Accounting's Approved payroll
+  // share words; the name alone could match the wrong one).
   const screen = SCREENS[key as ScreenId] as { path: string } | undefined;
   return screen ? link.and(page.locator(`[href="/${locale}${screen.path}"]`)) : link;
 }

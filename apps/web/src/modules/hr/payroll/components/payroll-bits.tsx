@@ -2,7 +2,7 @@
 
 import { PayrollStatus, type PayrollFlag } from '@school-erp/shared';
 import { Money } from '@/shared/components/ui/figures';
-import { LockedIcon, PendingIcon, ReadyIcon } from '@/shared/components/ui/icons';
+import { LockedIcon, PendingIcon, ReadyIcon, RestoreIcon } from '@/shared/components/ui/icons';
 import { StatusPill } from '@/shared/components/ui/status-pill';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
@@ -24,6 +24,31 @@ export function RunStatusPill({ status, transferred = false }: { status: Payroll
     <StatusPill tone={status === PayrollStatus.APPROVED ? 'success' : 'accent'}>
       {t(`common.enums.payrollStatus.${status}`)}
     </StatusPill>
+  );
+}
+
+/**
+ * A draft Accounting sent back (§10): "Draft" with a small "Returned" beside it, so HR spots it on
+ * the runs list. Approved again, the return is cleared and only the status shows.
+ */
+export function RunStatusCell({
+  status,
+  transferred = false,
+  returned = false,
+}: {
+  status: PayrollStatus;
+  transferred?: boolean;
+  returned?: boolean;
+}) {
+  const { t } = useTranslation();
+  if (status !== PayrollStatus.DRAFT || !returned) return <RunStatusPill status={status} transferred={transferred} />;
+  return (
+    <span className="flex flex-wrap items-center gap-1.5">
+      <RunStatusPill status={status} />
+      <StatusPill tone="warning" icon={RestoreIcon}>
+        {t('payroll.returned.pill')}
+      </StatusPill>
+    </span>
   );
 }
 

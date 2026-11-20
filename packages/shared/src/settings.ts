@@ -255,6 +255,16 @@ export const PAYROLL_PAGINATION = {
   maxLimit: 500,
 } as const;
 
+/**
+ * The listed page size closest to `limit` (the smaller on a tie): an unknown `?limit=30` reads as
+ * 25, so the "Rows per page" picker always shows the size the table really uses.
+ */
+export function nearestPageSize(limit: number, sizes: readonly number[]): number {
+  let best = sizes[0] ?? limit;
+  for (const size of sizes) if (Math.abs(size - limit) < Math.abs(best - limit)) best = size;
+  return best;
+}
+
 /** Logo upload rules from the contract. */
 export const LOGO_UPLOAD = {
   maxBytes: 2 * 1024 * 1024,

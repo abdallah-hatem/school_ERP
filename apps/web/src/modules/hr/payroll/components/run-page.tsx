@@ -383,9 +383,12 @@ export function RunPage({
             <p id={returnedTitleId} className="font-bold">
               {t('payroll.returned.title', { date: formatDate(run.returned.at.slice(0, 10), locale) })}
             </p>
-            <p className="text-sm break-words">
-              <BidiText>{t('payroll.returned.body', { reason: run.returned.reason })}</BidiText>
+            {/* The reason is what Accounting typed: isolated in its own direction (like adjustment
+                reasons), and never followed by a sentence's period of ours. */}
+            <p className="text-sm break-words" data-testid="returned-reason">
+              {t('payroll.returned.reasonLabel')} <BidiText>{run.returned.reason}</BidiText>
             </p>
+            <p className="text-sm">{t('payroll.returned.fix')}</p>
           </div>
         </div>
       ) : null}

@@ -1,5 +1,6 @@
 'use client';
 
+import { nearestPageSize } from '@school-erp/shared';
 import { useId, useRef } from 'react';
 import { Button } from '@/shared/components/ui/button';
 import {
@@ -122,7 +123,7 @@ export function Pagination({
         <div data-page-size="" className="flex items-center gap-2">
           <span id={sizeLabelId}>{t('ui.table.rowsPerPage')}</span>
           <Select
-            value={String(limit)}
+            value={String(nearestPageSize(limit, pageSizes))}
             disabled={disabled}
             onValueChange={(value) => {
               onLimitChange(Number(value));

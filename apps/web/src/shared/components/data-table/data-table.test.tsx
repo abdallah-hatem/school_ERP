@@ -345,6 +345,19 @@ describe('DataTable page size and sticky header (payroll tables)', () => {
     expect(onLimitChange).toHaveBeenCalledWith(500);
   });
 
+  it('an unknown page size (?limit=30) shows as the nearest listed one', () => {
+    renderWithI18n(
+      <DataTable
+        label="Employees"
+        columns={columns}
+        rows={people}
+        getRowId={(p) => p.id}
+        pagination={{ ...pagination(), limit: 30, pageSizes: [10, 25, 50, 500], onLimitChange: vi.fn() }}
+      />,
+    );
+    expect(screen.getByRole('combobox', { name: 'Rows per page' }).textContent).toContain('25');
+  });
+
   it('scrollHeight="screen": the table scrolls in a capped box under sticky column names', () => {
     const { container, rerender } = renderWithI18n(
       <DataTable label="Employees" columns={columns} rows={people} getRowId={(p) => p.id} />,

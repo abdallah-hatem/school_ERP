@@ -1,4 +1,4 @@
-import { PAGINATION, PAYROLL_PAGINATION, type AccountingPayrollLine, type AccountingPayrollTotals, type Piastres } from '@school-erp/shared';
+import { PAGINATION, PAYROLL_PAGINATION, nearestPageSize, type AccountingPayrollLine, type AccountingPayrollTotals, type Piastres } from '@school-erp/shared';
 import { sumMoney } from '@/shared/lib/format';
 import type { SearchParamsRecord } from './payroll-taxes';
 
@@ -23,7 +23,10 @@ function positiveInt(raw: string | undefined, fallback: number, max = Number.MAX
 export function parseListQuery(params: SearchParamsRecord): AccountingPayrollListQuery {
   return {
     page: positiveInt(one(params.page), PAGINATION.defaultPage),
-    limit: positiveInt(one(params.limit), PAGINATION.defaultLimit, PAYROLL_PAGINATION.maxLimit),
+    limit: nearestPageSize(
+      positiveInt(one(params.limit), PAGINATION.defaultLimit, PAYROLL_PAGINATION.maxLimit),
+      PAYROLL_PAGINATION.pageSizes,
+    ),
   };
 }
 

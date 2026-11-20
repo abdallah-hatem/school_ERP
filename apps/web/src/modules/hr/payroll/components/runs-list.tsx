@@ -21,7 +21,7 @@ import { formatCount, formatDate, formatMonth } from '@/shared/lib/format';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { CREATE_PAYROLL_RUN } from '../apis';
 import { runsQueryString, type RunsListQuery } from '../lib/run-query';
-import { RunStatusPill } from './payroll-bits';
+import { RunStatusCell } from './payroll-bits';
 
 export interface RunsListProps {
   /** `/ar/payroll` — the list's own path. */
@@ -66,10 +66,12 @@ export function RunsList({ basePath, query, runs, total, currentMonth }: RunsLis
     {
       id: 'status',
       header: t('payroll.list.columns.status'),
-      className: 'w-36',
+      className: 'w-52',
       card: 'status',
       skeleton: <SkeletonPill />,
-      cell: (run) => <RunStatusPill status={run.status} transferred={run.transferredAt !== null} />,
+      cell: (run) => (
+        <RunStatusCell status={run.status} transferred={run.transferredAt !== null} returned={run.returned !== null} />
+      ),
     },
     {
       id: 'employees',
