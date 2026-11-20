@@ -65,10 +65,13 @@ for (const locale of ['en', 'ar'] as const) {
     }
   });
 
-  test(`capped payroll tables keep their totals row in sight at 1440 × 900 (${locale})`, async ({ page }) => {
-    // Dry run 2026-11-20: the month's total row sat under the lines of the height-capped box.
+  test(`capped payroll tables keep their totals row in sight at 900px tall (${locale})`, async ({ page }) => {
+    // Dry run 2026-11-20: the month's total row sat under the lines of the height-capped box
+    // (1440 × 900 on a Mac). 1600 wide, not 1440: the month's lines are a table only from a
+    // 1100px content area, and with a classic 15px scrollbar (Linux CI, Windows) 1440 is just
+    // under it, so the month shows cards there. 900 tall keeps the box's cap the dry run's.
     const month = await approvedMonth();
-    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.setViewportSize({ width: 1600, height: 900 });
     await signIn(page, locale);
     for (const path of [`/accounting/payroll/${month.month}`, `/accounting/payroll-taxes/${month.month}`]) {
       await openSettled(page, `/${locale}${path}`);
