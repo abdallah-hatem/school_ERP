@@ -57,46 +57,66 @@ async function expandAll() {
 }
 
 describe('AuditTimeline — object values', () => {
-  it('a run’s totals: one labelled line each, money in EGP, counts grouped, net first, no JSON', async () => {
+  it('creating a run reads its net and head count only, money in EGP, no "Totals ·" prefix, no JSON', async () => {
     const { container } = show();
     await expandAll();
     const labels = [...container.querySelectorAll('dt')].map((dt) => dt.textContent);
-    expect(labels).toEqual([
-      'Totals · Net',
-      'Totals · Employees',
-      'Totals · Need review',
-      'Totals · Salaries',
-      'Totals · Penalties',
-      'Totals · Lateness',
-      'Totals · Additions',
-      'Totals · Deductions',
-    ]);
+    expect(labels).toEqual(['Net', 'Employees']);
     const dd = [...container.querySelectorAll('dd')].map((d) => d.textContent?.replace(/\s+/g, ' ').trim());
     expect(dd[0]).toMatch(/EGP\s?347,705\.81/);
     expect(dd[1]).toBe('1,284');
-    expect(dd[2]).toBe('2');
-    expect(container.textContent).not.toMatch(/[{}"]/);
+    expect(container.textContent).not.toMatch(/[{}"]|Need review|Totals/);
   });
 
-  it('a recalculation shows only the parts that changed, before → after', () => {
+  it('approving a run reads Draft → Approved, then its net — nothing else (owner, 2026-11-20)', () => {
+    const approved = entry({
+      ...created,
+      id: 'approve',
+      action: 'hr.payroll.approve',
+      changes: [
+        { field: 'totals', before: null, after: TOTALS },
+        { field: 'status', before: 'DRAFT', after: 'APPROVED' },
+      ],
+    });
+    const { container } = show([approved]);
+    expect([...container.querySelectorAll('dt')].map((dt) => dt.textContent)).toEqual(['Status', 'Net']);
+    expect(container.textContent).toMatch(/Draft/);
+    expect(container.textContent).toMatch(/347,705\.81/);
+    expect(screen.queryByRole('button', { name: /more/ })).toBeNull();
+  });
+
+  it('a recalculation shows only the totals that changed, before → after; "Need review" never', () => {
     const { container } = show([recalculated]);
     const labels = [...container.querySelectorAll('dt')].map((dt) => dt.textContent);
-    expect(labels).toEqual(['Totals · Net', 'Totals · Need review']);
+    expect(labels).toEqual(['Net']);
     expect(container.textContent).toMatch(/347,705\.81/);
     expect(container.textContent).toMatch(/347,005\.81/);
     expect(container.textContent).not.toMatch(/[{}"]/);
+  });
+
+  it('a recalculation whose figures stayed the same says so', () => {
+    const same = entry({
+      ...recalculated,
+      id: 'same',
+      changes: [{ field: 'totals', before: TOTALS, after: { ...TOTALS, flagged: 0 } }],
+    });
+    show([same]);
+    expect(screen.getByText('No change in totals')).toBeTruthy();
+    cleanup();
+    show([same], 'ar');
+    expect(screen.getByText('لا تغيير في الإجماليات')).toBeTruthy();
   });
 
   it('Arabic: the parts in Arabic, money in ج.م (drawn left of the figure, as everywhere)', async () => {
     const { container } = show([created], 'ar');
     await expandAll();
     const labels = [...container.querySelectorAll('dt')].map((dt) => dt.textContent);
-    expect(labels.slice(0, 3)).toEqual(['الإجماليات · الصافي', 'الإجماليات · الموظفون', 'الإجماليات · للمراجعة']);
+    expect(labels).toEqual(['الصافي', 'الموظفون']);
     expect(container.querySelector('dd')?.textContent).toMatch(/ج\.م\s?347,705\.81/);
-    expect(container.textContent).not.toMatch(/[{}"]/);
+    expect(container.textContent).not.toMatch(/[{}"]|الإجماليات/);
   });
 
-  it('accounting’s recorded taxes read the same way', () => {
+  it('accounting’s recorded taxes read every figure, without the prefix', () => {
     const { container } = show([
       entry({
         action: 'accounting.payroll.record',
@@ -114,10 +134,10 @@ describe('AuditTimeline — object values', () => {
       }),
     ]);
     expect([...container.querySelectorAll('dt')].map((dt) => dt.textContent)).toEqual([
-      'Totals · Net',
-      'Totals · Employees',
-      'Totals · Gross salaries',
-      'Totals · Income tax',
+      'Net',
+      'Employees',
+      'Gross salaries',
+      'Income tax',
     ]);
     expect(container.textContent).not.toMatch(/[{}"]/);
   });

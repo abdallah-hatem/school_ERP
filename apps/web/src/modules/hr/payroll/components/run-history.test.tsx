@@ -98,8 +98,12 @@ describe('Payroll run — History tab', () => {
     // Piastres read as pounds.
     expect(adjusted!.textContent).toMatch(/250\.00/);
     expect(created!.textContent).toContain('Created the payroll run for November 2026');
+    // Read like a person writes it: approve = status and net; create = net and head count.
+    const labels = (item: HTMLElement) => [...item.querySelectorAll('dt')].map((dt) => dt.textContent);
+    expect(labels(approved!)).toEqual(['Status', 'Net']);
+    expect(labels(created!)).toEqual(['Net', 'Employees']);
     for (const item of [approved, adjusted, created]) {
-      expect(item!.textContent).not.toMatch(/ADDITION|DRAFT|APPROVED|25000|2026-11(?!\d)/);
+      expect(item!.textContent).not.toMatch(/ADDITION|DRAFT|APPROVED|25000|2026-11(?!\d)|Totals|Need review/);
     }
   });
 
@@ -108,6 +112,7 @@ describe('Payroll run — History tab', () => {
     expect(screen.getByText('من فعل ماذا في رواتب هذا الشهر — الإنشاء وإعادة الحساب والتعديلات والاعتماد — الأحدث أولًا.')).toBeTruthy();
     const [approved, adjusted] = screen.getAllByTestId('audit-entry');
     expect(within(approved!).getByText('معتمد')).toBeTruthy();
+    expect([...approved!.querySelectorAll('dt')].map((dt) => dt.textContent)).toEqual(['الحالة', 'الصافي']);
     expect(within(adjusted!).getByText('سلمى عادل')).toBeTruthy();
     expect(adjusted!.textContent).not.toMatch(/ADDITION/);
   });

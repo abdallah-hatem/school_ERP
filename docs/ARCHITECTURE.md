@@ -394,8 +394,10 @@ module through core's exported `AuditService` — never through its repository.
   (`{ nameEn, nameAr, isActive, sortOrder }` before and after, same id) shows one line per changed
   part — "Violation · Name (Arabic)" — never "Strike → Strike"; a different item picked stays one line.
   Any other object value is split into one line per part that changed, never shown as JSON: a payroll
-  run's `totals` as "Totals · Net" etc. (`AUDIT_TOTAL_PARTS` in shared: order, money or count; labels
-  under `audit.totals.*`), a role's `permissions` as "Permissions · View payroll: Everyone → Their
+  run's `totals` as plain figures, "Net", "Employees" (`AUDIT_TOTAL_PARTS` in shared: order, money or
+  count; labels under `audit.totals.*`) — display only, the entry keeps every part: creating a run
+  shows Net and Employees, approving it Status then Net, a recalculation only the figures that
+  changed ("No change in totals" when none did); "Need review" never shows (`TOTALS_SHOWN`), a role's `permissions` as "Permissions · View payroll: Everyone → Their
   stage". A `totals` the viewer may not see (R7) stays one "changed" line.
   A month record (payroll run, its taxes, a lateness month — labelled `2026-11`) reads in the
   sentence as the app prints a month, "November 2026" / "نوفمبر 2026" (`recordLabel`), on one line.
