@@ -95,8 +95,9 @@ for (const locale of ['en', 'ar'] as const) {
     { name: 'desktop', viewport: undefined },
     { name: 'phone', viewport: { width: 390, height: 844 } },
   ] as const) {
-    test(`approved payroll month: cards on every width, the month total card first (${locale}, ${size.name})`, async ({ page }) => {
-      // Owner 2026-11-20: the month's lines are cards on every width, the total card above them.
+    test(`approved payroll month: cards on every width, no total card, an employee first (${locale}, ${size.name})`, async ({ page }) => {
+      // Owner 2026-11-20: the month's lines are cards on every width and the four tiles above are
+      // its totals, so there is no total card on screen. Paper keeps the totals row.
       const month = await approvedMonth();
       if (size.viewport) await page.setViewportSize(size.viewport);
       await signIn(page, locale);
@@ -106,26 +107,21 @@ for (const locale of ['en', 'ar'] as const) {
       // No table on screen (print's own copy of the rows stays, hidden).
       await expect(lines.locator('[data-view="table"]:visible')).toHaveCount(0);
       const cards = lines.locator('[data-view="cards"] > li');
-      expect(await cards.count()).toBeGreaterThan(1);
-      const total = cards.first();
-      await expect(total).toHaveAttribute('data-footer-card', '');
-      await expect(total).toContainText(t(locale, 'accounting.payroll.month.totalAll', { count: String(month.lines.length) }));
-      await expect(lines.locator('[data-footer-card]')).toHaveCount(1);
-      // Above every employee card, so it is never behind them.
-      const [totalBox, firstLine] = [await total.boundingBox(), await cards.nth(1).boundingBox()];
-      expect(totalBox!.y + totalBox!.height).toBeLessThanOrEqual(firstLine!.y);
-      if (!size.viewport) {
-        // 1440 × 900: in the window on load, with no scrolling at all.
-        expect(await page.evaluate(() => window.scrollY)).toBe(0);
-        expect(totalBox!.y).toBeGreaterThanOrEqual(0);
-        expect(totalBox!.y + totalBox!.height).toBeLessThanOrEqual(900);
-      } else {
-        // A phone stacks the four tiles first; scrolled to the lines, the total is the first card.
-        await lines.evaluate((el) => el.scrollIntoView({ block: 'start' }));
-        const box = (await total.boundingBox())!;
-        expect(box.y).toBeGreaterThanOrEqual(0);
-        expect(box.y + box.height).toBeLessThanOrEqual(size.viewport.height);
-      }
+      expect(await cards.count()).toBe(Math.min(month.lines.length, PAGINATION.defaultLimit));
+      await expect(lines.locator('[data-footer-card]')).toHaveCount(0);
+      await expect(lines.locator('[data-view="cards"]')).not.toContainText(
+        t(locale, 'accounting.payroll.month.totalAll', { count: String(month.lines.length) }),
+      );
+      // The first card is an employee's: their name and their fields.
+      const first = month.lines[0]!;
+      await expect(cards.first()).toContainText(locale === 'ar' ? first.nameAr : first.nameEn);
+      await expect(cards.first().locator('dl')).toHaveCount(1);
+      // The printout still has the month's total row.
+      await page.emulateMedia({ media: 'print' });
+      await expect(lines.locator('[data-print-rows] tfoot')).toContainText(
+        t(locale, 'accounting.payroll.month.totalAll', { count: String(month.lines.length) }),
+      );
+      await page.emulateMedia({ media: 'screen' });
     });
   }
 

@@ -114,20 +114,22 @@ describe('PayrollMonth (Accounting → Payroll, one month)', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Approved payroll · October 2026' })).toBeTruthy();
   });
 
-  it("the month's total card comes first, above the employees, covering everyone", () => {
+  it('no total card on screen: the four tiles are the totals; the first card is an employee (EN and AR)', () => {
     renderAccounting(<PayrollMonth {...props} month={WITH_HR} />);
     const items = within(cards()).getAllByRole('listitem');
-    expect(items[0]!.hasAttribute('data-footer-card')).toBe(true);
-    expect(items[0]!.textContent).toContain('Month total · all 3');
-    expect(items[0]!.textContent).toContain('28,148.78');
-    expect(items.filter((li) => li.hasAttribute('data-footer-card'))).toHaveLength(1);
-    expect(items[1]!.textContent).not.toContain('Month total');
-  });
-
-  it('Arabic: the total card reads "إجمالي الشهر"', () => {
+    expect(within(cards()).queryByText(/Month total/)).toBeNull();
+    expect(cards().querySelector('[data-footer-card]')).toBeNull();
+    expect(items).toHaveLength(WITH_HR.lines.length);
+    expect(items[0]!.querySelector('dl')).not.toBeNull();
+    expect(items[0]!.textContent).toContain(WITH_HR.lines[0]!.nameEn);
+    // The month's gross is on its tile.
+    expect(screen.getAllByText('28,148.78').length).toBeGreaterThan(0);
+    // Paper keeps the total row.
+    expect(document.querySelector('[data-print-rows] tfoot')?.textContent).toContain('Month total · all 3');
+    cleanup();
     renderAccounting(<PayrollMonth {...props} month={WITH_HR} />, 'ar');
-    const first = within(screen.getByRole('list', { name: 'موظفو أكتوبر 2026' })).getAllByRole('listitem')[0]!;
-    expect(first.textContent).toContain('إجمالي الشهر');
+    const list = screen.getByRole('list', { name: 'موظفو أكتوبر 2026' });
+    expect(within(list).queryByText(/إجمالي الشهر/)).toBeNull();
   });
 
   it('salary data (§2, P4): a line outside scope shows its name only; no totals', () => {
@@ -141,9 +143,12 @@ describe('PayrollMonth (Accounting → Payroll, one month)', () => {
     const omar = cardOf('Omar Fathy');
     expect(omar.textContent).toContain('Salary hidden');
     expect(within(omar).getAllByLabelText('Amount hidden')).toHaveLength(9);
-    const total = within(cards()).getAllByRole('listitem')[0]!;
-    expect(total.textContent).toContain('Totals show only to someone who sees every salary.');
-    expect(total.textContent).not.toContain('28,148.78');
+    // No total card: the note sits under the tiles, which show dashes.
+    expect(cards().querySelector('[data-footer-card]')).toBeNull();
+    const note = document.querySelector('[data-totals-hidden]')!;
+    expect(note.getAttribute('role')).toBe('note');
+    expect(note.textContent).toBe('Totals show only to someone who sees every salary.');
+    expect(document.body.textContent).not.toContain('28,148.78');
   });
 
   it('search narrows the employees by name or code', async () => {

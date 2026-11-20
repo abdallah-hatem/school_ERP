@@ -116,9 +116,9 @@ Before the demo, on the demo database:
   with net, insurance, taxes and gross. Open the month from step 7 → ✔ HR's figures, read only,
   one card per employee on every screen: salary, penalties, lateness, adjustments and net match
   HR's run, then insurance share, income tax, martyrs' fund, and the gross on the card's band.
-  ✔ On two cards, net + insurance + tax + fund = gross by hand; the first card, above the
-  employees ("Month total · all 38" — AR "إجمالي الشهر · الـ 38 كلهم"), has the same gross as the
-  Payroll taxes statement. A draft month → ✔ not listed.
+  ✔ On two cards, net + insurance + tax + fund = gross by hand. The month's totals are the four
+  tiles at the top (Net paid, Insurance share, Taxes, Gross); the Gross tile equals the Payroll
+  taxes statement's gross. The printout / PDF ends with the "Month total · all 38" row. A draft month → ✔ not listed.
   ✔ The month says **Pending transfer**. **Return to HR** → the dialog won't confirm without a
   reason; give one → ✔ back on the list, the month gone. As HR: ✔ the bell says Accounting returned
   it (in Arabic too, a Latin reason reads whole), the runs list shows *Draft* + *Returned*, the run

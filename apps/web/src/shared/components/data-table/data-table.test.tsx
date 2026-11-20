@@ -372,7 +372,7 @@ describe('DataTable page size and sticky header (payroll tables)', () => {
     for (const th of screen.getAllByRole('columnheader')) expect(th.className).toMatch(/\bsticky top-0\b/);
   });
 
-  it('cardsBelow="always": cards on every width, no screen table; footerCard="start" puts the totals card first', () => {
+  it('cardsBelow="always": cards on every width, no screen table; footerCard="none": no totals card on screen, print keeps the row', () => {
     const footer = { label: 'Month total · all 2', cells: { salary: '2,630,000' } };
     const { container, rerender } = renderWithI18n(
       <DataTable label="Employees" columns={columns} rows={people} getRowId={(p) => p.id} footer={footer} />,
@@ -382,23 +382,25 @@ describe('DataTable page size and sticky header (payroll tables)', () => {
     expect(container.querySelector('[data-view="cards"] > li:last-child')!.hasAttribute('data-footer-card')).toBe(true);
 
     rerender(
-      <DataTable label="Employees" columns={columns} rows={people} getRowId={(p) => p.id} footer={footer} cardsBelow="always" footerCard="start" />,
+      <DataTable label="Employees" columns={columns} rows={people} getRowId={(p) => p.id} footer={footer} printRows={people} cardsBelow="always" footerCard="none" />,
     );
-    expect(container.querySelector('[data-view="table"]')).toBeNull();
     expect(screen.queryByRole('table')).toBeNull();
-    const list = container.querySelector('[data-view="cards"]')!;
+    const screenPart = container.querySelector('.print\\:hidden')!;
+    expect(screenPart.querySelector('[data-view="table"]')).toBeNull();
+    const list = screenPart.querySelector('[data-view="cards"]')!;
     expect(list.className).not.toMatch(/hidden/);
-    const items = [...list.children];
-    expect(items[0]!.hasAttribute('data-footer-card')).toBe(true);
-    expect(items[0]!.textContent).toContain('Month total · all 2');
-    expect(items.slice(1).map((li) => li.textContent)).toEqual([expect.stringContaining('Mona Khalil'), expect.stringContaining('Omar Fathy')]);
+    expect(list.querySelector('[data-footer-card]')).toBeNull();
+    expect([...list.children].map((li) => li.textContent)).toEqual([expect.stringContaining('Mona Khalil'), expect.stringContaining('Omar Fathy')]);
+    // The printout still lists the rows as a table with its totals row.
+    expect(container.querySelector('[data-print-rows] tfoot')?.textContent).toContain('Month total · all 2');
 
-    // While loading: the same shape — no table, the totals card first.
+    // While loading: the same shape — cards, no table, no totals card.
     rerender(
-      <DataTable label="Employees" columns={columns} rows={undefined} loading getRowId={(p) => p.id} footer={footer} cardsBelow="always" footerCard="start" />,
+      <DataTable label="Employees" columns={columns} rows={undefined} loading getRowId={(p) => p.id} footer={footer} cardsBelow="always" footerCard="none" />,
     );
     expect(container.querySelector('[data-view="table"]')).toBeNull();
-    expect(container.querySelector('[data-view="cards"] > li:first-child')!.hasAttribute('data-footer-card')).toBe(true);
+    expect(container.querySelector('[data-view="cards"] [data-footer-card]')).toBeNull();
+    expect(container.querySelectorAll('[data-view="cards"] > li').length).toBeGreaterThan(0);
   });
 
   it('scrollHeight="screen": the totals row stays pinned to the box bottom (dry run 2026-11-20)', () => {

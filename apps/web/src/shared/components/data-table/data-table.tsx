@@ -91,10 +91,11 @@ export interface DataTableProps<Row> {
    */
   cardsBelow?: CardsBelow | 'always';
   /**
-   * Where the totals card goes among the cards: after the last one (default) or first, above the
-   * rows, so it is seen without scrolling past them (Approved payroll month, owner 2026-11-20).
+   * The totals card under the cards (`'end'`, default) or none on screen (`'none'`): the screen
+   * shows the totals elsewhere (the Approved payroll month's four tiles, owner 2026-11-20). The
+   * printout keeps its totals row either way.
    */
-  footerCard?: 'end' | 'start';
+  footerCard?: 'end' | 'none';
   /**
    * The cards' height follows their text (long names that wrap on a phone): the skeleton spec
    * compares their width only. Rows (the table view) are still compared in full.
@@ -279,8 +280,8 @@ interface RowsProps<Row> {
   footer?: DataTableFooter;
   /** Table only: a capped, vertically scrolling body under a sticky header (`scrollHeight`). */
   scrollHeight?: 'screen';
-  /** Cards only: the totals card first or last (`footerCard`). */
-  footerCard?: 'end' | 'start';
+  /** Cards only: the totals card after the cards, or none (`footerCard`). */
+  footerCard?: 'end' | 'none';
 }
 
 const toneBar = {
@@ -430,7 +431,6 @@ function Cards<Row>({ columns, rows, getRowId, label, rowTone, viewClass, height
 
   return (
     <ul data-view="cards" aria-label={label} className={cn('grid gap-3 px-4 pb-4', viewClass)}>
-      {footer && footerCard === 'start' ? <FooterCard columns={columns} footer={footer} /> : null}
       {rows.map((row) => {
         const tone = rowTone?.(row);
         return (
