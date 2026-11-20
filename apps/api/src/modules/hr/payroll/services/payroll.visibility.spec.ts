@@ -127,6 +127,7 @@ function makeService(scopes: Parameters<typeof fakeAccess>[0], salaryIds: string
     ]),
   };
   const notifications = { payrollReturned: jest.fn().mockResolvedValue(undefined) };
+  const audit = { record: jest.fn().mockResolvedValue(undefined) };
   const school = { getSchoolSettings: jest.fn().mockResolvedValue({ nameEn: 'S', nameAr: 'S', logoUrl: null }) };
   const service = new PayrollService(
     repository as unknown as PayrollRunsRepository,
@@ -138,12 +139,12 @@ function makeService(scopes: Parameters<typeof fakeAccess>[0], salaryIds: string
     school as unknown as SettingsService,
     { publish: jest.fn() } as unknown as DomainEvents,
     fakeAccess(scopes),
-    { record: jest.fn() } as never,
+    audit as never,
     { inTransaction: (fn: () => unknown) => fn(), run: (fn: () => unknown) => Promise.resolve(fn()) } as never,
     { payrollRunCreated: jest.fn(), payrollRunApproved: jest.fn() } as never,
     notifications as never,
   );
-  return { service, repository, employees, notifications };
+  return { service, repository, employees, notifications, audit };
 }
 
 const PRINCIPAL = { 'hr.employees.view_salary': null } as const;
@@ -294,6 +295,41 @@ describe('payroll — returned by / transferred in Accounting (§10)', () => {
     await service.returnFromAccounting('r1', 'Fix EMP-0003', 'u1');
     expect(repository.returnToDraft).toHaveBeenCalledWith('r1', 'Fix EMP-0003');
     expect(notifications.payrollReturned).toHaveBeenCalledWith({ id: 'r1', month: '2026-10', reason: 'Fix EMP-0003' }, 'u1');
+  });
+
+  it("return is recorded on the run itself (hr.payroll.returned: APPROVED → DRAFT, with the reason)", async () => {
+    const { service, repository, audit } = makeService({});
+    repository.findRun.mockResolvedValueOnce(approved());
+    await service.returnFromAccounting('r1', 'Fix EMP-0003', 'u1');
+    expect(audit.record).toHaveBeenCalledWith({
+      action: 'hr.payroll.returned',
+      entity: { type: 'payroll_run', id: 'r1', label: '2026-10' },
+      changes: [
+        { field: 'status', before: 'APPROVED', after: 'DRAFT' },
+        { field: 'reason', before: null, after: 'Fix EMP-0003' },
+      ],
+    });
+  });
+
+  it('transfer is recorded on the run itself (hr.payroll.transferred, with the moment)', async () => {
+    const { service, repository, audit } = makeService({});
+    repository.findRun.mockResolvedValueOnce(approved());
+    const at = new Date('2026-11-20T10:00:00.000Z');
+    await service.markTransferred('r1', at);
+    expect(repository.markTransferred).toHaveBeenCalledWith('r1', at);
+    expect(audit.record).toHaveBeenCalledWith({
+      action: 'hr.payroll.transferred',
+      entity: { type: 'payroll_run', id: 'r1', label: '2026-10' },
+      changes: [{ field: 'transferredAt', before: null, after: '2026-11-20T10:00:00.000Z' }],
+    });
+  });
+
+  it('a refused return or transfer records nothing', async () => {
+    const { service, repository, audit } = makeService({});
+    repository.findRun.mockResolvedValue(approved({ transferredAt: new Date() }));
+    await expect(service.returnFromAccounting('r1', 'x', 'u1')).rejects.toMatchObject({ status: 409 });
+    await expect(service.markTransferred('r1', new Date())).rejects.toMatchObject({ status: 409 });
+    expect(audit.record).not.toHaveBeenCalled();
   });
 
   it('a transferred run is never returned (409 PAYROLL_FINALIZED)', async () => {

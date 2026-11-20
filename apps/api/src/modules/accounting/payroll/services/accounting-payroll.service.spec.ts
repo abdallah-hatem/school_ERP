@@ -172,6 +172,34 @@ describe('AccountingPayrollService.returnToHr / finalize', () => {
     );
   });
 
+  it("locks like finalize: this month's row is dropped before HR's run is touched (no deadlock)", async () => {
+    const { service, repository, hrPayroll } = makeService({ storedMonth: true });
+    await service.returnToHr('2026-11', 'Penalty missing', 'u1');
+    expect(repository.deletePending.mock.invocationCallOrder[0]).toBeLessThan(
+      hrPayroll.returnFromAccounting.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('HR refusing the return fails the whole return (the drop rolls back with it), nothing audited', async () => {
+    const { service, hrPayroll, audit } = makeService({ storedMonth: true });
+    hrPayroll.returnFromAccounting.mockRejectedValueOnce(Object.assign(new Error('refused'), { status: 409 }));
+    await expect(service.returnToHr('2026-11', 'x', 'u1')).rejects.toMatchObject({ status: 409 });
+    expect(audit.record).not.toHaveBeenCalled();
+  });
+
+  it("return and finalize are recorded against the month, which outlives the dropped row", async () => {
+    const { service, audit } = makeService({ storedMonth: true });
+    await service.returnToHr('2026-11', 'Penalty missing', 'u1');
+    expect(audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({ entity: { type: 'accounting_payroll', id: '2026-11', label: '2026-11' } }),
+    );
+    const other = makeService({ storedMonth: true });
+    await other.service.finalize('2026-11', 'u1');
+    expect(other.audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({ entity: { type: 'accounting_payroll', id: '2026-11', label: '2026-11' } }),
+    );
+  });
+
   it('a finalized month is never returned (409 PAYROLL_FINALIZED), and HR is not touched', async () => {
     const { service, hrPayroll, repository } = makeService({ storedMonth: true, finalized: true });
     await expect(service.returnToHr('2026-11', 'late', 'u1')).rejects.toMatchObject({ status: 409 });

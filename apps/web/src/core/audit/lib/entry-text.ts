@@ -160,6 +160,7 @@ function enumOf(field: string, entityType: AuditEntityType | undefined): string 
     case 'status':
       if (entityType === 'penalty') return 'penaltyStatus';
       if (entityType === 'payroll_run') return 'payrollStatus';
+      if (entityType === 'accounting_payroll') return 'accountingPayrollStatus';
       return 'employeeStatus';
     default:
       return null;

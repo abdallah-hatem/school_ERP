@@ -62,7 +62,13 @@ export class AccountingPayrollService {
    * Sends an approved, not yet finalized month back to HR (§10): HR's run is a draft again (the
    * month unlocked, HR's approvers told why) and this month's taxes are dropped — worked out again
    * when HR approves it again. 404 for a month not here; 409 `PAYROLL_FINALIZED` once finalized.
-   * The run, the drop and the audit entry commit together.
+   * The run, the drop and the audit entries commit together; a refusal from HR rolls the drop back.
+   * Locks in finalize's order — this month's row first, then HR's run — so a return and a finalize
+   * racing each other wait on one another instead of deadlocking.
+   *
+   * Return and finalize are recorded against the month (`entity.id` = `YYYY-MM`), not the row id: a
+   * returned month's row is deleted and a new one recorded on re-approval, while the month is the
+   * accounting month's lasting identity (unique here), so its entries keep pointing at something.
    */
   async returnToHr(month: Month, reason: string, actorId: Uuid | null): Promise<void> {
     await this.afterCommit.inTransaction(async () => {
@@ -70,11 +76,11 @@ export class AccountingPayrollService {
       if (!run) throw new NotFoundException();
       if (run.finalizedAt) throw finalized();
       const totals = (await this.repository.totalsFor([run.id])).get(run.id);
-      await this.hrPayroll.returnFromAccounting(run.hrRunId, reason, actorId);
       if (!(await this.repository.deletePending(run.id))) throw finalized();
+      await this.hrPayroll.returnFromAccounting(run.hrRunId, reason, actorId);
       await this.audit.record({
         action: 'accounting.payroll.return',
-        entity: { type: AuditEntityType.ACCOUNTING_PAYROLL, id: run.id, label: month },
+        entity: { type: AuditEntityType.ACCOUNTING_PAYROLL, id: month, label: month },
         changes: [
           { field: 'status', before: AccountingPayrollStatus.PENDING, after: 'RETURNED' },
           { field: 'reason', before: null, after: reason },
@@ -98,7 +104,7 @@ export class AccountingPayrollService {
       await this.hrPayroll.markTransferred(run.hrRunId, at);
       await this.audit.record({
         action: 'accounting.payroll.finalize',
-        entity: { type: AuditEntityType.ACCOUNTING_PAYROLL, id: run.id, label: month },
+        entity: { type: AuditEntityType.ACCOUNTING_PAYROLL, id: month, label: month },
         changes: [{ field: 'status', before: AccountingPayrollStatus.PENDING, after: AccountingPayrollStatus.FINALIZED }],
       });
     });

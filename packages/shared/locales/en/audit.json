@@ -110,6 +110,8 @@
         "create": "Created the payroll run for {entity}",
         "recalculate": "Recalculated the payroll run for {entity}",
         "approve": "Approved the payroll run for {entity}",
+        "returned": "Returned the payroll run for {entity} to a draft (sent back by Accounting)",
+        "transferred": "Marked the payroll run for {entity} as transferred",
         "adjustment_add": "Added an adjustment to the payroll run for {entity}",
         "adjustment_remove": "Removed an adjustment from the payroll run for {entity}"
       }
@@ -167,6 +169,7 @@
     "university": "University",
     "graduationYear": "Graduation year",
     "status": "Status",
+    "transferredAt": "Transferred on",
     "userId": "User account",
     "lockedUntil": "Sign-in locked until",
     "groupId": "Penalty group",

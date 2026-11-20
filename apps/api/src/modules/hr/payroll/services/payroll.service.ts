@@ -498,27 +498,42 @@ export class PayrollService {
    * Accounting sends an APPROVED run back to HR (§10): a DRAFT again — the month unlocked, so HR
    * can fix penalties, lateness or adjustments and approve it again — with the reason, and HR's
    * approvers told. Refused with 409 `PAYROLL_FINALIZED` once the salaries were transferred, and
-   * `PAYROLL_NOT_APPROVED` for a run that isn't approved. Runs in the caller's transaction, which
-   * records the audit entry (`accounting.payroll.return`).
+   * `PAYROLL_NOT_APPROVED` for a run that isn't approved. Runs in the caller's transaction (which
+   * also records `accounting.payroll.return`) and records `hr.payroll.returned` on the run, so the
+   * run's own history shows it.
    */
   async returnFromAccounting(id: Uuid, reason: string, actorId: Uuid | null): Promise<void> {
     const run = await this.findRun(id);
     if (run.transferredAt) throw conflict(ErrorCode.PAYROLL_FINALIZED);
     if (run.status !== PayrollStatus.APPROVED) throw conflict(ErrorCode.PAYROLL_NOT_APPROVED);
     if (!(await this.repository.returnToDraft(id, reason))) throw conflict(ErrorCode.PAYROLL_FINALIZED);
+    await this.audit.record({
+      action: 'hr.payroll.returned',
+      entity: { type: AuditEntityType.PAYROLL_RUN, id, label: run.month },
+      changes: [
+        { field: 'status', before: PayrollStatus.APPROVED, after: PayrollStatus.DRAFT },
+        { field: 'reason', before: null, after: reason },
+      ],
+    });
     await this.notifications.payrollReturned({ id, month: run.month, reason }, actorId);
   }
 
   /**
    * Accounting marked an APPROVED run's salaries transferred (finalized, §10): it is final — never
    * returned. 409 `PAYROLL_NOT_APPROVED` when it isn't approved, `PAYROLL_FINALIZED` when already
-   * transferred. Runs in the caller's transaction (its audit entry is `accounting.payroll.finalize`).
+   * transferred. Runs in the caller's transaction (which also records `accounting.payroll.finalize`);
+   * records `hr.payroll.transferred` on the run.
    */
   async markTransferred(id: Uuid, at: Date): Promise<void> {
     const run = await this.findRun(id);
     if (run.transferredAt) throw conflict(ErrorCode.PAYROLL_FINALIZED);
     if (run.status !== PayrollStatus.APPROVED) throw conflict(ErrorCode.PAYROLL_NOT_APPROVED);
     if (!(await this.repository.markTransferred(id, at))) throw conflict(ErrorCode.PAYROLL_FINALIZED);
+    await this.audit.record({
+      action: 'hr.payroll.transferred',
+      entity: { type: AuditEntityType.PAYROLL_RUN, id, label: run.month },
+      changes: [{ field: 'transferredAt', before: null, after: at.toISOString() }],
+    });
   }
 
   /**
