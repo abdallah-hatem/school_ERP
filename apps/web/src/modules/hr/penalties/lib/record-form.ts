@@ -47,6 +47,8 @@ export function fieldForError(code: unknown): keyof RecordPenaltyValues | null {
       return 'violationId';
     // §4 once per day: the date is what to change (or the violation, if it was the wrong one).
     case ErrorCode.VIOLATION_ONCE_PER_DAY:
+    // §4 backdated: an approved penalty it would move up sits in an approved payroll month.
+    case ErrorCode.PENALTY_RECOUNT_MONTH_LOCKED:
       return 'date';
     default:
       return null;

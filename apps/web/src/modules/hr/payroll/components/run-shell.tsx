@@ -206,11 +206,22 @@ export function RunShell({ basePath, penaltiesHref, run: serverRun, asOf: server
     () => run.lines.some((line) => line.flags.includes(PayrollFlag.PENDING_PENALTIES)),
     [run.lines],
   );
-  const pendingNotice = !draft || approveError ? null : run.pendingPenalties > 0 ? 'pending' : staleFlags ? 'stale' : null;
+  // `recounted`: a backdated penalty moved approved ones of this month up a level since the last
+  // calculation (§4, owner 2026-11-20) — the same "penalties changed" notice, its own sentence.
+  const pendingNotice = !draft || approveError
+    ? null
+    : run.pendingPenalties > 0
+      ? 'pending'
+      : staleFlags
+        ? 'stale'
+        : run.penaltiesRecounted
+          ? 'recounted'
+          : null;
   const pendingTitleId = useId();
   // HR rules (lateness, payroll) changed after the last calculation (dry run 2026-11-18). Not shown
-  // beside the "stale" notice, which already offers Recalculate.
-  const rulesNotice = draft && !approveError && run.rulesChanged && pendingNotice !== 'stale';
+  // beside the "stale" / "recounted" notice, which already offers Recalculate.
+  const rulesNotice =
+    draft && !approveError && run.rulesChanged && pendingNotice !== 'stale' && pendingNotice !== 'recounted';
   const rulesTitleId = useId();
   const returnedTitleId = useId();
 
@@ -313,11 +324,13 @@ export function RunShell({ basePath, penaltiesHref, run: serverRun, asOf: server
           </div>
         ) : null}
 
-        {pendingNotice === 'stale' ? (
-          // No penalty is pending any more, but the lines were calculated while some were.
+        {pendingNotice === 'stale' || pendingNotice === 'recounted' ? (
+          // No penalty is pending any more, but the lines were calculated while some were — or a
+          // backdated approval moved approved ones up a level since.
           <div
             role="note"
             aria-labelledby={pendingTitleId}
+            data-testid={pendingNotice === 'recounted' ? 'penalties-recounted-notice' : undefined}
             className="bg-info-soft text-info-ink flex flex-wrap items-start gap-3 rounded-2xl px-4 py-3.5"
           >
             <RecalculateIcon className="mt-0.5 size-5 shrink-0" />
@@ -325,7 +338,9 @@ export function RunShell({ basePath, penaltiesHref, run: serverRun, asOf: server
               <p id={pendingTitleId} className="font-bold">
                 {t('payroll.approve.staleTitle')}
               </p>
-              <p className="text-sm">{t('payroll.approve.staleBody')}</p>
+              <p className="text-sm">
+                {t(pendingNotice === 'recounted' ? 'payroll.approve.recountedBody' : 'payroll.approve.staleBody')}
+              </p>
             </div>
             <Button
               size="sm"

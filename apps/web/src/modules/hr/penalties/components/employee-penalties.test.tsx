@@ -62,7 +62,7 @@ describe('EmployeePenalties (profile tab)', () => {
 
   it('records a penalty for this employee: the employee is already picked', async () => {
     const user = userEvent.setup();
-    apis.GET_PENALTY_PREVIEW.mockResolvedValue(ok({ level: 1, action: 'NOTICE', days: null, priorCount: 0 }));
+    apis.GET_PENALTY_PREVIEW.mockResolvedValue(ok({ level: 1, action: 'NOTICE', days: null, priorCount: 0, recount: [] }));
     renderTab();
     await user.click(screen.getByRole('button', { name: 'Record a penalty' }));
     const dialog = await screen.findByRole('dialog', { name: 'Record a penalty' });

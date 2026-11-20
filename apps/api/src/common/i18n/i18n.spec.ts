@@ -56,4 +56,19 @@ describe('translateError', () => {
     expect(ar).toContain('2026');
     expect(ar).not.toContain('2026-11-19');
   });
+
+  it('a month param (YYYY-MM) reads as the month and year (PENALTY_RECOUNT_MONTH_LOCKED)', () => {
+    const params = { month: '2026-10' };
+    expect(translateError('PENALTY_RECOUNT_MONTH_LOCKED', 'en', params)).toContain('in October 2026, whose payroll');
+    const ar = translateError('PENALTY_RECOUNT_MONTH_LOCKED', 'ar', params);
+    expect(ar).toContain('أكتوبر 2026');
+    expect(ar).not.toContain('2026-10');
+  });
+
+  it('a count picks the plural form (PENALTY_RECOUNT_UNCONFIRMED)', () => {
+    expect(translateError('PENALTY_RECOUNT_UNCONFIRMED', 'en', { count: 2 })).toBe(
+      'Approving this penalty raises the level of 2 approved penalties. Check them and confirm.',
+    );
+    expect(translateError('PENALTY_RECOUNT_UNCONFIRMED', 'en', { count: 1 })).toContain('1 approved penalty.');
+  });
 });

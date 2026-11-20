@@ -24,6 +24,10 @@ lines each role sees: §2 Roles (enforced, P4).
   from (the lateness rule and the payroll rule, §5, §7) changed after its last calculation, and
   offers **Recalculate**. The penalty repetition window doesn't count: it sets a penalty's level when
   the penalty is recorded, not the run.
+- **DECIDED** (owner, 2026-11-20) — A draft run also says "Penalties changed since the last
+  calculation" and offers **Recalculate** when approving a backdated penalty moved approved
+  penalties dated in its month up a level after the run was last calculated (§4), so their new
+  deductions are applied.
 - **GUESS** (2026-11-18, §2) — Adding or removing an **adjustment** needs the "Adjust payroll"
   permission (System admin, HR manager, HR officer). Without it, a draft's adjustments can be
   opened and read but not changed, and the screen says why.

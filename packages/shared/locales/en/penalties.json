@@ -40,7 +40,31 @@
     "title": "Approve this penalty?",
     "body": "{name} · {violation} · {action}. The level and action are fixed once approved.",
     "confirm": "Approve",
-    "done": "Penalty approved."
+    "done": "Penalty approved.",
+    "confirmRecount": {
+      "zero": "Approve and update penalties",
+      "one": "Approve and update 1 penalty",
+      "two": "Approve and update 2 penalties",
+      "few": "Approve and update {count} penalties",
+      "many": "Approve and update {count} penalties",
+      "other": "Approve and update {count} penalties"
+    },
+    "recountRefreshed": "The list below is up to date now. Check it and confirm again."
+  },
+  "recount": {
+    "label": "Approved penalties this changes",
+    "heading": {
+      "zero": "Approving this will raise the level of approved penalties:",
+      "one": "Approving this will raise the level of 1 approved penalty:",
+      "two": "Approving this will raise the level of 2 approved penalties:",
+      "few": "Approving this will raise the level of {count} approved penalties:",
+      "many": "Approving this will raise the level of {count} approved penalties:",
+      "other": "Approving this will raise the level of {count} approved penalties:"
+    },
+    "item": "{date}: level {from} → {to}, {action}",
+    "actionChange": "{from} → {to}",
+    "recordNote": "Recording changes nothing: they change only when this penalty is approved.",
+    "approveNote": "It was recorded with an earlier date than these, so they move up one level each."
   },
   "cancel": {
     "button": "Cancel",

@@ -29,8 +29,25 @@ const preview = (overrides: Partial<PenaltyPreview> = {}): PenaltyPreview => ({
   action: 'NOTICE',
   days: null,
   priorCount: 0,
+  recount: [],
   ...overrides,
 });
+
+/** §4 backdated: the owner's case — 19 Nov L1 and 20 Nov L2 approved, recording the 18th. */
+const RECOUNT: PenaltyPreview['recount'] = [
+  {
+    id: 'p-19',
+    date: '2026-11-19',
+    before: { level: 1, action: 'DEDUCT_DAYS', days: 0.5 },
+    after: { level: 2, action: 'DEDUCT_DAYS', days: 1 },
+  },
+  {
+    id: 'p-20',
+    date: '2026-11-20',
+    before: { level: 2, action: 'DEDUCT_DAYS', days: 1 },
+    after: { level: 3, action: 'DEDUCT_DAYS', days: 2 },
+  },
+];
 
 function renderDialog(onOpenChange = vi.fn(), locale: 'en' | 'ar' = 'en') {
   renderPenalties(
@@ -280,5 +297,81 @@ describe('RecordPenaltyDialog', () => {
     expect(date.getAttribute('aria-invalid')).toBe('true');
     expect(screen.queryByRole('alert')?.textContent ?? '').not.toBe(message);
     expect(onOpenChange).not.toHaveBeenCalledWith(false);
+  });
+
+  describe('backdated penalty (§4, owner 2026-11-20)', () => {
+    it.each([
+      [
+        'en',
+        /Employee/,
+        'Mona Khalil · EMP-0001',
+        /Violation/,
+        'Late arrival without notice',
+        'Approving this will raise the level of 2 approved penalties:',
+        ['19 Nov 2026: level 1 → 2, Deduct 0.5 day → Deduct 1 day', '20 Nov 2026: level 2 → 3, Deduct 1 day → Deduct 2 days'],
+        'Recording changes nothing',
+      ],
+      [
+        'ar',
+        /الموظف/,
+        'Mona Khalil · EMP-0001',
+        /المخالفة/,
+        'التأخر دون إخطار',
+        'اعتماد هذا الجزاء سيرفع مرة جزاءين معتمدين:',
+        ['19 نوفمبر 2026: المرة 1 ← 2، خصم 0.5 يوم ← خصم يوم واحد', '20 نوفمبر 2026: المرة 2 ← 3، خصم يوم واحد ← خصم يومين'],
+        'التسجيل وحده لا يغيّر شيئًا',
+      ],
+    ] as const)(
+      '(%s) the heads-up lists the approved penalties approving it would raise, before saving; saving still works',
+      async (locale, employeeField, employee, violationField, violation, heading, items, note) => {
+        const user = userEvent.setup();
+        apis.GET_PENALTY_PREVIEW.mockResolvedValue(ok(preview({ recount: RECOUNT })));
+        apis.CREATE_PENALTY.mockResolvedValue(ok(record({ recount: RECOUNT })));
+        const onOpenChange = renderDialog(vi.fn(), locale);
+        await choose(user, employeeField, employee);
+        await choose(user, violationField, violation);
+        const heads = await screen.findByTestId('penalty-recount');
+        expect(heads.textContent).toContain(heading);
+        expect(within(heads).getAllByRole('listitem').map((li) => li.textContent?.replace('•', '').trim())).toEqual(items);
+        expect(heads.textContent).toContain(note);
+        await user.click(screen.getByRole('button', { name: locale === 'en' ? 'Save as pending' : /حفظ/ }));
+        await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+      },
+    );
+
+    it('no heads-up when nothing would change', async () => {
+      const user = userEvent.setup();
+      apis.GET_PENALTY_PREVIEW.mockResolvedValue(ok(preview()));
+      renderDialog();
+      await choose(user, /Employee/, 'Mona Khalil · EMP-0001');
+      await choose(user, /Violation/, 'Late arrival without notice');
+      await waitFor(() => expect(previewLine()).toBe('Level 1 — Notice'));
+      expect(screen.queryByTestId('penalty-recount')).toBeNull();
+    });
+
+    it('one of them in an approved payroll month: the preview says so as an error naming the month; a refused save lands under the date', async () => {
+      const user = userEvent.setup();
+      const locked = {
+        success: false,
+        status: 409,
+        error: 'PENALTY_RECOUNT_MONTH_LOCKED',
+        message: 'Server message',
+        params: { month: '2026-10' },
+      } as never;
+      apis.GET_PENALTY_PREVIEW.mockResolvedValue(locked);
+      apis.CREATE_PENALTY.mockResolvedValue(locked);
+      const onOpenChange = renderDialog();
+      await choose(user, /Employee/, 'Mona Khalil · EMP-0001');
+      await choose(user, /Violation/, 'Late arrival without notice');
+      const message =
+        'This would raise the level of an approved penalty in October 2026, whose payroll is approved. Corrections for an approved month go into the next month as adjustments.';
+      await waitFor(() => expect(previewLine()).toBe(message));
+      await user.click(screen.getByRole('button', { name: 'Save as pending' }));
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: /Date of the violation/ }).getAttribute('aria-invalid')).toBe('true'),
+      );
+      expect(screen.getAllByText(message)).toHaveLength(1);
+      expect(onOpenChange).not.toHaveBeenCalledWith(false);
+    });
   });
 });

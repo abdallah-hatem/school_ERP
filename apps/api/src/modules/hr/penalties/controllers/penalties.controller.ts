@@ -13,6 +13,7 @@ import type { AuthUser } from '@school-erp/shared';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
 import { ResponseUtil } from '../../../../common/utils/response.util';
 import {
+  ApprovePenaltyDto,
   CancelPenaltyDto,
   CreatePenaltyDto,
   ListPenaltiesQueryDto,
@@ -60,8 +61,12 @@ export class PenaltiesController {
   @Post(':id/approve')
   @Permission('hr.penalties.approve')
   @HttpCode(HttpStatus.OK)
-  approve(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user?: AuthUser) {
-    return this.penalties.approve(id, user?.id ?? null);
+  approve(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ApprovePenaltyDto,
+    @CurrentUser() user?: AuthUser,
+  ) {
+    return this.penalties.approve(id, user?.id ?? null, dto?.acknowledgedRecount);
   }
 
   @Audited('hr.penalty.cancel')

@@ -55,7 +55,10 @@ function makeService(repo: Record<string, jest.Mock> = {}, oncePerDay = true, ac
     cancel: jest.fn().mockResolvedValue(true),
     ...repo,
   };
-  const monthLock = { assertMonthOpen: jest.fn().mockResolvedValue(undefined) };
+  const monthLock = {
+    assertMonthOpen: jest.fn().mockResolvedValue(undefined),
+    isMonthLocked: jest.fn().mockResolvedValue(false),
+  };
   const settings = {
     get: jest.fn().mockResolvedValue({ penalties: { repetitionWindow: 'CONTRACT_YEAR' } }),
   };
@@ -167,9 +170,10 @@ describe('PenaltyRecordsService', () => {
         level: 1,
         earlierPending: { id: 'r0', date: '2025-11-09' },
       });
+      // Every date of the pair: later approved ones are what approving it would recount (§4).
       expect(blocked.repository.approvedCandidates).toHaveBeenCalledWith(
         [{ employeeId: 'e1', violationId: 'v1' }],
-        '2025-11-10',
+        undefined,
         undefined,
         { withPending: true },
       );
@@ -432,5 +436,138 @@ describe('PenaltyRecordsService — audit entries (§9, T29)', () => {
     await expect(service.idsOfEmployee('act-123')).resolves.toEqual([]);
     expect(findIdsOfEmployees).not.toHaveBeenCalled();
     await expect(service.idsOfEmployee('33333333-3333-4333-8333-333333333333')).resolves.toEqual(['p1']);
+  });
+});
+
+describe('PenaltyRecordsService — backdated penalty recount (§4, owner 2026-11-20)', () => {
+  // r1 is dated 2025-11-10, recorded 08:00; LEVELS: 1 NOTICE, 2 DEDUCT_DAYS 2.
+  const laterApproved = (id: string, date: string, level = 1) => ({
+    ...approvedAt(id, `${date}T08:00:00Z`),
+    level,
+    action: level === 1 ? 'NOTICE' : 'DEDUCT_DAYS',
+    days: level === 1 ? null : 2,
+  });
+  const change = {
+    id: 'r2',
+    date: '2025-11-12',
+    before: { level: 1, action: 'NOTICE', days: null },
+    after: { level: 2, action: 'DEDUCT_DAYS', days: 2 },
+  };
+  const ack = [{ id: 'r2', level: 2, action: 'DEDUCT_DAYS' as const, days: 2 }];
+  /** A repository `approve` that runs the service's recount plan on `pair`, then approves. */
+  const approveRunning = (pair: unknown[], updates: unknown[] = []) =>
+    jest.fn(async (...args: unknown[]) => {
+      const plan = args[7] as (records: unknown[]) => Promise<unknown[]>;
+      updates.push(...(await plan(pair)));
+      return 'APPROVED';
+    });
+  const dto = { employeeId: 'e1', violationId: 'v1', date: '2025-11-10' };
+
+  it('the preview lists what approving would change; recording changes nothing', async () => {
+    const { service, repository } = makeService({
+      approvedCandidates: jest.fn().mockResolvedValue([laterApproved('r2', '2025-11-12')]),
+    });
+    expect(await service.preview(dto)).toEqual({ level: 1, action: 'NOTICE', days: null, priorCount: 0, recount: [change] });
+    // From the window's start, every later date included.
+    expect(repository.approvedCandidates).toHaveBeenCalledWith([dto], undefined, '2025-06-01');
+    await service.create(dto, 'u1');
+    expect(repository.approve).not.toHaveBeenCalled();
+  });
+
+  it('one of them in an approved payroll month → the preview and the recording are refused naming the month', async () => {
+    const { service, repository, monthLock } = makeService({
+      approvedCandidates: jest.fn().mockResolvedValue([laterApproved('r2', '2025-12-02')]),
+    });
+    monthLock.isMonthLocked.mockImplementation((m: string) => Promise.resolve(m === '2025-12'));
+    const refusal = { code: ErrorCode.PENALTY_RECOUNT_MONTH_LOCKED, status: 409, params: { month: '2025-12' } };
+    await expect(service.preview(dto)).rejects.toMatchObject(refusal);
+    await expect(service.create(dto, 'u1')).rejects.toMatchObject(refusal);
+    expect(repository.createRecord).not.toHaveBeenCalled();
+  });
+
+  it('a pending record carries its recount and the locked month among it; an approved one none', async () => {
+    const { service, monthLock } = makeService({
+      approvedCandidates: jest.fn().mockResolvedValue([laterApproved('r2', '2025-11-12')]),
+    });
+    expect(await service.get('r1')).toMatchObject({ recount: [change], recountLockedMonth: null });
+    monthLock.isMonthLocked.mockResolvedValue(true);
+    expect(await service.get('r1')).toMatchObject({ recountLockedMonth: '2025-11' });
+    const approved = makeService({ findOne: jest.fn().mockResolvedValue(row({ status: 'APPROVED' })) });
+    expect(await approved.service.get('r1')).toMatchObject({ recount: [], recountLockedMonth: null });
+  });
+
+  it('approving without confirming the changes → 409 PENALTY_RECOUNT_UNCONFIRMED with the list; nothing audited', async () => {
+    const { service, audit, notifications } = makeService({
+      approve: approveRunning([laterApproved('r2', '2025-11-12')]),
+    });
+    await expect(service.approve('r1', 'u1')).rejects.toMatchObject({
+      code: ErrorCode.PENALTY_RECOUNT_UNCONFIRMED,
+      status: 409,
+      params: { count: 1 },
+      data: { recount: [change] },
+    });
+    expect(audit.record).not.toHaveBeenCalled();
+    expect(notifications.penaltyApproved).not.toHaveBeenCalled();
+  });
+
+  it('a stale confirmation → 409 PENALTY_RECOUNT_CHANGED with the fresh list', async () => {
+    const { service } = makeService({
+      approve: approveRunning([laterApproved('r2', '2025-11-12'), laterApproved('r3', '2025-11-13')]),
+    });
+    await expect(service.approve('r1', 'u1', ack)).rejects.toMatchObject({
+      code: ErrorCode.PENALTY_RECOUNT_CHANGED,
+      params: { count: 2 },
+      data: { recount: [change, { ...change, id: 'r3', date: '2025-11-13' }] },
+    });
+    // Confirming changes when there are none now is stale too.
+    const none = makeService({ approve: approveRunning([]) });
+    await expect(none.service.approve('r1', 'u1', ack)).rejects.toMatchObject({ code: ErrorCode.PENALTY_RECOUNT_CHANGED });
+  });
+
+  it('a locked month among the changes refuses the approval (it may have been approved since recording)', async () => {
+    const { service, monthLock } = makeService({ approve: approveRunning([laterApproved('r2', '2025-12-02')]) });
+    monthLock.isMonthLocked.mockResolvedValue(true);
+    await expect(service.approve('r1', 'u1', ack)).rejects.toMatchObject({
+      code: ErrorCode.PENALTY_RECOUNT_MONTH_LOCKED,
+      params: { month: '2025-12' },
+    });
+  });
+
+  it('confirmed: the repository writes the moves; one hr.penalty.recount entry each after the approval, linked to the employee', async () => {
+    const updates: unknown[] = [];
+    const approved = row({ status: 'APPROVED' });
+    const { service, audit } = makeService({
+      approve: approveRunning([laterApproved('r2', '2025-11-12')], updates),
+      findOne: jest.fn().mockResolvedValueOnce(row()).mockResolvedValue(approved),
+    });
+    await service.approve('r1', 'u1', ack);
+    expect(updates).toEqual([{ id: 'r2', fromLevel: 1, level: 2, action: 'DEDUCT_DAYS', days: 2 }]);
+    expect(audit.record).toHaveBeenCalledTimes(2);
+    expect(audit.record.mock.calls[0][0]).toMatchObject({ action: 'hr.penalty.approve' });
+    expect(audit.record.mock.calls[1][0]).toEqual({
+      action: 'hr.penalty.recount',
+      entity: { type: 'penalty', id: 'r2', label: { en: 'A', ar: 'أ' } },
+      changes: [
+        { field: 'penaltyDate', before: null, after: '2025-11-12' },
+        { field: 'level', before: 1, after: 2 },
+        { field: 'action', before: 'NOTICE', after: 'DEDUCT_DAYS' },
+        { field: 'days', before: null, after: 2 },
+        { field: 'recountedAfter', before: null, after: '2025-11-10' },
+      ],
+    });
+  });
+
+  it('nothing to recount: approving needs no confirmation and writes one entry', async () => {
+    const updates: unknown[] = [];
+    const { service, audit } = makeService({ approve: approveRunning([laterApproved('r0', '2025-11-03')], updates) });
+    await service.approve('r1', 'u1');
+    expect(updates).toEqual([]);
+    expect(audit.record).toHaveBeenCalledTimes(1);
+  });
+
+  it('cancel runs under the pair lock (the record is the key)', async () => {
+    const { service, repository } = makeService();
+    await service.cancel('r1', { reason: 'x' }, 'u1');
+    expect(repository.cancel).toHaveBeenCalledWith('r1', 'x', 'u1', expect.objectContaining({ employeeId: 'e1', violationId: 'v1' }));
   });
 });
