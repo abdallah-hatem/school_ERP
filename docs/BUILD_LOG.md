@@ -442,6 +442,12 @@ phase live in `docs/build-log/`.
   Penalties, Users, Activity, Lateness and the payroll run lines; lists whose search filters loaded
   data don't refetch, so none there. DESIGN.md allows it as the second spinner. Rule added to the
   building-frontends skill (1.62.20). Checked in screenshots (EN desktop, AR phone).
+- 2026-11-20 — Money inputs → #189 (owner: "each money input field must be auto updated like this
+  10,000, in real time"): the Settings → Accounting example's Net pay was a hand-rolled input (from
+  #83); now the shared engine via a new `MoneyInput` (MoneyField renders through it). Sweep: also the
+  HR rules lateness example (minutes, grouped). A unit-test guard fails on any raw decimal/numeric
+  input outside the shared form components. The example box is redesigned as a receipt (owner
+  picked option A of three mockups): Net pay, + Income tax, + Martyrs' fund, Gross the school pays.
 
 ## Next up
 
