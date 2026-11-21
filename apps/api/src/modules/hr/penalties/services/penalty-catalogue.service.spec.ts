@@ -89,8 +89,8 @@ describe('PenaltyCatalogueService.list — searched here, never in the browser',
 
   it('active: retired groups and violations are left out, and a group left empty too', async () => {
     const withRetired = [
-      { ...catalogue[0]!, violations: [catalogue[0]!.violations[0]!, violationRow({ id: 'v9', nameEn: 'Old rule', nameAr: 'قديم', isActive: false })] },
-      { ...catalogue[1]!, isActive: false },
+      { ...catalogue[0], violations: [catalogue[0].violations[0], violationRow({ id: 'v9', nameEn: 'Old rule', nameAr: 'قديم', isActive: false })] },
+      { ...catalogue[1], isActive: false },
     ];
     const svc = makeService({ findGroupsWithViolations: jest.fn().mockResolvedValue(withRetired) }).service;
     expect((await svc.list(undefined, true)).map((g) => [g.id, g.violations.map((v) => v.id)])).toEqual([['g1', ['v1']]]);

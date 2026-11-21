@@ -1,5 +1,4 @@
 import {
-  EmployeeStatus,
   ErrorCode,
   PenaltyAction,
   PenaltyStatus,

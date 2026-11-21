@@ -270,7 +270,7 @@ describe('Monthly lateness — /hr/lateness (e2e)', () => {
     const second = (await get(MONTH, { page: 2, limit: 1 }).expect(200)).body.data as LatenessMonth;
     expect(first).toMatchObject({ total: all.length, page: 1, limit: 1 });
     expect(first.items).toHaveLength(1);
-    expect(second.items[0]!.employee.id).toBe(all[1]!.employee.id);
+    expect(second.items[0].employee.id).toBe(all[1].employee.id);
     const totals = {
       employees: all.length,
       minutes: all.reduce((n, r) => n + r.minutes, 0),

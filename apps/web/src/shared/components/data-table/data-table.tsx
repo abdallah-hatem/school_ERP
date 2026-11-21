@@ -80,6 +80,10 @@ export interface DataTableProps<Row> {
   retrying?: boolean;
   /** Shown when there are no rows. Pass a no-results state when filters are active. */
   empty?: ReactNode;
+  /**
+   * The API's page: `rows` must be that page (never more than `limit` rows) and `total` the API's
+   * count — the browser never pages, filters, sorts or searches a list (owner, 2026-11-21).
+   */
   pagination?: PaginationState;
   /** Title row above the table: heading, count, search, filters. */
   toolbar?: ReactNode;
@@ -178,6 +182,7 @@ export function DataTable<Row>({
   const view = cardsOnly ? { table: '', cards: '' } : VIEW_CLASSES[cardsBelow];
   const { t } = useTranslation();
   const skeletonCount = Math.min(pagination?.limit ?? 8, SKELETON_CAP);
+  assertServerPage(label, rows, pagination);
   const showSkeleton = loading && !rows?.length && !error;
   const isEmpty = !showSkeleton && !error && (rows?.length ?? 0) === 0;
 
@@ -570,4 +575,19 @@ function FooterCard<Row>({ columns, footer }: { columns: DataTableColumn<Row>[];
       ) : null}
     </li>
   );
+}
+
+/**
+ * The guard against paging in the browser (owner, 2026-11-21): a paginated table is handed the
+ * API's page, so it never holds more rows than the page size. Handed a whole list (to slice it
+ * here) it throws outside production — every unit test rendering such a screen fails, and so does
+ * the dev server — instead of quietly paging client-side.
+ */
+export function assertServerPage(label: string, rows: readonly unknown[] | undefined, pagination: PaginationState | undefined) {
+  if (process.env.NODE_ENV === 'production' || !pagination || !rows) return;
+  if (rows.length > pagination.limit) {
+    throw new Error(
+      `DataTable "${label}": ${rows.length} rows for a page of ${pagination.limit}. Pass the API's page (page, limit, search and totals come from the server), never a whole list to page here.`,
+    );
+  }
 }

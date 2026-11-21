@@ -12,7 +12,6 @@ import {
   type Employee,
   type EmployeeSummary,
   type Gender,
-  type ListItem,
 } from '@school-erp/shared';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';

@@ -738,12 +738,12 @@ describe('HR payroll and dashboard (e2e)', () => {
 
     const second = await getRun(run.id, { page: '2', limit: '1' });
     expect(second.linesPage).toEqual({ total: all.length, page: 2, limit: 1 });
-    expect(second.lines.map((l) => l.id)).toEqual([all[1]!.id]);
+    expect(second.lines.map((l) => l.id)).toEqual([all[1].id]);
     expect(second.totals).toEqual(run.totals);
     // A search narrows the count with the lines.
-    const found = await getRun(run.id, { search: all[0]!.employeeCode, limit: '1' });
+    const found = await getRun(run.id, { search: all[0].employeeCode, limit: '1' });
     expect(found.linesPage.total).toBeGreaterThanOrEqual(1);
-    expect(found.lines[0]!.employeeCode).toContain(all[0]!.employeeCode);
+    expect(found.lines[0].employeeCode).toContain(all[0].employeeCode);
     // Past the end: no lines, the count still right.
     expect(await getRun(run.id, { page: '999', limit: '10' })).toMatchObject({ lines: [], linesPage: { total: all.length } });
 

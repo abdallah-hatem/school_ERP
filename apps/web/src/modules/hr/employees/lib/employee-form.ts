@@ -2,7 +2,6 @@ import {
   applyInsuranceStatus,
   contractYearFor,
   DEGREES,
-  EmployeeStatus,
   ErrorCode,
   GENDERS,
   graduationYearRange,
@@ -18,13 +17,10 @@ import {
   type Degree,
   type CreateEmployeeRequest,
   type Employee,
-  type EmployeeSummary,
   type Gender,
   type IsoDate,
-  type ListItem,
   type NamedRef,
   type UpdateEmployeeRequest,
-  type Uuid,
   type WorkSystem,
 } from '@school-erp/shared';
 import { z } from 'zod';

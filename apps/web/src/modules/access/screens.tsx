@@ -1,4 +1,4 @@
-import { PAGINATION, SYSTEM_ADMIN_ROLE, type Role, type UserAccount } from '@school-erp/shared';
+import { SYSTEM_ADMIN_ROLE, type Role, type UserAccount } from '@school-erp/shared';
 import { can } from '@/core/auth/permissions';
 import { GET_NOTIFICATION_PREFERENCES, NotificationsI18n } from '@/core/notifications';
 import { getSession } from '@/core/auth/session';

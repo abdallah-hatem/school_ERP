@@ -152,10 +152,10 @@ describe('HR lists and employees (e2e)', () => {
       expect(whole.meta).toBeUndefined();
       const first = (await http(app).get('/hr/departments').query({ includeHidden: true, page: 1, limit: 1 }).expect(200)).body;
       expect(first.data).toHaveLength(1);
-      expect(first.data[0].id).toBe(whole.data[0]!.id);
+      expect(first.data[0].id).toBe(whole.data[0].id);
       expect(first.meta).toMatchObject({ total: whole.data.length, page: 1, limit: 1 });
       const second = (await http(app).get('/hr/departments').query({ includeHidden: true, page: 2, limit: 1 }).expect(200)).body;
-      if (whole.data.length > 1) expect(second.data[0].id).toBe(whole.data[1]!.id);
+      if (whole.data.length > 1) expect(second.data[0].id).toBe(whole.data[1].id);
       // Hidden items only with includeHidden.
       const hidden = whole.data.find((d) => d.id === hiddenDepartmentId)!;
       const found = (await http(app).get('/hr/departments').query({ includeHidden: true, search: hidden.nameAr }).expect(200)).body;

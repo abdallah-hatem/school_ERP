@@ -156,6 +156,29 @@ The API refuses anything undeclared (403) and CI fails on it (`docs/ARCHITECTURE
 5. `@SignedIn()` (any signed-in user) and `@Public()` (no session) are rare and reviewed: the scan
    lists them, so adding one changes a test.
 
+## Lists: the server pages, searches, filters, sorts and totals (owner, 2026-11-21)
+
+**No list is paged, filtered, sorted or searched in the browser — anywhere.** Every table, card
+list and picker over database records asks the API for one page: `page`, `limit`, `search`, its
+filters and order are query parameters, the repository runs the query, and the screen shows exactly
+the page it got. Figures over "all N" (a month's totals, a group's subtotals, a summary line) are
+worked out by the API over the whole filtered set and sent with the page — never summed in the
+browser from a fully loaded list.
+
+- **Screens:** the search, filters and page live in the URL (`?q`/`?search`, `?page`, `?limit`,
+  filters); typing is debounced; the list dims and the search box spins while the next page loads.
+- **Pickers:** a `SelectField` / `FilterSelect` / `Combobox` over records gets `server`
+  (`useServerOptions`): the API answers each typed search (one page of 20) and the chosen record's
+  name comes from the record or from the API (`?ids=` / `?id=`). Only short **code** lists (an enum)
+  may be filtered by the combobox itself.
+- **Exports** (Excel, print / PDF, the bank sheet) cover the whole set, read from the API — never
+  the page on screen.
+- **Guards:** `DataTable` throws outside production when handed more rows than its page size
+  (`assertServerPage`), and `apps/web/src/test/server-lists.guard.test.ts` fails on the client-side
+  idioms (the text matcher, case-folded `includes`, page slices, page counts or totals from an
+  array's length, `.sort(`) outside its allow-list — static config from code or one record's own
+  parts, each with its reason. A new exception needs that reason; a list of records never qualifies.
+
 ## Design changes: mockup first
 
 - **Small** (a new field, a tweak inside the existing design system): build it, show screenshots.

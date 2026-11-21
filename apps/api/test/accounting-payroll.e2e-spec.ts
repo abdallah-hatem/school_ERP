@@ -524,7 +524,7 @@ describe('Accounting — payroll taxes of approved months (e2e)', () => {
     const second = await linesOf(month, { page: 2, limit: 1 });
     expect(first).toMatchObject({ total: all.lines.length, page: 1, limit: 1 });
     expect(first.items).toHaveLength(1);
-    expect(second.items[0]!.employeeCode).toBe(all.lines[1]!.employeeCode);
+    expect(second.items[0].employeeCode).toBe(all.lines[1].employeeCode);
     // The totals are the whole month's, whichever page.
     expect(first.totals).toEqual(all.totals);
     expect(second.totals).toEqual(all.totals);

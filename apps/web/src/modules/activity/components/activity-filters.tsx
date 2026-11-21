@@ -174,7 +174,6 @@ function PersonPicker({
       if (timer.current) clearTimeout(timer.current);
     };
     // Once, on mount: the first page.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const shown = answer.actors;
   const row = (key: string, selected: boolean, onClick: () => void, lead: ReactNode, name: string) => (

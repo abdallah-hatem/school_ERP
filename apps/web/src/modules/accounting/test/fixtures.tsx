@@ -170,8 +170,9 @@ export const EMPTY_YEAR: AccountingPayrollYear = {
 
 /** The month as `GET /accounting/payroll/:month` sends it: no lines. */
 export function detailOf(sheet: AccountingPayrollMonthSheet): AccountingPayrollMonth {
-  const { lines: _lines, ...month } = sheet;
-  return month;
+  const month: Partial<AccountingPayrollMonthSheet> = { ...sheet };
+  delete month.lines;
+  return month as AccountingPayrollMonth;
 }
 
 /**

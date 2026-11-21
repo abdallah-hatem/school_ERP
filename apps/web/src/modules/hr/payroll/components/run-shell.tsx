@@ -1,6 +1,6 @@
 'use client';
 
-import { PayrollFlag, PayrollStatus, PenaltyStatus, type PayrollRun } from '@school-erp/shared';
+import { PayrollStatus, PenaltyStatus, type PayrollRun } from '@school-erp/shared';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {

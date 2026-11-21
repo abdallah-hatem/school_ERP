@@ -1102,6 +1102,21 @@ Frontend rules:
   owner 2026-11-18): "Clear filters · n" at the toolbar's inline end and in its "No results" state,
   shown only while something narrows the list; one click resets the search, every filter and the
   page in one URL update and brings the list's top back into view. A period (a month) is not a filter.
+- **Lists are the server's (owner, 2026-11-21; `docs/CONVENTIONS.md` → Lists).** The API pages,
+  searches, filters, orders and totals every list; the browser shows the page it got. Plain lists
+  answer `data` (the page) + `meta` (`total`, `page`, `limit`); a list whose screen also shows
+  figures over the whole filtered set answers `ListPage` as `data` — `{ items, total, page, limit }`
+  plus those figures: the accounting month's lines (`GET /accounting/payroll/:month/lines?search&
+  insurance&page&limit` with `totals`, the statement's subtotals per group), the month's lateness
+  (`GET /hr/lateness?month&search&page` with the month's `totals`), and a payroll run's lines
+  (`GET /hr/payroll-runs/:id?…&page&limit`: `lines` + `linesPage`). Rows the service works out in
+  memory (lateness days from today's rule) are paged with `pageOf` and searched with the shared
+  matcher (Arabic letter variants folded); rows read straight from a table page in their repository.
+  Lookup lists (stages, departments, job titles) answer the whole list without `page`/`limit`/
+  `search`/`ids` and a page with them; pickers always ask for a page (`useServerOptions`, 20 a
+  page). Print and Excel read every line from the API (pages of 500), not the page on screen.
+  `DataTable` refuses more rows than its page size outside production (`assertServerPage`), and
+  `src/test/server-lists.guard.test.ts` scans the app for client-side list idioms.
 - Branding (name, logo, colours) loads from settings into CSS variables — for the shell, the
   dashboard and the tab titles always from `GET /settings/school/public` (`getSchoolBranding`), so a
   user without `core.settings.view` sees the school's name too; only the Settings screen reads

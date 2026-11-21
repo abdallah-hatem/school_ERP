@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import ar from '@school-erp/shared/locales/ar/employees.json';
 import en from '@school-erp/shared/locales/en/employees.json';
 import { acceptPhoneInput, isValidPhone } from '@/shared/lib/phone';
-import { employee, item, summary } from '../test/fixtures';
+import { employee } from '../test/fixtures';
 import {
   emptyEmployeeForm,
   employeeFormSchema,
@@ -12,7 +12,6 @@ import {
   formToUpdate,
   graduationYears,
   managerChoice,
-  NO_MANAGER,
 } from './employee-form';
 import { employeesQueryString, hasActiveFilters, parseEmployeesQuery } from './list-query';
 

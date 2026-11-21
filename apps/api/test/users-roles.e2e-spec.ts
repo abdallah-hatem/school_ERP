@@ -158,7 +158,7 @@ describe('users and roles (e2e)', () => {
       const none = await http(app).get('/roles').query({ search: 'no-such-role-xyz' }).expect(200);
       expect(none.body).toMatchObject({ data: [], meta: { total: 0 } });
       const second = await http(app).get('/roles').query({ page: 2, limit: 1 }).expect(200);
-      expect((second.body.data as Role[])[0]!.id).toBe(all[1]!.id);
+      expect((second.body.data as Role[])[0].id).toBe(all[1].id);
       await http(app).get('/roles').query({ limit: 101 }).expect(400);
     });
 
