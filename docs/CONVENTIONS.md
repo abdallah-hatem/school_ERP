@@ -222,7 +222,7 @@ locally and appeared on #222 only once its seed added two users. Every smoke spe
 `settleStreams()` (`apps/web/e2e/support/stream.ts`), which makes each `goto` wait until no hidden
 `S:` copy is left (10 s; longer is a real bug and fails with the page and ids), and logs the longest
 wait per file. Prefer retrying assertions (`toHaveText`, `toHaveCount`) for values anyway. Image checks
-ignore images inside a hidden streamed copy (they are lazy and never load).
+ignore images inside a hidden streamed copy and lazy images below the fold (neither loads until shown).
 
 ## Review
 
