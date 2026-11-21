@@ -14,6 +14,10 @@ import { t } from './support/i18n';
 import { openDay } from './support/penalties';
 import { settled } from './support/role-access';
 import { settle, shoot } from './support/ui';
+import { settleStreams } from './support/stream';
+
+// Every goto waits for the streamed page to settle (see support/stream.ts).
+settleStreams();
 
 /**
  * Runs in the `desktop-en` project (1440×900). §4 two steps and §3 several stages (owner

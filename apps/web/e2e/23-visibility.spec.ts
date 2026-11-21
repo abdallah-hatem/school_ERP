@@ -3,6 +3,10 @@ import { sidebarLink } from './support/access';
 import { t } from './support/i18n';
 import { settle, shoot, signIn } from './support/ui';
 import { expectNotFound, makeStageHead, salaryInContract, signInAsStageHead } from './support/visibility';
+import { settleStreams } from './support/stream';
+
+// Every goto waits for the streamed page to settle (see support/stream.ts).
+settleStreams();
 
 /**
  * Runs in the `desktop-en` project (1440×900). P4 — what each role can see: a Stage head linked to

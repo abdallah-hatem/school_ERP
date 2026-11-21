@@ -4,6 +4,10 @@ import { makeUser, rolesByKey, sidebarLink, signInAs } from './support/access';
 import { checkAccountingSettings } from './support/accounting-settings';
 import { t } from './support/i18n';
 import { signIn } from './support/ui';
+import { settleStreams } from './support/stream';
+
+// Every goto waits for the streamed page to settle (see support/stream.ts).
+settleStreams();
 
 /** Settings → Accounting on a desktop, English then Arabic (§10). */
 for (const locale of ['en', 'ar'] as const) {

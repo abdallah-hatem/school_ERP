@@ -2,6 +2,10 @@ import { expect, test, type Page } from '@playwright/test';
 import type { Language } from '@school-erp/shared';
 import { t } from './support/i18n';
 import { shoot, signIn } from './support/ui';
+import { settleStreams } from './support/stream';
+
+// Every goto waits for the streamed page to settle (see support/stream.ts).
+settleStreams();
 
 /*
  * The date picker's month / year pickers sit under the calendar's previous / next nav. Only a real

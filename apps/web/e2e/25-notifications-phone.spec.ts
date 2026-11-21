@@ -2,6 +2,10 @@ import { expect, test, type Page } from '@playwright/test';
 import { t } from './support/i18n';
 import { settled } from './support/role-access';
 import { expectNoHorizontalScroll, settle, shoot, signIn } from './support/ui';
+import { settleStreams } from './support/stream';
+
+// Every goto waits for the streamed page to settle (see support/stream.ts).
+settleStreams();
 
 /**
  * Runs in the `phone-ar` project only (390×844, touch). On a phone the bell in the top bar opens

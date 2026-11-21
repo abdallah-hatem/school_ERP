@@ -1,6 +1,10 @@
 import { test } from '@playwright/test';
 import { checkClearFilters } from './support/clear-filters';
 import { signIn } from './support/ui';
+import { settleStreams } from './support/stream';
+
+// Every goto waits for the streamed page to settle (see support/stream.ts).
+settleStreams();
 
 /** Desktop (1440×900): "Clear filters · n" on the employees and penalties lists. */
 for (const locale of ['en', 'ar'] as const) {

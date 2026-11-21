@@ -13,6 +13,10 @@ import {
 import { t } from './support/i18n';
 import { activeEmployee } from './support/profile-tabs';
 import { expectNoHorizontalScroll, settle, shoot, signIn } from './support/ui';
+import { settleStreams } from './support/stream';
+
+// Every goto waits for the streamed page to settle (see support/stream.ts).
+settleStreams();
 
 /** Runs in the `desktop-en` project (1440×900). Activity log screens, T30. */
 

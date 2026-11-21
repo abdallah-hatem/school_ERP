@@ -1,3 +1,4 @@
+import { streamSettled } from './stream';
 import { expect, request, test, type Browser, type Page, type TestInfo } from '@playwright/test';
 import { AccountingPayrollStatus, monthOf, PAGINATION, PayrollStatus, PenaltyStatus, type AccountingPayrollMonthSummary, type Language, type PayrollRun, type PayrollRunSummary, type EmployeeSummary, type PenaltyRecord, type UserAccount } from '@school-erp/shared';
 import { join } from 'node:path';
@@ -75,7 +76,12 @@ async function blocksOf(page: Page): Promise<MeasuredBlock[]> {
 async function settled(page: Page): Promise<void> {
   await page.waitForLoadState('networkidle');
   await expect(page.locator('#main [aria-busy="true"]')).toHaveCount(0);
-  await page.waitForFunction(() => Array.from(document.images).every((img) => img.complete));
+  // Streamed content first lands in a hidden copy (`div[hidden][id^="S:"]`) until React swaps it
+  // in; a lazy image in that copy never loads. Wait for the swap, then for the visible images.
+  await streamSettled(page);
+  await page.waitForFunction(() =>
+    Array.from(document.images).every((img) => img.complete || img.closest('div[hidden][id^="S:"]') !== null),
+  );
 }
 
 export interface SkeletonScreen {

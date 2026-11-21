@@ -3,6 +3,10 @@ import { activeEmployee } from './support/profile-tabs';
 import { t } from './support/i18n';
 import { expectTopInView, recordTabs, scrollToBottom, switchTab } from './support/tab-switch';
 import { signIn } from './support/ui';
+import { settleStreams } from './support/stream';
+
+// Every goto waits for the streamed page to settle (see support/stream.ts).
+settleStreams();
 
 /*
  * Switching a tab moves its marker once, from the old tab straight to the clicked one — never back

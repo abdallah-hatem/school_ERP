@@ -2,6 +2,10 @@ import { expect, test } from '@playwright/test';
 import { Api, adminAccount, makeUser, openPermissionModule, rolesByKey, signInAs } from './support/access';
 import { t } from './support/i18n';
 import { expectNoHorizontalScroll, settle, shoot, signIn } from './support/ui';
+import { settleStreams } from './support/stream';
+
+// Every goto waits for the streamed page to settle (see support/stream.ts).
+settleStreams();
 
 /** Runs in the `phone-ar` project only (390×844, touch). Users, Roles and My account on a phone (P3). */
 

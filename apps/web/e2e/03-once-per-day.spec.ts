@@ -5,6 +5,10 @@ import { checkCatalogueSearch, showOncePerDaySwitch, usableCatalogue } from './s
 import { todayIso } from './support/dates';
 import { prefixOf, t } from './support/i18n';
 import { settle, shoot, signIn } from './support/ui';
+import { settleStreams } from './support/stream';
+
+// Every goto waits for the streamed page to settle (see support/stream.ts).
+settleStreams();
 
 /*
  * §4 / §7 (owner, 2026-11-18): the catalogue search, the "Once per day" switch, and the rule itself.

@@ -15,6 +15,10 @@ import { Api } from './support/api';
 import { currentMonth } from './support/dates';
 import { prefixOf, t } from './support/i18n';
 import { searchField, shoot, signIn } from './support/ui';
+import { settleStreams } from './support/stream';
+
+// Every goto waits for the streamed page to settle (see support/stream.ts).
+settleStreams();
 
 /** Grace minutes added in Settings; moves the days of the minutes entered by 04-lateness. */
 const EXTRA_GRACE = 30;

@@ -3,6 +3,10 @@ import { PERMISSION_KEYS, type Role } from '@school-erp/shared';
 import { Api, adminAccount, makeUser, openPermissionModule, permissionModule, rolesByKey, sidebarLink, signInAs, uniqueEmail } from './support/access';
 import { t } from './support/i18n';
 import { expectNoHorizontalScroll, settle, shoot, signIn } from './support/ui';
+import { settleStreams } from './support/stream';
+
+// Every goto waits for the streamed page to settle (see support/stream.ts).
+settleStreams();
 
 /** Runs in the `desktop-en` project (1440×900). Users, Roles and My account (spec P3, option A). */
 

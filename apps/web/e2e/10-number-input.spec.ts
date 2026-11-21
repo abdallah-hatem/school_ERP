@@ -4,6 +4,10 @@ import { Api } from './support/api';
 import { currentMonth } from './support/dates';
 import { t } from './support/i18n';
 import { searchField, signIn } from './support/ui';
+import { settleStreams } from './support/stream';
+
+// Every goto waits for the streamed page to settle (see support/stream.ts).
+settleStreams();
 
 /*
  * Live thousands grouping in a real browser (jsdom doesn't place the caret the way Chromium does):
