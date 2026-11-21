@@ -544,11 +544,19 @@ phase live in `docs/build-log/`.
   deductions vs net, a 6/12-month switch, a Table view per chart, an empty state under two approved months.
   Behind the new permission `hr.dashboard.view_analytics` (System admin only; grantable in Roles). Employees
   now record `deactivated_on`; the seed approves May–October; the StatTile circle no longer covers the label.
-- 2026-11-21 — Owner decisions, being built (`feature/penalty-two-step`): an employee can belong to several
-  stages (a main stage plus "also teaches in"); each penalty records the stage where it happened, and only
-  that stage's head sees and reviews it; every penalty goes record → stage head approve/reject (reason
-  required to reject) → HR approve/reject (reason required). Leave (Planned) will need every stage head,
-  then HR.
+- 2026-11-22 — Two-step penalties + multi-stage employees → #222 (owner: "record penalty => approve or
+  reject (reasons) => hr approval or reject (reasons)"; an employee can teach in two stages, "he would
+  have two bosses"): an employee has a main stage plus "also teaches in"; each penalty records the stage
+  where it happened, and only that stage's head sees and reviews it (the other head isn't told). Flow:
+  Pending stage review → Waiting for HR → Approved, or Rejected at either step with a required reason;
+  only HR's approval sets the level and deduction (date order, backdated recount, approved-month lock
+  move there). Skips to HR when the recorder or the penalised person is that stage's head, or the stage
+  has none. New permission `hr.penalties.review` (Stage head, own stage); existing Pending became Waiting
+  for HR. Also fixed: between 00:00 and 02:00 Cairo the API refused hires/penalties dated today (it
+  used the server's UTC day). Smoke: a race with React's streamed reveal (a hidden `S:n` copy for a
+  frame) made one-shot reads see two elements on CI; every spec now waits for the stream to settle —
+  CONVENTIONS → Where tests run, and the build-software skill (1.62.23). Leave (Planned) will need
+  every stage head, then HR.
 ## Next up
 
 - Sign-in follow-ups (from #218): a show/hide eye on the password box (smoke helpers must first find
