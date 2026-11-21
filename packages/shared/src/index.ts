@@ -20,3 +20,4 @@ export * from './rules';
 export * from './format';
 export * from './search';
 export * from './months';
+export * from './dashboard-analytics';

@@ -82,6 +82,14 @@ lines each role sees: §2 Roles (enforced, P4).
   recalculate) stays recorded but doesn't count, and is shown as "not applied".
 - **DECIDED** — **Dashboard:** active headcount (by stage), the current month's payroll run (status
   and net, or none yet), and this month's penalties (pending and approved, by violation date).
+- **DECIDED** (owner, 2026-11-21) — **Dashboard charts** (System admin only to start with, §2): the
+  net of each approved month; headcount by stage with joiners (hire date) and leavers (the day they
+  were deactivated) per month; approved penalties by violation month, stacked by kind (notice &
+  warning, day deductions, other), with the minutes late per month; and the newest month accounting
+  has worked out (§10) split into net, social insurance, income tax with the martyrs' fund, and
+  penalty and lateness deductions, each as a share of their sum, with that share for the six newest
+  such months. Over the last 6 or 12 months (phones open on 6). Under two approved months the trend
+  charts say "Charts appear after two approved months"; the snapshots still show.
 - **DECIDED** — Approving a run announces it (`payroll approved`, with the totals) once the
   approval is saved. Accounting works out the month's insurance share, income tax, martyrs' fund
   and gross from it (§10); HR payroll itself ends at the net.

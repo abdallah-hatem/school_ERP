@@ -539,6 +539,16 @@ phase live in `docs/build-log/`.
   redrawn): a teal panel with the school brand, headline and a soft-3D office illustration beside the
   form; stacks on phones; mirrors in Arabic; gentle motion off under reduce-motion. Form behaviour
   unchanged; `TextField` takes an optional leading icon. Mockup: `design/mockups/login-s2-quality.html`.
+- 2026-11-21 — Dashboard charts → #220 (owner picked mockup A · Grid, "for now make it only visible to
+  the system admin"): payroll cost trend, headcount by stage with joiners/leavers, penalties and lateness,
+  deductions vs net, a 6/12-month switch, a Table view per chart, an empty state under two approved months.
+  Behind the new permission `hr.dashboard.view_analytics` (System admin only; grantable in Roles). Employees
+  now record `deactivated_on`; the seed approves May–October; the StatTile circle no longer covers the label.
+- 2026-11-21 — Owner decisions, being built (`feature/penalty-two-step`): an employee can belong to several
+  stages (a main stage plus "also teaches in"); each penalty records the stage where it happened, and only
+  that stage's head sees and reviews it; every penalty goes record → stage head approve/reject (reason
+  required to reject) → HR approve/reject (reason required). Leave (Planned) will need every stage head,
+  then HR.
 ## Next up
 
 - Sign-in follow-ups (from #218): a show/hide eye on the password box (smoke helpers must first find

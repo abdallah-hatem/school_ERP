@@ -8,6 +8,7 @@ import { normalizeEmail } from '../../src/common/utils/password.util';
 import { SettingsService } from '../../src/core/settings';
 import { StagesService } from '../../src/core/school-structure';
 import { DatabaseService } from '../../src/database/database.service';
+import { DomainEvents } from '../../src/core/events';
 import {
   DepartmentsService,
   EmployeesService,
@@ -22,6 +23,7 @@ import { seedAdmin, seedStageHeads } from './admin';
 import { EMPLOYEES, generatedFields } from './data/employees';
 import { levelsOf, loadSeedData } from './data/load';
 import { DEPARTMENTS, JOB_TITLES, NO_STAGE_KEY, STAGES, type SeedListItem } from './data/lists';
+import { HISTORY_MONTHS } from './data/history';
 import { ADJUSTMENTS, DEMO_MONTH, LATENESS, PENALTIES, STAGE_HEADS } from './data/november';
 import type { SeedCatalogue, SeedData } from './data/types';
 
@@ -47,6 +49,8 @@ export interface SeedSummary {
   penalties: number;
   month: Month;
   monthSeeded: boolean;
+  /** Approved months before the demo month (the dashboard charts' trends). */
+  historyMonths: number;
 }
 
 const log = (msg: string) => console.log(`seed: ${msg}`);
@@ -186,11 +190,15 @@ async function seedAll(app: INestApplicationContext): Promise<SeedSummary> {
   const stageHeads = await seedStageHeads(db, employeeIds);
   log(`stage heads ready (${STAGE_HEADS.map((h) => h.email).join(', ')})`);
 
+  const history = await seedHistory(app, db, admin.id, employeeIds, violationIds, stageHeads);
   const monthSeeded = await seedMonth(app, db, admin.id, employeeIds, violationIds, stageHeads, stages);
+  // Accounting works each approved month's taxes out after the approval (the outbox): let it finish.
+  await get(DomainEvents).idle();
 
   return {
     source: data.source,
     employees: EMPLOYEES.length,
+    historyMonths: history,
     violations: violationCount,
     penalties: PENALTIES.length,
     month: DEMO_MONTH,
@@ -334,6 +342,58 @@ async function seedCatalogue(
     }
   }
   return bySeedKey;
+}
+
+/**
+ * The approved months before November (`HISTORY_MONTHS`), oldest first: lateness, approved
+ * penalties, then the run — created and approved. A month already approved is left as it is (an
+ * approved month never changes), so a second run creates nothing. Returns how many are approved.
+ */
+async function seedHistory(
+  app: INestApplicationContext,
+  db: DatabaseService,
+  adminId: string,
+  employeeIds: Map<number, string>,
+  violationIds: Map<string, string>,
+  stageHeads: Map<string, string>,
+): Promise<number> {
+  const get = <T>(token: new (...args: never[]) => T): T => app.get(token, { strict: false });
+  const emp = (n: number) => employeeIds.get(n)!;
+  const penalties = get(PenaltyRecordsService);
+  const payroll = get(PayrollService);
+  for (const h of HISTORY_MONTHS) {
+    if (await get(MonthLockService).isMonthLocked(h.month)) continue;
+    await get(LatenessService).put(
+      h.month,
+      { entries: h.lateness.map(([n, minutes]) => ({ employeeId: emp(n), minutes })) },
+      adminId,
+    );
+    for (const [n, violation, day] of h.penalties) {
+      const employeeId = emp(n);
+      const violationId = violationIds.get(violation)!;
+      const date = `${h.month}-${String(day).padStart(2, '0')}`;
+      const existing = await db.penaltyRecord.findFirst({
+        where: { employeeId, violationId, date: new Date(`${date}T00:00:00Z`) },
+        select: { id: true, status: true },
+      });
+      const record = existing ?? (await penalties.create({ employeeId, violationId, date, note: null }, adminId));
+      // §4 two steps: the stage head of its stage reviews it first (when it has one), then HR approves.
+      let status = record.status;
+      if (status === 'PENDING_REVIEW') {
+        const stageId = (await db.penaltyRecord.findUniqueOrThrow({ where: { id: record.id }, select: { stageId: true } })).stageId;
+        status = (await penalties.reviewApprove(record.id, stageHeads.get(stageId) ?? null, null)).status;
+      }
+      if (status === 'WAITING_HR') await penalties.approve(record.id, adminId);
+    }
+    const run = await db.payrollRun.findUnique({ where: { month: h.month }, select: { id: true } });
+    const id = run?.id ?? (await payroll.create(h.month, adminId)).id;
+    await payroll.approve(id, adminId);
+  }
+  const approved = await db.payrollRun.count({
+    where: { month: { in: HISTORY_MONTHS.map((h) => h.month) }, status: 'APPROVED' },
+  });
+  log(`${approved} approved months before ${DEMO_MONTH} ready (the dashboard charts)`);
+  return approved;
 }
 
 /**

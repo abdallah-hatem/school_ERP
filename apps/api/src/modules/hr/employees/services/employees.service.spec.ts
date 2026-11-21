@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { contractYearFor, ErrorCode, HrEvent } from '@school-erp/shared';
+import { contractYearFor, ErrorCode, HrEvent, schoolDayOf } from '@school-erp/shared';
 import { todayIsoDate } from '../../../../common/utils/dates.util';
 import type { AuditService } from '../../../../core/audit';
 import type { UsersService } from '../../../../core/users';
@@ -345,6 +345,21 @@ describe('EmployeesService', () => {
       fields: ['status'],
       at: expect.any(String),
     });
+  });
+
+  it('deactivating keeps the school day it was done (a leaver, §2); reactivating clears it', async () => {
+    const off = makeService({ updateEmployee: jest.fn().mockResolvedValue(row({ status: 'INACTIVE' })) });
+    await off.service.deactivate('e1');
+    const data = off.repository.updateEmployee.mock.calls[0]![1] as { status: string; deactivatedOn: Date };
+    expect(data.status).toBe('INACTIVE');
+    expect(data.deactivatedOn.toISOString().slice(0, 10)).toBe(schoolDayOf(new Date()));
+
+    const on = makeService({
+      findDetail: jest.fn().mockResolvedValue(row({ status: 'INACTIVE' })),
+      updateEmployee: jest.fn().mockResolvedValue(row({ status: 'ACTIVE' })),
+    });
+    await on.service.reactivate('e1');
+    expect(on.repository.updateEmployee).toHaveBeenCalledWith('e1', { status: 'ACTIVE', deactivatedOn: null });
   });
 
   it('create with contract end not after start → 400, nothing written', async () => {

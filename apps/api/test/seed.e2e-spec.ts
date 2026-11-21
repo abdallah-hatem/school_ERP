@@ -12,6 +12,7 @@ import { ErrorCode, PayrollFlag, SEED_ADMIN_EMAIL } from '@school-erp/shared';
 import { loadSeedData } from '../prisma/seed/data/load';
 import { ADJUSTMENTS, DEMO_MONTH, LATENESS, PENALTIES } from '../prisma/seed/data/november';
 import { EMPLOYEES } from '../prisma/seed/data/employees';
+import { HISTORY_MONTHS } from '../prisma/seed/data/history';
 import { runSeed } from '../prisma/seed/run';
 import { AppModule } from '../src/app.module';
 import { SettingsService } from '../src/core/settings';
@@ -24,6 +25,8 @@ const data = loadSeedData();
 
 /** Empties every table the seed writes (this is an `_e2e` database — setup-env checks). */
 async function wipe(db: DatabaseService): Promise<void> {
+  // The approved months' taxes (accounting's own rows, worked out from the seed's approvals).
+  await db.accountingPayrollRun.deleteMany({});
   await db.payrollRun.deleteMany({});
   await db.latenessEntry.deleteMany({});
   await db.penaltyRecord.deleteMany({});
@@ -333,7 +336,12 @@ describe('Seed (e2e)', () => {
     expect(salaries._max.basicSalary).toBeLessThanOrEqual(2_000_000);
 
     expect(await db.latenessEntry.count({ where: { month: DEMO_MONTH } })).toBe(LATENESS.length);
-    const byStatus = await db.penaltyRecord.groupBy({ by: ['status'], _count: true });
+    // November's own penalties (the months before it carry approved ones of their own, below).
+    const byStatus = await db.penaltyRecord.groupBy({
+      by: ['status'],
+      where: { date: { gte: new Date(`${DEMO_MONTH}-01T00:00:00Z`) } },
+      _count: true,
+    });
     const count = (s: string) => byStatus.find((b) => b.status === s)?._count ?? 0;
     // §4 two steps (owner 2026-11-21): the demo has a penalty in every status.
     for (const status of ['PENDING_REVIEW', 'WAITING_HR', 'APPROVED', 'REJECTED', 'CANCELLED'] as const) {
@@ -345,5 +353,20 @@ describe('Seed (e2e)', () => {
     const prep = await db.stage.findFirst({ where: { nameEn: 'Preparatory' }, select: { id: true } });
     expect(await db.employeeStage.count({ where: { stageId: prep!.id } })).toBeGreaterThan(0);
     expect(await db.payrollAdjustment.count()).toBe(ADJUSTMENTS.length);
+  });
+
+  it('the months before November are approved, with their lateness, penalties and taxes (the dashboard charts)', async () => {
+    const months = HISTORY_MONTHS.map((h) => h.month);
+    const runs = await db.payrollRun.findMany({ where: { month: { in: months } }, select: { month: true, status: true } });
+    expect(runs.map((r) => r.month).sort()).toEqual([...months].sort());
+    expect(runs.every((r) => r.status === 'APPROVED')).toBe(true);
+    expect(await db.accountingPayrollRun.count({ where: { month: { in: months } } })).toBe(months.length);
+    const historyPenalties = HISTORY_MONTHS.reduce((n, h) => n + h.penalties.length, 0);
+    expect(
+      await db.penaltyRecord.count({ where: { status: 'APPROVED', date: { lt: new Date(`${DEMO_MONTH}-01T00:00:00Z`) } } }),
+    ).toBe(historyPenalties);
+    // November's penalties go to other employees, so their repeat levels are as before.
+    const novemberPeople = new Set(PENALTIES.map((p) => p.employee));
+    expect(HISTORY_MONTHS.flatMap((h) => h.penalties).some(([n]) => novemberPeople.has(n))).toBe(false);
   });
 });

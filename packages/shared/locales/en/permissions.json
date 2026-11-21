@@ -75,6 +75,10 @@
         "view": {
           "label": "View the HR dashboard",
           "description": "See the HR summary on the home page: the figures of the screens this role can also open (employees, payroll, penalties). Without any of those, the home page shows links to the role's screens."
+        },
+        "view_analytics": {
+          "label": "View the dashboard charts",
+          "description": "See the charts on the home page: payroll cost, headcount, penalties and lateness, and deductions over the last 6 or 12 months. Each chart also needs the permission of the screen its figures come from, and amounts need the right to see salaries."
         }
       },
       "employees": {

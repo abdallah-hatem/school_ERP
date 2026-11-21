@@ -14,7 +14,7 @@ import { clientForSchema, e2eDatabaseUrl } from './helpers/setup-db';
  */
 
 const MIGRATIONS = join(__dirname, '..', 'prisma', 'migrations');
-const MIGRATION = '20261121120000_penalty_two_step';
+const MIGRATION = '20261121160000_penalty_two_step';
 const dbUrl = e2eDatabaseUrl();
 
 const migrationSql = (name: string) => readFileSync(join(MIGRATIONS, name, 'migration.sql'), 'utf8');

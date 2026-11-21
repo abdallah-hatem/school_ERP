@@ -32,7 +32,19 @@ Before the demo, on the demo database:
 
 ## 2. Dashboard
 - Active headcount with the split by stage; this month's payroll (status + net); pending and
-  approved penalties this month; quick links.
+  approved penalties this month; quick links. ✔ On the teal "Active employees" tile the sunflower
+  circle sits in the corner, clear of the label.
+- **Charts** (signed in as the System admin — no other starting role sees them): between the tiles
+  and the quick links, Payroll cost, Headcount, Penalties and lateness, Deductions vs net. The seed
+  approves May–October, so there are trends. ✔ The **6 months / 12 months** switch at the top right
+  reloads them in place (a laptop opens on 12, a phone on 6). ✔ Payroll cost: October in full teal
+  with its net printed, earlier months pale, November a gap (still a draft). ✔ Hovering a month — or
+  tabbing to a chart and using the arrow keys — shows its figures. ✔ **Table** on any card shows the
+  same numbers as a table, **Chart** brings the chart back. ✔ Deductions vs net: net + insurance +
+  income tax + penalties = the gross in the card's line, checked by hand against Accounting →
+  Approved payroll for October. ✔ In Arabic the months run right to left (newest on the left), the
+  axis labels sit on the right, digits stay Latin. ✔ Signed in as the HR manager alone: the
+  dashboard has no charts and no switch.
 - The menu is grouped by module, in this order: Dashboard; School (المدرسة — Students, Academics,
   Attendance, Exams & grades, all marked "Soon"); HR (Employees, Penalties, Lateness, Payroll, then
   Leave & permissions marked "Soon"); Accounting (Approved pay — "الرواتب المعتمدة" in Arabic; its
@@ -172,7 +184,8 @@ then to HR.
   only section listed; the rule can be changed. An HR officer opening `?section=accounting` → ✔
   lands on their first section, no error.
 - Still as the Accountant, **Payroll taxes**: the year's twelve months. ✔ The month approved in
-  step 7 shows *Approved* with its gross; a month HR hasn't approved shows *Draft in HR* (dashed);
+  step 7 shows *Approved* with its gross (so do May–October, approved by the seed); a month HR
+  hasn't approved shows *Draft in HR* (dashed);
   the rest say there is no payroll or that they haven't started. Open the approved month → the
   statement: ✔ net + insurance share + income tax + martyrs' fund = gross across the top, checked
   by hand; the Insured and Not insured tables each end with a subtotal, and the two subtotals add up

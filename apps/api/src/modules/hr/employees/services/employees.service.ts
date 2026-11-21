@@ -25,6 +25,7 @@ import {
   oneYearContractEnd,
   Paginated,
   type PermissionKey,
+  schoolDayOf,
   socialInsuranceIssues,
   type SocialInsurance,
   Uuid,
@@ -556,7 +557,9 @@ export class EmployeesService {
         await this.record(action, current, current);
         return this.present(current);
       }
-      const row = await this.repository.updateEmployee(id, { status });
+      // The day they left (the dashboard's leavers, §2), on the school's clock; cleared on return.
+      const deactivatedOn = status === EmployeeStatus.INACTIVE ? fromIsoDate(schoolDayOf(new Date())) : null;
+      const row = await this.repository.updateEmployee(id, { status, deactivatedOn });
       await this.record(action, current, row);
       if (status === EmployeeStatus.INACTIVE) {
         // §11 (N3): no reminder about an inactive employee stays open.

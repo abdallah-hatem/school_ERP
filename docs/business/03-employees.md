@@ -103,6 +103,8 @@ paying by bank transfer is Planned.
 - **DECIDED** — Inactive employees are not included in new payroll runs and can't get new penalties
   or lateness entries.
 - **GUESS** — Reactivating an employee is allowed.
+- **DECIDED** (2026-11-21) — The record keeps the school day an employee was last deactivated — a
+  leaver on the dashboard charts (§2) in that month; reactivating clears it.
 - **DECIDED** — Deactivating an inactive employee, or reactivating an active one, changes nothing and
   reports success.
 - **DECIDED** — A required field can't be cleared when editing.

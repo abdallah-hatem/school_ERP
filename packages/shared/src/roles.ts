@@ -45,10 +45,19 @@ const scoped = (scope: Scope, ...keys: PermissionKey[]) =>
   Object.fromEntries(keys.map((k) => [k, scope])) as Partial<Record<PermissionKey, Scope>>;
 
 /**
- * Every HR key but the stage review: that step belongs to the stage head of the penalty's stage
- * (§4, owner 2026-11-21); the HR manager acts at the HR step.
+ * Keys no starting role holds but the System admin (who holds every key): an admin grants them to
+ * other roles. The dashboard's analytics charts — "for now make it only visible to the system
+ * admin" (owner, 2026-11-21, §2).
  */
-const HR_KEYS = PERMISSION_KEYS.filter((k) => k.startsWith('hr.') && k !== 'hr.penalties.review');
+export const ADMIN_ONLY_AT_START: readonly PermissionKey[] = ['hr.dashboard.view_analytics'];
+
+/**
+ * Every HR key but the admin-only ones and the stage review: that step belongs to the stage head of
+ * the penalty's stage (§4, owner 2026-11-21); the HR manager acts at the HR step.
+ */
+const HR_KEYS = PERMISSION_KEYS.filter(
+  (k) => k.startsWith('hr.') && !ADMIN_ONLY_AT_START.includes(k) && k !== 'hr.penalties.review',
+);
 
 /** A team or stage role sees and records penalties for its people; the lists it picks from are school-wide. */
 const lineManager = (scope: Scope, ...extra: PermissionKey[]) => ({

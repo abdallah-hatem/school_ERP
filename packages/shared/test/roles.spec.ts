@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ADMIN_ONLY_AT_START,
   BUILT_IN_ROLES,
   PERMISSION_KEYS,
   PERMISSION_SCOPES,
@@ -74,8 +75,15 @@ describe('starting roles (spec table, GUESS)', () => {
     }
   });
 
-  it('HR manager: all of HR but the stage review, plus the Activity log, scope all', () => {
-    const hr = PERMISSION_KEYS.filter((k) => k.startsWith('hr.') && k !== 'hr.penalties.review');
+  it('the dashboard charts: System admin only at the start (owner, 2026-11-21)', () => {
+    expect(ADMIN_ONLY_AT_START).toEqual(['hr.dashboard.view_analytics']);
+    expect(holders('hr.dashboard.view_analytics')).toEqual(['system_admin']);
+  });
+
+  it('HR manager: all of HR but the admin-only keys and the stage review, plus the Activity log, scope all', () => {
+    const hr = PERMISSION_KEYS.filter(
+      (k) => k.startsWith('hr.') && !ADMIN_ONLY_AT_START.includes(k) && k !== 'hr.penalties.review',
+    );
     expect(keysOf('hr_manager')).toEqual(expect.arrayContaining([...hr, 'core.audit.view']));
     // §4 (owner 2026-11-21): the stage review is the stage head's; the HR manager acts at the HR step.
     expect(keysOf('hr_manager')).not.toContain('hr.penalties.review');
