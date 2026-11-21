@@ -35,3 +35,7 @@ Corrections recorded so they don't have to be repeated. Loaded at session start.
   shape check. #171 shipped the Approved payroll pages unregistered and without header skeletons; the
   review only looked at loaded screens ("why our review did not pick that up ?????"). Also re-check a
   page's height when its layout changes (table → cards made the month page too long). — 2026-11-21
+- No client-side paging, search, filtering or sorting of fetched lists — the API pages, searches, sorts
+  and totals; only static config may be filtered in the browser. My #146 and Tamer's #171 loaded whole
+  months and sliced them; every review brief checks for `.slice/.filter/.sort` on fetched lists. — 2026-11-21
+- Times shown to users are 12-hour with AM/PM (AR ص/م) through the shared formatter. — 2026-11-21
