@@ -1,12 +1,14 @@
 'use client';
 
-import { monthOf, PAGINATION, PAYROLL_PAGINATION } from '@school-erp/shared';
+import { monthOf, PAGINATION, PAYROLL_PAGINATION, PayrollStatus, type IsoDate, type IsoDateTime } from '@school-erp/shared';
+import { formatDate, formatMonth } from '@/shared/lib/format';
 import { useParams, useSearchParams } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { RecordHistorySkeleton } from '@/core/audit';
 import { DataTable } from '@/shared/components/data-table/data-table';
 import { PageHeader } from '@/shared/components/layout/page-header';
-import { Skeleton, SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
+import { ExportIcon } from '@/shared/components/ui/icons';
+import { SkeletonButton, SkeletonPill, SkeletonProse } from '@/shared/components/ui/skeleton';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { parseRunQuery, parseRunsQuery } from '../lib/run-query';
 import { PayrollI18n } from '../messages';
@@ -24,6 +26,12 @@ import { RunsList } from './runs-list';
  */
 
 const noop = () => undefined;
+
+/**
+ * A run's approval time as the rules panel's skeleton words it ("calculated on 21 Nov 2026,
+ * 10:30"): fixed, so the server's and the browser's skeleton read the same (no clock, no zone).
+ */
+const TYPICAL_APPROVED_AT = '2026-11-21T08:30:00.000Z' as IsoDateTime;
 
 /** The runs list while it loads: the list itself with skeleton rows. */
 export function RunsListSkeleton() {
@@ -47,26 +55,24 @@ function RunShellSkeleton({ children }: { children: ReactNode }) {
   const { t, locale } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const basePath = `/${locale}/payroll`;
+  // The title and sentence of a typical run (this month's, approved today), drawn as their own
+  // text so they wrap — and push the pill and the button — where the loaded ones do.
+  const today = new Date().toISOString().slice(0, 10) as IsoDate;
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title={<SkeletonText width="w-56" />}
-        status={<SkeletonPill />}
-        description={
-          // One line on a wide screen, two on a phone (as the loaded sentence wraps).
-          <span className="flex flex-col">
-            <SkeletonText width="w-96" />
-            <SkeletonText className="md:hidden" width="w-40" />
-          </span>
-        }
+        title={<SkeletonProse>{t('payroll.runTitle', { month: formatMonth(monthOf(new Date()), locale) })}</SkeletonProse>}
+        // An approved run, as most runs opened are (every month but the one being worked on): its
+        // pill and its one button, Export bank sheet (a draft adds Recalculate and Approve).
+        status={<SkeletonPill>{t(`common.enums.payrollStatus.${PayrollStatus.APPROVED}`)}</SkeletonPill>}
+        description={<SkeletonProse>{t('payroll.runDescriptionApproved', { date: formatDate(today, locale) })}</SkeletonProse>}
         breadcrumbs={[{ label: t('payroll.title'), href: basePath }, { label: ' ' }]}
         breadcrumbsLabel={t('ui.shell.breadcrumbs')}
         actions={
-          <>
-            <Skeleton className="h-11 w-40 rounded-lg" />
-            <Skeleton className="h-11 w-48 rounded-lg" />
-            <Skeleton className="h-11 w-32 rounded-lg" />
-          </>
+          <SkeletonButton>
+            <ExportIcon />
+            {t('payroll.actions.exportBankSheet')}
+          </SkeletonButton>
         }
       />
       <RunTabs runHref={`${basePath}/${id}`} />
@@ -113,7 +119,8 @@ function RunLinesSkeletonBody() {
             scrollHeight="screen"
           />
         </div>
-        <RulesPanel rules={undefined} settingsHref={`/${locale}/settings`} />
+        {/* An approved run's panel (today's rules, "calculated on …"), as the header traces. */}
+        <RulesPanel rules={undefined} settingsHref={`/${locale}/settings`} approvedAt={TYPICAL_APPROVED_AT} />
       </div>
     </>
   );

@@ -120,8 +120,11 @@ export interface DataTableProps<Row> {
   /**
    * The table view scrolls inside a box at most this tall and its column names stay on top while
    * the rows scroll (payroll tables, owner 2026-11-19); a `footer` (the totals row) stays pinned to
-   * the box's bottom the same way, so it is always in sight (dry run 2026-11-20). Cards and print
-   * are unaffected.
+   * the box's bottom the same way, so it is always in sight (dry run 2026-11-20). Print is
+   * unaffected. Cards are capped the same way only when they are the screen's one view
+   * (`cardsBelow="always"`, owner 2026-11-21), and only from the `md` breakpoint: a phone scrolls
+   * the page, as a scroll box inside a scrolling page is worse there. Phone cards of a table that
+   * has a table view stay uncapped.
    */
   scrollHeight?: 'screen';
   className?: string;
@@ -204,7 +207,7 @@ export function DataTable<Row>({
           {cardsOnly ? null : (
             <Table columns={skeletonColumns} rows={placeholders} getRowId={String} label={label} viewClass={view.table} footer={skeletonFooter} scrollHeight={scrollHeight} />
           )}
-          <Cards columns={skeletonColumns} rows={placeholders} getRowId={String} label={label} viewClass={view.cards} heightsVary={cardHeightsVary} footer={skeletonFooter} footerCard={footerCard} />
+          <Cards columns={skeletonColumns} rows={placeholders} getRowId={String} label={label} viewClass={view.cards} heightsVary={cardHeightsVary} footer={skeletonFooter} footerCard={footerCard} scrollHeight={cardsOnly ? scrollHeight : undefined} />
         </div>
       </div>
     );
@@ -219,7 +222,7 @@ export function DataTable<Row>({
         {cardsOnly ? null : (
           <Table columns={columns} rows={rows ?? []} getRowId={getRowId} label={label} rowTone={rowTone} viewClass={view.table} footer={footer} scrollHeight={scrollHeight} />
         )}
-        <Cards columns={columns} rows={rows ?? []} getRowId={getRowId} label={label} rowTone={rowTone} viewClass={view.cards} heightsVary={cardHeightsVary} footer={footer} footerCard={footerCard} />
+        <Cards columns={columns} rows={rows ?? []} getRowId={getRowId} label={label} rowTone={rowTone} viewClass={view.cards} heightsVary={cardHeightsVary} footer={footer} footerCard={footerCard} scrollHeight={cardsOnly ? scrollHeight : undefined} />
       </div>
     );
   }
@@ -278,7 +281,10 @@ interface RowsProps<Row> {
   /** Cards only: their height follows their text (`cardHeightsVary`). */
   heightsVary?: boolean;
   footer?: DataTableFooter;
-  /** Table only: a capped, vertically scrolling body under a sticky header (`scrollHeight`). */
+  /**
+   * A capped, vertically scrolling body (`scrollHeight`): the table under a sticky header; the
+   * cards (passed only when they are the one view) from `md` up.
+   */
   scrollHeight?: 'screen';
   /** Cards only: the totals card after the cards, or none (`footerCard`). */
   footerCard?: 'end' | 'none';
@@ -419,7 +425,8 @@ function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass, footer
 
 // ── Cards (container < 740px) ────────────────────────────────────────────────
 
-function Cards<Row>({ columns, rows, getRowId, label, rowTone, viewClass, heightsVary = false, footer, footerCard = 'end' }: RowsProps<Row>) {
+function Cards<Row>({ columns, rows, getRowId, label, rowTone, viewClass, heightsVary = false, footer, footerCard = 'end', scrollHeight }: RowsProps<Row>) {
+  const capped = scrollHeight === 'screen';
   const titles = columns.filter((c) => c.card === 'title');
   const statuses = columns.filter((c) => c.card === 'status');
   const badges = columns.filter((c) => c.card === 'badges');
@@ -430,7 +437,19 @@ function Cards<Row>({ columns, rows, getRowId, label, rowTone, viewClass, height
   const card = useBlock('table-card');
 
   return (
-    <ul data-view="cards" aria-label={label} className={cn('grid gap-3 px-4 pb-4', viewClass)}>
+    <ul
+      data-view="cards"
+      data-scroll-capped={capped ? '' : undefined}
+      aria-label={label}
+      className={cn(
+        'grid gap-3 px-4 pb-4',
+        // The table's cap (the screen less the top bar, title and pagination, never under ~26rem),
+        // from tablets up; the toolbar above and the pagination below stay in sight. A phone flows.
+        capped &&
+          'scrollbar-clean content-start md:max-h-[max(26rem,calc(100dvh-14rem))] md:overflow-y-auto md:overscroll-y-contain print:max-h-none print:overflow-visible',
+        viewClass,
+      )}
+    >
       {rows.map((row) => {
         const tone = rowTone?.(row);
         return (

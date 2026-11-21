@@ -12,6 +12,12 @@ export interface Breadcrumb {
  * Title row of every screen: optional breadcrumbs, the title with a status pill beside it, a
  * one-line description and the screen's actions (one primary, the rest secondary).
  * Actions wrap under the title on narrow screens.
+ *
+ * Its parts are skeleton blocks of their own — `header-breadcrumbs`, `header-status`,
+ * `header-actions` — so a skeleton that leaves out the buttons row or the pill, or draws it at
+ * another width, fails the skeleton spec (owner, 2026-11-21): pass the skeleton a `status` and
+ * `actions` whenever the loaded screen has them (`SkeletonPill` / `SkeletonButton` with the usual
+ * wording, so they are as wide in every language).
  */
 export function PageHeader({
   title,
@@ -44,7 +50,7 @@ export function PageHeader({
   return (
     <header data-skeleton-block="header" className={cn('flex flex-col gap-3', className)}>
       {breadcrumbs?.length ? (
-        <nav aria-label={breadcrumbsLabel} className="hidden md:block">
+        <nav aria-label={breadcrumbsLabel} data-skeleton-block="header-breadcrumbs" className="hidden md:block">
           <ol className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
             {breadcrumbs.map((crumb, i) => (
               <li key={`${crumb.label}-${i}`} className="flex items-center gap-1.5">
@@ -74,14 +80,22 @@ export function PageHeader({
               <h1 className="font-display text-2xl leading-tight font-extrabold tracking-tight break-words md:text-3xl">
                 {title}
               </h1>
-              {status}
+              {status ? (
+                <span data-skeleton-block="header-status" className="inline-flex min-w-0">
+                  {status}
+                </span>
+              ) : null}
             </div>
             {description ? (
               <p className={cn('text-sm text-muted-foreground', keepTitleLine && 'w-0 min-w-full')}>{description}</p>
             ) : null}
           </div>
         </div>
-        {actions ? <div className="flex flex-wrap items-center gap-2.5">{actions}</div> : null}
+        {actions ? (
+          <div data-skeleton-block="header-actions" className="flex flex-wrap items-center gap-2.5">
+            {actions}
+          </div>
+        ) : null}
       </div>
     </header>
   );

@@ -247,11 +247,19 @@ export function Statement({ monthKey, month, todayRule, basePath }: StatementPro
   );
 }
 
+/** Excel and Download PDF while the statement loads: the loaded buttons' boxes, labels invisible. */
 function ActionsSkeleton() {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-wrap gap-2">
-      <SkeletonButton className="h-11 w-24" />
-      <SkeletonButton className="h-11 w-36" />
+      <SkeletonButton>
+        <ExcelIcon />
+        {t('accounting.payrollTaxes.actions.excel')}
+      </SkeletonButton>
+      <SkeletonButton>
+        <PdfIcon />
+        {t('accounting.payrollTaxes.actions.print')}
+      </SkeletonButton>
     </div>
   );
 }
