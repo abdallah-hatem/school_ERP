@@ -20,7 +20,8 @@ vi.mock('next/navigation', () => ({ redirect: vi.fn() }));
 import { chooseRowAction } from '@/test/row-actions';
 
 import { CatalogueSection } from '../components/catalogue-section';
-import { highlightParts, searchCatalogue } from '../lib/catalogue-search';
+import { matchesSearch } from '@school-erp/shared';
+import { highlightParts } from '../lib/catalogue-search';
 import { deferred, ok, renderSettings } from './helpers';
 
 const v = (id: string, nameEn: string, nameAr: string, oncePerDay = true): Violation => ({
@@ -60,21 +61,29 @@ afterEach(() => {
 const search = (name: RegExp | string = 'Search violations') => screen.getByRole('searchbox', { name });
 const groupHeader = (name: string) => screen.getByRole('button', { name: new RegExp(`^${name}`) });
 
-describe('searchCatalogue', () => {
-  it('matches violation names in either language, keeps whole groups whose name matches, drops the rest', () => {
-    expect(searchCatalogue(catalogue, 'phone').map((m) => [m.group.id, m.group.violations.map((x) => x.id)])).toEqual([
-      ['g-gen', ['v-phone']],
-    ]);
-    // Arabic, typed without the hamza.
-    expect(searchCatalogue(catalogue, 'التاخير').map((m) => m.group.violations.map((x) => x.id))).toEqual([['v-late']]);
-    // "lesson" is in one violation of the first group and two of the second.
-    expect(searchCatalogue(catalogue, 'LESSON').map((m) => m.group.violations.length)).toEqual([1, 2]);
-    // The group's own name: all its violations.
-    expect(searchCatalogue(catalogue, 'التعليمية')).toEqual([{ group: catalogue[1], groupMatched: true }]);
-    expect(searchCatalogue(catalogue, 'nothing like this')).toEqual([]);
-    expect(searchCatalogue(catalogue, '  ')).toHaveLength(2);
+/**
+ * The API's side of the search (`GET /hr/penalty-groups?search`, its own tests in the API): a
+ * group's name keeps the whole group, a violation's name only it, with `match`. The screen only
+ * shows what it answers.
+ */
+function serveCatalogue(groups: PenaltyGroup[] = catalogue) {
+  api.GET_PENALTY_GROUPS.mockImplementation((q: { search?: string } = {}) => {
+    const text = q.search?.trim();
+    if (!text) return ok(groups);
+    const found: PenaltyGroup[] = [];
+    for (const g of groups) {
+      const violationCount = g.violations.length;
+      if (matchesSearch(text, [g.nameEn, g.nameAr])) found.push({ ...g, match: { group: true, violationCount } });
+      else {
+        const violations = g.violations.filter((x) => matchesSearch(text, [x.nameEn, x.nameAr]));
+        if (violations.length) found.push({ ...g, violations, match: { group: false, violationCount } });
+      }
+    }
+    return ok(found);
   });
+}
 
+describe('catalogue highlight', () => {
   it('highlight parts: the first plain occurrence, case-insensitive; none when only folding matched', () => {
     expect(highlightParts('Late to lesson', 'LESSON')).toEqual(['Late to ', 'lesson', '']);
     expect(highlightParts('أحمد', 'احمد')).toBeNull();
@@ -86,11 +95,14 @@ describe('searchCatalogue', () => {
 describe('Penalty catalogue search', { timeout: 20_000 }, () => {
   it('filters by English name: matching groups open and show only the matches, with the match marked; Clear filters resets', async () => {
     const user = userEvent.setup();
-    api.GET_PENALTY_GROUPS.mockImplementation(() => ok(catalogue));
+    serveCatalogue();
     renderSettings(<CatalogueSection />);
     await screen.findByText('General violations');
 
     await user.type(search(), 'lesson');
+    // The API is asked once typing pauses, for what was typed.
+    await waitFor(() => expect(api.GET_PENALTY_GROUPS).toHaveBeenLastCalledWith({ search: 'lesson' }));
+    await waitFor(() => expect(screen.queryByText('Chewing gum')).toBeNull());
     // Both groups have a match, so both open by themselves.
     expect(groupHeader('General violations').getAttribute('aria-expanded')).toBe('true');
     expect(groupHeader('Educational violations').getAttribute('aria-expanded')).toBe('true');
@@ -108,6 +120,7 @@ describe('Penalty catalogue search', { timeout: 20_000 }, () => {
 
     await user.click(screen.getByRole('button', { name: /Clear filters · 1/ }));
     expect((search() as HTMLInputElement).value).toBe('');
+    await waitFor(() => expect(api.GET_PENALTY_GROUPS).toHaveBeenLastCalledWith({ search: undefined }));
     // Back to the folded catalogue.
     expect(screen.queryAllByRole('button', { expanded: true })).toHaveLength(0);
     expect(screen.queryByRole('button', { name: /Clear filters/ })).toBeNull();
@@ -115,39 +128,40 @@ describe('Penalty catalogue search', { timeout: 20_000 }, () => {
 
   it('Arabic: matches Arabic and English names and group names; no match shows the empty state with Clear filters', async () => {
     const user = userEvent.setup();
-    api.GET_PENALTY_GROUPS.mockImplementation(() => ok(catalogue));
+    serveCatalogue();
     renderSettings(<CatalogueSection />, 'ar');
     await screen.findByText('المخالفات العامة');
     const box = search('البحث في المخالفات');
 
     await user.type(box, 'العلكة');
-    expect(screen.getByText('العلكة', { selector: 'mark' })).toBeTruthy();
+    expect(await screen.findByText('العلكة', { selector: 'mark' })).toBeTruthy();
     expect(screen.queryByText('استعمال الجوال في الدرس')).toBeNull();
     expect(screen.queryByText('المخالفات التعليمية')).toBeNull();
 
     // An English name on the Arabic screen finds it too (its English name shows under it).
     await user.clear(box);
     await user.type(box, 'phone');
-    expect(screen.getByText('استعمال الجوال في الدرس')).toBeTruthy();
+    await waitFor(() => expect(api.GET_PENALTY_GROUPS).toHaveBeenLastCalledWith({ search: 'phone' }));
+    expect(await screen.findByText('استعمال الجوال في الدرس')).toBeTruthy();
 
     // A group's name: the whole group.
     await user.clear(box);
     await user.type(box, 'التعليمية');
-    expect(screen.getByText('التأخير عن الدرس')).toBeTruthy();
+    expect(await screen.findByText('التأخير عن الدرس')).toBeTruthy();
     expect(screen.getByText('التغيب عن الدرس')).toBeTruthy();
 
     await user.clear(box);
     await user.type(box, 'لا شيء يطابق');
-    expect(screen.getByText('لا توجد مخالفات مطابقة')).toBeTruthy();
+    expect(await screen.findByText('لا توجد مخالفات مطابقة')).toBeTruthy();
     const clears = screen.getAllByRole('button', { name: /مسح عوامل التصفية/ });
     await user.click(clears[clears.length - 1]!);
-    expect((box as HTMLInputElement).value).toBe('');
-    expect(screen.getByText('المخالفات التعليمية')).toBeTruthy();
+    expect((search('البحث في المخالفات') as HTMLInputElement).value).toBe('');
+    expect(await screen.findByText('المخالفات التعليمية')).toBeTruthy();
   });
 
   it('"/" focuses the search, except while typing in a field', async () => {
     const user = userEvent.setup();
-    api.GET_PENALTY_GROUPS.mockImplementation(() => ok(catalogue));
+    serveCatalogue();
     renderSettings(<CatalogueSection />);
     await screen.findByText('General violations');
     await user.keyboard('/');
@@ -172,7 +186,7 @@ describe('Penalty catalogue search', { timeout: 20_000 }, () => {
 describe('Once per day (§4)', { timeout: 20_000 }, () => {
   it('only a violation that can repeat in a day shows the badge', async () => {
     const user = userEvent.setup();
-    api.GET_PENALTY_GROUPS.mockImplementation(() => ok(catalogue));
+    serveCatalogue();
     renderSettings(<CatalogueSection />);
     // The loading skeleton has a search box too: typing into it before the catalogue loads is lost.
     await screen.findByRole('button', { name: /^Educational violations/ });
@@ -184,7 +198,7 @@ describe('Once per day (§4)', { timeout: 20_000 }, () => {
 
   it('the switch shows the stored value with its explanation, and is sent on save (edit and create)', async () => {
     const user = userEvent.setup();
-    api.GET_PENALTY_GROUPS.mockImplementation(() => ok(catalogue));
+    serveCatalogue();
     api.UPDATE_VIOLATION.mockImplementation((id: string, body: object) =>
       ok({ ...catalogue[1]!.violations.find((x) => x.id === id)!, ...body }),
     );
@@ -212,7 +226,7 @@ describe('Once per day (§4)', { timeout: 20_000 }, () => {
 
   it('Arabic: the switch and the badge read natively', async () => {
     const user = userEvent.setup();
-    api.GET_PENALTY_GROUPS.mockImplementation(() => ok(catalogue));
+    serveCatalogue();
     renderSettings(<CatalogueSection />, 'ar');
     await user.click(await screen.findByRole('button', { name: /^المخالفات التعليمية/ }));
     expect(screen.getByText('قد تتكرر في اليوم')).toBeTruthy();

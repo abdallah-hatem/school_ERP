@@ -21,7 +21,12 @@ const api = vi.hoisted(() => ({
   UPDATE_VIOLATION: vi.fn(),
 }));
 vi.mock('../apis', () => api);
-vi.mock('next/navigation', () => ({ redirect: vi.fn() }));
+vi.mock('next/navigation', () => ({
+  redirect: vi.fn(),
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn(), refresh: vi.fn() }),
+  usePathname: () => '/en/settings',
+  useSearchParams: () => new URLSearchParams(),
+}));
 
 import { sessionWith, sessionWithout, STAGE_HEAD_KEYS, TEST_SESSION } from '@/test/render';
 import { CatalogueSection } from '../components/catalogue-section';

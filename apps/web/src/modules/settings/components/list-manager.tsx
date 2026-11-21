@@ -1,6 +1,7 @@
 'use client';
 
 import { PAGINATION, type PermissionKey } from '@school-erp/shared';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { useCan } from '@/core/auth';
 import { callApi } from '@/lib/callApi';
@@ -27,24 +28,37 @@ const MANAGE_PERMISSION: Record<ListKind, PermissionKey> = {
 
 /**
  * One managed list — stages, departments or job titles (§3, §7): add, rename, hide / show. No
- * delete: an item in use is hidden from new choices. The API returns the whole (short) list, so
- * it is paged here. Job titles also have the "Manages people" switch (in the add / edit dialog)
- * and a badge on the titles that have it.
+ * delete: an item in use is hidden from new choices. The API pages the list (`?<kind>Page=` in the
+ * URL, beside `?section=`); the browser only shows that page. Job titles also have the "Manages
+ * people" switch (in the add / edit dialog) and a badge on the titles that have it.
  */
 export function ListManager({ kind }: { kind: ListKind }) {
   const { t, locale } = useTranslation();
   const canManage = useCan()(MANAGE_PERMISSION[kind]);
-  const list = useResource(kind, () => GET_LIST_ITEMS(kind));
-  const [page, setPage] = useState(1);
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+  const pageKey = `${kind}Page`;
+  const urlPage = Number(params?.get(pageKey));
+  const page = Number.isInteger(urlPage) && urlPage >= 1 ? urlPage : PAGINATION.defaultPage;
   const limit = PAGINATION.defaultLimit;
+  // A new key (another page, or a reload after adding) asks the API again.
+  const [version, setVersion] = useState(0);
+  const list = useResource(`${kind}:${page}:${version}`, () => GET_LIST_ITEMS(kind, { page, limit }));
+  function setPage(next: number) {
+    const query = new URLSearchParams(params?.toString() ?? '');
+    if (next > PAGINATION.defaultPage) query.set(pageKey, String(next));
+    else query.delete(pageKey);
+    const s = query.toString();
+    router.replace(`${pathname ?? ''}${s ? `?${s}` : ''}`, { scroll: false });
+  }
   const [editing, setEditing] = useState<ManagedListItem | 'new' | null>(null);
   const withManaging = kind === 'jobTitles';
   const [toggling, setToggling] = useState<string | null>(null);
 
-  const all = list.data ? [...list.data].sort((a, b) => a.sortOrder - b.sortOrder) : undefined;
-  const pageCount = Math.max(1, Math.ceil((all?.length ?? 0) / limit));
-  const current = Math.min(page, pageCount);
-  const rows = all?.slice((current - 1) * limit, current * limit);
+  // The page the API sent, in its order.
+  const rows = list.data;
+  const total = list.meta?.total ?? 0;
   const copy = (key: string, values?: Record<string, string | number>) => t(`settings.lists.${kind}.${key}`, values);
 
   function replace(item: ManagedListItem) {
@@ -68,11 +82,13 @@ export function ListManager({ kind }: { kind: ListKind }) {
       ? { nameEn: form.nameEn, nameAr: form.nameAr, managesPeople: Boolean(form.managesPeople) }
       : { nameEn: form.nameEn, nameAr: form.nameAr };
     if (editing === 'new') {
-      const nextOrder = (all ?? []).reduce((max, i) => Math.max(max, i.sortOrder), 0) + 1;
-      const res = await callApi(CREATE_LIST_ITEM(kind, { ...values, sortOrder: nextOrder }));
+      // After the last item: the list's last one is asked of the API (one item, the last page).
+      const last = total > 0 ? await callApi(GET_LIST_ITEMS(kind, { page: total, limit: 1 }), { showErrorToast: false }) : null;
+      const lastOrder = last?.success ? (last.data?.[0]?.sortOrder ?? total) : total;
+      const res = await callApi(CREATE_LIST_ITEM(kind, { ...values, sortOrder: lastOrder + 1 }));
       if (res.success && res.data) {
-        const created = res.data;
-        list.setData((items) => [...items, created]);
+        // Re-read the page from the API (the new item lands on the last page).
+        setVersion((v) => v + 1);
         return true;
       }
       return false;
@@ -155,7 +171,8 @@ export function ListManager({ kind }: { kind: ListKind }) {
         retrying={list.retrying}
         empty={<EmptyState title={copy('emptyTitle')} description={copy('emptyBody')} action={addButton} />}
         // Always there (total 0 while loading), so the skeleton has the bar the list will have.
-        pagination={{ page: current, limit, total: all?.length ?? 0, onPageChange: setPage }}
+        refreshing={list.refreshing}
+        pagination={{ page: list.meta?.page ?? page, limit, total, onPageChange: setPage }}
       />
       {editing ? (
         <NamesDialog

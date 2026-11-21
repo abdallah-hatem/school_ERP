@@ -1,35 +1,7 @@
-import type { PenaltyGroup } from '@school-erp/shared';
-import { matchesSearch } from '@/shared/lib/search';
-
 /*
- * Searching the penalty catalogue (§7). The catalogue loads whole, so it is filtered in the browser
- * with the shared matcher (case-, mark- and Arabic-letter-variant-insensitive).
+ * The penalty catalogue's search is the API's (`GET /hr/penalty-groups?search`, owner 2026-11-21);
+ * here only the highlight of what was typed in the names it answered with.
  */
-
-export interface CatalogueMatch {
-  group: PenaltyGroup;
-  /** The group's own name matched: all its violations are shown. */
-  groupMatched: boolean;
-}
-
-/**
- * The groups that match `query`, each with only its matching violations: a violation matches by
- * its English or Arabic name; a group whose English or Arabic name matches keeps every violation.
- * Groups with nothing matching are left out. An empty query returns every group as it is.
- */
-export function searchCatalogue(groups: readonly PenaltyGroup[], query: string): CatalogueMatch[] {
-  if (!query.trim()) return groups.map((group) => ({ group, groupMatched: false }));
-  const matches: CatalogueMatch[] = [];
-  for (const group of groups) {
-    if (matchesSearch(query, [group.nameEn, group.nameAr])) {
-      matches.push({ group, groupMatched: true });
-      continue;
-    }
-    const violations = group.violations.filter((v) => matchesSearch(query, [v.nameEn, v.nameAr]));
-    if (violations.length > 0) matches.push({ group: { ...group, violations }, groupMatched: false });
-  }
-  return matches;
-}
 
 /**
  * `text` split around the first plain (case-insensitive) occurrence of the query, for a cheap
