@@ -52,7 +52,6 @@ import {
   type EmployeeFormValues,
 } from '../lib/employee-form';
 import { EmployeePhotoField, uploadEmployeePhoto } from './employee-photo-field';
-import { OtherStagesField } from './other-stages-field';
 
 export interface EmployeeFormProps {
   /** `/ar/employees`. */
@@ -84,7 +83,7 @@ export function EmployeeForm({
   const { t, has, locale } = useTranslation();
   const router = useRouter();
   const isEdit = Boolean(employee) || editing;
-  const initial = useMemo(() => (employee ? employeeToForm(employee, locale) : emptyEmployeeForm()), [employee, locale]);
+  const initial = useMemo(() => (employee ? employeeToForm(employee) : emptyEmployeeForm()), [employee]);
   // Salary-type fields (R7): editing, only when the API sent them; adding, with the salary key.
   const canSeeSalary = useCan()('hr.employees.view_salary');
   const salary = employee ? employee.salaryVisible : canSeeSalary;
@@ -131,7 +130,6 @@ export function EmployeeForm({
   // The choices are visible items only, searched by the API; the employee's own (even hidden) item
   // stays the choice until changed.
   const stage = useListItemOptions(GET_STAGES, locale, { selected: employee?.stage });
-  const otherStages = useListItemOptions(GET_STAGES, locale);
   const department = useListItemOptions(GET_DEPARTMENTS, locale, { selected: employee?.department });
   const jobTitle = useListItemOptions(GET_JOB_TITLES, locale, { selected: employee?.jobTitle });
   const hiddenHint = t('employees.hints.hiddenItem');
@@ -288,7 +286,6 @@ export function EmployeeForm({
             required
           />
           <SelectField server={stage} control={control} name="stageId" label={t('employees.fields.stage')} placeholder={t('employees.placeholders.stage')} emptyText={t('employees.noStages')} hint={currentHidden.stage ? hiddenHint : undefined} required />
-          <OtherStagesField control={control} server={otherStages} />
           <SelectField server={department} control={control} name="departmentId" label={t('employees.fields.department')} placeholder={t('employees.placeholders.department')} emptyText={t('employees.noDepartments')} hint={currentHidden.department ? hiddenHint : undefined} required />
           <SelectField server={jobTitle} control={control} name="jobTitleId" label={t('employees.fields.jobTitle')} placeholder={t('employees.placeholders.jobTitle')} emptyText={t('employees.noJobTitles')} hint={currentHidden.jobTitle ? hiddenHint : undefined} required />
           <SelectField server={managers.server} control={control} name="managerId" label={t('employees.fields.manager')} placeholder={t('employees.placeholders.manager')} hint={managerHint} />
