@@ -192,6 +192,11 @@ What reviewers check:
 4. Permissions enforced on the backend, not just hidden in the UI.
 5. Edge cases tested, including a cross-user/permission test for id endpoints.
 6. i18n and RTL: both languages, logical classes, nothing hardcoded.
+7. Shared building blocks, not hand-rolled copies: money and number inputs go through `MoneyField` /
+   `MoneyInput` / `GroupedNumberInput`, tables through `DataTable`, search through `SearchInput`.
+8. Every new screen is looked at in its **loading** state too, not only loaded: the skeleton traces the
+   whole page — header buttons, status pills, tabs, filters — and the route is listed in the skeleton
+   shape check (`apps/web/e2e/support/skeletons.ts`). Screenshots in the PR show loaded and loading.
 
 How:
 
