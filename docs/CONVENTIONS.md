@@ -213,6 +213,17 @@ refuse to start there unless `GITHUB_ACTIONS=true` — which also covers every C
 machine. A failure is fixed from CI's logs and artifacts. Review screenshots come from a short headless
 capture script on a throwaway stack, not the suites.
 
+**Streamed pages: read only after the stream settles** (2026-11-22). Next.js streams a page's content
+after its shell: the content arrives as a hidden copy (`<div hidden id="S:0">`) and React swaps it in
+on the next animation frame. Until then the same element exists twice. A one-shot read
+(`textContent()`, `evaluate()`, a strict `getByText`) that lands in that gap fails with "resolved to 2
+elements"; the gap is longer on busy CI runners and grows with more data. That is why it never showed
+locally and appeared on #222 only once its seed added two users. Every smoke spec therefore calls
+`settleStreams()` (`apps/web/e2e/support/stream.ts`), which makes each `goto` wait until no hidden
+`S:` copy is left (10 s; longer is a real bug and fails with the page and ids), and logs the longest
+wait per file. Prefer retrying assertions (`toHaveText`, `toHaveCount`) for values anyway. Image checks
+ignore images inside a hidden streamed copy (they are lazy and never load).
+
 ## Review
 
 What reviewers check:
