@@ -21,16 +21,17 @@ test('the System admin sees the charts; Table shows the numbers; the range switc
     const charts = page.getByTestId('dashboard-charts');
     await expect(charts).toBeVisible();
 
-    // Every card has a Table toggle; the first one swaps its chart for a table and back.
-    const toggles = charts.getByRole('button', { name: t(locale, 'dashboard.charts.table') });
+    // Every card has a Table toggle; the first card's swaps its chart for a table and back. The card
+    // is held by its own region (its heading), not through the button, whose name changes on click.
+    const toggles = charts.getByRole('button', { name: t(locale, 'dashboard.charts.table'), exact: true });
     expect(await toggles.count()).toBeGreaterThan(0);
-    const card = charts.locator('section').filter({ has: toggles.first() }).first();
-    await toggles.first().click();
+    const card = charts.getByRole('region').first();
+    await card.getByRole('button', { name: t(locale, 'dashboard.charts.table'), exact: true }).click();
     const table = card.getByRole('table');
     await expect(table).toBeVisible();
     expect(await table.locator('tbody tr').count()).toBeGreaterThan(0);
-    await expect(card.getByRole('button', { name: t(locale, 'dashboard.charts.chart') })).toHaveAttribute('aria-pressed', 'true');
-    await card.getByRole('button', { name: t(locale, 'dashboard.charts.chart') }).click();
+    await expect(card.getByRole('button', { name: t(locale, 'dashboard.charts.chart'), exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await card.getByRole('button', { name: t(locale, 'dashboard.charts.chart'), exact: true }).click();
     await expect(table).toHaveCount(0);
 
     // The range switch (shown once there are two approved months): 6 months reloads the charts in place.
