@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { visibleSettingsSections } from '@school-erp/shared';
-import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import { settingsActivityHref } from '@/core/audit';
 import { Can, useSession } from '@/core/auth';
 import { PageHeader } from '@/shared/components/layout/page-header';
@@ -22,10 +22,12 @@ import {
   StructureIcon,
   type AppIcon,
 } from '@/shared/components/ui/icons';
+import { TAB_HOVER_FADE } from '@/shared/lib/tab-motion';
+import { useRevealTopOnChange } from '@/shared/hooks/use-reveal-top';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { DirtyReporterProvider, useLeaveGuard } from '../hooks/unsaved-changes';
-import type { SettingsSectionId } from '../sections';
+import { parseSection, type SettingsSectionId } from '../sections';
 import { AccountingRulesSection } from './accounting-rules-section';
 import { CatalogueSection } from './catalogue-section';
 import { HrRulesSection } from './hr-rules-section';
@@ -67,7 +69,37 @@ function SectionBody({ id }: { id: SettingsSectionId }): ReactNode {
   }
 }
 
-type Leave = { to: SettingsSectionId | null } | { href: string } | { proceed: () => void };
+/**
+ * Moves focus to the open section's first heading, without scrolling. A section draws its loading
+ * shape first and its loaded form after, which replaces the heading — so for a moment the focus
+ * follows the newest first heading, until the person does anything (a key, a tap) or 3 s pass.
+ */
+function focusFirstHeading(body: HTMLElement) {
+  const heading = () => body.querySelector<HTMLElement>('h2[tabindex]');
+  const start = document.activeElement;
+  const ours = () => {
+    const active = document.activeElement;
+    return !active || active === document.body || active === start || (active.tagName === 'H2' && body.contains(active));
+  };
+  const place = () => {
+    const h = heading();
+    if (h && document.activeElement !== h && ours()) h.focus({ preventScroll: true });
+  };
+  place();
+  const observer = new MutationObserver(place);
+  observer.observe(body, { childList: true, subtree: true });
+  const stop = () => {
+    observer.disconnect();
+    window.clearTimeout(timer);
+    window.removeEventListener('keydown', stop, true);
+    window.removeEventListener('pointerdown', stop, true);
+  };
+  const timer = window.setTimeout(stop, 3000);
+  window.addEventListener('keydown', stop, true);
+  window.addEventListener('pointerdown', stop, true);
+}
+
+type Leave ={ to: SettingsSectionId | null } | { href: string } | { proceed: () => void };
 
 /**
  * The one Settings screen (§7): a section per area. Desktop and tablet show the sections as a side
@@ -75,14 +107,23 @@ type Leave = { to: SettingsSectionId | null } | { href: string } | { proceed: ()
  * Leaving a section with unsaved edits — another section, a menu link, the language switch,
  * closing the tab — asks first. Only the sections the viewer may see are listed
  * (`SETTINGS_SECTION_ACCESS`); a `?section=` they can't see opens their first one instead.
+ *
+ * Switching section is client-side only: the list marks the new section in the same frame as the
+ * click, and `?section=` follows with `history.replaceState` (Next keeps `useSearchParams` in step)
+ * instead of `router.replace`, which re-rendered the server page on every switch for nothing.
  */
 export function SettingsScreen({ initialSection }: { initialSection: SettingsSectionId | null }) {
   const { t, locale } = useTranslation();
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const user = useSession();
   const sections = useMemo(() => visibleSettingsSections(user?.permissions ?? []), [user]);
-  const [picked, setSection] = useState<SettingsSectionId | null>(initialSection);
+  // The address bar wins over the server's prop: coming back to an entry whose `?section=` was
+  // replaced on the client restores the page the server drew for the older address.
+  const [picked, setSection] = useState<SettingsSectionId | null>(
+    () => parseSection(searchParams?.get('section') ?? undefined) ?? initialSection,
+  );
   // The page's guard lets in only someone with a section, so `sections` is never empty there.
   const section = picked && sections.includes(picked) ? picked : null;
   const [dirtyBy, setDirtyBy] = useState<Record<string, boolean>>({});
@@ -100,9 +141,19 @@ export function SettingsScreen({ initialSection }: { initialSection: SettingsSec
   );
   useLeaveGuard(dirty, onLeaveAttempt);
 
+  // A new section starts from its top (owner, 2026-11-21): scrolled deep into Accounting, picking
+  // Notifications in the sticky list shows Notifications' heading, not the old scroll position.
+  // Its heading takes focus (no scroll of its own) so a screen reader announces where it landed.
+  // On a phone, back to the list shows the list from its top.
+  const navRef = useRef<HTMLElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  useRevealTopOnChange(section ? bodyRef : navRef, section ?? 'list', (el) => {
+    if (section) focusFirstHeading(el);
+  });
+
   function open(to: SettingsSectionId | null) {
     setSection(to);
-    router.replace(to ? `${pathname}?section=${to}` : (pathname ?? ''), { scroll: false });
+    window.history.replaceState(null, '', to ? `${pathname}?section=${to}` : (pathname ?? ''));
   }
 
   function choose(to: SettingsSectionId | null) {
@@ -138,7 +189,7 @@ export function SettingsScreen({ initialSection }: { initialSection: SettingsSec
         }
       />
       <div className="grid items-start gap-6 md:grid-cols-[15rem_minmax(0,1fr)] xl:grid-cols-[17rem_minmax(0,1fr)]">
-        <nav aria-label={t('settings.sectionsLabel')} className={cn('md:sticky md:top-6', section && 'max-md:hidden')}>
+        <nav ref={navRef} aria-label={t('settings.sectionsLabel')} className={cn('md:sticky md:top-6', section && 'max-md:hidden')}>
           <ul data-skeleton-block="settings-nav" className="flex flex-col gap-1 rounded-3xl bg-card p-2 shadow-card">
             {sections.map((id) => {
               const Icon = ICONS[id];
@@ -150,9 +201,9 @@ export function SettingsScreen({ initialSection }: { initialSection: SettingsSec
                     aria-current={current ? 'page' : undefined}
                     onClick={() => choose(id)}
                     className={cn(
-                      'flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-2xl px-3 py-2.5 text-start text-sm font-semibold transition-colors duration-150',
+                      'flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-2xl px-3 py-2.5 text-start text-sm font-semibold',
                       'focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring/55',
-                      current ? 'md:bg-primary-soft md:text-primary' : 'text-foreground hover:bg-muted',
+                      current ? 'md:bg-primary-soft md:text-primary' : cn('text-foreground hover:bg-muted', TAB_HOVER_FADE),
                     )}
                   >
                     <Icon className="size-5 shrink-0" />
@@ -170,7 +221,7 @@ export function SettingsScreen({ initialSection }: { initialSection: SettingsSec
           </ul>
         </nav>
 
-        <div className={cn('flex min-w-0 flex-col gap-4', !section && 'max-md:hidden')}>
+        <div ref={bodyRef} className={cn('flex min-w-0 flex-col gap-4', !section && 'max-md:hidden')}>
           {section ? (
             <Button variant="ghost" size="sm" className="self-start md:hidden" onClick={() => choose(null)}>
               <ChevronStartIcon className="flip-rtl" />

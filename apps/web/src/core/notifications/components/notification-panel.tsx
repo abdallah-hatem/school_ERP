@@ -14,6 +14,7 @@ import {
 } from '@/shared/components/ui/icons';
 import { Skeleton, SkeletonText } from '@/shared/components/ui/skeleton';
 import { formatCount } from '@/shared/lib/format';
+import { TAB_HOVER_FADE } from '@/shared/lib/tab-motion';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { groupItemText, linkHref, notificationText, resolvedText, whenText } from '../lib/text';
@@ -116,9 +117,11 @@ function StatusTabs({ status, onStatus, unreadCount }: { status: InboxStatus; on
       aria-selected={status === value}
       onClick={() => onStatus(value)}
       className={cn(
-        '-mb-px flex h-10 cursor-pointer items-center gap-1.5 border-b-2 px-3.5 text-sm font-bold whitespace-nowrap transition-colors duration-150',
+        '-mb-px flex h-10 cursor-pointer items-center gap-1.5 border-b-2 px-3.5 text-sm font-bold whitespace-nowrap',
         'focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring/55',
-        status === value ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground',
+        status === value
+          ? 'border-primary text-primary'
+          : cn('border-transparent text-muted-foreground hover:text-foreground', TAB_HOVER_FADE),
       )}
     >
       {label}

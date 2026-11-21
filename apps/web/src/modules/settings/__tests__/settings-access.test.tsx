@@ -27,6 +27,7 @@ const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi
 vi.mock('next/navigation', () => ({
   usePathname: () => '/en/settings',
   useRouter: () => router,
+  useSearchParams: () => new URLSearchParams(),
   redirect: vi.fn(),
 }));
 

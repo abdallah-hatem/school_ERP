@@ -7,7 +7,6 @@ import { EmployeeLink } from '@/core/employees';
 import { forgetDeviceThenSubmit, InstallApp } from '@/core/pwa';
 import { callApi } from '@/lib/callApi';
 import { FieldShell } from '@/shared/components/form/field-shell';
-import { PageHeader } from '@/shared/components/layout/page-header';
 import { Button } from '@/shared/components/ui/button';
 import { ErrorIcon, LinkedEmployeeIcon, LockedIcon, PasswordIcon, SignOutIcon } from '@/shared/components/ui/icons';
 import { Input } from '@/shared/components/ui/input';
@@ -16,7 +15,6 @@ import { apiErrorText } from '@/shared/lib/api-error';
 import { localName } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { formatSignIn } from '../lib/sign-in-time';
-import { AccountTabs } from './account-tabs';
 import { FormCard, FormColumns } from './form-card';
 import { RoleChips } from './role-bits';
 
@@ -32,8 +30,6 @@ export function AccountView({ account, now }: { account: UserAccount; now: IsoDa
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title={t('access.account.title')} description={t('access.account.description')} />
-      <AccountTabs />
       <FormColumns
         main={
           <>
