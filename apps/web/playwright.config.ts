@@ -1,8 +1,12 @@
 import { defineConfig, devices } from '@playwright/test';
+import { existsSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 
-// Owner rule (2026-11-21): Smoke specs run on GitHub CI only — never on a developer machine.
-if (process.env.GITHUB_ACTIONS !== 'true') {
-  throw new Error('Smoke specs run on GitHub CI only (owner rule). Push and let CI run them.');
+// On a machine that has ~/.config/school-erp/e2e-ci-only (the owner's, so also every Claude agent
+// on it), smoke specs run on GitHub CI only (owner, 2026-11-21). Other developers run them locally.
+if (process.env.GITHUB_ACTIONS !== 'true' && existsSync(join(homedir(), '.config/school-erp/e2e-ci-only'))) {
+  throw new Error('On this machine smoke specs run on GitHub CI only (owner rule). Push and let CI run them.');
 }
 
 

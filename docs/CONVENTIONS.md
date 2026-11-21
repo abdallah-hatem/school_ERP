@@ -183,10 +183,12 @@ The API refuses anything undeclared (403) and CI fails on it (`docs/ARCHITECTURE
 
 ## Where tests run
 
-Lint, typecheck and unit tests run locally and in CI. **Smoke specs and API e2e run on GitHub CI only**
-(owner, 2026-11-21): `pnpm smoke`, the Playwright config and the API e2e setup refuse to start unless
-`GITHUB_ACTIONS=true`. A failure is fixed from CI's logs and artifacts, then CI re-runs. Review
-screenshots come from a short headless capture script on a throwaway stack, not the suites.
+Lint, typecheck and unit tests run locally and in CI. Smoke specs and API e2e run locally for the
+team as usual. **On the owner's machine they run on GitHub CI only** (owner, 2026-11-21): a marker file
+`~/.config/school-erp/e2e-ci-only` makes `pnpm smoke`, the Playwright config and the API e2e setup
+refuse to start there unless `GITHUB_ACTIONS=true` — which also covers every Claude agent on that
+machine. A failure is fixed from CI's logs and artifacts. Review screenshots come from a short headless
+capture script on a throwaway stack, not the suites.
 
 ## Review
 
