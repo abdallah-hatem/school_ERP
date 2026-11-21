@@ -490,6 +490,10 @@ phase live in `docs/build-log/`.
   at once; smoke test recalc → History without reload. Also: run-specific empty text, approved-month
   refusal hides the date hint and disables Save, recount labels "Penalty date"; the Arabic count was
   already plural (test added). `demo` PR #198 now carries all of it; waits for the owner's approval.
+- 2026-11-21 — `demo` refreshed again → #198 merged (dev → demo, merge commit `2d95bac`; owner: "Yes,
+  merge it", admin bypass, one-off). `demo` equals `dev`. Still the owner's before Sunday: re-run the
+  seed (SEED_ADMIN_PASSWORD first), remove "Test User"/"Test Role AR", insure 2–3 employees, add an
+  HR officer and an Accountant login.
 ## Next up
 
 - Custom icon set drawn (`design/mockups/icon-set.html`, style G monoline + solid when selected) —
