@@ -104,6 +104,8 @@ export function run(overrides: Partial<PayrollRun> = {}): PayrollRun {
     rulesChanged: false,
     penaltiesRecounted: false,
     rules: SETTINGS,
+    linesPage: { total: lines.length, page: 1, limit: 10 },
+    pendingPenaltyLines: lines.filter((l) => l.flags.includes('PENDING_PENALTIES')).length,
     ...overrides,
     lines,
   };

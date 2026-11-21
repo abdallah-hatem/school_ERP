@@ -15,12 +15,18 @@ export default async function EditEmployeePage({ params }: { params: Promise<{ l
   // R6: a page the viewer's roles can't open is the not-found screen.
   await requireScreen('employeeEdit');
 
-  const [employee, departments, stages, jobTitles, managers] = await Promise.all([
-    loadEmployee(id),
-    GET_DEPARTMENTS(),
-    GET_STAGES(),
-    GET_JOB_TITLES(),
-    GET_MANAGER_OPTIONS(id),
+  const [employee, managers] = await Promise.all([loadEmployee(id), GET_MANAGER_OPTIONS(id, { limit: 1 })]);
+  // The pickers' choices are searched by the API as the person types; here only whether the
+  // employee's own items have since been hidden (they keep them, with a note).
+  const hiddenOf = async (res: Promise<{ success?: boolean; data?: unknown }>) => {
+    const r = await res;
+    const item = r.success && Array.isArray(r.data) ? (r.data[0] as { isActive?: boolean } | undefined) : undefined;
+    return item ? item.isActive === false : false;
+  };
+  const [stage, department, jobTitle] = await Promise.all([
+    hiddenOf(GET_STAGES({ ids: [employee.stage.id], includeHidden: true })),
+    hiddenOf(GET_DEPARTMENTS({ ids: [employee.department.id], includeHidden: true })),
+    hiddenOf(GET_JOB_TITLES({ ids: [employee.jobTitle.id], includeHidden: true })),
   ]);
 
   return (
@@ -28,10 +34,8 @@ export default async function EditEmployeePage({ params }: { params: Promise<{ l
       <EmployeeForm
         basePath={`/${locale}/employees`}
         employee={employee}
-        departments={departments.success ? (departments.data ?? []) : []}
-        stages={stages.success ? (stages.data ?? []) : []}
-        jobTitles={jobTitles.success ? (jobTitles.data ?? []) : []}
-        managerCandidates={managers.success ? (managers.data ?? []) : []}
+        currentHidden={{ stage, department, jobTitle }}
+        hasManagerCandidates={!managers.success || (managers.meta?.total ?? 0) > 0}
       />
     </EmployeesI18n>
   );

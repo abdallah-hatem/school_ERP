@@ -12,11 +12,22 @@ vi.mock('next/navigation', () => ({
 }));
 vi.mock('next/link', async () => ({ default: (await import('../test/fixtures')).MockLink }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
-vi.mock('../apis', () => ({ CREATE_EMPLOYEE: vi.fn(), UPDATE_EMPLOYEE: vi.fn() }));
+vi.mock('../apis', () => ({
+  CREATE_EMPLOYEE: vi.fn(),
+  UPDATE_EMPLOYEE: vi.fn(),
+  // The pickers' choices come from the API (searched there, never here).
+  GET_DEPARTMENTS: vi.fn(),
+  GET_STAGES: vi.fn(),
+  GET_JOB_TITLES: vi.fn(),
+  GET_MANAGER_OPTIONS: vi.fn(),
+}));
 
 import type { Employee, EmployeeSummary } from '@school-erp/shared';
-import { CREATE_EMPLOYEE, UPDATE_EMPLOYEE } from '../apis';
-import { departments, employee, item, jobTitles, renderEmployees, stages, summary } from '../test/fixtures';
+import { CREATE_EMPLOYEE, GET_DEPARTMENTS, GET_JOB_TITLES, GET_MANAGER_OPTIONS, GET_STAGES, UPDATE_EMPLOYEE } from '../apis';
+import { departments, employee, jobTitles, renderEmployees, stages, summary } from '../test/fixtures';
+
+const page = <T,>(data: T[]) => ({ success: true as const, status: 200, data, meta: { total: data.length, page: 1, limit: 20 } });
+const managerOptions = vi.mocked(GET_MANAGER_OPTIONS);
 import { EmployeeForm } from './employee-form';
 
 const update = vi.mocked(UPDATE_EMPLOYEE);
@@ -26,21 +37,24 @@ function renderForm({
   editing,
   candidates = [],
   locale = 'en',
-  deptList = departments,
+  hidden,
 }: {
   editing?: Employee;
+  /** What the API answers for the manager picker (it filters out the employee and the inactive). */
   candidates?: EmployeeSummary[];
   locale?: 'en' | 'ar';
-  deptList?: typeof departments;
+  hidden?: { department?: boolean };
 } = {}) {
+  vi.mocked(GET_DEPARTMENTS).mockResolvedValue(page(departments) as never);
+  vi.mocked(GET_STAGES).mockResolvedValue(page(stages) as never);
+  vi.mocked(GET_JOB_TITLES).mockResolvedValue(page(jobTitles) as never);
+  managerOptions.mockResolvedValue(page(candidates) as never);
   return renderEmployees(
     <EmployeeForm
       basePath={`/${locale}/employees`}
       employee={editing}
-      departments={deptList}
-      stages={stages}
-      jobTitles={jobTitles}
-      managerCandidates={candidates}
+      currentHidden={hidden}
+      hasManagerCandidates={candidates.length > 0}
     />,
     locale,
   );
@@ -93,21 +107,18 @@ describe('EmployeeForm', () => {
     expect((await screen.findByRole('alert')).textContent).toContain('This item is hidden.');
   });
 
-  it('Manager picker excludes the employee and inactive employees', async () => {
+  it('Manager picker asks the API for active managers other than the employee, and lists its answer', async () => {
     const user = userEvent.setup();
-    const candidates = [
-      summary({ id: 'e-mona', code: 'EMP-0001', nameEn: 'Mona Khalil', nameAr: 'منى خليل' }),
-      summary({ id: 'e-omar', code: 'EMP-0002', nameEn: 'Omar Fathy', nameAr: 'عمر فتحي' }),
-      summary({ id: 'e-sara', code: 'EMP-0003', nameEn: 'Sara Adel', nameAr: 'سارة عادل', status: 'INACTIVE' }),
-    ];
+    const candidates = [summary({ id: 'e-omar', code: 'EMP-0002', nameEn: 'Omar Fathy', nameAr: 'عمر فتحي' })];
     renderForm({ editing: employee, candidates });
 
     await user.click(screen.getByRole('combobox', { name: /Direct manager/ }));
     const listbox = await screen.findByRole('listbox');
-    const names = within(listbox)
-      .getAllByRole('option')
-      .map((o) => o.textContent);
-    expect(names).toEqual(['No direct manager', 'Omar Fathy · EMP-0002']);
+    await waitFor(() =>
+      expect(within(listbox).getAllByRole('option').map((o) => o.textContent)).toEqual(['No direct manager', 'Omar Fathy · EMP-0002']),
+    );
+    // The employee is left out by the API (`excludeId`), one page for the typed text.
+    expect(managerOptions).toHaveBeenCalledWith('e-mona', { search: '', limit: 20 });
   });
 
   it('Manager picker: a kept manager who no longer manages people is listed and flagged; search finds by code', async () => {
@@ -122,12 +133,11 @@ describe('EmployeeForm', () => {
 
     await user.click(trigger);
     const listbox = await screen.findByRole('listbox');
-    expect(within(listbox).getAllByRole('option').map((o) => o.textContent)).toEqual([
-      'No direct manager',
-      'Omar Fathy · EMP-0002',
-      'Hany Said · EMP-0007',
-    ]);
+    await waitFor(() =>
+      expect(within(listbox).getAllByRole('option').map((o) => o.textContent)).toEqual(['No direct manager', 'Omar Fathy · EMP-0002']),
+    );
     await user.keyboard('EMP-0002');
+    await waitFor(() => expect(managerOptions).toHaveBeenLastCalledWith('e-mona', { search: 'EMP-0002', limit: 20 }));
     await waitFor(() =>
       expect(within(screen.getByRole('listbox')).getAllByRole('option').map((o) => o.textContent)).toEqual(['Omar Fathy · EMP-0002']),
     );
@@ -265,7 +275,7 @@ describe('EmployeeForm', () => {
   it('keeps a department that was hidden after the employee got it, and says so', () => {
     renderForm({
       editing: { ...employee, department: { id: 'd-old', nameEn: 'Old Department', nameAr: 'قسم قديم' } },
-      deptList: [...departments, item('d-old', 'Old Department', 'قسم قديم', false)],
+      hidden: { department: true },
     });
     const trigger = screen.getByRole('combobox', { name: /Department/ });
     expect(trigger.textContent).toContain('Old Department');

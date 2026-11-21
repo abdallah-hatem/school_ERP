@@ -42,14 +42,29 @@ export function runsQueryString(query: RunsListQuery): string {
   return s ? `?${s}` : '';
 }
 
-// ── Run page: ?search&departmentId&flagged (the API filters the lines) ───────
+// ── Run page: ?search&departmentId&flagged&page&limit (the API filters and pages the lines) ──
 
 export function parseRunQuery(params: SearchParamsRecord): PayrollRunQuery {
+  const page = positiveInt(one(params.page), PAGINATION.defaultPage);
+  const limit = nearestPageSize(
+    positiveInt(one(params.limit), PAGINATION.defaultLimit, PAYROLL_PAGINATION.maxLimit),
+    PAYROLL_PAGINATION.pageSizes,
+  );
   return {
     search: one(params.search),
     departmentId: one(params.departmentId),
     flagged: one(params.flagged) === 'true' ? true : undefined,
+    ...(page !== PAGINATION.defaultPage ? { page } : {}),
+    ...(limit !== PAGINATION.defaultLimit ? { limit } : {}),
   };
+}
+
+/**
+ * The tab reads its own lines when the URL filters or pages them; on page 1 of the default size
+ * with no filter it shows the run the layout already read (the same lines), so nothing is read twice.
+ */
+export function needsOwnLines(query: PayrollRunQuery): boolean {
+  return runFilterCount(query) > 0 || query.page !== undefined || query.limit !== undefined;
 }
 
 /** The search (when it has text) plus each filter in use — the "Clear filters · n" count. */
@@ -66,6 +81,8 @@ export function runQueryString(query: PayrollRunQuery): string {
   if (query.search) params.set('search', query.search);
   if (query.departmentId) params.set('departmentId', query.departmentId);
   if (query.flagged) params.set('flagged', 'true');
+  if (query.page && query.page !== PAGINATION.defaultPage) params.set('page', String(query.page));
+  if (query.limit && query.limit !== PAGINATION.defaultLimit) params.set('limit', String(query.limit));
   const s = params.toString();
   return s ? `?${s}` : '';
 }

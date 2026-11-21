@@ -14,6 +14,10 @@ vi.mock('next/link', async () => ({ default: (await import('../test/fixtures')).
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('../apis', () => ({
   CREATE_EMPLOYEE: vi.fn(),
+  GET_DEPARTMENTS: vi.fn(),
+  GET_STAGES: vi.fn(),
+  GET_JOB_TITLES: vi.fn(),
+  GET_MANAGER_OPTIONS: vi.fn(),
   UPDATE_EMPLOYEE: vi.fn(),
   UPLOAD_EMPLOYEE_PHOTO: vi.fn(),
   REMOVE_EMPLOYEE_PHOTO: vi.fn(),
@@ -21,7 +25,7 @@ vi.mock('../apis', () => ({
 
 import type { Employee } from '@school-erp/shared';
 import { CREATE_EMPLOYEE, REMOVE_EMPLOYEE_PHOTO, UPDATE_EMPLOYEE, UPLOAD_EMPLOYEE_PHOTO } from '../apis';
-import { departments, employee, jobTitles, renderEmployees, stages } from '../test/fixtures';
+import { employee, renderEmployees } from '../test/fixtures';
 import { EmployeeForm } from './employee-form';
 import { photoFileProblem } from './employee-photo-field';
 
@@ -45,10 +49,6 @@ function renderForm(editing?: Employee, locale: 'en' | 'ar' = 'en') {
     <EmployeeForm
       basePath={`/${locale}/employees`}
       employee={editing}
-      departments={departments}
-      stages={stages}
-      jobTitles={jobTitles}
-      managerCandidates={[]}
     />,
     locale,
   );

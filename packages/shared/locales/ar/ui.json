@@ -56,7 +56,8 @@
     "month": "الشهر",
     "year": "السنة",
     "searchOptions": "اكتب للبحث",
-    "noMatches": "لا توجد نتائج مطابقة."
+    "noMatches": "لا توجد نتائج مطابقة.",
+    "moreOptions": "يظهر {shown} من {total} — اكتب لتضييق البحث"
   },
   "filters": {
     "clear": "مسح عوامل التصفية",

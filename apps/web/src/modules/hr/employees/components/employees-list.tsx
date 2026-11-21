@@ -20,7 +20,6 @@ import { AddIcon, SearchIcon } from '@/shared/components/ui/icons';
 import { ClearFilters, FilterSelect, SearchInput } from '@/shared/components/form/filter-controls';
 import { formatCount } from '@/shared/lib/format';
 import { SkeletonText } from '@/shared/components/ui/skeleton';
-import { localName } from '@/shared/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import {
@@ -29,6 +28,8 @@ import {
   type EmployeesFilterKey,
   type EmployeesListQuery,
 } from '../lib/list-query';
+import { GET_DEPARTMENTS, GET_STAGES } from '../apis';
+import { useListItemOptions } from '../lib/list-item-options';
 import { stageBandOf } from '../lib/stage-band';
 import { EmployeeCard, EmployeeCardGrid, EmployeeCardSkeleton } from './employee-card';
 
@@ -41,13 +42,24 @@ export interface EmployeesListProps {
   /** `undefined` while the first page loads: the list draws itself with skeleton cards. */
   rows: EmployeeSummary[] | undefined;
   total: number;
-  /** Every department and stage, hidden ones too — hidden items can still have employees. */
-  departments: ListItem[];
+  /** The department and stage the filters name (hidden ones too); the API searches the rest. */
+  selectedDepartment?: ListItem | null;
+  selectedStage?: ListItem | null;
+  /** Every stage in the school's order — only for the cards' stage colour bands. */
   stages: Stage[];
   error?: boolean;
 }
 
-export function EmployeesList({ basePath, query, rows, total, departments, stages, error = false }: EmployeesListProps) {
+export function EmployeesList({
+  basePath,
+  query,
+  rows,
+  total,
+  selectedDepartment = null,
+  selectedStage = null,
+  stages,
+  error = false,
+}: EmployeesListProps) {
   const { t, locale } = useTranslation();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -83,8 +95,9 @@ export function EmployeesList({ basePath, query, rows, total, departments, stage
   const loading = rows === undefined;
   const filterCount = activeFilterCount(query);
   const filtered = filterCount > 0;
-  const itemOptions = (items: ListItem[]) =>
-    [...items].sort((a, b) => a.sortOrder - b.sortOrder).map((i) => ({ value: i.id, label: localName(i, locale), keywords: [i.nameEn, i.nameAr] }));
+  // Hidden departments and stages too: hidden items can still have employees.
+  const departmentOptions = useListItemOptions(GET_DEPARTMENTS, locale, { includeHidden: true, selected: selectedDepartment });
+  const stageOptions = useListItemOptions(GET_STAGES, locale, { includeHidden: true, selected: selectedStage });
 
   const addButton = (
     <Can permission="hr.employees.create">
@@ -172,8 +185,7 @@ export function EmployeesList({ basePath, query, rows, total, departments, stage
                 label={t('employees.columns.department')}
                 allLabel={t('employees.list.allDepartments')}
                 value={query.departmentId}
-                options={itemOptions(departments)}
-                searchable
+                server={departmentOptions}
                 onChange={(v) => setFilter('departmentId', v)}
                 disabled={loading}
                 className="w-full sm:w-full @min-[1000px]:w-44"
@@ -182,8 +194,7 @@ export function EmployeesList({ basePath, query, rows, total, departments, stage
                 label={t('employees.columns.stage')}
                 allLabel={t('employees.list.allStages')}
                 value={query.stageId}
-                options={itemOptions(stages)}
-                searchable
+                server={stageOptions}
                 onChange={(v) => setFilter('stageId', v)}
                 disabled={loading}
                 className="w-full sm:w-full @min-[1000px]:w-44"

@@ -81,8 +81,8 @@ export async function CREATE_PAYROLL_RUN(month: Month) {
 }
 
 /**
- * `GET /hr/payroll-runs/:id?search&departmentId&flagged` — the run, its totals (all lines), every
- * adjustment, and the lines matching the filters.
+ * `GET /hr/payroll-runs/:id?search&departmentId&flagged&page&limit` — the run, its totals (all
+ * lines), every adjustment, and one page of the lines matching the filters with their count.
  */
 export async function GET_PAYROLL_RUN(id: Uuid, query: PayrollRunQuery = {}) {
   const response = await apiFetch<PayrollRun>(runPath(id), {
@@ -91,6 +91,8 @@ export async function GET_PAYROLL_RUN(id: Uuid, query: PayrollRunQuery = {}) {
       search: query.search || undefined,
       departmentId: query.departmentId || undefined,
       flagged: query.flagged ? 'true' : undefined,
+      page: query.page ? String(query.page) : undefined,
+      limit: query.limit ? String(query.limit) : undefined,
     },
     next: { tags: [RUNS_TAG, runTag(id)] },
   });

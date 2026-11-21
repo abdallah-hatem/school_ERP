@@ -2,7 +2,7 @@ import { sectionMetadata } from '@/core/navigation/section-metadata';
 import { notFound } from 'next/navigation';
 import { requireScreen } from '@/core/auth';
 import { EmployeesI18n, EmployeesList, parseEmployeesQuery, type SearchParamsRecord } from '@/modules/hr/employees';
-import { GET_DEPARTMENTS, GET_EMPLOYEES, GET_STAGES } from '@/modules/hr/employees/apis';
+import { GET_DEPARTMENTS, GET_EMPLOYEES, GET_STAGE_ORDER, GET_STAGES } from '@/modules/hr/employees/apis';
 import { isLocale } from '@/shared/lib/i18n';
 
 export const generateMetadata = sectionMetadata('employees');
@@ -21,11 +21,13 @@ export default async function EmployeesPage({
   await requireScreen('employees');
   const query = parseEmployeesQuery(await searchParams);
 
-  // Filters list hidden departments and stages too: hidden items can still have employees.
-  const [employees, departments, stages] = await Promise.all([
+  // The filters' choices are searched by the API as the person types; here only the chosen ones'
+  // names (hidden items too: they can still have employees) and the stage order for the bands.
+  const [employees, department, stage, stages] = await Promise.all([
     GET_EMPLOYEES(query),
-    GET_DEPARTMENTS(true),
-    GET_STAGES(true),
+    query.departmentId ? GET_DEPARTMENTS({ ids: [query.departmentId], includeHidden: true }) : null,
+    query.stageId ? GET_STAGES({ ids: [query.stageId], includeHidden: true }) : null,
+    GET_STAGE_ORDER(),
   ]);
 
   return (
@@ -35,7 +37,8 @@ export default async function EmployeesPage({
         query={query}
         rows={employees.success ? (employees.data ?? []) : []}
         total={employees.success ? (employees.meta?.total ?? 0) : 0}
-        departments={departments.success ? (departments.data ?? []) : []}
+        selectedDepartment={department?.success ? (department.data?.[0] ?? null) : null}
+        selectedStage={stage?.success ? (stage.data?.[0] ?? null) : null}
         stages={stages.success ? (stages.data ?? []) : []}
         error={!employees.success}
       />

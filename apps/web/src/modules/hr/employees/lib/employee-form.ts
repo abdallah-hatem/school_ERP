@@ -340,49 +340,7 @@ export function fieldForError(code: unknown): keyof EmployeeFormValues | undefin
   return typeof code === 'string' ? FIELD_BY_ERROR[code] : undefined;
 }
 
-/**
- * Picker options: visible items only, plus the employee's current item when it has since been
- * hidden (§3 — they keep it on edit; only a newly chosen item must be visible).
- */
-export function listOptions(
-  items: ListItem[],
-  locale: Locale,
-  current?: NamedRef,
-): { options: SelectOption[]; currentHidden: boolean } {
-  const options = items
-    .filter((item) => item.isActive)
-    .sort((a, b) => a.sortOrder - b.sortOrder)
-    .map((item) => ({ value: item.id, label: localName(item, locale), keywords: [item.nameEn, item.nameAr] }));
-  const currentHidden = Boolean(current && !options.some((o) => o.value === current.id));
-  if (current && currentHidden) options.push({ value: current.id, label: localName(current, locale), keywords: [current.nameEn, current.nameAr] });
-  return { options, currentHidden };
-}
-
-/**
- * Direct-manager options (§3): active employees whose job title manages people (the API filters
- * them) — never the employee being edited and never an inactive one. The current manager stays
- * listed so an unrelated edit doesn't blank it, even when they no longer manage people:
- * `currentNotManaging` then says so, for the field's note.
- */
-export function managerOptions(
-  candidates: EmployeeSummary[],
-  locale: Locale,
-  noneLabel: string,
-  selfId?: Uuid,
-  current?: (NamedRef & { code: string; managesPeople?: boolean }) | null,
-): { options: SelectOption[]; currentNotManaging: boolean; hasCandidates: boolean } {
-  const label = (e: NamedRef & { code: string }) => `${localName(e, locale)} · ${e.code}`;
-  const options = candidates
-    .filter((e) => e.status === EmployeeStatus.ACTIVE && e.id !== selfId)
-    .map((e) => ({ value: e.id, label: label(e), keywords: [e.nameEn, e.nameAr, e.code] }));
-  const hasCandidates = options.length > 0;
-  const kept = Boolean(current && current.id !== selfId);
-  if (current && kept && !options.some((o) => o.value === current.id)) {
-    options.push({ value: current.id, label: label(current), keywords: [current.nameEn, current.nameAr, current.code] });
-  }
-  return {
-    options: [{ value: NO_MANAGER, label: noneLabel }, ...options],
-    currentNotManaging: kept && current?.managesPeople === false,
-    hasCandidates,
-  };
+/** A direct-manager choice (§3): "Name · code". The API lists the candidates as the person types. */
+export function managerChoice(e: NamedRef & { code: string }, locale: Locale): SelectOption {
+  return { value: e.id, label: `${localName(e, locale)} · ${e.code}` };
 }

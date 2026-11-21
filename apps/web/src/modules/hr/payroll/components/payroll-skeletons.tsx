@@ -97,7 +97,6 @@ function RunLinesSkeletonBody() {
                 count={null}
                 search={query.search ?? ''}
                 onSearchChange={noop}
-                departments={[]}
                 query={query}
                 onFilter={noop}
                 disabled

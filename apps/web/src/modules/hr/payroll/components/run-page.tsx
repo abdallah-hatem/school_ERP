@@ -5,7 +5,7 @@ import {
   PAGINATION,
   PAYROLL_PAGINATION,
   PayrollStatus,
-  type Department,
+  type ListItem,
   type PayrollLine,
   type PayrollRun,
   type PayrollRunQuery,
@@ -39,7 +39,16 @@ import { formatCount, formatMoney, formatMoneyText, formatMonth, sumMoney } from
 import { localName, nameIn } from '@/shared/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
-import { adjustmentNet, adjustmentsOf, notAppliedAdjustments, runFilterCount, runQueryString } from '../lib/run-query';
+import { GET_DEPARTMENTS } from '../../employees/apis';
+import { useListItemOptions } from '../../employees/lib/list-item-options';
+import {
+  adjustmentNet,
+  adjustmentsOf,
+  needsOwnLines,
+  notAppliedAdjustments,
+  runFilterCount,
+  runQueryString,
+} from '../lib/run-query';
 import { AdjustmentsDialog, type AdjustmentsTarget } from './adjustments-dialog';
 import { DeductionAmount, LineStatus, SignedAmount } from './payroll-bits';
 import { RulesPanel } from './rules-panel';
@@ -53,11 +62,13 @@ export interface RunLinesProps {
   /** `/ar/settings` — the rules panel links there. */
   settingsHref: string;
   /**
-   * With search or filters in the URL: the run read with them (its lines are the matching ones),
-   * and the server's clock before that read. Without: null — the lines are the layout's run's.
+   * With search, filters or a page in the URL: the run read with them (its lines are that page of
+   * the matching ones), and the server's clock before that read. Without: null — the lines are
+   * the layout's run's (page 1).
    */
   filtered: { run: PayrollRun; asOf: number } | null;
-  departments: Department[];
+  /** The department the filter names; the API searches the others. */
+  selectedDepartment?: ListItem | null;
   query: PayrollRunQuery;
 }
 
@@ -67,7 +78,7 @@ export interface RunLinesProps {
  * from the run layout (`useRunState`); only the filtered lines are this tab's own read. A draft is
  * editable; an approved run is read-only with the payslips.
  */
-export function RunLines({ basePath, settingsHref, filtered: filteredRead, departments, query }: RunLinesProps) {
+export function RunLines({ basePath, settingsHref, filtered: filteredRead, selectedDepartment = null, query }: RunLinesProps) {
   const { t, locale } = useTranslation();
   const router = useRouter();
   const [navigating, startNavigation] = useTransition();
@@ -75,13 +86,17 @@ export function RunLines({ basePath, settingsHref, filtered: filteredRead, depar
 
   const filterCount = runFilterCount(query);
   const filtered = filterCount > 0;
-  // A write answered after the filtered lines were read: they're re-read for the current URL
-  // (the write's answer holds every line, not the matching ones).
+  const ownLines = needsOwnLines(query);
+  // A write answered after this tab's lines were read: they're re-read for the current URL (the
+  // write's answer holds the first page, unfiltered).
   const filteredAsOf = filteredRead?.asOf ?? 0;
   useEffect(() => {
-    if (filtered && filteredRead && lastWrite > filteredAsOf) startNavigation(() => router.refresh());
-  }, [filtered, filteredRead, filteredAsOf, lastWrite, router]);
-  const lines = filtered && filteredRead ? filteredRead.run.lines : run.lines;
+    if (ownLines && filteredRead && lastWrite > filteredAsOf) startNavigation(() => router.refresh());
+  }, [ownLines, filteredRead, filteredAsOf, lastWrite, router]);
+  // One page of the matching lines, as the API sent it.
+  const shownRun = ownLines && filteredRead ? filteredRead.run : run;
+  const lines = shownRun.lines;
+  const linesPage = shownRun.linesPage;
 
   const [search, setSearch] = useState(query.search ?? '');
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -91,8 +106,6 @@ export function RunLines({ basePath, settingsHref, filtered: filteredRead, depar
     },
     [],
   );
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState<number>(PAGINATION.defaultLimit);
   const [adjusting, setAdjusting] = useState<AdjustmentsTarget | null>(null);
   const canAdjust = useCan()('hr.payroll.adjust');
 
@@ -100,13 +113,8 @@ export function RunLines({ basePath, settingsHref, filtered: filteredRead, depar
   const monthLabel = formatMonth(run.month, locale);
   const notApplied = useMemo(() => notAppliedAdjustments(run.adjustments), [run.adjustments]);
 
-  const pageCount = Math.max(1, Math.ceil(lines.length / limit));
-  const currentPage = Math.min(page, pageCount);
-  const pageLines = lines.slice((currentPage - 1) * limit, currentPage * limit);
-
-  // ── Filters live in the URL; the API filters the lines ────────────────────
+  // ── Filters and the page live in the URL; the API filters and pages the lines ──
   function go(next: PayrollRunQuery) {
-    setPage(1);
     startNavigation(() =>
       router.push(`${basePath}/${run.id}${runQueryString(next)}`, {
         scroll: false,
@@ -119,7 +127,7 @@ export function RunLines({ basePath, settingsHref, filtered: filteredRead, depar
     searchTimer.current = setTimeout(() => {
       searchTimer.current = null;
       // Never mid-write: a search typed during Recalculate / Approve goes once it answers.
-      whenIdle(() => go({ ...query, search: text.trim() || undefined }));
+      whenIdle(() => go({ ...query, search: text.trim() || undefined, page: undefined }));
     }, SEARCH_DEBOUNCE_MS);
   }
   /** Search, both filters and the page, in one URL update. */
@@ -127,7 +135,7 @@ export function RunLines({ basePath, settingsHref, filtered: filteredRead, depar
     if (searchTimer.current) clearTimeout(searchTimer.current);
     searchTimer.current = null;
     setSearch('');
-    go({});
+    go({ limit: query.limit });
   }
 
   // ── Table ─────────────────────────────────────────────────────────────────
@@ -213,7 +221,7 @@ export function RunLines({ basePath, settingsHref, filtered: filteredRead, depar
           <DataTable
             label={t('payroll.table.label', { month: monthLabel })}
             columns={columns}
-            rows={pageLines}
+            rows={lines}
             getRowId={(line) => line.id}
             refreshing={navigating}
             rowTone={(line) => (line.flags.length > 0 ? 'warning' : undefined)}
@@ -233,29 +241,26 @@ export function RunLines({ basePath, settingsHref, filtered: filteredRead, depar
             toolbar={
               <RunLinesToolbar
                 count={t('payroll.table.count', {
-                  shown: formatCount(lines.length),
+                  shown: formatCount(linesPage.total),
                   total: formatCount(totals.employees),
                 })}
                 search={search}
                 onSearchChange={onSearchChange}
-                departments={departments}
+                selectedDepartment={selectedDepartment}
                 query={query}
-                onFilter={go}
+                onFilter={(next) => go({ ...next, page: undefined })}
                 onClear={clearFilters}
                 busy={navigating}
                 disabled={mutating}
               />
             }
             pagination={{
-              page: currentPage,
-              limit,
-              total: lines.length,
-              onPageChange: setPage,
+              page: linesPage.page,
+              limit: linesPage.limit,
+              total: linesPage.total,
+              onPageChange: (page) => go({ ...query, page: page === PAGINATION.defaultPage ? undefined : page }),
               pageSizes: PAYROLL_PAGINATION.pageSizes,
-              onLimitChange: (next) => {
-                setLimit(next);
-                setPage(1);
-              },
+              onLimitChange: (next) => go({ ...query, page: undefined, limit: next === PAGINATION.defaultLimit ? undefined : next }),
             }}
             scrollHeight="screen"
           />
@@ -450,7 +455,7 @@ export function RunLinesToolbar({
   count,
   search,
   onSearchChange,
-  departments,
+  selectedDepartment = null,
   query,
   onFilter,
   onClear,
@@ -461,7 +466,8 @@ export function RunLinesToolbar({
   count: string | null;
   search: string;
   onSearchChange: (text: string) => void;
-  departments: Department[];
+  /** The department the filter names (hidden ones too); the API searches the choices. */
+  selectedDepartment?: ListItem | null;
   query: PayrollRunQuery;
   onFilter: (next: PayrollRunQuery) => void;
   /** "Clear filters · n": search and both filters at once (absent while loading). */
@@ -471,6 +477,8 @@ export function RunLinesToolbar({
   disabled?: boolean;
 }) {
   const { t, locale } = useTranslation();
+  // Hidden departments too: a line keeps the department it had.
+  const departmentOptions = useListItemOptions(GET_DEPARTMENTS, locale, { includeHidden: true, selected: selectedDepartment });
   return (
     <>
       <div className="flex w-full flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -498,14 +506,7 @@ export function RunLinesToolbar({
           allLabel={t('payroll.filters.allDepartments')}
           value={query.departmentId}
           disabled={disabled}
-          options={[...departments]
-            .sort((a, b) => a.sortOrder - b.sortOrder)
-            .map((d) => ({
-              value: d.id,
-              label: localName(d, locale),
-              keywords: [d.nameEn, d.nameAr],
-            }))}
-          searchable
+          server={departmentOptions}
           onChange={(departmentId) => onFilter({ ...query, departmentId })}
         />
         <label className="flex h-11 cursor-pointer items-center gap-2.5 rounded-lg px-1 text-sm font-semibold">

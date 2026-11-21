@@ -46,17 +46,25 @@ describe('payroll loaders', () => {
     expect(apis.GET_PAYROLL_RUN).toHaveBeenCalledTimes(1);
   });
 
-  it('the Employees tab reads the run only when the URL filters (else it shows the layout’s run)', async () => {
-    employees.GET_DEPARTMENTS.mockResolvedValue(ok([{ id: 'd1' }]));
+  it('the Employees tab reads the run only when the URL filters or pages (else it shows the layout’s run)', async () => {
     const unfiltered = await loadRunLines('r1', {}, false);
     expect(apis.GET_PAYROLL_RUN).not.toHaveBeenCalled();
-    expect(unfiltered).toEqual({ filtered: null, departments: [{ id: 'd1' }] });
+    // No department chosen: no list read (the filter asks the API when it opens).
+    expect(employees.GET_DEPARTMENTS).not.toHaveBeenCalled();
+    expect(unfiltered).toEqual({ filtered: null, selectedDepartment: null });
 
     apis.GET_PAYROLL_RUN.mockResolvedValue(ok(run({ lines: [SALMA] })));
-    const filtered = await loadRunLines('r1', { search: 'salma' }, true);
+    const filtered = await loadRunLines('r1', { search: 'salma', page: 2, limit: 50 }, true);
     expect(apis.GET_PAYROLL_RUN).toHaveBeenCalledTimes(1);
-    expect(apis.GET_PAYROLL_RUN).toHaveBeenCalledWith('r1', { search: 'salma' });
+    expect(apis.GET_PAYROLL_RUN).toHaveBeenCalledWith('r1', { search: 'salma', page: 2, limit: 50 });
     expect(filtered.filtered?.run.lines).toEqual([SALMA]);
+  });
+
+  it('a chosen department: only its name is read (hidden ones too)', async () => {
+    employees.GET_DEPARTMENTS.mockResolvedValue(ok([{ id: 'd1', nameEn: 'Old', nameAr: 'قديم', isActive: false, sortOrder: 1 }]));
+    const data = await loadRunLines('r1', { departmentId: 'd1' }, false);
+    expect(employees.GET_DEPARTMENTS).toHaveBeenCalledWith({ ids: ['d1'], includeHidden: true });
+    expect(data.selectedDepartment).toMatchObject({ id: 'd1', nameEn: 'Old' });
   });
 
   it('an unknown run is the not-found page', async () => {

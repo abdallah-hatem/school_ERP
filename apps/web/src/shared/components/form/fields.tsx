@@ -5,7 +5,7 @@ import { useId, useState, type ComponentProps, type ReactNode } from 'react';
 import { useController, type Control, type FieldPath, type FieldValues } from 'react-hook-form';
 import { Button } from '@/shared/components/ui/button';
 import { Calendar } from '@/shared/components/ui/calendar';
-import { Combobox, needsSearch } from '@/shared/components/ui/combobox';
+import { Combobox, needsSearch, type ServerOptions } from '@/shared/components/ui/combobox';
 import { CalendarIcon } from '@/shared/components/ui/icons';
 import { GroupedNumberInput } from '@/shared/components/ui/grouped-number-input';
 import { Input, controlClasses } from '@/shared/components/ui/input';
@@ -397,9 +397,9 @@ export interface SelectOptionGroup {
 }
 
 /**
- * A select. Above `SEARCH_THRESHOLD` options (grouped ones included) it becomes the searchable
- * `Combobox` by itself; `searchable` forces either way — set it on lists of records (employees,
- * departments, violations) that will outgrow today's seed.
+ * A select. Over records (employees, departments, violations) pass `server` (`useServerOptions`):
+ * the API searches the choices. A short code list (an enum) passes `options`; above
+ * `SEARCH_THRESHOLD` options it becomes the searchable `Combobox` by itself (`searchable` forces).
  */
 export function SelectField<T extends FieldValues>({
   control,
@@ -416,6 +416,7 @@ export function SelectField<T extends FieldValues>({
   searchable,
   searchPlaceholder,
   noMatchesText,
+  server,
 }: BaseFieldProps<T> & {
   options?: SelectOption[];
   /** Options under headings, shown after `options` (e.g. violations by catalogue group). */
@@ -430,6 +431,8 @@ export function SelectField<T extends FieldValues>({
   searchPlaceholder?: string;
   /** Shown when the search matches nothing. */
   noMatchesText?: string;
+  /** Records: the API searches the choices (`options` / `groups` ignored). */
+  server?: ServerOptions;
 }) {
   const { t } = useTranslation();
   const id = useFieldId(name);
@@ -439,8 +442,9 @@ export function SelectField<T extends FieldValues>({
   return (
     <FieldShell id={id} label={label} required={required} hint={hint} error={fieldState.error?.message} className={className}>
       {(a11y) =>
-        needsSearch(count, searchable) ? (
+        server || needsSearch(count, searchable) ? (
           <Combobox
+            server={server}
             {...a11y}
             ref={field.ref}
             name={field.name}
