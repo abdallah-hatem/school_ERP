@@ -1,4 +1,14 @@
 import { defineConfig, devices } from '@playwright/test';
+import { existsSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
+
+// On a machine that has ~/.config/school-erp/e2e-ci-only (the owner's, so also every Claude agent
+// on it), smoke specs run on GitHub CI only (owner, 2026-11-21). Other developers run them locally.
+if (process.env.GITHUB_ACTIONS !== 'true' && existsSync(join(homedir(), '.config/school-erp/e2e-ci-only'))) {
+  throw new Error('On this machine smoke specs run on GitHub CI only (owner rule). Push and let CI run them.');
+}
+
 
 /*
  * Smoke specs (apps/web/e2e). Run them with `pnpm smoke` at the repo root: it creates its own
