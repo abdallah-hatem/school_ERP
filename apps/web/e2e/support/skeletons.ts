@@ -77,10 +77,17 @@ async function settled(page: Page): Promise<void> {
   await page.waitForLoadState('networkidle');
   await expect(page.locator('#main [aria-busy="true"]')).toHaveCount(0);
   // Streamed content first lands in a hidden copy (`div[hidden][id^="S:"]`) until React swaps it
-  // in; a lazy image in that copy never loads. Wait for the swap, then for the visible images.
+  // in; a lazy image in that copy never loads. Wait for the swap, then for the images on screen. A
+  // lazy image below the fold (an employee photo on a long list) never loads either until scrolled
+  // to; its box has a fixed size, so it can't move anything we measure.
   await streamSettled(page);
   await page.waitForFunction(() =>
-    Array.from(document.images).every((img) => img.complete || img.closest('div[hidden][id^="S:"]') !== null),
+    Array.from(document.images).every((img) => {
+      if (img.complete || img.closest('div[hidden][id^="S:"]') !== null) return true;
+      const r = img.getBoundingClientRect();
+      const onScreen = r.bottom > 0 && r.top < window.innerHeight && r.right > 0 && r.left < window.innerWidth;
+      return img.loading === 'lazy' && !onScreen;
+    }),
   );
 }
 
