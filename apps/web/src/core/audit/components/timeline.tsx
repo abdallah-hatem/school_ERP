@@ -24,6 +24,7 @@ import {
 } from '@/shared/components/ui/icons';
 import { Skeleton, SkeletonText } from '@/shared/components/ui/skeleton';
 import { SlotText, TEXT_SLOT } from '@/shared/components/ui/slot-text';
+import { formatDateTime, formatTime } from '@/shared/lib/format';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import {
@@ -41,8 +42,6 @@ import {
 import {
   formatDayHeading,
   formatMonthHeading,
-  formatSchoolDateTime,
-  formatSchoolTime,
   formatShortDay,
   relativeAgo,
   schoolDay,
@@ -342,8 +341,8 @@ function TimelineItem({
   joined: boolean;
 }) {
   const { t, locale } = useTranslation();
-  const time = formatSchoolTime(entry.at, locale);
-  const exact = formatSchoolDateTime(entry.at, locale);
+  const time = formatTime(entry.at, locale);
+  const exact = formatDateTime(entry.at, locale);
   const ago = grouping === 'day' ? relativeAgo(entry.at, now, t) : null;
   const day = grouping === 'month' ? formatShortDay(schoolDay(entry.at), locale) : null;
   const sub = day ?? ago;

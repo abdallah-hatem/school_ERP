@@ -57,6 +57,16 @@ describe('translateError', () => {
     expect(ar).not.toContain('2026-11-19');
   });
 
+  it('an ISO instant param reads as the school date and a 12-hour time, never 24-hour', () => {
+    const params = { date: '2026-11-19T14:07:00.000Z' };
+    expect(translateError('PENALTY_EARLIER_PENDING', 'en', params)).toBe(
+      'Approve or cancel the 19 Nov 2026, 4:07\u00a0PM penalty for this violation first.',
+    );
+    const ar = translateError('PENALTY_EARLIER_PENDING', 'ar', params);
+    expect(ar).toContain('19 نوفمبر 2026، 4:07\u00a0م');
+    expect(ar).not.toContain('16:07');
+  });
+
   it('a month param (YYYY-MM) reads as the month and year (PENALTY_RECOUNT_MONTH_LOCKED)', () => {
     const params = { month: '2026-10' };
     expect(translateError('PENALTY_RECOUNT_MONTH_LOCKED', 'en', params)).toContain('in October 2026, whose payroll');
