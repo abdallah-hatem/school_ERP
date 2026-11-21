@@ -20,12 +20,13 @@ vi.mock('../apis', () => ({
   CANCEL_PENALTY: vi.fn(),
   CREATE_PENALTY: vi.fn(),
   GET_PENALTY_PREVIEW: vi.fn(),
+  GET_PENALTY_GROUPS: vi.fn(),
 }));
+vi.mock('../../employees/apis', () => ({ GET_EMPLOYEES: vi.fn() }));
 
 import { PAGINATION } from '@school-erp/shared';
-import { violationGroups } from '../lib/penalty-text';
 import type { PenaltiesListQuery } from '../lib/list-query';
-import { groups, record, renderPenalties } from '../test/fixtures';
+import { record, renderPenalties } from '../test/fixtures';
 import { PenaltiesList, type PenaltiesListProps } from './penalties-list';
 
 const QUERY: PenaltiesListQuery = { month: '2026-11', page: 1, limit: PAGINATION.defaultLimit };
@@ -38,8 +39,6 @@ function renderList(props: Partial<PenaltiesListProps> = {}, locale: 'en' | 'ar'
       currentMonth="2026-11"
       rows={[record(), record({ id: 'p-2', status: 'CANCELLED', cancelReason: 'Wrong day', action: 'WARNING', days: null, level: 1 })]}
       total={2}
-      employees={[]}
-      violations={violationGroups(groups, locale)}
       {...props}
     />,
     locale,

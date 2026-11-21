@@ -248,6 +248,8 @@ export interface PenaltyGroup extends Names {
 /** `GET /hr/penalty-groups?search` — a violation's or a group's name, either language. */
 export interface PenaltyCatalogueQuery {
   search?: string;
+  /** Only what can be recorded now: retired groups and violations left out (the record picker). */
+  active?: boolean;
 }
 
 export interface CreatePenaltyGroupRequest extends Names {

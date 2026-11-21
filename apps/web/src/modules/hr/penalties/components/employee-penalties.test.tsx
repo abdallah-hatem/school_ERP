@@ -13,11 +13,12 @@ const apis = vi.hoisted(() => ({
   CANCEL_PENALTY: vi.fn(),
   CREATE_PENALTY: vi.fn(),
   GET_PENALTY_PREVIEW: vi.fn(),
+  GET_PENALTY_GROUPS: vi.fn(),
 }));
 vi.mock('../apis', () => apis);
+vi.mock('../../employees/apis', () => ({ GET_EMPLOYEES: vi.fn() }));
 
 import { employee } from '../../employees/test/fixtures';
-import { violationGroups } from '../lib/penalty-text';
 import { groups, ok, record, renderPenalties } from '../test/fixtures';
 import { EmployeePenalties } from './employee-penalties';
 
@@ -30,7 +31,6 @@ function renderTab(overrides: Partial<Parameters<typeof EmployeePenalties>[0]> =
       total={25}
       page={1}
       limit={10}
-      violations={violationGroups(groups, 'en')}
       {...overrides}
     />,
   );
@@ -62,6 +62,7 @@ describe('EmployeePenalties (profile tab)', () => {
 
   it('records a penalty for this employee: the employee is already picked', async () => {
     const user = userEvent.setup();
+    apis.GET_PENALTY_GROUPS.mockResolvedValue(ok(groups.filter((g) => g.isActive).map((g) => ({ ...g, violations: g.violations.filter((v) => v.isActive) }))));
     apis.GET_PENALTY_PREVIEW.mockResolvedValue(ok({ level: 1, action: 'NOTICE', days: null, priorCount: 0, recount: [] }));
     renderTab();
     await user.click(screen.getByRole('button', { name: 'Record a penalty' }));

@@ -8,21 +8,54 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const router = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => router, redirect: vi.fn() }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
-const apis = vi.hoisted(() => ({ GET_PENALTY_PREVIEW: vi.fn(), CREATE_PENALTY: vi.fn() }));
+const apis = vi.hoisted(() => ({ GET_PENALTY_PREVIEW: vi.fn(), CREATE_PENALTY: vi.fn(), GET_PENALTY_GROUPS: vi.fn() }));
 vi.mock('../apis', () => apis);
+// The pickers' choices come from the API (searched there, never here).
+const employeesApis = vi.hoisted(() => ({ GET_EMPLOYEES: vi.fn() }));
+vi.mock('../../employees/apis', () => employeesApis);
 
 import { todayIso } from '@/shared/lib/format';
-import { employeeOptions, violationGroups } from '../lib/penalty-text';
+import { matchesSearch } from '@school-erp/shared';
 import { failure, groups, ok, record, renderPenalties } from '../test/fixtures';
 import { RecordPenaltyDialog } from './record-penalty-dialog';
 
-const EMPLOYEES = employeeOptions(
-  [
-    { id: 'e-mona', code: 'EMP-0001', nameEn: 'Mona Khalil', nameAr: 'منى خليل', status: 'ACTIVE' },
-    { id: 'e-omar', code: 'EMP-0002', nameEn: 'Omar Fathy', nameAr: 'عمر فتحي', status: 'ACTIVE' },
-  ],
-  'en',
-);
+const PEOPLE = [
+  { id: 'e-mona', code: 'EMP-0001', nameEn: 'Mona Khalil', nameAr: 'منى خليل', status: 'ACTIVE' },
+  { id: 'e-omar', code: 'EMP-0002', nameEn: 'Omar Fathy', nameAr: 'عمر فتحي', status: 'ACTIVE' },
+  { id: 'e-gone', code: 'EMP-0003', nameEn: 'Omar Gone', nameAr: 'عمر سابق', status: 'INACTIVE' },
+];
+
+/** The API's side: active employees for `status=ACTIVE`, searched by name or code. */
+function serveEmployees() {
+  employeesApis.GET_EMPLOYEES.mockImplementation((q: { status?: string; search?: string }) => {
+    const found = PEOPLE.filter((p) => (!q.status || p.status === q.status) && matchesSearch(q.search ?? '', [p.nameEn, p.nameAr, p.code]));
+    return ok(found);
+  });
+}
+
+/**
+ * The API's side of the catalogue for the record picker (its own tests are the API's): what can be
+ * recorded now, in order; a search keeps a group by its name or its matching violations.
+ */
+function serveViolations() {
+  apis.GET_PENALTY_GROUPS.mockImplementation((q: { search?: string } = {}) => {
+    const usable = [...groups]
+      .filter((g) => g.isActive)
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((g) => ({ ...g, violations: g.violations.filter((v) => v.isActive) }))
+      .filter((g) => g.violations.length > 0);
+    const text = q.search?.trim() ?? '';
+    return ok(
+      text
+        ? usable
+            .map((g) =>
+              matchesSearch(text, [g.nameEn, g.nameAr]) ? g : { ...g, violations: g.violations.filter((v) => matchesSearch(text, [v.nameEn, v.nameAr])) },
+            )
+            .filter((g) => g.violations.length > 0)
+        : usable,
+    );
+  });
+}
 
 const preview = (overrides: Partial<PenaltyPreview> = {}): PenaltyPreview => ({
   level: 1,
@@ -51,12 +84,7 @@ const RECOUNT: PenaltyPreview['recount'] = [
 
 function renderDialog(onOpenChange = vi.fn(), locale: 'en' | 'ar' = 'en') {
   renderPenalties(
-    <RecordPenaltyDialog
-      open
-      onOpenChange={onOpenChange}
-      employees={EMPLOYEES}
-      violations={violationGroups(groups, locale)}
-    />,
+    <RecordPenaltyDialog open onOpenChange={onOpenChange} />,
     locale,
   );
   return onOpenChange;
@@ -74,6 +102,8 @@ describe('RecordPenaltyDialog', () => {
     router.refresh.mockReset();
     apis.GET_PENALTY_PREVIEW.mockReset();
     apis.CREATE_PENALTY.mockReset();
+    serveEmployees();
+    serveViolations();
   });
   afterEach(cleanup);
 
@@ -123,31 +153,20 @@ describe('RecordPenaltyDialog', () => {
     expect(lastCall.date < todayIso()).toBe(true);
   });
 
-  it('the employee picker searches active employees by Arabic name or code and picks with the keyboard', async () => {
+  it('the employee picker asks the API for active employees by Arabic name or code and picks with the keyboard', async () => {
     const user = userEvent.setup();
     apis.GET_PENALTY_PREVIEW.mockResolvedValue(ok(preview()));
-    renderPenalties(
-      <RecordPenaltyDialog
-        open
-        onOpenChange={vi.fn()}
-        employees={employeeOptions(
-          [
-            { id: 'e-mona', code: 'EMP-0001', nameEn: 'Mona Khalil', nameAr: 'منى خليل', status: 'ACTIVE' },
-            { id: 'e-omar', code: 'EMP-0002', nameEn: 'Omar Fathy', nameAr: 'عمر فتحي', status: 'ACTIVE' },
-            { id: 'e-gone', code: 'EMP-0003', nameEn: 'Omar Gone', nameAr: 'عمر سابق', status: 'INACTIVE' },
-          ],
-          'en',
-        )}
-        violations={violationGroups(groups, 'en')}
-      />,
-    );
+    renderPenalties(<RecordPenaltyDialog open onOpenChange={vi.fn()} />);
     await user.click(screen.getByRole('combobox', { name: /Employee/ }));
     const search = screen.getByRole('searchbox', { name: /Type a name/ });
     await user.type(search, 'عمر');
-    // The inactive one is never offered.
-    expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['Omar Fathy · EMP-0002']);
+    await waitFor(() => expect(employeesApis.GET_EMPLOYEES).toHaveBeenLastCalledWith({ status: 'ACTIVE', search: 'عمر', limit: 20 }));
+    // The inactive one is never offered (the API asks for active ones only).
+    await waitFor(() => expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['Omar Fathy · EMP-0002']));
     await user.clear(search);
-    await user.type(search, '0001{Enter}');
+    await user.type(search, '0001');
+    await waitFor(() => expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['Mona Khalil · EMP-0001']));
+    await user.keyboard('{Enter}');
     expect(screen.getByRole('combobox', { name: /Employee/ }).textContent).toBe('Mona Khalil · EMP-0001');
   });
 
@@ -169,11 +188,13 @@ describe('RecordPenaltyDialog', () => {
     expect(previewLine()).toBe('Level 4 — Dismissal');
   });
 
-  it('the violation picker lists groups in order and hides retired violations and groups', async () => {
+  it('the violation picker shows the API\'s groups in order, what can be recorded now', async () => {
     const user = userEvent.setup();
     renderDialog();
     await user.click(screen.getByRole('combobox', { name: /Violation/ }));
     const listbox = await screen.findByRole('listbox');
+    expect(apis.GET_PENALTY_GROUPS).toHaveBeenCalledWith({ search: '' });
+    await waitFor(() => expect(within(listbox).getAllByRole('option').length).toBe(2));
     expect(within(listbox).getAllByRole('option').map((o) => o.textContent)).toEqual([
       'Late arrival without notice',
       'Using a phone in class',
@@ -256,29 +277,21 @@ describe('RecordPenaltyDialog', () => {
     expect(screen.queryByTestId('penalty-preview')).toBeNull();
   });
 
-  it('the violation picker searches English and Arabic names and group names', async () => {
+  it('the violation picker asks the API for what is typed (either language, group names too) and shows its answer', async () => {
     const user = userEvent.setup();
     renderDialog(vi.fn(), 'ar');
     await user.click(screen.getByRole('combobox', { name: /المخالفة/ }));
     const search = screen.getByRole('searchbox', { name: /اكتب اسم المخالفة/ });
     const shown = () => screen.queryAllByRole('option').map((o) => o.textContent);
-    // Arabic name.
     await user.type(search, 'الهاتف');
-    expect(shown()).toEqual(['استخدام الهاتف في الفصل']);
-    // English name, on the Arabic screen.
-    await user.clear(search);
-    await user.type(search, 'late arrival');
-    expect(shown()).toEqual(['التأخر دون إخطار']);
-    // A group's name (either language) finds its violations.
+    await waitFor(() => expect(apis.GET_PENALTY_GROUPS).toHaveBeenLastCalledWith({ search: 'الهاتف' }));
+    await waitFor(() => expect(shown()).toEqual(['استخدام الهاتف في الفصل']));
     await user.clear(search);
     await user.type(search, 'General');
-    expect(shown()).toEqual(['التأخر دون إخطار']);
-    await user.clear(search);
-    await user.type(search, 'الجدول ب');
-    expect(shown()).toEqual(['استخدام الهاتف في الفصل']);
+    await waitFor(() => expect(shown()).toEqual(['التأخر دون إخطار']));
     await user.clear(search);
     await user.type(search, 'zzz');
-    expect(screen.getByText('لا توجد مخالفة مستخدمة تطابق البحث.')).toBeTruthy();
+    expect(await screen.findByText('لا توجد مخالفة مستخدمة تطابق البحث.')).toBeTruthy();
   });
 
   it('once per day (§4): the preview says so before saving, and a refused save moves it under the date — shown once', async () => {
@@ -318,7 +331,8 @@ describe('RecordPenaltyDialog', () => {
       [
         'ar',
         /الموظف/,
-        'Mona Khalil · EMP-0001',
+        // The picker names employees in the page's language.
+        'منى خليل · EMP-0001',
         /المخالفة/,
         'التأخر دون إخطار',
         'اعتماد هذا الجزاء سيرفع مرة جزاءين معتمدين:',

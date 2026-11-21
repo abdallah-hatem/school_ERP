@@ -5,7 +5,7 @@ import enErrors from '@school-erp/shared/locales/en/errors.json';
 import { createTranslator, getBaseMessages, hasMessage, mergeMessages, type MessageTree } from '@/shared/lib/i18n';
 import { groups } from '../test/fixtures';
 import { parsePenaltiesQuery, penaltiesQueryString } from './list-query';
-import { describeAction, employeeOptions, errorMessage, violationGroups } from './penalty-text';
+import { describeAction, employeeChoice, errorMessage, violationGroups } from './penalty-text';
 
 const messages = mergeMessages(getBaseMessages('en'), { penalties: en, errors: enErrors } as unknown as MessageTree);
 const t = createTranslator(messages);
@@ -33,24 +33,17 @@ describe('describeAction', () => {
 });
 
 describe('violationGroups', () => {
-  it('orders groups, drops retired violations and every violation of a retired group', () => {
-    expect(violationGroups(groups, 'ar')).toMatchObject([
-      { key: 'g-a', label: 'الجدول العام أ', options: [{ value: 'v-late', label: 'التأخر دون إخطار' }] },
-      { key: 'g-b', label: 'الجدول ب', options: [{ value: 'v-phone', label: 'استخدام الهاتف في الفصل' }] },
+  it('one section per group of the API\'s answer (it leaves out what is retired), in its order', () => {
+    expect(violationGroups([groups[0]!], 'ar')).toEqual([
+      { key: groups[0]!.id, label: groups[0]!.nameAr, options: groups[0]!.violations.map((v) => ({ value: v.id, label: v.nameAr })) },
     ]);
   });
 });
 
-describe('employeeOptions', () => {
-  it('offers active employees only', () => {
-    const options = employeeOptions(
-      [
-        { id: 'a', code: 'EMP-1', nameEn: 'A', nameAr: 'أ', status: 'ACTIVE' },
-        { id: 'b', code: 'EMP-2', nameEn: 'B', nameAr: 'ب', status: 'INACTIVE' },
-      ],
-      'en',
-    );
-    expect(options).toEqual([{ value: 'a', label: 'A · EMP-1', keywords: ['A', 'أ', 'EMP-1'] }]);
+describe('employeeChoice', () => {
+  it('"Name · code" in the page language (the API lists the active employees)', () => {
+    expect(employeeChoice({ id: 'a', code: 'EMP-1', nameEn: 'A', nameAr: 'أ' }, 'en')).toEqual({ value: 'a', label: 'A · EMP-1' });
+    expect(employeeChoice({ id: 'a', code: 'EMP-1', nameEn: 'A', nameAr: 'أ' }, 'ar')).toEqual({ value: 'a', label: 'أ · EMP-1' });
   });
 });
 

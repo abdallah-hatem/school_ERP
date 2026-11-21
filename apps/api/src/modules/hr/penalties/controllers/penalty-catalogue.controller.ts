@@ -23,7 +23,7 @@ export class PenaltyCatalogueController {
   @Get('penalty-groups')
   @Permission('hr.penalty_catalogue.view')
   list(@Query() query: PenaltyCatalogueQueryDto) {
-    return this.catalogue.list(query.search);
+    return this.catalogue.list(query.search, query.active);
   }
 
   @Audited('hr.penalty_group.create')

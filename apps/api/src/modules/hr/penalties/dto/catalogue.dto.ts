@@ -180,4 +180,9 @@ export class PenaltyCatalogueQueryDto implements PenaltyCatalogueQuery {
   @MaxLength(100)
   @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
   search?: string;
+
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => (value === 'true' ? true : value === 'false' ? false : value))
+  @IsBoolean()
+  active?: boolean;
 }

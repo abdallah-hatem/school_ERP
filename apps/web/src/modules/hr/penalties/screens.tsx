@@ -1,12 +1,11 @@
-import { EmployeeStatus, monthOf, PAGINATION, type PenaltyRecord, type Uuid } from '@school-erp/shared';
+import { monthOf, type PenaltyRecord, type Uuid } from '@school-erp/shared';
 import { notFound } from 'next/navigation';
 import type { Locale } from '@/shared/lib/i18n';
-import { GET_EMPLOYEES } from '../employees/apis';
-import { GET_PENALTIES, GET_PENALTY, GET_PENALTY_GROUPS } from './apis';
+import { GET_PENALTIES, GET_PENALTY } from './apis';
 import { ProfileEmployeePenalties } from './components/employee-penalties';
 import { PenaltiesList } from './components/penalties-list';
 import { focusedPenaltyId, parsePagingQuery, parsePenaltiesQuery, type SearchParamsRecord } from './lib/list-query';
-import { employeeOptions, violationGroups } from './lib/penalty-text';
+
 import { PenaltiesI18n } from './messages';
 
 /**
@@ -22,7 +21,8 @@ async function loadFocused(id: Uuid): Promise<PenaltyRecord> {
 }
 
 /**
- * Server: the penalties list for the URL's month / status / search, plus the record dialog's pickers.
+ * Server: the penalties list for the URL's month / status / search (the record dialog's pickers ask
+ * the API themselves as the person types).
  * With `?penalty=<id>` the list shows that penalty's month and opens the penalty over it.
  */
 export async function PenaltiesScreen({ locale, searchParams }: { locale: Locale; searchParams: SearchParamsRecord }) {
@@ -31,11 +31,7 @@ export async function PenaltiesScreen({ locale, searchParams }: { locale: Locale
   const focused = focusId ? await loadFocused(focusId) : undefined;
   const parsed = parsePenaltiesQuery(searchParams, currentMonth);
   const query = focused ? { ...parsed, month: monthOf(focused.date) } : parsed;
-  const [penalties, employees, groups] = await Promise.all([
-    GET_PENALTIES(query),
-    GET_EMPLOYEES({ status: EmployeeStatus.ACTIVE, limit: PAGINATION.maxLimit }),
-    GET_PENALTY_GROUPS(),
-  ]);
+  const penalties = await GET_PENALTIES(query);
   return (
     <PenaltiesI18n locale={locale}>
       <PenaltiesList
@@ -45,8 +41,6 @@ export async function PenaltiesScreen({ locale, searchParams }: { locale: Locale
         rows={penalties.success ? (penalties.data ?? []) : []}
         total={penalties.success ? (penalties.meta?.total ?? 0) : 0}
         error={!penalties.success}
-        employees={employeeOptions(employees.success ? (employees.data ?? []) : [], locale)}
-        violations={violationGroups(groups.success ? (groups.data ?? []) : [], locale)}
         focused={focused}
       />
     </PenaltiesI18n>
@@ -67,7 +61,7 @@ export async function EmployeePenaltiesScreen({
   searchParams: SearchParamsRecord;
 }) {
   const { page, limit } = parsePagingQuery(searchParams);
-  const [penalties, groups] = await Promise.all([GET_PENALTIES({ employeeId, page, limit }), GET_PENALTY_GROUPS()]);
+  const penalties = await GET_PENALTIES({ employeeId, page, limit });
   return (
     <PenaltiesI18n locale={locale}>
       <ProfileEmployeePenalties
@@ -77,7 +71,6 @@ export async function EmployeePenaltiesScreen({
         page={page}
         limit={limit}
         error={!penalties.success}
-        violations={violationGroups(groups.success ? (groups.data ?? []) : [], locale)}
       />
     </PenaltiesI18n>
   );

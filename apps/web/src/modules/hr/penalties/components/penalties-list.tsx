@@ -4,7 +4,6 @@ import { useCan } from '@/core/auth';
 import { PAGINATION, PENALTY_STATUSES, type Month, type PenaltyRecord, type PenaltyStatus } from '@school-erp/shared';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
-import type { SelectOption, SelectOptionGroup } from '@/shared/components/form/fields';
 import { ClearFilters, FilterSelect, SearchInput } from '@/shared/components/form/filter-controls';
 import { MonthStepper } from '@/shared/components/form/month-stepper';
 import { EmptyState } from '@/shared/components/layout/empty-state';
@@ -30,9 +29,6 @@ export interface PenaltiesListProps {
   rows: PenaltyRecord[] | undefined;
   total: number;
   error?: boolean;
-  /** For the record dialog: active employees and the violations in use. */
-  employees: SelectOption[];
-  violations: SelectOptionGroup[];
   /** The penalty a link opens (`?penalty=<id>`, a notification's): shown over the list. */
   focused?: PenaltyRecord;
 }
@@ -45,8 +41,6 @@ export function PenaltiesList({
   rows,
   total,
   error = false,
-  employees,
-  violations,
   focused,
 }: PenaltiesListProps) {
   const { t, locale } = useTranslation();
@@ -165,7 +159,7 @@ export function PenaltiesList({
         record={focused}
         onClose={() => router.push(`${basePath}${penaltiesQueryString(query, currentMonth)}`, { scroll: false })}
       />
-      <RecordPenaltyDialog open={recording} onOpenChange={setRecording} employees={employees} violations={violations} />
+      <RecordPenaltyDialog open={recording} onOpenChange={setRecording} />
     </div>
   );
 }

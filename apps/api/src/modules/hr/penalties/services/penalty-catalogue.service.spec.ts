@@ -87,6 +87,17 @@ describe('PenaltyCatalogueService.list — searched here, never in the browser',
     expect(await service().list('nothing like it')).toEqual([]);
   });
 
+  it('active: retired groups and violations are left out, and a group left empty too', async () => {
+    const withRetired = [
+      { ...catalogue[0]!, violations: [catalogue[0]!.violations[0]!, violationRow({ id: 'v9', nameEn: 'Old rule', nameAr: 'قديم', isActive: false })] },
+      { ...catalogue[1]!, isActive: false },
+    ];
+    const svc = makeService({ findGroupsWithViolations: jest.fn().mockResolvedValue(withRetired) }).service;
+    expect((await svc.list(undefined, true)).map((g) => [g.id, g.violations.map((v) => v.id)])).toEqual([['g1', ['v1']]]);
+    expect((await svc.list('old', true))).toEqual([]);
+    expect((await svc.list('old')).map((g) => g.id)).toEqual(['g1']);
+  });
+
   it('Arabic letter variants and marks fold (أ/ا, ة/ه)', async () => {
     expect((await service().list('الصوت')).map((g) => g.id)).toEqual(['g2']);
     expect((await service().list('التاخر')).map((g) => g.violations.map((v) => v.id))).toEqual([['v1']]);

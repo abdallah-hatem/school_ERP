@@ -98,10 +98,14 @@ export async function CANCEL_PENALTY(id: Uuid, reason: string) {
   return handleResponse({ response });
 }
 
-/** `GET /hr/penalty-groups` — the whole catalogue, retired items included (the picker hides them). */
-export async function GET_PENALTY_GROUPS() {
+/**
+ * `GET /hr/penalty-groups?search&active=true` — the record picker's choices: what can be recorded
+ * now (retired groups and violations left out), searched by the API by violation or group name.
+ */
+export async function GET_PENALTY_GROUPS(query: { search?: string } = {}) {
   const response = await apiFetch<PenaltyGroup[]>('/hr/penalty-groups', {
     method: 'GET',
+    params: { active: 'true', search: query.search || undefined },
     next: { tags: [CATALOGUE_TAG] },
   });
   return handleResponse({ response, showErrorToast: false });
