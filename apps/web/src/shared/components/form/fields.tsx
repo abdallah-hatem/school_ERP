@@ -6,7 +6,7 @@ import { useController, type Control, type FieldPath, type FieldValues } from 'r
 import { Button } from '@/shared/components/ui/button';
 import { Calendar } from '@/shared/components/ui/calendar';
 import { Combobox, needsSearch, type ServerOptions } from '@/shared/components/ui/combobox';
-import { CalendarIcon } from '@/shared/components/ui/icons';
+import { CalendarIcon, type AppIcon } from '@/shared/components/ui/icons';
 import { GroupedNumberInput } from '@/shared/components/ui/grouped-number-input';
 import { Input, controlClasses } from '@/shared/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover';
@@ -62,6 +62,7 @@ export function TextField<T extends FieldValues>({
   autoComplete,
   maxLength,
   dir,
+  icon,
 }: BaseFieldProps<T> & {
   placeholder: string;
   type?: 'text' | 'email' | 'tel' | 'url' | 'password';
@@ -71,6 +72,8 @@ export function TextField<T extends FieldValues>({
   maxLength?: number;
   /** Force a direction for codes and emails inside Arabic forms. */
   dir?: 'ltr' | 'rtl';
+  /** A small icon inside the box at the inline start (the sign-in page's envelope and lock). */
+  icon?: AppIcon;
 }) {
   const { t } = useTranslation();
   const id = useFieldId(name);
@@ -87,24 +90,40 @@ export function TextField<T extends FieldValues>({
       aside={maxLength ? <span dir="ltr" className="tabular">{t('ui.form.counter', { count: value.length, max: maxLength })}</span> : null}
     >
       {(a11y) => (
-        <Input
-          {...a11y}
-          ref={field.ref}
-          name={field.name}
-          type={type}
-          inputMode={inputMode}
-          autoComplete={autoComplete}
-          dir={dir}
-          required={required}
-          disabled={disabled}
-          maxLength={maxLength}
-          placeholder={placeholder}
-          value={value}
-          onChange={(e) => field.onChange(e.target.value)}
-          onBlur={field.onBlur}
-        />
+        <LeadingIconBox icon={icon}>
+          <Input
+            {...a11y}
+            ref={field.ref}
+            name={field.name}
+            type={type}
+            inputMode={inputMode}
+            autoComplete={autoComplete}
+            dir={dir}
+            required={required}
+            disabled={disabled}
+            maxLength={maxLength}
+            placeholder={placeholder}
+            value={value}
+            onChange={(e) => field.onChange(e.target.value)}
+            onBlur={field.onBlur}
+            // The icon sits at the page's inline start; a box forced to LTR inside Arabic (an email)
+            // keeps its text clear of it on the right.
+            className={cn(icon && 'ps-11 text-start', icon && dir === 'ltr' && 'rtl:ps-3.5 rtl:pe-11')}
+          />
+        </LeadingIconBox>
       )}
     </FieldShell>
+  );
+}
+
+/** The box around a text input that carries an icon at its inline start; nothing without one. */
+function LeadingIconBox({ icon: Icon, children }: { icon?: AppIcon; children: ReactNode }) {
+  if (!Icon) return children;
+  return (
+    <div className="relative">
+      <Icon className="pointer-events-none absolute inset-y-0 start-3.5 my-auto size-5 text-muted-foreground" />
+      {children}
+    </div>
   );
 }
 
