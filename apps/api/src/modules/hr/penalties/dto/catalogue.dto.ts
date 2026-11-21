@@ -3,6 +3,7 @@ import {
   type CreatePenaltyGroupRequest,
   type CreateViolationRequest,
   type PenaltyAction,
+  type PenaltyCatalogueQuery,
   type UpdatePenaltyGroupRequest,
   type UpdateViolationRequest,
   type ViolationLevelInput,
@@ -166,4 +167,22 @@ export class UpdatePenaltyGroupDto implements UpdatePenaltyGroupRequest {
   @IsOptionalNotNull()
   @IsBoolean()
   isActive?: boolean;
+}
+
+/**
+ * `GET /hr/penalty-groups?search` — searched here, never in the browser (owner, 2026-11-21): a group
+ * whose name matches keeps every violation; otherwise only its matching violations; a group with
+ * none is left out. Either language, case, marks and Arabic letter variants ignored.
+ */
+export class PenaltyCatalogueQueryDto implements PenaltyCatalogueQuery {
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
+  search?: string;
+
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => (value === 'true' ? true : value === 'false' ? false : value))
+  @IsBoolean()
+  active?: boolean;
 }

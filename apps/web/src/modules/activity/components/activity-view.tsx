@@ -222,7 +222,6 @@ export function ActivityView({
   const filters = (title: boolean) => (
     <ActivityFilters
       query={picked}
-      actors={actors}
       summary={summary}
       today={today}
       onChange={go}

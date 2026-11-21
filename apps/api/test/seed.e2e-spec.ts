@@ -248,7 +248,9 @@ describe('Seed (e2e)', () => {
     expect(run.status).toBe('DRAFT');
     const payroll = app.get(PayrollService);
 
-    const recalculated = await payroll.recalculate(run.id);
+    await payroll.recalculate(run.id);
+    // A run's read pages its lines (≤ 500): one page holds the seed's staff.
+    const recalculated = await payroll.get(run.id, { limit: 500 });
     const lines = recalculated.lines;
     const active = EMPLOYEES.filter((e) => !e.inactive).length;
     expect(lines).toHaveLength(active);

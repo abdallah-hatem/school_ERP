@@ -2,6 +2,7 @@ import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import {
   ErrorCode,
   HrCatalogueKey,
+  matchesSearch,
   violationLevelsProblem,
   type PenaltyGroup,
   type Uuid,
@@ -90,15 +91,42 @@ export class PenaltyCatalogueService {
     private readonly afterCommit: AfterCommit,
   ) {}
 
-  async list(): Promise<PenaltyGroup[]> {
+  /**
+   * The catalogue, groups by order with their violations. With `search`: a group whose English or
+   * Arabic name matches keeps every violation; otherwise only its violations whose name matches;
+   * a group with none is left out — each with `match` (which matched, and the group's count).
+   * `active` leaves out retired groups and violations (the record dialog's picker).
+   */
+  async list(search?: string, active = false): Promise<PenaltyGroup[]> {
     const rows = await this.repository.findGroupsWithViolations();
-    return rows.map((g) => ({
+    const all: PenaltyGroup[] = rows.map((g) => ({
       ...toGroup(g),
       violations: g.violations.map((v) => {
         const { groupId: _groupId, ...violation } = toViolation(v);
         return violation;
       }),
     }));
+    // `active`: only what can be recorded now — a retired group retires every violation in it (§4),
+    // and a group left with none is left out.
+    const groups = active
+      ? all
+          .filter((g) => g.isActive)
+          .map((g) => ({ ...g, violations: g.violations.filter((v) => v.isActive) }))
+          .filter((g) => g.violations.length > 0)
+      : all;
+    const query = search?.trim();
+    if (!query) return groups;
+    const found: PenaltyGroup[] = [];
+    for (const group of groups) {
+      const violationCount = group.violations.length;
+      if (matchesSearch(query, [group.nameEn, group.nameAr])) {
+        found.push({ ...group, match: { group: true, violationCount } });
+        continue;
+      }
+      const violations = group.violations.filter((v) => matchesSearch(query, [v.nameEn, v.nameAr]));
+      if (violations.length) found.push({ ...group, violations, match: { group: false, violationCount } });
+    }
+    return found;
   }
 
   /** Each write and its history entry commit together (audit D2). */

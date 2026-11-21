@@ -24,8 +24,6 @@ export function PenaltiesSkeleton() {
         currentMonth={currentMonth}
         rows={undefined}
         total={0}
-        employees={[]}
-        violations={[]}
       />
     </PenaltiesI18n>
   );
@@ -44,7 +42,6 @@ export function EmployeePenaltiesSkeleton() {
         total={0}
         page={page}
         limit={limit}
-        violations={[]}
       />
     </PenaltiesI18n>
   );

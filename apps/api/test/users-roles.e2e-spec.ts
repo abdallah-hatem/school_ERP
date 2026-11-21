@@ -145,6 +145,23 @@ describe('users and roles (e2e)', () => {
       expect(res.body.meta).toMatchObject({ page: 1, limit: 50 });
     });
 
+    it('searches the roles by either name (the user form’s checklist) and pages them', async () => {
+      const all = (await http(app).get('/roles?limit=100').expect(200)).body.data as Role[];
+      const accountant = all.find((r) => r.key === 'accountant')!;
+      const term = accountant.nameEn.slice(0, 5);
+      const byEn = await http(app).get('/roles').query({ search: term.toUpperCase(), limit: 100 }).expect(200);
+      expect((byEn.body.data as Role[]).map((r) => r.key)).toContain('accountant');
+      expect((byEn.body.data as Role[]).every((r) => r.nameEn.toLowerCase().includes(term.toLowerCase()))).toBe(true);
+      const byAr = await http(app).get('/roles').query({ search: accountant.nameAr, limit: 100 }).expect(200);
+      expect((byAr.body.data as Role[]).map((r) => r.key)).toContain('accountant');
+      expect(byAr.body.meta.total).toBe((byAr.body.data as Role[]).length);
+      const none = await http(app).get('/roles').query({ search: 'no-such-role-xyz' }).expect(200);
+      expect(none.body).toMatchObject({ data: [], meta: { total: 0 } });
+      const second = await http(app).get('/roles').query({ page: 2, limit: 1 }).expect(200);
+      expect((second.body.data as Role[])[0].id).toBe(all[1].id);
+      await http(app).get('/roles').query({ limit: 101 }).expect(400);
+    });
+
     it('creates a custom role, edits its permissions and scopes, and records both', async () => {
       const mark = await historyMark(db);
       const created = await http(app)

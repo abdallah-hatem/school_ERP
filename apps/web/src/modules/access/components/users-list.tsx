@@ -34,6 +34,8 @@ import { formatLockEnd, formatSignIn } from '../lib/sign-in-time';
 import { activeFilterCount, usersQueryString, type UsersFilterKey, type UsersListQuery } from '../lib/users-query';
 import { RoleChips } from './role-bits';
 import { useUserActions } from './user-actions';
+import { PICKER_PAGE, useServerOptions } from '@/shared/hooks/use-server-options';
+import { GET_ROLES } from '../apis';
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -45,7 +47,8 @@ export interface UsersListProps {
   rows: UserAccount[] | undefined;
   total: number;
   /** Every role, for the role filter. */
-  roles: Role[];
+  /** The role the filter names; the API searches the others. */
+  selectedRole?: Role | null;
   /**
    * The only active System admin, when there is exactly one: their ⋯ has no Deactivate (R8, edge
    * case 5 — the API refuses it anyway).
@@ -57,7 +60,7 @@ export interface UsersListProps {
 }
 
 /** Administration → Users (spec P3, option A): search, role and status filters, 10 per page. */
-export function UsersList({ basePath, query, rows, total, roles, lastAdminId, now, error = false }: UsersListProps) {
+export function UsersList({ basePath, query, rows, total, selectedRole = null, lastAdminId, now, error = false }: UsersListProps) {
   const { t, locale } = useTranslation();
   const router = useRouter();
   const can = useCan();
@@ -264,7 +267,11 @@ export function UsersList({ basePath, query, rows, total, roles, lastAdminId, no
     <EmptyState title={t('access.users.emptyTitle')} description={t('access.users.emptyBody')} action={addButton} />
   );
 
-  const roleOptions = roles.map((r) => ({ value: r.id, label: localName(r, locale), keywords: [r.nameEn, r.nameAr] }));
+  const roleOptions = useServerOptions<Role>({
+    load: (search) => GET_ROLES({ search, limit: PICKER_PAGE }),
+    toOption: (r) => ({ value: r.id, label: localName(r, locale) }),
+    selected: selectedRole ? { value: selectedRole.id, label: localName(selectedRole, locale) } : null,
+  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -291,7 +298,7 @@ export function UsersList({ basePath, query, rows, total, roles, lastAdminId, no
               label={t('access.users.role')}
               allLabel={t('access.users.allRoles')}
               value={query.roleId}
-              options={roleOptions}
+              server={roleOptions}
               onChange={(v) => setFilter('roleId', v)}
               disabled={loading}
               className="w-full sm:w-full @min-[900px]:w-60"

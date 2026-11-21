@@ -38,17 +38,21 @@ export class RolesRepository {
   }
 
   /** Built-in roles first, in the spec's order; then custom roles by name. */
-  async findPage(p: number, limit: number): Promise<Paginated<RoleRow>> {
+  async findPage(p: number, limit: number, search?: string): Promise<Paginated<RoleRow>> {
     const take = Math.min(Math.max(1, limit), PAGINATION.maxLimit);
     const page = Math.max(1, p);
+    const where: Prisma.RoleWhereInput = search
+      ? { OR: [{ nameEn: { contains: search, mode: 'insensitive' } }, { nameAr: { contains: search, mode: 'insensitive' } }] }
+      : {};
     const [data, total] = await Promise.all([
       this.db.role.findMany({
+        where,
         select: roleSelect,
         orderBy: [{ builtIn: 'desc' }, { sortOrder: 'asc' }, { nameEn: 'asc' }],
         skip: (page - 1) * take,
         take,
       }),
-      this.db.role.count(),
+      this.db.role.count({ where }),
     ]);
     return {
       data,

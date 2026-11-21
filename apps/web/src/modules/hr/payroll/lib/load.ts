@@ -1,6 +1,6 @@
 import type {
-  Department,
   EmployeePayrollLine,
+  ListItem,
   PayrollRun,
   PayrollRunQuery,
   PayrollRunSummary,
@@ -46,21 +46,25 @@ export async function loadRun(id: Uuid, query: PayrollRunQuery = {}): Promise<Ru
 }
 
 export interface RunLinesData {
-  /** With search or filters: the run read with them (its lines are the matching ones). */
+  /** With search, filters or a page: the run read with them (its lines are that page of the matching ones). */
   filtered: RunData | null;
-  /** Every department, hidden ones too (a line keeps the department it had). */
-  departments: Department[];
+  /** The department the filter names (hidden ones too: a line keeps the department it had). */
+  selectedDepartment: ListItem | null;
 }
 
 /**
- * The Employees tab: the departments (its filter) and, only when the URL filters, the run read
- * with the filters — unfiltered, the tab shows the layout's run, so the run is not read twice.
+ * The Employees tab: when the URL filters or pages, the run read with them — otherwise the tab
+ * shows the layout's run (page 1), so the run is not read twice. The department filter's choices
+ * are searched by the API; here only the chosen one's name.
  */
-export async function loadRunLines(id: Uuid, query: PayrollRunQuery, filtered: boolean): Promise<RunLinesData> {
-  const [run, departments] = await Promise.all([filtered ? loadRun(id, query) : null, GET_DEPARTMENTS(true)]);
+export async function loadRunLines(id: Uuid, query: PayrollRunQuery, ownLines: boolean): Promise<RunLinesData> {
+  const [run, department] = await Promise.all([
+    ownLines ? loadRun(id, query) : null,
+    query.departmentId ? GET_DEPARTMENTS({ ids: [query.departmentId], includeHidden: true }) : null,
+  ]);
   return {
     filtered: run,
-    departments: departments.success && Array.isArray(departments.data) ? departments.data : [],
+    selectedDepartment: department?.success && Array.isArray(department.data) ? (department.data[0] ?? null) : null,
   };
 }
 

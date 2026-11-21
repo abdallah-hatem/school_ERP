@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Put, Query } from '@nestjs/common';
-import type { AuthUser, LatenessMonth } from '@school-erp/shared';
+import type { AuthUser, LatenessMonth, LatenessSummary } from '@school-erp/shared';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
 import { LatenessMonthParamDto, LatenessMonthQueryDto, PutLatenessDto } from '../dto/lateness.dto';
 import { LatenessService } from '../services/lateness.service';
@@ -8,8 +8,8 @@ import { Permission } from '../../../../core/permissions';
 
 /**
  * `/hr/lateness` (contract: "Monthly lateness — hr"). The month's list is one row per active
- * employee — a bounded set, returned whole (not paginated) as the contract specifies — with the
- * month's `locked` flag.
+ * employee, paged and searched here (owner, 2026-11-21: never in the browser), with the month's
+ * `locked` flag, its rule and its totals over every listed employee.
  */
 @Controller('hr/lateness')
 export class LatenessController {
@@ -18,7 +18,7 @@ export class LatenessController {
   @Get()
   @Permission('hr.lateness.view')
   list(@Query() query: LatenessMonthQueryDto): Promise<LatenessMonth> {
-    return this.lateness.month(query.month);
+    return this.lateness.month(query.month, query);
   }
 
   @Audited('hr.lateness.save')
@@ -28,7 +28,7 @@ export class LatenessController {
     @Param() params: LatenessMonthParamDto,
     @Body() body: PutLatenessDto,
     @CurrentUser() user: AuthUser | undefined,
-  ): Promise<LatenessMonth> {
+  ): Promise<LatenessSummary> {
     return this.lateness.put(params.month, body, user?.id ?? null);
   }
 }

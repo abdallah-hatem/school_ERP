@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ComponentProps } from 'react';
 import { scrollListIntoView } from '@/shared/components/data-table/pagination';
 import { Button, Spinner } from '@/shared/components/ui/button';
-import { Combobox, needsSearch } from '@/shared/components/ui/combobox';
+import { Combobox, needsSearch, type ServerOptions } from '@/shared/components/ui/combobox';
 import { ClearFiltersIcon, SearchIcon } from '@/shared/components/ui/icons';
 import { formatCount } from '@/shared/lib/format';
 import { Input } from '@/shared/components/ui/input';
@@ -27,34 +27,51 @@ export interface FilterOption {
 }
 
 /**
- * A filter with an "All …" first option; `undefined` means no filter. Above `SEARCH_THRESHOLD`
- * choices it is the searchable `Combobox`; `searchable` forces either way (lists of records such
- * as departments, which outgrow the seed).
+ * A filter with an "All …" first option; `undefined` means no filter. A filter over records
+ * (departments, roles…) passes `server` (`useServerOptions`): the API searches its choices. A short
+ * code list (an enum) passes `options`; above `SEARCH_THRESHOLD` it gets a search box of its own.
  */
 export function FilterSelect({
   label,
   allLabel,
   value,
-  options,
+  options = [],
   onChange,
   disabled,
   className,
   searchable,
+  server,
 }: {
   /** Accessible name, e.g. "Department". */
   label: string;
   /** The no-filter option, e.g. "All departments". */
   allLabel: string;
   value: string | undefined;
-  options: FilterOption[];
+  /** A short code list's choices; ignored with `server`. */
+  options?: FilterOption[];
   onChange: (value: string | undefined) => void;
   disabled?: boolean;
   className?: string;
   searchable?: boolean;
+  /** Records: the API searches the choices. */
+  server?: ServerOptions;
 }) {
   // A filter in use is tinted, so a narrowed list is visible at a glance.
   const triggerClass = cn('w-full sm:w-48', value !== undefined && 'border-primary bg-primary-soft text-primary', className);
   const report = (v: string) => onChange(v === ALL ? undefined : v);
+  if (server) {
+    return (
+      <ServerFilter
+        label={label}
+        allLabel={allLabel}
+        server={server}
+        value={value ?? ALL}
+        onChange={report}
+        disabled={disabled}
+        className={triggerClass}
+      />
+    );
+  }
   if (needsSearch(options.length + 1, searchable)) {
     return (
       <SearchableFilter
@@ -87,6 +104,47 @@ export function FilterSelect({
   );
 }
 
+/** A filter over records: "All …" heads the API's answer, until the person searches. */
+function ServerFilter({
+  label,
+  allLabel,
+  server,
+  value,
+  onChange,
+  disabled,
+  className,
+}: {
+  label: string;
+  allLabel: string;
+  server: ServerOptions;
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  className: string;
+}) {
+  const [query, setQuery] = useState('');
+  const all = { value: ALL, label: allLabel };
+  return (
+    <SearchableFilter
+      label={label}
+      options={[]}
+      server={{
+        ...server,
+        options: query.trim() ? server.options : [all, ...server.options],
+        onQueryChange: (text) => {
+          setQuery(text);
+          server.onQueryChange(text);
+        },
+        selected: value === ALL ? all : server.selected,
+      }}
+      value={value}
+      onChange={onChange}
+      disabled={disabled}
+      className={className}
+    />
+  );
+}
+
 function SearchableFilter({
   label,
   options,
@@ -94,6 +152,7 @@ function SearchableFilter({
   onChange,
   disabled,
   className,
+  server,
 }: {
   label: string;
   options: FilterOption[];
@@ -101,12 +160,14 @@ function SearchableFilter({
   onChange: (value: string) => void;
   disabled?: boolean;
   className: string;
+  server?: ServerOptions;
 }) {
   const { t } = useTranslation();
   return (
     <Combobox
       aria-label={label}
       options={options}
+      server={server}
       value={value}
       onValueChange={onChange}
       disabled={disabled}

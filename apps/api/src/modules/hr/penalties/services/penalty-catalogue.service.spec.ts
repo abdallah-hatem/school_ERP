@@ -50,6 +50,60 @@ function makeService(repo: Partial<Record<keyof PenaltyCatalogueRepository, jest
   return { service, repository, history, tx };
 }
 
+describe('PenaltyCatalogueService.list — searched here, never in the browser', () => {
+  const catalogue = [
+    {
+      ...groupRow,
+      id: 'g1',
+      nameEn: 'Attendance',
+      nameAr: 'الحضور',
+      violations: [violationRow({ id: 'v1', nameEn: 'Late arrival', nameAr: 'التأخر' }), violationRow({ id: 'v2', nameEn: 'Absence', nameAr: 'الغياب' })],
+    },
+    {
+      ...groupRow,
+      id: 'g2',
+      nameEn: 'Conduct',
+      nameAr: 'السلوك',
+      violations: [violationRow({ id: 'v3', groupId: 'g2', nameEn: 'Shouting', nameAr: 'رفع الصوت' })],
+    },
+  ];
+  const service = () => makeService({ findGroupsWithViolations: jest.fn().mockResolvedValue(catalogue) }).service;
+
+  it('no search: every group with every violation, no match info', async () => {
+    const groups = await service().list();
+    expect(groups.map((g) => [g.id, g.violations.length, g.match])).toEqual([
+      ['g1', 2, undefined],
+      ['g2', 1, undefined],
+    ]);
+  });
+
+  it("a group's own name: the whole group; a violation's name: only it; nothing else", async () => {
+    expect((await service().list('attend')).map((g) => [g.id, g.violations.map((v) => v.id), g.match])).toEqual([
+      ['g1', ['v1', 'v2'], { group: true, violationCount: 2 }],
+    ]);
+    expect((await service().list('ABSENCE')).map((g) => [g.id, g.violations.map((v) => v.id), g.match])).toEqual([
+      ['g1', ['v2'], { group: false, violationCount: 2 }],
+    ]);
+    expect(await service().list('nothing like it')).toEqual([]);
+  });
+
+  it('active: retired groups and violations are left out, and a group left empty too', async () => {
+    const withRetired = [
+      { ...catalogue[0], violations: [catalogue[0].violations[0], violationRow({ id: 'v9', nameEn: 'Old rule', nameAr: 'قديم', isActive: false })] },
+      { ...catalogue[1], isActive: false },
+    ];
+    const svc = makeService({ findGroupsWithViolations: jest.fn().mockResolvedValue(withRetired) }).service;
+    expect((await svc.list(undefined, true)).map((g) => [g.id, g.violations.map((v) => v.id)])).toEqual([['g1', ['v1']]]);
+    expect((await svc.list('old', true))).toEqual([]);
+    expect((await svc.list('old')).map((g) => g.id)).toEqual(['g1']);
+  });
+
+  it('Arabic letter variants and marks fold (أ/ا, ة/ه)', async () => {
+    expect((await service().list('الصوت')).map((g) => g.id)).toEqual(['g2']);
+    expect((await service().list('التاخر')).map((g) => g.violations.map((v) => v.id))).toEqual([['v1']]);
+  });
+});
+
 describe('PenaltyCatalogueService', () => {
   it('once per day (§4): stored only when given (the schema defaults it on), and a change is history', async () => {
     const { service, repository, history } = makeService({

@@ -39,7 +39,6 @@ function renderRun(r = run()) {
       penaltiesHref="/en/penalties"
       run={r}
       asOf={0}
-      departments={[]}
       query={{}}
     />,
   );

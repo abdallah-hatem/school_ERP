@@ -14,6 +14,10 @@ vi.mock('next/link', async () => ({ default: (await import('../test/fixtures')).
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('../apis', () => ({
   CREATE_EMPLOYEE: vi.fn(),
+  GET_DEPARTMENTS: vi.fn(),
+  GET_STAGES: vi.fn(),
+  GET_JOB_TITLES: vi.fn(),
+  GET_MANAGER_OPTIONS: vi.fn(),
   UPDATE_EMPLOYEE: vi.fn(),
   DEACTIVATE_EMPLOYEE: vi.fn(),
   REACTIVATE_EMPLOYEE: vi.fn(),
@@ -21,7 +25,7 @@ vi.mock('../apis', () => ({
 
 import { EMPLOYEE_SALARY_FIELDS, type Employee } from '@school-erp/shared';
 import { sessionWith, STAGE_HEAD_KEYS, TEST_SESSION } from '@/test/render';
-import { departments, employee, jobTitles, renderEmployees, stages, summary } from '../test/fixtures';
+import { employee, renderEmployees, summary } from '../test/fixtures';
 import { EmployeeCard } from './employee-card';
 import { EmployeeForm } from './employee-form';
 import { EmployeeDetails, ProfileTabs } from './employee-profile';
@@ -151,10 +155,6 @@ describe('employee form (R7)', () => {
       <EmployeeForm
         basePath="/en/employees"
         employee={editing}
-        departments={departments}
-        stages={stages}
-        jobTitles={jobTitles}
-        managerCandidates={[]}
       />,
       'en',
       session,

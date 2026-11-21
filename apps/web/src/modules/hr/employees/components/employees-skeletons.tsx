@@ -35,7 +35,6 @@ export function EmployeesListSkeleton() {
         query={parseEmployeesQuery(Object.fromEntries(params))}
         rows={undefined}
         total={0}
-        departments={[]}
         stages={[]}
       />
     </EmployeesI18n>
@@ -206,10 +205,6 @@ function FormSkeleton() {
       <EmployeeForm
         basePath={basePath}
         editing={editing}
-        departments={[]}
-        stages={[]}
-        jobTitles={[]}
-        managerCandidates={[]}
         header={
           <PageHeader
             title={<SkeletonText width="w-48" />}

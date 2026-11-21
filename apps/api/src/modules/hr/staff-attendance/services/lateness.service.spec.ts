@@ -100,7 +100,7 @@ describe('LatenessService', () => {
   it('month: the rows plus the month lock (locked false / true)', async () => {
     const open = makeService();
     await expect(open.service.month('2026-11')).resolves.toMatchObject({ locked: false });
-    expect((await open.service.month('2026-11')).rows).toHaveLength(2);
+    expect((await open.service.month('2026-11')).items).toHaveLength(2);
     const locked = makeService({ locked: true });
     await expect(locked.service.month('2026-11')).resolves.toMatchObject({ locked: true });
   });
@@ -109,11 +109,34 @@ describe('LatenessService', () => {
     const rule = { ...RULE, graceMinutes: 10 };
     const { service } = makeService({ stored: [{ employeeId: '1', minutes: 70 }], rule });
     const month = await service.month('2026-11');
-    expect(Object.keys(month).sort()).toEqual(['locked', 'rows', 'rule']);
+    expect(Object.keys(month).sort()).toEqual(['items', 'limit', 'locked', 'page', 'rule', 'total', 'totals']);
     expect(month.rule).toEqual(rule);
     expect(Object.keys(month.rule).sort()).toEqual(['extraHourDays', 'graceMinutes', 'steps']);
     // 70 minutes, 10 of grace → 60 → hour 1 = 0.25 d: the rows use the very rule returned.
-    expect(month.rows[0]).toMatchObject({ minutes: 70, days: 0.25 });
+    expect(month.items[0]).toMatchObject({ minutes: 70, days: 0.25 });
+  });
+
+  it('month: pages and searches here (code or either name); the totals cover every row', async () => {
+    const { service } = makeService({ stored: [{ employeeId: '1', minutes: 70 }, { employeeId: '2', minutes: 130 }] });
+    const page2 = await service.month('2026-11', { page: 2, limit: 1 });
+    expect(page2).toMatchObject({ total: 2, page: 2, limit: 1 });
+    expect(page2.items.map((r) => r.employee.id)).toEqual(['2']);
+    // 70 → 0.75 d, 130 → 1.25 d: every row, whatever the page.
+    expect(page2.totals).toEqual({ employees: 2, minutes: 200, days: 2 });
+    const found = await service.month('2026-11', { search: 'emp-1' });
+    expect(found.items.map((r) => r.employee.id)).toEqual(['1']);
+    expect(found.total).toBe(1);
+    // The totals stay the month's: the search narrows the rows, not the summary.
+    expect(found.totals.employees).toBe(2);
+    expect((await service.month('2026-11', { search: 'nobody' })).items).toEqual([]);
+    expect((await service.month('2026-11', { page: 5, limit: 10 })).items).toEqual([]);
+  });
+
+  it('put: answers with the month as it stands — lock, rule and totals, no rows', async () => {
+    const { service } = makeService({ stored: [{ employeeId: '1', minutes: 70 }] });
+    const saved = await service.put('2026-11', { entries: [{ employeeId: '1', minutes: 70 }] }, 'u1');
+    expect(Object.keys(saved).sort()).toEqual(['locked', 'rule', 'totals']);
+    expect(saved.totals).toEqual({ employees: 2, minutes: 70, days: 0.75 });
   });
 
   it('list: a stored row for an employee no longer active is not shown', async () => {

@@ -7,6 +7,7 @@ import type {
   EmployeeSummary,
   JobTitle,
   ListEmployeesQuery,
+  ListStagesQuery,
   Stage,
   UpdateEmployeeRequest,
   Uuid,
@@ -50,15 +51,16 @@ export async function GET_EMPLOYEES(query: ListEmployeesQuery = {}) {
 
 /**
  * Candidates for the direct-manager picker (§3): active employees whose job title manages people,
- * never `selfId` (the employee being edited), one page of the maximum size. The form adds back
- * the employee's current manager if they no longer qualify.
+ * never `selfId` (the employee being edited), one page for the typed name or code — the API
+ * searches them. The form keeps the employee's current manager even if they no longer qualify.
  */
-export async function GET_MANAGER_OPTIONS(selfId?: Uuid) {
+export async function GET_MANAGER_OPTIONS(selfId?: Uuid, query: { search?: string; limit?: number } = {}) {
   return GET_EMPLOYEES({
     status: EmployeeStatus.ACTIVE,
     managesPeople: true,
     excludeId: selfId,
-    limit: PAGINATION.maxLimit,
+    search: query.search || undefined,
+    limit: query.limit ?? PAGINATION.defaultLimit,
   });
 }
 
@@ -134,33 +136,59 @@ export async function REACTIVATE_EMPLOYEE(id: Uuid) {
   return handleResponse({ response });
 }
 
-const listParams = (includeHidden: boolean) => (includeHidden ? { includeHidden: 'true' } : undefined);
+/**
+ * A list's query: `page`, `limit`, `search` (either name) and `ids` (a picker's chosen ones) ask the
+ * API for one page with `meta` — pickers search there, never in the browser. Hidden items only
+ * with `includeHidden` (filters show every one: hidden items can still have employees).
+ */
+function listParams(query: ListStagesQuery): Record<string, string | undefined> {
+  return {
+    includeHidden: query.includeHidden ? 'true' : undefined,
+    page: query.page ? String(query.page) : undefined,
+    limit: query.limit ? String(query.limit) : undefined,
+    search: query.search || undefined,
+    ids: query.ids?.length ? query.ids.join(',') : undefined,
+  };
+}
 
-/** `GET /hr/departments` — visible ones unless `includeHidden` (filters show every one). */
-export async function GET_DEPARTMENTS(includeHidden = false) {
+/** `GET /hr/departments` — one page (a picker's search), visible ones unless `includeHidden`. */
+export async function GET_DEPARTMENTS(query: ListStagesQuery = {}) {
   const response = await apiFetch<Department[]>('/hr/departments', {
     method: 'GET',
-    params: listParams(includeHidden),
+    params: listParams({ limit: PAGINATION.defaultLimit, ...query }),
     next: { tags: [LISTS_TAG] },
   });
   return handleResponse({ response });
 }
 
-/** `GET /hr/job-titles`. */
-export async function GET_JOB_TITLES(includeHidden = false) {
+/** `GET /hr/job-titles` — one page, as departments. */
+export async function GET_JOB_TITLES(query: ListStagesQuery = {}) {
   const response = await apiFetch<JobTitle[]>('/hr/job-titles', {
     method: 'GET',
-    params: listParams(includeHidden),
+    params: listParams({ limit: PAGINATION.defaultLimit, ...query }),
     next: { tags: [LISTS_TAG] },
   });
   return handleResponse({ response });
 }
 
-/** `GET /stages` (core school structure). */
-export async function GET_STAGES(includeHidden = false) {
+/** `GET /stages` (core school structure) — one page, as departments. */
+export async function GET_STAGES(query: ListStagesQuery = {}) {
   const response = await apiFetch<Stage[]>('/stages', {
     method: 'GET',
-    params: listParams(includeHidden),
+    params: listParams({ limit: PAGINATION.defaultLimit, ...query }),
+    next: { tags: [LISTS_TAG] },
+  });
+  return handleResponse({ response });
+}
+
+/**
+ * Every stage, hidden ones too, in the school's order — only for the stage colour bands on the
+ * employee cards (a colour per place in the order), never as a list or a picker's choices.
+ */
+export async function GET_STAGE_ORDER() {
+  const response = await apiFetch<Stage[]>('/stages', {
+    method: 'GET',
+    params: { includeHidden: 'true' },
     next: { tags: [LISTS_TAG] },
   });
   return handleResponse({ response });

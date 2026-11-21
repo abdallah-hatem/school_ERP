@@ -7,7 +7,7 @@ import { RunLines } from './components/run-page';
 import { RunShell } from './components/run-shell';
 import { RunsList } from './components/runs-list';
 import { loadEmployeePayroll, loadPayslip, loadRun, loadRunLines, loadRuns } from './lib/load';
-import { parseRunQuery, parseRunsQuery, runFilterCount, type SearchParamsRecord } from './lib/run-query';
+import { needsOwnLines, parseRunQuery, parseRunsQuery, type SearchParamsRecord } from './lib/run-query';
 import { PayrollI18n } from './messages';
 
 /** Server screens rendered by the `payroll` routes (and the profile's payroll tab). */
@@ -63,7 +63,7 @@ export async function PayrollRunLinesScreen({
   searchParams: SearchParamsRecord;
 }) {
   const query = parseRunQuery(searchParams);
-  const data = await loadRunLines(id, query, runFilterCount(query) > 0);
+  const data = await loadRunLines(id, query, needsOwnLines(query));
   return (
     <PayrollI18n locale={locale}>
       <RunLines
@@ -71,7 +71,7 @@ export async function PayrollRunLinesScreen({
         settingsHref={`/${locale}/settings`}
         query={query}
         filtered={data.filtered}
-        departments={data.departments}
+        selectedDepartment={data.selectedDepartment}
       />
     </PayrollI18n>
   );

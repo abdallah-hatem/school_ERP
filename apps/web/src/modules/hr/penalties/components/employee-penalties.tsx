@@ -4,14 +4,12 @@ import { useCan } from '@/core/auth';
 import { EmployeeStatus, PAGINATION, type Employee, type PenaltyRecord } from '@school-erp/shared';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
-import type { SelectOptionGroup } from '@/shared/components/form/fields';
 import { EmptyState } from '@/shared/components/layout/empty-state';
 import { Button } from '@/shared/components/ui/button';
 import { AddIcon } from '@/shared/components/ui/icons';
 import { nameIn } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { useProfileEmployeeIfLoaded } from '../../employees';
-import { employeeOptions } from '../lib/penalty-text';
 import { PenaltiesTable } from './penalties-table';
 import { RecordPenaltyDialog } from './record-penalty-dialog';
 
@@ -26,14 +24,13 @@ export interface EmployeePenaltiesProps {
   page: number;
   limit: number;
   error?: boolean;
-  violations: SelectOptionGroup[];
 }
 
 /**
  * The profile's "Penalties" section: the employee's penalties across every month, newest first,
  * with the same row actions as the list. An active employee can get a new one from here.
  */
-export function EmployeePenalties({ employeesPath, employee, rows, total, page, limit, error = false, violations }: EmployeePenaltiesProps) {
+export function EmployeePenalties({ employeesPath, employee, rows, total, page, limit, error = false }: EmployeePenaltiesProps) {
   const { t, locale } = useTranslation();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -87,9 +84,7 @@ export function EmployeePenalties({ employeesPath, employee, rows, total, page, 
         <RecordPenaltyDialog
           open={recording}
           onOpenChange={setRecording}
-          employees={employeeOptions([employee], locale)}
-          violations={violations}
-          employeeId={employee.id}
+          employee={employee}
         />
       ) : null}
     </>

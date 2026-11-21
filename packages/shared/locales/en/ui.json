@@ -56,7 +56,8 @@
     "month": "Month",
     "year": "Year",
     "searchOptions": "Type to search",
-    "noMatches": "Nothing matches that search."
+    "noMatches": "Nothing matches that search.",
+    "moreOptions": "Showing {shown} of {total} — type to narrow"
   },
   "filters": {
     "clear": "Clear filters",

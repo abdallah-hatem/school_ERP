@@ -4,7 +4,7 @@ import { cleanup, fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderWithI18n } from '@/test/render';
-import { DataTable, type DataTableColumn } from './data-table';
+import { assertServerPage, DataTable, type DataTableColumn } from './data-table';
 import { pageWindow } from './pagination';
 
 interface Person {
@@ -430,5 +430,16 @@ describe('DataTable page size and sticky header (payroll tables)', () => {
     for (const td of footCells()) expect(td.className).toMatch(/\bsticky bottom-0\b/);
     // The phone's summary card is unchanged (not sticky).
     expect(container.querySelector('[data-view="cards"] li:last-child')!.className).not.toContain('sticky');
+  });
+});
+
+describe('DataTable — the server page guard (owner, 2026-11-21)', () => {
+  const pagination = { page: 1, limit: 10, total: 25, onPageChange: () => undefined };
+  it('a page of at most limit rows is fine; more throws (a whole list handed in to page here)', () => {
+    expect(() => assertServerPage('People', Array.from({ length: 10 }), pagination)).not.toThrow();
+    expect(() => assertServerPage('People', Array.from({ length: 11 }), pagination)).toThrow(/11 rows for a page of 10/);
+    // Without pagination, or while loading, nothing to check.
+    expect(() => assertServerPage('People', Array.from({ length: 50 }), undefined)).not.toThrow();
+    expect(() => assertServerPage('People', undefined, pagination)).not.toThrow();
   });
 });

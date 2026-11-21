@@ -20,6 +20,7 @@ import type {
   Violation,
 } from '@school-erp/shared';
 import { SCHOOL_SETTINGS_TAG } from '@/core/settings/tags';
+import { PAGINATION } from '@school-erp/shared';
 import { apiFetch } from '@/lib/api';
 import { handleResponse } from '@/lib/handleResponse';
 
@@ -76,9 +77,14 @@ export async function UPLOAD_SCHOOL_LOGO(form: FormData) {
 
 // ── Lists: stages (core), departments and job titles (hr) ────────────────────
 
-export async function GET_LIST_ITEMS(kind: ListKind) {
+/** One page of a list, hidden items too (by order, then name) — the API pages it, with `meta`. */
+export async function GET_LIST_ITEMS(kind: ListKind, query: { page?: number; limit?: number } = {}) {
   const res = await apiFetch<ManagedListItem[]>(LIST_ROUTES[kind].path, {
-    params: { includeHidden: 'true' },
+    params: {
+      includeHidden: 'true',
+      page: String(query.page ?? PAGINATION.defaultPage),
+      limit: String(query.limit ?? PAGINATION.defaultLimit),
+    },
     cache: 'no-store',
   });
   return handleResponse({ response: res });
@@ -137,8 +143,15 @@ export async function UPDATE_ACCOUNTING_SETTINGS(data: UpdateAccountingSettingsR
 
 // ── Penalty catalogue ────────────────────────────────────────────────────────
 
-export async function GET_PENALTY_GROUPS() {
-  const res = await apiFetch<PenaltyGroup[]>('/hr/penalty-groups', { cache: 'no-store' });
+/**
+ * `GET /hr/penalty-groups?search` — the catalogue; with `search` the API keeps the groups whose
+ * name matches (whole) or that hold matching violations (only those), each with its `match`.
+ */
+export async function GET_PENALTY_GROUPS(query: { search?: string } = {}) {
+  const res = await apiFetch<PenaltyGroup[]>('/hr/penalty-groups', {
+    params: { search: query.search || undefined },
+    cache: 'no-store',
+  });
   return handleResponse({ response: res });
 }
 

@@ -92,7 +92,7 @@ test('payroll: run → penalty deduction → grace change → recalculate → ap
 
   // Bring the run up to date with the penalty (03) and lateness (04) recorded today.
   await recalculate(page);
-  const first = await api.get<PayrollRun>(`/hr/payroll-runs/${runId}`);
+  const first = await api.get<PayrollRun>(`/hr/payroll-runs/${runId}`, { limit: '500' });
   await shoot(page, info, 'payroll-run-draft');
 
   const penalised = first.lines.find((l) => (l.penaltyAmount ?? 0) > 0);
@@ -138,7 +138,7 @@ test('payroll: run → penalty deduction → grace change → recalculate → ap
   // Recalculate: the late employee's numbers change.
   await page.goto(`/en/payroll/${runId}`);
   await recalculate(page);
-  const second = await api.get<PayrollRun>(`/hr/payroll-runs/${runId}`);
+  const second = await api.get<PayrollRun>(`/hr/payroll-runs/${runId}`, { limit: '500' });
   const after =
     second.lines.find((l) => l.id === late.id) ?? second.lines.find((l) => l.employeeId === late.employeeId);
   if (!after) throw new Error('smoke: the late employee left the run');
@@ -162,7 +162,7 @@ test('payroll: run → penalty deduction → grace change → recalculate → ap
   await expect(page).not.toHaveURL(/[?&]search=/);
   await expect(page.getByRole('button', { name: t('en', 'payroll.actions.approve') })).toHaveCount(0);
   await expect(page.getByRole('button', { name: t('en', 'payroll.actions.recalculate') })).toHaveCount(0);
-  const approved = await api.get<PayrollRun>(`/hr/payroll-runs/${runId}`);
+  const approved = await api.get<PayrollRun>(`/hr/payroll-runs/${runId}`, { limit: '500' });
   expect(approved.status).toBe(PayrollStatus.APPROVED);
   await shoot(page, info, 'payroll-run-approved');
 

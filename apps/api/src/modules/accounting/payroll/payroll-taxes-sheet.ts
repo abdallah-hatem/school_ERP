@@ -1,4 +1,4 @@
-import { InsuranceStatus, type AccountingPayrollMonth, type Language, type Piastres } from '@school-erp/shared';
+import { InsuranceStatus, type AccountingPayrollMonthSheet, type Language, type Piastres } from '@school-erp/shared';
 import ar from '@school-erp/shared/locales/ar/accounting.json';
 import en from '@school-erp/shared/locales/en/accounting.json';
 import ExcelJS from 'exceljs';
@@ -16,7 +16,7 @@ const egp = (p: Piastres) => p / 100;
  * insurance status and says "Salary hidden" instead of amounts (§2, P4) — then a bold total row,
  * only when the viewer sees every salary. Sheet 2: the tax rule the month was worked out with.
  */
-export async function buildPayrollTaxesSheet(month: AccountingPayrollMonth, lang: Language): Promise<Buffer> {
+export async function buildPayrollTaxesSheet(month: AccountingPayrollMonthSheet, lang: Language): Promise<Buffer> {
   const t = LABELS[lang];
   const workbook = new ExcelJS.Workbook();
   const views = [{ rightToLeft: lang === 'ar', state: 'frozen' as const, ySplit: 1 }];

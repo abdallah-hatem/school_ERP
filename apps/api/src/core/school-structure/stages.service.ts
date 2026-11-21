@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
-import { ErrorCode, type Stage } from '@school-erp/shared';
+import { ErrorCode, type Paginated, type Stage } from '@school-erp/shared';
 import { CodedException } from '../../common/errors/coded.exception';
 import { AfterCommit } from '../../database/transactions';
 import { SettingsHistory } from '../settings';
@@ -32,6 +32,11 @@ export class StagesService {
 
   list(includeHidden = false): Promise<Stage[]> {
     return this.stages.findMany(includeHidden);
+  }
+
+  /** One page of the stages (the Settings screen), searched by either name. */
+  page(query: { includeHidden?: boolean; page?: number; limit?: number; search?: string; ids?: string[] }): Promise<Paginated<Stage>> {
+    return this.stages.findPage(query.includeHidden ?? false, query.page, query.limit, query.search || undefined, query.ids);
   }
 
   async getById(id: string): Promise<Stage> {

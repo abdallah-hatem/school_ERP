@@ -75,10 +75,19 @@ export async function GET_RECORD_AUDIT_FIELDS(entityType: AuditEntityType, entit
   return handleResponse({ response });
 }
 
-/** `GET /audit/actors` — the person pickers (everyone, or the people on one record). */
+/**
+ * `GET /audit/actors` — the person pickers (everyone, or the people on one record), newest activity
+ * first: `search` (a name, searched by the API), `id` (the chosen one's name), `limit`.
+ */
 export async function GET_AUDIT_ACTORS(query: AuditActorsQuery = {}) {
   const response = await apiFetch<AuditActor[]>('/audit/actors', {
-    params: { entityType: query.entityType, entityId: query.entityId },
+    params: {
+      entityType: query.entityType,
+      entityId: query.entityId,
+      search: query.search || undefined,
+      id: query.id,
+      limit: query.limit ? String(query.limit) : undefined,
+    },
     cache: 'no-store',
   });
   return handleResponse({ response });

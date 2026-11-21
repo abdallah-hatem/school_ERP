@@ -30,14 +30,18 @@ describe('lateness entries', () => {
     expect(parseMinutes('abc')).toBeNull();
   });
 
-  it('only changed rows are sent; an invalid row blocks the totals', () => {
-    expect(gridState(rows, { a: '10', b: '61' }, RULE)).toEqual({
+  it('only changed rows are sent; the API\'s month totals move by the drafts; an invalid row blocks the days', () => {
+    // The API's totals cover the whole month (every page), not just these two rows.
+    const month = { employees: 40, minutes: 500, days: 3 };
+    const drafts = { a: { text: '10', row: rows[0]! }, b: { text: '61', row: rows[1]! } };
+    expect(gridState(drafts, month, RULE)).toEqual({
       invalidCount: 0,
       entries: [{ employeeId: 'b', minutes: 61 }],
-      totalMinutes: 71,
-      totalDays: 1,
+      totalMinutes: 561,
+      totalDays: 3.75,
     });
-    expect(gridState(rows, { b: '-3' }, RULE)).toMatchObject({ invalidCount: 1, totalDays: null });
+    expect(gridState({ b: { text: '-3', row: rows[1]! } }, month, RULE)).toMatchObject({ invalidCount: 1, totalDays: null, entries: [] });
+    expect(gridState({}, month, RULE)).toEqual({ invalidCount: 0, entries: [], totalMinutes: 500, totalDays: 3 });
   });
 
   it('?month falls back to this month when missing, malformed or in the future', () => {

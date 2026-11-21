@@ -101,8 +101,19 @@ export interface UpdateListItemRequest extends Partial<Names> {
   isActive?: boolean;
 }
 
+/**
+ * `GET /stages`, `/hr/departments`, `/hr/job-titles`. Without `page`, `limit` or `search`: the whole
+ * list (a form's or filter's choices). With any of them: one page (by order, then English name; the
+ * search is either name) with the envelope's `meta` — the Settings screen's lists.
+ */
 export interface ListStagesQuery {
   includeHidden?: boolean;
+  page?: number;
+  /** ≤ 100. */
+  limit?: number;
+  search?: string;
+  /** Only these items (a picker's chosen ones, whose names it shows); comma-separated, ≤ 50. */
+  ids?: Uuid[];
 }
 
 // ── Users and roles — core/users, core/roles (spec roles-permissions, P2) ──

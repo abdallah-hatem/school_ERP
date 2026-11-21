@@ -303,7 +303,7 @@ describe('P4 — scopes and salary in HR (e2e)', () => {
 
     it('payroll: only their own line, with their own salary; another payslip → 404', async () => {
       await asUser(users.self, async () => {
-        const run = (await http(app).get(`/hr/payroll-runs/${runId}`).expect(200)).body.data as PayrollRun;
+        const run = (await http(app).get(`/hr/payroll-runs/${runId}`).query({ limit: 500 }).expect(200)).body.data as PayrollRun;
         expect(run.lines.map((l) => l.employeeId)).toEqual([ids.k2]);
         expect(run.lines[0]).toMatchObject({ salaryVisible: true });
         expect(run.lines[0].net).toEqual(expect.any(Number));
@@ -318,7 +318,9 @@ describe('P4 — scopes and salary in HR (e2e)', () => {
     it('lateness: only their own row', async () => {
       await asUser(users.self, async () => {
         const res = (await http(app).get('/hr/lateness').query({ month }).expect(200)).body.data as LatenessMonth;
-        expect(res.rows.map((r) => r.employee.id)).toEqual([ids.k2]);
+        expect(res.items.map((r) => r.employee.id)).toEqual([ids.k2]);
+        expect(res.total).toBe(1);
+        expect(res.totals.employees).toBe(1);
       });
     });
 
@@ -370,7 +372,7 @@ describe('P4 — scopes and salary in HR (e2e)', () => {
 
     it('payroll as the principal: lines without money, the school’s totals kept', async () => {
       await asUser(users.principal, async () => {
-        const run = (await http(app).get(`/hr/payroll-runs/${runId}`).expect(200)).body.data as PayrollRun;
+        const run = (await http(app).get(`/hr/payroll-runs/${runId}`).query({ limit: 500 }).expect(200)).body.data as PayrollRun;
         expect(run.lines.length).toBeGreaterThanOrEqual(5);
         for (const line of run.lines) {
           expect(line.salaryVisible).toBe(false);
@@ -392,7 +394,7 @@ describe('P4 — scopes and salary in HR (e2e)', () => {
       for (const who of [users.principal, users.accountant]) {
         await asUser(who, async () => {
           await http(app).get('/hr/settings').expect(403);
-          const run = (await http(app).get(`/hr/payroll-runs/${runId}`).expect(200)).body.data as PayrollRun;
+          const run = (await http(app).get(`/hr/payroll-runs/${runId}`).query({ limit: 500 }).expect(200)).body.data as PayrollRun;
           expect(run.rules).toEqual({ lateness: settings.lateness, payroll: settings.payroll, penalties: settings.penalties });
           expect(Object.keys(run.rules).sort()).toEqual(['lateness', 'payroll', 'penalties']);
           expect(Object.keys(run.rules.payroll).sort()).toEqual(['dayDivisor', 'partTime']);
@@ -400,7 +402,7 @@ describe('P4 — scopes and salary in HR (e2e)', () => {
         });
       }
       await asUser(users.principal, async () => {
-        const run = (await http(app).get(`/hr/payroll-runs/${runId}`).expect(200)).body.data as PayrollRun;
+        const run = (await http(app).get(`/hr/payroll-runs/${runId}`).query({ limit: 500 }).expect(200)).body.data as PayrollRun;
         for (const line of run.lines) for (const f of PAYROLL_LINE_MONEY_FIELDS) expect(line).not.toHaveProperty(f);
       });
     });
@@ -410,14 +412,14 @@ describe('P4 — scopes and salary in HR (e2e)', () => {
       await asUser(users.principal, async () => {
         await http(app).get('/hr/settings').expect(403);
         const list = (await http(app).get('/hr/lateness').query({ month }).expect(200)).body.data as LatenessMonth;
-        expect(Object.keys(list).sort()).toEqual(['locked', 'rows', 'rule']);
+        expect(Object.keys(list).sort()).toEqual(['items', 'limit', 'locked', 'page', 'rule', 'total', 'totals']);
         expect(list.rule).toEqual(settings.lateness);
       });
     });
 
     it('…and the same reads as the HR manager carry every amount', async () => {
       await asUser(users.hrManager, async () => {
-        const run = (await http(app).get(`/hr/payroll-runs/${runId}`).expect(200)).body.data as PayrollRun;
+        const run = (await http(app).get(`/hr/payroll-runs/${runId}`).query({ limit: 500 }).expect(200)).body.data as PayrollRun;
         expect(run.lines.every((l) => l.salaryVisible && typeof l.net === 'number')).toBe(true);
         const lines = (await http(app).get(`/hr/employees/${ids.p1}/payroll-lines`).expect(200)).body.data;
         expect(lines[0].net).toEqual(expect.any(Number));

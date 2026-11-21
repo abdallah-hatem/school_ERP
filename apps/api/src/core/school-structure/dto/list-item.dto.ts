@@ -1,19 +1,23 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { Transform, Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsBoolean,
   IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUUID,
   Max,
   MaxLength,
   Min,
 } from 'class-validator';
-import type {
-  CreateListItemRequest,
-  ListStagesQuery,
-  UpdateListItemRequest,
+import {
+  PAGINATION,
+  type CreateListItemRequest,
+  type ListStagesQuery,
+  type UpdateListItemRequest,
 } from '@school-erp/shared';
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
@@ -62,4 +66,37 @@ export class ListItemsQueryDto implements ListStagesQuery {
   @Transform(queryBoolean)
   @IsBoolean()
   includeHidden?: boolean;
+
+  /** With `page`, `limit` or `search`: one page with `meta` (no defaults, so their absence means the whole list). */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(PAGINATION.maxLimit)
+  limit?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
+  search?: string;
+
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.split(',').filter(Boolean) : value))
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsUUID('all', { each: true })
+  ids?: string[];
 }
+
+/** True when the list is asked for a page (the Settings screen) rather than whole (choices). */
+export function wantsPage(query: ListItemsQueryDto): boolean {
+  return query.page !== undefined || query.limit !== undefined || Boolean(query.search) || query.ids !== undefined;
+}
+

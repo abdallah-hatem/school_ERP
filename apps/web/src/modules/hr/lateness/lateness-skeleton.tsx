@@ -1,6 +1,6 @@
 'use client';
 
-import { monthOf } from '@school-erp/shared';
+import { monthOf, PAGINATION } from '@school-erp/shared';
 import { useSearchParams } from 'next/navigation';
 import { I18nProvider, useTranslation } from '@/shared/providers/i18n-provider';
 import { LatenessBoard } from './lateness-board';
@@ -23,6 +23,11 @@ export function LatenessSkeleton() {
         rows={undefined}
         rule={undefined}
         locked={false}
+        search={params.get('search') ?? ''}
+        total={0}
+        page={1}
+        limit={PAGINATION.defaultLimit}
+        totals={null}
       />
     </I18nProvider>
   );

@@ -20,6 +20,7 @@ import {
 } from 'class-validator';
 import { MAX_MONTHLY_PIASTRES } from '@school-erp/shared';
 import { IsMonth } from '../../../../common/validators/month.validator';
+import { PayrollPaginationQueryDto } from '../../../../common/dto/pagination-query.dto';
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 
@@ -33,7 +34,7 @@ export class CreatePayrollRunDto implements CreatePayrollRunRequest {
 }
 
 /** `GET /hr/payroll-runs/:id?search&departmentId&flagged` — filters the lines, not the totals. */
-export class PayrollRunQueryDto implements PayrollRunQuery {
+export class PayrollRunQueryDto extends PayrollPaginationQueryDto implements PayrollRunQuery {
   @IsOptional()
   @Transform(trim)
   @IsString()

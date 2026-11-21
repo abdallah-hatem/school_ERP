@@ -64,6 +64,13 @@ function makeService(
       Promise.resolve((opts.inYear ?? []).map((month) => ({ ...stored, id: `acc-${month}`, month }))),
     ),
     findLines: jest.fn(() => Promise.resolve(opts.storedLines ?? [])),
+    findLinesPage: jest.fn((_runId: string, _filter: unknown, page: number, limit: number) =>
+      Promise.resolve({ rows: opts.storedLines ?? [], total: 42, page, limit }),
+    ),
+    sumLines: jest.fn(() =>
+      Promise.resolve({ employees: 42, net: 4200, insuranceAmount: 420, incomeTax: 42, martyrTax: 4, gross: 4666 }),
+    ),
+    findLineEmployeeIds: jest.fn(() => Promise.resolve(['a', 'b', 'c'])),
     totalsFor: jest.fn((ids: string[]) =>
       Promise.resolve(
         new Map<string, unknown>([
@@ -234,7 +241,7 @@ describe('AccountingPayrollService.returnToHr / finalize', () => {
   });
 });
 
-describe('AccountingPayrollService.getMonth (HR breakdown)', () => {
+describe('AccountingPayrollService.monthSheet / lines (HR breakdown)', () => {
   const stored = (employeeId: string) => ({
     employeeId,
     employeeCode: `EMP-${employeeId}`,
@@ -266,7 +273,7 @@ describe('AccountingPayrollService.getMonth (HR breakdown)', () => {
       storedLines: [stored('a')],
       breakdowns: new Map([['a', breakdown]]),
     });
-    const month = await service.getMonth('2026-11');
+    const month = await service.monthSheet('2026-11');
     expect(hrPayroll.approvedLineBreakdowns).toHaveBeenCalledWith('hr-run');
     expect(month.lines[0]).toEqual(expect.objectContaining({ employeeId: 'a', net: 1_000_000, gross: 1_000_110, hr: breakdown }));
   });
@@ -279,7 +286,7 @@ describe('AccountingPayrollService.getMonth (HR breakdown)', () => {
       storedLines: [stored('a'), stored('b')],
       breakdowns: new Map([['a', breakdown], ['b', breakdown]]),
     });
-    const [a, b] = (await service.getMonth('2026-11')).lines;
+    const [a, b] = (await service.monthSheet('2026-11')).lines;
     expect(a).not.toHaveProperty('net');
     expect(a.hr).toEqual({ departmentNameEn: 'Teaching', departmentNameAr: 'التدريس', penaltyDays: 1, latenessDays: 0.5 });
     expect(b.hr).toEqual(breakdown);
@@ -287,8 +294,45 @@ describe('AccountingPayrollService.getMonth (HR breakdown)', () => {
 
   it('no breakdown from HR: the line comes without one', async () => {
     const { service } = makeService({ storedMonth: true, storedLines: [stored('a')], breakdowns: null });
-    const [a] = (await service.getMonth('2026-11')).lines;
+    const [a] = (await service.monthSheet('2026-11')).lines;
     expect(a).not.toHaveProperty('hr');
+  });
+
+  it('lines: the repository pages, searches and narrows to one group; the totals cover every match', async () => {
+    const { service, repository } = makeService({ storedMonth: true, storedLines: [stored('a')] });
+    const page = await service.lines('2026-11', { page: 2, limit: 25, search: 'mona', insurance: 'INSURED' });
+    expect(repository.findLinesPage).toHaveBeenCalledWith('acc-run', { search: 'mona', insurance: 'INSURED' }, 2, 25);
+    expect(repository.sumLines).toHaveBeenCalledWith('acc-run', { search: 'mona', insurance: 'INSURED' });
+    expect(page).toMatchObject({ total: 42, page: 2, limit: 25 });
+    expect(page.items).toHaveLength(1);
+    expect(page.totals).toEqual({ employees: 42, net: 4200, insuranceAmount: 420, incomeTax: 42, martyrTax: 4, gross: 4666 });
+  });
+
+  it('lines without every salary: the totals keep only the count, lines outside the scope hide their money', async () => {
+    const { service } = makeService({
+      storedMonth: true,
+      everySalary: false,
+      inScope: ['b'],
+      storedLines: [stored('a'), stored('b')],
+    });
+    const page = await service.lines('2026-11', {});
+    expect(page.totals).toEqual({ employees: 42 });
+    expect(page.items[0]).toMatchObject({ employeeId: 'a', salaryVisible: false });
+    expect(page.items[0]).not.toHaveProperty('gross');
+    expect(page.items[1]).toMatchObject({ employeeId: 'b', salaryVisible: true, gross: 1_000_110 });
+  });
+
+  it('lines of a month HR never approved → 404', async () => {
+    const { service } = makeService();
+    await expect(service.lines('2026-12', {})).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('the month itself carries no lines, and how many the viewer sees the amounts of', async () => {
+    const all = await makeService({ storedMonth: true }).service.getMonth('2026-11');
+    expect(all).not.toHaveProperty('lines');
+    expect(all.visibleLines).toBe(3);
+    const some = await makeService({ storedMonth: true, everySalary: false, inScope: ['b'] }).service.getMonth('2026-11');
+    expect(some.visibleLines).toBe(1);
   });
 });
 

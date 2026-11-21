@@ -1,6 +1,6 @@
 'use client';
 
-import { PayrollFlag, PayrollStatus, PenaltyStatus, type PayrollRun } from '@school-erp/shared';
+import { PayrollStatus, PenaltyStatus, type PayrollRun } from '@school-erp/shared';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -201,11 +201,9 @@ export function RunShell({ basePath, penaltiesHref, run: serverRun, asOf: server
 
   const draft = run.status === PayrollStatus.DRAFT;
   const monthLabel = formatMonth(run.month, locale);
-  // The live count comes from the server; the lines' flags only reflect the last calculation.
-  const staleFlags = useMemo(
-    () => run.lines.some((line) => line.flags.includes(PayrollFlag.PENDING_PENALTIES)),
-    [run.lines],
-  );
+  // The live count comes from the server; the lines' flags only reflect the last calculation
+  // (how many lines still carry the flag is counted by the API over every line, not this page).
+  const staleFlags = run.pendingPenaltyLines > 0;
   // `recounted`: a backdated penalty moved approved ones of this month up a level since the last
   // calculation (§4, owner 2026-11-20) — the same "penalties changed" notice, its own sentence.
   const pendingNotice = !draft || approveError

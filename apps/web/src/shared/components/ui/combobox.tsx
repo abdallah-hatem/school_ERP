@@ -35,11 +35,33 @@ export function needsSearch(count: number, forced?: boolean): boolean {
   return forced ?? count > SEARCH_THRESHOLD;
 }
 
+/**
+ * A picker whose options the API searches (lists of records: employees, departments, people in
+ * the log…) — `useServerOptions` builds it. The Combobox then never filters: it shows what the API
+ * answered for the typed text, dimmed while the next answer loads.
+ */
+export interface ServerOptions {
+  /** The options the API answered for the current text (ungrouped). */
+  options: readonly ComboboxOption[];
+  /** …or under headings (violations by catalogue group). */
+  groups?: readonly ComboboxGroup[];
+  /** Called when the list opens (with "") and as the person types. */
+  onQueryChange: (query: string) => void;
+  loading: boolean;
+  /** The answer failed: the list says so instead of "no matches". */
+  failed?: boolean;
+  /** The chosen option, shown on the trigger even when today's answer doesn't hold it. */
+  selected?: ComboboxOption | null;
+  /** "Showing 20 of 85 — type to narrow": when the API holds more than it answered. */
+  more?: string | null;
+}
+
 export interface ComboboxProps extends Omit<
   ComponentProps<'button'>,
   'value' | 'onChange' | 'children' | 'placeholder'
 > {
-  options: readonly ComboboxOption[];
+  /** The options (a short code list the Combobox filters itself); ignored with `server`. */
+  options?: readonly ComboboxOption[];
   /** Options under headings, after `options` (e.g. violations by catalogue group). */
   groups?: readonly ComboboxGroup[];
   value: string | null | undefined;
@@ -54,17 +76,20 @@ export interface ComboboxProps extends Omit<
   noMatchesText: string;
   /** Called when the list closes (react-hook-form's `onBlur`). */
   onClose?: () => void;
+  /** The API searches the options (`useServerOptions`); `options` / `groups` are then ignored. */
+  server?: ServerOptions;
 }
 
 /**
  * A select with a search box: the trigger opens a popover aligned to it, focus lands in the search,
  * typing filters the options (label and keywords, either language, ignoring case and marks), the
  * arrow keys / Home / End move through the matches and Enter picks one. Rows are touch-sized;
- * direction follows the page. For short, fully loaded lists — the API searches paged data.
+ * direction follows the page. With `server` the API answers each search (records); without, the
+ * typed text filters the given options — only for short lists that are code, not data (an enum).
  */
 export function Combobox({
-  options,
-  groups,
+  options: givenOptions = [],
+  groups: givenGroups,
   value,
   onValueChange,
   placeholder,
@@ -75,8 +100,11 @@ export function Combobox({
   disabled,
   className,
   ref,
+  server,
   ...triggerProps
 }: ComboboxProps) {
+  const options = server ? server.options : givenOptions;
+  const groups = server ? server.groups : givenGroups;
   const listId = useId();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -85,11 +113,13 @@ export function Combobox({
   const listRef = useRef<HTMLUListElement>(null);
 
   const all = useMemo(() => [...options, ...(groups ?? []).flatMap((g) => g.options)], [options, groups]);
-  const selected = all.find((o) => o.value === value);
+  const remembered = server?.selected;
+  const selected = all.find((o) => o.value === value) ?? (remembered && remembered.value === value ? remembered : undefined);
   // Sections in display order: the ungrouped options, then each group that still has a match.
   const sections = useMemo(() => {
+    // The API already searched a server list; a short code list filters here.
     const filter = (list: readonly ComboboxOption[]) =>
-      list.filter((o) => matchesSearch(query, [o.label, ...(o.keywords ?? [])]));
+      server ? list : list.filter((o) => matchesSearch(query, [o.label, ...(o.keywords ?? [])]));
     return [
       { key: '', label: null as string | null, options: filter(options) },
       ...(groups ?? []).map((g) => ({
@@ -98,7 +128,7 @@ export function Combobox({
         options: filter(g.options),
       })),
     ].filter((section) => section.options.length > 0);
-  }, [options, groups, query]);
+  }, [options, groups, query, server]);
   const matches = sections.flatMap((section) => section.options);
   const enabled = matches.filter((o) => !o.disabled);
   const activeOption = enabled[Math.min(active, enabled.length - 1)];
@@ -108,6 +138,7 @@ export function Combobox({
     setOpen(next);
     if (next) {
       setQuery('');
+      server?.onQueryChange('');
       // Start on the chosen option so arrows continue from it.
       setActive(
         Math.max(
@@ -235,6 +266,7 @@ export function Combobox({
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
+              server?.onQueryChange(e.target.value);
               setActive(0);
               listRef.current?.scrollTo?.({ top: 0 });
             }}
@@ -247,7 +279,11 @@ export function Combobox({
           id={listId}
           role="listbox"
           aria-label={triggerProps['aria-label'] ?? placeholder}
-          className="scrollbar-clean max-h-64 min-h-0 overflow-y-auto overscroll-contain"
+          aria-busy={server?.loading || undefined}
+          className={cn(
+            'scrollbar-clean max-h-64 min-h-0 overflow-y-auto overscroll-contain transition-opacity duration-150',
+            server?.loading && matches.length > 0 && 'opacity-55',
+          )}
         >
           {sections.map((section) =>
             section.label === null ? (
@@ -269,10 +305,25 @@ export function Combobox({
           )}
           {matches.length === 0 ? (
             <li role="presentation" className="text-muted-foreground px-3 py-2.5 text-sm">
-              {all.length === 0 ? emptyText : noMatchesText}
+              {server?.loading
+                ? '…'
+                : server?.failed
+                  ? noMatchesText
+                  : server
+                    ? query.trim()
+                      ? noMatchesText
+                      : emptyText
+                    : all.length === 0
+                      ? emptyText
+                      : noMatchesText}
             </li>
           ) : null}
         </ul>
+        {server?.more ? (
+          <p role="status" className="text-muted-foreground border-border border-t px-3 pt-2 pb-1 text-xs">
+            {server.more}
+          </p>
+        ) : null}
       </PopoverContent>
     </Popover>
   );

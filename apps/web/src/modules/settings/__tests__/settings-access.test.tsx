@@ -88,7 +88,7 @@ describe('Settings — who sees which section', () => {
     renderScreen(sessionOf('hr_officer'), 'accounting');
     expect(listed()).not.toContain('Accounting');
     expect(listed()[0]).toBe('School structure');
-    await waitFor(() => expect(api.GET_LIST_ITEMS).toHaveBeenCalledWith('stages'));
+    await waitFor(() => expect(api.GET_LIST_ITEMS).toHaveBeenCalledWith('stages', { page: 1, limit: 10 }));
     expect(api.GET_ACCOUNTING_SETTINGS).not.toHaveBeenCalled();
     expect(screen.queryByText("This couldn't load")).toBeNull();
   });

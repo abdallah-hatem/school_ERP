@@ -1,4 +1,5 @@
-import { SETTING_LIMITS, type Month, type PutLatenessRequest } from '@school-erp/shared';
+import { SETTING_LIMITS, type LatenessQuery, type Month, type PutLatenessRequest } from '@school-erp/shared';
+import { PaginationQueryDto } from '../../../../common/dto/pagination-query.dto';
 import { Type } from 'class-transformer';
 import {
   ArrayUnique,
@@ -12,8 +13,8 @@ import {
 } from 'class-validator';
 import { IsMonth } from '../../../../common/validators/month.validator';
 
-/** `GET /hr/lateness?month=YYYY-MM`. */
-export class LatenessMonthQueryDto {
+/** `GET /hr/lateness?month=YYYY-MM&page&limit&search` (`limit` ≤ 100; search: code or either name). */
+export class LatenessMonthQueryDto extends PaginationQueryDto implements LatenessQuery {
   @IsDefined()
   @IsMonth()
   month: Month;

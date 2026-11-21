@@ -12,7 +12,6 @@ import {
   type Employee,
   type EmployeeSummary,
   type Gender,
-  type ListItem,
 } from '@school-erp/shared';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -35,7 +34,9 @@ import { ErrorIcon } from '@/shared/components/ui/icons';
 import { callApi } from '@/lib/callApi';
 import { localName } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
-import { CREATE_EMPLOYEE, UPDATE_EMPLOYEE } from '../apis';
+import { PICKER_PAGE, useServerOptions } from '@/shared/hooks/use-server-options';
+import { CREATE_EMPLOYEE, GET_DEPARTMENTS, GET_JOB_TITLES, GET_MANAGER_OPTIONS, GET_STAGES, UPDATE_EMPLOYEE } from '../apis';
+import { useListItemOptions } from '../lib/list-item-options';
 import {
   CLEARED_INSURANCE,
   emptyEmployeeForm,
@@ -45,8 +46,8 @@ import {
   formToRequest,
   formToUpdate,
   graduationYears,
-  listOptions,
-  managerOptions,
+  managerChoice,
+  NO_MANAGER,
   todayIso,
   type EmployeeFormValues,
 } from '../lib/employee-form';
@@ -57,12 +58,13 @@ export interface EmployeeFormProps {
   basePath: string;
   /** The employee being edited; omit to add a new one. */
   employee?: Employee;
-  /** Visible list items (the employee's own hidden ones are added back on edit). */
-  departments: ListItem[];
-  stages: ListItem[];
-  jobTitles: ListItem[];
-  /** Active employees whose job title manages people, for the direct-manager picker (§3). */
-  managerCandidates: EmployeeSummary[];
+  /**
+   * The employee's own stage / department / job title has since been hidden (§3: they keep it on
+   * edit; a new choice must be visible). The pickers' choices are searched by the API.
+   */
+  currentHidden?: { stage?: boolean; department?: boolean; jobTitle?: boolean };
+  /** Whether any active employee manages people (the manager picker's "none yet" note). */
+  hasManagerCandidates?: boolean;
   /** Replaces the page header: the form's skeleton draws one without the employee's name. */
   header?: ReactNode;
   /** The edit page's skeleton (no employee yet): the form in its edit shape. */
@@ -70,7 +72,14 @@ export interface EmployeeFormProps {
 }
 
 /** Add or edit an employee (§3). Server rule errors land on their field. */
-export function EmployeeForm({ basePath, employee, departments, stages, jobTitles, managerCandidates, header, editing = false }: EmployeeFormProps) {
+export function EmployeeForm({
+  basePath,
+  employee,
+  currentHidden = {},
+  hasManagerCandidates = true,
+  header,
+  editing = false,
+}: EmployeeFormProps) {
   const { t, has, locale } = useTranslation();
   const router = useRouter();
   const isEdit = Boolean(employee) || editing;
@@ -118,13 +127,35 @@ export function EmployeeForm({ basePath, employee, departments, stages, jobTitle
     clearErrors(Object.keys(CLEARED_INSURANCE) as (keyof typeof CLEARED_INSURANCE)[]);
   }, [insuranceStatus, setValue, clearErrors]);
 
-  const stage = listOptions(stages, locale, employee?.stage);
-  const department = listOptions(departments, locale, employee?.department);
-  const jobTitle = listOptions(jobTitles, locale, employee?.jobTitle);
-  const managers = managerOptions(managerCandidates, locale, t('employees.noManager'), employee?.id, employee?.manager);
+  // The choices are visible items only, searched by the API; the employee's own (even hidden) item
+  // stays the choice until changed.
+  const stage = useListItemOptions(GET_STAGES, locale, { selected: employee?.stage });
+  const department = useListItemOptions(GET_DEPARTMENTS, locale, { selected: employee?.department });
+  const jobTitle = useListItemOptions(GET_JOB_TITLES, locale, { selected: employee?.jobTitle });
   const hiddenHint = t('employees.hints.hiddenItem');
   // §3: a manager who no longer manages people is kept — noted while they are still the choice.
   const managerId = useWatch({ control, name: 'managerId' });
+  const noManager = { value: NO_MANAGER, label: t('employees.noManager') };
+  const [managerQuery, setManagerQuery] = useState('');
+  const managerSearch = useServerOptions<EmployeeSummary>({
+    load: (search) => GET_MANAGER_OPTIONS(employee?.id, { search, limit: PICKER_PAGE }),
+    toOption: (e) => managerChoice(e, locale),
+    selected: employee?.manager ? managerChoice(employee.manager, locale) : null,
+  });
+  const managers = {
+    server: {
+      ...managerSearch,
+      // "No direct manager" heads the list, until the person searches for someone.
+      options: managerQuery.trim() ? managerSearch.options : [noManager, ...managerSearch.options],
+      onQueryChange: (query: string) => {
+        setManagerQuery(query);
+        managerSearch.onQueryChange(query);
+      },
+      selected: managerId === NO_MANAGER ? noManager : managerSearch.selected,
+    },
+    currentNotManaging: employee?.manager?.managesPeople === false,
+    hasCandidates: hasManagerCandidates,
+  };
   const gender = useWatch({ control, name: 'gender' });
   const hireDate = useWatch({ control, name: 'hireDate' });
   const managerHint =
@@ -254,10 +285,10 @@ export function EmployeeForm({ basePath, employee, departments, stages, jobTitle
             options={WORK_SYSTEMS.map((w) => ({ value: w, label: t(`common.enums.workSystem.${w}`) }))}
             required
           />
-          <SelectField searchable control={control} name="stageId" label={t('employees.fields.stage')} placeholder={t('employees.placeholders.stage')} options={stage.options} emptyText={t('employees.noStages')} hint={stage.currentHidden ? hiddenHint : undefined} required />
-          <SelectField searchable control={control} name="departmentId" label={t('employees.fields.department')} placeholder={t('employees.placeholders.department')} options={department.options} emptyText={t('employees.noDepartments')} hint={department.currentHidden ? hiddenHint : undefined} required />
-          <SelectField searchable control={control} name="jobTitleId" label={t('employees.fields.jobTitle')} placeholder={t('employees.placeholders.jobTitle')} options={jobTitle.options} emptyText={t('employees.noJobTitles')} hint={jobTitle.currentHidden ? hiddenHint : undefined} required />
-          <SelectField searchable control={control} name="managerId" label={t('employees.fields.manager')} placeholder={t('employees.placeholders.manager')} options={managers.options} hint={managerHint} />
+          <SelectField server={stage} control={control} name="stageId" label={t('employees.fields.stage')} placeholder={t('employees.placeholders.stage')} emptyText={t('employees.noStages')} hint={currentHidden.stage ? hiddenHint : undefined} required />
+          <SelectField server={department} control={control} name="departmentId" label={t('employees.fields.department')} placeholder={t('employees.placeholders.department')} emptyText={t('employees.noDepartments')} hint={currentHidden.department ? hiddenHint : undefined} required />
+          <SelectField server={jobTitle} control={control} name="jobTitleId" label={t('employees.fields.jobTitle')} placeholder={t('employees.placeholders.jobTitle')} emptyText={t('employees.noJobTitles')} hint={currentHidden.jobTitle ? hiddenHint : undefined} required />
+          <SelectField server={managers.server} control={control} name="managerId" label={t('employees.fields.manager')} placeholder={t('employees.placeholders.manager')} hint={managerHint} />
           <TextField control={control} name="grade" label={t('employees.fields.grade')} placeholder={t('employees.placeholders.grade')} maxLength={50} />
           <TextField control={control} name="fingerprintId" label={t('employees.fields.fingerprintId')} placeholder={t('employees.placeholders.fingerprintId')} dir="ltr" maxLength={50} />
         </Section>

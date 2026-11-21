@@ -1,5 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
-import { PAGINATION, PayrollStatus, type AccountingPayrollMonth, type PayrollRunSummary } from '@school-erp/shared';
+import {
+  PAGINATION,
+  PayrollStatus,
+  type AccountingPayrollLinesPage,
+  type AccountingPayrollMonth,
+  type AccountingPayrollMonthSheet,
+  type PayrollRunSummary,
+} from '@school-erp/shared';
 import { Api } from './support/api';
 import { t } from './support/i18n';
 import { searchField, shoot, signIn } from './support/ui';
@@ -13,13 +20,16 @@ import { searchField, shoot, signIn } from './support/ui';
  * approves one). The employees screen is a card grid, not a DataTable, so it isn't measured here.
  */
 
-async function approvedMonth(): Promise<AccountingPayrollMonth> {
+/** An approved month with every line (the lines are paged by the API: one page of 500). */
+async function approvedMonth(): Promise<AccountingPayrollMonthSheet> {
   const api = await Api.asAdmin();
   try {
     const runs = await api.get<PayrollRunSummary[]>('/hr/payroll-runs', { limit: PAGINATION.maxLimit });
     const approved = runs.find((r) => r.status === PayrollStatus.APPROVED);
     if (!approved) throw new Error('smoke: no approved payroll month (05-payroll approves one)');
-    return await api.get<AccountingPayrollMonth>(`/accounting/payroll/${approved.month}`);
+    const month = await api.get<AccountingPayrollMonth>(`/accounting/payroll/${approved.month}`);
+    const lines = await api.get<AccountingPayrollLinesPage>(`/accounting/payroll/${approved.month}/lines`, { limit: '500' });
+    return { ...month, lines: lines.items };
   } finally {
     await api.dispose();
   }
@@ -116,7 +126,12 @@ for (const locale of ['en', 'ar'] as const) {
       const first = month.lines[0]!;
       await expect(cards.first()).toContainText(locale === 'ar' ? first.nameAr : first.nameEn);
       await expect(cards.first().locator('dl')).toHaveCount(1);
-      // The printout still has the month's total row.
+      // The printout (every line, read from the API on Download PDF) still has the month's total row.
+      await page.evaluate(() => {
+        window.print = () => undefined;
+      });
+      await page.getByRole('button', { name: t(locale, 'accounting.payroll.month.actions.print') }).click();
+      await expect(lines.locator('[data-print-rows] tbody tr')).toHaveCount(month.lines.length);
       await page.emulateMedia({ media: 'print' });
       await expect(lines.locator('[data-print-rows] tfoot')).toContainText(
         t(locale, 'accounting.payroll.month.totalAll', { count: String(month.lines.length) }),
@@ -146,13 +161,18 @@ for (const locale of ['en', 'ar'] as const) {
       );
     }
 
-    // A search narrows the groups on screen…
+    // A search (asked of the API) narrows the groups on screen…
     const first = month.lines[0]!;
     await searchField(page, t(locale, 'accounting.payrollTaxes.statement.search.label')).fill(first.employeeCode);
     await expect(page.locator('[data-statement] [data-view="table"] tbody tr:visible')).toHaveCount(1);
     await shoot(page, info, `payroll-taxes-search-${locale}`);
 
-    // …and print still lists every employee of each group, with no paging and no search box.
+    // …and print (every line, read from the API on Download PDF) still lists every employee of
+    // each group, with no paging and no search box.
+    await page.evaluate(() => {
+      window.print = () => undefined;
+    });
+    await page.getByRole('button', { name: t(locale, 'accounting.payrollTaxes.actions.print') }).click();
     await page.emulateMedia({ media: 'print' });
     for (const group of groups.filter((g) => g.count > 0)) {
       await expect(page.locator(`[data-statement] table[aria-label="${group.name}"] tbody tr:visible`)).toHaveCount(group.count);

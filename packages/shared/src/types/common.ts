@@ -43,6 +43,20 @@ export interface Paginated<T> extends Required<Meta> {
   data: T[];
 }
 
+/**
+ * One page of a list whose screen also shows figures over the **whole filtered set** (a month's
+ * totals, a group's subtotals): the endpoint returns this as `data`, with those figures beside
+ * `items`. The server pages, searches, filters and sums; the browser only shows the page
+ * (owner, 2026-11-21). Plain lists keep the envelope's `data` array + `meta`.
+ */
+export interface ListPage<T> {
+  items: T[];
+  /** Rows matching the search and filters (all pages). */
+  total: number;
+  page: number;
+  limit: number;
+}
+
 export interface PaginationQuery {
   page?: number;
   /** Max 100. */

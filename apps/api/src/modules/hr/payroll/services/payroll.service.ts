@@ -220,9 +220,10 @@ export class PayrollService {
     const view = await this.view();
     const scope = employeeWhere(view.lines);
     const draft = run.status === PayrollStatus.DRAFT;
-    const [totals, lines, adjustments, inRun, pendingPenalties, rulesChangedAt, recounted, rules] = await Promise.all([
+    const filter = { search: query.search, departmentId: query.departmentId, flagged: query.flagged };
+    const [totals, page, adjustments, inRun, pendingPenalties, rulesChangedAt, recounted, rules, pendingPenaltyLines] = await Promise.all([
       this.repository.totalsFor([id], scope),
-      this.repository.findLines(id, query, scope),
+      this.repository.findLinesPage(id, filter, scope, query.page, query.limit),
       this.repository.findAdjustments(id, undefined, scope),
       this.repository.lineEmployeeIds(id),
       draft ? this.penalties.pendingCountInMonth(run.month) : 0,
@@ -230,7 +231,9 @@ export class PayrollService {
       // §4 backdated penalty: one dated in the month moved up a level since the last calculation.
       draft ? this.penalties.recountedInMonthSince(run.month, run.calculatedAt) : false,
       this.hrSettings.get().then(runRules),
+      draft ? this.repository.countPendingPenaltyLines(id, scope) : 0,
     ]);
+    const lines = page.rows;
     const paid = await this.salaryVisibleFor(view, [
       ...lines.map((l) => l.employeeId),
       ...adjustments.map((a) => a.employeeId),
@@ -243,6 +246,8 @@ export class PayrollService {
       penaltiesRecounted: recounted,
       rules,
       lines: lines.map((l) => toLine(l, paid.has(l.employeeId))),
+      linesPage: { total: page.total, page: page.page, limit: page.limit },
+      pendingPenaltyLines,
       adjustments: adjustments.map((a) => toAdjustment(a, inRun, paid.has(a.employeeId))),
     };
   }

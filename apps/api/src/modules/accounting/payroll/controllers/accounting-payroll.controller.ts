@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Headers, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
-import type { AccountingPayrollMonth, AccountingPayrollYear, AuthUser } from '@school-erp/shared';
+import type { AccountingPayrollLinesPage, AccountingPayrollMonth, AccountingPayrollYear, AuthUser } from '@school-erp/shared';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
 import { Audited } from '../../../../core/audit';
 import { PayrollPaginationQueryDto } from '../../../../common/dto/pagination-query.dto';
@@ -8,6 +8,7 @@ import { ResponseUtil } from '../../../../common/utils/response.util';
 import { xlsxFile } from '../../../../common/utils/xlsx-file.util';
 import { Permission } from '../../../../core/permissions';
 import {
+  AccountingPayrollLinesQueryDto,
   AccountingPayrollMonthParamDto,
   AccountingPayrollYearParamDto,
   ReturnPayrollMonthDto,
@@ -36,7 +37,7 @@ export class AccountingPayrollController {
     return this.payroll.year(params.year);
   }
 
-  /** The month's lines as the viewer sees them, plus the tax rule used, as `.xlsx`. */
+  /** Every line of the month as the viewer sees it (not a page), plus the tax rule used, as `.xlsx`. */
   @Get(':month/export')
   @Permission('accounting.payroll.view')
   async export(
@@ -44,6 +45,20 @@ export class AccountingPayrollController {
     @Headers('accept-language') acceptLanguage?: string,
   ) {
     return xlsxFile(await this.payroll.exportMonth(params.month, resolveLanguage(acceptLanguage)));
+  }
+
+  /**
+   * A page of the month's lines (by code; `limit` ≤ 500), searched by code or either name, one
+   * insurance group with `insurance`, and `totals` over every matching line (money only with every
+   * salary).
+   */
+  @Get(':month/lines')
+  @Permission('accounting.payroll.view')
+  lines(
+    @Param() params: AccountingPayrollMonthParamDto,
+    @Query() query: AccountingPayrollLinesQueryDto,
+  ): Promise<AccountingPayrollLinesPage> {
+    return this.payroll.lines(params.month, query);
   }
 
   /** Sends the approved month back to HR with a reason; refused once finalized. */

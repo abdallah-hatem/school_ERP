@@ -8,11 +8,23 @@ const push = vi.fn();
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push, refresh: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
 }));
+// The person pickers' choices come from the API (searched there, never here).
+const auditApis = vi.hoisted(() => ({ GET_AUDIT_ACTORS: vi.fn() }));
+vi.mock('../apis', () => auditApis);
 vi.mock('next/link', async () => ({ default: (await import('../test/fixtures')).MockLink }));
 
 import type { AuditEntry } from '@school-erp/shared';
 import { parseHistoryQuery } from '../lib/history-query';
 import { ACTORS, AHMED, entry, NOW, renderAudit } from '../test/fixtures';
+
+/** The API's side of the people picker: the log's people, searched by name. */
+function serveActors() {
+  auditApis.GET_AUDIT_ACTORS.mockImplementation(async (q: { search?: string } = {}) => ({
+    success: true,
+    status: 200,
+    data: ACTORS.filter((a) => a.name.toLowerCase().includes((q.search ?? '').toLowerCase())),
+  }));
+}
 import { RecordHistory } from './record-history';
 
 const BASE = '/en/employees/33333333-3333-4333-8333-333333333333/history';
@@ -34,7 +46,10 @@ function renderHistory(params: Record<string, string> = {}, entries: AuditEntry[
 }
 
 describe('RecordHistory (employee History tab)', () => {
-  beforeEach(() => push.mockReset());
+  beforeEach(() => {
+    serveActors();
+    push.mockReset();
+  });
   afterEach(cleanup);
 
   it('field and person filters go into the URL from page 1', async () => {
@@ -47,6 +62,8 @@ describe('RecordHistory (employee History tab)', () => {
     await user.click(screen.getByRole('combobox', { name: 'Who' }));
     await user.click(await screen.findByRole('option', { name: 'Ahmed Mahmoud' }));
     expect(push).toHaveBeenLastCalledWith(`${BASE}?person=${AHMED.id}`, { scroll: false });
+    // The record's people come from the API (searched there).
+    expect(auditApis.GET_AUDIT_ACTORS).toHaveBeenCalledWith(expect.objectContaining({ search: '', limit: 20 }));
   });
 
   it('shows the record’s entries by month, with the last change', () => {

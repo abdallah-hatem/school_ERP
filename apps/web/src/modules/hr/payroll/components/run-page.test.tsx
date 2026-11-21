@@ -28,6 +28,9 @@ const apis = vi.hoisted(() => ({
   REMOVE_PAYROLL_ADJUSTMENT: vi.fn(),
 }));
 vi.mock('../apis', () => apis);
+// The department filter's choices come from the API (searched there, never here).
+const employeesApis = vi.hoisted(() => ({ GET_DEPARTMENTS: vi.fn() }));
+vi.mock('../../employees/apis', () => employeesApis);
 const download = vi.hoisted(() => ({ saveDownloadedFile: vi.fn() }));
 vi.mock('@/shared/lib/download', () => download);
 
@@ -65,7 +68,6 @@ function runElement(props: Partial<RunPageProps> = {}, locale: Locale = 'en') {
       penaltiesHref={`/${locale}/penalties`}
       run={props.run ?? run()}
       asOf={0}
-      departments={DEPARTMENTS}
       query={{} as PayrollRunQuery}
       {...props}
     />
@@ -93,6 +95,12 @@ const PENDING = {
 const PENDING_EN = "Approve or cancel this month's pending penalties first.";
 
 beforeEach(() => {
+    employeesApis.GET_DEPARTMENTS.mockReset().mockResolvedValue({
+      success: true,
+      status: 200,
+      data: DEPARTMENTS,
+      meta: { total: DEPARTMENTS.length, page: 1, limit: 20 },
+    });
   for (const fn of [
     ...Object.values(apis),
     ...Object.values(router),
@@ -447,6 +455,26 @@ describe('RunPage — draft', () => {
     await user.click(screen.getByRole('combobox', { name: 'Department' }));
     await user.click(await screen.findByRole('option', { name: 'Science' }));
     expect(router.push).toHaveBeenCalledWith(`/en/payroll/${RUN_ID}?departmentId=d-sci`, { scroll: false });
+    // Hidden departments too (a line keeps the department it had), searched by the API.
+    expect(employeesApis.GET_DEPARTMENTS).toHaveBeenCalledWith({ includeHidden: true, search: '', limit: 20 });
+  });
+
+  it('pages through the API: shows only the page it sent, the page and size go in the URL', async () => {
+    const user = userEvent.setup();
+    // The API's second page of 10: one line of 11 matching.
+    renderRun({
+      run: run({ lines: [SALMA], linesPage: { total: 11, page: 2, limit: 10 } }),
+      query: { page: 2 },
+    });
+    expect(table().getByText('Salma Adel')).toBeTruthy();
+    expect(table().queryByText('Mona Khalil')).toBeNull();
+    expect(screen.getByText('Showing 11–11 of 11')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Page 1' }));
+    expect(router.push).toHaveBeenCalledWith(`/en/payroll/${RUN_ID}`, { scroll: false });
+    router.push.mockReset();
+    await user.click(screen.getByRole('combobox', { name: 'Rows per page' }));
+    await user.click(await screen.findByRole('option', { name: '50' }));
+    expect(router.push).toHaveBeenCalledWith(`/en/payroll/${RUN_ID}?limit=50`, { scroll: false });
   });
 
   it('no lines: "no results" with filters differs from an empty run', async () => {

@@ -44,7 +44,6 @@ export function UsersListSkeleton() {
         query={parseUsersQuery(Object.fromEntries(params))}
         rows={undefined}
         total={0}
-        roles={[]}
         lastAdminId={null}
         now={new Date().toISOString()}
       />

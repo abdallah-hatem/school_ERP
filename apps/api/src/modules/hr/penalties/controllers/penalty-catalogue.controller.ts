@@ -1,9 +1,10 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
 import type { AuthUser } from '@school-erp/shared';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
 import {
   CreatePenaltyGroupDto,
   CreateViolationDto,
+  PenaltyCatalogueQueryDto,
   UpdatePenaltyGroupDto,
   UpdateViolationDto,
 } from '../dto/catalogue.dto';
@@ -21,8 +22,8 @@ export class PenaltyCatalogueController {
 
   @Get('penalty-groups')
   @Permission('hr.penalty_catalogue.view')
-  list() {
-    return this.catalogue.list();
+  list(@Query() query: PenaltyCatalogueQueryDto) {
+    return this.catalogue.list(query.search, query.active);
   }
 
   @Audited('hr.penalty_group.create')

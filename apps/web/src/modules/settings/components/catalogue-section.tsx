@@ -25,7 +25,9 @@ import {
   UPDATE_VIOLATION,
 } from '../apis';
 import { useResource } from '../hooks/use-resource';
-import { highlightParts, searchCatalogue } from '../lib/catalogue-search';
+import { highlightParts } from '../lib/catalogue-search';
+
+const SEARCH_DEBOUNCE_MS = 250;
 import { toLevelInputs, type NamesFormValues, type ViolationFormValues } from '../schemas';
 import { NamesDialog } from './names-dialog';
 import { SectionPanel } from './section-panel';
@@ -37,27 +39,38 @@ type ViolationEdit = { groupId: string; violation: Violation | null };
 /**
  * The penalty catalogue (§4, §7): groups → violations → levels. Groups and violations are retired
  * and restored, never deleted. Edits change pending penalties and new ones, never approved ones.
- * A search box (`/` focuses it) filters violations by name in both languages and by group name;
- * the catalogue loads whole, so it filters here. While searching, matching groups open and show
- * only their matching violations (all of them when the group's own name matched).
+ * A search box (`/` focuses it) asks the API for violations by name in both languages and by group
+ * name (after a pause in typing). While searching, matching groups open and show only their
+ * matching violations (all of them when the group's own name matched).
  */
 export function CatalogueSection() {
   const { t, locale } = useTranslation();
   const canManage = useCan()('hr.penalty_catalogue.manage');
-  const catalogue = useResource('catalogue', () => GET_PENALTY_GROUPS());
+  const [query, setQuery] = useState('');
+  // What the API was asked: the typed text, after a pause.
+  const [asked, setAsked] = useState('');
+  const catalogue = useResource(`catalogue:${asked}`, () => GET_PENALTY_GROUPS({ search: asked || undefined }));
+  const askTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (askTimer.current) clearTimeout(askTimer.current);
+    },
+    [],
+  );
   const [open, setOpen] = useState<Set<string>>(new Set());
   const [groupDialog, setGroupDialog] = useState<GroupDialog | null>(null);
   const [editing, setEditing] = useState<ViolationEdit | null>(null);
   const [retiring, setRetiring] = useState<PenaltyGroup | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [query, setQuery] = useState('');
   // Groups folded by hand during the current search (they open by themselves while it matches).
   const [foldedInSearch, setFoldedInSearch] = useState<Set<string>>(new Set());
   const searchRef = useRef<HTMLInputElement>(null);
-  const searching = query.trim() !== '';
+  // The answer on screen is for `asked`: the highlight and the open groups follow it.
+  const searching = asked !== '';
 
-  const groups = catalogue.data ? [...catalogue.data].sort((a, b) => a.sortOrder - b.sortOrder) : undefined;
-  const matches = groups ? searchCatalogue(groups, query) : undefined;
+  // The API's answer, in its order: the whole catalogue, or the search's matches.
+  const groups = catalogue.data;
+  const matches = groups?.map((group) => ({ group, groupMatched: Boolean(group.match?.group) }));
   // Every group starts folded (owner, 2026-11-17): the catalogue is long, the headers are the map.
   const isOpen = (id: string) => (searching ? !foldedInSearch.has(id) : open.has(id));
 
@@ -78,6 +91,17 @@ export function CatalogueSection() {
   function changeQuery(next: string) {
     setQuery(next);
     setFoldedInSearch(new Set());
+    if (askTimer.current) clearTimeout(askTimer.current);
+    const text = next.trim();
+    if (!text) {
+      askTimer.current = null;
+      setAsked('');
+      return;
+    }
+    askTimer.current = setTimeout(() => {
+      askTimer.current = null;
+      setAsked(text);
+    }, SEARCH_DEBOUNCE_MS);
   }
 
   function toggleOpen(id: string) {
@@ -120,7 +144,10 @@ export function CatalogueSection() {
   async function saveGroup(values: NamesFormValues): Promise<boolean> {
     if (!groupDialog) return false;
     if (groupDialog.mode === 'new') {
-      const nextOrder = (groups ?? []).reduce((max, g) => Math.max(max, g.sortOrder), 0) + 1;
+      // After the last group of the whole catalogue (a search's answer holds only some).
+      const all = searching ? await callApi(GET_PENALTY_GROUPS(), { showErrorToast: false }) : null;
+      const every = all?.success ? (all.data ?? []) : (groups ?? []);
+      const nextOrder = every.reduce((max, g) => Math.max(max, g.sortOrder), 0) + 1;
       const res = await callApi(CREATE_PENALTY_GROUP({ ...values, sortOrder: nextOrder }));
       if (res.success && res.data) {
         const created = { ...res.data, violations: res.data.violations ?? [] };
@@ -190,7 +217,8 @@ export function CatalogueSection() {
         aria-keyshortcuts="/"
         title={t('settings.catalogue.searchShortcut')}
         value={query}
-        disabled={!groups}
+        disabled={!groups && !searching}
+        loading={catalogue.refreshing}
         onChange={(e) => changeQuery(e.target.value)}
       />
       <ClearFilters count={searching ? 1 : 0} onClear={() => changeQuery('')} />
@@ -206,7 +234,7 @@ export function CatalogueSection() {
         <CatalogueSkeleton />
       </div>
     );
-  else if (groups.length === 0)
+  else if (groups.length === 0 && !searching)
     body = <EmptyState title={t('settings.catalogue.emptyTitle')} description={t('settings.catalogue.emptyBody')} action={addGroup} />;
   else if (matches.length === 0)
     body = (
@@ -226,7 +254,7 @@ export function CatalogueSection() {
         <ul className="flex flex-col gap-3">
         {matches.map(({ group, groupMatched }) => {
           const expanded = isOpen(group.id);
-          const total = groups.find((g) => g.id === group.id)?.violations.length ?? group.violations.length;
+          const total = group.match?.violationCount ?? group.violations.length;
           const name = localName(group, locale);
           const panelId = `group-${group.id}`;
           return (
@@ -242,7 +270,7 @@ export function CatalogueSection() {
                   <ChevronDownIcon className={cn('size-5 shrink-0 text-muted-foreground transition-transform duration-150', !expanded && '-rotate-90 rtl:rotate-90')} />
                   <span className="flex min-w-0 flex-col">
                     <span className="font-display font-extrabold break-words">
-                      <Highlight text={name} query={groupMatched ? query : ''} />
+                      <Highlight text={name} query={groupMatched ? asked : ''} />
                     </span>
                     <span className="text-xs text-muted-foreground">
                       {t('settings.catalogue.violationCount', { count: formatCount(total) })}
@@ -282,7 +310,7 @@ export function CatalogueSection() {
                         <ViolationRow
                           key={violation.id}
                           violation={violation}
-                          query={groupMatched ? '' : query}
+                          query={groupMatched ? '' : asked}
                           groupActive={group.isActive}
                           busy={busyId === violation.id}
                           locked={busyId !== null && busyId !== violation.id}

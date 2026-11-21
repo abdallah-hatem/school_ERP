@@ -17,7 +17,13 @@ const api = vi.hoisted(() => ({
 }));
 vi.mock('../apis', () => api);
 import { chooseRowAction, menuItemNames, openRowActions, rowActionsButton } from '@/test/row-actions';
-vi.mock('next/navigation', () => ({ redirect: vi.fn() }));
+const nav = vi.hoisted(() => ({ replace: vi.fn(), params: new URLSearchParams() }));
+vi.mock('next/navigation', () => ({
+  redirect: vi.fn(),
+  useRouter: () => ({ replace: nav.replace, push: vi.fn(), refresh: vi.fn() }),
+  usePathname: () => '/en/settings',
+  useSearchParams: () => nav.params,
+}));
 
 import { CatalogueSection } from '../components/catalogue-section';
 import { ListManager } from '../components/list-manager';
@@ -194,6 +200,26 @@ describe('Penalty catalogue editor', () => {
   });
 });
 
+/**
+ * The API's side of a list: it pages (`page`, `limit`, by order) and keeps what is created — the
+ * screen only shows the page it answers.
+ */
+function serverList<T extends { sortOrder: number }>(start: T[]) {
+  const items = [...start];
+  api.GET_LIST_ITEMS.mockImplementation((_k: string, q: { page?: number; limit?: number } = {}) => {
+    const page = q.page ?? 1;
+    const limit = q.limit ?? 10;
+    const sorted = [...items].sort((a, b) => a.sortOrder - b.sortOrder);
+    return ok(sorted.slice((page - 1) * limit, page * limit), { total: items.length, page, limit });
+  });
+  api.CREATE_LIST_ITEM.mockImplementation((_k: string, body: object) => {
+    const created = { id: `new-${items.length}`, isActive: true, ...body } as unknown as T;
+    items.push(created);
+    return ok(created);
+  });
+  return items;
+}
+
 describe('Managed lists (stages, departments, job titles)', () => {
   const departments: ListItem[] = [
     { id: 'd1', nameEn: 'Mathematics', nameAr: 'الرياضيات', sortOrder: 1, isActive: true },
@@ -202,13 +228,14 @@ describe('Managed lists (stages, departments, job titles)', () => {
 
   it('hide and show send isActive; hidden items stay listed', async () => {
     const user = userEvent.setup();
-    api.GET_LIST_ITEMS.mockImplementation(() => ok(departments));
+    serverList(departments);
     api.UPDATE_LIST_ITEM.mockImplementation((_k: string, id: string, body: object) =>
       ok({ ...departments.find((d) => d.id === id)!, ...body }),
     );
     renderSettings(<ListManager kind="departments" />);
     expect((await screen.findAllByText('Science'))[0]).toBeTruthy();
-    expect(api.GET_LIST_ITEMS).toHaveBeenCalledWith('departments');
+    // One page from the API, hidden items too.
+    expect(api.GET_LIST_ITEMS).toHaveBeenCalledWith('departments', { page: 1, limit: 10 });
 
     // A shown item: Rename, then Hide in red after the divider.
     const menu = await openRowActions(user, 'Mathematics');
@@ -225,8 +252,7 @@ describe('Managed lists (stages, departments, job titles)', () => {
 
   it('adding needs both names (inline errors), then creates the item at the end', async () => {
     const user = userEvent.setup();
-    api.GET_LIST_ITEMS.mockImplementation(() => ok(departments));
-    api.CREATE_LIST_ITEM.mockImplementation((_k: string, body: object) => ok({ id: 'd3', isActive: true, ...body }));
+    serverList(departments);
     renderSettings(<ListManager kind="departments" />);
     await screen.findAllByText('Science');
     await user.click(screen.getAllByRole('button', { name: 'Add department' })[0]!);
@@ -253,8 +279,7 @@ describe('Managed lists (stages, departments, job titles)', () => {
       { id: 'j1', nameEn: 'Principal', nameAr: 'مدير المدرسة', sortOrder: 1, isActive: true, managesPeople: true },
       { id: 'j2', nameEn: 'Teacher', nameAr: 'معلم', sortOrder: 2, isActive: true, managesPeople: false },
     ];
-    api.GET_LIST_ITEMS.mockImplementation(() => ok(titles));
-    api.CREATE_LIST_ITEM.mockImplementation((_k: string, body: object) => ok({ id: 'j3', isActive: true, ...body }));
+    serverList(titles);
     api.UPDATE_LIST_ITEM.mockImplementation((_k: string, id: string, body: object) =>
       ok({ ...titles.find((t) => t.id === id)!, ...body }),
     );
@@ -304,9 +329,7 @@ describe('Managed lists (stages, departments, job titles)', () => {
 
   it('job titles in Arabic: the switch and badge read natively; departments have no switch', async () => {
     const user = userEvent.setup();
-    api.GET_LIST_ITEMS.mockImplementation(() =>
-      ok([{ id: 'j1', nameEn: 'Principal', nameAr: 'مدير المدرسة', sortOrder: 1, isActive: true, managesPeople: true }]),
-    );
+    serverList([{ id: 'j1', nameEn: 'Principal', nameAr: 'مدير المدرسة', sortOrder: 1, isActive: true, managesPeople: true }]);
     renderSettings(<ListManager kind="jobTitles" />, 'ar');
     expect((await screen.findAllByText('يدير موظفين')).length).toBeGreaterThan(0);
     await chooseRowAction(user, /^إجراءات مدير المدرسة/, 'تعديل');
@@ -314,7 +337,7 @@ describe('Managed lists (stages, departments, job titles)', () => {
     expect(within(dialog).getByRole('switch', { name: 'يدير موظفين' }).getAttribute('aria-checked')).toBe('true');
     cleanup();
 
-    api.GET_LIST_ITEMS.mockImplementation(() => ok(departments));
+    serverList(departments);
     renderSettings(<ListManager kind="departments" />);
     await screen.findAllByText('Science');
     await chooseRowAction(user, 'Mathematics', 'Rename');
@@ -322,8 +345,22 @@ describe('Managed lists (stages, departments, job titles)', () => {
     expect(within(rename).queryByRole('switch')).toBeNull();
   });
 
+  it('pages through the API: the page goes in the URL beside the section; only that page shows', async () => {
+    const user = userEvent.setup();
+    const many = Array.from({ length: 12 }, (_, i) => ({ id: `d${i}`, nameEn: `Dept ${i + 1}`, nameAr: `قسم ${i + 1}`, sortOrder: i + 1, isActive: true }));
+    serverList(many);
+    nav.params = new URLSearchParams('section=lists&departmentsPage=2');
+    renderSettings(<ListManager kind="departments" />);
+    expect((await screen.findAllByText('Dept 11'))[0]).toBeTruthy();
+    expect(screen.queryByText('Dept 1')).toBeNull();
+    expect(api.GET_LIST_ITEMS).toHaveBeenCalledWith('departments', { page: 2, limit: 10 });
+    await user.click(screen.getByRole('button', { name: 'Page 1' }));
+    expect(nav.replace).toHaveBeenCalledWith('/en/settings?section=lists', { scroll: false });
+    nav.params = new URLSearchParams();
+  });
+
   it('an empty list says so and offers the add action', async () => {
-    api.GET_LIST_ITEMS.mockImplementation(() => ok([]));
+    api.GET_LIST_ITEMS.mockImplementation(() => ok([], { total: 0, page: 1, limit: 10 }));
     renderSettings(<ListManager kind="stages" />);
     expect((await screen.findAllByText('No stages yet'))[0]).toBeTruthy();
     expect(screen.getAllByRole('button', { name: 'Add stage' }).length).toBeGreaterThan(1);

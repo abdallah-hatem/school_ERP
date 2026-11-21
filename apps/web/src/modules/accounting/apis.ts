@@ -1,6 +1,8 @@
 'use server';
 
 import type {
+  AccountingPayrollLinesPage,
+  AccountingPayrollLinesQuery,
   AccountingPayrollMonth,
   AccountingPayrollMonthSummary,
   AccountingPayrollYear,
@@ -26,10 +28,29 @@ export async function GET_PAYROLL_TAXES_YEAR(year: number) {
   return handleResponse({ response, showErrorToast: false });
 }
 
-/** `GET /accounting/payroll/:month` — the month's lines as the viewer may see them, and the rule used. */
+/** `GET /accounting/payroll/:month` — the month's summary, totals and the rule used (no lines: they are paged). */
 export async function GET_PAYROLL_TAXES_MONTH(month: Month) {
   const response = await apiFetch<AccountingPayrollMonth>(`/accounting/payroll/${encodeURIComponent(month)}`, {
     method: 'GET',
+    cache: 'no-store',
+  });
+  return handleResponse({ response, showErrorToast: false });
+}
+
+/**
+ * `GET /accounting/payroll/:month/lines?page&limit&search&insurance` — one page of the month's lines
+ * as the viewer may see them (by code), searched and narrowed to one insurance group by the API,
+ * with `totals` over every matching line (money only with every salary).
+ */
+export async function GET_PAYROLL_TAXES_LINES(month: Month, query: AccountingPayrollLinesQuery = {}) {
+  const response = await apiFetch<AccountingPayrollLinesPage>(`/accounting/payroll/${encodeURIComponent(month)}/lines`, {
+    method: 'GET',
+    params: {
+      page: query.page ? String(query.page) : undefined,
+      limit: query.limit ? String(query.limit) : undefined,
+      search: query.search || undefined,
+      insurance: query.insurance,
+    },
     cache: 'no-store',
   });
   return handleResponse({ response, showErrorToast: false });

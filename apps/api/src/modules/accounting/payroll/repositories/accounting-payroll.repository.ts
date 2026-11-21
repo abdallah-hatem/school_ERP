@@ -47,6 +47,24 @@ export interface AccountingLineData {
   gross: number;
 }
 
+/** What narrows a month's lines: the search (code or either name) and one insurance group. */
+export interface AccountingLinesFilter {
+  search?: string;
+  insurance?: InsuranceStatus;
+}
+
+function linesWhere(runId: string, filter: AccountingLinesFilter): Prisma.AccountingPayrollLineWhereInput {
+  const where: Prisma.AccountingPayrollLineWhereInput = { runId };
+  if (filter.insurance) where.insuranceStatus = filter.insurance;
+  const search = filter.search?.trim();
+  if (search) {
+    where.OR = (['employeeCode', 'nameEn', 'nameAr'] as const).map((field) => ({
+      [field]: { contains: search, mode: 'insensitive' as const },
+    }));
+  }
+  return where;
+}
+
 const EMPTY_TOTALS: AccountingPayrollTotals = {
   employees: 0,
   net: 0,
@@ -98,6 +116,55 @@ export class AccountingPayrollRepository {
       select: ACCOUNTING_RUN_SELECT,
       orderBy: { month: 'asc' },
     });
+  }
+
+  /**
+   * One page of a month's lines (by employee code) matching `filter`, and how many match. The
+   * search is the code, English or Arabic name (any case); `insurance` keeps one group.
+   */
+  async findLinesPage(
+    runId: string,
+    filter: AccountingLinesFilter,
+    page: number,
+    limit: number,
+  ): Promise<{ rows: AccountingLineRow[]; total: number; page: number; limit: number }> {
+    const take = Math.min(Math.max(1, limit), PAYROLL_PAGINATION.maxLimit);
+    const current = Math.max(1, page);
+    const where = linesWhere(runId, filter);
+    const [rows, total] = await Promise.all([
+      this.db.accountingPayrollLine.findMany({
+        where,
+        select: ACCOUNTING_LINE_SELECT,
+        orderBy: { employeeCode: 'asc' },
+        skip: (current - 1) * take,
+        take,
+      }),
+      this.db.accountingPayrollLine.count({ where }),
+    ]);
+    return { rows, total, page: current, limit: take };
+  }
+
+  /** The sums of every line matching `filter` (all pages), in one aggregate query. */
+  async sumLines(runId: string, filter: AccountingLinesFilter): Promise<AccountingPayrollTotals> {
+    const s = await this.db.accountingPayrollLine.aggregate({
+      where: linesWhere(runId, filter),
+      _count: { _all: true },
+      _sum: { net: true, insuranceAmount: true, incomeTax: true, martyrTax: true, gross: true },
+    });
+    return {
+      employees: s._count._all,
+      net: s._sum.net ?? 0,
+      insuranceAmount: s._sum.insuranceAmount ?? 0,
+      incomeTax: s._sum.incomeTax ?? 0,
+      martyrTax: s._sum.martyrTax ?? 0,
+      gross: s._sum.gross ?? 0,
+    };
+  }
+
+  /** Every employee on a month's lines (the salary-scope count). */
+  async findLineEmployeeIds(runId: string): Promise<string[]> {
+    const rows = await this.db.accountingPayrollLine.findMany({ where: { runId }, select: { employeeId: true } });
+    return rows.map((r) => r.employeeId);
   }
 
   findLines(runId: string): Promise<AccountingLineRow[]> {

@@ -489,6 +489,14 @@ describe('AuditService reads', () => {
       expect(entries.findActors).toHaveBeenCalledWith({}, []);
     });
 
+    it('the picker’s search, one person and the cap go to the query, inside the same scope', async () => {
+      const { service, entries } = makeService({ visibleEmployees: ['e1'] });
+      await service.listActors(undefined, { search: 'mona', limit: 20 });
+      expect(entries.findActors).toHaveBeenCalledWith({ search: 'mona', limit: 20 }, [{ entityType: 'employee', ids: ['e1'] }]);
+      await service.listActors(undefined, { id: 'u1' });
+      expect(entries.findActors).toHaveBeenLastCalledWith({ id: 'u1' }, [{ entityType: 'employee', ids: ['e1'] }]);
+    });
+
     it('a payroll run’s totals follow the Payroll screen: shown to the principal (payroll at all, no salary)', async () => {
       const { service, entries } = makeService({ salaryScope: null, payrollScope: 'all' });
       const changes = [

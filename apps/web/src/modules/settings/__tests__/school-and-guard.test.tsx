@@ -313,7 +313,7 @@ describe('Settings screen — change history (owner, 2026-11-17)', () => {
     expect(buttons.map((b) => b.querySelector('span > span')?.textContent)).toEqual(['School structure', 'Penalty catalogue']);
     expect(buttons[0]?.getAttribute('aria-current')).toBe('page');
     // The School section (core.settings.view) is never asked for: the API would refuse it.
-    await waitFor(() => expect(api.GET_LIST_ITEMS).toHaveBeenCalledWith('stages'));
+    await waitFor(() => expect(api.GET_LIST_ITEMS).toHaveBeenCalledWith('stages', { page: 1, limit: 10 }));
     expect(api.GET_SCHOOL_SETTINGS_FOR_EDIT).not.toHaveBeenCalled();
   });
 

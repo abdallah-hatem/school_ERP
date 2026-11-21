@@ -1,5 +1,4 @@
 import {
-  EmployeeStatus,
   ErrorCode,
   PenaltyAction,
   PenaltyStatus,
@@ -33,32 +32,20 @@ export function describeAction(t: Translate, locale: Locale, action: PenaltyActi
 }
 
 /**
- * The violation picker's sections: one per catalogue group in its order, each with the violations
- * still in use. A retired group retires every violation in it (§4); empty groups are left out.
- * Searchable by the violation's name in either language and by its group's name in either.
+ * The violation picker's sections, as the API answered (`GET_PENALTY_GROUPS`: what can be recorded
+ * now, in the catalogue's order, searched there): one per group with its violations.
  */
 export function violationGroups(groups: PenaltyGroup[], locale: Locale): SelectOptionGroup[] {
-  return [...groups]
-    .filter((g) => g.isActive)
-    .sort((a, b) => a.sortOrder - b.sortOrder)
-    .map((g) => ({
-      key: g.id,
-      label: nameIn(g, locale),
-      options: g.violations
-        .filter((v) => v.isActive)
-        .map((v) => ({ value: v.id, label: nameIn(v, locale), keywords: [v.nameEn, v.nameAr, g.nameEn, g.nameAr] })),
-    }))
-    .filter((g) => g.options.length > 0);
+  return groups.map((g) => ({
+    key: g.id,
+    label: nameIn(g, locale),
+    options: g.violations.map((v) => ({ value: v.id, label: nameIn(v, locale) })),
+  }));
 }
 
-/**
- * Active employees only (§4: a penalty is recorded for an active employee), "Name · code",
- * searchable by either name and the code.
- */
-export function employeeOptions(employees: Pick<EmployeeSummary, 'id' | 'code' | 'nameEn' | 'nameAr' | 'status'>[], locale: Locale): SelectOption[] {
-  return employees
-    .filter((e) => e.status === EmployeeStatus.ACTIVE)
-    .map((e) => ({ value: e.id, label: `${nameIn(e, locale)} · ${e.code}`, keywords: [e.nameEn, e.nameAr, e.code] }));
+/** An employee as the picker's choice: "Name · code". The API lists the active ones as the person types. */
+export function employeeChoice(e: Pick<EmployeeSummary, 'id' | 'code' | 'nameEn' | 'nameAr'>, locale: Locale): SelectOption {
+  return { value: e.id, label: `${nameIn(e, locale)} · ${e.code}` };
 }
 
 /**

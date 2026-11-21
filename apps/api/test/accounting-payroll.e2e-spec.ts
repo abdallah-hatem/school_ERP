@@ -1,6 +1,8 @@
 import { INestApplication } from '@nestjs/common';
 import {
+  type AccountingPayrollLinesPage,
   type AccountingPayrollMonth,
+  type AccountingPayrollMonthSheet,
   type AccountingPayrollMonthSummary,
   type AccountingPayrollYear,
   type AuthUser,
@@ -116,9 +118,17 @@ describe('Accounting — payroll taxes of approved months (e2e)', () => {
       throw new Error(`accounting never recorded ${month}`);
     }
   };
-  const monthOf = async (month: string) =>
-    (await http(app).get(`/accounting/payroll/${month}`).expect(200)).body.data as AccountingPayrollMonth;
-  const lineOf = (m: AccountingPayrollMonth, employeeId: string) => {
+  /** A page of the month's lines (`GET /accounting/payroll/:month/lines`). */
+  const linesOf = async (month: string, query: Record<string, string | number> = {}) =>
+    (await http(app).get(`/accounting/payroll/${month}/lines`).query(query).expect(200)).body
+      .data as AccountingPayrollLinesPage;
+  /** The month and every one of its lines (one page of 500 holds a suite's employees). */
+  const monthOf = async (month: string): Promise<AccountingPayrollMonthSheet> => {
+    const m = (await http(app).get(`/accounting/payroll/${month}`).expect(200)).body.data as AccountingPayrollMonth;
+    expect(m).not.toHaveProperty('lines');
+    return { ...m, lines: (await linesOf(month, { limit: 500 })).items };
+  };
+  const lineOf = (m: AccountingPayrollMonthSheet, employeeId: string) => {
     const line = m.lines.find((l) => l.employeeId === employeeId);
     if (!line) throw new Error(`no line for ${employeeId}`);
     return line;
@@ -496,6 +506,59 @@ describe('Accounting — payroll taxes of approved months (e2e)', () => {
     expect((await monthOf(month)).status).toBe('PENDING');
   });
 
+  // ── the lines: paged, searched, one group, totals over every match (owner, 2026-11-21) ──
+
+  it('lines: the API pages them by code, searches code and both names, keeps one insurance group, and sums every match', async () => {
+    const month = nextMonth();
+    const plain = await employee({ nameEn: unique('Zeinab Paging') });
+    const a = await insured(500_000);
+    const b = await insured(600_000);
+    const run = await createRun(month);
+    await approve(run.id);
+    await recorded(month);
+    const all = await monthOf(month);
+    expect(all.lines.map((l) => l.employeeCode)).toEqual([...all.lines.map((l) => l.employeeCode)].sort());
+
+    // Paging: one line a page, the total says how many; the pages follow the code order.
+    const first = await linesOf(month, { page: 1, limit: 1 });
+    const second = await linesOf(month, { page: 2, limit: 1 });
+    expect(first).toMatchObject({ total: all.lines.length, page: 1, limit: 1 });
+    expect(first.items).toHaveLength(1);
+    expect(second.items[0].employeeCode).toBe(all.lines[1].employeeCode);
+    // The totals are the whole month's, whichever page.
+    expect(first.totals).toEqual(all.totals);
+    expect(second.totals).toEqual(all.totals);
+
+    // One group: only its lines, and its subtotals over all of them.
+    const insuredPage = await linesOf(month, { insurance: 'INSURED', limit: 1 });
+    const insuredLines = all.lines.filter((l) => l.insuranceStatus === 'INSURED');
+    expect(insuredPage.total).toBe(insuredLines.length);
+    expect(insuredPage.items.every((l) => l.insuranceStatus === 'INSURED')).toBe(true);
+    expect(insuredPage.totals.gross).toBe(insuredLines.reduce((n, l) => n + l.gross!, 0));
+    expect(insuredPage.totals.employees).toBe(insuredLines.length);
+    expect(insuredLines.map((l) => l.employeeId)).toEqual(expect.arrayContaining([a, b]));
+
+    // Search: a name part (any case) and a code; the totals follow the search.
+    const plainLine = lineOf(all, plain);
+    const byName = await linesOf(month, { search: 'zeinab paging' });
+    expect(byName.items.map((l) => l.employeeId)).toEqual([plain]);
+    expect(byName.totals).toMatchObject({ employees: 1, gross: plainLine.gross });
+    const byCode = await linesOf(month, { search: plainLine.employeeCode });
+    expect(byCode.items.map((l) => l.employeeId)).toContain(plain);
+    const none = await linesOf(month, { search: 'no-such-employee-xyz' });
+    expect(none).toMatchObject({ items: [], total: 0, totals: { employees: 0, gross: 0 } });
+
+    // Bounds: a payroll table's page holds up to 500; more, a bad page or group is a 400.
+    await http(app).get(`/accounting/payroll/${month}/lines`).query({ limit: 501 }).expect(400);
+    await http(app).get(`/accounting/payroll/${month}/lines`).query({ page: 0 }).expect(400);
+    await http(app).get(`/accounting/payroll/${month}/lines`).query({ insurance: 'MAYBE' }).expect(400);
+    await http(app).get(`/accounting/payroll/${month}/lines`).query({ limit: 500 }).expect(200);
+    // A page past the end is empty, the total still right.
+    expect(await linesOf(month, { page: 99, limit: 10 })).toMatchObject({ items: [], total: all.lines.length });
+    // A month HR never approved: 404.
+    await http(app).get('/accounting/payroll/2099-01/lines').expect(404);
+  });
+
   // ── who sees it (§2, P4) ──────────────────────────────────────────────────
 
   it('salary data: a role with accounting.payroll.view but not hr.employees.view_salary sees the lines without tax, insurance, gross or net, and no money totals', async () => {
@@ -509,7 +572,7 @@ describe('Accounting — payroll taxes of approved months (e2e)', () => {
     expect(full).toMatchObject({ salaryVisible: true, totals: { gross: full.totals.gross } });
 
     await as(noSalary, async () => {
-      const m = (await http(app).get(`/accounting/payroll/${month}`).expect(200)).body.data as AccountingPayrollMonth;
+      const m = await monthOf(month);
       const line = lineOf(m, emp);
       expect(line).toMatchObject({ employeeId: emp, insuranceStatus: 'INSURED', salaryVisible: false });
       for (const field of ['net', 'insuredSalary', 'insuranceAmount', 'incomeTax', 'martyrTax', 'gross']) {
@@ -517,6 +580,11 @@ describe('Accounting — payroll taxes of approved months (e2e)', () => {
       }
       expect(m.salaryVisible).toBe(false);
       expect(m.totals).toEqual({ employees: full.totals.employees });
+      expect(m.visibleLines).toBe(0);
+      // The lines' totals over the filtered set: the count only.
+      expect((await linesOf(month, { insurance: 'INSURED' })).totals).toEqual({
+        employees: full.lines.filter((l) => l.insuranceStatus === 'INSURED').length,
+      });
       const list = (await http(app).get('/accounting/payroll').query({ limit: 100 }).expect(200)).body
         .data as AccountingPayrollMonthSummary[];
       expect(list.find((r) => r.month === month)?.totals).toEqual({ employees: full.totals.employees });
@@ -532,6 +600,7 @@ describe('Accounting — payroll taxes of approved months (e2e)', () => {
       await http(app).get('/accounting/payroll/2026-11').expect(403);
       await http(app).get('/accounting/payroll/year/2026').expect(403);
       await http(app).get('/accounting/payroll/2026-11/export').expect(403);
+      await http(app).get('/accounting/payroll/2026-11/lines').expect(403);
     });
   });
 });

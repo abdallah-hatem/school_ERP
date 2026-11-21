@@ -1,12 +1,14 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import type { PenaltyPreview } from '@school-erp/shared';
+import { EmployeeStatus, type EmployeeSummary, type PenaltyGroup, type PenaltyPreview } from '@school-erp/shared';
 import { useRouter } from 'next/navigation';
 import { useEffect, useId, useRef, useState } from 'react';
 import { useForm, useFormState, useWatch } from 'react-hook-form';
 import { callApi } from '@/lib/callApi';
-import { DateField, SelectField, TextareaField, type SelectOption, type SelectOptionGroup } from '@/shared/components/form/fields';
+import { DateField, SelectField, TextareaField } from '@/shared/components/form/fields';
+import type { ServerOptions } from '@/shared/components/ui/combobox';
+import { PICKER_PAGE, useServerOptions } from '@/shared/hooks/use-server-options';
 import { Form } from '@/shared/components/form/form';
 import { Button } from '@/shared/components/ui/button';
 import { Dialog, DialogClose, DialogContent } from '@/shared/components/ui/dialog';
@@ -14,8 +16,9 @@ import { PenaltiesIcon } from '@/shared/components/ui/icons';
 import { formatCount, todayIso } from '@/shared/lib/format';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
-import { CREATE_PENALTY, GET_PENALTY_PREVIEW } from '../apis';
-import { describeAction, errorMessage } from '../lib/penalty-text';
+import { GET_EMPLOYEES } from '../../employees/apis';
+import { CREATE_PENALTY, GET_PENALTY_GROUPS, GET_PENALTY_PREVIEW } from '../apis';
+import { describeAction, employeeChoice, errorMessage, violationGroups } from '../lib/penalty-text';
 import { RecountList } from './recount-list';
 import {
   emptyRecordForm,
@@ -29,12 +32,12 @@ import {
 export interface RecordPenaltyDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Active employees (`employeeOptions`). */
-  employees: SelectOption[];
-  /** Violations in use, by catalogue group (`violationGroups`). */
-  violations: SelectOptionGroup[];
-  /** Pre-picked employee (the profile tab). */
-  employeeId?: string;
+  /**
+   * Pre-picked employee (the profile tab): the only choice. Without it the picker asks the API for
+   * active employees as the person types; the violations always come from the API (what can be
+   * recorded now, searched by violation or group name).
+   */
+  employee?: Pick<EmployeeSummary, 'id' | 'code' | 'nameEn' | 'nameAr'>;
 }
 
 /** The error type of a rule the server refused the save on (`fieldForError`). */
@@ -52,8 +55,20 @@ type PreviewState =
  * are set, a live line shows the level and action the server would give ("Level 2 — Deduct 0.5
  * day"); only the latest answer is shown. Saves as pending; rule errors land on their field.
  */
-export function RecordPenaltyDialog({ open, onOpenChange, employees, violations, employeeId }: RecordPenaltyDialogProps) {
+export function RecordPenaltyDialog({ open, onOpenChange, employee }: RecordPenaltyDialogProps) {
   const { t, has, locale } = useTranslation();
+  const employeeId = employee?.id;
+  const employeeSearch = useServerOptions<EmployeeSummary>({
+    load: (search) => GET_EMPLOYEES({ status: EmployeeStatus.ACTIVE, search, limit: PICKER_PAGE }),
+    toOption: (e) => employeeChoice(e, locale),
+  });
+  const employees: ServerOptions = employee
+    ? { options: [employeeChoice(employee, locale)], onQueryChange: () => undefined, loading: false, selected: employeeChoice(employee, locale) }
+    : employeeSearch;
+  const violations = useServerOptions<PenaltyGroup>({
+    load: (search) => GET_PENALTY_GROUPS({ search }),
+    toGroups: (groups) => violationGroups(groups, locale),
+  });
   const router = useRouter();
   const formId = useId();
   const form = useForm<RecordPenaltyValues>({
@@ -182,7 +197,7 @@ export function RecordPenaltyDialog({ open, onOpenChange, employees, violations,
       >
         <Form id={formId} onSubmit={(e) => void handleSubmit(onSubmit)(e)}>
           <SelectField
-            searchable
+            server={employees}
             control={control}
             name="employeeId"
             label={t('penalties.form.employee')}
@@ -190,12 +205,11 @@ export function RecordPenaltyDialog({ open, onOpenChange, employees, violations,
             disabled={busy}
             placeholder={t('penalties.form.employeePlaceholder')}
             searchPlaceholder={t('penalties.form.employeeSearch')}
-            options={employees}
             emptyText={t('penalties.form.noEmployees')}
             noMatchesText={t('penalties.form.noEmployeeMatches')}
           />
           <SelectField
-            searchable
+            server={violations}
             control={control}
             name="violationId"
             label={t('penalties.form.violation')}
@@ -203,7 +217,6 @@ export function RecordPenaltyDialog({ open, onOpenChange, employees, violations,
             disabled={busy}
             placeholder={t('penalties.form.violationPlaceholder')}
             searchPlaceholder={t('penalties.form.violationSearch')}
-            groups={violations}
             emptyText={t('penalties.form.noViolations')}
             noMatchesText={t('penalties.form.noViolationMatches')}
           />

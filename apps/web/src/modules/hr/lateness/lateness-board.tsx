@@ -1,9 +1,16 @@
 'use client';
 
 import { useCan } from '@/core/auth';
-import { ErrorCode, PAGINATION, type LatenessRule, type LatenessRow, type Month } from '@school-erp/shared';
+import {
+  ErrorCode,
+  latenessDays,
+  type LatenessRule,
+  type LatenessRow,
+  type LatenessTotals,
+  type Month,
+} from '@school-erp/shared';
 import { useRouter } from 'next/navigation';
-import { useId, useMemo, useRef, useState, useTransition } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, useTransition } from 'react';
 import { EmployeeLink } from '@/core/employees';
 import { callApi } from '@/lib/callApi';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-table/data-table';
@@ -24,56 +31,120 @@ import { nameIn } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { PUT_LATENESS } from './apis';
 import { describeLatenessRule } from './describe-rule';
-import { gridState, matchesSearch, MINUTES_MAX, viewEntry, type Drafts } from './lateness-entries';
+import { gridState, MINUTES_MAX, viewEntry, type Drafts } from './lateness-entries';
+import { latenessHref } from './lateness-month';
+
+const SEARCH_DEBOUNCE_MS = 300;
+const NO_TOTALS: LatenessTotals = { employees: 0, minutes: 0, days: 0 };
 
 export interface LatenessBoardProps {
   month: Month;
   /** Latest month that can be picked (this month). */
   maxMonth: Month;
-  /** `null` when the list failed to load; `undefined` on first load (the route's skeleton). */
+  /**
+   * One page of the month, as the API paged and searched it; `null` when it failed to load;
+   * `undefined` on first load (the route's skeleton).
+   */
   rows: LatenessRow[] | null | undefined;
   /** The rule the list came with; `null` when it is missing; `undefined` on first load. */
   rule: LatenessRule | null | undefined;
   /** The month's payroll is approved: open read-only. */
   locked: boolean;
+  /** The URL's search (the API searched with it). */
+  search: string;
+  /** Employees matching the search (all pages), this page and its size. */
+  total: number;
+  page: number;
+  limit: number;
+  /** The month's totals over every employee (the summary line); `null` when not loaded. */
+  totals: LatenessTotals | null;
 }
 
 /**
- * The month's lateness grid: minutes per active employee, days computed live from the shared rule
- * while typing, "Save all" sends only the changed rows. A locked month (approved payroll) opens
- * read-only; a 409 `PAYROLL_APPROVED` on save turns it read-only too.
+ * The month's lateness grid: minutes per active employee, one page at a time as the API pages and
+ * searches it (`?search&page` in the URL), days computed live from the shared rule while typing,
+ * "Save all" sends only the changed rows — typed on any page or under any search. The summary is
+ * the month's totals from the API, moved by the unsaved changes. A locked month (approved payroll)
+ * opens read-only; a 409 `PAYROLL_APPROVED` on save turns it read-only too.
  */
-export function LatenessBoard({ month, maxMonth, rows: initialRows, rule: initialRule, locked: initialLocked }: LatenessBoardProps) {
+export function LatenessBoard({
+  month,
+  maxMonth,
+  rows: serverRows,
+  rule: serverRule,
+  locked: serverLocked,
+  search: urlSearch,
+  total,
+  page,
+  limit,
+  totals: serverTotals,
+}: LatenessBoardProps) {
   const { t, locale } = useTranslation();
   const router = useRouter();
   const [navigating, startNavigation] = useTransition();
   const [retrying, startRetry] = useTransition();
 
-  const [rows, setRows] = useState<LatenessRow[] | null | undefined>(initialRows);
-  // The rule comes with each list (load and save), so the preview always matches the saved days.
-  const [rule, setRule] = useState<LatenessRule | null | undefined>(initialRule);
+  // A save's answer (the saved minutes, the month's totals, lock and rule) shows over the page it
+  // was saved on until the re-read page arrives — the rule comes with each answer, so the preview
+  // always matches the saved days.
+  const [saved, setSaved] = useState<{
+    on: LatenessRow[] | null | undefined;
+    minutes: Record<string, number>;
+    totals: LatenessTotals;
+    rule: LatenessRule | null;
+  } | null>(null);
+  const overlay = saved && saved.on === serverRows ? saved : null;
+  const rule = overlay ? overlay.rule : serverRule;
+  const rows = useMemo(
+    () =>
+      overlay && serverRows
+        ? serverRows.map((r) => {
+            const minutes = overlay.minutes[r.employee.id];
+            return minutes === undefined ? r : { ...r, minutes, days: rule ? latenessDays(minutes, rule) : r.days };
+          })
+        : serverRows,
+    [overlay, serverRows, rule],
+  );
+  const totals = overlay?.totals ?? serverTotals ?? NO_TOTALS;
   const loading = rows === undefined;
   const [drafts, setDrafts] = useState<Drafts>({});
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
-  const limit = PAGINATION.defaultLimit;
-  const [locked, setLocked] = useState(initialLocked);
+  const [search, setSearch] = useState(urlSearch);
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (searchTimer.current) clearTimeout(searchTimer.current);
+    },
+    [],
+  );
+  // A 409 on save locks the month at once; otherwise the month's own lock.
+  const [lockedBySave, setLockedBySave] = useState(false);
+  const locked = serverLocked || lockedBySave;
   // R6: without `hr.lateness.edit` the month is read-only (no inputs, no Save).
   const canEdit = useCan()('hr.lateness.edit');
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
   const [pendingMonth, setPendingMonth] = useState<Month | null>(null);
 
-  const state = useMemo(() => gridState(rows ?? [], drafts, rule ?? null), [rows, drafts, rule]);
-  const filtered = useMemo(() => (rows ?? []).filter((row) => matchesSearch(row, search)), [rows, search]);
-  const pageCount = Math.max(1, Math.ceil(filtered.length / limit));
-  const currentPage = Math.min(page, pageCount);
-  const pageRows = filtered.slice((currentPage - 1) * limit, currentPage * limit);
+  const state = useMemo(() => gridState(drafts, totals, rule ?? null), [drafts, totals, rule]);
   const dirty = state.entries.length > 0 || state.invalidCount > 0;
   const monthLabel = formatMonth(month, locale);
 
   function goTo(next: Month) {
     startNavigation(() => router.push(`?month=${next}`, { scroll: false }));
+  }
+
+  /** The search and the page live in the URL; the API answers with the page. Typed minutes stay. */
+  function goSearch(next: { search?: string; page?: number }) {
+    startNavigation(() => router.push(latenessHref(month, next), { scroll: false }));
+  }
+
+  function onSearchChange(text: string) {
+    setSearch(text);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => {
+      searchTimer.current = null;
+      goSearch({ search: text.trim() || undefined });
+    }, SEARCH_DEBOUNCE_MS);
   }
 
   function requestMonth(next: Month) {
@@ -97,14 +168,17 @@ export function LatenessBoard({ month, maxMonth, rows: initialRows, rule: initia
       // A 401 is handled by callApi (sign-in redirect); check it before `success`.
       if (res.unauthorized) return;
       if (res.success) {
-        if (res.data && Array.isArray(res.data.rows)) {
-          setRows(res.data.rows);
-          setLocked(res.data.locked);
-          if (res.data.rule) setRule(res.data.rule);
+        const sent = Object.fromEntries(state.entries.map((e) => [e.employeeId, e.minutes]));
+        if (res.data && res.data.totals) {
+          const answer = res.data;
+          setSaved({ on: serverRows, minutes: sent, totals: answer.totals, rule: answer.rule ?? rule ?? null });
+          if (answer.locked) setLockedBySave(true);
         }
         setDrafts({});
+        // Re-read this page (and its totals) from the API.
+        startNavigation(() => router.refresh());
       } else if (res.status === 409 && res.error === ErrorCode.PAYROLL_APPROVED) {
-        setLocked(true);
+        setLockedBySave(true);
         setDrafts({});
       }
     } finally {
@@ -154,9 +228,9 @@ export function LatenessBoard({ month, maxMonth, rows: initialRows, rule: initia
       cell: (row) => (
         <MinutesInput
           row={row}
-          draft={drafts[row.employee.id]}
+          draft={drafts[row.employee.id]?.text}
           readOnly={locked || !canEdit}
-          onChange={(text) => setDrafts((prev) => ({ ...prev, [row.employee.id]: text }))}
+          onChange={(text) => setDrafts((prev) => ({ ...prev, [row.employee.id]: { text, row: prev[row.employee.id]?.row ?? row } }))}
         />
       ),
     },
@@ -166,7 +240,7 @@ export function LatenessBoard({ month, maxMonth, rows: initialRows, rule: initia
       align: 'end',
       className: 'w-32',
       cell: (row) => {
-        const view = viewEntry(row, drafts[row.employee.id], rule ?? null);
+        const view = viewEntry(row, drafts[row.employee.id]?.text, rule ?? null);
         return (
           <span data-testid={`days-${row.employee.id}`} aria-live="polite">
             {view.days === null ? '—' : <Days value={view.days} />}
@@ -176,11 +250,13 @@ export function LatenessBoard({ month, maxMonth, rows: initialRows, rule: initia
     },
   ];
 
-  const searching = search.trim().length > 0;
-  /** The grid's search is local (typed minutes stay in memory), so clearing it is too. */
+  const searching = urlSearch.trim().length > 0 || search.trim().length > 0;
+  /** Search and page in one URL update; typed minutes stay in memory. */
   function clearSearch() {
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    searchTimer.current = null;
     setSearch('');
-    setPage(1);
+    goSearch({});
   }
 
   return (
@@ -245,14 +321,14 @@ export function LatenessBoard({ month, maxMonth, rows: initialRows, rule: initia
       <DataTable
         label={t('lateness.tableLabel', { month: monthLabel })}
         columns={columns}
-        rows={rows ? pageRows : undefined}
+        rows={rows ?? undefined}
         loading={loading}
         getRowId={(row) => row.employee.id}
         error={rows === null}
         onRetry={retry}
         retrying={retrying}
         refreshing={navigating}
-        rowTone={(row) => (viewEntry(row, drafts[row.employee.id], rule ?? null).invalid ? 'danger' : undefined)}
+        rowTone={(row) => (viewEntry(row, drafts[row.employee.id]?.text, rule ?? null).invalid ? 'danger' : undefined)}
         empty={
           searching ? (
             <EmptyState
@@ -275,17 +351,14 @@ export function LatenessBoard({ month, maxMonth, rows: initialRows, rule: initia
                 value={search}
                 disabled={loading}
                 loading={navigating}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
+                onChange={(e) => onSearchChange(e.target.value)}
               />
               <ClearFilters count={searching ? 1 : 0} onClear={clearSearch} disabled={loading} />
               {rows ? (
                 <p data-testid="lateness-summary" className="ms-auto text-sm font-semibold text-muted-foreground">
                   {t('lateness.summary', {
                     // Each count agrees with its own noun (Arabic plural forms).
-                    employees: t('lateness.summaryEmployees', { count: formatCount(rows.length) }),
+                    employees: t('lateness.summaryEmployees', { count: formatCount(totals.employees) }),
                     minutes: t('lateness.summaryMinutes', { count: formatCount(state.totalMinutes) }),
                     days: state.totalDays === null ? '—' : formatDayCount(state.totalDays, locale),
                   })}
@@ -308,10 +381,10 @@ export function LatenessBoard({ month, maxMonth, rows: initialRows, rule: initia
           rows === null
             ? undefined
             : {
-                page: currentPage,
+                page,
                 limit,
-                total: filtered.length,
-                onPageChange: setPage,
+                total,
+                onPageChange: (next) => goSearch({ search: urlSearch || undefined, page: next }),
               }
         }
       />

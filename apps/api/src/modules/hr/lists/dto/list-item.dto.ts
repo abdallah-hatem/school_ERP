@@ -1,17 +1,22 @@
 import { PartialType } from '@nestjs/mapped-types';
-import type {
-  CreateJobTitleRequest,
-  CreateListItemRequest,
-  UpdateJobTitleRequest,
-  UpdateListItemRequest,
-} from '@school-erp/shared';
-import { Transform } from 'class-transformer';
 import {
+  PAGINATION,
+  type CreateJobTitleRequest,
+  type CreateListItemRequest,
+  type ListStagesQuery,
+  type UpdateJobTitleRequest,
+  type UpdateListItemRequest,
+} from '@school-erp/shared';
+import { Transform, Type } from 'class-transformer';
+import {
+  ArrayMaxSize,
+  IsArray,
   IsBoolean,
   IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUUID,
   Max,
   MaxLength,
   Min,
@@ -64,7 +69,7 @@ export class UpdateJobTitleDto extends UpdateListItemDto implements UpdateJobTit
 }
 
 /** `?includeHidden=true` also returns hidden items (for the Settings screen). */
-export class ListItemsQueryDto {
+export class ListItemsQueryDto implements ListStagesQuery {
   @IsOptional()
   @Transform(({ value }: { value: unknown }) =>
     value === 'true' || value === true
@@ -75,4 +80,37 @@ export class ListItemsQueryDto {
   )
   @IsBoolean()
   includeHidden?: boolean;
+
+  /** With `page`, `limit` or `search`: one page with `meta` (no defaults, so their absence means the whole list). */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(PAGINATION.maxLimit)
+  limit?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
+  search?: string;
+
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.split(',').filter(Boolean) : value))
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsUUID('all', { each: true })
+  ids?: string[];
 }
+
+/** True when the list is asked for a page (the Settings screen) rather than whole (choices). */
+export function wantsPage(query: ListItemsQueryDto): boolean {
+  return query.page !== undefined || query.limit !== undefined || Boolean(query.search) || query.ids !== undefined;
+}
+

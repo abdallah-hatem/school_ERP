@@ -17,6 +17,7 @@ import type {
   Days,
   IsoDate,
   IsoDateTime,
+  ListPage,
   Month,
   NamedRef,
   Names,
@@ -237,6 +238,18 @@ export interface PenaltyGroup extends Names {
   sortOrder: number;
   isActive: boolean;
   violations: Violation[];
+  /**
+   * Only on a search (`GET /hr/penalty-groups?search=`): the group's own name matched (every
+   * violation listed), or only `violations` matched — and how many violations the group has in all.
+   */
+  match?: { group: boolean; violationCount: number };
+}
+
+/** `GET /hr/penalty-groups?search` — a violation's or a group's name, either language. */
+export interface PenaltyCatalogueQuery {
+  search?: string;
+  /** Only what can be recorded now: retired groups and violations left out (the record picker). */
+  active?: boolean;
 }
 
 export interface CreatePenaltyGroupRequest extends Names {
@@ -386,8 +399,15 @@ export interface LatenessRow {
   days: Days;
 }
 
-/** `GET /hr/lateness?month=` and `PUT /hr/lateness/:month`: the month's whole list. */
-export interface LatenessMonth {
+/** The month's lateness over every listed employee (all pages, whatever the search): the summary. */
+export interface LatenessTotals {
+  employees: number;
+  minutes: number;
+  days: Days;
+}
+
+/** `PUT /hr/lateness/:month` — the month as it stands after the save (the screen re-reads its page). */
+export interface LatenessSummary {
   /** True once the month's payroll is approved — entry is refused (409 `PAYROLL_APPROVED`). */
   locked: boolean;
   /**
@@ -395,7 +415,22 @@ export interface LatenessMonth {
    * `hr.settings.view` can still see and preview days. Only the lateness rule, no other setting.
    */
   rule: LatenessRule;
-  rows: LatenessRow[];
+  /** Every employee the viewer may see this month, whatever the page or search. */
+  totals: LatenessTotals;
+}
+
+/**
+ * `GET /hr/lateness?month&page&limit&search` — one page of the month's employees (by code; the
+ * search matches the code or either name), with the month's lock, rule and totals.
+ */
+export interface LatenessMonth extends LatenessSummary, ListPage<LatenessRow> {}
+
+/** `GET /hr/lateness` query (`limit` ≤ 100). */
+export interface LatenessQuery {
+  month: Month;
+  page?: number;
+  limit?: number;
+  search?: string;
 }
 
 export interface PutLatenessRequest {
@@ -573,7 +608,15 @@ export interface PayrollRun extends PayrollRunSummary {
    * the screen words them as the current rules, not the ones it was approved with. No money.
    */
   rules: PayrollRunRules;
+  /** One page of the lines matching the query (by code; `?page&limit`, limit ≤ 500). */
   lines: PayrollLine[];
+  /** How many lines match the query (all pages), and the page `lines` is. */
+  linesPage: { total: number; page: number; limit: number };
+  /**
+   * Lines (in the viewer's scope, any page) whose last calculation found PENDING penalties — the
+   * "penalties changed since the calculation" notice when none is pending any more.
+   */
+  pendingPenaltyLines: number;
   adjustments: PayrollAdjustment[];
 }
 
@@ -585,6 +628,9 @@ export interface PayrollRunQuery {
   search?: string;
   departmentId?: Uuid;
   flagged?: boolean;
+  /** The lines' page (`limit` ≤ 500, a payroll table). */
+  page?: number;
+  limit?: number;
 }
 
 export interface CreateAdjustmentRequest {

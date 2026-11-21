@@ -10,10 +10,15 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push, refresh, replace: vi.fn(), prefetch: vi.fn() }),
 }));
 vi.mock('next/link', async () => ({ default: (await import('../test/fixtures')).MockLink }));
+// The filters' choices come from the API (searched there, never here).
+const apis = vi.hoisted(() => ({ GET_DEPARTMENTS: vi.fn(), GET_STAGES: vi.fn() }));
+vi.mock('../apis', () => apis);
 
 import type { EmployeeSummary } from '@school-erp/shared';
 import { parseEmployeesQuery } from '../lib/list-query';
 import { departments, renderEmployees, stages, summary } from '../test/fixtures';
+
+const page = <T,>(data: T[]) => ({ success: true as const, status: 200, data, meta: { total: data.length, page: 1, limit: 20 } });
 import { EmployeesList } from './employees-list';
 
 const people: EmployeeSummary[] = [
@@ -28,7 +33,6 @@ function renderList(params: Record<string, string> = {}, rows: EmployeeSummary[]
       query={parseEmployeesQuery(params)}
       rows={rows}
       total={rows.length}
-      departments={departments}
       stages={stages}
     />,
     locale,
@@ -36,7 +40,11 @@ function renderList(params: Record<string, string> = {}, rows: EmployeeSummary[]
 }
 
 describe('EmployeesList', () => {
-  beforeEach(() => push.mockReset());
+  beforeEach(() => {
+    push.mockReset();
+    apis.GET_DEPARTMENTS.mockReset().mockResolvedValue(page(departments));
+    apis.GET_STAGES.mockReset().mockResolvedValue(page(stages));
+  });
   afterEach(() => {
     cleanup();
     vi.useRealTimers();
@@ -84,6 +92,35 @@ describe('EmployeesList', () => {
     await user.click(screen.getByRole('combobox', { name: 'Department' }));
     await user.click(await screen.findByRole('option', { name: 'Science' }));
     expect(push).toHaveBeenCalledWith('/en/employees?departmentId=d-sci&workSystem=FULL_TIME', { scroll: false });
+    // The choices came from the API: hidden departments too (they can still have employees).
+    expect(apis.GET_DEPARTMENTS).toHaveBeenCalledWith({ includeHidden: true, search: '', limit: 20 });
+  });
+
+  it('the department filter asks the API for what is typed and shows only its answer', async () => {
+    const user = userEvent.setup();
+    renderList({}, people);
+    await user.click(screen.getByRole('combobox', { name: 'Department' }));
+    await screen.findByRole('option', { name: 'Science' });
+    apis.GET_DEPARTMENTS.mockResolvedValue(page(departments.slice(0, 1)));
+    await user.type(screen.getByRole('searchbox', { name: 'Type to search' }), 'sci');
+    await waitFor(() => expect(apis.GET_DEPARTMENTS).toHaveBeenLastCalledWith({ includeHidden: true, search: 'sci', limit: 20 }));
+    // "All departments" steps aside while a search is typed.
+    await waitFor(() => expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual([departments[0]!.nameEn]));
+  });
+
+  it('a chosen department the answer doesn’t hold is still named on the filter', () => {
+    renderEmployees(
+      <EmployeesList
+        basePath="/en/employees"
+        query={parseEmployeesQuery({ departmentId: 'd-far' })}
+        rows={people}
+        total={2}
+        selectedDepartment={{ id: 'd-far', nameEn: 'Far away', nameAr: 'بعيد', sortOrder: 9, isActive: false }}
+        stages={stages}
+      />,
+    );
+    expect(screen.getByRole('combobox', { name: 'Department' }).textContent).toContain('Far away');
+    expect(apis.GET_DEPARTMENTS).not.toHaveBeenCalled();
   });
 
   it('search waits for typing to pause, then searches from page 1', async () => {
@@ -107,7 +144,6 @@ describe('EmployeesList', () => {
         query={parseEmployeesQuery({ status: 'ACTIVE' })}
         rows={people}
         total={45}
-        departments={departments}
         stages={stages}
       />,
     );
@@ -138,7 +174,6 @@ describe('EmployeesList', () => {
           query={parseEmployeesQuery({ search: 'أحمد' })}
           rows={people}
           total={total}
-          departments={departments}
           stages={stages}
         />,
         'ar',
@@ -153,7 +188,7 @@ describe('EmployeesList', () => {
     const query = parseEmployeesQuery({ limit: '50', page: '1' });
     expect(query.limit).toBe(12);
     renderEmployees(
-      <EmployeesList basePath="/en/employees" query={query} rows={people} total={30} departments={departments} stages={stages} />,
+      <EmployeesList basePath="/en/employees" query={query} rows={people} total={30} stages={stages} />,
     );
     expect(screen.getByText('Showing 1–12 of 30')).toBeTruthy();
     expect(screen.getByText('30 employees')).toBeTruthy();
@@ -165,7 +200,7 @@ describe('EmployeesList', () => {
   it('a failed load shows the error state with a retry', async () => {
     const user = userEvent.setup();
     renderEmployees(
-      <EmployeesList basePath="/en/employees" query={parseEmployeesQuery({})} rows={[]} total={0} departments={[]} stages={[]} error />,
+      <EmployeesList basePath="/en/employees" query={parseEmployeesQuery({})} rows={[]} total={0} stages={[]} error />,
     );
     await user.click(screen.getByRole('button', { name: 'Try again' }));
     expect(refresh).toHaveBeenCalled();

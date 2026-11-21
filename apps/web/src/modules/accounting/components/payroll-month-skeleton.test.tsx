@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import type { AccountingPayrollHrBreakdown, AccountingPayrollMonth } from '@school-erp/shared';
+import type { AccountingPayrollHrBreakdown, AccountingPayrollMonthSheet } from '@school-erp/shared';
 import { cleanup } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -14,7 +14,7 @@ vi.mock('../apis', () => ({
 }));
 vi.mock('@/shared/lib/download', () => ({ saveDownloadedFile: vi.fn() }));
 
-import { MONTH, renderAccounting } from '../test/fixtures';
+import { MONTH, monthView, renderAccounting } from '../test/fixtures';
 import { PayrollMonth } from './payroll-month';
 
 /*
@@ -37,7 +37,7 @@ const HR: AccountingPayrollHrBreakdown = {
   adjustmentAdditions: 0,
   adjustmentDeductions: 25_000,
 };
-const PENDING: AccountingPayrollMonth = { ...MONTH, status: 'PENDING', lines: MONTH.lines.map((l) => ({ ...l, hr: HR })) };
+const PENDING: AccountingPayrollMonthSheet = { ...MONTH, status: 'PENDING', lines: MONTH.lines.map((l) => ({ ...l, hr: HR })) };
 const props = { monthKey: '2026-10' as const, basePath: '/en/accounting/payroll' };
 
 /** The page's skeleton blocks, in document order. */
@@ -76,7 +76,7 @@ describe('PayrollMonth skeleton — header', () => {
     const skeletonLabels = actionLabels();
     const skeletonPage = blocks().filter((b) => b !== 'table-card');
     cleanup();
-    renderAccounting(<PayrollMonth {...props} month={PENDING} />);
+    renderAccounting(<PayrollMonth {...props} {...monthView(PENDING)} />);
     expect(headerBlocks()).toEqual(skeletonBlocks);
     expect(actionLabels()).toEqual(skeletonLabels);
     expect(document.querySelector('[data-skeleton-block="header-status"]')?.textContent).toBe('Pending transfer');
@@ -92,7 +92,7 @@ describe('PayrollMonth skeleton — header', () => {
     // Return to HR, Download PDF and Finalize are Arabic words (Excel may stay "Excel").
     expect(skeletonLabels.filter((l) => l && /[؀-ۿ]/.test(l)).length).toBeGreaterThanOrEqual(3);
     cleanup();
-    renderAccounting(<PayrollMonth {...props} month={PENDING} />, 'ar');
+    renderAccounting(<PayrollMonth {...props} {...monthView(PENDING)} />, 'ar');
     expect(actionLabels()).toEqual(skeletonLabels);
   });
 });
@@ -102,7 +102,7 @@ describe('PayrollMonth — capped card list', () => {
 
   it('the cards scroll inside a box of about the screen height from md up; the pagination sits outside it', () => {
     for (const month of [undefined, PENDING]) {
-      renderAccounting(<PayrollMonth {...props} month={month} />);
+      renderAccounting(<PayrollMonth {...props} {...(month ? monthView(month) : { month: undefined })} />);
       const list = cardList();
       expect(list.hasAttribute('data-scroll-capped')).toBe(true);
       expect(list.className).toContain('md:max-h-[max(26rem,calc(100dvh-14rem))]');

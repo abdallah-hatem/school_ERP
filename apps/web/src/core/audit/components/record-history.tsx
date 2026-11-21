@@ -1,6 +1,8 @@
 'use client';
 
-import type { AuditActor, AuditEntry, IsoDateTime } from '@school-erp/shared';
+import type { AuditActor, AuditEntityType, AuditEntry, IsoDateTime } from '@school-erp/shared';
+import { useServerOptions, PICKER_PAGE } from '@/shared/hooks/use-server-options';
+import { GET_AUDIT_ACTORS } from '../apis';
 import { useRouter } from 'next/navigation';
 import { useTransition, type ComponentProps, type ReactNode } from 'react';
 import { Pagination } from '@/shared/components/data-table/pagination';
@@ -35,9 +37,14 @@ export interface RecordHistoryProps {
   query: HistoryQuery;
   entries: AuditEntry[];
   total: number;
-  /** The fields this record's entries changed, and the people who changed it. */
+  /**
+   * The fields this record's entries changed (field keys from code, labelled and ordered in the
+   * page's language), and the person the filter names (the API searches the record's people).
+   */
   fields: string[];
   actors: AuditActor[];
+  /** The record, for the person filter's search; absent in the skeleton. */
+  record?: { entityType: AuditEntityType; entityId: string };
   now: IsoDateTime;
   error?: boolean;
 }
@@ -62,6 +69,7 @@ export function RecordHistory({
   total,
   fields,
   actors,
+  record,
   now,
   error = false,
 }: RecordHistoryProps) {
@@ -82,7 +90,14 @@ export function RecordHistory({
   const fieldOptions = fields
     .map((f) => ({ value: f, label: fieldLabel(f, t, has) }))
     .sort((a, b) => a.label.localeCompare(b.label, locale));
-  const actorOptions = actors.map((a) => ({ value: a.id, label: a.name || t('audit.system') }));
+  const actorName = (a: AuditActor) => a.name || t('audit.system');
+  const chosen = actors.find((a) => a.id === query.actorId);
+  const actorSearch = useServerOptions<AuditActor>({
+    load: (search) =>
+      GET_AUDIT_ACTORS({ entityType: record?.entityType, entityId: record?.entityId, search, limit: PICKER_PAGE }),
+    toOption: (a) => ({ value: a.id, label: actorName(a) }),
+    selected: chosen ? { value: chosen.id, label: actorName(chosen) } : null,
+  });
   const filterCount = (query.field ? 1 : 0) + (query.actorId ? 1 : 0);
   /** Both filters and the page, in one URL update. */
   const clearFilters = () => go({ page: 1 });
@@ -90,7 +105,7 @@ export function RecordHistory({
     query.field ? t('audit.history.causes.field', { name: fieldLabel(query.field, t, has) }) : null,
     query.actorId
       ? t('audit.history.causes.person', {
-          name: actorOptions.find((o) => o.value === query.actorId)?.label ?? t('audit.filters.person'),
+          name: chosen ? actorName(chosen) : t('audit.filters.person'),
         })
       : null,
   ].filter((c): c is string => c !== null);
@@ -115,7 +130,7 @@ export function RecordHistory({
           label={t('audit.history.who')}
           allLabel={t('audit.history.anyone')}
           value={query.actorId}
-          options={actorOptions}
+          server={actorSearch}
           onChange={(actorId) => go({ ...query, actorId, page: 1 })}
           disabled={pending}
           className="w-full sm:w-full"

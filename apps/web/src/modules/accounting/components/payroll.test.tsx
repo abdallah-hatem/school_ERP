@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
-import type { AccountingPayrollHrBreakdown, AccountingPayrollMonth, AccountingPayrollMonthSummary } from '@school-erp/shared';
+import '@/test/dom-polyfills';
+import type { AccountingPayrollHrBreakdown, AccountingPayrollMonthSheet, AccountingPayrollMonthSummary } from '@school-erp/shared';
 import { cleanup, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -13,14 +14,16 @@ vi.mock('next/navigation', () => ({
 }));
 const RETURN_PAYROLL_MONTH = vi.fn();
 const FINALIZE_PAYROLL_MONTH = vi.fn();
+const GET_PAYROLL_TAXES_LINES = vi.hoisted(() => vi.fn());
 vi.mock('../apis', () => ({
   GET_PAYROLL_TAXES_EXCEL: vi.fn(),
+  GET_PAYROLL_TAXES_LINES,
   RETURN_PAYROLL_MONTH: (...args: unknown[]) => RETURN_PAYROLL_MONTH(...args),
   FINALIZE_PAYROLL_MONTH: (...args: unknown[]) => FINALIZE_PAYROLL_MONTH(...args),
 }));
 vi.mock('@/shared/lib/download', () => ({ saveDownloadedFile: vi.fn() }));
 
-import { LIMITED_MONTH, MONTH, renderAccounting } from '../test/fixtures';
+import { detailOf, LIMITED_MONTH, MONTH, monthView, pageOf, renderAccounting } from '../test/fixtures';
 import { PayrollList } from './payroll-list';
 import { PayrollMonth } from './payroll-month';
 
@@ -45,7 +48,7 @@ const HR: AccountingPayrollHrBreakdown = {
 };
 
 /** October with HR's breakdown on every line (as `GET /accounting/payroll/:month` sends it). */
-const WITH_HR: AccountingPayrollMonth = { ...MONTH, lines: MONTH.lines.map((l) => ({ ...l, hr: HR })) };
+const WITH_HR: AccountingPayrollMonthSheet = { ...MONTH, lines: MONTH.lines.map((l) => ({ ...l, hr: HR })) };
 
 const SUMMARY: AccountingPayrollMonthSummary = {
   month: MONTH.month,
@@ -96,7 +99,7 @@ describe('PayrollMonth (Accounting → Payroll, one month)', () => {
   const cardOf = (name: string) => within(cards()).getByText(name).closest('li') as HTMLElement;
 
   it("cards on every width: HR's fields, then insurance and taxes, with the gross on the band", () => {
-    renderAccounting(<PayrollMonth {...props} month={WITH_HR} />);
+    renderAccounting(<PayrollMonth {...props} {...monthView(WITH_HR)} />);
     // No table on screen (print keeps its own, hidden from the screen and assistive tech).
     expect(screen.queryByRole('table')).toBeNull();
     expect(document.querySelector('section[data-cards-below="always"]')).not.toBeNull();
@@ -115,7 +118,7 @@ describe('PayrollMonth (Accounting → Payroll, one month)', () => {
   });
 
   it('no total card on screen: the four tiles are the totals; the first card is an employee (EN and AR)', () => {
-    renderAccounting(<PayrollMonth {...props} month={WITH_HR} />);
+    renderAccounting(<PayrollMonth {...props} {...monthView(WITH_HR)} />);
     const items = within(cards()).getAllByRole('listitem');
     expect(within(cards()).queryByText(/Month total/)).toBeNull();
     expect(cards().querySelector('[data-footer-card]')).toBeNull();
@@ -124,22 +127,20 @@ describe('PayrollMonth (Accounting → Payroll, one month)', () => {
     expect(items[0]!.textContent).toContain(WITH_HR.lines[0]!.nameEn);
     // The month's gross is on its tile.
     expect(screen.getAllByText('28,148.78').length).toBeGreaterThan(0);
-    // Paper keeps the total row.
-    expect(document.querySelector('[data-print-rows] tfoot')?.textContent).toContain('Month total · all 3');
     cleanup();
-    renderAccounting(<PayrollMonth {...props} month={WITH_HR} />, 'ar');
+    renderAccounting(<PayrollMonth {...props} {...monthView(WITH_HR)} />, 'ar');
     const list = screen.getByRole('list', { name: 'موظفو أكتوبر 2026' });
     expect(within(list).queryByText(/إجمالي الشهر/)).toBeNull();
   });
 
   it('salary data (§2, P4): a line outside scope shows its name only; no totals', () => {
-    const limited: AccountingPayrollMonth = {
+    const limited: AccountingPayrollMonthSheet = {
       ...LIMITED_MONTH,
       lines: LIMITED_MONTH.lines.map((l) =>
         l.salaryVisible ? { ...l, hr: HR } : { ...l, hr: { departmentNameEn: 'Science', departmentNameAr: 'العلوم', penaltyDays: 1, latenessDays: 0 } },
       ),
     };
-    renderAccounting(<PayrollMonth {...props} month={limited} />);
+    renderAccounting(<PayrollMonth {...props} {...monthView(limited)} />);
     const omar = cardOf('Omar Fathy');
     expect(omar.textContent).toContain('Salary hidden');
     expect(within(omar).getAllByLabelText('Amount hidden')).toHaveLength(9);
@@ -151,17 +152,42 @@ describe('PayrollMonth (Accounting → Payroll, one month)', () => {
     expect(document.body.textContent).not.toContain('28,148.78');
   });
 
-  it('search narrows the employees by name or code', async () => {
+  it('search goes in the URL after a pause; the API answers the matches, counted against the month', async () => {
     const user = userEvent.setup();
-    renderAccounting(<PayrollMonth {...props} month={WITH_HR} />);
+    renderAccounting(<PayrollMonth {...props} {...monthView(WITH_HR, { page: 2, limit: 10 })} />);
     await user.type(screen.getByRole('searchbox', { name: 'Search employees' }), 'EMP-0002');
+    await vi.waitFor(() => expect(push).toHaveBeenLastCalledWith('/en/accounting/payroll/2026-10?q=EMP-0002', { scroll: false }));
+    cleanup();
+    renderAccounting(<PayrollMonth {...props} {...monthView(WITH_HR, { search: 'EMP-0002', page: 1, limit: 10 })} />);
     expect(within(cards()).getByText('Omar Fathy')).toBeTruthy();
     expect(within(cards()).queryByText('Salma Adel')).toBeNull();
     expect(screen.getByTestId('lines-count').textContent).toBe('1 of 3');
   });
 
+  it('pages and page sizes go in the URL; only the page the API sent shows', async () => {
+    const user = userEvent.setup();
+    renderAccounting(<PayrollMonth {...props} {...monthView(WITH_HR, { page: 1, limit: 10 })} />);
+    await user.click(screen.getByRole('combobox', { name: 'Rows per page' }));
+    await user.click(await screen.findByRole('option', { name: '50' }));
+    expect(push).toHaveBeenLastCalledWith('/en/accounting/payroll/2026-10?limit=50', { scroll: false });
+  });
+
+  it('print / PDF reads every line of the month from the API, then prints with the month total', async () => {
+    const user = userEvent.setup();
+    const print = vi.fn();
+    vi.stubGlobal('print', print);
+    GET_PAYROLL_TAXES_LINES.mockImplementation(async (_m: string, q: object) => ({ success: true, status: 200, data: pageOf(WITH_HR, q) }));
+    renderAccounting(<PayrollMonth {...props} {...monthView(WITH_HR, { search: 'EMP-0002', page: 1, limit: 10 })} />);
+    await user.click(screen.getByRole('button', { name: 'Download PDF' }));
+    await vi.waitFor(() => expect(print).toHaveBeenCalledTimes(1));
+    expect(GET_PAYROLL_TAXES_LINES).toHaveBeenCalledWith('2026-10', { insurance: undefined, page: 1, limit: 500 });
+    expect(document.querySelectorAll('[data-print-rows] tbody tr')).toHaveLength(3);
+    expect(document.querySelector('[data-print-rows] tfoot')?.textContent).toContain('Month total · all 3');
+    vi.unstubAllGlobals();
+  });
+
   it('Arabic: right to left, Arabic headings and names', () => {
-    renderAccounting(<PayrollMonth {...props} month={WITH_HR} />, 'ar');
+    renderAccounting(<PayrollMonth {...props} {...monthView(WITH_HR)} />, 'ar');
     expect(document.documentElement.dir).toBe('rtl');
     expect(within(screen.getByRole('list', { name: 'موظفو أكتوبر 2026' })).getAllByText('ضريبة كسب العمل').length).toBeGreaterThan(0);
     expect(screen.getAllByText('عمر فتحي').length).toBeGreaterThan(0);
@@ -174,18 +200,18 @@ describe('PayrollMonth — return to HR / finalize', () => {
   const button = (name: string) => screen.queryByRole('button', { name });
 
   it('a pending month: "Pending transfer", with Return to HR and Finalize for someone holding both', () => {
-    renderAccounting(<PayrollMonth {...props} month={WITH_HR} />);
+    renderAccounting(<PayrollMonth {...props} {...monthView(WITH_HR)} />);
     expect(screen.getByText('Pending transfer')).toBeTruthy();
     expect(button('Return to HR')).toBeTruthy();
     expect(button('Finalize (transfer made)')).toBeTruthy();
   });
 
   it('each button needs its own permission', () => {
-    renderAccounting(<PayrollMonth {...props} month={WITH_HR} />, 'en', sessionWithout('accounting.payroll.return'));
+    renderAccounting(<PayrollMonth {...props} {...monthView(WITH_HR)} />, 'en', sessionWithout('accounting.payroll.return'));
     expect(button('Return to HR')).toBeNull();
     expect(button('Finalize (transfer made)')).toBeTruthy();
     cleanup();
-    renderAccounting(<PayrollMonth {...props} month={WITH_HR} />, 'en', sessionWithout('accounting.payroll.finalize'));
+    renderAccounting(<PayrollMonth {...props} {...monthView(WITH_HR)} />, 'en', sessionWithout('accounting.payroll.finalize'));
     expect(button('Return to HR')).toBeTruthy();
     expect(button('Finalize (transfer made)')).toBeNull();
   });
@@ -193,7 +219,7 @@ describe('PayrollMonth — return to HR / finalize', () => {
   it('Return to HR asks why (required), sends the reason, then goes back to the list', async () => {
     const user = userEvent.setup();
     RETURN_PAYROLL_MONTH.mockResolvedValue({ success: true, status: 204, data: null });
-    renderAccounting(<PayrollMonth {...props} month={WITH_HR} />);
+    renderAccounting(<PayrollMonth {...props} {...monthView(WITH_HR)} />);
     await user.click(button('Return to HR')!);
     const dialog = await screen.findByRole('dialog', { name: 'Return October 2026 to HR?' });
     const confirm = within(dialog).getByRole('button', { name: 'Return to HR' });
@@ -209,9 +235,9 @@ describe('PayrollMonth — return to HR / finalize', () => {
     FINALIZE_PAYROLL_MONTH.mockResolvedValue({
       success: true,
       status: 200,
-      data: { ...WITH_HR, status: 'FINALIZED', finalizedAt: '2026-11-20T09:00:00.000Z' },
+      data: { ...detailOf(WITH_HR), status: 'FINALIZED', finalizedAt: '2026-11-20T09:00:00.000Z' },
     });
-    renderAccounting(<PayrollMonth {...props} month={WITH_HR} />);
+    renderAccounting(<PayrollMonth {...props} {...monthView(WITH_HR)} />);
     await user.click(button('Finalize (transfer made)')!);
     const dialog = await screen.findByRole('dialog', { name: 'Finalize October 2026?' });
     await user.click(within(dialog).getByRole('button', { name: 'Finalize' }));
@@ -224,7 +250,7 @@ describe('PayrollMonth — return to HR / finalize', () => {
 
   it('Arabic: a finalized month in Arabic, no actions but Excel and PDF', () => {
     renderAccounting(
-      <PayrollMonth {...props} month={{ ...WITH_HR, status: 'FINALIZED', finalizedAt: '2026-11-20T09:00:00.000Z' }} />,
+      <PayrollMonth {...props} {...monthView({ ...WITH_HR, status: 'FINALIZED', finalizedAt: '2026-11-20T09:00:00.000Z' })} />,
       'ar',
     );
     expect(screen.getByText('نهائي · تم التحويل')).toBeTruthy();

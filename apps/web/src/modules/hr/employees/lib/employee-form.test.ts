@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import ar from '@school-erp/shared/locales/ar/employees.json';
 import en from '@school-erp/shared/locales/en/employees.json';
 import { acceptPhoneInput, isValidPhone } from '@/shared/lib/phone';
-import { employee, item, summary } from '../test/fixtures';
+import { employee } from '../test/fixtures';
 import {
   emptyEmployeeForm,
   employeeFormSchema,
@@ -11,9 +11,7 @@ import {
   formToRequest,
   formToUpdate,
   graduationYears,
-  listOptions,
-  managerOptions,
-  NO_MANAGER,
+  managerChoice,
 } from './employee-form';
 import { employeesQueryString, hasActiveFilters, parseEmployeesQuery } from './list-query';
 
@@ -83,36 +81,10 @@ describe('employee form rules (§3)', () => {
     expect(fieldForError('PAYROLL_APPROVED')).toBeUndefined();
   });
 
-  it('pickers list visible items only, plus the employee’s own hidden one', () => {
-    const items = [item('a', 'A', 'أ'), item('b', 'B', 'ب', false)];
-    expect(listOptions(items, 'en').options.map((o) => o.value)).toEqual(['a']);
-    const kept = listOptions(items, 'en', { id: 'b', nameEn: 'B', nameAr: 'ب' });
-    expect(kept.options.map((o) => o.value)).toEqual(['a', 'b']);
-    expect(kept.currentHidden).toBe(true);
-  });
-
-  it('manager options: never self, never inactive, keep the current manager', () => {
-    const candidates = [
-      summary({ id: 'self', code: 'EMP-0001', nameEn: 'Self', nameAr: 'س' }),
-      summary({ id: 'x', code: 'EMP-0002', nameEn: 'Inactive', nameAr: 'غ', status: 'INACTIVE' }),
-      summary({ id: 'ok', code: 'EMP-0003', nameEn: 'Active', nameAr: 'ن' }),
-    ];
-    const plain = managerOptions(candidates, 'en', 'None', 'self');
-    expect(plain.options.map((o) => o.value)).toEqual([NO_MANAGER, 'ok']);
-    expect(plain).toMatchObject({ currentNotManaging: false, hasCandidates: true });
-    const current = { id: 'boss', code: 'EMP-0009', nameEn: 'Boss', nameAr: 'م', managesPeople: true };
-    const kept = managerOptions(candidates, 'en', 'None', 'self', current);
-    expect(kept.options.map((o) => o.value)).toEqual([NO_MANAGER, 'ok', 'boss']);
-    expect(kept.currentNotManaging).toBe(false);
-  });
-
-  it('manager options: a current manager who no longer manages people is kept and flagged', () => {
-    const current = { id: 'boss', code: 'EMP-0009', nameEn: 'Boss', nameAr: 'م', managesPeople: false };
-    const result = managerOptions([], 'en', 'None', 'self', current);
-    expect(result.options.map((o) => o.value)).toEqual([NO_MANAGER, 'boss']);
-    expect(result).toMatchObject({ currentNotManaging: true, hasCandidates: false });
-    // Searchable by name and code.
-    expect(result.options[1]).toMatchObject({ label: 'Boss · EMP-0009', keywords: ['Boss', 'م', 'EMP-0009'] });
+  it('a manager choice reads "Name · code" in the page language (the API lists the candidates)', () => {
+    const boss = { id: 'boss', code: 'EMP-0009', nameEn: 'Boss', nameAr: 'مدير' };
+    expect(managerChoice(boss, 'en')).toEqual({ value: 'boss', label: 'Boss · EMP-0009' });
+    expect(managerChoice(boss, 'ar')).toEqual({ value: 'boss', label: 'مدير · EMP-0009' });
   });
 
   it('phone: mobiles, landlines and international numbers pass; 7–20 characters', () => {

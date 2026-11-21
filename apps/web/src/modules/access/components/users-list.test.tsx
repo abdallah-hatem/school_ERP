@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '@/test/dom-polyfills';
-import { cleanup, screen, within } from '@testing-library/react';
+import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -12,7 +12,10 @@ vi.mock('next/navigation', () => ({
 vi.mock('next/link', async () => ({ default: (await import('../test/fixtures')).MockLink }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 const UNLOCK_SIGN_IN = vi.hoisted(() => vi.fn());
+// The role filter's choices come from the API (searched there, never here).
+const GET_ROLES = vi.hoisted(() => vi.fn());
 vi.mock('../apis', () => ({
+  GET_ROLES,
   DEACTIVATE_USER: vi.fn(),
   REACTIVATE_USER: vi.fn(),
   SET_TEMPORARY_PASSWORD: vi.fn(),
@@ -44,7 +47,6 @@ function renderList(params: Record<string, string> = {}, opts: { total?: number;
       query={parseUsersQuery(params)}
       rows={[admin, officer, gone]}
       total={opts.total ?? 3}
-      roles={ROLES}
       lastAdminId={admin.id}
       now={NOW}
     />,
@@ -64,9 +66,13 @@ describe('UsersList', () => {
     await user.click(await screen.findByRole('option', { name: 'Inactive' }));
     expect(push).toHaveBeenLastCalledWith('/en/users?status=inactive', { scroll: false });
 
-    // Eight roles: the role filter is searchable; focus lands in its search box.
+    // The role filter asks the API for what is typed; focus lands in its search box.
+    GET_ROLES.mockImplementation(({ search }: { search?: string }) =>
+      Promise.resolve({ success: true, status: 200, data: ROLES.filter((r) => !search || r.nameEn.toLowerCase().includes(search.toLowerCase())) }),
+    );
     await user.click(screen.getByRole('combobox', { name: 'Role' }));
     await user.keyboard('officer');
+    await waitFor(() => expect(GET_ROLES).toHaveBeenLastCalledWith({ search: 'officer', limit: 20 }));
     await user.click(await screen.findByRole('option', { name: 'HR officer' }));
     expect(push).toHaveBeenLastCalledWith(`/en/users?roleId=${role('hr_officer').id}`, { scroll: false });
   });
@@ -114,7 +120,7 @@ describe('UsersList', () => {
   it('each user has an avatar, never initials: the linked employee’s photo or silhouette, else the neutral one; inactive greyed', () => {
     const withPhoto = account({ employee: { ...admin.employee!, photoUrl: '/files/employee-photos/hany.jpg' } });
     renderAccess(
-      <UsersList basePath="/en/users" query={parseUsersQuery({})} rows={[withPhoto, officer, gone]} total={3} roles={ROLES} lastAdminId={admin.id} now={NOW} />,
+      <UsersList basePath="/en/users" query={parseUsersQuery({})} rows={[withPhoto, officer, gone]} total={3} lastAdminId={admin.id} now={NOW} />,
     );
     const avatarIn = (name: string) => screen.getAllByRole('link', { name })[0]!.closest('span.flex')!.parentElement!.querySelector('[data-avatar]') as HTMLElement;
     expect(avatarIn('Hany Saad').dataset.avatar).toBe('photo');
@@ -134,7 +140,7 @@ describe('UsersList', () => {
   it('filters that match nobody → "no results" with Clear filters', async () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 });
     renderAccess(
-      <UsersList basePath="/en/users" query={parseUsersQuery({ search: 'samy' })} rows={[]} total={0} roles={ROLES} lastAdminId={null} now={NOW} />,
+      <UsersList basePath="/en/users" query={parseUsersQuery({ search: 'samy' })} rows={[]} total={0} lastAdminId={null} now={NOW} />,
     );
     expect(screen.getByText('No users match these filters')).toBeTruthy();
     await user.click(screen.getAllByRole('button', { name: /Clear filters/ })[0]!);
@@ -143,7 +149,7 @@ describe('UsersList', () => {
 
   it('Arabic: the same list, mirrored', () => {
     renderAccess(
-      <UsersList basePath="/ar/users" query={parseUsersQuery({})} rows={[admin]} total={1} roles={ROLES} lastAdminId={admin.id} now={NOW} />,
+      <UsersList basePath="/ar/users" query={parseUsersQuery({})} rows={[admin]} total={1} lastAdminId={admin.id} now={NOW} />,
       'ar',
     );
     expect(document.documentElement.dir).toBe('rtl');
@@ -163,7 +169,7 @@ describe('UsersList', () => {
     });
     const renderLocked = (session?: ReturnType<typeof sessionWithout>) =>
       renderAccess(
-        <UsersList basePath="/en/users" query={parseUsersQuery({})} rows={[admin, locked]} total={2} roles={ROLES} lastAdminId={admin.id} now={NOW} />,
+        <UsersList basePath="/en/users" query={parseUsersQuery({})} rows={[admin, locked]} total={2} lastAdminId={admin.id} now={NOW} />,
         'en',
         session,
       );
@@ -205,7 +211,7 @@ describe('UsersList', () => {
 
     it('Arabic: the pill reads in Arabic', () => {
       renderAccess(
-        <UsersList basePath="/ar/users" query={parseUsersQuery({})} rows={[locked]} total={1} roles={ROLES} lastAdminId={null} now={NOW} />,
+        <UsersList basePath="/ar/users" query={parseUsersQuery({})} rows={[locked]} total={1} lastAdminId={null} now={NOW} />,
         'ar',
       );
       expect(screen.getAllByText('الدخول مقفل').length).toBeGreaterThan(0);

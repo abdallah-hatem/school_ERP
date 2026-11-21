@@ -32,6 +32,7 @@ export class RolesController {
     const page = await this.roles.list(
       query.page ?? PAGINATION.defaultPage,
       query.limit ?? PAGINATION.defaultLimit,
+      query.search || undefined,
     );
     return ResponseUtil.paginated(page, undefined, req.url);
   }
