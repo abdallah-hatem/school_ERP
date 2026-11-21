@@ -519,6 +519,19 @@ phase live in `docs/build-log/`.
   then "for me but not for the team"): a marker `~/.config/school-erp/e2e-ci-only` on the owner's machine
   makes `pnpm smoke`, the Playwright config and the API e2e setup refuse to start outside GitHub Actions —
   so every agent on that machine is blocked; the team runs them locally. CONVENTIONS → Where tests run.
+- 2026-11-21 — Skeleton headers + capped cards → #212 (owner: "no skeleton for the action buttons and
+  status pill ???? isnt that a rule"): the Approved payroll pages (from #171) were never in the skeleton
+  check; now registered, page headers mark breadcrumbs/pill/actions as skeleton blocks, a coverage guard
+  fails on any unregistered `loading.tsx`; 6 routes' header skeletons fixed; the month's cards scroll in a
+  capped box on tablet/desktop (flow on phones).
+- 2026-11-21 — Server-side lists → #213 (owner rule: no client-side paging/search/filter/sort): the
+  Approved payroll month, the statement, lateness, run lines, settings lists, the catalogue, roles/actors
+  and every list picker now page/search/total on the API; DataTable refuses more rows than a page; a scan
+  guard fails on browser-side list code (reasoned allow-list for static config). Lateness "loads the
+  whole month" (Next up) is superseded. Open: Arabic letter variants (أ/ا) in in-memory searches.
+- 2026-11-21 — Housekeeping (owner: "when worktrees are done we delete them right ?" / "what about the
+  177 branches"): 50 merged worktrees removed (64 GB → ~4 GB), 168 merged remote branches and 188 local
+  ones deleted; merges now use `--delete-branch` and remove the agent's worktree.
 ## Next up
 
 - Custom icon set drawn (`design/mockups/icon-set.html`, style G monoline + solid when selected) —
@@ -552,4 +565,4 @@ phase live in `docs/build-log/`.
   considered and dropped, 2026-11-20).
 - Audit log T28 (#107), T29 + T31 (#126) done; the T30 History follow-ups are done (#188). Optional CI ratchet that forbids touching an unwired endpoint (owner: docs only for now).
 
-- Optional: server-side paging for lateness (loads the whole month today) and column sorting.
+- Optional: column sorting on lists (paging/search are server-side since #213).
