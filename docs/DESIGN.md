@@ -110,7 +110,10 @@ Motion explains a change and never delays it.
   the old tab straight to the new one — no colour fade between them (a cross-fade read as the
   highlight going back; owner, 2026-11-21). Only hover eases in (`TAB_HOVER_FADE`). A switch that
   only changes what's shown stays on the client (Settings' `?section=` via `history.replaceState`);
-  tabs that are routes share a layout, so the header never re-mounts. `e2e/30-tab-switch*` guards it.
+  tabs that are routes share a layout, so the header never re-mounts. A new tab or section starts
+  from its top: if the page is scrolled past it, it jumps (instantly, never smoothly) to its top
+  (`useRevealTopOnChange`); Settings also focuses the new section's first heading without scrolling.
+  `e2e/30-tab-switch*` guards it.
 
 ## States
 

@@ -29,7 +29,10 @@ export function SectionPanel({
     >
       <header data-skeleton-block="section-header" className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 flex-1 basis-60 flex-col gap-1">
-          <h2 className="font-display text-lg leading-tight font-extrabold">{title}</h2>
+          {/* Focusable from script only: a section switch moves focus here (settings-screen). */}
+          <h2 tabIndex={-1} className="font-display text-lg leading-tight font-extrabold outline-none">
+            {title}
+          </h2>
           {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
         </div>
         {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}

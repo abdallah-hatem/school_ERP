@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { activeEmployee } from './support/profile-tabs';
 import { t } from './support/i18n';
-import { recordTabs, switchTab } from './support/tab-switch';
+import { expectTopInView, recordTabs, scrollToBottom, switchTab } from './support/tab-switch';
 import { signIn } from './support/ui';
 
 /*
@@ -58,4 +58,21 @@ test('settings (ar, phone): list → section → list stays on the client and th
   await expect(nav).toBeVisible();
   expect(await list!.evaluate((el) => el.isConnected), 'the section list is never re-mounted').toBe(true);
   expect(renders(), 'no server round trip for a section switch').toEqual([]);
+});
+
+test('settings (ar, phone): scrolled down the list, the chosen section opens at its top', async ({ page }) => {
+  await signIn(page, 'ar');
+  // A short phone, so the section list scrolls.
+  await page.setViewportSize({ width: 390, height: 500 });
+  await page.goto('/ar/settings');
+  const nav = page.getByRole('navigation', { name: t('ar', 'settings.sectionsLabel') });
+  await expect(nav).toBeVisible();
+  await scrollToBottom(page);
+  // The last section, tapped where it is (at the bottom of the scrolled list).
+  await nav.getByRole('button', { name: new RegExp(t('ar', 'settings.sections.notifications.title')) }).click();
+  await expect(page).toHaveURL(/\?section=notifications$/);
+  await expect(page.locator('#main [aria-busy="true"]')).toHaveCount(0);
+  const heading = page.locator('#main h2[tabindex]').first();
+  await expectTopInView(page.getByRole('button', { name: t('ar', 'settings.allSections') }), 'the chosen section');
+  await expect(heading).toBeFocused();
 });

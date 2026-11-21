@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { visibleSettingsSections } from '@school-erp/shared';
-import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import { settingsActivityHref } from '@/core/audit';
 import { Can, useSession } from '@/core/auth';
 import { PageHeader } from '@/shared/components/layout/page-header';
@@ -23,6 +23,7 @@ import {
   type AppIcon,
 } from '@/shared/components/ui/icons';
 import { TAB_HOVER_FADE } from '@/shared/lib/tab-motion';
+import { useRevealTopOnChange } from '@/shared/hooks/use-reveal-top';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { DirtyReporterProvider, useLeaveGuard } from '../hooks/unsaved-changes';
@@ -68,7 +69,37 @@ function SectionBody({ id }: { id: SettingsSectionId }): ReactNode {
   }
 }
 
-type Leave = { to: SettingsSectionId | null } | { href: string } | { proceed: () => void };
+/**
+ * Moves focus to the open section's first heading, without scrolling. A section draws its loading
+ * shape first and its loaded form after, which replaces the heading — so for a moment the focus
+ * follows the newest first heading, until the person does anything (a key, a tap) or 3 s pass.
+ */
+function focusFirstHeading(body: HTMLElement) {
+  const heading = () => body.querySelector<HTMLElement>('h2[tabindex]');
+  const start = document.activeElement;
+  const ours = () => {
+    const active = document.activeElement;
+    return !active || active === document.body || active === start || (active.tagName === 'H2' && body.contains(active));
+  };
+  const place = () => {
+    const h = heading();
+    if (h && document.activeElement !== h && ours()) h.focus({ preventScroll: true });
+  };
+  place();
+  const observer = new MutationObserver(place);
+  observer.observe(body, { childList: true, subtree: true });
+  const stop = () => {
+    observer.disconnect();
+    window.clearTimeout(timer);
+    window.removeEventListener('keydown', stop, true);
+    window.removeEventListener('pointerdown', stop, true);
+  };
+  const timer = window.setTimeout(stop, 3000);
+  window.addEventListener('keydown', stop, true);
+  window.addEventListener('pointerdown', stop, true);
+}
+
+type Leave ={ to: SettingsSectionId | null } | { href: string } | { proceed: () => void };
 
 /**
  * The one Settings screen (§7): a section per area. Desktop and tablet show the sections as a side
@@ -110,6 +141,16 @@ export function SettingsScreen({ initialSection }: { initialSection: SettingsSec
   );
   useLeaveGuard(dirty, onLeaveAttempt);
 
+  // A new section starts from its top (owner, 2026-11-21): scrolled deep into Accounting, picking
+  // Notifications in the sticky list shows Notifications' heading, not the old scroll position.
+  // Its heading takes focus (no scroll of its own) so a screen reader announces where it landed.
+  // On a phone, back to the list shows the list from its top.
+  const navRef = useRef<HTMLElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  useRevealTopOnChange(section ? bodyRef : navRef, section ?? 'list', (el) => {
+    if (section) focusFirstHeading(el);
+  });
+
   function open(to: SettingsSectionId | null) {
     setSection(to);
     window.history.replaceState(null, '', to ? `${pathname}?section=${to}` : (pathname ?? ''));
@@ -148,7 +189,7 @@ export function SettingsScreen({ initialSection }: { initialSection: SettingsSec
         }
       />
       <div className="grid items-start gap-6 md:grid-cols-[15rem_minmax(0,1fr)] xl:grid-cols-[17rem_minmax(0,1fr)]">
-        <nav aria-label={t('settings.sectionsLabel')} className={cn('md:sticky md:top-6', section && 'max-md:hidden')}>
+        <nav ref={navRef} aria-label={t('settings.sectionsLabel')} className={cn('md:sticky md:top-6', section && 'max-md:hidden')}>
           <ul data-skeleton-block="settings-nav" className="flex flex-col gap-1 rounded-3xl bg-card p-2 shadow-card">
             {sections.map((id) => {
               const Icon = ICONS[id];
@@ -180,7 +221,7 @@ export function SettingsScreen({ initialSection }: { initialSection: SettingsSec
           </ul>
         </nav>
 
-        <div className={cn('flex min-w-0 flex-col gap-4', !section && 'max-md:hidden')}>
+        <div ref={bodyRef} className={cn('flex min-w-0 flex-col gap-4', !section && 'max-md:hidden')}>
           {section ? (
             <Button variant="ghost" size="sm" className="self-start md:hidden" onClick={() => choose(null)}>
               <ChevronStartIcon className="flip-rtl" />

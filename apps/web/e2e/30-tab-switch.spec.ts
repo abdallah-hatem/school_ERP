@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { activeEmployee } from './support/profile-tabs';
 import { t } from './support/i18n';
-import { recordTabs, switchTab } from './support/tab-switch';
+import { expectTopInView, recordTabs, scrollToBottom, switchTab } from './support/tab-switch';
 import { signIn } from './support/ui';
 
 /*
@@ -47,9 +47,20 @@ for (const locale of ['en', 'ar'] as const) {
     }
     expect(renders(), 'a section switch never re-renders the server page').toEqual([]);
 
+    // Scrolled to the bottom of a long section, the next one opens at its top, its heading focused.
+    await section('hrRules').click();
+    await expect(page.locator('#main [aria-busy="true"]')).toHaveCount(0);
+    await scrollToBottom(page);
+    await section('notifications').click();
+    await expect(section('notifications')).toHaveAttribute('aria-current', 'page');
+    await expect(page.locator('#main [aria-busy="true"]')).toHaveCount(0);
+    const heading = page.locator('#main h2[tabindex]').first();
+    await expectTopInView(heading, 'the new section');
+    await expect(heading).toBeFocused();
+
     // The address is the truth: a reload, and back from another page, open the section it names.
     await page.reload();
-    await expect(section('lists')).toHaveAttribute('aria-current', 'page');
+    await expect(section('notifications')).toHaveAttribute('aria-current', 'page');
     await section('hrRules').click();
     await expect(page).toHaveURL(/\?section=hrRules$/);
     await page.goto(`/${locale}/employees`);
@@ -83,6 +94,13 @@ test('employee profile: the tab marker moves once and the header stays mounted',
     await recordTabs(page, '#main nav[data-skeleton-block="tabs"]', 'a');
     await switchTab(page, tab(from), tab(to));
   }
+
+  // Scrolled to the bottom of Details, a tab picked from the keyboard (no pointer scroll on the
+  // way) shows the tab bar and the new tab from its top; the header stays.
+  await scrollToBottom(page);
+  await tab(history).evaluate((el: HTMLElement) => el.click());
+  await expect(tab(history)).toHaveAttribute('aria-current', 'page');
+  await expectTopInView(tabs, 'the tab bar and the new tab');
 });
 
 test('my account: Profile ↔ Notifications keeps the header, the marker moves once', async ({ page }) => {

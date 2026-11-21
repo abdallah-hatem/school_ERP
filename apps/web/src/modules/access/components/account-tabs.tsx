@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { NotificationsIcon, PersonIcon } from '@/shared/components/ui/icons';
 import { TAB_HOVER_FADE } from '@/shared/lib/tab-motion';
+import { useRef } from 'react';
+import { useRevealTopOnChange } from '@/shared/hooks/use-reveal-top';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 
@@ -18,8 +20,11 @@ export function AccountTabs() {
   const pathname = usePathname() ?? '';
   const base = `/${locale}/account`;
   const active = pathname.startsWith(`${base}/notifications`) ? 'notifications' : 'profile';
+  // A new tab starts from its top (see RecordTabs).
+  const navRef = useRef<HTMLElement>(null);
+  useRevealTopOnChange(navRef, active);
   return (
-    <nav aria-label={t('access.account.tabs.label')} data-skeleton-block="tabs" className="scrollbar-clean -mb-2 overflow-x-auto">
+    <nav ref={navRef} aria-label={t('access.account.tabs.label')} data-skeleton-block="tabs" className="scrollbar-clean -mb-2 overflow-x-auto">
       <ul className="flex gap-1.5 border-b border-border">
         {TABS.map(({ key, segment, icon: Icon }) => {
           const current = key === active;

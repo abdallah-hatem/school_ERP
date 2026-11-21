@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { TAB_HOVER_FADE } from '@/shared/lib/tab-motion';
+import { useRef } from 'react';
+import { useRevealTopOnChange } from '@/shared/hooks/use-reveal-top';
 import { cn } from '@/shared/lib/utils';
 
 export interface RecordTab {
@@ -34,8 +36,12 @@ export function RecordTabs({
   tabs: readonly RecordTab[];
   active: string | undefined;
 }) {
+  // A new tab starts from its top: scrolled down a long tab, the tab bar comes back into view
+  // with the new tab right under it (the header above stays as it is).
+  const navRef = useRef<HTMLElement>(null);
+  useRevealTopOnChange(navRef, active);
   return (
-    <nav aria-label={label} data-skeleton-block="tabs" className="scrollbar-clean -mb-2 overflow-x-auto">
+    <nav ref={navRef} aria-label={label} data-skeleton-block="tabs" className="scrollbar-clean -mb-2 overflow-x-auto">
       <ul className="flex gap-1.5 border-b border-border">
         {tabs.map((tab) => {
           const current = tab.key === active;

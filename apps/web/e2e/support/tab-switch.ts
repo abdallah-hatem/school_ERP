@@ -97,3 +97,20 @@ export async function switchTab(page: Page, from: Locator, tab: Locator): Promis
   expect(steps('marked'), `the visible marker, ${before} → ${after}`).toEqual([before, after]);
   expect(log.every((f) => f.h1Same), `the header stays mounted, ${before} → ${after}`).toBe(true);
 }
+
+/*
+ * A new tab or section starts from its top (owner, 2026-11-21): after a switch made while scrolled
+ * deep into the old one, `target`'s top edge is on screen near the top (under the phone's sticky
+ * bar), not above the viewport at the old scroll position.
+ */
+export async function expectTopInView(target: Locator, what: string): Promise<void> {
+  const top = async () => Math.round((await target.boundingBox())?.y ?? -1);
+  await expect.poll(top, { message: `${what} starts on screen, not above it` }).toBeGreaterThanOrEqual(0);
+  expect(await top(), `${what} starts near the top of the screen`).toBeLessThanOrEqual(160);
+}
+
+/** Scrolls the window to the bottom of the page and checks it really moved. */
+export async function scrollToBottom(page: Page): Promise<void> {
+  await page.evaluate(() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' }));
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
+}
