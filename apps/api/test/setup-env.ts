@@ -1,6 +1,4 @@
 import { existsSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
 
 // On a machine that has ~/.config/school-erp/e2e-ci-only (the owner's, so also every Claude agent
 // on it), API e2e tests run on GitHub CI only (owner, 2026-11-21). Other developers run them locally.
@@ -17,7 +15,7 @@ if (process.env.GITHUB_ACTIONS !== 'true' && existsSync(join(homedir(), '.config
  *
  * Refuses to run against anything that isn't an `_e2e` database — teardown deletes rows.
  */
-import { tmpdir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const url = process.env.DATABASE_URL;
