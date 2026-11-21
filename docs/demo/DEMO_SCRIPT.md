@@ -65,7 +65,7 @@ then to HR.
   approval".
 - As **primary.head@school.local**: ✔ the Preparatory penalty is nowhere in their list, search or
   counts (it isn't their stage), though he is a primary teacher.
-- As prep.head, open the seed's other Preparatory penalty waiting for review and **Reject** it: ✔
+- As prep.head, open the seed's Preparatory penalty waiting for review (Mostafa, 14 Nov) and **Reject** it: ✔
   Reject stays disabled until a reason is typed; the row then reads **Rejected** with "Reason: …".
   ✔ Whoever recorded it gets "Penalty you recorded was rejected".
 - Back as the admin (HR step): filter **Waiting (stage or HR)**; approve one. ✔ Only now are the

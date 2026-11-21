@@ -111,8 +111,8 @@
     "penaltyStatus": {
       "APPROVED": "معتمد",
       "CANCELLED": "ملغى",
-      "PENDING_REVIEW": "في انتظار مراجعة المرحلة",
-      "WAITING_HR": "في انتظار شؤون الموظفين",
+      "PENDING_REVIEW": "مراجعة المرحلة",
+      "WAITING_HR": "لدى شؤون الموظفين",
       "REJECTED": "مرفوض",
       "PENDING": "قيد الانتظار"
     },

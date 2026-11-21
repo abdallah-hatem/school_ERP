@@ -110,7 +110,7 @@
     "startsReview": "It goes to the stage head of {stage} first, then to HR.",
     "startsHr": {
       "EMPLOYEE_IS_HEAD": "It goes straight to HR: the employee heads this stage.",
-      "RECORDER_IS_HEAD": "It goes straight to HR: you head this stage, so your recording is the stage review.",
+      "RECORDER_IS_HEAD": "It goes straight to HR: you review this stage's penalties, so your recording is the stage review.",
       "NO_STAGE_HEAD": "It goes straight to HR: {stage} has no stage head."
     }
   },
@@ -162,7 +162,7 @@
     "reviewed": "Approved at the stage review by {name}",
     "skip": {
       "EMPLOYEE_IS_HEAD": "No stage review: the employee heads this stage",
-      "RECORDER_IS_HEAD": "No stage review: recorded by the stage head",
+      "RECORDER_IS_HEAD": "No stage review: recorded by someone who reviews this stage",
       "NO_STAGE_HEAD": "No stage review: this stage has no stage head"
     },
     "approved": "Approved by HR: {name}",

@@ -61,7 +61,7 @@ export const STAGE_HEADS: { employee: number; email: string; name: string }[] = 
 export const PENALTIES: SeedPenalty[] = [
   { employee: 33, violation: 'chewing-gum', date: '2026-11-02', status: 'APPROVED' },
   { employee: 14, violation: 'unexcused-absence', date: '2026-11-03', status: 'APPROVED' },
-  { employee: 16, violation: 'late-to-class', date: '2026-11-04', status: 'APPROVED' },
+  { employee: 16, violation: 'late-to-class', date: '2026-11-04', status: 'APPROVED', stage: 'primary' },
   { employee: 20, violation: 'phone-in-class', date: '2026-11-05', status: 'APPROVED' },
   // Twice on the same day: recorded and approved in this order → levels 1 then 2 (§4). Late to
   // class can repeat in a day; a once-per-day violation would refuse the second one.
@@ -106,7 +106,7 @@ export const PENALTIES: SeedPenalty[] = [
   // The multi-stage teacher (primary, also teaches in prep): a prep penalty waits for the prep
   // head — the primary head never sees it.
   { employee: 16, violation: 'phone-in-class', date: '2026-11-14', status: 'PENDING_REVIEW', stage: 'prep' },
-  { employee: 16, violation: 'late-to-class', date: '2026-11-12', status: 'APPROVED' },
+  { employee: 16, violation: 'late-to-class', date: '2026-11-12', status: 'APPROVED', stage: 'primary' },
   {
     employee: 16,
     violation: 'late-to-class',

@@ -58,7 +58,7 @@ describe('PenaltiesList', () => {
     expect(rows[1]?.textContent).toContain('التأخر دون إخطار');
     expect(rows[1]?.textContent).toContain('المرة 2');
     expect(rows[1]?.textContent).toContain('خصم 0.5 يوم');
-    expect(rows[1]?.textContent).toContain('في انتظار شؤون الموظفين');
+    expect(rows[1]?.textContent).toContain('لدى شؤون الموظفين');
     expect(rows[2]?.textContent).toContain('السبب: Wrong day');
     // The English reason keeps its own direction inside the Arabic line.
     const reason = within(rows[2] as HTMLElement).getByText('Wrong day');
