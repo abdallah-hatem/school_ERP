@@ -48,6 +48,11 @@ plain status colour is for icons, bars and large figures only.
 - Numbers are always Latin digits, grouped with commas. Money is integer piastres from the API and
   is shown only through `<Money>` / `formatMoney` (`EGP 14,000.00`; `14,000.00 ج.م`, the label to
   the left of the figure in both languages). Day counts through `<Days>` / `formatDays` (`1.25`).
+- **Dates and times:** every time of day is 12-hour with the period, never 24-hour — `4:07 PM`,
+  Arabic `4:07 م` / `9:30 ص`; midnight `12:00 AM`, noon `12:00 PM`; no leading zero on the hour; a
+  no-break space before the period. On the school's clock (Cairo). Only through `formatTime`,
+  `formatDateTime` (`17 Nov 2026, 4:07 PM`) and `formatTimeOfDay` in `shared/lib/format.ts`
+  (owner, 2026-11-21); never `toLocaleTimeString` or a hand-built `HH:mm`.
 
 ## Shape and space
 

@@ -53,7 +53,7 @@ describe('My account', () => {
     expect(screen.getAllByText('System admin').length).toBeGreaterThan(0);
     expect(screen.getByText('EMP-0002')).toBeTruthy();
     expect((screen.getByLabelText('Full name') as HTMLInputElement).readOnly).toBe(true);
-    expect(screen.getByText('Today, 09:12')).toBeTruthy();
+    expect(screen.getByText('Today, 9:12 AM')).toBeTruthy();
   });
 });
 

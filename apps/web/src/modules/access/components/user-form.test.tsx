@@ -211,7 +211,7 @@ describe('UserForm', () => {
     renderAccess(<UserForm basePath="/en/users" user={locked} roles={ROLES} now={NOW} />);
     expect(screen.getByText('Sign-in locked')).toBeTruthy();
     expect(
-      screen.getByText('Too many wrong passwords. Sign-in is locked until 14:15, unless you unlock it.'),
+      screen.getByText('Too many wrong passwords. Sign-in is locked until 2:15 PM, unless you unlock it.'),
     ).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Unlock sign-in' }));
     const dialog = await screen.findByRole('dialog', { name: 'Unlock sign-in for Rania Magdy?' });

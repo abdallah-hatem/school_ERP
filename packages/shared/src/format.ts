@@ -1,5 +1,6 @@
 import type { Language } from './enums';
-import type { Days, Piastres } from './types/common';
+import { SCHOOL_TIME_ZONE } from './settings';
+import type { Days, Piastres, TimeOfDay } from './types/common';
 
 /*
  * Pure display formatters shared by the screens (and any future PDF/export on the API).
@@ -81,4 +82,73 @@ export function formatDayCount(
   if (rest >= 3 && rest <= 10) return `${number} أيام`;
   if (rest >= 11) return `${number} يومًا`;
   return `${number} يوم`;
+}
+
+/*
+ * Times of day — always 12-hour with the period: `4:07 PM` / `4:07 م`, `9:30 AM` / `9:30 ص`.
+ * Never 24-hour on screen (owner, 2026-11-21); stored values (`HH:mm`, ISO instants) don't change.
+ * Latin digits in both languages. The time and its period are joined by a no-break space so a
+ * wrapping line never leaves "PM" on its own. The text is built here, not taken from the engine,
+ * so it reads the same in Node and every browser (engines differ: "pm", a narrow space…).
+ */
+
+const NBSP = ' ';
+const DATE_LOCALE: Record<Language, string> = { en: 'en-GB', ar: 'ar-EG-u-nu-latn' };
+/** A date and its time, joined as each language lists: `17 Nov 2026, 4:07 PM` / `17 نوفمبر 2026، 4:07 م`. */
+const DATE_TIME_JOIN: Record<Language, string> = { en: ', ', ar: '، ' };
+
+const clockFormatters = new Map<string, Intl.DateTimeFormat>();
+
+/** The 24-hour hour and minute of an instant on a zone's clock. */
+function clockOf(at: Date, timeZone: string): { hour: number; minute: number } {
+  let formatter = clockFormatters.get(timeZone);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat('en-US', { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+    clockFormatters.set(timeZone, formatter);
+  }
+  const parts = formatter.formatToParts(at);
+  const get = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((p) => p.type === type)?.value ?? 0);
+  return { hour: get('hour') % 24, minute: get('minute') };
+}
+
+/** 24-hour `13`, `7` → `1:07 PM` / `1:07 م`; `0` → `12:… AM`, `12` → `12:… PM`. */
+function twelveHour(hour24: number, minute: number, lang: Language): string {
+  const hour = hour24 % 12 === 0 ? 12 : hour24 % 12;
+  const pm = hour24 >= 12;
+  const period = lang === 'ar' ? (pm ? 'م' : 'ص') : pm ? 'PM' : 'AM';
+  return `${hour}:${String(minute).padStart(2, '0')}${NBSP}${period}`;
+}
+
+/**
+ * An instant's time of day on the school's clock (`SCHOOL_TIME_ZONE`, unless told otherwise):
+ * `2026-11-20T14:07:00Z` → `4:07 PM` / `4:07 م` (Cairo, UTC+2).
+ */
+export function formatClockTime(at: Date | string, lang: Language, timeZone: string = SCHOOL_TIME_ZONE): string {
+  const { hour, minute } = clockOf(new Date(at), timeZone);
+  return twelveHour(hour, minute, lang);
+}
+
+/**
+ * A date with its time on the school's clock (unless told otherwise): `17 Nov 2026, 4:07 PM` /
+ * `17 نوفمبر 2026، 4:07 م`. `year: false` drops the year (`14 Nov, 10:30 AM`).
+ */
+export function formatClockDateTime(
+  at: Date | string,
+  lang: Language,
+  options: { year?: boolean; timeZone?: string } = {},
+): string {
+  const timeZone = options.timeZone ?? SCHOOL_TIME_ZONE;
+  const date = new Intl.DateTimeFormat(DATE_LOCALE[lang], {
+    timeZone,
+    day: 'numeric',
+    month: 'short',
+    year: options.year === false ? undefined : 'numeric',
+  }).format(new Date(at));
+  return `${date}${DATE_TIME_JOIN[lang]}${formatClockTime(at, lang, timeZone)}`;
+}
+
+/** A stored `HH:mm` time of day (no zone): `07:30` → `7:30 AM` / `7:30 ص`; `00:00` → `12:00 AM`. */
+export function formatTimeOfDayText(time: TimeOfDay, lang: Language): string {
+  const [h = 0, m = 0] = time.split(':').map(Number);
+  return twelveHour(h % 24, m, lang);
 }

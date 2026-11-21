@@ -30,3 +30,8 @@ Corrections recorded so they don't have to be repeated. Loaded at session start.
 - Every money input groups thousands live through the shared `MoneyField`/`MoneyInput`; a guard
   test enforces it. When reviewing Tamer's PRs, check new inputs and screens against the shared
   components — the hand-rolled example box slipped through #83. — 2026-11-20
+- Review briefs (mine and for Tamer's PRs) check the **loading** state of every new or changed screen, not
+  only the loaded one: skeleton header (buttons, pills, tabs) and the route registered in the skeleton
+  shape check. #171 shipped the Approved payroll pages unregistered and without header skeletons; the
+  review only looked at loaded screens ("why our review did not pick that up ?????"). Also re-check a
+  page's height when its layout changes (table → cards made the month page too long). — 2026-11-21

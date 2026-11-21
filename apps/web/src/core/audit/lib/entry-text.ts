@@ -15,9 +15,18 @@ import {
   type AuditLabel,
   type Names,
 } from '@school-erp/shared';
-import { formatCount, formatDate, formatDayCount, formatDays, formatMoney, formatMoneyText, formatMonth } from '@/shared/lib/format';
+import {
+  formatCount,
+  formatDate,
+  formatDateTime,
+  formatDayCount,
+  formatDays,
+  formatMoney,
+  formatMoneyText,
+  formatMonth,
+  formatTimeOfDay,
+} from '@/shared/lib/format';
 import { localName, type Locale, type Translate } from '@/shared/lib/i18n';
-import { formatSchoolDateTime } from './time';
 
 /*
  * How an entry reads (D5): the sentence from its action's template with the record's label, each
@@ -92,6 +101,7 @@ export function isFailedSignIn(entry: Pick<AuditEntry, 'action'>): boolean {
 const EMPTY = '—';
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 const ISO_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
+const HH_MM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 function isNames(value: unknown): value is Names & { isActive?: boolean } {
   return (
@@ -189,6 +199,10 @@ export function formatAuditValue(
       return t(value === 'ar' ? 'common.common.arabic' : 'common.common.english');
     }
     if (field === HrSettingKey.PENALTIES_REPETITION_WINDOW) return t(`common.enums.repetitionWindow.${value}`);
+    // The school's work hours are stored `HH:mm`; they read 12-hour like every time (`7:30 AM`).
+    if ((field === SchoolSettingKey.WORK_START || field === SchoolSettingKey.WORK_END) && HH_MM.test(value)) {
+      return formatTimeOfDay(value, locale);
+    }
     // A role's permission line holds its scope: "Everyone", "Their stage".
     if (PERMISSION_PART.test(field) && has(`permissions.scopes.${value}`)) return t(`permissions.scopes.${value}`);
     // A stored file (the school logo, an employee's photo) never shows its stored name
@@ -198,7 +212,7 @@ export function formatAuditValue(
     if (enumList && has(`common.enums.${enumList}.${value}`)) return t(`common.enums.${enumList}.${value}`);
     if (field === 'month' && isMonth(value)) return formatMonth(value, locale);
     if (ISO_DAY.test(value)) return formatDate(value, locale);
-    if (ISO_INSTANT.test(value) && !Number.isNaN(Date.parse(value))) return formatSchoolDateTime(value, locale);
+    if (ISO_INSTANT.test(value) && !Number.isNaN(Date.parse(value))) return formatDateTime(value, locale);
     return value;
   }
   if (typeof value === 'number') {

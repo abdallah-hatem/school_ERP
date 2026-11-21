@@ -91,18 +91,18 @@ describe('Settings screen — school section', () => {
     expect(save).toHaveProperty('disabled', true);
 
     await user.type(nameAr, 'مدرسة النيل');
-    // Work end is a dropdown of half hours shown in the locale's time format.
+    // Work end is a dropdown of half hours, 12-hour with ص/م (no-break space before the period).
     const workEnd = screen.getByRole('combobox', { name: /نهاية العمل/ });
     await user.click(workEnd);
-    expect(screen.queryByRole('option', { name: '7:15 ص' })).toBeNull();
-    await user.click(await screen.findByRole('option', { name: '7:00 ص' }));
+    expect(screen.queryByRole('option', { name: '7:15\u00a0ص' })).toBeNull();
+    await user.click(await screen.findByRole('option', { name: '7:00\u00a0ص' }));
     expect(await screen.findByText('يجب أن تكون نهاية العمل بعد بدايته.')).toBeTruthy();
     expect(save).toHaveProperty('disabled', true);
     expect(api.UPDATE_SCHOOL_SETTINGS).not.toHaveBeenCalled();
 
     // Valid again → enabled; while saving it is busy and a second click sends nothing.
     await user.click(workEnd);
-    await user.click(await screen.findByRole('option', { name: '2:30 م' }));
+    await user.click(await screen.findByRole('option', { name: '2:30\u00a0م' }));
     await waitFor(() => expect(save).toHaveProperty('disabled', false));
     const pending = deferred<{ success: true; status: number; data: typeof school }>();
     api.UPDATE_SCHOOL_SETTINGS.mockReturnValue(pending.promise);

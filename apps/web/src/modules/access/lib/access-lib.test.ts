@@ -125,8 +125,8 @@ describe('last sign-in', () => {
   const now = '2026-11-17T12:00:00.000Z';
   it('never / today with the school time / another day / another year', () => {
     expect(formatSignIn(null, now, 'en', t)).toBe('Never');
-    expect(formatSignIn('2026-11-17T07:12:00.000Z', now, 'en', t)).toBe('Today, 09:12');
-    expect(formatSignIn('2026-11-14T08:30:00.000Z', now, 'en', t)).toBe('14 Nov, 10:30');
-    expect(formatSignIn('2025-10-02T10:45:00.000Z', now, 'en', t)).toBe('2 Oct 2025, 13:45');
+    expect(formatSignIn('2026-11-17T07:12:00.000Z', now, 'en', t)).toBe('Today, 9:12\u00a0AM');
+    expect(formatSignIn('2026-11-14T08:30:00.000Z', now, 'en', t)).toBe('14 Nov, 10:30\u00a0AM');
+    expect(formatSignIn('2025-10-02T10:45:00.000Z', now, 'en', t)).toBe('2 Oct 2025, 1:45\u00a0PM');
   });
 });

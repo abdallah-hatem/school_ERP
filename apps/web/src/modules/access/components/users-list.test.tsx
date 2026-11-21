@@ -108,7 +108,7 @@ describe('UsersList', () => {
     expect(screen.getAllByText('Temporary password').length).toBeGreaterThan(0);
     expect(screen.getAllByTitle('Must change password').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Never').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Today, 09:12').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Today, 9:12 AM').length).toBeGreaterThan(0);
   });
 
   it('each user has an avatar, never initials: the linked employee’s photo or silhouette, else the neutral one; inactive greyed', () => {
@@ -152,7 +152,7 @@ describe('UsersList', () => {
   });
 
   describe('a sign-in locked by too many wrong passwords (owner 2026-11-18)', () => {
-    // Locked until 12:15 UTC = 14:15 school time (Cairo).
+    // Locked until 12:15 UTC = 2:15 PM school time (Cairo).
     const locked = account({
       id: '00000000-0000-4000-8000-000000000004',
       name: 'Salma Adel',
@@ -173,7 +173,7 @@ describe('UsersList', () => {
       renderLocked();
       expect(screen.getAllByText('Sign-in locked').length).toBeGreaterThan(0);
       expect(
-        screen.getAllByTitle('Too many wrong passwords: sign-in is locked until 14:15.').length,
+        screen.getAllByTitle('Too many wrong passwords: sign-in is locked until 2:15 PM.').length,
       ).toBeGreaterThan(0);
       expect(menuItemNames(await openRowActions(user, 'Salma Adel'))).toEqual([
         'Edit',
