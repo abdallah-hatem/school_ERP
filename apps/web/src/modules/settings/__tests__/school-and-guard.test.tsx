@@ -27,6 +27,7 @@ const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi
 vi.mock('next/navigation', () => ({
   usePathname: () => '/en/settings',
   useRouter: () => router,
+  useSearchParams: () => new URLSearchParams(),
   redirect: vi.fn(),
 }));
 
@@ -73,6 +74,8 @@ describe('Settings screen — school section', () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+    // A section switch writes `?section=` into the (jsdom) address bar; the next test starts clean.
+    window.history.replaceState(null, '', '/');
   });
 
   it('field errors shown inline in the current language; save disabled while invalid or saving', async () => {
@@ -183,6 +186,8 @@ describe('Settings screen — unsaved changes warning', () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+    // A section switch writes `?section=` into the (jsdom) address bar; the next test starts clean.
+    window.history.replaceState(null, '', '/');
   });
 
   it('switching section with edits asks first; staying keeps the edits, discarding leaves', async () => {
@@ -201,7 +206,9 @@ describe('Settings screen — unsaved changes warning', () => {
     await user.click(screen.getByRole('button', { name: /HR rules/ }));
     await user.click(await screen.findByRole('button', { name: 'Discard changes' }));
     expect(await screen.findByText('Lateness rule')).toBeTruthy();
-    expect(router.replace).toHaveBeenLastCalledWith('/en/settings?section=hrRules', { scroll: false });
+    // The address follows on the client only: no server round trip for a section switch.
+    expect(window.location.search).toBe('?section=hrRules');
+    expect(router.replace).not.toHaveBeenCalled();
   });
 
   it('without edits a section switch needs no confirmation', async () => {
@@ -276,6 +283,8 @@ describe('Settings screen — change history (owner, 2026-11-17)', () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+    // A section switch writes `?section=` into the (jsdom) address bar; the next test starts clean.
+    window.history.replaceState(null, '', '/');
   });
 
   it('has no Change history section; "View change history" opens Activity filtered to settings', () => {

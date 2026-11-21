@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { visibleSettingsSections } from '@school-erp/shared';
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { settingsActivityHref } from '@/core/audit';
@@ -22,10 +22,11 @@ import {
   StructureIcon,
   type AppIcon,
 } from '@/shared/components/ui/icons';
+import { TAB_HOVER_FADE } from '@/shared/lib/tab-motion';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { DirtyReporterProvider, useLeaveGuard } from '../hooks/unsaved-changes';
-import type { SettingsSectionId } from '../sections';
+import { parseSection, type SettingsSectionId } from '../sections';
 import { AccountingRulesSection } from './accounting-rules-section';
 import { CatalogueSection } from './catalogue-section';
 import { HrRulesSection } from './hr-rules-section';
@@ -75,14 +76,23 @@ type Leave = { to: SettingsSectionId | null } | { href: string } | { proceed: ()
  * Leaving a section with unsaved edits — another section, a menu link, the language switch,
  * closing the tab — asks first. Only the sections the viewer may see are listed
  * (`SETTINGS_SECTION_ACCESS`); a `?section=` they can't see opens their first one instead.
+ *
+ * Switching section is client-side only: the list marks the new section in the same frame as the
+ * click, and `?section=` follows with `history.replaceState` (Next keeps `useSearchParams` in step)
+ * instead of `router.replace`, which re-rendered the server page on every switch for nothing.
  */
 export function SettingsScreen({ initialSection }: { initialSection: SettingsSectionId | null }) {
   const { t, locale } = useTranslation();
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const user = useSession();
   const sections = useMemo(() => visibleSettingsSections(user?.permissions ?? []), [user]);
-  const [picked, setSection] = useState<SettingsSectionId | null>(initialSection);
+  // The address bar wins over the server's prop: coming back to an entry whose `?section=` was
+  // replaced on the client restores the page the server drew for the older address.
+  const [picked, setSection] = useState<SettingsSectionId | null>(
+    () => parseSection(searchParams?.get('section') ?? undefined) ?? initialSection,
+  );
   // The page's guard lets in only someone with a section, so `sections` is never empty there.
   const section = picked && sections.includes(picked) ? picked : null;
   const [dirtyBy, setDirtyBy] = useState<Record<string, boolean>>({});
@@ -102,7 +112,7 @@ export function SettingsScreen({ initialSection }: { initialSection: SettingsSec
 
   function open(to: SettingsSectionId | null) {
     setSection(to);
-    router.replace(to ? `${pathname}?section=${to}` : (pathname ?? ''), { scroll: false });
+    window.history.replaceState(null, '', to ? `${pathname}?section=${to}` : (pathname ?? ''));
   }
 
   function choose(to: SettingsSectionId | null) {
@@ -150,9 +160,9 @@ export function SettingsScreen({ initialSection }: { initialSection: SettingsSec
                     aria-current={current ? 'page' : undefined}
                     onClick={() => choose(id)}
                     className={cn(
-                      'flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-2xl px-3 py-2.5 text-start text-sm font-semibold transition-colors duration-150',
+                      'flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-2xl px-3 py-2.5 text-start text-sm font-semibold',
                       'focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring/55',
-                      current ? 'md:bg-primary-soft md:text-primary' : 'text-foreground hover:bg-muted',
+                      current ? 'md:bg-primary-soft md:text-primary' : cn('text-foreground hover:bg-muted', TAB_HOVER_FADE),
                     )}
                   >
                     <Icon className="size-5 shrink-0" />

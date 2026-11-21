@@ -3,8 +3,10 @@ import { can } from '@/core/auth/permissions';
 import { GET_NOTIFICATION_PREFERENCES, NotificationsI18n } from '@/core/notifications';
 import { getSession } from '@/core/auth/session';
 import { GET_PUSH_DEVICES } from '@/core/pwa';
+import type { ReactNode } from 'react';
 import type { Locale } from '@/shared/lib/i18n';
 import { GET_MY_ACCOUNT, GET_ROLE, GET_ROLES, GET_USER, GET_USERS } from './apis';
+import { AccountHeader } from './components/account-header';
 import { AccountNotificationsView } from './components/account-notifications';
 import { AccountView } from './components/account-view';
 import { AccessState } from './components/no-access';
@@ -162,6 +164,18 @@ export async function RoleScreen({ locale, id, from }: { locale: Locale; id?: st
         holdersTotal={holders?.success ? (holders.meta?.total ?? 0) : (found?.userCount ?? 0)}
       />
     </AccessI18n>
+  );
+}
+
+/** My account's frame (header and tabs), around whichever tab is open. */
+export function AccountLayout({ locale, children }: { locale: Locale; children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-6">
+      <AccessI18n locale={locale}>
+        <AccountHeader />
+      </AccessI18n>
+      {children}
+    </div>
   );
 }
 

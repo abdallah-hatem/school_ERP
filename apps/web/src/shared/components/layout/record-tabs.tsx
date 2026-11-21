@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { TAB_HOVER_FADE } from '@/shared/lib/tab-motion';
 import { cn } from '@/shared/lib/utils';
 
 export interface RecordTab {
@@ -46,8 +47,10 @@ export function RecordTabs({
                 scroll={false}
                 aria-current={current ? 'page' : undefined}
                 className={cn(
-                  '-mb-px flex h-11 cursor-pointer items-center border-b-2 px-4 text-sm font-bold whitespace-nowrap transition-colors duration-150',
-                  current ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground',
+                  '-mb-px flex h-11 cursor-pointer items-center border-b-2 px-4 text-sm font-bold whitespace-nowrap',
+                  current
+                    ? 'border-primary text-primary'
+                    : cn('border-transparent text-muted-foreground hover:text-foreground', TAB_HOVER_FADE),
                 )}
               >
                 {tab.label}
