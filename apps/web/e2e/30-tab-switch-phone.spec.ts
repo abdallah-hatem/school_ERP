@@ -11,11 +11,16 @@ import { signIn } from './support/ui';
  * Runs in the `phone-ar` project only (390×844).
  */
 
-/** Server-component requests for Settings itself (the menu's own prefetches don't count). */
+/**
+ * Server-component requests that render Settings itself. Prefetches (`Next-Router-Prefetch`) don't
+ * count: the menu's links prefetch their pages as they come into view, Settings' own link included.
+ */
 function settingsRenders(page: Page): () => string[] {
   const seen: string[] = [];
   page.on('request', (r) => {
-    if (r.headers()['rsc'] && new URL(r.url()).pathname.endsWith('/settings')) seen.push(r.url());
+    const headers = r.headers();
+    if (headers['rsc'] && !headers['next-router-prefetch'] && new URL(r.url()).pathname.endsWith('/settings'))
+      seen.push(r.url());
   });
   return () => seen;
 }

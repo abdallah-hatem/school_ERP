@@ -13,13 +13,16 @@ import { signIn } from './support/ui';
  */
 
 /**
- * The server-component requests (Next's `RSC` header) for Settings itself from now on — the menu's
- * links prefetch their own pages meanwhile, which is fine.
+ * The server-component requests (Next's `RSC` header) that render Settings itself from now on.
+ * Prefetches (`Next-Router-Prefetch`) don't count: the menu's links prefetch their pages as they
+ * come into view, and Settings' own menu link is in view (the menu scrolls to the current page).
  */
 function settingsRenders(page: Page): () => string[] {
   const seen: string[] = [];
   page.on('request', (r) => {
-    if (r.headers()['rsc'] && new URL(r.url()).pathname.endsWith('/settings')) seen.push(r.url());
+    const headers = r.headers();
+    if (headers['rsc'] && !headers['next-router-prefetch'] && new URL(r.url()).pathname.endsWith('/settings'))
+      seen.push(r.url());
   });
   return () => seen;
 }
