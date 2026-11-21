@@ -34,7 +34,7 @@ import {
   RestoreIcon,
   SearchIcon,
 } from '@/shared/components/ui/icons';
-import { SkeletonButton, SkeletonProse, SkeletonText } from '@/shared/components/ui/skeleton';
+import { SkeletonButton, SkeletonPill, SkeletonProse, SkeletonText } from '@/shared/components/ui/skeleton';
 import { StatTile } from '@/shared/components/ui/stat-tile';
 import { StatusPill } from '@/shared/components/ui/status-pill';
 import { saveDownloadedFile } from '@/shared/lib/download';
@@ -123,7 +123,14 @@ export function PayrollMonth({ monthKey, month: serverMonth, basePath }: Payroll
       <style>{PRINT_CSS}</style>
       <PageHeader
         title={t('accounting.payroll.month.title', { month: monthLabel })}
-        status={month ? <MonthStatusPill status={month.status} /> : undefined}
+        status={
+          month ? (
+            <MonthStatusPill status={month.status} />
+          ) : (
+            // A pending month's pill, the state the skeleton's buttons row traces too.
+            <SkeletonPill>{t(`accounting.payroll.month.status.${AccountingPayrollStatus.PENDING}`)}</SkeletonPill>
+          )
+        }
         description={t('accounting.payroll.month.description')}
         breadcrumbs={[{ label: t('accounting.payroll.month.actions.back'), href: basePath }, { label: monthLabel }]}
         breadcrumbsLabel={t('ui.shell.breadcrumbs')}
@@ -167,6 +174,9 @@ export function PayrollMonth({ monthKey, month: serverMonth, basePath }: Payroll
         // month's totals. Print stays a table with its totals row.
         cardsBelow="always"
         footerCard="none"
+        // The cards scroll inside a box of about the screen's height under the search, with the
+        // pagination under it, on tablets and desktops (owner 2026-11-21); a phone scrolls the page.
+        scrollHeight="screen"
         toolbar={
           <>
             <div className="flex w-full flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -223,11 +233,31 @@ export function PayrollMonth({ monthKey, month: serverMonth, basePath }: Payroll
   );
 }
 
+/**
+ * The buttons row while the month loads: a pending month's, as the people who work on it see it —
+ * Return to HR, Excel, Download PDF, Finalize — each the loaded button's box around its real
+ * (invisible) icon and label, so the row is as wide as the loaded one in every language.
+ */
 function ActionsSkeleton() {
+  const { t } = useTranslation();
   return (
-    <div className="flex flex-wrap gap-2">
-      <SkeletonButton className="h-11 w-24" />
-      <SkeletonButton className="h-11 w-36" />
+    <div data-testid="month-actions-skeleton" className="flex flex-wrap gap-2">
+      <SkeletonButton>
+        <RestoreIcon />
+        {t('accounting.payroll.month.actions.returnToHr')}
+      </SkeletonButton>
+      <SkeletonButton>
+        <ExcelIcon />
+        {t('accounting.payroll.month.actions.excel')}
+      </SkeletonButton>
+      <SkeletonButton>
+        <PdfIcon />
+        {t('accounting.payroll.month.actions.print')}
+      </SkeletonButton>
+      <SkeletonButton>
+        <ApproveIcon />
+        {t('accounting.payroll.month.actions.finalize')}
+      </SkeletonButton>
     </div>
   );
 }

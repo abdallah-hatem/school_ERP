@@ -75,14 +75,62 @@ export function SkeletonMask({ children, className }: { children: ReactNode; cla
   );
 }
 
-/** A status pill's shape (`StatusPill`: text-xs with py-1 → 24px). */
-export function SkeletonPill({ className }: { className?: string }) {
-  return <Skeleton className={cn('h-6 w-20 rounded-full', className)} />;
+/**
+ * A status pill's shape (`StatusPill`: text-xs with py-1 → 24px). Pass the pill's usual wording
+ * (`children`) and it is laid out invisibly in the pill's own box, so the bar is as wide as the
+ * loaded pill in every language; without it, a fixed `w-20` bar. `icon`: the loaded pill shows an
+ * icon (size-4) instead of its dot.
+ */
+export function SkeletonPill({ className, children, icon = false }: { className?: string; children?: ReactNode; icon?: boolean }) {
+  if (children === undefined) return <Skeleton className={cn('h-6 w-20 rounded-full', className)} />;
+  return (
+    <span
+      data-slot="skeleton"
+      aria-hidden="true"
+      className={cn(
+        // StatusPill's box: a dot (size-1.5), gap-1.5, text-xs bold, py-1 ps-2 pe-2.5.
+        'inline-flex items-center gap-1.5 rounded-full bg-secondary py-1 ps-2 pe-2.5 text-xs font-bold whitespace-nowrap text-transparent select-none',
+        'motion-safe:animate-pulse motion-safe:[animation-duration:1.8s] [&_svg]:invisible',
+        className,
+      )}
+    >
+      <span className={icon ? 'size-4' : 'size-1.5'} />
+      {children}
+    </span>
+  );
 }
 
-/** A small button's shape (`size="sm"`: 36px). */
-export function SkeletonButton({ className }: { className?: string }) {
-  return <Skeleton className={cn('h-9 w-24 rounded-lg', className)} />;
+/**
+ * A button's shape. Without `children`: a small button (`size="sm"`: 36px) of a fixed width. With
+ * them — the loaded button's icon and label — the real button's box (`size`, default `md`: 44px)
+ * with that content laid out invisibly, so a header's buttons row is as wide as the loaded one in
+ * every language.
+ */
+export function SkeletonButton({
+  className,
+  children,
+  size = 'md',
+}: {
+  className?: string;
+  children?: ReactNode;
+  size?: 'sm' | 'md';
+}) {
+  if (children === undefined) return <Skeleton className={cn('h-9 w-24 rounded-lg', className)} />;
+  return (
+    <span
+      data-slot="skeleton"
+      aria-hidden="true"
+      className={cn(
+        // Button's box: a 1px border, gap-2, bold text; `md` h-11 px-4, `sm` h-9 px-3.
+        'inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-transparent bg-secondary font-bold whitespace-nowrap text-transparent select-none',
+        "motion-safe:animate-pulse motion-safe:[animation-duration:1.8s] [&_svg]:invisible [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-[1.15em]",
+        size === 'md' ? 'h-11 px-4 text-sm' : 'h-9 px-3 text-sm',
+        className,
+      )}
+    >
+      {children}
+    </span>
+  );
 }
 
 /** An avatar with a name over a code (the employee cell): size-9 tile, text-sm and text-xs lines. */

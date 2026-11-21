@@ -1122,11 +1122,20 @@ doesn't update its skeleton fails CI (owner, 2026-11-18).
 - **Payroll tables: page size and sticky header** (owner, 2026-11-19). Every payroll table passes
   `pagination.pageSizes = PAYROLL_PAGINATION.pageSizes` (10–500) with `onLimitChange` (a "Rows per
   page" picker in `Pagination`) and `scrollHeight="screen"` (the table view scrolls inside a box of
-  about the screen's height with sticky column names; cards and print are unaffected). The API's
+  about the screen's height with sticky column names; print is unaffected). A table drawn as cards
+  on every width (`cardsBelow="always"`, the Approved payroll month) caps its cards the same way from
+  `md` up — the search above and the pagination below stay in sight — while a phone lets them flow
+  with the page, since a scroll box inside a scrolling page is worse on a phone (owner,
+  2026-11-21); a table's phone cards stay uncapped. The API's
   payroll lists (`GET /hr/payroll-runs`, `/hr/employees/:id/payroll-lines`, `/accounting/payroll`)
   take `PayrollPaginationQueryDto` (`limit` ≤ 500); every other list keeps `limit` ≤ 100.
 - **Mark the main blocks.** The screen and its skeleton carry the same `data-skeleton-block="<name>"`
-  on their main content blocks. The shared pieces already do: `PageHeader` (`header`), `DataTable`
+  on their main content blocks. The shared pieces already do: `PageHeader` (`header`, and inside it
+  `header-breadcrumbs`, `header-status` and `header-actions` — so a skeleton missing the status pill
+  or the buttons row, or drawing it at another width, fails; owner, 2026-11-21: draw them with
+  `SkeletonPill` / `SkeletonButton` around the loaded wording and icon, which lays it out invisibly
+  so the bar is as wide in every language, and trace the state most people open: a pending
+  approved month, an approved run, an active employee), `DataTable`
   (`table`, `table-toolbar`, `table-head`, `table-row`, `table-card`, and with a `footer` totals row
   `table-foot` / `table-card-foot`), `Pagination`
   (`pagination`), `StatTile` (`tile`), `FormActionBar` (`form-actions`), `SectionPanel`
@@ -1149,7 +1158,10 @@ doesn't update its skeleton fails CI (owner, 2026-11-18).
   screen with JavaScript off — the server streams the skeleton first and the real content stays
   hidden — reads every visible block, then opens it normally and reads them again. Same blocks, same
   order, each width and height within ±8px (or ±5% above 160px), else it fails with the list of
-  differences. A new screen with a skeleton is added to `SKELETON_SCREENS` there.
+  differences. A new screen with a skeleton is added to `SKELETON_SCREENS` and its `loading.tsx`
+  folder to `SKELETON_ROUTES` (`e2e/support/skeleton-screens.ts`); the unit guard
+  `src/test/skeleton-coverage.guard.test.ts` fails on any `loading.tsx` not listed there (the
+  Approved payroll pages of #171 were missed until 2026-11-21).
 - **A nested route's skeleton is its parent boundary's on a hard load.** A `loading.tsx` wraps every
   route below it, and a first visit shows the outermost one. So lists live in a `(list)` route group
   (`employees/(list)`, `payroll/(list)`, `users/(list)`, `roles/(list)`) to keep their skeleton off
