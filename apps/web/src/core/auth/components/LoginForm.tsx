@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { Form } from '@/shared/components/form/form';
 import { TextField } from '@/shared/components/form/fields';
 import { Button } from '@/shared/components/ui/button';
+import { EmailIcon, PasswordIcon } from '@/shared/components/ui/icons';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { signIn, signInWithForm } from '../actions';
 
@@ -54,6 +55,7 @@ export function LoginForm({ next }: { next?: string }) {
         dir="ltr"
         inputMode="email"
         autoComplete="username"
+        icon={EmailIcon}
         label={t('auth.login.email')}
         placeholder={t('auth.login.emailPlaceholder')}
         disabled={pending}
@@ -64,6 +66,7 @@ export function LoginForm({ next }: { next?: string }) {
         name="password"
         type="password"
         autoComplete="current-password"
+        icon={PasswordIcon}
         label={t('auth.login.password')}
         placeholder={t('auth.login.passwordPlaceholder')}
         disabled={pending}

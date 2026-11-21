@@ -21,6 +21,10 @@ Before the demo, on the demo database:
 
 ## 1. Sign in
 - Open the app in Arabic (`/ar` — the default language is English). The sign-in page shows the school's logo and name before signing in.
+- ✔ The sign-in page is split in two: a light teal panel with the school's name, a headline and the office
+  scene (the monitor's bars grow in, the mug steams, two cards bob), and the form beside it. In Arabic
+  the panel moves to the right and the cards' text reads right to left; the drawing itself doesn't flip.
+  On a phone the panel sits on top (name, EN/ع switch, the scene cropped) with the form under it.
 - Wrong password → a clear Arabic message; correct password → the dashboard.
 
 ## 2. Dashboard
