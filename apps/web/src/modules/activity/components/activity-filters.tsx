@@ -1,7 +1,10 @@
 'use client';
 
 import type { AuditActor, AuditSummary, IsoDate } from '@school-erp/shared';
-import { useId, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { GET_AUDIT_ACTORS } from '@/core/audit/apis';
+import { callApi } from '@/lib/callApi';
+import { PICKER_DEBOUNCE_MS, PICKER_PAGE } from '@/shared/hooks/use-server-options';
 import {
   AnyoneIcon,
   CheckIcon,
@@ -19,7 +22,6 @@ import { controlClasses } from '@/shared/components/ui/input';
 import { PersonAvatar } from '@/shared/components/ui/person-avatar';
 import { SkeletonText } from '@/shared/components/ui/skeleton';
 import { formatCount } from '@/shared/lib/format';
-import { matchesSearch } from '@/shared/lib/search';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import {
@@ -135,21 +137,45 @@ function TypeChips({
   );
 }
 
-/** The searchable person picker, open inline (layout option B): "Anyone" then everyone in the log. */
+/**
+ * The person picker, open inline (layout option B): "Anyone" then the people in the log, newest
+ * activity first — one page from the API, which also searches them by name as the person types.
+ */
 function PersonPicker({
-  actors,
   value,
   onChange,
   disabled,
 }: {
-  actors: AuditActor[];
   value: string | undefined;
   onChange: (value: string | undefined) => void;
   disabled?: boolean;
 }) {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
-  const shown = actors.filter((a) => matchesSearch(search, [a.name]));
+  const [answer, setAnswer] = useState<{ actors: AuditActor[]; loaded: boolean }>({ actors: [], loaded: false });
+  const request = useRef(0);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function load(text: string, wait: number) {
+    const n = ++request.current;
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      void callApi(GET_AUDIT_ACTORS({ search: text.trim() || undefined, limit: PICKER_PAGE }), { showErrorToast: false }).then(
+        (res) => {
+          if (n !== request.current || res.unauthorized) return;
+          setAnswer({ actors: res.success ? (res.data ?? []) : [], loaded: true });
+        },
+      );
+    }, wait);
+  }
+  useEffect(() => {
+    load('', 0);
+    return () => {
+      if (timer.current) clearTimeout(timer.current);
+    };
+    // Once, on mount: the first page.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const shown = answer.actors;
   const row = (key: string, selected: boolean, onClick: () => void, lead: ReactNode, name: string) => (
     <li key={key}>
       <button
@@ -180,7 +206,10 @@ function PersonPicker({
           aria-label={t('audit.filters.searchPeople')}
           placeholder={t('audit.filters.searchPeople')}
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            load(e.target.value, PICKER_DEBOUNCE_MS);
+          }}
           className={cn(controlClasses, 'h-11 rounded-none border-0 ps-9 shadow-none md:h-10')}
         />
       </div>
@@ -205,9 +234,9 @@ function PersonPicker({
             a.name,
           ),
         )}
-        {shown.length === 0 ? (
+        {shown.length === 0 && answer.loaded ? (
           <li className="px-2 py-2 text-sm text-muted-foreground">
-            {actors.length === 0 ? t('audit.filters.noPeople') : t('audit.filters.noPeopleMatch')}
+            {search.trim() ? t('audit.filters.noPeopleMatch') : t('audit.filters.noPeople')}
           </li>
         ) : null}
       </ul>
@@ -253,7 +282,6 @@ function Glance({ summary }: { summary: AuditSummary | undefined }) {
  */
 export function ActivityFilters({
   query,
-  actors,
   summary,
   today,
   onChange,
@@ -263,7 +291,6 @@ export function ActivityFilters({
   title = true,
 }: {
   query: ActivityQuery;
-  actors: AuditActor[];
   /** Today's counts; null when they couldn't be loaded, undefined while the page loads. */
   summary: AuditSummary | null | undefined;
   /** Today in the school's calendar. */
@@ -308,7 +335,7 @@ export function ActivityFilters({
         <TypeChips value={query.types} disabled={disabled} onChange={(types) => set({ types })} />
       </Group>
       <Group label={t('audit.filters.person')}>
-        <PersonPicker actors={actors} value={query.actorId} disabled={disabled} onChange={(actorId) => set({ actorId })} />
+        <PersonPicker value={query.actorId} disabled={disabled} onChange={(actorId) => set({ actorId })} />
       </Group>
       {summary !== null ? (
         <Group label={t('audit.filters.glance')}>

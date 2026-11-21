@@ -47,7 +47,8 @@ export async function RecordHistoryScreen({
   const [entries, fields, actors] = await Promise.all([
     GET_RECORD_AUDIT(entityType, entityId, toAuditRecordQuery(query)),
     GET_RECORD_AUDIT_FIELDS(entityType, entityId),
-    GET_AUDIT_ACTORS({ entityType, entityId }),
+    // The person filter asks the API as the person types; here only the chosen one's name.
+    query.actorId ? GET_AUDIT_ACTORS({ entityType, entityId, id: query.actorId }) : Promise.resolve(null),
   ]);
   if (entries.success === false && entries.status === 404) notFound();
   return (
@@ -61,7 +62,8 @@ export async function RecordHistoryScreen({
         entries={entries.success ? (entries.data ?? []) : []}
         total={entries.success ? (entries.meta?.total ?? 0) : 0}
         fields={fields.success ? (fields.data ?? []) : []}
-        actors={actors.success ? (actors.data ?? []) : []}
+        actors={actors?.success ? (actors.data ?? []) : []}
+        record={{ entityType, entityId }}
         now={new Date().toISOString()}
         error={!entries.success}
       />

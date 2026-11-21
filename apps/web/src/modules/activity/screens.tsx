@@ -50,7 +50,8 @@ export async function ActivityScreen({ locale, searchParams }: { locale: Locale;
   const [entries, actors, summary] = await Promise.all([
     // Filters that can't match anything (Settings + "Signed in") need no request.
     apiQuery ? GET_AUDIT(apiQuery) : Promise.resolve(null),
-    GET_AUDIT_ACTORS(),
+    // The person picker asks the API as the person types; here only the chosen one (the chip's name).
+    query.actorId ? GET_AUDIT_ACTORS({ id: query.actorId }) : Promise.resolve(null),
     GET_AUDIT_SUMMARY(todayRange.from, todayRange.to),
   ]);
   const ok = entries === null || entries.success;
@@ -63,7 +64,7 @@ export async function ActivityScreen({ locale, searchParams }: { locale: Locale;
         query={query}
         entries={entries?.success ? (entries.data ?? []) : []}
         total={entries?.success ? (entries.meta?.total ?? 0) : 0}
-        actors={actors.success ? (actors.data ?? []) : []}
+        actors={actors?.success ? (actors.data ?? []) : []}
         summary={summary.success ? (summary.data ?? null) : null}
         dayTotals={dayTotals}
         now={now}

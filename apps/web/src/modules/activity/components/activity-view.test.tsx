@@ -9,10 +9,22 @@ const refresh = vi.fn();
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push, refresh, replace: vi.fn(), prefetch: vi.fn() }),
 }));
+// The person pickers' choices come from the API (searched there, never here).
+const auditApis = vi.hoisted(() => ({ GET_AUDIT_ACTORS: vi.fn() }));
+vi.mock('@/core/audit/apis', () => auditApis);
 vi.mock('next/link', async () => ({ default: (await import('@/core/audit/test/fixtures')).MockLink }));
 
 import type { AuditEntry } from '@school-erp/shared';
 import { ACTORS, AHMED, entry, MONA, NOW, renderAudit } from '@/core/audit/test/fixtures';
+
+/** The API's side of the people picker: the log's people, searched by name. */
+function serveActors() {
+  auditApis.GET_AUDIT_ACTORS.mockImplementation(async (q: { search?: string } = {}) => ({
+    success: true,
+    status: 200,
+    data: ACTORS.filter((a) => a.name.toLowerCase().includes((q.search ?? '').toLowerCase())),
+  }));
+}
 import { parseActivityQuery } from '../lib/query';
 import { ActivityView } from './activity-view';
 
@@ -43,6 +55,7 @@ const panel = () => screen.getByRole('complementary', { name: 'Filters' });
 
 describe('Activity page', () => {
   beforeEach(() => {
+    serveActors();
     push.mockReset();
     refresh.mockReset();
   });
@@ -75,8 +88,10 @@ describe('Activity page', () => {
     await user.click(within(panel()).getByRole('button', { name: 'Changed' }));
     expect(push).toHaveBeenLastCalledWith('/en/activity?type=update', { scroll: false });
 
-    await user.click(within(panel()).getByRole('button', { name: 'Ahmed Mahmoud' }));
+    await user.click(await within(panel()).findByRole('button', { name: 'Ahmed Mahmoud' }));
     expect(push).toHaveBeenLastCalledWith(`/en/activity?person=${AHMED.id}`, { scroll: false });
+    // The people came from the API's first page.
+    expect(auditApis.GET_AUDIT_ACTORS).toHaveBeenCalledWith({ search: undefined, limit: 20 });
 
     await user.click(within(panel()).getByRole('button', { name: /Date range/ }));
     await user.click(await screen.findByRole('button', { name: 'Last 7 days' }));
@@ -92,8 +107,10 @@ describe('Activity page', () => {
     await user.click(within(panel()).getByRole('button', { name: 'Added' }));
     expect(push).toHaveBeenLastCalledWith(`/en/activity?person=${MONA.id}`, { scroll: false });
 
+    await within(panel()).findByRole('button', { name: 'Mona Ibrahim' });
     await user.type(within(panel()).getByRole('searchbox', { name: 'Search people' }), 'ahm');
-    expect(within(panel()).queryByRole('button', { name: 'Mona Ibrahim' })).toBeNull();
+    await waitFor(() => expect(auditApis.GET_AUDIT_ACTORS).toHaveBeenLastCalledWith({ search: 'ahm', limit: 20 }));
+    await waitFor(() => expect(within(panel()).queryByRole('button', { name: 'Mona Ibrahim' })).toBeNull());
     await user.clear(within(panel()).getByRole('searchbox', { name: 'Search people' }));
     await user.click(within(panel()).getByRole('button', { name: 'Anyone' }));
     expect(push).toHaveBeenLastCalledWith('/en/activity?type=create', { scroll: false });
