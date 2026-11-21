@@ -15,6 +15,11 @@ export const LANG_COOKIE = 'lang';
  * logo). Every other `/files/…` path needs one. Logo uploads must be stored under it.
  */
 export const PUBLIC_FILES_PREFIX = '/files/logo/';
+/**
+ * Every public `/files/…` prefix: the logo, and the app icons drawn from it (the browser fetches
+ * them for the manifest, the tab and push alerts, signed out too — owner, 2026-11-21).
+ */
+export const PUBLIC_FILES_PREFIXES = [PUBLIC_FILES_PREFIX, '/files/app-icon/'] as const;
 export const FILES_PREFIX = '/files/';
 
 /** Seeded HR admin (§2: accounts come from the seed; no self sign-up). */

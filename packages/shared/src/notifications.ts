@@ -1,5 +1,5 @@
 import type { PermissionKey } from './permissions';
-import type { ScreenId } from './screens';
+import { SCREENS, type ScreenId } from './screens';
 
 /*
  * Notifications (§11, spec docs/specs/2026-11-18-notifications.md). Core owns the mechanism
@@ -17,14 +17,33 @@ import type { ScreenId } from './screens';
  */
 
 /**
- * Where a notification can go. Only `in_app` is live: later channels (email, WhatsApp, SMS) add a
- * value here and an adapter in core — modules never name a channel (N7). The UI shows none of this.
+ * Where a notification can go: `in_app` (the bell) and `push` (Web Push to the person's devices,
+ * owner 2026-11-21). Later channels (email, WhatsApp, SMS) add a value here and an adapter in core —
+ * modules never name a channel (N7).
  */
-export const NOTIFICATION_CHANNELS = ['in_app'] as const;
+export const NOTIFICATION_CHANNELS = ['in_app', 'push'] as const;
 export type NotificationChannel = (typeof NOTIFICATION_CHANNELS)[number];
 
 export function isNotificationChannel(value: unknown): value is NotificationChannel {
   return typeof value === 'string' && (NOTIFICATION_CHANNELS as readonly string[]).includes(value);
+}
+
+/**
+ * The channels a person (and the school) switches **per type** — the one switch per type on My
+ * account → Notifications and Settings → Notifications. `push` is not among them: it follows each
+ * type's in-app switch (a type that reaches the bell reaches the person's devices too; required
+ * types always) and is turned on **per device** instead ("Alerts on this device", owner 2026-11-21).
+ */
+export const NOTIFICATION_PREFERENCE_CHANNELS = ['in_app'] as const satisfies readonly NotificationChannel[];
+export type NotificationPreferenceChannel = (typeof NOTIFICATION_PREFERENCE_CHANNELS)[number];
+
+export function isNotificationPreferenceChannel(value: unknown): value is NotificationPreferenceChannel {
+  return typeof value === 'string' && (NOTIFICATION_PREFERENCE_CHANNELS as readonly string[]).includes(value);
+}
+
+/** The per-type switch a channel follows: `push` goes wherever the type's in-app switch says. */
+export function preferenceChannelOf(channel: NotificationChannel): NotificationPreferenceChannel {
+  return channel === 'push' ? 'in_app' : channel;
 }
 
 /** `approval`: something waits for the reader and resolves when done; `reminder`: something is due. */
@@ -179,3 +198,22 @@ export const NOTIFICATIONS_PAGE = { defaultLimit: 20, maxLimit: 50 } as const;
 
 /** The bell shows the real count up to this, then "99+" (the API always returns the real number). */
 export const NOTIFICATION_BELL_MAX = 99;
+
+/**
+ * The page a link opens, under the locale: the `SCREENS` path with the record's id and the query
+ * (`/en/penalties?penalty=<id>`); null when the screen needs a record the link doesn't name. The
+ * bell's rows and a tapped push notification open the same page.
+ */
+export function notificationLinkPath(link: NotificationLink | null, locale: string): string | null {
+  if (!link) return null;
+  const screen = (SCREENS as Record<string, { path: string } | undefined>)[link.screen];
+  if (!screen) return null;
+  let path = screen.path;
+  if (path.includes(':id')) {
+    if (!link.recordId) return null;
+    path = path.replace(':id', encodeURIComponent(link.recordId));
+  }
+  if (path.includes(':')) return null;
+  const query = new URLSearchParams(link.query ?? {}).toString();
+  return `/${locale}${path}${query ? `?${query}` : ''}`;
+}

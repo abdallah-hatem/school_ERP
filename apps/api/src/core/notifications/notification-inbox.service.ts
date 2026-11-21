@@ -100,6 +100,16 @@ export class NotificationInbox {
     return { updated: await this.notifications.readAllUpTo(me(user), upTo, new Date()) };
   }
 
+  /**
+   * One of the person's notifications as the bell shows it to them now (N11) — only the items they
+   * may still see — or null when it isn't theirs or they may see none of it. The push alert reads it.
+   */
+  async findVisible(user: Who, id: string): Promise<NotificationItem | null> {
+    const row = await this.notifications.findOne(me(user), id);
+    const [view] = row ? await this.visible(user, [row]) : [];
+    return view ?? null;
+  }
+
   private typesOf(category: NotificationCategory): string[] {
     return this.types
       .all()

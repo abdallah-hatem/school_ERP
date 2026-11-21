@@ -2,11 +2,12 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import {
   AuditEntityType,
   ErrorCode,
-  NOTIFICATION_CHANNELS,
+  NOTIFICATION_PREFERENCE_CHANNELS,
   NotificationSettingKey,
+  isNotificationPreferenceChannel,
   type AuditChange,
   type AuthUser,
-  type NotificationChannel,
+  type NotificationPreferenceChannel,
   type NotificationPreferences,
   type NotificationRetention,
   type NotificationSettings,
@@ -50,7 +51,8 @@ const changeLine = (
 /**
  * Preferences (N13): per person, per type, per channel (My account → Notifications), over the
  * school's defaults (Settings → Notifications), over each type's own default. A type that can't be
- * turned off is always on in the app. Only a live channel can be chosen — `in_app` today.
+ * turned off is always on in the app. Only a per-type channel can be chosen — `in_app`; push
+ * follows it and is turned on per device (`PushDevicesService`).
  * Both saves are settings changes and are audited, listing only the switches that changed.
  */
 @Injectable()
@@ -84,7 +86,7 @@ export class NotificationPreferencesService {
           module: t.module,
           category: t.category,
           canTurnOff: t.canTurnOff,
-          channels: NOTIFICATION_CHANNELS.map((channel) => {
+          channels: NOTIFICATION_PREFERENCE_CHANNELS.map((channel) => {
             const stored = defaults.get(`${key}:${channel}`);
             const own = isLocked(t, channel) ? null : (personal.get(`${key}:${channel}`) ?? null);
             return {
@@ -136,7 +138,7 @@ export class NotificationPreferencesService {
     return {
       channels: this.channels.states(),
       defaults: this.types.all().flatMap(([key, t]) =>
-        NOTIFICATION_CHANNELS.map((channel) => ({
+        NOTIFICATION_PREFERENCE_CHANNELS.map((channel) => ({
           type: key,
           module: t.module,
           category: t.category,
@@ -190,14 +192,14 @@ export class NotificationPreferencesService {
 
   /**
    * Refuses the whole save on the first bad switch: an unknown type or the same switch twice (400),
-   * a channel that isn't live (409 `CHANNEL_NOT_AVAILABLE`), turning off a type that can't be
+   * a channel without per-type switches or that isn't live (409 `CHANNEL_NOT_AVAILABLE`), turning off a type that can't be
    * (409 `NOTIFICATION_TYPE_REQUIRED`); a school default can't be `null` (400). A locked switch
    * sent as on (or back to the default) changes nothing and is left out.
    */
   private check(
     items: readonly ChoiceInput[],
     what: 'preferences' | 'defaults',
-  ): (ChoiceInput & { channel: NotificationChannel })[] {
+  ): (ChoiceInput & { channel: NotificationPreferenceChannel })[] {
     const seen = new Set<string>();
     return items.flatMap((item) => {
       const type: NotificationTypeDefinition | undefined = this.types.find(item.type);
@@ -209,7 +211,7 @@ export class NotificationPreferencesService {
         throw new CodedException(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_FAILED);
       }
       seen.add(`${item.type}:${item.channel}`);
-      if (!this.channels.isAvailable(item.channel)) {
+      if (!isNotificationPreferenceChannel(item.channel) || !this.channels.isAvailable(item.channel)) {
         throw new CodedException(HttpStatus.CONFLICT, ErrorCode.CHANNEL_NOT_AVAILABLE);
       }
       if (isLocked(type, item.channel)) {

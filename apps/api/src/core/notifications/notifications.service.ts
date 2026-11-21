@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import {
   NOTIFICATION_CHANNELS,
+  NotificationEvent,
+  preferenceChannelOf,
   schoolDayOf,
   type NotificationChannel,
   type NotificationResolution,
@@ -9,6 +11,7 @@ import {
   type NotificationTypeKey,
 } from '@school-erp/shared';
 import type { DbAdapter } from '../../database/transactions';
+import { DomainEvents } from '../events';
 import { NotificationChannels, type DeliveryStart } from './channels';
 import { NotificationAccess } from './notification-access.service';
 import { NotificationScopes, type NotificationScopeResolver } from './notification-scope';
@@ -16,6 +19,7 @@ import { NotificationTypes } from './notification-types';
 import { effectiveEnabled, groupLockKey } from './notifications.pure';
 import { NotificationPreferencesRepository } from './repositories/notification-preferences.repository';
 import { NotificationsRepository, type Recipient } from './repositories/notifications.repository';
+import { PushDevicesRepository } from './repositories/push-devices.repository';
 import { RecipientsRepository } from './repositories/recipients.repository';
 
 export interface NotifyInput {
@@ -80,13 +84,17 @@ export class NotificationsService {
     private readonly notifications: NotificationsRepository,
     private readonly preferences: NotificationPreferencesRepository,
     private readonly recipients: RecipientsRepository,
+    private readonly pushDevices: PushDevicesRepository,
+    private readonly events: DomainEvents,
   ) {}
 
   /**
    * Tells everyone who may act on `subject` (N5): one item per recipient, joining their open,
    * unread notification of this type and group key, or starting a new one with its deliveries
-   * (N17, N8). A person who turned the type off in the app gets nothing (N13). Returns how many
-   * items were written — 0 for a repeat (N9) or nobody to tell.
+   * (N17, N8). A person who turned the type off in the app gets nothing (N13). Someone with alerts
+   * on a device also gets a push: an outbox event in this transaction, sent after the commit
+   * (`PushNotificationListener`) — for every new item, so a group's alert is brought up to date.
+   * Returns how many items were written — 0 for a repeat (N9) or nobody to tell.
    */
   async notify(input: NotifyInput): Promise<{ created: number }> {
     if (!this.txHost.isTransactionActive())
@@ -107,7 +115,15 @@ export class NotificationsService {
       if (!channels.some((d) => d.channel === 'in_app')) continue;
       const to: Recipient = { kind: USER, id: userId };
       const added = await this.addItem(to, input, groupKey, actorId, now, channels);
-      if (added) created++;
+      if (!added) continue;
+      created++;
+      if (channels.some((d) => d.channel === 'push')) {
+        await this.events.publish(
+          NotificationEvent.PUSH_REQUESTED,
+          { notificationId: added, recipientId: userId, at: now.toISOString() },
+          { mustDeliver: true },
+        );
+      }
     }
     return { created };
   }
@@ -156,7 +172,10 @@ export class NotificationsService {
     this.scopes.register(entityType, resolver);
   }
 
-  /** The channels each recipient gets this type on (N13), with how each delivery starts. */
+  /**
+   * The channels each recipient gets this type on (N13), with how each delivery starts. Push
+   * follows the type's in-app switch (`preferenceChannelOf`) and needs a device with alerts on.
+   */
   private async deliveriesFor(
     type: string,
     userIds: readonly string[],
@@ -173,26 +192,30 @@ export class NotificationsService {
         c.enabled,
       ]),
     );
+    const withDevices = this.channels.isAvailable('push')
+      ? await this.pushDevices.usersWithDevices(userIds)
+      : new Set<string>();
     const out = new Map<string, { channel: NotificationChannel; status: DeliveryStart }[]>();
     for (const userId of userIds) {
       out.set(
         userId,
-        NOTIFICATION_CHANNELS.filter(
-          (channel) =>
-            this.channels.isAvailable(channel) &&
-            effectiveEnabled(
-              definition,
-              channel,
-              defaults.get(channel),
-              personal.get(`${userId}:${channel}`),
-            ),
-        ).map((channel) => ({ channel, status: this.channels.start(channel) })),
+        NOTIFICATION_CHANNELS.filter((channel) => {
+          if (!this.channels.isAvailable(channel)) return false;
+          if (channel === 'push' && !withDevices.has(userId)) return false;
+          const switchOf = preferenceChannelOf(channel);
+          return effectiveEnabled(
+            definition,
+            switchOf,
+            defaults.get(switchOf),
+            personal.get(`${userId}:${switchOf}`),
+          );
+        }).map((channel) => ({ channel, status: this.channels.start(channel) })),
       );
     }
     return out;
   }
 
-  /** One item for one person, under their group's lock (N17); false when it was a repeat (N9). */
+  /** One item for one person, under their group's lock (N17): its notification's id, or null for a repeat (N9). */
   private async addItem(
     to: Recipient,
     input: NotifyInput,
@@ -200,9 +223,9 @@ export class NotificationsService {
     actorId: string | null,
     now: Date,
     deliveries: { channel: NotificationChannel; status: DeliveryStart }[],
-  ): Promise<boolean> {
+  ): Promise<string | null> {
     await this.notifications.lock(groupLockKey(to.kind, to.id, input.type, groupKey));
-    if (await this.notifications.itemExists(to, input.type, input.dedupeKey)) return false;
+    if (await this.notifications.itemExists(to, input.type, input.dedupeKey)) return null;
 
     const open = await this.notifications.findOpenGroup(to, input.type, groupKey);
     const notificationId =
@@ -226,9 +249,9 @@ export class NotificationsService {
     if (!(await this.notifications.insertItem(notificationId, to, item, now))) {
       // Another transaction wrote the same item under another group key meanwhile (N9): drop ours.
       if (!open) await this.notifications.deleteNotification(notificationId);
-      return false;
+      return null;
     }
     if (open) await this.notifications.touch(open, now);
-    return true;
+    return notificationId;
   }
 }

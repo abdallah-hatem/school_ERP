@@ -30,7 +30,8 @@
     "accounting_payroll": "ضرائب الرواتب",
     "outbox_delivery": "تسليم حدث",
     "notification_preferences": "تفضيلات الإشعارات",
-    "notification_settings": "إعدادات الإشعارات"
+    "notification_settings": "إعدادات الإشعارات",
+    "push_device": "جهاز التنبيهات"
   },
   "actions": {
     "core": {
@@ -70,6 +71,10 @@
       },
       "notification_settings": {
         "update": "تعديل إعدادات الإشعارات"
+      },
+      "push_device": {
+        "add": "تفعيل التنبيهات على {entity}",
+        "remove": "إزالة الجهاز {entity} من التنبيهات"
       }
     },
     "hr": {

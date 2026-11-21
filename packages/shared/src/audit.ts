@@ -37,6 +37,7 @@ export const AuditEntityType = {
   OUTBOX_DELIVERY: 'outbox_delivery',
   NOTIFICATION_PREFERENCES: 'notification_preferences',
   NOTIFICATION_SETTINGS: 'notification_settings',
+  PUSH_DEVICE: 'push_device',
 } as const;
 export type AuditEntityType = (typeof AuditEntityType)[keyof typeof AuditEntityType];
 export const AUDIT_ENTITY_TYPES = Object.values(AuditEntityType) as AuditEntityType[];
@@ -118,6 +119,10 @@ export const AUDIT_ACTIONS = {
     entityType: E.NOTIFICATION_SETTINGS,
     kind: 'update',
   },
+  // core — push alerts (§11): a device that gets a person's notifications, added or removed. Not
+  // read state: it decides where the school's notifications (names, approvals) go.
+  'core.push_device.add': { module: 'core', entityType: E.PUSH_DEVICE, kind: 'access' },
+  'core.push_device.remove': { module: 'core', entityType: E.PUSH_DEVICE, kind: 'access' },
   // hr — employees
   'hr.employee.create': {
     module: 'hr',

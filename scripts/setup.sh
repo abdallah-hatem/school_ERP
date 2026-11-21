@@ -6,7 +6,7 @@
 #   1. checks Node 20+ and pnpm 10, installs dependencies
 #   2. checks Docker, starts the Postgres container and waits for it
 #   3. creates apps/api/.env and apps/web/.env.local from their examples if missing, with generated
-#      secrets (JWT_ACCESS_SECRET, SEED_ADMIN_PASSWORD) — never printed
+#      secrets (JWT_ACCESS_SECRET, SEED_ADMIN_PASSWORD, a VAPID pair for push alerts) — never printed
 #   4. builds packages/shared, generates the Prisma client, applies the migrations
 #   5. seeds the demo data unless the admin already exists (`--reseed` runs it anyway; the seed is
 #      idempotent but resets the admin's password to SEED_ADMIN_PASSWORD)
@@ -62,6 +62,15 @@ set_key() { # set_key FILE KEY VALUE — replaces KEY= or "# KEY=" lines, append
   rm -f "$tmp"
 }
 
+# A Web Push (VAPID) pair for this clone's push alerts, from the API's own web-push package.
+set_vapid() {
+  local keys
+  keys="$(cd apps/api && node -e "const k=require('web-push').generateVAPIDKeys();console.log(k.publicKey+' '+k.privateKey)")"
+  set_key "$api_env" VAPID_PUBLIC_KEY "${keys%% *}"
+  set_key "$api_env" VAPID_PRIVATE_KEY "${keys##* }"
+  set_key "$api_env" VAPID_SUBJECT "mailto:dev@localhost.test"
+}
+
 if [[ ! -f "$api_env" ]]; then
   cp apps/api/.env.example "$api_env"
   chmod 600 "$api_env"
@@ -72,7 +81,8 @@ if [[ ! -f "$api_env" ]]; then
   set_key "$api_env" JWT_ACCESS_SECRET "$(openssl rand -base64 48 | tr -d '\n')"
   set_key "$api_env" COOKIE_SECURE false
   set_key "$api_env" SEED_ADMIN_PASSWORD "$(openssl rand -hex 12)"
-  echo "  created $api_env (generated JWT_ACCESS_SECRET and SEED_ADMIN_PASSWORD)"
+  set_vapid
+  echo "  created $api_env (generated JWT_ACCESS_SECRET, SEED_ADMIN_PASSWORD and a VAPID pair)"
 else
   # An older .env may lack the two generated values; add them without touching anything else.
   if [[ -z "$(env_get JWT_ACCESS_SECRET "$api_env")" ]]; then
@@ -82,6 +92,10 @@ else
   if [[ -z "$(env_get SEED_ADMIN_PASSWORD "$api_env")" ]]; then
     set_key "$api_env" SEED_ADMIN_PASSWORD "$(openssl rand -hex 12)"
     echo "  $api_env: added a generated SEED_ADMIN_PASSWORD"
+  fi
+  if [[ -z "$(env_get VAPID_PUBLIC_KEY "$api_env")" ]]; then
+    set_vapid
+    echo "  $api_env: added a generated VAPID pair (push alerts)"
   fi
   echo "  kept $api_env"
 fi

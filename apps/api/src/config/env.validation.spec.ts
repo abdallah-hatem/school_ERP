@@ -1,4 +1,5 @@
-import { validateEnv } from './env.validation';
+import webPush from 'web-push';
+import { validateEnv, vapidFrom } from './env.validation';
 
 const URL = 'postgresql://u:p@localhost:5442/db';
 const SECRET = 'x'.repeat(32);
@@ -29,6 +30,38 @@ describe('validateEnv', () => {
   it('fails at boot when the JWT secret is missing or short', () => {
     expect(() => validateEnv({ DATABASE_URL: URL })).toThrow(/JWT_ACCESS_SECRET/);
     expect(() => validateEnv({ ...BASE, JWT_ACCESS_SECRET: 'short' })).toThrow(/32 characters/);
+  });
+
+  describe('VAPID keys (push alerts, 2026-11-21)', () => {
+    // A pair made for this run only (never a committed key).
+    const keys = webPush.generateVAPIDKeys();
+    const VAPID = {
+      VAPID_PUBLIC_KEY: keys.publicKey,
+      VAPID_PRIVATE_KEY: keys.privateKey,
+      VAPID_SUBJECT: 'mailto:it@example.test',
+    };
+
+    it('none set (or empty lines) → push off', () => {
+      expect(vapidFrom(validateEnv(BASE))).toBeNull();
+      expect(
+        vapidFrom(validateEnv({ ...BASE, VAPID_PUBLIC_KEY: '', VAPID_PRIVATE_KEY: '', VAPID_SUBJECT: '' })),
+      ).toBeNull();
+    });
+
+    it('all three → push on', () => {
+      expect(vapidFrom(validateEnv({ ...BASE, ...VAPID }))).toEqual({
+        publicKey: VAPID.VAPID_PUBLIC_KEY,
+        privateKey: VAPID.VAPID_PRIVATE_KEY,
+        subject: VAPID.VAPID_SUBJECT,
+      });
+    });
+
+    it('some but not all, or a malformed one → fails at boot', () => {
+      const { VAPID_SUBJECT: _subject, ...two } = VAPID;
+      expect(() => vapidFrom(validateEnv({ ...BASE, ...two }))).toThrow(/set all three or none/);
+      expect(() => validateEnv({ ...BASE, ...VAPID, VAPID_SUBJECT: 'it@example.test' })).toThrow(/VAPID_SUBJECT/);
+      expect(() => validateEnv({ ...BASE, ...VAPID, VAPID_PUBLIC_KEY: 'short' })).toThrow(/VAPID_PUBLIC_KEY/);
+    });
   });
 
   it('reads COOKIE_SECURE as a boolean', () => {

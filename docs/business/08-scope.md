@@ -30,7 +30,8 @@ responsive layout.
 - **Supervision duty roster.**
 - **Notifications** (§11) — in-app bell, approvals waiting and reminders; spec, plan and mockups
   with the owner (2026-11-18). The mechanism, HR's reminders and the screens are built
-  (2026-11-18); HR's approval notifications next. Email, WhatsApp, SMS and parents later.
+  (2026-11-18); HR's approval notifications next. Push alerts to phones and computers, and the
+  app installable with the school's logo, built 2026-11-21. Email, WhatsApp, SMS and parents later.
 - **Audit log** (§9) — approved 2026-11-17, being built.
 - **App logging** for developers (requests, errors) — with hosting.
 

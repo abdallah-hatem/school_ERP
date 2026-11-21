@@ -3,6 +3,23 @@
     "name": "School ERP",
     "comingSoon": "This screen is being built."
   },
+  "pwa": {
+    "install": "Install app",
+    "installDescription": "Open it from your home screen or dock, in its own window.",
+    "installed": "Installed on this device",
+    "ios": {
+      "title": "Add to Home Screen",
+      "step1": "Tap the Share button in Safari's toolbar.",
+      "step2": "Choose “Add to Home Screen”, then Add.",
+      "step3": "Open the app from your Home Screen.",
+      "close": "Got it"
+    },
+    "offline": {
+      "title": "You're offline",
+      "body": "Check your connection. The page opens again as soon as you're back online.",
+      "retry": "Try again"
+    }
+  },
   "nav": {
     "dashboard": "Dashboard",
     "employees": "Employees",

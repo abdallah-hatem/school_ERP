@@ -1,9 +1,10 @@
 import { HttpStatus } from '@nestjs/common';
+import type { ConfigService } from '@nestjs/config';
 import { ErrorCode, NOTIFICATION_TYPE_KEYS, SETTING_DEFAULTS, type PermissionKey } from '@school-erp/shared';
 import type { AuditService } from '../audit';
 import type { PermissionsService } from '../permissions';
 import type { SettingsService } from '../settings';
-import { InAppChannel, NotificationChannels } from './channels';
+import { InAppChannel, NotificationChannels, PushChannel } from './channels';
 import { NotificationPreferencesService } from './notification-preferences.service';
 import { NotificationTypes } from './notification-types';
 import type {
@@ -50,7 +51,10 @@ function make(
   const service = new NotificationPreferencesService(
     repository as unknown as NotificationPreferencesRepository,
     new NotificationTypes(),
-    new NotificationChannels(new InAppChannel()),
+    new NotificationChannels(
+      new InAppChannel(),
+      new PushChannel({ get: () => null } as unknown as ConfigService),
+    ),
     permissions as unknown as PermissionsService,
     settings as unknown as SettingsService,
     audit as unknown as AuditService,
@@ -62,7 +66,10 @@ describe('My account → Notifications (N13)', () => {
   it('lists only the types whose permission the person holds (edge case 20); the approval locked on', async () => {
     const { service } = make({ held: ['hr.penalties.approve'] });
     const prefs = await service.preferencesOf(ME);
-    expect(prefs.channels).toEqual([{ channel: 'in_app', available: true }]);
+    expect(prefs.channels).toEqual([
+      { channel: 'in_app', available: true },
+      { channel: 'push', available: false },
+    ]);
     expect(prefs.types.map((t) => t.type)).toEqual([APPROVAL]);
     expect(prefs.types[0]?.channels).toEqual([
       { channel: 'in_app', enabled: true, schoolDefault: true, personal: null, locked: true },
@@ -101,6 +108,10 @@ describe('My account → Notifications (N13)', () => {
     const { service } = make();
     await expect(
       service.updatePreferences(ME, [{ type: REMINDER, channel: 'email', enabled: true }]),
+    ).rejects.toMatchObject({ code: ErrorCode.CHANNEL_NOT_AVAILABLE, status: HttpStatus.CONFLICT });
+    // Push has no per-type switch: it follows the in-app one and is turned on per device.
+    await expect(
+      service.updatePreferences(ME, [{ type: REMINDER, channel: 'push', enabled: false }]),
     ).rejects.toMatchObject({ code: ErrorCode.CHANNEL_NOT_AVAILABLE, status: HttpStatus.CONFLICT });
     await expect(
       service.updatePreferences(ME, [

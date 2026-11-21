@@ -2,6 +2,7 @@ import { PAGINATION, SYSTEM_ADMIN_ROLE, type Role, type UserAccount } from '@sch
 import { can } from '@/core/auth/permissions';
 import { GET_NOTIFICATION_PREFERENCES, NotificationsI18n } from '@/core/notifications';
 import { getSession } from '@/core/auth/session';
+import { GET_PUSH_DEVICES } from '@/core/pwa';
 import type { Locale } from '@/shared/lib/i18n';
 import { GET_MY_ACCOUNT, GET_ROLE, GET_ROLES, GET_USER, GET_USERS } from './apis';
 import { AccountNotificationsView } from './components/account-notifications';
@@ -165,12 +166,16 @@ export async function RoleScreen({ locale, id, from }: { locale: Locale; id?: st
 }
 
 export async function AccountNotificationsScreen({ locale }: { locale: Locale }) {
-  const preferences = await GET_NOTIFICATION_PREFERENCES();
+  const [preferences, devices] = await Promise.all([GET_NOTIFICATION_PREFERENCES(), GET_PUSH_DEVICES()]);
   return (
     <AccessI18n locale={locale}>
       <NotificationsI18n locale={locale}>
         {preferences.success && preferences.data ? (
-          <AccountNotificationsView preferences={preferences.data} />
+          <AccountNotificationsView
+            preferences={preferences.data}
+            // The device list is a nicety: if it can't load, the switch says alerts aren't set up.
+            devices={devices.success && devices.data ? devices.data : { available: false, publicKey: null, devices: [] }}
+          />
         ) : (
           <AccessState kind="notFound" />
         )}

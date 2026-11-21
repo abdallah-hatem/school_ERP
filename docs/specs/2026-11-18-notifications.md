@@ -467,6 +467,8 @@ later modules        ← the same: own types, call core
 ## Out of scope (this version)
 
 - Email, WhatsApp, SMS and push (the channel adapters, sender settings, templates). Planned.
+  (Push was built on 2026-11-21 — Web Push to each person's devices, following the in-app switch:
+  `docs/ARCHITECTURE.md` → Installable app and push, §11 → Push alerts.)
 - Parents and students as recipients; a parent portal. Planned.
 - Live push to the browser (SSE / WebSocket). Planned.
 - Notifications about other modules (leave, fees, exams) — they come with their modules.

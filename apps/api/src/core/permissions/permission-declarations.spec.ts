@@ -74,6 +74,8 @@ describe('every endpoint declares its permission (R4)', () => {
         'POST /auth/refresh',
         'GET /settings/school/public',
         'GET /files/logo/:name',
+        // The installed app's icons, drawn from the logo: the browser fetches them signed out too.
+        'GET /files/app-icon/:name',
         'GET /health',
       ].sort(),
     );
@@ -97,6 +99,11 @@ describe('every endpoint declares its permission (R4)', () => {
         'POST /notifications/:id/unread',
         'GET /notifications/preferences',
         'PUT /notifications/preferences',
+        // My account → Notifications → Alerts on this device: each person's own devices (§11).
+        'GET /notifications/push-devices',
+        'POST /notifications/push-devices',
+        'POST /notifications/push-devices/unsubscribe',
+        'DELETE /notifications/push-devices/:id',
       ].sort(),
     );
   });

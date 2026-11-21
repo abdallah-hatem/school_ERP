@@ -109,6 +109,25 @@ export interface UserSessionsEndedEvent {
   at: string;
 }
 
+// ── core: notifications (§11) ──────────────────────────────────────────────
+
+export const NotificationEvent = {
+  /**
+   * An item reached a person's bell and they have alerts on at least one device (owner,
+   * 2026-11-21): core/notifications sends the Web Push after the commit, through the outbox, so a
+   * push service that is down is retried and never slows down or fails the change.
+   */
+  PUSH_REQUESTED: 'core.notification.push_requested',
+} as const;
+export type NotificationEvent = (typeof NotificationEvent)[keyof typeof NotificationEvent];
+
+/** Ids only: the listener reads the notification as its reader sees it now (N11). */
+export interface NotificationPushRequestedEvent {
+  notificationId: Uuid;
+  recipientId: Uuid;
+  at: string;
+}
+
 // ── the map ────────────────────────────────────────────────────────────────
 
 /** Every event name → its payload. `DomainEvents.publish` and the listener decorators use it. */
@@ -119,6 +138,7 @@ export interface DomainEventMap {
   [HrEvent.PAYROLL_APPROVED]: PayrollApprovedEvent;
   [SettingsEvent.CHANGED]: SettingsChangedEvent;
   [CoreEvent.USER_SESSIONS_ENDED]: UserSessionsEndedEvent;
+  [NotificationEvent.PUSH_REQUESTED]: NotificationPushRequestedEvent;
 }
 export type DomainEventName = keyof DomainEventMap;
 
@@ -127,13 +147,18 @@ export const DOMAIN_EVENT_NAMES: readonly DomainEventName[] = [
   ...Object.values(HrEvent),
   ...Object.values(SettingsEvent),
   ...Object.values(CoreEvent),
+  ...Object.values(NotificationEvent),
 ];
 
 /**
  * The events that go through the outbox. Rule (owner, 2026-11-18): if losing it leaves data wrong
  * or someone not told, it is must-deliver (every notification event will be).
  */
-export const MUST_DELIVER_EVENTS = [HrEvent.PAYROLL_APPROVED, HrEvent.EMPLOYEE_DEACTIVATED] as const;
+export const MUST_DELIVER_EVENTS = [
+  HrEvent.PAYROLL_APPROVED,
+  HrEvent.EMPLOYEE_DEACTIVATED,
+  NotificationEvent.PUSH_REQUESTED,
+] as const;
 export type MustDeliverEventName = (typeof MUST_DELIVER_EVENTS)[number];
 export type FireAndForgetEventName = Exclude<DomainEventName, MustDeliverEventName>;
 

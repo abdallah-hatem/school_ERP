@@ -114,7 +114,10 @@ export const ErrorCode = {
   // notifications (core/notifications, §11)
   /** A type that can't be turned off (approvals) can't be switched off in the app (409). */
   NOTIFICATION_TYPE_REQUIRED: 'NOTIFICATION_TYPE_REQUIRED',
-  /** A channel that isn't live — anything but `in_app` today (409). */
+  /**
+   * A channel that can't be used for this (409): a per-type switch on anything but `in_app` (push
+   * follows the in-app switch), or a device added for alerts while the server has no VAPID keys.
+   */
   CHANNEL_NOT_AVAILABLE: 'CHANNEL_NOT_AVAILABLE',
 } as const;
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
