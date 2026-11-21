@@ -16,9 +16,9 @@
   },
   "penalties": {
     "pending": "Penalties waiting",
-    "pendingSub": "At the stage review or HR, this month",
+    "pendingSub": "At the stage or HR, this month",
     "approved": "Approved penalties",
-    "approvedSub": "Approved by HR this month, by violation date"
+    "approvedSub": "Approved by HR, by violation date"
   },
   "quickLinks": {
     "title": "Quick links",

@@ -103,16 +103,18 @@ describe('penalty_two_step on existing databases (migration, e2e)', () => {
     expect(await db.employeeStage.count()).toBe(0);
   });
 
-  it('the Stage head role gets hr.penalties.review at own_stage, as BUILT_IN_ROLES says — and only it', async () => {
+  it('the Stage head gets hr.penalties.review at own_stage and the System admin at all, as BUILT_IN_ROLES says — and no other role', async () => {
     const holders = await db.role.findMany({
       where: { permissions: { some: { permissionKey: 'hr.penalties.review' } } },
       select: { key: true, permissions: { where: { permissionKey: 'hr.penalties.review' }, select: { scope: true } } },
     });
-    const expected = BUILT_IN_ROLES.filter((r) => r.key !== 'system_admin' && r.permissions['hr.penalties.review']).map((r) => ({
-      key: r.key,
-      permissions: [{ scope: r.permissions['hr.penalties.review'] }],
-    }));
-    expect(expected).toEqual([{ key: 'stage_head', permissions: [{ scope: 'own_stage' }] }]);
-    expect(holders.filter((h) => h.key !== 'system_admin')).toEqual(expected);
+    const expected = BUILT_IN_ROLES.filter((r) => r.permissions['hr.penalties.review'])
+      .map((r) => ({ key: r.key, permissions: [{ scope: r.permissions['hr.penalties.review'] }] }))
+      .sort((a, b) => a.key.localeCompare(b.key));
+    expect(expected).toEqual([
+      { key: 'stage_head', permissions: [{ scope: 'own_stage' }] },
+      { key: 'system_admin', permissions: [{ scope: 'all' }] },
+    ]);
+    expect([...holders].sort((a, b) => a.key.localeCompare(b.key))).toEqual(expected);
   });
 });

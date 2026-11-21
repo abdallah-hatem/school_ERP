@@ -890,6 +890,8 @@ describe('HR lists and employees (e2e)', () => {
       nameAr: 'سارة علي',
       department: { id: dept.id, nameEn: 'Science', nameAr: 'العلوم' },
       stage: { id: stageId, nameEn: 'Primary', nameAr: 'ابتدائي' },
+      // "Also teaches in" (§3, owner 2026-11-21): none here.
+      otherStages: [],
       jobTitle: { id: title.id, nameEn: 'Lab tech', nameAr: 'فني معمل' },
       workSystem: 'FULL_TIME',
       basicSalary: 1000000,

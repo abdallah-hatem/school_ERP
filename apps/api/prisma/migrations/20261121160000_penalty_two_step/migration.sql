@@ -45,12 +45,13 @@ ALTER TABLE "penalty_records" ADD CONSTRAINT "penalty_records_stage_id_fkey" FOR
 ALTER TABLE "penalty_records" ADD CONSTRAINT "penalty_records_reviewed_by_id_fkey" FOREIGN KEY ("reviewed_by_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "penalty_records" ADD CONSTRAINT "penalty_records_rejected_by_id_fkey" FOREIGN KEY ("rejected_by_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- 4. The stage review permission, on the starting role that holds it (BUILT_IN_ROLES): the Stage
---    head, for their own stages. The System admin holds every key. Joined on the role's key, so a
---    deleted starting role is skipped; idempotent.
+-- 4. The stage review permission, on the starting roles that hold it (BUILT_IN_ROLES): the Stage
+--    head, for their own stages, and the System admin's stored list (it holds every key). Joined on
+--    the role's key, so a deleted starting role is skipped; idempotent.
 INSERT INTO "role_permissions" ("role_id", "permission_key", "scope")
 SELECT r."id", g.permission_key, g.scope::"PermissionScope"
 FROM (VALUES
+    ('system_admin', 'hr.penalties.review', 'all'),
     ('stage_head', 'hr.penalties.review', 'own_stage')
 ) AS g(role_key, permission_key, scope)
 JOIN "roles" r ON r."key" = g.role_key
