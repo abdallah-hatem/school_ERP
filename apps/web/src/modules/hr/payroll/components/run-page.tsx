@@ -366,16 +366,21 @@ export function runColumn(id: RunColumnId, t: Translate) {
 }
 
 /** The four figures (Net first on phones); `undefined` while the run loads. */
-/** A month's totals as a school's usually read (the tiles' loading shape). */
+/**
+ * A month's totals as a school's usually read (the tiles' loading shape). The penalties figure has
+ * three digits before the point: with four ("1,280.00") the deductions sentence sat on a line
+ * break in a phone's half-width tile — 5 lines in the skeleton where a month of "1,786.67" took 4
+ * (CI 2026-11-21); "950.00" keeps "Penalties EGP … ·" clearly on its first line.
+ */
 const TYPICAL_TOTALS: PayrollRun['totals'] = {
   employees: 40,
   flagged: 2,
   monthSalary: 35_158_000,
-  penaltyAmount: 128_000,
+  penaltyAmount: 95_000,
   latenessAmount: 268_502,
   adjustmentAdditions: 75_000,
   adjustmentDeductions: 30_000,
-  net: 34_806_498,
+  net: 34_839_498,
 };
 
 export function RunTiles({ totals }: { totals: PayrollRun['totals'] | undefined }) {
