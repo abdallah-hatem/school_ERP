@@ -43,7 +43,13 @@ export async function UsersScreen({ locale, searchParams }: { locale: Locale; se
     );
   }
   const query = parseUsersQuery(searchParams);
-  const [users, roles] = await Promise.all([GET_USERS(query), GET_ROLES()]);
+  // The role filter's choices are searched by the API; here the roles' first page (it holds the
+  // System admin, for the last-admin rule) and the chosen role's name.
+  const [users, roles, chosen] = await Promise.all([
+    GET_USERS(query),
+    GET_ROLES(),
+    query.roleId ? GET_ROLE(query.roleId) : Promise.resolve(null),
+  ]);
   const roleList = roles.success ? (roles.data ?? []) : [];
   return (
     <AccessI18n locale={locale}>
@@ -52,7 +58,7 @@ export async function UsersScreen({ locale, searchParams }: { locale: Locale; se
         query={query}
         rows={users.success ? (users.data ?? []) : []}
         total={users.success ? (users.meta?.total ?? 0) : 0}
-        roles={roleList}
+        selectedRole={chosen?.success ? (chosen.data ?? null) : null}
         lastAdminId={await loneSystemAdmin(roleList)}
         now={new Date().toISOString()}
         error={!users.success}
@@ -96,6 +102,9 @@ export async function UserScreen({ locale, id }: { locale: Locale; id?: string }
   );
 }
 
+/** How many of a role's holders its avatar stack shows. */
+const HOLDERS_SHOWN = 3;
+
 export async function RolesScreen({ locale }: { locale: Locale }) {
   const session = await getSession();
   if (!can(session, 'core.roles.view')) {
@@ -105,21 +114,23 @@ export async function RolesScreen({ locale }: { locale: Locale }) {
       </AccessI18n>
     );
   }
-  // Who holds each role, for the avatars: one page of everyone is plenty for a school's accounts;
-  // the count beside them comes from the role itself.
-  const [roles, users] = await Promise.all([
-    GET_ROLES(),
-    can(session, 'core.users.view') ? GET_USERS({ limit: PAGINATION.maxLimit }) : Promise.resolve(null),
-  ]);
+  // Who holds each role, for the avatars: the API's first few holders of each role (the count
+  // beside them comes from the role itself) — never every account, grouped here.
+  const roles = await GET_ROLES();
+  const roleList = roles.success ? (roles.data ?? []) : [];
   const holders: Record<string, RoleHolder[]> = {};
-  for (const u of users?.success ? (users.data ?? []) : []) {
-    for (const r of u.roles) (holders[r.id] ??= []).push({ id: u.id, employee: u.employee, isActive: u.isActive });
+  if (can(session, 'core.users.view')) {
+    const pages = await Promise.all(roleList.map((r) => GET_USERS({ roleId: r.id, limit: HOLDERS_SHOWN })));
+    roleList.forEach((r, i) => {
+      const page = pages[i];
+      holders[r.id] = (page?.success ? (page.data ?? []) : []).map((u) => ({ id: u.id, employee: u.employee, isActive: u.isActive }));
+    });
   }
   return (
     <AccessI18n locale={locale}>
       <RolesList
         basePath={rolesPath(locale)}
-        roles={roles.success ? (roles.data ?? []) : []}
+        roles={roleList}
         holders={holders}
         error={!roles.success}
       />

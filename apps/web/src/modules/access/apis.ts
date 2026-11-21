@@ -120,10 +120,13 @@ export async function GET_EMPLOYEE_OPTIONS(query: EmployeeOptionsQuery = {}) {
 
 // ── Roles ────────────────────────────────────────────────────────────────────
 
-/** `GET /roles` — every role (a school has a handful), for the list, filters and checklists. */
-export async function GET_ROLES() {
+/**
+ * `GET /roles?search&limit` — one page of the roles (starting ones first), searched by the API by
+ * either name: the list, the role filter's and the user form's checklist's choices.
+ */
+export async function GET_ROLES(query: { search?: string; limit?: number } = {}) {
   const response = await apiFetch<Role[]>('/roles', {
-    params: { limit: String(PAGINATION.maxLimit) },
+    params: { limit: String(query.limit ?? PAGINATION.maxLimit), search: query.search || undefined },
     next: { tags: [ROLES_TAG] },
   });
   return handleResponse({ response });

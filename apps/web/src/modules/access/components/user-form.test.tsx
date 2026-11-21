@@ -19,9 +19,10 @@ vi.mock('../apis', () => ({
   SET_TEMPORARY_PASSWORD: vi.fn(),
   UNLOCK_SIGN_IN: vi.fn(),
   GET_EMPLOYEE_OPTIONS: vi.fn(),
+  GET_ROLES: vi.fn(),
 }));
 
-import { CREATE_USER, GET_EMPLOYEE_OPTIONS, UNLOCK_SIGN_IN, UPDATE_USER } from '../apis';
+import { CREATE_USER, GET_EMPLOYEE_OPTIONS, GET_ROLES, UNLOCK_SIGN_IN, UPDATE_USER } from '../apis';
 import { sessionWithout } from '@/test/render';
 import { account, fail, NOW, ok, renderAccess, role, ROLES } from '../test/fixtures';
 import { UserForm } from './user-form';
@@ -77,17 +78,25 @@ describe('UserForm', () => {
     await waitFor(() => expect(push).toHaveBeenCalledWith('/en/users'));
   });
 
-  it('the role checklist is searchable', async () => {
+  it('the role checklist asks the API for the typed name and shows its answer; ticks survive the search', async () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 });
+    // The API's side (its search is the API's own test): roles whose name holds the text.
+    vi.mocked(GET_ROLES).mockImplementation((async (q: { search?: string } = {}) => ({
+      success: true,
+      status: 200,
+      data: ROLES.filter((r) => r.nameEn.toLowerCase().includes((q.search ?? '').toLowerCase())),
+    })) as never);
     renderAccess(<UserForm basePath="/en/users" user={officer} roles={ROLES} now={NOW} />);
     await user.type(screen.getByRole('searchbox', { name: 'Search roles' }), 'manager');
-    const names = within(screen.getByRole('group', { name: 'Roles' }))
-      .getAllByRole('checkbox')
-      .map((c) => c.getAttribute('id') && document.querySelector(`label[for="${c.id}"]`)?.getAttribute('data-role'));
-    expect(names).toEqual(['hr_manager', 'direct_manager']);
+    await waitFor(() => expect(GET_ROLES).toHaveBeenLastCalledWith({ search: 'manager' }));
+    const names = () =>
+      within(screen.getByRole('group', { name: 'Roles' }))
+        .getAllByRole('checkbox')
+        .map((c) => c.getAttribute('id') && document.querySelector(`label[for="${c.id}"]`)?.getAttribute('data-role'));
+    await waitFor(() => expect(names()).toEqual(['hr_manager', 'direct_manager']));
     await user.clear(screen.getByRole('searchbox', { name: 'Search roles' }));
     await user.type(screen.getByRole('searchbox', { name: 'Search roles' }), 'zzz');
-    expect(screen.getByText('No role matches “zzz”.')).toBeTruthy();
+    expect(await screen.findByText('No role matches “zzz”.')).toBeTruthy();
   });
 
   it('the last System admin: the role is locked with the reason, and Deactivate is disabled', () => {

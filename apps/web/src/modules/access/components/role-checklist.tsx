@@ -1,21 +1,25 @@
 'use client';
 
 import { SYSTEM_ADMIN_ROLE, type Role } from '@school-erp/shared';
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
+import { callApi } from '@/lib/callApi';
+import { GET_ROLES } from '../apis';
 import { SearchInput } from '@/shared/components/form/filter-controls';
 import { Checkbox } from '@/shared/components/ui/checkbox';
 import { CustomRoleIcon, ErrorIcon, LockedIcon } from '@/shared/components/ui/icons';
 import { formatCount } from '@/shared/lib/format';
 import { localName } from '@/shared/lib/i18n';
-import { matchesSearch } from '@/shared/lib/search';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 
 /**
- * The roles a user holds (P3, option A): a searchable checklist of cards, two across, each with
- * how many permissions the role grants. `lockedReason` locks the System admin box (checked) with
+ * The roles a user holds (P3, option A): a checklist of cards, two across, each with how many
+ * permissions the role grants. `roles` is the API's first page; the search asks the API (after a
+ * pause) and shows its answer — the browser never filters the roles. `lockedReason` locks the System admin box (checked) with
  * the reason under it — the last active System admin can't lose the role (R8, edge case 5).
  */
+const SEARCH_DEBOUNCE_MS = 250;
+
 export function RoleChecklist({
   roles,
   value,
@@ -35,16 +39,42 @@ export function RoleChecklist({
 }) {
   const { t, locale } = useTranslation();
   const [query, setQuery] = useState('');
+  // The API's answer for the typed text (null: nothing typed, the first page shows).
+  const [found, setFound] = useState<{ query: string; roles: Role[] } | null>(null);
+  const request = useRef(0);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    [],
+  );
   const idBase = useId();
-  const shown = roles.filter((r) => matchesSearch(query, [r.nameEn, r.nameAr]));
+  const shown = query.trim() && found ? found.roles : roles;
   const chosen = new Set(value);
+
+  function search(text: string) {
+    setQuery(text);
+    if (timer.current) clearTimeout(timer.current);
+    const n = ++request.current;
+    if (!text.trim()) {
+      setFound(null);
+      return;
+    }
+    timer.current = setTimeout(() => {
+      void callApi(GET_ROLES({ search: text.trim() }), { showErrorToast: false }).then((res) => {
+        if (n !== request.current || res.unauthorized) return;
+        setFound({ query: text, roles: res.success ? (res.data ?? []) : [] });
+      });
+    }, SEARCH_DEBOUNCE_MS);
+  }
 
   function toggle(id: string, on: boolean) {
     const next = new Set(chosen);
     if (on) next.add(id);
     else next.delete(id);
-    // Keep the roles' own order, so the value is stable whatever order they were ticked in.
-    onChange(roles.filter((r) => next.has(r.id)).map((r) => r.id));
+    // In the order they were held, then ticked — stable whatever page they were ticked on.
+    onChange([...value.filter((v) => next.has(v)), ...(on && !value.includes(id) ? [id] : [])]);
   }
 
   return (
@@ -53,7 +83,7 @@ export function RoleChecklist({
         aria-label={t('access.userForm.searchRoles')}
         placeholder={t('access.userForm.searchRoles')}
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={(e) => search(e.target.value)}
         wrapperClassName="basis-auto"
       />
       <div role="group" aria-labelledby={labelledBy} className="grid gap-2 @min-[560px]:grid-cols-2">
@@ -114,7 +144,7 @@ export function RoleChecklist({
           );
         })}
       </div>
-      {shown.length === 0 ? (
+      {shown.length === 0 && query.trim() && found ? (
         <p role="status" className="rounded-xl bg-muted px-3 py-2.5 text-sm text-muted-foreground">
           {t('access.userForm.noRoleMatches', { query: query.trim() })}
         </p>
