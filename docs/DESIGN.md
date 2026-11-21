@@ -106,6 +106,14 @@ Motion explains a change and never delays it.
   skeletons; while they refetch, the list's search box swaps its magnifier for a small spinner
   (below). Reduced motion turns pulses and slides into plain fades, and the spinner stands still.
 - No motion on actions done many times a day (paging, typing, saving rows).
+- Tabs, section lists and segmented switches: the current marker moves in the click's frame, from
+  the old tab straight to the new one — no colour fade between them (a cross-fade read as the
+  highlight going back; owner, 2026-11-21). Only hover eases in (`TAB_HOVER_FADE`). A switch that
+  only changes what's shown stays on the client (Settings' `?section=` via `history.replaceState`);
+  tabs that are routes share a layout, so the header never re-mounts. A new tab or section starts
+  from its top: if the page is scrolled past it, it jumps (instantly, never smoothly) to its top
+  (`useRevealTopOnChange`); Settings also focuses the new section's first heading without scrolling.
+  `e2e/30-tab-switch*` guards it.
 
 ## States
 

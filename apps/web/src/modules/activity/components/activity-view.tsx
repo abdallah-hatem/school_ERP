@@ -2,7 +2,7 @@
 
 import type { AuditActor, AuditEntry, AuditSummary, IsoDate, IsoDateTime } from '@school-erp/shared';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
+import { useEffect, useOptimistic, useRef, useState, useTransition, type ReactNode } from 'react';
 import { AUDIT_PAGE_SIZE, AuditFiltersSheet, AuditTimeline, AuditTimelineSkeleton, formatFilterRange, schoolDay } from '@/core/audit';
 import { Pagination } from '@/shared/components/data-table/pagination';
 import { ClearFilters, SearchInput } from '@/shared/components/form/filter-controls';
@@ -179,6 +179,9 @@ export function ActivityView({
   const roomy = useMediaQuery(TABLET_UP, true);
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  // The filter panel shows the picked filters at once (the module switch's segment moves in the
+  // click's frame), while the timeline dims until the server's page for them lands.
+  const [picked, pick] = useOptimistic(query);
   const [search, setSearch] = useState(query.q ?? '');
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const today = schoolDay(now);
@@ -191,7 +194,10 @@ export function ActivityView({
   );
 
   function go(next: ActivityQuery) {
-    startTransition(() => router.push(`${basePath}${activityQueryString(next)}`, { scroll: false }));
+    startTransition(() => {
+      pick(next);
+      router.push(`${basePath}${activityQueryString(next)}`, { scroll: false });
+    });
   }
 
   function onSearchChange(text: string) {
@@ -215,7 +221,7 @@ export function ActivityView({
   const clearCount = filterCount + (query.q ? 1 : 0);
   const filters = (title: boolean) => (
     <ActivityFilters
-      query={query}
+      query={picked}
       actors={actors}
       summary={summary}
       today={today}

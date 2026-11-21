@@ -3,6 +3,9 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { NotificationsIcon, PersonIcon } from '@/shared/components/ui/icons';
+import { TAB_HOVER_FADE } from '@/shared/lib/tab-motion';
+import { useRef } from 'react';
+import { useRevealTopOnChange } from '@/shared/hooks/use-reveal-top';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 
@@ -17,8 +20,11 @@ export function AccountTabs() {
   const pathname = usePathname() ?? '';
   const base = `/${locale}/account`;
   const active = pathname.startsWith(`${base}/notifications`) ? 'notifications' : 'profile';
+  // A new tab starts from its top (see RecordTabs).
+  const navRef = useRef<HTMLElement>(null);
+  useRevealTopOnChange(navRef, active);
   return (
-    <nav aria-label={t('access.account.tabs.label')} data-skeleton-block="tabs" className="scrollbar-clean -mb-2 overflow-x-auto">
+    <nav ref={navRef} aria-label={t('access.account.tabs.label')} data-skeleton-block="tabs" className="scrollbar-clean -mb-2 overflow-x-auto">
       <ul className="flex gap-1.5 border-b border-border">
         {TABS.map(({ key, segment, icon: Icon }) => {
           const current = key === active;
@@ -30,8 +36,10 @@ export function AccountTabs() {
                 scroll={false}
                 aria-current={current ? 'page' : undefined}
                 className={cn(
-                  '-mb-px flex h-11 cursor-pointer items-center gap-2 border-b-2 px-4 text-sm font-bold whitespace-nowrap transition-colors duration-150',
-                  current ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground',
+                  '-mb-px flex h-11 cursor-pointer items-center gap-2 border-b-2 px-4 text-sm font-bold whitespace-nowrap',
+                  current
+                    ? 'border-primary text-primary'
+                    : cn('border-transparent text-muted-foreground hover:text-foreground', TAB_HOVER_FADE),
                 )}
               >
                 <Icon className="size-4.5" />

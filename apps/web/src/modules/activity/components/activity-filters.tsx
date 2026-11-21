@@ -20,6 +20,7 @@ import { PersonAvatar } from '@/shared/components/ui/person-avatar';
 import { SkeletonText } from '@/shared/components/ui/skeleton';
 import { formatCount } from '@/shared/lib/format';
 import { matchesSearch } from '@/shared/lib/search';
+import { TAB_HOVER_FADE } from '@/shared/lib/tab-motion';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import {
@@ -84,9 +85,9 @@ function ModuleSwitch({
             disabled={disabled}
             onClick={() => onChange(o.value)}
             className={cn(
-              'tap-target min-h-9 flex-[1_1_auto] cursor-pointer rounded-[0.6rem] px-1.5 text-[0.8125rem] font-bold whitespace-nowrap transition-colors duration-150',
+              'tap-target min-h-9 flex-[1_1_auto] cursor-pointer rounded-[0.6rem] px-1.5 text-[0.8125rem] font-bold whitespace-nowrap',
               'focus-visible:outline-3 focus-visible:outline-ring/55 disabled:cursor-not-allowed',
-              on ? 'bg-card text-primary shadow-xs' : 'text-muted-foreground hover:text-foreground',
+              on ? 'bg-card text-primary shadow-xs' : cn('text-muted-foreground hover:text-foreground', TAB_HOVER_FADE),
             )}
           >
             {o.label}
