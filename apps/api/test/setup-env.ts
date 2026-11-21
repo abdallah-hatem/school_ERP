@@ -1,3 +1,8 @@
+// Owner rule (2026-11-21): API e2e tests run on GitHub CI only — never on a developer machine.
+if (process.env.GITHUB_ACTIONS !== 'true') {
+  throw new Error('API e2e tests run on GitHub CI only (owner rule). Push and let CI run them.');
+}
+
 /**
  * e2e environment. DATABASE_URL and PORT come from the caller's env so parallel agents each use
  * their own database (create one with `scripts/e2e-db.sh <n>`):

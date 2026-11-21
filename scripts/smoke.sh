@@ -13,6 +13,12 @@
 # Extra arguments go to Playwright (e.g. `pnpm smoke 03-penalties`).
 set -euo pipefail
 
+# Owner rule (2026-11-21): smoke and API e2e run on GitHub CI only — never on a developer machine.
+if [[ "${GITHUB_ACTIONS:-}" != "true" ]]; then
+  echo "✗ pnpm smoke runs on GitHub CI only (owner rule). Push and let CI run it." >&2
+  exit 1
+fi
+
 root="$(cd "$(dirname "$0")/.." && pwd)"
 n="${SMOKE_DB:-18}"
 api_port="${SMOKE_API_PORT:-4180}"

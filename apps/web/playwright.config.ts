@@ -1,5 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
 
+// Owner rule (2026-11-21): Smoke specs run on GitHub CI only — never on a developer machine.
+if (process.env.GITHUB_ACTIONS !== 'true') {
+  throw new Error('Smoke specs run on GitHub CI only (owner rule). Push and let CI run them.');
+}
+
+
 /*
  * Smoke specs (apps/web/e2e). Run them with `pnpm smoke` at the repo root: it creates its own
  * database, seeds it, starts the API and the web app, runs these specs and stops both servers.
