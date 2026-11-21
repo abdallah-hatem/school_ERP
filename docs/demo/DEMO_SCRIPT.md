@@ -3,8 +3,11 @@
 The story we show a school, in order. Each step lists what to do and what must be true. The dry run
 (`docs/CONVENTIONS.md` → Demo dry run) walks exactly this script; keep it in step with the product.
 
-Demo data: the seed (`pnpm --filter api db:seed`) — about 40 employees, the school's penalty
-catalogue, a month of penalties (some pending) and lateness, and a DRAFT payroll run for that month.
+Demo data: the seed (`pnpm --filter api db:seed`) — about 40 employees (one teaches in two stages:
+Mostafa Reda Salem, Primary, also Preparatory), the school's penalty catalogue, a month of penalties
+in every status (Pending stage review, Waiting for HR, Approved, Rejected, Cancelled) and lateness,
+a DRAFT payroll run for that month, and two stage heads who sign in with the admin's password:
+`primary.head@school.local` and `prep.head@school.local`.
 After `prisma migrate deploy` on an older demo database, **run the seed once more** (same
 `SEED_ADMIN_PASSWORD`): it switches off "once per day" for the violations that repeat in a day,
 marks the managing job titles and stores the principal's photo. It also adds the two same-day
@@ -46,19 +49,45 @@ Before the demo, on the demo database:
   the sign-in page; the school name in the desktop sidebar is shown whole (up to two lines).
 
 ## 3. Penalties — the rules come from the school's own regulations
+
+**Two steps (owner, 2026-11-21).** Every penalty goes to the head of the stage where it happened,
+then to HR.
+- Open Employees → **Mostafa Reda Salem**. ✔ His page shows **Also teaches in: Preparatory**; his
+  card has "+ Preparatory" beside Primary. Filter the employees by Preparatory: ✔ he is there too.
+- Penalties → **Record a penalty** for him. ✔ A **Stage where it happened** picker appears with
+  Primary and Preparatory only. Pick Preparatory: ✔ the preview says "It goes to the stage head of
+  Preparatory first, then to HR." Save. ✔ It is listed as **Pending stage review**, with
+  "Preparatory" under the violation.
+- Sign in (second window) as **prep.head@school.local**. ✔ The bell: "Penalty waiting for your
+  review". Open it: the penalty's **Steps** say "Waiting for the stage head of Preparatory".
+  **Approve** → add a note → **Approve and send to HR**. ✔ Waiting for HR, "Approved at the stage
+  review by Hoda …" with the time (12-hour). Back as the admin: ✔ "Penalty waiting for your
+  approval".
+- As **primary.head@school.local**: ✔ the Preparatory penalty is nowhere in their list, search or
+  counts (it isn't their stage), though he is a primary teacher.
+- As prep.head, open the seed's other Preparatory penalty waiting for review and **Reject** it: ✔
+  Reject stays disabled until a reason is typed; the row then reads **Rejected** with "Reason: …".
+  ✔ Whoever recorded it gets "Penalty you recorded was rejected".
+- Back as the admin (HR step): filter **Waiting (stage or HR)**; approve one. ✔ Only now are the
+  level and the deduction fixed. Reject another with a reason: ✔ Rejected, "Rejected by HR".
+- Record a penalty in **Kindergarten** (no stage head): ✔ the preview says it goes straight to HR,
+  and it is listed as **Waiting for HR**.
+- ✔ The dashboard: **Penalties waiting** counts both steps; **Approved penalties** only HR-approved.
+
 - Open **Record a penalty**. Pick an employee who already has approved penalties for a violation
   (search by name or code), pick that violation (grouped under the school's tables, in the school's
   own wording), keep today's date.
 - The **live preview** shows the repeat level and the deduction from the catalogue
   (e.g. "4th time — 2 days"). ✔ It matches the regulation table.
-- Record it **signed in as the HR officer** (second window) and Save (pending). Back as the admin:
+- Record it **signed in as the HR officer** (second window) and Save (it waits for the stage head;
+  for a stage without one, straight for HR). Back as the admin (after the stage review, if any):
   ✔ the bell shows "Penalty waiting for your approval" with the employee, violation and level;
   clicking it opens that penalty with **Approve** → approve. ✔ The bell item now reads "Approved by
   …". (Whoever records a penalty isn't notified about it — that is why the HR officer records it.)
   (Pick a pair with no pending penalty — not the seed's 15 Nov "Late to class" one — or approve
   that earlier one first: penalties are approved in date order.)
-- Approve any other pending penalties of the month from the list's row menu (payroll can't be
-  approved while any are pending). ✔ Where one employee has two pending for the same violation,
+- Approve any other penalties of the month still waiting (either step) from the list's row menu —
+  a stage review first where there is one (payroll can't be approved while any are waiting). ✔ Where one employee has two pending for the same violation,
   the later one's **Approve** is greyed out with "Approve or cancel the … penalty for this
   violation first."; approve the earlier one, then the later one gets the next level.
 - **A backdated penalty** (before the month is approved): record one for an employee who already has

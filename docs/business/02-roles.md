@@ -50,9 +50,20 @@
   **HR officer**, **Accountant**, **Principal / administrative director**, **Stage head**, **Direct
   manager**; **Employee** self-service is Planned. A user may hold several roles. Roles are data the
   school can change.
-- **GUESS** — A penalty is recorded by an HR officer, stage head or direct manager and **approved by
-  the HR manager or principal**. Payroll is prepared by an HR officer and **approved by the HR
-  manager**; the accountant views and exports it. Leave (Planned): direct manager, then HR manager.
+- **DECIDED** (owner, 2026-11-21) — A penalty is recorded by an HR officer, stage head or direct
+  manager and goes through **two steps** (§4): the **stage head of the stage where it happened**
+  approves it (optional note) or rejects it (required reason), then **HR** — the HR manager or the
+  principal — approves it (optional note; this fixes the level and the deduction) or rejects it
+  (required reason). The stage review is its own permission, **Review penalties (stage head)**: the
+  Stage head holds it for their own stages; the System admin holds everything. The HR step stays
+  **Approve penalties** (HR manager, principal). The HR manager does not hold the stage review.
+  Cancelling stays as before (HR manager, principal). Nobody reviews, approves or rejects a penalty
+  given to themselves.
+- **GUESS** — Payroll is prepared by an HR officer and **approved by the HR manager**; the
+  accountant views and exports it.
+- **DECIDED** (owner, 2026-11-21; not built) — **Leave** (Planned) will need the approval of **every
+  one** of the employee's stage heads (an employee can belong to several stages, §3), then HR. This
+  records the decision only; leave isn't built.
 - **GUESS** (enforced, P4) — Salaries are seen only by System admin, HR manager, HR officer and
   Accountant. "Salaries" includes the employee's insured salary and bank details (§3). Anyone else
   gets no salary at all — not on employee cards, the profile, the employee form, payroll lines,
@@ -62,7 +73,13 @@
   activity log alike), never one person's pay. Adding an employee needs to see
   every salary (the pay is set when adding); the bank sheet too.
 - **GUESS** (enforced, P4) — A stage head sees only their stage's employees; a direct manager only
-  the employees they directly manage. That covers every list, count, search, picker and dashboard
+  the employees they directly manage. **DECIDED** (owner, 2026-11-21): a user is tied to stages
+  through their employee record — the linked employee's **main stage and their other stages** ("also
+  teaches in", §3) — so a stage head of two stages sees the employees of both, and an employee of
+  two stages is seen by both stages' heads. **Penalties go by the penalty's stage** (where the
+  violation happened, §4), not the employee's: the head of an employee's other stage doesn't see,
+  isn't told about and can't act on a penalty from a stage that isn't theirs (opening it shows
+  "This page isn't here"). That covers every list, count, search, picker and dashboard
   figure, their penalties, lateness and payroll lines, and the activity log's entries about them.
   Opening anyone else shows "This page isn't here", as for a record that doesn't exist. Someone in
   such a role who has no employee record sees nobody. Each screen, tab, section and button is

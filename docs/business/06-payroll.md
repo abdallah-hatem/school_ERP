@@ -19,7 +19,8 @@ lines each role sees: §2 Roles (enforced, P4).
   cancelled, or a setting changed, since the last recalculate is included), then locks the run, its
   penalties, lateness and adjustments. An approved run
   is never edited or deleted; corrections go into the next month as adjustments.
-- **DECIDED** — A month can't be approved while it still has **pending** penalties.
+- **DECIDED** — A month can't be approved while it still has **pending** penalties — waiting at
+  either step, the stage review or HR (owner, 2026-11-21, §4).
 - **DECIDED** (demo dry run, 2026-11-18) — A draft run says when the **HR rules** it is calculated
   from (the lateness rule and the payroll rule, §5, §7) changed after its last calculation, and
   offers **Recalculate**. The penalty repetition window doesn't count: it sets a penalty's level when

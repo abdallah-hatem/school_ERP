@@ -21,6 +21,12 @@
 
 - **DECIDED** — HR records a penalty for an **active** employee: the violation, the date it happened
   (not in the future), and an optional note.
+- **DECIDED** (owner, 2026-11-21) — Each penalty records the **stage where the violation happened**,
+  one of the employee's stages (§3). With one stage it fills in by itself; with several, the record
+  form asks, from the employee's stages only. The penalty keeps its stage even if the employee's
+  stages change later; that stage's head still reviews it.
+- **DECIDED** (owner, 2026-11-21) — **Levels count across all stages**: the same person and the same
+  violation, whatever stage each penalty was in.
 - **DECIDED** — The system works out the **level**: 1 + the number of **approved** penalties for the
   same violation and the same employee inside the repetition window.
 - **DECIDED** (owner, 2026-11-18) — "Earlier" follows the **violation date**, then **when the
@@ -74,8 +80,37 @@
   and offers Recalculate (§6); approving the run recalculates anyway.
 - **GUESS** — The repetition window is the **contract year** (1 June – 31 May). It's a setting (§7).
   The rolling-12-months option starts on the same date one year earlier, inclusive.
-- **DECIDED** — A new penalty starts as **pending**. HR **approves** it, or **cancels** it with a
-  required reason. Penalties are never deleted.
+- **DECIDED** (owner, 2026-11-21) — **Two steps**: "record penalty => approve or reject (reasons) =>
+  hr approval or reject (reasons)". Statuses: **Pending stage review** → the stage head of the
+  penalty's stage approves (optional note) → **Waiting for HR**, or rejects (required reason) →
+  **Rejected**; **Waiting for HR** → the HR manager or principal approves (optional note) →
+  **Approved**, or rejects (required reason) → **Rejected**. **Only the HR approval sets the level
+  and the deduction**: approve in date order, the backdated recount ("told first, confirmed at
+  approval") and "not into an approved month" (below) are rules of the HR step. A reason is
+  required to reject: not blank, at most 1,000 characters, any language. Rejected and cancelled
+  penalties are final and never count. Penalties are never deleted.
+- **DECIDED** (owner, 2026-11-21) — A penalty skips the stage review and goes **straight to Waiting
+  for HR** when the **recorder is a stage head of the penalty's stage** (their recording counts as
+  the review), when the **penalty's stage has no stage head**, or when the **penalised employee is
+  themselves a stage head of that stage** (nobody reviews their own penalty — also when they recorded
+  it). The penalty says why ("No stage review: …"). A school-wide reviewer (the System admin) heads no
+  stage. A penalty recorded by the system itself (the demo seed) is nobody's review.
+- **DECIDED** (owner, 2026-11-21) — Nobody reviews, approves or rejects a **penalty given to
+  themselves**: a stage head or HR approver who is the penalised employee is refused, and the
+  screens leave those buttons out for them.
+- **DECIDED** (Claude, from the owner's edge case 3, 2026-11-21) — If a penalty waits for the stage
+  review and its stage **no longer has a stage head** (the head left or lost the role), **HR may
+  approve or reject it directly** from Pending stage review; the penalty says "has no stage head now:
+  HR can approve or reject it directly". A new stage head of that stage can review it as usual.
+- **DECIDED** (owner, 2026-11-21) — Two people acting on the same step at once: exactly one wins;
+  the other is told it has moved on ("someone else acted on it first") and sees where it stands.
+- **DECIDED** (owner, 2026-11-21) — Rejection reasons show on the penalty (list, details) and in its
+  history; the recorder is notified (§11). Whoever must act next is notified (§11).
+- **DECIDED** (owner, 2026-11-21) — Penalties pending before the two steps existed became **Waiting
+  for HR** (nothing already pending needed a new review); approved and cancelled ones were left as
+  they were.
+- **DECIDED** — **Cancel** stays as before: with a required reason, while the penalty waits at
+  either step or once approved (month lock aside), for whoever may cancel.
 - **GUESS** — An **approved** penalty can also be cancelled with a reason while its month's payroll
   is not approved. Other approved penalties keep their fixed levels (nothing is recomputed). A
   cancelled penalty can't be approved or cancelled again.
@@ -113,7 +148,12 @@
   penalty already pending can still be approved or cancelled.
 - **DECIDED** — The preview (level and action before saving) saves nothing, so it ignores the month
   lock; recording, approving and cancelling respect it.
-- **DECIDED** — Pending penalties show the level, action and days the catalogue gives today. Editing
-  the catalogue changes pending penalties, never approved ones.
-- **OPEN** — Who approves penalties, and whether an investigation is needed before a deduction.
+- **DECIDED** — Penalties waiting at either step show the level, action and days the catalogue gives
+  today. Editing the catalogue changes them, never approved ones.
+- **DECIDED** (owner, 2026-11-21) — "Pending" in the rules above (approve in date order, once per
+  day, payroll's "pending penalties", the dashboard) means **waiting at either step**: an earlier
+  penalty still at the stage review blocks the HR approval of a later one, named by its date; a
+  rejected one, like a cancelled one, frees the day and never blocks.
+- **DECIDED** (owner, 2026-11-21) — Who approves penalties: the stage head of its stage, then HR
+  (above). **OPEN** — whether an investigation is needed before a deduction.
 - **OPEN** — Whether a monthly cap on penalty deductions applies under the labour law.
