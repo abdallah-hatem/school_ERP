@@ -1,5 +1,5 @@
 import { Injectable, NestMiddleware, UnauthorizedException } from '@nestjs/common';
-import { PUBLIC_FILES_PREFIX } from '@school-erp/shared';
+import { PUBLIC_FILES_PREFIXES } from '@school-erp/shared';
 import type { NextFunction, Request, Response } from 'express';
 import { UsersService } from '../../users';
 import { TokensService } from '../services/tokens.service';
@@ -7,8 +7,8 @@ import { accessTokenFrom } from '../tokens/extract-token';
 
 /**
  * Guards `/files/…` however the files are served (a controller or static middleware): the
- * logo under `PUBLIC_FILES_PREFIX` is public because the sign-in page shows it; every other
- * file needs a signed-in, active user.
+ * logo and the app icons drawn from it (`PUBLIC_FILES_PREFIXES`) are public because the sign-in
+ * page and the installed app show them; every other file needs a signed-in, active user.
  */
 @Injectable()
 export class FilesAccessMiddleware implements NestMiddleware {
@@ -22,7 +22,7 @@ export class FilesAccessMiddleware implements NestMiddleware {
     // A literal `..` segment could climb out of the public folder: never treat it as public.
     // Encoded names (`..%2F…`) stay one route parameter; the logo route refuses them (404).
     const climbs = path.split('/').some((segment) => segment === '..' || segment === '.');
-    if (path.startsWith(PUBLIC_FILES_PREFIX) && !climbs) return next();
+    if (PUBLIC_FILES_PREFIXES.some((prefix) => path.startsWith(prefix)) && !climbs) return next();
 
     const payload = await this.tokens.verifyAccess(accessTokenFrom(req));
     const user = payload ? await this.users.findActiveAuthUser(payload.sub) : null;

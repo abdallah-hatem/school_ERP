@@ -69,7 +69,7 @@ export function InstallApp({ env }: { env?: BrowserEnv }) {
       data-state={state}
       className="flex flex-col gap-3 rounded-3xl bg-card p-5 shadow-card md:p-6"
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-start gap-3">
         <span
           aria-hidden="true"
           className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary-soft text-lg text-primary"
@@ -84,13 +84,14 @@ export function InstallApp({ env }: { env?: BrowserEnv }) {
             <p className="text-sm text-muted-foreground">{t('common.pwa.installDescription')}</p>
           )}
         </div>
-        {state === 'prompt' ? (
-          <Button variant="soft" onClick={() => void prompt.install()} className="shrink-0">
-            <InstallAppIcon />
-            {t('common.pwa.install')}
-          </Button>
-        ) : null}
       </div>
+      {/* Under the text, full width: the card sits in a narrow side column. */}
+      {state === 'prompt' ? (
+        <Button variant="soft" onClick={() => void prompt.install()} className="w-full">
+          <InstallAppIcon />
+          {t('common.pwa.install')}
+        </Button>
+      ) : null}
       {state === 'ios' ? <IosInstallSteps /> : null}
     </section>
   );
