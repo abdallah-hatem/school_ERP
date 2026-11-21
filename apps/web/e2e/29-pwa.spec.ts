@@ -55,9 +55,13 @@ test('the service worker registers for the whole app; offline, a page shows the 
   await expect(page.getByRole('button', { name: t(locale, 'common.pwa.offline.retry') })).toBeVisible();
   await shoot(page, info, 'pwa-offline-en-desktop');
 
-  // Back online, Try again loads the page itself — nothing stale was kept.
-  await context.setOffline(false);
+  // Try again while still offline: the same offline page again (the page itself was never stored).
   await page.getByRole('button', { name: t(locale, 'common.pwa.offline.retry') }).click();
-  await expect(page).toHaveURL(/\/en\/employees/);
+  await expect(page.getByRole('heading', { name: t(locale, 'common.pwa.offline.title') })).toBeVisible();
+
+  // Back online, the offline page reloads by itself (its `online` listener) into the real page.
+  await context.setOffline(false);
   await expect(page.getByRole('heading', { name: t(locale, 'common.pwa.offline.title') })).toBeHidden();
+  await expect(page).toHaveURL(/\/en\/employees/);
+  await expect(page.locator('#main')).toBeVisible();
 });
