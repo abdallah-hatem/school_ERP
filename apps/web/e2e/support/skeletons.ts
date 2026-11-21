@@ -92,7 +92,12 @@ export async function compareScreen(browser: Browser, page: Page, locale: Langua
     storageState: await page.context().storageState(),
     javaScriptEnabled: false,
     viewport: page.viewportSize(),
-    deviceScaleFactor: 1,
+    // The loaded page's device (the phone's 3× pixels, touch), so text is laid out at the same
+    // pixel density on both sides and a sentence near a tile's edge wraps alike (CI 2026-11-21: the
+    // run's deductions sentence took 5 lines in the 1× skeleton, 4 on the 3× loaded page).
+    deviceScaleFactor: info.project.use.deviceScaleFactor ?? 1,
+    isMobile: info.project.use.isMobile ?? false,
+    hasTouch: info.project.use.hasTouch ?? false,
     locale: locale === 'ar' ? 'ar-EG' : 'en-US',
     baseURL: new URL(page.url()).origin,
   });

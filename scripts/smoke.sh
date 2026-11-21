@@ -13,6 +13,13 @@
 # Extra arguments go to Playwright (e.g. `pnpm smoke 03-penalties`).
 set -euo pipefail
 
+# On a machine that has ~/.config/school-erp/e2e-ci-only (the owner's, so also every Claude agent on it),
+# smoke runs on GitHub CI only (owner, 2026-11-21). Other developers run it locally as usual.
+if [[ "${GITHUB_ACTIONS:-}" != "true" && -f "$HOME/.config/school-erp/e2e-ci-only" ]]; then
+  echo "✗ On this machine pnpm smoke runs on GitHub CI only (owner rule). Push and let CI run it." >&2
+  exit 1
+fi
+
 root="$(cd "$(dirname "$0")/.." && pwd)"
 n="${SMOKE_DB:-18}"
 api_port="${SMOKE_API_PORT:-4180}"

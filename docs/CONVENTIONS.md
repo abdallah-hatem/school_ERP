@@ -98,7 +98,7 @@ up-to-date branch.
       PR body instead; whoever merges the PR writes the build log from it (see The PR).
 - [ ] UI changes: screenshots. New or visually changed screens: EN/AR × phone/desktop (light only).
 - [ ] Changed a component → updated its skeleton in the same PR, and the skeleton spec passes
-      (`pnpm smoke 23-skeletons`; owner, 2026-11-18). A new main block gets the same
+      (the `23-skeletons` smoke spec, on CI; owner, 2026-11-18). A new main block gets the same
       `data-skeleton-block` on both sides; a new screen with a skeleton is added to the spec
       (`docs/ARCHITECTURE.md` → Skeletons match their screens).
 
@@ -203,6 +203,15 @@ browser from a fully loaded list.
   PRs all appending to the same spot of `docs/BUILD_LOG.md` (or `00-recent-changes.md`) is what made
   them conflict; with one writer and one file per business change they don't. At the start of each
   session, compare the log with the PRs merged into `dev` and add any entry that's missing.
+
+## Where tests run
+
+Lint, typecheck and unit tests run locally and in CI. Smoke specs and API e2e run locally for the
+team as usual. **On the owner's machine they run on GitHub CI only** (owner, 2026-11-21): a marker file
+`~/.config/school-erp/e2e-ci-only` makes `pnpm smoke`, the Playwright config and the API e2e setup
+refuse to start there unless `GITHUB_ACTIONS=true` — which also covers every Claude agent on that
+machine. A failure is fixed from CI's logs and artifacts. Review screenshots come from a short headless
+capture script on a throwaway stack, not the suites.
 
 ## Review
 
