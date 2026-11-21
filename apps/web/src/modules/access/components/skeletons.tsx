@@ -7,9 +7,9 @@ import { Form } from '@/shared/components/form/form';
 import { FormActionBar } from '@/shared/components/form/form-action-bar';
 import { PageHeader } from '@/shared/components/layout/page-header';
 import { Button } from '@/shared/components/ui/button';
-import { AddUserIcon, ReadyIcon } from '@/shared/components/ui/icons';
+import { AddUserIcon, ReadyIcon, RemoveIcon } from '@/shared/components/ui/icons';
 import { formatCount } from '@/shared/lib/format';
-import { Skeleton, SkeletonIdentity, SkeletonMask, SkeletonPill, SkeletonProse, SkeletonText } from '@/shared/components/ui/skeleton';
+import { Skeleton, SkeletonButton, SkeletonIdentity, SkeletonMask, SkeletonPill, SkeletonProse, SkeletonText } from '@/shared/components/ui/skeleton';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { parseUsersQuery } from '../lib/users-query';
 import { AccessI18n } from '../messages';
@@ -119,6 +119,7 @@ function Header({
   crumb?: 'users' | 'roles';
   title?: string;
   description: string;
+  /** The kind pill beside a role's name (most roles opened are built-in: the defaults). */
   status?: boolean;
   /** A button in the header (a role's Delete: every role but the System admin has one). */
   action?: boolean;
@@ -127,9 +128,16 @@ function Header({
   return (
     <PageHeader
       title={title ? <SkeletonProse>{title}</SkeletonProse> : <SkeletonText width="w-40" />}
-      status={status ? <SkeletonPill /> : undefined}
+      status={status ? <SkeletonPill icon>{t('access.roles.builtIn')}</SkeletonPill> : undefined}
       description={<SkeletonProse>{description}</SkeletonProse>}
-      actions={action ? <Skeleton className="h-11 w-32 rounded-lg" /> : undefined}
+      actions={
+        action ? (
+          <SkeletonButton>
+            <RemoveIcon />
+            {t('access.roleForm.deleteRole')}
+          </SkeletonButton>
+        ) : undefined
+      }
       breadcrumbs={
         crumb ? [{ label: t('access.administration') }, { label: t(`access.${crumb}.title`) }, { label: ' ' }] : undefined
       }

@@ -59,9 +59,16 @@ export function RulesPanel({
             {approved ? t('payroll.rules.currentTitle') : t('payroll.rules.title')}
           </h2>
           <p className="text-muted-foreground text-sm">
-            {approved
-              ? t('payroll.rules.currentBody', { date: formatDateTime(approvedAt, locale) })
-              : t('payroll.rules.body')}
+            {approved ? (
+              loading ? (
+                // While the run loads its date isn't known: the sentence as a bar per line.
+                <SkeletonProse>{t('payroll.rules.currentBody', { date: formatDateTime(approvedAt, locale) })}</SkeletonProse>
+              ) : (
+                t('payroll.rules.currentBody', { date: formatDateTime(approvedAt, locale) })
+              )
+            ) : (
+              t('payroll.rules.body')
+            )}
           </p>
         </div>
       </div>

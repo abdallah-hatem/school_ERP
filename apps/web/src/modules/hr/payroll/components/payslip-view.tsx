@@ -1,6 +1,6 @@
 'use client';
 
-import { AdjustmentType, PayrollFlag, type Payslip } from '@school-erp/shared';
+import { AdjustmentType, monthOf, PayrollFlag, type Payslip } from '@school-erp/shared';
 import Image from 'next/image';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
@@ -10,7 +10,8 @@ import { BidiText } from '@/shared/components/ui/bidi-text';
 import { Button } from '@/shared/components/ui/button';
 import { Days, Money } from '@/shared/components/ui/figures';
 import { ChevronStartIcon, PayslipIcon, PrintIcon } from '@/shared/components/ui/icons';
-import { Skeleton, SkeletonText } from '@/shared/components/ui/skeleton';
+import { useSchoolBranding } from '@/core/settings';
+import { Skeleton, SkeletonButton, SkeletonProse, SkeletonText } from '@/shared/components/ui/skeleton';
 import { apiErrorText } from '@/shared/lib/api-error';
 import { formatCount, formatDate, formatDayCount, formatMonth } from '@/shared/lib/format';
 import { localName, nameIn, type Locale, type Translate } from '@/shared/lib/i18n';
@@ -296,7 +297,12 @@ export function PayslipView({ payslip, backHref }: { payslip: Payslip; backHref:
  * band (the usual case — no penalties, no adjustments), with bars in place of the figures.
  */
 export function PayslipSkeleton() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  const { branding } = useSchoolBranding();
+  // The school's name (known) and a typical month, drawn as their own text: on a phone the month
+  // goes under the name exactly when the loaded one does.
+  const schoolName = nameIn(branding, locale) || t('ui.shell.productName');
+  const typicalMonth = formatMonth(monthOf(new Date()), locale);
   const amount = <SkeletonText className="font-bold" width="w-24" />;
   return (
     <div className="flex flex-col gap-5" aria-busy="true">
@@ -304,8 +310,15 @@ export function PayslipSkeleton() {
         {t('ui.states.loading')}
       </span>
       <div aria-hidden="true" data-skeleton-block="payslip-actions" className="flex flex-wrap items-center justify-between gap-3">
-        <Skeleton className="h-11 w-36 rounded-lg" />
-        <Skeleton className="h-11 w-28 rounded-lg" />
+        {/* Back to the run and Print: the loaded buttons' boxes, labels invisible. */}
+        <SkeletonButton>
+          <ChevronStartIcon />
+          {t('payroll.actions.backToRun')}
+        </SkeletonButton>
+        <SkeletonButton>
+          <PrintIcon />
+          {t('payroll.actions.print')}
+        </SkeletonButton>
       </div>
       <div
         aria-hidden="true"
@@ -317,13 +330,17 @@ export function PayslipSkeleton() {
           <div className="flex min-w-0 items-center gap-3">
             <Skeleton className="size-12 shrink-0 rounded-xl" />
             <div className="min-w-0">
-              <SkeletonText className="font-display text-lg leading-tight font-extrabold" width="w-44" />
+              <p className="font-display text-lg leading-tight font-extrabold break-words">
+                <SkeletonProse>{schoolName}</SkeletonProse>
+              </p>
               <p className="text-muted-foreground">{t('payroll.payslip.title')}</p>
             </div>
           </div>
           <div className="text-end">
             <p className="text-muted-foreground text-xs">{t('payroll.payslip.month')}</p>
-            <SkeletonText className="font-display text-lg font-extrabold" width="w-32" />
+            <p className="font-display text-lg font-extrabold">
+              <SkeletonProse>{typicalMonth}</SkeletonProse>
+            </p>
           </div>
         </div>
         <section data-skeleton-block="payslip-employee" className="flex flex-col gap-2">

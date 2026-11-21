@@ -1,11 +1,12 @@
 'use client';
 
-import { EMPLOYEE_SALARY_FIELDS } from '@school-erp/shared';
+import { EMPLOYEE_SALARY_FIELDS, EmployeeStatus } from '@school-erp/shared';
 import { useParams, usePathname, useSearchParams } from 'next/navigation';
 import { useCan } from '@/core/auth';
 import type { ReactNode } from 'react';
 import { PageHeader } from '@/shared/components/layout/page-header';
-import { Skeleton, SkeletonMask, SkeletonPill, SkeletonProse, SkeletonText } from '@/shared/components/ui/skeleton';
+import { DeactivateIcon, EditIcon } from '@/shared/components/ui/icons';
+import { Skeleton, SkeletonButton, SkeletonMask, SkeletonPill, SkeletonProse, SkeletonText } from '@/shared/components/ui/skeleton';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { parseEmployeesQuery } from '../lib/list-query';
 import { EmployeesI18n } from '../messages';
@@ -138,6 +139,7 @@ export function EmployeeProfileSkeleton({ body }: { body?: ReactNode }) {
 
 function ProfileSkeleton({ body }: { body?: ReactNode }) {
   const { t, locale } = useTranslation();
+  const can = useCan();
   const { id } = useParams<{ id: string }>();
   const basePath = `/${locale}/employees`;
   return (
@@ -145,7 +147,8 @@ function ProfileSkeleton({ body }: { body?: ReactNode }) {
       <PageHeader
         title={<SkeletonText width="w-36 sm:w-56" />}
         leading={<Skeleton className="size-16 shrink-0 rounded-[1.25rem]" />}
-        status={<SkeletonPill />}
+        // An active employee, as most profiles opened are: the Active pill and Edit · Deactivate.
+        status={<SkeletonPill>{t(`common.enums.employeeStatus.${EmployeeStatus.ACTIVE}`)}</SkeletonPill>}
         // The loaded header's two lines: code · job · department, then "Signs in as" / "No sign-in account".
         description={
           <span className="flex flex-col gap-1">
@@ -156,10 +159,22 @@ function ProfileSkeleton({ body }: { body?: ReactNode }) {
         breadcrumbs={[{ label: t('employees.title'), href: basePath }, { label: ' ' }]}
         breadcrumbsLabel={t('ui.shell.breadcrumbs')}
         actions={
-          <>
-            <Skeleton className="h-11 w-28 rounded-lg" />
-            <Skeleton className="h-11 w-36 rounded-lg" />
-          </>
+          can('hr.employees.edit') || can('hr.employees.change_status') ? (
+            <>
+              {can('hr.employees.edit') ? (
+                <SkeletonButton>
+                  <EditIcon />
+                  {t('employees.profile.edit')}
+                </SkeletonButton>
+              ) : null}
+              {can('hr.employees.change_status') ? (
+                <SkeletonButton>
+                  <DeactivateIcon />
+                  {t('employees.status.deactivate')}
+                </SkeletonButton>
+              ) : null}
+            </>
+          ) : undefined
         }
       />
       <ProfileTabs profileHref={`${basePath}/${id}`} />

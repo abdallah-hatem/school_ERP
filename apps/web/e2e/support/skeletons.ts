@@ -1,7 +1,10 @@
 import { expect, request, test, type Browser, type Page, type TestInfo } from '@playwright/test';
-import { monthOf, PAGINATION, PayrollStatus, type Language, type PayrollRun, type PayrollRunSummary, type EmployeeSummary, type PenaltyRecord, type UserAccount } from '@school-erp/shared';
+import { AccountingPayrollStatus, monthOf, PAGINATION, PayrollStatus, PenaltyStatus, type AccountingPayrollMonthSummary, type Language, type PayrollRun, type PayrollRunSummary, type EmployeeSummary, type PenaltyRecord, type UserAccount } from '@school-erp/shared';
 import { join } from 'node:path';
 import { Api } from './api';
+import { SKELETON_SCREENS, type SkeletonScreenName } from './skeleton-screens';
+
+export { SKELETON_SCREENS, type SkeletonScreenName } from './skeleton-screens';
 import { env } from './env';
 import { adminAccount, makeUser, rolesByKey } from './access';
 import { signIn } from './ui';
@@ -153,41 +156,35 @@ function previousMonth(month: string): string {
   return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`;
 }
 
-/** Every screen with a skeleton, in menu order. */
-export const SKELETON_SCREENS = [
-  'dashboard',
-  'employees',
-  'employee-details',
-  'employee-penalties',
-  'employee-payroll',
-  'employee-history',
-  'employee-new',
-  'employee-edit',
-  'penalties',
-  'lateness',
-  'payroll',
-  'payroll-run',
-  'payroll-run-history',
-  'payslip',
-  'payroll-taxes',
-  'payroll-taxes-month',
-  'activity',
-  'users',
-  'user-new',
-  'user-edit',
-  'roles',
-  'role-new',
-  'role-edit',
-  'account',
-  'account-notifications',
-  'settings-school',
-  'settings-structure',
-  'settings-lists',
-  'settings-hr-rules',
-  'settings-catalogue',
-  'settings-notifications',
-] as const;
-export type SkeletonScreenName = (typeof SKELETON_SCREENS)[number];
+/**
+ * The payroll runs, with at least one approved: when none is (a phone pass, which has no
+ * 05-payroll), this month's run — the one 06 fills with penalties, lateness and adjustments, so its
+ * tiles read like a school's — is approved as 05 does on desktop, after its pending penalties are
+ * approved (§6 refuses a month with pending ones; later specs record penalties on the latest open
+ * day, so a locked month is fine). Should that still be refused, the month before last is approved
+ * instead, leaving last month's lateness board (checked below) unlocked.
+ */
+export async function ensureApprovedRun(api: Api): Promise<PayrollRunSummary[]> {
+  const list = () => api.get<PayrollRunSummary[]>('/hr/payroll-runs', { limit: PAGINATION.maxLimit });
+  const runs = await list();
+  if (runs.some((r) => r.status === PayrollStatus.APPROVED)) return runs;
+  const thisMonth = monthOf(new Date());
+  // Oldest first (§4 approves in date order).
+  const pending = (await api.get<PenaltyRecord[]>('/hr/penalties', { status: PenaltyStatus.PENDING, limit: PAGINATION.maxLimit }))
+    .filter((p) => p.date.startsWith(thisMonth))
+    .sort((a, b) => a.date.localeCompare(b.date));
+  for (const p of pending) await api.post(`/hr/penalties/${p.id}/approve`, {}).catch(() => undefined);
+  for (const month of [thisMonth, previousMonth(previousMonth(thisMonth))]) {
+    const draft = runs.find((r) => r.month === month) ?? (await api.post<PayrollRun>('/hr/payroll-runs', { month }));
+    try {
+      await api.post(`/hr/payroll-runs/${draft.id}/approve`, {});
+      return list();
+    } catch {
+      // 409 PENDING_PENALTIES: try the next month.
+    }
+  }
+  throw new Error('smoke: no payroll run could be approved for the skeleton checks');
+}
 
 let paths: Promise<Record<SkeletonScreenName, string | null>> | null = null;
 
@@ -206,12 +203,11 @@ async function readPaths(): Promise<Record<SkeletonScreenName, string | null>> {
     // shows rows rather than its empty state.
     const penalties = await api.get<PenaltyRecord[]>('/hr/penalties', { limit: 1 });
     const employee = penalties[0]?.employee ?? employees[0];
-    // The payslip exists only on an approved run (05-payroll approves one).
-    let runs = await api.get<PayrollRunSummary[]>('/hr/payroll-runs', { limit: PAGINATION.maxLimit });
-    if (runs.length === 0) {
-      await api.post('/hr/payroll-runs', { month: monthOf(new Date()) });
-      runs = await api.get<PayrollRunSummary[]>('/hr/payroll-runs', { limit: PAGINATION.maxLimit });
-    }
+    // An approved run, as the run skeleton traces (its pill, Export bank sheet, today's rules) and
+    // as the payslip and Approved payroll need: 05-payroll approves this month's on desktop; the
+    // phone pass (no 05) approves the month before last here: this month stays open for later
+    // specs, and last month's lateness board (checked below) stays unlocked.
+    const runs = await ensureApprovedRun(api);
     const approved = runs.find((r) => r.status === PayrollStatus.APPROVED);
     const run = await api.get<PayrollRun>(`/hr/payroll-runs/${(approved ?? runs[0]!).id}`);
     const line = approved ? run.lines[0] : undefined;
@@ -231,6 +227,10 @@ async function readPaths(): Promise<Record<SkeletonScreenName, string | null>> {
       await api.patch(`/hr/employees/${employee.id}`, { grade: 'Skeleton check' });
       await api.patch(`/hr/employees/${employee.id}`, { grade });
     }
+    // Approved payroll: a month still pending transfer, as its skeleton draws it (the pill and
+    // the four buttons a pending month shows the admin); none pending, no month check.
+    const accountingMonths = await api.get<AccountingPayrollMonthSummary[]>('/accounting/payroll', { limit: PAGINATION.maxLimit });
+    const pendingMonth = accountingMonths.find((m) => m.status === AccountingPayrollStatus.PENDING);
     const e = `/employees/${employee.id}`;
     return {
       dashboard: '',
@@ -253,6 +253,8 @@ async function readPaths(): Promise<Record<SkeletonScreenName, string | null>> {
       // The year of an approved month (its tiles in every state), and that month's statement (§10).
       'payroll-taxes': `/accounting/payroll-taxes?year=${(approved?.month ?? monthOf(new Date())).slice(0, 4)}`,
       'payroll-taxes-month': approved ? `/accounting/payroll-taxes/${approved.month}` : null,
+      'accounting-payroll': '/accounting/payroll',
+      'accounting-payroll-month': pendingMonth ? `/accounting/payroll/${pendingMonth.month}` : null,
       activity: '/activity',
       users: '/users',
       'user-new': '/users/new',
@@ -282,7 +284,7 @@ export function defineSkeletonSpecs(locales: readonly Language[]): void {
   for (const name of SKELETON_SCREENS) {
     test(`${name}: the skeleton has the loaded screen's blocks, in order and size`, async ({ page, browser }, info) => {
       const path = (await screenPaths())[name];
-      test.skip(path === null, 'no approved payroll run to open (a payslip, a payroll taxes statement)');
+      test.skip(path === null, 'no approved payroll run to open (a payslip, a payroll taxes statement, an approved month)');
       await signIn(page, locales[0]!);
       const problems: string[] = [];
       for (const locale of locales) {
