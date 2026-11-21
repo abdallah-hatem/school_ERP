@@ -1,5 +1,5 @@
 import type { TransactionHost } from '@nestjs-cls/transactional';
-import type { ListItem } from '@school-erp/shared';
+import type { ListItem, Paginated } from '@school-erp/shared';
 import { BaseRepository, ModelName } from '../../../../common/repositories/base.repository';
 import { DatabaseService } from '../../../../database/database.service';
 import type { DbAdapter } from '../../../../database/transactions';
@@ -65,6 +65,18 @@ export abstract class ListItemsRepository<
       orderBy: [{ sortOrder: 'asc' }, { nameEn: 'asc' }],
       select: this.select,
     });
+  }
+
+  /** One page (by order, then English name), searched by either name (any case). */
+  findPage(includeHidden: boolean, page?: number, limit?: number, search?: string, ids?: string[]): Promise<Paginated<T>> {
+    return this.findAllWithPagination(
+      page,
+      limit,
+      search || undefined,
+      ['nameEn', 'nameAr'],
+      { ...(includeHidden ? {} : { isActive: true }), ...(ids ? { id: { in: ids } } : {}) },
+      { select: this.select, orderBy: [{ sortOrder: 'asc' }, { nameEn: 'asc' }] },
+    );
   }
 
   findOne(id: string): Promise<T | null> {

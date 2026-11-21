@@ -143,6 +143,38 @@ describe('HR lists and employees (e2e)', () => {
       expect(all.find((d) => d.id === hiddenDepartmentId)).toMatchObject({ isActive: false });
     });
 
+    it('GET with page, limit or search: one page (by order, then name) with meta, searched by either name', async () => {
+      const whole = (await http(app).get('/hr/departments?includeHidden=true').expect(200)).body as {
+        data: { id: string; nameEn: string; nameAr: string }[];
+        meta?: unknown;
+      };
+      // The whole list (a form's choices) has no meta.
+      expect(whole.meta).toBeUndefined();
+      const first = (await http(app).get('/hr/departments').query({ includeHidden: true, page: 1, limit: 1 }).expect(200)).body;
+      expect(first.data).toHaveLength(1);
+      expect(first.data[0].id).toBe(whole.data[0]!.id);
+      expect(first.meta).toMatchObject({ total: whole.data.length, page: 1, limit: 1 });
+      const second = (await http(app).get('/hr/departments').query({ includeHidden: true, page: 2, limit: 1 }).expect(200)).body;
+      if (whole.data.length > 1) expect(second.data[0].id).toBe(whole.data[1]!.id);
+      // Hidden items only with includeHidden.
+      const hidden = whole.data.find((d) => d.id === hiddenDepartmentId)!;
+      const found = (await http(app).get('/hr/departments').query({ includeHidden: true, search: hidden.nameAr }).expect(200)).body;
+      expect(found.data.map((d: { id: string }) => d.id)).toContain(hiddenDepartmentId);
+      const notShown = (await http(app).get('/hr/departments').query({ search: hidden.nameEn.toUpperCase() }).expect(200)).body;
+      expect(notShown.data.map((d: { id: string }) => d.id)).not.toContain(hiddenDepartmentId);
+      // A picker's chosen items by id (their names), hidden ones only with includeHidden.
+      const byId = (await http(app).get('/hr/departments').query({ includeHidden: true, ids: hiddenDepartmentId }).expect(200)).body;
+      expect(byId.data.map((d: { id: string }) => d.id)).toEqual([hiddenDepartmentId]);
+      await http(app).get('/hr/departments').query({ ids: 'not-a-uuid' }).expect(400);
+      // Job titles and stages page the same way.
+      expect((await http(app).get('/hr/job-titles').query({ limit: 1 }).expect(200)).body.meta).toMatchObject({ limit: 1 });
+      expect((await http(app).get('/stages').query({ limit: 1 }).expect(200)).body.meta).toMatchObject({ limit: 1 });
+      // Bounds.
+      await http(app).get('/hr/departments').query({ limit: 101 }).expect(400);
+      await http(app).get('/hr/job-titles').query({ page: 0 }).expect(400);
+      await http(app).get('/stages').query({ limit: 101 }).expect(400);
+    });
+
     it('hiding an item used by an employee is allowed and the employee keeps it', async () => {
       const dept = (
         await http(app).post('/hr/departments').send({ nameEn: 'Temp', nameAr: 'مؤقت' }).expect(201)

@@ -5,6 +5,7 @@ import {
   HrSettingKey,
   type CreateEmployeeRequest,
   type LatenessMonth,
+  type LatenessSummary,
   type LatenessRow,
 } from '@school-erp/shared';
 import { DatabaseService } from '../src/database/database.service';
@@ -52,11 +53,13 @@ describe('Monthly lateness — /hr/lateness (e2e)', () => {
     return (await http(app).post('/hr/employees').send(body).expect(201)).body.data.id as string;
   };
 
-  const get = (month: string) => http(app).get(`/hr/lateness?month=${month}`);
+  const get = (month: string, query: Record<string, string | number> = {}) =>
+    http(app).get('/hr/lateness').query({ month, ...query });
   const put = (month: string, entries: unknown) =>
     http(app).put(`/hr/lateness/${month}`).send({ entries });
+  /** Every row of the month (one page of 100 holds this suite's employees). */
   const rows = async (month: string) =>
-    ((await get(month).expect(200)).body.data as LatenessMonth).rows;
+    ((await get(month, { limit: 100 }).expect(200)).body.data as LatenessMonth).items;
   const rowOf = (list: LatenessRow[], id: string) => list.find((r) => r.employee.id === id);
 
   beforeAll(async () => {
@@ -110,7 +113,9 @@ describe('Monthly lateness — /hr/lateness (e2e)', () => {
       { employeeId: b, minutes: 121 },
     ]).expect(200);
     expect(res.body).toMatchObject({ success: true, statusCode: 200 });
-    const after = res.body.data.rows as LatenessRow[];
+    // The save answers with the month's lock, rule and totals; the rows are re-read.
+    expect(res.body.data).not.toHaveProperty('items');
+    const after = await rows(MONTH);
     expect(rowOf(after, a)).toMatchObject({ minutes: 61, days: 0.75 });
     expect(rowOf(after, b)).toMatchObject({ minutes: 121, days: 1.25 });
     expect(rowOf(await rows(MONTH), a)).toMatchObject({ minutes: 61, days: 0.75 });
@@ -130,7 +135,7 @@ describe('Monthly lateness — /hr/lateness (e2e)', () => {
     await newEmployee();
     const open = (await get(MONTH).expect(200)).body.data as LatenessMonth;
     expect(open.locked).toBe(false);
-    expect(Array.isArray(open.rows)).toBe(true);
+    expect(Array.isArray(open.items)).toBe(true);
     expect(((await get(DRAFT_MONTH).expect(200)).body.data as LatenessMonth).locked).toBe(false);
     expect(((await get(APPROVED_MONTH).expect(200)).body.data as LatenessMonth).locked).toBe(true);
     // PUT returns the same shape.
@@ -146,9 +151,8 @@ describe('Monthly lateness — /hr/lateness (e2e)', () => {
       nameEn: department.nameEn,
       nameAr: department.nameAr,
     });
-    const list = (await put(MONTH, [{ employeeId: a, minutes: 5 }]).expect(200)).body.data
-      .rows as LatenessRow[];
-    expect(rowOf(list, a)!.department.id).toBe(departmentId);
+    await put(MONTH, [{ employeeId: a, minutes: 5 }]).expect(200);
+    expect(rowOf(await rows(MONTH), a)!.department.id).toBe(departmentId);
   });
 
   it('Minutes negative, decimal or above 6,000 → 400', async () => {
@@ -162,13 +166,13 @@ describe('Monthly lateness — /hr/lateness (e2e)', () => {
 
   it('6,000 minutes accepted; 6,001 → 400; 0 accepted', async () => {
     const a = await newEmployee();
-    let list = (await put(MONTH, [{ employeeId: a, minutes: 6000 }]).expect(200)).body
-      .data.rows as LatenessRow[];
+    await put(MONTH, [{ employeeId: a, minutes: 6000 }]).expect(200);
+    let list = await rows(MONTH);
     // 100 hours: ¼ + ½ + 98 × ½ = 49.75 days under the default rule.
     expect(rowOf(list, a)).toMatchObject({ minutes: 6000, days: 49.75 });
     await put(MONTH, [{ employeeId: a, minutes: 6001 }]).expect(400);
-    list = (await put(MONTH, [{ employeeId: a, minutes: 0 }]).expect(200)).body
-      .data.rows as LatenessRow[];
+    await put(MONTH, [{ employeeId: a, minutes: 0 }]).expect(200);
+    list = await rows(MONTH);
     expect(rowOf(list, a)).toMatchObject({ minutes: 0, days: 0 });
   });
 
@@ -241,14 +245,52 @@ describe('Monthly lateness — /hr/lateness (e2e)', () => {
     expect(rowOf(await rows(MONTH), a)).toMatchObject({ minutes: 0 });
 
     await put(MONTH, [{ employeeId: a, minutes: 45 }]).expect(200);
-    const list = (await put(MONTH, [{ employeeId: b, minutes: 90 }]).expect(200)).body
-      .data.rows as LatenessRow[];
+    await put(MONTH, [{ employeeId: b, minutes: 90 }]).expect(200);
+    const list = await rows(MONTH);
     expect(rowOf(list, a)).toMatchObject({ minutes: 45, days: 0.25 });
     expect(rowOf(list, b)).toMatchObject({ minutes: 90, days: 0.75 });
     expect(rowOf(list, c)).toMatchObject({ minutes: 0, days: 0 });
 
-    // An empty PUT writes nothing and returns the month's list.
-    const empty = (await put(MONTH, []).expect(200)).body.data.rows as LatenessRow[];
-    expect(rowOf(empty, a)).toMatchObject({ minutes: 45 });
+    // An empty PUT writes nothing and answers with the month as it stands.
+    const saved = (await put(MONTH, []).expect(200)).body.data as LatenessSummary;
+    expect(saved.totals.minutes).toBe((await rows(MONTH)).reduce((n, r) => n + r.minutes, 0));
+    expect(rowOf(await rows(MONTH), a)).toMatchObject({ minutes: 45 });
+  });
+
+  // ── paged and searched by the API (owner, 2026-11-21) ───────────────────
+
+  it('pages by code, searches code and both names, and totals every row whatever the page or search', async () => {
+    const a = await newEmployee({ nameEn: unique('Paging Late') });
+    const b = await newEmployee();
+    await put(MONTH, [{ employeeId: a, minutes: 61 }, { employeeId: b, minutes: 121 }]).expect(200);
+    const all = await rows(MONTH);
+    expect(all.map((r) => r.employee.code)).toEqual([...all.map((r) => r.employee.code)].sort());
+
+    const first = (await get(MONTH, { page: 1, limit: 1 }).expect(200)).body.data as LatenessMonth;
+    const second = (await get(MONTH, { page: 2, limit: 1 }).expect(200)).body.data as LatenessMonth;
+    expect(first).toMatchObject({ total: all.length, page: 1, limit: 1 });
+    expect(first.items).toHaveLength(1);
+    expect(second.items[0]!.employee.id).toBe(all[1]!.employee.id);
+    const totals = {
+      employees: all.length,
+      minutes: all.reduce((n, r) => n + r.minutes, 0),
+      days: all.reduce((n, r) => n + r.days, 0),
+    };
+    expect(first.totals).toEqual(totals);
+
+    const row = rowOf(all, a)!;
+    const byName = (await get(MONTH, { search: row.employee.nameEn.toUpperCase() }).expect(200)).body.data as LatenessMonth;
+    expect(byName.items.map((r) => r.employee.id)).toEqual([a]);
+    expect(byName.total).toBe(1);
+    // The summary stays the month's.
+    expect(byName.totals).toEqual(totals);
+    const byCode = (await get(MONTH, { search: row.employee.code }).expect(200)).body.data as LatenessMonth;
+    expect(byCode.items.map((r) => r.employee.id)).toContain(a);
+    const byArabic = (await get(MONTH, { search: row.employee.nameAr }).expect(200)).body.data as LatenessMonth;
+    expect(byArabic.items.map((r) => r.employee.id)).toEqual([a]);
+
+    await get(MONTH, { limit: 101 }).expect(400);
+    await get(MONTH, { page: 0 }).expect(400);
+    expect(((await get(MONTH, { page: 999 }).expect(200)).body.data as LatenessMonth)).toMatchObject({ items: [], total: all.length });
   });
 });

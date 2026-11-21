@@ -18,4 +18,5 @@ export * from './types/accounting';
 export * from './types/notifications';
 export * from './rules';
 export * from './format';
+export * from './search';
 export * from './months';

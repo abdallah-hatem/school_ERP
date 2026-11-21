@@ -4,11 +4,11 @@ import { Prisma } from '@prisma/client';
 import {
   PAGINATION,
   PAYROLL_PAGINATION,
+  PayrollFlag,
   PayrollStatus,
   type AdjustmentType,
   type InsuranceStatus,
   type Paginated,
-  type PayrollFlag,
   type PayrollTotals,
   type WorkSystem,
 } from '@school-erp/shared';
@@ -149,6 +149,18 @@ export interface LineFilter {
   flagged?: boolean;
 }
 
+/** The run's lines matching `filter` within `scope`: code, either name or national id; a department; flagged. */
+function lineWhere(runId: string, filter: LineFilter, scope: Prisma.EmployeeWhereInput): Prisma.PayrollLineWhereInput {
+  const where: Prisma.PayrollLineWhereInput = { runId, employee: scope };
+  if (filter.departmentId) where.departmentId = filter.departmentId;
+  if (filter.flagged !== undefined) where.flags = { isEmpty: !filter.flagged };
+  if (filter.search) {
+    const contains = { contains: filter.search, mode: 'insensitive' as const };
+    where.OR = [{ employeeCode: contains }, { nameEn: contains }, { nameAr: contains }, { nationalId: contains }];
+  }
+  return where;
+}
+
 /** A line's new adjustment sums, net and flags after its adjustments changed. */
 export type LineAdjustmentUpdate = Pick<
   LineData,
@@ -269,22 +281,41 @@ export class PayrollRunsRepository extends BaseRepository<
     filter: LineFilter = {},
     scope: Prisma.EmployeeWhereInput = {},
   ): Promise<LineRow[]> {
-    const where: Prisma.PayrollLineWhereInput = { runId, employee: scope };
-    if (filter.departmentId) where.departmentId = filter.departmentId;
-    if (filter.flagged !== undefined) where.flags = { isEmpty: !filter.flagged };
-    if (filter.search) {
-      const contains = { contains: filter.search, mode: 'insensitive' as const };
-      where.OR = [
-        { employeeCode: contains },
-        { nameEn: contains },
-        { nameAr: contains },
-        { nationalId: contains },
-      ];
-    }
     return this.db.payrollLine.findMany({
-      where,
+      where: lineWhere(runId, filter, scope),
       select: LINE_SELECT,
       orderBy: { employeeCode: 'asc' },
+    });
+  }
+
+  /** One page of the lines matching `filter` (by code; `limit` ≤ 500), and how many match. */
+  async findLinesPage(
+    runId: string,
+    filter: LineFilter,
+    scope: Prisma.EmployeeWhereInput,
+    page: number = PAGINATION.defaultPage,
+    limit: number = PAGINATION.defaultLimit,
+  ): Promise<{ rows: LineRow[]; total: number; page: number; limit: number }> {
+    const take = Math.min(Math.max(1, limit), PAYROLL_PAGINATION.maxLimit);
+    const current = Math.max(1, page);
+    const where = lineWhere(runId, filter, scope);
+    const [rows, total] = await Promise.all([
+      this.db.payrollLine.findMany({
+        where,
+        select: LINE_SELECT,
+        orderBy: { employeeCode: 'asc' },
+        skip: (current - 1) * take,
+        take,
+      }),
+      this.db.payrollLine.count({ where }),
+    ]);
+    return { rows, total, page: current, limit: take };
+  }
+
+  /** Lines in `scope` whose last calculation flagged PENDING penalties. */
+  countPendingPenaltyLines(runId: string, scope: Prisma.EmployeeWhereInput = {}): Promise<number> {
+    return this.db.payrollLine.count({
+      where: { runId, employee: scope, flags: { has: PayrollFlag.PENDING_PENALTIES } },
     });
   }
 

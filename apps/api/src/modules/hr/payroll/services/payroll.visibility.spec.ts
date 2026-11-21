@@ -87,6 +87,8 @@ function makeService(scopes: Parameters<typeof fakeAccess>[0], salaryIds: string
     }),
     totalsFor: jest.fn().mockResolvedValue(new Map([['r1', { ...TOTALS }]])),
     findLines: jest.fn().mockResolvedValue([line('e1')]),
+    findLinesPage: jest.fn().mockResolvedValue({ rows: [line('e1')], total: 1, page: 1, limit: 10 }),
+    countPendingPenaltyLines: jest.fn().mockResolvedValue(0),
     findLine: jest.fn().mockResolvedValue(line('e1')),
     findAdjustments: jest.fn().mockResolvedValue([
       {
@@ -232,7 +234,7 @@ describe('payroll — scopes (R5)', () => {
   it('a scoped payroll viewer gets only their employees’ lines, adjustments and totals', async () => {
     const { service, repository } = makeService({ 'hr.payroll.view': PRIMARY });
     await service.get('r1');
-    expect(repository.findLines).toHaveBeenCalledWith('r1', {}, { stageId: 'primary' });
+    expect(repository.findLinesPage).toHaveBeenCalledWith('r1', { search: undefined, departmentId: undefined, flagged: undefined }, { stageId: 'primary' }, undefined, undefined);
     expect(repository.findAdjustments).toHaveBeenCalledWith('r1', undefined, { stageId: 'primary' });
     expect(repository.totalsFor).toHaveBeenCalledWith(['r1'], { stageId: 'primary' });
   });

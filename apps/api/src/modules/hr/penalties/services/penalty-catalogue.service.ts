@@ -2,6 +2,7 @@ import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import {
   ErrorCode,
   HrCatalogueKey,
+  matchesSearch,
   violationLevelsProblem,
   type PenaltyGroup,
   type Uuid,
@@ -90,15 +91,33 @@ export class PenaltyCatalogueService {
     private readonly afterCommit: AfterCommit,
   ) {}
 
-  async list(): Promise<PenaltyGroup[]> {
+  /**
+   * The catalogue, groups by order with their violations. With `search`: a group whose English or
+   * Arabic name matches keeps every violation; otherwise only its violations whose name matches;
+   * a group with none is left out — each with `match` (which matched, and the group's count).
+   */
+  async list(search?: string): Promise<PenaltyGroup[]> {
     const rows = await this.repository.findGroupsWithViolations();
-    return rows.map((g) => ({
+    const groups: PenaltyGroup[] = rows.map((g) => ({
       ...toGroup(g),
       violations: g.violations.map((v) => {
         const { groupId: _groupId, ...violation } = toViolation(v);
         return violation;
       }),
     }));
+    const query = search?.trim();
+    if (!query) return groups;
+    const found: PenaltyGroup[] = [];
+    for (const group of groups) {
+      const violationCount = group.violations.length;
+      if (matchesSearch(query, [group.nameEn, group.nameAr])) {
+        found.push({ ...group, match: { group: true, violationCount } });
+        continue;
+      }
+      const violations = group.violations.filter((v) => matchesSearch(query, [v.nameEn, v.nameAr]));
+      if (violations.length) found.push({ ...group, violations, match: { group: false, violationCount } });
+    }
+    return found;
   }
 
   /** Each write and its history entry commit together (audit D2). */

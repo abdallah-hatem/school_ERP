@@ -1,8 +1,8 @@
 import ExcelJS from 'exceljs';
-import { DEFAULT_TAX_RULE, type AccountingPayrollMonth } from '@school-erp/shared';
+import { DEFAULT_TAX_RULE, type AccountingPayrollMonthSheet } from '@school-erp/shared';
 import { buildPayrollTaxesSheet } from './payroll-taxes-sheet';
 
-const month = (over: Partial<AccountingPayrollMonth> = {}): AccountingPayrollMonth => ({
+const month = (over: Partial<AccountingPayrollMonthSheet> = {}): AccountingPayrollMonthSheet => ({
   month: '2026-10',
   status: 'PENDING',
   finalizedAt: null,
@@ -11,6 +11,7 @@ const month = (over: Partial<AccountingPayrollMonth> = {}): AccountingPayrollMon
   salaryVisible: true,
   totals: { employees: 2, net: 2_400_000, insuranceAmount: 55_000, incomeTax: 303_470, martyrTax: 1_380, gross: 2_759_850 },
   taxRule: DEFAULT_TAX_RULE,
+  visibleLines: 2,
   lines: [
     {
       employeeId: 'a',

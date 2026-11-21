@@ -1,6 +1,6 @@
 import type { InsuranceStatus } from '../enums';
 import type { TaxBracket } from '../settings';
-import type { IsoDateTime, Month, Piastres, Uuid } from './common';
+import type { IsoDateTime, ListPage, Month, Piastres, Uuid } from './common';
 
 /*
  * Accounting (§10). HR payroll ends at the net; accounting works out what the school pays on top —
@@ -126,11 +126,38 @@ export interface AccountingPayrollMonthSummary {
   totals: AccountingPayrollTotals;
 }
 
-/** `GET /accounting/payroll/:month`. */
+/**
+ * `GET /accounting/payroll/:month` — the month without its lines: they are paged, searched and
+ * summed by the API (`GET /accounting/payroll/:month/lines`).
+ */
 export interface AccountingPayrollMonth extends AccountingPayrollMonthSummary {
   /** The tax rule in force at approval (frozen with the month). */
   taxRule: TaxRule;
+  /** How many of the month's lines this viewer sees the amounts of (all of them with every salary). */
+  visibleLines: number;
+}
+
+/** The whole month with every line as the viewer sees it — the Excel export and print. */
+export interface AccountingPayrollMonthSheet extends AccountingPayrollMonth {
   lines: AccountingPayrollLine[];
+}
+
+/** `GET /accounting/payroll/:month/lines` — `?page&limit` (≤ 500), `search`, `insurance`. */
+export interface AccountingPayrollLinesQuery {
+  page?: number;
+  limit?: number;
+  /** Code, English or Arabic name. */
+  search?: string;
+  /** One insurance group (the statement's Insured / Not insured tables); absent: everyone. */
+  insurance?: InsuranceStatus;
+}
+
+/**
+ * A page of the month's lines (by employee code) and `totals` over **every** line matching the
+ * search and group — the money only for a viewer who sees every salary (§2, P4).
+ */
+export interface AccountingPayrollLinesPage extends ListPage<AccountingPayrollLine> {
+  totals: AccountingPayrollTotals;
 }
 
 /**

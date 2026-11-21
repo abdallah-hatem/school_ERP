@@ -398,7 +398,16 @@ export interface AuditActor {
 export interface AuditActorsQuery {
   entityType?: AuditEntityType;
   entityId?: string;
+  /** Part of the person's name, any case — the pickers search here, never in the browser. */
+  search?: string;
+  /** One person (a picker's chosen one, the filter chip's name). */
+  id?: Uuid;
+  /** How many, newest activity first (≤ `AUDIT_ACTORS_MAX`; default all of them up to it). */
+  limit?: number;
 }
+
+/** The most people one `GET /audit/actors` answer lists. */
+export const AUDIT_ACTORS_MAX = 200;
 
 /** `GET /audit/summary?from&to` — the Activity page's "today at a glance". */
 export interface AuditSummary {

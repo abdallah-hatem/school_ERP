@@ -491,6 +491,23 @@ describe('audit log (e2e)', () => {
       expect(nobody.body.data).toEqual([]);
     });
 
+    it('the pickers search by name (any case), ask for one person, and cap how many', async () => {
+      await http(app).post(`/__audit-probe/two/act-${Date.now()}?label=Act`).expect(201);
+      const term = user.name.slice(1, 4);
+      const found = await http(app).get('/audit/actors').query({ search: term.toUpperCase() }).expect(200);
+      expect(found.body.data.map((a: { id: string }) => a.id)).toContain(user.id);
+      expect(found.body.data.every((a: { name: string }) => a.name.toLowerCase().includes(term.toLowerCase()))).toBe(true);
+      expect((await http(app).get('/audit/actors').query({ search: 'no-such-person-xyz' }).expect(200)).body.data).toEqual([]);
+      // A LIKE wildcard is a plain character.
+      expect((await http(app).get('/audit/actors').query({ search: '%' }).expect(200)).body.data.every((a: { name: string }) => a.name.includes('%'))).toBe(true);
+      expect((await http(app).get('/audit/actors').query({ id: user.id }).expect(200)).body.data).toEqual([
+        { id: user.id, name: user.name, employee: null },
+      ]);
+      expect((await http(app).get('/audit/actors').query({ limit: 1 }).expect(200)).body.data).toHaveLength(1);
+      await http(app).get('/audit/actors').query({ limit: 201 }).expect(400);
+      await http(app).get('/audit/actors').query({ id: 'not-a-uuid' }).expect(400);
+    });
+
     it('400 when only one of entityType / entityId is given, or the type is unknown', async () => {
       await http(app).get('/audit/actors?entityType=employee').expect(400);
       await http(app).get('/audit/actors?entityId=x').expect(400);

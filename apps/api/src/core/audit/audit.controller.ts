@@ -80,7 +80,10 @@ export class AuditController {
     return this.audit.summary(from as Date, to as Date);
   }
 
-  /** The person pickers: everyone in the log, or the people who touched one record. */
+  /**
+   * The person pickers: everyone in the log, or the people who touched one record — newest activity
+   * first, searched by name (`search`), one person (`id`), at most `limit` (≤ 200).
+   */
   @Get('actors')
   @Permission('core.audit.view')
   actors(@Query() query: AuditActorsQueryDto): Promise<AuditActor[]> {
@@ -91,6 +94,7 @@ export class AuditController {
       query.entityType && query.entityId
         ? { entityType: query.entityType, entityId: query.entityId }
         : undefined,
+      { search: query.search || undefined, id: query.id, limit: query.limit },
     );
   }
 

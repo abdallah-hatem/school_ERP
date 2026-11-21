@@ -13,13 +13,17 @@ import {
   payrollTax,
   type AccountingPayrollHrBreakdown,
   type AccountingPayrollLine,
+  type AccountingPayrollLinesPage,
+  type AccountingPayrollLinesQuery,
   type AccountingPayrollMonth,
+  type AccountingPayrollMonthSheet,
   type AccountingPayrollMonthSummary,
   type AccountingPayrollTotals,
   type AccountingPayrollYear,
   type Language,
   type Month,
   type Paginated,
+  PAGINATION,
   type TaxRule,
   type Uuid,
 } from '@school-erp/shared';
@@ -34,6 +38,7 @@ import {
   AccountingPayrollRepository,
   type AccountingLineData,
   type AccountingLineRow,
+  type AccountingLinesFilter,
   type AccountingRunRow,
 } from '../repositories/accounting-payroll.repository';
 
@@ -207,20 +212,72 @@ export class AccountingPayrollService {
   }
 
   /**
-   * A month's taxes as `.xlsx`, with the lines exactly as `getMonth` gives them to this viewer
+   * A month's taxes as `.xlsx`, with every line exactly as `lines` gives them to this viewer
    * (amounts only within their salary scope, totals only with every salary) and the tax rule used.
    */
   async exportMonth(month: Month, lang: Language): Promise<{ fileName: string; content: Buffer }> {
-    const data = await this.getMonth(month);
+    const data = await this.monthSheet(month);
     return { fileName: `payroll-taxes-${month}.xlsx`, content: await buildPayrollTaxesSheet(data, lang) };
   }
 
   /**
-   * One approved month's taxes. If HR approved the month but its event was missed (the listener
-   * failed or hasn't finished), they are worked out now (logged) — still with the rule in force at
-   * the approval and the insurance HR took then, so the month comes out as it would have.
+   * One approved month's summary, totals and tax rule — its lines are paged by `lines`. Says how
+   * many lines the viewer sees the amounts of (all with every salary, else those in their scope).
    */
   async getMonth(month: Month): Promise<AccountingPayrollMonth> {
+    return this.detail(await this.recordedRun(month));
+  }
+
+  private async detail(run: AccountingRunRow): Promise<AccountingPayrollMonth> {
+    const [totals, everySalary] = await Promise.all([
+      this.repository.totalsFor([run.id]),
+      this.employees.seesEverySalary(),
+    ]);
+    const monthTotals = totals.get(run.id)!;
+    const visibleLines = everySalary
+      ? monthTotals.employees
+      : (await this.employees.filterInScope('hr.employees.view_salary', await this.repository.findLineEmployeeIds(run.id))).size;
+    return { ...toSummary(run, monthTotals, everySalary), taxRule: run.taxRule as unknown as TaxRule, visibleLines };
+  }
+
+  /**
+   * One page of an approved month's lines (by code), searched by code or either name and narrowed
+   * to one insurance group, with `totals` over **every** matching line — the money only for
+   * someone who sees every salary (§2, P4); tax, insurance and gross on a line only within the
+   * viewer's salary scope.
+   */
+  async lines(month: Month, query: AccountingPayrollLinesQuery): Promise<AccountingPayrollLinesPage> {
+    const run = await this.recordedRun(month);
+    const filter: AccountingLinesFilter = { search: query.search || undefined, insurance: query.insurance };
+    const [page, sums, everySalary] = await Promise.all([
+      this.repository.findLinesPage(run.id, filter, query.page ?? 1, query.limit ?? PAGINATION.defaultLimit),
+      this.repository.sumLines(run.id, filter),
+      this.employees.seesEverySalary(),
+    ]);
+    const items = await this.viewLines(run, page.rows, everySalary);
+    return {
+      items,
+      total: page.total,
+      page: page.page,
+      limit: page.limit,
+      totals: everySalary ? sums : { employees: sums.employees },
+    };
+  }
+
+  /** The whole month with every line as the viewer sees it (the Excel export). */
+  async monthSheet(month: Month): Promise<AccountingPayrollMonthSheet> {
+    const run = await this.recordedRun(month);
+    const detail = await this.detail(run);
+    const lines = await this.viewLines(run, await this.repository.findLines(run.id), detail.salaryVisible);
+    return { ...detail, lines };
+  }
+
+  /**
+   * The month's recorded row. If HR approved the month but its event was missed (the listener
+   * failed or hasn't finished), its taxes are worked out now (logged) — still with the rule in
+   * force at the approval and the insurance HR took then, so the month comes out as it would have.
+   */
+  private async recordedRun(month: Month): Promise<AccountingRunRow> {
     let run = await this.repository.findByMonth(month);
     if (!run) {
       const hrRunId = await this.hrPayroll.approvedRunIdForMonth(month);
@@ -229,22 +286,22 @@ export class AccountingPayrollService {
       run = (await this.recordApprovedRun(hrRunId)) ?? (await this.repository.findByMonth(month));
       if (!run) throw new NotFoundException();
     }
-    const [lines, totals, everySalary, breakdowns] = await Promise.all([
-      this.repository.findLines(run.id),
-      this.repository.totalsFor([run.id]),
-      this.employees.seesEverySalary(),
+    return run;
+  }
+
+  /** Stored lines with HR's breakdown, the money left out outside the viewer's salary scope. */
+  private async viewLines(
+    run: AccountingRunRow,
+    rows: AccountingLineRow[],
+    everySalary: boolean,
+  ): Promise<AccountingPayrollLine[]> {
+    if (!rows.length) return [];
+    const ids = rows.map((l) => l.employeeId);
+    const [breakdowns, paid] = await Promise.all([
       this.hrPayroll.approvedLineBreakdowns(run.hrRunId),
+      everySalary ? Promise.resolve(new Set(ids)) : this.employees.filterInScope('hr.employees.view_salary', ids),
     ]);
-    // Tax, insurance and gross are salary data (§2, P4): only for the employees whose salary the
-    // viewer may see; the whole month's money totals only for someone who sees every salary.
-    const paid = everySalary
-      ? new Set(lines.map((l) => l.employeeId))
-      : await this.employees.filterInScope('hr.employees.view_salary', lines.map((l) => l.employeeId));
-    return {
-      ...toSummary(run, totals.get(run.id)!, everySalary),
-      taxRule: run.taxRule as unknown as TaxRule,
-      lines: lines.map((l) => toLine(l, paid.has(l.employeeId), breakdowns?.get(l.employeeId))),
-    };
+    return rows.map((l) => toLine(l, paid.has(l.employeeId), breakdowns?.get(l.employeeId)));
   }
 }
 

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { Prisma } from '@prisma/client';
 import {
+  AUDIT_ACTORS_MAX,
   AUDIT_FAILED_SIGN_IN,
   AUDIT_MONEY_ACTIONS,
   AUDIT_MONEY_FIELDS,
@@ -72,7 +73,7 @@ const entrySelect = {
 export type AuditEntryRow = Prisma.AuditEntryGetPayload<{ select: typeof entrySelect }>;
 
 /** How many people a picker lists at most (newest first). */
-const ACTORS_CAP = 200;
+const ACTORS_CAP = AUDIT_ACTORS_MAX;
 
 const page = (p: number, limit: number) => {
   const take = Math.min(Math.max(1, limit), PAGINATION.maxLimit);
@@ -230,11 +231,17 @@ export class AuditEntryRepository {
    * most recently active first. People who were never signed in (failed sign-ins) are not people.
    */
   async findActors(
-    filter: { records?: readonly RecordSet[] },
+    filter: { records?: readonly RecordSet[]; search?: string; id?: string; limit?: number },
     restricted: AuditEntryFilter['restricted'] = [],
   ): Promise<AuditActor[]> {
     const record = recordsSql(filter.records);
     const scope = restrictionSql(restricted);
+    const one = filter.id ? Prisma.sql`AND "actor_id" = ${filter.id}::uuid` : Prisma.empty;
+    // The search is on the name the person had most recently (what the picker shows), any case.
+    const named = filter.search
+      ? Prisma.sql`WHERE latest.name ILIKE ${`%${filter.search.replace(/[\\%_]/g, (c) => `\\${c}`)}%`}`
+      : Prisma.empty;
+    const limit = Math.min(Math.max(1, filter.limit ?? ACTORS_CAP), ACTORS_CAP);
     // The avatar comes from the account's linked employee (core's users and HR's employees tables:
     // reading is allowed, writing is not); none when the account is unlinked or gone.
     const rows = await this.txHost.tx.$queryRaw<
@@ -243,13 +250,14 @@ export class AuditEntryRepository {
       SELECT latest.id, latest.name, e."id"::text AS employee_id, e."photo_url", e."gender"::text AS gender FROM (
         SELECT DISTINCT ON ("actor_id") "actor_id" AS actor, "actor_id"::text AS id, "actor_name" AS name, "at", "seq"
         FROM "audit_entries"
-        WHERE "actor_id" IS NOT NULL ${record} ${scope}
+        WHERE "actor_id" IS NOT NULL ${record} ${scope} ${one}
         ORDER BY "actor_id", "at" DESC, "seq" DESC
       ) latest
       LEFT JOIN "users" u ON u."id" = latest.actor
       LEFT JOIN "employees" e ON e."id" = u."employee_id"
+      ${named}
       ORDER BY latest."at" DESC, latest."seq" DESC
-      LIMIT ${ACTORS_CAP}`;
+      LIMIT ${limit}`;
     return rows.map((r) => ({
       id: r.id,
       name: r.name ?? '',

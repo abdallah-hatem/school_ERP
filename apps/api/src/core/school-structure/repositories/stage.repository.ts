@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
-import type { Stage } from '@school-erp/shared';
+import { PAGINATION, type Paginated, type Stage } from '@school-erp/shared';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import type { DbAdapter, DbClient } from '../../../database/transactions';
 
@@ -23,6 +23,37 @@ export class StageRepository {
 
   private get db(): DbClient {
     return this.txHost.tx;
+  }
+
+  /** One page (by order, then English name), searched by either name (any case). */
+  async findPage(
+    includeHidden: boolean,
+    page = 1,
+    limit: number = PAGINATION.defaultLimit,
+    search?: string,
+    ids?: string[],
+  ): Promise<Paginated<Stage>> {
+    const take = Math.min(Math.max(1, limit), PAGINATION.maxLimit);
+    const current = Math.max(1, page);
+    const where: Prisma.StageWhereInput = includeHidden ? {} : { isActive: true };
+    if (ids) where.id = { in: ids };
+    if (search) {
+      where.OR = [
+        { nameEn: { contains: search, mode: 'insensitive' } },
+        { nameAr: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+    const [data, total] = await Promise.all([
+      this.db.stage.findMany({
+        where,
+        select: stageSelect,
+        orderBy: [{ sortOrder: 'asc' }, { nameEn: 'asc' }],
+        skip: (current - 1) * take,
+        take,
+      }),
+      this.db.stage.count({ where }),
+    ]);
+    return { data, total, page: current, limit: take, hasNextPage: current * take < total, hasPreviousPage: current > 1 };
   }
 
   findMany(includeHidden: boolean): Promise<Stage[]> {

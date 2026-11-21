@@ -107,18 +107,24 @@ describe('HR payroll and dashboard (e2e)', () => {
       .put(`/hr/lateness/${month}`)
       .send({ entries: [{ employeeId, minutes }] });
 
-  const createRun = async (month: string) =>
-    (await http(app).post('/hr/payroll-runs').send({ month }).expect(201)).body.data as PayrollRun;
+  /**
+   * The run with every line: a read pages them (`limit` ≤ 500, one page holds this suite's
+   * employees), and a write answers with the first page only — so a write is read back whole.
+   */
   const getRun = async (id: string, query: Record<string, string> = {}) =>
-    (await http(app).get(`/hr/payroll-runs/${id}`).query(query).expect(200)).body
+    (await http(app).get(`/hr/payroll-runs/${id}`).query({ limit: '500', ...query }).expect(200)).body
       .data as PayrollRun;
+  /** A write's run, read back with every line. */
+  const full = async (write: PromiseLike<{ body: { data: PayrollRun } }>) => getRun((await write).body.data.id);
+  const createRun = async (month: string) =>
+    full(http(app).post('/hr/payroll-runs').send({ month }).expect(201));
   const recalculate = (id: string) => http(app).post(`/hr/payroll-runs/${id}/recalculate`);
   const approve = (id: string) => http(app).post(`/hr/payroll-runs/${id}/approve`);
   /** Approves, then waits for the outbox nudge (accounting's taxes) that runs after the response. */
   const approveOk = async (id: string) => {
     const run = (await approve(id).expect(200)).body.data as PayrollRun;
     await outboxIdle(app);
-    return run;
+    return getRun(run.id);
   };
   const addAdjustment = (id: string, body: Record<string, unknown>) =>
     http(app).post(`/hr/payroll-runs/${id}/adjustments`).send(body);
@@ -252,14 +258,12 @@ describe('HR payroll and dashboard (e2e)', () => {
       amount: 25_000,
       reason: 'Overtime',
     }).expect(201);
-    const after = (
-      await addAdjustment(run.id, {
+    const after = await full(addAdjustment(run.id, {
         employeeId: emp,
         type: 'DEDUCTION',
         amount: 5_000,
         reason: 'Advance',
-      }).expect(201)
-    ).body.data as PayrollRun;
+      }).expect(201));
     line = lineOf(after, emp);
     expect(line.adjustmentAdditions).toBe(25_000);
     expect(line.adjustmentDeductions).toBe(5_000);
@@ -284,8 +288,7 @@ describe('HR payroll and dashboard (e2e)', () => {
     await http(app).post(`/hr/employees/${leaves}/deactivate`).expect(200);
     const joins = await employee();
 
-    const res = await recalculate(run.id).expect(200);
-    const recalculated = res.body.data as PayrollRun;
+    const recalculated = await full(recalculate(run.id).expect(200));
     expect(lineOf(recalculated, stays).penaltyAmount).toBe(50_000); // 1,200,000 ÷ 24
     expect(lineOf(recalculated, stays).dayValue).toBe(50_000);
     expect(lineOf(recalculated, partTimer).monthSalary).toBe(900_000);
@@ -353,7 +356,7 @@ describe('HR payroll and dashboard (e2e)', () => {
     expect(after.pendingPenalties).toBe(0);
     // The lines still carry the last calculation's flag until Recalculate.
     expect(lineOf(after, emp).flags).toEqual(['PENDING_PENALTIES']);
-    const recalculated = (await recalculate(run.id).expect(200)).body.data as PayrollRun;
+    const recalculated = await full(recalculate(run.id).expect(200));
     expect(recalculated.pendingPenalties).toBe(0);
     expect(lineOf(recalculated, emp).flags).toEqual([]);
     expect((await approveOk(run.id)).pendingPenalties).toBe(0);
@@ -519,7 +522,7 @@ describe('HR payroll and dashboard (e2e)', () => {
       .patch(`/hr/violations/${violationId}`)
       .send({ levels: DEDUCT(3) })
       .expect(200);
-    const line = lineOf((await recalculate(run.id).expect(200)).body.data as PayrollRun, emp);
+    const line = lineOf(await full(recalculate(run.id).expect(200)), emp);
     expect(line.penaltyDays).toBe(1);
   });
 
@@ -573,36 +576,30 @@ describe('HR payroll and dashboard (e2e)', () => {
       reason: 'x',
     }).expect(400);
 
-    const withAdj = (
-      await addAdjustment(run.id, {
+    const withAdj = await full(addAdjustment(run.id, {
         employeeId: emp,
         type: 'DEDUCTION',
         amount: 7_000,
         reason: 'Advance',
-      }).expect(201)
-    ).body.data as PayrollRun;
+      }).expect(201));
     const adjId = withAdj.adjustments.find((a) => a.employeeId === emp)!.id;
 
-    const recalculated = (await recalculate(run.id).expect(200)).body.data as PayrollRun;
+    const recalculated = await full(recalculate(run.id).expect(200));
     expect(lineOf(recalculated, emp)).toMatchObject({
       adjustmentDeductions: 7_000,
       net: 1_193_000,
     });
     expect(recalculated.adjustments.some((a) => a.id === adjId)).toBe(true);
 
-    const restored = (
-      await http(app).delete(`/hr/payroll-runs/${run.id}/adjustments/${adjId}`).expect(200)
-    ).body.data as PayrollRun;
+    const restored = await full(http(app).delete(`/hr/payroll-runs/${run.id}/adjustments/${adjId}`).expect(200));
     expect(lineOf(restored, emp)).toMatchObject({ adjustmentDeductions: 0, net: 1_200_000 });
 
-    const again = (
-      await addAdjustment(run.id, {
+    const again = await full(addAdjustment(run.id, {
         employeeId: emp,
         type: 'ADDITION',
         amount: 1_000,
         reason: 'Bonus',
-      }).expect(201)
-    ).body.data as PayrollRun;
+      }).expect(201));
     await approveOk(run.id);
     const res = await http(app)
       .delete(`/hr/payroll-runs/${run.id}/adjustments/${again.adjustments[0].id}`)
@@ -643,7 +640,7 @@ describe('HR payroll and dashboard (e2e)', () => {
       expect((await getRun(run.id)).adjustments).toHaveLength(0);
 
       // Allowed: the HR officer adds one…
-      const added = await as(officer, async () => (await addAdjustment(run.id, body).expect(201)).body.data as PayrollRun);
+      const added = await as(officer, async () => await full(addAdjustment(run.id, body).expect(201)));
       const adjId = added.adjustments.find((a) => a.employeeId === emp)!.id;
       expect(lineOf(added, emp).adjustmentAdditions).toBe(5_000);
 
@@ -654,7 +651,7 @@ describe('HR payroll and dashboard (e2e)', () => {
       // The HR officer removes it.
       const removed = await as(
         officer,
-        async () => (await http(app).delete(`/hr/payroll-runs/${run.id}/adjustments/${adjId}`).expect(200)).body.data as PayrollRun,
+        async () => await full(http(app).delete(`/hr/payroll-runs/${run.id}/adjustments/${adjId}`).expect(200)),
       );
       expect(removed.adjustments).toHaveLength(0);
       expect(lineOf(removed, emp).adjustmentAdditions).toBe(0);
@@ -684,14 +681,12 @@ describe('HR payroll and dashboard (e2e)', () => {
       amount: 150_000,
       reason: 'Loan',
     }).expect(201);
-    const after = (
-      await addAdjustment(run.id, {
+    const after = await full(addAdjustment(run.id, {
         employeeId: emp,
         type: 'ADDITION',
         amount: 80_000,
         reason: 'Exam bonus',
-      }).expect(201)
-    ).body.data as PayrollRun;
+      }).expect(201));
     expect(lineOf(after, emp)).toMatchObject({ net: 30_000, flags: [] });
   });
 
@@ -730,6 +725,36 @@ describe('HR payroll and dashboard (e2e)', () => {
     expect(flaggedOnly.totals).toEqual(run.totals);
     const clean = await getRun(run.id, { flagged: 'false' });
     expect(clean.lines.every((l) => l.flags.length === 0)).toBe(true);
+  });
+
+  it('The lines are paged by the API (by code, ≤ 500 a page) with their count; totals stay the run\'s; a write answers with the first page', async () => {
+    const month = nextMonth();
+    await employee();
+    await employee();
+    const run = await createRun(month);
+    const all = run.lines;
+    expect(all.length).toBeGreaterThanOrEqual(2);
+    expect(all.map((l) => l.employeeCode)).toEqual([...all.map((l) => l.employeeCode)].sort());
+
+    const second = await getRun(run.id, { page: '2', limit: '1' });
+    expect(second.linesPage).toEqual({ total: all.length, page: 2, limit: 1 });
+    expect(second.lines.map((l) => l.id)).toEqual([all[1]!.id]);
+    expect(second.totals).toEqual(run.totals);
+    // A search narrows the count with the lines.
+    const found = await getRun(run.id, { search: all[0]!.employeeCode, limit: '1' });
+    expect(found.linesPage.total).toBeGreaterThanOrEqual(1);
+    expect(found.lines[0]!.employeeCode).toContain(all[0]!.employeeCode);
+    // Past the end: no lines, the count still right.
+    expect(await getRun(run.id, { page: '999', limit: '10' })).toMatchObject({ lines: [], linesPage: { total: all.length } });
+
+    // Bounds: a payroll table's page holds up to 500.
+    await http(app).get(`/hr/payroll-runs/${run.id}`).query({ limit: 501 }).expect(400);
+    await http(app).get(`/hr/payroll-runs/${run.id}`).query({ page: 0 }).expect(400);
+
+    // A write's answer: the first page of the default size, with the count of every line.
+    const written = (await recalculate(run.id).expect(200)).body.data as PayrollRun;
+    expect(written.linesPage).toEqual({ total: all.length, page: 1, limit: 10 });
+    expect(written.lines).toHaveLength(Math.min(10, all.length));
   });
 
   it('Payslip on a DRAFT run → 409; on an APPROVED run → itemised penalties and adjustments', async () => {
@@ -845,7 +870,7 @@ describe('HR payroll and dashboard (e2e)', () => {
     await setDivisor(25);
     expect(lineOf(await getRun(draft.id), emp).penaltyAmount).toBe(40_000);
     expect(
-      lineOf((await recalculate(draft.id).expect(200)).body.data as PayrollRun, emp).penaltyAmount,
+      lineOf(await full(recalculate(draft.id).expect(200)), emp).penaltyAmount,
     ).toBe(48_000);
     // The approved run's money, lines and totals never change. Its `rules` are TODAY's HR rules
     // (a run keeps no snapshot; the screen labels them "Current rules … may differ", §6), so they
@@ -872,7 +897,7 @@ describe('HR payroll and dashboard (e2e)', () => {
     expect((await getRun(draft.id)).rulesChanged).toBe(true);
     expect((await getRun(approved.id)).rulesChanged).toBe(false);
 
-    const recalculated = (await recalculate(draft.id).expect(200)).body.data as PayrollRun;
+    const recalculated = await full(recalculate(draft.id).expect(200));
     expect(recalculated.rulesChanged).toBe(false);
     expect(Date.parse(recalculated.calculatedAt)).toBeGreaterThan(Date.parse(draft.calculatedAt));
 
@@ -928,7 +953,7 @@ describe('HR payroll and dashboard (e2e)', () => {
       .post(`/hr/penalties/${first}/cancel`)
       .send({ reason: 'Recorded by mistake' })
       .expect(200);
-    const line = lineOf((await recalculate(run.id).expect(200)).body.data as PayrollRun, emp);
+    const line = lineOf(await full(recalculate(run.id).expect(200)), emp);
     expect(line.penaltyDays).toBe(2);
     const kept = (await http(app).get(`/hr/penalties/${second}`).expect(200)).body.data;
     expect(kept).toMatchObject({ level: 2, days: 2, status: 'APPROVED' });

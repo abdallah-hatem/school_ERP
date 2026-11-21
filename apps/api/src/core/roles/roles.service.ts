@@ -31,8 +31,9 @@ export class RolesService {
     private readonly audit: AuditService,
   ) {}
 
-  async list(page: number, limit: number): Promise<Paginated<Role>> {
-    const result = await this.roles.findPage(page, limit);
+  /** One page of the roles (starting ones first), searched by either name when `search` is given. */
+  async list(page: number, limit: number, search?: string): Promise<Paginated<Role>> {
+    const result = await this.roles.findPage(page, limit, search);
     return { ...result, data: result.data.map(fromRow) };
   }
 

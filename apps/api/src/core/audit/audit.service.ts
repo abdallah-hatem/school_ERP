@@ -168,11 +168,14 @@ export class AuditService {
    * The people in the log (or on one record — 404 outside the viewer's scope), most recent first —
    * only people with an entry the viewer may see (P4).
    */
-  async listActors(record?: { entityType: AuditEntityType; entityId: string }): Promise<AuditActor[]> {
-    if (!record) return this.entries.findActors({}, await this.recordAccess.restrictions());
+  async listActors(
+    record?: { entityType: AuditEntityType; entityId: string },
+    pick: { search?: string; id?: string; limit?: number } = {},
+  ): Promise<AuditActor[]> {
+    if (!record) return this.entries.findActors({ ...pick }, await this.recordAccess.restrictions());
     await this.assertCanSee(record.entityType, record.entityId);
     const records = await this.recordAccess.historyRecords(record.entityType, record.entityId);
-    return this.entries.findActors({ records }, await this.recordAccess.restrictions());
+    return this.entries.findActors({ records, ...pick }, await this.recordAccess.restrictions());
   }
 
   /** The fields a record's entries changed (its History field filter). 404 outside the scope. */

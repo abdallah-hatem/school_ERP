@@ -1,6 +1,14 @@
 import { Transform, Type } from 'class-transformer';
-import { IsInt, IsNotEmpty, IsString, Max, MaxLength, Min } from 'class-validator';
-import { ACCOUNTING_YEAR_RANGE, RETURN_REASON_MAX, type ReturnPayrollMonthRequest } from '@school-erp/shared';
+import { IsIn, IsInt, IsNotEmpty, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import {
+  ACCOUNTING_YEAR_RANGE,
+  INSURANCE_STATUSES,
+  RETURN_REASON_MAX,
+  type AccountingPayrollLinesQuery,
+  type InsuranceStatus,
+  type ReturnPayrollMonthRequest,
+} from '@school-erp/shared';
+import { PayrollPaginationQueryDto } from '../../../../common/dto/pagination-query.dto';
 import { IsMonth } from '../../../../common/validators/month.validator';
 
 /** `/accounting/payroll/:month` — `YYYY-MM`. */
@@ -25,4 +33,20 @@ export class ReturnPayrollMonthDto implements ReturnPayrollMonthRequest {
   @IsNotEmpty()
   @MaxLength(RETURN_REASON_MAX)
   reason: string;
+}
+
+/**
+ * `GET /accounting/payroll/:month/lines?page&limit&search&insurance` — a payroll table: `limit` up
+ * to 500 (`PayrollPaginationQueryDto`).
+ */
+export class AccountingPayrollLinesQueryDto extends PayrollPaginationQueryDto implements AccountingPayrollLinesQuery {
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
+  search?: string;
+
+  @IsOptional()
+  @IsIn(INSURANCE_STATUSES)
+  insurance?: InsuranceStatus;
 }

@@ -76,7 +76,7 @@ test('number input: a lateness minutes field groups live and keeps the caret on 
     month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     sheet = await api.get<LatenessMonth>('/hr/lateness', { month });
   }
-  const row = sheet.rows[0];
+  const row = sheet.items[0];
   if (sheet.locked || !row) throw new Error('smoke: no open lateness month with rows');
 
   await signIn(page, 'en');

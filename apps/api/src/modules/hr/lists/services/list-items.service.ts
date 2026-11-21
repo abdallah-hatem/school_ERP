@@ -1,5 +1,5 @@
 import { HttpStatus, NotFoundException } from '@nestjs/common';
-import { ErrorCode, HrListKey, ListItem, Uuid } from '@school-erp/shared';
+import { ErrorCode, HrListKey, ListItem, Paginated, Uuid } from '@school-erp/shared';
 import { CodedException } from '../../../../common/errors/coded.exception';
 import { SettingsHistory } from '../../../../core/settings';
 import { AfterCommit } from '../../../../database/transactions';
@@ -29,6 +29,11 @@ export abstract class ListItemsService<
 
   list(includeHidden = false): Promise<T[]> {
     return this.repository.findAllOrdered(includeHidden);
+  }
+
+  /** One page of the list (the Settings screen), searched by either name. */
+  page(query: { includeHidden?: boolean; page?: number; limit?: number; search?: string; ids?: string[] }): Promise<Paginated<T>> {
+    return this.repository.findPage(query.includeHidden ?? false, query.page, query.limit, query.search, query.ids);
   }
 
   create(dto: C, changedById: Uuid | null): Promise<T> {

@@ -1,7 +1,8 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
-import type { AuthUser, Stage } from '@school-erp/shared';
+import type { ApiResponse, AuthUser, Stage } from '@school-erp/shared';
+import { ResponseUtil } from '../../common/utils/response.util';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { CreateListItemDto, ListItemsQueryDto, UpdateListItemDto } from './dto/list-item.dto';
+import { CreateListItemDto, ListItemsQueryDto, UpdateListItemDto, wantsPage } from './dto/list-item.dto';
 import { StagesService } from './stages.service';
 import { Audited } from '../audit';
 import { Permission } from '../permissions';
@@ -13,7 +14,9 @@ export class StagesController {
 
   @Get()
   @Permission('core.stages.view')
-  list(@Query() query: ListItemsQueryDto): Promise<Stage[]> {
+  async list(@Query() query: ListItemsQueryDto): Promise<Stage[] | ApiResponse<Stage[]>> {
+    // A page (Settings) or the whole list (a form's or filter's choices).
+    if (wantsPage(query)) return ResponseUtil.paginated(await this.stages.page(query));
     return this.stages.list(query.includeHidden ?? false);
   }
 

@@ -23,12 +23,12 @@ test('lateness: minutes for two employees → days shown → saved → kept afte
   const month = currentMonth();
   const api = await Api.asAdmin();
   const [sheet, settings] = await Promise.all([
-    api.get<LatenessMonth>('/hr/lateness', { month }),
+    api.get<LatenessMonth>('/hr/lateness', { month, limit: '100' }),
     api.get<HrSettings>('/hr/settings'),
   ]);
   expect(sheet.locked).toBe(false);
   // Two employees whose minutes this month differ from the ones entered here.
-  const rows = sheet.rows.filter((r) => !MINUTES.includes(r.minutes)).slice(0, 2);
+  const rows = sheet.items.filter((r) => !MINUTES.includes(r.minutes)).slice(0, 2);
   expect(rows).toHaveLength(2);
   const entries = rows.map((row, i) => ({ row, minutes: MINUTES[i] ?? 0 }));
 
@@ -60,9 +60,9 @@ test('lateness: minutes for two employees → days shown → saved → kept afte
     );
   }
 
-  const saved = await api.get<LatenessMonth>('/hr/lateness', { month });
+  const saved = await api.get<LatenessMonth>('/hr/lateness', { month, limit: '100' });
   for (const { row, minutes } of entries) {
-    expect(saved.rows.find((r) => r.employee.id === row.employee.id)?.minutes).toBe(minutes);
+    expect(saved.items.find((r) => r.employee.id === row.employee.id)?.minutes).toBe(minutes);
   }
   await api.dispose();
 });

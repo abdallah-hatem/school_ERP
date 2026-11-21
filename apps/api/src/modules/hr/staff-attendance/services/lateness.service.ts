@@ -2,13 +2,17 @@ import { Injectable } from '@nestjs/common';
 import {
   AuditEntityType,
   type AuditChange,
+  matchesSearch,
   type LatenessMonth,
+  type LatenessQuery,
   type LatenessRule,
   type LatenessRow,
+  type LatenessSummary,
   type Month,
   type PermissionKey,
   type PutLatenessRequest,
 } from '@school-erp/shared';
+import { pageOf } from '../../../../common/utils/list-page.util';
 import { AuditService } from '../../../../core/audit';
 import { AfterCommit } from '../../../../database/transactions';
 import { latenessDays } from '../../domain';
@@ -40,7 +44,21 @@ export class LatenessService {
    * with: the screen previews days from it, so a viewer needs no `hr.settings.view`. Only the
    * lateness rule leaves here — no payroll or penalty setting.
    */
-  async month(month: Month): Promise<LatenessMonth> {
+  async month(month: Month, query: Omit<LatenessQuery, 'month'> = {}): Promise<LatenessMonth> {
+    const { rows, ...summary } = await this.read(month);
+    const search = query.search?.trim();
+    const matching = search
+      ? rows.filter((r) => matchesSearch(search, [r.employee.code, r.employee.nameEn, r.employee.nameAr]))
+      : rows;
+    return { ...summary, ...pageOf(matching, query.page, query.limit) };
+  }
+
+  /**
+   * The month's every row (the viewer's scope, by code), its lock, the rule and the totals over all
+   * of them. The days come from today's rule, so the rows are worked out here, then paged and
+   * searched here too — never in the browser.
+   */
+  private async read(month: Month): Promise<LatenessSummary & { rows: LatenessRow[] }> {
     const [locked, settings] = await Promise.all([
       this.monthLock.isMonthLocked(month),
       this.settings.get(),
@@ -50,6 +68,11 @@ export class LatenessService {
     return {
       locked,
       rule: { graceMinutes: rule.graceMinutes, steps: rule.steps, extraHourDays: rule.extraHourDays },
+      totals: {
+        employees: rows.length,
+        minutes: rows.reduce((n, r) => n + r.minutes, 0),
+        days: rows.reduce((n, r) => n + r.days, 0),
+      },
       rows,
     };
   }
@@ -77,7 +100,7 @@ export class LatenessService {
    * payroll is approved (409 `PAYROLL_APPROVED`), and for unknown (400) or inactive (409)
    * employees — nothing is written unless every entry is valid.
    */
-  async put(month: Month, body: PutLatenessRequest, userId: string | null): Promise<LatenessMonth> {
+  async put(month: Month, body: PutLatenessRequest, userId: string | null): Promise<LatenessSummary> {
     // The month's minutes and its audit entry commit together (audit D2).
     return this.tx.inTransaction(async () => {
       await this.monthLock.assertMonthOpen(month);
@@ -114,7 +137,8 @@ export class LatenessService {
         entity: { type: AuditEntityType.LATENESS_MONTH, id: month, label: month },
         changes,
       });
-      return this.month(month);
+      const { rows: _rows, ...summary } = await this.read(month);
+      return summary;
     });
   }
 }

@@ -1,6 +1,7 @@
 import {
   AUDIT_ACTION_KEYS,
   AUDIT_DAY_TOTALS_MAX,
+  AUDIT_ACTORS_MAX,
   AUDIT_ENTITY_TYPES,
   AUDIT_MODULES,
   PAGINATION,
@@ -158,6 +159,23 @@ export class AuditActorsQueryDto {
   @IsNotEmpty()
   @MaxLength(100)
   entityId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
+  search?: string;
+
+  @IsOptional()
+  @IsUUID()
+  id?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(AUDIT_ACTORS_MAX)
+  limit?: number;
 }
 
 /** `GET /audit/summary` — both edges required (the client sends today's, in the school's zone). */
