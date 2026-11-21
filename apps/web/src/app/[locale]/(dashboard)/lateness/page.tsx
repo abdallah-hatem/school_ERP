@@ -6,17 +6,17 @@ import { isLocale } from '@/shared/lib/i18n';
 
 export const generateMetadata = sectionMetadata('lateness');
 
-/** Monthly lateness (§5). `?month=YYYY-MM`, this month by default. */
+/** Monthly lateness (§5). `?month=YYYY-MM` (this month by default), `?search`, `?page`. */
 export default async function LatenessPage({
   params,
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ month?: string | string[] }>;
+  searchParams: Promise<{ month?: string | string[]; search?: string | string[]; page?: string | string[] }>;
 }) {
-  const [{ locale }, { month }] = await Promise.all([params, searchParams]);
+  const [{ locale }, { month, search, page }] = await Promise.all([params, searchParams]);
   if (!isLocale(locale)) notFound();
   // R6: a page the viewer's roles can't open is the not-found screen.
   await requireScreen('lateness');
-  return <LatenessScreen locale={locale} month={month} />;
+  return <LatenessScreen locale={locale} month={month} search={search} page={page} />;
 }

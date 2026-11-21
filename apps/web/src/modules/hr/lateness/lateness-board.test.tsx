@@ -42,7 +42,18 @@ const ROWS = [
   row('e3', 'EMP-0003', 'Salma Nour', 'سلمى نور', 90),
 ];
 
+/** The API's month totals over `rows` (in the app they cover every page). */
+function totalsOf(rows: LatenessRow[]) {
+  return { employees: rows.length, minutes: rows.reduce((n, r) => n + r.minutes, 0), days: rows.reduce((n, r) => n + r.days, 0) };
+}
+
+/** A save's answer: the month's lock, rule and totals (the rows are re-read). */
+function saved(rows: LatenessRow[], rule: LatenessRule = DEFAULT_RULE) {
+  return { success: true, status: 200, message: 'Resource updated successfully', data: { locked: false, rule, totals: totalsOf(rows) } };
+}
+
 function renderBoard(props: Partial<LatenessBoardProps> = {}, locale: Locale = 'en') {
+  const rows = props.rows === undefined ? ROWS : props.rows;
   const ui: ReactElement = (
     <I18nProvider messages={latenessMessages(locale)}>
       <LatenessBoard
@@ -51,6 +62,11 @@ function renderBoard(props: Partial<LatenessBoardProps> = {}, locale: Locale = '
         rows={ROWS}
         rule={DEFAULT_RULE}
         locked={false}
+        search=""
+        total={rows?.length ?? 0}
+        page={1}
+        limit={10}
+        totals={totalsOf(rows ?? [])}
         {...props}
       />
     </I18nProvider>
@@ -80,6 +96,7 @@ function saveButton() {
 beforeEach(() => {
   apis.PUT_LATENESS.mockReset();
   router.push.mockReset();
+  router.refresh.mockReset();
   toast.success.mockReset();
   toast.error.mockReset();
 });
@@ -161,8 +178,7 @@ describe('LatenessBoard', () => {
 
   it('Save all sends only the changed rows and shows a translated success toast', async () => {
     const user = userEvent.setup();
-    const saved = [ROWS[0]!, row('e2', 'EMP-0002', 'Karim Fawzy', 'كريم فوزي', 45), ROWS[2]!];
-    apis.PUT_LATENESS.mockResolvedValue({ success: true, status: 200, message: 'Resource updated successfully', data: { locked: false, rows: saved } });
+    apis.PUT_LATENESS.mockResolvedValue(saved([ROWS[0]!, row('e2', 'EMP-0002', 'Karim Fawzy', 'كريم فوزي', 45), ROWS[2]!]));
     renderBoard();
     expect((saveButton() as HTMLButtonElement | HTMLInputElement).disabled).toBe(true);
 
@@ -177,6 +193,9 @@ describe('LatenessBoard', () => {
     expect(apis.PUT_LATENESS).toHaveBeenCalledWith('2026-11', { entries: [{ employeeId: 'e2', minutes: 45 }] });
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Lateness saved.'));
     expect(screen.getByRole('button', { name: 'Save all' })).toBeTruthy();
+    // The saved minute shows at once; the page is re-read from the API.
+    expect((minutesInput('Karim Fawzy') as HTMLInputElement).value).toBe('45');
+    expect(router.refresh).toHaveBeenCalled();
     expect((saveButton() as HTMLButtonElement | HTMLInputElement).disabled).toBe(true);
   });
 
@@ -190,7 +209,7 @@ describe('LatenessBoard', () => {
     await user.dblClick(button);
     expect(apis.PUT_LATENESS).toHaveBeenCalledTimes(1);
     expect((button as HTMLButtonElement | HTMLInputElement).disabled).toBe(true);
-    resolve({ success: true, status: 200, data: { locked: false, rows: ROWS } });
+    resolve(saved(ROWS));
     await waitFor(() => expect(toast.success).toHaveBeenCalled());
   });
 
@@ -263,35 +282,46 @@ describe('LatenessBoard', () => {
     expect(screen.getByTestId('lateness-summary').textContent).toBe('3 employees · 1,620 minutes · 13.25 days');
   });
 
-  it('search filters by name or code; no match shows a no-results state', async () => {
+  it('search asks the API (in the URL, after a pause) and shows only the page it sent; no match shows a no-results state', async () => {
     const user = userEvent.setup();
     renderBoard();
-    const search = screen.getByRole('searchbox', { name: 'Search employees' });
-    await user.type(search, 'emp-0003');
-    expect(table().queryByRole('textbox', { name: 'Minutes for Mona Adel' })).toBeNull();
-    expect(minutesInput('Salma Nour')).toBeTruthy();
-    await user.clear(search);
-    await user.type(search, 'karim');
-    expect(minutesInput('Karim Fawzy')).toBeTruthy();
-    expect(table().queryByRole('textbox', { name: 'Minutes for Salma Nour' })).toBeNull();
-    await user.clear(search);
-    await user.type(search, 'nobody');
+    await user.type(screen.getByRole('searchbox', { name: 'Search employees' }), 'emp-0003');
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith('?month=2026-11&search=emp-0003', { scroll: false }));
+    // Nothing is filtered here: the rows on screen are the API's.
+    expect(minutesInput('Mona Adel')).toBeTruthy();
+    cleanup();
+
+    router.push.mockReset();
+    renderBoard({ rows: [], search: 'nobody', total: 0 });
     expect(screen.getByText('No employees match')).toBeTruthy();
-    // The toolbar's and the "No results" "Clear filters · 1": either brings every row back.
     const clears = screen.getAllByRole('button', { name: 'Clear filters · 1' });
     expect(clears).toHaveLength(2);
     await user.click(clears[1]!);
-    expect((search as HTMLInputElement).value).toBe('');
-    expect(minutesInput('Mona Adel')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /Clear filters/ })).toBeNull();
+    expect(router.push).toHaveBeenCalledWith('?month=2026-11', { scroll: false });
   });
 
-  it('an edit survives filtering it out of view and is still saved', async () => {
+  it('pages through the API: the page goes in the URL with the search, the summary stays the month\'s', async () => {
     const user = userEvent.setup();
-    apis.PUT_LATENESS.mockResolvedValue({ success: true, status: 200, data: { locked: false, rows: ROWS } });
-    renderBoard();
+    renderBoard({ rows: [ROWS[2]!], search: 'a', total: 11, page: 2, totals: { employees: 40, minutes: 900, days: 6 } });
+    expect(screen.getByText('Showing 11–11 of 11')).toBeTruthy();
+    expect(screen.getByTestId('lateness-summary').textContent).toBe('40 employees · 900 minutes · 6 days');
+    await user.click(screen.getByRole('button', { name: 'Page 1' }));
+    expect(router.push).toHaveBeenCalledWith('?month=2026-11&search=a', { scroll: false });
+  });
+
+  it('an edit survives another page or search arriving and is still saved', async () => {
+    const user = userEvent.setup();
+    apis.PUT_LATENESS.mockResolvedValue(saved(ROWS));
+    const { rerender } = renderBoard();
     await user.type(minutesInput('Karim Fawzy'), '9');
-    await user.type(screen.getByRole('searchbox', { name: 'Search employees' }), 'Salma');
+    // The search's page lands without Karim on it.
+    rerender(
+      <I18nProvider messages={latenessMessages('en')}>
+        <LatenessBoard month="2026-11" maxMonth="2026-11" rows={[ROWS[2]!]} rule={DEFAULT_RULE} locked={false} search="Salma" total={1} page={1} limit={10} totals={totalsOf(ROWS)} />
+      </I18nProvider>,
+    );
+    // The summary still counts the typed minutes (the month's totals + the change).
+    expect(screen.getByTestId('lateness-summary').textContent).toBe(`3 employees · 129 minutes · ${formatDayCount(1 + latenessDays(9, DEFAULT_RULE), 'en')}`);
     await user.click(saveButton());
     expect(apis.PUT_LATENESS).toHaveBeenCalledWith('2026-11', { entries: [{ employeeId: 'e2', minutes: 9 }] });
   });
@@ -310,15 +340,9 @@ describe('LatenessBoard', () => {
   it('after Save the days follow the rule the saved list came with', async () => {
     const user = userEvent.setup();
     const newRule: LatenessRule = { graceMinutes: 0, steps: [{ hour: 1, days: 1 }], extraHourDays: 1 };
-    apis.PUT_LATENESS.mockResolvedValue({
-      success: true,
-      status: 200,
-      data: {
-        locked: false,
-        rule: newRule,
-        rows: ROWS.map((r) => (r.employee.id === 'e2' ? { ...r, minutes: 61, days: latenessDays(61, newRule) } : r)),
-      },
-    });
+    apis.PUT_LATENESS.mockResolvedValue(
+      saved(ROWS.map((r) => (r.employee.id === 'e2' ? { ...r, minutes: 61, days: latenessDays(61, newRule) } : r)), newRule),
+    );
     renderBoard();
     const input = minutesInput('Karim Fawzy');
     await user.clear(input);

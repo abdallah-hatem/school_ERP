@@ -3,6 +3,7 @@ import {
   SETTING_LIMITS,
   type LatenessRule,
   type LatenessRow,
+  type LatenessTotals,
   type Uuid,
 } from '@school-erp/shared';
 
@@ -41,7 +42,8 @@ export function viewEntry(row: LatenessRow, draft: string | undefined, rule: Lat
   };
 }
 
-export type Drafts = Record<Uuid, string>;
+/** What HR typed per employee (any page or search), with the row it was typed over. */
+export type Drafts = Record<Uuid, { text: string; row: LatenessRow }>;
 
 export interface GridState {
   invalidCount: number;
@@ -51,30 +53,26 @@ export interface GridState {
   totalDays: number | null;
 }
 
-/** The whole month: invalid rows, the changed entries "Save all" sends, and the live totals. */
-export function gridState(rows: LatenessRow[], drafts: Drafts, rule: LatenessRule | null): GridState {
+/**
+ * The month's live state: the invalid drafts, the changed entries "Save all" sends, and the
+ * month's totals — the API's (every employee, all pages) moved by what the drafts change. The
+ * rows themselves are never summed here: the browser only holds a page.
+ */
+export function gridState(drafts: Drafts, totals: LatenessTotals, rule: LatenessRule | null): GridState {
   let invalidCount = 0;
-  let totalMinutes = 0;
-  let totalDays: number | null = rule ? 0 : null;
+  let totalMinutes = totals.minutes;
+  let totalDays: number | null = rule ? totals.days : null;
   const entries: GridState['entries'] = [];
-  for (const row of rows) {
-    const view = viewEntry(row, drafts[row.employee.id], rule);
+  for (const { text, row } of Object.values(drafts)) {
+    const view = viewEntry(row, text, rule);
     if (view.invalid || view.minutes === null) {
       invalidCount += 1;
       totalDays = null;
       continue;
     }
-    totalMinutes += view.minutes;
-    if (totalDays !== null && view.days !== null) totalDays += view.days;
+    totalMinutes += view.minutes - row.minutes;
+    if (totalDays !== null && view.days !== null) totalDays += view.days - latenessDays(row.minutes, rule!);
     if (view.changed) entries.push({ employeeId: row.employee.id, minutes: view.minutes });
   }
   return { invalidCount, entries, totalMinutes, totalDays };
-}
-
-/** Case-insensitive match on code, English or Arabic name. */
-export function matchesSearch(row: LatenessRow, query: string): boolean {
-  const q = query.trim().toLocaleLowerCase();
-  if (!q) return true;
-  const { code, nameEn, nameAr } = row.employee;
-  return [code, nameEn, nameAr].some((value) => value.toLocaleLowerCase().includes(q));
 }
