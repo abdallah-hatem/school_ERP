@@ -534,11 +534,15 @@ phase live in `docs/build-log/`.
   ones deleted; merges now use `--delete-branch` and remove the agent's worktree.
 - 2026-11-21 — Sidebar keeps the current page in view → #215: on load and on navigation the active
   item scrolls into the sidebar's view (a prefetch no longer counts as a server render in the guard).
+- 2026-11-21 — Sign-in redesign → #218 (owner: "too basic"; split layout S2, then real photos rejected —
+  "I dont want real people photos just better ilustration quality" — then Q1 · Soft 3D picked, teacher
+  redrawn): a teal panel with the school brand, headline and a soft-3D office illustration beside the
+  form; stacks on phones; mirrors in Arabic; gentle motion off under reduce-motion. Form behaviour
+  unchanged; `TextField` takes an optional leading icon. Mockup: `design/mockups/login-s2-quality.html`.
 ## Next up
 
-- Sign-in page redesign — owner picked the split layout, option S2 "Office scene" (artwork on the light
-  side, form on the right, light motion), but the hand-drawn SVG is "too basic … needs to be more real".
-  Realistic artwork options being mocked (`design/mockups/login-*.html`); build after the pick.
+- Sign-in follow-ups (from #218): a show/hide eye on the password box (smoke helpers must first find
+  the field with `{ exact: true }`); the filled-input look and button sheen from the mockup if wanted.
 
 - Custom icon set drawn (`design/mockups/icon-set.html`, style G monoline + solid when selected) —
   **on hold** (owner, 2026-11-20).
