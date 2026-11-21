@@ -38,5 +38,82 @@
     "screensTitle": "Your screens",
     "noneTitle": "No screens yet",
     "noneBody": "Your roles don't open any screen yet. Ask the system admin if you need one."
+  },
+  "charts": {
+    "label": "Charts",
+    "range": {
+      "label": "Months shown",
+      "6": "6 months",
+      "12": "12 months"
+    },
+    "table": "Table",
+    "chart": "Chart",
+    "showTable": "Show the numbers as a table",
+    "showChart": "Show the chart",
+    "chartHint": "Use the arrow keys to move between months.",
+    "month": "Month",
+    "total": "Total",
+    "noRun": "No approved payroll",
+    "payroll": {
+      "title": "Payroll cost",
+      "sub": "Net pay per approved month",
+      "net": "Net pay",
+      "employees": "Employees paid",
+      "change": "vs previous month"
+    },
+    "headcount": {
+      "title": "Headcount",
+      "sub": "Active employees today, by stage",
+      "count": "Employees",
+      "share": "Share",
+      "stage": "Stage"
+    },
+    "flow": {
+      "title": "Joiners and leavers",
+      "joiners": "Joiners",
+      "leavers": "Leavers",
+      "headEnd": "Headcount at month end"
+    },
+    "penalties": {
+      "title": "Penalties and lateness",
+      "sub": "Approved penalties by violation month",
+      "notice": "Notice & warning",
+      "deduct": "Deduct days",
+      "rest": "Other"
+    },
+    "lateness": {
+      "title": "Lateness",
+      "sub": "Minutes late per month",
+      "minutes": "Minutes late",
+      "unit": "min"
+    },
+    "deductions": {
+      "title": "Deductions vs net",
+      "sub": "Share of {month}’s gross payroll ({amount})",
+      "subNone": "Shown once accounting has worked out an approved month",
+      "net": "Net pay",
+      "insurance": "Social insurance",
+      "incomeTax": "Income tax",
+      "penalties": "Penalties & lateness",
+      "amount": "Amount",
+      "share": "Share",
+      "part": "Part",
+      "trend": "Deductions, % of gross",
+      "trendSub": "insurance + tax + penalties",
+      "trendTotal": "Deductions"
+    },
+    "empty": {
+      "title": "Charts appear after two approved months",
+      "body": "Trends compare one month with the one before it. Approve a second month’s payroll and the payroll, people and penalty trends start here.",
+      "bodyOne": "Trends compare one month with the one before it. You have one approved month so far, {month}. Approve the next month’s payroll and the payroll, people and penalty trends start here.",
+      "done": "{month} approved",
+      "todo": "Next month",
+      "none": "No month approved yet",
+      "cta": "Open payroll"
+    },
+    "compact": {
+      "thousand": "{n}K",
+      "million": "{n}M"
+    }
   }
 }

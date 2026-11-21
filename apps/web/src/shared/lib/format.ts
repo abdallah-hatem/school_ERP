@@ -74,6 +74,19 @@ export function formatMonthName(month: Month, locale: Locale): string {
   );
 }
 
+/** `2026-11` → `Nov` / `نوفمبر` — a chart's month axis (Arabic months have no short form). */
+export function formatMonthShort(month: Month, locale: Locale): string {
+  // en-US: `Sep`, not en-GB's `Sept`.
+  return new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : INTL_LOCALE[locale], { month: 'short', timeZone: 'UTC' }).format(
+    parseIsoDate(`${month}-01`),
+  );
+}
+
+/** `0.0712` → `7.1%` (Latin digits in both languages). */
+export function formatPercent(share: number, digits = 1): string {
+  return `${(share * 100).toFixed(digits)}%`;
+}
+
 /** A JS Date (from a picker) → `YYYY-MM-DD` of the day the person picked, in their local calendar. */
 export function toIsoDate(date: Date): IsoDate {
   const y = date.getFullYear();

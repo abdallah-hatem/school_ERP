@@ -70,6 +70,21 @@
   --band-inactive: #eef1f0;
   --band-inactive-ink: #587069;
 
+  /*
+   * Chart series (the dashboard charts, owner 2026-11-21), in this fixed order — validated with
+   * the dataviz validator against the card (#fff). Sunflower is under 3:1, so every chart has a
+   * legend and a Table view. `series-1-muted`: past months beside the current one.
+   */
+  --series-1: #008a73;
+  --series-1-muted: #b4e0d5;
+  --series-2: #dda000;
+  --series-2-ink: #3a2900;
+  --series-3: #3567c0;
+  --series-4: #c44e86;
+  --series-none: #9fb5af;
+  --chart-grid: #e6efec;
+  --chart-axis: #c9dcd6;
+
   /* Lines and focus */
   --border: #dce9e5;
   --input: #cfe0db;
@@ -133,6 +148,15 @@
   --color-band-neutral-ink: var(--band-neutral-ink);
   --color-band-inactive: var(--band-inactive);
   --color-band-inactive-ink: var(--band-inactive-ink);
+  --color-series-1: var(--series-1);
+  --color-series-1-muted: var(--series-1-muted);
+  --color-series-2: var(--series-2);
+  --color-series-2-ink: var(--series-2-ink);
+  --color-series-3: var(--series-3);
+  --color-series-4: var(--series-4);
+  --color-series-none: var(--series-none);
+  --color-chart-grid: var(--chart-grid);
+  --color-chart-axis: var(--chart-axis);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);

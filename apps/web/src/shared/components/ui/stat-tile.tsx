@@ -61,7 +61,12 @@ export function StatTile({
     <>
       {feature ? (
         <>
-          <span aria-hidden="true" className="absolute -end-12 -top-16 -z-10 size-36 rounded-full bg-accent/85" />
+          {/*
+            The sunflower cap sits in the top corner, above the label row: its lowest point is 28px
+            down, and the label keeps clear of it (`pe-10`), so a label never runs under it — the
+            old -top-16 circle reached 80px down, over "Active employees" on desktop.
+          */}
+          <span aria-hidden="true" className="absolute -end-12 -top-29 -z-10 size-36 rounded-full bg-accent/85" />
           <span aria-hidden="true" className="absolute start-[30%] -bottom-16 -z-10 size-44 rounded-full bg-primary-foreground/8" />
         </>
       ) : null}
@@ -71,7 +76,7 @@ export function StatTile({
             <Icon className="size-6" />
           </span>
         ) : null}
-        <span className={cn('text-sm font-semibold', feature ? 'text-primary-foreground/80' : 'text-muted-foreground')}>
+        <span className={cn('text-sm font-semibold', feature ? 'pe-10 text-primary-foreground/80' : 'text-muted-foreground')}>
           {label}
         </span>
       </div>

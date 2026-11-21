@@ -549,6 +549,9 @@ model Employee {
   university                   String?
   graduationYear               Int?            @map("graduation_year")
   status                       EmployeeStatus  @default(ACTIVE)
+  /// The school day the employee was last deactivated (a leaver on the dashboard charts); null
+  /// while active — reactivating clears it.
+  deactivatedOn                DateTime?       @map("deactivated_on") @db.Date
   createdAt                    DateTime        @default(now()) @map("created_at")
   updatedAt                    DateTime        @updatedAt @map("updated_at")
 
@@ -570,6 +573,8 @@ model Employee {
   @@index([managerId])
   @@index([status])
   @@index([workSystem])
+  @@index([hireDate])
+  @@index([deactivatedOn])
   @@map("employees")
 }
 

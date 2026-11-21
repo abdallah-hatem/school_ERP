@@ -48,6 +48,8 @@ export const PERMISSIONS = {
 
   // hr — dashboard
   'hr.dashboard.view': hr,
+  // hr — the dashboard's analytics charts (owner, 2026-11-21: System admin only to start with)
+  'hr.dashboard.view_analytics': hr,
   // hr — employees
   'hr.employees.view': hr,
   'hr.employees.view_salary': hr,
