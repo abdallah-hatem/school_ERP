@@ -8,8 +8,8 @@ import {
   type NotificationLink,
   type NotificationName,
 } from '@school-erp/shared';
-import { addDays, formatSchoolTime, formatShortDay, schoolDay } from '@/core/audit/lib/time';
-import { formatMoney, formatMoneyText, formatMonth } from '@/shared/lib/format';
+import { addDays, formatShortDay, schoolDay } from '@/core/audit/lib/time';
+import { formatMoney, formatMoneyText, formatMonth, formatTime } from '@/shared/lib/format';
 import type { Locale, Translate, TranslateValues } from '@/shared/lib/i18n';
 
 /*
@@ -201,7 +201,7 @@ export function resolvedText(
 
 /**
  * When it happened, the way the bell says it (school time zone): "3 min ago", "1 h ago",
- * "Today, 07:00", "Yesterday, 07:00", "16 Nov, 10:42".
+ * "Today, 7:00 AM", "Yesterday, 7:00 AM", "16 Nov, 10:42 AM".
  */
 export function whenText(at: IsoDateTime, now: IsoDateTime, { t, locale }: Pick<TextDeps, 't' | 'locale'>): string {
   const minutes = Math.floor((Date.parse(now) - Date.parse(at)) / 60_000);
@@ -210,7 +210,7 @@ export function whenText(at: IsoDateTime, now: IsoDateTime, { t, locale }: Pick<
   if (minutes >= 60 && minutes < 6 * 60) return t('notifications.screen.time.hoursAgo', { count: Math.floor(minutes / 60) });
   const day = schoolDay(at);
   const today = schoolDay(now);
-  const time = formatSchoolTime(at, locale);
+  const time = formatTime(at, locale);
   if (day === today) return t('notifications.screen.time.today', { time });
   if (day === addDays(today, -1)) return t('notifications.screen.time.yesterday', { time });
   return t('notifications.screen.time.earlier', { date: formatShortDay(day, locale), time });

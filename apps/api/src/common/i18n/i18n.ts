@@ -1,4 +1,4 @@
-import { LANGUAGES, SETTING_DEFAULTS, type ErrorParams, type Language } from '@school-erp/shared';
+import { formatClockDateTime, LANGUAGES, SETTING_DEFAULTS, type ErrorParams, type Language } from '@school-erp/shared';
 import ar from '@school-erp/shared/locales/ar/errors.json';
 import en from '@school-erp/shared/locales/en/errors.json';
 
@@ -87,9 +87,13 @@ const MONTH_FORMAT: Record<Language, Intl.DateTimeFormat> = {
 
 /**
  * A param as the message shows it: an ISO date (`2026-11-19`) as a date in `lang`, a month
- * (`2026-11`) as the month's name and year, else as is.
+ * (`2026-11`) as the month's name and year, an ISO instant as the school's date and 12-hour time
+ * (`19 Nov 2026, 4:07 PM` / `19 نوفمبر 2026، 4:07 م` — the web app's `formatDateTime`), else as is.
  */
 function paramText(value: string | number, lang: Language): string {
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value) && !Number.isNaN(Date.parse(value))) {
+    return formatClockDateTime(value, lang);
+  }
   if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
     return DATE_FORMAT[lang].format(new Date(`${value}T00:00:00Z`));
   }

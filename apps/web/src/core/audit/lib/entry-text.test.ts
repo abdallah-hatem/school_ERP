@@ -153,3 +153,16 @@ describe('stored files read in words, never their file names', () => {
     expect(changeRows([{ field: 'photoUrl', before: null, after: null }], t, has, 'en', 'employee')).toEqual([]);
   });
 });
+
+describe('formatAuditValue: times read 12-hour with AM/PM (ص/م), never 24-hour', () => {
+  it('the school work hours (stored HH:mm) and an instant (school time)', () => {
+    const en = deps('en');
+    const ar = deps('ar');
+    expect(formatAuditValue('school.workStart', '07:30', en.t, en.has, 'en')).toBe(`7:30${NBSP}AM`);
+    expect(formatAuditValue('school.workEnd', '15:00', en.t, en.has, 'en')).toBe(`3:00${NBSP}PM`);
+    expect(formatAuditValue('school.workEnd', '15:00', ar.t, ar.has, 'ar')).toBe(`3:00${NBSP}م`);
+    expect(formatAuditValue('transferredAt', '2026-11-20T14:07:00.000Z', en.t, en.has, 'en')).toBe(
+      `20 Nov 2026, 4:07${NBSP}PM`,
+    );
+  });
+});
