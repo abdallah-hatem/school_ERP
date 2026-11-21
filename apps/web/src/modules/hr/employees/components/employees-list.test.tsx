@@ -70,7 +70,7 @@ describe('EmployeesList', () => {
     cleanup();
 
     renderList({ page: '3', search: 'mona', departmentId: 'd-sci', status: 'ACTIVE' }, people);
-    const search = screen.getByRole('textbox', { name: 'Search employees' }) as HTMLInputElement;
+    const search = screen.getByRole('searchbox', { name: 'Search employees' }) as HTMLInputElement;
     expect(search.value).toBe('mona');
     await user.click(screen.getByRole('button', { name: 'Clear filters · 3' }));
     expect(push).toHaveBeenCalledTimes(1);
@@ -90,7 +90,7 @@ describe('EmployeesList', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderList({ page: '2' }, people);
-    await user.type(screen.getByRole('textbox', { name: 'Search employees' }), 'mona');
+    await user.type(screen.getByRole('searchbox', { name: 'Search employees' }), 'mona');
     expect(push).not.toHaveBeenCalled();
     await act(async () => {
       vi.advanceTimersByTime(350);
@@ -123,6 +123,29 @@ describe('EmployeesList', () => {
     expect(within(card).getByRole('link', { name: 'عرض منى خليل' }).getAttribute('href')).toBe('/ar/employees/e-1');
     expect(within(card).getByRole('link', { name: 'تعديل منى خليل' }).getAttribute('href')).toBe('/ar/employees/e-1/edit');
     expect(within(region).getByRole('article', { name: 'عمر فتحي' }).textContent).toContain('غير نشط');
+  });
+
+  it('Arabic filtered count agrees with its noun: 3 موظفين, 11 موظفًا (dry run 2026-11-20 b)', () => {
+    for (const [total, text] of [
+      [3, '3 موظفين'],
+      [11, '11 موظفًا'],
+      [1, 'موظف واحد'],
+      [1284, '1,284 موظفًا'],
+    ] as const) {
+      renderEmployees(
+        <EmployeesList
+          basePath="/ar/employees"
+          query={parseEmployeesQuery({ search: 'أحمد' })}
+          rows={people}
+          total={total}
+          departments={departments}
+          stages={stages}
+        />,
+        'ar',
+      );
+      expect(screen.getByTestId('employees-count').textContent).toBe(text);
+      cleanup();
+    }
   });
 
   it('12 per page: the URL limit is ignored, pages are counted in twelves and never sent as limit', async () => {

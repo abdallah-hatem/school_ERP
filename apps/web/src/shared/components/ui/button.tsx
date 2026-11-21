@@ -85,10 +85,13 @@ export function Button({
   );
 }
 
-/** The only spinner in the app: inside a button that is mid-submit (and a loading toast's badge). */
-export function Spinner({ className }: { className?: string }) {
+/**
+ * The app's spinner: inside a button that is mid-submit, a loading toast's badge, and in place of
+ * a list's search magnifier while the list refetches (`SearchInput loading`).
+ */
+export function Spinner({ className, ...props }: ComponentProps<'svg'>) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" className={cn('size-4 animate-spin', className)} aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" {...props} className={cn('size-4 animate-spin', className)} aria-hidden="true">
       <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity="0.25" strokeWidth="3" />
       <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
     </svg>

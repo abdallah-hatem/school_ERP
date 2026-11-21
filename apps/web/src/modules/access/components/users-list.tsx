@@ -284,6 +284,7 @@ export function UsersList({ basePath, query, rows, total, roles, lastAdminId, no
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
               disabled={loading}
+              loading={pending}
               wrapperClassName="basis-auto"
             />
             <FilterSelect

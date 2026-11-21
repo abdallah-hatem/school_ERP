@@ -98,13 +98,17 @@ Motion explains a change and never delays it.
   from their trigger. Curves are the shared `ease-snappy` / `ease-drawer` tokens; never `ease-in`.
 - Transform and opacity only. The drawer slides from the inline-start edge (mirrored in Arabic).
 - Buttons press to 98%. Skeletons pulse slowly; refetched tables dim instead of flashing back to
-  skeletons. Reduced motion turns pulses and slides into plain fades.
+  skeletons; while they refetch, the list's search box swaps its magnifier for a small spinner
+  (below). Reduced motion turns pulses and slides into plain fades, and the spinner stands still.
 - No motion on actions done many times a day (paging, typing, saving rows).
 
 ## States
 
-- **Loading:** skeletons in the exact shape of what comes (same row count as the page). The only
-  spinner is inside a button that is mid-submit.
+- **Loading:** skeletons in the exact shape of what comes (same row count as the page). Spinners
+  appear in two places only: inside a button that is mid-submit, and in a list's search box while
+  that list refetches (typing, a filter, a tab, a page; owner, 2026-11-20). The search one is
+  `SearchInput loading`: it replaces the magnifier in place after ~180ms, stays at least ~300ms,
+  announces "Loading…" once, and the rows still dim. Filters get no spinner of their own.
 - **Empty:** says what is missing and offers the action that fills it. "No results for these
   filters" is a different message from "nothing yet".
 - **Error:** says what happened and offers a retry; never a blank area.

@@ -617,6 +617,9 @@ model PenaltyRecord {
   approvedAt    DateTime?     @map("approved_at")
   cancelledById String?       @map("cancelled_by_id") @db.Uuid
   cancelledAt   DateTime?     @map("cancelled_at")
+  /// When a backdated approval last moved this approved penalty up a level (§4, owner 2026-11-20):
+  /// a draft payroll run calculated before it is due a Recalculate.
+  recountedAt   DateTime?     @map("recounted_at")
   createdAt     DateTime      @default(now()) @map("created_at")
   updatedAt     DateTime      @updatedAt @map("updated_at")
 

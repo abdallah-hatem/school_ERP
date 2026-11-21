@@ -1,5 +1,6 @@
-import { RunPageSkeleton } from '@/modules/hr/payroll';
+import { RunLinesSkeleton } from '@/modules/hr/payroll';
 
-export default function PayrollRunLoading() {
-  return <RunPageSkeleton />;
+/** Switching to the Employees tab: only the tab's tiles, table and rules (the layout's header stays). */
+export default function PayrollRunLinesLoading() {
+  return <RunLinesSkeleton />;
 }

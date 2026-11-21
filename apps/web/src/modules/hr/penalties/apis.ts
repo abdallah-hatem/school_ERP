@@ -1,12 +1,14 @@
 'use server';
 
 import type {
+  ApprovePenaltyRequest,
   CreatePenaltyRequest,
   ListPenaltiesQuery,
   PenaltyGroup,
   PenaltyPreview,
   PenaltyPreviewQuery,
   PenaltyRecord,
+  PenaltyRecountAcknowledgement,
   Uuid,
 } from '@school-erp/shared';
 import { apiFetch } from '@/lib/api';
@@ -71,10 +73,16 @@ export async function CREATE_PENALTY(body: CreatePenaltyRequest) {
   return handleResponse({ response });
 }
 
-/** `POST /hr/penalties/:id/approve` — fixes the level and action. */
-export async function APPROVE_PENALTY(id: Uuid) {
+/**
+ * `POST /hr/penalties/:id/approve` — fixes the level and action. `acknowledgedRecount`: the
+ * approved penalties a backdated one moves up, as the dialog listed them (§4) — a 409 with the
+ * fresh list (`data.recount`) when they changed meanwhile.
+ */
+export async function APPROVE_PENALTY(id: Uuid, acknowledgedRecount?: PenaltyRecountAcknowledgement[]) {
+  const body: ApprovePenaltyRequest = acknowledgedRecount ? { acknowledgedRecount } : {};
   const response = await apiFetch<PenaltyRecord>(`/hr/penalties/${encodeURIComponent(id)}/approve`, {
     method: 'POST',
+    body: { ...body },
     revalidateTags: [PENALTIES_TAG],
   });
   return handleResponse({ response });

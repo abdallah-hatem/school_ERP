@@ -232,6 +232,18 @@ describe('HR audit wiring — penalties (T29, e2e)', () => {
     expect((await db.penaltyRecord.findUnique({ where: { id: q.id } }))?.status).toBe('PENDING');
   });
 
+  it('an approval refused for an earlier pending one (§4 date order) leaves no entry', async () => {
+    const emp = await employee();
+    const v = await violation();
+    await recordOk(emp.id, v.id, nextDate());
+    const later = await recordOk(emp.id, v.id, nextDate());
+    mark = await historyMark(db);
+    const res = await http(app).post(`/hr/penalties/${later.id}/approve`).expect(409);
+    expect(res.body.error).toBe('PENALTY_EARLIER_PENDING');
+    expect(await entries()).toHaveLength(0);
+    expect((await db.penaltyRecord.findUnique({ where: { id: later.id } }))?.status).toBe('PENDING');
+  });
+
   it('the employee’s History lists their penalties (record, approve, cancel), with the people and fields', async () => {
     const emp = await employee();
     const v = await violation();

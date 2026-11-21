@@ -52,6 +52,7 @@
     "pendingLink": "Review pending penalties",
     "staleTitle": "Penalties changed since the last calculation",
     "staleBody": "Some lines still show pending penalties from the last calculation. Recalculate to update them.",
+    "recountedBody": "Approving a backdated penalty raised the level of approved penalties dated this month. Recalculate to update the deductions.",
     "staleAction": "Recalculate now"
   },
   "tiles": {
@@ -220,5 +221,12 @@
     "reasonLabel": "Reason:",
     "fix": "Fix what's needed, then approve the month again.",
     "pill": "Returned"
+  },
+  "tabs": {
+    "label": "Payroll run sections",
+    "employees": "Employees",
+    "history": "History",
+    "historyDescription": "Who did what on this month's payroll — created, recalculated, adjusted, approved — newest first.",
+    "historyEmptyBody": "Creating, recalculating, adjusting and approving this month's payroll will be listed here, with who did it."
   }
 }

@@ -8,6 +8,7 @@ import {
   SchoolSettingKey,
   WEEKDAYS,
   isMonth,
+  type AuditAction,
   type AuditChange,
   type AuditEntityType,
   type AuditEntry,
@@ -300,6 +301,18 @@ function partOf(field: string, key: string, t: Translate, has: (key: string) => 
   return { field: key, label: fieldLabel(key, t, has) };
 }
 
+/**
+ * A payroll run's totals as a person would write them (owner, 2026-11-20): creating a run gives its
+ * net and head count, approving it its net; other entries (recalculate, Accounting's month) every
+ * part that changed. "Need review" is a to-do count, not a figure, and never shows. Display only:
+ * the entry keeps every part.
+ */
+const TOTALS_SHOWN: Partial<Record<AuditAction, readonly string[]>> = {
+  'hr.payroll.create': ['net', 'employees'],
+  'hr.payroll.approve': ['net'],
+};
+const TOTALS_NEVER: readonly string[] = ['flagged'];
+
 function partKeys(field: string, before: Parts | null, after: Parts | null): string[] {
   const keys = [...new Set([...Object.keys(before ?? {}), ...Object.keys(after ?? {})])];
   if (field !== 'totals') return keys;
@@ -332,6 +345,8 @@ export function changeRows(
   has: (key: string) => boolean,
   locale: Locale,
   entityType?: AuditEntityType,
+  /** The entry's action: which of a run's totals it shows (`TOTALS_SHOWN`). */
+  action?: AuditAction,
 ): ChangeRow[] {
   const rows: ChangeRow[] = [];
   changes.forEach((change, i) => {
@@ -379,17 +394,26 @@ export function changeRows(
     ) {
       const b = isParts(before) ? before : null;
       const a = isParts(after) ? after : null;
+      // A run's totals read as plain figures ("Net", not "Totals · Net"), only the ones that matter.
+      const totals = change.field === 'totals';
+      const shown = totals && action ? TOTALS_SHOWN[action] : undefined;
+      const count = rows.length;
       for (const key of partKeys(change.field, b, a)) {
+        if (totals && (TOTALS_NEVER.includes(key) || (shown && !shown.includes(key)))) continue;
         const part = partOf(change.field, key, t, has);
         if (b && a && JSON.stringify(b[key]) === JSON.stringify(a[key])) continue;
         rows.push({
           key: `${change.field}-${i}-${key}`,
           field: part.field,
-          label: t('audit.timeline.part', { field: label, part: part.label }),
+          label: totals ? part.label : t('audit.timeline.part', { field: label, part: part.label }),
           before: b ? (b[key] ?? null) : undefined,
           after: a ? (a[key] ?? null) : null,
           created,
         });
+      }
+      // Recalculated with the same figures: say so rather than show nothing.
+      if (totals && b && a && rows.length === count) {
+        rows.push({ key: `${change.field}-${i}`, field: change.field, label, before, after, created, text: t('audit.timeline.noTotalsChange') });
       }
       return;
     }
@@ -399,6 +423,8 @@ export function changeRows(
     }
     rows.push({ key: `${change.field}-${i}`, field: change.field, label, before, after, created });
   });
+  // Approving a run: what happened (Draft → Approved) before the figure.
+  if (action === 'hr.payroll.approve') return [...rows].sort((x, y) => Number(x.field !== 'status') - Number(y.field !== 'status'));
   return rows;
 }
 

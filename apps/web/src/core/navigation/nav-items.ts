@@ -1,20 +1,27 @@
 import { SCREENS, type ScreenAccess } from '@school-erp/shared';
 import type { PermissionRequirement } from '@/core/auth/permissions';
 import {
+  AcademicsIcon,
   AccountingModuleIcon,
   ActivityIcon,
   AdministrationModuleIcon,
+  AttendanceIcon,
   DashboardIcon,
+  ExamsIcon,
+  FeesIcon,
   HrModuleIcon,
-  InventoryModuleIcon,
   LatenessIcon,
+  LeaveIcon,
+  ParentPortalModuleIcon,
   PayrollIcon,
   PayrollTaxesIcon,
   PenaltiesIcon,
   RolesIcon,
+  SchoolModuleIcon,
   SettingsIcon,
   StaffIcon,
-  StudentsModuleIcon,
+  StudentsIcon,
+  TransportModuleIcon,
   UsersIcon,
   type AppIcon,
 } from '@/shared/components/ui/icons';
@@ -43,18 +50,33 @@ export interface NavItem {
   anyOf?: readonly PermissionRequirement[];
 }
 
+/**
+ * A page that hasn't landed yet: drawn locked with a "Soon" tag where it will live, never a link.
+ * Not a screen — it has no path and is not in `NAV_ITEMS`, so nothing can open it.
+ */
+export interface ComingItem {
+  /** Key under `common.nav.coming` for the label. */
+  key: 'students' | 'academics' | 'attendance' | 'exams' | 'leave' | 'fees';
+  icon: AppIcon;
+}
+
 /** How a module's icon tile is coloured (token pairs, so the palette stays in globals.css). */
 export type ModuleTone = 'neutral' | 'primary' | 'accent';
 
 export interface NavModule {
-  key: 'home' | 'hr' | 'accounting' | 'inventory' | 'students' | 'administration';
+  key: 'home' | 'school' | 'hr' | 'accounting' | 'transport' | 'parentPortal' | 'administration';
   /** Translation key of the module's name. */
   nameKey: `common.nav.modules.${string}`;
   icon: AppIcon;
   tone: ModuleTone;
   /** Its pages. A live module with one page is drawn as that page's link, not as a group. */
   items: readonly NavItem[];
-  /** `soon`: shown locked with a "Soon" tag, never a link. */
+  /** Its pages still to come, drawn locked after its live pages (shown to whoever sees the module). */
+  coming?: readonly ComingItem[];
+  /**
+   * `soon`: not built yet, shown to everyone. Without `coming` pages it is one locked row with a
+   * "Soon" tag; with them, a group that opens to show them, all locked.
+   */
   status: 'live' | 'soon';
 }
 
@@ -82,6 +104,21 @@ export const NAV_MODULES: readonly NavModule[] = [
     status: 'live',
   },
   {
+    // The school's own side, still to come (docs/business/08-scope.md).
+    key: 'school',
+    nameKey: 'common.nav.modules.school',
+    icon: SchoolModuleIcon,
+    tone: 'neutral',
+    items: [],
+    coming: [
+      { key: 'students', icon: StudentsIcon },
+      { key: 'academics', icon: AcademicsIcon },
+      { key: 'attendance', icon: AttendanceIcon },
+      { key: 'exams', icon: ExamsIcon },
+    ],
+    status: 'soon',
+  },
+  {
     key: 'hr',
     nameKey: 'common.nav.modules.hr',
     icon: HrModuleIcon,
@@ -92,6 +129,7 @@ export const NAV_MODULES: readonly NavModule[] = [
       page('lateness', LatenessIcon),
       page('payroll', PayrollIcon),
     ],
+    coming: [{ key: 'leave', icon: LeaveIcon }],
     status: 'live',
   },
   {
@@ -101,10 +139,18 @@ export const NAV_MODULES: readonly NavModule[] = [
     icon: AccountingModuleIcon,
     tone: 'primary',
     items: [page('accountingPayroll', PayrollIcon), page('payrollTaxes', PayrollTaxesIcon)],
+    coming: [{ key: 'fees', icon: FeesIcon }],
     status: 'live',
   },
-  { key: 'inventory', nameKey: 'common.nav.modules.inventory', icon: InventoryModuleIcon, tone: 'neutral', items: [], status: 'soon' },
-  { key: 'students', nameKey: 'common.nav.modules.students', icon: StudentsModuleIcon, tone: 'neutral', items: [], status: 'soon' },
+  { key: 'transport', nameKey: 'common.nav.modules.transport', icon: TransportModuleIcon, tone: 'neutral', items: [], status: 'soon' },
+  {
+    key: 'parentPortal',
+    nameKey: 'common.nav.modules.parentPortal',
+    icon: ParentPortalModuleIcon,
+    tone: 'neutral',
+    items: [],
+    status: 'soon',
+  },
   {
     // Settings, the activity log, users and roles: the school's own administration.
     key: 'administration',
@@ -129,8 +175,8 @@ export function itemIsVisible(item: NavItem, can: (required: PermissionRequireme
 }
 
 /**
- * The menu as the user may see it: each live module keeps only its visible pages and disappears
- * when none is left; coming modules (`soon`) always show.
+ * The menu as the user may see it: each live module keeps only its visible pages (and its coming
+ * ones) and disappears when no page is left; coming modules (`soon`) always show.
  */
 export function visibleModules(
   modules: readonly NavModule[],
@@ -143,7 +189,7 @@ export function visibleModules(
   });
 }
 
-/** Every page in the menu, in order. */
+/** Every page in the menu, in order — live pages only: coming ones are never a screen. */
 export const NAV_ITEMS: readonly NavItem[] = NAV_MODULES.flatMap((m) => m.items);
 
 /** Whether `item` is the current section for `pathname` (`/ar/payroll/2026-11` → payroll). */

@@ -182,7 +182,7 @@ function Changes({ entry, inline }: { entry: AuditEntry; inline: number }) {
   const { t, has, locale } = useTranslation();
   const [open, setOpen] = useState(false);
   const listId = useId();
-  const rows = changeRows(entry.changes, t, has, locale, entry.entityType);
+  const rows = changeRows(entry.changes, t, has, locale, entry.entityType, entry.action);
   if (rows.length === 0) return null;
   const shown = open ? rows : rows.slice(0, inline);
   const hidden = rows.length - inline;

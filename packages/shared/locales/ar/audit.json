@@ -101,7 +101,8 @@
       "penalty": {
         "record": "تسجيل جزاء على {entity}",
         "approve": "اعتماد جزاء {entity}",
-        "cancel": "إلغاء جزاء {entity}"
+        "cancel": "إلغاء جزاء {entity}",
+        "recount": "رفع مرة جزاء {entity}"
       },
       "lateness": {
         "save": "حفظ تأخير شهر {entity}"
@@ -183,6 +184,8 @@
     "action": "الجزاء",
     "days": "الأيام",
     "cancelReason": "سبب الإلغاء",
+    "penaltyDate": "تاريخ الجزاء",
+    "recountedAfter": "ارتفعت مرته باعتماد جزاء بتاريخ",
     "minutes": "الدقائق",
     "month": "الشهر",
     "type": "النوع",
@@ -369,7 +372,8 @@
     "changes": "التغييرات",
     "to": "تغيّر إلى",
     "noChanges": "لا توجد تفاصيل",
-    "part": "{field} · {part}"
+    "part": "{field} · {part}",
+    "noTotalsChange": "لا تغيير في الإجماليات"
   },
   "history": {
     "title": "سجل التغييرات",

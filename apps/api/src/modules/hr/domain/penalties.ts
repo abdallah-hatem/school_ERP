@@ -130,6 +130,40 @@ export function countPriorInWindow(
 }
 
 /**
+ * The penalty that must be approved or cancelled before `target` can be approved (§4 DECIDED,
+ * owner 2026-11-20: approve in date order): the EARLIEST still-PENDING penalty of the same
+ * employee and violation, inside `target`'s repetition window, that comes before it in the repeat
+ * order (`isEarlierPenalty`). Null when there is none — approved and cancelled ones never block,
+ * nor do other violations, other employees, or a same-date penalty recorded after `target`.
+ *
+ * Approving out of order would fix a level that ignores the earlier one (18 approved → L1; approve
+ * 20 → L2; then 19 → also L2), so the approval waits for it.
+ *
+ * @example earlierPendingPenalty(the20th, 'CONTRACT_YEAR', [the18th(APPROVED), the19th(PENDING)]) // the19th
+ */
+export function earlierPendingPenalty<R extends RecordedPenalty>(
+  target: PenaltyTarget,
+  window: RepetitionWindow,
+  records: readonly R[],
+): R | null {
+  const start = repetitionWindowStart(target.date, window);
+  const blocking = records.filter(
+    (p) =>
+      p.status === PenaltyStatus.PENDING &&
+      p.employeeId === target.employeeId &&
+      p.violationId === target.violationId &&
+      p.date >= start &&
+      // `target` itself never blocks (nor is it ever "earlier" than itself).
+      !('id' in target && p.id === target.id) &&
+      isEarlierPenalty(p, target),
+  );
+  return blocking.reduce<R | null>(
+    (earliest, p) => (earliest === null || isEarlierPenalty(p, earliest) ? p : earliest),
+    null,
+  );
+}
+
+/**
  * The level, action and days a penalty gets from its violation's catalogue levels, given the
  * number of prior approved penalties. "Doubles on repeat" stays text: days are never doubled.
  */
@@ -141,4 +175,115 @@ export function resolvePenalty(
   const entry = levels.find((l) => l.level === level);
   if (!entry) throw new RangeError(`level ${level} is missing from the catalogue levels`);
   return { level: entry.level, action: entry.action, days: entry.days };
+}
+
+/** An APPROVED penalty with the level, action and days fixed on it — what a recount may change. */
+export interface ApprovedPenalty extends RecordedPenalty, CatalogueLevel {}
+
+/** One approved penalty a backdated approval moves up (§4 DECIDED, owner 2026-11-20). */
+export interface RecountChange<R extends ApprovedPenalty = ApprovedPenalty> {
+  record: R;
+  before: CatalogueLevel;
+  after: CatalogueLevel;
+}
+
+/** Whether `target` (recorded or not) comes before `other` in the repeat order. */
+function comesBefore(target: PenaltyTarget, other: PenaltyPosition): boolean {
+  if ('id' in target && target.id === other.id) return false;
+  if (!('recordedAt' in target)) return target.date < other.date;
+  return isEarlierPenalty(target, other);
+}
+
+/**
+ * What approving `target` does to the pair's APPROVED penalties that come AFTER it (§4 DECIDED,
+ * owner 2026-11-20: a backdated penalty recounts the later ones — the one exception to "approved
+ * levels are never recomputed"). Each approved penalty of the same employee and violation that
+ * comes later in the repeat order (`isEarlierPenalty`), and whose own repetition window holds
+ * `target`'s date, now has one more earlier approved penalty, so it moves up ONE level — capped at
+ * the violation's last level (a capped one doesn't change and isn't listed). Its action and days
+ * become those of its new level in `levels` (today's catalogue: the source an approval uses — the
+ * catalogue keeps no history). Gaps left by cancellations stay: a cancellation never recounts, and
+ * this only adds the one penalty being approved.
+ *
+ * Pending and cancelled penalties are never changed (a pending one is shown from today's count
+ * anyway). Other employees, other violations, and penalties outside the window are untouched.
+ * `target` not recorded yet (preview, recording): it comes after every same-date penalty, so only
+ * later dates move. Sorted by the repeat order.
+ *
+ * @example recountAfterApproval(the18th, 'CONTRACT_YEAR', [the19th(L1), the20th(L2)], levels5)
+ *   // [the19th 1 → 2, the20th 2 → 3]
+ */
+export function recountAfterApproval<R extends ApprovedPenalty>(
+  target: PenaltyTarget,
+  window: RepetitionWindow,
+  records: readonly R[],
+  levels: readonly CatalogueLevel[],
+): RecountChange<R>[] {
+  if (levels.length === 0) throw new RangeError('a violation needs at least one level');
+  const last = Math.max(...levels.map((l) => l.level));
+  const changes: RecountChange<R>[] = [];
+  for (const r of records) {
+    if (r.status !== PenaltyStatus.APPROVED) continue;
+    if (r.employeeId !== target.employeeId || r.violationId !== target.violationId) continue;
+    if (!comesBefore(target, r)) continue;
+    if (target.date < repetitionWindowStart(r.date, window)) continue;
+    const level = Math.min(r.level + 1, last);
+    // Capped (or a level above today's last one): it stays as it was.
+    if (level <= r.level) continue;
+    const entry = levels.find((l) => l.level === level);
+    if (!entry) throw new RangeError(`level ${level} is missing from the catalogue levels`);
+    changes.push({
+      record: r,
+      before: { level: r.level, action: r.action, days: r.days },
+      after: { level: entry.level, action: entry.action, days: entry.days },
+    });
+  }
+  return changes.sort((a, b) => (isEarlierPenalty(a.record, b.record) ? -1 : 1));
+}
+
+/**
+ * The earliest month among `changes` whose payroll is approved (`lockedMonths`, `YYYY-MM`), or null
+ * (§4 DECIDED, owner 2026-11-20): an approved month can't be recounted, so the recording — or the
+ * approval — is refused naming it; corrections for approved months go into the next month as
+ * adjustments (§6).
+ */
+export function recountLockedMonth(
+  changes: readonly RecountChange[],
+  lockedMonths: ReadonlySet<string>,
+): string | null {
+  const locked = changes.map((c) => c.record.date.slice(0, 7)).filter((m) => lockedMonths.has(m));
+  return locked.length === 0 ? null : locked.reduce((a, b) => (a < b ? a : b));
+}
+
+/** What the user confirmed: each recounted penalty and the level, action and days it gets. */
+export interface RecountAcknowledgement {
+  id: string;
+  level: number;
+  action: PenaltyAction;
+  days: number | null;
+}
+
+/**
+ * Whether the user's confirmation (`acknowledged`: the list their screen showed) is exactly what
+ * approving now does (`changes`): the same penalties, each to the same level, action and days, in
+ * any order (§4 DECIDED, owner 2026-11-20 — a stale screen can't recount silently). `undefined`
+ * (nothing confirmed) matches only when nothing changes.
+ */
+export function recountAcknowledged(
+  changes: readonly RecountChange[],
+  acknowledged: readonly RecountAcknowledgement[] | undefined,
+): boolean {
+  if (acknowledged === undefined) return changes.length === 0;
+  if (acknowledged.length !== changes.length) return false;
+  const byId = new Map(acknowledged.map((a) => [a.id, a]));
+  if (byId.size !== acknowledged.length) return false;
+  return changes.every((c) => {
+    const a = byId.get(c.record.id);
+    return (
+      a !== undefined &&
+      a.level === c.after.level &&
+      a.action === c.after.action &&
+      (a.days ?? null) === c.after.days
+    );
+  });
 }

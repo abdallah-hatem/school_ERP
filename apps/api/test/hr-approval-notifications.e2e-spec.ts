@@ -46,7 +46,9 @@ describe('HR approval notifications — N2 (e2e)', () => {
   let prep: string;
   let departmentId: string;
   let jobTitleId: string;
-  let violationId: string;
+  const violationPool: string[] = [];
+  let nextViolationIndex = 0;
+  let groupId = '';
   let oncePerDayViolationId: string;
   const emp = { hPrim: '', hPrep: '', boss: '', p1: '', p2: '', q1: '' };
   const who = { stageHead: '', primaryApprover: '', prepApprover: '', teamApprover: '' };
@@ -128,7 +130,17 @@ describe('HR approval notifications — N2 (e2e)', () => {
    */
   const nextDate = (month = PENALTY_MONTH) => `${month}-${String(day++).padStart(2, '0')}`;
 
-  const record = (employeeId: string, date = nextDate(), violation = violationId) =>
+  /**
+   * A violation no other recording here used: penalties are approved in date order (§4), so a
+   * shared one would leave earlier tests' pending penalties blocking later approvals.
+   */
+  const nextViolation = () => {
+    const id = violationPool[nextViolationIndex++];
+    if (!id) throw new Error('violation pool exhausted: create more in beforeAll');
+    return id;
+  };
+
+  const record = (employeeId: string, date = nextDate(), violation = nextViolation()) =>
     http(app).post('/hr/penalties').send({ employeeId, violationId: violation, date });
   const recordOk = async (employeeId: string, date?: string) =>
     (await record(employeeId, date).expect(201)).body.data as PenaltyRecord;
@@ -185,7 +197,7 @@ describe('HR approval notifications — N2 (e2e)', () => {
         .send({ nameEn: unique('Teacher'), nameAr: unique('معلم'), managesPeople: true })
         .expect(201)
     ).body.data.id;
-    const groupId = (
+    groupId = (
       await http(app)
         .post('/hr/penalty-groups')
         .send({ nameEn: unique('G'), nameAr: unique('ج') })
@@ -203,7 +215,7 @@ describe('HR approval notifications — N2 (e2e)', () => {
           })
           .expect(201)
       ).body.data.id as string;
-    violationId = await violation(false);
+    for (let i = 0; i < 24; i++) violationPool.push(await violation(false));
     oncePerDayViolationId = await violation(true);
 
     emp.hPrim = await createEmployee({ stageId: primary });
@@ -234,6 +246,15 @@ describe('HR approval notifications — N2 (e2e)', () => {
     await db.penaltyRecord.deleteMany({ where: { employeeId: { in: employees } } });
     await db.user.deleteMany({ where: { id: { in: users } } });
     await db.role.deleteMany({ where: { id: { in: roles } } });
+    // Everything else this suite made, so later suites (hr-visibility counts every employee) start
+    // clean: its employees (managers unlinked first), catalogue, departments and stages.
+    await db.employee.updateMany({ where: { id: { in: employees } }, data: { managerId: null } });
+    await db.employee.deleteMany({ where: { id: { in: employees } } });
+    await db.violation.deleteMany({ where: { groupId } });
+    await db.penaltyGroup.deleteMany({ where: { id: groupId } });
+    await db.department.deleteMany({ where: { id: departmentId } });
+    await db.jobTitle.deleteMany({ where: { id: jobTitleId } });
+    await db.stage.deleteMany({ where: { id: { in: [primary, prep] } } });
     await app.close();
   });
 

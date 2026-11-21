@@ -11,8 +11,10 @@ const router = vi.hoisted(() => ({
   replace: vi.fn(),
   prefetch: vi.fn(),
 }));
+const pathname = vi.hoisted(() => ({ current: '/en/payroll/11111111-1111-4111-8111-111111111111' }));
 vi.mock('next/navigation', () => ({
   useRouter: () => router,
+  usePathname: () => pathname.current,
   redirect: vi.fn(),
 }));
 const toast = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
@@ -27,7 +29,7 @@ const apis = vi.hoisted(() => ({
 vi.mock('../apis', () => apis);
 
 import { ADJ_MONA, MONA, renderPayroll, run, RUN_ID } from '../test/fixtures';
-import { RunPage } from './run-page';
+import { RunPage } from '../test/run-page';
 
 function renderRun(r = run()) {
   return renderPayroll(

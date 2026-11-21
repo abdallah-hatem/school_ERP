@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '@/test/dom-polyfills';
-import { cleanup, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { AnchorHTMLAttributes, ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -99,8 +99,32 @@ describe('PenaltiesList', () => {
     await user.click(await screen.findByRole('option', { name: 'Approved' }));
     expect(router.push).toHaveBeenLastCalledWith('/en/penalties?status=APPROVED', { scroll: false });
 
-    await user.type(screen.getByRole('textbox', { name: 'Search penalties' }), 'EMP-0001');
+    await user.type(screen.getByRole('searchbox', { name: 'Search penalties' }), 'EMP-0001');
     await waitFor(() => expect(router.push).toHaveBeenLastCalledWith('/en/penalties?search=EMP-0001', { scroll: false }));
+  });
+
+  it('a filter change shows the spinner in the search box while the list loads, then the magnifier', async () => {
+    // The navigation stays pending until the next page "arrives".
+    let arrive: () => void = () => undefined;
+    router.push.mockImplementation(() => new Promise<void>((resolve) => (arrive = resolve)));
+    const user = userEvent.setup();
+    renderList();
+    const box = screen.getByRole('searchbox', { name: 'Search penalties' }).parentElement!;
+    expect(within(box).queryByTestId('search-spinner')).toBeNull();
+
+    await user.click(screen.getByRole('combobox', { name: 'Status' }));
+    await user.click(await screen.findByRole('option', { name: 'Approved' }));
+    // The status filter has no spinner of its own; the search box shows it, and the rows dim.
+    expect(await within(box).findByTestId('search-spinner')).toBeTruthy();
+    expect(within(box).queryByTestId('search-icon')).toBeNull();
+    expect(within(box).getByRole('status').textContent).toBe('Loading…');
+    expect(screen.getAllByTestId('search-spinner')).toHaveLength(1);
+
+    await act(async () => arrive());
+    await waitFor(() => expect(within(box).queryByTestId('search-spinner')).toBeNull());
+    expect(within(box).getByTestId('search-icon')).toBeTruthy();
+    // `beforeEach` hands back the mock, which vitest calls as teardown: it must not stay pending.
+    router.push.mockReset();
   });
 
   it('"Record a penalty" opens the dialog', async () => {

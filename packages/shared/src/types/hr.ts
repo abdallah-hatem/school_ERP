@@ -282,11 +282,54 @@ export interface PenaltyPreviewQuery {
   date: IsoDate;
 }
 
-export interface PenaltyPreview {
+/** The level, action and days a penalty has (or gets). */
+export interface PenaltyLevelValues {
   level: number;
   action: PenaltyAction;
   days: Days | null;
+}
+
+/**
+ * §4 backdated penalty (owner 2026-11-20): an APPROVED penalty of the same employee and violation,
+ * later in the repeat order and in the window, that approving this one moves up one level — its
+ * level, action and days now (`before`) and after the approval (`after`, from today's catalogue).
+ */
+export interface PenaltyRecountChange {
+  id: Uuid;
+  date: IsoDate;
+  before: PenaltyLevelValues;
+  after: PenaltyLevelValues;
+}
+
+export interface PenaltyPreview extends PenaltyLevelValues {
   priorCount: number;
+  /**
+   * What approving the new penalty would change (§4, owner 2026-11-20), by date — empty when it is
+   * not backdated before approved ones. Recording changes nothing. When one of them sits in a month
+   * whose payroll is approved, the preview (and recording) is refused instead: 409
+   * `PENALTY_RECOUNT_MONTH_LOCKED`, `params.month`.
+   */
+  recount: PenaltyRecountChange[];
+}
+
+/** One recounted penalty the user confirmed: the level, action and days it was shown to get. */
+export interface PenaltyRecountAcknowledgement extends PenaltyLevelValues {
+  id: Uuid;
+}
+
+/**
+ * `POST /hr/penalties/:id/approve`. `acknowledgedRecount`: the record's `recount` list as the
+ * screen showed it, each with its `after` values. Required when approving changes approved
+ * penalties (409 `PENALTY_RECOUNT_UNCONFIRMED` without it); when it differs from what approving
+ * does now → 409 `PENALTY_RECOUNT_CHANGED`. Both carry the fresh list as `data.recount`.
+ */
+export interface ApprovePenaltyRequest {
+  acknowledgedRecount?: PenaltyRecountAcknowledgement[];
+}
+
+/** The `data` of a 409 `PENALTY_RECOUNT_UNCONFIRMED` / `PENALTY_RECOUNT_CHANGED`. */
+export interface PenaltyRecountConflict {
+  recount: PenaltyRecountChange[];
 }
 
 export interface CreatePenaltyRequest {
@@ -314,6 +357,23 @@ export interface PenaltyRecord {
   createdBy: { id: Uuid; name: string } | null;
   approvedBy: { id: Uuid; name: string } | null;
   createdAt: IsoDateTime;
+  /**
+   * §4 approve in date order (owner 2026-11-20): for a PENDING record, the earliest earlier
+   * penalty of the same violation and employee (in the repetition window) that is still pending —
+   * approving this one is refused (409 `PENALTY_EARLIER_PENDING`) until it is approved or
+   * cancelled. Null otherwise (and always for approved and cancelled records).
+   */
+  earlierPending: { id: Uuid; date: IsoDate } | null;
+  /**
+   * §4 backdated penalty (owner 2026-11-20): for a PENDING record, the approved penalties that
+   * approving it now would move up one level (by date). Empty otherwise.
+   */
+  recount: PenaltyRecountChange[];
+  /**
+   * The earliest month among `recount` whose payroll is approved (`YYYY-MM`): approving is refused
+   * (409 `PENALTY_RECOUNT_MONTH_LOCKED`). Null otherwise.
+   */
+  recountLockedMonth: Month | null;
 }
 
 // ── Monthly lateness ───────────────────────────────────────────────────────
@@ -501,6 +561,11 @@ export interface PayrollRun extends PayrollRunSummary {
    * Recalculate is due. Always false on an approved run.
    */
   rulesChanged: boolean;
+  /**
+   * A DRAFT run with a penalty dated in its month that a backdated approval moved up a level (§4,
+   * owner 2026-11-20) after `calculatedAt`: a Recalculate is due. Always false on an approved run.
+   */
+  penaltiesRecounted: boolean;
   /**
    * The HR rules behind the run's figures, for its "rules applied" panel — readable by anyone who
    * may view the run, without `hr.settings.view`. A run stores no copy of the rules, so these are

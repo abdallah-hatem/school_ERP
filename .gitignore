@@ -56,3 +56,6 @@ design/mockups/screenshots/
 
 # Local CI logs
 .ci-local/
+
+# Review screenshots taken by agents (never committed)
+design/screenshots-local/

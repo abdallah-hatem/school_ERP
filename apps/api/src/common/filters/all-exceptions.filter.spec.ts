@@ -52,6 +52,17 @@ describe('AllExceptionsFilter', () => {
     });
   });
 
+  it('a CodedException with data: the envelope carries its params and data (the fresh state)', () => {
+    const recount = [{ id: 'p1', date: '2026-11-19' }];
+    const { status, body } = run(
+      CodedException.withData(HttpStatus.CONFLICT, ErrorCode.PENALTY_RECOUNT_CHANGED, { count: 1 }, { recount }),
+    );
+    expect(status).toBe(409);
+    expect(body).toMatchObject({ error: 'PENALTY_RECOUNT_CHANGED', params: { count: 1 }, data: { recount } });
+    // Without data, no `data` key.
+    expect(run(new CodedException(HttpStatus.CONFLICT, ErrorCode.PAYROLL_APPROVED)).body).not.toHaveProperty('data');
+  });
+
   it('joins ValidationPipe messages and codes them VALIDATION_FAILED', () => {
     const { status, body } = run(new BadRequestException(['a is required', 'b must be a number']));
     expect(status).toBe(400);

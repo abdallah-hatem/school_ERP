@@ -27,3 +27,6 @@ Corrections recorded so they don't have to be repeated. Loaded at session start.
   totals, so a "Month total" card under them was removed ("we dont need the month card its already
   at the cards at the top"). Check the page's tiles/headers before adding a summary row or card.
   — 2026-11-20
+- Every money input groups thousands live through the shared `MoneyField`/`MoneyInput`; a guard
+  test enforces it. When reviewing Tamer's PRs, check new inputs and screens against the shared
+  components — the hand-rolled example box slipped through #83. — 2026-11-20

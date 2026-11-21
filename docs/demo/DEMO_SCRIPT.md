@@ -26,9 +26,17 @@ Before the demo, on the demo database:
 ## 2. Dashboard
 - Active headcount with the split by stage; this month's payroll (status + net); pending and
   approved penalties this month; quick links.
-- The menu is grouped by module: HR (Employees, Penalties, Lateness, Payroll), Accounting (Approved
-  pay — "الرواتب المعتمدة" in Arabic; its page is titled Approved payroll — and Payroll taxes), Inventory and Students marked "Soon", Administration (Settings, Activity, Users,
-  Roles). The bell sits in the top bar.
+- The menu is grouped by module, in this order: Dashboard; School (المدرسة — Students, Academics,
+  Attendance, Exams & grades, all marked "Soon"); HR (Employees, Penalties, Lateness, Payroll, then
+  Leave & permissions marked "Soon"); Accounting (Approved pay — "الرواتب المعتمدة" in Arabic; its
+  page is titled Approved payroll — Payroll taxes, then Fees marked "Soon"); Transport and Parent
+  portal marked "Soon"; Administration (Settings, Activity, Users, Roles). The "Soon" rows are dimmed
+  and do nothing when tapped — they show where the coming modules will live. The bell sits in the
+  top bar; its **Notification settings** link opens My account → Notifications, where a switch
+  saves at once (dimmed while saving, "Different from default" once changed). Settings →
+  Notifications holds the school's defaults and saves with **Save**.
+- Typing in a list's search (Employees, Penalties, Users, Activity, a run's lines): ✔ a small spinner
+  takes the magnifier's place while the list reloads.
 - Switch **ع ↔ EN**: the whole layout mirrors without a reload and stays on the same page.
 - ✔ The browser tab reads "Dashboard · <school name>" (لوحة التحكم · <اسم المدرسة> in Arabic), like
   the sign-in page; the school name in the desktop sidebar is shown whole (up to two lines).
@@ -43,8 +51,24 @@ Before the demo, on the demo database:
   ✔ the bell shows "Penalty waiting for your approval" with the employee, violation and level;
   clicking it opens that penalty with **Approve** → approve. ✔ The bell item now reads "Approved by
   …". (Whoever records a penalty isn't notified about it — that is why the HR officer records it.)
+  (Pick a pair with no pending penalty — not the seed's 15 Nov "Late to class" one — or approve
+  that earlier one first: penalties are approved in date order.)
 - Approve any other pending penalties of the month from the list's row menu (payroll can't be
-  approved while any are pending).
+  approved while any are pending). ✔ Where one employee has two pending for the same violation,
+  the later one's **Approve** is greyed out with "Approve or cancel the … penalty for this
+  violation first."; approve the earlier one, then the later one gets the next level.
+- **A backdated penalty** (before the month is approved): record one for an employee who already has
+  approved penalties for that violation, dated **before** them (e.g. EMP-0014, Unexcused absence,
+  5 Nov). ✔ The form lists the approved penalties it would move up ("10 Nov 2026: level 2 → 3, Deduct
+  0.5 day → Deduct 1 day") and says recording changes nothing. Approve it → ✔ the confirmation lists
+  them again and its button reads **Approve and update 2 penalties**; after it, the list shows the
+  new levels and the employee's **History** has a "Raised the level of the penalty …" entry for each
+  (rows: Penalty date, Occurrence, Days, "Raised by approving the penalty dated" 5 Nov 2026).
+  The draft run then says "Penalties changed since the last calculation" with **Recalculate now**
+  (while a penalty of the month is still pending, the pending notice shows first). A date whose
+  later penalties sit in an **approved** payroll month is refused under the date, naming the month —
+  ✔ only the refusal (no "Can't be in the future" under it) and Save stays disabled until the
+  employee, violation or date changes.
 - Open **Record a penalty** again with the same employee, violation and date. ✔ The preview says
   this violation counts once per day and the employee already has one on this date; Save moves the
   message under the date — ✔ it shows once, not twice. (Late to class is different: it can be recorded several times a day.)
@@ -82,11 +106,19 @@ Before the demo, on the demo database:
   (e.g. EMP-0007): their entries and their penalties' show.
 - Back to the run → **Recalculate** → ✔ the same employee's lateness drops (0.25 × 20,000 ÷ 30 =
   166.67) and the totals follow.
+- The run's **History** tab (beside **Employees**): ✔ "Created the payroll run for …" (not on a
+  run the seed made before the audit log existed), each **Recalculate** with only the totals that
+  changed, before → after (net, penalties …), and any adjustment with the employee, "Addition",
+  the amount in EGP and the reason — no codes or raw figures. ✔ The net after → equals the run's Net
+  to pay tile. Switching tabs keeps the header (no flash). ✔ Click **Recalculate** and go straight to
+  **History** (no reload): the new entry is already at the top. An empty History says the run's
+  creating, recalculating, adjusting and approving will be listed there (not "this employee").
 - Put the rule back afterwards if the demo continues on the same data.
 
 ## 7. Approve
 - **Approve payroll** → confirmation explains it recalculates once more and locks the month.
 - After approval: read-only, **Export bank sheet** downloads an Excel file, each row has a payslip.
+  ✔ The run's **History** tab now starts with "Approved the payroll run for …" (Draft → Approved).
   ✔ The sheet has the bank, account number and IBAN of each employee (empty where none is on file)
   and a **Total** row at the bottom equal to the run's net.
 
@@ -97,8 +129,10 @@ Before the demo, on the demo database:
   day" (a run calculated before this change shows it after a Recalculate).
 - Print → one A4 page, in Arabic and in English.
 - Settings → **Accounting** (signed in as System admin or Accountant): the payroll tax rule —
-  monthly slices, martyrs' fund, insurance share. ✔ The example shows net 10,000.00 → income tax
-  1,017.00 · fund 5.51 · gross 11,022.51. By hand: taxable 11,022.51; tax = 125 + 187.50 +
+  monthly slices, martyrs' fund, insurance share. ✔ The example receipt shows Net pay 10,000.00,
+  + Income tax 1,017.00, + Martyrs' fund 5.51, then "Gross the school pays" EGP 11,022.51. Typing
+  in the Net pay box groups as you type (`15000` → `15,000`) and completes to `15,000.00` on leaving
+  it; the receipt then reads 2,267.78 · 8.64 · EGP 17,276.42. By hand: taxable 11,022.51; tax = 125 + 187.50 +
   (11,022.51 − 7,500) × 20% = 1,017.00; fund = 11,022.51 × 0.05% = 5.51; 11,022.51 − 1,017.00 −
   5.51 = 10,000.00 (the net is what the employee is paid).
 - Sign in as the **Accountant** → ✔ Settings is in the menu and opens straight on Accounting, the

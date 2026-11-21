@@ -12,8 +12,10 @@ const router = vi.hoisted(() => ({
   replace: vi.fn(),
   prefetch: vi.fn(),
 }));
+const pathname = vi.hoisted(() => ({ current: '/en/payroll/11111111-1111-4111-8111-111111111111' }));
 vi.mock('next/navigation', () => ({
   useRouter: () => router,
+  usePathname: () => pathname.current,
   redirect: vi.fn(),
 }));
 const toast = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
@@ -35,7 +37,8 @@ import type { Locale } from '@/shared/lib/i18n';
 import { ADJ_MONA, MONA, renderPayroll, run, RUN_ID, SALMA, SETTINGS } from '../test/fixtures';
 import { renderWithI18n, sessionWithout } from '@/test/render';
 import { PayrollI18n } from '../messages';
-import { RunPage, RunTiles, type RunPageProps } from './run-page';
+import { RunTiles } from './run-page';
+import { RunPage, type RunPageProps } from '../test/run-page';
 
 const DEPARTMENTS = [
   {
@@ -204,6 +207,35 @@ describe('RunPage — approve', () => {
     renderRun({ run: run({ lines: [SALMA], pendingPenalties: 0, rulesChanged: true }) });
     expect(screen.getAllByRole('note')).toHaveLength(1);
     expect(screen.queryByTestId('rules-changed-notice')).toBeNull();
+  });
+
+  it.each(['en', 'ar'] as const)(
+    'a backdated penalty moved approved ones of the month up since the last calculation (%s): the penalties hint recalculates (§4, owner 2026-11-20)',
+    async (locale) => {
+      const user = userEvent.setup();
+      apis.RECALCULATE_PAYROLL_RUN.mockResolvedValue({
+        success: true,
+        asOf: 1,
+        data: run({ lines: [MONA], penaltiesRecounted: false }),
+      });
+      renderRun({ run: run({ lines: [MONA], penaltiesRecounted: true, rulesChanged: true }) }, locale);
+      const hint = screen.getByTestId('penalties-recounted-notice');
+      expect(hint.textContent).toContain(
+        locale === 'en' ? 'raised the level of approved penalties dated this month' : 'رفع اعتماد جزاء بتاريخ سابق',
+      );
+      // One hint, one Recalculate: the rules hint steps aside.
+      expect(screen.getAllByRole('note')).toHaveLength(1);
+      await user.click(within(hint).getByRole('button', { name: locale === 'en' ? 'Recalculate now' : 'أعد الحساب الآن' }));
+      expect(apis.RECALCULATE_PAYROLL_RUN).toHaveBeenCalledTimes(1);
+      await waitFor(() => expect(screen.queryByTestId('penalties-recounted-notice')).toBeNull());
+    },
+  );
+
+  it('no recount hint on an approved run', () => {
+    renderRun({
+      run: run({ lines: [MONA], status: 'APPROVED', approvedAt: '2026-11-30T10:00:00.000Z', penaltiesRecounted: true }),
+    });
+    expect(screen.queryByTestId('penalties-recounted-notice')).toBeNull();
   });
 
   it('a penalty recorded since the last calculation: the live count shows even with no flagged line', () => {

@@ -190,6 +190,9 @@ export const AUDIT_ACTIONS = {
   'hr.penalty.record': { module: 'hr', entityType: E.PENALTY, kind: 'create' },
   'hr.penalty.approve': { module: 'hr', entityType: E.PENALTY, kind: 'status' },
   'hr.penalty.cancel': { module: 'hr', entityType: E.PENALTY, kind: 'status' },
+  // §4 (owner 2026-11-20): an approved penalty moved up one level by a backdated approval — one
+  // entry per recounted penalty, in the approval's transaction (`recountedAfter`: that one's date).
+  'hr.penalty.recount': { module: 'hr', entityType: E.PENALTY, kind: 'update' },
   // hr — lateness: one entry per saved month, the changed employees' minutes before → after
   'hr.lateness.save': {
     module: 'hr',

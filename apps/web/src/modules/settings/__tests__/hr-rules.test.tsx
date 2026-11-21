@@ -65,6 +65,20 @@ describe('HR rules — lateness rule editor', () => {
     await waitFor(() => expect(example()).toContain('30 minutes → 0 days'));
   });
 
+  it('the example minutes group live like the lateness board (1500 → 1,500) and stop at the monthly cap', async () => {
+    const user = userEvent.setup();
+    renderSettings(<HrRulesSection />);
+    await loaded();
+    const minutes = screen.getByRole('textbox', { name: 'Minutes in a month' }) as HTMLInputElement;
+    await user.clear(minutes);
+    await user.type(minutes, '1500');
+    expect(minutes.value).toBe('1,500');
+    expect(example()).toContain('1,500 minutes →');
+    // 15,000 would pass the 6,000-minute cap: the extra digit is ignored.
+    await user.type(minutes, '0');
+    expect(minutes.value).toBe('1,500');
+  });
+
   it('the Save/Discard bar stays in view over the whole form only while there are unsaved changes', async () => {
     const user = userEvent.setup();
     renderSettings(<HrRulesSection />);

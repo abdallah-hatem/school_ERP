@@ -322,7 +322,7 @@ describe('HR penalty catalogue and records (e2e)', () => {
     const emp = await employee();
     const v = await violation();
     const ok = await preview(emp, v, '2025-10-01').expect(200);
-    expect(ok.body.data).toEqual({ level: 1, action: 'NOTICE', days: null, priorCount: 0 });
+    expect(ok.body.data).toEqual({ level: 1, action: 'NOTICE', days: null, priorCount: 0, recount: [] });
     expect(await db.penaltyRecord.count({ where: { employeeId: emp } })).toBe(0);
 
     await preview(emp, v, tomorrow()).expect(400);
@@ -350,7 +350,7 @@ describe('HR penalty catalogue and records (e2e)', () => {
     await cancel(cancelled.id, 'entered by mistake').expect(200);
 
     const res = await preview(emp, v, '2025-09-10').expect(200);
-    expect(res.body.data).toEqual({ level: 2, action: 'WARNING', days: null, priorCount: 1 });
+    expect(res.body.data).toEqual({ level: 2, action: 'WARNING', days: null, priorCount: 1, recount: [] });
     const rec = await recordOk(emp, v, '2025-09-10');
     expect(rec).toMatchObject({ level: 2, action: 'WARNING', status: 'PENDING' });
   });
@@ -377,7 +377,15 @@ describe('HR penalty catalogue and records (e2e)', () => {
     });
     // Same date: a not-yet-recorded penalty comes after the approved one (§4).
     expect((await preview(emp, v, '2025-05-31').expect(200)).body.data.priorCount).toBe(1);
-    await approvedOn(emp, v, '2024-06-01');
+    // Backdated before the approved 31 May one, same contract year: approving it moves 31 May up
+    // a level (§4, owner 2026-11-20), so the approval confirms that.
+    const june = await recordOk(emp, v, '2024-06-01');
+    const recount = (await getRecord(june.id)).recount;
+    expect(recount.map((c) => [c.date, c.before.level, c.after.level])).toEqual([['2025-05-31', 1, 2]]);
+    await http(app)
+      .post(`/hr/penalties/${june.id}/approve`)
+      .send({ acknowledgedRecount: recount.map((c) => ({ id: c.id, ...c.after })) })
+      .expect(200);
     expect((await preview(emp, v, '2025-05-31').expect(200)).body.data.priorCount).toBe(2);
   });
 
@@ -407,7 +415,7 @@ describe('HR penalty catalogue and records (e2e)', () => {
     expect((await preview(emp3, v, '2025-11-18').expect(200)).body.data.priorCount).toBe(0);
   });
 
-  it('PENDING dated 3 Nov and 10 Nov: approve 3 Nov then 10 Nov → levels 1, 2; approve 10 Nov then 3 Nov → levels 1, 1, neither recomputed', async () => {
+  it('PENDING dated 3 Nov and 10 Nov: approve 3 Nov then 10 Nov → levels 1, 2; 10 Nov first is refused (approve in date order)', async () => {
     const v = await violation();
     const a = await employee();
     const a3 = await recordOk(a, v, '2025-11-03');
@@ -418,10 +426,87 @@ describe('HR penalty catalogue and records (e2e)', () => {
     const b = await employee();
     const b3 = await recordOk(b, v, '2025-11-03');
     const b10 = await recordOk(b, v, '2025-11-10');
-    expect((await approveOk(b10.id)).level).toBe(1);
+    expect((await getRecord(b10.id)).earlierPending).toEqual({ id: b3.id, date: '2025-11-03' });
+    expect((await approve(b10.id).expect(409)).body.error).toBe(ErrorCode.PENALTY_EARLIER_PENDING);
     expect((await approveOk(b3.id)).level).toBe(1);
-    // Approving 3 Nov doesn't recompute 10 Nov.
-    expect((await getRecord(b10.id)).level).toBe(1);
+    expect((await approveOk(b10.id)).level).toBe(2);
+  });
+
+  describe('approve in date order (§4, owner 2026-11-20)', () => {
+    it("the owner's scenario: 18 approved, 19 + 20 pending → approving 20 is refused naming 19; then 19 → L2, 20 → L3", async () => {
+      const emp = await employee();
+      const v = await violation();
+      const d18 = await approvedOn(emp, v, '2025-11-18');
+      const d19 = await recordOk(emp, v, '2025-11-19');
+      const d20 = await recordOk(emp, v, '2025-11-20');
+      expect(d18.level).toBe(1);
+
+      const before = await historyMark(db);
+      const refused = await approve(d20.id).set('Accept-Language', 'en').expect(409);
+      expect(refused.body.error).toBe(ErrorCode.PENALTY_EARLIER_PENDING);
+      expect(refused.body.params).toEqual({ date: '2025-11-19' });
+      expect(refused.body.message).toBe('Approve or cancel the 19 Nov 2025 penalty for this violation first.');
+      const ar = await approve(d20.id).set('Accept-Language', 'ar').expect(409);
+      expect(ar.body.message).not.toBe(refused.body.message);
+      // A refused approval writes nothing: still pending, no audit entry.
+      expect((await getRecord(d20.id)).status).toBe('PENDING');
+      expect(await db.auditEntry.count({ where: { seq: { gt: before }, entityId: d20.id } })).toBe(0);
+
+      // The list and the record say why before anyone tries.
+      expect((await getRecord(d20.id)).earlierPending).toEqual({ id: d19.id, date: '2025-11-19' });
+      expect((await getRecord(d19.id)).earlierPending).toBeNull();
+      const listed = (await http(app).get('/hr/penalties').query({ employeeId: emp }).expect(200)).body
+        .data as PenaltyRecord[];
+      expect(listed.find((r) => r.id === d20.id)?.earlierPending?.date).toBe('2025-11-19');
+
+      expect((await approveOk(d19.id)).level).toBe(2);
+      expect((await getRecord(d20.id)).earlierPending).toBeNull();
+      expect((await approveOk(d20.id)).level).toBe(3);
+      expect((await getRecord(d18.id)).level).toBe(1);
+    });
+
+    it('cancelling is always allowed — the blocked one and the earlier one — and frees the later one', async () => {
+      const emp = await employee();
+      const v = await violation();
+      const d19 = await recordOk(emp, v, '2025-11-19');
+      const d20 = await recordOk(emp, v, '2025-11-20');
+      const d21 = await recordOk(emp, v, '2025-11-21');
+      await approve(d20.id).expect(409);
+      await cancel(d21.id, 'entered by mistake').expect(200);
+      await cancel(d19.id, 'entered by mistake').expect(200);
+      expect((await approveOk(d20.id)).level).toBe(1);
+    });
+
+    it('other violations and other employees do not block; a same-date one recorded later does not block the earlier one', async () => {
+      const emp = await employee();
+      const other = await employee();
+      const v = await repeatingViolation();
+      const otherV = await violation();
+      await recordOk(emp, otherV, '2025-11-01');
+      await recordOk(other, v, '2025-11-01');
+      const first = await recordOk(emp, v, '2025-11-05');
+      const second = await recordOk(emp, v, '2025-11-05');
+      expect((await approve(second.id).expect(409)).body.params).toEqual({ date: '2025-11-05' });
+      expect((await approveOk(first.id)).level).toBe(1);
+      expect((await approveOk(second.id)).level).toBe(2);
+    });
+
+    it('concurrent approvals of 19 and 20 (18 approved): never two equal levels', async () => {
+      const emp = await employee();
+      const v = await violation();
+      await approvedOn(emp, v, '2025-11-18');
+      const d19 = await recordOk(emp, v, '2025-11-19');
+      const d20 = await recordOk(emp, v, '2025-11-20');
+      const [r19, r20] = await Promise.all([approve(d19.id), approve(d20.id)]);
+      expect(r19.status).toBe(200);
+      expect(r19.body.data.level).toBe(2);
+      // 20 either ran after 19 under the pair lock (and counts it) or saw it pending (and was refused).
+      if (r20.status === 200) expect(r20.body.data.level).toBe(3);
+      else {
+        expect(r20.body.error).toBe(ErrorCode.PENALTY_EARLIER_PENDING);
+        expect((await approveOk(d20.id)).level).toBe(3);
+      }
+    });
   });
 
   it('Same violation date: record and approve three in order → levels 1, 2, 3; the preview counts them all', async () => {
@@ -440,22 +525,22 @@ describe('HR penalty catalogue and records (e2e)', () => {
     });
   });
 
-  it('Same violation date, approved out of order: the later-recorded one approved first stays level 1; a pending one shows the count of those recorded before it', async () => {
+  it('Same violation date: a later-recorded one waits for the earlier-recorded ones; a pending one shows the count of the approved ones recorded before it', async () => {
     const emp = await employee();
     const v = await repeatingViolation();
     const first = await recordOk(emp, v, '2025-11-06');
     const second = await recordOk(emp, v, '2025-11-06');
     const third = await recordOk(emp, v, '2025-11-06');
-    // Recorded after `first`, so `first` (still pending) doesn't count either way.
-    expect((await approveOk(second.id)).level).toBe(1);
-    // `first` was recorded before `second`: the approved `second` doesn't count for it.
-    expect((await getRecord(first.id)).level).toBe(1);
-    // `third` was recorded after `second`: shown (pending) as level 2.
-    expect((await getRecord(third.id)).level).toBe(2);
+    // `first` (recorded earlier, still pending) goes first.
+    expect((await approve(second.id).expect(409)).body.error).toBe(ErrorCode.PENALTY_EARLIER_PENDING);
+    expect((await getRecord(second.id)).earlierPending?.id).toBe(first.id);
+    // The earliest pending one is named, not the nearest.
+    expect((await getRecord(third.id)).earlierPending?.id).toBe(first.id);
     expect((await approveOk(first.id)).level).toBe(1);
+    // `third` was recorded after `first`: shown (pending) as level 2.
+    expect((await getRecord(third.id)).level).toBe(2);
+    expect((await approveOk(second.id)).level).toBe(2);
     expect((await approveOk(third.id)).level).toBe(3);
-    // Fixed at approval: `second` is not recomputed.
-    expect((await getRecord(second.id)).level).toBe(1);
   });
 
   it('Same date: a cancelled or another violation’s record recorded earlier doesn’t count', async () => {
@@ -474,7 +559,7 @@ describe('HR penalty catalogue and records (e2e)', () => {
     const v = await violation(LEVELS_5, 'doubles on repeat');
     for (let d = 1; d <= 7; d++) await approvedOn(emp, v, `2025-07-0${d}`);
     const res = await preview(emp, v, '2025-07-10').expect(200);
-    expect(res.body.data).toEqual({ level: 5, action: 'DEDUCT_DAYS', days: 5, priorCount: 7 });
+    expect(res.body.data).toEqual({ level: 5, action: 'DEDUCT_DAYS', days: 5, priorCount: 7, recount: [] });
     expect(await approvedOn(emp, v, '2025-07-10')).toMatchObject({ level: 5, days: 5 });
   });
 

@@ -136,6 +136,161 @@ describe('PenaltyActions', () => {
     await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
   });
 
+  describe('approve in date order (§4, owner 2026-11-20)', () => {
+    const waiting = () => record({ earlierPending: { id: 'p-0', date: '2026-11-04' } });
+
+    it('waiting for an earlier pending one: Approve is shown disabled with the reason; Cancel still works', async () => {
+      const user = userEvent.setup();
+      renderPenalties(<PenaltyActions record={waiting()} />);
+      const menu = await openRowActions(user, 'Mona Khalil');
+      expect(menuItemNames(menu)).toEqual(['Approve', 'Cancel']);
+      const approve = within(menu).getByRole('menuitem', { name: /Approve/ });
+      expect(approve.getAttribute('aria-disabled')).toBe('true');
+      expect(approve.textContent).toContain('Approve or cancel the 4 Nov 2026 penalty for this violation first.');
+      await user.click(approve);
+      expect(screen.queryByRole('dialog', { name: 'Approve this penalty?' })).toBeNull();
+      expect(apis.APPROVE_PENALTY).not.toHaveBeenCalled();
+
+      await user.click(within(menu).getByRole('menuitem', { name: 'Cancel' }));
+      expect(await screen.findByRole('dialog', { name: 'Cancel this penalty?' })).toBeTruthy();
+    });
+
+    it('Arabic: the reason names the date in Arabic', async () => {
+      const user = userEvent.setup();
+      renderPenalties(<PenaltyActions record={waiting()} />, 'ar');
+      const menu = await openRowActions(user, /^إجراءات منى خليل/);
+      const approve = within(menu).getByRole('menuitem', { name: /اعتماد/ });
+      expect(approve.getAttribute('aria-disabled')).toBe('true');
+      expect(approve.textContent).toContain('اعتمد أو ألغِ جزاء يوم');
+      expect(approve.textContent).toContain('نوفمبر');
+    });
+
+    it('buttons (the penalty a notification opens): Approve disabled, described by the reason', () => {
+      renderPenalties(
+        <>
+          <p id="penalty-p-1-blocked">reason</p>
+          <PenaltyActions record={waiting()} variant="buttons" />
+        </>,
+      );
+      const approve = screen.getByRole('button', { name: 'Approve' });
+      expect(approve).toHaveProperty('disabled', true);
+      expect(approve.getAttribute('aria-describedby')).toBe('penalty-p-1-blocked');
+      expect(screen.getByRole('button', { name: 'Cancel' })).toHaveProperty('disabled', false);
+    });
+
+    it('nothing waiting, or not pending: Approve is enabled as before', async () => {
+      const user = userEvent.setup();
+      renderPenalties(<PenaltyActions record={record({ earlierPending: null })} />);
+      const menu = await openRowActions(user, 'Mona Khalil');
+      expect(within(menu).getByRole('menuitem', { name: 'Approve' }).getAttribute('aria-disabled')).toBeNull();
+    });
+
+    it('the list was out of date: the server refusal names the date in the dialog', async () => {
+      const user = userEvent.setup();
+      apis.APPROVE_PENALTY.mockResolvedValue({
+        ...(failure(409, 'PENALTY_EARLIER_PENDING') as object),
+        params: { date: '2026-11-04' },
+      } as never);
+      renderPenalties(<PenaltyActions record={record()} />);
+      await chooseRowAction(user, 'Mona Khalil', 'Approve');
+      const dialog = await screen.findByRole('dialog', { name: 'Approve this penalty?' });
+      await user.click(within(dialog).getByRole('button', { name: 'Approve' }));
+      expect((await within(dialog).findByRole('alert')).textContent).toBe(
+        'Approve or cancel the 4 Nov 2026 penalty for this violation first.',
+      );
+    });
+  });
+
+  describe('backdated penalty recount (§4, owner 2026-11-20)', () => {
+    const RECOUNT = [
+      {
+        id: 'p-19',
+        date: '2026-11-19',
+        before: { level: 1, action: 'DEDUCT_DAYS' as const, days: 0.5 },
+        after: { level: 2, action: 'DEDUCT_DAYS' as const, days: 1 },
+      },
+      {
+        id: 'p-20',
+        date: '2026-11-20',
+        before: { level: 2, action: 'DEDUCT_DAYS' as const, days: 1 },
+        after: { level: 3, action: 'DEDUCT_DAYS' as const, days: 2 },
+      },
+    ];
+    const backdated = () => record({ date: '2026-11-18', level: 1, recount: RECOUNT });
+    const ACK = [
+      { id: 'p-19', level: 2, action: 'DEDUCT_DAYS', days: 1 },
+      { id: 'p-20', level: 3, action: 'DEDUCT_DAYS', days: 2 },
+    ];
+    const items = (dialog: HTMLElement) =>
+      within(within(dialog).getByTestId('penalty-recount'))
+        .getAllByRole('listitem')
+        .map((li) => li.textContent?.replace('•', '').trim());
+
+    it('the confirmation lists the changes and its button says so; the request confirms exactly that list', async () => {
+      const user = userEvent.setup();
+      apis.APPROVE_PENALTY.mockResolvedValue(ok(record({ status: 'APPROVED' })));
+      renderPenalties(<PenaltyActions record={backdated()} />);
+      await chooseRowAction(user, 'Mona Khalil', 'Approve');
+      const dialog = await screen.findByRole('dialog', { name: 'Approve this penalty?' });
+      expect(dialog.textContent).toContain('Approving this will raise the level of 2 approved penalties:');
+      expect(items(dialog)).toEqual([
+        '19 Nov 2026: level 1 → 2, Deduct 0.5 day → Deduct 1 day',
+        '20 Nov 2026: level 2 → 3, Deduct 1 day → Deduct 2 days',
+      ]);
+      expect(within(dialog).queryByRole('button', { name: 'Approve' })).toBeNull();
+      await user.click(within(dialog).getByRole('button', { name: 'Approve and update 2 penalties' }));
+      await waitFor(() => expect(router.refresh).toHaveBeenCalled());
+      expect(apis.APPROVE_PENALTY).toHaveBeenCalledWith('p-1', ACK);
+    });
+
+    it('Arabic: the same list and button', async () => {
+      const user = userEvent.setup();
+      renderPenalties(<PenaltyActions record={backdated()} />, 'ar');
+      await chooseRowAction(user, /^إجراءات منى خليل/, 'اعتماد');
+      const dialog = await screen.findByRole('dialog', { name: 'اعتماد هذا الجزاء؟' });
+      expect(dialog.textContent).toContain('اعتماد هذا الجزاء سيرفع مرة جزاءين معتمدين:');
+      expect(items(dialog)).toEqual([
+        '19 نوفمبر 2026: المرة 1 ← 2، خصم 0.5 يوم ← خصم يوم واحد',
+        '20 نوفمبر 2026: المرة 2 ← 3، خصم يوم واحد ← خصم يومين',
+      ]);
+      expect(within(dialog).getByRole('button', { name: 'اعتماد وتحديث جزاءين' })).toBeTruthy();
+    });
+
+    it('the changes changed meanwhile (409 with the fresh list): the dialog shows it and confirms it next', async () => {
+      const user = userEvent.setup();
+      const fresh = [RECOUNT[0]!];
+      apis.APPROVE_PENALTY.mockResolvedValueOnce({
+        ...(failure(409, 'PENALTY_RECOUNT_CHANGED') as object),
+        params: { count: 1 },
+        data: { recount: fresh },
+      } as never).mockResolvedValueOnce(ok(record({ status: 'APPROVED' })));
+      renderPenalties(<PenaltyActions record={backdated()} />);
+      await chooseRowAction(user, 'Mona Khalil', 'Approve');
+      const dialog = await screen.findByRole('dialog', { name: 'Approve this penalty?' });
+      await user.click(within(dialog).getByRole('button', { name: 'Approve and update 2 penalties' }));
+      expect((await within(dialog).findByRole('alert')).textContent).toBe(
+        'The list below is up to date now. Check it and confirm again.',
+      );
+      expect(items(dialog)).toEqual(['19 Nov 2026: level 1 → 2, Deduct 0.5 day → Deduct 1 day']);
+      await user.click(within(dialog).getByRole('button', { name: 'Approve and update 1 penalty' }));
+      await waitFor(() => expect(apis.APPROVE_PENALTY).toHaveBeenLastCalledWith('p-1', [ACK[0]]));
+    });
+
+    it('one of them in an approved payroll month: Approve is disabled naming the month (EN + AR)', async () => {
+      const user = userEvent.setup();
+      const locked = () => record({ recount: RECOUNT, recountLockedMonth: '2026-10' });
+      renderPenalties(<PenaltyActions record={locked()} />);
+      const menu = await openRowActions(user, 'Mona Khalil');
+      const approve = within(menu).getByRole('menuitem', { name: /Approve/ });
+      expect(approve.getAttribute('aria-disabled')).toBe('true');
+      expect(approve.textContent).toContain('an approved penalty in October 2026, whose payroll is approved');
+      cleanup();
+      renderPenalties(<PenaltyActions record={locked()} />, 'ar');
+      const arMenu = await openRowActions(user, /^إجراءات منى خليل/);
+      expect(within(arMenu).getByRole('menuitem', { name: /اعتماد/ }).textContent).toContain('أكتوبر 2026');
+    });
+  });
+
   it('PENALTY_CANCELLED on cancel is explained in the dialog', async () => {
     const user = userEvent.setup();
     apis.CANCEL_PENALTY.mockResolvedValue(failure(409, 'PENALTY_CANCELLED'));

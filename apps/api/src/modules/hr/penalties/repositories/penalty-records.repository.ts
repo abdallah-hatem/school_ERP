@@ -62,11 +62,12 @@ export interface RepeatKey {
 }
 
 /**
- * An APPROVED record as the repeat count looks at it (§4): its pair, status and place in the
- * repeat order (violation date, then when recorded, then id). Same shape as the domain's
- * `RecordedPenalty`.
+ * An APPROVED (or PENDING) record as the repeat count looks at it (§4): its pair, status and place
+ * in the repeat order (violation date, then when recorded, then id), and the level, action and days
+ * stored on it (fixed on an approved one — what a backdated approval recounts). Same shape as the
+ * domain's `ApprovedPenalty`.
  */
-export interface ApprovedCandidate extends RepeatKey {
+export interface ApprovedCandidate extends RepeatKey, LevelData {
   id: string;
   date: IsoDate;
   recordedAt: Date;
@@ -80,6 +81,9 @@ const CANDIDATE_SELECT = {
   date: true,
   createdAt: true,
   status: true,
+  level: true,
+  action: true,
+  days: true,
 } as const;
 
 const toCandidate = (
@@ -91,21 +95,64 @@ const toCandidate = (
   date: toIsoDate(r.date),
   recordedAt: r.createdAt,
   status: r.status,
+  level: r.level,
+  action: r.action,
+  days: r.days === null ? null : Number(r.days),
 });
 
-/** APPROVED records of the pairs dated `from <= date <= upTo` (same date included: §4). */
+/**
+ * Records of the pairs in `statuses` dated `from <= date <= upTo` (same date included: §4); no
+ * `upTo`: every later date too (the approved ones a backdated penalty would recount).
+ */
 const candidatesWhere = (
   keys: readonly RepeatKey[],
-  upTo: IsoDate,
+  upTo: IsoDate | undefined,
   from?: IsoDate,
+  statuses: readonly PenaltyStatus[] = [PenaltyStatus.APPROVED],
 ): Prisma.PenaltyRecordWhereInput => ({
-  status: PenaltyStatus.APPROVED,
-  date: { ...(from ? { gte: fromIsoDate(from) } : {}), lte: fromIsoDate(upTo) },
+  status: { in: [...statuses] },
+  date: {
+    ...(from ? { gte: fromIsoDate(from) } : {}),
+    ...(upTo ? { lte: fromIsoDate(upTo) } : {}),
+  },
   OR: keys.map((k) => ({ employeeId: k.employeeId, violationId: k.violationId })),
 });
 
-/** How an approval ended (`approve`). */
-export type ApproveOutcome = 'APPROVED' | 'NOT_PENDING' | 'ONCE_PER_DAY';
+/** How an approval ended (`approve`); `earlierPending`: the date of the penalty to approve first (§4). */
+export type ApproveOutcome =
+  | 'APPROVED'
+  | 'NOT_PENDING'
+  | 'ONCE_PER_DAY'
+  | { earlierPending: IsoDate };
+
+/** §4 approve in date order: the pair's earlier PENDING record that blocks the approval, or null. */
+export type EarlierPendingCheck = (pairRecords: ApprovedCandidate[]) => ApprovedCandidate | null;
+
+/** One approved record a backdated approval moves up: its level when read, and its new values. */
+export interface RecountUpdate extends LevelData {
+  id: string;
+  /** The level it had when the recount was worked out (the write checks it is unchanged). */
+  fromLevel: number;
+}
+
+/**
+ * §4 backdated penalty (owner 2026-11-20): given the pair's records (approved and pending, from the
+ * window's start, every later date included), the approved records approving this one moves up —
+ * or it throws (a locked month, a missing or stale confirmation), which rolls the approval back.
+ * Runs under the pair's lock, after the order check.
+ */
+export type RecountPlan = (pairRecords: ApprovedCandidate[]) => Promise<RecountUpdate[]>;
+
+/** The pair's approved record changed under the recount (it can't, under the lock): roll back. */
+export class RecountConflictError extends Error {
+  constructor(id: string) {
+    super(`penalty ${id} changed while it was being recounted`);
+    this.name = 'RecountConflictError';
+  }
+}
+
+/** The statuses whose records a pending row's level and order check look at. */
+const APPROVED_OR_PENDING = [PenaltyStatus.APPROVED, PenaltyStatus.PENDING] as const;
 
 /**
  * §4 once per day: given the statuses of the OTHER records of the same pair and date, whether the
@@ -259,16 +306,18 @@ export class PenaltyRecordsRepository extends BaseRepository<
   /**
    * APPROVED records of the pairs dated up to `upTo` (and from `from`, when given), same date
    * included: which of them come earlier is the domain's call (`countPriorInWindow`, §4). One
-   * query for a whole page of rows.
+   * query for a whole page of rows. `withPending`: PENDING ones too (a pending row's order check,
+   * `earlierPendingPenalty`). `upTo` undefined: later dates too (what a backdated one recounts).
    */
   async approvedCandidates(
     keys: readonly RepeatKey[],
-    upTo: IsoDate,
+    upTo: IsoDate | undefined,
     from?: IsoDate,
+    { withPending = false }: { withPending?: boolean } = {},
   ): Promise<ApprovedCandidate[]> {
     if (keys.length === 0) return [];
     const rows = await this.db.penaltyRecord.findMany({
-      where: candidatesWhere(keys, upTo, from),
+      where: candidatesWhere(keys, upTo, from, withPending ? APPROVED_OR_PENDING : undefined),
       select: CANDIDATE_SELECT,
     });
     return rows.map(toCandidate);
@@ -279,8 +328,16 @@ export class PenaltyRecordsRepository extends BaseRepository<
    * records in `window` (same date included; `resolve` decides which come earlier, §4).
    * Writes of the same employee + violation are serialised with a transaction-level advisory
    * lock, so two approvals can't both read the same records, and the once-per-day rule (`refuse`,
-   * §4) is checked again inside the same transaction. NOT_PENDING when the record was no longer
-   * PENDING; ONCE_PER_DAY when another record of that day is already approved.
+   * §4) is checked again inside the same transaction. So is the date order (`earlier`, §4): under
+   * the same lock, so of two concurrent approvals of the 19th and the 20th the 20th either sees the
+   * 19th approved (and counts it) or still pending (and is refused) — never neither. NOT_PENDING
+   * when the record was no longer PENDING; ONCE_PER_DAY when another record of that day is already
+   * approved; `{ earlierPending }` when an earlier record of the pair is still pending.
+   *
+   * §4 backdated penalty (owner 2026-11-20): `recount` gets the pair's records from the window's
+   * start on — later dates included — and returns the approved ones this approval moves up (or
+   * throws to refuse). They are written in the same transaction, under the same lock, after the
+   * approval itself (`recountedAt` set: a draft payroll run is due a Recalculate).
    */
   async approve(
     id: string,
@@ -289,17 +346,30 @@ export class PenaltyRecordsRepository extends BaseRepository<
     approvedById: string | null,
     resolve: (approved: ApprovedCandidate[]) => LevelData,
     refuse: SameDayRefusal,
+    earlier: EarlierPendingCheck,
+    recount: RecountPlan = () => Promise.resolve([]),
   ): Promise<ApproveOutcome> {
     return this.txHost.withTransaction(async () => {
       const tx = this.txHost.tx;
       await lockPair(tx, key);
+      // Still pending? Checked first, under the lock: a concurrent approval that won has already
+      // recounted, so the loser must hear "not pending", not a stale-recount or order refusal.
+      const self = await tx.penaltyRecord.findUnique({ where: { id }, select: { status: true } });
+      if (self?.status !== PenaltyStatus.PENDING) return 'NOT_PENDING';
       // `window.upTo` is the record's own date.
       if (refuse(await sameDayStatuses(tx, key, window.upTo, id))) return 'ONCE_PER_DAY';
-      const approved = await tx.penaltyRecord.findMany({
-        where: candidatesWhere([key], window.upTo, window.from),
+      // Every later date too: which come earlier is the domain's call; later approved ones are
+      // what a backdated approval recounts.
+      const rows = await tx.penaltyRecord.findMany({
+        where: { ...candidatesWhere([key], undefined, window.from, APPROVED_OR_PENDING), id: { not: id } },
         select: CANDIDATE_SELECT,
       });
-      const fixed = resolve(approved.map(toCandidate));
+      const pairRecords = rows.map(toCandidate);
+      const blocker = earlier(pairRecords);
+      if (blocker) return { earlierPending: blocker.date };
+      const fixed = resolve(pairRecords.filter((r) => r.status === PenaltyStatus.APPROVED));
+      const updates = await recount(pairRecords);
+      const now = new Date();
       const { count } = await tx.penaltyRecord.updateMany({
         where: { id, status: PenaltyStatus.PENDING },
         data: {
@@ -308,11 +378,31 @@ export class PenaltyRecordsRepository extends BaseRepository<
           days: fixed.days,
           status: PenaltyStatus.APPROVED,
           approvedById,
-          approvedAt: new Date(),
+          approvedAt: now,
         },
       });
-      return count === 1 ? 'APPROVED' : 'NOT_PENDING';
+      if (count !== 1) return 'NOT_PENDING';
+      for (const u of updates) {
+        const moved = await tx.penaltyRecord.updateMany({
+          where: { id: u.id, status: PenaltyStatus.APPROVED, level: u.fromLevel },
+          data: { level: u.level, action: u.action, days: u.days, recountedAt: now },
+        });
+        if (moved.count !== 1) throw new RecountConflictError(u.id);
+      }
+      return 'APPROVED';
     });
+  }
+
+  /**
+   * Whether a penalty dated in `month` was recounted after `since` (§4, §6): a draft run calculated
+   * before then is due a Recalculate.
+   */
+  async recountedInMonthSince(month: string, since: Date): Promise<boolean> {
+    const found = await this.db.penaltyRecord.findFirst({
+      where: { date: monthDateRange(month), recountedAt: { gt: since } },
+      select: { id: true },
+    });
+    return found !== null;
   }
 
   /** PENDING and APPROVED records dated in a month: what payroll counts and flags (§6). */
@@ -372,17 +462,29 @@ export class PenaltyRecordsRepository extends BaseRepository<
     return counts;
   }
 
-  /** Cancels a PENDING or APPROVED record. Returns false when it was already CANCELLED. */
-  async cancel(id: string, reason: string, cancelledById: string | null): Promise<boolean> {
-    const { count } = await this.db.penaltyRecord.updateMany({
-      where: { id, status: { in: [PenaltyStatus.PENDING, PenaltyStatus.APPROVED] } },
-      data: {
-        status: PenaltyStatus.CANCELLED,
-        cancelReason: reason,
-        cancelledById,
-        cancelledAt: new Date(),
-      },
+  /**
+   * Cancels a PENDING or APPROVED record. Returns false when it was already CANCELLED. `key`: under
+   * the pair's lock, so a cancel can't slip between a backdated approval's recount and its writes.
+   */
+  async cancel(
+    id: string,
+    reason: string,
+    cancelledById: string | null,
+    key?: RepeatKey,
+  ): Promise<boolean> {
+    return this.txHost.withTransaction(async () => {
+      const tx = this.txHost.tx;
+      if (key) await lockPair(tx, key);
+      const { count } = await tx.penaltyRecord.updateMany({
+        where: { id, status: { in: [PenaltyStatus.PENDING, PenaltyStatus.APPROVED] } },
+        data: {
+          status: PenaltyStatus.CANCELLED,
+          cancelReason: reason,
+          cancelledById,
+          cancelledAt: new Date(),
+        },
+      });
+      return count === 1;
     });
-    return count === 1;
   }
 }

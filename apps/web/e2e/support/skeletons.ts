@@ -167,6 +167,7 @@ export const SKELETON_SCREENS = [
   'lateness',
   'payroll',
   'payroll-run',
+  'payroll-run-history',
   'payslip',
   'payroll-taxes',
   'payroll-taxes-month',
@@ -246,6 +247,8 @@ async function readPaths(): Promise<Record<SkeletonScreenName, string | null>> {
       lateness: `/lateness?month=${previousMonth(monthOf(new Date()))}`,
       payroll: '/payroll',
       'payroll-run': `/payroll/${run.id}`,
+      // Every run has entries from its creation (T29), so the History compares its pagination too.
+      'payroll-run-history': `/payroll/${run.id}/history`,
       payslip: line ? `/payroll/${run.id}/payslip/${line.id}` : null,
       // The year of an approved month (its tiles in every state), and that month's statement (§10).
       'payroll-taxes': `/accounting/payroll-taxes?year=${(approved?.month ?? monthOf(new Date())).slice(0, 4)}`,

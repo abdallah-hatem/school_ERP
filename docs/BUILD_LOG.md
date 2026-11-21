@@ -427,34 +427,87 @@ phase live in `docs/build-log/`.
   every screen width, and no Month total card on screen ("its already at the cards at the top" — the
   four tiles carry the totals); print and Excel/PDF keep the total row. The hidden-totals note moved
   under the tiles. DataTable gained `cardsBelow="always"` and `footerCard="none"`.
+- 2026-11-20 — `demo` refreshed → #167 merged (dev → demo, merge commit `7543009`; owner: "merge it
+  for me", with the admin bypass — a one-off, `demo`/`testing`/`production` stay the owner's). `demo`
+  now equals `dev` at `625de6d`. Still the owner's before Sunday: re-run the seed (set
+  SEED_ADMIN_PASSWORD first), remove "Test User" / "Test Role AR", insure 2–3 employees, add an HR
+  officer and an Accountant login.
+- 2026-11-20 — #181 (AbdelrahmanHassib, into `demo`: CI deploy of `demo` to Vercel + Neon) — the owner
+  first confirmed he asked for it, then dropped Vercel ("never mind vercel lets remove it"): #181
+  closed unmerged, CLAUDE.md rule 6 back to no Vercel (#182/#183 reverted here). The demo runs locally.
+- 2026-11-20 — Search-field loader → #185 (owner: the cards just fade while results load; "add a
+  small loader in the searchbar"): while a list refetches (typing, a filter, a tab or a page), a
+  spinner takes the magnifier's place after ~180ms and stays ≥300ms; static under reduced motion;
+  "Loading…" announced once; dropdowns get no spinner of their own; the dim stays. On Employees,
+  Penalties, Users, Activity, Lateness and the payroll run lines; lists whose search filters loaded
+  data don't refetch, so none there. DESIGN.md allows it as the second spinner. Rule added to the
+  building-frontends skill (1.62.20). Checked in screenshots (EN desktop, AR phone).
+- 2026-11-20 — Money inputs → #189 (owner: "each money input field must be auto updated like this
+  10,000, in real time"): the Settings → Accounting example's Net pay was a hand-rolled input (from
+  #83); now the shared engine via a new `MoneyInput` (MoneyField renders through it). Sweep: also the
+  HR rules lateness example (minutes, grouped). A unit-test guard fails on any raw decimal/numeric
+  input outside the shared form components. The example box is redesigned as a receipt (owner
+  picked option A of three mockups): Net pay, + Income tax, + Martyrs' fund, Gross the school pays.
 
+- 2026-11-20 — Run History tab → #188: the payroll run page has Employees | History tabs (header stays
+  mounted); entries trimmed to what a person would write (approved: status + net; created: net +
+  employees; recalculated: only changed totals; no "Need review", no "Totals ·" prefix), Activity
+  the same. Penalties already showed on an employee's History (T29/T31) — the Next up item was stale.
+- 2026-11-20 — Notifications loading → #190 (owner: "looks so bad, like no css"): the skeleton mask
+  painted the switches' hidden native checkboxes (fixed for every SkeletonMask with switches/checkboxes);
+  a saving switch now shows a pending state (new value, dimmed track, crisp thumb, extra clicks
+  ignored) instead of looking locked or doing nothing. Before/after screenshots EN + AR.
+- 2026-11-20 — Penalties approve in date order → #192 (owner found 19 + 20 Nov both at level 2 after
+  approving 20 first; picked option 1 of 3): approving is refused (409 PENALTY_EARLIER_PENDING) while an
+  earlier pending penalty of the same violation for the employee exists within the repeat window;
+  checked under the same advisory lock as the level; Approve shows greyed with the reason; cancel
+  always allowed; approved levels never recomputed (older pairs may share a level, noted in §4).
+  CI caught 9 employees leaked by hr-approval-notifications' e2e (older bug) — cleanup fixed.
+- 2026-11-20 — Sidebar coming modules → #194 (owner picked option C of three mockups): a locked School
+  group (Students, Academics, Attendance, Exams & grades), Leave & permissions locked in HR, Fees locked
+  in Accounting, Transport and Parent portal locked; Inventory removed. Locked items are never screens or
+  links. Current (Phosphor) icons — the custom icon set is on hold (owner).
+- 2026-11-20 — Owner: backdated penalty → **recount, telling them first** (heads-up when recording, an
+  explicit "Approve and update N penalties" confirmation when approving; refused if a later one is in an
+  approved payroll month). Built in #196.
+- 2026-11-20 — Backdated penalty recount → #196 (owner: "recount but you tell them first"): approving a
+  penalty dated before approved ones of the same violation/employee moves each later one (in its
+  window) up one level with today's catalogue action; never down; capped at the last level. Heads-up
+  on the record form, "Approve and update N penalties" confirmation, server requires the acknowledged
+  list (409 UNCONFIRMED / CHANGED with the fresh list); refused naming the month if a later one is in
+  an approved payroll month. One `hr.penalty.recount` History entry per moved penalty; draft runs show
+  the recalculate notice (new `recounted_at`). CI caught a real race-order bug (losers now get
+  NOT_PENDING) and a wrong test. Screenshots EN + AR.
+- 2026-11-20 — `demo` refresh 2 → PR #198 (dev → demo, green, waits for the owner). Dry run of the
+  changed steps → #199 (`docs/demo/dry-runs/2026-11-20-b.md`, script wording): AR, EN, phone on DB
+  copies; money matched by hand (tax receipt, recounted deductions, run totals vs History vs
+  Accounting). Must fix: run History empty right after Recalculate until a reload — being fixed with
+  four later items (run empty-state text, approved-month refusal UI, Arabic count plural, recount
+  entry label).
+- 2026-11-20 — Dry-run 11-20b fixes → #201: History was stale after a write (apiFetch expired tags with
+  `revalidateTag(tag,'default')`, which serves the old copy and never tells the browser) — now
+  `updateTag` inside Server Actions (fallback `revalidateTag(tag,'max')`), so every tagged write refreshes
+  at once; smoke test recalc → History without reload. Also: run-specific empty text, approved-month
+  refusal hides the date hint and disables Save, recount labels "Penalty date"; the Arabic count was
+  already plural (test added). `demo` PR #198 now carries all of it; waits for the owner's approval.
 ## Next up
+
+- Custom icon set drawn (`design/mockups/icon-set.html`, style G monoline + solid when selected) —
+  **on hold** (owner, 2026-11-20).
 
 - Outbox nits (from #121's live test, cosmetic): the "dead after 10 failures" log line always says
   10 (after an admin retry it's 11); a dead row still gets a `next_attempt_at`. A lock held longer
   than Prisma's 15 s transaction timeout counts as one failure, then the next tick delivers it.
-- **Notifications — spec, plan and option A decided (PR #106). Events + outbox and jobs are in; N0–N5 done (#124, #127, #131, #134, #137, #156).** Spec
-  `docs/specs/2026-11-18-notifications.md`, plan `docs/plans/2026-11-18-notifications-plan.md`,
-  business §11, mockup `design/mockups/notifications.html` (option A · bell popover; B and C dropped). The
-  UI shows the in-app channel only — one switch per type; the API keeps a `channel` field (`in_app`). Owner decisions (2026-11-18): in-app bell only (channels addable later), staff users now
-  (parents later), approvals waiting + scheduled reminders, preferences per person / type / channel
-  with school defaults, some types can't be turned off. Owner answers (2026-11-18): grouped notifications, probation end per
-  employee (N0), lateness by the 25th and payroll by the 28th (settings), approvals can't be turned
-  off, retention 90 / 30 / 365 days, contract reminders at 30 and 7 days, Settings → Notifications
-  changed by the System admin and seen by the HR manager.
-
-- ~~Accounting payroll taxes screen~~ done (#138). Follow-up: the "Approved in HR" stamp has no date
+- Payroll taxes follow-up: the "Approved in HR" stamp has no date
   (accounting doesn't store HR's approval time). The long phone statement is paged now (#146).
-- (was) **Accounting payroll taxes screen** — a page per approved month (net, insurance share, income tax,
-  fund, gross per employee) and a sidebar entry: **mockups first** (CLAUDE.md rule 9). The API
-  (`GET /accounting/payroll[/:month]`) is built. Tax defaults are GUESS until the accountant confirms.
 - Accounting settings, from the #84 review (optional): `AccountingSettingsService.update()` now
   reads inside the write's transaction, but two simultaneous saves can still overwrite each other
   (needs a row lock or a version check); the settings e2e checks the audit entry exists but not its
   before/after values.
-- **Before Sunday (owner):** on the demo DB run `prisma migrate deploy`, then `db:seed` once with the
-  same `SEED_ADMIN_PASSWORD`. Activity in the demo: settings, sign-ins, employees and HR rules are recorded; penalties, lateness
-  and payroll only once T29 lands.
+- **Before Sunday (owner):** on the demo DB re-run the seed (set `SEED_ADMIN_PASSWORD` in
+  `apps/api/.env` to the current admin password first — the reseed resets it); deactivate "Test User",
+  delete "Test Role AR"; insure 2–3 employees; add an HR officer and an Accountant login. `demo` was
+  refreshed at `625de6d` (#167); #185 (search loader) came after — refresh again if wanted.
 - Payroll runs could keep a snapshot of the rules they were calculated with (**Tamer**, told 2026-11-18); today
   an approved run shows current rules.
 - Dry-run follow-ups (2026-11-18): the eight polish items are fixed in #99. Still open: Activity
@@ -466,8 +519,8 @@ phase live in `docs/build-log/`.
 - Sign-in limit numbers (5 wrong passwords / 15-minute window / 15-minute lock) are core settings with
   no screen yet; add them to Settings → School if a school wants to change them.
 
-- Hosting the demo on the Contabo server (owner: later; local demo is the fallback).
-- Audit log T28 (#107), T29 + T31 (#126) done. Optional CI ratchet that forbids touching an unwired endpoint (owner: docs only for now). Follow-ups from T30 still open: penalties don't appear on the employee's History (T29); the payroll
-  run page has no History tab yet.
+- Hosting the demo on the Contabo server (owner: later; the demo runs locally — Vercel was
+  considered and dropped, 2026-11-20).
+- Audit log T28 (#107), T29 + T31 (#126) done; the T30 History follow-ups are done (#188). Optional CI ratchet that forbids touching an unwired endpoint (owner: docs only for now).
 
 - Optional: server-side paging for lateness (loads the whole month today) and column sorting.

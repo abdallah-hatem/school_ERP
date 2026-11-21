@@ -2,6 +2,7 @@ import {
   EmployeeStatus,
   PAGINATION,
   PayrollStatus,
+  PenaltyStatus,
   type EmployeeSummary,
   type IsoDate,
   type PayrollRunSummary,
@@ -47,9 +48,16 @@ export async function recordOpenPenalty(api: Api): Promise<PenaltyRecord> {
   const violations = groups.filter((g) => g.isActive).flatMap((g) => g.violations.filter((v) => v.isActive));
   // A violation that may repeat in a day first.
   violations.sort((a, b) => Number(a.oncePerDay) - Number(b.oncePerDay));
+  // §4 approve in date order: a pair that already has a pending penalty would refuse approving it.
+  const pending = await api.get<PenaltyRecord[]>('/hr/penalties', {
+    status: PenaltyStatus.PENDING,
+    limit: PAGINATION.maxLimit,
+  });
+  const waiting = new Set(pending.map((p) => `${p.employee.id}|${p.violation.id}`));
   let last: unknown;
   for (const violation of violations) {
     for (const employee of employees) {
+      if (waiting.has(`${employee.id}|${violation.id}`)) continue;
       try {
         return await api.post<PenaltyRecord>('/hr/penalties', {
           employeeId: employee.id,

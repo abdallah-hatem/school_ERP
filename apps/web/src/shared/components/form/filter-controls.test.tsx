@@ -1,12 +1,18 @@
 // @vitest-environment jsdom
 import '@/test/dom-polyfills';
-import { cleanup, screen } from '@testing-library/react';
+import { act, cleanup, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderWithI18n } from '@/test/render';
 import { Pagination } from '../data-table/pagination';
-import { ClearFilters, FilterSelect } from './filter-controls';
+import {
+  ClearFilters,
+  FilterSelect,
+  SEARCH_LOADING_DELAY_MS,
+  SEARCH_LOADING_MIN_MS,
+  SearchInput,
+} from './filter-controls';
 
 const OPTIONS = [
   { value: 'd1', label: 'Science' },
@@ -84,5 +90,92 @@ describe('ClearFilters', () => {
     renderWithI18n(<ClearFilters count={1} onClear={onClear} disabled />);
     await userEvent.click(screen.getByRole('button', { name: 'Clear filters · 1' }));
     expect(onClear).not.toHaveBeenCalled();
+  });
+});
+
+describe('SearchInput while its list refetches', () => {
+  afterEach(() => vi.useRealTimers());
+
+  function search(loading: boolean) {
+    return <SearchInput aria-label="Search employees" placeholder="Name or code" loading={loading} />;
+  }
+  const spinner = () => screen.queryByTestId('search-spinner');
+  const icon = () => screen.queryByTestId('search-icon');
+  function advance(ms: number) {
+    act(() => {
+      vi.advanceTimersByTime(ms);
+    });
+  }
+
+  it('shows the magnifier when not loading', () => {
+    renderWithI18n(search(false));
+    expect(icon()).toBeTruthy();
+    expect(spinner()).toBeNull();
+    expect(screen.getByRole('status').textContent).toBe('');
+  });
+
+  it('swaps the magnifier for a spinner in the same spot, only after the delay', () => {
+    vi.useFakeTimers();
+    renderWithI18n(search(true));
+    // An instant result never flashes it.
+    expect(spinner()).toBeNull();
+    advance(SEARCH_LOADING_DELAY_MS - 1);
+    expect(spinner()).toBeNull();
+    advance(1);
+    const shown = spinner();
+    expect(shown).toBeTruthy();
+    expect(icon()).toBeNull();
+    // The magnifier's size and logical-start spot: no layout shift, mirrored in Arabic.
+    for (const cls of ['absolute', 'start-3.5', 'size-5']) expect(shown?.getAttribute('class')).toContain(cls);
+    expect(shown?.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('a refetch that ends before the delay shows nothing', () => {
+    vi.useFakeTimers();
+    const { rerender } = renderWithI18n(search(true));
+    advance(100);
+    rerender(search(false));
+    advance(1000);
+    expect(spinner()).toBeNull();
+    expect(icon()).toBeTruthy();
+  });
+
+  it('once shown, stays at least the minimum time, then the magnifier returns', () => {
+    vi.useFakeTimers();
+    const { rerender } = renderWithI18n(search(true));
+    advance(SEARCH_LOADING_DELAY_MS);
+    expect(spinner()).toBeTruthy();
+    rerender(search(false));
+    advance(SEARCH_LOADING_MIN_MS - 1);
+    expect(spinner()).toBeTruthy();
+    advance(1);
+    expect(spinner()).toBeNull();
+    expect(icon()).toBeTruthy();
+  });
+
+  it('spins only when motion is allowed (stands still under reduced motion)', () => {
+    vi.useFakeTimers();
+    renderWithI18n(search(true));
+    advance(SEARCH_LOADING_DELAY_MS);
+    const classes = (spinner()?.getAttribute('class') ?? '').split(/\s+/);
+    expect(classes).toContain('motion-safe:animate-spin');
+    expect(classes).not.toContain('animate-spin');
+  });
+
+  it('announces "Loading…" once per refetch, in both languages, not per keystroke', () => {
+    vi.useFakeTimers();
+    const { rerender } = renderWithI18n(search(true));
+    advance(SEARCH_LOADING_DELAY_MS);
+    expect(screen.getAllByRole('status')).toHaveLength(1);
+    expect(screen.getByRole('status').textContent).toBe('Loading…');
+    // More typing while the same refetch is pending leaves the one announcement as it is.
+    rerender(search(true));
+    advance(500);
+    expect(screen.getAllByRole('status')).toHaveLength(1);
+    expect(screen.getByRole('status').textContent).toBe('Loading…');
+    cleanup();
+    renderWithI18n(search(true), { locale: 'ar' });
+    advance(SEARCH_LOADING_DELAY_MS);
+    expect(screen.getByRole('status').textContent).toBe('جارٍ التحميل…');
   });
 });

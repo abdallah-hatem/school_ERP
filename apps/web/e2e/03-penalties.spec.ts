@@ -53,9 +53,14 @@ async function findTarget(api: Api, today: string): Promise<Target> {
   const approved = await all<PenaltyRecord>(api, '/hr/penalties', {
     status: PenaltyStatus.APPROVED,
   });
-  const seen = new Set<string>();
+  // §4 approve in date order: a pair with a pending penalty would refuse approving today's one.
+  const pending = await all<PenaltyRecord>(api, '/hr/penalties', {
+    status: PenaltyStatus.PENDING,
+  });
+  const keyOf = (p: PenaltyRecord) => `${p.employee.id}|${p.violation.id}`;
+  const seen = new Set<string>(pending.map(keyOf));
   for (const p of approved) {
-    const key = `${p.employee.id}|${p.violation.id}`;
+    const key = keyOf(p);
     const employee = activeEmployees.get(p.employee.id);
     const violation = usableViolations.get(p.violation.id);
     if (seen.has(key) || !employee || !violation) continue;
@@ -75,7 +80,7 @@ async function findTarget(api: Api, today: string): Promise<Target> {
   const violation = violations.find(
     (v) => !v.oncePerDay && deducts(v.levels.find((l) => l.level === 2) ?? { days: null }),
   );
-  const penalised = new Set(approved.map((p) => p.employee.id));
+  const penalised = new Set([...approved, ...pending].map((p) => p.employee.id));
   const employee = employees.find((e) => !penalised.has(e.id));
   if (!violation || !employee) throw new Error('smoke: no violation with a level-2 day deduction to use');
   const prior = await api.post<PenaltyRecord>('/hr/penalties', {

@@ -76,6 +76,23 @@ export const ErrorCode = {
   PENALTY_CANCELLED: 'PENALTY_CANCELLED',
   /** §4: a once-per-day violation already has a pending or approved penalty that day. */
   VIOLATION_ONCE_PER_DAY: 'VIOLATION_ONCE_PER_DAY',
+  /**
+   * §4 (owner 2026-11-20): an earlier penalty of the same violation and employee is still pending,
+   * so this one can't be approved yet (approve in date order). `params.date`: the earlier one's date.
+   */
+  PENALTY_EARLIER_PENDING: 'PENALTY_EARLIER_PENDING',
+  /**
+   * §4 backdated penalty (owner 2026-11-20): approving it would move up approved penalties, and the
+   * request didn't confirm that (`acknowledgedRecount`). `params.count`; `data.recount`: the list.
+   */
+  PENALTY_RECOUNT_UNCONFIRMED: 'PENALTY_RECOUNT_UNCONFIRMED',
+  /** The confirmed recount differs from what approving does now. `params.count`; `data.recount`. */
+  PENALTY_RECOUNT_CHANGED: 'PENALTY_RECOUNT_CHANGED',
+  /**
+   * A penalty it would move up sits in a month whose payroll is approved: recording (and approving)
+   * the backdated penalty is refused. `params.month` (`YYYY-MM`).
+   */
+  PENALTY_RECOUNT_MONTH_LOCKED: 'PENALTY_RECOUNT_MONTH_LOCKED',
 
   // payroll
   PAYROLL_APPROVED: 'PAYROLL_APPROVED',

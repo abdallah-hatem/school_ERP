@@ -1,7 +1,11 @@
 import {
   countPriorInWindow,
+  earlierPendingPenalty,
   isEarlierPenalty,
   penaltyLevel,
+  recountAcknowledged,
+  recountAfterApproval,
+  recountLockedMonth,
   repetitionWindowStart,
   resolvePenalty,
   type CatalogueLevel,
@@ -169,6 +173,83 @@ describe('isEarlierPenalty (the repeat order)', () => {
   });
 });
 
+describe('earlierPendingPenalty (§4 DECIDED 2026-11-20: approve in date order)', () => {
+  const pending = (id: string, date: string, time = '08:00', over: Partial<RecordedPenalty> = {}) =>
+    rec(id, date, time, { status: 'PENDING', ...over });
+  const w = 'CONTRACT_YEAR' as const;
+
+  it("the owner's scenario: 18 approved, 19 + 20 pending → 20 waits for 19; 19 can go", () => {
+    const d18 = rec('a18', '2026-11-18');
+    const d19 = pending('a19', '2026-11-19');
+    const d20 = pending('a20', '2026-11-20');
+    const all = [d18, d19, d20];
+    expect(earlierPendingPenalty(d20, w, all)).toBe(d19);
+    expect(earlierPendingPenalty(d19, w, all)).toBeNull();
+    // Once 19 is approved, 20 is free — and its level counts 18 and 19.
+    const after = [d18, { ...d19, status: 'APPROVED' as const }, d20];
+    expect(earlierPendingPenalty(d20, w, after)).toBeNull();
+    expect(penaltyLevel(countPriorInWindow(d20, w, after), levels5)).toBe(3);
+  });
+
+  it('refuses for an earlier date pending', () => {
+    const target = pending('t', '2026-11-20');
+    expect(earlierPendingPenalty(target, w, [pending('e', '2026-11-02'), target])?.id).toBe('e');
+  });
+
+  it('refuses for a same-date penalty recorded earlier (then by id at the same instant)', () => {
+    const target = pending('m', '2026-11-20', '09:00');
+    expect(earlierPendingPenalty(target, w, [pending('z', '2026-11-20', '08:59')])?.id).toBe('z');
+    expect(earlierPendingPenalty(target, w, [pending('a', '2026-11-20', '09:00')])?.id).toBe('a');
+  });
+
+  it('a same-date penalty recorded later does not block the earlier one', () => {
+    const target = pending('m', '2026-11-20', '09:00');
+    expect(earlierPendingPenalty(target, w, [pending('x', '2026-11-20', '09:01')])).toBeNull();
+    expect(earlierPendingPenalty(target, w, [pending('z', '2026-11-20', '09:00')])).toBeNull();
+  });
+
+  it('a later date never blocks', () => {
+    expect(earlierPendingPenalty(pending('t', '2026-11-19'), w, [pending('l', '2026-11-20')])).toBeNull();
+  });
+
+  it('an earlier approved or cancelled penalty does not block', () => {
+    const target = pending('t', '2026-11-20');
+    expect(earlierPendingPenalty(target, w, [rec('a', '2026-11-19')])).toBeNull();
+    expect(earlierPendingPenalty(target, w, [rec('c', '2026-11-19', '08:00', { status: 'CANCELLED' })])).toBeNull();
+  });
+
+  it('other violations and other employees do not block', () => {
+    const target = pending('t', '2026-11-20');
+    expect(
+      earlierPendingPenalty(target, w, [
+        pending('v', '2026-11-19', '08:00', { violationId: 'absent' }),
+        pending('e', '2026-11-19', '08:00', { employeeId: 'e2' }),
+      ]),
+    ).toBeNull();
+  });
+
+  it('the penalty itself never blocks', () => {
+    const target = pending('t', '2026-11-20');
+    expect(earlierPendingPenalty(target, w, [target])).toBeNull();
+  });
+
+  it('names the earliest of several earlier pending ones', () => {
+    const target = pending('t', '2026-11-20');
+    const records = [pending('b', '2026-11-19'), pending('a', '2026-11-18', '10:00'), pending('c', '2026-11-18', '11:00')];
+    expect(earlierPendingPenalty(target, w, records)?.id).toBe('a');
+  });
+
+  it('a pending penalty before the repetition window does not block (it would not count either)', () => {
+    const target = pending('t', '2026-06-01');
+    expect(earlierPendingPenalty(target, w, [pending('may', '2026-05-31')])).toBeNull();
+    expect(earlierPendingPenalty(target, 'ROLLING_12_MONTHS', [pending('may', '2026-05-31')])?.id).toBe('may');
+  });
+
+  it('a not-yet-recorded penalty is after every one on its date', () => {
+    expect(earlierPendingPenalty(unrecorded('2026-11-20'), w, [pending('z', '2026-11-20', '23:59')])?.id).toBe('z');
+  });
+});
+
 describe('resolvePenalty', () => {
   it('copies the level’s action and days', () => {
     expect(resolvePenalty(0, levels5)).toEqual({ level: 1, action: 'NOTICE', days: null });
@@ -176,5 +257,166 @@ describe('resolvePenalty', () => {
   });
   it('"doubles on repeat": level 5 with 7 prior → level-5 days, not doubled', () => {
     expect(resolvePenalty(7, levels5)).toEqual({ level: 5, action: 'DEDUCT_DAYS', days: 5 });
+  });
+});
+
+describe('recountAfterApproval (§4 DECIDED 2026-11-20: a backdated penalty recounts the later approved ones)', () => {
+  const w = 'CONTRACT_YEAR' as const;
+  /** An APPROVED record of PAIR with its fixed level (the action and days of that level in levels5). */
+  const fixed = (id: string, date: string, level: number, over: Partial<RecordedPenalty> = {}, time = '08:00') => {
+    const entry = levels5.find((l) => l.level === level)!;
+    return { ...rec(id, date, time, over), level, action: entry.action, days: entry.days };
+  };
+  /** The recorded backdated penalty: recorded after the others (on 21 Nov). */
+  const backdated = (date: string): PenaltyTarget => ({
+    ...PAIR,
+    id: 'new',
+    date,
+    recordedAt: new Date('2026-11-21T10:00:00Z'),
+  });
+  const summary = (changes: ReturnType<typeof recountAfterApproval>) =>
+    changes.map((c) => `${c.record.id}:${c.before.level}→${c.after.level}`);
+
+  it("the owner's case: 19 Nov L1 and 20 Nov L2 approved; approving 18 Nov moves them to L2 and L3, with the new levels' action and days", () => {
+    const records = [fixed('d20', '2026-11-20', 2), fixed('d19', '2026-11-19', 1)];
+    expect(recountAfterApproval(backdated('2026-11-18'), w, records, levels5)).toEqual([
+      {
+        record: expect.objectContaining({ id: 'd19' }),
+        before: { level: 1, action: 'NOTICE', days: null },
+        after: { level: 2, action: 'WARNING', days: null },
+      },
+      {
+        record: expect.objectContaining({ id: 'd20' }),
+        before: { level: 2, action: 'WARNING', days: null },
+        after: { level: 3, action: 'DEDUCT_DAYS', days: 1 },
+      },
+    ]);
+    // The 18th itself gets level 1 (nothing approved before it): 18/19/20 → 1/2/3.
+    expect(countPriorInWindow(backdated('2026-11-18'), w, records)).toBe(0);
+  });
+
+  it('the same answer before it is recorded (preview / recording): later dates move', () => {
+    const records = [fixed('d19', '2026-11-19', 1), fixed('d20', '2026-11-20', 2)];
+    expect(summary(recountAfterApproval(unrecorded('2026-11-18'), w, records, levels5))).toEqual(['d19:1→2', 'd20:2→3']);
+  });
+
+  it('pending and cancelled ones are never changed; approved ones around them still move', () => {
+    const records = [
+      fixed('d19', '2026-11-19', 1),
+      fixed('p20', '2026-11-20', 2, { status: 'PENDING' }),
+      fixed('c21', '2026-11-21', 2, { status: 'CANCELLED' }),
+      fixed('d22', '2026-11-22', 2),
+    ];
+    expect(summary(recountAfterApproval(backdated('2026-11-18'), w, records, levels5))).toEqual(['d19:1→2', 'd22:2→3']);
+  });
+
+  it('a gap left by a cancellation stays: each later one moves up exactly one level', () => {
+    // 19 L1, 20 L2 approved; 19 cancelled (20 keeps L2, §4); then 18 approved → 20 becomes L3.
+    const records = [fixed('d19', '2026-11-19', 1, { status: 'CANCELLED' }), fixed('d20', '2026-11-20', 2)];
+    expect(summary(recountAfterApproval(backdated('2026-11-18'), w, records, levels5))).toEqual(['d20:2→3']);
+  });
+
+  it('earlier ones, other violations and other employees are untouched', () => {
+    const records = [
+      fixed('d10', '2026-11-10', 1),
+      fixed('otherV', '2026-11-20', 1, { violationId: 'other' }),
+      fixed('otherE', '2026-11-20', 1, { employeeId: 'e2' }),
+      fixed('d20', '2026-11-20', 2),
+    ];
+    expect(summary(recountAfterApproval(backdated('2026-11-18'), w, records, levels5))).toEqual(['d20:2→3']);
+  });
+
+  it('outside the window untouched: 31 May does not move 1 June (contract year); rolling 12 months it does', () => {
+    const records = [fixed('jun', '2026-06-01', 1)];
+    expect(recountAfterApproval(backdated('2026-05-31'), w, records, levels5)).toEqual([]);
+    expect(summary(recountAfterApproval(backdated('2026-05-31'), 'ROLLING_12_MONTHS', records, levels5))).toEqual(['jun:1→2']);
+    // Rolling: more than a year earlier is outside that one's window.
+    expect(recountAfterApproval(backdated('2025-05-31'), 'ROLLING_12_MONTHS', records, levels5)).toEqual([]);
+  });
+
+  it('no later approved penalty → nothing', () => {
+    expect(recountAfterApproval(backdated('2026-11-18'), w, [], levels5)).toEqual([]);
+    expect(recountAfterApproval(backdated('2026-11-18'), w, [fixed('d10', '2026-11-10', 1)], levels5)).toEqual([]);
+  });
+
+  it('same date: one recorded before the target is not moved (it stays earlier); one recorded after it is', () => {
+    const records = [
+      fixed('before', '2026-11-18', 1, {}, '2026-11-18T07:00:00Z'),
+      fixed('after', '2026-11-18', 2, {}, '2026-11-22T07:00:00Z'),
+    ];
+    expect(summary(recountAfterApproval(backdated('2026-11-18'), w, records, levels5))).toEqual(['after:2→3']);
+    // Not recorded yet: every same-date one comes before it, so none moves.
+    expect(recountAfterApproval(unrecorded('2026-11-18'), w, records, levels5)).toEqual([]);
+  });
+
+  it('the target itself never moves', () => {
+    expect(recountAfterApproval(backdated('2026-11-18'), w, [fixed('new', '2026-11-18', 1)], levels5)).toEqual([]);
+  });
+
+  it('capped at the last level: a level-5 one stays and is not listed; one above today’s last level never goes down', () => {
+    const records = [fixed('l4', '2026-11-19', 4), fixed('l5', '2026-11-20', 5)];
+    expect(summary(recountAfterApproval(backdated('2026-11-18'), w, records, levels5))).toEqual(['l4:4→5']);
+    expect(recountAfterApproval(backdated('2026-11-18'), w, [fixed('l3', '2026-11-19', 3)], levels5.slice(0, 2))).toEqual([]);
+  });
+
+  it('action and days come from the catalogue given (today’s), not the stored ones', () => {
+    const edited = levels5.map((l) => (l.level === 2 ? { ...l, action: 'DEDUCT_DAYS' as const, days: 0.5 } : l));
+    const [change] = recountAfterApproval(backdated('2026-11-18'), w, [fixed('d19', '2026-11-19', 1)], edited);
+    expect(change?.after).toEqual({ level: 2, action: 'DEDUCT_DAYS', days: 0.5 });
+  });
+});
+
+describe('recountLockedMonth (§4: an approved month cannot be recounted)', () => {
+  const change = (id: string, date: string) => ({
+    record: { ...rec(id, date), level: 1, action: 'NOTICE' as const, days: null },
+    before: { level: 1, action: 'NOTICE' as const, days: null },
+    after: { level: 2, action: 'WARNING' as const, days: null },
+  });
+
+  it('names the earliest locked month among the changes', () => {
+    const changes = [change('a', '2026-11-20'), change('b', '2026-10-05'), change('c', '2026-12-01')];
+    expect(recountLockedMonth(changes, new Set(['2026-11', '2026-10']))).toBe('2026-10');
+    expect(recountLockedMonth(changes, new Set(['2026-12']))).toBe('2026-12');
+  });
+
+  it('none locked, or nothing changes → null', () => {
+    expect(recountLockedMonth([change('a', '2026-11-20')], new Set(['2026-09']))).toBeNull();
+    expect(recountLockedMonth([], new Set(['2026-11']))).toBeNull();
+  });
+});
+
+describe('recountAcknowledged (§4: the approval names what it changes)', () => {
+  const change = (id: string, level: number, days: number | null = null) => ({
+    record: { ...rec(id, '2026-11-20'), level: level - 1, action: 'NOTICE' as const, days: null },
+    before: { level: level - 1, action: 'NOTICE' as const, days: null },
+    after: { level, action: days ? ('DEDUCT_DAYS' as const) : ('WARNING' as const), days },
+  });
+  const ack = (id: string, level: number, days: number | null = null) => ({
+    id,
+    level,
+    action: days ? ('DEDUCT_DAYS' as const) : ('WARNING' as const),
+    days,
+  });
+
+  it('nothing changes: no confirmation needed, an empty one matches too', () => {
+    expect(recountAcknowledged([], undefined)).toBe(true);
+    expect(recountAcknowledged([], [])).toBe(true);
+  });
+
+  it('changes need the confirmation: missing → false; the same list in any order → true', () => {
+    const changes = [change('a', 2), change('b', 3, 1)];
+    expect(recountAcknowledged(changes, undefined)).toBe(false);
+    expect(recountAcknowledged(changes, [ack('b', 3, 1), ack('a', 2)])).toBe(true);
+  });
+
+  it('a stale confirmation → false: a missing or extra penalty, another level, action or days, a duplicate', () => {
+    const changes = [change('a', 2), change('b', 3, 1)];
+    expect(recountAcknowledged(changes, [ack('a', 2)])).toBe(false);
+    expect(recountAcknowledged(changes, [ack('a', 2), ack('b', 3, 1), ack('c', 2)])).toBe(false);
+    expect(recountAcknowledged(changes, [ack('a', 3), ack('b', 3, 1)])).toBe(false);
+    expect(recountAcknowledged(changes, [ack('a', 2), ack('b', 3, 2)])).toBe(false);
+    expect(recountAcknowledged(changes, [ack('a', 2), { ...ack('b', 3, 1), action: 'INVESTIGATION' as const }])).toBe(false);
+    expect(recountAcknowledged(changes, [ack('a', 2), ack('a', 2)])).toBe(false);
+    expect(recountAcknowledged([], [ack('a', 2)])).toBe(false);
   });
 });

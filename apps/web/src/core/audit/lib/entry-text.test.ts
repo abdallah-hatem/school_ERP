@@ -74,6 +74,28 @@ describe('changeRows: an insurance edit', () => {
   });
 });
 
+describe('changeRows: a backdated approval’s recount entry', () => {
+  // `hr.penalty.recount` (penalty-records.service): which penalty moved, its level / days, and the
+  // penalty whose approval moved it. The first label names a field, like the record's own "Date",
+  // never a dangling "Penalty of" (dry run 2026-11-20 b).
+  const changes = [
+    { field: 'penaltyDate', before: null, after: '2026-11-16' },
+    { field: 'level', before: 3, after: 4 },
+    { field: 'days', before: 1, after: 2 },
+    { field: 'recountedAfter', before: null, after: '2026-11-05' },
+  ];
+
+  it.each([
+    ['en', ['Penalty date', 'Occurrence', 'Days', 'Raised by approving the penalty dated']],
+    ['ar', ['تاريخ الجزاء', 'المرة', 'الأيام', 'ارتفعت مرته باعتماد جزاء بتاريخ']],
+  ] as const)('%s: labels read as fields, never "Penalty of"', (locale, labels) => {
+    const d = deps(locale);
+    const rows = changeRows(changes, d.t, d.has, locale, 'penalty', 'hr.penalty.recount');
+    expect(rows.map((r) => r.label)).toEqual(labels);
+    expect(rows.map((r) => r.label).join(' ')).not.toMatch(/Penalty of|جزاء يوم/);
+  });
+});
+
 describe('stored files read in words, never their file names', () => {
   const PHOTO = '/files/employee-photos/37af9816-ca92-4608-89d2-be9666bc1289.jpg';
   const NEW_PHOTO = '/files/employee-photos/70df5c73-e190-4881-aa0b-188ba94c1e6a.jpg';

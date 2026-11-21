@@ -102,6 +102,7 @@ export function run(overrides: Partial<PayrollRun> = {}): PayrollRun {
     pendingPenalties: lines.filter((l) => l.flags.includes('PENDING_PENALTIES')).length,
     calculatedAt: '2026-11-18T08:00:00.000Z',
     rulesChanged: false,
+    penaltiesRecounted: false,
     rules: SETTINGS,
     ...overrides,
     lines,
