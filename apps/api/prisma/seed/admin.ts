@@ -1,6 +1,7 @@
 import type { PrismaClient } from '@prisma/client';
 import { SEED_ADMIN_EMAIL, SEED_ADMIN_ROLES, SYSTEM_ADMIN_ROLE } from '@school-erp/shared';
 import { hashPassword, normalizeEmail } from '../../src/common/utils/password.util';
+import { STAGE_HEADS } from './data/november';
 
 /** Shortest password the seed accepts for the HR admin. */
 const MIN_PASSWORD_LENGTH = 12;
@@ -44,4 +45,43 @@ export async function seedAdmin(prisma: PrismaClient): Promise<void> {
     skipDuplicates: true,
   });
   console.log(`seed: HR admin ready (${email})`);
+}
+
+/**
+ * The demo stage heads (§4 two steps, owner 2026-11-21): one account per `STAGE_HEADS` entry,
+ * linked to that employee ("Who is this person in HR?"), with the Stage head role and the admin's
+ * password. Returns each of their stages' ids → the head's user id (the seed reviews as them). A
+ * deleted Stage head role stays deleted: the accounts are made without it.
+ */
+export async function seedStageHeads(
+  prisma: PrismaClient,
+  employeeIds: Map<number, string>,
+): Promise<Map<string, string>> {
+  const passwordHash = await hashPassword(process.env.SEED_ADMIN_PASSWORD!);
+  const role = await prisma.role.findUnique({ where: { key: 'stage_head' }, select: { id: true } });
+  const out = new Map<string, string>();
+  for (const head of STAGE_HEADS) {
+    const employeeId = employeeIds.get(head.employee)!;
+    const email = normalizeEmail(head.email);
+    const user = await prisma.user.upsert({
+      where: { email },
+      create: { email, passwordHash, name: head.name, employeeId },
+      update: { passwordHash, isActive: true, mustChangePassword: false },
+      select: { id: true },
+    });
+    if (role) {
+      await prisma.userRoleAssignment.createMany({
+        data: [{ userId: user.id, roleId: role.id }],
+        skipDuplicates: true,
+      });
+    }
+    const employee = await prisma.employee.findUnique({
+      where: { id: employeeId },
+      select: { stageId: true, otherStages: { select: { stageId: true } } },
+    });
+    for (const stageId of [employee!.stageId, ...employee!.otherStages.map((st) => st.stageId)]) {
+      out.set(stageId, user.id);
+    }
+  }
+  return out;
 }

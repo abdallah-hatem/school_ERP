@@ -37,6 +37,13 @@ export interface NotifyInput {
   dedupeKey: string;
   /** Who caused it: left out of the recipients (GUESS). Null or absent for a reminder. */
   actorId?: string | null;
+  /**
+   * Only these people (still among the type's permission holders whose scope covers the subject):
+   * an item meant for one person — the recorder of a rejected penalty (§4, owner 2026-11-21).
+   */
+  onlyUserIds?: readonly string[];
+  /** Never these people — e.g. the penalised employee is not told their own penalty waits for them. */
+  excludeUserIds?: readonly string[];
   /** Items of one key join one notification while it is unread (N17). Default: today, school time. */
   groupKey?: string;
   /** For tests: the moment it happens. */
@@ -104,7 +111,11 @@ export class NotificationsService {
     const groupKey = input.groupKey ?? schoolDayOf(now);
     const actorId = input.actorId ?? null;
 
-    const userIds = await this.access.recipientsFor(type.permission, input.subject, actorId);
+    const userIds = (await this.access.recipientsFor(type.permission, input.subject, actorId)).filter(
+      (id) =>
+        (input.onlyUserIds === undefined || input.onlyUserIds.includes(id)) &&
+        !(input.excludeUserIds ?? []).includes(id),
+    );
     if (userIds.length === 0) return { created: 0 };
     const deliveries = await this.deliveriesFor(input.type, userIds);
 

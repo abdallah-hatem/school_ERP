@@ -26,6 +26,24 @@ export {
   type RecountChange,
 } from './penalties';
 export {
+  actsOnOwnPenalty,
+  decisionFrom,
+  firstStep,
+  migratedPenaltyStatus,
+  optionalNote,
+  penaltyStage,
+  penaltyTransition,
+  PENALTY_TEXT_MAX,
+  rejectionReason,
+  rejectionStep,
+  type FirstStepFacts,
+  type PenaltyDecision,
+  type PenaltyTransition,
+  type PenaltyTransitionRefusal,
+  type StageChoiceRefusal,
+  type TransitionFacts,
+} from './penalty-flow';
+export {
   deductionAmount,
   displayDayValue,
   lineNet,

@@ -261,7 +261,7 @@ describe('Seed (e2e)', () => {
     expect(recalculated.adjustments).toHaveLength(ADJUSTMENTS.length);
 
     const pendingIds = new Set(
-      (await db.penaltyRecord.findMany({ where: { status: 'PENDING' } })).map((p) => p.employeeId),
+      (await db.penaltyRecord.findMany({ where: { status: { in: ['PENDING_REVIEW', 'WAITING_HR'] } } })).map((p) => p.employeeId),
     );
     expect(pendingIds.size).toBeGreaterThan(0);
     for (const l of lines) {

@@ -19,7 +19,7 @@ import { PayrollService, totalsMoneyVisible } from './payroll.service';
  * salary scope covers it all.
  */
 
-const PRIMARY: EmployeeScope = { kind: 'stage', stageId: 'primary' };
+const PRIMARY: EmployeeScope = { kind: 'stage', stageIds: ['primary'] };
 
 const line = (employeeId: string): LineRow => ({
   id: `l-${employeeId}`,
@@ -234,9 +234,9 @@ describe('payroll — scopes (R5)', () => {
   it('a scoped payroll viewer gets only their employees’ lines, adjustments and totals', async () => {
     const { service, repository } = makeService({ 'hr.payroll.view': PRIMARY });
     await service.get('r1');
-    expect(repository.findLinesPage).toHaveBeenCalledWith('r1', { search: undefined, departmentId: undefined, flagged: undefined }, { stageId: 'primary' }, undefined, undefined);
-    expect(repository.findAdjustments).toHaveBeenCalledWith('r1', undefined, { stageId: 'primary' });
-    expect(repository.totalsFor).toHaveBeenCalledWith(['r1'], { stageId: 'primary' });
+    expect(repository.findLinesPage).toHaveBeenCalledWith('r1', { search: undefined, departmentId: undefined, flagged: undefined }, { OR: [{ stageId: { in: ['primary'] } }, { otherStages: { some: { stageId: { in: ['primary'] } } } }] }, undefined, undefined);
+    expect(repository.findAdjustments).toHaveBeenCalledWith('r1', undefined, { OR: [{ stageId: { in: ['primary'] } }, { otherStages: { some: { stageId: { in: ['primary'] } } } }] });
+    expect(repository.totalsFor).toHaveBeenCalledWith(['r1'], { OR: [{ stageId: { in: ['primary'] } }, { otherStages: { some: { stageId: { in: ['primary'] } } } }] });
   });
 
   it('a scoped viewer’s totals hide money unless their salary scope covers it', async () => {
@@ -252,7 +252,7 @@ describe('payroll — scopes (R5)', () => {
     const { service, repository } = makeService({ 'hr.payroll.view': PRIMARY });
     repository.findLine.mockResolvedValueOnce(null);
     await expect(service.payslip('r1', 'l-e9')).rejects.toMatchObject({ status: 404 });
-    expect(repository.findLine).toHaveBeenCalledWith('r1', 'l-e9', { stageId: 'primary' });
+    expect(repository.findLine).toHaveBeenCalledWith('r1', 'l-e9', { OR: [{ stageId: { in: ['primary'] } }, { otherStages: { some: { stageId: { in: ['primary'] } } } }] });
   });
 
   it('edge case 3 — an employee’s payroll lines outside the scope are 404', async () => {

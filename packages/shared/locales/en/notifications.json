@@ -17,16 +17,19 @@
   },
   "categories": {
     "approval": "Needs action",
-    "reminder": "Reminders"
+    "reminder": "Reminders",
+    "update": "Updates"
   },
   "required": "Required",
   "resolved": {
     "approved": "Approved by {name}",
+    "rejected": "Rejected by {name}",
     "cancelled": "Cancelled by {name}",
     "done": "Done",
     "allDone": "All done",
     "group": {
       "approved": "Approved by {name}",
+      "rejected": "Rejected by {name}",
       "cancelled": "Cancelled by {name}"
     }
   },
@@ -54,6 +57,50 @@
             "other": "{count} penalties — all handled"
           },
           "description": "A penalty is recorded for someone whose penalties you may approve."
+        },
+        "awaiting_review": {
+          "name": "Penalty waiting for your stage review",
+          "title": "Penalty waiting for your review",
+          "body": "{employee} · {violation} · {stage}",
+          "group": {
+            "zero": "No penalties waiting for your review",
+            "one": "{count} penalty waiting for your review",
+            "two": "{count} penalties waiting for your review",
+            "few": "{count} penalties waiting for your review",
+            "many": "{count} penalties waiting for your review",
+            "other": "{count} penalties waiting for your review"
+          },
+          "groupDone": {
+            "zero": "No penalties",
+            "one": "{count} penalty — handled",
+            "two": "{count} penalties — all handled",
+            "few": "{count} penalties — all handled",
+            "many": "{count} penalties — all handled",
+            "other": "{count} penalties — all handled"
+          },
+          "description": "A penalty is recorded in a stage you head. You approve or reject it before it goes to HR."
+        },
+        "rejected": {
+          "name": "Penalty you recorded was rejected",
+          "title": "Penalty rejected",
+          "body": "{employee} · {violation}",
+          "group": {
+            "zero": "No penalties rejected",
+            "one": "{count} penalty you recorded was rejected",
+            "two": "{count} penalties you recorded were rejected",
+            "few": "{count} penalties you recorded were rejected",
+            "many": "{count} penalties you recorded were rejected",
+            "other": "{count} penalties you recorded were rejected"
+          },
+          "groupDone": {
+            "zero": "No penalties",
+            "one": "{count} rejected penalty",
+            "two": "{count} rejected penalties",
+            "few": "{count} rejected penalties",
+            "many": "{count} rejected penalties",
+            "other": "{count} rejected penalties"
+          },
+          "description": "A penalty you recorded is rejected at the stage review or at HR. Open it to read the reason."
         }
       },
       "payroll": {

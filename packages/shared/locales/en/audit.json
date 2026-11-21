@@ -105,9 +105,11 @@
       },
       "penalty": {
         "record": "Recorded a penalty for {entity}",
-        "approve": "Approved the penalty for {entity}",
+        "approve": "Approved the penalty for {entity} at HR",
         "cancel": "Cancelled the penalty for {entity}",
-        "recount": "Raised the level of the penalty for {entity}"
+        "recount": "Raised the level of the penalty for {entity}",
+        "review": "Approved the penalty for {entity} at the stage review",
+        "reject": "Rejected the penalty for {entity}"
       },
       "lateness": {
         "save": "Saved the lateness for {entity}"
@@ -254,7 +256,14 @@
         "resolvedDays": "Keep done approvals (days)",
         "maxDays": "Keep any notification at most (days)"
       }
-    }
+    },
+    "stage": "Stage",
+    "otherStageIds": "Also teaches in",
+    "reviewNote": "Stage review note",
+    "reviewSkip": "Stage review",
+    "approvalNote": "HR note",
+    "rejectionReason": "Rejection reason",
+    "rejectedStep": "Rejected at"
   },
   "totals": {
     "net": "Net",

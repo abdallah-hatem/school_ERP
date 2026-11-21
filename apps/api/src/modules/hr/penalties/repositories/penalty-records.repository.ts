@@ -1,7 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { Prisma } from '@prisma/client';
-import { PenaltyStatus, type IsoDate, type PenaltyAction } from '@school-erp/shared';
+import {
+  OPEN_PENALTY_STATUSES,
+  PenaltyStatus,
+  type IsoDate,
+  type PenaltyAction,
+  type PenaltyReviewSkip,
+  type PenaltyStatusFilter,
+  type PenaltyStep,
+} from '@school-erp/shared';
 import { BaseRepository } from '../../../../common/repositories/base.repository';
 import { fromIsoDate, monthDateRange, toIsoDate } from '../../../../common/utils/dates.util';
 import { DatabaseService } from '../../../../database/database.service';
@@ -16,13 +24,36 @@ export const RECORD_SELECT = {
   violationId: true,
   date: true,
   status: true,
+  stageId: true,
+  stage: { select: { id: true, nameEn: true, nameAr: true } },
   level: true,
   action: true,
   days: true,
   note: true,
   cancelReason: true,
   createdAt: true,
-  employee: { select: { id: true, code: true, nameEn: true, nameAr: true, photoUrl: true, gender: true } },
+  createdById: true,
+  reviewedAt: true,
+  reviewNote: true,
+  reviewSkip: true,
+  approvedAt: true,
+  approvalNote: true,
+  rejectedAt: true,
+  rejectedStep: true,
+  rejectionReason: true,
+  cancelledAt: true,
+  employee: {
+    select: {
+      id: true,
+      code: true,
+      nameEn: true,
+      nameAr: true,
+      photoUrl: true,
+      gender: true,
+      // For the scope checks (a team scope goes by the employee's manager); not in the response.
+      managerId: true,
+    },
+  },
   // The catalogue's current levels: a PENDING record is shown with them (§4).
   violation: {
     select: {
@@ -34,7 +65,9 @@ export const RECORD_SELECT = {
     },
   },
   createdBy: USER_REF,
+  reviewedBy: USER_REF,
   approvedBy: USER_REF,
+  rejectedBy: USER_REF,
 } satisfies Prisma.PenaltyRecordSelect;
 
 export type RecordRow = Prisma.PenaltyRecordGetPayload<{ select: typeof RECORD_SELECT }>;
@@ -42,16 +75,27 @@ export type RecordRow = Prisma.PenaltyRecordGetPayload<{ select: typeof RECORD_S
 export interface RecordCreateData extends LevelData {
   employeeId: string;
   violationId: string;
+  /** Where the violation happened (owner 2026-11-21). */
+  stageId: string;
   date: IsoDate;
   note: string | null;
   createdById: string | null;
+  /** PENDING_REVIEW, or WAITING_HR when it skips the stage review (`reviewSkip` says why). */
+  status: typeof PenaltyStatus.PENDING_REVIEW | typeof PenaltyStatus.WAITING_HR;
+  reviewSkip: PenaltyReviewSkip | null;
 }
+
+/** A scope's filter on `penalty_records` (`HrAccessService.penaltyWhere`) — `{}` for all. */
+export type PenaltyScopeWhere = Prisma.PenaltyRecordWhereInput;
 
 export interface RecordListFilter {
   employeeId?: string;
   /** `YYYY-MM`: records dated in that month. */
   month?: string;
-  status?: PenaltyStatus;
+  /** One status, or `OPEN`: waiting at either step. */
+  status?: PenaltyStatusFilter;
+  /** The stage where it happened. */
+  stageId?: string;
   search?: string;
 }
 
@@ -151,8 +195,8 @@ export class RecountConflictError extends Error {
   }
 }
 
-/** The statuses whose records a pending row's level and order check look at. */
-const APPROVED_OR_PENDING = [PenaltyStatus.APPROVED, PenaltyStatus.PENDING] as const;
+/** The statuses whose records a waiting row's level and order check look at. */
+const APPROVED_OR_PENDING = [PenaltyStatus.APPROVED, ...OPEN_PENALTY_STATUSES] as const;
 
 /**
  * §4 once per day: given the statuses of the OTHER records of the same pair and date, whether the
@@ -210,16 +254,18 @@ export class PenaltyRecordsRepository extends BaseRepository<
     return this.txHost.tx;
   }
 
-  /** `scope`: the employees whose records the viewer may see (R5) — `{}` for all. */
+  /** `scope`: the records the viewer may see (R5; a stage scope by the penalty's stage) — `{}` for all. */
   list(
     page: number | undefined,
     limit: number | undefined,
     filter: RecordListFilter,
-    scope: Prisma.EmployeeWhereInput = {},
+    scope: PenaltyScopeWhere = {},
   ) {
-    const where: Prisma.PenaltyRecordWhereInput = { AND: [{ employee: scope }] };
+    const where: Prisma.PenaltyRecordWhereInput = { AND: [scope] };
     if (filter.employeeId) where.employeeId = filter.employeeId;
-    if (filter.status) where.status = filter.status;
+    if (filter.status === 'OPEN') where.status = { in: [...OPEN_PENALTY_STATUSES] };
+    else if (filter.status) where.status = filter.status;
+    if (filter.stageId) where.stageId = filter.stageId;
     if (filter.month) where.date = monthDateRange(filter.month);
     if (filter.search) {
       const contains = { contains: filter.search, mode: 'insensitive' as const };
@@ -237,30 +283,41 @@ export class PenaltyRecordsRepository extends BaseRepository<
     });
   }
 
-  /** The record, or null when unknown or its employee is outside `scope` (R5 — the caller 404s). */
-  findOne(id: string, scope: Prisma.EmployeeWhereInput = {}): Promise<RecordRow | null> {
+  /** The record, or null when unknown or outside `scope` (R5 — the caller 404s). */
+  findOne(id: string, scope: PenaltyScopeWhere = {}): Promise<RecordRow | null> {
     return this.db.penaltyRecord.findFirst({
-      where: { id, employee: scope },
+      where: { AND: [{ id }, scope] },
       select: RECORD_SELECT,
+    });
+  }
+
+  /** What a scope check reads about records (notification recipients, §11): unknown ids are absent. */
+  findScopeFields(
+    ids: readonly string[],
+  ): Promise<{ id: string; stageId: string; employeeId: string; employee: { managerId: string | null } }[]> {
+    if (!ids.length) return Promise.resolve([]);
+    return this.db.penaltyRecord.findMany({
+      where: { id: { in: [...ids] } },
+      select: { id: true, stageId: true, employeeId: true, employee: { select: { managerId: true } } },
     });
   }
 
   /** Status only, for deciding which error a failed status change gets. */
   async findStatus(
     id: string,
-    scope: Prisma.EmployeeWhereInput = {},
+    scope: PenaltyScopeWhere = {},
   ): Promise<{ status: PenaltyStatus; date: IsoDate } | null> {
     const row = await this.db.penaltyRecord.findFirst({
-      where: { id, employee: scope },
+      where: { AND: [{ id }, scope] },
       select: { status: true, date: true },
     });
     return row && { status: row.status, date: toIsoDate(row.date) };
   }
 
-  /** The ids of the records whose employee is in `scope` (the Activity log's filter, R5). */
-  async findIdsInScope(scope: Prisma.EmployeeWhereInput): Promise<string[]> {
+  /** The ids of the records in `scope` (the Activity log's filter, R5). */
+  async findIdsInScope(scope: PenaltyScopeWhere): Promise<string[]> {
     const rows = await this.db.penaltyRecord.findMany({
-      where: { employee: scope },
+      where: scope,
       select: { id: true },
     });
     return rows.map((r) => r.id);
@@ -287,7 +344,7 @@ export class PenaltyRecordsRepository extends BaseRepository<
   }
 
   /**
-   * Records a PENDING penalty, unless `refuse` says the day is taken (§4 once per day) — then
+   * Records a penalty (PENDING_REVIEW or WAITING_HR, `data.status`), unless `refuse` says the day is taken (§4 once per day) — then
    * nothing is written and null is returned. Checked and written under the pair's lock, so two
    * concurrent recordings of the same day can't both pass.
    */
@@ -297,7 +354,7 @@ export class PenaltyRecordsRepository extends BaseRepository<
       await lockPair(tx, data);
       if (refuse(await sameDayStatuses(tx, data, data.date))) return null;
       return tx.penaltyRecord.create({
-        data: { ...data, date: fromIsoDate(data.date), status: PenaltyStatus.PENDING },
+        data: { ...data, date: fromIsoDate(data.date) },
         select: RECORD_SELECT,
       });
     });
@@ -306,7 +363,7 @@ export class PenaltyRecordsRepository extends BaseRepository<
   /**
    * APPROVED records of the pairs dated up to `upTo` (and from `from`, when given), same date
    * included: which of them come earlier is the domain's call (`countPriorInWindow`, §4). One
-   * query for a whole page of rows. `withPending`: PENDING ones too (a pending row's order check,
+   * query for a whole page of rows. `withPending`: waiting ones (either step) too (a pending row's order check,
    * `earlierPendingPenalty`). `upTo` undefined: later dates too (what a backdated one recounts).
    */
   async approvedCandidates(
@@ -348,6 +405,9 @@ export class PenaltyRecordsRepository extends BaseRepository<
     refuse: SameDayRefusal,
     earlier: EarlierPendingCheck,
     recount: RecountPlan = () => Promise.resolve([]),
+    /** The statuses it may be approved from: WAITING_HR (and PENDING_REVIEW when HR may decide it). */
+    from: readonly PenaltyStatus[] = [PenaltyStatus.WAITING_HR],
+    note: string | null = null,
   ): Promise<ApproveOutcome> {
     return this.txHost.withTransaction(async () => {
       const tx = this.txHost.tx;
@@ -355,7 +415,7 @@ export class PenaltyRecordsRepository extends BaseRepository<
       // Still pending? Checked first, under the lock: a concurrent approval that won has already
       // recounted, so the loser must hear "not pending", not a stale-recount or order refusal.
       const self = await tx.penaltyRecord.findUnique({ where: { id }, select: { status: true } });
-      if (self?.status !== PenaltyStatus.PENDING) return 'NOT_PENDING';
+      if (!self || !from.includes(self.status)) return 'NOT_PENDING';
       // `window.upTo` is the record's own date.
       if (refuse(await sameDayStatuses(tx, key, window.upTo, id))) return 'ONCE_PER_DAY';
       // Every later date too: which come earlier is the domain's call; later approved ones are
@@ -371,7 +431,7 @@ export class PenaltyRecordsRepository extends BaseRepository<
       const updates = await recount(pairRecords);
       const now = new Date();
       const { count } = await tx.penaltyRecord.updateMany({
-        where: { id, status: PenaltyStatus.PENDING },
+        where: { id, status: { in: [...from] } },
         data: {
           level: fixed.level,
           action: fixed.action,
@@ -379,6 +439,7 @@ export class PenaltyRecordsRepository extends BaseRepository<
           status: PenaltyStatus.APPROVED,
           approvedById,
           approvedAt: now,
+          approvalNote: note,
         },
       });
       if (count !== 1) return 'NOT_PENDING';
@@ -405,7 +466,7 @@ export class PenaltyRecordsRepository extends BaseRepository<
     return found !== null;
   }
 
-  /** PENDING and APPROVED records dated in a month: what payroll counts and flags (§6). */
+  /** Waiting (either step) and APPROVED records dated in a month: what payroll counts and flags (§6). */
   findForPayroll(
     month: string,
   ): Promise<
@@ -419,16 +480,16 @@ export class PenaltyRecordsRepository extends BaseRepository<
     return this.db.penaltyRecord.findMany({
       where: {
         date: monthDateRange(month),
-        status: { in: [PenaltyStatus.PENDING, PenaltyStatus.APPROVED] },
+        status: { in: [...OPEN_PENALTY_STATUSES, PenaltyStatus.APPROVED] },
       },
       select: { employeeId: true, status: true, action: true, days: true },
     });
   }
 
-  /** How many PENDING records are dated in a month (the payroll run's live notice). */
+  /** How many records dated in a month still wait at either step (the payroll run's live notice). */
   countPendingInMonth(month: string): Promise<number> {
     return this.db.penaltyRecord.count({
-      where: { date: monthDateRange(month), status: PenaltyStatus.PENDING },
+      where: { date: monthDateRange(month), status: { in: [...OPEN_PENALTY_STATUSES] } },
     });
   }
 
@@ -447,23 +508,76 @@ export class PenaltyRecordsRepository extends BaseRepository<
     });
   }
 
-  /** How many records dated in a month (of employees in `scope`) are in each status. */
+  /** How many records dated in a month (in `scope`) are in each status. */
   async countByStatusInMonth(
     month: string,
-    scope: Prisma.EmployeeWhereInput = {},
+    scope: PenaltyScopeWhere = {},
   ): Promise<Record<PenaltyStatus, number>> {
     const groups = await this.db.penaltyRecord.groupBy({
       by: ['status'],
-      where: { date: monthDateRange(month), employee: scope },
+      where: { AND: [{ date: monthDateRange(month) }, scope] },
       _count: { _all: true },
     });
-    const counts: Record<PenaltyStatus, number> = { PENDING: 0, APPROVED: 0, CANCELLED: 0 };
+    const counts: Record<PenaltyStatus, number> = {
+      PENDING_REVIEW: 0,
+      WAITING_HR: 0,
+      APPROVED: 0,
+      REJECTED: 0,
+      CANCELLED: 0,
+    };
     for (const g of groups) counts[g.status] = g._count._all;
     return counts;
   }
 
   /**
-   * Cancels a PENDING or APPROVED record. Returns false when it was already CANCELLED. `key`: under
+   * The stage review approves a PENDING_REVIEW record: WAITING_HR, with who, when and the note
+   * (§4 two steps). A conditional update: of two reviews at once exactly one matches; false for the
+   * other (or when it was no longer waiting for review).
+   */
+  async review(id: string, reviewedById: string | null, note: string | null): Promise<boolean> {
+    const { count } = await this.db.penaltyRecord.updateMany({
+      where: { id, status: PenaltyStatus.PENDING_REVIEW },
+      data: {
+        status: PenaltyStatus.WAITING_HR,
+        reviewedById,
+        reviewedAt: new Date(),
+        reviewNote: note,
+      },
+    });
+    return count === 1;
+  }
+
+  /**
+   * Rejects a record waiting in one of `from`, with the reason and the step (§4 two steps). Under
+   * the pair's lock, like a cancel. False when it was no longer in one of `from`.
+   */
+  async reject(
+    id: string,
+    from: readonly PenaltyStatus[],
+    rejectedById: string | null,
+    reason: string,
+    step: PenaltyStep,
+    key: RepeatKey,
+  ): Promise<boolean> {
+    return this.txHost.withTransaction(async () => {
+      const tx = this.txHost.tx;
+      await lockPair(tx, key);
+      const { count } = await tx.penaltyRecord.updateMany({
+        where: { id, status: { in: [...from] } },
+        data: {
+          status: PenaltyStatus.REJECTED,
+          rejectedById,
+          rejectedAt: new Date(),
+          rejectedStep: step,
+          rejectionReason: reason,
+        },
+      });
+      return count === 1;
+    });
+  }
+
+  /**
+   * Cancels a waiting (either step) or APPROVED record. Returns false when it was already final. `key`: under
    * the pair's lock, so a cancel can't slip between a backdated approval's recount and its writes.
    */
   async cancel(
@@ -476,7 +590,7 @@ export class PenaltyRecordsRepository extends BaseRepository<
       const tx = this.txHost.tx;
       if (key) await lockPair(tx, key);
       const { count } = await tx.penaltyRecord.updateMany({
-        where: { id, status: { in: [PenaltyStatus.PENDING, PenaltyStatus.APPROVED] } },
+        where: { id, status: { in: [...OPEN_PENALTY_STATUSES, PenaltyStatus.APPROVED] } },
         data: {
           status: PenaltyStatus.CANCELLED,
           cancelReason: reason,

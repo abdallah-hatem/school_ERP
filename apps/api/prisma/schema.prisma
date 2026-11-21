@@ -42,6 +42,8 @@ model User {
   penaltiesCreated    PenaltyRecord[]          @relation("PenaltyCreatedBy")
   penaltiesApproved   PenaltyRecord[]          @relation("PenaltyApprovedBy")
   penaltiesCancelled  PenaltyRecord[]          @relation("PenaltyCancelledBy")
+  penaltiesReviewed   PenaltyRecord[]          @relation("PenaltyReviewedBy")
+  penaltiesRejected   PenaltyRecord[]          @relation("PenaltyRejectedBy")
   latenessUpdated     LatenessEntry[]
   payrollRunsCreated  PayrollRun[]             @relation("PayrollRunCreatedBy")
   payrollRunsApproved PayrollRun[]             @relation("PayrollRunApprovedBy")
@@ -399,7 +401,9 @@ model Stage {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  employees Employee[]
+  employees      Employee[]
+  otherEmployees EmployeeStage[]
+  penalties      PenaltyRecord[]
 
   @@index([isActive])
   @@index([sortOrder])
@@ -452,10 +456,26 @@ enum PenaltyAction {
   DISMISSAL
 }
 
+/// §4 two steps (owner 2026-11-21). WAITING_HR was PENDING (renamed: pending ones need no new review).
 enum PenaltyStatus {
-  PENDING
+  WAITING_HR
   APPROVED
   CANCELLED
+  PENDING_REVIEW
+  REJECTED
+}
+
+/// The step a penalty was rejected at.
+enum PenaltyStep {
+  REVIEW
+  HR
+}
+
+/// Why a penalty went straight to WAITING_HR (§4, owner 2026-11-21).
+enum PenaltyReviewSkip {
+  EMPLOYEE_IS_HEAD
+  RECORDER_IS_HEAD
+  NO_STAGE_HEAD
 }
 
 enum PayrollStatus {
@@ -559,6 +579,8 @@ model Employee {
   reports    Employee[] @relation("EmployeeManager")
   linkedUser User?      @relation("UserLinkedEmployee")
 
+  /// "Also teaches in" (§3, owner 2026-11-21): stages besides the main one.
+  otherStages  EmployeeStage[]
   penalties    PenaltyRecord[]
   lateness     LatenessEntry[]
   payrollLines PayrollLine[]
@@ -571,6 +593,21 @@ model Employee {
   @@index([status])
   @@index([workSystem])
   @@map("employees")
+}
+
+/// An employee's other stage (§3, owner 2026-11-21: "a teacher at primary and secondary at the same
+/// time … two bosses"). Never the main stage (`employees.stage_id`), which keeps every current use.
+model EmployeeStage {
+  employeeId String   @map("employee_id") @db.Uuid
+  stageId    String   @map("stage_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  stage    Stage    @relation(fields: [stageId], references: [id], onDelete: Restrict)
+
+  @@id([employeeId, stageId])
+  @@index([stageId])
+  @@map("employee_stages")
 }
 
 /// A table of the penalty regulations (§4), e.g. general table A.
@@ -634,33 +671,50 @@ model ViolationLevel {
 /// A recorded penalty. Level, action and days are computed at creation, shown from the catalogue
 /// while PENDING, and fixed at approval. Never deleted.
 model PenaltyRecord {
-  id            String        @id @default(uuid()) @db.Uuid
-  employeeId    String        @map("employee_id") @db.Uuid
-  violationId   String        @map("violation_id") @db.Uuid
+  id              String             @id @default(uuid()) @db.Uuid
+  employeeId      String             @map("employee_id") @db.Uuid
+  violationId     String             @map("violation_id") @db.Uuid
   /// The day the violation happened; its month is the payroll month it affects.
-  date          DateTime      @db.Date
-  status        PenaltyStatus @default(PENDING)
-  level         Int
-  action        PenaltyAction
-  days          Decimal?      @db.Decimal(5, 2)
-  note          String?
-  cancelReason  String?       @map("cancel_reason")
-  createdById   String?       @map("created_by_id") @db.Uuid
-  approvedById  String?       @map("approved_by_id") @db.Uuid
-  approvedAt    DateTime?     @map("approved_at")
-  cancelledById String?       @map("cancelled_by_id") @db.Uuid
-  cancelledAt   DateTime?     @map("cancelled_at")
+  date            DateTime           @db.Date
+  status          PenaltyStatus      @default(WAITING_HR)
+  /// Where the violation happened (owner 2026-11-21): who reviews it, who sees it (own_stage).
+  stageId         String             @map("stage_id") @db.Uuid
+  level           Int
+  action          PenaltyAction
+  days            Decimal?           @db.Decimal(5, 2)
+  note            String?
+  cancelReason    String?            @map("cancel_reason")
+  createdById     String?            @map("created_by_id") @db.Uuid
+  approvedById    String?            @map("approved_by_id") @db.Uuid
+  approvedAt      DateTime?          @map("approved_at")
+  cancelledById   String?            @map("cancelled_by_id") @db.Uuid
+  cancelledAt     DateTime?          @map("cancelled_at")
+  /// The stage review (§4 two steps): who approved it, when, and the note; or why it was skipped.
+  reviewedById    String?            @map("reviewed_by_id") @db.Uuid
+  reviewedAt      DateTime?          @map("reviewed_at")
+  reviewNote      String?            @map("review_note")
+  reviewSkip      PenaltyReviewSkip? @map("review_skip")
+  /// The HR step's optional note.
+  approvalNote    String?            @map("approval_note")
+  /// A rejection, at either step, with its required reason.
+  rejectedById    String?            @map("rejected_by_id") @db.Uuid
+  rejectedAt      DateTime?          @map("rejected_at")
+  rejectedStep    PenaltyStep?       @map("rejected_step")
+  rejectionReason String?            @map("rejection_reason")
   /// When a backdated approval last moved this approved penalty up a level (§4, owner 2026-11-20):
   /// a draft payroll run calculated before it is due a Recalculate.
-  recountedAt   DateTime?     @map("recounted_at")
-  createdAt     DateTime      @default(now()) @map("created_at")
-  updatedAt     DateTime      @updatedAt @map("updated_at")
+  recountedAt     DateTime?          @map("recounted_at")
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
 
   employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Restrict)
   violation   Violation @relation(fields: [violationId], references: [id], onDelete: Restrict)
   createdBy   User?     @relation("PenaltyCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   approvedBy  User?     @relation("PenaltyApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
   cancelledBy User?     @relation("PenaltyCancelledBy", fields: [cancelledById], references: [id], onDelete: SetNull)
+  reviewedBy  User?     @relation("PenaltyReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  rejectedBy  User?     @relation("PenaltyRejectedBy", fields: [rejectedById], references: [id], onDelete: SetNull)
+  stage       Stage     @relation(fields: [stageId], references: [id], onDelete: Restrict)
 
   @@index([employeeId])
   @@index([violationId])
@@ -669,6 +723,9 @@ model PenaltyRecord {
   @@index([createdById])
   @@index([approvedById])
   @@index([cancelledById])
+  @@index([reviewedById])
+  @@index([rejectedById])
+  @@index([stageId])
   /// Repeat-level count: approved records of one violation for one employee in a date window.
   @@index([employeeId, violationId, status, date])
   @@map("penalty_records")

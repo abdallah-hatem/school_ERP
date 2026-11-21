@@ -6,7 +6,7 @@ import { HrAuditAccess } from './hr-audit-access';
 
 /* P4 — which HR records' audit entries a viewer may read (Activity, History, summary, people). */
 
-const PRIMARY = { kind: 'stage', stageId: 'primary' } as const;
+const PRIMARY = { kind: 'stage', stageIds: ['primary'] } as const;
 
 function setup(scopes: Parameters<typeof fakeAccess>[0]) {
   const audit = new AuditRecordAccess();

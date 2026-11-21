@@ -74,9 +74,11 @@ describe('starting roles (spec table, GUESS)', () => {
     }
   });
 
-  it('HR manager: all of HR plus the Activity log, scope all', () => {
-    const hr = PERMISSION_KEYS.filter((k) => k.startsWith('hr.'));
+  it('HR manager: all of HR but the stage review, plus the Activity log, scope all', () => {
+    const hr = PERMISSION_KEYS.filter((k) => k.startsWith('hr.') && k !== 'hr.penalties.review');
     expect(keysOf('hr_manager')).toEqual(expect.arrayContaining([...hr, 'core.audit.view']));
+    // §4 (owner 2026-11-21): the stage review is the stage head's; the HR manager acts at the HR step.
+    expect(keysOf('hr_manager')).not.toContain('hr.penalties.review');
     expect(new Set(Object.values(role('hr_manager').permissions))).toEqual(new Set(['all']));
   });
 
@@ -86,7 +88,9 @@ describe('starting roles (spec table, GUESS)', () => {
     );
   });
 
-  it('penalties are recorded by officer, stage head, direct manager; approved by HR manager or principal', () => {
+  it('penalties: recorded by officer, stage head, direct manager; reviewed by the stage head; approved at HR by HR manager or principal', () => {
+    expect(holders('hr.penalties.review')).toEqual(['stage_head', 'system_admin']);
+    expect(role('stage_head').permissions['hr.penalties.review']).toBe('own_stage');
     expect(holders('hr.penalties.record')).toEqual(
       ['direct_manager', 'hr_manager', 'hr_officer', 'stage_head', 'system_admin'].sort(),
     );

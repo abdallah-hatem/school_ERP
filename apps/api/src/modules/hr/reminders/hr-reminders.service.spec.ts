@@ -1,3 +1,4 @@
+import type { PenaltyRecordsService } from '../penalties/services/penalty-records.service';
 import { PermissionScope } from '@school-erp/shared';
 import type { NotificationScopeResolver, NotificationsService } from '../../../core/notifications';
 import { HrNotificationScopes } from '../access/hr-notification-scopes';
@@ -55,7 +56,7 @@ describe('HrRemindersService', () => {
 });
 
 describe('HrNotificationScopes', () => {
-  const scope = (s: PermissionScope) => ({ scope: s, employeeId: 'me', stageId: 'primary' });
+  const scope = (s: PermissionScope) => ({ scope: s, employeeId: 'me', stageId: 'primary', stageIds: ['primary'] });
 
   it('edge 13 — employee subjects: the recipient’s scope must cover the employee (HR’s rule)', async () => {
     const notifications = makeNotifications();
@@ -63,6 +64,7 @@ describe('HrNotificationScopes', () => {
     new HrNotificationScopes(
       notifications as unknown as NotificationsService,
       employees as unknown as EmployeesService,
+      {} as PenaltyRecordsService,
     ).onModuleInit();
     const subjects = [
       { entityType: 'employee', entityId: 'e1', employeeId: 'e1' },
@@ -75,7 +77,11 @@ describe('HrNotificationScopes', () => {
 
   it('months and runs are whole-school: a scoped holder is never told', async () => {
     const notifications = makeNotifications();
-    new HrNotificationScopes(notifications as unknown as NotificationsService, {} as EmployeesService).onModuleInit();
+    new HrNotificationScopes(
+      notifications as unknown as NotificationsService,
+      {} as EmployeesService,
+      {} as PenaltyRecordsService,
+    ).onModuleInit();
     for (const type of ['lateness_month', 'payroll_month', 'payroll_run']) {
       const resolver = notifications.resolvers.get(type)!;
       await expect(

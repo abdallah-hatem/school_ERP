@@ -1,5 +1,6 @@
 import {
   contractYearFor,
+  isOpenPenaltyStatus,
   PenaltyStatus,
   type IsoDate,
   type PenaltyAction,
@@ -109,8 +110,8 @@ export function isEarlierPenalty(
 }
 
 /**
- * How many of `records` count toward `target`'s level (§4): APPROVED (pending and cancelled never
- * count), the same employee and violation, inside the repetition window, and earlier in the
+ * How many of `records` count toward `target`'s level (§4): APPROVED (waiting, rejected and
+ * cancelled never count; levels count across all of the employee's stages, owner 2026-11-21), the same employee and violation, inside the repetition window, and earlier in the
  * repeat order (`isEarlierPenalty`). `target` itself never counts.
  */
 export function countPriorInWindow(
@@ -131,9 +132,10 @@ export function countPriorInWindow(
 
 /**
  * The penalty that must be approved or cancelled before `target` can be approved (§4 DECIDED,
- * owner 2026-11-20: approve in date order): the EARLIEST still-PENDING penalty of the same
+ * owner 2026-11-20: approve in date order): the EARLIEST still-waiting penalty — at the stage
+ * review or at HR (owner 2026-11-21) — of the same
  * employee and violation, inside `target`'s repetition window, that comes before it in the repeat
- * order (`isEarlierPenalty`). Null when there is none — approved and cancelled ones never block,
+ * order (`isEarlierPenalty`). Null when there is none — approved, rejected and cancelled ones never block,
  * nor do other violations, other employees, or a same-date penalty recorded after `target`.
  *
  * Approving out of order would fix a level that ignores the earlier one (18 approved → L1; approve
@@ -149,7 +151,7 @@ export function earlierPendingPenalty<R extends RecordedPenalty>(
   const start = repetitionWindowStart(target.date, window);
   const blocking = records.filter(
     (p) =>
-      p.status === PenaltyStatus.PENDING &&
+      isOpenPenaltyStatus(p.status) &&
       p.employeeId === target.employeeId &&
       p.violationId === target.violationId &&
       p.date >= start &&

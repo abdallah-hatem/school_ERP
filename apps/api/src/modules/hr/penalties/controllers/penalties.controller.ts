@@ -18,6 +18,8 @@ import {
   CreatePenaltyDto,
   ListPenaltiesQueryDto,
   PenaltyPreviewQueryDto,
+  RejectPenaltyDto,
+  ReviewPenaltyDto,
 } from '../dto/penalty.dto';
 import { PenaltyRecordsService } from '../services/penalty-records.service';
 import { Audited } from '../../../../core/audit';
@@ -44,6 +46,13 @@ export class PenaltiesController {
     return this.penalties.preview(query);
   }
 
+  /** The stages a penalty for this employee can be recorded in (owner 2026-11-21). */
+  @Get('employee-stages/:employeeId')
+  @Permission('hr.penalties.record')
+  employeeStages(@Param('employeeId', ParseUUIDPipe) employeeId: string) {
+    return this.penalties.employeeStages(employeeId);
+  }
+
   @Get(':id')
   @Permission('hr.penalties.view')
   get(@Param('id', ParseUUIDPipe) id: string) {
@@ -57,6 +66,33 @@ export class PenaltiesController {
     return this.penalties.create(dto, user?.id ?? null);
   }
 
+  /** The stage review: PENDING_REVIEW → WAITING_HR (§4 two steps). */
+  @Audited('hr.penalty.review')
+  @Post(':id/review/approve')
+  @Permission('hr.penalties.review')
+  @HttpCode(HttpStatus.OK)
+  reviewApprove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ReviewPenaltyDto,
+    @CurrentUser() user?: AuthUser,
+  ) {
+    return this.penalties.reviewApprove(id, user?.id ?? null, dto?.note ?? null);
+  }
+
+  /** The stage review rejects, with a reason: PENDING_REVIEW → REJECTED. */
+  @Audited('hr.penalty.reject')
+  @Post(':id/review/reject')
+  @Permission('hr.penalties.review')
+  @HttpCode(HttpStatus.OK)
+  reviewReject(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: RejectPenaltyDto,
+    @CurrentUser() user?: AuthUser,
+  ) {
+    return this.penalties.reject(id, 'REVIEW_REJECT', dto.reason, user?.id ?? null);
+  }
+
+  /** The HR step: WAITING_HR → APPROVED, fixing the level and the deduction. */
   @Audited('hr.penalty.approve')
   @Post(':id/approve')
   @Permission('hr.penalties.approve')
@@ -66,7 +102,20 @@ export class PenaltiesController {
     @Body() dto: ApprovePenaltyDto,
     @CurrentUser() user?: AuthUser,
   ) {
-    return this.penalties.approve(id, user?.id ?? null, dto?.acknowledgedRecount);
+    return this.penalties.approve(id, user?.id ?? null, dto?.acknowledgedRecount, dto?.note ?? null);
+  }
+
+  /** The HR step rejects, with a reason: WAITING_HR → REJECTED. */
+  @Audited('hr.penalty.reject')
+  @Post(':id/reject')
+  @Permission('hr.penalties.approve')
+  @HttpCode(HttpStatus.OK)
+  reject(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: RejectPenaltyDto,
+    @CurrentUser() user?: AuthUser,
+  ) {
+    return this.penalties.reject(id, 'HR_REJECT', dto.reason, user?.id ?? null);
   }
 
   @Audited('hr.penalty.cancel')

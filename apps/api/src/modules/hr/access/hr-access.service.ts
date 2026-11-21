@@ -8,6 +8,7 @@ import {
   ALL_EMPLOYEES,
   employeeWhere,
   inScope,
+  penaltyWhere,
   toEmployeeScope,
   type EmployeeScope,
   type ScopedEmployee,
@@ -49,6 +50,21 @@ export class HrAccessService {
   /** `scope(key)` as a Prisma filter on `employees`. */
   async where(key: PermissionKey): Promise<Prisma.EmployeeWhereInput> {
     return employeeWhere(await this.scope(key));
+  }
+
+  /**
+   * `scope(key)` as a Prisma filter on `penalty_records` (owner 2026-11-21): a stage scope goes by
+   * the penalty's stage, not the employee's.
+   */
+  async penaltyWhere(key: PermissionKey): Promise<Prisma.PenaltyRecordWhereInput> {
+    return penaltyWhere(await this.scope(key));
+  }
+
+  /** The signed-in user's id and linked employee (none outside a request: the system acts). */
+  async actor(): Promise<{ userId: string; employeeId: string | null } | null> {
+    const user = this.user();
+    if (!user) return null;
+    return { userId: user.id, employeeId: await this.permissions.linkedEmployeeOf(user) };
   }
 
   /** Whose salary the current user may see. */

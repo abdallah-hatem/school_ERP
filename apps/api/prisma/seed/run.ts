@@ -18,11 +18,11 @@ import {
   PenaltyCatalogueService,
   PenaltyRecordsService,
 } from '../../src/modules/hr';
-import { seedAdmin } from './admin';
+import { seedAdmin, seedStageHeads } from './admin';
 import { EMPLOYEES, generatedFields } from './data/employees';
 import { levelsOf, loadSeedData } from './data/load';
 import { DEPARTMENTS, JOB_TITLES, NO_STAGE_KEY, STAGES, type SeedListItem } from './data/lists';
-import { ADJUSTMENTS, DEMO_MONTH, LATENESS, PENALTIES } from './data/november';
+import { ADJUSTMENTS, DEMO_MONTH, LATENESS, PENALTIES, STAGE_HEADS } from './data/november';
 import type { SeedCatalogue, SeedData } from './data/types';
 
 /**
@@ -157,9 +157,14 @@ async function seedAll(app: INestApplicationContext): Promise<SeedSummary> {
           contractStart: CONTRACT.start,
           contractEnd: CONTRACT.end,
           usesBus: e.n % 4 === 0,
+          otherStageIds: (e.otherStages ?? []).map((k) => stages.get(k)!),
         })
       ).id;
       created += 1;
+    } else if (e.otherStages?.length) {
+      // A database seeded before "also teaches in" existed gets it on the next run.
+      const has = await db.employeeStage.count({ where: { employeeId: id } });
+      if (has === 0) await employees.update(id, { otherStageIds: e.otherStages.map((k) => stages.get(k)!) });
     }
     employeeIds.set(e.n, id);
     if (e.inactive) await employees.deactivate(id);
@@ -178,7 +183,10 @@ async function seedAll(app: INestApplicationContext): Promise<SeedSummary> {
     `penalty catalogue ready (${data.catalogue.groups.length} groups, ${violationCount} violations)`,
   );
 
-  const monthSeeded = await seedMonth(app, db, admin.id, employeeIds, violationIds);
+  const stageHeads = await seedStageHeads(db, employeeIds);
+  log(`stage heads ready (${STAGE_HEADS.map((h) => h.email).join(', ')})`);
+
+  const monthSeeded = await seedMonth(app, db, admin.id, employeeIds, violationIds, stageHeads, stages);
 
   return {
     source: data.source,
@@ -339,6 +347,8 @@ async function seedMonth(
   adminId: string,
   employeeIds: Map<number, string>,
   violationIds: Map<string, string>,
+  stageHeads: Map<string, string>,
+  stages: Map<string, string>,
 ): Promise<boolean> {
   const get = <T>(token: new (...args: never[]) => T): T => app.get(token, { strict: false });
   if (await get(MonthLockService).isMonthLocked(DEMO_MONTH)) {
@@ -367,17 +377,35 @@ async function seedMonth(
       where: { employeeId, violationId, date: new Date(`${p.date}T00:00:00Z`) },
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
       skip: nth,
-      select: { id: true, status: true },
+      select: { id: true, status: true, stageId: true },
     });
     const record =
       existing ??
       (await penalties.create(
-        { employeeId, violationId, date: p.date, note: p.note ?? null },
+        {
+          employeeId,
+          violationId,
+          date: p.date,
+          note: p.note ?? null,
+          ...(p.stage ? { stageId: stages.get(p.stage)! } : {}),
+        },
         adminId,
       ));
-    if (p.status === 'APPROVED' && record.status === 'PENDING') {
+    const stageId = 'stageId' in record ? record.stageId : record.stage.id;
+    const head = stageHeads.get(stageId) ?? null;
+    let status = record.status;
+    // §4 two steps: the stage head reviews first, then HR decides.
+    const reviewNow =
+      status === 'PENDING_REVIEW' &&
+      (p.status === 'WAITING_HR' || p.status === 'APPROVED' || (p.status === 'REJECTED' && p.rejectedAt === 'HR'));
+    if (reviewNow) status = (await penalties.reviewApprove(record.id, head, null)).status;
+    if (p.status === 'APPROVED' && status === 'WAITING_HR') {
       await penalties.approve(record.id, adminId);
-    } else if (p.status === 'CANCELLED' && record.status !== 'CANCELLED') {
+    } else if (p.status === 'REJECTED' && status === 'PENDING_REVIEW' && p.rejectedAt === 'REVIEW') {
+      await penalties.reject(record.id, 'REVIEW_REJECT', p.rejectReason ?? 'مرفوض', head);
+    } else if (p.status === 'REJECTED' && status === 'WAITING_HR') {
+      await penalties.reject(record.id, 'HR_REJECT', p.rejectReason ?? 'مرفوض', adminId);
+    } else if (p.status === 'CANCELLED' && status !== 'CANCELLED') {
       await penalties.cancel(record.id, { reason: p.cancelReason ?? 'أُلغيت' }, adminId);
     }
   }

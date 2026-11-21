@@ -18,6 +18,7 @@ const scope = (
   scope: s,
   employeeId,
   stageId,
+  stageIds: stageId ? [stageId] : [],
 });
 
 function make(
@@ -48,8 +49,11 @@ const PENALTY = {
   id: 'p-1',
   employee: { id: 'e-1', nameEn: 'Omar Khalil', nameAr: 'عمر خليل' },
   violation: { nameEn: 'Late', nameAr: 'تأخير' },
+  stage: { nameEn: 'Primary', nameAr: 'الابتدائية' },
   level: 2,
   month: '2026-11',
+  // Straight to HR (no stage review): HR's approvers are told.
+  status: 'WAITING_HR' as const,
 };
 
 const RUN: CalculatedRun = {
@@ -76,6 +80,7 @@ describe('HrNotificationsService — penalties', () => {
       dedupeKey: 'penalty:p-1',
       // The recorder isn't told (edge 3): core leaves the actor out.
       actorId: 'u-recorder',
+      excludeUserIds: [],
     });
   });
 
@@ -98,18 +103,95 @@ describe('HrNotificationsService — penalties', () => {
     const { service, notifications } = make();
     await service.penaltyApproved('p-1', 'u-principal');
     await service.penaltyCancelled('p-2', 'u-hr');
-    expect(notifications.resolve).toHaveBeenNthCalledWith(1, {
+    expect(notifications.resolve).toHaveBeenCalledWith({
       type: 'hr.penalty.awaiting_approval',
       subject: { entityType: 'penalty', entityId: 'p-1' },
       resolution: 'approved',
       byUserId: 'u-principal',
     });
-    expect(notifications.resolve).toHaveBeenNthCalledWith(2, {
+    expect(notifications.resolve).toHaveBeenCalledWith({
       type: 'hr.penalty.awaiting_approval',
       subject: { entityType: 'penalty', entityId: 'p-2' },
       resolution: 'cancelled',
       byUserId: 'u-hr',
     });
+  });
+});
+
+describe('HrNotificationsService — the two steps (§4, owner 2026-11-21; edge case 15)', () => {
+  const IN_REVIEW = { ...PENALTY, status: 'PENDING_REVIEW' as const };
+
+  it('recorded for a stage review: only "waiting for your review" (its stage head), never HR yet, never the employee', async () => {
+    const { service, notifications } = make();
+    await service.penaltyRecorded(IN_REVIEW, 'u-recorder', ['u-employee']);
+    expect(notifications.notify).toHaveBeenCalledTimes(1);
+    expect(notifications.notify).toHaveBeenCalledWith({
+      type: 'hr.penalty.awaiting_review',
+      subject: { entityType: 'penalty', entityId: 'p-1', employeeId: 'e-1' },
+      params: {
+        employee: { en: 'Omar Khalil', ar: 'عمر خليل' },
+        violation: { en: 'Late', ar: 'تأخير' },
+        stage: { en: 'Primary', ar: 'الابتدائية' },
+      },
+      dedupeKey: 'penalty_review:p-1',
+      actorId: 'u-recorder',
+      excludeUserIds: ['u-employee'],
+    });
+  });
+
+  it('reviewed: the heads’ item reads "Approved by …", and HR’s approvers are told — once, not the reviewer', async () => {
+    const { service, notifications } = make();
+    await service.penaltyReviewed(IN_REVIEW, 'u-head', ['u-employee']);
+    expect(notifications.resolve).toHaveBeenCalledWith({
+      type: 'hr.penalty.awaiting_review',
+      subject: { entityType: 'penalty', entityId: 'p-1' },
+      resolution: 'approved',
+      byUserId: 'u-head',
+    });
+    expect(notifications.notify).toHaveBeenCalledTimes(1);
+    expect(notifications.notify).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'hr.penalty.awaiting_approval',
+        dedupeKey: 'penalty:p-1',
+        actorId: 'u-head',
+        excludeUserIds: ['u-employee'],
+      }),
+    );
+  });
+
+  it('rejected: whatever waited reads "Rejected by …"; only the recorder is told, without the reason', async () => {
+    const { service, notifications } = make();
+    await service.penaltyRejected({ ...PENALTY, createdById: 'u-recorder' }, 'u-head');
+    expect(notifications.resolve).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'hr.penalty.awaiting_review', resolution: 'rejected', byUserId: 'u-head' }),
+    );
+    expect(notifications.resolve).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'hr.penalty.awaiting_approval', resolution: 'rejected', byUserId: 'u-head' }),
+    );
+    expect(notifications.notify).toHaveBeenCalledTimes(1);
+    const [sent] = notifications.notify.mock.calls[0] as [{ type: string; onlyUserIds: string[]; actorId: string; params: object }];
+    expect(sent).toMatchObject({ type: 'hr.penalty.rejected', onlyUserIds: ['u-recorder'], actorId: 'u-head' });
+    expect(JSON.stringify(sent.params)).not.toContain('reason');
+  });
+
+  it('rejected, recorded by the system (no recorder): nobody to tell', async () => {
+    const { service, notifications } = make();
+    await service.penaltyRejected({ ...PENALTY, createdById: null }, 'u-head');
+    expect(notifications.notify).not.toHaveBeenCalled();
+  });
+
+  it('HR approved or cancelled: both steps’ items resolve (HR may have decided a review nobody could give)', async () => {
+    const { service, notifications } = make();
+    await service.penaltyApproved('p-1', 'u-hr');
+    await service.penaltyCancelled('p-2', 'u-hr');
+    const types = notifications.resolve.mock.calls.map((c) => [(c[0] as { type: string }).type, (c[0] as { resolution: string }).resolution]);
+    expect(types).toEqual([
+      ['hr.penalty.awaiting_approval', 'approved'],
+      ['hr.penalty.awaiting_review', 'approved'],
+      ['hr.penalty.awaiting_approval', 'cancelled'],
+      ['hr.penalty.awaiting_review', 'cancelled'],
+    ]);
+    expect(notifications.notify).not.toHaveBeenCalled();
   });
 });
 

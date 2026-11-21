@@ -32,7 +32,7 @@ function fakeCls() {
   };
 }
 
-function makeService(rows: StoredGrant[], link: UserLink = { employeeId: 'e-1', stageId: 's-1' }) {
+function makeService(rows: StoredGrant[], link: UserLink = { employeeId: 'e-1', stageId: 's-1', stageIds: ['s-1'] }) {
   const state = { rows };
   const repo = {
     get rows() {
@@ -195,11 +195,13 @@ describe('scopeFor (R5)', () => {
     const { service } = makeService([g('stage_head', 'hr.employees.view', 'own_stage')], {
       employeeId: 'e-7',
       stageId: 's-2',
+      stageIds: ['s-2', 's-5'],
     });
     expect(await service.scopeFor(USER, 'hr.employees.view')).toEqual({
       scope: 'own_stage',
       employeeId: 'e-7',
       stageId: 's-2',
+      stageIds: ['s-2', 's-5'],
     });
   });
 
@@ -213,11 +215,13 @@ describe('scopeFor (R5)', () => {
     const { service } = makeService([g('direct_manager', 'hr.employees.view', 'own_team')], {
       employeeId: null,
       stageId: null,
+      stageIds: [],
     });
     expect(await service.scopeFor(USER, 'hr.employees.view')).toEqual({
       scope: 'own_team',
       employeeId: null,
       stageId: null,
+      stageIds: [],
     });
   });
 

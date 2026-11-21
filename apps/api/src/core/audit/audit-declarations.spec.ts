@@ -86,7 +86,11 @@ describe('every write endpoint declares its audit (D6)', () => {
       ]);
     expect(declared).toEqual([
       ['POST /hr/penalties', 'hr.penalty.record'],
+      // §4 two steps (owner 2026-11-21): the stage review's approve and reject, HR's reject.
+      ['POST /hr/penalties/:id/review/approve', 'hr.penalty.review'],
+      ['POST /hr/penalties/:id/review/reject', 'hr.penalty.reject'],
       ['POST /hr/penalties/:id/approve', 'hr.penalty.approve'],
+      ['POST /hr/penalties/:id/reject', 'hr.penalty.reject'],
       ['POST /hr/penalties/:id/cancel', 'hr.penalty.cancel'],
     ]);
   });

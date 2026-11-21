@@ -17,7 +17,14 @@ export interface SeedEmployee {
   /** Seed number of the direct manager — always listed earlier. */
   manager?: number;
   inactive?: boolean;
+  /** "Also teaches in" (§3, owner 2026-11-21): stages besides the main one. */
+  otherStages?: StageKey[];
 }
+
+/** The demo's multi-stage teachers: seed number → their other stages. */
+const OTHER_STAGES: Record<number, StageKey[]> = {
+  16: ['prep'],
+};
 
 type Row = [
   nameEn: string,
@@ -96,6 +103,7 @@ export const EMPLOYEES: SeedEmployee[] = ROWS.map(
     salaryEgp,
     ...(manager ? { manager } : {}),
     ...(inactive ? { inactive } : {}),
+    ...(OTHER_STAGES[i + 1] ? { otherStages: OTHER_STAGES[i + 1] } : {}),
   }),
 );
 

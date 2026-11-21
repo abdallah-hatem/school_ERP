@@ -21,6 +21,7 @@ const d = (s: string) => new Date(`${s}T00:00:00.000Z`);
 
 const row = (over: Partial<EmployeeDetailRow> = {}): EmployeeDetailRow => ({
   id: 'e1',
+  otherStages: [],
   code: 'EMP-0001',
   nameEn: 'A',
   nameAr: 'أ',

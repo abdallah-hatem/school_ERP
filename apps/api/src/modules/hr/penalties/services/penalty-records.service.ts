@@ -1,14 +1,19 @@
-import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { isUUID } from 'class-validator';
 import {
   AuditEntityType,
   ErrorCode,
+  isOpenPenaltyStatus,
   PenaltyStatus,
   type AuditAction,
+  type NamedRef,
+  type PenaltyEmployeeStages,
+  type PenaltyStepConflict,
   type Days,
   type IsoDate,
   type Month,
   type Paginated,
+  type PermissionKey,
   type PayslipPenalty,
   type PenaltyPreview,
   type PenaltyRecord,
@@ -23,19 +28,31 @@ import { AuditService } from '../../../../core/audit';
 import { AfterCommit } from '../../../../database/transactions';
 import { monthOf, toIsoDate } from '../../../../common/utils/dates.util';
 import {
+  actsOnOwnPenalty,
   countPriorInWindow,
+  decisionFrom,
   deductedDays,
   earlierPendingPenalty,
+  firstStep,
   oncePerDayRefuses,
+  optionalNote,
+  penaltyStage,
+  penaltyTransition,
+  rejectionReason,
+  rejectionStep,
   recountAcknowledged,
   recountAfterApproval,
   recountLockedMonth,
   repetitionWindowStart,
   resolvePenalty,
   type CatalogueLevel,
+  type PenaltyDecision,
   type PenaltyTarget,
   type RecountChange,
 } from '../../domain';
+import { PermissionsService } from '../../../../core/permissions';
+import { UsersService } from '../../../../core/users';
+import { headsStage, penaltyInScope, toEmployeeScope, type EmployeeScope } from '../../access/employee-scope.pure';
 import { HrAccessService } from '../../access/hr-access.service';
 import { EmployeesService } from '../../employees/services/employees.service';
 import { MonthLockService } from '../../month-lock/month-lock.service';
@@ -61,7 +78,7 @@ const keyOf = (k: RepeatKey) => `${k.employeeId}:${k.violationId}`;
 export interface MonthPenaltyInputs {
   /** Employee → fixed days of each approved deducting penalty dated in the month. */
   deductingDays: Map<Uuid, Days[]>;
-  /** Employee → number of pending penalties dated in the month. */
+  /** Employee → number of penalties dated in the month still waiting at either step. */
   pending: Map<Uuid, number>;
 }
 
@@ -73,7 +90,17 @@ interface Shown extends CatalogueLevel {
   earlierPending: PenaltyRecord['earlierPending'];
   recount: PenaltyRecountChange[];
   recountLockedMonth: Month | null;
+  hrMayDecide: boolean;
 }
+
+/** A stage-review holder: who they are and the stages their grant covers (`headsStage`). */
+interface ReviewHolder {
+  userId: string;
+  employeeId: string | null;
+  scope: EmployeeScope;
+}
+
+const iso = (d: Date | null) => (d ? d.toISOString() : null);
 
 /** A domain recount change → the contract's shape. */
 const toChange = (c: RecountChange<ApprovedCandidate>): PenaltyRecountChange => ({
@@ -94,11 +121,24 @@ function toRecord(row: RecordRow, shown: Shown): PenaltyRecord {
     action: shown.action,
     days: shown.days,
     status: row.status,
+    stage: row.stage,
     note: row.note,
     cancelReason: row.cancelReason,
     createdBy: row.createdBy,
-    approvedBy: row.approvedBy,
     createdAt: row.createdAt.toISOString(),
+    reviewedBy: row.reviewedBy,
+    reviewedAt: iso(row.reviewedAt),
+    reviewNote: row.reviewNote,
+    reviewSkip: row.reviewSkip,
+    approvedBy: row.approvedBy,
+    approvedAt: iso(row.approvedAt),
+    approvalNote: row.approvalNote,
+    rejectedBy: row.rejectedBy,
+    rejectedAt: iso(row.rejectedAt),
+    rejectedStep: row.rejectedStep,
+    rejectionReason: row.rejectionReason,
+    cancelledAt: iso(row.cancelledAt),
+    hrMayDecide: shown.hrMayDecide,
     earlierPending: shown.earlierPending,
     recount: shown.recount,
     recountLockedMonth: shown.recountLockedMonth,
@@ -117,12 +157,13 @@ const positionOf = (row: RecordRow): PenaltyTarget => ({
 /** What a non-pending record shows: the level, action and days stored on it. */
 const storedLevel = (row: RecordRow): CatalogueLevel => toLevel(row);
 
-/** A non-pending record: its stored level, and nothing blocks it (it isn't waiting for approval). */
+/** A decided record: its stored level, and nothing blocks it (it isn't waiting for approval). */
 const storedShown = (row: RecordRow): Shown => ({
   ...storedLevel(row),
   earlierPending: null,
   recount: [],
   recountLockedMonth: null,
+  hrMayDecide: false,
 });
 
 /**
@@ -136,26 +177,44 @@ function penaltyAuditSnapshot(row: RecordRow) {
   return {
     violationId: { nameEn: row.violation.nameEn, nameAr: row.violation.nameAr },
     date: toIsoDate(row.date),
+    stage: { nameEn: row.stage.nameEn, nameAr: row.stage.nameAr },
     level,
     action,
     days,
     status: row.status,
     note: row.note,
+    reviewSkip: row.reviewSkip,
+    reviewNote: row.reviewNote,
+    approvalNote: row.approvalNote,
+    rejectedStep: row.rejectedStep,
+    rejectionReason: row.rejectionReason,
     cancelReason: row.cancelReason,
   };
 }
 
 /**
- * Penalty records (§4). Level = 1 + APPROVED records of the same violation and employee inside
+ * Penalty records (§4), in two steps (owner 2026-11-21): recorded in the stage where the violation
+ * happened (one of the employee's stages) → PENDING_REVIEW, until that stage's head approves (→
+ * WAITING_HR) or rejects it with a reason; then HR (`hr.penalties.approve`) approves (→ APPROVED,
+ * fixing level, action and days) or rejects it with a reason. It skips the review — straight to
+ * WAITING_HR — when the penalised employee heads that stage, when the recorder may review it
+ * themselves, or when the stage has no stage head (`firstStep`). With no stage head left while it
+ * waits for review, HR may decide it directly (`hrMayDecide`). Nobody reviews, approves or rejects
+ * their own penalty (403 `PENALTY_OWN`). A stage scope covers the penalties recorded in the user's
+ * stages, not the employee's other stages'. A review action on a penalty outside the reviewer's
+ * stages is 403 (it exists, it isn't theirs to act on); unknown → 404. A step taken twice at once:
+ * one wins, the other gets 409 `PENALTY_WRONG_STEP` with the fresh status.
+ *
+ * Level = 1 + APPROVED records of the same violation and employee inside
  * the repetition window that come earlier: an earlier violation date, or the same date and recorded
- * earlier (a not-yet-recorded penalty comes after every same-date one). A PENDING record is shown with today's
+ * earlier (a not-yet-recorded penalty comes after every same-date one). A waiting record is shown with today’s
  * catalogue and count; approval computes the level again and fixes level, action and days.
  * Recording, approving and cancelling need the record's month to be open (409 PAYROLL_APPROVED).
  * Never deleted: cancelled with a reason instead, and a cancelled record is final.
  * A "once per day" violation takes at most one pending or approved record per employee per date
  * (409 VIOLATION_ONCE_PER_DAY at preview, recording and approval; a cancelled one frees the day).
  * Approving goes in date order (§4, owner 2026-11-20): while an earlier record of the same pair
- * (in the window) is still PENDING, approval is refused (409 PENALTY_EARLIER_PENDING, `params.date`),
+ * (in the window) still waits at either step, the HR approval is refused (409 PENALTY_EARLIER_PENDING, `params.date`),
  * checked under the pair's lock; a pending row carries that blocker as `earlierPending`.
  * Recording, approving and cancelling are each one audit entry (§9) on the penalty, labelled with
  * the employee's two names, written in the change's transaction; a refused write records nothing.
@@ -182,9 +241,11 @@ export class PenaltyRecordsService {
     private readonly audit: AuditService,
     private readonly tx: AfterCommit,
     private readonly notifications: HrNotificationsService,
+    private readonly permissions: PermissionsService,
+    private readonly users: UsersService,
   ) {}
 
-  /** The records of the employees `hr.penalties.view` covers for the user (R5). */
+  /** The records `hr.penalties.view` covers for the user (R5; a stage scope by the penalty's stage). */
   async list(query: ListPenaltiesQueryDto): Promise<Paginated<PenaltyRecord>> {
     const result = await this.repository.list(
       query.page,
@@ -193,24 +254,37 @@ export class PenaltyRecordsService {
         employeeId: query.employeeId,
         month: query.month,
         status: query.status,
+        stageId: query.stageId,
         search: query.search,
       },
-      await this.access.where('hr.penalties.view'),
+      await this.access.penaltyWhere('hr.penalties.view'),
     );
     const shown = await this.shownLevels(result.data);
     return { ...result, data: result.data.map((row) => toRecord(row, shown.get(row.id)!)) };
   }
 
-  /** 404 when unknown or its employee is outside the user's `hr.penalties.view` scope (edge case 3). */
+  /** 404 when unknown or outside the user's `hr.penalties.view` scope (edge case 3). */
   async get(id: Uuid): Promise<PenaltyRecord> {
-    const row = await this.repository.findOne(id, await this.access.where('hr.penalties.view'));
+    const row = await this.repository.findOne(id, await this.access.penaltyWhere('hr.penalties.view'));
     if (!row) throw new NotFoundException();
     return this.present(row);
+  }
+
+  /**
+   * The stages a penalty for this employee can be recorded in: main first, then the other ones
+   * (owner 2026-11-21). Outside the user's `hr.penalties.record` scope → 404.
+   */
+  async employeeStages(employeeId: Uuid): Promise<PenaltyEmployeeStages> {
+    await this.employees.assertScopeFirst('hr.penalties.record', [employeeId]);
+    const found = await this.employees.stagesOf(employeeId);
+    if (!found) throw new NotFoundException();
+    return { stages: found.stages };
   }
 
   /** What recording this penalty now would give. Nothing is saved. */
   async preview(query: PenaltyPreviewQueryDto): Promise<PenaltyPreview> {
     const { levels, oncePerDay } = await this.assertRecordable(query.employeeId, query.violationId);
+    const placed = await this.placeNew(query.employeeId, query.stageId, { allowUnchosen: true });
     // §4: say before submitting that the day is taken (the same check `create` makes).
     if (oncePerDay) {
       const sameDay = await this.repository.sameDayStatuses(query, query.date);
@@ -224,7 +298,15 @@ export class PenaltyRecordsService {
     const recount = await this.assertRecountOpen(
       recountAfterApproval({ ...query, date: query.date }, window, pair, levels),
     );
-    return { level, action, days, priorCount, recount: recount.map(toChange) };
+    return {
+      level,
+      action,
+      days,
+      priorCount,
+      recount: recount.map(toChange),
+      startsAs: placed?.status ?? null,
+      reviewSkip: placed?.skip ?? null,
+    };
   }
 
   async create(dto: CreatePenaltyDto, createdById: Uuid | null): Promise<PenaltyRecord> {
@@ -234,6 +316,7 @@ export class PenaltyRecordsService {
 
   private async createInTransaction(dto: CreatePenaltyDto, createdById: Uuid | null): Promise<PenaltyRecord> {
     const { levels, oncePerDay } = await this.assertRecordable(dto.employeeId, dto.violationId);
+    const placed = (await this.placeNew(dto.employeeId, dto.stageId))!;
     await this.monthLock.assertMonthOpen(monthOf(dto.date));
     const window = await this.window();
     const pair = await this.pairRecords(dto, dto.date, window);
@@ -244,9 +327,12 @@ export class PenaltyRecordsService {
       {
         employeeId: dto.employeeId,
         violationId: dto.violationId,
+        stageId: placed.stageId,
         date: dto.date,
         note: dto.note ?? null,
         createdById,
+        status: placed.status,
+        reviewSkip: placed.skip,
         ...resolvePenalty(priorCount, levels),
       },
       (sameDay) => oncePerDayRefuses(oncePerDay, sameDay, 'record'),
@@ -254,35 +340,105 @@ export class PenaltyRecordsService {
     if (!row) this.throwOncePerDay();
     await this.record('hr.penalty.record', null, row);
     const recorded = await this.present(row);
-    // In the same transaction (§11, N4): a refused or rolled-back recording tells no one.
-    await this.notifications.penaltyRecorded({ ...recorded, month: monthOf(dto.date) }, createdById);
+    // In the same transaction (§11, N4): a refused or rolled-back recording tells no one. Whoever
+    // acts next is told — the stage's head, or HR — never the penalised employee themselves.
+    await this.notifications.penaltyRecorded(
+      { ...recorded, month: monthOf(dto.date) },
+      createdById,
+      await this.employeeUserIds(dto.employeeId),
+    );
     return recorded;
   }
 
   /**
-   * PENDING → APPROVED, fixing level, action and days from today's catalogue and count. A
+   * The stage review approves: PENDING_REVIEW → WAITING_HR, with an optional note (§4 two steps).
+   * Only a reviewer whose stages hold the penalty's stage (else 403), never on their own penalty
+   * (403 `PENALTY_OWN`), not in an approved payroll month. HR's approvers are told.
+   */
+  async reviewApprove(id: Uuid, byUserId: Uuid | null, note: string | null): Promise<PenaltyRecord> {
+    return this.tx.inTransaction(async () => {
+      const current = await this.findForAction(id, 'hr.penalties.review');
+      this.assertTransition(current, 'REVIEW_APPROVE', false);
+      await this.monthLock.assertMonthOpen(monthOf(toIsoDate(current.date)));
+      if (!(await this.repository.review(id, byUserId, optionalNote(note)))) await this.throwStepConflict(id);
+      const after = await this.findWritten(id);
+      await this.record('hr.penalty.review', current, after);
+      const reviewed = await this.present(after);
+      await this.notifications.penaltyReviewed(
+        { ...reviewed, month: monthOf(toIsoDate(current.date)) },
+        byUserId,
+        await this.employeeUserIds(current.employeeId),
+      );
+      return this.get(id);
+    });
+  }
+
+  /**
+   * A rejection with a required reason (§4 two steps): at the stage review (`REVIEW_REJECT`,
+   * PENDING_REVIEW → REJECTED, `hr.penalties.review`) or at HR (`HR_REJECT`, WAITING_HR →
+   * REJECTED — or PENDING_REVIEW when HR may decide it — `hr.penalties.approve`). Not on one's own
+   * penalty, not in an approved payroll month. The recorder is told; the reason shows on the
+   * penalty and in its history.
+   */
+  async reject(
+    id: Uuid,
+    decision: 'REVIEW_REJECT' | 'HR_REJECT',
+    rawReason: string,
+    byUserId: Uuid | null,
+  ): Promise<PenaltyRecord> {
+    return this.tx.inTransaction(async () => {
+      const key: PermissionKey = decision === 'REVIEW_REJECT' ? 'hr.penalties.review' : 'hr.penalties.approve';
+      const current = await this.findForAction(id, key);
+      const hrMayDecide = decision === 'HR_REJECT' && (await this.hrMayDecide(current));
+      this.assertTransition(current, decision, hrMayDecide);
+      const reason = rejectionReason(rawReason);
+      if (reason === null) throw new CodedException(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_FAILED);
+      await this.monthLock.assertMonthOpen(monthOf(toIsoDate(current.date)));
+      const from = decisionFrom(decision, { hrMayDecide });
+      const done = await this.repository.reject(id, from, byUserId, reason, rejectionStep(decision), current);
+      if (!done) await this.throwStepConflict(id);
+      await this.record('hr.penalty.reject', current, await this.findWritten(id));
+      await this.notifications.penaltyRejected(
+        {
+          id,
+          employee: current.employee,
+          violation: current.violation,
+          createdById: current.createdById,
+        },
+        byUserId,
+      );
+      return this.get(id);
+    });
+  }
+
+  /**
+   * The HR step: WAITING_HR (or PENDING_REVIEW when HR may decide it) → APPROVED, fixing level, action and days from today's catalogue and count. A
    * backdated one also moves the later approved ones up — only as `acknowledgedRecount` confirms.
    */
   async approve(
     id: Uuid,
     approvedById: Uuid | null,
     acknowledgedRecount?: PenaltyRecountAcknowledgement[],
+    note: string | null = null,
   ): Promise<PenaltyRecord> {
-    return this.tx.inTransaction(() => this.approveInTransaction(id, approvedById, acknowledgedRecount));
+    return this.tx.inTransaction(() =>
+      this.approveInTransaction(id, approvedById, acknowledgedRecount, optionalNote(note)),
+    );
   }
 
   private async approveInTransaction(
     id: Uuid,
     approvedById: Uuid | null,
     acknowledgedRecount: PenaltyRecountAcknowledgement[] | undefined,
+    note: string | null,
   ): Promise<PenaltyRecord> {
     // Outside the user's `hr.penalties.approve` scope → 404, like an unknown record (R5).
-    const current = await this.repository.findOne(id, await this.access.where('hr.penalties.approve'));
+    const current = await this.repository.findOne(id, await this.access.penaltyWhere('hr.penalties.approve'));
     if (!current) throw new NotFoundException();
-    this.assertNotCancelled(current.status);
-    if (current.status !== PenaltyStatus.PENDING) {
-      throw new CodedException(HttpStatus.CONFLICT, ErrorCode.PENALTY_NOT_PENDING);
-    }
+    await this.assertNotOwn(current);
+    const hrMayDecide = await this.hrMayDecide(current);
+    this.assertTransition(current, 'HR_APPROVE', hrMayDecide);
+    const from = decisionFrom('HR_APPROVE', { hrMayDecide });
     const date = toIsoDate(current.date);
     await this.monthLock.assertMonthOpen(monthOf(date));
 
@@ -317,6 +473,8 @@ export class PenaltyRecordsService {
         recounted = changes;
         return changes.map((c) => ({ id: c.record.id, fromLevel: c.before.level, ...c.after }));
       },
+      from,
+      note,
     );
     if (outcome === 'ONCE_PER_DAY') this.throwOncePerDay();
     if (typeof outcome === 'object') {
@@ -324,14 +482,17 @@ export class PenaltyRecordsService {
         date: outcome.earlierPending,
       });
     }
-    if (outcome === 'NOT_PENDING') await this.throwStatusConflict(id);
+    if (outcome === 'NOT_PENDING') await this.throwStepConflict(id);
     await this.record('hr.penalty.approve', current, await this.findWritten(id));
     for (const change of recounted) await this.recordRecount(current, date, change);
     await this.notifications.penaltyApproved(id, approvedById);
     return this.get(id);
   }
 
-  /** PENDING or APPROVED → CANCELLED with a reason. Other approved levels are not recomputed. */
+  /**
+   * Waiting (either step) or APPROVED → CANCELLED with a reason. Other approved levels are not
+   * recomputed. Cancelling stays as before: whoever holds `hr.penalties.cancel` over it.
+   */
   async cancel(
     id: Uuid,
     dto: CancelPenaltyDto,
@@ -346,31 +507,30 @@ export class PenaltyRecordsService {
     cancelledById: Uuid | null,
   ): Promise<PenaltyRecord> {
     // Outside the user's `hr.penalties.cancel` scope → 404, like an unknown record (R5).
-    const current = await this.repository.findOne(id, await this.access.where('hr.penalties.cancel'));
+    const current = await this.repository.findOne(id, await this.access.penaltyWhere('hr.penalties.cancel'));
     if (!current) throw new NotFoundException();
-    this.assertNotCancelled(current.status);
+    this.assertTransition(current, 'CANCEL', false);
     await this.monthLock.assertMonthOpen(monthOf(toIsoDate(current.date)));
     // Under the pair's lock: never between a backdated approval's recount and its writes.
     if (!(await this.repository.cancel(id, dto.reason, cancelledById, current))) {
-      await this.throwStatusConflict(id);
+      await this.throwStepConflict(id);
     }
     await this.record('hr.penalty.cancel', current, await this.findWritten(id));
-    if (current.status === PenaltyStatus.PENDING)
-      await this.notifications.penaltyCancelled(id, cancelledById);
+    if (isOpenPenaltyStatus(current.status)) await this.notifications.penaltyCancelled(id, cancelledById);
     return this.get(id);
   }
 
   /**
    * What payroll needs from a month's penalties (§4, §6): per employee, the FIXED days of each
    * APPROVED deducting penalty (day deduction, or investigation with days) dated in the month, and
-   * how many PENDING penalties are dated in it. Cancelled records never count.
+   * how many penalties dated in it still wait at either step. Rejected and cancelled never count.
    */
   async payrollInputs(month: Month): Promise<MonthPenaltyInputs> {
     const rows = await this.repository.findForPayroll(month);
     const deductingDays = new Map<Uuid, Days[]>();
     const pending = new Map<Uuid, number>();
     for (const row of rows) {
-      if (row.status === PenaltyStatus.PENDING) {
+      if (isOpenPenaltyStatus(row.status)) {
         pending.set(row.employeeId, (pending.get(row.employeeId) ?? 0) + 1);
         continue;
       }
@@ -389,7 +549,7 @@ export class PenaltyRecordsService {
     return this.repository.recountedInMonthSince(month, since);
   }
 
-  /** How many penalties dated in a month are still PENDING right now (blocks payroll approval). */
+  /** How many penalties dated in a month still wait at either step right now (blocks payroll approval). */
   pendingCountInMonth(month: Month): Promise<number> {
     return this.repository.countPendingInMonth(month);
   }
@@ -408,22 +568,36 @@ export class PenaltyRecordsService {
   }
 
   /**
-   * Pending and approved records dated in a month (dashboard: by violation date), of the employees
-   * `hr.penalties.view` covers for the user (R5).
+   * Records dated in a month (dashboard: by violation date) that `hr.penalties.view` covers for the
+   * user (R5): `pending` waits at either step (stage review or HR), `approved` only the HR-approved
+   * ones (owner 2026-11-21).
    */
   async monthCounts(month: Month): Promise<{ pending: number; approved: number }> {
     const counts = await this.repository.countByStatusInMonth(
       month,
-      await this.access.where('hr.penalties.view'),
+      await this.access.penaltyWhere('hr.penalties.view'),
     );
-    return { pending: counts.PENDING, approved: counts.APPROVED };
+    return { pending: counts.PENDING_REVIEW + counts.WAITING_HR, approved: counts.APPROVED };
   }
 
-  /** The ids of the records whose employee `hr.penalties.view` covers (Activity log, R5). */
+  /** The ids of the records `hr.penalties.view` covers (Activity log, R5). */
   async idsInViewScope(): Promise<Uuid[] | 'all'> {
     const scope = await this.access.scope('hr.penalties.view');
     if (scope.kind === 'all') return 'all';
-    return this.repository.findIdsInScope(await this.access.where('hr.penalties.view'));
+    return this.repository.findIdsInScope(await this.access.penaltyWhere('hr.penalties.view'));
+  }
+
+  /**
+   * Whether `scope` — a notification recipient's (§11) — covers each record, in order: a stage
+   * scope by the penalty's stage (owner 2026-11-21: the other stage's head isn't told), a team or
+   * self scope by its employee. Unknown ids are not covered.
+   */
+  async coveredBy(scope: EmployeeScope, ids: readonly Uuid[]): Promise<boolean[]> {
+    const rows = new Map((await this.repository.findScopeFields([...new Set(ids)])).map((r) => [r.id, r]));
+    return ids.map((id) => {
+      const row = rows.get(id);
+      return !!row && penaltyInScope(scope, row);
+    });
   }
 
   /**
@@ -482,19 +656,118 @@ export class PenaltyRecordsService {
     throw new CodedException(HttpStatus.CONFLICT, ErrorCode.VIOLATION_ONCE_PER_DAY);
   }
 
-  private assertNotCancelled(status: PenaltyStatus): void {
-    if (status === PenaltyStatus.CANCELLED) {
-      throw new CodedException(HttpStatus.CONFLICT, ErrorCode.PENALTY_CANCELLED);
+  /**
+   * The record for a decision under `key` (§4 two steps). Unknown → 404. Outside the user's scope:
+   * for the stage review 403 (the penalty is in another stage — not theirs to act on, owner
+   * 2026-11-21), for the other keys 404 as before (R5). Own penalty → 403 `PENALTY_OWN`.
+   */
+  private async findForAction(id: Uuid, key: PermissionKey): Promise<RecordRow> {
+    const current = await this.repository.findOne(id, await this.access.penaltyWhere(key));
+    if (!current) {
+      if (key === 'hr.penalties.review' && (await this.repository.findStatus(id))) {
+        throw new ForbiddenException();
+      }
+      throw new NotFoundException();
+    }
+    await this.assertNotOwn(current);
+    return current;
+  }
+
+  /** Nobody reviews, approves or rejects their own penalty (owner 2026-11-21). */
+  private async assertNotOwn(row: RecordRow): Promise<void> {
+    const actor = await this.access.actor();
+    if (actor && actsOnOwnPenalty(actor.employeeId, row.employeeId)) {
+      throw new CodedException(HttpStatus.FORBIDDEN, ErrorCode.PENALTY_OWN);
     }
   }
 
-  /** A conditional status update matched nothing: someone changed the record meanwhile. */
-  private async throwStatusConflict(id: Uuid): Promise<never> {
+  /** 409 when `decision` can't be taken from the record's status (final, or the wrong step). */
+  private assertTransition(row: RecordRow, decision: PenaltyDecision, hrMayDecide: boolean): void {
+    const t = penaltyTransition(row.status, decision, { hrMayDecide });
+    if (t.ok) return;
+    if (t.refusal === ErrorCode.PENALTY_WRONG_STEP) this.stepConflict(row.status);
+    throw new CodedException(HttpStatus.CONFLICT, t.refusal);
+  }
+
+  private stepConflict(status: PenaltyStatus): never {
+    const data: PenaltyStepConflict = { status };
+    throw CodedException.withData(HttpStatus.CONFLICT, ErrorCode.PENALTY_WRONG_STEP, {}, data);
+  }
+
+  /**
+   * A conditional status update matched nothing: someone changed the record meanwhile (two reviews
+   * at once — one wins). 409 with where it stands now.
+   */
+  private async throwStepConflict(id: Uuid): Promise<never> {
     const now = await this.repository.findStatus(id);
     if (now?.status === PenaltyStatus.CANCELLED) {
       throw new CodedException(HttpStatus.CONFLICT, ErrorCode.PENALTY_CANCELLED);
     }
-    throw new CodedException(HttpStatus.CONFLICT, ErrorCode.PENALTY_NOT_PENDING);
+    if (now?.status === PenaltyStatus.REJECTED) {
+      throw new CodedException(HttpStatus.CONFLICT, ErrorCode.PENALTY_REJECTED);
+    }
+    this.stepConflict(now?.status ?? PenaltyStatus.APPROVED);
+  }
+
+  /** Everyone holding the stage review, with their scope — once per request (cached by the core). */
+  private async reviewHolders(): Promise<ReviewHolder[]> {
+    const holders = await this.permissions.holdersWithScope('hr.penalties.review');
+    return holders.map((h) => ({ userId: h.userId, employeeId: h.scope.employeeId, scope: toEmployeeScope(h.scope) }));
+  }
+
+  /** The stage heads who may review a penalty of `employeeId` in `stageId`: never the employee. */
+  private reviewersOf(holders: readonly ReviewHolder[], stageId: string, employeeId: string): ReviewHolder[] {
+    return holders.filter((h) => headsStage(h.scope, stageId) && h.employeeId !== employeeId);
+  }
+
+  /**
+   * PENDING_REVIEW with nobody left to review it — no stage head of its stage other than the
+   * penalised employee (owner 2026-11-21, edge case 3): HR may decide it directly.
+   */
+  private async hrMayDecide(row: RecordRow, holders?: readonly ReviewHolder[]): Promise<boolean> {
+    if (row.status !== PenaltyStatus.PENDING_REVIEW) return false;
+    return this.reviewersOf(holders ?? (await this.reviewHolders()), row.stageId, row.employeeId).length === 0;
+  }
+
+  /**
+   * Where a new penalty of `employeeId` goes (owner 2026-11-21): its stage — the one given, or the
+   * only one (400 `PENALTY_STAGE_REQUIRED` / `PENALTY_STAGE_INVALID`) — and its first status
+   * (`firstStep`). `allowUnchosen` (the preview): several stages and none chosen yet → null.
+   */
+  private async placeNew(
+    employeeId: Uuid,
+    requested: string | undefined,
+    { allowUnchosen = false }: { allowUnchosen?: boolean } = {},
+  ) {
+    const found = await this.employees.stagesOf(employeeId);
+    if (!found) throw new CodedException(HttpStatus.BAD_REQUEST, ErrorCode.FOREIGN_KEY_VIOLATION);
+    const choice = penaltyStage(found.stages.map((st: NamedRef) => st.id), requested);
+    if (!choice.ok) {
+      if (allowUnchosen && choice.refusal === ErrorCode.PENALTY_STAGE_REQUIRED) return null;
+      throw new CodedException(HttpStatus.BAD_REQUEST, choice.refusal);
+    }
+    const holders = await this.reviewHolders();
+    const employeeIsHead = holders.some((h) => h.employeeId === employeeId && headsStage(h.scope, choice.stageId));
+    // The system recording (seed, scripts — no signed-in user) is nobody's review.
+    const recorderMayReview =
+      (await this.access.actor()) !== null &&
+      penaltyInScope(await this.access.scope('hr.penalties.review'), {
+        stageId: choice.stageId,
+        employeeId,
+        employee: { managerId: found.managerId },
+      });
+    const step = firstStep({
+      employeeIsHead,
+      recorderMayReview,
+      stageHasHead: this.reviewersOf(holders, choice.stageId, employeeId).length > 0,
+    });
+    return { stageId: choice.stageId, ...step };
+  }
+
+  /** The penalised employee's own sign-in account, left out of "waiting for you" notifications. */
+  private async employeeUserIds(employeeId: Uuid): Promise<Uuid[]> {
+    const account = await this.users.accountOfEmployee(employeeId);
+    return account ? [account.id] : [];
   }
 
   private async window(): Promise<RepetitionWindow> {
@@ -567,18 +840,20 @@ export class PenaltyRecordsService {
   }
 
   /**
-   * The level / action / days each row shows: stored for APPROVED and CANCELLED, recomputed from
-   * today's catalogue and approved records for PENDING (§4) — which also get the earlier pending
+   * The level / action / days each row shows: stored for APPROVED, REJECTED and CANCELLED,
+   * recomputed from today's catalogue and approved records for a waiting one (either step, §4) — which also get the earlier pending
    * record that blocks approving them (`earlierPending`), and the approved ones approving them would
    * move up (`recount`, §4 backdated penalty) with the earliest locked month among those. One query
    * for the whole page (later dates included: what a backdated one recounts).
    */
   private async shownLevels(rows: readonly RecordRow[]): Promise<Map<Uuid, Shown>> {
     const shown = new Map<Uuid, Shown>();
-    const pending = rows.filter((r) => r.status === PenaltyStatus.PENDING);
-    for (const row of rows)
-      if (row.status !== PenaltyStatus.PENDING) shown.set(row.id, storedShown(row));
+    const pending = rows.filter((r) => isOpenPenaltyStatus(r.status));
+    for (const row of rows) if (!isOpenPenaltyStatus(row.status)) shown.set(row.id, storedShown(row));
     if (pending.length === 0) return shown;
+    const holders = pending.some((r) => r.status === PenaltyStatus.PENDING_REVIEW)
+      ? await this.reviewHolders()
+      : [];
 
     const window = await this.window();
     const uniqueKeys = [
@@ -606,6 +881,7 @@ export class PenaltyRecordsService {
         earlierPending: blocker && { id: blocker.id, date: blocker.date },
         recount: recount.map(toChange),
         recountLockedMonth: await this.recountLocked(recount),
+        hrMayDecide: await this.hrMayDecide(row, holders),
       });
     }
     return shown;

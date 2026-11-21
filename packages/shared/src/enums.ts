@@ -78,13 +78,56 @@ export const PENALTY_ACTIONS_ALLOWING_DAYS: readonly PenaltyAction[] = [
   PenaltyAction.INVESTIGATION,
 ];
 
+/**
+ * §4 two-step approval (owner, 2026-11-21): recorded → PENDING_REVIEW (the stage head of the
+ * penalty's stage approves or rejects) → WAITING_HR (the HR manager or principal approves or
+ * rejects) → APPROVED. REJECTED (at either step, with a reason) and CANCELLED are final.
+ * Penalties pending before the two steps existed became WAITING_HR.
+ */
 export const PenaltyStatus = {
-  PENDING: 'PENDING',
+  PENDING_REVIEW: 'PENDING_REVIEW',
+  WAITING_HR: 'WAITING_HR',
   APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
   CANCELLED: 'CANCELLED',
 } as const;
 export type PenaltyStatus = (typeof PenaltyStatus)[keyof typeof PenaltyStatus];
 export const PENALTY_STATUSES = values(PenaltyStatus);
+
+/**
+ * The statuses still waiting for a decision (either step) — what "pending" means for payroll, the
+ * once-per-day rule, the date-order rule and the dashboard's Pending tile.
+ */
+export const OPEN_PENALTY_STATUSES = [PenaltyStatus.PENDING_REVIEW, PenaltyStatus.WAITING_HR] as const;
+
+export function isOpenPenaltyStatus(status: PenaltyStatus): boolean {
+  return (OPEN_PENALTY_STATUSES as readonly PenaltyStatus[]).includes(status);
+}
+
+/** The list filter: one status, or `OPEN` — waiting at either step. */
+export const PENALTY_STATUS_FILTERS = [...PENALTY_STATUSES, 'OPEN'] as const;
+export type PenaltyStatusFilter = (typeof PENALTY_STATUS_FILTERS)[number];
+
+/** The step a penalty was rejected at. */
+export const PenaltyStep = {
+  REVIEW: 'REVIEW',
+  HR: 'HR',
+} as const;
+export type PenaltyStep = (typeof PenaltyStep)[keyof typeof PenaltyStep];
+export const PENALTY_STEPS = values(PenaltyStep);
+
+/**
+ * Why a penalty skipped the stage review and went straight to WAITING_HR (§4, owner 2026-11-21):
+ * the penalised employee is a stage head of that stage (they can't review their own), the recorder
+ * may review it themselves (their recording counts as the review), or the stage has no stage head.
+ */
+export const PenaltyReviewSkip = {
+  EMPLOYEE_IS_HEAD: 'EMPLOYEE_IS_HEAD',
+  RECORDER_IS_HEAD: 'RECORDER_IS_HEAD',
+  NO_STAGE_HEAD: 'NO_STAGE_HEAD',
+} as const;
+export type PenaltyReviewSkip = (typeof PenaltyReviewSkip)[keyof typeof PenaltyReviewSkip];
+export const PENALTY_REVIEW_SKIPS = values(PenaltyReviewSkip);
 
 export const PayrollStatus = {
   DRAFT: 'DRAFT',

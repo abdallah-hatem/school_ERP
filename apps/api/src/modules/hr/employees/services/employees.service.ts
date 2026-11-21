@@ -91,19 +91,32 @@ const detailScopeFields = (row: EmployeeDetailRow): EmployeeScopeFields => ({
   id: row.id,
   stageId: row.stage.id,
   managerId: row.manager?.id ?? null,
+  otherStageIds: row.otherStages.map((s) => s.stage.id),
 });
+
+/** "Also teaches in" as the API returns it: the stages themselves, in stage order. */
+const otherStagesOf = (row: { otherStages: { stage: NamedRef }[] }): NamedRef[] =>
+  row.otherStages.map((s) => s.stage);
+
+const sameIds = (a: readonly string[], b: readonly string[]) =>
+  a.length === b.length && [...a].sort().join() === [...b].sort().join();
 
 /** A list row; `basicSalary` left out unless `salaryVisible` (R7). */
 export function toEmployeeSummary(row: EmployeeSummaryRow, salaryVisible: boolean): EmployeeSummary {
-  const { managerId: _managerId, ...rest } = row;
-  return { ...withoutFields(rest, ['basicSalary'], salaryVisible), salaryVisible };
+  const { managerId: _managerId, otherStages: _otherStages, ...rest } = row;
+  return {
+    ...withoutFields(rest, ['basicSalary'], salaryVisible),
+    otherStages: otherStagesOf(row),
+    salaryVisible,
+  };
 }
 
 /** The full record; the salary fields (`EMPLOYEE_SALARY_FIELDS`) left out unless `salaryVisible` (R7). */
 export function toEmployee(row: EmployeeDetailRow, salaryVisible: boolean): Omit<Employee, 'signInAccount'> {
-  const { manager, ...rest } = row;
+  const { manager, otherStages: _otherStages, ...rest } = row;
   return {
     ...withoutFields(rest, EMPLOYEE_SALARY_FIELDS, salaryVisible),
+    otherStages: otherStagesOf(row),
     salaryVisible,
     manager: manager
       ? {
@@ -174,7 +187,14 @@ export class EmployeesService {
     return {
       ...result,
       data: result.data.map((row) =>
-        toEmployeeSummary(row, inScope(salary, { ...row, stageId: row.stage.id })),
+        toEmployeeSummary(
+          row,
+          inScope(salary, {
+            ...row,
+            stageId: row.stage.id,
+            otherStageIds: row.otherStages.map((s) => s.stage.id),
+          }),
+        ),
       ),
     };
   }
@@ -192,6 +212,17 @@ export class EmployeesService {
    */
   async assertInScope(key: PermissionKey, id: Uuid): Promise<void> {
     await this.access.assertInScope(key, await this.repository.findScopeFields(id));
+  }
+
+  /**
+   * The employee's stages — main first, then "also teaches in" in stage order (§3, owner
+   * 2026-11-21): the stages a penalty can be recorded in. Null for an unknown employee. No scope
+   * check: the caller checks its own key first.
+   */
+  async stagesOf(id: Uuid): Promise<{ managerId: string | null; stages: NamedRef[] } | null> {
+    const row = await this.repository.findDetailById(id);
+    if (!row) return null;
+    return { managerId: row.manager?.id ?? null, stages: [row.stage, ...otherStagesOf(row)] };
   }
 
   /** The ids of the employees `hr.employees.view` covers for the user (Activity log, R5). */
@@ -330,8 +361,9 @@ export class EmployeesService {
       }
       const contract = this.resolveContract(dto.contractStart, dto.contractEnd);
       const probationEnd = await this.resolveProbationEnd(dto.hireDate, dto.probationEnd);
+      const otherStageIds = await this.resolveOtherStages(dto.stageId, dto.otherStageIds ?? [], []);
 
-      const row = await this.repository.createWithCode({
+      const created = await this.repository.createWithCode({
         nameEn: dto.nameEn,
         nameAr: dto.nameAr,
         nationalId: dto.nationalId ?? null,
@@ -365,6 +397,9 @@ export class EmployeesService {
         university: dto.university ?? null,
         graduationYear: dto.graduationYear ?? null,
       });
+      const row = otherStageIds.length
+        ? await this.writeOtherStages(created.id, otherStageIds)
+        : created;
       await this.record('hr.employee.create', null, row);
       await this.events.publish(HrEvent.EMPLOYEE_HIRED, {
         employeeId: row.id,
@@ -424,13 +459,22 @@ export class EmployeesService {
         );
       }
 
-      const data: EmployeeUpdateData = { ...dto };
+      const currentOthers = current.otherStages.map((s) => s.stage.id);
+      const otherStageIds = await this.resolveOtherStages(
+        dto.stageId ?? current.stage.id,
+        dto.otherStageIds,
+        currentOthers,
+      );
+
+      const { otherStageIds: _otherStageIds, ...fields } = dto;
+      const data: EmployeeUpdateData = { ...fields };
       for (const f of DATE_FIELDS) {
         const v = dto[f];
         if (v) data[f] = fromIsoDate(v);
       }
       Object.assign(data, this.insuranceData(insurance));
-      const row = await this.repository.updateEmployee(id, data);
+      let row = await this.repository.updateEmployee(id, data);
+      if (!sameIds(otherStageIds, currentOthers)) row = await this.writeOtherStages(id, otherStageIds);
       // Always recorded: a save that changes nothing writes no entry but still answers `@Audited`.
       await this.record('hr.employee.update', current, row);
       // §11 (N3): a moved contract or probation end ends its open reminder; the daily job sends a
@@ -578,6 +622,7 @@ export class EmployeesService {
       id: current.id,
       stageId: dto.stageId ?? current.stage.id,
       managerId: dto.managerId !== undefined ? dto.managerId : (current.manager?.id ?? null),
+      otherStageIds: dto.otherStageIds ?? current.otherStages.map((s) => s.stage.id),
     };
     if (inScope(edit, after)) return;
     throw bad(after.stageId !== current.stage.id ? ErrorCode.FOREIGN_KEY_VIOLATION : ErrorCode.INVALID_MANAGER);
@@ -589,6 +634,38 @@ export class EmployeesService {
     if (view.kind === 'all') return;
     const manager = await this.repository.findScopeFields(managerId);
     if (!manager || !inScope(view, manager)) throw bad(ErrorCode.INVALID_MANAGER);
+  }
+
+  /**
+   * "Also teaches in" after this request (§3, owner 2026-11-21): `requested` (absent on an edit:
+   * the current ones), never the main stage, each once, existing stages — a newly picked one must
+   * be shown (a hidden one already held is kept, like the other lists). When an edit moves the main
+   * stage onto one of the current other stages and doesn't send the list, it simply leaves the list.
+   * 400 `INVALID_OTHER_STAGES` otherwise.
+   */
+  private async resolveOtherStages(
+    mainStageId: string,
+    requested: readonly string[] | undefined,
+    current: readonly string[],
+  ): Promise<string[]> {
+    if (requested === undefined) return current.filter((id) => id !== mainStageId);
+    const unique = new Set(requested);
+    if (unique.size === 0) return [];
+    if (unique.size !== requested.length || unique.has(mainStageId)) throw bad(ErrorCode.INVALID_OTHER_STAGES);
+    const found = new Map((await this.repository.findStages([...unique])).map((s) => [s.id, s.isActive]));
+    for (const id of unique) {
+      if (!found.has(id)) throw bad(ErrorCode.INVALID_OTHER_STAGES);
+      if (!found.get(id) && !current.includes(id)) throw bad(ErrorCode.INVALID_OTHER_STAGES);
+    }
+    return [...requested];
+  }
+
+  /** Writes the other stages and reads the record back with them. */
+  private async writeOtherStages(id: Uuid, stageIds: readonly string[]): Promise<EmployeeDetailRow> {
+    await this.repository.setOtherStages(id, stageIds);
+    const row = await this.repository.findDetailById(id);
+    if (!row) throw new NotFoundException();
+    return row;
   }
 
   private async assertSelectable(ids: {
