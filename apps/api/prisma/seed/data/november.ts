@@ -48,7 +48,10 @@ export interface SeedPenalty {
  * stage review. Kindergarten has none: its penalties go straight to HR. Email `<key>@school.local`,
  * the admin's password (`SEED_ADMIN_PASSWORD`).
  */
-export const STAGE_HEADS: { employee: number; email: string; name: string }[] = [];
+export const STAGE_HEADS: { employee: number; email: string; name: string }[] = [
+  { employee: 3, email: 'primary.head@school.local', name: 'Khaled Mostafa Hassan' },
+  { employee: 4, email: 'prep.head@school.local', name: 'Hoda Abdelaziz Fathy' },
+];
 
 /**
  * Recorded in date order and approved through the penalties service, so repeats get their level
