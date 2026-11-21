@@ -532,7 +532,13 @@ phase live in `docs/build-log/`.
 - 2026-11-21 — Housekeeping (owner: "when worktrees are done we delete them right ?" / "what about the
   177 branches"): 50 merged worktrees removed (64 GB → ~4 GB), 168 merged remote branches and 188 local
   ones deleted; merges now use `--delete-branch` and remove the agent's worktree.
+- 2026-11-21 — Sidebar keeps the current page in view → #215: on load and on navigation the active
+  item scrolls into the sidebar's view (a prefetch no longer counts as a server render in the guard).
 ## Next up
+
+- Sign-in page redesign — owner picked the split layout, option S2 "Office scene" (artwork on the light
+  side, form on the right, light motion), but the hand-drawn SVG is "too basic … needs to be more real".
+  Realistic artwork options being mocked (`design/mockups/login-*.html`); build after the pick.
 
 - Custom icon set drawn (`design/mockups/icon-set.html`, style G monoline + solid when selected) —
   **on hold** (owner, 2026-11-20).
