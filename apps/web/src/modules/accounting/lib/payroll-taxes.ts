@@ -1,13 +1,6 @@
-import {
-  ACCOUNTING_YEAR_RANGE,
-  InsuranceStatus,
-  type AccountingPayrollLine,
-  type Piastres,
-  type TaxRule,
-} from '@school-erp/shared';
-import { matchesSearch } from '@/shared/lib/search';
+import { ACCOUNTING_YEAR_RANGE, type Piastres, type TaxRule } from '@school-erp/shared';
 
-/** Pure helpers of the payroll taxes screens (§10): the URL's year, the statement's groups and rule. */
+/** Pure helpers of the payroll taxes screens (§10): the URL's year and the rule. The lines are the API's. */
 
 export type SearchParamsRecord = Record<string, string | string[] | undefined>;
 
@@ -22,34 +15,8 @@ export function parseYear(params: SearchParamsRecord, now: Date = new Date()): n
   return year;
 }
 
-/** The statement's two groups, each in the API's order (employee code). */
-export function groupByInsurance(lines: readonly AccountingPayrollLine[]): {
-  insured: AccountingPayrollLine[];
-  notInsured: AccountingPayrollLine[];
-} {
-  return {
-    insured: lines.filter((l) => l.insuranceStatus === InsuranceStatus.INSURED),
-    notInsured: lines.filter((l) => l.insuranceStatus !== InsuranceStatus.INSURED),
-  };
-}
-
-/** The statement's search: an employee's English or Arabic name, or code (an empty search matches all). */
-export function matchesLine(line: AccountingPayrollLine, search: string): boolean {
-  return matchesSearch(search, [line.nameEn, line.nameAr, line.employeeCode]);
-}
-
 export const SUBTOTAL_FIELDS = ['net', 'insuranceAmount', 'incomeTax', 'martyrTax', 'gross'] as const;
 export type SubtotalField = (typeof SUBTOTAL_FIELDS)[number];
-
-/**
- * A group's subtotals — the sum of its lines, which are the whole month (not a page). `null` when
- * any line's amounts are hidden from this viewer (§2, P4): a partial sum would read as the total.
- */
-export function subtotals(lines: readonly AccountingPayrollLine[]): Record<SubtotalField, Piastres> | null {
-  if (lines.some((l) => !l.salaryVisible)) return null;
-  const sum = (field: SubtotalField) => lines.reduce((n, l) => n + (l[field] ?? 0), 0);
-  return { net: sum('net'), insuranceAmount: sum('insuranceAmount'), incomeTax: sum('incomeTax'), martyrTax: sum('martyrTax'), gross: sum('gross') };
-}
 
 export interface RuleSlice {
   /** `first` (from 0), `next`, `rest` (open-ended, from `from`) or `all` (one open slice: the whole amount). */

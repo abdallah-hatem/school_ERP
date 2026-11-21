@@ -4,13 +4,16 @@ import {
   DEFAULT_TAX_RULE,
   PAGINATION,
   PAYROLL_PAGINATION,
+  InsuranceStatus,
   type AccountingPayrollLine,
+  type AccountingPayrollLinesPage,
   type AccountingPayrollMonth,
   type Month,
   type Piastres,
   type TaxRule,
 } from '@school-erp/shared';
-import { Fragment, useMemo, useState, type ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
+import { Fragment, useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
 import { callApi } from '@/lib/callApi';
 import { EmployeeLink } from '@/core/employees';
 import { useSchoolBranding } from '@/core/settings';
@@ -38,16 +41,16 @@ import { localName, nameIn, type Locale, type Translate } from '@/shared/lib/i18
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { GET_PAYROLL_TAXES_EXCEL } from '../apis';
-import {
-  formatPercent,
-  groupByInsurance,
-  matchesLine,
-  ruleSlices,
-  sameRule,
-  SUBTOTAL_FIELDS,
-  subtotals,
-  type SubtotalField,
-} from '../lib/payroll-taxes';
+import { statementQueryString, type StatementQuery, type TablePage } from '../lib/lines-query';
+import { formatPercent, ruleSlices, sameRule, SUBTOTAL_FIELDS, type SubtotalField } from '../lib/payroll-taxes';
+import { loadEveryLine } from '../lib/print-lines';
+import { usePrintEveryLine } from '../lib/use-print-every-line';
+
+const SEARCH_DEBOUNCE_MS = 300;
+const DEFAULT_QUERY: StatementQuery = {
+  insured: { page: PAGINATION.defaultPage, limit: PAGINATION.defaultLimit },
+  notInsured: { page: PAGINATION.defaultPage, limit: PAGINATION.defaultLimit },
+};
 
 const isSubtotalField = (id: string): id is SubtotalField => (SUBTOTAL_FIELDS as readonly string[]).includes(id);
 
@@ -84,28 +87,78 @@ export interface StatementProps {
   todayRule: TaxRule | null;
   /** `/<locale>/accounting/payroll-taxes`. */
   basePath: string;
+  /** The URL's search and each group's page (the API answered the groups for it). */
+  query?: StatementQuery;
+  /** Each group's page as the API paged, searched and summed it; `undefined` while loading. */
+  insured?: AccountingPayrollLinesPage;
+  notInsured?: AccountingPayrollLinesPage;
+  /** How many employees each group holds, whatever the search ("3 of 12"). */
+  groupSizes?: { insured: number; notInsured: number };
 }
 
-export function Statement({ monthKey, month, todayRule, basePath }: StatementProps) {
+export function Statement({
+  monthKey,
+  month,
+  todayRule,
+  basePath,
+  query = DEFAULT_QUERY,
+  insured,
+  notInsured,
+  groupSizes,
+}: StatementProps) {
   const { t, locale } = useTranslation();
   const { branding } = useSchoolBranding();
+  const router = useRouter();
+  const [navigating, startNavigation] = useTransition();
   const title = formatMonth(monthKey, locale);
-  const loading = month === undefined;
-  const groups = groupByInsurance(month?.lines ?? []);
-  const seen = month?.lines.filter((l) => l.salaryVisible).length ?? 0;
+  const loading = month === undefined || insured === undefined || notInsured === undefined;
+  const seen = month?.visibleLines ?? 0;
   const school = nameIn(branding, locale) || t('ui.shell.productName');
-  // On screen each group pages and the search narrows both (the whole month is loaded, so both
-  // happen here, as on the lateness board); the subtotals, print and Excel always cover everyone.
-  const [search, setSearch] = useState('');
-  const [pages, setPages] = useState({ insured: 1, notInsured: 1 });
-  const searching = search.trim().length > 0;
+  // The search, each group's page and size live in the URL; the API pages, searches and sums the
+  // groups. Print lists every line of both groups, read from the API.
+  const [search, setSearch] = useState(query.search ?? '');
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (searchTimer.current) clearTimeout(searchTimer.current);
+    },
+    [],
+  );
+  const searching = Boolean(query.search) || search.trim().length > 0;
+  const printing = usePrintEveryLine(async () => {
+    const [ins, not] = await Promise.all([
+      loadEveryLine(monthKey, InsuranceStatus.INSURED),
+      loadEveryLine(monthKey, InsuranceStatus.NOT_INSURED),
+    ]);
+    return ins && not ? { insured: ins, notInsured: not } : null;
+  });
+  function go(next: StatementQuery) {
+    startNavigation(() => router.push(`${basePath}/${monthKey}${statementQueryString(next)}`, { scroll: false }));
+  }
   function onSearch(text: string) {
     setSearch(text);
-    setPages({ insured: 1, notInsured: 1 });
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    const next = text.trim();
+    const run = () =>
+      go({
+        ...(next ? { search: next } : {}),
+        insured: { ...query.insured, page: PAGINATION.defaultPage },
+        notInsured: { ...query.notInsured, page: PAGINATION.defaultPage },
+      });
+    if (!next) {
+      searchTimer.current = null;
+      run();
+      return;
+    }
+    searchTimer.current = setTimeout(() => {
+      searchTimer.current = null;
+      run();
+    }, SEARCH_DEBOUNCE_MS);
   }
   function clearSearch() {
     onSearch('');
   }
+  const groupPage = (key: 'insured' | 'notInsured') => (next: TablePage) => go({ ...query, [key]: next });
 
   return (
     <div className="flex flex-col gap-6">
@@ -115,7 +168,7 @@ export function Statement({ monthKey, month, todayRule, basePath }: StatementPro
         title={title}
         breadcrumbs={[{ label: t('accounting.payrollTaxes.actions.backToYear'), href: `${basePath}?year=${monthKey.slice(0, 4)}` }, { label: title }]}
         breadcrumbsLabel={t('ui.shell.breadcrumbs')}
-        actions={loading ? <ActionsSkeleton /> : <StatementActions month={monthKey} />}
+        actions={loading ? <ActionsSkeleton /> : <StatementActions month={monthKey} onPrint={() => void printing.print()} printing={printing.busy} />}
       />
 
       <article
@@ -144,7 +197,7 @@ export function Statement({ monthKey, month, todayRule, basePath }: StatementPro
               {loading ? (
                 <SkeletonText className="text-sm" width="w-24" />
               ) : (
-                t('accounting.payrollTaxes.board.employees', { count: formatCount(month.lines.length) })
+                t('accounting.payrollTaxes.board.employees', { count: formatCount(month.totals.employees) })
               )}
             </p>
           </div>
@@ -163,7 +216,7 @@ export function Statement({ monthKey, month, todayRule, basePath }: StatementPro
                 <p className="font-bold">
                   {t('accounting.payrollTaxes.statement.limitedTitle', {
                     seen: formatCount(seen),
-                    total: formatCount(month.lines.length),
+                    total: formatCount(month.totals.employees),
                   })}
                 </p>
                 <p>{t('accounting.payrollTaxes.statement.limitedBody')}</p>
@@ -178,6 +231,7 @@ export function Statement({ monthKey, month, todayRule, basePath }: StatementPro
             placeholder={t('accounting.payrollTaxes.statement.search.placeholder')}
             value={search}
             disabled={loading}
+            loading={navigating}
             onChange={(e) => onSearch(e.target.value)}
           />
           <ClearFilters count={searching ? 1 : 0} onClear={clearSearch} disabled={loading} />
@@ -185,23 +239,29 @@ export function Statement({ monthKey, month, todayRule, basePath }: StatementPro
 
         <Group
           title={t('accounting.payrollTaxes.statement.insured')}
-          lines={loading ? undefined : groups.insured}
+          page={loading ? undefined : insured}
+          size={groupSizes?.insured ?? insured?.total ?? 0}
+          printRows={printing.rows?.insured}
           insured
           everySalary={month?.salaryVisible ?? true}
-          search={search}
+          searching={searching}
           onClearSearch={clearSearch}
-          page={pages.insured}
-          onPageChange={(page) => setPages((p) => ({ ...p, insured: page }))}
+          table={query.insured}
+          onTableChange={groupPage('insured')}
+          refreshing={navigating}
         />
         <Group
           title={t('accounting.payrollTaxes.statement.notInsured')}
-          lines={loading ? undefined : groups.notInsured}
+          page={loading ? undefined : notInsured}
+          size={groupSizes?.notInsured ?? notInsured?.total ?? 0}
+          printRows={printing.rows?.notInsured}
           insured={false}
           everySalary={month?.salaryVisible ?? true}
-          search={search}
+          searching={searching}
           onClearSearch={clearSearch}
-          page={pages.notInsured}
-          onPageChange={(page) => setPages((p) => ({ ...p, notInsured: page }))}
+          table={query.notInsured}
+          onTableChange={groupPage('notInsured')}
+          refreshing={navigating}
         />
 
         <footer
@@ -264,8 +324,8 @@ function ActionsSkeleton() {
   );
 }
 
-/** Excel of the lines as the viewer sees them (+ the rule), and the browser's print → PDF. */
-function StatementActions({ month }: { month: Month }) {
+/** Excel of every line as the viewer sees it (+ the rule), and print → PDF of every line (both read from the API). */
+function StatementActions({ month, onPrint, printing }: { month: Month; onPrint: () => void; printing: boolean }) {
   const { t } = useTranslation();
   const [exporting, setExporting] = useState(false);
   async function exportExcel() {
@@ -284,7 +344,7 @@ function StatementActions({ month }: { month: Month }) {
         <ExcelIcon />
         {t('accounting.payrollTaxes.actions.excel')}
       </Button>
-      <Button variant="primary" className="cursor-pointer" onClick={() => window.print()}>
+      <Button variant="primary" className="cursor-pointer" loading={printing} onClick={onPrint}>
         <PdfIcon />
         {t('accounting.payrollTaxes.actions.print')}
       </Button>
@@ -352,50 +412,53 @@ function Operator({ children, wide = false }: { children: ReactNode; wide?: bool
 
 
 /**
- * One insurance group: its heading and count, its DataTable paged like every list (the search's
- * matches on screen), and the subtotal row — always the whole group, never the page, and saying
- * so. Print lists the whole group (`printRows`).
+ * One insurance group: its heading and count, its DataTable showing the page the API sent (the
+ * search's matches), and the subtotal row — the API's sums over every matching line of the group,
+ * never the page, and saying how many. Print lists the whole group (`printRows`, read from the API).
  */
 function Group({
   title,
-  lines,
+  page,
+  size,
+  printRows,
   insured,
   everySalary,
-  search,
+  searching,
   onClearSearch,
-  page,
-  onPageChange,
+  table,
+  onTableChange,
+  refreshing,
 }: {
   title: string;
-  /** The whole group; `undefined` while loading. */
-  lines: AccountingPayrollLine[] | undefined;
+  /** The group's page from the API; `undefined` while loading. */
+  page: AccountingPayrollLinesPage | undefined;
+  /** How many employees the group holds, whatever the search. */
+  size: number;
+  printRows: AccountingPayrollLine[] | undefined;
   insured: boolean;
   everySalary: boolean;
-  search: string;
+  searching: boolean;
   onClearSearch: () => void;
-  page: number;
-  onPageChange: (page: number) => void;
+  table: TablePage;
+  onTableChange: (next: TablePage) => void;
+  refreshing: boolean;
 }) {
   const { t, locale } = useTranslation();
   const columns = groupColumns(t, locale, insured);
-  const sums = lines ? subtotals(lines) : null;
-  const searching = search.trim().length > 0;
-  const [limit, setLimit] = useState<number>(PAGINATION.defaultLimit);
-  const shown = useMemo(() => (lines ?? []).filter((l) => matchesLine(l, search)), [lines, search]);
-  const pageCount = Math.max(1, Math.ceil(shown.length / limit));
-  const currentPage = Math.min(Math.max(1, page), pageCount);
-  const pageLines = shown.slice((currentPage - 1) * limit, currentPage * limit);
+  const sums = page && everySalary ? page.totals : null;
   const footer: DataTableFooter = {
-    label: lines
-      ? t('accounting.payrollTaxes.statement.subtotalAll', { count: formatCount(lines.length) })
+    label: page
+      ? t('accounting.payrollTaxes.statement.subtotalAll', { count: formatCount(printRows ? size : page.total) })
       : t('accounting.payrollTaxes.statement.subtotal'),
-    ...(sums && everySalary
+    ...(sums
       ? {
           cells: Object.fromEntries(
-            columns.filter((c) => isSubtotalField(c.id)).map((c) => [c.id, <Money key={c.id} value={sums[c.id as SubtotalField]} currency={false} />]),
+            columns
+              .filter((c) => isSubtotalField(c.id))
+              .map((c) => [c.id, <Money key={c.id} value={sums[c.id as SubtotalField]} currency={false} />]),
           ),
         }
-      : lines
+      : page
         ? {
             note: (
               <span className="inline-flex items-center gap-1.5">
@@ -411,33 +474,31 @@ function Group({
       <div className="flex items-center gap-2.5">
         <h3 className="font-display text-base font-extrabold">{title}</h3>
         <span className="text-sm text-muted-foreground tabular">
-          {!lines ? (
+          {!page ? (
             <SkeletonText className="text-sm" width="w-6" />
           ) : searching ? (
-            t('accounting.payrollTaxes.statement.groupCount', { shown: formatCount(shown.length), total: formatCount(lines.length) })
+            t('accounting.payrollTaxes.statement.groupCount', { shown: formatCount(page.total), total: formatCount(size) })
           ) : (
-            formatCount(lines.length)
+            formatCount(page.total)
           )}
         </span>
       </div>
       <DataTable
         label={title}
         columns={columns}
-        rows={lines ? pageLines : undefined}
-        printRows={lines}
-        loading={!lines}
+        rows={page?.items}
+        printRows={printRows}
+        loading={!page}
+        refreshing={refreshing}
         getRowId={(l) => l.employeeId}
         footer={footer}
         pagination={{
-          page: currentPage,
-          limit,
-          total: shown.length,
-          onPageChange,
+          page: page?.page ?? table.page,
+          limit: page?.limit ?? table.limit,
+          total: page?.total ?? 0,
+          onPageChange: (next) => onTableChange({ ...table, page: next }),
           pageSizes: PAYROLL_PAGINATION.pageSizes,
-          onLimitChange: (next) => {
-            setLimit(next);
-            onPageChange(1);
-          },
+          onLimitChange: (next) => onTableChange({ page: PAGINATION.defaultPage, limit: next }),
         }}
         scrollHeight="screen"
         // A group can be empty one month (an empty state) and full the next: no skeleton can know,
@@ -445,7 +506,7 @@ function Group({
         skeletonBlocks={false}
         cardsBelow={insured ? 960 : 740}
         empty={
-          searching && lines?.length ? (
+          searching && size > 0 ? (
             <EmptyState
               className="py-8"
               icon={SearchIcon}

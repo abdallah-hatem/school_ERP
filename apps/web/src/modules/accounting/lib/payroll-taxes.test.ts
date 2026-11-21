@@ -1,7 +1,6 @@
 import { DEFAULT_TAX_RULE } from '@school-erp/shared';
 import { describe, expect, it } from 'vitest';
-import { LIMITED_MONTH, MONTH } from '../test/fixtures';
-import { formatPercent, groupByInsurance, parseYear, ruleSlices, sameRule, subtotals } from './payroll-taxes';
+import { formatPercent, parseYear, ruleSlices, sameRule } from './payroll-taxes';
 
 const NOW = new Date(2026, 10, 18);
 
@@ -13,15 +12,6 @@ describe('payroll taxes helpers', () => {
     expect(parseYear({ year: '1999' }, NOW)).toBe(2026);
     expect(parseYear({ year: '2025.5' }, NOW)).toBe(2026);
     expect(parseYear({ year: ['2024', '2023'] }, NOW)).toBe(2024);
-  });
-
-  it('groups by insurance and sums each group; a hidden line hides the subtotal', () => {
-    const { insured, notInsured } = groupByInsurance(MONTH.lines);
-    expect(insured.map((l) => l.employeeCode)).toEqual(['EMP-0002', 'EMP-0003']);
-    expect(notInsured.map((l) => l.employeeCode)).toEqual(['EMP-0001']);
-    expect(subtotals(insured)).toEqual({ net: 1_200_000, insuranceAmount: 110_000, incomeTax: 151_738, martyrTax: 732, gross: 1_462_470 });
-    expect(subtotals([])).toEqual({ net: 0, insuranceAmount: 0, incomeTax: 0, martyrTax: 0, gross: 0 });
-    expect(subtotals(groupByInsurance(LIMITED_MONTH.lines).insured)).toBeNull();
   });
 
   it('ruleSlices: first, next…, then the rest from where the slices end; one open slice is all of it', () => {

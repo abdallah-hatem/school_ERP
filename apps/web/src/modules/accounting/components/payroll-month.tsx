@@ -5,11 +5,12 @@ import {
   PAGINATION,
   PAYROLL_PAGINATION,
   type AccountingPayrollLine,
+  type AccountingPayrollLinesPage,
   type AccountingPayrollMonth,
   type Month,
 } from '@school-erp/shared';
 import { useRouter } from 'next/navigation';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
 import { useCan } from '@/core/auth';
 import { EmployeeLink } from '@/core/employees';
 import { callApi } from '@/lib/callApi';
@@ -44,7 +45,11 @@ import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { FINALIZE_PAYROLL_MONTH, GET_PAYROLL_TAXES_EXCEL, RETURN_PAYROLL_MONTH } from '../apis';
 import { adjustmentNet, taxesOf } from '../lib/accounting-payroll';
-import { matchesLine } from '../lib/payroll-taxes';
+import { monthLinesQueryString, type MonthLinesQuery } from '../lib/lines-query';
+import { loadEveryLine } from '../lib/print-lines';
+import { usePrintEveryLine } from '../lib/use-print-every-line';
+
+const SEARCH_DEBOUNCE_MS = 300;
 
 /*
  * One approved month in Accounting → Payroll (§10): HR's run page, read only — the four tiles and
@@ -55,7 +60,7 @@ import { matchesLine } from '../lib/payroll-taxes';
  */
 
 
-/** Print: landscape A4 with no app chrome; the table lists everyone (`printRows`). */
+/** Print: landscape A4 with no app chrome; the table lists everyone, read from the API (`printRows`). */
 const PRINT_CSS = `@page { size: A4 landscape; margin: 10mm; }
 @media print {
   html, body { background: var(--card) !important; }
@@ -67,44 +72,80 @@ export interface PayrollMonthProps {
   /** `YYYY-MM`, known before the data (the title while it loads). */
   monthKey: Month;
   month: AccountingPayrollMonth | undefined;
+  /** One page of the lines as the API paged, searched and summed them; `undefined` while loading. */
+  lines?: AccountingPayrollLinesPage;
+  /** The URL's search and page (the API answered `lines` for it). */
+  query?: MonthLinesQuery;
   /** `/<locale>/accounting/payroll`. */
   basePath: string;
 }
 
-export function PayrollMonth({ monthKey, month: serverMonth, basePath }: PayrollMonthProps) {
+export function PayrollMonth({
+  monthKey,
+  month: serverMonth,
+  lines: page,
+  query = { page: PAGINATION.defaultPage, limit: PAGINATION.defaultLimit },
+  basePath,
+}: PayrollMonthProps) {
   const { t, locale } = useTranslation();
+  const router = useRouter();
+  const [navigating, startNavigation] = useTransition();
   // Finalizing answers with the month as it is now; shown in place of the server's.
   const [updated, setUpdated] = useState<AccountingPayrollMonth | null>(null);
   const month = updated ?? serverMonth;
-  const loading = month === undefined;
+  const loading = month === undefined || page === undefined;
   const monthLabel = formatMonth(monthKey, locale);
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState<number>(PAGINATION.defaultLimit);
-  const searching = search.trim().length > 0;
-  const lines = month?.lines;
-  const shown = useMemo(() => (lines ?? []).filter((l) => matchesLine(l, search)), [lines, search]);
-  const pageCount = Math.max(1, Math.ceil(shown.length / limit));
-  const currentPage = Math.min(Math.max(1, page), pageCount);
-  const pageLines = shown.slice((currentPage - 1) * limit, currentPage * limit);
+  // The box follows typing; the URL (and so the API's answer) follows after a pause.
+  const [search, setSearch] = useState(query.search ?? '');
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (searchTimer.current) clearTimeout(searchTimer.current);
+    },
+    [],
+  );
+  const searching = Boolean(query.search) || search.trim().length > 0;
+  const lines = page?.items;
   const columns = monthColumns(t, locale);
+  const printing = usePrintEveryLine(async () => {
+    const all = await loadEveryLine(monthKey);
+    return all ? { all } : null;
+  });
+
+  function go(next: MonthLinesQuery) {
+    startNavigation(() => router.push(`${basePath}/${monthKey}${monthLinesQueryString(next)}`, { scroll: false }));
+  }
 
   function onSearch(text: string) {
     setSearch(text);
-    setPage(1);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    const next = text.trim();
+    const run = () => go({ ...(next ? { search: next } : {}), page: PAGINATION.defaultPage, limit: query.limit });
+    if (!next) {
+      searchTimer.current = null;
+      run();
+      return;
+    }
+    searchTimer.current = setTimeout(() => {
+      searchTimer.current = null;
+      run();
+    }, SEARCH_DEBOUNCE_MS);
   }
 
   const totalsShown = month?.salaryVisible ?? true;
-  const footer: DataTableFooter | undefined = month
+  // On screen the footer sums every line the search matches (the API's totals); printed, every line.
+  const footerTotals = printing.rows ? month?.totals : page?.totals;
+  const footerCount = printing.rows ? (month?.totals.employees ?? 0) : (page?.total ?? 0);
+  const footer: DataTableFooter | undefined = month && footerTotals
     ? totalsShown
       ? {
-          label: t('accounting.payroll.month.totalAll', { count: formatCount(month.lines.length) }),
+          label: t('accounting.payroll.month.totalAll', { count: formatCount(footerCount) }),
           cells: {
-            net: <Money value={month.totals.net} currency={false} className="font-extrabold" />,
-            insuranceAmount: <Money value={month.totals.insuranceAmount} currency={false} />,
-            incomeTax: <Money value={month.totals.incomeTax} currency={false} />,
-            martyrTax: <Money value={month.totals.martyrTax} currency={false} />,
-            gross: <Money value={month.totals.gross} currency={false} className="font-extrabold text-primary" />,
+            net: <Money value={footerTotals.net} currency={false} className="font-extrabold" />,
+            insuranceAmount: <Money value={footerTotals.insuranceAmount} currency={false} />,
+            incomeTax: <Money value={footerTotals.incomeTax} currency={false} />,
+            martyrTax: <Money value={footerTotals.martyrTax} currency={false} />,
+            gross: <Money value={footerTotals.gross} currency={false} className="font-extrabold text-primary" />,
           },
         }
       : {
@@ -138,7 +179,7 @@ export function PayrollMonth({ monthKey, month: serverMonth, basePath }: Payroll
         keepTitleLine
         actions={
           month ? (
-            <MonthActions month={month} basePath={basePath} onFinalized={setUpdated} />
+            <MonthActions month={month} basePath={basePath} onFinalized={setUpdated} onPrint={() => void printing.print()} printing={printing.busy} />
           ) : (
             <ActionsSkeleton />
           )
@@ -165,9 +206,10 @@ export function PayrollMonth({ monthKey, month: serverMonth, basePath }: Payroll
       <DataTable
         label={t('accounting.payroll.month.tableLabel', { month: monthLabel })}
         columns={columns}
-        rows={lines ? pageLines : undefined}
-        printRows={lines}
+        rows={lines}
+        printRows={printing.rows?.all}
         loading={loading}
+        refreshing={navigating}
         getRowId={(l) => l.employeeId}
         footer={footer}
         // Cards on every width and no total card (owner 2026-11-20): the four tiles above are the
@@ -181,9 +223,9 @@ export function PayrollMonth({ monthKey, month: serverMonth, basePath }: Payroll
           <>
             <div className="flex w-full flex-wrap items-baseline gap-x-3 gap-y-1">
               <h2 className="font-display text-lg font-extrabold">{t('accounting.payroll.month.heading')}</h2>
-              {lines ? (
+              {page && month ? (
                 <p data-testid="lines-count" className="text-sm text-muted-foreground">
-                  {t('accounting.payroll.month.count', { shown: formatCount(shown.length), total: formatCount(lines.length) })}
+                  {t('accounting.payroll.month.count', { shown: formatCount(page.total), total: formatCount(month.totals.employees) })}
                 </p>
               ) : (
                 <SkeletonText className="text-sm" width="w-16" />
@@ -195,6 +237,7 @@ export function PayrollMonth({ monthKey, month: serverMonth, basePath }: Payroll
                 placeholder={t('accounting.payroll.month.searchPlaceholder')}
                 value={search}
                 disabled={loading}
+                loading={navigating}
                 onChange={(e) => onSearch(e.target.value)}
               />
               <ClearFilters count={searching ? 1 : 0} onClear={() => onSearch('')} disabled={loading} className="ms-auto" />
@@ -202,7 +245,7 @@ export function PayrollMonth({ monthKey, month: serverMonth, basePath }: Payroll
           </>
         }
         empty={
-          searching && lines?.length ? (
+          searching && (month?.totals.employees ?? 0) > 0 ? (
             <EmptyState
               icon={SearchIcon}
               title={t('accounting.payroll.month.noMatch.title')}
@@ -218,15 +261,12 @@ export function PayrollMonth({ monthKey, month: serverMonth, basePath }: Payroll
           )
         }
         pagination={{
-          page: currentPage,
-          limit,
-          total: shown.length,
-          onPageChange: setPage,
+          page: page?.page ?? query.page,
+          limit: page?.limit ?? query.limit,
+          total: page?.total ?? 0,
+          onPageChange: (next) => go({ ...query, page: next }),
           pageSizes: PAYROLL_PAGINATION.pageSizes,
-          onLimitChange: (next) => {
-            setLimit(next);
-            setPage(1);
-          },
+          onLimitChange: (next) => go({ ...query, page: PAGINATION.defaultPage, limit: next }),
         }}
       />
     </div>
@@ -280,10 +320,15 @@ function MonthActions({
   month,
   basePath,
   onFinalized,
+  onPrint,
+  printing,
 }: {
   month: AccountingPayrollMonth;
   basePath: string;
   onFinalized: (month: AccountingPayrollMonth) => void;
+  /** Reads every line from the API, then opens the browser's print. */
+  onPrint: () => void;
+  printing: boolean;
 }) {
   const { t, locale } = useTranslation();
   const router = useRouter();
@@ -345,7 +390,7 @@ function MonthActions({
         <ExcelIcon />
         {t('accounting.payroll.month.actions.excel')}
       </Button>
-      <Button variant={pending && can('accounting.payroll.finalize') ? 'secondary' : 'primary'} className="cursor-pointer" onClick={() => window.print()}>
+      <Button variant={pending && can('accounting.payroll.finalize') ? 'secondary' : 'primary'} className="cursor-pointer" loading={printing} onClick={onPrint}>
         <PdfIcon />
         {t('accounting.payroll.month.actions.print')}
       </Button>

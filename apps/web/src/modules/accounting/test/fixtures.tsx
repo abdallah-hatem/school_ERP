@@ -1,7 +1,13 @@
 import {
   DEFAULT_TAX_RULE,
+  InsuranceStatus,
+  matchesSearch,
+  PAGINATION,
   type AccountingPayrollLine,
+  type AccountingPayrollLinesPage,
+  type AccountingPayrollLinesQuery,
   type AccountingPayrollMonth,
+  type AccountingPayrollMonthSheet,
   type AccountingPayrollYear,
   type SessionUser,
 } from '@school-erp/shared';
@@ -10,6 +16,7 @@ import { SchoolBrandingProvider } from '@/core/settings';
 import type { Locale } from '@/shared/lib/i18n';
 import { renderWithI18n } from '@/test/render';
 import { AccountingI18n } from '../messages';
+import { groupQuery, parseStatementQuery, type MonthLinesQuery, type StatementQuery } from '../lib/lines-query';
 
 /** Accounting screens under test: their messages, the school's name, and a session. */
 export function renderAccounting(ui: ReactElement, locale: Locale = 'en', session?: SessionUser) {
@@ -65,7 +72,7 @@ const FLOORED = line({
 });
 
 /** October 2026: one employee not insured, two insured (one floored at net 0). */
-export const MONTH: AccountingPayrollMonth = {
+export const MONTH: AccountingPayrollMonthSheet = {
   month: '2026-10',
   status: 'PENDING',
   finalizedAt: null,
@@ -74,14 +81,16 @@ export const MONTH: AccountingPayrollMonth = {
   salaryVisible: true,
   totals: { employees: 3, net: 2_400_000, insuranceAmount: 110_000, incomeTax: 303_470, martyrTax: 1_408, gross: 2_814_878 },
   taxRule: DEFAULT_TAX_RULE,
+  visibleLines: 3,
   lines: [line(), INSURED, FLOORED],
 };
 
 /** The same month for a viewer whose salary scope leaves Omar out (§2, P4). */
-export const LIMITED_MONTH: AccountingPayrollMonth = {
+export const LIMITED_MONTH: AccountingPayrollMonthSheet = {
   ...MONTH,
   salaryVisible: false,
   totals: { employees: 3 },
+  visibleLines: 2,
   lines: [
     line(),
     {
@@ -100,7 +109,7 @@ export const LIMITED_MONTH: AccountingPayrollMonth = {
  * A month of 29: 26 insured ("Insured 01"… codes EMP-0101…, three pages) and 3 not insured
  * ("Other 1"… / "موظف أخر 1"…), every gross 100.00.
  */
-export const BIG_MONTH: AccountingPayrollMonth = {
+export const BIG_MONTH: AccountingPayrollMonthSheet = {
   ...MONTH,
   totals: { employees: 29, net: 2_900, insuranceAmount: 0, incomeTax: 0, martyrTax: 0, gross: 290_000 },
   lines: [
@@ -156,3 +165,54 @@ export const EMPTY_YEAR: AccountingPayrollYear = {
   year: 2025,
   months: Array.from({ length: 12 }, (_, i) => ({ month: `2025-${String(i + 1).padStart(2, '0')}`, state: 'NONE' as const })),
 };
+
+// ── The API's side of the month screens (its own tests are the API's) ─────────────────────────
+
+/** The month as `GET /accounting/payroll/:month` sends it: no lines. */
+export function detailOf(sheet: AccountingPayrollMonthSheet): AccountingPayrollMonth {
+  const { lines: _lines, ...month } = sheet;
+  return month;
+}
+
+/**
+ * What `GET /accounting/payroll/:month/lines` answers for `query`: by code, searched by code or
+ * either name, one insurance group, one page, and the totals over every match (money only with
+ * every salary).
+ */
+export function pageOf(sheet: AccountingPayrollMonthSheet, query: AccountingPayrollLinesQuery = {}): AccountingPayrollLinesPage {
+  const matching = sheet.lines
+    .filter((l) => !query.insurance || l.insuranceStatus === query.insurance)
+    .filter((l) => matchesSearch(query.search ?? '', [l.employeeCode, l.nameEn, l.nameAr]))
+    .sort((a, b) => a.employeeCode.localeCompare(b.employeeCode));
+  const page = query.page ?? PAGINATION.defaultPage;
+  const limit = query.limit ?? PAGINATION.defaultLimit;
+  const sum = (k: 'net' | 'insuranceAmount' | 'incomeTax' | 'martyrTax' | 'gross') => matching.reduce((n, l) => n + (l[k] ?? 0), 0);
+  return {
+    items: matching.slice((page - 1) * limit, page * limit),
+    total: matching.length,
+    page,
+    limit,
+    totals: sheet.salaryVisible
+      ? { employees: matching.length, net: sum('net'), insuranceAmount: sum('insuranceAmount'), incomeTax: sum('incomeTax'), martyrTax: sum('martyrTax'), gross: sum('gross') }
+      : { employees: matching.length },
+  };
+}
+
+/** Accounting → Payroll, one month, as its screen hands it to `PayrollMonth`. */
+export function monthView(sheet: AccountingPayrollMonthSheet, query: MonthLinesQuery = { page: 1, limit: PAGINATION.defaultLimit }) {
+  return { month: detailOf(sheet), lines: pageOf(sheet, query), query };
+}
+
+/** The payroll taxes statement, as its screen hands it to `Statement`. */
+export function statementView(sheet: AccountingPayrollMonthSheet, query: StatementQuery = parseStatementQuery({})) {
+  return {
+    month: detailOf(sheet),
+    query,
+    insured: pageOf(sheet, groupQuery(query, true)),
+    notInsured: pageOf(sheet, groupQuery(query, false)),
+    groupSizes: {
+      insured: sheet.lines.filter((l) => l.insuranceStatus === InsuranceStatus.INSURED).length,
+      notInsured: sheet.lines.filter((l) => l.insuranceStatus !== InsuranceStatus.INSURED).length,
+    },
+  };
+}

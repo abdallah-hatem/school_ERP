@@ -3,7 +3,8 @@ import { notFound } from 'next/navigation';
 import { can, getSession } from '@/core/auth';
 import { GET_ACCOUNTING_SETTINGS } from '@/modules/settings';
 import type { Locale } from '@/shared/lib/i18n';
-import { GET_ACCOUNTING_PAYROLL, GET_PAYROLL_TAXES_MONTH, GET_PAYROLL_TAXES_YEAR } from './apis';
+import { GET_ACCOUNTING_PAYROLL, GET_PAYROLL_TAXES_LINES, GET_PAYROLL_TAXES_MONTH, GET_PAYROLL_TAXES_YEAR } from './apis';
+import { groupQuery, parseMonthLinesQuery, parseStatementQuery } from './lib/lines-query';
 import { parseListQuery } from './lib/accounting-payroll';
 import { PayrollList } from './components/payroll-list';
 import { PayrollMonth } from './components/payroll-month';
@@ -39,18 +40,48 @@ export async function PayrollTaxesScreen({ locale, searchParams }: { locale: Loc
  * Today's tax rule is read only by someone who may view it (Settings → Accounting), for the
  * "Same as today's rule" badge; without it there is no badge.
  */
-export async function PayrollTaxesMonthScreen({ locale, month }: { locale: Locale; month: Month }) {
+export async function PayrollTaxesMonthScreen({
+  locale,
+  month,
+  searchParams = {},
+}: {
+  locale: Locale;
+  month: Month;
+  searchParams?: SearchParamsRecord;
+}) {
   const session = await getSession();
-  const [res, settings] = await Promise.all([
+  const query = parseStatementQuery(searchParams);
+  // Each group is one page from the API (searched there), with its subtotals over every match;
+  // while searching, the groups' sizes too, for "3 of 12".
+  const [res, settings, insured, notInsured, insuredAll, notInsuredAll] = await Promise.all([
     GET_PAYROLL_TAXES_MONTH(month),
     can(session, 'accounting.settings.view') ? GET_ACCOUNTING_SETTINGS() : null,
+    GET_PAYROLL_TAXES_LINES(month, groupQuery(query, true)),
+    GET_PAYROLL_TAXES_LINES(month, groupQuery(query, false)),
+    query.search ? GET_PAYROLL_TAXES_LINES(month, { insurance: groupQuery(query, true).insurance, limit: 1 }) : null,
+    query.search ? GET_PAYROLL_TAXES_LINES(month, { insurance: groupQuery(query, false).insurance, limit: 1 }) : null,
   ]);
   if (res.success === false && (res.status === 404 || res.status === 400)) notFound();
   if (!res.success || !res.data) throw new Error(res.message ?? 'Payroll taxes failed to load');
+  if (!insured.success || !insured.data || !notInsured.success || !notInsured.data) {
+    throw new Error('Payroll taxes lines failed to load');
+  }
   const todayRule: TaxRule | null = settings?.success && settings.data ? settings.data.payroll : null;
   return (
     <AccountingI18n locale={locale}>
-      <Statement monthKey={month} month={res.data} todayRule={todayRule} basePath={payrollTaxesPath(locale)} />
+      <Statement
+        monthKey={month}
+        month={res.data}
+        todayRule={todayRule}
+        basePath={payrollTaxesPath(locale)}
+        query={query}
+        insured={insured.data}
+        notInsured={notInsured.data}
+        groupSizes={{
+          insured: insuredAll?.success ? (insuredAll.data?.total ?? insured.data.total) : insured.data.total,
+          notInsured: notInsuredAll?.success ? (notInsuredAll.data?.total ?? notInsured.data.total) : notInsured.data.total,
+        }}
+      />
     </AccountingI18n>
   );
 }
@@ -78,13 +109,24 @@ export async function AccountingPayrollScreen({ locale, searchParams }: { locale
 }
 
 /** One approved month, HR's columns plus taxes. A month HR hasn't approved is the not-found page. */
-export async function AccountingPayrollMonthScreen({ locale, month }: { locale: Locale; month: Month }) {
-  const res = await GET_PAYROLL_TAXES_MONTH(month);
+export async function AccountingPayrollMonthScreen({
+  locale,
+  month,
+  searchParams = {},
+}: {
+  locale: Locale;
+  month: Month;
+  searchParams?: SearchParamsRecord;
+}) {
+  const query = parseMonthLinesQuery(searchParams);
+  // One page of the lines from the API (searched there), with the totals over every match.
+  const [res, lines] = await Promise.all([GET_PAYROLL_TAXES_MONTH(month), GET_PAYROLL_TAXES_LINES(month, query)]);
   if (res.success === false && (res.status === 404 || res.status === 400)) notFound();
   if (!res.success || !res.data) throw new Error(res.message ?? 'Payroll failed to load');
+  if (!lines.success || !lines.data) throw new Error(lines.message ?? 'Payroll lines failed to load');
   return (
     <AccountingI18n locale={locale}>
-      <PayrollMonth monthKey={month} month={res.data} basePath={accountingPayrollPath(locale)} />
+      <PayrollMonth monthKey={month} month={res.data} lines={lines.data} query={query} basePath={accountingPayrollPath(locale)} />
     </AccountingI18n>
   );
 }

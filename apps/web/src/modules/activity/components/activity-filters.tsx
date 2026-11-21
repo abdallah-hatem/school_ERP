@@ -22,11 +22,7 @@ import { controlClasses } from '@/shared/components/ui/input';
 import { PersonAvatar } from '@/shared/components/ui/person-avatar';
 import { SkeletonText } from '@/shared/components/ui/skeleton';
 import { formatCount } from '@/shared/lib/format';
-<<<<<<< HEAD
-=======
-import { matchesSearch } from '@/shared/lib/search';
 import { TAB_HOVER_FADE } from '@/shared/lib/tab-motion';
->>>>>>> origin/dev
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import {
