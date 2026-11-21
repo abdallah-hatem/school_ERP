@@ -74,6 +74,8 @@ describe('Settings screen — school section', () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+    // A section switch writes `?section=` into the (jsdom) address bar; the next test starts clean.
+    window.history.replaceState(null, '', '/');
   });
 
   it('field errors shown inline in the current language; save disabled while invalid or saving', async () => {
@@ -89,18 +91,18 @@ describe('Settings screen — school section', () => {
     expect(save).toHaveProperty('disabled', true);
 
     await user.type(nameAr, 'مدرسة النيل');
-    // Work end is a dropdown of half hours shown in the locale's time format.
+    // Work end is a dropdown of half hours, 12-hour with ص/م (no-break space before the period).
     const workEnd = screen.getByRole('combobox', { name: /نهاية العمل/ });
     await user.click(workEnd);
-    expect(screen.queryByRole('option', { name: '7:15 ص' })).toBeNull();
-    await user.click(await screen.findByRole('option', { name: '7:00 ص' }));
+    expect(screen.queryByRole('option', { name: '7:15\u00a0ص' })).toBeNull();
+    await user.click(await screen.findByRole('option', { name: '7:00\u00a0ص' }));
     expect(await screen.findByText('يجب أن تكون نهاية العمل بعد بدايته.')).toBeTruthy();
     expect(save).toHaveProperty('disabled', true);
     expect(api.UPDATE_SCHOOL_SETTINGS).not.toHaveBeenCalled();
 
     // Valid again → enabled; while saving it is busy and a second click sends nothing.
     await user.click(workEnd);
-    await user.click(await screen.findByRole('option', { name: '2:30 م' }));
+    await user.click(await screen.findByRole('option', { name: '2:30\u00a0م' }));
     await waitFor(() => expect(save).toHaveProperty('disabled', false));
     const pending = deferred<{ success: true; status: number; data: typeof school }>();
     api.UPDATE_SCHOOL_SETTINGS.mockReturnValue(pending.promise);
@@ -184,6 +186,8 @@ describe('Settings screen — unsaved changes warning', () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+    // A section switch writes `?section=` into the (jsdom) address bar; the next test starts clean.
+    window.history.replaceState(null, '', '/');
   });
 
   it('switching section with edits asks first; staying keeps the edits, discarding leaves', async () => {
@@ -202,7 +206,9 @@ describe('Settings screen — unsaved changes warning', () => {
     await user.click(screen.getByRole('button', { name: /HR rules/ }));
     await user.click(await screen.findByRole('button', { name: 'Discard changes' }));
     expect(await screen.findByText('Lateness rule')).toBeTruthy();
-    expect(router.replace).toHaveBeenLastCalledWith('/en/settings?section=hrRules', { scroll: false });
+    // The address follows on the client only: no server round trip for a section switch.
+    expect(window.location.search).toBe('?section=hrRules');
+    expect(router.replace).not.toHaveBeenCalled();
   });
 
   it('without edits a section switch needs no confirmation', async () => {
@@ -277,6 +283,8 @@ describe('Settings screen — change history (owner, 2026-11-17)', () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+    // A section switch writes `?section=` into the (jsdom) address bar; the next test starts clean.
+    window.history.replaceState(null, '', '/');
   });
 
   it('has no Change history section; "View change history" opens Activity filtered to settings', () => {

@@ -503,6 +503,13 @@ phase live in `docs/build-log/`.
   only after Add to Home Screen. Verified live up to a local push service; real FCM/APNs delivery and
   the OS banner not yet. CI's first smoke failure was the test (offline page auto-reloads), fixed.
 - 2026-11-21 — Owner held the first client meeting; details to follow.
+- 2026-11-21 — 12-hour time → #207 (owner: "all hour format should be 12h … pm and am"): one shared
+  formatter (`formatClockTime`/`formatClockDateTime`, Cairo clock, EN `4:07 PM`, AR `4:07 م`/`9:30 ص`) used
+  by Activity/History, Last sign-in, the bell, payroll approval time and work-hours settings; hand-rolled
+  24-hour formatting removed. Stored formats unchanged.
+- 2026-11-21 — Owner: review gaps → #206 (review checklist: shared inputs, loading states + skeleton
+  registration). Owner rule: **no client-side paging/search/filter/sort anywhere** — the statement (#146,
+  mine) and the Approved payroll month (#171) do it; being moved to the server with a CI guard.
 ## Next up
 
 - Custom icon set drawn (`design/mockups/icon-set.html`, style G monoline + solid when selected) —

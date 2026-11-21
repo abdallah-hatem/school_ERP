@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, formatDayHeading, formatFilterRange, formatSchoolTime, schoolDay, schoolDayRange, schoolDayStart } from './time';
+import { formatTime } from '@/shared/lib/format';
+import { addDays, formatDayHeading, formatFilterRange, schoolDay, schoolDayRange, schoolDayStart } from './time';
 
 describe('school time zone (Africa/Cairo)', () => {
   it('an instant falls on the school-calendar day, whatever the viewer’s zone', () => {
@@ -24,8 +25,8 @@ describe('school time zone (Africa/Cairo)', () => {
   });
 
   it('times and headers use Latin digits in both languages', () => {
-    expect(formatSchoolTime('2026-11-17T12:24:00Z', 'en')).toBe('14:24');
-    expect(formatSchoolTime('2026-11-17T12:24:00Z', 'ar')).toBe('14:24');
+    expect(formatTime('2026-11-17T12:24:00Z', 'en')).toBe('2:24\u00a0PM');
+    expect(formatTime('2026-11-17T12:24:00Z', 'ar')).toBe('2:24\u00a0م');
     expect(formatDayHeading('2026-11-17', 'en')).toBe('Tuesday 17 Nov 2026');
     expect(formatDayHeading('2026-11-17', 'ar')).toBe('الثلاثاء 17 نوفمبر 2026');
   });

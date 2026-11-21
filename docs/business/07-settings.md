@@ -60,7 +60,8 @@ affects only **draft** payroll runs (approved runs never change).
   fewer days before the end than the first (or 0). Changing a timing is recorded like any HR rule.
 - **DECIDED** (owner, 2026-11-17) — Work start and work end are on a 30-minute boundary (07:00,
   07:30 — not 07:15). The Settings screen offers them as a list from 05:00 to 20:00 every half hour,
-  shown in the screen's language; a time off the boundary is refused. Times already saved on a
+  shown 12-hour in the screen's language (`7:30 AM` / `7:30 ص`, owner 2026-11-21); a time off the
+  boundary is refused. Times already saved on a
   boundary stay valid.
 - **DECIDED** — A violation used by an approved penalty can't be deleted, only retired from new use.
 - **DECIDED** (owner, 2026-11-18) — The violation dialog in Settings → Penalty catalogue has a

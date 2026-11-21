@@ -48,6 +48,11 @@ plain status colour is for icons, bars and large figures only.
 - Numbers are always Latin digits, grouped with commas. Money is integer piastres from the API and
   is shown only through `<Money>` / `formatMoney` (`EGP 14,000.00`; `14,000.00 ج.م`, the label to
   the left of the figure in both languages). Day counts through `<Days>` / `formatDays` (`1.25`).
+- **Dates and times:** every time of day is 12-hour with the period, never 24-hour — `4:07 PM`,
+  Arabic `4:07 م` / `9:30 ص`; midnight `12:00 AM`, noon `12:00 PM`; no leading zero on the hour; a
+  no-break space before the period. On the school's clock (Cairo). Only through `formatTime`,
+  `formatDateTime` (`17 Nov 2026, 4:07 PM`) and `formatTimeOfDay` in `shared/lib/format.ts`
+  (owner, 2026-11-21); never `toLocaleTimeString` or a hand-built `HH:mm`.
 
 ## Shape and space
 
@@ -101,6 +106,14 @@ Motion explains a change and never delays it.
   skeletons; while they refetch, the list's search box swaps its magnifier for a small spinner
   (below). Reduced motion turns pulses and slides into plain fades, and the spinner stands still.
 - No motion on actions done many times a day (paging, typing, saving rows).
+- Tabs, section lists and segmented switches: the current marker moves in the click's frame, from
+  the old tab straight to the new one — no colour fade between them (a cross-fade read as the
+  highlight going back; owner, 2026-11-21). Only hover eases in (`TAB_HOVER_FADE`). A switch that
+  only changes what's shown stays on the client (Settings' `?section=` via `history.replaceState`);
+  tabs that are routes share a layout, so the header never re-mounts. A new tab or section starts
+  from its top: if the page is scrolled past it, it jumps (instantly, never smoothly) to its top
+  (`useRevealTopOnChange`); Settings also focuses the new section's first heading without scrolling.
+  `e2e/30-tab-switch*` guards it.
 
 ## States
 
