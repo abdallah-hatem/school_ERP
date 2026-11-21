@@ -48,10 +48,7 @@ export interface SeedPenalty {
  * stage review. Kindergarten has none: its penalties go straight to HR. Email `<key>@school.local`,
  * the admin's password (`SEED_ADMIN_PASSWORD`).
  */
-export const STAGE_HEADS: { employee: number; email: string; name: string }[] = [
-  { employee: 3, email: 'primary.head@school.local', name: 'Khaled Mostafa Hassan' },
-  { employee: 4, email: 'prep.head@school.local', name: 'Hoda Abdelaziz Fathy' },
-];
+export const STAGE_HEADS: { employee: number; email: string; name: string }[] = [];
 
 /**
  * Recorded in date order and approved through the penalties service, so repeats get their level
@@ -61,60 +58,16 @@ export const STAGE_HEADS: { employee: number; email: string; name: string }[] = 
 export const PENALTIES: SeedPenalty[] = [
   { employee: 33, violation: 'chewing-gum', date: '2026-11-02', status: 'APPROVED' },
   { employee: 14, violation: 'unexcused-absence', date: '2026-11-03', status: 'APPROVED' },
-  { employee: 16, violation: 'late-to-class', date: '2026-11-04', status: 'APPROVED', stage: 'primary' },
+  { employee: 16, violation: 'late-to-class', date: '2026-11-04', status: 'APPROVED' },
   { employee: 20, violation: 'phone-in-class', date: '2026-11-05', status: 'APPROVED' },
-  // Twice on the same day: recorded and approved in this order → levels 1 then 2 (§4). Late to
-  // class can repeat in a day; a once-per-day violation would refuse the second one.
   { employee: 12, violation: 'late-to-class', date: '2026-11-06', status: 'APPROVED' },
-  {
-    employee: 12,
-    violation: 'late-to-class',
-    date: '2026-11-06',
-    status: 'APPROVED',
-    note: 'المرة الثانية في نفس اليوم',
-  },
-  {
-    employee: 30,
-    violation: 'dress',
-    date: '2026-11-08',
-    status: 'CANCELLED',
-    cancelReason: 'سُجّلت على موظف آخر بالخطأ',
-  },
+  { employee: 12, violation: 'late-to-class', date: '2026-11-06', status: 'APPROVED', note: 'المرة الثانية في نفس اليوم' },
+  { employee: 30, violation: 'dress', date: '2026-11-08', status: 'CANCELLED', cancelReason: 'سُجّلت على موظف آخر بالخطأ' },
   { employee: 21, violation: 'dress', date: '2026-11-09', status: 'APPROVED' },
   { employee: 14, violation: 'unexcused-absence', date: '2026-11-10', status: 'APPROVED' },
-  // No stage head for "none": straight to Waiting for HR.
   { employee: 26, violation: 'not-signing-attendance', date: '2026-11-11', status: 'WAITING_HR' },
-  // Reviewed by the primary head, waiting for HR.
-  { employee: 18, violation: 'phone-in-class', date: '2026-11-11', status: 'WAITING_HR' },
-  // Rejected at the stage review, and at HR — the reasons show on the penalty and its history.
-  {
-    employee: 20,
-    violation: 'dress',
-    date: '2026-11-13',
-    status: 'REJECTED',
-    rejectedAt: 'REVIEW',
-    rejectReason: 'كان يرتدي الزي الرياضي لحصة التربية الرياضية',
-  },
-  {
-    employee: 37,
-    violation: 'chewing-gum',
-    date: '2026-11-13',
-    status: 'REJECTED',
-    rejectedAt: 'HR',
-    rejectReason: 'لا يوجد شاهد على المخالفة',
-  },
-  // The multi-stage teacher (primary, also teaches in prep): a prep penalty waits for the prep
-  // head — the primary head never sees it.
-  { employee: 16, violation: 'phone-in-class', date: '2026-11-14', status: 'PENDING_REVIEW', stage: 'prep' },
-  { employee: 16, violation: 'late-to-class', date: '2026-11-12', status: 'APPROVED', stage: 'primary' },
-  {
-    employee: 16,
-    violation: 'late-to-class',
-    date: '2026-11-15',
-    status: 'PENDING_REVIEW',
-    stage: 'primary',
-    note: 'المرة الثالثة هذا الشهر',
-  },
+  { employee: 16, violation: 'late-to-class', date: '2026-11-12', status: 'APPROVED' },
+  { employee: 16, violation: 'late-to-class', date: '2026-11-15', status: 'WAITING_HR', note: 'المرة الثالثة هذا الشهر' },
   { employee: 14, violation: 'unexcused-absence', date: '2026-11-16', status: 'APPROVED' },
 ];
 

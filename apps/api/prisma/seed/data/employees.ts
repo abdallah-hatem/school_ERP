@@ -22,9 +22,7 @@ export interface SeedEmployee {
 }
 
 /** The demo's multi-stage teachers: seed number → their other stages. */
-const OTHER_STAGES: Record<number, StageKey[]> = {
-  16: ['prep'],
-};
+const OTHER_STAGES: Record<number, StageKey[]> = {};
 
 type Row = [
   nameEn: string,
