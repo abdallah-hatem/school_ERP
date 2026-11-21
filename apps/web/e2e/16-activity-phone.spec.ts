@@ -11,6 +11,10 @@ import { t } from './support/i18n';
 import { activeEmployee } from './support/profile-tabs';
 import { schoolDay } from '../src/core/audit/lib/time';
 import { expectNoHorizontalScroll, expectTapTargets, settle, shoot, signIn } from './support/ui';
+import { settleStreams } from './support/stream';
+
+// Every goto waits for the streamed page to settle (see support/stream.ts).
+settleStreams();
 
 /** Runs in the `phone-ar` project only (390×844, touch). Activity log screens on a phone, T30. */
 

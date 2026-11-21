@@ -14,7 +14,7 @@ import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import type { StageBand } from '../lib/stage-band';
 import { PersonAvatar } from '@/shared/components/ui/person-avatar';
-import { EmployeeStatusPill } from './employee-bits';
+import { EmployeeStatusPill, OtherStageTags } from './employee-bits';
 
 /*
  * The employee profile card (owner's pick, option B): a band coloured by stage with the stage and
@@ -112,9 +112,13 @@ export function EmployeeCard({
       bandClass={BAND_CLASSES[inactive ? 'inactive' : band]}
       band={
         <>
-          <span className="relative inline-flex min-w-0 items-center gap-1.5 rounded-full bg-card/75 px-2.5 py-0.5 text-[0.78rem] font-bold">
-            <StageIcon className="size-4 shrink-0" />
-            <span className="truncate">{localName(employee.stage, locale)}</span>
+          <span className="relative flex min-w-0 flex-wrap items-center gap-1.5">
+            <span className="inline-flex min-w-0 items-center gap-1.5 rounded-full bg-card/75 px-2.5 py-0.5 text-[0.78rem] font-bold">
+              <StageIcon className="size-4 shrink-0" />
+              <span className="truncate">{localName(employee.stage, locale)}</span>
+            </span>
+            {/* "Also teaches in" (owner 2026-11-21): the band keeps the main stage's colour. */}
+            <OtherStageTags stages={employee.otherStages} compact />
           </span>
           <span dir="ltr" className="tabular relative shrink-0 pt-0.5 text-xs font-semibold opacity-80">
             {employee.code}

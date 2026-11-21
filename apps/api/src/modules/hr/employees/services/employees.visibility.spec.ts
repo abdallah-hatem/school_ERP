@@ -24,10 +24,11 @@ import { EmployeesService } from './employees.service';
 
 const ref = (id: string) => ({ id, nameEn: id, nameAr: id });
 const d = (s: string) => new Date(`${s}T00:00:00.000Z`);
-const PRIMARY: EmployeeScope = { kind: 'stage', stageId: 'primary' };
+const PRIMARY: EmployeeScope = { kind: 'stage', stageIds: ['primary'] };
 
 const detail = (over: Partial<EmployeeDetailRow> = {}): EmployeeDetailRow => ({
   id: 'e1',
+  otherStages: [],
   code: 'EMP-0001',
   nameEn: 'A',
   nameAr: 'أ',
@@ -78,6 +79,7 @@ const summary = (id: string, stageId: string): EmployeeSummaryRow => ({
   nameAr: id,
   department: ref('d1'),
   stage: ref(stageId),
+  otherStages: [],
   jobTitle: ref('j1'),
   workSystem: 'FULL_TIME',
   basicSalary: 500000,
@@ -138,7 +140,7 @@ describe('employees — scopes (R5)', () => {
   it('own_stage: the list query is limited to the stage', async () => {
     const { service, repository } = makeService(STAGE_HEAD);
     await service.list({});
-    expect(repository.list.mock.calls[0][4]).toEqual({ stageId: 'primary' });
+    expect(repository.list.mock.calls[0][4]).toEqual({ OR: [{ stageId: { in: ['primary'] } }, { otherStages: { some: { stageId: { in: ['primary'] } } } }] });
   });
 
   it('all: the list query is not limited', async () => {
@@ -150,9 +152,9 @@ describe('employees — scopes (R5)', () => {
   it('detail and headcount are read inside the view scope', async () => {
     const { service, repository } = makeService(STAGE_HEAD);
     await service.get('e1');
-    expect(repository.findDetail).toHaveBeenCalledWith('e1', { stageId: 'primary' });
+    expect(repository.findDetail).toHaveBeenCalledWith('e1', { OR: [{ stageId: { in: ['primary'] } }, { otherStages: { some: { stageId: { in: ['primary'] } } } }] });
     await service.activeHeadcount();
-    expect(repository.countActiveByStage).toHaveBeenCalledWith({ stageId: 'primary' });
+    expect(repository.countActiveByStage).toHaveBeenCalledWith({ OR: [{ stageId: { in: ['primary'] } }, { otherStages: { some: { stageId: { in: ['primary'] } } } }] });
   });
 
   it('edge case 3 — an employee outside the scope is 404, like an unknown one', async () => {

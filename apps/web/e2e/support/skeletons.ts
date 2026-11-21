@@ -1,3 +1,4 @@
+import { streamSettled } from './stream';
 import { expect, request, test, type Browser, type Page, type TestInfo } from '@playwright/test';
 import { AccountingPayrollStatus, monthOf, PAGINATION, PayrollStatus, PenaltyStatus, type AccountingPayrollMonthSummary, type Language, type PayrollRun, type PayrollRunSummary, type EmployeeSummary, type PenaltyRecord, type UserAccount } from '@school-erp/shared';
 import { join } from 'node:path';
@@ -75,7 +76,19 @@ async function blocksOf(page: Page): Promise<MeasuredBlock[]> {
 async function settled(page: Page): Promise<void> {
   await page.waitForLoadState('networkidle');
   await expect(page.locator('#main [aria-busy="true"]')).toHaveCount(0);
-  await page.waitForFunction(() => Array.from(document.images).every((img) => img.complete));
+  // Streamed content first lands in a hidden copy (`div[hidden][id^="S:"]`) until React swaps it
+  // in; a lazy image in that copy never loads. Wait for the swap, then for the images on screen. A
+  // lazy image below the fold (an employee photo on a long list) never loads either until scrolled
+  // to; its box has a fixed size, so it can't move anything we measure.
+  await streamSettled(page);
+  await page.waitForFunction(() =>
+    Array.from(document.images).every((img) => {
+      if (img.complete || img.closest('div[hidden][id^="S:"]') !== null) return true;
+      const r = img.getBoundingClientRect();
+      const onScreen = r.bottom > 0 && r.top < window.innerHeight && r.right > 0 && r.left < window.innerWidth;
+      return img.loading === 'lazy' && !onScreen;
+    }),
+  );
 }
 
 export interface SkeletonScreen {
@@ -177,10 +190,14 @@ export async function ensureApprovedRun(api: Api): Promise<PayrollRunSummary[]> 
   // seed approves earlier months too (the dashboard charts), so "some approved run" isn't enough.
   if (runs.some((r) => r.status === PayrollStatus.APPROVED && r.month === thisMonth)) return runs;
   // Oldest first (§4 approves in date order).
-  const pending = (await api.get<PenaltyRecord[]>('/hr/penalties', { status: PenaltyStatus.PENDING, limit: PAGINATION.maxLimit }))
+  const pending = (await api.get<PenaltyRecord[]>('/hr/penalties', { status: 'OPEN', limit: PAGINATION.maxLimit }))
     .filter((p) => p.date.startsWith(thisMonth))
     .sort((a, b) => a.date.localeCompare(b.date));
-  for (const p of pending) await api.post(`/hr/penalties/${p.id}/approve`, {}).catch(() => undefined);
+  for (const p of pending) {
+    // §4 two steps: a penalty still at the stage review is reviewed first (the admin reviews school-wide).
+    if (p.status === PenaltyStatus.PENDING_REVIEW) await api.post(`/hr/penalties/${p.id}/review/approve`, {}).catch(() => undefined);
+    await api.post(`/hr/penalties/${p.id}/approve`, {}).catch(() => undefined);
+  }
   for (const month of [thisMonth, previousMonth(previousMonth(thisMonth))]) {
     const draft = runs.find((r) => r.month === month) ?? (await api.post<PayrollRun>('/hr/payroll-runs', { month }));
     if (draft.status === PayrollStatus.APPROVED) return list();

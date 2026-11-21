@@ -41,7 +41,10 @@ describe('dates.util', () => {
     expect(toIsoDate(fromIsoDate('2026-06-01'))).toBe('2026-06-01');
   });
 
-  it('todayIsoDate formats the given local date', () => {
-    expect(todayIsoDate(new Date(2026, 10, 7, 23, 59))).toBe('2026-11-07');
+  it('todayIsoDate is the school’s day (Cairo), whatever the server’s clock', () => {
+    expect(todayIsoDate(new Date('2026-11-07T12:00:00Z'))).toBe('2026-11-07');
+    // 22:30 UTC on 21 Nov is already 22 Nov in Cairo: a hire or penalty dated 22 Nov isn't "future".
+    expect(todayIsoDate(new Date('2026-11-21T22:30:00Z'))).toBe('2026-11-22');
+    expect(todayIsoDate(new Date('2026-11-21T21:59:00Z'))).toBe('2026-11-21');
   });
 });

@@ -51,11 +51,17 @@ const scoped = (scope: Scope, ...keys: PermissionKey[]) =>
  */
 export const ADMIN_ONLY_AT_START: readonly PermissionKey[] = ['hr.dashboard.view_analytics'];
 
-const HR_KEYS = PERMISSION_KEYS.filter((k) => k.startsWith('hr.') && !ADMIN_ONLY_AT_START.includes(k));
+/**
+ * Every HR key but the admin-only ones and the stage review: that step belongs to the stage head of
+ * the penalty's stage (§4, owner 2026-11-21); the HR manager acts at the HR step.
+ */
+const HR_KEYS = PERMISSION_KEYS.filter(
+  (k) => k.startsWith('hr.') && !ADMIN_ONLY_AT_START.includes(k) && k !== 'hr.penalties.review',
+);
 
 /** A team or stage role sees and records penalties for its people; the lists it picks from are school-wide. */
-const lineManager = (scope: Scope) => ({
-  ...scoped(scope, 'hr.employees.view', 'hr.penalties.view', 'hr.penalties.record'),
+const lineManager = (scope: Scope, ...extra: PermissionKey[]) => ({
+  ...scoped(scope, 'hr.employees.view', 'hr.penalties.view', 'hr.penalties.record', ...extra),
   ...all('core.stages.view', 'hr.penalty_catalogue.view'),
 });
 
@@ -136,7 +142,7 @@ export const BUILT_IN_ROLES: readonly BuiltInRoleDefinition[] = [
     key: BuiltInRole.STAGE_HEAD,
     nameEn: 'Stage head',
     nameAr: 'رئيس المرحلة',
-    permissions: lineManager(PermissionScope.OWN_STAGE),
+    permissions: lineManager(PermissionScope.OWN_STAGE, 'hr.penalties.review'),
   },
   {
     key: BuiltInRole.DIRECT_MANAGER,

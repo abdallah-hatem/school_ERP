@@ -9,7 +9,8 @@ import { formatDate } from '@/shared/lib/format';
 import { nameIn } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { EmployeeIdentity } from '../../employees';
-import { approveBlockedReason, describeAction } from '../lib/penalty-text';
+import { approveBlockedReason, describeAction, penaltyStepLines } from '../lib/penalty-text';
+import { cn } from '@/shared/lib/utils';
 import { PenaltyActions } from './penalty-actions';
 import { PenaltyStatusPill } from './penalties-table';
 
@@ -38,7 +39,7 @@ export function PenaltyDetailsDialog({
   onClose: () => void;
 }) {
   const { t, locale } = useTranslation();
-  const blocked = record ? approveBlockedReason(record, t, locale) : null;
+  const blocked = record && !record.ownPenalty ? approveBlockedReason(record, t, locale) : null;
   return (
     <Dialog open={!!record} onOpenChange={(open) => (open ? undefined : onClose())}>
       {record ? (
@@ -74,6 +75,7 @@ export function PenaltyDetailsDialog({
                 </span>
               </Field>
               <Field label={t('penalties.columns.violation')}>{nameIn(record.violation, locale)}</Field>
+              <Field label={t('penalties.details.stage')}>{nameIn(record.stage, locale)}</Field>
               <Field label={t('penalties.columns.levelAction')}>
                 <span className="flex flex-col gap-0.5">
                   <span className="text-xs text-muted-foreground">{t('penalties.levelValue', { level: record.level })}</span>
@@ -90,6 +92,43 @@ export function PenaltyDetailsDialog({
                 </div>
               ) : null}
             </dl>
+            <section aria-labelledby={`penalty-${record.id}-steps`} className="flex flex-col gap-2">
+              <h3 id={`penalty-${record.id}-steps`} className="text-xs font-semibold text-muted-foreground">
+                {t('penalties.steps.title')}
+              </h3>
+              <ol data-testid="penalty-steps" className="flex flex-col gap-2.5">
+                {penaltyStepLines(record, t, locale).map((line) => (
+                  <li key={line.key} className="flex items-start gap-2.5">
+                    <span
+                      aria-hidden="true"
+                      className={cn(
+                        'mt-1.5 size-2.5 shrink-0 rounded-full',
+                        line.tone === 'done' && 'bg-success',
+                        line.tone === 'waiting' && 'bg-warning',
+                        line.tone === 'rejected' && 'bg-destructive',
+                        line.tone === 'cancelled' && 'bg-muted-foreground',
+                      )}
+                    />
+                    <span className="flex min-w-0 flex-col gap-0.5 text-sm">
+                      <span className="font-semibold break-words">
+                        {line.text}
+                        {line.at ? (
+                          <>
+                            {' · '}
+                            <bdi className="tabular font-normal text-muted-foreground">{line.at}</bdi>
+                          </>
+                        ) : null}
+                      </span>
+                      {line.detail ? (
+                        <span className="text-xs break-words text-muted-foreground">
+                          <BidiText>{line.detail}</BidiText>
+                        </span>
+                      ) : null}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </section>
             {blocked ? (
               <p
                 id={`penalty-${record.id}-blocked`}

@@ -3,6 +3,10 @@ import { activeEmployee } from './support/profile-tabs';
 import { t } from './support/i18n';
 import { expectTopInView, recordTabs, scrollToBottom, switchTab } from './support/tab-switch';
 import { signIn } from './support/ui';
+import { settleStreams } from './support/stream';
+
+// Every goto waits for the streamed page to settle (see support/stream.ts).
+settleStreams();
 
 /*
  * The phone flows of 30-tab-switch: the employee profile's tabs move their marker once with the

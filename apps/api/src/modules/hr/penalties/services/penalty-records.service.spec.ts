@@ -1,6 +1,8 @@
 import { ErrorCode } from '@school-erp/shared';
 import type { AuditService } from '../../../../core/audit';
 import type { AfterCommit } from '../../../../database/transactions';
+import type { PermissionsService, UserScope } from '../../../../core/permissions';
+import type { UsersService } from '../../../../core/users';
 import type { EmployeesService } from '../../employees/services/employees.service';
 import type { MonthLockService } from '../../month-lock/month-lock.service';
 import type { HrNotificationsService } from '../../notifications/hr-notifications.service';
@@ -20,18 +22,38 @@ const row = (over: Record<string, unknown> = {}) => ({
   employeeId: 'e1',
   violationId: 'v1',
   date: new Date('2025-11-10T00:00:00Z'),
-  status: 'PENDING',
+  status: 'WAITING_HR',
+  stageId: 'primary',
+  stage: { id: 'primary', nameEn: 'Primary', nameAr: 'الابتدائية' },
   level: 1,
   action: 'NOTICE',
   days: null,
   note: null,
   cancelReason: null,
   createdAt: new Date('2025-11-10T08:00:00Z'),
-  employee: { id: 'e1', code: 'EMP-0001', nameEn: 'A', nameAr: 'أ' },
+  createdById: 'recorder',
+  reviewedAt: null,
+  reviewNote: null,
+  reviewSkip: null,
+  approvedAt: null,
+  approvalNote: null,
+  rejectedAt: null,
+  rejectedStep: null,
+  rejectionReason: null,
+  cancelledAt: null,
+  employee: { id: 'e1', code: 'EMP-0001', nameEn: 'A', nameAr: 'أ', managerId: null },
   violation: { id: 'v1', nameEn: 'Late', nameAr: 'تأخر', oncePerDay: true, levels: LEVELS },
   createdBy: null,
+  reviewedBy: null,
   approvedBy: null,
+  rejectedBy: null,
   ...over,
+});
+
+/** A holder of the stage review: a stage head (own_stage) of `stageIds`, linked to `employeeId`. */
+const head = (userId: string, employeeId: string | null, stageIds: string[]) => ({
+  userId,
+  scope: { scope: 'own_stage', employeeId, stageId: stageIds[0] ?? null, stageIds } as UserScope,
 });
 
 /** An APPROVED record of the same pair, dated and recorded at `iso`. */
@@ -44,10 +66,19 @@ const approvedAt = (id: string, iso: string) => ({
   recordedAt: new Date(iso),
 });
 
-function makeService(repo: Record<string, jest.Mock> = {}, oncePerDay = true, access = fakeAccess(), employees: Record<string, jest.Mock> = {}) {
+function makeService(
+  repo: Record<string, jest.Mock> = {},
+  oncePerDay = true,
+  access = fakeAccess(),
+  employees: Record<string, jest.Mock> = {},
+  reviewHolders: ReturnType<typeof head>[] = [],
+  employeeAccount: { id: string; name: string } | null = null,
+) {
   const repository = {
     findOne: jest.fn().mockResolvedValue(row()),
-    findStatus: jest.fn().mockResolvedValue({ status: 'PENDING', date: '2025-11-10' }),
+    findStatus: jest.fn().mockResolvedValue({ status: 'WAITING_HR', date: '2025-11-10' }),
+    review: jest.fn().mockResolvedValue(true),
+    reject: jest.fn().mockResolvedValue(true),
     approvedCandidates: jest.fn().mockResolvedValue([]),
     approve: jest.fn().mockResolvedValue('APPROVED'),
     sameDayStatuses: jest.fn().mockResolvedValue([]),
@@ -67,23 +98,35 @@ function makeService(repo: Record<string, jest.Mock> = {}, oncePerDay = true, ac
   const tx = { inTransaction: jest.fn((fn: () => Promise<unknown>) => fn()) };
   const notifications = {
     penaltyRecorded: jest.fn().mockResolvedValue(undefined),
+    penaltyReviewed: jest.fn().mockResolvedValue(undefined),
     penaltyApproved: jest.fn().mockResolvedValue(undefined),
+    penaltyRejected: jest.fn().mockResolvedValue(undefined),
     penaltyCancelled: jest.fn().mockResolvedValue(undefined),
   };
+  const permissions = { holdersWithScope: jest.fn().mockResolvedValue(reviewHolders) };
+  const users = { accountOfEmployee: jest.fn().mockResolvedValue(employeeAccount) };
   const service = new PenaltyRecordsService(
     repository as unknown as PenaltyRecordsRepository,
     {
       getUsable: jest.fn().mockResolvedValue({ id: 'v1', levels: LEVELS.map((l) => ({ ...l, days: l.days && Number(l.days) })), oncePerDay }),
     } as unknown as PenaltyCatalogueService,
-    { assertActive: jest.fn(), assertInScope: jest.fn(), assertScopeFirst: jest.fn(), ...employees } as unknown as EmployeesService,
+    {
+      assertActive: jest.fn(),
+      assertInScope: jest.fn(),
+      assertScopeFirst: jest.fn(),
+      stagesOf: jest.fn().mockResolvedValue({ managerId: null, stages: [{ id: 'primary', nameEn: 'Primary', nameAr: 'الابتدائية' }] }),
+      ...employees,
+    } as unknown as EmployeesService,
     settings as unknown as HrSettingsService,
     monthLock as unknown as MonthLockService,
     access,
     audit as unknown as AuditService,
     tx as unknown as AfterCommit,
     notifications as unknown as HrNotificationsService,
+    permissions as unknown as PermissionsService,
+    users as unknown as UsersService,
   );
-  return { service, repository, monthLock, audit, tx, notifications };
+  return { service, repository, monthLock, audit, tx, notifications, permissions };
 }
 
 describe('PenaltyRecordsService', () => {
@@ -136,7 +179,7 @@ describe('PenaltyRecordsService', () => {
 
   describe('approve in date order (§4, owner 2026-11-20)', () => {
     type Earlier = (records: unknown[]) => { id: string } | null;
-    const pendingAt = (id: string, iso: string) => ({ ...approvedAt(id, iso), status: 'PENDING' });
+    const pendingAt = (id: string, iso: string) => ({ ...approvedAt(id, iso), status: 'WAITING_HR' });
 
     it('an earlier pending one → 409 PENALTY_EARLIER_PENDING naming its date; nothing audited or notified', async () => {
       const { service, audit, notifications } = makeService({
@@ -204,7 +247,8 @@ describe('PenaltyRecordsService', () => {
         status: 409,
       });
       const refuse = refuseOf(repository.createRecord, 1);
-      expect(refuse(['PENDING'])).toBe(true);
+      expect(refuse(['PENDING_REVIEW'])).toBe(true);
+      expect(refuse(['WAITING_HR'])).toBe(true);
       expect(refuse(['APPROVED'])).toBe(true);
       // A cancelled one doesn't block.
       expect(refuse(['CANCELLED'])).toBe(false);
@@ -213,11 +257,11 @@ describe('PenaltyRecordsService', () => {
     it('recording a violation that repeats within a day is never refused', async () => {
       const { service, repository } = makeService({}, false);
       await service.create(dto, 'u1');
-      expect(refuseOf(repository.createRecord, 1)(['APPROVED', 'PENDING'])).toBe(false);
+      expect(refuseOf(repository.createRecord, 1)(['APPROVED', 'WAITING_HR'])).toBe(false);
     });
 
     it('preview says so before submitting', async () => {
-      const { service } = makeService({ sameDayStatuses: jest.fn().mockResolvedValue(['PENDING']) });
+      const { service } = makeService({ sameDayStatuses: jest.fn().mockResolvedValue(['PENDING_REVIEW']) });
       await expect(service.preview(dto)).rejects.toMatchObject({
         code: ErrorCode.VIOLATION_ONCE_PER_DAY,
       });
@@ -237,8 +281,8 @@ describe('PenaltyRecordsService', () => {
       });
       const refuse = refuseOf(repository.approve, 5);
       expect(refuse(['APPROVED'])).toBe(true);
-      // Another pending one doesn't block approving this one.
-      expect(refuse(['PENDING'])).toBe(false);
+      // Another waiting one doesn't block approving this one.
+      expect(refuse(['WAITING_HR'])).toBe(false);
     });
 
     it('approval follows the violation’s flag today', async () => {
@@ -254,7 +298,7 @@ describe('PenaltyRecordsService', () => {
 });
 
 describe('PenaltyRecordsService — scopes (R5, edge case 3)', () => {
-  const PRIMARY = { kind: 'stage', stageId: 'primary' } as const;
+  const PRIMARY = { kind: 'stage', stageIds: ['primary'] } as const;
   const STAGE_HEAD = fakeAccess({
     'hr.penalties.view': PRIMARY,
     'hr.penalties.record': PRIMARY,
@@ -265,14 +309,14 @@ describe('PenaltyRecordsService — scopes (R5, edge case 3)', () => {
   it('approve: the record is looked up inside the approve scope; outside → 404, nothing approved', async () => {
     const { service, repository } = makeService({ findOne: jest.fn().mockResolvedValue(null) }, true, STAGE_HEAD);
     await expect(service.approve('r9', 'u1')).rejects.toMatchObject({ status: 404 });
-    expect(repository.findOne).toHaveBeenCalledWith('r9', { stageId: 'primary' });
+    expect(repository.findOne).toHaveBeenCalledWith('r9', { stageId: { in: ['primary'] } });
     expect(repository.approve).not.toHaveBeenCalled();
   });
 
   it('cancel: outside the cancel scope → 404, nothing cancelled', async () => {
     const { service, repository } = makeService({ findOne: jest.fn().mockResolvedValue(null) }, true, STAGE_HEAD);
     await expect(service.cancel('r9', { reason: 'x' }, 'u1')).rejects.toMatchObject({ status: 404 });
-    expect(repository.findOne).toHaveBeenCalledWith('r9', { stageId: 'primary' });
+    expect(repository.findOne).toHaveBeenCalledWith('r9', { stageId: { in: ['primary'] } });
     expect(repository.cancel).not.toHaveBeenCalled();
   });
 
@@ -286,7 +330,7 @@ describe('PenaltyRecordsService — scopes (R5, edge case 3)', () => {
       STAGE_HEAD,
     );
     await service.list({});
-    expect((repository as unknown as { list: jest.Mock }).list.mock.calls[0][3]).toEqual({ stageId: 'primary' });
+    expect((repository as unknown as { list: jest.Mock }).list.mock.calls[0][3]).toEqual({ stageId: { in: ['primary'] } });
     await expect(service.get('r9')).rejects.toMatchObject({ status: 404 });
   });
 
@@ -320,11 +364,17 @@ describe('PenaltyRecordsService — audit entries (§9, T29)', () => {
       after: {
         ...names,
         date: '2025-11-10',
+        stage: { nameEn: 'Primary', nameAr: 'الابتدائية' },
         level: 1,
         action: 'NOTICE',
         days: null,
-        status: 'PENDING',
+        status: 'WAITING_HR',
         note: 'Came at 9',
+        reviewSkip: null,
+        reviewNote: null,
+        approvalNote: null,
+        rejectedStep: null,
+        rejectionReason: null,
         cancelReason: null,
       },
     });
@@ -339,7 +389,7 @@ describe('PenaltyRecordsService — audit entries (§9, T29)', () => {
     await service.approve('r1', 'u1');
     const [input] = audit.record.mock.calls[0] as [{ action: string; before: object; after: object }];
     expect(input.action).toBe('hr.penalty.approve');
-    expect(input.before).toMatchObject({ ...names, status: 'PENDING', level: 1, action: 'NOTICE', days: null });
+    expect(input.before).toMatchObject({ ...names, status: 'WAITING_HR', level: 1, action: 'NOTICE', days: null });
     expect(input.after).toMatchObject({ ...names, status: 'APPROVED', level: 2, action: 'DEDUCT_DAYS', days: 2 });
   });
 
@@ -353,7 +403,7 @@ describe('PenaltyRecordsService — audit entries (§9, T29)', () => {
     expect(input).toMatchObject({
       action: 'hr.penalty.cancel',
       entity: { type: 'penalty', id: 'r1', label },
-      before: { status: 'PENDING', cancelReason: null },
+      before: { status: 'WAITING_HR', cancelReason: null },
       after: { status: 'CANCELLED', cancelReason: 'Recorded twice' },
     });
   });
@@ -390,6 +440,7 @@ describe('PenaltyRecordsService — audit entries (§9, T29)', () => {
           month: '2025-11',
         }),
         'u1',
+        [],
       );
     });
 
@@ -467,7 +518,15 @@ describe('PenaltyRecordsService — backdated penalty recount (§4, owner 2026-1
     const { service, repository } = makeService({
       approvedCandidates: jest.fn().mockResolvedValue([laterApproved('r2', '2025-11-12')]),
     });
-    expect(await service.preview(dto)).toEqual({ level: 1, action: 'NOTICE', days: null, priorCount: 0, recount: [change] });
+    expect(await service.preview(dto)).toEqual({
+      level: 1,
+      action: 'NOTICE',
+      days: null,
+      priorCount: 0,
+      recount: [change],
+      startsAs: 'WAITING_HR',
+      reviewSkip: 'NO_STAGE_HEAD',
+    });
     // From the window's start, every later date included.
     expect(repository.approvedCandidates).toHaveBeenCalledWith([dto], undefined, '2025-06-01');
     await service.create(dto, 'u1');
@@ -569,5 +628,370 @@ describe('PenaltyRecordsService — backdated penalty recount (§4, owner 2026-1
     const { service, repository } = makeService();
     await service.cancel('r1', { reason: 'x' }, 'u1');
     expect(repository.cancel).toHaveBeenCalledWith('r1', 'x', 'u1', expect.objectContaining({ employeeId: 'e1', violationId: 'v1' }));
+  });
+});
+
+describe('PenaltyRecordsService — the two steps (§4, owner 2026-11-21)', () => {
+  const dto = { employeeId: 'e1', violationId: 'v1', date: '2025-11-10' };
+  const PRIMARY = { kind: 'stage', stageIds: ['primary'] } as const;
+  const PREP = { kind: 'stage', stageIds: ['prep'] } as const;
+  const primaryHead = head('u-head', 'e-head', ['primary']);
+  const prepHead = head('u-prep', 'e-prep', ['prep']);
+  const officer = () => fakeAccess({ 'hr.penalties.review': null }, { userId: 'u-officer', employeeId: null });
+  const twoStages = () => ({
+    stagesOf: jest.fn().mockResolvedValue({
+      managerId: null,
+      stages: [
+        { id: 'primary', nameEn: 'Primary', nameAr: 'الابتدائية' },
+        { id: 'prep', nameEn: 'Preparatory', nameAr: 'الإعدادية' },
+      ],
+    }),
+  });
+  const created = (repository: { createRecord: jest.Mock }) =>
+    repository.createRecord.mock.calls[0][0] as { stageId: string; status: string; reviewSkip: string | null };
+
+  describe('recording: where it starts', () => {
+    it('a stage with a stage head → Pending stage review; whoever acts next is told, never the penalised employee', async () => {
+      const { service, repository, notifications } = makeService(
+        { createRecord: jest.fn().mockResolvedValue(row({ status: 'PENDING_REVIEW' })) },
+        true,
+        officer(),
+        {},
+        [primaryHead],
+        { id: 'u-e1', name: 'A' },
+      );
+      await service.create(dto, 'u-officer');
+      expect(created(repository)).toMatchObject({ stageId: 'primary', status: 'PENDING_REVIEW', reviewSkip: null });
+      expect(notifications.penaltyRecorded).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'r1', status: 'PENDING_REVIEW' }),
+        'u-officer',
+        ['u-e1'],
+      );
+    });
+
+    it('the recorder is a stage head of the penalty stage → skip: Waiting for HR (RECORDER_IS_HEAD)', async () => {
+      const access = fakeAccess({ 'hr.penalties.review': PRIMARY }, { userId: 'u-head', employeeId: 'e-head' });
+      const { service, repository } = makeService({}, true, access, {}, [primaryHead]);
+      await service.create(dto, 'u-head');
+      expect(created(repository)).toMatchObject({ status: 'WAITING_HR', reviewSkip: 'RECORDER_IS_HEAD' });
+    });
+
+    it('a recorder who heads another stage is no reviewer here → Pending stage review', async () => {
+      const access = fakeAccess({ 'hr.penalties.review': PREP }, { userId: 'u-prep', employeeId: 'e-prep' });
+      const { service, repository } = makeService({}, true, access, {}, [primaryHead, prepHead]);
+      await service.create(dto, 'u-prep');
+      expect(created(repository)).toMatchObject({ status: 'PENDING_REVIEW', reviewSkip: null });
+    });
+
+    it('no stage head → skip: Waiting for HR (NO_STAGE_HEAD); a school-wide reviewer (System admin) heads no stage', async () => {
+      const admin = { userId: 'u-admin', scope: { scope: 'all', employeeId: null, stageId: null, stageIds: [] } as UserScope };
+      const { service, repository } = makeService({}, true, officer(), {}, [admin, prepHead]);
+      await service.create(dto, 'u-officer');
+      expect(created(repository)).toMatchObject({ status: 'WAITING_HR', reviewSkip: 'NO_STAGE_HEAD' });
+    });
+
+    it('penalty against a stage head (edge case 1) → Waiting for HR (EMPLOYEE_IS_HEAD), also when they record it themselves', async () => {
+      const against = { ...dto, employeeId: 'e-head' };
+      const a = makeService({}, true, officer(), {}, [primaryHead]);
+      await a.service.create(against, 'u-officer');
+      expect(created(a.repository)).toMatchObject({ status: 'WAITING_HR', reviewSkip: 'EMPLOYEE_IS_HEAD' });
+
+      const self = fakeAccess({ 'hr.penalties.review': PRIMARY }, { userId: 'u-head', employeeId: 'e-head' });
+      const b = makeService({}, true, self, {}, [primaryHead]);
+      await b.service.create(against, 'u-head');
+      expect(created(b.repository)).toMatchObject({ status: 'WAITING_HR', reviewSkip: 'EMPLOYEE_IS_HEAD' });
+    });
+
+    it('the system recording (seed, no signed-in user) is nobody’s review', async () => {
+      const { service, repository } = makeService({}, true, fakeAccess(), {}, [primaryHead]);
+      await service.create(dto, null);
+      expect(created(repository)).toMatchObject({ status: 'PENDING_REVIEW' });
+    });
+
+    it('several stages: the recorder must choose one of the employee’s stages', async () => {
+      const none = makeService({}, true, officer(), twoStages(), [primaryHead]);
+      await expect(none.service.create(dto, 'u-officer')).rejects.toMatchObject({ status: 400, code: ErrorCode.PENALTY_STAGE_REQUIRED });
+      await expect(none.service.create({ ...dto, stageId: 'kg' }, 'u-officer')).rejects.toMatchObject({
+        code: ErrorCode.PENALTY_STAGE_INVALID,
+      });
+      expect(none.repository.createRecord).not.toHaveBeenCalled();
+      const prep = makeService({}, true, officer(), twoStages(), [primaryHead, prepHead]);
+      await prep.service.create({ ...dto, stageId: 'prep' }, 'u-officer');
+      expect(created(prep.repository)).toMatchObject({ stageId: 'prep', status: 'PENDING_REVIEW' });
+    });
+
+    it('the preview says where it goes, and waits for the stage choice when there are several', async () => {
+      const { service } = makeService({}, true, officer(), twoStages(), [primaryHead]);
+      expect(await service.preview(dto)).toMatchObject({ startsAs: null, reviewSkip: null });
+      expect(await service.preview({ ...dto, stageId: 'primary' })).toMatchObject({ startsAs: 'PENDING_REVIEW' });
+      expect(await service.preview({ ...dto, stageId: 'prep' })).toMatchObject({ startsAs: 'WAITING_HR', reviewSkip: 'NO_STAGE_HEAD' });
+    });
+  });
+
+  describe('the stage review', () => {
+    const asHead = () => fakeAccess({ 'hr.penalties.review': PRIMARY }, { userId: 'u-head', employeeId: 'e-head' });
+    const reviewing = (over: Record<string, jest.Mock> = {}, access = asHead()) =>
+      makeService(
+        {
+          findOne: jest
+            .fn()
+            .mockResolvedValueOnce(row({ status: 'PENDING_REVIEW' }))
+            .mockResolvedValue(row({ status: 'WAITING_HR', reviewNote: 'ok' })),
+          ...over,
+        },
+        true,
+        access,
+        {},
+        [primaryHead],
+        { id: 'u-e1', name: 'A' },
+      );
+
+    it('approve: Pending stage review → Waiting for HR with the note; audited; HR told, not the employee', async () => {
+      const { service, repository, audit, notifications } = reviewing();
+      await service.reviewApprove('r1', 'u-head', '  ok ');
+      expect(repository.review).toHaveBeenCalledWith('r1', 'u-head', 'ok');
+      expect(audit.record.mock.calls[0][0]).toMatchObject({
+        action: 'hr.penalty.review',
+        before: { status: 'PENDING_REVIEW' },
+        after: { status: 'WAITING_HR', reviewNote: 'ok' },
+      });
+      expect(notifications.penaltyReviewed).toHaveBeenCalledWith(expect.objectContaining({ id: 'r1' }), 'u-head', ['u-e1']);
+    });
+
+    it('reject: a reason is required and recorded with the step; the recorder is told', async () => {
+      const { service, repository, audit, notifications } = reviewing({
+        findOne: jest
+          .fn()
+          .mockResolvedValueOnce(row({ status: 'PENDING_REVIEW' }))
+          .mockResolvedValue(row({ status: 'REJECTED', rejectedStep: 'REVIEW', rejectionReason: 'كان في مهمة' })),
+      });
+      await service.reject('r1', 'REVIEW_REJECT', ' كان في مهمة ', 'u-head');
+      expect(repository.reject).toHaveBeenCalledWith('r1', ['PENDING_REVIEW'], 'u-head', 'كان في مهمة', 'REVIEW', expect.anything());
+      expect(audit.record.mock.calls[0][0]).toMatchObject({
+        action: 'hr.penalty.reject',
+        after: { status: 'REJECTED', rejectedStep: 'REVIEW', rejectionReason: 'كان في مهمة' },
+      });
+      expect(notifications.penaltyRejected).toHaveBeenCalledWith(expect.objectContaining({ id: 'r1', createdById: 'recorder' }), 'u-head');
+    });
+
+    it('reject reasons (edge case 7): blank is refused; nothing written', async () => {
+      const { service, repository } = reviewing();
+      await expect(service.reject('r1', 'REVIEW_REJECT', '   ', 'u-head')).rejects.toMatchObject({ status: 400 });
+      expect(repository.reject).not.toHaveBeenCalled();
+    });
+
+    it('multi-stage visibility (edge cases 11, 12): the other stage’s head gets 403 on the actions and 404 on the detail', async () => {
+      const asPrep = fakeAccess(
+        { 'hr.penalties.review': PREP, 'hr.penalties.view': PREP },
+        { userId: 'u-prep', employeeId: 'e-prep' },
+      );
+      const { service, repository } = reviewing({ findOne: jest.fn().mockResolvedValue(null) }, asPrep);
+      await expect(service.reviewApprove('r1', 'u-prep', null)).rejects.toMatchObject({ status: 403 });
+      await expect(service.reject('r1', 'REVIEW_REJECT', 'x', 'u-prep')).rejects.toMatchObject({ status: 403 });
+      expect(repository.findOne).toHaveBeenCalledWith('r1', { stageId: { in: ['prep'] } });
+      await expect(service.get('r1')).rejects.toMatchObject({ status: 404 });
+      expect(repository.review).not.toHaveBeenCalled();
+    });
+
+    it('an unknown penalty → 404', async () => {
+      const { service } = reviewing({ findOne: jest.fn().mockResolvedValue(null), findStatus: jest.fn().mockResolvedValue(null) });
+      await expect(service.reviewApprove('r9', 'u-head', null)).rejects.toMatchObject({ status: 404 });
+    });
+
+    it('own penalty (edge case 1): a stage head never reviews a penalty given to them — 403 PENALTY_OWN', async () => {
+      const { service, repository } = reviewing({
+        findOne: jest.fn().mockResolvedValue(row({ status: 'PENDING_REVIEW', employeeId: 'e-head' })),
+      });
+      await expect(service.reviewApprove('r1', 'u-head', null)).rejects.toMatchObject({ status: 403, code: ErrorCode.PENALTY_OWN });
+      await expect(service.reject('r1', 'REVIEW_REJECT', 'x', 'u-head')).rejects.toMatchObject({ code: ErrorCode.PENALTY_OWN });
+      expect(repository.review).not.toHaveBeenCalled();
+    });
+
+    it('two reviews at once (edge case 5): the loser gets 409 PENALTY_WRONG_STEP with the fresh status, nothing audited', async () => {
+      const { service, audit, notifications } = reviewing({
+        review: jest.fn().mockResolvedValue(false),
+        findStatus: jest.fn().mockResolvedValue({ status: 'WAITING_HR', date: '2025-11-10' }),
+      });
+      await expect(service.reviewApprove('r1', 'u-head', null)).rejects.toMatchObject({
+        status: 409,
+        code: ErrorCode.PENALTY_WRONG_STEP,
+        data: { status: 'WAITING_HR' },
+      });
+      expect(audit.record).not.toHaveBeenCalled();
+      expect(notifications.penaltyReviewed).not.toHaveBeenCalled();
+
+      const lostToReject = reviewing({
+        reject: jest.fn().mockResolvedValue(false),
+        findStatus: jest.fn().mockResolvedValue({ status: 'REJECTED', date: '2025-11-10' }),
+      });
+      await expect(lostToReject.service.reject('r1', 'REVIEW_REJECT', 'x', 'u-head')).rejects.toMatchObject({
+        code: ErrorCode.PENALTY_REJECTED,
+      });
+    });
+
+    it('a penalty past the review (waiting for HR, approved), rejected or cancelled is refused (409)', async () => {
+      for (const [status, code] of [
+        ['WAITING_HR', ErrorCode.PENALTY_WRONG_STEP],
+        ['APPROVED', ErrorCode.PENALTY_WRONG_STEP],
+        ['REJECTED', ErrorCode.PENALTY_REJECTED],
+        ['CANCELLED', ErrorCode.PENALTY_CANCELLED],
+      ] as const) {
+        const { service } = reviewing({ findOne: jest.fn().mockResolvedValue(row({ status })) });
+        await expect(service.reviewApprove('r1', 'u-head', null)).rejects.toMatchObject({ status: 409, code });
+      }
+    });
+
+    it('the stage head changes while it waits (edge case 3): the new head acts; with none left, HR may decide directly', async () => {
+      const newHead = head('u-new', 'e-new', ['primary']);
+      const asNew = fakeAccess({ 'hr.penalties.review': PRIMARY }, { userId: 'u-new', employeeId: 'e-new' });
+      const a = makeService({ findOne: jest.fn().mockResolvedValue(row({ status: 'PENDING_REVIEW' })) }, true, asNew, {}, [newHead]);
+      await a.service.reviewApprove('r1', 'u-new', null);
+      expect(a.repository.review).toHaveBeenCalled();
+
+      // Nobody heads primary any more: the record says so, and HR's approval takes it from Pending stage review.
+      const asHr = () => fakeAccess({}, { userId: 'u-hr', employeeId: 'e-hr' });
+      const hr = makeService({ findOne: jest.fn().mockResolvedValue(row({ status: 'PENDING_REVIEW' })) }, true, asHr(), {}, []);
+      expect(await hr.service.get('r1')).toMatchObject({ hrMayDecide: true });
+      await hr.service.approve('r1', 'u-hr');
+      expect(hr.repository.approve.mock.calls[0][8]).toEqual(['WAITING_HR', 'PENDING_REVIEW']);
+      // While a head is there, HR waits for the review.
+      const waits = makeService({ findOne: jest.fn().mockResolvedValue(row({ status: 'PENDING_REVIEW' })) }, true, asHr(), {}, [primaryHead]);
+      expect(await waits.service.get('r1')).toMatchObject({ hrMayDecide: false });
+      await expect(waits.service.approve('r1', 'u-hr')).rejects.toMatchObject({
+        status: 409,
+        code: ErrorCode.PENALTY_WRONG_STEP,
+        data: { status: 'PENDING_REVIEW' },
+      });
+    });
+
+    it('the employee’s stages change after recording (edge case 4): the penalty keeps its stage, and its head still reviews it', async () => {
+      // Scope and reviewers go by the penalty's stage, whatever the employee's stages are now.
+      const { service, repository } = reviewing({
+        findOne: jest.fn().mockResolvedValue(row({ status: 'PENDING_REVIEW', stageId: 'primary' })),
+      });
+      await service.reviewApprove('r1', 'u-head', null);
+      expect(repository.findOne).toHaveBeenCalledWith('r1', { stageId: { in: ['primary'] } });
+      expect(repository.review).toHaveBeenCalled();
+    });
+
+    it('an approved payroll month blocks the review (the existing lock)', async () => {
+      const { service, repository, monthLock } = reviewing();
+      monthLock.assertMonthOpen.mockRejectedValue(Object.assign(new Error('locked'), { status: 409 }));
+      await expect(service.reviewApprove('r1', 'u-head', null)).rejects.toThrow('locked');
+      expect(repository.review).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('the HR step', () => {
+    const asHr = () => fakeAccess({}, { userId: 'u-hr', employeeId: 'e-hr' });
+
+    it('approve: only from Waiting for HR, with the optional note; the level is fixed here', async () => {
+      const { service, repository } = makeService({}, true, asHr());
+      await service.approve('r1', 'u-hr', undefined, '  fine  ');
+      expect(repository.approve.mock.calls[0][8]).toEqual(['WAITING_HR']);
+      expect(repository.approve.mock.calls[0][9]).toBe('fine');
+    });
+
+    it('self-approval at HR (edge case 2): the HR approver who is the penalised employee is refused (403 PENALTY_OWN)', async () => {
+      const { service, repository } = makeService({ findOne: jest.fn().mockResolvedValue(row({ employeeId: 'e-hr' })) }, true, asHr());
+      await expect(service.approve('r1', 'u-hr')).rejects.toMatchObject({ status: 403, code: ErrorCode.PENALTY_OWN });
+      await expect(service.reject('r1', 'HR_REJECT', 'x', 'u-hr')).rejects.toMatchObject({ code: ErrorCode.PENALTY_OWN });
+      expect(repository.approve).not.toHaveBeenCalled();
+      expect(repository.reject).not.toHaveBeenCalled();
+    });
+
+    it('reject: Waiting for HR → Rejected with the reason, step HR; audited; the recorder told', async () => {
+      const { service, repository, audit, notifications } = makeService(
+        {
+          findOne: jest
+            .fn()
+            .mockResolvedValueOnce(row())
+            .mockResolvedValue(row({ status: 'REJECTED', rejectedStep: 'HR', rejectionReason: 'No witness' })),
+        },
+        true,
+        asHr(),
+      );
+      await service.reject('r1', 'HR_REJECT', 'No witness', 'u-hr');
+      expect(repository.reject).toHaveBeenCalledWith('r1', ['WAITING_HR'], 'u-hr', 'No witness', 'HR', expect.anything());
+      expect(audit.record.mock.calls[0][0]).toMatchObject({ action: 'hr.penalty.reject', after: { rejectedStep: 'HR' } });
+      expect(notifications.penaltyRejected).toHaveBeenCalledTimes(1);
+    });
+
+    it('reject reasons (edge case 7): over 1,000 characters refused', async () => {
+      const { service, repository } = makeService({}, true, asHr());
+      await expect(service.reject('r1', 'HR_REJECT', 'x'.repeat(1001), 'u-hr')).rejects.toMatchObject({ status: 400 });
+      expect(repository.reject).not.toHaveBeenCalled();
+    });
+
+    it('approved month (edge case 8): the payroll month approved while it was in review blocks the HR step', async () => {
+      const { service, repository, monthLock } = makeService({}, true, asHr());
+      monthLock.assertMonthOpen.mockRejectedValue(Object.assign(new Error('PAYROLL_APPROVED'), { status: 409 }));
+      await expect(service.approve('r1', 'u-hr')).rejects.toThrow('PAYROLL_APPROVED');
+      await expect(service.reject('r1', 'HR_REJECT', 'x', 'u-hr')).rejects.toThrow('PAYROLL_APPROVED');
+      expect(repository.approve).not.toHaveBeenCalled();
+      expect(repository.reject).not.toHaveBeenCalled();
+    });
+
+    it('date order (edge case 9): the earlier Pending stage review one blocks, named by date', async () => {
+      const { service } = makeService({ approve: jest.fn().mockResolvedValue({ earlierPending: '2025-11-05' }) }, true, asHr());
+      await expect(service.approve('r1', 'u-hr')).rejects.toMatchObject({
+        code: ErrorCode.PENALTY_EARLIER_PENDING,
+        params: { date: '2025-11-05' },
+      });
+    });
+
+    it('a rejected, cancelled or approved penalty is refused at HR (409)', async () => {
+      for (const [status, code] of [
+        ['REJECTED', ErrorCode.PENALTY_REJECTED],
+        ['CANCELLED', ErrorCode.PENALTY_CANCELLED],
+        ['APPROVED', ErrorCode.PENALTY_WRONG_STEP],
+      ] as const) {
+        const { service } = makeService({ findOne: jest.fn().mockResolvedValue(row({ status })) }, true, asHr());
+        await expect(service.approve('r1', 'u-hr')).rejects.toMatchObject({ status: 409, code });
+        await expect(service.reject('r1', 'HR_REJECT', 'x', 'u-hr')).rejects.toMatchObject({ status: 409, code });
+      }
+    });
+  });
+
+  describe('cancel (edge case 6)', () => {
+    it('cancelling while Pending stage review or Waiting for HR resolves what waited', async () => {
+      for (const status of ['PENDING_REVIEW', 'WAITING_HR']) {
+        const { service, repository, notifications } = makeService({ findOne: jest.fn().mockResolvedValue(row({ status })) });
+        await service.cancel('r1', { reason: 'x' }, 'u1');
+        expect(repository.cancel).toHaveBeenCalled();
+        expect(notifications.penaltyCancelled).toHaveBeenCalledWith('r1', 'u1');
+      }
+    });
+    it('a rejected or cancelled one is refused', async () => {
+      for (const [status, code] of [
+        ['REJECTED', ErrorCode.PENALTY_REJECTED],
+        ['CANCELLED', ErrorCode.PENALTY_CANCELLED],
+      ] as const) {
+        const { service, repository } = makeService({ findOne: jest.fn().mockResolvedValue(row({ status })) });
+        await expect(service.cancel('r1', { reason: 'x' }, 'u1')).rejects.toMatchObject({ status: 409, code });
+        expect(repository.cancel).not.toHaveBeenCalled();
+      }
+    });
+  });
+
+  it('the dashboard tiles (edge case 11): Pending counts both waiting steps, Approved only HR-approved — a stage head by the penalty’s stage', async () => {
+    const counts = { PENDING_REVIEW: 2, WAITING_HR: 3, APPROVED: 4, REJECTED: 5, CANCELLED: 6 };
+    const countByStatusInMonth = jest.fn().mockResolvedValue(counts);
+    const { service } = makeService({ countByStatusInMonth }, true, fakeAccess({ 'hr.penalties.view': PRIMARY }));
+    expect(await service.monthCounts('2025-11')).toEqual({ pending: 5, approved: 4 });
+    expect(countByStatusInMonth).toHaveBeenCalledWith('2025-11', { stageId: { in: ['primary'] } });
+  });
+
+  it('payroll: penalties waiting at either step are “pending”; rejected never count', async () => {
+    const { service } = makeService({
+      findForPayroll: jest.fn().mockResolvedValue([
+        { employeeId: 'e1', status: 'PENDING_REVIEW', action: 'NOTICE', days: null },
+        { employeeId: 'e1', status: 'WAITING_HR', action: 'NOTICE', days: null },
+        { employeeId: 'e2', status: 'APPROVED', action: 'DEDUCT_DAYS', days: '1' },
+      ]),
+    });
+    const inputs = await service.payrollInputs('2025-11');
+    expect(inputs.pending.get('e1')).toBe(2);
+    expect(inputs.deductingDays.get('e2')).toEqual([1]);
   });
 });

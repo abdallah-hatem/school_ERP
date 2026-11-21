@@ -4,6 +4,7 @@ import type {
   ApprovePenaltyRequest,
   CreatePenaltyRequest,
   ListPenaltiesQuery,
+  PenaltyEmployeeStages,
   PenaltyGroup,
   PenaltyPreview,
   PenaltyPreviewQuery,
@@ -35,6 +36,7 @@ export async function GET_PENALTIES(query: ListPenaltiesQuery = {}) {
       employeeId: query.employeeId,
       month: query.month,
       status: query.status,
+      stageId: query.stageId,
     },
     next: { tags: [PENALTIES_TAG] },
   });
@@ -57,13 +59,33 @@ export async function GET_PENALTY(id: Uuid) {
 export async function GET_PENALTY_PREVIEW(query: PenaltyPreviewQuery) {
   const response = await apiFetch<PenaltyPreview>('/hr/penalties/preview', {
     method: 'GET',
-    params: { employeeId: query.employeeId, violationId: query.violationId, date: query.date },
+    params: {
+      employeeId: query.employeeId,
+      violationId: query.violationId,
+      date: query.date,
+      stageId: query.stageId,
+    },
     cache: 'no-store',
   });
   return handleResponse({ response, showErrorToast: false });
 }
 
-/** `POST /hr/penalties` — saved as PENDING with the level and action computed now. */
+/**
+ * `GET /hr/penalties/employee-stages/:employeeId` — the stages a penalty for this employee can be
+ * recorded in (main first): one fills in by itself, several → the record dialog asks.
+ */
+export async function GET_PENALTY_EMPLOYEE_STAGES(employeeId: Uuid) {
+  const response = await apiFetch<PenaltyEmployeeStages>(
+    `/hr/penalties/employee-stages/${encodeURIComponent(employeeId)}`,
+    { method: 'GET', cache: 'no-store' },
+  );
+  return handleResponse({ response, showErrorToast: false });
+}
+
+/**
+ * `POST /hr/penalties` — saved as Pending stage review, or straight to Waiting for HR (§4), with the
+ * level and action computed now.
+ */
 export async function CREATE_PENALTY(body: CreatePenaltyRequest) {
   const response = await apiFetch<PenaltyRecord>('/hr/penalties', {
     method: 'POST',
@@ -78,11 +100,42 @@ export async function CREATE_PENALTY(body: CreatePenaltyRequest) {
  * approved penalties a backdated one moves up, as the dialog listed them (§4) — a 409 with the
  * fresh list (`data.recount`) when they changed meanwhile.
  */
-export async function APPROVE_PENALTY(id: Uuid, acknowledgedRecount?: PenaltyRecountAcknowledgement[]) {
-  const body: ApprovePenaltyRequest = acknowledgedRecount ? { acknowledgedRecount } : {};
+export async function APPROVE_PENALTY(
+  id: Uuid,
+  acknowledgedRecount?: PenaltyRecountAcknowledgement[],
+  note?: string | null,
+) {
+  const body: ApprovePenaltyRequest = {
+    ...(acknowledgedRecount ? { acknowledgedRecount } : {}),
+    ...(note ? { note } : {}),
+  };
   const response = await apiFetch<PenaltyRecord>(`/hr/penalties/${encodeURIComponent(id)}/approve`, {
     method: 'POST',
     body: { ...body },
+    revalidateTags: [PENALTIES_TAG],
+  });
+  return handleResponse({ response });
+}
+
+/** `POST /hr/penalties/:id/review/approve` — the stage head approves (→ Waiting for HR), with an optional note. */
+export async function REVIEW_APPROVE_PENALTY(id: Uuid, note?: string | null) {
+  const response = await apiFetch<PenaltyRecord>(`/hr/penalties/${encodeURIComponent(id)}/review/approve`, {
+    method: 'POST',
+    body: note ? { note } : {},
+    revalidateTags: [PENALTIES_TAG],
+  });
+  return handleResponse({ response });
+}
+
+/**
+ * Rejects with the required reason: at the stage review (`step: 'review'`, the stage head) or at HR.
+ * A 409 `PENALTY_WRONG_STEP` (someone acted first) carries the fresh status as `data.status`.
+ */
+export async function REJECT_PENALTY(id: Uuid, reason: string, step: 'review' | 'hr') {
+  const path = step === 'review' ? 'review/reject' : 'reject';
+  const response = await apiFetch<PenaltyRecord>(`/hr/penalties/${encodeURIComponent(id)}/${path}`, {
+    method: 'POST',
+    body: { reason },
     revalidateTags: [PENALTIES_TAG],
   });
   return handleResponse({ response });

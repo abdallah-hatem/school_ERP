@@ -19,6 +19,8 @@ import {
 import type { CreateEmployeeRequest, ListEmployeesQuery } from '@school-erp/shared';
 import { Transform } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsBoolean,
   IsEmail,
   IsIn,
@@ -103,6 +105,13 @@ export class CreateEmployeeDto implements CreateEmployeeRequest {
 
   @IsUUID()
   stageId: string;
+
+  /** "Also teaches in" (§3, owner 2026-11-21): other stages besides the main one. */
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @IsUUID('all', { each: true })
+  otherStageIds?: string[];
 
   @IsUUID()
   departmentId: string;

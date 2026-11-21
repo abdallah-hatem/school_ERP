@@ -4,6 +4,7 @@ import {
   ALL_EMPLOYEES,
   employeeWhere,
   inScope,
+  penaltyWhere,
   type EmployeeScope,
   type ScopedEmployee,
 } from './employee-scope.pure';
@@ -15,6 +16,7 @@ import type { HrAccessService } from './hr-access.service';
  */
 export function fakeAccess(
   scopes: Partial<Record<PermissionKey, EmployeeScope | null>> = {},
+  actor?: { userId: string; employeeId: string | null },
 ): HrAccessService {
   const scopeOf = (key: PermissionKey): EmployeeScope => {
     const s = scopes[key];
@@ -24,6 +26,9 @@ export function fakeAccess(
     scope: (key: PermissionKey) => Promise.resolve(scopeOf(key)),
     holds: (key: PermissionKey) => Promise.resolve(scopes[key] !== null),
     where: (key: PermissionKey) => Promise.resolve(employeeWhere(scopeOf(key))),
+    penaltyWhere: (key: PermissionKey) => Promise.resolve(penaltyWhere(scopeOf(key))),
+    // No signed-in user unless a test sets one (`actor`): the system acts.
+    actor: () => Promise.resolve(actor ?? null),
     salaryScope: () => Promise.resolve(scopeOf('hr.employees.view_salary')),
     assertInScope: (key: PermissionKey, employee: ScopedEmployee | null) => {
       if (!employee || !inScope(scopeOf(key), employee)) {

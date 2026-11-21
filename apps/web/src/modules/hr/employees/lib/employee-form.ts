@@ -94,6 +94,8 @@ const employeeFields = z.object({
     /** §3 (N0): empty on a new employee → the API fills it from the hire date; empty on edit → none. */
     probationEnd: z.string().nullable(),
     stageId: requiredId,
+    /** "Also teaches in" (owner 2026-11-21): the other stages, as their tags show them. */
+    otherStages: z.array(z.object({ id: z.string(), label: z.string() })),
     departmentId: requiredId,
     jobTitleId: requiredId,
     managerId: z.string(),
@@ -138,6 +140,10 @@ const employeeFields = z.object({
 export function employeeFormSchemaFor({ salary }: { salary: boolean }) {
   const fields = salary ? employeeFields : employeeFields.extend({ basicSalary: z.number().nullable() });
   return fields.superRefine((v, ctx) => {
+    // §3: the main stage isn't also an "also teaches in" stage.
+    if (v.stageId && v.otherStages.some((s) => s.id === v.stageId)) {
+      ctx.addIssue({ code: 'custom', path: ['otherStages'], message: 'employees.errors.otherStageIsMain' });
+    }
     if (v.contractStart && v.contractEnd && v.contractEnd <= v.contractStart) {
       ctx.addIssue({ code: 'custom', path: ['contractEnd'], message: 'employees.errors.contractOrder' });
     }
@@ -166,6 +172,9 @@ export const employeeFormSchema = employeeFormSchemaFor({ salary: true });
 
 export type EmployeeFormValues = z.input<typeof employeeFormSchema>;
 
+/** One "also teaches in" tag: the stage and its name in the form's language. */
+export type OtherStageChoice = EmployeeFormValues['otherStages'][number];
+
 /** A new employee: contract defaults to 1 June – 31 May of the current contract year (§3). */
 export function emptyEmployeeForm(today: IsoDate = todayIso()): EmployeeFormValues {
   const contract = contractYearFor(today);
@@ -181,6 +190,7 @@ export function emptyEmployeeForm(today: IsoDate = todayIso()): EmployeeFormValu
     hireDate: null,
     probationEnd: null,
     stageId: '',
+    otherStages: [],
     departmentId: '',
     jobTitleId: '',
     managerId: NO_MANAGER,
@@ -221,7 +231,8 @@ export const CLEARED_INSURANCE = {
 } as const satisfies Partial<EmployeeFormValues>;
 
 /** The form's starting values for editing `employee`. */
-export function employeeToForm(employee: Employee): EmployeeFormValues {
+/** An employee as the edit form's values; `locale` names the "also teaches in" tags. */
+export function employeeToForm(employee: Employee, locale: Locale = 'en'): EmployeeFormValues {
   return {
     nameEn: employee.nameEn,
     nameAr: employee.nameAr,
@@ -234,6 +245,7 @@ export function employeeToForm(employee: Employee): EmployeeFormValues {
     hireDate: employee.hireDate,
     probationEnd: employee.probationEnd,
     stageId: employee.stage.id,
+    otherStages: employee.otherStages.map((s) => ({ id: s.id, label: localName(s, locale) })),
     departmentId: employee.department.id,
     jobTitleId: employee.jobTitle.id,
     managerId: employee.manager?.id ?? NO_MANAGER,
@@ -283,6 +295,7 @@ export function formToRequest(v: EmployeeFormValues): CreateEmployeeRequest {
     hireDate: v.hireDate as IsoDate,
     probationEnd: v.probationEnd,
     stageId: v.stageId,
+    otherStageIds: v.otherStages.map((s) => s.id),
     departmentId: v.departmentId,
     jobTitleId: v.jobTitleId,
     managerId: v.managerId && v.managerId !== NO_MANAGER ? v.managerId : null,
@@ -316,7 +329,10 @@ export function formToUpdate(values: EmployeeFormValues, initial: EmployeeFormVa
   const before = formToRequest(initial);
   const patch: Record<string, unknown> = {};
   for (const key of Object.keys(next) as (keyof CreateEmployeeRequest)[]) {
-    if (next[key] !== before[key]) patch[key] = next[key];
+    const a = next[key];
+    const b = before[key];
+    // A list (the other stages) changes when its items do, not when it is a new array.
+    if (Array.isArray(a) && Array.isArray(b) ? a.join() !== b.join() : a !== b) patch[key] = a;
   }
   return patch as UpdateEmployeeRequest;
 }
@@ -330,6 +346,7 @@ const FIELD_BY_ERROR: Partial<Record<string, keyof EmployeeFormValues>> = {
   [ErrorCode.MANAGER_LOOP]: 'managerId',
   [ErrorCode.MANAGER_NOT_MANAGING]: 'managerId',
   [ErrorCode.PROBATION_BEFORE_HIRE]: 'probationEnd',
+  [ErrorCode.INVALID_OTHER_STAGES]: 'otherStages',
 };
 
 export function fieldForError(code: unknown): keyof EmployeeFormValues | undefined {

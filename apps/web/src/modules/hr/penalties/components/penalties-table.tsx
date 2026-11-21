@@ -1,12 +1,13 @@
 'use client';
 
-import { PenaltyStatus, type PenaltyRecord } from '@school-erp/shared';
+import { isOpenPenaltyStatus, PenaltyStatus, type PenaltyRecord } from '@school-erp/shared';
 import type { ReactNode } from 'react';
 import { rowActionsColumn } from '@/shared/components/data-table/row-actions';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-table/data-table';
 import type { PaginationState } from '@/shared/components/data-table/pagination';
 import { BidiText } from '@/shared/components/ui/bidi-text';
 import { SkeletonIdentity, SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
+import { StageIcon } from '@/shared/components/ui/icons';
 import { SlotText, TEXT_SLOT } from '@/shared/components/ui/slot-text';
 import { StatusPill, type StatusTone } from '@/shared/components/ui/status-pill';
 import { formatDate } from '@/shared/lib/format';
@@ -17,9 +18,11 @@ import { describeAction } from '../lib/penalty-text';
 import { PenaltyActions } from './penalty-actions';
 
 const STATUS_TONE: Record<PenaltyStatus, StatusTone> = {
-  PENDING: 'warning',
+  PENDING_REVIEW: 'info',
+  WAITING_HR: 'warning',
   APPROVED: 'success',
-  CANCELLED: 'danger',
+  REJECTED: 'danger',
+  CANCELLED: 'neutral',
 };
 
 export function PenaltyStatusPill({ status }: { status: PenaltyStatus }) {
@@ -90,7 +93,22 @@ export function PenaltiesTable({
       className: 'min-w-40 whitespace-normal',
       // Names run long: across the card, so a phone shows them on one line as a rule.
       card: 'wide',
-      cell: (p) => <span className="break-words">{nameIn(p.violation, locale)}</span>,
+      skeleton: (
+        <span className="flex flex-col gap-0.5">
+          <SkeletonText width="w-32" />
+          <SkeletonText className="text-xs" width="w-16" />
+        </span>
+      ),
+      cell: (p) => (
+        <span className="flex flex-col gap-0.5">
+          <span className="break-words">{nameIn(p.violation, locale)}</span>
+          {/* Where it happened (owner 2026-11-21): who reviews it. */}
+          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+            <StageIcon className="size-3.5 shrink-0" />
+            {nameIn(p.stage, locale)}
+          </span>
+        </span>
+      ),
     },
     {
       id: 'action',
@@ -126,6 +144,11 @@ export function PenaltiesTable({
               <SlotText text={t('penalties.cancelledBecause', { reason: TEXT_SLOT })} slot={<BidiText>{p.cancelReason}</BidiText>} />
             </span>
           ) : null}
+          {p.status === PenaltyStatus.REJECTED && p.rejectionReason ? (
+            <span className="max-w-48 text-xs break-words text-muted-foreground">
+              <SlotText text={t('penalties.rejectedBecause', { reason: TEXT_SLOT })} slot={<BidiText>{p.rejectionReason}</BidiText>} />
+            </span>
+          ) : null}
         </span>
       ),
     },
@@ -148,7 +171,7 @@ export function PenaltiesTable({
       empty={empty}
       pagination={pagination}
       toolbar={toolbar}
-      rowTone={(p) => (p.status === PenaltyStatus.PENDING ? 'warning' : undefined)}
+      rowTone={(p) => (isOpenPenaltyStatus(p.status) ? 'warning' : undefined)}
       cardsBelow={showEmployee ? 1100 : 960}
     />
   );

@@ -68,6 +68,9 @@ export const PERMISSIONS = {
   // hr — penalties
   'hr.penalties.view': hr,
   'hr.penalties.record': hr,
+  // the stage review (§4, owner 2026-11-21): the stage head of the penalty's stage, before HR
+  'hr.penalties.review': hr,
+  // the HR step: fixes the level and the deduction
   'hr.penalties.approve': hr,
   'hr.penalties.cancel': hr,
   // hr — lateness
@@ -165,6 +168,7 @@ export const ROW_SCOPED_PERMISSIONS: ReadonlySet<PermissionKey> = new Set<Permis
   'hr.employees.change_status',
   'hr.penalties.view',
   'hr.penalties.record',
+  'hr.penalties.review',
   'hr.penalties.approve',
   'hr.penalties.cancel',
   'hr.lateness.view',

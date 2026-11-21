@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import {
   AuditEntityType,
   PayrollStatus,
+  PenaltyStatus,
   notificationDedupeKey,
   type Month,
   type NotificationSubject,
@@ -13,13 +14,25 @@ import { toEmployeeScope } from '../access/employee-scope.pure';
 import { PayrollRunsRepository } from '../payroll/repositories/payroll-runs.repository';
 import { payrollReadyParams, type PayrollReadyFacts } from './hr-notifications.pure';
 
-/** A recorded penalty, as its "waiting for approval" sentence needs it. */
+/** A recorded penalty, as its "waiting for review / approval" sentences need it. */
 export interface RecordedPenalty {
   id: Uuid;
   employee: { id: Uuid; nameEn: string; nameAr: string };
   violation: { nameEn: string; nameAr: string };
+  /** Where it happened (the review sentence names it). */
+  stage: { nameEn: string; nameAr: string };
   level: number;
   month: Month;
+  /** PENDING_REVIEW → its stage head is told; WAITING_HR → HR's approvers. */
+  status: PenaltyStatus;
+}
+
+/** A rejected penalty: its recorder is told (owner 2026-11-21). */
+export interface RejectedPenalty {
+  id: Uuid;
+  employee: { id: Uuid; nameEn: string; nameAr: string };
+  violation: { nameEn: string; nameAr: string };
+  createdById: Uuid | null;
 }
 
 /** A payroll run just created or recalculated. */
@@ -32,8 +45,24 @@ export interface CalculatedRun extends PayrollReadyFacts {
 }
 
 const PENALTY_WAITING = 'hr.penalty.awaiting_approval';
+const PENALTY_REVIEW = 'hr.penalty.awaiting_review';
+const PENALTY_REJECTED = 'hr.penalty.rejected';
 const PAYROLL_READY = 'hr.payroll.ready_to_approve';
 const PAYROLL_RETURNED = 'hr.payroll.returned_by_accounting';
+
+const penaltySubject = (p: { id: Uuid; employee: { id: Uuid } }): NotificationSubject => ({
+  entityType: AuditEntityType.PENALTY,
+  entityId: p.id,
+  employeeId: p.employee.id,
+});
+
+const penaltyParams = (p: {
+  employee: { nameEn: string; nameAr: string };
+  violation: { nameEn: string; nameAr: string };
+}) => ({
+  employee: { en: p.employee.nameEn, ar: p.employee.nameAr },
+  violation: { en: p.violation.nameEn, ar: p.violation.nameAr },
+});
 
 const runSubject = (id: Uuid): NotificationSubject => ({
   entityType: AuditEntityType.PAYROLL_RUN,
@@ -61,25 +90,28 @@ export class HrNotificationsService {
   ) {}
 
   /**
-   * A penalty was recorded (pending): its approvers are told (§4, §11), and the month's payroll
-   * is no longer ready — an open "ready" is resolved as done (spec → Payroll "ready" in detail).
+   * A penalty was recorded (§4, §11): whoever acts next is told — the stage head of its stage
+   * (PENDING_REVIEW, "waiting for your review"; the other stage's head never, owner 2026-11-21), or
+   * HR's approvers (WAITING_HR) — never the actor, nor the penalised employee (`excludeUserIds`).
+   * The month's payroll is no longer ready — an open "ready" is resolved as done.
    */
-  async penaltyRecorded(penalty: RecordedPenalty, actorId: Uuid | null): Promise<void> {
-    await this.notifications.notify({
-      type: PENALTY_WAITING,
-      subject: {
-        entityType: AuditEntityType.PENALTY,
-        entityId: penalty.id,
-        employeeId: penalty.employee.id,
-      },
-      params: {
-        employee: { en: penalty.employee.nameEn, ar: penalty.employee.nameAr },
-        violation: { en: penalty.violation.nameEn, ar: penalty.violation.nameAr },
-        level: penalty.level,
-      },
-      dedupeKey: notificationDedupeKey(PENALTY_WAITING, penalty.id),
-      actorId,
-    });
+  async penaltyRecorded(
+    penalty: RecordedPenalty,
+    actorId: Uuid | null,
+    excludeUserIds: readonly Uuid[] = [],
+  ): Promise<void> {
+    if (penalty.status === PenaltyStatus.PENDING_REVIEW) {
+      await this.notifications.notify({
+        type: PENALTY_REVIEW,
+        subject: penaltySubject(penalty),
+        params: { ...penaltyParams(penalty), stage: { en: penalty.stage.nameEn, ar: penalty.stage.nameAr } },
+        dedupeKey: notificationDedupeKey(PENALTY_REVIEW, penalty.id),
+        actorId,
+        excludeUserIds,
+      });
+    } else {
+      await this.askHr(penalty, actorId, excludeUserIds);
+    }
     const run = await this.runs.findByMonth(penalty.month);
     if (run?.status === PayrollStatus.DRAFT) {
       await this.notifications.resolve({
@@ -90,17 +122,66 @@ export class HrNotificationsService {
     }
   }
 
-  /** The penalty was approved: everyone's "waiting" for it reads "Approved by …" (N10). */
-  async penaltyApproved(id: Uuid, byUserId: Uuid | null): Promise<void> {
-    await this.resolvePenalty(id, 'approved', byUserId);
+  /**
+   * The stage head approved it (§4 two steps): their "waiting for your review" reads "Approved by
+   * …" for every head told, and HR's approvers are told now.
+   */
+  async penaltyReviewed(
+    penalty: RecordedPenalty,
+    byUserId: Uuid | null,
+    excludeUserIds: readonly Uuid[] = [],
+  ): Promise<void> {
+    await this.resolvePenaltyItems(PENALTY_REVIEW, penalty.id, 'approved', byUserId);
+    await this.askHr(penalty, byUserId, excludeUserIds);
   }
 
   /**
-   * The penalty was cancelled. Only a pending one has a "waiting" open; an approved one cancelled
-   * later has none (plan N2 edge 6) — resolving it is then a no-op.
+   * HR approved it: everyone's "waiting" for it reads "Approved by …" (N10) — the review's too,
+   * when HR decided a penalty nobody could review.
+   */
+  async penaltyApproved(id: Uuid, byUserId: Uuid | null): Promise<void> {
+    await this.resolvePenalty(id, 'approved', byUserId);
+    await this.resolvePenaltyItems(PENALTY_REVIEW, id, 'approved', byUserId);
+  }
+
+  /**
+   * Rejected at either step (owner 2026-11-21): whatever waited for it reads "Rejected by …", and
+   * the recorder is told — not when they rejected it themselves, and never with the reason (it may
+   * reach a push alert; the reason shows on the penalty).
+   */
+  async penaltyRejected(penalty: RejectedPenalty, byUserId: Uuid | null): Promise<void> {
+    await this.resolvePenaltyItems(PENALTY_REVIEW, penalty.id, 'rejected', byUserId);
+    await this.resolvePenaltyItems(PENALTY_WAITING, penalty.id, 'rejected', byUserId);
+    if (!penalty.createdById) return;
+    await this.notifications.notify({
+      type: PENALTY_REJECTED,
+      subject: penaltySubject(penalty),
+      params: penaltyParams(penalty),
+      dedupeKey: notificationDedupeKey(PENALTY_REJECTED, penalty.id),
+      actorId: byUserId,
+      onlyUserIds: [penalty.createdById],
+    });
+  }
+
+  /**
+   * The penalty was cancelled. Only a waiting one has a "waiting" open (at either step); an
+   * approved one cancelled later has none (plan N2 edge 6) — resolving it is then a no-op.
    */
   async penaltyCancelled(id: Uuid, byUserId: Uuid | null): Promise<void> {
     await this.resolvePenalty(id, 'cancelled', byUserId);
+    await this.resolvePenaltyItems(PENALTY_REVIEW, id, 'cancelled', byUserId);
+  }
+
+  /** HR's approvers are told a penalty waits for them ("waiting for your approval"). */
+  private async askHr(penalty: RecordedPenalty, actorId: Uuid | null, excludeUserIds: readonly Uuid[]) {
+    await this.notifications.notify({
+      type: PENALTY_WAITING,
+      subject: penaltySubject(penalty),
+      params: { ...penaltyParams(penalty), level: penalty.level },
+      dedupeKey: notificationDedupeKey(PENALTY_WAITING, penalty.id),
+      actorId,
+      excludeUserIds,
+    });
   }
 
   /**
@@ -159,13 +240,18 @@ export class HrNotificationsService {
     });
   }
 
-  private async resolvePenalty(
+  private resolvePenalty(id: Uuid, resolution: 'approved' | 'cancelled', byUserId: Uuid | null): Promise<void> {
+    return this.resolvePenaltyItems(PENALTY_WAITING, id, resolution, byUserId);
+  }
+
+  private async resolvePenaltyItems(
+    type: typeof PENALTY_WAITING | typeof PENALTY_REVIEW,
     id: Uuid,
-    resolution: 'approved' | 'cancelled',
+    resolution: 'approved' | 'rejected' | 'cancelled',
     byUserId: Uuid | null,
   ): Promise<void> {
     await this.notifications.resolve({
-      type: PENALTY_WAITING,
+      type,
       subject: { entityType: AuditEntityType.PENALTY, entityId: id },
       resolution,
       byUserId,

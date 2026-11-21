@@ -1,13 +1,18 @@
-import { isMonth, PAGINATION, PENALTY_STATUSES, type Month, type PenaltyStatus } from '@school-erp/shared';
+import { isMonth, PAGINATION, PENALTY_STATUS_FILTERS, type Month, type PenaltyStatusFilter } from '@school-erp/shared';
 
-/** The penalties list's state, in the URL: `?month&status&search&page&limit`. */
+/** The penalties list's state, in the URL: `?month&status&stageId&search&page&limit`. */
 export interface PenaltiesListQuery {
   month: Month;
-  status?: PenaltyStatus;
+  /** One status, or `OPEN`: waiting at either step (the dashboard's "waiting" tile). */
+  status?: PenaltyStatusFilter;
+  /** The stage where the violation happened. */
+  stageId?: string;
   search?: string;
   page: number;
   limit: number;
 }
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export type SearchParamsRecord = Record<string, string | string[] | undefined>;
 
@@ -27,7 +32,8 @@ export function parsePenaltiesQuery(params: SearchParamsRecord, current: Month):
   const status = one(params.status);
   return {
     month: isMonth(month) && month <= current ? month : current,
-    status: (PENALTY_STATUSES as string[]).includes(status ?? '') ? (status as PenaltyStatus) : undefined,
+    status: (PENALTY_STATUS_FILTERS as readonly string[]).includes(status ?? '') ? (status as PenaltyStatusFilter) : undefined,
+    stageId: UUID.test(one(params.stageId) ?? '') ? one(params.stageId) : undefined,
     search: one(params.search),
     page: positiveInt(one(params.page), PAGINATION.defaultPage),
     limit: positiveInt(one(params.limit), PAGINATION.defaultLimit, PAGINATION.maxLimit),
@@ -39,14 +45,13 @@ export function penaltiesQueryString(query: PenaltiesListQuery, current: Month):
   const params = new URLSearchParams();
   if (query.month !== current) params.set('month', query.month);
   if (query.status) params.set('status', query.status);
+  if (query.stageId) params.set('stageId', query.stageId);
   if (query.search) params.set('search', query.search);
   if (query.page !== PAGINATION.defaultPage) params.set('page', String(query.page));
   if (query.limit !== PAGINATION.defaultLimit) params.set('limit', String(query.limit));
   const s = params.toString();
   return s ? `?${s}` : '';
 }
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * The penalty a link opens (`?penalty=<id>`, a notification's, §11), or undefined. Not part of the

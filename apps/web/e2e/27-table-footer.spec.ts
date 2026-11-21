@@ -10,6 +10,10 @@ import {
 import { Api } from './support/api';
 import { t } from './support/i18n';
 import { searchField, shoot, signIn } from './support/ui';
+import { settleStreams } from './support/stream';
+
+// Every goto waits for the streamed page to settle (see support/stream.ts).
+settleStreams();
 
 /*
  * Every DataTable's header, rows and totals row reach both inner edges of their card, in English

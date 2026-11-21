@@ -86,11 +86,12 @@ export class DashboardAnalyticsRepository {
   /** Approved penalties with a violation day in [from, to), counted per day and action. */
   async approvedPenaltyCounts(
     range: { gte: Date; lt: Date },
-    scope: EmployeeScopeWhere,
+    /** The penalties in scope — a stage scope by the penalty's stage (`penaltyWhere`). */
+    scope: Prisma.PenaltyRecordWhereInput,
   ): Promise<{ date: IsoDate; action: PenaltyAction; count: number }[]> {
     const groups = await this.db.penaltyRecord.groupBy({
       by: ['date', 'action'],
-      where: { status: PenaltyStatus.APPROVED, date: range, employee: scope },
+      where: { AND: [{ status: PenaltyStatus.APPROVED, date: range }, scope] },
       _count: { _all: true },
     });
     return groups.map((g) => ({ date: toIsoDate(g.date), action: g.action, count: g._count._all }));

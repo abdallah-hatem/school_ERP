@@ -4,6 +4,10 @@ import { Api } from './support/api';
 import { currentMonth } from './support/dates';
 import { t } from './support/i18n';
 import { searchField, shoot, signIn } from './support/ui';
+import { settleStreams } from './support/stream';
+
+// Every goto waits for the streamed page to settle (see support/stream.ts).
+settleStreams();
 
 /*
  * Minutes chosen so a later grace change (05-payroll) moves the days: 75 → ¾ day and 130 → 1¼ days

@@ -5,6 +5,10 @@ import { checkCatalogueSearch, showOncePerDaySwitch, usableCatalogue } from './s
 import { todayIso } from './support/dates';
 import { prefixOf, t } from './support/i18n';
 import { settle, shoot, signIn } from './support/ui';
+import { settleStreams } from './support/stream';
+
+// Every goto waits for the streamed page to settle (see support/stream.ts).
+settleStreams();
 
 /*
  * §4 / §7 (owner, 2026-11-18): the catalogue search, the "Once per day" switch, and the rule itself.
@@ -52,7 +56,7 @@ test('once per day: the same violation twice on one day for one employee → the
     await expect(dialog.getByTestId('penalty-preview')).toContainText(prefixOf('en', 'penalties.preview.line', {}));
     await dialog.getByRole('button', { name: t('en', 'penalties.form.save') }).click();
     await expect(dialog).toBeHidden();
-    const mine = await api.get<PenaltyRecord[]>('/hr/penalties', { employeeId: employee.id, status: PenaltyStatus.PENDING, limit: PAGINATION.maxLimit });
+    const mine = await api.get<PenaltyRecord[]>('/hr/penalties', { employeeId: employee.id, status: 'OPEN', limit: PAGINATION.maxLimit });
     recorded.push(...mine.filter((p) => p.violation.id === violation.id && p.date === today).map((p) => p.id));
     expect(recorded).toHaveLength(1);
 

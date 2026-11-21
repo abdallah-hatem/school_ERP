@@ -41,7 +41,8 @@
 | Gender, date of birth | Required. Date of birth used for the "over 50" annual-leave rule later. GUESS |
 | Phone, email, address | Phone required; email optional; address optional |
 | Hire date | Required; not in the future |
-| Stage, department, job title | Required (stage can be "None") |
+| Main stage, department, job title | Required (stage can be "None"). The main stage gives the card its colour and counts the person in the dashboard's headcount and payroll groups. DECIDED |
+| Also teaches in | Optional: the employee's **other stages** besides the main one (never the main stage, each once; a newly picked stage must be shown). Shown as tags on the employee's page and card, edited in the employee form. DECIDED (owner, 2026-11-21) |
 | Direct manager | Optional; must be another active employee whose job title **manages people** (see Direct managers); no one can be their own manager or create a loop |
 | Grade | Optional text. DECIDED (the client's regulations refer to grades) |
 | Work system | Full-time, or part-time 4, 3 or 2 days a week. DECIDED |
@@ -81,6 +82,20 @@ paying by bank transfer is Planned.
   visibility rule as the basic salary (§2).
 - **DECIDED** (enforced, P4) — Who sees the basic salary, insured salary and bank details, and
   which employees each role sees at all: §2 Roles.
+
+## Several stages
+
+- **DECIDED** (owner, 2026-11-21: "An employee can be a teacher at primary and secondary stage at the
+  same time … he would have two bosses") — An employee has one required **main stage** and
+  optional **other stages** ("Also teaches in").
+- **DECIDED** (owner, 2026-11-21) — The main stage keeps every current use: the card's colour, the
+  headcount by stage on the dashboard (each person counted **once**, by main stage), payroll
+  grouping and the default display.
+- **DECIDED** (owner, 2026-11-21) — A stage filter or search finds the employee under **every**
+  stage they belong to, and each of those stages' heads sees them (§2).
+- **DECIDED** (owner, 2026-11-21) — Each penalty records the stage where the violation happened,
+  from the employee's stages (§4). Removing a stage from an employee later doesn't change the
+  penalties already recorded there.
 
 ## Rules
 

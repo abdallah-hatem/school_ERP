@@ -12,6 +12,12 @@ export const EMPLOYEE_CODE_COUNTER = 'employee_code';
 
 const REF = { select: { id: true, nameEn: true, nameAr: true } } as const;
 
+/** "Also teaches in" (§3, owner 2026-11-21): the other stages, in stage order. */
+const OTHER_STAGES = {
+  select: { stage: REF },
+  orderBy: [{ stage: { sortOrder: 'asc' } }, { stage: { nameEn: 'asc' } }],
+} as const satisfies Prisma.Employee$otherStagesArgs;
+
 export const EMPLOYEE_SUMMARY_SELECT = {
   id: true,
   code: true,
@@ -19,6 +25,7 @@ export const EMPLOYEE_SUMMARY_SELECT = {
   nameAr: true,
   department: REF,
   stage: REF,
+  otherStages: OTHER_STAGES,
   jobTitle: REF,
   workSystem: true,
   basicSalary: true,
@@ -61,6 +68,7 @@ export const EMPLOYEE_DETAIL_SELECT = {
   address: true,
   hireDate: true,
   stage: REF,
+  otherStages: OTHER_STAGES,
   department: REF,
   jobTitle: REF,
   manager: {
@@ -135,9 +143,31 @@ export interface EmployeeScopeFields {
   id: string;
   stageId: string;
   managerId: string | null;
+  /** "Also teaches in" — a stage head of one of them covers the employee too (owner 2026-11-21). */
+  otherStageIds: string[];
 }
 
-const SCOPE_SELECT = { id: true, stageId: true, managerId: true } as const;
+const SCOPE_SELECT = {
+  id: true,
+  stageId: true,
+  managerId: true,
+  otherStages: { select: { stageId: true } },
+} as const satisfies Prisma.EmployeeSelect;
+
+const toScopeFields = (
+  row: Prisma.EmployeeGetPayload<{ select: typeof SCOPE_SELECT }>,
+): EmployeeScopeFields => ({
+  id: row.id,
+  stageId: row.stageId,
+  managerId: row.managerId,
+  otherStageIds: row.otherStages.map((s) => s.stageId),
+});
+
+/** An employee row's stages: main first, then the others (the stages a penalty may be recorded in). */
+export const stageIdsOf = (row: Pick<EmployeeScopeFields, 'stageId' | 'otherStageIds'>): string[] => [
+  row.stageId,
+  ...row.otherStageIds,
+];
 
 /** A unique-constraint race the service's pre-check missed → the same 409 the pre-check gives. */
 function rethrowUnique(e: unknown): never {
@@ -185,9 +215,15 @@ export class EmployeesRepository extends BaseRepository<
     filter: EmployeeListFilter,
     scope: EmployeeScopeWhere = {},
   ): Promise<Paginated<EmployeeSummaryRow>> {
-    const where: Prisma.EmployeeWhereInput = { AND: [scope] };
+    const and: Prisma.EmployeeWhereInput[] = [scope];
+    const where: Prisma.EmployeeWhereInput = { AND: and };
     if (filter.departmentId) where.departmentId = filter.departmentId;
-    if (filter.stageId) where.stageId = filter.stageId;
+    // §3 (owner 2026-11-21): found under every stage they belong to — main or "also teaches in".
+    if (filter.stageId) {
+      and.push({
+        OR: [{ stageId: filter.stageId }, { otherStages: { some: { stageId: filter.stageId } } }],
+      });
+    }
     if (filter.status) where.status = filter.status;
     if (filter.workSystem) where.workSystem = filter.workSystem;
     if (filter.managesPeople !== undefined) {
@@ -213,17 +249,49 @@ export class EmployeesRepository extends BaseRepository<
   }
 
   /** What a scope check needs about one employee, or null when unknown. */
-  findScopeFields(id: string): Promise<EmployeeScopeFields | null> {
-    return this.db.employee.findUnique({ where: { id }, select: SCOPE_SELECT });
+  async findScopeFields(id: string): Promise<EmployeeScopeFields | null> {
+    const row = await this.db.employee.findUnique({ where: { id }, select: SCOPE_SELECT });
+    return row && toScopeFields(row);
   }
 
   /** The same, for several employees (unknown ids are absent). */
-  findScopeFieldsMany(ids: readonly string[]): Promise<EmployeeScopeFields[]> {
-    if (!ids.length) return Promise.resolve([]);
-    return this.db.employee.findMany({
+  async findScopeFieldsMany(ids: readonly string[]): Promise<EmployeeScopeFields[]> {
+    if (!ids.length) return [];
+    const rows = await this.db.employee.findMany({
       where: { id: { in: [...ids] } },
       select: SCOPE_SELECT,
     });
+    return rows.map(toScopeFields);
+  }
+
+  /** Which of `ids` are existing stages, with whether each is shown (the "also teaches in" check). */
+  findStages(ids: readonly string[]): Promise<{ id: string; isActive: boolean }[]> {
+    if (!ids.length) return Promise.resolve([]);
+    return this.db.stage.findMany({
+      where: { id: { in: [...ids] } },
+      select: { id: true, isActive: true },
+    });
+  }
+
+  /**
+   * Replaces the employee's other stages (HR's `employee_stages`), in the write's transaction.
+   * The main stage is never among them (the service checks).
+   */
+  async setOtherStages(employeeId: string, stageIds: readonly string[]): Promise<void> {
+    await this.db.employeeStage.deleteMany({
+      where: { employeeId, stageId: { notIn: [...stageIds] } },
+    });
+    if (stageIds.length) {
+      await this.db.employeeStage.createMany({
+        data: stageIds.map((stageId) => ({ employeeId, stageId })),
+        skipDuplicates: true,
+      });
+    }
+  }
+
+  /** The record again after a write of its other stages. */
+  findDetailById(id: string): Promise<EmployeeDetailRow | null> {
+    return this.db.employee.findUnique({ where: { id }, select: EMPLOYEE_DETAIL_SELECT });
   }
 
   /** The ids of the employees `scope` covers (any status). */

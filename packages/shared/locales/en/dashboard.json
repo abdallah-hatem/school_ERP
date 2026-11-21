@@ -15,10 +15,10 @@
     "create": "Create run"
   },
   "penalties": {
-    "pending": "Pending penalties",
-    "pendingSub": "Waiting for approval this month",
+    "pending": "Penalties waiting",
+    "pendingSub": "At the stage or HR, this month",
     "approved": "Approved penalties",
-    "approvedSub": "Approved this month, by violation date"
+    "approvedSub": "Approved by HR, by violation date"
   },
   "quickLinks": {
     "title": "Quick links",

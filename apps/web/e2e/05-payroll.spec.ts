@@ -4,7 +4,6 @@ import {
   latenessDays,
   PAGINATION,
   PayrollStatus,
-  PenaltyStatus,
   type HrSettings,
   type LatenessRule,
   type PayrollLine,
@@ -16,6 +15,10 @@ import { Api } from './support/api';
 import { currentMonth } from './support/dates';
 import { prefixOf, t } from './support/i18n';
 import { searchField, shoot, signIn } from './support/ui';
+import { settleStreams } from './support/stream';
+
+// Every goto waits for the streamed page to settle (see support/stream.ts).
+settleStreams();
 
 /** Grace minutes added in Settings; moves the days of the minutes entered by 04-lateness. */
 const EXTRA_GRACE = 30;
@@ -52,7 +55,7 @@ test('payroll: run → penalty deduction → grace change → recalculate → ap
   // Pending penalties block approval (§6); the smoke database clears this month's first.
   const pending = await api.get<PenaltyRecord[]>('/hr/penalties', {
     month,
-    status: PenaltyStatus.PENDING,
+    status: 'OPEN',
     limit: PAGINATION.maxLimit,
   });
   for (const p of pending) {

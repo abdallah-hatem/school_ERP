@@ -13,6 +13,10 @@ import { Api } from './support/api';
 import { todayIso } from './support/dates';
 import { prefixOf, t } from './support/i18n';
 import { settle, shoot, signIn } from './support/ui';
+import { settleStreams } from './support/stream';
+
+// Every goto waits for the streamed page to settle (see support/stream.ts).
+settleStreams();
 
 interface Target {
   employee: EmployeeSummary;
@@ -55,7 +59,8 @@ async function findTarget(api: Api, today: string): Promise<Target> {
   });
   // §4 approve in date order: a pair with a pending penalty would refuse approving today's one.
   const pending = await all<PenaltyRecord>(api, '/hr/penalties', {
-    status: PenaltyStatus.PENDING,
+    // Waiting at either step (§4 two steps).
+    status: 'OPEN',
   });
   const keyOf = (p: PenaltyRecord) => `${p.employee.id}|${p.violation.id}`;
   const seen = new Set<string>(pending.map(keyOf));
@@ -132,7 +137,8 @@ test('penalties: a repeat is previewed as level 2 → saved → approved → lis
   await dialog.getByRole('button', { name: t('en', 'penalties.form.save') }).click();
   await expect(dialog).toBeHidden();
 
-  await page.goto(filtered(PenaltyStatus.PENDING));
+  // The admin heads every stage's review (school-wide), so their recording goes straight to HR (§4).
+  await page.goto(filtered(PenaltyStatus.WAITING_HR));
   // Row actions sit behind the row's ⋯ menu.
   await page
     .getByRole('button', {

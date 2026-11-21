@@ -5,6 +5,10 @@ import { t } from './support/i18n';
 import { recordOpenPenalty } from './support/penalties';
 import { makeRoleUser, settled, signInAsRoleUser } from './support/role-access';
 import { settle, shoot } from './support/ui';
+import { settleStreams } from './support/stream';
+
+// Every goto waits for the streamed page to settle (see support/stream.ts).
+settleStreams();
 
 /**
  * Runs in the `desktop-en` project (1440×900). HR's approval notification end to end (§11, N2):

@@ -3,6 +3,10 @@ import { PAGINATION, type Employee, type Month, type PayrollRun, type PayrollRun
 import { Api } from './support/api';
 import { prefixOf, t } from './support/i18n';
 import { expectNoHorizontalScroll, settle, shoot, signIn } from './support/ui';
+import { settleStreams } from './support/stream';
+
+// Every goto waits for the streamed page to settle (see support/stream.ts).
+settleStreams();
 
 /*
  * A payroll run's header (month, status, Recalculate / Export / Approve) and its tab bar live in the

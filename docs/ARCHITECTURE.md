@@ -450,20 +450,24 @@ Roles are rows, not code (spec P2, R2 / R5 / R8 / R9). A school changes them thr
   The **System admin always holds every key** with scope `all`, whatever its rows say — a key added
   later reaches it without a migration, and its permission list can't be edited (no lock-out).
 - **Union and scopes.** A user's permissions are the union of their roles' (edge case 2). Each grant
-  has a **scope**: `all`, `own_stage` (the user's linked employee's stage), `own_team` (employees
+  has a **scope**: `all`, `own_stage` (the user's linked employee's stages — main and "also
+  teaches in", owner 2026-11-21), `own_team` (employees
   whose direct manager is the user's linked employee), `self`. Per key the widest scope wins, in
   that order (`widerScope` in shared; `own_stage` counts as wider than `own_team`).
 - **Per request.** `PermissionsService` reads the user's roles once per request and caches them in
   the request context (CLS), so a change to a role or to a user's roles applies from the next
   request, with no new sign-in (edge case 7).
 - **`scopeFor(user, key)`** (same service, exported from `core/permissions`) returns
-  `{ scope, employeeId, stageId }` — the widest scope the user holds `key` with, plus their linked
-  employee and its stage — or `null` when they don't hold it. The module that owns the data applies
+  `{ scope, employeeId, stageId, stageIds }` — the widest scope the user holds `key` with, plus
+  their linked employee, its main stage and all its stages (`employee_stages`) — or `null` when they don't hold it. The module that owns the data applies
   it in its repository query; a scoped user with no linked employee matches no rows. Core only
   answers the question.
 - **Scopes in HR (P4).** `modules/hr/access`: `employee-scope.pure.ts` turns a `UserScope` into
-  rows (`own_stage` → `stageId`, `own_team` → `managerId`, `self` → `id`, not held or unlinked →
-  none) as a Prisma filter (`employeeWhere`) or a check (`inScope`); `HrAccessService` reads the
+  rows (`own_stage` → the employee's main or other stage in the user's stages, `own_team` →
+  `managerId`, `self` → `id`, not held or unlinked → none) as a Prisma filter (`employeeWhere`) or a
+  check (`inScope`). **Penalties go by the penalty's own stage** (`penaltyWhere` / `penaltyInScope`,
+  §4 two steps): a stage head sees and acts on the penalties recorded in their stages, not those of
+  an employee's other stage; the notification resolver for penalties asks the same; `HrAccessService` reads the
   request's user from the request context (outside a request — seed, listeners — everything is
   covered). HR services pass the filter to their repositories on every row-scoped read and check
   the action's own key on writes keyed by an employee; outside → 404 (edge case 3). On those writes

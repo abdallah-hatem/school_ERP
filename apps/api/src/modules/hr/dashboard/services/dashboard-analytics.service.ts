@@ -8,7 +8,7 @@ import {
 } from '@school-erp/shared';
 import { monthDateRange } from '../../../../common/utils/dates.util';
 import { HrAccessService } from '../../access/hr-access.service';
-import { employeeWhere } from '../../access/employee-scope.pure';
+import { employeeWhere, penaltyWhere } from '../../access/employee-scope.pure';
 import { EmployeesService } from '../../employees/services/employees.service';
 import { totalsMoneyVisible } from '../../payroll/services/payroll.service';
 import { analyticsMonths, buildAnalytics, type WorkedOutMonth } from '../analytics.pure';
@@ -64,7 +64,8 @@ export class DashboardAnalyticsService {
       sees(employeesScope) ? this.employees.activeHeadcount() : null,
       sees(employeesScope) ? this.repository.employeeDates(employeeWhere(employeesScope)) : null,
       sees(penaltiesScope)
-        ? this.repository.approvedPenaltyCounts({ gte: first, lt: last }, employeeWhere(penaltiesScope))
+        ? // By the penalty's stage, like every penalty read (owner 2026-11-21).
+          this.repository.approvedPenaltyCounts({ gte: first, lt: last }, penaltyWhere(penaltiesScope))
         : null,
       sees(latenessScope) ? this.repository.latenessMinutes(months, employeeWhere(latenessScope)) : null,
     ]);

@@ -13,6 +13,11 @@ const REQUIRED = 'ui.form.required';
 export const recordPenaltySchema = z.object({
   employeeId: z.string().min(1, REQUIRED),
   violationId: z.string().min(1, REQUIRED),
+  /**
+   * The stage where it happened (owner 2026-11-21): filled by itself for an employee with one
+   * stage; the dialog asks (and requires it) when they have several.
+   */
+  stageId: z.string(),
   date: z
     .string()
     .nullable()
@@ -25,7 +30,7 @@ export const recordPenaltySchema = z.object({
 export type RecordPenaltyValues = z.input<typeof recordPenaltySchema>;
 
 export function emptyRecordForm(employeeId = ''): RecordPenaltyValues {
-  return { employeeId, violationId: '', date: todayIso(), note: '' };
+  return { employeeId, violationId: '', stageId: '', date: todayIso(), note: '' };
 }
 
 export function formToRequest(values: RecordPenaltyValues): CreatePenaltyRequest {
@@ -33,6 +38,7 @@ export function formToRequest(values: RecordPenaltyValues): CreatePenaltyRequest
   return {
     employeeId: values.employeeId,
     violationId: values.violationId,
+    ...(values.stageId ? { stageId: values.stageId } : {}),
     date: values.date ?? todayIso(),
     note: note === '' ? null : note,
   };
@@ -45,6 +51,9 @@ export function fieldForError(code: unknown): keyof RecordPenaltyValues | null {
       return 'employeeId';
     case ErrorCode.VIOLATION_RETIRED:
       return 'violationId';
+    case ErrorCode.PENALTY_STAGE_REQUIRED:
+    case ErrorCode.PENALTY_STAGE_INVALID:
+      return 'stageId';
     // §4 once per day: the date is what to change (or the violation, if it was the wrong one).
     case ErrorCode.VIOLATION_ONCE_PER_DAY:
     // §4 backdated: an approved penalty it would move up sits in an approved payroll month.

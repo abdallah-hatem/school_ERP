@@ -4,6 +4,10 @@ import { Api } from './support/access';
 import { t } from './support/i18n';
 import { makeRoleUser, settled, signInAsRoleUser } from './support/role-access';
 import { settle, shoot, signIn } from './support/ui';
+import { settleStreams } from './support/stream';
+
+// Every goto waits for the streamed page to settle (see support/stream.ts).
+settleStreams();
 
 /**
  * Runs in the `desktop-en` project (1440×900). Notifications, option A (§11, N4): the bell beside the

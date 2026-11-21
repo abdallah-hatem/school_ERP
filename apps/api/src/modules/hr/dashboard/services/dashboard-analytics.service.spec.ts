@@ -10,7 +10,8 @@ import type { DashboardAnalyticsRepository } from '../repositories/dashboard-ana
 import { DashboardAnalyticsService } from './dashboard-analytics.service';
 
 const NOW = new Date('2026-11-21T10:00:00Z');
-const PRIMARY: EmployeeScope = { kind: 'stage', stageId: 'primary' };
+const PRIMARY: EmployeeScope = { kind: 'stage', stageIds: ['primary'] };
+const PRIMARY_EMPLOYEES = { OR: [{ stageId: { in: ['primary'] } }, { otherStages: { some: { stageId: { in: ['primary'] } } } }] };
 
 function makeService(scopes: Partial<Record<PermissionKey, EmployeeScope | null>> = {}) {
   const repository = {
@@ -87,8 +88,8 @@ describe('DashboardAnalyticsService', () => {
       'hr.employees.view_salary': null,
     });
     const a = await service.get(6, NOW);
-    expect(repository.employeeDates).toHaveBeenCalledWith({ stageId: 'primary' });
-    expect(repository.approvedPenaltyCounts.mock.calls[0]![1]).toEqual({ stageId: 'primary' });
+    expect(repository.employeeDates).toHaveBeenCalledWith(PRIMARY_EMPLOYEES);
+    expect(repository.approvedPenaltyCounts.mock.calls[0]![1]).toEqual({ stageId: { in: ['primary'] } });
     expect(a.payroll).toBeNull();
     expect(a.lateness).toBeNull();
     expect(a.deductions).toBeNull();
@@ -98,7 +99,7 @@ describe('DashboardAnalyticsService', () => {
   it('a stage head whose salary scope covers their stage: their lines’ totals, still no deductions', async () => {
     const { service, repository } = makeService({ 'hr.payroll.view': PRIMARY, 'hr.employees.view_salary': PRIMARY });
     const a = await service.get(6, NOW);
-    expect(repository.lineTotals).toHaveBeenCalledWith(['r9', 'r10'], { stageId: 'primary' });
+    expect(repository.lineTotals).toHaveBeenCalledWith(['r9', 'r10'], PRIMARY_EMPLOYEES);
     expect(a.payroll!.find((p) => p.month === '2026-10')!.net).toBe(20);
     expect(a.deductions).toBeNull();
   });

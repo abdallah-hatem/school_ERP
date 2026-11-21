@@ -10,6 +10,10 @@ import {
 import { sidebarLink } from './support/access';
 import { t } from './support/i18n';
 import { makeRoleUser, settled, signInAsRoleUser } from './support/role-access';
+import { settleStreams } from './support/stream';
+
+// Every goto waits for the streamed page to settle (see support/stream.ts).
+settleStreams();
 
 /**
  * Runs in the `desktop-en` project (1440×900). Every built-in role, signed in with only that role,

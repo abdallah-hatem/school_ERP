@@ -80,7 +80,9 @@ and its list, My account → Notifications, Settings → Notifications).
 
 | Notification | Who gets it | When | Goes away when |
 |---|---|---|---|
-| Penalty waiting for your approval | Whoever may approve penalties for that employee (§2) | A penalty is recorded | It is approved or cancelled, by anyone |
+| Penalty waiting for your review | The stage head(s) of the penalty's stage (§2, §4) — not the other stages' heads | A penalty is recorded for the stage review | It is reviewed (approved or rejected), approved by HR, or cancelled |
+| Penalty waiting for your approval | Whoever may approve penalties at the HR step, for that penalty (§2) | A penalty is recorded straight to HR, or the stage head approves it | It is approved, rejected or cancelled, by anyone |
+| Penalty you recorded was rejected | The person who recorded it (only them) | It is rejected at either step | Read (nothing to do) |
 | Payroll ready to approve | Whoever may approve payroll | A draft month is calculated and has no pending penalties | It is approved (or a pending penalty appears in the month again) |
 | Contract ends soon | Whoever may edit that employee | 30 days, and again 7 days, before the contract ends | The contract is extended, or the employee is deactivated |
 | Probation ends soon | Whoever may edit that employee | 7 days before the employee's probation end date | The date passes or moves, or the employee is deactivated |
@@ -95,9 +97,15 @@ and its list, My account → Notifications, Settings → Notifications).
   employee, a month whose payroll is approved) tells no one. Approving or cancelling it marks it
   done for everyone; cancelling an already approved penalty changes nothing (there is nothing
   waiting). Deactivating the employee leaves it waiting: the penalty can still be approved (§4).
-- **GUESS** — An approver whose employee moves to another stage after a penalty was recorded:
-  the old stage's approver stops seeing it, and the new stage's approver isn't told about the old
-  penalty (only about new ones).
+- **DECIDED** (owner, 2026-11-21; replaces the earlier GUESS) — A penalty belongs to the stage where
+  it happened: if the employee moves to another stage afterwards, that stage's head (and any
+  stage-scoped approver) still sees it; the new stage's isn't told about the old penalty (only about
+  new ones).
+- **DECIDED** (owner, 2026-11-21) — Each step tells **whoever must act next**, once, never the
+  person who acted and never the penalised employee themselves: recording → the stage head(s) of the
+  penalty's stage (or HR's approvers when it skips the review); the stage head's approval → HR's
+  approvers; a rejection at either step → the recorder (without the reason: it shows on the penalty).
+  Through the bell and push alerts, like every notification.
 - **DECIDED** — "Payroll ready to approve" is sent when a draft month is created or
   recalculated and no penalty dated in that month is pending (§6: it can't be approved before).
   A penalty recorded in the month marks it done (the month isn't ready any more); the next

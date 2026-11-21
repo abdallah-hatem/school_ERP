@@ -193,7 +193,12 @@ export const AUDIT_ACTIONS = {
   },
   // hr — penalties
   'hr.penalty.record': { module: 'hr', entityType: E.PENALTY, kind: 'create' },
+  // §4 two steps (owner 2026-11-21): the stage head's approval (PENDING_REVIEW → WAITING_HR) …
+  'hr.penalty.review': { module: 'hr', entityType: E.PENALTY, kind: 'status' },
+  // … the HR approval (WAITING_HR → APPROVED, fixing the level) …
   'hr.penalty.approve': { module: 'hr', entityType: E.PENALTY, kind: 'status' },
+  // … and a rejection at either step (`rejectedStep`), with its reason.
+  'hr.penalty.reject': { module: 'hr', entityType: E.PENALTY, kind: 'status' },
   'hr.penalty.cancel': { module: 'hr', entityType: E.PENALTY, kind: 'status' },
   // §4 (owner 2026-11-20): an approved penalty moved up one level by a backdated approval — one
   // entry per recounted penalty, in the approval's transaction (`recountedAfter`: that one's date).

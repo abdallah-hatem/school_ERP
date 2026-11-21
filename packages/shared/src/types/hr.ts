@@ -8,7 +8,10 @@ import type {
   PayrollFlag,
   PayrollStatus,
   PenaltyAction,
+  PenaltyReviewSkip,
   PenaltyStatus,
+  PenaltyStatusFilter,
+  PenaltyStep,
   RepetitionWindow,
   WorkSystem,
 } from '../enums';
@@ -50,6 +53,7 @@ export interface UpdateJobTitleRequest extends UpdateListItemRequest {
 
 export interface ListEmployeesQuery extends PaginationQuery {
   departmentId?: Uuid;
+  /** The employees of this stage: main stage or one of their other stages (§3, owner 2026-11-21). */
   stageId?: Uuid;
   status?: EmployeeStatus;
   workSystem?: WorkSystem;
@@ -73,7 +77,10 @@ export interface EmployeeSummary extends Names, SalaryVisibility {
   id: Uuid;
   code: string;
   department: NamedRef;
+  /** The main stage: card colour, headcount, payroll grouping (§3). */
   stage: NamedRef;
+  /** "Also teaches in" (owner, 2026-11-21): the employee's other stages, in stage order. */
+  otherStages: NamedRef[];
   jobTitle: NamedRef;
   workSystem: WorkSystem;
   basicSalary?: Piastres;
@@ -94,6 +101,11 @@ export interface CreateEmployeeRequest extends Names {
   address?: string | null;
   hireDate: IsoDate;
   stageId: Uuid;
+  /**
+   * "Also teaches in" (§3, owner 2026-11-21): other stages besides the main one — never the main
+   * stage, each once (400 `INVALID_OTHER_STAGES`). Absent on an edit: unchanged; `[]`: none.
+   */
+  otherStageIds?: Uuid[];
   departmentId: Uuid;
   jobTitleId: Uuid;
   managerId?: Uuid | null;
@@ -160,6 +172,8 @@ export interface Employee extends Names, SalaryVisibility {
   address: string | null;
   hireDate: IsoDate;
   stage: NamedRef;
+  /** "Also teaches in": the other stages, in stage order. */
+  otherStages: NamedRef[];
   department: NamedRef;
   jobTitle: NamedRef;
   /**
@@ -286,13 +300,27 @@ export interface UpdateViolationRequest extends Partial<Names> {
 export interface ListPenaltiesQuery extends PaginationQuery {
   employeeId?: Uuid;
   month?: Month;
-  status?: PenaltyStatus;
+  /** One status, or `OPEN`: waiting at either step. */
+  status?: PenaltyStatusFilter;
+  /** The stage where the violation happened. */
+  stageId?: Uuid;
 }
 
 export interface PenaltyPreviewQuery {
   employeeId: Uuid;
   violationId: Uuid;
   date: IsoDate;
+  /** The stage where it happened; may be left out when the employee has one stage. */
+  stageId?: Uuid;
+}
+
+/**
+ * `GET /hr/penalties/employee-stages/:employeeId` — the stages a penalty for this employee can be
+ * recorded in (main stage first, then the other ones): one fills in by itself, several → the record
+ * form asks (owner 2026-11-21).
+ */
+export interface PenaltyEmployeeStages {
+  stages: NamedRef[];
 }
 
 /** The level, action and days a penalty has (or gets). */
@@ -317,6 +345,13 @@ export interface PenaltyRecountChange {
 export interface PenaltyPreview extends PenaltyLevelValues {
   priorCount: number;
   /**
+   * Where recording it now puts it (§4, owner 2026-11-21): PENDING_REVIEW, or WAITING_HR when it
+   * skips the stage review (`reviewSkip` says why). Null until the stage is known (several stages
+   * and none chosen yet).
+   */
+  startsAs: typeof PenaltyStatus.PENDING_REVIEW | typeof PenaltyStatus.WAITING_HR | null;
+  reviewSkip: PenaltyReviewSkip | null;
+  /**
    * What approving the new penalty would change (§4, owner 2026-11-20), by date — empty when it is
    * not backdated before approved ones. Recording changes nothing. When one of them sits in a month
    * whose payroll is approved, the preview (and recording) is refused instead: 409
@@ -338,6 +373,26 @@ export interface PenaltyRecountAcknowledgement extends PenaltyLevelValues {
  */
 export interface ApprovePenaltyRequest {
   acknowledgedRecount?: PenaltyRecountAcknowledgement[];
+  /** Optional note with the HR approval. */
+  note?: string | null;
+}
+
+/** `POST /hr/penalties/:id/review/approve` — the stage head approves, with an optional note. */
+export interface ReviewPenaltyRequest {
+  note?: string | null;
+}
+
+/**
+ * `POST /hr/penalties/:id/review/reject` and `POST /hr/penalties/:id/reject` — the reason is
+ * required (not blank, at most 1,000 characters).
+ */
+export interface RejectPenaltyRequest {
+  reason: string;
+}
+
+/** The `data` of a 409 `PENALTY_WRONG_STEP`: where the penalty stands now. */
+export interface PenaltyStepConflict {
+  status: PenaltyStatus;
 }
 
 /** The `data` of a 409 `PENALTY_RECOUNT_UNCONFIRMED` / `PENALTY_RECOUNT_CHANGED`. */
@@ -349,6 +404,11 @@ export interface CreatePenaltyRequest {
   employeeId: Uuid;
   violationId: Uuid;
   date: IsoDate;
+  /**
+   * The stage where the violation happened — one of the employee's stages. Required when they
+   * have several (400 `PENALTY_STAGE_REQUIRED`); left out, the only one is used.
+   */
+  stageId?: Uuid;
   note?: string | null;
 }
 
@@ -365,14 +425,45 @@ export interface PenaltyRecord {
   action: PenaltyAction;
   days: Days | null;
   status: PenaltyStatus;
+  /**
+   * Where the violation happened (owner, 2026-11-21): who reviews it and who sees it — a stage head
+   * sees the penalties of their stages, not the employee's other stages'.
+   */
+  stage: NamedRef;
   note: string | null;
   cancelReason: string | null;
   createdBy: { id: Uuid; name: string } | null;
-  approvedBy: { id: Uuid; name: string } | null;
   createdAt: IsoDateTime;
+  /** The stage review: who approved it, when, and their note. Null when skipped or not done yet. */
+  reviewedBy: { id: Uuid; name: string } | null;
+  reviewedAt: IsoDateTime | null;
+  reviewNote: string | null;
+  /** Why it skipped the stage review; null when it had one (or was recorded before it existed). */
+  reviewSkip: PenaltyReviewSkip | null;
+  /** The HR step. */
+  approvedBy: { id: Uuid; name: string } | null;
+  approvedAt: IsoDateTime | null;
+  approvalNote: string | null;
+  /** A rejection: by whom, when, at which step, and why. */
+  rejectedBy: { id: Uuid; name: string } | null;
+  rejectedAt: IsoDateTime | null;
+  rejectedStep: PenaltyStep | null;
+  rejectionReason: string | null;
+  cancelledAt: IsoDateTime | null;
   /**
-   * §4 approve in date order (owner 2026-11-20): for a PENDING record, the earliest earlier
-   * penalty of the same violation and employee (in the repetition window) that is still pending —
+   * PENDING_REVIEW with nobody left to review it (its stage has no stage head any more, owner
+   * 2026-11-21): the HR step may decide it directly. False otherwise.
+   */
+  hrMayDecide: boolean;
+  /**
+   * The signed-in user is the penalised employee: they can't review, approve or reject it (403
+   * `PENALTY_OWN`, owner 2026-11-21) — the screens leave those actions out.
+   */
+  ownPenalty: boolean;
+  /**
+   * §4 approve in date order (owner 2026-11-20): for a waiting record (either step), the earliest
+   * earlier penalty of the same violation and employee (in the repetition window) still waiting at
+   * either step —
    * approving this one is refused (409 `PENALTY_EARLIER_PENDING`) until it is approved or
    * cancelled. Null otherwise (and always for approved and cancelled records).
    */
@@ -684,5 +775,9 @@ export interface HrDashboard {
   currentRun:
     | { id: Uuid; month: Month; status: PayrollStatus; net?: Piastres; salaryVisible: boolean }
     | null;
+  /**
+   * `pending`: waiting at either step (stage review or HR); `approved`: approved at the HR step
+   * only (owner 2026-11-21).
+   */
   penaltiesThisMonth: { pending: number; approved: number } | null;
 }

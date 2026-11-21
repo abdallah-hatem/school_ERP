@@ -1,6 +1,6 @@
 {
   "title": "Penalties",
-  "description": "Violations recorded against employees. A new penalty waits as pending until it is approved; only approved ones count toward repeats and payroll.",
+  "description": "Violations recorded against employees. Each goes to the stage head of the stage where it happened, then to HR; only penalties HR approves count toward repeats and payroll.",
   "record": "Record a penalty",
   "month": "Month",
   "tableLabel": "Penalties for {month}",
@@ -19,7 +19,10 @@
     "searchLabel": "Search penalties",
     "searchPlaceholder": "Employee name or code, like EMP-0012",
     "status": "Status",
-    "allStatuses": "All statuses"
+    "allStatuses": "All statuses",
+    "stage": "Stage",
+    "allStages": "All stages",
+    "open": "Waiting (stage or HR)"
   },
   "list": {
     "emptyTitle": "No penalties this month",
@@ -38,7 +41,7 @@
     "button": "Approve",
     "buttonFor": "Approve the penalty of {name}",
     "title": "Approve this penalty?",
-    "body": "{name} · {violation} · {action}. The level and action are fixed once approved.",
+    "body": "{name} · {violation} · {action}. HR's approval fixes the level and the deduction.",
     "confirm": "Approve",
     "done": "Penalty approved.",
     "confirmRecount": {
@@ -49,7 +52,9 @@
       "many": "Approve and update {count} penalties",
       "other": "Approve and update {count} penalties"
     },
-    "recountRefreshed": "The list below is up to date now. Check it and confirm again."
+    "recountRefreshed": "The list below is up to date now. Check it and confirm again.",
+    "noteLabel": "Note (optional)",
+    "notePlaceholder": "Checked with the attendance sheet"
   },
   "recount": {
     "label": "Approved penalties this changes",
@@ -78,7 +83,7 @@
   },
   "form": {
     "title": "Record a penalty",
-    "description": "It is saved as pending. The level comes from the employee's approved penalties for the same violation.",
+    "description": "It goes to the stage head of the stage where it happened, then to HR. The level comes from the employee's approved penalties for the same violation, in every stage.",
     "employee": "Employee",
     "employeePlaceholder": "Choose an employee",
     "employeeSearch": "Type a name (English or Arabic) or code",
@@ -94,11 +99,20 @@
     "dateHint": "Can't be in the future.",
     "note": "Note",
     "notePlaceholder": "Arrived 40 minutes late without notice",
-    "save": "Save as pending",
-    "saved": "Penalty recorded as pending.",
+    "save": "Record penalty",
+    "saved": "Penalty recorded.",
     "saveFailed": "The penalty couldn't be saved. Try again.",
     "futureDate": "The date can't be in the future.",
-    "tooLong": "Keep it under 1,000 characters."
+    "tooLong": "Keep it under 1,000 characters.",
+    "stage": "Stage where it happened",
+    "stagePlaceholder": "Choose the stage",
+    "stageHint": "This employee works in several stages. That stage's head reviews it; the other stages' heads don't see it.",
+    "startsReview": "It goes to the stage head of {stage} first, then to HR.",
+    "startsHr": {
+      "EMPLOYEE_IS_HEAD": "It goes straight to HR: the employee heads this stage.",
+      "RECORDER_IS_HEAD": "It goes straight to HR: you review this stage's penalties, so your recording is the stage review.",
+      "NO_STAGE_HEAD": "It goes straight to HR: {stage} has no stage head."
+    }
   },
   "preview": {
     "label": "What this penalty means",
@@ -119,6 +133,47 @@
   },
   "details": {
     "title": "Penalty",
-    "note": "Note"
-  }
+    "note": "Note",
+    "stage": "Stage"
+  },
+  "rejectedBecause": "Reason: {reason}",
+  "review": {
+    "approve": {
+      "button": "Approve",
+      "title": "Approve at the stage review?",
+      "body": "{name} · {violation} · {stage}. It goes to HR next; HR fixes the level and the deduction.",
+      "confirm": "Approve and send to HR",
+      "done": "Penalty approved and sent to HR."
+    }
+  },
+  "reject": {
+    "button": "Reject",
+    "title": "Reject this penalty?",
+    "body": "{name} · {violation}. It is kept with your reason, never counts, and whoever recorded it is told.",
+    "confirm": "Reject penalty",
+    "reasonLabel": "Reason for rejecting",
+    "reasonPlaceholder": "He was on an official task that day",
+    "done": "Penalty rejected."
+  },
+  "steps": {
+    "title": "Steps",
+    "recorded": "Recorded by {name}",
+    "recordedBySystem": "Recorded",
+    "reviewed": "Approved at the stage review by {name}",
+    "skip": {
+      "EMPLOYEE_IS_HEAD": "No stage review: the employee heads this stage",
+      "RECORDER_IS_HEAD": "No stage review: recorded by someone who reviews this stage",
+      "NO_STAGE_HEAD": "No stage review: this stage has no stage head"
+    },
+    "approved": "Approved by HR: {name}",
+    "rejectedREVIEW": "Rejected at the stage review by {name}",
+    "rejectedHR": "Rejected by HR: {name}",
+    "cancelled": "Cancelled",
+    "waitingReview": "Waiting for the stage head of {stage}",
+    "waitingHr": "Waiting for HR",
+    "someone": "someone",
+    "note": "Note: {note}",
+    "reason": "Reason: {reason}"
+  },
+  "hrMayDecide": "{stage} has no stage head now: HR can approve or reject it directly."
 }

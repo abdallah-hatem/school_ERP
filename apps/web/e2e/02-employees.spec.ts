@@ -3,6 +3,10 @@ import { EmployeeStatus, type Employee, type EmployeeSummary } from '@school-erp
 import { Api } from './support/api';
 import { t } from './support/i18n';
 import { searchField, shoot, signIn } from './support/ui';
+import { settleStreams } from './support/stream';
+
+// Every goto waits for the streamed page to settle (see support/stream.ts).
+settleStreams();
 
 /** A valid Egyptian mobile number that differs from `current`. */
 function newPhone(current: string): string {

@@ -2,6 +2,8 @@ import type { NotificationSubject } from '@school-erp/shared';
 import type { NotificationScopeResolver, NotificationsService } from '../../../core/notifications';
 import type { UserScope } from '../../../core/permissions';
 import type { EmployeesService } from '../employees/services/employees.service';
+import type { PenaltyRecordsService } from '../penalties/services/penalty-records.service';
+import type { EmployeeScope } from './employee-scope.pure';
 import { HrNotificationScopes } from './hr-notification-scopes';
 
 /* HR's notification scope resolvers (§11, N5, N11): one per subject type, registered at start-up. */
@@ -10,9 +12,10 @@ const scope = (s: UserScope['scope'], employeeId = 'me', stageId = 'st-1'): User
   scope: s,
   employeeId,
   stageId,
+  stageIds: [stageId],
 });
 
-function make(covered: string[] = []) {
+function make(covered: string[] = [], coveredPenalties: string[] = []) {
   const resolvers = new Map<string, NotificationScopeResolver>();
   const notifications = {
     registerScopeResolver: jest.fn((type: string, r: NotificationScopeResolver) => {
@@ -25,11 +28,17 @@ function make(covered: string[] = []) {
       Promise.resolve(ids.map((id) => covered.includes(id))),
     ),
   };
+  const penalties = {
+    coveredBy: jest.fn((_s: EmployeeScope, ids: readonly string[]) =>
+      Promise.resolve(ids.map((id) => coveredPenalties.includes(id))),
+    ),
+  };
   new HrNotificationScopes(
     notifications as unknown as NotificationsService,
     employees as unknown as EmployeesService,
+    penalties as unknown as PenaltyRecordsService,
   ).onModuleInit();
-  return { resolvers, employees };
+  return { resolvers, employees, penalties };
 }
 
 const penalty = (employeeId: string | null): NotificationSubject => ({
@@ -50,17 +59,17 @@ describe('HrNotificationScopes', () => {
     ]);
   });
 
-  it("a penalty is covered when its employee is in the reader's stage / team, as the employee is now (N2 edges 1, 2, 9)", async () => {
-    const { resolvers, employees } = make(['e-1']);
-    const stage = scope('own_stage');
-    const answers = await resolvers.get('penalty')!(stage, [
+  it("a penalty is covered by the record itself — its stage for a stage head, not the employee's other stages (owner 2026-11-21)", async () => {
+    const { resolvers, penalties, employees } = make([], ['p-e-1']);
+    const answers = await resolvers.get('penalty')!(scope('own_stage'), [
       penalty('e-1'),
       penalty('e-2'),
       penalty(null),
     ]);
     expect(answers).toEqual([true, false, false]);
-    // A penalty without an employee is never looked up (fail closed).
-    expect(employees.coveredBy).toHaveBeenCalledWith(stage, ['e-1', 'e-2']);
+    // Asked by penalty id, with the reader's stages as HR's scope.
+    expect(penalties.coveredBy).toHaveBeenCalledWith({ kind: 'stage', stageIds: ['st-1'] }, ['p-e-1', 'p-e-2', 'p-null']);
+    expect(employees.coveredBy).not.toHaveBeenCalled();
   });
 
   it('a payroll run: no scoped reader covers it (only scope all, which core answers itself)', async () => {

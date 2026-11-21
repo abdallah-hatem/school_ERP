@@ -27,7 +27,7 @@ describe('PenaltyDetailsDialog', () => {
     renderPenalties(<PenaltyDetailsDialog record={record({ note: 'Came at 9' })} onClose={vi.fn()} />);
     const dialog = screen.getByRole('dialog', { name: 'Penalty' });
     const text = dialog.textContent ?? '';
-    for (const part of ['Mona Khalil', 'Late arrival without notice', 'Level 2', 'Deduct 0.5 day', 'Pending', 'Came at 9']) {
+    for (const part of ['Mona Khalil', 'Late arrival without notice', 'Level 2', 'Deduct 0.5 day', 'Waiting for HR', 'Primary', 'Came at 9']) {
       expect(text).toContain(part);
     }
   });
@@ -40,7 +40,7 @@ describe('PenaltyDetailsDialog', () => {
     const confirm = await screen.findByRole('dialog', { name: 'Approve this penalty?' });
     await user.click(within(confirm).getByRole('button', { name: 'Approve' }));
     await waitFor(() => expect(router.refresh).toHaveBeenCalled());
-    expect(apis.APPROVE_PENALTY).toHaveBeenCalledWith('p-1');
+    expect(apis.APPROVE_PENALTY).toHaveBeenCalledWith('p-1', undefined, undefined);
   });
 
   it('§4 date order: a penalty waiting for an earlier one says why, and its Approve is disabled (EN + AR)', () => {

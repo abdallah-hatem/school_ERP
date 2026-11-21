@@ -16,7 +16,7 @@ export function IsIsoDate(options?: ValidationOptions): PropertyDecorator {
     });
 }
 
-/** A `YYYY-MM-DD` date that is today or earlier (server clock). */
+/** A `YYYY-MM-DD` date that is today or earlier, on the school's clock (`todayIsoDate`). */
 export function IsNotFutureDate(options?: ValidationOptions): PropertyDecorator {
   return (target: object, propertyName: string | symbol) =>
     registerDecorator({

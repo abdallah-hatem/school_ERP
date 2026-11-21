@@ -46,15 +46,19 @@ export function preferenceChannelOf(channel: NotificationChannel): NotificationP
   return channel === 'push' ? 'in_app' : channel;
 }
 
-/** `approval`: something waits for the reader and resolves when done; `reminder`: something is due. */
-export const NOTIFICATION_CATEGORIES = ['approval', 'reminder'] as const;
+/**
+ * `approval`: something waits for the reader and resolves when done; `reminder`: something is due;
+ * `update`: something the reader did was decided by someone else (a penalty they recorded was
+ * rejected) — nothing to do but read it.
+ */
+export const NOTIFICATION_CATEGORIES = ['approval', 'reminder', 'update'] as const;
 export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number];
 
 export const NOTIFICATION_MODULES = ['core', 'hr'] as const;
 export type NotificationModule = (typeof NOTIFICATION_MODULES)[number];
 
-/** How a done item reads: approved / cancelled by someone, or no longer needed (`done`). */
-export const NOTIFICATION_RESOLUTIONS = ['approved', 'cancelled', 'done'] as const;
+/** How a done item reads: approved / rejected / cancelled by someone, or no longer needed (`done`). */
+export const NOTIFICATION_RESOLUTIONS = ['approved', 'rejected', 'cancelled', 'done'] as const;
 export type NotificationResolution = (typeof NOTIFICATION_RESOLUTIONS)[number];
 
 /** Who receives notifications: staff users now; parents and students (`contact`) are Planned (N6). */
@@ -104,6 +108,26 @@ export const NOTIFICATION_TYPES = {
     defaultChannels: IN_APP,
     permission: 'hr.penalties.approve',
     dedupePrefix: 'penalty',
+    link: (s) => ({ screen: 'penalties', query: { penalty: s.entityId } }),
+  },
+  // §4 two steps (owner 2026-11-21): the stage head of the penalty's stage reviews it first …
+  'hr.penalty.awaiting_review': {
+    module: 'hr',
+    category: 'approval',
+    canTurnOff: false,
+    defaultChannels: IN_APP,
+    permission: 'hr.penalties.review',
+    dedupePrefix: 'penalty_review',
+    link: (s) => ({ screen: 'penalties', query: { penalty: s.entityId } }),
+  },
+  // … and the recorder hears when it is rejected, at either step (sent only to them).
+  'hr.penalty.rejected': {
+    module: 'hr',
+    category: 'update',
+    canTurnOff: true,
+    defaultChannels: IN_APP,
+    permission: 'hr.penalties.view',
+    dedupePrefix: 'penalty_rejected',
     link: (s) => ({ screen: 'penalties', query: { penalty: s.entityId } }),
   },
   'hr.payroll.ready_to_approve': {

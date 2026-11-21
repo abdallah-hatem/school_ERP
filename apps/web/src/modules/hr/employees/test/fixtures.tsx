@@ -71,6 +71,7 @@ export const employee: Employee = {
   graduationYear: null,
   status: 'ACTIVE',
   signInAccount: null,
+  otherStages: [],
   salaryVisible: true,
   createdAt: '2026-11-01T08:00:00.000Z',
   updatedAt: '2026-11-01T08:00:00.000Z',
@@ -79,6 +80,7 @@ export const employee: Employee = {
 export const summary = (overrides: Partial<EmployeeSummary> & Pick<EmployeeSummary, 'id' | 'code' | 'nameEn' | 'nameAr'>): EmployeeSummary => ({
   department: employee.department,
   stage: employee.stage,
+  otherStages: [],
   jobTitle: employee.jobTitle,
   workSystem: 'FULL_TIME',
   basicSalary: 1200000,

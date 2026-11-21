@@ -1,7 +1,14 @@
 'use client';
 
 import { useCan } from '@/core/auth';
-import { PAGINATION, PENALTY_STATUSES, type Month, type PenaltyRecord, type PenaltyStatus } from '@school-erp/shared';
+import {
+  PAGINATION,
+  PENALTY_STATUS_FILTERS,
+  type ListItem,
+  type Month,
+  type PenaltyRecord,
+  type PenaltyStatusFilter,
+} from '@school-erp/shared';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { ClearFilters, FilterSelect, SearchInput } from '@/shared/components/form/filter-controls';
@@ -12,6 +19,8 @@ import { Button } from '@/shared/components/ui/button';
 import { AddIcon, SearchIcon } from '@/shared/components/ui/icons';
 import { formatMonth } from '@/shared/lib/format';
 import { useTranslation } from '@/shared/providers/i18n-provider';
+import { GET_STAGES } from '../../employees/apis';
+import { useListItemOptions } from '../../employees/lib/list-item-options';
 import { penaltiesQueryString, type PenaltiesListQuery } from '../lib/list-query';
 import { PenaltiesTable } from './penalties-table';
 import { PenaltyDetailsDialog } from './penalty-details-dialog';
@@ -31,6 +40,8 @@ export interface PenaltiesListProps {
   error?: boolean;
   /** The penalty a link opens (`?penalty=<id>`, a notification's): shown over the list. */
   focused?: PenaltyRecord;
+  /** The stage filter's chosen stage (its name shows before the picker's first answer). */
+  selectedStage?: ListItem | null;
 }
 
 /** The month's penalties, filtered by status and a search, with "Record a penalty". */
@@ -42,6 +53,7 @@ export function PenaltiesList({
   total,
   error = false,
   focused,
+  selectedStage = null,
 }: PenaltiesListProps) {
   const { t, locale } = useTranslation();
   const router = useRouter();
@@ -79,7 +91,9 @@ export function PenaltiesList({
   }
 
   const canRecord = useCan()('hr.penalties.record');
-  const filterCount = (query.search ? 1 : 0) + (query.status ? 1 : 0);
+  const filterCount = (query.search ? 1 : 0) + (query.status ? 1 : 0) + (query.stageId ? 1 : 0);
+  // Where it happened (owner 2026-11-21); hidden stages too — they can still have penalties.
+  const stageOptions = useListItemOptions(GET_STAGES, locale, { includeHidden: true, selected: selectedStage });
   const filtered = filterCount > 0;
   const loading = rows === undefined;
   // R6: only someone who may record a penalty sees the button.
@@ -147,8 +161,19 @@ export function PenaltiesList({
               label={t('penalties.filters.status')}
               allLabel={t('penalties.filters.allStatuses')}
               value={query.status}
-              options={PENALTY_STATUSES.map((s) => ({ value: s, label: t(`common.enums.penaltyStatus.${s}`) }))}
-              onChange={(v) => go({ ...query, status: v as PenaltyStatus | undefined, page: PAGINATION.defaultPage })}
+              options={PENALTY_STATUS_FILTERS.map((s) => ({
+                value: s,
+                label: s === 'OPEN' ? t('penalties.filters.open') : t(`common.enums.penaltyStatus.${s}`),
+              }))}
+              onChange={(v) => go({ ...query, status: v as PenaltyStatusFilter | undefined, page: PAGINATION.defaultPage })}
+              disabled={loading}
+            />
+            <FilterSelect
+              label={t('penalties.filters.stage')}
+              allLabel={t('penalties.filters.allStages')}
+              value={query.stageId}
+              server={stageOptions}
+              onChange={(v) => go({ ...query, stageId: v, page: PAGINATION.defaultPage })}
               disabled={loading}
             />
             <ClearFilters count={filterCount} onClear={clearFilters} disabled={loading || pending} className="ms-auto" />

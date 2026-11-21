@@ -37,7 +37,10 @@ export function employeeAuditSnapshot(row: EmployeeDetailRow): Record<string, un
   for (const [key, value] of Object.entries(row)) {
     if (SKIPPED.includes(key)) continue;
     const refField = (REF_FIELDS as Record<string, string>)[key];
-    if (refField) out[refField] = names(value as Named | null);
+    if (key === 'otherStages') {
+      // "Also teaches in" (owner 2026-11-21): the stages by their two names, in stage order.
+      out.otherStageIds = row.otherStages.map((s) => names(s.stage));
+    } else if (refField) out[refField] = names(value as Named | null);
     else if (value instanceof Date) out[key] = toIsoDate(value);
     else out[key] = value;
   }
@@ -62,7 +65,10 @@ export function changedEmployeeFields(before: EmployeeDetailRow, after: Employee
     const refField = (REF_FIELDS as Record<string, string>)[key];
     const a: unknown = before[key];
     const b: unknown = after[key];
-    if (refField) {
+    if (key === 'otherStages') {
+      const ids = (r: EmployeeDetailRow) => r.otherStages.map((s) => s.stage.id).join();
+      if (ids(before) !== ids(after)) out.push('otherStageIds');
+    } else if (refField) {
       if ((a as { id?: string } | null)?.id !== (b as { id?: string } | null)?.id) out.push(refField);
     } else if (a instanceof Date || b instanceof Date) {
       const iso = (v: unknown) => (v instanceof Date ? v.toISOString() : v);

@@ -135,7 +135,8 @@ describe('Penalty catalogue search', { timeout: 20_000 }, () => {
 
     await user.type(box, 'العلكة');
     expect(await screen.findByText('العلكة', { selector: 'mark' })).toBeTruthy();
-    expect(screen.queryByText('استعمال الجوال في الدرس')).toBeNull();
+    // The highlight can show before the filtered list replaces the old one: wait for it.
+    await waitFor(() => expect(screen.queryByText('استعمال الجوال في الدرس')).toBeNull());
     expect(screen.queryByText('المخالفات التعليمية')).toBeNull();
 
     // An English name on the Arabic screen finds it too (its English name shows under it).

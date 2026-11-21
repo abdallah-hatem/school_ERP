@@ -8,7 +8,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const router = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => router, redirect: vi.fn() }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
-const apis = vi.hoisted(() => ({ GET_PENALTY_PREVIEW: vi.fn(), CREATE_PENALTY: vi.fn(), GET_PENALTY_GROUPS: vi.fn() }));
+const apis = vi.hoisted(() => ({
+  GET_PENALTY_PREVIEW: vi.fn(),
+  CREATE_PENALTY: vi.fn(),
+  GET_PENALTY_GROUPS: vi.fn(),
+  GET_PENALTY_EMPLOYEE_STAGES: vi.fn(),
+}));
 vi.mock('../apis', () => apis);
 // The pickers' choices come from the API (searched there, never here).
 const employeesApis = vi.hoisted(() => ({ GET_EMPLOYEES: vi.fn() }));
@@ -63,8 +68,13 @@ const preview = (overrides: Partial<PenaltyPreview> = {}): PenaltyPreview => ({
   days: null,
   priorCount: 0,
   recount: [],
+  startsAs: 'WAITING_HR',
+  reviewSkip: 'NO_STAGE_HEAD',
   ...overrides,
 });
+
+const PRIMARY = { id: 's-pri', nameEn: 'Primary', nameAr: 'الابتدائي' };
+const PREP = { id: 's-prep', nameEn: 'Preparatory', nameAr: 'الإعدادي' };
 
 /** §4 backdated: the owner's case — 19 Nov L1 and 20 Nov L2 approved, recording the 18th. */
 const RECOUNT: PenaltyPreview['recount'] = [
@@ -102,6 +112,9 @@ describe('RecordPenaltyDialog', () => {
     router.refresh.mockReset();
     apis.GET_PENALTY_PREVIEW.mockReset();
     apis.CREATE_PENALTY.mockReset();
+    // One stage each by default: it fills in by itself (owner 2026-11-21).
+    apis.GET_PENALTY_EMPLOYEE_STAGES.mockReset();
+    apis.GET_PENALTY_EMPLOYEE_STAGES.mockResolvedValue(ok({ stages: [PRIMARY] }));
     serveEmployees();
     serveViolations();
   });
@@ -129,7 +142,7 @@ describe('RecordPenaltyDialog', () => {
 
     await choose(user, /Violation/, 'Late arrival without notice');
     await waitFor(() => expect(previewLine()).toBe('Level 2 — Deduct 0.5 day'));
-    expect(apis.GET_PENALTY_PREVIEW).toHaveBeenLastCalledWith({ employeeId: 'e-mona', violationId: 'v-late', date: todayIso() });
+    expect(apis.GET_PENALTY_PREVIEW).toHaveBeenLastCalledWith({ employeeId: 'e-mona', violationId: 'v-late', date: todayIso(), stageId: 's-pri' });
     expect(screen.getByText('1 earlier approved penalty for this violation in the repetition window.')).toBeTruthy();
 
     // Employee changes → asked again for the other employee.
@@ -140,7 +153,7 @@ describe('RecordPenaltyDialog', () => {
     await choose(user, /Employee/, 'Mona Khalil · EMP-0001');
     await choose(user, /Violation/, 'Using a phone in class');
     await waitFor(() =>
-      expect(apis.GET_PENALTY_PREVIEW).toHaveBeenLastCalledWith({ employeeId: 'e-mona', violationId: 'v-phone', date: todayIso() }),
+      expect(apis.GET_PENALTY_PREVIEW).toHaveBeenLastCalledWith({ employeeId: 'e-mona', violationId: 'v-phone', date: todayIso(), stageId: 's-pri' }),
     );
 
     // Date changes: the 15th of last month.
@@ -213,13 +226,15 @@ describe('RecordPenaltyDialog', () => {
     await choose(user, /Employee/, 'Mona Khalil · EMP-0001');
     await choose(user, /Violation/, 'Late arrival without notice');
     await user.type(screen.getByRole('textbox', { name: /Note/ }), '  Came at 9:10  ');
-    const save = screen.getByRole('button', { name: 'Save as pending' });
+    const save = screen.getByRole('button', { name: 'Record penalty' });
     await user.dblClick(save);
     await waitFor(() => expect(save).toHaveProperty('disabled', true));
     expect(apis.CREATE_PENALTY).toHaveBeenCalledTimes(1);
     expect(apis.CREATE_PENALTY).toHaveBeenCalledWith({
       employeeId: 'e-mona',
       violationId: 'v-late',
+      // One stage: filled in by itself (owner 2026-11-21).
+      stageId: 's-pri',
       date: todayIso(),
       note: 'Came at 9:10',
     });
@@ -232,7 +247,7 @@ describe('RecordPenaltyDialog', () => {
   it('required fields block saving with translated messages (Arabic)', async () => {
     const user = userEvent.setup();
     renderDialog(vi.fn(), 'ar');
-    await user.click(screen.getByRole('button', { name: 'حفظ قيد الانتظار' }));
+    await user.click(screen.getByRole('button', { name: 'تسجيل الجزاء' }));
     expect((await screen.findAllByText('هذا الحقل مطلوب.')).length).toBe(2);
     expect(apis.CREATE_PENALTY).not.toHaveBeenCalled();
   });
@@ -244,7 +259,7 @@ describe('RecordPenaltyDialog', () => {
     const onOpenChange = renderDialog();
     await choose(user, /Employee/, 'Mona Khalil · EMP-0001');
     await choose(user, /Violation/, 'Late arrival without notice');
-    await user.click(screen.getByRole('button', { name: 'Save as pending' }));
+    await user.click(screen.getByRole('button', { name: 'Record penalty' }));
 
     expect((await screen.findByRole('alert')).textContent).toBe("This month's payroll is approved and locked.");
     expect(onOpenChange).not.toHaveBeenCalledWith(false);
@@ -262,13 +277,13 @@ describe('RecordPenaltyDialog', () => {
     // The preview says why it can't be worked out.
     await waitFor(() => expect(previewLine()).toBe("This violation is retired and can't be used."));
 
-    await user.click(screen.getByRole('button', { name: 'Save as pending' }));
+    await user.click(screen.getByRole('button', { name: 'Record penalty' }));
     expect(await screen.findByText('This employee is inactive.')).toBeTruthy();
     // The refusal stands until the employee changes: Save waits.
-    expect((screen.getByRole('button', { name: 'Save as pending' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: 'Record penalty' }) as HTMLButtonElement).disabled).toBe(true);
     await choose(user, /Employee/, 'Omar Fathy · EMP-0002');
     await waitFor(() => expect(screen.queryByText('This employee is inactive.')).toBeNull());
-    await user.click(screen.getByRole('button', { name: 'Save as pending' }));
+    await user.click(screen.getByRole('button', { name: 'Record penalty' }));
     // Under the violation now, and only there: the preview steps aside rather than repeat it.
     await waitFor(() =>
       expect(screen.getByRole('combobox', { name: /Violation/ }).getAttribute('aria-invalid')).toBe('true'),
@@ -304,7 +319,7 @@ describe('RecordPenaltyDialog', () => {
     const message = 'This violation counts once per day, and this employee already has one on this date.';
     await waitFor(() => expect(previewLine()).toBe(message));
 
-    await user.click(screen.getByRole('button', { name: 'Save as pending' }));
+    await user.click(screen.getByRole('button', { name: 'Record penalty' }));
     // Once, not in the preview and under the date both (dry run 2026-11-18).
     await waitFor(() => expect(screen.getByRole('button', { name: /Date of the violation/ }).getAttribute('aria-invalid')).toBe('true'));
     expect(screen.getAllByText(message)).toHaveLength(1);
@@ -352,7 +367,7 @@ describe('RecordPenaltyDialog', () => {
         expect(heads.textContent).toContain(heading);
         expect(within(heads).getAllByRole('listitem').map((li) => li.textContent?.replace('•', '').trim())).toEqual(items);
         expect(heads.textContent).toContain(note);
-        await user.click(screen.getByRole('button', { name: locale === 'en' ? 'Save as pending' : /حفظ/ }));
+        await user.click(screen.getByRole('button', { name: locale === 'en' ? 'Record penalty' : 'تسجيل الجزاء' }));
         await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
       },
     );
@@ -384,7 +399,7 @@ describe('RecordPenaltyDialog', () => {
       const message =
         'This would raise the level of an approved penalty in October 2026, whose payroll is approved. Corrections for an approved month go into the next month as adjustments.';
       await waitFor(() => expect(previewLine()).toBe(message));
-      await user.click(screen.getByRole('button', { name: 'Save as pending' }));
+      await user.click(screen.getByRole('button', { name: 'Record penalty' }));
       await waitFor(() =>
         expect(screen.getByRole('button', { name: /Date of the violation/ }).getAttribute('aria-invalid')).toBe('true'),
       );
@@ -393,7 +408,7 @@ describe('RecordPenaltyDialog', () => {
       // Only the refusal under the date — not the "Can't be in the future" hint, which read as the
       // cause — and Save waits while it stands (dry run 2026-11-20 b).
       expect(screen.queryByText("Can't be in the future.")).toBeNull();
-      const save = screen.getByRole('button', { name: 'Save as pending' }) as HTMLButtonElement;
+      const save = screen.getByRole('button', { name: 'Record penalty' }) as HTMLButtonElement;
       expect(save.disabled).toBe(true);
       await user.click(save);
       expect(apis.CREATE_PENALTY).toHaveBeenCalledTimes(1);
@@ -404,5 +419,52 @@ describe('RecordPenaltyDialog', () => {
       expect(screen.getByText("Can't be in the future.")).toBeTruthy();
       expect(screen.queryByText(message)).toBeNull();
     });
+  });
+});
+
+describe('RecordPenaltyDialog — the stage where it happened (owner 2026-11-21)', () => {
+  beforeEach(() => {
+    router.refresh.mockReset();
+    apis.GET_PENALTY_PREVIEW.mockReset();
+    apis.CREATE_PENALTY.mockReset();
+    apis.GET_PENALTY_EMPLOYEE_STAGES.mockReset();
+    serveEmployees();
+    serveViolations();
+  });
+  afterEach(cleanup);
+
+  it('one stage: no stage picker; the preview says where it goes (the stage head first)', async () => {
+    const user = userEvent.setup();
+    apis.GET_PENALTY_EMPLOYEE_STAGES.mockResolvedValue(ok({ stages: [PRIMARY] }));
+    apis.GET_PENALTY_PREVIEW.mockResolvedValue(ok(preview({ startsAs: 'PENDING_REVIEW', reviewSkip: null })));
+    renderDialog();
+    await choose(user, /Employee/, 'Mona Khalil · EMP-0001');
+    await choose(user, /Violation/, 'Late arrival without notice');
+    expect(screen.queryByRole('combobox', { name: /Stage where it happened/ })).toBeNull();
+    expect((await screen.findByTestId('penalty-route')).textContent).toBe('It goes to the stage head of Primary first, then to HR.');
+  });
+
+  it('several stages: the picker lists only the employee’s stages; it is required; the chosen stage is sent', async () => {
+    const user = userEvent.setup();
+    apis.GET_PENALTY_EMPLOYEE_STAGES.mockResolvedValue(ok({ stages: [PRIMARY, PREP] }));
+    apis.GET_PENALTY_PREVIEW.mockResolvedValue(ok(preview({ startsAs: 'WAITING_HR', reviewSkip: 'NO_STAGE_HEAD' })));
+    apis.CREATE_PENALTY.mockResolvedValue(ok(record()));
+    renderDialog();
+    await choose(user, /Employee/, 'Mona Khalil · EMP-0001');
+    await choose(user, /Violation/, 'Late arrival without notice');
+    const picker = await screen.findByRole('combobox', { name: /Stage where it happened/ });
+    await user.click(screen.getByRole('button', { name: 'Record penalty' }));
+    expect(apis.CREATE_PENALTY).not.toHaveBeenCalled();
+
+    await user.click(picker);
+    const options = (await screen.findAllByRole('option')).map((o) => o.textContent);
+    expect(options).toEqual(['Primary', 'Preparatory']);
+    await user.click(screen.getByRole('option', { name: 'Preparatory' }));
+    await waitFor(() =>
+      expect(apis.GET_PENALTY_PREVIEW).toHaveBeenLastCalledWith(expect.objectContaining({ stageId: 's-prep' })),
+    );
+    expect((await screen.findByTestId('penalty-route')).textContent).toBe('It goes straight to HR: Preparatory has no stage head.');
+    await user.click(screen.getByRole('button', { name: 'Record penalty' }));
+    await waitFor(() => expect(apis.CREATE_PENALTY).toHaveBeenCalledWith(expect.objectContaining({ stageId: 's-prep' })));
   });
 });

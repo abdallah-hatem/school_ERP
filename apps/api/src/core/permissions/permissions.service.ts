@@ -6,7 +6,7 @@ import { GrantsRepository, type UserLink } from './repositories/grants.repositor
 
 /**
  * Which rows a permission covers for a user (R5), for the module that owns the data to apply in
- * its repository query. `employeeId` / `stageId` are the user's linked employee and its stage;
+ * its repository query. `employeeId` / `stageIds` are the user's linked employee and its stages;
  * when a scope needs one and it is null (no linked employee), the module returns no rows.
  */
 export interface UserScope extends UserLink {
@@ -46,6 +46,24 @@ export class PermissionsService {
     const scope = (await this.resolved(user)).scopes.get(key);
     if (!scope) return null;
     return { scope, ...(await this.link(user)) };
+  }
+
+  /**
+   * Every active user holding `key`, with the widest scope they hold it with and their employee
+   * and stages — for a module asking "who may act on this?" (HR: who heads a stage, §4).
+   */
+  async holdersWithScope(key: PermissionKey): Promise<{ userId: string; scope: UserScope }[]> {
+    const out: { userId: string; scope: UserScope }[] = [];
+    for (const userId of await this.grants.holdersOf(key)) {
+      const scope = await this.scopeFor({ id: userId }, key);
+      if (scope) out.push({ userId, scope });
+    }
+    return out;
+  }
+
+  /** The user's linked employee (who they are in HR), or null. */
+  async linkedEmployeeOf(user: Who): Promise<string | null> {
+    return (await this.link(user)).employeeId;
   }
 
   private resolved(user: Who): Promise<ResolvedGrants> {

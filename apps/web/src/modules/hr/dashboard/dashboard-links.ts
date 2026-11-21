@@ -1,4 +1,4 @@
-import { PenaltyStatus, type Month } from '@school-erp/shared';
+import { PenaltyStatus, type Month, type PenaltyStatusFilter } from '@school-erp/shared';
 
 /**
  * Where each tile and quick link goes, under the locale segment (`/ar`, `/en`). The query strings
@@ -7,12 +7,13 @@ import { PenaltyStatus, type Month } from '@school-erp/shared';
  */
 export function dashboardLinks(locale: string, month: Month, runId?: string | null) {
   const base = `/${locale}`;
-  const penalties = (status: PenaltyStatus) => `${base}/penalties?${new URLSearchParams({ month, status }).toString()}`;
+  const penalties = (status: PenaltyStatusFilter) => `${base}/penalties?${new URLSearchParams({ month, status }).toString()}`;
   return {
     employees: `${base}/employees`,
     newEmployee: `${base}/employees/new`,
     penalties: `${base}/penalties`,
-    pendingPenalties: penalties(PenaltyStatus.PENDING),
+    // Waiting at either step — the stage review or HR (owner 2026-11-21).
+    pendingPenalties: penalties('OPEN'),
     approvedPenalties: penalties(PenaltyStatus.APPROVED),
     lateness: `${base}/lateness?${new URLSearchParams({ month }).toString()}`,
     /** The month's run when there is one, else the runs list (where a run is created). */

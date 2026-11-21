@@ -64,6 +64,8 @@ export const ErrorCode = {
   DUPLICATE_FINGERPRINT_ID: 'DUPLICATE_FINGERPRINT_ID',
   DUPLICATE_INSURANCE_NUMBER: 'DUPLICATE_INSURANCE_NUMBER',
   INVALID_MANAGER: 'INVALID_MANAGER',
+  /** §3 (owner 2026-11-21): an "also teaches in" stage is the main stage, repeated, or hidden. */
+  INVALID_OTHER_STAGES: 'INVALID_OTHER_STAGES',
   MANAGER_LOOP: 'MANAGER_LOOP',
   MANAGER_NOT_MANAGING: 'MANAGER_NOT_MANAGING',
   /** §3 (N0): the probation end is before the hire date. */
@@ -74,6 +76,19 @@ export const ErrorCode = {
   INVALID_LEVELS: 'INVALID_LEVELS',
   PENALTY_NOT_PENDING: 'PENALTY_NOT_PENDING',
   PENALTY_CANCELLED: 'PENALTY_CANCELLED',
+  /**
+   * §4 two steps (owner 2026-11-21): the penalty isn't at the step this action is for (another
+   * reviewer or approver acted first, or it was cancelled). `data.status`: its status now.
+   */
+  PENALTY_WRONG_STEP: 'PENALTY_WRONG_STEP',
+  /** The penalty was rejected (final): it can't be reviewed, approved, rejected or cancelled. */
+  PENALTY_REJECTED: 'PENALTY_REJECTED',
+  /** Nobody reviews or approves a penalty given to themselves (owner 2026-11-21). */
+  PENALTY_OWN: 'PENALTY_OWN',
+  /** The employee belongs to several stages: say in which one the violation happened. */
+  PENALTY_STAGE_REQUIRED: 'PENALTY_STAGE_REQUIRED',
+  /** The stage given isn't one of the employee's stages. */
+  PENALTY_STAGE_INVALID: 'PENALTY_STAGE_INVALID',
   /** §4: a once-per-day violation already has a pending or approved penalty that day. */
   VIOLATION_ONCE_PER_DAY: 'VIOLATION_ONCE_PER_DAY',
   /**

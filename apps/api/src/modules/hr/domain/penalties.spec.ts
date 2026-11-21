@@ -79,14 +79,14 @@ describe('countPriorInWindow (§4 DECIDED: earlier date, or same date and record
       expect(countPriorInWindow(unrecorded('2026-11-18'), 'ROLLING_12_MONTHS', approved)).toBe(0);
     });
     it('a recorded penalty on 1 June ignores 31 May but counts 1 June recorded earlier', () => {
-      const target = rec('t', '2026-06-01', '12:00', { status: 'PENDING' });
+      const target = rec('t', '2026-06-01', '12:00', { status: 'WAITING_HR' });
       const approved = [rec('a', '2026-05-31', '07:00'), rec('b', '2026-06-01', '07:00')];
       expect(countPriorInWindow(target, 'CONTRACT_YEAR', approved)).toBe(1);
     });
   });
 
   it('earlier date still counts (even if recorded later); a later date never does', () => {
-    const target = rec('t', '2026-11-10', '08:00', { status: 'PENDING' });
+    const target = rec('t', '2026-11-10', '08:00', { status: 'WAITING_HR' });
     // Dated 3 Nov but entered after the target: the date decides.
     const earlierDate = rec('a', '2026-11-03', '2026-11-12T10:00:00Z');
     const laterDate = rec('b', '2026-11-12', '07:00');
@@ -94,8 +94,8 @@ describe('countPriorInWindow (§4 DECIDED: earlier date, or same date and record
   });
 
   it('two approved same day → 1 then 2', () => {
-    const first = rec('a', '2026-11-10', '08:00', { status: 'PENDING' });
-    const second = rec('b', '2026-11-10', '09:00', { status: 'PENDING' });
+    const first = rec('a', '2026-11-10', '08:00', { status: 'WAITING_HR' });
+    const second = rec('b', '2026-11-10', '09:00', { status: 'WAITING_HR' });
     // Approving the first: nothing approved yet → level 1.
     const firstLevel = penaltyLevel(countPriorInWindow(first, 'CONTRACT_YEAR', []), levels5);
     expect(firstLevel).toBe(1);
@@ -107,7 +107,7 @@ describe('countPriorInWindow (§4 DECIDED: earlier date, or same date and record
   });
 
   it('same day but recorded later than the one being approved doesn’t count', () => {
-    const target = rec('a', '2026-11-10', '08:00', { status: 'PENDING' });
+    const target = rec('a', '2026-11-10', '08:00', { status: 'WAITING_HR' });
     const laterSameDay = rec('b', '2026-11-10', '09:00');
     expect(countPriorInWindow(target, 'CONTRACT_YEAR', [laterSameDay])).toBe(0);
   });
@@ -126,21 +126,21 @@ describe('countPriorInWindow (§4 DECIDED: earlier date, or same date and record
   });
 
   it('cancelled same day doesn’t count', () => {
-    const target = rec('t', '2026-11-10', '09:00', { status: 'PENDING' });
+    const target = rec('t', '2026-11-10', '09:00', { status: 'WAITING_HR' });
     const cancelled = rec('c', '2026-11-10', '07:00', { status: 'CANCELLED' });
     expect(countPriorInWindow(target, 'CONTRACT_YEAR', [cancelled])).toBe(0);
     expect(countPriorInWindow(unrecorded('2026-11-10'), 'CONTRACT_YEAR', [cancelled])).toBe(0);
   });
 
   it('pending doesn’t count', () => {
-    const target = rec('t', '2026-11-10', '09:00', { status: 'PENDING' });
-    const pending = [rec('p', '2026-11-10', '07:00', { status: 'PENDING' })];
-    pending.push(rec('q', '2026-11-03', '07:00', { status: 'PENDING' }));
+    const target = rec('t', '2026-11-10', '09:00', { status: 'WAITING_HR' });
+    const pending = [rec('p', '2026-11-10', '07:00', { status: 'WAITING_HR' })];
+    pending.push(rec('q', '2026-11-03', '07:00', { status: 'WAITING_HR' }));
     expect(countPriorInWindow(target, 'CONTRACT_YEAR', pending)).toBe(0);
   });
 
   it('different violation same day doesn’t count (nor another employee’s)', () => {
-    const target = rec('t', '2026-11-10', '09:00', { status: 'PENDING' });
+    const target = rec('t', '2026-11-10', '09:00', { status: 'WAITING_HR' });
     const others = [
       rec('o', '2026-11-10', '07:00', { violationId: 'phone' }),
       rec('x', '2026-11-10', '07:00', { employeeId: 'e2' }),
@@ -175,7 +175,7 @@ describe('isEarlierPenalty (the repeat order)', () => {
 
 describe('earlierPendingPenalty (§4 DECIDED 2026-11-20: approve in date order)', () => {
   const pending = (id: string, date: string, time = '08:00', over: Partial<RecordedPenalty> = {}) =>
-    rec(id, date, time, { status: 'PENDING', ...over });
+    rec(id, date, time, { status: 'WAITING_HR', ...over });
   const w = 'CONTRACT_YEAR' as const;
 
   it("the owner's scenario: 18 approved, 19 + 20 pending → 20 waits for 19; 19 can go", () => {
@@ -303,7 +303,7 @@ describe('recountAfterApproval (§4 DECIDED 2026-11-20: a backdated penalty reco
   it('pending and cancelled ones are never changed; approved ones around them still move', () => {
     const records = [
       fixed('d19', '2026-11-19', 1),
-      fixed('p20', '2026-11-20', 2, { status: 'PENDING' }),
+      fixed('p20', '2026-11-20', 2, { status: 'WAITING_HR' }),
       fixed('c21', '2026-11-21', 2, { status: 'CANCELLED' }),
       fixed('d22', '2026-11-22', 2),
     ];

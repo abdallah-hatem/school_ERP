@@ -22,7 +22,7 @@ vi.mock('../apis', () => ({
   GET_PENALTY_PREVIEW: vi.fn(),
   GET_PENALTY_GROUPS: vi.fn(),
 }));
-vi.mock('../../employees/apis', () => ({ GET_EMPLOYEES: vi.fn() }));
+vi.mock('../../employees/apis', () => ({ GET_EMPLOYEES: vi.fn(), GET_STAGES: vi.fn().mockResolvedValue({ success: true, status: 200, data: [] }) }));
 
 import { PAGINATION } from '@school-erp/shared';
 import type { PenaltiesListQuery } from '../lib/list-query';
@@ -58,7 +58,7 @@ describe('PenaltiesList', () => {
     expect(rows[1]?.textContent).toContain('التأخر دون إخطار');
     expect(rows[1]?.textContent).toContain('المرة 2');
     expect(rows[1]?.textContent).toContain('خصم 0.5 يوم');
-    expect(rows[1]?.textContent).toContain('قيد الانتظار');
+    expect(rows[1]?.textContent).toContain('لدى شؤون الموظفين');
     expect(rows[2]?.textContent).toContain('السبب: Wrong day');
     // The English reason keeps its own direction inside the Arabic line.
     const reason = within(rows[2] as HTMLElement).getByText('Wrong day');

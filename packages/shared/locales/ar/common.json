@@ -109,9 +109,12 @@
       "DISMISSAL": "الفصل"
     },
     "penaltyStatus": {
-      "PENDING": "قيد الانتظار",
       "APPROVED": "معتمد",
-      "CANCELLED": "ملغى"
+      "CANCELLED": "ملغى",
+      "PENDING_REVIEW": "مراجعة المرحلة",
+      "WAITING_HR": "لدى شؤون الموظفين",
+      "REJECTED": "مرفوض",
+      "PENDING": "قيد الانتظار"
     },
     "payrollStatus": {
       "DRAFT": "مسودة",

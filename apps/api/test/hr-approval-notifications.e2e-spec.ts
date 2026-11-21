@@ -271,10 +271,15 @@ describe('HR approval notifications — N2 (e2e)', () => {
       expect(await itemsAbout(who.prepApprover, penalty.id)).toHaveLength(0);
       expect(await itemsAbout(who.stageHead, penalty.id)).toHaveLength(0);
 
-      // The team approver gets their team only: p2 has no manager.
-      const p2Penalty = await as(who.stageHead, () => recordOk(emp.p2));
+      // The team approver gets their team only: this one has no manager. (Not p2: the primary
+      // approver is p2, and nobody is told their own penalty waits for them — owner 2026-11-21.)
+      const noManager = await createEmployee({ stageId: primary });
+      const p2Penalty = await as(who.stageHead, () => recordOk(noManager));
       expect(await itemsAbout(who.teamApprover, p2Penalty.id)).toHaveLength(0);
       expect(await itemsAbout(who.primaryApprover, p2Penalty.id)).toHaveLength(1);
+      // The primary approver's own penalty: everyone else is told, never them.
+      const own = await as(who.stageHead, () => recordOk(emp.p2));
+      expect(await itemsAbout(who.primaryApprover, own.id)).toHaveLength(0);
 
       // The values of the sentence, never a sentence (N3); the link opens the penalty.
       const [item] = await itemsAbout(principal, penalty.id);
@@ -330,7 +335,8 @@ describe('HR approval notifications — N2 (e2e)', () => {
       expect(item).toMatchObject({ resolution: 'cancelled' });
       expect(item?.resolvedAt).not.toBeNull();
 
-      const approved = await as(who.stageHead, () => recordOk(emp.p2));
+      // Not p2 (the primary approver's own employee record: they aren't told about it).
+      const approved = await as(who.stageHead, () => recordOk(emp.p1));
       await as(principal, () => approve(approved.id));
       const before = await itemsAbout(who.primaryApprover, approved.id);
       await cancel(approved.id);
@@ -376,15 +382,17 @@ describe('HR approval notifications — N2 (e2e)', () => {
       expect(await itemsAbout(approver, later.id)).toHaveLength(0);
     });
 
-    it('the employee moves stage → the old stage’s approver no longer sees it; the new one isn’t told retroactively (edge 9)', async () => {
+    it('the employee moves stage → the penalty keeps its stage: its approver still sees it; the new stage’s isn’t told (edge 9, owner 2026-11-21)', async () => {
       const mover = await createEmployee({ stageId: primary });
       const penalty = await as(who.stageHead, () => recordOk(mover));
       expect(await bellItem(who.primaryApprover, penalty.id)).toBeDefined();
 
       await db.employee.update({ where: { id: mover }, data: { stageId: prep } });
 
-      expect(await bellItem(who.primaryApprover, penalty.id)).toBeUndefined();
+      // A stage scope goes by the penalty's stage (where it happened), not the employee's.
+      expect(await bellItem(who.primaryApprover, penalty.id)).toBeDefined();
       expect(await itemsAbout(who.prepApprover, penalty.id)).toHaveLength(0);
+      expect(await bellItem(who.prepApprover, penalty.id)).toBeUndefined();
     });
 
     it('deactivating the employee leaves the pending penalty’s notification open (edge 10)', async () => {

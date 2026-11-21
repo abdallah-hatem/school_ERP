@@ -109,9 +109,12 @@
       "DISMISSAL": "Dismissal"
     },
     "penaltyStatus": {
-      "PENDING": "Pending",
       "APPROVED": "Approved",
-      "CANCELLED": "Cancelled"
+      "CANCELLED": "Cancelled",
+      "PENDING_REVIEW": "Pending stage review",
+      "WAITING_HR": "Waiting for HR",
+      "REJECTED": "Rejected",
+      "PENDING": "Pending"
     },
     "payrollStatus": {
       "DRAFT": "Draft",

@@ -157,7 +157,7 @@ describe('HR penalties — backdated penalty recount (e2e, §4 owner 2026-11-20)
     expect(refused.body.message).toBe(
       'Approving this penalty raises the level of 2 approved penalties. Check them and confirm.',
     );
-    expect((await getRecord(d18.id)).status).toBe('PENDING');
+    expect((await getRecord(d18.id)).status).toBe('WAITING_HR');
     expect((await getRecord(d20.id)).level).toBe(2);
     expect(await db.auditEntry.count({ where: { seq: { gt: before } } })).toBe(0);
 
@@ -206,7 +206,7 @@ describe('HR penalties — backdated penalty recount (e2e, §4 owner 2026-11-20)
     expect(stale.body.params).toEqual({ count: 1 });
     const fresh = stale.body.data.recount as PenaltyRecountChange[];
     expect(fresh.map((c) => c.id)).toEqual([d10.id]);
-    expect((await getRecord(d5.id)).status).toBe('PENDING');
+    expect((await getRecord(d5.id)).status).toBe('WAITING_HR');
     expect((await getRecord(d10.id)).level).toBe(1);
 
     // Confirming changes that aren't there (another level) is stale too.
@@ -238,7 +238,7 @@ describe('HR penalties — backdated penalty recount (e2e, §4 owner 2026-11-20)
       expect((await getRecord(d28.id)).recountLockedMonth).toBe(LOCKED);
       const a = await approve(d28.id, ackOf(d28.recount)).expect(409);
       expect(a.body.error).toBe(ErrorCode.PENALTY_RECOUNT_MONTH_LOCKED);
-      expect((await getRecord(d28.id)).status).toBe('PENDING');
+      expect((await getRecord(d28.id)).status).toBe('WAITING_HR');
       // Cancelling it is still allowed (its own month is open).
       await http(app).post(`/hr/penalties/${d28.id}/cancel`).send({ reason: 'goes to December as an adjustment' }).expect(200);
     } finally {
@@ -276,7 +276,7 @@ describe('HR penalties — backdated penalty recount (e2e, §4 owner 2026-11-20)
     expect(results.filter((r) => r.status === 200)).toHaveLength(1);
     for (const r of results.filter((x) => x.status !== 200)) {
       expect(r.status).toBe(409);
-      expect(r.body.error).toBe(ErrorCode.PENALTY_NOT_PENDING);
+      expect(r.body.error).toBe(ErrorCode.PENALTY_WRONG_STEP);
     }
     expect((await getRecord(d19.id)).level).toBe(2);
     expect((await getRecord(d20.id)).level).toBe(3);

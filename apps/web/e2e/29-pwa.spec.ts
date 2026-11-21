@@ -3,6 +3,10 @@ import type { PublicSchoolSettings } from '@school-erp/shared';
 import { Api } from './support/api';
 import { t } from './support/i18n';
 import { shoot, signIn } from './support/ui';
+import { settleStreams } from './support/stream';
+
+// Every goto waits for the streamed page to settle (see support/stream.ts).
+settleStreams();
 
 /**
  * Runs in the `desktop-en` project. The installable app (owner, 2026-11-21): the manifest from the

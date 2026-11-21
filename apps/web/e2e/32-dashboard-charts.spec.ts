@@ -2,6 +2,10 @@ import { expect, test } from '@playwright/test';
 import { t } from './support/i18n';
 import { makeRoleUser, settled, signInAsRoleUser } from './support/role-access';
 import { expectNoHorizontalScroll, settle, shoot, signIn } from './support/ui';
+import { settleStreams } from './support/stream';
+
+// Every goto waits for the streamed page to settle (see support/stream.ts).
+settleStreams();
 
 /**
  * Runs in the `desktop-en` project (1440×900). The home dashboard's charts (owner, 2026-11-21,

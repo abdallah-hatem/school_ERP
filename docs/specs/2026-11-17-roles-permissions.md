@@ -37,17 +37,19 @@ each endpoint from its first line of code.
 | Role | Can do | Scope |
 |---|---|---|
 | **System admin** | Everything, plus users, roles, school settings. | all |
-| **HR manager** | All of HR: employees (incl. salary), lists, rules, catalogue; record, **approve** and cancel penalties; lateness; create, recalculate and **approve payroll**; bank sheet; Activity log. | all |
+| **HR manager** | All of HR but the stage review: employees (incl. salary), lists, rules, catalogue; record, **approve** (the HR step) and cancel penalties; lateness; create, recalculate and **approve payroll**; bank sheet; Activity log. | all |
 | **HR officer** | Employees (incl. salary), lateness, **record** penalties (stay pending), create and recalculate payroll drafts, adjustments. No approvals, no rules or catalogue edits. | all |
 | **Accountant** | View payroll runs, payslips and bank sheet; view employees **with** salary; the payroll tax rule (view and edit) and, once built, the approved months' payroll taxes (view) — §10, owner 2026-11-18. Nothing else. | all |
 | **Principal / administrative director** | View employees (no salary), penalties, lateness, payroll totals; **approve** and cancel penalties; Activity log. | all |
-| **Stage head** | View employees (no salary) and penalties; record penalties (pending). | own_stage |
+| **Stage head** | View employees (no salary) and penalties; record penalties; **review** them — the stage review, `hr.penalties.review` (owner, 2026-11-21). Their stages are the linked employee's main and other stages. | own_stage |
 | **Direct manager** | View their team (no salary) and its penalties; record penalties (pending). | own_team |
 | **Employee** (self-service) | **Planned** — own profile, own payslips, requests. | self |
 
 Approval answers (GUESS — the client's documents leave these open):
-- **Penalty:** recorded by HR officer, stage head or direct manager → **approved by HR manager or
-  principal**.
+- **Penalty** (DECIDED, owner 2026-11-21): recorded by HR officer, stage head or direct manager →
+  **reviewed by the stage head of the penalty's stage** → **approved by HR manager or principal**
+  (§4 two steps).
+- **Leave** (Planned, DECIDED 2026-11-21): every one of the employee's stage heads, then HR.
 - **Payroll:** prepared by HR officer → **approved by HR manager**; the accountant views and exports.
 - **Leave** (Planned): direct manager → HR manager.
 

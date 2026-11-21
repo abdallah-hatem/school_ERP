@@ -33,11 +33,12 @@ const TEST_DEFINITION: NotificationTypeDefinition = {
 };
 const SUBJECT = { entityType: 'test_subject', entityId: 's-1', employeeId: 'e-1' };
 
-const all = (): UserScope => ({ scope: 'all', employeeId: null, stageId: null });
+const all = (): UserScope => ({ scope: 'all', employeeId: null, stageId: null, stageIds: [] });
 const stage = (employeeId: string | null): UserScope => ({
   scope: 'own_stage',
   employeeId,
   stageId: 'st-1',
+  stageIds: ['st-1'],
 });
 
 function make(

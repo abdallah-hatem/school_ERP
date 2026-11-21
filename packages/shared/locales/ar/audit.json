@@ -105,9 +105,11 @@
       },
       "penalty": {
         "record": "تسجيل جزاء على {entity}",
-        "approve": "اعتماد جزاء {entity}",
+        "approve": "اعتماد جزاء {entity} في شؤون الموظفين",
         "cancel": "إلغاء جزاء {entity}",
-        "recount": "رفع مرة جزاء {entity}"
+        "recount": "رفع مرة جزاء {entity}",
+        "review": "موافقة مراجعة المرحلة على جزاء {entity}",
+        "reject": "رفض جزاء {entity}"
       },
       "lateness": {
         "save": "حفظ تأخير شهر {entity}"
@@ -254,7 +256,14 @@
         "resolvedDays": "مدة الاحتفاظ بالموافقات المنتهية (أيام)",
         "maxDays": "أقصى مدة للاحتفاظ بأي إشعار (أيام)"
       }
-    }
+    },
+    "stage": "المرحلة",
+    "otherStageIds": "يدرّس أيضًا في",
+    "reviewNote": "ملاحظة مراجعة المرحلة",
+    "reviewSkip": "مراجعة المرحلة",
+    "approvalNote": "ملاحظة شؤون الموظفين",
+    "rejectionReason": "سبب الرفض",
+    "rejectedStep": "رُفض في"
   },
   "totals": {
     "net": "الصافي",

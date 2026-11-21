@@ -1,5 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 import { signIn } from './support/ui';
+import { settleStreams } from './support/stream';
+
+// Every goto waits for the streamed page to settle (see support/stream.ts).
+settleStreams();
 
 /** Runs in the `desktop-en` project (1440×900). */
 

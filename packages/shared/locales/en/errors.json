@@ -37,7 +37,7 @@
   "PROBATION_BEFORE_HIRE": "The probation end can’t be before the hire date.",
   "VIOLATION_RETIRED": "This violation is retired and can't be used.",
   "INVALID_LEVELS": "Levels must be numbered 1 to 5 with no gaps.",
-  "PENALTY_NOT_PENDING": "Only a pending penalty can be approved.",
+  "PENALTY_NOT_PENDING": "This penalty isn't waiting for approval any more.",
   "PENALTY_CANCELLED": "This penalty is already cancelled.",
   "VIOLATION_ONCE_PER_DAY": "This violation counts once per day, and this employee already has one on this date.",
   "PENALTY_EARLIER_PENDING": "Approve or cancel the {date} penalty for this violation first.",
@@ -55,7 +55,7 @@
   "PAYROLL_NOT_APPROVED": "Available only after the payroll is approved.",
   "PAYROLL_FINALIZED": "This month's salaries were already transferred (finalized); it can't go back to HR.",
   "PAYROLL_RUN_EXISTS": "A payroll run already exists for this month.",
-  "PENDING_PENALTIES": "Approve or cancel this month's pending penalties first.",
+  "PENDING_PENALTIES": "Decide this month's penalties that are still waiting for approval first.",
   "EMPLOYEE_NOT_IN_RUN": "This employee is not in this payroll run.",
   "AUDIT_NOT_RECORDED": "The change could not be recorded in the activity log, so it was not saved. Please try again.",
   "LAST_SYSTEM_ADMIN": "This is the last active System admin. Give the role to another user first.",
@@ -73,5 +73,11 @@
   "SAME_PASSWORD": "Choose a password different from the one you signed in with.",
   "OUTBOX_NOT_DEAD": "Only a delivery that failed for good can be retried.",
   "NOTIFICATION_TYPE_REQUIRED": "This kind of notification can't be turned off.",
-  "CHANNEL_NOT_AVAILABLE": "This channel isn't available."
+  "CHANNEL_NOT_AVAILABLE": "This channel isn't available.",
+  "PENALTY_WRONG_STEP": "This penalty has moved on: someone else acted on it first. Refresh to see where it stands.",
+  "PENALTY_REJECTED": "This penalty was rejected.",
+  "PENALTY_OWN": "You can't review or approve a penalty given to you.",
+  "PENALTY_STAGE_REQUIRED": "This employee works in several stages. Choose the stage where the violation happened.",
+  "PENALTY_STAGE_INVALID": "Choose one of this employee's stages.",
+  "INVALID_OTHER_STAGES": "Pick other stages than the main stage, each once, from the stages in use."
 }

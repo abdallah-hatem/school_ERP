@@ -140,15 +140,19 @@
         },
         "record": {
           "label": "Record penalties",
-          "description": "Record a penalty for an employee (it waits for approval)."
+          "description": "Record a penalty for an employee. It goes to the stage head of the stage where it happened, then to HR."
         },
         "approve": {
           "label": "Approve penalties",
-          "description": "Approve a pending penalty so it counts in payroll."
+          "description": "The HR step: approve a penalty waiting for HR, which fixes its level and deduction, or reject it with a reason."
         },
         "cancel": {
           "label": "Cancel penalties",
           "description": "Cancel a penalty, giving the reason."
+        },
+        "review": {
+          "label": "Review penalties (stage head)",
+          "description": "Approve, with an optional note, or reject, with a reason, a penalty recorded in your stage before it goes to HR."
         }
       },
       "lateness": {

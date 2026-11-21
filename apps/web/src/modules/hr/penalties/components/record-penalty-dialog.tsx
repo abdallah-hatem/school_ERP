@@ -1,7 +1,13 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { EmployeeStatus, type EmployeeSummary, type PenaltyGroup, type PenaltyPreview } from '@school-erp/shared';
+import {
+  EmployeeStatus,
+  type EmployeeSummary,
+  type NamedRef,
+  type PenaltyGroup,
+  type PenaltyPreview,
+} from '@school-erp/shared';
 import { useRouter } from 'next/navigation';
 import { useEffect, useId, useRef, useState } from 'react';
 import { useForm, useFormState, useWatch } from 'react-hook-form';
@@ -17,7 +23,8 @@ import { formatCount, todayIso } from '@/shared/lib/format';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { GET_EMPLOYEES } from '../../employees/apis';
-import { CREATE_PENALTY, GET_PENALTY_GROUPS, GET_PENALTY_PREVIEW } from '../apis';
+import { CREATE_PENALTY, GET_PENALTY_EMPLOYEE_STAGES, GET_PENALTY_GROUPS, GET_PENALTY_PREVIEW } from '../apis';
+import { nameIn } from '@/shared/lib/i18n';
 import { describeAction, employeeChoice, errorMessage, violationGroups } from '../lib/penalty-text';
 import { RecountList } from './recount-list';
 import {
@@ -42,7 +49,7 @@ export interface RecordPenaltyDialogProps {
 
 /** The error type of a rule the server refused the save on (`fieldForError`). */
 const SERVER_REFUSAL = 'server';
-const REFUSABLE_FIELDS = ['employeeId', 'violationId', 'date'] as const;
+const REFUSABLE_FIELDS = ['employeeId', 'violationId', 'stageId', 'date'] as const;
 
 type PreviewState =
   | { kind: 'idle' }
@@ -82,15 +89,33 @@ export function RecordPenaltyDialog({ open, onOpenChange, employee }: RecordPena
   const [answer, setAnswer] = useState<{ key: string; state: PreviewState } | null>(null);
   const previewSeq = useRef(0);
 
-  const [watchedEmployee, watchedViolation, watchedDate] = useWatch({
+  const [watchedEmployee, watchedViolation, watchedDate, watchedStage] = useWatch({
     control,
-    name: ['employeeId', 'violationId', 'date'],
+    name: ['employeeId', 'violationId', 'date', 'stageId'],
   });
 
-  // The preview's inputs, or null until all three are set (and the date isn't in the future).
+  // The employee's stages (owner 2026-11-21): one fills the stage by itself; several → a picker.
+  const [stages, setStages] = useState<{ employeeId: string; stages: NamedRef[] } | null>(null);
+  const stageSeq = useRef(0);
+  useEffect(() => {
+    const seq = ++stageSeq.current;
+    if (!open || !watchedEmployee) return;
+    void callApi(GET_PENALTY_EMPLOYEE_STAGES(watchedEmployee), { showErrorToast: false }).then((res) => {
+      if (seq !== stageSeq.current || res.unauthorized || !res.success || !res.data) return;
+      const list = res.data.stages;
+      setStages({ employeeId: watchedEmployee, stages: list });
+      const only = list.length === 1 ? list[0] : undefined;
+      form.setValue('stageId', only ? only.id : '', { shouldValidate: false });
+    });
+  }, [open, watchedEmployee, form]);
+  const employeeStages = stages?.employeeId === watchedEmployee ? stages.stages : null;
+  const choosesStage = (employeeStages?.length ?? 0) > 1;
+
+  // The preview's inputs, or null until they are set (and the date isn't in the future). An
+  // employee with several stages also needs the stage before it says where the penalty goes.
   const previewKey =
-    open && watchedEmployee && watchedViolation && watchedDate && watchedDate <= todayIso()
-      ? `${watchedEmployee}|${watchedViolation}|${watchedDate}`
+    open && watchedEmployee && watchedViolation && watchedDate && watchedDate <= todayIso() && employeeStages
+      ? `${watchedEmployee}|${watchedViolation}|${watchedDate}|${watchedStage}`
       : null;
   const preview: PreviewState =
     previewKey === null ? { kind: 'idle' } : answer?.key === previewKey ? answer.state : { kind: 'loading' };
@@ -107,15 +132,15 @@ export function RecordPenaltyDialog({ open, onOpenChange, employee }: RecordPena
   const dateRefused = errors.date?.type === SERVER_REFUSAL;
   useEffect(() => {
     clearErrors(REFUSABLE_FIELDS.filter((name) => form.getFieldState(name).error?.type === SERVER_REFUSAL));
-  }, [watchedEmployee, watchedViolation, watchedDate, clearErrors, form]);
+  }, [watchedEmployee, watchedViolation, watchedDate, watchedStage, clearErrors, form]);
 
   // Live preview: one request per change of employee, violation or date; a slower earlier answer
   // never overwrites a later one.
   useEffect(() => {
     const seq = ++previewSeq.current;
     if (previewKey === null) return;
-    const [employee = '', violation = '', date = ''] = previewKey.split('|');
-    void callApi(GET_PENALTY_PREVIEW({ employeeId: employee, violationId: violation, date }), {
+    const [employee = '', violation = '', date = '', stage = ''] = previewKey.split('|');
+    void callApi(GET_PENALTY_PREVIEW({ employeeId: employee, violationId: violation, date, stageId: stage || undefined }), {
       showErrorToast: false,
     }).then((res) => {
       if (seq !== previewSeq.current || res.unauthorized) return;
@@ -135,12 +160,17 @@ export function RecordPenaltyDialog({ open, onOpenChange, employee }: RecordPena
       reset(emptyRecordForm(employeeId));
       setFormError(null);
       setAnswer(null);
+      setStages(null);
     }
     onOpenChange(next);
   }
 
   async function onSubmit(values: RecordPenaltyValues) {
     if (inFlight.current) return;
+    if (choosesStage && !values.stageId) {
+      setError('stageId', { type: 'required', message: 'ui.form.required' }, { shouldFocus: true });
+      return;
+    }
     inFlight.current = true;
     setBusy(true);
     setFormError(null);
@@ -220,6 +250,19 @@ export function RecordPenaltyDialog({ open, onOpenChange, employee }: RecordPena
             emptyText={t('penalties.form.noViolations')}
             noMatchesText={t('penalties.form.noViolationMatches')}
           />
+          {choosesStage && employeeStages ? (
+            <SelectField
+              control={control}
+              name="stageId"
+              label={t('penalties.form.stage')}
+              required
+              disabled={busy}
+              placeholder={t('penalties.form.stagePlaceholder')}
+              hint={t('penalties.form.stageHint')}
+              // The employee's own stages (two or three): their record's parts, not a list to search.
+              options={employeeStages.map((s) => ({ value: s.id, label: nameIn(s, locale) }))}
+            />
+          ) : null}
           <DateField
             control={control}
             name="date"
@@ -230,7 +273,12 @@ export function RecordPenaltyDialog({ open, onOpenChange, employee }: RecordPena
             hint={dateRefused ? undefined : t('penalties.form.dateHint')}
             max={todayIso()}
           />
-          {previewRepeatsFieldError ? null : <PreviewLine state={preview} />}
+          {previewRepeatsFieldError ? null : (
+            <PreviewLine
+              state={preview}
+              stage={employeeStages?.find((s) => s.id === watchedStage) ?? null}
+            />
+          )}
           {preview.kind === 'ready' ? (
             <RecountList recount={preview.preview.recount} note={t('penalties.recount.recordNote')} />
           ) : null}
@@ -254,10 +302,11 @@ export function RecordPenaltyDialog({ open, onOpenChange, employee }: RecordPena
   );
 }
 
-function PreviewLine({ state }: { state: PreviewState }) {
+function PreviewLine({ state, stage }: { state: PreviewState; stage: NamedRef | null }) {
   const { t, locale } = useTranslation();
   let line: string;
   let detail: string | null = null;
+  let route: string | null = null;
   switch (state.kind) {
     case 'idle':
       line = t('penalties.preview.idle');
@@ -277,6 +326,15 @@ function PreviewLine({ state }: { state: PreviewState }) {
           : priorCount === 1
             ? t('penalties.preview.priorOne')
             : t('penalties.preview.priorMany', { count: formatCount(priorCount) });
+      // Where it goes (§4 two steps): the stage head first, or straight to HR and why.
+      const stageName = stage ? nameIn(stage, locale) : '';
+      const { startsAs, reviewSkip } = state.preview;
+      route =
+        startsAs === 'PENDING_REVIEW'
+          ? t('penalties.form.startsReview', { stage: stageName })
+          : startsAs === 'WAITING_HR' && reviewSkip
+            ? t(`penalties.form.startsHr.${reviewSkip}`, { stage: stageName })
+            : null;
       break;
     }
   }
@@ -298,6 +356,11 @@ function PreviewLine({ state }: { state: PreviewState }) {
           {line}
         </p>
         {detail ? <p className="text-xs">{detail}</p> : null}
+        {route ? (
+          <p data-testid="penalty-route" className="text-xs font-semibold">
+            {route}
+          </p>
+        ) : null}
       </div>
     </section>
   );

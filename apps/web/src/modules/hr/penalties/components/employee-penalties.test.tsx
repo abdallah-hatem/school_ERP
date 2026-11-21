@@ -14,9 +14,14 @@ const apis = vi.hoisted(() => ({
   CREATE_PENALTY: vi.fn(),
   GET_PENALTY_PREVIEW: vi.fn(),
   GET_PENALTY_GROUPS: vi.fn(),
+  GET_PENALTY_EMPLOYEE_STAGES: vi.fn().mockResolvedValue({
+    success: true,
+    status: 200,
+    data: { stages: [{ id: 's-pri', nameEn: 'Primary', nameAr: 'الابتدائي' }] },
+  }),
 }));
 vi.mock('../apis', () => apis);
-vi.mock('../../employees/apis', () => ({ GET_EMPLOYEES: vi.fn() }));
+vi.mock('../../employees/apis', () => ({ GET_EMPLOYEES: vi.fn(), GET_STAGES: vi.fn().mockResolvedValue({ success: true, status: 200, data: [] }) }));
 
 import { employee } from '../../employees/test/fixtures';
 import { groups, ok, record, renderPenalties } from '../test/fixtures';
