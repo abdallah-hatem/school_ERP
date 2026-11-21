@@ -1,3 +1,4 @@
+import { schoolDayOf } from '@school-erp/shared';
 import type { IsoDate, Month } from '@school-erp/shared';
 
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -31,8 +32,12 @@ export function toIsoDate(value: Date): IsoDate {
   return value.toISOString().slice(0, 10);
 }
 
-/** Today's calendar date on the server's clock, `YYYY-MM-DD`. */
+/**
+ * Today's calendar date **at the school** (`SCHOOL_TIME_ZONE`, Cairo), `YYYY-MM-DD` — never the
+ * server's own clock: a server on UTC is still on yesterday between midnight and 02:00 in Cairo,
+ * and "not in the future" would refuse the school's today (§3 hire date, §4 penalty date). The
+ * same day jobs, notifications and the web app use (`schoolDayOf`).
+ */
 export function todayIsoDate(now: Date = new Date()): IsoDate {
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  return schoolDayOf(now);
 }
