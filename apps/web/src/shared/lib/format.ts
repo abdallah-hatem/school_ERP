@@ -1,4 +1,9 @@
-import { formatMoney as formatPiastres, type IsoDate, type IsoDateTime, type Month, type Piastres, type TimeOfDay } from '@school-erp/shared';
+import {
+  formatClockDateTime,
+  formatClockTime,
+  formatMoney as formatPiastres,
+  formatTimeOfDayText,
+  type IsoDate, type IsoDateTime, type Month, type Piastres, type TimeOfDay } from '@school-erp/shared';
 import type { Locale } from './i18n';
 
 /** Money and day counts are pure and shared with the API: one implementation, in packages/shared. */
@@ -77,27 +82,28 @@ export function toIsoDate(date: Date): IsoDate {
   return `${y}-${m}-${d}`;
 }
 
-/** `2026-11-17T09:05:00Z` → `17 Nov 2026, 11:05` / `17 نوفمبر 2026، 11:05` in the viewer's time zone. */
-export function formatDateTime(value: IsoDateTime, locale: Locale): string {
-  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).format(new Date(value));
+/*
+ * Times are always 12-hour with AM/PM (ص/م in Arabic), on the school's clock (Cairo) so the server
+ * render, the browser and the API agree whatever zone a device is set to. These are the only
+ * places the app turns a time into text (the rules live in packages/shared/src/format.ts).
+ */
+
+/** `2026-11-17T14:07:00Z` → `4:07 PM` / `4:07 م` — the time of day at the school. */
+export function formatTime(value: IsoDateTime, locale: Locale): string {
+  return formatClockTime(value, locale);
 }
 
-/** `07:30` → `7:30 am` / `7:30 ص` — a time of day in the viewer's language (no time zone). */
+/**
+ * `2026-11-17T09:05:00Z` → `17 Nov 2026, 11:05 AM` / `17 نوفمبر 2026، 11:05 ص` at the school.
+ * `{ year: false }` → `17 Nov, 11:05 AM` (this year's dates).
+ */
+export function formatDateTime(value: IsoDateTime, locale: Locale, options: { year?: boolean } = {}): string {
+  return formatClockDateTime(value, locale, options);
+}
+
+/** `07:30` → `7:30 AM` / `7:30 ص` — a stored time of day (no time zone). */
 export function formatTimeOfDay(time: TimeOfDay, locale: Locale): string {
-  const [h = 0, m = 0] = time.split(':').map(Number);
-  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-    timeZone: 'UTC',
-  }).format(new Date(Date.UTC(2000, 0, 1, h, m)));
+  return formatTimeOfDayText(time, locale);
 }
 
 /** Today as `YYYY-MM-DD` in the person's calendar — the `max` of a date that can't be in the future. */

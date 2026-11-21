@@ -184,7 +184,7 @@ describe('AuditTimeline', () => {
     const [first] = screen.getAllByTestId('audit-entry');
     // The record's Arabic name in the Arabic sentence (finding 3).
     expect(first!.textContent).toContain('Mona Ibrahim · تعديل بيانات الموظف عمر فتحي');
-    expect(first!.textContent).toContain('14:24');
+    expect(first!.textContent).toContain('2:24\u00a0م');
     // History has no module chip or record link: the record is the page.
     expect(within(first!).queryByRole('link')).toBeNull();
   });

@@ -3,10 +3,12 @@
 Corrections recorded so they don't have to be repeated. Loaded at session start.
 
 ## Local app and tests
-- Never run `pnpm smoke` (or any `next build`) in the checkout that serves the owner's local app on
-  :3000 — smoke rebuilds `apps/web/.next`, the running server then points at replaced files and
-  pages load without CSS (only incognito shows it; normal browsers serve cached CSS). Run smoke in a
-  worktree; if it already happened, rebuild and restart the local app. — 2026-11-18
+- Smoke and API e2e run on GitHub CI only — never locally, not in a worktree, not "to rule out a
+  flake", not to verify a fix. Locally: lint, typecheck, unit tests. Review screenshots come from a
+  short headless capture script on a throwaway stack, not the smoke suite. A CI failure is fixed from
+  CI's logs and artifacts, then CI re-runs. Every agent brief says so. I broke this by telling agents to
+  run suites locally ("are agents running tests here locally ??? or on ci as we said ?"). Also: a
+  `next build` in the checkout serving :3000 breaks the running app's CSS. — 2026-11-18, 2026-11-21
 
 ## Docs
 - Only the merger writes `docs/BUILD_LOG.md` (CONVENTIONS → The PR): never tell an agent to edit it;
@@ -30,3 +32,12 @@ Corrections recorded so they don't have to be repeated. Loaded at session start.
 - Every money input groups thousands live through the shared `MoneyField`/`MoneyInput`; a guard
   test enforces it. When reviewing Tamer's PRs, check new inputs and screens against the shared
   components — the hand-rolled example box slipped through #83. — 2026-11-20
+- Review briefs (mine and for Tamer's PRs) check the **loading** state of every new or changed screen, not
+  only the loaded one: skeleton header (buttons, pills, tabs) and the route registered in the skeleton
+  shape check. #171 shipped the Approved payroll pages unregistered and without header skeletons; the
+  review only looked at loaded screens ("why our review did not pick that up ?????"). Also re-check a
+  page's height when its layout changes (table → cards made the month page too long). — 2026-11-21
+- No client-side paging, search, filtering or sorting of fetched lists — the API pages, searches, sorts
+  and totals; only static config may be filtered in the browser. My #146 and Tamer's #171 loaded whole
+  months and sliced them; every review brief checks for `.slice/.filter/.sort` on fetched lists. — 2026-11-21
+- Times shown to users are 12-hour with AM/PM (AR ص/م) through the shared formatter. — 2026-11-21

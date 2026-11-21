@@ -89,28 +89,7 @@ export function schoolDayRange(from: IsoDate, to: IsoDate): { from: IsoDateTime;
   return { from: schoolDayStart(from).toISOString(), to: schoolDayStart(addDays(to, 1)).toISOString() };
 }
 
-const timeFormatters: Record<Locale, Intl.DateTimeFormat> = {
-  en: new Intl.DateTimeFormat(INTL_LOCALE.en, { timeZone: SCHOOL_TIME_ZONE, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }),
-  ar: new Intl.DateTimeFormat(INTL_LOCALE.ar, { timeZone: SCHOOL_TIME_ZONE, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }),
-};
-
-/** `14:24` — the time of day at the school. */
-export function formatSchoolTime(at: IsoDateTime, locale: Locale): string {
-  return timeFormatters[locale].format(new Date(at));
-}
-
-/** `17 Nov 2026, 14:24` — the exact moment, for a tooltip. */
-export function formatSchoolDateTime(at: IsoDateTime, locale: Locale): string {
-  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
-    timeZone: SCHOOL_TIME_ZONE,
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23',
-  }).format(new Date(at));
-}
+// Times of day (`2:24 PM`) come from `formatTime` / `formatDateTime` in `@/shared/lib/format`.
 
 /** Calendar values are read at noon UTC so no zone can move them to another day. */
 const noon = (day: IsoDate) => {
