@@ -1,6 +1,6 @@
 'use client';
 
-import { PayrollStatus, PenaltyStatus, type PayrollRun } from '@school-erp/shared';
+import { PayrollStatus, type PayrollRun } from '@school-erp/shared';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -315,7 +315,7 @@ export function RunShell({ basePath, penaltiesHref, run: serverRun, asOf: server
               <p className="text-sm">{t('payroll.approve.pendingBody', { count: formatCount(run.pendingPenalties) })}</p>
             </div>
             <Button asChild size="sm" variant="secondary" className="cursor-pointer">
-              <Link href={`${penaltiesHref}?${new URLSearchParams({ month: run.month, status: PenaltyStatus.PENDING }).toString()}`}>
+              <Link href={`${penaltiesHref}?${new URLSearchParams({ month: run.month, status: 'OPEN' }).toString()}`}>
                 {t('payroll.approve.pendingLink')}
               </Link>
             </Button>

@@ -40,7 +40,7 @@ describe('dashboard visibility', () => {
   it('a Stage head (no hr.dashboard.view): no figures, and only the quick links they can use (Settings: stages, catalogue)', () => {
     renderAs(<DashboardView data={undefined} month="2026-11" />, sessionWith(...STAGE_HEAD_KEYS));
     expect(screen.queryByText('Active employees')).toBeNull();
-    expect(screen.queryByText('Pending penalties')).toBeNull();
+    expect(screen.queryByText('Penalties waiting')).toBeNull();
     expect(screen.getAllByRole('link').map((l) => l.textContent)).toEqual(['Record a penalty', 'Settings']);
   });
 
@@ -67,7 +67,7 @@ describe('dashboard visibility', () => {
   it('the HR manager sees all four tiles and every quick link', () => {
     renderAs(<DashboardView data={FULL} month="2026-11" />, TEST_SESSION);
     expect(screen.getByText('Active employees')).toBeTruthy();
-    expect(screen.getByText('Pending penalties')).toBeTruthy();
+    expect(screen.getByText('Penalties waiting')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Run payroll' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Add employee' })).toBeTruthy();
   });

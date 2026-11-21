@@ -2,7 +2,6 @@ import {
   EmployeeStatus,
   PAGINATION,
   PayrollStatus,
-  PenaltyStatus,
   type EmployeeSummary,
   type IsoDate,
   type PayrollRunSummary,
@@ -23,7 +22,7 @@ function monthsBefore(date: IsoDate, months: number): IsoDate {
  * The latest day a penalty can be recorded on: today, unless an earlier spec approved this month's
  * payroll (05 does — the month is then locked, §6), else the 15th of the latest open month.
  */
-async function openDay(api: Api): Promise<IsoDate> {
+export async function openDay(api: Api): Promise<IsoDate> {
   const runs = await api.get<PayrollRunSummary[]>('/hr/payroll-runs', { limit: PAGINATION.maxLimit });
   const locked = new Set(runs.filter((r) => r.status === PayrollStatus.APPROVED).map((r) => r.month));
   const today = todayIso();
@@ -50,7 +49,8 @@ export async function recordOpenPenalty(api: Api): Promise<PenaltyRecord> {
   violations.sort((a, b) => Number(a.oncePerDay) - Number(b.oncePerDay));
   // §4 approve in date order: a pair that already has a pending penalty would refuse approving it.
   const pending = await api.get<PenaltyRecord[]>('/hr/penalties', {
-    status: PenaltyStatus.PENDING,
+    // Waiting at either step (§4 two steps).
+    status: 'OPEN',
     limit: PAGINATION.maxLimit,
   });
   const waiting = new Set(pending.map((p) => `${p.employee.id}|${p.violation.id}`));

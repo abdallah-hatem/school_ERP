@@ -92,7 +92,7 @@ describe('Dashboard', () => {
 
   it('links go to the right filtered pages', () => {
     renderDashboard(DATA);
-    expect(linkTo(/Pending penalties/)).toBe('/en/penalties?month=2026-11&status=PENDING');
+    expect(linkTo(/Penalties waiting/)).toBe('/en/penalties?month=2026-11&status=OPEN');
     expect(linkTo(/Approved penalties/)).toBe('/en/penalties?month=2026-11&status=APPROVED');
     expect(linkTo(/Active employees/)).toBe('/en/employees');
     // The month has a run: the tile and "Run payroll" open it directly.
@@ -109,7 +109,7 @@ describe('Dashboard', () => {
     expect(document.documentElement.dir).toBe('rtl');
     expect(screen.getByRole('heading', { level: 1 }).textContent).toContain(BRANDING.nameAr);
     expect(screen.getByText('الابتدائية')).toBeTruthy();
-    expect(linkTo(/جزاءات معلّقة/)).toBe('/ar/penalties?month=2026-11&status=PENDING');
+    expect(linkTo(/جزاءات في الانتظار/)).toBe('/ar/penalties?month=2026-11&status=OPEN');
   });
 
   it('loading skeleton has the shape of the figures (four tiles, five quick links), no spinner', () => {
@@ -141,7 +141,7 @@ describe('loadDashboard', () => {
 describe('dashboardLinks', () => {
   it('builds the penalties filters from the month and status', () => {
     const links = dashboardLinks('ar', '2026-01');
-    expect(links.pendingPenalties).toBe('/ar/penalties?month=2026-01&status=PENDING');
+    expect(links.pendingPenalties).toBe('/ar/penalties?month=2026-01&status=OPEN');
     expect(links.lateness).toBe('/ar/lateness?month=2026-01');
   });
 });

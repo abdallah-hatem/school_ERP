@@ -1,6 +1,7 @@
 import { monthOf, type PenaltyRecord, type Uuid } from '@school-erp/shared';
 import { notFound } from 'next/navigation';
 import type { Locale } from '@/shared/lib/i18n';
+import { GET_STAGES } from '../employees/apis';
 import { GET_PENALTIES, GET_PENALTY } from './apis';
 import { ProfileEmployeePenalties } from './components/employee-penalties';
 import { PenaltiesList } from './components/penalties-list';
@@ -31,7 +32,11 @@ export async function PenaltiesScreen({ locale, searchParams }: { locale: Locale
   const focused = focusId ? await loadFocused(focusId) : undefined;
   const parsed = parsePenaltiesQuery(searchParams, currentMonth);
   const query = focused ? { ...parsed, month: monthOf(focused.date) } : parsed;
-  const penalties = await GET_PENALTIES(query);
+  const [penalties, stage] = await Promise.all([
+    GET_PENALTIES(query),
+    // The stage filter's chosen stage, by id: its name shows on the filter at once.
+    query.stageId ? GET_STAGES({ ids: [query.stageId], includeHidden: true }) : Promise.resolve(null),
+  ]);
   return (
     <PenaltiesI18n locale={locale}>
       <PenaltiesList
@@ -42,6 +47,7 @@ export async function PenaltiesScreen({ locale, searchParams }: { locale: Locale
         total={penalties.success ? (penalties.meta?.total ?? 0) : 0}
         error={!penalties.success}
         focused={focused}
+        selectedStage={stage?.success ? (stage.data?.[0] ?? null) : null}
       />
     </PenaltiesI18n>
   );

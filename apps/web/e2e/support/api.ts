@@ -14,16 +14,25 @@ export class Api {
   private constructor(private readonly ctx: APIRequestContext) {}
 
   /** Signs in as the seeded HR admin; the session cookie stays on this client. */
-  static async asAdmin(): Promise<Api> {
+  static asAdmin(): Promise<Api> {
+    return Api.as(SEED_ADMIN_EMAIL, env.adminPassword);
+  }
+
+  /** Signs in as any account that needs no password change (the seeded demo stage heads, §4). */
+  static async as(email: string, password: string): Promise<Api> {
     const ctx = await request.newContext({
       baseURL: env.apiUrl,
       extraHTTPHeaders: { 'Accept-Language': 'en' },
     });
-    const res = await ctx.post('/auth/login', {
-      data: { email: SEED_ADMIN_EMAIL, password: env.adminPassword },
-    });
+    const res = await ctx.post('/auth/login', { data: { email, password } });
     await unwrap(res, 'POST /auth/login');
     return new Api(ctx);
+  }
+
+  /** The raw response (for a refusal a spec expects: its status). */
+  status(method: 'get' | 'post', path: string, data?: unknown): Promise<number> {
+    const res = method === 'get' ? this.ctx.get(path) : this.ctx.post(path, { data: data ?? {} });
+    return res.then((r) => r.status());
   }
 
   get<T>(path: string, params?: Query): Promise<T> {

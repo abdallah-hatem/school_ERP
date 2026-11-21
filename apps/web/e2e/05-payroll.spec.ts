@@ -4,7 +4,6 @@ import {
   latenessDays,
   PAGINATION,
   PayrollStatus,
-  PenaltyStatus,
   type HrSettings,
   type LatenessRule,
   type PayrollLine,
@@ -52,7 +51,7 @@ test('payroll: run → penalty deduction → grace change → recalculate → ap
   // Pending penalties block approval (§6); the smoke database clears this month's first.
   const pending = await api.get<PenaltyRecord[]>('/hr/penalties', {
     month,
-    status: PenaltyStatus.PENDING,
+    status: 'OPEN',
     limit: PAGINATION.maxLimit,
   });
   for (const p of pending) {

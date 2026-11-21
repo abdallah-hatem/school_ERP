@@ -335,9 +335,15 @@ describe('Seed (e2e)', () => {
     expect(await db.latenessEntry.count({ where: { month: DEMO_MONTH } })).toBe(LATENESS.length);
     const byStatus = await db.penaltyRecord.groupBy({ by: ['status'], _count: true });
     const count = (s: string) => byStatus.find((b) => b.status === s)?._count ?? 0;
-    expect(count('PENDING')).toBe(2);
-    expect(count('CANCELLED')).toBe(1);
-    expect(count('APPROVED')).toBe(PENALTIES.length - 3);
+    // §4 two steps (owner 2026-11-21): the demo has a penalty in every status.
+    for (const status of ['PENDING_REVIEW', 'WAITING_HR', 'APPROVED', 'REJECTED', 'CANCELLED'] as const) {
+      const expected = PENALTIES.filter((p) => p.status === status).length;
+      expect({ status, count: count(status) }).toEqual({ status, count: expected });
+      expect(expected).toBeGreaterThan(0);
+    }
+    // The multi-stage teacher's prep penalty is prep's (the primary head never sees it).
+    const prep = await db.stage.findFirst({ where: { nameEn: 'Preparatory' }, select: { id: true } });
+    expect(await db.employeeStage.count({ where: { stageId: prep!.id } })).toBeGreaterThan(0);
     expect(await db.payrollAdjustment.count()).toBe(ADJUSTMENTS.length);
   });
 });

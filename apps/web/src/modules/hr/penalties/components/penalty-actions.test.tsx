@@ -8,7 +8,12 @@ const router = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn(), replace: vi.
 vi.mock('next/navigation', () => ({ useRouter: () => router, redirect: vi.fn() }));
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock('sonner', () => ({ toast }));
-const apis = vi.hoisted(() => ({ APPROVE_PENALTY: vi.fn(), CANCEL_PENALTY: vi.fn() }));
+const apis = vi.hoisted(() => ({
+  APPROVE_PENALTY: vi.fn(),
+  CANCEL_PENALTY: vi.fn(),
+  REVIEW_APPROVE_PENALTY: vi.fn(),
+  REJECT_PENALTY: vi.fn(),
+}));
 vi.mock('../apis', () => apis);
 
 import { chooseRowAction, menuItemNames, openRowActions, rowActionsButton } from '@/test/row-actions';
@@ -22,6 +27,8 @@ describe('PenaltyActions', () => {
     toast.error.mockReset();
     apis.APPROVE_PENALTY.mockReset();
     apis.CANCEL_PENALTY.mockReset();
+    apis.REVIEW_APPROVE_PENALTY.mockReset();
+    apis.REJECT_PENALTY.mockReset();
   });
   afterEach(cleanup);
 
@@ -38,7 +45,7 @@ describe('PenaltyActions', () => {
 
     await waitFor(() => expect(router.refresh).toHaveBeenCalled());
     expect(apis.APPROVE_PENALTY).toHaveBeenCalledTimes(1);
-    expect(apis.APPROVE_PENALTY).toHaveBeenCalledWith('p-1');
+    expect(apis.APPROVE_PENALTY).toHaveBeenCalledWith('p-1', undefined, undefined);
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 
@@ -72,14 +79,14 @@ describe('PenaltyActions', () => {
     await waitFor(() => expect(router.refresh).toHaveBeenCalled());
   });
 
-  it('a pending penalty offers Approve then Cancel (red, after a divider); approved only Cancel; cancelled nothing', async () => {
+  it('a penalty waiting for HR offers Approve, then Reject and Cancel (red, after a divider); approved only Cancel; cancelled nothing', async () => {
     const user = userEvent.setup();
     const { unmount } = renderPenalties(<PenaltyActions record={record()} />);
     let menu = await openRowActions(user, 'Mona Khalil');
-    expect(menuItemNames(menu)).toEqual(['Approve', 'Cancel']);
+    expect(menuItemNames(menu)).toEqual(['Approve', 'Reject', 'Cancel']);
     expect(within(menu).getByRole('separator')).toBeTruthy();
     // Destructive items sit after the divider.
-    const [approve, cancel] = within(menu).getAllByRole('menuitem');
+    const [approve, , cancel] = within(menu).getAllByRole('menuitem');
     expect(within(menu).getByRole('separator').compareDocumentPosition(cancel!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(approve!.compareDocumentPosition(within(menu).getByRole('separator')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     await user.keyboard('{Escape}');
@@ -103,10 +110,10 @@ describe('PenaltyActions', () => {
     trigger.focus();
     await user.keyboard('{Enter}');
     const menu = await screen.findByRole('menu');
-    const [approve, cancel] = within(menu).getAllByRole('menuitem');
+    const [approve, reject] = within(menu).getAllByRole('menuitem');
     await waitFor(() => expect(document.activeElement).toBe(approve));
     await user.keyboard('{ArrowDown}');
-    expect(document.activeElement).toBe(cancel);
+    expect(document.activeElement).toBe(reject);
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
     expect(document.activeElement).toBe(trigger);
@@ -143,7 +150,7 @@ describe('PenaltyActions', () => {
       const user = userEvent.setup();
       renderPenalties(<PenaltyActions record={waiting()} />);
       const menu = await openRowActions(user, 'Mona Khalil');
-      expect(menuItemNames(menu)).toEqual(['Approve', 'Cancel']);
+      expect(menuItemNames(menu)).toEqual(['Approve', 'Reject', 'Cancel']);
       const approve = within(menu).getByRole('menuitem', { name: /Approve/ });
       expect(approve.getAttribute('aria-disabled')).toBe('true');
       expect(approve.textContent).toContain('Approve or cancel the 4 Nov 2026 penalty for this violation first.');
@@ -240,7 +247,7 @@ describe('PenaltyActions', () => {
       expect(within(dialog).queryByRole('button', { name: 'Approve' })).toBeNull();
       await user.click(within(dialog).getByRole('button', { name: 'Approve and update 2 penalties' }));
       await waitFor(() => expect(router.refresh).toHaveBeenCalled());
-      expect(apis.APPROVE_PENALTY).toHaveBeenCalledWith('p-1', ACK);
+      expect(apis.APPROVE_PENALTY).toHaveBeenCalledWith('p-1', ACK, undefined);
     });
 
     it('Arabic: the same list and button', async () => {
@@ -273,7 +280,7 @@ describe('PenaltyActions', () => {
       );
       expect(items(dialog)).toEqual(['19 Nov 2026: level 1 → 2, Deduct 0.5 day → Deduct 1 day']);
       await user.click(within(dialog).getByRole('button', { name: 'Approve and update 1 penalty' }));
-      await waitFor(() => expect(apis.APPROVE_PENALTY).toHaveBeenLastCalledWith('p-1', [ACK[0]]));
+      await waitFor(() => expect(apis.APPROVE_PENALTY).toHaveBeenLastCalledWith('p-1', [ACK[0]], undefined));
     });
 
     it('one of them in an approved payroll month: Approve is disabled naming the month (EN + AR)', async () => {
@@ -313,5 +320,92 @@ describe('PenaltyActions', () => {
 
     renderPenalties(<PenaltyActions record={record()} />, 'en', sessionWithout('hr.penalties.approve', 'hr.penalties.cancel'));
     expect(screen.queryAllByRole('button')).toHaveLength(0);
+  });
+});
+
+describe('PenaltyActions — the two steps (§4, owner 2026-11-21)', () => {
+  beforeEach(() => {
+    router.refresh.mockReset();
+    apis.APPROVE_PENALTY.mockReset();
+    apis.REVIEW_APPROVE_PENALTY.mockReset();
+    apis.REJECT_PENALTY.mockReset();
+  });
+  afterEach(cleanup);
+
+  it('Pending stage review: the stage head approves with an optional note (sent trimmed) — never HR’s Approve', async () => {
+    const user = userEvent.setup();
+    apis.REVIEW_APPROVE_PENALTY.mockResolvedValue(ok(record({ status: 'WAITING_HR' })));
+    const session = sessionWithout('hr.penalties.approve', 'hr.penalties.cancel');
+    renderPenalties(<PenaltyActions record={record({ status: 'PENDING_REVIEW' })} />, 'en', session);
+    const menu = await openRowActions(user, 'Mona Khalil');
+    expect(menuItemNames(menu)).toEqual(['Approve', 'Reject']);
+    await user.keyboard('{Escape}');
+    await chooseRowAction(user, 'Mona Khalil', 'Approve');
+    const dialog = await screen.findByRole('dialog', { name: 'Approve at the stage review?' });
+    await user.type(within(dialog).getByRole('textbox', { name: /Note/ }), '  checked  ');
+    await user.click(within(dialog).getByRole('button', { name: 'Approve and send to HR' }));
+    await waitFor(() => expect(apis.REVIEW_APPROVE_PENALTY).toHaveBeenCalledWith('p-1', 'checked'));
+    expect(apis.APPROVE_PENALTY).not.toHaveBeenCalled();
+  });
+
+  it('reject needs a reason (blank refused); it goes to the step the user acts at', async () => {
+    const user = userEvent.setup();
+    apis.REJECT_PENALTY.mockResolvedValue(ok(record({ status: 'REJECTED' })));
+    const session = sessionWithout('hr.penalties.approve');
+    renderPenalties(<PenaltyActions record={record({ status: 'PENDING_REVIEW' })} />, 'ar', session);
+    await chooseRowAction(user, /^إجراءات منى خليل/, 'رفض');
+    const dialog = await screen.findByRole('dialog', { name: 'رفض هذا الجزاء؟' });
+    const confirm = within(dialog).getByRole('button', { name: 'رفض الجزاء' });
+    await user.type(within(dialog).getByRole('textbox', { name: /سبب الرفض/ }), '   ');
+    expect(confirm).toHaveProperty('disabled', true);
+    await user.type(within(dialog).getByRole('textbox', { name: /سبب الرفض/ }), 'كان في مهمة ');
+    await user.click(confirm);
+    await waitFor(() => expect(apis.REJECT_PENALTY).toHaveBeenCalledWith('p-1', 'كان في مهمة', 'review'));
+  });
+
+  it('Waiting for HR: HR rejects at the HR step', async () => {
+    const user = userEvent.setup();
+    apis.REJECT_PENALTY.mockResolvedValue(ok(record({ status: 'REJECTED' })));
+    renderPenalties(<PenaltyActions record={record({ status: 'WAITING_HR' })} />, 'en', sessionWithout('hr.penalties.review'));
+    await chooseRowAction(user, 'Mona Khalil', 'Reject');
+    const dialog = await screen.findByRole('dialog', { name: 'Reject this penalty?' });
+    await user.type(within(dialog).getByRole('textbox', { name: /Reason for rejecting/ }), 'No witness');
+    await user.click(within(dialog).getByRole('button', { name: 'Reject penalty' }));
+    await waitFor(() => expect(apis.REJECT_PENALTY).toHaveBeenCalledWith('p-1', 'No witness', 'hr'));
+  });
+
+  it('HR sees nothing to do on a penalty still waiting for its stage head — unless no head is left', async () => {
+    const user = userEvent.setup();
+    const hr = sessionWithout('hr.penalties.review', 'hr.penalties.cancel');
+    const { unmount } = renderPenalties(<PenaltyActions record={record({ status: 'PENDING_REVIEW' })} />, 'en', hr);
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
+    unmount();
+    renderPenalties(<PenaltyActions record={record({ status: 'PENDING_REVIEW', hrMayDecide: true })} />, 'en', hr);
+    const menu = await openRowActions(user, 'Mona Khalil');
+    expect(menuItemNames(menu)).toEqual(['Approve', 'Reject']);
+  });
+
+  it('own penalty: no review or HR actions (only cancel, for whoever may cancel)', async () => {
+    const user = userEvent.setup();
+    renderPenalties(<PenaltyActions record={record({ status: 'WAITING_HR', ownPenalty: true })} />);
+    const menu = await openRowActions(user, 'Mona Khalil');
+    expect(menuItemNames(menu)).toEqual(['Cancel']);
+  });
+
+  it('a rejected penalty has no actions', () => {
+    renderPenalties(<PenaltyActions record={record({ status: 'REJECTED' })} />);
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
+  });
+
+  it('someone acted first (409 PENALTY_WRONG_STEP): the dialog says so and the list refreshes on close', async () => {
+    const user = userEvent.setup();
+    apis.REVIEW_APPROVE_PENALTY.mockResolvedValue(failure(409, 'PENALTY_WRONG_STEP'));
+    renderPenalties(<PenaltyActions record={record({ status: 'PENDING_REVIEW' })} />, 'en', sessionWithout('hr.penalties.approve'));
+    await chooseRowAction(user, 'Mona Khalil', 'Approve');
+    const dialog = await screen.findByRole('dialog', { name: 'Approve at the stage review?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Approve and send to HR' }));
+    expect((await within(dialog).findByRole('alert')).textContent).toContain('someone else acted on it first');
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
   });
 });

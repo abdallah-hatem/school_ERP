@@ -15,7 +15,7 @@ import { formatDate } from '@/shared/lib/format';
 import { localName } from '@/shared/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
-import { EmployeeIdentity, EmployeeStatusPill } from './employee-bits';
+import { EmployeeIdentity, EmployeeStatusPill, OtherStageTags } from './employee-bits';
 import { EmployeeStatusAction } from './employee-status-action';
 
 /**
@@ -226,6 +226,9 @@ export function EmployeeDetails({ employee }: { employee: Employee }) {
         <DetailsItem label={t('employees.fields.workSystem')}>{t(`common.enums.workSystem.${employee.workSystem}`)}</DetailsItem>
         {/* Grade before the manager line and the fingerprint across: the two columns stay full. */}
         <DetailsItem label={t('employees.fields.grade')}>{text(employee.grade)}</DetailsItem>
+        <DetailsItem label={t('employees.fields.otherStages')} wide>
+          {employee.otherStages.length > 0 ? <OtherStageTags stages={employee.otherStages} /> : t('employees.otherStages.none')}
+        </DetailsItem>
         <DetailsItem label={t('employees.fields.manager')} wide>
           {employee.manager ? <EmployeeIdentity employee={employee.manager} /> : notSet}
         </DetailsItem>

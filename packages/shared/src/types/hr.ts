@@ -456,6 +456,11 @@ export interface PenaltyRecord {
    */
   hrMayDecide: boolean;
   /**
+   * The signed-in user is the penalised employee: they can't review, approve or reject it (403
+   * `PENALTY_OWN`, owner 2026-11-21) — the screens leave those actions out.
+   */
+  ownPenalty: boolean;
+  /**
    * §4 approve in date order (owner 2026-11-20): for a waiting record (either step), the earliest
    * earlier penalty of the same violation and employee (in the repetition window) still waiting at
    * either step —

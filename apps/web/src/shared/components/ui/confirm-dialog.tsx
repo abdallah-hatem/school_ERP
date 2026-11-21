@@ -10,7 +10,8 @@ import { Textarea } from './textarea';
 const REASON_MAX = 500;
 
 /**
- * "Are you sure?" with an optional required reason (cancel a penalty, deactivate an employee).
+ * "Are you sure?" with an optional required reason (cancel a penalty, deactivate an employee), or
+ * an optional note (`optionalNote`: approving a penalty, §4 two steps).
  * Confirm stays disabled until the reason has text, shows busy while `onConfirm` runs and can't be
  * pressed twice. The dialog closes only when `onConfirm` resolves without returning `false`.
  */
@@ -22,6 +23,7 @@ export function ConfirmDialog({
   confirmLabel,
   tone = 'primary',
   requireReason = false,
+  optionalNote = false,
   reasonLabel,
   reasonPlaceholder,
   onConfirm,
@@ -33,9 +35,14 @@ export function ConfirmDialog({
   confirmLabel?: string;
   tone?: 'primary' | 'destructive';
   requireReason?: boolean;
+  /** A text box that may stay empty (its label is `reasonLabel`); ignored with `requireReason`. */
+  optionalNote?: boolean;
   reasonLabel?: string;
   reasonPlaceholder?: string;
-  /** Receives the trimmed reason when `requireReason` is set. Return `false` to keep it open. */
+  /**
+   * Receives the trimmed reason when `requireReason` is set (the trimmed note, or undefined when
+   * empty, with `optionalNote`). Return `false` to keep it open.
+   */
   onConfirm: (reason?: string) => Promise<boolean | void> | boolean | void;
 }) {
   const { t } = useTranslation();
@@ -56,7 +63,7 @@ export function ConfirmDialog({
     if (busy || blocked) return;
     setBusy(true);
     try {
-      const result = await onConfirm(requireReason ? trimmed : undefined);
+      const result = await onConfirm(requireReason || (optionalNote && trimmed) ? trimmed : undefined);
       if (result !== false) {
         setReason('');
         onOpenChange(false);
@@ -90,17 +97,19 @@ export function ConfirmDialog({
           </>
         }
       >
-        {requireReason ? (
+        {requireReason || optionalNote ? (
           <div className="flex flex-col gap-2">
             <Label htmlFor={reasonId}>
               {reasonLabel ?? t('ui.dialog.reasonLabel')}
-              <span aria-hidden="true" className="ms-0.5 text-destructive">
-                *
-              </span>
+              {requireReason ? (
+                <span aria-hidden="true" className="ms-0.5 text-destructive">
+                  *
+                </span>
+              ) : null}
             </Label>
             <Textarea
               id={reasonId}
-              required
+              required={requireReason}
               rows={3}
               maxLength={REASON_MAX}
               value={reason}

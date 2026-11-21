@@ -91,6 +91,7 @@ interface Shown extends CatalogueLevel {
   recount: PenaltyRecountChange[];
   recountLockedMonth: Month | null;
   hrMayDecide: boolean;
+  ownPenalty?: boolean;
 }
 
 /** A stage-review holder: who they are and the stages their grant covers (`headsStage`). */
@@ -139,6 +140,7 @@ function toRecord(row: RecordRow, shown: Shown): PenaltyRecord {
     rejectionReason: row.rejectionReason,
     cancelledAt: iso(row.cancelledAt),
     hrMayDecide: shown.hrMayDecide,
+    ownPenalty: shown.ownPenalty ?? false,
     earlierPending: shown.earlierPending,
     recount: shown.recount,
     recountLockedMonth: shown.recountLockedMonth,
@@ -848,8 +850,12 @@ export class PenaltyRecordsService {
    */
   private async shownLevels(rows: readonly RecordRow[]): Promise<Map<Uuid, Shown>> {
     const shown = new Map<Uuid, Shown>();
+    const actor = await this.access.actor();
+    const own = (row: RecordRow) => actsOnOwnPenalty(actor?.employeeId ?? null, row.employeeId);
     const pending = rows.filter((r) => isOpenPenaltyStatus(r.status));
-    for (const row of rows) if (!isOpenPenaltyStatus(row.status)) shown.set(row.id, storedShown(row));
+    for (const row of rows) {
+      if (!isOpenPenaltyStatus(row.status)) shown.set(row.id, { ...storedShown(row), ownPenalty: own(row) });
+    }
     if (pending.length === 0) return shown;
     const holders = pending.some((r) => r.status === PenaltyStatus.PENDING_REVIEW)
       ? await this.reviewHolders()
@@ -882,6 +888,7 @@ export class PenaltyRecordsService {
         recount: recount.map(toChange),
         recountLockedMonth: await this.recountLocked(recount),
         hrMayDecide: await this.hrMayDecide(row, holders),
+        ownPenalty: own(row),
       });
     }
     return shown;

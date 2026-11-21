@@ -376,15 +376,17 @@ describe('HR approval notifications — N2 (e2e)', () => {
       expect(await itemsAbout(approver, later.id)).toHaveLength(0);
     });
 
-    it('the employee moves stage → the old stage’s approver no longer sees it; the new one isn’t told retroactively (edge 9)', async () => {
+    it('the employee moves stage → the penalty keeps its stage: its approver still sees it; the new stage’s isn’t told (edge 9, owner 2026-11-21)', async () => {
       const mover = await createEmployee({ stageId: primary });
       const penalty = await as(who.stageHead, () => recordOk(mover));
       expect(await bellItem(who.primaryApprover, penalty.id)).toBeDefined();
 
       await db.employee.update({ where: { id: mover }, data: { stageId: prep } });
 
-      expect(await bellItem(who.primaryApprover, penalty.id)).toBeUndefined();
+      // A stage scope goes by the penalty's stage (where it happened), not the employee's.
+      expect(await bellItem(who.primaryApprover, penalty.id)).toBeDefined();
       expect(await itemsAbout(who.prepApprover, penalty.id)).toHaveLength(0);
+      expect(await bellItem(who.prepApprover, penalty.id)).toBeUndefined();
     });
 
     it('deactivating the employee leaves the pending penalty’s notification open (edge 10)', async () => {

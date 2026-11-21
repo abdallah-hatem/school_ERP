@@ -105,11 +105,11 @@
       },
       "penalty": {
         "record": "تسجيل جزاء على {entity}",
-        "approve": "اعتماد شؤون الموظفين للجزاء الموقّع على {entity}",
+        "approve": "اعتماد جزاء {entity} في شؤون الموظفين",
         "cancel": "إلغاء جزاء {entity}",
         "recount": "رفع مرة جزاء {entity}",
-        "review": "موافقة مراجعة المرحلة على الجزاء الموقّع على {entity}",
-        "reject": "رفض الجزاء الموقّع على {entity}"
+        "review": "موافقة مراجعة المرحلة على جزاء {entity}",
+        "reject": "رفض جزاء {entity}"
       },
       "lateness": {
         "save": "حفظ تأخير شهر {entity}"

@@ -175,10 +175,14 @@ export async function ensureApprovedRun(api: Api): Promise<PayrollRunSummary[]> 
   if (runs.some((r) => r.status === PayrollStatus.APPROVED)) return runs;
   const thisMonth = monthOf(new Date());
   // Oldest first (§4 approves in date order).
-  const pending = (await api.get<PenaltyRecord[]>('/hr/penalties', { status: PenaltyStatus.PENDING, limit: PAGINATION.maxLimit }))
+  const pending = (await api.get<PenaltyRecord[]>('/hr/penalties', { status: 'OPEN', limit: PAGINATION.maxLimit }))
     .filter((p) => p.date.startsWith(thisMonth))
     .sort((a, b) => a.date.localeCompare(b.date));
-  for (const p of pending) await api.post(`/hr/penalties/${p.id}/approve`, {}).catch(() => undefined);
+  for (const p of pending) {
+    // §4 two steps: a penalty still at the stage review is reviewed first (the admin reviews school-wide).
+    if (p.status === PenaltyStatus.PENDING_REVIEW) await api.post(`/hr/penalties/${p.id}/review/approve`, {}).catch(() => undefined);
+    await api.post(`/hr/penalties/${p.id}/approve`, {}).catch(() => undefined);
+  }
   for (const month of [thisMonth, previousMonth(previousMonth(thisMonth))]) {
     const draft = runs.find((r) => r.month === month) ?? (await api.post<PayrollRun>('/hr/payroll-runs', { month }));
     try {

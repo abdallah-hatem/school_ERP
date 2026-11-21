@@ -173,7 +173,7 @@ describe('HR audit wiring — penalties (T29, e2e)', () => {
         { field: 'date', before: null, after: date },
         { field: 'level', before: null, after: 1 },
         { field: 'action', before: null, after: 'NOTICE' },
-        { field: 'status', before: null, after: 'PENDING' },
+        { field: 'status', before: null, after: 'WAITING_HR' },
         { field: 'note', before: null, after: 'Came at 9' },
       ]),
     );
@@ -197,7 +197,7 @@ describe('HR audit wiring — penalties (T29, e2e)', () => {
     expect(approvals).toHaveLength(1);
     expect(approvals[0]).toMatchObject({ entityType: 'penalty', entityId: second.id, entityLabel: emp.nameEn, actorId: user.id });
     // Level 2 (a day) both when recorded and when fixed at approval: only the status changed.
-    expect(changesOf(approvals[0])).toEqual([{ field: 'status', before: 'PENDING', after: 'APPROVED' }]);
+    expect(changesOf(approvals[0])).toEqual([{ field: 'status', before: 'WAITING_HR', after: 'APPROVED' }]);
     expect(await entries()).toHaveLength(1);
   });
 
@@ -210,7 +210,7 @@ describe('HR audit wiring — penalties (T29, e2e)', () => {
     const [cancel] = await entries('hr.penalty.cancel');
     expect(cancel).toMatchObject({ entityType: 'penalty', entityId: p.id, entityLabel: emp.nameEn, actorId: user.id });
     expect(changesOf(cancel)).toEqual([
-      { field: 'status', before: 'PENDING', after: 'CANCELLED' },
+      { field: 'status', before: 'WAITING_HR', after: 'CANCELLED' },
       { field: 'cancelReason', before: null, after: 'Recorded twice' },
     ]);
   });
@@ -229,7 +229,7 @@ describe('HR audit wiring — penalties (T29, e2e)', () => {
     await http(app).post(`/hr/penalties/${p.id}/cancel`).send({ reason: 'again' }).expect(409);
     expect(await entries()).toHaveLength(0);
     // …and nothing changed either.
-    expect((await db.penaltyRecord.findUnique({ where: { id: q.id } }))?.status).toBe('PENDING');
+    expect((await db.penaltyRecord.findUnique({ where: { id: q.id } }))?.status).toBe('WAITING_HR');
   });
 
   it('an approval refused for an earlier pending one (§4 date order) leaves no entry', async () => {
@@ -241,7 +241,7 @@ describe('HR audit wiring — penalties (T29, e2e)', () => {
     const res = await http(app).post(`/hr/penalties/${later.id}/approve`).expect(409);
     expect(res.body.error).toBe('PENALTY_EARLIER_PENDING');
     expect(await entries()).toHaveLength(0);
-    expect((await db.penaltyRecord.findUnique({ where: { id: later.id } }))?.status).toBe('PENDING');
+    expect((await db.penaltyRecord.findUnique({ where: { id: later.id } }))?.status).toBe('WAITING_HR');
   });
 
   it('the employee’s History lists their penalties (record, approve, cancel), with the people and fields', async () => {

@@ -54,7 +54,7 @@ describe('Home: dashboard or welcome', () => {
     expect(links).toEqual([['My account', '/en/account']]);
     expect(screen.queryByRole('region', { name: 'This month' })).toBeNull();
     expect(screen.queryByText('Active employees')).toBeNull();
-    expect(screen.queryByText('Pending penalties')).toBeNull();
+    expect(screen.queryByText('Penalties waiting')).toBeNull();
     expect(document.querySelector('[aria-busy]')).toBeNull(); // no skeleton
     expect(GET_HR_DASHBOARD).not.toHaveBeenCalled();
   });
@@ -63,7 +63,7 @@ describe('Home: dashboard or welcome', () => {
     const user = sessionWith('hr.dashboard.view', 'hr.penalties.view');
     expect(seesDashboardFigures(user)).toBe(true);
     renderAs(<DashboardSkeleton />, user);
-    expect(screen.getByText('Pending penalties')).toBeTruthy();
+    expect(screen.getByText('Penalties waiting')).toBeTruthy();
     expect(screen.getByText('Approved penalties')).toBeTruthy();
     expect(screen.queryByText('Active employees')).toBeNull();
     expect(screen.queryByRole('region', { name: 'Your screens' })).toBeNull();
@@ -82,7 +82,7 @@ describe('Home: dashboard or welcome', () => {
       sessionWith('hr.dashboard.view', 'hr.penalties.view'),
     );
     const tiles = within(screen.getByRole('region', { name: 'This month' }));
-    expect(tiles.getByText('Pending penalties')).toBeTruthy();
+    expect(tiles.getByText('Penalties waiting')).toBeTruthy();
     expect(tiles.getByText('Approved penalties')).toBeTruthy();
     expect(screen.queryByText('Active employees')).toBeNull();
     expect(screen.queryByText(/Payroll/)).toBeNull();
@@ -91,7 +91,7 @@ describe('Home: dashboard or welcome', () => {
   it('the skeleton shows no tiles with hr.dashboard.view alone', () => {
     renderAs(<DashboardSkeleton />, sessionWith('hr.dashboard.view'));
     expect(screen.queryByText('Active employees')).toBeNull();
-    expect(screen.queryByText('Pending penalties')).toBeNull();
+    expect(screen.queryByText('Penalties waiting')).toBeNull();
   });
 
   it('the server check and the tiles read the same three keys', () => {

@@ -92,7 +92,7 @@ const PENDING = {
   error: 'PENDING_PENALTIES',
   message: 'اعتمد أو ألغِ جزاءات هذا الشهر المعلقة أولًا.',
 };
-const PENDING_EN = "Approve or cancel this month's pending penalties first.";
+const PENDING_EN = "Decide this month's penalties that are still waiting for approval first.";
 
 beforeEach(() => {
     employeesApis.GET_DEPARTMENTS.mockReset().mockResolvedValue({
@@ -156,7 +156,7 @@ describe('RunPage — approve', () => {
         locale === 'en' ? 'Pending penalties dated this month: 2.' : 'جزاءات معلّقة بتاريخ هذا الشهر: 2.',
       );
       const link = within(notice).getByRole('link');
-      expect(link.getAttribute('href')).toBe(`/${locale}/penalties?month=2026-11&status=PENDING`);
+      expect(link.getAttribute('href')).toBe(`/${locale}/penalties?month=2026-11&status=OPEN`);
       // A notice, not a block: the button is still there to press.
       expect(
         (screen.getByRole('button', { name: locale === 'en' ? 'Approve payroll' : /اعتماد الرواتب/ }) as HTMLButtonElement)

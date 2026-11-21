@@ -291,7 +291,7 @@ describe('HR penalty catalogue and records (e2e)', () => {
       expect((await cancel(pending.id, 'typo').expect(409)).body.error).toBe(
         ErrorCode.PAYROLL_APPROVED,
       );
-      expect((await getRecord(pending.id)).status).toBe('PENDING');
+      expect((await getRecord(pending.id)).status).toBe('WAITING_HR');
     } finally {
       await db.payrollRun.deleteMany({ where: { month: LOCKED_MONTH } });
     }
@@ -315,7 +315,7 @@ describe('HR penalty catalogue and records (e2e)', () => {
   it('No DELETE route for penalty records', async () => {
     const rec = await recordOk(await employee(), await violation(), '2025-10-01');
     await http(app).delete(`/hr/penalties/${rec.id}`).expect(404);
-    expect((await getRecord(rec.id)).status).toBe('PENDING');
+    expect((await getRecord(rec.id)).status).toBe('WAITING_HR');
   });
 
   it('Preview: inactive employee → 409; future date → 400; retired violation → 400', async () => {
@@ -352,7 +352,7 @@ describe('HR penalty catalogue and records (e2e)', () => {
     const res = await preview(emp, v, '2025-09-10').expect(200);
     expect(res.body.data).toEqual({ level: 2, action: 'WARNING', days: null, priorCount: 1, recount: [] });
     const rec = await recordOk(emp, v, '2025-09-10');
-    expect(rec).toMatchObject({ level: 2, action: 'WARNING', status: 'PENDING' });
+    expect(rec).toMatchObject({ level: 2, action: 'WARNING', status: 'WAITING_HR' });
   });
 
   it('Another employee’s or another violation’s approved record doesn’t count', async () => {
@@ -449,7 +449,7 @@ describe('HR penalty catalogue and records (e2e)', () => {
       const ar = await approve(d20.id).set('Accept-Language', 'ar').expect(409);
       expect(ar.body.message).not.toBe(refused.body.message);
       // A refused approval writes nothing: still pending, no audit entry.
-      expect((await getRecord(d20.id)).status).toBe('PENDING');
+      expect((await getRecord(d20.id)).status).toBe('WAITING_HR');
       expect(await db.auditEntry.count({ where: { seq: { gt: before }, entityId: d20.id } })).toBe(0);
 
       // The list and the record say why before anyone tries.
@@ -609,7 +609,7 @@ describe('HR penalty catalogue and records (e2e)', () => {
     const emp = await employee();
     const rec = await recordOk(emp, await violation(), '2025-08-01');
     await approveOk(rec.id);
-    expect((await approve(rec.id).expect(409)).body.error).toBe(ErrorCode.PENALTY_NOT_PENDING);
+    expect((await approve(rec.id).expect(409)).body.error).toBe(ErrorCode.PENALTY_WRONG_STEP);
     await cancel(rec.id).expect(400);
     await cancel(rec.id, '   ').expect(400);
     const res = await cancel(rec.id, 'Investigation cleared the employee').expect(200);
@@ -691,7 +691,7 @@ describe('HR penalty catalogue and records (e2e)', () => {
       expect(turnedOn.body.data.oncePerDay).toBe(true);
       await approveOk(a.id);
       refused(await approve(b.id));
-      expect((await getRecord(b.id)).status).toBe('PENDING');
+      expect((await getRecord(b.id)).status).toBe('WAITING_HR');
       // b can still be cancelled; an earlier approved penalty is untouched.
       await cancel(b.id, 'duplicate').expect(200);
       expect(await getRecord(earlier.id)).toMatchObject({ status: 'APPROVED', level: earlier.level });
@@ -757,7 +757,7 @@ describe('HR penalty catalogue and records (e2e)', () => {
     expect((await preview(emp, v, '2025-10-05').expect(200)).body.data.level).toBe(1);
     const first = await recordOk(emp, v, '2025-10-05');
     expect(first).toMatchObject({
-      status: 'PENDING',
+      status: 'WAITING_HR',
       level: 1,
       action: 'NOTICE',
       createdBy: { id: userId },
@@ -790,7 +790,7 @@ describe('HR penalty catalogue and records (e2e)', () => {
     ]);
     const pendingOnly = await http(app)
       .get('/hr/penalties')
-      .query({ employeeId: emp, status: 'PENDING' })
+      .query({ employeeId: emp, status: 'WAITING_HR' })
       .expect(200);
     expect((pendingOnly.body.data as PenaltyRecord[]).map((r) => r.id)).toEqual([pendingRec.id]);
     await http(app).get('/hr/penalties').query({ month: '2025-13' }).expect(400);
