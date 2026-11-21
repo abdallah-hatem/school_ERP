@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useId, useMemo, useState, type ReactNode } from 'react';
+import { useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useCan } from '@/core/auth/session-context';
 import { ChevronDownIcon } from '@/shared/components/ui/icons';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover';
@@ -18,6 +18,7 @@ import {
   type NavItem,
   type NavModule,
 } from './nav-items';
+import { useCurrentItemInView } from './use-current-in-view';
 
 /*
  * The menu, grouped by module (docs/ARCHITECTURE.md → core/navigation).
@@ -30,6 +31,9 @@ import {
  *   none left is not drawn.
  * - `rail` (768–1279px): one icon per module with its name as tooltip; a module with several pages
  *   opens them in a flyout beside the rail.
+ * - The menu scrolls on its own. On load, on navigation and when the drawer opens, the current
+ *   entry is brought into view if it is off screen (the menu only, never the page); otherwise the
+ *   menu keeps its scroll position.
  */
 export function SidebarNav({
   variant,
@@ -44,10 +48,12 @@ export function SidebarNav({
   const can = useCan();
   const modules = useMemo(() => visibleModules(NAV_MODULES, can), [can]);
   const rail = variant === 'rail';
+  const panel = useRef<HTMLDivElement>(null);
+  useCurrentItemInView(panel, usePathname() ?? '');
 
   return (
     <nav aria-label={t('ui.shell.mainNav')} className="flex min-h-0 flex-1 flex-col gap-4">
-      <div className="scrollbar-clean -mx-1 min-h-0 flex-1 overflow-y-auto px-1">
+      <div ref={panel} data-nav-panel className="scrollbar-clean -mx-1 min-h-0 flex-1 overflow-y-auto px-1">
         <ul className={cn('flex flex-col gap-1.5', rail && 'items-center')}>
           {modules.map((module) => (
             <li key={module.key} className={cn(rail && 'w-auto')}>
@@ -300,7 +306,13 @@ function RailModule({ module }: { module: NavModule }) {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button type="button" aria-label={name} title={name} className={tileClass}>
+        <button
+          type="button"
+          aria-label={name}
+          title={name}
+          data-nav-current={active ? '' : undefined}
+          className={tileClass}
+        >
           <ModuleTile module={module} />
         </button>
       </PopoverTrigger>

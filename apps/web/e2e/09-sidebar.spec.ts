@@ -31,3 +31,23 @@ for (const locale of ['en', 'ar'] as const) {
     await expectSidebarCoversViewport(page);
   });
 }
+
+for (const locale of ['en', 'ar'] as const) {
+  test(`the current page low in the menu is in view without scrolling it (${locale})`, async ({ page }) => {
+    await signIn(page, locale);
+    await page.goto(`/${locale}/settings`);
+    const panel = page.locator('aside [data-nav-panel]').filter({ visible: true });
+    const current = panel.locator('[aria-current="page"]');
+    await expect(current).toBeVisible();
+    // The menu is taller than its panel here, or this proves nothing.
+    expect(await panel.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
+    await expect
+      .poll(async () => {
+        const [box, item] = [await panel.boundingBox(), await current.boundingBox()];
+        return !!box && !!item && item.y >= box.y && item.y + item.height <= box.y + box.height;
+      })
+      .toBe(true);
+    // Only the menu scrolled, never the page.
+    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  });
+}
