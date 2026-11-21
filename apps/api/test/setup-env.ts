@@ -1,3 +1,11 @@
+import { existsSync } from 'node:fs';
+
+// On a machine that has ~/.config/school-erp/e2e-ci-only (the owner's, so also every Claude agent
+// on it), API e2e tests run on GitHub CI only (owner, 2026-11-21). Other developers run them locally.
+if (process.env.GITHUB_ACTIONS !== 'true' && existsSync(join(homedir(), '.config/school-erp/e2e-ci-only'))) {
+  throw new Error('On this machine API e2e tests run on GitHub CI only (owner rule). Push and let CI run them.');
+}
+
 /**
  * e2e environment. DATABASE_URL and PORT come from the caller's env so parallel agents each use
  * their own database (create one with `scripts/e2e-db.sh <n>`):
@@ -7,7 +15,7 @@
  *
  * Refuses to run against anything that isn't an `_e2e` database — teardown deletes rows.
  */
-import { tmpdir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const url = process.env.DATABASE_URL;

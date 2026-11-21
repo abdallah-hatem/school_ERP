@@ -510,6 +510,15 @@ phase live in `docs/build-log/`.
 - 2026-11-21 — Owner: review gaps → #206 (review checklist: shared inputs, loading states + skeleton
   registration). Owner rule: **no client-side paging/search/filter/sort anywhere** — the statement (#146,
   mine) and the Approved payroll month (#171) do it; being moved to the server with a CI guard.
+- 2026-11-21 — Tab switches → #211: the selected marker cross-faded (`transition-colors` on the selected
+  state) so the old tab looked selected for ~150 ms; now hover-only fade, Settings sections switch with
+  `history.replaceState` (no server render), a new section/tab opens at its top, My account's header stays
+  mounted, Activity's module switch moves on click; guard spec 30-tab-switch. Rules added to the
+  building-frontends skill (1.62.22).
+- 2026-11-21 — CI-only suites → #209/#210 (owner: "are agents running tests here locally ??? or on ci",
+  then "for me but not for the team"): a marker `~/.config/school-erp/e2e-ci-only` on the owner's machine
+  makes `pnpm smoke`, the Playwright config and the API e2e setup refuse to start outside GitHub Actions —
+  so every agent on that machine is blocked; the team runs them locally. CONVENTIONS → Where tests run.
 ## Next up
 
 - Custom icon set drawn (`design/mockups/icon-set.html`, style G monoline + solid when selected) —
