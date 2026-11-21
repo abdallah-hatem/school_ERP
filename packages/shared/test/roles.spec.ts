@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ADMIN_ONLY_AT_START,
   BUILT_IN_ROLES,
   PERMISSION_KEYS,
   PERMISSION_SCOPES,
@@ -74,8 +75,13 @@ describe('starting roles (spec table, GUESS)', () => {
     }
   });
 
-  it('HR manager: all of HR plus the Activity log, scope all', () => {
-    const hr = PERMISSION_KEYS.filter((k) => k.startsWith('hr.'));
+  it('the dashboard charts: System admin only at the start (owner, 2026-11-21)', () => {
+    expect(ADMIN_ONLY_AT_START).toEqual(['hr.dashboard.view_analytics']);
+    expect(holders('hr.dashboard.view_analytics')).toEqual(['system_admin']);
+  });
+
+  it('HR manager: all of HR (but the admin-only keys) plus the Activity log, scope all', () => {
+    const hr = PERMISSION_KEYS.filter((k) => k.startsWith('hr.') && !ADMIN_ONLY_AT_START.includes(k));
     expect(keysOf('hr_manager')).toEqual(expect.arrayContaining([...hr, 'core.audit.view']));
     expect(new Set(Object.values(role('hr_manager').permissions))).toEqual(new Set(['all']));
   });

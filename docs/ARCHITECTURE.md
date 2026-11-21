@@ -866,6 +866,13 @@ The first module built, and the first demo for the client (payroll and penalties
      table.
   3. **Dependency inversion:** HR defines an interface ("extra paid hours for employee X this
      month"); academics implements and registers it.
+- **Dashboard charts** (owner, 2026-11-21): `GET /hr/dashboard/analytics?months=6|12`
+  (`hr.dashboard.view_analytics`), the query validated by the shared zod schema
+  (`dashboardAnalyticsQuerySchema`, through `common/pipes/SchemaPipe`). The API works out every
+  figure (`dashboard/analytics.pure.ts`, from aggregates in `DashboardAnalyticsRepository`, which
+  also reads accounting's worked-out months — a read, never a write); each part follows its
+  screen's permission and scope. The web draws them with small inline-SVG components
+  (`modules/hr/dashboard/charts/`), no chart library.
 - **Events HR publishes** (for higher modules to react): `hr.employee.hired`,
   `hr.employee.updated` (fire-and-forget), `hr.employee.deactivated` and `hr.payroll.approved`
   (must-deliver). Details: `docs/EVENTS.md`.

@@ -78,6 +78,14 @@
   from: headcount needs "View employees", the payroll tile "View payroll", the penalty tiles "View
   penalties". A role allowed to see the dashboard but none of those three gets the welcome above
   instead of an empty page. Recommended by Claude (owner found the empty page), owner to confirm.
+- **DECIDED** (owner, 2026-11-21) — The dashboard's **charts** (payroll cost, headcount, penalties
+  and lateness, deductions vs net, over 6 or 12 months; §6) need their own permission, **View the
+  dashboard charts** (`hr.dashboard.view_analytics`): "for now make it only visible to the system
+  admin". No starting role holds it but the System admin (who holds every permission); an admin can
+  give it to any role. Each chart also needs its screen's permission and follows its scope (a stage
+  head's charts count their stage), money only for those who see the payroll totals, and the
+  deductions only with every salary (§10). Without it the dashboard is as before — no charts, no
+  6 / 12 months switch.
 - **GUESS** (enforced, 2026-11-18) — Someone who may see a Settings section but not change it sees
   it read-only (§7): a stage head and a direct manager see Structure and the penalty catalogue, the
   principal sees the lists. They keep Settings in their menu for now (owner hasn't decided

@@ -12,6 +12,8 @@ import { HrRemindersService } from './reminders/hr-reminders.service';
 import { RemindersRepository } from './reminders/repositories/reminders.repository';
 import { DashboardController } from './dashboard/controllers/dashboard.controller';
 import { DashboardService } from './dashboard/services/dashboard.service';
+import { DashboardAnalyticsRepository } from './dashboard/repositories/dashboard-analytics.repository';
+import { DashboardAnalyticsService } from './dashboard/services/dashboard-analytics.service';
 import { EmployeesController } from './employees/controllers/employees.controller';
 import { EmployeesRepository } from './employees/repositories/employees.repository';
 import { EmployeesService } from './employees/services/employees.service';
@@ -100,6 +102,9 @@ import { LatenessService } from './staff-attendance/services/lateness.service';
     PayrollRunsRepository,
     PayrollService,
     DashboardService,
+    // the dashboard charts (owner, 2026-11-21)
+    DashboardAnalyticsRepository,
+    DashboardAnalyticsService,
   ],
   exports: [
     // lists + employees (T5)

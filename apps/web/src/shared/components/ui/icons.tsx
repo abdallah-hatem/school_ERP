@@ -54,6 +54,9 @@ import {
   SquaresFourIcon as SquaresFour,
   TrashIcon as Trash,
   TrayIcon as Tray,
+  TableIcon as Table,
+  ChartBarIcon as ChartBar,
+  CalendarDotsIcon as CalendarDots,
   TreeStructureIcon as TreeStructure,
   UploadSimpleIcon as UploadSimple,
   UserCheckIcon as UserCheck,
@@ -167,6 +170,11 @@ export const CheckIcon = duotone(Check, 'Check');
 export const SearchIcon = duotone(MagnifyingGlass, 'Search');
 export const CalendarIcon = duotone(CalendarBlank, 'Calendar');
 export const RetryIcon = duotone(ArrowClockwise, 'Retry');
+/** A chart card's Table / Chart toggle, and the 6 / 12 months switch. */
+export const TableIcon = duotone(Table, 'Table');
+export const ChartIcon = duotone(ChartBar, 'Chart');
+export const MonthsShortIcon = duotone(CalendarBlank, 'MonthsShort');
+export const MonthsLongIcon = duotone(CalendarDots, 'MonthsLong');
 
 /**
  * The "add" mark on every Add / Create / Record button: a bold plus in a small soft rounded badge

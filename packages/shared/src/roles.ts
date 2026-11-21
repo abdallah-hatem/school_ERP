@@ -44,7 +44,14 @@ const all = (...keys: PermissionKey[]) =>
 const scoped = (scope: Scope, ...keys: PermissionKey[]) =>
   Object.fromEntries(keys.map((k) => [k, scope])) as Partial<Record<PermissionKey, Scope>>;
 
-const HR_KEYS = PERMISSION_KEYS.filter((k) => k.startsWith('hr.'));
+/**
+ * Keys no starting role holds but the System admin (who holds every key): an admin grants them to
+ * other roles. The dashboard's analytics charts — "for now make it only visible to the system
+ * admin" (owner, 2026-11-21, §2).
+ */
+export const ADMIN_ONLY_AT_START: readonly PermissionKey[] = ['hr.dashboard.view_analytics'];
+
+const HR_KEYS = PERMISSION_KEYS.filter((k) => k.startsWith('hr.') && !ADMIN_ONLY_AT_START.includes(k));
 
 /** A team or stage role sees and records penalties for its people; the lists it picks from are school-wide. */
 const lineManager = (scope: Scope) => ({

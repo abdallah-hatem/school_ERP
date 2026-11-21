@@ -172,8 +172,10 @@ function previousMonth(month: string): string {
 export async function ensureApprovedRun(api: Api): Promise<PayrollRunSummary[]> {
   const list = () => api.get<PayrollRunSummary[]>('/hr/payroll-runs', { limit: PAGINATION.maxLimit });
   const runs = await list();
-  if (runs.some((r) => r.status === PayrollStatus.APPROVED)) return runs;
   const thisMonth = monthOf(new Date());
+  // This month's approved run is the one the run skeleton traces (its title names this month). The
+  // seed approves earlier months too (the dashboard charts), so "some approved run" isn't enough.
+  if (runs.some((r) => r.status === PayrollStatus.APPROVED && r.month === thisMonth)) return runs;
   // Oldest first (§4 approves in date order).
   const pending = (await api.get<PenaltyRecord[]>('/hr/penalties', { status: PenaltyStatus.PENDING, limit: PAGINATION.maxLimit }))
     .filter((p) => p.date.startsWith(thisMonth))
@@ -181,6 +183,7 @@ export async function ensureApprovedRun(api: Api): Promise<PayrollRunSummary[]> 
   for (const p of pending) await api.post(`/hr/penalties/${p.id}/approve`, {}).catch(() => undefined);
   for (const month of [thisMonth, previousMonth(previousMonth(thisMonth))]) {
     const draft = runs.find((r) => r.month === month) ?? (await api.post<PayrollRun>('/hr/payroll-runs', { month }));
+    if (draft.status === PayrollStatus.APPROVED) return list();
     try {
       await api.post(`/hr/payroll-runs/${draft.id}/approve`, {});
       return list();
@@ -188,6 +191,8 @@ export async function ensureApprovedRun(api: Api): Promise<PayrollRunSummary[]> 
       // 409 PENDING_PENALTIES: try the next month.
     }
   }
+  // An earlier month the seed approved still gives the run, payslip and Approved payroll pages.
+  if (runs.some((r) => r.status === PayrollStatus.APPROVED)) return runs;
   throw new Error('smoke: no payroll run could be approved for the skeleton checks');
 }
 
@@ -213,7 +218,16 @@ async function readPaths(): Promise<Record<SkeletonScreenName, string | null>> {
     // phone pass (no 05) approves the month before last here: this month stays open for later
     // specs, and last month's lateness board (checked below) stays unlocked.
     const runs = await ensureApprovedRun(api);
-    const approved = runs.find((r) => r.status === PayrollStatus.APPROVED);
+    const thisMonth = monthOf(new Date());
+    const approved =
+      runs.find((r) => r.status === PayrollStatus.APPROVED && r.month === thisMonth) ??
+      runs.find((r) => r.status === PayrollStatus.APPROVED);
+    // The newest open lateness board before this month: an approved month locks its board (a pill,
+    // no Save) — a state the skeleton can't know before the data — and the seed approves the
+    // months before this one (the dashboard charts), so step back past them.
+    const lockedMonths = new Set(runs.filter((r) => r.status === PayrollStatus.APPROVED).map((r) => r.month));
+    let latenessMonth = previousMonth(thisMonth);
+    for (let i = 0; i < 36 && lockedMonths.has(latenessMonth); i++) latenessMonth = previousMonth(latenessMonth);
     const run = await api.get<PayrollRun>(`/hr/payroll-runs/${(approved ?? runs[0]!).id}`);
     const line = approved ? run.lines[0] : undefined;
     const admin = await adminAccount(api);
@@ -247,9 +261,9 @@ async function readPaths(): Promise<Record<SkeletonScreenName, string | null>> {
       'employee-new': '/employees/new',
       'employee-edit': `${e}/edit`,
       penalties: '/penalties',
-      // Last month: this month's payroll may be approved (05-payroll), which locks its lateness
-      // board and drops its Save button — a state the skeleton can't know.
-      lateness: `/lateness?month=${previousMonth(monthOf(new Date()))}`,
+      // The newest open month before this one (above): an approved month locks its lateness board
+      // and drops its Save button — a state the skeleton can't know.
+      lateness: `/lateness?month=${latenessMonth}`,
       payroll: '/payroll',
       'payroll-run': `/payroll/${run.id}`,
       // Every run has entries from its creation (T29), so the History compares its pagination too.

@@ -4,7 +4,7 @@ import { PayrollStatus, SCREENS, type HrDashboard, type Month } from '@school-er
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTransition, type ReactNode } from 'react';
-import { canAny, useSession, type PermissionRequirement } from '@/core/auth';
+import { can, canAny, useSession, type PermissionRequirement } from '@/core/auth';
 import { useSchoolBranding } from '@/core/settings';
 import { ErrorState } from '@/shared/components/layout/empty-state';
 import { PageHeader } from '@/shared/components/layout/page-header';
@@ -27,20 +27,26 @@ import { StatusPill } from '@/shared/components/ui/status-pill';
 import { formatCount, formatMoney, formatMonth } from '@/shared/lib/format';
 import { nameIn } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
+import { AnalyticsSkeleton } from './charts/analytics-skeleton';
+import { RangeSwitch } from './charts/range-switch';
 import { dashboardLinks, type DashboardLinks } from './dashboard-links';
 import { anyTile, seesDashboardFigures, tilesShown, type DashboardTilesShown } from './dashboard-tiles';
 
 /** Phone 2×2 (1 column below 360px), tablet 2, desktop 4. */
 const TILE_GRID = 'grid grid-cols-1 gap-4 min-[360px]:grid-cols-2 xl:grid-cols-4';
 
-/** Greeting with the school's name and the month the figures are for. */
-export function DashboardHeader({ month }: { month: Month }) {
+/**
+ * Greeting with the school's name and the month the figures are for; with the charts, the 6 / 12
+ * months switch at its end (hidden while there are no trends to range over).
+ */
+export function DashboardHeader({ month, range = false }: { month: Month; range?: boolean }) {
   const { t, locale } = useTranslation();
   const { branding } = useSchoolBranding();
   return (
     <PageHeader
       title={t('dashboard.greeting', { school: nameIn(branding, locale) })}
       description={t('dashboard.description', { month: formatMonth(month, locale) })}
+      actions={range ? <RangeSwitch /> : undefined}
     />
   );
 }
@@ -213,10 +219,12 @@ export interface DashboardViewProps {
   data: HrDashboard | null | undefined;
   /** The month the figures are for (this month). */
   month: Month;
+  /** The charts (with `hr.dashboard.view_analytics`), streamed on their own between the tiles and the quick links. */
+  charts?: ReactNode;
 }
 
-/** The figures under the header: tiles and quick links, or an error with a retry. */
-export function DashboardView({ data, month }: DashboardViewProps) {
+/** The figures under the header: tiles, the charts and quick links, or an error with a retry. */
+export function DashboardView({ data, month, charts }: DashboardViewProps) {
   const { t, locale } = useTranslation();
   const router = useRouter();
   const [retrying, startRetry] = useTransition();
@@ -236,16 +244,18 @@ export function DashboardView({ data, month }: DashboardViewProps) {
           />
         </div>
       )}
+      {charts}
       <QuickLinks links={links} />
     </>
   );
 }
 
-/** First load: the tiles and quick links in their final shape, nothing that shifts. */
+/** First load: the tiles, the charts and quick links in their final shape, nothing that shifts. */
 export function DashboardSkeleton() {
   const { t, locale } = useTranslation();
   const shown = useTilesShown();
-  const seesFigures = seesDashboardFigures(useSession());
+  const user = useSession();
+  const seesFigures = seesDashboardFigures(user);
   const quick = useQuickLinks();
   return (
     // `contents`: the tiles and quick links stay direct items of the screen's column, as loaded.
@@ -299,6 +309,7 @@ export function DashboardSkeleton() {
         ) : null}
       </div>
       ) : null}
+      {seesFigures && can(user, 'hr.dashboard.view_analytics') ? <AnalyticsSkeleton announce={false} /> : null}
       {quick.length > 0 ? (
         // The real buttons (their labels wrap as loaded), masked: each a pulsing block.
         <div aria-hidden="true" inert className="skeleton-mask">
