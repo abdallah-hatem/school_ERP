@@ -30,7 +30,8 @@
     "accounting_payroll": "Payroll taxes",
     "outbox_delivery": "Event delivery",
     "notification_preferences": "Notification preferences",
-    "notification_settings": "Notification settings"
+    "notification_settings": "Notification settings",
+    "push_device": "Alerts device"
   },
   "actions": {
     "core": {
@@ -70,6 +71,10 @@
       },
       "notification_settings": {
         "update": "Changed the notification settings"
+      },
+      "push_device": {
+        "add": "Turned on alerts on {entity}",
+        "remove": "Removed {entity} from alerts"
       }
     },
     "hr": {

@@ -16,6 +16,9 @@ import {
 export const NODE_ENVS = ['development', 'test', 'production'] as const;
 export type NodeEnv = (typeof NODE_ENVS)[number];
 
+/** An empty `KEY=` line in an env file counts as not set. */
+const emptyToUndefined = ({ value }: { value: unknown }) => (value === '' ? undefined : value);
+
 /** Every environment variable the API reads. A missing required one fails at boot. */
 export class EnvironmentVariables {
   @IsOptional()
@@ -90,6 +93,45 @@ export class EnvironmentVariables {
   )
   @IsBoolean()
   JOBS_ENABLED?: boolean;
+
+  /**
+   * Web Push (VAPID) keys, base64url — `npx web-push generate-vapid-keys`, or `pnpm run setup` for a
+   * fresh clone. Optional: without them push alerts are off ("not set up on this server"); set
+   * all three or none. Never committed.
+   */
+  @IsOptional()
+  @Transform(emptyToUndefined)
+  @IsString()
+  @Matches(/^[A-Za-z0-9_-]{80,100}$/, { message: 'VAPID_PUBLIC_KEY must be a base64url P-256 public key' })
+  VAPID_PUBLIC_KEY?: string;
+
+  @IsOptional()
+  @Transform(emptyToUndefined)
+  @IsString()
+  @Matches(/^[A-Za-z0-9_-]{40,50}$/, { message: 'VAPID_PRIVATE_KEY must be a base64url P-256 private key' })
+  VAPID_PRIVATE_KEY?: string;
+
+  /** Who runs this server, for the push services: `mailto:…` or an `https://` URL. */
+  @IsOptional()
+  @Transform(emptyToUndefined)
+  @IsString()
+  @Matches(/^(mailto:|https:\/\/)\S+$/, { message: 'VAPID_SUBJECT must be a mailto: or https:// URL' })
+  VAPID_SUBJECT?: string;
+}
+
+/** The three VAPID values together, or null when push is off. Some but not all → an error at boot. */
+export function vapidFrom(
+  env: Pick<EnvironmentVariables, 'VAPID_PUBLIC_KEY' | 'VAPID_PRIVATE_KEY' | 'VAPID_SUBJECT'>,
+): { publicKey: string; privateKey: string; subject: string } | null {
+  const { VAPID_PUBLIC_KEY: publicKey, VAPID_PRIVATE_KEY: privateKey, VAPID_SUBJECT: subject } = env;
+  const set = [publicKey, privateKey, subject].filter((v) => v !== undefined && v !== '');
+  if (set.length === 0) return null;
+  if (!publicKey || !privateKey || !subject) {
+    throw new Error(
+      'Invalid environment configuration — VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY and VAPID_SUBJECT go together: set all three or none',
+    );
+  }
+  return { publicKey, privateKey, subject };
 }
 
 /** Used by `ConfigModule.forRoot({ validate })`. Throws with every problem listed. */

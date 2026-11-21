@@ -96,6 +96,11 @@ import {
   ClockCountdownIcon as ClockCountdown,
   CalendarCheckIcon as CalendarCheck,
   ChecksIcon as Checks,
+  BellRingingIcon as BellRinging,
+  DeviceMobileIcon as DeviceMobile,
+  DesktopIcon as Desktop,
+  DownloadSimpleIcon as DownloadSimple,
+  ExportIcon as ShareArrow,
 } from '@phosphor-icons/react/ssr';
 import type { ComponentType, SVGProps } from 'react';
 import { cn } from '@/shared/lib/utils';
@@ -306,6 +311,13 @@ export const SameRuleIcon = duotone(EquivalentRule, 'SameRule');
 export const OtherRuleIcon = duotone(NotEquals, 'OtherRule');
 // Notifications (§11): the bell, its actions and one icon per kind of notification.
 export const NotificationsIcon = duotone(Bell, 'Notifications');
+// The installed app and push alerts (2026-11-21).
+export const DeviceAlertsIcon = duotone(BellRinging, 'DeviceAlerts');
+export const PhoneDeviceIcon = duotone(DeviceMobile, 'PhoneDevice');
+export const ComputerDeviceIcon = duotone(Desktop, 'ComputerDevice');
+export const InstallAppIcon = duotone(DownloadSimple, 'InstallApp');
+/** Safari's Share button (a square with an arrow up), for the Add to Home Screen steps. */
+export const ShareIcon = duotone(ShareArrow, 'Share');
 export const MarkAllReadIcon = duotone(Checks, 'MarkAllRead');
 export const NotificationSettingsIcon = duotone(GearSix, 'NotificationSettings');
 export const ContractEndIcon = duotone(FileText, 'ContractEnd');

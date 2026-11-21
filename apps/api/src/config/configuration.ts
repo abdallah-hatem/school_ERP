@@ -1,4 +1,4 @@
-import { validateEnv, type NodeEnv } from './env.validation';
+import { validateEnv, vapidFrom, type NodeEnv } from './env.validation';
 
 /** Typed application config. The only place `process.env` is read (house lint rule). */
 export interface AppConfig {
@@ -18,6 +18,8 @@ export interface AppConfig {
     /** Scheduled jobs run on their clock (off under NODE_ENV=test unless JOBS_ENABLED=true). */
     enabled: boolean;
   };
+  /** Web Push (VAPID); null: push alerts are off on this server. */
+  push: { publicKey: string; privateKey: string; subject: string } | null;
 }
 
 export const configuration = (): AppConfig => {
@@ -36,5 +38,6 @@ export const configuration = (): AppConfig => {
       cookieSecure: env.COOKIE_SECURE ?? env.NODE_ENV === 'production',
     },
     jobs: { enabled: env.JOBS_ENABLED ?? env.NODE_ENV !== 'test' },
+    push: vapidFrom(env),
   };
 };

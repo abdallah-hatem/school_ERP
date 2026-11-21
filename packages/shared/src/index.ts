@@ -7,6 +7,7 @@ export * from './events';
 export * from './audit';
 export * from './permissions';
 export * from './notifications';
+export * from './pwa';
 export * from './roles';
 export * from './screens';
 export * from './screens';

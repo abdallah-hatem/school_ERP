@@ -4,6 +4,7 @@ import type { SessionUser } from '@school-erp/shared';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from '@/core/auth';
+import { forgetDeviceThenSubmit } from '@/core/pwa';
 import { SignOutIcon } from '@/shared/components/ui/icons';
 import { PersonAvatar } from '@/shared/components/ui/person-avatar';
 import { localName } from '@/shared/lib/i18n';
@@ -58,7 +59,7 @@ export function UserChip({ user, compact = false }: { user: SessionUser; compact
           </span>
         </span>
       </Link>
-      <form action={signOut.bind(null, locale)}>
+      <form action={signOut.bind(null, locale)} onSubmit={forgetDeviceThenSubmit}>
         <button
           type="submit"
           aria-label={t('common.actions.signOut')}

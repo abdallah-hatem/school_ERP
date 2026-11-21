@@ -11,11 +11,12 @@ and its list, My account → Notifications, Settings → Notifications).
 
 - **DECIDED** (owner, 2026-11-18) — One channel for now: **in the app**. A bell shows how many
   notifications are unread and opens the list. Email, WhatsApp and SMS are Planned, and adding one
-  must not change how any module decides what to send.
+  must not change how any module decides what to send. (2026-11-21: **push alerts** to the
+  person's devices added — "Push alerts and the installed app" below.)
 - **DECIDED** (owner, 2026-11-18) — **The bell opens a short list over the page** (all, or unread
   only), with "Mark all as read" and a link to the notification settings; on a phone the list
   fills the screen. The screens show only notifications in the app — no other channel is mentioned
-  anywhere.
+  anywhere (except, since 2026-11-21, "Alerts on this device" on My account → Notifications).
 - **DECIDED** (owner, 2026-11-18) — Recipients are **staff users** now. Parents and students are
   Planned.
 - **DECIDED** — A person sees only their own notifications. Nobody, the System admin included, reads
@@ -40,6 +41,33 @@ and its list, My account → Notifications, Settings → Notifications).
 - **Built** (2026-11-19) — Everyone sees the school's name and logo in the app (side bar, top bar,
   dashboard, browser tab), whatever they may do; only the Settings screen needs the right to view
   settings.
+
+## Push alerts and the installed app
+
+- **DECIDED** (owner, 2026-11-21) — The ERP **installs as an app** (phone, tablet, computer), named
+  after the school, with the school's logo as its icon (a generic icon without a logo). My account
+  → Install app: the browser's own install dialog where it has one; on an iPhone or iPad the Add to
+  Home Screen steps; nothing where the browser can't install. No banner asks.
+- **DECIDED** (owner, 2026-11-21) — A second channel, **push**: what reaches a person's bell also
+  arrives as an alert on each of their devices that has **Alerts on this device** on (My account →
+  Notifications). The switch is per device; My devices lists them, each removable. It asks the
+  browser's permission when turned on, never on its own.
+- **DECIDED** (owner, 2026-11-21) — Alerts follow the per-kind switches (no second switch per kind);
+  kinds that can't be turned off always come. Settings → Notifications has nothing new.
+- **DECIDED** (owner, 2026-11-21) — An alert says what the bell says, in the device's language,
+  opens the same page, and **never shows money** (a payroll month's net) — nor a typed reason.
+- **GUESS** — An alert is sent once per new item; a group's alert is replaced by its next one (one
+  alert per bell notification on the device). One already read or handled sends nothing.
+- **GUESS** — Signing out turns that device's alerts off. A device the push service reports gone
+  (the browser dropped it) is removed by itself. At most 20 devices per person; a 21st replaces the
+  one unused longest.
+- **GUESS** — Adding and removing a device are recorded in the Activity log (§9): a device decides
+  where the school's notifications show, like the per-kind choices (recorded too). Reading isn't.
+- **Limits** — Install and alerts need **https** (or `localhost`). On iPhone and iPad, alerts only
+  work **after Add to Home Screen**, on iOS / iPadOS **16.4 or later**; the switch says so there.
+  A device that is off gets the alert when it comes back, for up to a day.
+- **Built** (2026-11-21) — Offline, a page shows "You're offline" with the school's name and Try
+  again. Nothing personal is kept on the device.
 
 ## Who is told what
 
@@ -158,4 +186,5 @@ and its list, My account → Notifications, Settings → Notifications).
 - **DECIDED** — Notifications are not the activity log (§9): they are personal, and old ones are
   deleted. The change that caused one is recorded in the log as usual; reading or marking a
   notification read is not recorded. Changing one's own preferences, the school's defaults and the
-  reminder timings is recorded (they are settings).
+  reminder timings is recorded (they are settings), and so is adding or removing a device for
+  alerts (2026-11-21).

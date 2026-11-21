@@ -4,6 +4,7 @@ import { ErrorCode, type IsoDateTime, type UserAccount } from '@school-erp/share
 import { useId, useRef, useState, type FormEvent } from 'react';
 import { CHANGE_OWN_PASSWORD, NewPasswordFields, PasswordInput, checkNewPassword, signOut, type NewPassword } from '@/core/auth';
 import { EmployeeLink } from '@/core/employees';
+import { forgetDeviceThenSubmit, InstallApp } from '@/core/pwa';
 import { callApi } from '@/lib/callApi';
 import { FieldShell } from '@/shared/components/form/field-shell';
 import { PageHeader } from '@/shared/components/layout/page-header';
@@ -85,6 +86,7 @@ export function AccountView({ account, now }: { account: UserAccount; now: IsoDa
           </>
         }
         side={
+          <>
           <FormCard title={t('access.account.signIn')}>
             <dl className="flex flex-col gap-3">
               <div className="flex flex-col gap-0.5">
@@ -100,13 +102,16 @@ export function AccountView({ account, now }: { account: UserAccount; now: IsoDa
                 </dd>
               </div>
             </dl>
-            <form action={signOut.bind(null, locale)}>
+            <form action={signOut.bind(null, locale)} onSubmit={forgetDeviceThenSubmit}>
               <Button type="submit" variant="secondary" className="w-full">
                 <SignOutIcon className="flip-rtl" />
                 {t('access.account.signOut')}
               </Button>
             </form>
           </FormCard>
+          {/* Shown only where the browser can install the app (or on an iPhone): never a banner. */}
+          <InstallApp />
+          </>
         }
       />
     </div>

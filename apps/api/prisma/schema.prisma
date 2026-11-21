@@ -47,6 +47,7 @@ model User {
   payrollRunsApproved PayrollRun[]             @relation("PayrollRunApprovedBy")
   adjustmentsCreated  PayrollAdjustment[]
   notificationPrefs   NotificationPreference[]
+  pushSubscriptions   PushSubscription[]
 
   @@index([isActive])
   @@map("users")
@@ -297,6 +298,38 @@ model NotificationPreference {
 
   @@id([userId, type, channel])
   @@map("notification_preferences")
+}
+
+/// A device that gets a person's notifications as Web Push alerts (§11, owner 2026-11-21): one row
+/// per browser push subscription. `endpoint` is the push service's URL for that browser (unique: a
+/// browser shared by two accounts belongs to whoever turned alerts on last). Removed by the person,
+/// or by the sender when the push service answers 404 / 410 (the subscription is gone): then
+/// `revoked_at` is set and nothing is sent to it again. `locale` is the app's language on that
+/// device, the language its alerts are written in.
+model PushSubscription {
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  endpoint      String    @unique
+  /// SHA-256 of `endpoint`, hex, cut to 32: the browser finds "this device" without seeing endpoints.
+  endpointHash  String    @map("endpoint_hash")
+  p256dh        String
+  auth          String
+  /// "Chrome", "Safari"… and "Android", "iPhone"… from the user agent when it was added.
+  browser       String?
+  os            String?
+  locale        String    @default("en")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  /// The last alert the push service accepted for it.
+  lastUsedAt    DateTime? @map("last_used_at")
+  revokedAt     DateTime? @map("revoked_at")
+  /// `removed` (by the person) | `expired` (404 / 410 from the push service) | `replaced` (over the limit).
+  revokedReason String?   @map("revoked_reason")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+  @@map("push_subscriptions")
 }
 
 /// Named monotonic counters (e.g. 'employee_code'). Incremented atomically; values never reused.

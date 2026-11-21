@@ -1,8 +1,10 @@
 import type { TransactionHost } from '@nestjs-cls/transactional';
+import type { ConfigService } from '@nestjs/config';
 import type { NotificationTypeDefinition, NotificationTypeKey } from '@school-erp/shared';
 import type { DbAdapter } from '../../database/transactions';
+import type { DomainEvents } from '../events';
 import type { PermissionsService, UserScope } from '../permissions';
-import { InAppChannel, NotificationChannels } from './channels';
+import { InAppChannel, NotificationChannels, PushChannel } from './channels';
 import { NotificationAccess } from './notification-access.service';
 import { NoNotificationScopeResolverError, NotificationScopes } from './notification-scope';
 import { NotificationTypes, UnknownNotificationTypeError } from './notification-types';
@@ -10,6 +12,7 @@ import { NotificationOutsideTransactionError, NotificationsService } from './not
 import type { StoredNotification } from './notifications.pure';
 import type { NotificationPreferencesRepository } from './repositories/notification-preferences.repository';
 import type { NotificationsRepository } from './repositories/notifications.repository';
+import type { PushDevicesRepository } from './repositories/push-devices.repository';
 import type { RecipientsRepository } from './repositories/recipients.repository';
 
 /*
@@ -47,6 +50,10 @@ function make(
     existing?: Set<string>;
     openGroup?: string | null;
     insertOk?: boolean;
+    /** The server has VAPID keys (push is live). */
+    push?: boolean;
+    /** Who has a device with alerts on. */
+    withDevices?: string[];
   } = {},
 ) {
   const txHost = { isTransactionActive: jest.fn(() => opts.inTransaction ?? true) };
@@ -85,17 +92,26 @@ function make(
     types,
     recipients as unknown as RecipientsRepository,
   );
+  const config = { get: jest.fn(() => (opts.push ? { publicKey: 'p', privateKey: 'k', subject: 'mailto:x' } : null)) };
+  const pushDevices = {
+    usersWithDevices: jest.fn((ids: readonly string[]) =>
+      Promise.resolve(new Set(ids.filter((id) => opts.withDevices?.includes(id)))),
+    ),
+  };
+  const events = { publish: jest.fn(() => Promise.resolve()) };
   const service = new NotificationsService(
     txHost as unknown as TransactionHost<DbAdapter>,
     types,
     access,
     scopes,
-    new NotificationChannels(new InAppChannel()),
+    new NotificationChannels(new InAppChannel(), new PushChannel(config as unknown as ConfigService)),
     notifications as unknown as NotificationsRepository,
     preferences as unknown as NotificationPreferencesRepository,
     recipients as unknown as RecipientsRepository,
+    pushDevices as unknown as PushDevicesRepository,
+    events as unknown as DomainEvents,
   );
-  return { service, access, notifications, recipients, permissions, scopes, types };
+  return { service, access, notifications, recipients, permissions, scopes, types, events, pushDevices };
 }
 
 const notify = (
@@ -214,6 +230,89 @@ describe('NotificationsService.notify', () => {
     expect(notifications.createNotification).toHaveBeenCalledWith(
       expect.objectContaining({ to: { kind: 'user', id: 'u-3' } }),
     );
+  });
+
+  describe('push alerts (owner, 2026-11-21)', () => {
+    it('a person with a device gets a push delivery and an outbox event per new item; the others only the bell', async () => {
+      const { service, notifications, events } = make({ push: true, withDevices: ['u-2'] });
+      const now = new Date('2026-11-21T08:00:00Z');
+      expect(await notify(service, { now })).toEqual({ created: 2 });
+      expect(notifications.createNotification).toHaveBeenCalledWith(
+        expect.objectContaining({ to: { kind: 'user', id: 'u-1' }, deliveries: [{ channel: 'in_app', status: 'sent' }] }),
+      );
+      expect(notifications.createNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: { kind: 'user', id: 'u-2' },
+          deliveries: [
+            { channel: 'in_app', status: 'sent' },
+            { channel: 'push', status: 'pending' },
+          ],
+        }),
+      );
+      expect(events.publish).toHaveBeenCalledTimes(1);
+      expect(events.publish).toHaveBeenCalledWith(
+        'core.notification.push_requested',
+        { notificationId: 'n-2', recipientId: 'u-2', at: now.toISOString() },
+        { mustDeliver: true },
+      );
+    });
+
+    it('device alerts off (no device) → no push, no event', async () => {
+      const { service, events, notifications } = make({ push: true, withDevices: [] });
+      await notify(service);
+      expect(events.publish).not.toHaveBeenCalled();
+      for (const [input] of notifications.createNotification.mock.calls as unknown as [{ deliveries: { channel: string }[] }][]) {
+        expect(input.deliveries.map((d) => d.channel)).toEqual(['in_app']);
+      }
+    });
+
+    it('a server without VAPID keys never pushes, and never asks who has devices', async () => {
+      const { service, events, pushDevices } = make({ push: false, withDevices: ['u-1', 'u-2'] });
+      await notify(service);
+      expect(events.publish).not.toHaveBeenCalled();
+      expect(pushDevices.usersWithDevices).not.toHaveBeenCalled();
+    });
+
+    it('push follows the type’s in-app switch: turned off → neither the bell nor a push', async () => {
+      const { service, events } = make({
+        push: true,
+        withDevices: ['u-1', 'u-2'],
+        choices: [{ userId: 'u-1', type: TEST_TYPE, channel: 'in_app', enabled: false }],
+      });
+      expect(await notify(service)).toEqual({ created: 1 });
+      expect(events.publish).toHaveBeenCalledTimes(1);
+      expect(events.publish).toHaveBeenCalledWith(
+        'core.notification.push_requested',
+        expect.objectContaining({ recipientId: 'u-2' }),
+        { mustDeliver: true },
+      );
+    });
+
+    it('a required type pushes even when the school default and the person say off', async () => {
+      const { service, events, types } = make({
+        push: true,
+        holders: ['u-1'],
+        withDevices: ['u-1'],
+        defaults: [{ type: 'core.test.required', channel: 'in_app', enabled: false }],
+        choices: [{ userId: 'u-1', type: 'core.test.required', channel: 'in_app', enabled: false }],
+      });
+      types.register('core.test.required', { ...TEST_DEFINITION, canTurnOff: false, category: 'approval' });
+      await notify(service, { type: 'core.test.required' as NotificationTypeKey });
+      expect(events.publish).toHaveBeenCalledTimes(1);
+    });
+
+    it('an item joining an open group pushes again (the alert is brought up to date); a repeat does not', async () => {
+      const joined = make({ push: true, holders: ['u-1'], withDevices: ['u-1'], openGroup: 'n-open' });
+      await notify(joined.service);
+      expect(joined.events.publish).toHaveBeenCalledWith(
+        'core.notification.push_requested',
+        expect.objectContaining({ notificationId: 'n-open' }),
+        { mustDeliver: true },
+      );
+      const repeat = make({ push: true, holders: ['u-1'], withDevices: ['u-1'], existing: new Set(['u-1']) });
+      await notify(repeat.service);
+      expect(repeat.events.publish).not.toHaveBeenCalled();
+    });
   });
 
   it('scopes: all covers; a scoped holder is asked of the resolver; an unlinked one gets nothing (edges 5, 6)', async () => {

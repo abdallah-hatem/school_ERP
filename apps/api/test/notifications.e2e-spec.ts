@@ -556,7 +556,11 @@ describe('Notifications — core mechanism (e2e)', () => {
             .data as NotificationPreferences,
       );
       expect(prefs.types).toEqual([]);
-      expect(prefs.channels).toEqual([{ channel: 'in_app', available: true }]);
+      // Push is a channel too (2026-11-21), live only with VAPID keys — none in this suite.
+      expect(prefs.channels).toEqual([
+        { channel: 'in_app', available: true },
+        { channel: 'push', available: false },
+      ]);
       const approver = await newUser('Prefs', ['principal']);
       const theirs = await as(
         approver,

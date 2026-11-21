@@ -16,6 +16,7 @@ import { AccessI18n } from '../messages';
 import { ChangePasswordCard } from './account-view';
 import { AccountTabs } from './account-tabs';
 import { NotificationPreferencesSkeleton, NotificationsI18n } from '@/core/notifications';
+import { DeviceAlerts } from '@/core/pwa';
 import { FormCard, FormColumns } from './form-card';
 import { PermissionGroups } from './permission-groups';
 import { RoleScopesCard } from './role-form';
@@ -85,6 +86,9 @@ export function AccountNotificationsSkeleton() {
         <div aria-busy="true" className="flex flex-col gap-6">
           <Header title={t('access.account.title')} description={t('access.account.notificationsDescription')} />
           <AccountTabs />
+          <SkeletonMask>
+            <DeviceAlerts initial={{ available: true, publicKey: null, devices: [] }} />
+          </SkeletonMask>
           <NotificationPreferencesSkeleton />
         </div>
       </NotificationsI18n>

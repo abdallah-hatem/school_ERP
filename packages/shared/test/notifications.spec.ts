@@ -2,9 +2,16 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  APP_ICON_DEFAULT_VERSION,
+  APP_ICON_NAMES,
   AUDIT_ACTIONS,
   BUILT_IN_ROLES,
   NOTIFICATION_CHANNELS,
+  NOTIFICATION_PREFERENCE_CHANNELS,
+  appIconPath,
+  appIconVersion,
+  notificationLinkPath,
+  preferenceChannelOf,
   NOTIFICATION_MODULES,
   NOTIFICATION_TYPE_KEYS,
   NOTIFICATION_TYPES,
@@ -70,8 +77,42 @@ describe('notification types (N2)', () => {
     }
   });
 
-  it('the channel field is there with only in_app live', () => {
-    expect(NOTIFICATION_CHANNELS).toEqual(['in_app']);
+  it('two channels: the bell and push; only the bell has per-type switches (owner, 2026-11-21)', () => {
+    expect(NOTIFICATION_CHANNELS).toEqual(['in_app', 'push']);
+    expect(NOTIFICATION_PREFERENCE_CHANNELS).toEqual(['in_app']);
+    expect(preferenceChannelOf('push')).toBe('in_app');
+    expect(preferenceChannelOf('in_app')).toBe('in_app');
+  });
+
+  it('a link opens the same page from the bell and from a push (notificationLinkPath)', () => {
+    expect(notificationLinkPath({ screen: 'penalties', query: { penalty: 'p1' } }, 'en')).toBe('/en/penalties?penalty=p1');
+    expect(notificationLinkPath({ screen: 'payrollRun', recordId: 'r 1' }, 'ar')).toBe(
+      `/ar${SCREENS.payrollRun.path.replace(':id', 'r%201')}`,
+    );
+    expect(notificationLinkPath({ screen: 'payrollRun' }, 'en')).toBeNull();
+    expect(notificationLinkPath(null, 'en')).toBeNull();
+  });
+
+  it('a device for alerts is audited, added and removed (2026-11-21)', () => {
+    expect(AUDIT_ACTIONS['core.push_device.add'].entityType).toBe('push_device');
+    expect(AUDIT_ACTIONS['core.push_device.remove'].entityType).toBe('push_device');
+  });
+
+  it('the app icons are versioned by the logo URL: a new logo, new URLs; no logo, the generic icon', () => {
+    const a = appIconVersion('/files/logo/logo-a.png');
+    expect(a).toMatch(/^[0-9a-f]{8}$/);
+    expect(appIconVersion('/files/logo/logo-a.png')).toBe(a);
+    expect(appIconVersion('/files/logo/logo-b.png')).not.toBe(a);
+    expect(appIconVersion(null)).toBe(APP_ICON_DEFAULT_VERSION);
+    expect(appIconPath('icon-192.png', '/files/logo/logo-a.png')).toBe(`/files/app-icon/icon-192.png?v=${a}`);
+    expect(APP_ICON_NAMES).toEqual([
+      'icon-192.png',
+      'icon-512.png',
+      'maskable-512.png',
+      'apple-touch-icon.png',
+      'favicon-32.png',
+      'badge-96.png',
+    ]);
   });
 
   it.each(NOTIFICATION_TYPE_KEYS)('%s has its name, title and group texts in English and Arabic', (key) => {

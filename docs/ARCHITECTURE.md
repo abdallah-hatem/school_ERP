@@ -700,9 +700,11 @@ types** and sends through core's exported `NotificationsService` — core never 
   `NOTIFICATION_TYPE_REQUIRED` (409), `CHANNEL_NOT_AVAILABLE` (409, anything but `in_app`), unknown
   type → 400. A person with the type off in the app gets no notification at all (GUESS).
 - **Channels (N7)**: `NotificationChannelAdapter` (`key`, `available()`, how a delivery starts) in
-  `channels.ts`; only `InAppChannel`. Email / WhatsApp / SMS later = an adapter, a value in
-  `NOTIFICATION_CHANNELS` and a job sending `pending` deliveries after the commit — no module changes.
-  The UI shows the in-app channel only (owner, 2026-11-18).
+  `channels.ts`: `InAppChannel` and `PushChannel` (live with the VAPID keys; below). Email / WhatsApp
+  / SMS later = an adapter, a value in `NOTIFICATION_CHANNELS` and an after-commit sender — no module
+  changes. Per-type switches exist for `NOTIFICATION_PREFERENCE_CHANNELS` only (`in_app`); push
+  follows the type's in-app switch (`preferenceChannelOf`) — a `push` choice is 409
+  `CHANNEL_NOT_AVAILABLE`.
 - **Retention (N14)**: core settings `notifications.retention.readDays` / `resolvedDays` / `maxDays`
   (90 / 30 / 365, each 1–3650); the nightly `core.notifications.purge` (02:30, advisory lock) deletes
   what is past them, with items and deliveries. Not audited.
@@ -759,6 +761,71 @@ types** and sends through core's exported `NotificationsService` — core never 
   approver). The Penalties screen opens the
   linked penalty (`?penalty=<id>`: its month's list with `PenaltyDetailsDialog` over it; unknown or
   out of scope → not found).
+
+### Installable app and push
+
+The ERP installs as an app and sends Web Push alerts (owner, 2026-11-21; §11 → Push alerts;
+`docs/business/recent-changes/2026-11-21-050-pwa-and-push.md`). Web: `apps/web/src/core/pwa`, the
+service worker `apps/web/public/sw.js`. API: `core/notifications/push`, the icons in `core/settings`.
+
+- **Manifest** — `GET /manifest.webmanifest?lang=en|ar` (a route handler, `app/manifest.webmanifest`),
+  linked per language by the root layout: the school's name in that language and its logo's icons,
+  from the public settings endpoint the shell uses (`getSchoolBranding`) — never a hard-coded school.
+  `id` and `scope` `/`, `start_url` `/<lang>`, `display: standalone`, colours `APP_THEME` (the
+  `--primary` / `--background` tokens; a test keeps them equal). The layout also sets the favicon,
+  the Apple touch icon, `apple-mobile-web-app-capable` / `-title` / status bar, and `theme-color`.
+- **Icons** — `GET /files/app-icon/<name>?v=<version>` (public, `FilesController`), `APP_ICONS`:
+  192 and 512 (`any`: the logo on white), maskable 512 and the Apple touch icon 180 (the logo on a
+  white disc in a teal square, inside the safe zone), favicon 32, and a generic white badge 96 for
+  Android's status bar. `AppIconsService` draws each with **sharp once per logo** and keeps it in
+  `uploads/app-icon/<version>-<name>`; later requests read the file. The version is a hash of the
+  logo's URL (`appIconVersion`, shared: each upload has a new file name), so a new logo means new
+  URLs; responses are `public, max-age=31536000, immutable` and a URL without `v` is a 404. No logo
+  (or an unreadable one) → a generic mortarboard icon. Old versions' files are deleted when a new one
+  is first drawn.
+- **Service worker** (`/sw.js`, scope `/`, registered by `ServiceWorkerRegistrar` in the root
+  layout, production builds only, `updateViaCache: 'none'`). **Pages (navigations) always come
+  from the network** (navigation preload); only a failed fetch shows the cached offline page of the
+  path's language (`/offline.html?lang=…`, a route handler with the school's name and its icon
+  inlined — nothing personal, the one HTML it stores). **API calls, server actions and anything
+  not a GET are never touched.** Cache-first only for content-hashed static files: `/_next/static/`
+  (JS, CSS, fonts) and `/files/app-icon/…?v=` — at most 300 entries. CLAUDE.md rule 7's spirit:
+  nothing per-user is ever stored. **Updates**: a changed `sw.js` installs in the background,
+  `skipWaiting()`s, deletes old caches on activate and never `clients.claim()`s — open tabs keep
+  working, the next load runs on it; since nothing it stores can go stale, there is no stale shell.
+- **Push devices** — `push_subscriptions` (per user per browser: endpoint (unique), the browser's
+  keys, browser / system from the user agent, the device's language, created / last used, revoked
+  at and why — `removed`, `expired` (404 / 410), `replaced` (over `PUSH_DEVICES_MAX` = 20)).
+  `GET /notifications/push-devices` (`{ available, publicKey, devices }`; a device carries an
+  `endpointHash`, never its endpoint — the browser hashes its own to find "This device"),
+  `POST /notifications/push-devices` (subscribe; https endpoints only in production),
+  `POST /notifications/push-devices/unsubscribe` (`{ endpoint }`), `DELETE /notifications/push-devices/:id`
+  — all `@SignedIn`, the person's own (another's id → 404). **Audited** (`core.push_device.add` /
+  `.remove`): unlike read state (`@NotAudited`, personal), a device decides where the school's
+  notifications (names, approvals waiting) are shown — the same reason per-type preferences are
+  audited. Turning alerts on again on one's own active device (a language refresh) writes no entry.
+- **Sending** — `notify()` adds a `push` delivery (`pending`) for a recipient who gets the type in
+  the app and has an active device, and publishes the must-deliver `core.notification.push_requested`
+  (`{ notificationId, recipientId }`) **in the change's transaction**; `PushNotificationListener`
+  sends after the commit (outbox: retries, never blocks or fails the change). It reads the
+  notification as the reader sees it **now** (`NotificationInbox.findVisible`, N11 — read, handled or
+  no longer visible → nothing), writes the alert per device in its language (`pushMessageFor`: the
+  bell's title and line, a group's count, the same deep link; **no money, no typed text** —
+  `PUSH_HIDDEN_PARAMS`), and sends it through `PushSender` (`web-push` encrypts aes128gcm and signs
+  VAPID; `fetch` with a 10 s timeout; TTL 1 day; `topic` = the notification, so a group's next alert
+  replaces the last; urgency high for approvals). 404 / 410 → the device is revoked. Retried only
+  when no device took it (429 / 5xx / timeout) — never a second copy to a device that got it.
+- **VAPID keys** — env `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (`mailto:` /
+  `https:`), all three or none (`vapidFrom`); none → push not available ("not set up on this
+  server"). `pnpm run setup` generates a pair for a fresh clone; each environment has its own, never
+  committed. Changing the pair invalidates every device (they must turn alerts on again).
+- **Web** — My account → Notifications: `DeviceAlerts` above the per-type list (the switch, its
+  states — `insecure`, `ios-install` (Safari on iPhone / iPad outside the Home Screen app),
+  `unsupported`, `denied`, `not-configured` — and My devices); My account: `InstallApp` (the browser's
+  `beforeinstallprompt`, kept by `install-prompt.ts`; the iOS steps; installed). Signing out
+  (`forgetDeviceThenSubmit`) unsubscribes this browser first (≤ 2 s). Endpoints in
+  `core/pwa/apis.ts`; the browser's abilities in `browser.ts` (tests stand in for any browser).
+- **Needs https** (or `localhost`); iOS / iPadOS push only from the Home Screen app, 16.4+.
 
 ### Deliberate shortcuts
 
@@ -983,6 +1050,8 @@ apps/web/src/
 │   │                                   entry text (sentences, field labels), record History
 │   ├── notifications/                ← the bell and its list, the per-type switch list,
 │   │                                   My account → Notifications (§11, N4)
+│   ├── pwa/                          ← the installable app: manifest, offline page, service worker
+│   │                                   registration, Install app, Alerts on this device (§11)
 │   └── academic-year/                ← year switcher, current-year context
 ├── shared/                           ← shared technical pieces
 │   ├── components/ui/                ← shadcn kit, plus PersonAvatar: the one avatar for every

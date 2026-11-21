@@ -320,6 +320,40 @@
       "body": "Your roles don't receive any notifications yet."
     }
   },
+  "devices": {
+    "title": "Alerts on this device",
+    "description": "Your notifications on this phone or computer, even when the app is closed. They follow your choices below; required ones always come.",
+    "on": "On. What reaches your bell also arrives here.",
+    "off": "Off. Notifications stay in the bell.",
+    "states": {
+      "checking": "Checking this browser…",
+      "unsupported": "This browser can't show alerts. Try a recent Chrome, Edge, Firefox or Safari.",
+      "insecure": "Alerts need a secure (https) connection to the app.",
+      "notConfigured": "Alerts aren't set up on this server yet.",
+      "denied": "Alerts are blocked for this site. Allow notifications in your browser's site settings, then come back.",
+      "iosInstall": "On iPhone and iPad, add the app to your Home Screen first: tap Share, then Add to Home Screen, and open it from there.",
+      "failed": "Alerts couldn't be turned on. Try again."
+    },
+    "label": "{browser} on {os}",
+    "unknownBrowser": "A browser",
+    "unknownOs": "a device",
+    "list": {
+      "title": "My devices",
+      "empty": "No device gets your alerts yet.",
+      "thisDevice": "This device",
+      "added": "Added {date}",
+      "lastUsed": "Last alert {date}",
+      "neverUsed": "No alert yet",
+      "remove": "Remove",
+      "removeLabel": "Remove {device}",
+      "removed": "Device removed. It gets no more alerts.",
+      "removeFailed": "The device couldn't be removed. Try again."
+    },
+    "test": {
+      "title": "Alerts are on",
+      "body": "This is how your notifications will look on this device."
+    }
+  },
   "settings": {
     "defaults": {
       "title": "What everyone receives",

@@ -1,6 +1,6 @@
 import {
   isMonth,
-  SCREENS,
+  notificationLinkPath,
   type IsoDate,
   type IsoDateTime,
   type NotificationItem,
@@ -221,17 +221,8 @@ export function whenText(at: IsoDateTime, now: IsoDateTime, { t, locale }: Pick<
  * language; null when the screen needs a record the link doesn't name.
  */
 export function linkHref(link: NotificationLink | null, locale: Locale): string | null {
-  if (!link) return null;
-  const screen = (SCREENS as Record<string, { path: string } | undefined>)[link.screen];
-  if (!screen) return null;
-  let path = screen.path;
-  if (path.includes(':id')) {
-    if (!link.recordId) return null;
-    path = path.replace(':id', encodeURIComponent(link.recordId));
-  }
-  if (path.includes(':')) return null;
-  const query = new URLSearchParams(link.query ?? {}).toString();
-  return `/${locale}${path}${query ? `?${query}` : ''}`;
+  // The same page a tapped push alert opens (shared with the API).
+  return notificationLinkPath(link, locale);
 }
 
 /** "99+" past `max`, the number itself below it. */

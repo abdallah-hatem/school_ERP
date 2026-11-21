@@ -1,5 +1,5 @@
 import { createReadStream } from 'node:fs';
-import { mkdir, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { extname, join, resolve, sep } from 'node:path';
 import { Injectable, NotFoundException, StreamableFile } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -53,6 +53,27 @@ export class FileStorageService {
     } catch {
       // A name the safe-path rules refuse was never ours to delete.
     }
+  }
+
+  /** The bytes of the file a `urlFor` path (or a folder and name) points at; null when it isn't there. */
+  async read(folder: string, name: string): Promise<Buffer | null> {
+    try {
+      return await readFile(this.pathFor(folder, name));
+    } catch {
+      return null;
+    }
+  }
+
+  /** The bytes behind a `/files/<folder>/<name>` URL (the logo); null for anything else or a missing file. */
+  async readUrl(url: string): Promise<Buffer | null> {
+    const match = /^\/files\/([^/]+)\/([^/]+)$/.exec(url);
+    return match ? this.read(match[1], match[2]) : null;
+  }
+
+  /** The names in a folder (empty when it doesn't exist yet). */
+  async list(folder: string): Promise<string[]> {
+    if (!SAFE_FOLDER.test(folder)) return [];
+    return readdir(join(this.root, folder)).catch(() => []);
   }
 
   /** The stored file as a download, or 404 for a bad or missing name. */
