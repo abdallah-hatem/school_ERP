@@ -574,7 +574,7 @@ phase live in `docs/build-log/`.
 - 2026-11-22 — Test data out of the app bundle → #233: `SEARCH_FIXTURE` moved to
   `@school-erp/shared/testing`; a guard fails if app code imports it.
 - 2026-11-22 — Dependabot removed (owner chose "remove completely"): `.github/dependabot.yml` deleted and
-  its 5 GitHub Actions upgrade PRs (#234–#238) closed; upgrades by hand, the weekly `pnpm audit` flags
+  its 10 open upgrade PRs (#234–#244, GitHub Actions and npm) closed; upgrades by hand, the weekly `pnpm audit` flags
   vulnerabilities.
 ## Next up
 
