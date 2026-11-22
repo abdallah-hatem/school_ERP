@@ -528,7 +528,7 @@ phase live in `docs/build-log/`.
   Approved payroll month, the statement, lateness, run lines, settings lists, the catalogue, roles/actors
   and every list picker now page/search/total on the API; DataTable refuses more rows than a page; a scan
   guard fails on browser-side list code (reasoned allow-list for static config). Lateness "loads the
-  whole month" (Next up) is superseded. Open: Arabic letter variants (أ/ا) in in-memory searches.
+  whole month" (Next up) is superseded. Arabic letter variants: done in #229.
 - 2026-11-21 — Housekeeping (owner: "when worktrees are done we delete them right ?" / "what about the
   177 branches"): 50 merged worktrees removed (64 GB → ~4 GB), 168 merged remote branches and 188 local
   ones deleted; merges now use `--delete-branch` and remove the agent's worktree.
@@ -557,6 +557,13 @@ phase live in `docs/build-log/`.
   frame) made one-shot reads see two elements on CI; every spec now waits for the stream to settle —
   CONVENTIONS → Where tests run, and the build-software skill (1.62.23). Leave (Planned) will need
   every stage head, then HR.
+- 2026-11-22 — Arabic-aware database search → #229 (owner: "typing احمد wont bring أحمد"; "what about
+  spaces"): a `search_fold()` SQL function (the same rules as `searchKey`: case, accents, Arabic marks
+  and tatweel, أإآٱ→ا, ى→ي, ة→ه, ؤ→و, ئ→ي, odd spaces) feeds generated `search_text`/`search_compact`
+  columns with pg_trgm GIN indexes on 10 tables, kept up to date by Postgres. A query matches when every
+  word appears (any order) or the query without spaces appears in the joined name (عبد الرحمن ⇄
+  عبدالرحمن). Covers employees, users, roles, lists, activity, penalties and payroll lines; `%`/`_` are
+  literal. A parity e2e keeps the SQL and JS folds identical. ARCHITECTURE → Search.
 ## Next up
 
 - Sign-in follow-ups (from #218): a show/hide eye on the password box (smoke helpers must first find
