@@ -234,7 +234,7 @@ A stored file opens for exactly the people who may see the record it belongs to 
   stage's; self: own photo only; no permission: 404; signed out: 401; unknown folder: 404; the logo
   public), `file-folders.spec.ts` (the registry) and the guard.
 
-### Scanning (`.github/workflows/security.yml`, `.github/dependabot.yml`)
+### Scanning (`.github/workflows/security.yml`)
 
 - **`pnpm audit --prod --audit-level=high`** on every PR, on `dev` and weekly — advisory
   (`continue-on-error`) while the known high findings (inside the Prisma CLI's config loader) wait
@@ -242,8 +242,9 @@ A stored file opens for exactly the people who may see the record it belongs to 
 - **gitleaks** on every PR (its commits), on `dev` and weekly (the whole history). Reviewed false
   positives are allowlisted by fingerprint in `.gitleaksignore` (test fixtures only — a real secret
   is rotated and removed from history, never allowlisted).
-- **Dependabot**: npm (root, api, web, shared) and GitHub Actions, weekly, minor + patch grouped
-  into one PR each, majors one by one, all into `dev`.
+- **No Dependabot** (owner, 2026-11-22): removed — no automatic upgrade PRs. Dependency upgrades are
+  done by hand; the weekly `pnpm audit` run is where known vulnerabilities surface, so read it and
+  upgrade what it flags.
 
 ## Per-school differences
 
