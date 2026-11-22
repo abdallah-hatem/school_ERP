@@ -64,7 +64,7 @@ jobs:
           cache: pnpm
 
       - name: Turbo cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .turbo/cache
           key: turbo-checks-${{ runner.os }}-${{ github.sha }}
@@ -123,7 +123,7 @@ jobs:
 
       - name: Turbo cache
         if: needs.changes.outputs.docs_only != 'true'
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .turbo/cache
           key: turbo-e2e-${{ runner.os }}-${{ github.sha }}
@@ -183,7 +183,7 @@ jobs:
 
       - name: Next.js build cache
         if: needs.changes.outputs.docs_only != 'true'
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: apps/web/.next/cache
           key: next-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
@@ -201,7 +201,7 @@ jobs:
       - name: Playwright browser cache
         if: needs.changes.outputs.docs_only != 'true'
         id: pw-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
