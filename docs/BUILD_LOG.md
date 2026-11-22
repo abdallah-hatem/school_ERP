@@ -573,6 +573,9 @@ phase live in `docs/build-log/`.
   public); gitleaks, an advisory `pnpm audit` and Dependabot in CI. ARCHITECTURE → Security.
 - 2026-11-22 — Test data out of the app bundle → #233: `SEARCH_FIXTURE` moved to
   `@school-erp/shared/testing`; a guard fails if app code imports it.
+- 2026-11-22 — Dependabot removed (owner chose "remove completely"): `.github/dependabot.yml` deleted and
+  its 5 GitHub Actions upgrade PRs (#234–#238) closed; upgrades by hand, the weekly `pnpm audit` flags
+  vulnerabilities.
 ## Next up
 
 - Sign-in follow-ups (from #218): a show/hide eye on the password box (smoke helpers must first find
