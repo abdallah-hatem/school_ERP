@@ -27,6 +27,39 @@ describe('svgToPng', () => {
     expect(await centre(png)).toEqual([0x12, 0x34, 0x56]);
   });
 
+  it('keeps the artwork: gradients, <defs>/<use>, viewBox only — many colours, each shape where it was', async () => {
+    // A generic logo (not a school's): a sun over waves on a teal tile, the way real logos are
+    // drawn — a gradient from <defs>, a shape reused with <use>, size from the viewBox alone.
+    const artwork = Buffer.from(
+      '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 100">' +
+        '<defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0b7a68"/><stop offset="1" stop-color="#5fb3a3"/></linearGradient>' +
+        '<path id="wave" d="M0 0 q12.5 -8 25 0 t25 0 t25 0 t25 0 v12 h-100z" fill="#ffffff"/></defs>' +
+        '<rect width="100" height="100" rx="16" fill="url(#sky)"/>' +
+        '<circle cx="50" cy="38" r="18" fill="#f5b820"/>' +
+        '<use xlink:href="#wave" y="70"/><use href="#wave" y="84" opacity="0.6"/></svg>',
+    );
+    const png = await svgToPng(artwork);
+    expect(await sharp(png).metadata()).toMatchObject({ width: SVG_LOGO_MAX_PX, height: SVG_LOGO_MAX_PX });
+
+    // Not one flat colour: every channel varies across the picture.
+    const { channels } = await sharp(png).stats();
+    for (const c of channels.slice(0, 3)) expect(c.stdev).toBeGreaterThan(20);
+
+    const at = async (x: number, y: number) => {
+      const s = SVG_LOGO_MAX_PX / 100;
+      const { data, info } = await sharp(png).raw().toBuffer({ resolveWithObject: true });
+      const i = (Math.round(y * s) * info.width + Math.round(x * s)) * info.channels;
+      return [...data.subarray(i, i + 3)];
+    };
+    const near = (actual: number[], expected: number[]) =>
+      actual.forEach((v, i) => expect(Math.abs(v - (expected[i] ?? 0))).toBeLessThanOrEqual(12));
+    near(await at(50, 38), [0xf5, 0xb8, 0x20]); // the sun
+    near(await at(50, 76), [0xff, 0xff, 0xff]); // the first wave (from <use>)
+    near(await at(10, 8), [0x0e, 0x7d, 0x6b]); // the gradient's top, nearly #0b7a68
+    const lower = await at(90, 62); // further down the gradient: lighter than the top
+    expect(lower[1] ?? 0).toBeGreaterThan(0x7d + 30);
+  });
+
   it('a huge declared size is drawn at the max, not at its own size', async () => {
     const png = await svgToPng(svg('<rect width="10" height="10"/>', 'width="20000" height="20000"'));
     expect(await sharp(png).metadata()).toMatchObject({ width: SVG_LOGO_MAX_PX, height: SVG_LOGO_MAX_PX });
