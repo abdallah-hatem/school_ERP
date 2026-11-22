@@ -87,6 +87,151 @@ backups proven by a restore).
 - **`docs/SERVER.md`** records what is configured and why, and where each secret lives. Never the
   secret values themselves.
 
+## Security
+
+What protects the app beyond sign-in and permissions (2026-11-22). Sign-in itself: bcrypt
+passwords, `httpOnly` `Secure` `SameSite=Lax` session cookies, refresh-token families, the
+per-account lockout (Sign-in limits); every endpoint declares its permission (Permissions).
+
+### Response headers
+
+- **API** (`common/security/security-headers.ts`, helmet, set in `configureApp`):
+  `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'`
+  (a JSON answer opened in a tab runs and loads nothing), `X-Frame-Options: DENY`,
+  `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`,
+  `Cross-Origin-Resource-Policy: same-site` (the web app — its own origin through the `/files`
+  rewrite, or a sibling subdomain — still loads the logo and icons; other sites can't), no
+  `X-Powered-By`. **HSTS only when the session cookies are `Secure`** (`COOKIE_SECURE`, default in
+  production): a plain-http dev or CI server never sends it. The files routes keep their own policy
+  (`default-src 'none'; style-src 'unsafe-inline'; sandbox`) and `nosniff`.
+- **Web pages** (`src/proxy.ts`, `src/lib/security-headers.ts`): a **nonce-based CSP**, a fresh
+  128-bit nonce per response, set on the response and on the render's request — Next reads the
+  nonce from there and puts it on its own scripts, including the streamed reveal (`$RC`) and the
+  RSC payload scripts. The policy (production; `<api>` = `API_PUBLIC_ORIGIN`, else `BASE_URL`'s
+  origin):
+
+  ```
+  default-src 'self'; script-src 'self' 'nonce-<nonce>' 'strict-dynamic'; style-src 'self' 'unsafe-inline';
+  img-src 'self' data: blob: <api>; font-src 'self'; connect-src 'self' <api>; worker-src 'self';
+  manifest-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
+  ```
+
+  `'unsafe-eval'` is added in development only (React's dev tools). **Why `style-src
+  'unsafe-inline'`**: React renders `style={…}` as inline style attributes (chart sizes, sidebar
+  widths, branding colours) and a nonce can't cover an attribute; styles run no script, so the
+  script policy stays whole. Every page is dynamic (it reads the session cookie), which a nonce
+  needs — a statically prerendered page would carry no nonce and its scripts would be blocked.
+- **Every web response** (`next.config.ts` `headers()`): `X-Content-Type-Options: nosniff`,
+  `Referrer-Policy: strict-origin-when-cross-origin`, `X-Frame-Options: DENY`,
+  `Permissions-Policy: camera=(), microphone=(), geolocation=()`, no `X-Powered-By`.
+- **The offline page** (`/offline.html`, a route handler outside the proxy) has its own policy:
+  `default-src 'none'`, its one script by nonce, inline style, `data:` images. The service worker
+  stores it with that header, so the stored nonce still matches its script.
+- **Checked by:** `security.e2e-spec.ts` (API headers), `src/lib/security-headers.test.ts` and
+  `src/proxy.test.ts` (the policy, the nonce on request and response), and the smoke spec
+  `34-security-headers.spec.ts`: sign-in, the dashboard, employees, penalties, payroll, settings and
+  activity load with the policy on the response, every inline script carrying its nonce, no
+  `securitypolicyviolation` event, no console error, no broken image, the service worker registered.
+
+### Rate limits
+
+`@nestjs/throttler` behind our own guard (`common/rate-limit`), registered after `JwtAuthGuard` so
+a signed-in caller is counted by user. Over a limit → **429 `TOO_MANY_REQUESTS`** in the usual
+envelope, `params.count` = seconds to wait (EN/AR plural message in `errors.json`, which the web
+app's `apiErrorText` shows), plus a `Retry-After-<bucket>` header. Counts are in memory — one API
+process per school; a second replica would need a shared store.
+
+| Bucket | Routes | Counted by | Default per 60 s | Env |
+|---|---|---|---|---|
+| `global` | every route but `/health` | the user when signed in, else the client IP | 300 | `RATE_LIMIT_GLOBAL` |
+| `auth` | `POST /auth/login`, `POST /account/password`, `POST /users/:id/password` | client IP | 10 | `RATE_LIMIT_AUTH` |
+| `refresh` | `POST /auth/refresh` | client IP | 60 | `RATE_LIMIT_REFRESH` |
+| `heavy` | the payroll exports (`/accounting/payroll/:month/export`, `/hr/payroll-runs/:id/bank-sheet`), logo and photo uploads | user (IP signed out) | 20 | `RATE_LIMIT_HEAVY` |
+
+The window is `RATE_LIMIT_TTL_SECONDS` (60); once over, the caller waits out the window. A
+bucket's count spans all its routes (key = bucket + caller). `auth` is **on top of** the
+per-account lockout: the lockout stops guessing one account's password, the IP limit stops trying
+many accounts. Why by user once signed in: every page the web app renders reaches the API from the
+web server's own address, so counting by IP would make the whole school one caller. Why `refresh`
+is looser than `auth`: a page load refreshes once per parallel request (prefetches), and a whole
+school may share one public IP. The e2e and smoke suites run with limits nobody reaches (one test
+user on 127.0.0.1, much faster than a person — `test/setup-env.ts`, `scripts/smoke.sh`);
+`security.e2e-spec.ts` sets its own small limits and tests them.
+
+### Who the client is (proxies)
+
+- **`TRUST_PROXY`** (API, unset = none) is Express's `trust proxy`. Unset, the client IP is the
+  socket's and `X-Forwarded-For` is ignored — a caller can't pick its own IP. Set it only where a
+  proxy sets that header. `true` is refused at boot (it trusts any client).
+- The web server forwards the browser's `X-Forwarded-For` and `CF-Connecting-IP` on its own API calls
+  (`clientAddressHeaders` in `apiFetch` and the token refresh), so sign-in counts the person's IP,
+  not the web server's.
+- **`TRUST_CLOUDFLARE`** (default off): take the IP from `CF-Connecting-IP`, and only on requests
+  whose socket peer is a trusted proxy. Safe **only** when the server's public ports accept nothing
+  but Cloudflare (the `deploying-to-vps` firewall); otherwise anyone could send the header.
+- **On our server** (Cloudflare → Traefik → web → API on Docker networks): `TRUST_PROXY=loopback,
+  uniquelocal` and `TRUST_CLOUDFLARE=true`. A school's own server without Cloudflare:
+  `TRUST_PROXY` naming its proxy, Cloudflare off.
+
+### Uploads
+
+- **Checked by their bytes** (`detectImageType`, the magic numbers: PNG, JPEG, WebP, an `<svg` root),
+  never the name; the declared type must be an allowed one **and** agree with the bytes —
+  a renamed file is refused with the usual 400 `INVALID_FILE_TYPE`. Size is capped while the file
+  streams in (413 `FILE_TOO_LARGE`). Files are stored under a name we make and served with the type
+  of what was detected, `nosniff` and the files policy.
+- **SVG logos are converted to PNG on upload** (`svg-logo.ts`, sharp/librsvg): the longest side
+  drawn at 1024 px; an SVG declaring entities, or one that can't be drawn, is refused (400). We chose
+  conversion over sanitising because nothing needs the vector (the sign-in page shows a few hundred
+  pixels; the app icons are PNGs drawn from it) and a sanitiser is a filter to keep up to date,
+  while a PNG can't carry script, event handlers, `foreignObject` or external references. librsvg
+  runs no script and loads no URL.
+- **Logos stored as SVG before this** keep working, lazily: the logo route answers `….svg` with a
+  PNG drawn on first request and kept beside it (`logo-<id>-svg.png`); the SVG is never served.
+  The next upload replaces it with a PNG for good.
+
+### Files follow their record
+
+A stored file opens for exactly the people who may see the record it belongs to (owner,
+2026-11-22). Only the logo and the app icons are public (`PUBLIC_FILE_FOLDERS`, their own routes).
+
+- **A registry of folders** (`core/settings/files/file-folders.ts`, `FileFolders`): every other
+  folder is registered by the module that owns its records, on start, with its `owner`, a
+  `canOpen(user, url)` check, and optionally an extra `permission` and an `onOpen` hook. Core can't
+  import a module (Module order), so the module registers — HR's `HrFileAccess`, like
+  `HrAuditAccess` for the audit log.
+- **`GET /files/:folder/:name`** (signed in): an unknown folder, a missing extra permission, or
+  `canOpen` saying no → **404**, the answer the record itself gives (never 403, so existence isn't
+  confirmed). Headers stay `Cache-Control: private, no-store`, `nosniff` and the files policy.
+- **`employee-photos`** → the employee: the photo is found through the stored link
+  (`employees.photo_url`, indexed), never by taking the file name apart; it opens when
+  `hr.employees.view` covers that employee for the user (their scope: all, own stage, own team,
+  self) — the rule for opening the employee — **or when it is the user's own linked employee** (the
+  avatar in their top bar, even without `hr.employees.view`). A replaced photo belongs to nobody: 404.
+  Where a screen shows a photo the viewer may not open (a manager outside their scope on a
+  profile), `PersonAvatar` falls back to the silhouette.
+- **Sensitive documents** (contracts, medical, legal, investigations — none stored yet) register
+  their folder the same way, with `permission` (an extra key on top of seeing the record; not held
+  → 404) and `onOpen`, which records the opening in the audit log in a transaction of its own (a
+  failed record refuses the opening).
+- **Nothing is stored where nobody could open it:** `FileStorageService.save` refuses an
+  unregistered folder, and the unit guard `file-folders.guard.spec.ts` fails CI on a
+  `files.save(<FOLDER>, …)` whose folder is neither public nor registered.
+- **Checked by:** `file-access.e2e-spec.ts` (a stage head: their stage's photos, 404 for another
+  stage's; self: own photo only; no permission: 404; signed out: 401; unknown folder: 404; the logo
+  public), `file-folders.spec.ts` (the registry) and the guard.
+
+### Scanning (`.github/workflows/security.yml`, `.github/dependabot.yml`)
+
+- **`pnpm audit --prod --audit-level=high`** on every PR, on `dev` and weekly — advisory
+  (`continue-on-error`) while the known high findings (inside the Prisma CLI's config loader) wait
+  for an upstream fix; make it blocking then.
+- **gitleaks** on every PR (its commits), on `dev` and weekly (the whole history). Reviewed false
+  positives are allowlisted by fingerprint in `.gitleaksignore` (test fixtures only — a real secret
+  is rotated and removed from history, never allowlisted).
+- **Dependabot**: npm (root, api, web, shared) and GitHub Actions, weekly, minor + patch grouped
+  into one PR each, majors one by one, all into `dev`.
+
 ## Per-school differences
 
 Never in code. In order of preference:
@@ -561,8 +706,8 @@ Roles are rows, not code (spec P2, R2 / R5 / R8 / R9). A school changes them thr
 
 ### Sign-in limits
 
-Wrong-password counting per account (`core/sign-in-limit`, owner 2026-11-18, §2). **Per account
-only — no per-IP limit.**
+Wrong-password counting per account (`core/sign-in-limit`, owner 2026-11-18, §2). **Per account**
+— the per-IP limit on sign-in is the separate rate limit (Security → Rate limits), on top of it.
 
 - **Rule.** `security.login.maxAttempts` wrong passwords within `security.login.windowMinutes` lock
   that account's sign-in for `security.login.lockMinutes` — core settings, defaults 5 / 15 / 15

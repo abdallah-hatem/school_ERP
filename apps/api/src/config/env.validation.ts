@@ -84,6 +84,65 @@ export class EnvironmentVariables {
   COOKIE_SECURE?: boolean;
 
   /**
+   * Express `trust proxy` (docs/ARCHITECTURE.md → Security): unset = trust nobody, so the client
+   * IP is the socket's and `X-Forwarded-For` is ignored. Set it only when a proxy in front sets
+   * that header: a hop count (`1`), or addresses / presets (`loopback, uniquelocal`, `10.0.0.0/8`).
+   * `true` trusts every hop and lets any client choose its own IP — refused.
+   */
+  @IsOptional()
+  @Transform(emptyToUndefined)
+  @IsString()
+  @Matches(/^(?!\s*true\s*$).+$/i, { message: 'TRUST_PROXY=true would trust any client: give a hop count or addresses' })
+  TRUST_PROXY?: string;
+
+  /**
+   * Behind Cloudflare: take the client IP from `CF-Connecting-IP` — only on requests that came
+   * through a trusted proxy (TRUST_PROXY), and only safe when the server accepts nothing but
+   * Cloudflare (and the web app) on its public ports. Default off.
+   */
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    value === undefined || value === '' ? undefined : value === true || value === 'true',
+  )
+  @IsBoolean()
+  TRUST_CLOUDFLARE?: boolean;
+
+  /** Rate limits (docs/ARCHITECTURE.md → Security): the window, in seconds, every limit counts in. */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  RATE_LIMIT_TTL_SECONDS: number = 60;
+
+  /** Requests per window for every route: per user when signed in, per client IP otherwise. */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  RATE_LIMIT_GLOBAL: number = 300;
+
+  /** Sign-in and password changes per window per client IP (on top of the per-account lockout). */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  RATE_LIMIT_AUTH: number = 10;
+
+  /** Session refreshes per window per client IP (a page load can refresh several times at once). */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  RATE_LIMIT_REFRESH: number = 60;
+
+  /** Exports and uploads per window per user (per IP when signed out). */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  RATE_LIMIT_HEAVY: number = 20;
+
+  /**
    * Whether scheduled jobs (core/jobs) run on their clock. Defaults to on, except under
    * NODE_ENV=test: unit and e2e tests run a job only by triggering it (`JobRunner.run(name)`).
    */

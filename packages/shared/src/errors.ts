@@ -25,6 +25,11 @@ export const ErrorCode = {
    * minutes left are its `count`, and the envelope carries them as `retryAfterMinutes`.
    */
   TOO_MANY_ATTEMPTS: 'TOO_MANY_ATTEMPTS',
+  /**
+   * Too many requests in a short time (429, the rate limits — `docs/ARCHITECTURE.md` → Security).
+   * Plural forms: the seconds until the next request is allowed are its `count`.
+   */
+  TOO_MANY_REQUESTS: 'TOO_MANY_REQUESTS',
 
   // users and roles (P2)
   /** Would leave the school without an active System admin (R8, edge case 5). */

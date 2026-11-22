@@ -7,6 +7,7 @@ import type {
 } from '@school-erp/shared';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
+import { RateLimit } from '../../common/rate-limit';
 import { Audited } from '../audit';
 import { UpdateSchoolSettingsDto } from './dto/update-school-settings.dto';
 import { LogoUploadInterceptor } from './files/logo-upload.interceptor';
@@ -41,6 +42,7 @@ export class SettingsController {
   }
 
   @Post('school/logo')
+  @RateLimit('heavy')
   @Permission('core.settings.edit')
   @Audited('core.settings.logo_change')
   @UseInterceptors(LogoUploadInterceptor)

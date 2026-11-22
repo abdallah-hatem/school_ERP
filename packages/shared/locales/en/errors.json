@@ -21,6 +21,14 @@
     "many": "Too many attempts. Try again in {count} minutes.",
     "other": "Too many attempts. Try again in {count} minutes."
   },
+  "TOO_MANY_REQUESTS": {
+    "zero": "Too many requests. Try again in a moment.",
+    "one": "Too many requests. Try again in 1 second.",
+    "two": "Too many requests. Try again in 2 seconds.",
+    "few": "Too many requests. Try again in {count} seconds.",
+    "many": "Too many requests. Try again in {count} seconds.",
+    "other": "Too many requests. Try again in {count} seconds."
+  },
   "INVALID_WORK_HOURS": "Work end must be after work start.",
   "INVALID_TAX_RULE": "The tax rule isn't valid: only the last bracket is open-ended, widths are above 0, and each bracket's rate plus the martyrs' fund stays under 100%.",
   "INVALID_REMINDER_DAYS": "The second contract reminder must come fewer days before the end than the first (or 0 for none).",

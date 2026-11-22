@@ -1,0 +1,63 @@
+name: Security
+
+# Dependency and secret scanning (docs/ARCHITECTURE.md → Security). Separate from CI so it never
+# blocks a merge by itself: branch protection requires CI's checks by name, not these.
+on:
+  pull_request:
+    branches: [dev, testing, production, demo]
+  push:
+    branches: [dev]
+  # Weekly, so a new advisory against what is already merged shows up without a PR.
+  schedule:
+    - cron: '0 5 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: security-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: Dependency audit (pnpm audit, advisory)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Advisory for now: the known high findings sit in the Prisma CLI's own config loader
+      # (deepmerge-ts, effect — pulled in through @prisma/config), not in request handling; they
+      # are listed in the PR that added this job. The step still fails red in the log, so a new
+      # finding is seen; make it blocking (remove continue-on-error) once those are fixed upstream.
+      - name: pnpm audit --prod --audit-level=high
+        continue-on-error: true
+        run: pnpm audit --prod --audit-level=high
+
+  gitleaks:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The whole history: a PR is scanned commit by commit, a push or the weekly run all of it.
+          fetch-depth: 0
+
+      # Known false positives (test fixtures) are allowlisted by fingerprint in .gitleaksignore.
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: 'false'
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: 'false'

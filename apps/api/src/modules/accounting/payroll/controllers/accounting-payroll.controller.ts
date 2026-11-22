@@ -4,6 +4,7 @@ import { CurrentUser } from '../../../../common/decorators/current-user.decorato
 import { Audited } from '../../../../core/audit';
 import { PayrollPaginationQueryDto } from '../../../../common/dto/pagination-query.dto';
 import { resolveLanguage } from '../../../../common/i18n/i18n';
+import { RateLimit } from '../../../../common/rate-limit';
 import { ResponseUtil } from '../../../../common/utils/response.util';
 import { xlsxFile } from '../../../../common/utils/xlsx-file.util';
 import { Permission } from '../../../../core/permissions';
@@ -39,6 +40,7 @@ export class AccountingPayrollController {
 
   /** Every line of the month as the viewer sees it (not a page), plus the tax rule used, as `.xlsx`. */
   @Get(':month/export')
+  @RateLimit('heavy')
   @Permission('accounting.payroll.view')
   async export(
     @Param() params: AccountingPayrollMonthParamDto,

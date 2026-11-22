@@ -15,6 +15,7 @@ import type { AuthUser } from '@school-erp/shared';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
 import { PayrollPaginationQueryDto } from '../../../../common/dto/pagination-query.dto';
 import { resolveLanguage } from '../../../../common/i18n/i18n';
+import { RateLimit } from '../../../../common/rate-limit';
 import { ResponseUtil } from '../../../../common/utils/response.util';
 import { xlsxFile } from '../../../../common/utils/xlsx-file.util';
 import { CreateAdjustmentDto, CreatePayrollRunDto, PayrollRunQueryDto } from '../dto/payroll.dto';
@@ -66,6 +67,7 @@ export class PayrollRunsController {
   }
 
   @Get(':id/bank-sheet')
+  @RateLimit('heavy')
   @Permission('hr.payroll.export_bank_sheet')
   async bankSheet(
     @Param('id', ParseUUIDPipe) id: string,

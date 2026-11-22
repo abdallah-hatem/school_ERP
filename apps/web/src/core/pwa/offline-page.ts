@@ -10,14 +10,37 @@ const escapeHtml = (text: string) =>
   text.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c);
 
 /**
+ * The offline page's own Content-Security-Policy (it is a route handler, outside the proxy that
+ * sets the pages' one): nothing but its inline style, its data: icon and its one nonce'd script.
+ * The service worker keeps the page with this header, so the stored nonce still matches.
+ */
+export function offlinePageCsp(nonce: string): string {
+  return [
+    "default-src 'none'",
+    `script-src 'nonce-${nonce}'`,
+    "style-src 'unsafe-inline'",
+    'img-src data:',
+    "base-uri 'none'",
+    "form-action 'none'",
+    "frame-ancestors 'none'",
+  ].join('; ');
+}
+
+/**
  * The page the service worker shows when a page can't load because the device is offline
  * (owner, 2026-11-21): the school's name and icon, "You're offline", Try again — in the visitor's
  * language. Self-contained (inline style, the icon as a data URL) because it is shown with no
  * network, and holding nothing personal, so the service worker may keep it. It reloads by itself
  * when the connection comes back.
  */
-export function offlineHtml(input: { locale: Locale; schoolName: string; iconDataUrl: string | null }): string {
-  const { locale, schoolName, iconDataUrl } = input;
+export function offlineHtml(input: {
+  locale: Locale;
+  schoolName: string;
+  iconDataUrl: string | null;
+  /** The response's CSP nonce (`offlinePageCsp`): the page's one script carries it. */
+  nonce?: string;
+}): string {
+  const { locale, schoolName, iconDataUrl, nonce } = input;
   const t = getCommonMessages(locale).pwa.offline;
   const font =
     locale === 'ar'
@@ -55,9 +78,12 @@ export function offlineHtml(input: { locale: Locale; schoolName: string; iconDat
   <p class="school">${escapeHtml(schoolName)}</p>
   <h1>${escapeHtml(t.title)}</h1>
   <p>${escapeHtml(t.body)}</p>
-  <button type="button" onclick="location.reload()">${escapeHtml(t.retry)}</button>
+  <button type="button" id="retry">${escapeHtml(t.retry)}</button>
 </main>
-<script>window.addEventListener('online', function () { location.reload(); });</script>
+<script${nonce ? ` nonce="${escapeHtml(nonce)}"` : ''}>
+  document.getElementById('retry').addEventListener('click', function () { location.reload(); });
+  window.addEventListener('online', function () { location.reload(); });
+</script>
 </body>
 </html>`;
 }

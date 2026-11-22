@@ -6,6 +6,7 @@ import {
   refreshTokens,
   sessionCookies,
 } from '@/lib/middlewareFunctions';
+import { clientAddressHeaders } from '@/lib/security-headers';
 
 /**
  * Fallback for a render whose API call got a 401 (the access token expired or was revoked after
@@ -15,7 +16,7 @@ import {
 export async function GET(req: NextRequest) {
   const next = safeNextPath(req.nextUrl.searchParams.get('next')) ?? '/';
   const refresh = req.cookies.get(REFRESH_TOKEN_KEY)?.value;
-  const tokens = refresh ? await refreshTokens(refresh) : null;
+  const tokens = refresh ? await refreshTokens(refresh, clientAddressHeaders(req.headers)) : null;
 
   if (!tokens) {
     // `/login` without a locale: the proxy prefixes the visitor's language.

@@ -2,6 +2,7 @@ import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseInterceptors } fr
 import type { AuthUser, SessionUser } from '@school-erp/shared';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { Public } from '../../../common/decorators/public.decorator';
+import { RateLimit } from '../../../common/rate-limit';
 import { RefreshTokenValue } from '../decorators/refresh-token.decorator';
 import { LoginDto } from '../dto/login.dto';
 import { AuthCookiesInterceptor } from '../interceptors/auth-cookies.interceptor';
@@ -26,6 +27,7 @@ export class AuthController {
     'records its own entries: core.auth.sign_in in one transaction with the session; failed sign-ins and lockouts each in their own, since a request transaction would hold a connection while they wait for another',
   )
   @Post('login')
+  @RateLimit('auth')
   @HttpCode(HttpStatus.OK)
   login(@Body() dto: LoginDto): Promise<IssuedSession> {
     return this.auth.login(dto.email, dto.password);
@@ -34,6 +36,7 @@ export class AuthController {
   @Public()
   @NotAudited('token refresh rotates the session; not an audited action in v1')
   @Post('refresh')
+  @RateLimit('refresh')
   @HttpCode(HttpStatus.OK)
   refresh(@RefreshTokenValue() refreshToken: string | undefined): Promise<IssuedSession> {
     return this.auth.refresh(refreshToken);

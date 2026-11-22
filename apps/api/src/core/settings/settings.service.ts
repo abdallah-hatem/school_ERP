@@ -21,6 +21,7 @@ import { DomainEvents } from '../events';
 import type { UpdateSchoolSettingsDto } from './dto/update-school-settings.dto';
 import { FileStorageService } from './files/file-storage.service';
 import { checkImageUpload, type UploadedFileLike } from './files/image-upload';
+import { logoForStorage } from './files/svg-logo';
 import { SchoolSettingRepository } from './repositories/school-setting.repository';
 import {
   LOGO_FOLDER,
@@ -180,12 +181,15 @@ export class SettingsService {
     return this.getSchoolSettings();
   }
 
-  /** Stores a png / jpg / svg up to 2 MB and points `logoUrl` at it. */
+  /**
+   * Stores a png / jpg up to 2 MB — an svg is converted to png first (`svg-logo.ts`) — and points
+   * `logoUrl` at it.
+   */
   async setLogo(
     file: UploadedFileLike | undefined,
     changedById: string | null,
   ): Promise<UploadLogoResponse> {
-    const { type, buffer } = checkImageUpload(file, LOGO_UPLOAD);
+    const { type, buffer } = await logoForStorage(checkImageUpload(file, LOGO_UPLOAD));
 
     return this.afterCommit.inTransaction(async () => {
       const logoUrl = await this.files.save(LOGO_FOLDER, `logo-${randomUUID()}.${type}`, buffer);

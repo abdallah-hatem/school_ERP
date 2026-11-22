@@ -248,6 +248,12 @@ export class EmployeesRepository extends BaseRepository<
     });
   }
 
+  /** The scope fields of the employee whose stored photo is `photoUrl`, or null (no one's photo). */
+  async findScopeFieldsByPhoto(photoUrl: string): Promise<EmployeeScopeFields | null> {
+    const row = await this.db.employee.findFirst({ where: { photoUrl }, select: SCOPE_SELECT });
+    return row && toScopeFields(row);
+  }
+
   /** What a scope check needs about one employee, or null when unknown. */
   async findScopeFields(id: string): Promise<EmployeeScopeFields | null> {
     const row = await this.db.employee.findUnique({ where: { id }, select: SCOPE_SELECT });

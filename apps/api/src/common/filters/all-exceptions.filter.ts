@@ -34,6 +34,7 @@ function codeForStatus(status: number, isValidation: boolean): ErrorCode {
   if (status === 404) return ErrorCode.NOT_FOUND;
   if (status === 409) return ErrorCode.CONFLICT;
   if (status === 413) return ErrorCode.PAYLOAD_TOO_LARGE;
+  if (status === 429) return ErrorCode.TOO_MANY_REQUESTS;
   if (status >= 500) return ErrorCode.INTERNAL_ERROR;
   return ErrorCode.BAD_REQUEST;
 }
