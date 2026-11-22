@@ -230,6 +230,11 @@ locally and appeared on #222 only once its seed added two users. Every smoke spe
 wait per file. Prefer retrying assertions (`toHaveText`, `toHaveCount`) for values anyway. Image checks
 ignore images inside a hidden streamed copy and lazy images below the fold (neither loads until shown).
 
+**Tests create data the way the app does** (2026-11-22): through the API, or a shared fixture that
+applies the same rules — not by writing rows straight to the database, unless the test is about the
+database itself. A row the API would refuse (a violation with no levels) breaks other screens in ways
+that look like app bugs (#229's penalties search returned 500 only because its test made one).
+
 ## Review
 
 What reviewers check:
