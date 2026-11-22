@@ -119,7 +119,9 @@ per-account lockout (Sign-in limits); every endpoint declares its permission (Pe
   `'unsafe-eval'` is added in development only (React's dev tools). **Why `style-src
   'unsafe-inline'`**: React renders `style={…}` as inline style attributes (chart sizes, sidebar
   widths, branding colours) and a nonce can't cover an attribute; styles run no script, so the
-  script policy stays whole. Every page is dynamic (it reads the session cookie), which a nonce
+  script policy stays whole. **No eval in the browser:** zod probes `new Function` when a schema is
+  built, which the policy reports as a violation on every page, so `src/instrumentation-client.ts`
+  sets `z.config({ jitless: true })` before any app code (same validation, no probe). Every page is dynamic (it reads the session cookie), which a nonce
   needs — a statically prerendered page would carry no nonce and its scripts would be blocked.
 - **Every web response** (`next.config.ts` `headers()`): `X-Content-Type-Options: nosniff`,
   `Referrer-Policy: strict-origin-when-cross-origin`, `X-Frame-Options: DENY`,
