@@ -23,7 +23,7 @@
   "devDependencies": {
     "dependency-cruiser": "16.10.4",
     "simple-git-hooks": "2.14.0",
-    "turbo": "2.11.11",
+    "turbo": "2.11.13",
     "typescript": "5.9.3"
   },
   "simple-git-hooks": {
