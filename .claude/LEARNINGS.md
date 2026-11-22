@@ -3,6 +3,9 @@
 Corrections recorded so they don't have to be repeated. Loaded at session start.
 
 ## Local app and tests
+- The owner's local `school_erp` data is fake demo data: when running the local app, apply pending
+  migrations directly — no backups, no "your data changed" notes. ("I dont care at all about current
+  data its fake") — 2026-11-22
 - Smoke and API e2e run on GitHub CI only — never locally, not in a worktree, not "to rule out a
   flake", not to verify a fix. Locally: lint, typecheck, unit tests. Review screenshots come from a
   short headless capture script on a throwaway stack, not the smoke suite. A CI failure is fixed from
