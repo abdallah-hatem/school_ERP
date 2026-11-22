@@ -564,6 +564,15 @@ phase live in `docs/build-log/`.
   word appears (any order) or the query without spaces appears in the joined name (عبد الرحمن ⇄
   عبدالرحمن). Covers employees, users, roles, lists, activity, penalties and payroll lines; `%`/`_` are
   literal. A parity e2e keeps the SQL and JS folds identical. ARCHITECTURE → Search.
+- 2026-11-22 — Security hardening → #232 (owner: "what about security"; "the school ips might be one"):
+  helmet on the API; a nonce-based CSP plus Referrer/Permissions-Policy and frame blocking on the web
+  app (zod set jitless so it needs no eval); rate limits — sign-in per account+IP (10/min) with a 200/min
+  per-IP ceiling so a school behind one NAT is never locked out, 300/min per signed-in user, 20/min on
+  exports and uploads, 429 in EN/AR; SVG logos converted to PNG (old ones on first view); stored files
+  follow their record's permission and scope (a folder registry; 404 outside scope; logo and app icons
+  public); gitleaks, an advisory `pnpm audit` and Dependabot in CI. ARCHITECTURE → Security.
+- 2026-11-22 — Test data out of the app bundle → #233: `SEARCH_FIXTURE` moved to
+  `@school-erp/shared/testing`; a guard fails if app code imports it.
 ## Next up
 
 - Sign-in follow-ups (from #218): a show/hide eye on the password box (smoke helpers must first find
