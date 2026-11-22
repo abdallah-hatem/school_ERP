@@ -3,6 +3,7 @@ import { PAGINATION } from '@school-erp/shared';
 import { DatabaseService } from '../../database/database.service';
 import type { Paginated } from '../interfaces/api-response.interface';
 import type { IRepository } from '../interfaces/repository.interface';
+import { searchWhere } from './search';
 
 /** The subset of a Prisma model delegate the base class uses. */
 interface ModelDelegate<T> {
@@ -61,30 +62,27 @@ export abstract class BaseRepository<T, CreateDto, UpdateDto> implements IReposi
   }
 
   /**
-   * Generic pagination with search. Override in a repository to fix its searchable fields.
+   * Generic pagination with search. `search` goes through the shared database search
+   * (`searchWhere` on the model's generated search columns, so the model
+   * must have them — docs/CONVENTIONS.md → Lists).
    *
    * @example
-   * async findAllWithPagination(page = 1, limit = 20, search?: string) {
-   *   return super.findAllWithPagination(page, limit, search, ['nameEn', 'nameAr', 'code']);
-   * }
+   * return this.findAllWithPagination(page, limit, search, { isActive: true }, { select });
    */
   async findAllWithPagination(
     page: number = PAGINATION.defaultPage,
     limit: number = PAGINATION.defaultLimit,
     search?: string,
-    searchFields?: string[],
     where?: Record<string, unknown>,
     query?: PaginationShape,
   ): Promise<Paginated<T>> {
     const take = Math.min(Math.max(1, limit), query?.maxLimit ?? PAGINATION.maxLimit);
     const current = Math.max(1, page);
 
-    const whereCondition: Record<string, unknown> = { ...where };
-    if (search && searchFields?.length) {
-      whereCondition.OR = searchFields.map((field) => ({
-        [field]: { contains: search, mode: 'insensitive' },
-      }));
-    }
+    const searched = searchWhere(search);
+    const whereCondition: Record<string, unknown> = searched
+      ? { AND: [{ ...where }, searched] }
+      : { ...where };
 
     const [data, total] = await Promise.all([
       this.model.findMany({

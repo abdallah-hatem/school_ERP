@@ -6,6 +6,7 @@ import { BaseRepository } from '../../../../common/repositories/base.repository'
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { DatabaseService } from '../../../../database/database.service';
 import type { DbAdapter, DbClient } from '../../../../database/transactions';
+import { codeContains } from '../../../../common/repositories/search';
 
 /** Counter row the employee codes come from (`Counter` table, never decremented). */
 export const EMPLOYEE_CODE_COUNTER = 'employee_code';
@@ -234,7 +235,6 @@ export class EmployeesRepository extends BaseRepository<
       page,
       limit,
       search || undefined,
-      ['code', 'nameEn', 'nameAr'],
       where,
       { select: EMPLOYEE_SUMMARY_SELECT, orderBy: [{ createdAt: 'asc' }, { code: 'asc' }] },
     );
@@ -303,7 +303,7 @@ export class EmployeesRepository extends BaseRepository<
   /** The ids of the employees (any status) whose code contains `q`, any case (Activity's search). */
   async findIdsByCode(q: string): Promise<string[]> {
     const rows = await this.db.employee.findMany({
-      where: { code: { contains: q, mode: 'insensitive' } },
+      where: { code: codeContains(q) },
       select: { id: true },
     });
     return rows.map((r) => r.id);

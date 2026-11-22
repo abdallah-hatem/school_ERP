@@ -3,6 +3,7 @@ import { TransactionHost } from '@nestjs-cls/transactional';
 import { Prisma } from '@prisma/client';
 import { PAGINATION, type AuthUser, type Gender, type Paginated } from '@school-erp/shared';
 import type { DbAdapter } from '../../../database/transactions';
+import { searchWhere } from '../../../common/repositories/search';
 
 /** What may leave the API about a user. Never the password hash. */
 const AUTH_USER_SELECT = {
@@ -85,14 +86,7 @@ export class UsersRepository {
     const where: Prisma.UserWhereInput = {
       ...(filter.isActive === undefined ? {} : { isActive: filter.isActive }),
       ...(filter.roleId ? { roles: { some: { roleId: filter.roleId } } } : {}),
-      ...(filter.search
-        ? {
-            OR: [
-              { name: { contains: filter.search, mode: 'insensitive' } },
-              { email: { contains: filter.search, mode: 'insensitive' } },
-            ],
-          }
-        : {}),
+      ...searchWhere(filter.search),
     };
     const [data, total] = await Promise.all([
       this.db.user.findMany({
@@ -206,15 +200,7 @@ export class UsersRepository {
   ): Promise<Paginated<EmployeeOptionRow>> {
     const take = Math.min(Math.max(1, limit), PAGINATION.maxLimit);
     const page = Math.max(1, p);
-    const where: Prisma.EmployeeWhereInput = search
-      ? {
-          OR: [
-            { nameEn: { contains: search, mode: 'insensitive' } },
-            { nameAr: { contains: search, mode: 'insensitive' } },
-            { code: { contains: search, mode: 'insensitive' } },
-          ],
-        }
-      : {};
+    const where: Prisma.EmployeeWhereInput = searchWhere(search) ?? {};
     const [data, total] = await Promise.all([
       this.db.employee.findMany({
         where,

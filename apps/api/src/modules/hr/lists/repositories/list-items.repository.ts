@@ -67,13 +67,12 @@ export abstract class ListItemsRepository<
     });
   }
 
-  /** One page (by order, then English name), searched by either name (any case). */
+  /** One page (by order, then English name), searched by either name (the shared search). */
   findPage(includeHidden: boolean, page?: number, limit?: number, search?: string, ids?: string[]): Promise<Paginated<T>> {
     return this.findAllWithPagination(
       page,
       limit,
       search || undefined,
-      ['nameEn', 'nameAr'],
       { ...(includeHidden ? {} : { isActive: true }), ...(ids ? { id: { in: ids } } : {}) },
       { select: this.select, orderBy: [{ sortOrder: 'asc' }, { nameEn: 'asc' }] },
     );

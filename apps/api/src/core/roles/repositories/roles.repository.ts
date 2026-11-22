@@ -3,6 +3,7 @@ import { TransactionHost } from '@nestjs-cls/transactional';
 import { Prisma, type PermissionScope } from '@prisma/client';
 import { PAGINATION, SYSTEM_ADMIN_ROLE, type Paginated, type RoleRef } from '@school-erp/shared';
 import type { DbAdapter } from '../../../database/transactions';
+import { searchWhere } from '../../../common/repositories/search';
 
 const roleRefSelect = {
   id: true,
@@ -41,9 +42,7 @@ export class RolesRepository {
   async findPage(p: number, limit: number, search?: string): Promise<Paginated<RoleRow>> {
     const take = Math.min(Math.max(1, limit), PAGINATION.maxLimit);
     const page = Math.max(1, p);
-    const where: Prisma.RoleWhereInput = search
-      ? { OR: [{ nameEn: { contains: search, mode: 'insensitive' } }, { nameAr: { contains: search, mode: 'insensitive' } }] }
-      : {};
+    const where: Prisma.RoleWhereInput = searchWhere(search) ?? {};
     const [data, total] = await Promise.all([
       this.db.role.findMany({
         where,

@@ -948,6 +948,39 @@ quietly loosen a rule.
   module actually needs it.
 - **`packages/shared`** — the only code shared by api and web.
 
+### Search
+
+One fold and one matching rule for every search, in the database and in memory (owner, 2026-11-22),
+so "احمد" finds "أحمد", "عبدالرحمن" finds "عبد الرحمن" and "mona" finds "Moná".
+
+- **The fold.** `searchKey` (`packages/shared/src/search.ts`) and the database's IMMUTABLE
+  `search_fold(text)` (migration `20261122100000_search_fold`) do the same thing: NFD, drop Latin
+  combining accents (every accented Latin letter that decomposes; ø, æ, ł, đ, ß, ı stay — no
+  `unaccent` extension), Arabic marks U+064B–U+0670 and the tatweel; fold أ إ آ ٱ → ا, ى → ي,
+  ة → ه, ؤ → و, ئ → ي; lower-case; every whitespace-like character (NBSP, tabs, newlines, the U+2000
+  spaces) becomes a space and zero-width ones (U+200B–U+200F, U+FEFF) are dropped; runs collapse,
+  ends are trimmed. The API e2e spec `search-fold.e2e-spec.ts` runs the shared `SEARCH_FIXTURE`
+  through both and fails if they differ — change both, or neither.
+- **The database keeps the search text itself.** Each searched table has two
+  `GENERATED ALWAYS … STORED` columns: `search_text` = `search_fold` of its searched columns joined
+  by spaces (employees: code and both names; users: name and email; roles, stages, departments, job
+  titles and violations: both names; audit entries: the record's name in both languages; payroll and
+  accounting payroll lines: code, both names, and national id on HR's), and `search_compact` = the
+  same with every space removed. Each has a `pg_trgm` GIN index, so a contains search is indexed.
+  Prisma declares them `String? @default(dbgenerated())`; the client omits them from every row
+  (`SEARCH_OMIT` in `database.service.ts`) and the app never writes them (a unit test scans for it).
+- **The matching rule** (`searchWhere` in `apps/api/src/common/repositories/search.ts`): fold the
+  query with `searchKey` and split it into words; a row matches when **every word** is contained in
+  `search_text` (any order, partial words), **or** the query without spaces is contained in
+  `search_compact` (joined and split names, both directions). `%`, `_` and `\` are literal. It is a
+  Prisma where fragment, nested under a relation for a search through one (penalties: the
+  employee's or the violation's), and goes through `BaseRepository.findAllWithPagination`'s
+  `search`; paging, totals and order stay in the same query. `searchSql` is the raw-SQL twin for an
+  expression with no columns (the Activity people picker's latest name — a handful of rows, no
+  index). Code-only look-ups (Activity finding records by employee code) use `codeContains`.
+- **In memory** (a month's lateness, the penalty catalogue, a picker's own short option list),
+  `matchesSearch` applies the same rule to the same fold.
+
 ## Repository layout
 
 ```

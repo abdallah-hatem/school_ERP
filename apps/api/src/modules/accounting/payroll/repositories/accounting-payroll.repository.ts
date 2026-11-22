@@ -3,6 +3,7 @@ import { TransactionHost } from '@nestjs-cls/transactional';
 import { Prisma } from '@prisma/client';
 import { PAGINATION, PAYROLL_PAGINATION, type AccountingPayrollTotals, type InsuranceStatus } from '@school-erp/shared';
 import type { DbAdapter } from '../../../../database/transactions';
+import { searchWhere } from '../../../../common/repositories/search';
 
 export const ACCOUNTING_RUN_SELECT = {
   id: true,
@@ -56,12 +57,8 @@ export interface AccountingLinesFilter {
 function linesWhere(runId: string, filter: AccountingLinesFilter): Prisma.AccountingPayrollLineWhereInput {
   const where: Prisma.AccountingPayrollLineWhereInput = { runId };
   if (filter.insurance) where.insuranceStatus = filter.insurance;
-  const search = filter.search?.trim();
-  if (search) {
-    where.OR = (['employeeCode', 'nameEn', 'nameAr'] as const).map((field) => ({
-      [field]: { contains: search, mode: 'insensitive' as const },
-    }));
-  }
+  const searched = searchWhere(filter.search);
+  if (searched) where.OR = searched.OR;
   return where;
 }
 

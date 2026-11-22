@@ -51,7 +51,15 @@ model User {
   notificationPrefs   NotificationPreference[]
   pushSubscriptions   PushSubscription[]
 
+  /// Search text the database keeps up to date (search_fold of the searched columns):
+  /// read-only, never written by the app (docs/ARCHITECTURE.md -> Search).
+  searchText    String? @default(dbgenerated()) @map("search_text")
+  /// The same with every space removed (عبد الرحمن finds عبدالرحمن).
+  searchCompact String? @default(dbgenerated()) @map("search_compact")
+
   @@index([isActive])
+  @@index([searchText(ops: raw("gin_trgm_ops"))], type: Gin, map: "users_search_text_idx")
+  @@index([searchCompact(ops: raw("gin_trgm_ops"))], type: Gin, map: "users_search_compact_idx")
   @@map("users")
 }
 
@@ -79,6 +87,14 @@ model Role {
   permissions RolePermission[]
   users       UserRoleAssignment[]
 
+  /// Search text the database keeps up to date (search_fold of the searched columns):
+  /// read-only, never written by the app (docs/ARCHITECTURE.md -> Search).
+  searchText    String? @default(dbgenerated()) @map("search_text")
+  /// The same with every space removed (عبد الرحمن finds عبدالرحمن).
+  searchCompact String? @default(dbgenerated()) @map("search_compact")
+
+  @@index([searchText(ops: raw("gin_trgm_ops"))], type: Gin, map: "roles_search_text_idx")
+  @@index([searchCompact(ops: raw("gin_trgm_ops"))], type: Gin, map: "roles_search_compact_idx")
   @@map("roles")
 }
 
@@ -380,11 +396,19 @@ model AuditEntry {
   meta          Json     @default("{}")
   at            DateTime @default(now())
 
+  /// Search text the database keeps up to date (search_fold of the searched columns):
+  /// read-only, never written by the app (docs/ARCHITECTURE.md -> Search).
+  searchText    String? @default(dbgenerated()) @map("search_text")
+  /// The same with every space removed (عبد الرحمن finds عبدالرحمن).
+  searchCompact String? @default(dbgenerated()) @map("search_compact")
+
   @@index([at(sort: Desc)])
   @@index([entityType, entityId, at])
   @@index([actorId, at])
   @@index([module, at])
   @@index([action, at])
+  @@index([searchText(ops: raw("gin_trgm_ops"))], type: Gin, map: "audit_entries_search_text_idx")
+  @@index([searchCompact(ops: raw("gin_trgm_ops"))], type: Gin, map: "audit_entries_search_compact_idx")
   @@map("audit_entries")
 }
 
@@ -405,8 +429,16 @@ model Stage {
   otherEmployees EmployeeStage[]
   penalties      PenaltyRecord[]
 
+  /// Search text the database keeps up to date (search_fold of the searched columns):
+  /// read-only, never written by the app (docs/ARCHITECTURE.md -> Search).
+  searchText    String? @default(dbgenerated()) @map("search_text")
+  /// The same with every space removed (عبد الرحمن finds عبدالرحمن).
+  searchCompact String? @default(dbgenerated()) @map("search_compact")
+
   @@index([isActive])
   @@index([sortOrder])
+  @@index([searchText(ops: raw("gin_trgm_ops"))], type: Gin, map: "stages_search_text_idx")
+  @@index([searchCompact(ops: raw("gin_trgm_ops"))], type: Gin, map: "stages_search_compact_idx")
   @@map("stages")
 }
 
@@ -499,8 +531,16 @@ model Department {
 
   employees Employee[]
 
+  /// Search text the database keeps up to date (search_fold of the searched columns):
+  /// read-only, never written by the app (docs/ARCHITECTURE.md -> Search).
+  searchText    String? @default(dbgenerated()) @map("search_text")
+  /// The same with every space removed (عبد الرحمن finds عبدالرحمن).
+  searchCompact String? @default(dbgenerated()) @map("search_compact")
+
   @@index([isActive])
   @@index([sortOrder])
+  @@index([searchText(ops: raw("gin_trgm_ops"))], type: Gin, map: "departments_search_text_idx")
+  @@index([searchCompact(ops: raw("gin_trgm_ops"))], type: Gin, map: "departments_search_compact_idx")
   @@map("departments")
 }
 
@@ -517,9 +557,17 @@ model JobTitle {
 
   employees Employee[]
 
+  /// Search text the database keeps up to date (search_fold of the searched columns):
+  /// read-only, never written by the app (docs/ARCHITECTURE.md -> Search).
+  searchText    String? @default(dbgenerated()) @map("search_text")
+  /// The same with every space removed (عبد الرحمن finds عبدالرحمن).
+  searchCompact String? @default(dbgenerated()) @map("search_compact")
+
   @@index([isActive])
   @@index([managesPeople])
   @@index([sortOrder])
+  @@index([searchText(ops: raw("gin_trgm_ops"))], type: Gin, map: "job_titles_search_text_idx")
+  @@index([searchCompact(ops: raw("gin_trgm_ops"))], type: Gin, map: "job_titles_search_compact_idx")
   @@map("job_titles")
 }
 
@@ -589,6 +637,12 @@ model Employee {
   payrollLines PayrollLine[]
   adjustments  PayrollAdjustment[]
 
+  /// Search text the database keeps up to date (search_fold of the searched columns):
+  /// read-only, never written by the app (docs/ARCHITECTURE.md -> Search).
+  searchText    String? @default(dbgenerated()) @map("search_text")
+  /// The same with every space removed (عبد الرحمن finds عبدالرحمن).
+  searchCompact String? @default(dbgenerated()) @map("search_compact")
+
   @@index([stageId])
   @@index([departmentId])
   @@index([jobTitleId])
@@ -597,6 +651,8 @@ model Employee {
   @@index([workSystem])
   @@index([hireDate])
   @@index([deactivatedOn])
+  @@index([searchText(ops: raw("gin_trgm_ops"))], type: Gin, map: "employees_search_text_idx")
+  @@index([searchCompact(ops: raw("gin_trgm_ops"))], type: Gin, map: "employees_search_compact_idx")
   @@map("employees")
 }
 
@@ -652,8 +708,16 @@ model Violation {
   levels    ViolationLevel[]
   penalties PenaltyRecord[]
 
+  /// Search text the database keeps up to date (search_fold of the searched columns):
+  /// read-only, never written by the app (docs/ARCHITECTURE.md -> Search).
+  searchText    String? @default(dbgenerated()) @map("search_text")
+  /// The same with every space removed (عبد الرحمن finds عبدالرحمن).
+  searchCompact String? @default(dbgenerated()) @map("search_compact")
+
   @@index([groupId])
   @@index([isActive])
+  @@index([searchText(ops: raw("gin_trgm_ops"))], type: Gin, map: "violations_search_text_idx")
+  @@index([searchCompact(ops: raw("gin_trgm_ops"))], type: Gin, map: "violations_search_compact_idx")
   @@map("violations")
 }
 
@@ -828,10 +892,18 @@ model PayrollLine {
   run      PayrollRun @relation(fields: [runId], references: [id], onDelete: Cascade)
   employee Employee   @relation(fields: [employeeId], references: [id], onDelete: Restrict)
 
+  /// Search text the database keeps up to date (search_fold of the searched columns):
+  /// read-only, never written by the app (docs/ARCHITECTURE.md -> Search).
+  searchText    String? @default(dbgenerated()) @map("search_text")
+  /// The same with every space removed (عبد الرحمن finds عبدالرحمن).
+  searchCompact String? @default(dbgenerated()) @map("search_compact")
+
   @@unique([runId, employeeId])
   @@index([runId])
   @@index([employeeId])
   @@index([departmentId])
+  @@index([searchText(ops: raw("gin_trgm_ops"))], type: Gin, map: "payroll_lines_search_text_idx")
+  @@index([searchCompact(ops: raw("gin_trgm_ops"))], type: Gin, map: "payroll_lines_search_compact_idx")
   @@map("payroll_lines")
 }
 
@@ -910,7 +982,15 @@ model AccountingPayrollLine {
 
   run AccountingPayrollRun @relation(fields: [runId], references: [id], onDelete: Cascade)
 
+  /// Search text the database keeps up to date (search_fold of the searched columns):
+  /// read-only, never written by the app (docs/ARCHITECTURE.md -> Search).
+  searchText    String? @default(dbgenerated()) @map("search_text")
+  /// The same with every space removed (عبد الرحمن finds عبدالرحمن).
+  searchCompact String? @default(dbgenerated()) @map("search_compact")
+
   @@unique([runId, employeeId])
   @@index([runId])
+  @@index([searchText(ops: raw("gin_trgm_ops"))], type: Gin, map: "accounting_payroll_lines_search_text_idx")
+  @@index([searchCompact(ops: raw("gin_trgm_ops"))], type: Gin, map: "accounting_payroll_lines_search_compact_idx")
   @@map("accounting_payroll_lines")
 }

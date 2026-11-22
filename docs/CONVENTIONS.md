@@ -171,6 +171,12 @@ browser from a fully loaded list.
   (`useServerOptions`): the API answers each typed search (one page of 20) and the chosen record's
   name comes from the record or from the API (`?ids=` / `?id=`). Only short **code** lists (an enum)
   may be filtered by the combobox itself.
+- **Search** (owner, 2026-11-22): every table a list searches gets the two generated columns
+  `search_text` / `search_compact` (`search_fold` of its searched columns) with their trigram
+  indexes, in its migration and as read-only fields in the Prisma schema (and `SEARCH_OMIT`), and its
+  repository searches only through the shared helper (`searchWhere`, or `findAllWithPagination`'s
+  `search`) — never `contains` / `mode: 'insensitive'` or `ILIKE` on name columns
+  (`docs/ARCHITECTURE.md` → Search). The app never writes the search columns.
 - **Exports** (Excel, print / PDF, the bank sheet) cover the whole set, read from the API — never
   the page on screen.
 - **Guards:** `DataTable` throws outside production when handed more rows than its page size

@@ -7,7 +7,6 @@ export interface IRepository<T, CreateDto, UpdateDto> {
     page?: number,
     limit?: number,
     search?: string,
-    searchFields?: string[],
     where?: Record<string, unknown>,
     query?: { select?: unknown; orderBy?: unknown },
   ): Promise<Paginated<T>>;
