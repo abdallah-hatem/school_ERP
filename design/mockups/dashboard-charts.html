@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard Charts Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Tajawal:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/duotone/style.css">
+<style>
+/*
+ * Home dashboard + analytics charts — three layout options (A / B / C).
+ * Tokens copied from apps/web/src/app/globals.css (direction "Campus", light only).
+ * Chart palette (validated with the dataviz validator against #FFFFFF, all checks pass;
+ * sunflower is below 3:1, so every chart has a legend/labels and a table view):
+ *   series-1 teal #008A73 · series-2 sunflower #DDA000 · series-3 blue #3567C0 · series-4 rose #C44E86
+ */
+:root{
+  --background:#f2f8f6; --foreground:#11302b; --card:#ffffff; --muted:#f5faf8; --muted-foreground:#587069;
+  --secondary:#eaf4f1; --primary:#0b7a68; --primary-foreground:#fff; --primary-soft:#d5efe8;
+  --accent:#ffc43d; --accent-foreground:#4a3400; --accent-soft:#fff1c9;
+  --success:#1f9a62; --success-soft:#ddf4e7; --success-ink:#126b42;
+  --warning:#d9771c; --warning-soft:#ffe8d2; --warning-ink:#8f4608;
+  --info:#2f6fb3; --info-soft:#e0eefb; --info-ink:#24578e;
+  --border:#dce9e5; --input:#cfe0db;
+  --shadow-card:0 1px 2px rgb(11 72 62 / .06),0 10px 30px -12px rgb(11 72 62 / .18);
+  --shadow-raised:0 2px 4px rgb(11 72 62 / .05),0 30px 60px -24px rgb(11 72 62 / .28);
+  --s1:#008a73; --s2:#dda000; --s3:#3567c0; --s4:#c44e86; --s1-muted:#b4e0d5;
+  --grid:#e6efec; --axis:#c9dcd6;
+  --font-latin:"Plus Jakarta Sans",system-ui,sans-serif;
+  --font-ar:"IBM Plex Sans Arabic","Plus Jakarta Sans",system-ui,sans-serif;
+  --font-ar-display:"Tajawal","IBM Plex Sans Arabic",system-ui,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:#dfece8;color:var(--foreground);font-family:var(--font-latin);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+.num{font-family:var(--font-latin);font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1}
+.ph-duotone{line-height:1}
+[dir=rtl] .flip{transform:scaleX(-1)}
+
+/* ---------- mockup chrome (not the app) ---------- */
+.mockbar{position:sticky;top:0;z-index:50;background:#0f2f2a;color:#e7f4f0;display:flex;align-items:center;gap:18px;padding:10px 24px;font-size:13px;flex-wrap:wrap}
+.mockbar strong{font-size:14px}
+.mockbar .note{opacity:.75;flex:1;min-width:260px}
+.optseg{display:inline-flex;background:rgba(255,255,255,.08);border-radius:999px;padding:3px;gap:2px}
+.optseg a{color:inherit;text-decoration:none;padding:5px 14px;border-radius:999px;font-weight:700}
+.optseg a[aria-current]{background:var(--accent);color:#3a2900}
+.board{padding:28px 32px 48px;display:flex;flex-direction:column;gap:28px;width:max-content}
+.cap{font-size:13px;font-weight:700;color:#41605a;margin:0 0 8px;display:flex;gap:8px;align-items:center}
+.cap span{font-weight:500;opacity:.8}
+.phones{display:flex;gap:32px;align-items:flex-start}
+
+/* ---------- frame = one device ---------- */
+.frame{background:var(--background);border-radius:22px;overflow:hidden;box-shadow:var(--shadow-raised);border:1px solid var(--border);position:relative}
+.frame[lang=ar]{font-family:var(--font-ar)}
+.frame .disp{font-family:var(--font-latin)}
+.frame[lang=ar] .disp{font-family:var(--font-ar-display)}
+.dev-desk{width:1440px;display:grid;grid-template-columns:272px minmax(0,1fr)}
+.dev-phone{width:390px}
+
+/* sidebar */
+.side{background:var(--card);border-inline-end:1px solid var(--border);padding:22px 14px;display:flex;flex-direction:column;gap:22px}
+.brand{display:flex;align-items:center;gap:11px;padding-inline:6px}
+.logo{width:40px;height:40px;border-radius:13px;background:var(--primary);display:grid;place-items:center;position:relative;flex:none;color:#fff;font-size:22px}
+.logo::after{content:"";position:absolute;width:11px;height:11px;border-radius:50%;background:var(--accent);inset-block-start:-3px;inset-inline-end:-3px;box-shadow:0 0 0 3px #fff}
+.brand b{display:block;font-weight:800;font-size:15px;line-height:1.2}
+.brand small{font-size:12px;color:var(--muted-foreground)}
+.nav{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.mod{display:flex;align-items:center;gap:11px;min-height:46px;padding:8px 10px;border-radius:14px;font-weight:700;font-size:14.4px}
+.mod .mt{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;font-size:18px;flex:none}
+.mt.n{background:var(--secondary);color:var(--muted-foreground)} .mt.p{background:var(--primary-soft);color:var(--primary)} .mt.a{background:var(--accent-soft);color:var(--accent-foreground)}
+.mod .grow{flex:1;min-width:0}
+.mod .chev{color:var(--muted-foreground);font-size:14px}
+.mod.soon{color:var(--muted-foreground);font-weight:600}
+.mod.soon .mt{opacity:.7;filter:grayscale(1)}
+.soontag{background:var(--secondary);border-radius:999px;padding:1px 7px;font-size:10.5px;font-weight:700;color:var(--muted-foreground)}
+.grp.open{background:var(--muted);border-radius:16px;box-shadow:inset 0 0 0 1px var(--border)}
+.sub{list-style:none;margin:0 0 0 24px;margin-inline:24px 0;padding:0 10px 10px 8px;padding-inline:8px 10px;border-inline-start:2px solid var(--border);display:flex;flex-direction:column;gap:2px}
+.sub li{display:flex;align-items:center;gap:9px;min-height:38px;padding:6px 9px;border-radius:12px;font-size:13.8px;font-weight:600;color:var(--muted-foreground)}
+.sub li .ph-duotone{font-size:19px}
+.sub li.cur{background:var(--primary-soft);color:var(--primary)}
+.sub li.cur::after,.mod.cur::after{content:"";margin-inline-start:auto;width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px rgb(255 196 61 / .3)}
+.mod.cur{background:var(--primary-soft);color:var(--primary)}
+.sub li.lock{opacity:.75;font-size:12.8px}
+.userchip{margin-block-start:auto;display:flex;align-items:center;gap:11px;padding:11px;border-radius:18px;background:var(--muted);border:1px solid var(--border)}
+.av{width:38px;height:38px;border-radius:13px;background:var(--accent);color:var(--accent-foreground);display:grid;place-items:center;font-weight:800;font-size:14px;flex:none}
+.userchip b{display:block;font-size:13.5px;line-height:1.25}.userchip small{font-size:12px;color:var(--muted-foreground)}
+
+/* top row + main */
+.topright{display:flex;justify-content:flex-end;gap:10px;padding:20px 32px 0}
+.iconbtn{width:40px;height:40px;border-radius:13px;border:1px solid var(--border);background:var(--card);display:grid;place-items:center;font-size:20px;position:relative;cursor:pointer}
+.iconbtn .badge{position:absolute;inset-block-start:-4px;inset-inline-end:-4px;min-width:18px;height:18px;border-radius:9px;background:var(--accent);color:var(--accent-foreground);font-size:10.5px;font-weight:800;display:grid;place-items:center;padding-inline:4px;box-shadow:0 0 0 2px var(--background)}
+.loc{height:40px;padding-inline:14px;border-radius:13px;border:1px solid var(--border);background:var(--card);font-weight:700;display:inline-flex;align-items:center;gap:6px;font-size:14px}
+.loc .g{font-family:var(--font-ar-display);font-size:17px}
+main{display:flex;flex-direction:column;gap:20px;padding:12px 32px 32px;min-width:0}
+.dev-phone main{padding:18px 16px 28px;gap:16px}
+.ptop{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);background:rgb(242 248 246 / .92)}
+.ptop .nm{flex:1;font-weight:800;font-size:15px;line-height:1.2}
+
+/* page header */
+.ph{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap}
+.ph h1{margin:0;font-size:28px;line-height:1.2;font-weight:800;letter-spacing:-.01em}
+.frame[lang=ar] .ph h1{letter-spacing:0}
+.ph p{margin:4px 0 0;color:var(--muted-foreground);font-size:14.5px}
+.ph .end{margin-inline-start:auto}
+.dev-phone .ph h1{font-size:22px}
+.dev-phone .ph{align-items:flex-start;flex-direction:column;gap:10px}
+.dev-phone .ph .end{margin-inline-start:0}
+
+/* segmented control (range + tabs) */
+.segc{display:inline-flex;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:3px;gap:2px;box-shadow:0 1px 2px rgb(11 72 62 / .05)}
+.segc button{border:0;background:transparent;border-radius:11px;padding:7px 14px;font-weight:700;font-size:13.5px;color:var(--muted-foreground);cursor:pointer;display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.segc button .ph-duotone{font-size:17px}
+.segc button[aria-pressed=true]{background:var(--primary);color:#fff;box-shadow:0 6px 14px -8px rgb(11 122 104 / .8)}
+.tabsbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.tabsbar .segc{padding:4px}
+.tabsbar .segc button{padding:9px 16px;font-size:14px}
+.dev-phone .tabsbar .segc{display:flex;width:100%}
+.dev-phone .tabsbar .segc button{flex:1;justify-content:center;padding:8px 4px;font-size:12.8px}
+.dev-phone .tabsbar .segc button .ph-duotone{display:none}
+
+/* tiles (StatTile) */
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.dev-phone .tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.tile{position:relative;isolation:isolate;overflow:hidden;border-radius:22px;background:var(--card);box-shadow:var(--shadow-card);padding:18px 20px 20px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.dev-phone .tile{padding:14px 14px 16px;gap:10px;border-radius:20px}
+.tile .tt{display:flex;align-items:center;gap:12px}
+.dev-phone .tile .tt{gap:9px;align-items:flex-start}
+.tile .ic{width:40px;height:40px;border-radius:14px;display:grid;place-items:center;font-size:24px;flex:none}
+.dev-phone .tile .ic{width:34px;height:34px;font-size:20px;border-radius:12px}
+.tile .lbl{font-size:14px;font-weight:600;color:var(--muted-foreground);line-height:1.3}
+.dev-phone .tile .lbl{font-size:12.5px}
+.tile .val{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px;line-height:1;direction:ltr}
+.frame[dir=rtl] .tile .val{justify-content:flex-end}
+.tile .val b{font-size:clamp(24px,2.2vw,30px);font-weight:800;letter-spacing:-.02em}
+.dev-phone .tile .val b{font-size:19px}
+.tile .val .u{font-size:14px;font-weight:700;color:var(--muted-foreground);font-family:var(--font)}
+.frame[lang=ar] .tile .val .u{font-family:var(--font-ar)}
+.tile .sb{font-size:12.3px;color:var(--muted-foreground);line-height:1.45;margin-top:-2px}
+.tone-p{background:linear-gradient(180deg,rgb(11 122 104 / .07),var(--card) 60%)} .tone-p .ic{background:var(--primary-soft);color:var(--primary)}
+.tone-i{background:linear-gradient(180deg,rgb(47 111 179 / .07),var(--card) 60%)} .tone-i .ic{background:var(--info-soft);color:var(--info)}
+.tone-w{background:linear-gradient(180deg,rgb(217 119 28 / .07),var(--card) 60%)} .tone-w .ic{background:var(--warning-soft);color:var(--warning-ink)}
+.tone-f{background:var(--primary);color:#fff}
+.dev-phone .tone-f::before{width:96px;height:96px;inset-block-start:-52px;inset-inline-end:-40px}
+.tone-f .ic{background:rgb(255 255 255 / .15);color:#fff}
+.tone-f .lbl,.tone-f .sb,.tone-f .val .u{color:rgb(255 255 255 / .8)}
+.tone-f::before{content:"";position:absolute;z-index:-1;width:144px;height:144px;border-radius:50%;background:rgb(255 196 61 / .85);inset-block-start:-64px;inset-inline-end:-48px}
+.tone-f::after{content:"";position:absolute;z-index:-1;width:176px;height:176px;border-radius:50%;background:rgb(255 255 255 / .08);inset-block-end:-64px;inset-inline-start:30%}
+.stages{display:flex;flex-wrap:wrap;gap:4px 12px;list-style:none;margin:0;padding:0}
+.stages b{color:#fff;font-weight:700;margin-inline-start:3px}
+.pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:3px 10px 3px 8px;padding-inline:8px 10px;font-size:12px;font-weight:700;white-space:nowrap}
+.pill-ok{background:var(--success-soft);color:var(--success-ink)}
+.cta{display:inline-flex;align-items:center;gap:4px;color:var(--primary);font-weight:700;white-space:nowrap}
+.sbrow{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
+
+/* cards + charts */
+.card{background:var(--card);border-radius:24px;box-shadow:var(--shadow-card);padding:20px 22px 20px;display:flex;flex-direction:column;gap:14px;min-width:0;position:relative}
+.dev-phone .card{padding:16px 16px 16px;border-radius:22px}
+.ch{display:flex;align-items:flex-start;gap:12px}
+.ch .tx{flex:1;min-width:0}
+.ch h2{margin:0;font-size:16.5px;font-weight:800;line-height:1.3}
+.ch p{margin:2px 0 0;font-size:12.8px;color:var(--muted-foreground)}
+.tblbtn{border:1px solid var(--border);background:var(--card);border-radius:11px;height:32px;padding-inline:10px;display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--muted-foreground);cursor:pointer;flex:none}
+.tblbtn .ph-duotone{font-size:16px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--muted-foreground);font-weight:600}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.legend i.ln{height:3px;width:14px;border-radius:2px}
+.chart{position:relative;width:100%}
+.chart svg{display:block;overflow:visible;direction:ltr}
+.chart.fill{flex:1}
+.chart.fill svg{position:absolute;inset:0}
+.ctable{display:none}
+.card.tabled .chart,.card.tabled .legend,.card.tabled .hidewhentable{display:none}
+.card.tabled .ctable{display:block}
+.ctable{max-height:300px;overflow:auto}
+.ctable table{width:100%;border-collapse:collapse;font-size:13px}
+.ctable th{text-align:start;font-weight:600;color:var(--muted-foreground);font-size:12px;padding:7px 8px;background:var(--muted);position:sticky;top:0}
+.ctable td{padding:7px 8px;border-bottom:1px solid var(--border)}
+.ctable td.n,.ctable th.n{text-align:end}
+.subhead{font-size:13px;font-weight:700;margin:4px 0 -4px;display:flex;align-items:center;gap:8px}
+.subhead small{font-weight:500;color:var(--muted-foreground);font-size:12px}
+.divider{height:1px;background:var(--border);margin:2px 0}
+g.hit rect.bg{fill:transparent}
+g.hit:hover rect.bg{fill:rgb(11 122 104 / .06)}
+g.hit .xh,g.hit .hd{opacity:0}
+g.hit:hover .xh,g.hit:hover .hd{opacity:1}
+
+/* hero (option B) */
+.hero{display:flex;align-items:flex-end;gap:10px 18px;flex-wrap:wrap}
+.hero .fig{display:flex;align-items:baseline;gap:8px;direction:ltr;line-height:1}
+.hero .fig .u{font-size:18px;font-weight:700;color:var(--muted-foreground)}
+.frame[lang=ar] .hero .fig .u{font-family:var(--font-ar)}
+.hero .fig b{font-size:52px;font-weight:800;letter-spacing:-.025em}
+.dev-phone .hero .fig b{font-size:36px}
+.hero .meta{display:flex;flex-direction:column;gap:6px;padding-bottom:4px;font-size:13px;color:var(--muted-foreground)}
+.delta{display:inline-flex;align-items:center;gap:4px;font-weight:700;color:var(--foreground)}
+
+/* horizontal bars (stages) */
+.hb{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px}
+.hb li{display:grid;grid-template-columns:96px minmax(0,1fr);align-items:center;gap:10px;font-size:13px;cursor:default}
+.dev-phone .hb li{grid-template-columns:84px minmax(0,1fr)}
+.hb .nm{color:var(--muted-foreground);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hb .tr{display:flex;align-items:center;gap:8px;min-width:0}
+.hb .fl{height:14px;background:var(--s1);border-start-end-radius:4px;border-end-end-radius:4px;flex:none}
+.hb li:hover .fl{filter:brightness(1.08)}
+.hb .v{font-weight:700;font-size:13px}
+.hb li.ns .fl{background:#9fb5af}
+
+/* deductions */
+.segbar{display:flex;gap:2px;height:28px}
+.segbar > div{height:100%;border-radius:4px;display:flex;align-items:center;padding-inline:0;color:#fff;font-size:12px;font-weight:700;white-space:nowrap;min-width:0;cursor:default}
+.dlist{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 18px}
+.dlist li{display:grid;grid-template-columns:10px minmax(0,1fr);gap:4px 8px;align-items:center;font-size:12.5px}
+.dlist i{width:10px;height:10px;border-radius:3px}
+.dlist .k{color:var(--muted-foreground);font-weight:600}
+.dlist .a{grid-column:2;font-weight:700;font-size:13px;color:var(--foreground);display:flex;gap:6px;align-items:baseline}
+.dlist .a small{font-weight:600;color:var(--muted-foreground)}
+.mrows{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.mrows li{display:grid;grid-template-columns:64px minmax(0,1fr) 48px;gap:10px;align-items:center;font-size:12.5px;cursor:default}
+.mrows .m{color:var(--muted-foreground);font-weight:600}
+.mrows .track{height:8px;background:var(--muted);border-radius:999px;display:flex;gap:2px;overflow:hidden}
+.mrows .track span{height:100%}
+.mrows .p{font-weight:700;text-align:end}
+.mrows li.cur .m,.mrows li.cur .p{color:var(--foreground)}
+.mrows li:hover .track{background:var(--secondary)}
+
+/* empty state */
+.empty{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:26px 18px 22px;background:linear-gradient(180deg,var(--accent-soft),var(--card) 70%)}
+.empty .art{width:92px;height:72px}
+.empty h2{margin:4px 0 0;font-size:18px;font-weight:800;line-height:1.3}
+.empty p{margin:0;color:var(--muted-foreground);font-size:13.5px;max-width:460px}
+.steps{display:flex;gap:8px;align-items:center;font-size:12.5px;font-weight:700;margin-top:4px}
+.steps span{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:var(--success-soft);color:var(--success-ink)}
+.steps span.todo{background:var(--card);color:var(--muted-foreground);box-shadow:inset 0 0 0 1.5px var(--border)}
+.btn{display:inline-flex;align-items:center;gap:8px;border-radius:14px;padding:10px 16px;font-weight:700;font-size:14px;border:0;background:var(--primary);color:#fff;box-shadow:0 8px 20px -8px rgb(11 122 104 / .7);margin-top:6px}
+
+/* quick links */
+.ql{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.dev-phone .ql{grid-template-columns:repeat(2,minmax(0,1fr))}
+.ql a{display:flex;align-items:center;gap:9px;min-height:48px;padding:12px 14px;border-radius:14px;background:var(--secondary);font-weight:700;font-size:13.5px;text-decoration:none;color:var(--foreground)}
+.ql a .ph-duotone{font-size:20px;color:var(--primary)}
+
+/* layouts */
+.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;align-items:stretch}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;align-items:stretch}
+.g32{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:20px}
+.heroRow{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px;align-items:stretch}
+.stack{display:flex;flex-direction:column;gap:14px}
+.stack .tile{flex:1}
+.dev-phone .g2,.dev-phone .g3,.dev-phone .g32,.dev-phone .heroRow{grid-template-columns:minmax(0,1fr);gap:16px}
+.dev-phone .stack{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.dev-phone .stack .span2{grid-column:1 / -1}
+.span2{grid-column:span 2}
+
+/* tooltip */
+#tip{position:fixed;z-index:100;pointer-events:none;background:var(--card);border-radius:12px;box-shadow:var(--shadow-raised),0 0 0 1px var(--border);padding:9px 11px;font-size:12.5px;min-width:150px;opacity:0;transition:opacity .1s;font-family:var(--font-latin)}
+#tip[lang=ar]{font-family:var(--font-ar)}
+#tip.on{opacity:1}
+#tip .tt{font-weight:800;margin-bottom:4px}
+#tip .r{display:flex;align-items:center;gap:7px;line-height:1.7}
+#tip .r i{width:9px;height:9px;border-radius:3px;flex:none}
+#tip .r .k{color:var(--muted-foreground);flex:1}
+#tip .r .v{font-weight:700;font-family:var(--font-latin);direction:ltr;unicode-bidi:isolate}
+</style>
+</head>
+<body>
+<div class="mockbar">
+  <strong>Home dashboard · charts</strong>
+  <nav class="optseg" aria-label="Layout option">
+    <a href="?opt=A">A · Grid</a><a href="?opt=B">B · Hero</a><a href="?opt=C">C · Sections</a>
+  </nav>
+  <span class="note" id="note"></span>
+</div>
+<div class="board" id="board"></div>
+<div id="tip" role="tooltip"></div>
+
+<script>
+/* ================= data (sample — "School ERP Demo") ================= */
+const MONTHS = [[2025,11],[2026,0],[2026,1],[2026,2],[2026,3],[2026,4],[2026,5],[2026,6],[2026,7],[2026,8],[2026,9],[2026,10]];
+const NET = [1148236.50,1152910.25,1149377.00,1161842.75,1158420.00,1163705.50,1121560.25,1207618.00,1198344.75,1262917.50,1279120.25,1284500.00];
+const JOIN = [1,0,0,2,0,1,0,3,6,11,2,1];
+const LEAVE = [0,1,0,1,0,2,7,1,2,1,0,1];
+const HC = (()=>{let h=131;return JOIN.map((j,i)=>h=h+j-LEAVE[i]);})(); // end-of-month headcount → 142
+const PEN = {notice:[4,5,3,6,4,5,1,0,2,7,6,5], deduct:[2,1,2,3,1,2,0,0,1,3,4,3], other:[0,1,0,0,1,0,0,0,0,1,0,1]};
+const LATE = [1840,2120,1560,2380,1910,2260,620,180,940,2710,2480,1975];
+// deduction shares of gross per month: [insurance, tax, penalties]
+const SHARE = [[.0712,.0548,.0021],[.0711,.0549,.0030],[.0710,.0547,.0018],[.0712,.0551,.0036],[.0709,.0546,.0024],[.0711,.0552,.0033],
+               [.0715,.0544,.0004],[.0708,.0556,.0000],[.0709,.0557,.0011],[.0710,.0553,.0042],[.0709,.0551,.0047],[.0000,.0000,.0000]];
+// November exact (gross 1,476,300.00)
+const NOV = {gross:1476300, net:1284500, ins:104620, tax:81310, pen:5870};
+const DED = MONTHS.map((_,i)=>{
+  if(i===11) return NOV;
+  const [a,b,c]=SHARE[i]; const g=+(NET[i]/(1-a-b-c)).toFixed(2);
+  const ins=+(g*a).toFixed(2), tax=+(g*b).toFixed(2), pen=+(g*c).toFixed(2);
+  return {gross:+(NET[i]+ins+tax+pen).toFixed(2), net:NET[i], ins, tax, pen};
+});
+const STAGES = [['kg',24],['primary',51],['prep',33],['secondary',26],['none',8]];
+// a new school with one approved month (empty state)
+const NEW = {active:37, stages:[['kg',8],['primary',15],['prep',9],['secondary',5]], net:312480, ded:{gross:359170,net:312480,ins:25480,tax:20560,pen:650}};
+
+/* ================= strings ================= */
+const S = {
+en:{
+  monthsShort:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+  monthsLong:['January','February','March','April','May','June','July','August','September','October','November','December'],
+  cur:'EGP', school:'School ERP Demo', schoolSub:'HR & payroll',
+  greeting:'Welcome to School ERP Demo', desc:'Your HR at a glance for November 2026.',
+  r6:'6 months', r12:'12 months',
+  nav:{home:'Home',dashboard:'Dashboard',school:'School',hr:'HR',employees:'Employees',penalties:'Penalties',lateness:'Lateness',payroll:'Payroll',leave:'Leave & permissions',accounting:'Accounting',approvedPay:'Approved pay',taxes:'Payroll taxes',fees:'Fees',transport:'Transport',parents:'Parent portal',admin:'Administration',soon:'Soon'},
+  user:'Demo admin', role:'System admin',
+  stage:{kg:'KG',primary:'Primary',prep:'Preparatory',secondary:'Secondary',none:'No stage'},
+  t:{active:'Active employees', payroll:'Payroll, November 2026', approved:'Approved', openRun:'Open the run', pending:'Pending penalties', pendingSub:'Waiting for approval this month', apprPen:'Approved penalties', apprSub:'Approved this month, by violation date',
+     gross:'Gross pay, November', ded:'Deductions, November', dedSub:'Insurance, tax and penalties', avg:'Average net per employee', avgSub:'142 employees paid',
+     joined:'Joined since September', joinedSub:'School year 2026–27', left:'Left since September', leftSub:'School year 2026–27', change:'Net change, 12 months', changeSub:'131 → 142 active',
+     lateMin:'Lateness, November', lateSub:'Minutes late so far this month', lateEmp:'Employees late', lateEmpSub:'At least once this month', min:'min', grossSub:'Before deductions'},
+  c:{pay:'Payroll cost', paySub:'Net pay per approved month', head:'Headcount', headSub:'Active employees today, by stage', flow:'Joiners and leavers', flowSub:'Per month',
+     joiners:'Joiners', leavers:'Leavers', pen:'Penalties and lateness', penSub:'Approved penalties by violation month', notice:'Notice & warning', deduct:'Deduct days', other:'Other',
+     late:'Lateness', lateSub2:'Minutes late per month', lateUnit:'minutes', ded:'Deductions vs net', dedSub:'Share of November’s gross payroll (EGP 1,476,300.00)',
+     net:'Net pay', ins:'Social insurance', tax:'Income tax', pens:'Penalties', dedTrend:'Deductions, % of gross', dedTrendSub:'insurance + tax + penalties',
+     table:'Table', chart:'Chart', month:'Month', employees:'Employees paid', vsPrev:'vs previous month', headEnd:'Headcount at month end', total:'Total', count:'Employees', share:'Share', amount:'Amount',
+     deltaVsOct:'vs October', heroLbl:'Net pay, November 2026', penTitle:'Penalties', penUnit:'penalties'},
+  tabs:{overview:'Overview',payroll:'Payroll',people:'People',discipline:'Discipline'},
+  ql:{title:'Quick links', add:'Add employee', pen:'Record a penalty', late:'Enter lateness', run:'Run payroll', settings:'Settings'},
+  empty:{title:'Charts appear after two approved months', body:'Trends compare one month with the one before it. You have one approved month so far, November 2026. Approve December’s payroll and the payroll, people and penalty trends start here.', done:'November approved', todo:'December', cta:'Open November’s run', dedSub:'Share of November’s gross payroll (EGP 359,170.00)'}
+},
+ar:{
+  monthsShort:['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'],
+  monthsLong:['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'],
+  cur:'ج.م', school:'School ERP Demo', schoolSub:'الموارد البشرية والرواتب',
+  greeting:'مرحبًا بكم في School ERP Demo', desc:'نظرة سريعة على شؤون الموظفين لشهر نوفمبر 2026.',
+  r6:'6 أشهر', r12:'12 شهرًا',
+  nav:{home:'الرئيسية',dashboard:'لوحة التحكم',school:'المدرسة',hr:'الموارد البشرية',employees:'الموظفون',penalties:'الجزاءات',lateness:'التأخير',payroll:'الرواتب',leave:'الإجازات والأذونات',accounting:'الحسابات',approvedPay:'الرواتب المعتمدة',taxes:'ضرائب الرواتب',fees:'المصروفات',transport:'النقل',parents:'بوابة أولياء الأمور',admin:'الإدارة',soon:'قريبًا'},
+  user:'حساب تجريبي', role:'مدير النظام',
+  stage:{kg:'رياض الأطفال',primary:'الابتدائية',prep:'الإعدادية',secondary:'الثانوية',none:'بدون مرحلة'},
+  t:{active:'الموظفون النشطون', payroll:'رواتب نوفمبر 2026', approved:'معتمد', openRun:'افتح المسير', pending:'جزاءات معلّقة', pendingSub:'بانتظار الاعتماد هذا الشهر', apprPen:'جزاءات معتمدة', apprSub:'اعتُمدت هذا الشهر، حسب تاريخ المخالفة',
+     gross:'إجمالي رواتب نوفمبر', ded:'استقطاعات نوفمبر', dedSub:'التأمينات والضريبة والجزاءات', avg:'متوسط الصافي للموظف', avgSub:'صُرفت رواتب 142 موظفًا',
+     joined:'انضموا منذ سبتمبر', joinedSub:'العام الدراسي 2026–2027', left:'غادروا منذ سبتمبر', leftSub:'العام الدراسي 2026–2027', change:'صافي التغيّر، 12 شهرًا', changeSub:'من 131 إلى 142 موظفًا نشطًا',
+     lateMin:'التأخير، نوفمبر', lateSub:'دقائق التأخير حتى الآن هذا الشهر', lateEmp:'موظفون متأخرون', lateEmpSub:'مرة واحدة على الأقل هذا الشهر', min:'دقيقة', grossSub:'قبل الاستقطاعات'},
+  c:{pay:'تكلفة الرواتب', paySub:'صافي الرواتب لكل شهر معتمد', head:'عدد الموظفين', headSub:'الموظفون النشطون اليوم، حسب المرحلة', flow:'المنضمّون والمغادرون', flowSub:'لكل شهر',
+     joiners:'منضمّون', leavers:'مغادرون', pen:'الجزاءات والتأخير', penSub:'الجزاءات المعتمدة حسب شهر المخالفة', notice:'لفت نظر وإنذار', deduct:'خصم أيام', other:'أخرى',
+     late:'التأخير', lateSub2:'دقائق التأخير لكل شهر', lateUnit:'دقيقة', ded:'الاستقطاعات مقابل الصافي', dedSub:'النسبة من إجمالي رواتب نوفمبر (<bdi>1,476,300.00 ج.م</bdi>)',
+     net:'صافي الرواتب', ins:'التأمينات الاجتماعية', tax:'ضريبة كسب العمل', pens:'الجزاءات', dedTrend:'الاستقطاعات، % من الإجمالي', dedTrendSub:'التأمينات + الضريبة + الجزاءات',
+     table:'جدول', chart:'رسم', month:'الشهر', employees:'موظفون صُرفت رواتبهم', vsPrev:'مقارنة بالشهر السابق', headEnd:'العدد في نهاية الشهر', total:'الإجمالي', count:'الموظفون', share:'النسبة', amount:'المبلغ',
+     deltaVsOct:'مقارنة بأكتوبر', heroLbl:'صافي رواتب نوفمبر 2026', penTitle:'الجزاءات', penUnit:'جزاءات'},
+  tabs:{overview:'نظرة عامة',payroll:'الرواتب',people:'الموظفون',discipline:'الانضباط'},
+  ql:{title:'روابط سريعة', add:'إضافة موظف', pen:'تسجيل جزاء', late:'إدخال التأخير', run:'تشغيل الرواتب', settings:'الإعدادات'},
+  empty:{title:'تظهر الرسوم البيانية بعد اعتماد شهرين', body:'تقارن الاتجاهات كل شهر بالشهر الذي قبله. لديك حتى الآن شهر معتمد واحد هو نوفمبر 2026، وبعد اعتماد رواتب ديسمبر تبدأ هنا اتجاهات الرواتب والموظفين والجزاءات.', done:'نوفمبر معتمد', todo:'ديسمبر', cta:'افتح مسير نوفمبر', dedSub:'النسبة من إجمالي رواتب نوفمبر (<bdi>359,170.00 ج.م</bdi>)'}
+}};
+
+/* ================= helpers ================= */
+const money = n => n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const count = n => n.toLocaleString('en-US');
+const pct = (n,d=1) => (n*100).toFixed(d)+'%';
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+const ic = (n,extra='') => `<i class="ph-duotone ph-${n} ${extra}"></i>`;
+const cv = document.createElement('canvas').getContext('2d');
+function tw(text, size=11.5, weight=600, ar=false){ cv.font = `${weight} ${size}px ${ar?'"IBM Plex Sans Arabic"':'"Plus Jakarta Sans"'}`; return cv.measureText(text).width; }
+const isAr = s => /[؀-ۿ]/.test(s);
+function nice(x){ const e=Math.pow(10,Math.floor(Math.log10(x))); const f=x/e; return (f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*e; }
+function compact(v, lang){
+  if(v===0) return '0';
+  const a=Math.abs(v);
+  if(a>=1e6){ const s=(a/1e6).toFixed(a%1e6===0?0:1).replace(/\.0$/,''); return lang==='ar'? s+' مليون' : s+'M'; }
+  if(a>=1e4){ const s=String(Math.round(a/1e3)); return lang==='ar'? s+' ألف' : s+'K'; }
+  return count(a);
+}
+const mlabel = (i,lang,long) => S[lang][long?'monthsLong':'monthsShort'][MONTHS[i][1]];
+const mfull = (i,lang) => `${S[lang].monthsLong[MONTHS[i][1]]} ${MONTHS[i][0]}`;
+const tip = (title, rows) => encodeURIComponent(JSON.stringify({title,rows}));
+const rTop=(x,yt,w,yb,r)=>{r=Math.max(0,Math.min(r,w/2,yb-yt));return `M${x},${yb}V${yt+r}Q${x},${yt} ${x+r},${yt}H${x+w-r}Q${x+w},${yt} ${x+w},${yt+r}V${yb}Z`;};
+const rBot=(x,yt,w,yb,r)=>{r=Math.max(0,Math.min(r,w/2,yb-yt));return `M${x},${yt}H${x+w}V${yb-r}Q${x+w},${yb} ${x+w-r},${yb}H${x+r}Q${x},${yb} ${x},${yb-r}Z`;};
+const sq=(x,yt,w,yb)=>`M${x},${yt}H${x+w}V${yb}H${x}Z`;
+
+/* one time-axis frame shared by the bar and line charts. RTL: time runs right → left, y labels on the right. */
+function frameCalc(el, o){
+  const w = el.clientWidth, rtl = o.lang==='ar', n = o.idx.length;
+  const ticks=[]; for(let v=-o.bot; v<=o.top+1e-9; v+=o.step) ticks.push(+v.toFixed(6));
+  const gutter = Math.max(...ticks.map(t=>tw(o.yFmt(t),11,500,o.lang==='ar' && isAr(o.yFmt(t)))))+10;
+  const padT = o.padT ?? 22, padB = 34;
+  const x0 = rtl?2:gutter, x1 = rtl? w-gutter : w-2;
+  const plotH = o.h-padT-padB;
+  const y = v => padT + (o.top - v)/(o.top+o.bot)*plotH;
+  const slot = (x1-x0)/n;
+  const cx = k => x0 + ((rtl? n-1-k : k)+0.5)*slot;
+  let s = '';
+  ticks.forEach(t=>{
+    const yy = y(t).toFixed(1);
+    s += `<line x1="${x0}" x2="${x1}" y1="${yy}" y2="${yy}" stroke="${t===0?'var(--axis)':'var(--grid)'}" stroke-width="1"/>`;
+    const lab=o.yFmt(t), arl = isAr(lab);
+    s += `<text x="${rtl? x1+8 : x0-8}" y="${+yy+4}" text-anchor="${rtl?(arl?'end':'start'):'end'}" ${arl?'direction="rtl"':''} font-size="11" font-weight="500" fill="var(--muted-foreground)" ${arl?'':'class="num"'}>${lab}</text>`;
+  });
+  // x labels — newest month always labelled, then every k-th going back
+  const maxW = Math.max(...o.idx.map(i=>tw(mlabel(i,o.lang),11.5,600,o.lang==='ar')));
+  const k = Math.max(1, Math.ceil((maxW+10)/slot));
+  let lastYear=null;
+  o.idx.forEach((mi,kk)=>{
+    if((n-1-kk)%k!==0) return;
+    const X = cx(kk).toFixed(1), Y = y(0) + (o.bot? (o.bot/(o.top+o.bot))*0 : 0);
+    const by = padT+plotH+16;
+    s += `<text x="${X}" y="${by}" text-anchor="middle" font-size="11.5" font-weight="${kk===n-1?700:600}" fill="${kk===n-1?'var(--foreground)':'var(--muted-foreground)'}">${mlabel(mi,o.lang)}</text>`;
+    const yr = MONTHS[mi][0];
+    if(lastYear!==yr){ s += `<text x="${X}" y="${by+13}" text-anchor="middle" font-size="10.5" font-weight="500" fill="var(--muted-foreground)" class="num" opacity=".8">${yr}</text>`; lastYear=yr; }
+  });
+  return {w, rtl, n, y, slot, cx, x0, x1, padT, plotH, svgStart:`<svg width="${w}" height="${o.h}" viewBox="0 0 ${w} ${o.h}" role="img" aria-label="${esc(o.aria||'')}">`, grid:s};
+}
+function clampLabel(f, x, text, size=11.5){ const half = tw(text,size,700)/2; return Math.max(f.x0+half, Math.min(f.x1-half, x)); }
+
+/* columns: pos = stacked series above zero, neg = series below zero */
+function barChart(el, o){
+  const n=o.idx.length;
+  const pTot = k => o.pos.reduce((s,se)=>s+se.v[k],0), nTot = k => (o.neg||[]).reduce((s,se)=>s+se.v[k],0);
+  const maxP = Math.max(...o.idx.map((_,k)=>pTot(k))), maxN = Math.max(0,...o.idx.map((_,k)=>nTot(k)));
+  const step = o.step || nice((maxP+maxN)/(o.ticks||4));
+  const top = Math.ceil(maxP/step)*step, bot = Math.ceil(maxN/step)*step;
+  if(el.dataset.h==='fill') o.h = el.clientHeight;
+  const f = frameCalc(el, {...o, top, bot, step});
+  const bw = Math.min(24, f.slot*0.58);
+  let bars='', hits='', labels='';
+  o.idx.forEach((mi,k)=>{
+    const X = f.cx(k)-bw/2;
+    let acc=0; const nz = o.pos.map(se=>se.v[k]>0); const lastNZ = nz.lastIndexOf(true);
+    o.pos.forEach((se,si)=>{
+      const v=se.v[k]; if(v<=0) return;
+      let yb=f.y(acc), yt=f.y(acc+v); if(acc>0) yb-=2; acc+=v;
+      const col = typeof se.c==='function'? se.c(k) : se.c;
+      bars += `<path d="${si===lastNZ? rTop(X,yt,bw,yb,4) : sq(X,yt,bw,yb)}" fill="${col}"/>`;
+    });
+    let accN=0;
+    (o.neg||[]).forEach(se=>{ const v=se.v[k]; if(v<=0) return; const yt=f.y(-accN)+(accN>0?2:0), yb=f.y(-(accN+v)); accN+=v; bars += `<path d="${rBot(X,yt,bw,yb,4)}" fill="${se.c}"/>`; });
+    const t = o.tip(mi,k);
+    hits += `<g class="hit" data-tip="${t}"><rect class="bg" x="${(f.cx(k)-f.slot/2).toFixed(1)}" y="${f.padT-6}" width="${f.slot.toFixed(1)}" height="${f.plotH+6}" rx="6"/></g>`;
+    if(o.cap && o.cap.k===k){
+      const v = o.cap.below? -nTot(k) : pTot(k);
+      const yy = o.cap.below? f.y(v)+15 : f.y(v)-7;
+      labels += `<text x="${clampLabel(f,f.cx(k),o.cap.text).toFixed(1)}" y="${yy}" text-anchor="middle" font-size="11.5" font-weight="700" fill="var(--foreground)" class="num">${o.cap.text}</text>`;
+    }
+  });
+  el.innerHTML = f.svgStart + f.grid + bars + labels + hits + '</svg>';
+}
+function lineChart(el, o){
+  const max = Math.max(...o.v); const step = nice(max/(o.ticks||3)); const top=Math.ceil(max/step)*step;
+  if(el.dataset.h==='fill') o.h = el.clientHeight;
+  const f = frameCalc(el,{...o, top, bot:0, step});
+  const pts = o.v.map((v,k)=>[f.cx(k), f.y(v)]);
+  const line = pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+','+p[1].toFixed(1)).join('');
+  const area = line + `L${pts[pts.length-1][0].toFixed(1)},${f.y(0)}L${pts[0][0].toFixed(1)},${f.y(0)}Z`;
+  const last = pts[pts.length-1];
+  let s = f.svgStart + f.grid + `<path d="${area}" fill="${o.c}" opacity=".1"/><path d="${line}" fill="none" stroke="${o.c}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  s += `<circle cx="${last[0]}" cy="${last[1]}" r="4.5" fill="${o.c}" stroke="#fff" stroke-width="2"/>`;
+  const lt = o.endText; s += `<text x="${clampLabel(f,last[0],lt)}" y="${last[1]-10}" text-anchor="middle" font-size="11.5" font-weight="700" fill="var(--foreground)" class="num">${lt}</text>`;
+  o.idx.forEach((mi,k)=>{
+    s += `<g class="hit" data-tip="${o.tip(mi,k)}"><rect class="bg" x="${(f.cx(k)-f.slot/2).toFixed(1)}" y="${f.padT-6}" width="${f.slot.toFixed(1)}" height="${f.plotH+6}" rx="6" style="fill:transparent"/>`+
+         `<line class="xh" x1="${pts[k][0]}" x2="${pts[k][0]}" y1="${f.padT}" y2="${f.y(0)}" stroke="var(--axis)"/><circle class="hd" cx="${pts[k][0]}" cy="${pts[k][1]}" r="4.5" fill="${o.c}" stroke="#fff" stroke-width="2"/></g>`;
+  });
+  el.innerHTML = s + '</svg>';
+}
+function tableHtml(head, rows){
+  return `<table><thead><tr>${head.map((h,i)=>`<th class="${i?'n':''}">${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map((c,i)=>`<td class="${i?'n num':''}">${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+}
+
+/* ================= chart renderers ================= */
+const R = {
+  payroll(el, ctx){
+    const L=S[ctx.lang], idx=ctx.idx, last=idx.length-1;
+    barChart(el,{lang:ctx.lang, idx, h:+el.dataset.h||260, ticks:3, yFmt:v=>compact(v,ctx.lang), aria:L.c.pay,
+      pos:[{v:idx.map(i=>NET[i]), c:k=>k===last?'var(--s1)':'var(--s1-muted)'}],
+      cap: el.dataset.cap==='0'? null : {k:last, text:money(NET[idx[last]])},
+      tip:(mi)=>tip(mfull(mi,ctx.lang)+(mi===11?' · '+L.t.approved:''),[['var(--s1)',L.c.net,`${L.cur} ${money(NET[mi])}`],['',L.c.employees,count(HC[mi]-(mi===11?0:0))],['',L.c.vsPrev, mi? (NET[mi]-NET[mi-1]>=0?'+':'−')+money(Math.abs(NET[mi]-NET[mi-1])) : '—']])});
+    return [ [L.c.month, `${L.c.net} (${L.cur})`], idx.map(i=>[mfull(i,ctx.lang), money(NET[i])]).reverse() ];
+  },
+  flow(el, ctx){
+    const L=S[ctx.lang], idx=ctx.idx;
+    const mk = Math.max(...idx.map(i=>JOIN[i])); const kMax = idx.findIndex(i=>JOIN[i]===mk);
+    barChart(el,{lang:ctx.lang, idx, h:+el.dataset.h||170, step:5, yFmt:v=>count(Math.abs(v)), aria:L.c.flow, padT:20,
+      pos:[{v:idx.map(i=>JOIN[i]), c:'var(--s1)'}], neg:[{v:idx.map(i=>LEAVE[i]), c:'var(--s2)'}],
+      cap:{k:kMax, text:'+'+mk},
+      tip:(mi)=>tip(mfull(mi,ctx.lang),[['var(--s1)',L.c.joiners,count(JOIN[mi])],['var(--s2)',L.c.leavers,count(LEAVE[mi])],['',L.c.headEnd,count(HC[mi])]])});
+    return [[L.c.month,L.c.joiners,L.c.leavers,L.c.headEnd], idx.map(i=>[mfull(i,ctx.lang),JOIN[i],LEAVE[i],HC[i]]).reverse()];
+  },
+  penalties(el, ctx){
+    const L=S[ctx.lang], idx=ctx.idx, last=idx.length-1;
+    const tot = i=>PEN.notice[i]+PEN.deduct[i]+PEN.other[i];
+    barChart(el,{lang:ctx.lang, idx, h:+el.dataset.h||170, step:5, yFmt:v=>count(v), aria:L.c.pen, padT:20,
+      pos:[{v:idx.map(i=>PEN.notice[i]),c:'var(--s1)'},{v:idx.map(i=>PEN.deduct[i]),c:'var(--s2)'},{v:idx.map(i=>PEN.other[i]),c:'var(--s3)'}],
+      cap:{k:last, text:String(tot(idx[last]))},
+      tip:(mi)=>tip(mfull(mi,ctx.lang),[['var(--s1)',L.c.notice,PEN.notice[mi]],['var(--s2)',L.c.deduct,PEN.deduct[mi]],['var(--s3)',L.c.other,PEN.other[mi]],['',L.c.total,tot(mi)]])});
+    return [[L.c.month,L.c.notice,L.c.deduct,L.c.other,L.c.total], idx.map(i=>[mfull(i,ctx.lang),PEN.notice[i],PEN.deduct[i],PEN.other[i],tot(i)]).reverse()];
+  },
+  lateness(el, ctx){
+    const L=S[ctx.lang], idx=ctx.idx;
+    lineChart(el,{lang:ctx.lang, idx, h:+el.dataset.h||130, ticks:2, yFmt:v=>compact(v,ctx.lang), v:idx.map(i=>LATE[i]), c:'var(--s3)', aria:L.c.late, padT:22,
+      endText:count(LATE[idx[idx.length-1]]),
+      tip:(mi)=>tip(mfull(mi,ctx.lang),[['var(--s3)',L.c.late,`${count(LATE[mi])} ${L.c.lateUnit}`]])});
+    return [[L.c.month,`${L.c.late} (${L.c.lateUnit})`], idx.map(i=>[mfull(i,ctx.lang),count(LATE[i])]).reverse()];
+  },
+  stages(el, ctx){
+    const L=S[ctx.lang], data = ctx.empty? NEW.stages : STAGES, max=Math.max(...data.map(d=>d[1])), tot=data.reduce((s,d)=>s+d[1],0);
+    el.innerHTML = `<ul class="hb">${data.map(([k,v])=>`<li class="${k==='none'?'ns':''}" data-tip="${tip(L.stage[k],[[k==='none'?'#9fb5af':'var(--s1)',L.c.count,count(v)],['',L.c.share,pct(v/tot)]])}"><span class="nm">${L.stage[k]}</span><span class="tr"><span class="fl" style="width:calc((100% - 34px) * ${(v/max).toFixed(4)})"></span><b class="v num">${v}</b></span></li>`).join('')}</ul>`;
+    return [[L.c.head, L.c.count], data.map(([k,v])=>[L.stage[k],v])];
+  },
+  deductions(el, ctx){
+    const L=S[ctx.lang], d = ctx.empty? NEW.ded : NOV, w=el.clientWidth;
+    const parts=[['net',d.net,'var(--s1)'],['ins',d.ins,'var(--s3)'],['tax',d.tax,'var(--s2)'],['pens',d.pen,'var(--s4)']];
+    const avail = w - 2*(parts.length-1);
+    let bar='', printed={};
+    parts.forEach(([k,v,c])=>{ const sh=v/d.gross, pw=avail*sh, lab=pct(sh); const fits = pw >= tw(lab,12,700)+18; if(fits) printed[k]=1;
+      bar += `<div style="flex:0 0 ${pw.toFixed(1)}px;background:${c};${k==='tax'?'color:#3a2900;':''}" data-tip="${tip(L.c[k],[[c,L.c.amount,`${L.cur} ${money(v)}`],['',L.c.share,pct(sh)]])}">${fits?`<span class="num" style="padding-inline:8px">${lab}</span>`:''}</div>`; });
+    const list = `<ul class="dlist">${parts.map(([k,v,c])=>`<li><i style="background:${c}"></i><span class="k">${L.c[k]}</span><span class="a num"><bdi>${money(v)}</bdi>${printed[k]?'':`<small><bdi>${pct(v/d.gross)}</bdi></small>`}</span></li>`).join('')}</ul>`;
+    let rows='';
+    if(!ctx.empty && el.dataset.trend!=='0'){
+      const idx = ctx.idx.slice(-6), scale=.16;
+      rows = `<div class="divider"></div><div class="subhead">${L.c.dedTrend} <small>${L.c.dedTrendSub}</small></div><ul class="mrows">${idx.map(i=>{const x=DED[i], g=x.gross; const t=(x.ins+x.tax+x.pen)/g;
+        return `<li class="${i===11?'cur':''}" data-tip="${tip(mfull(i,ctx.lang),[['var(--s3)',L.c.ins,pct(x.ins/g)],['var(--s2)',L.c.tax,pct(x.tax/g)],['var(--s4)',L.c.pens,pct(x.pen/g,2)],['',L.c.total,`${L.cur} ${money(x.ins+x.tax+x.pen)}`]])}"><span class="m">${mlabel(i,ctx.lang)}</span><span class="track">${[['ins','var(--s3)'],['tax','var(--s2)'],['pen','var(--s4)']].filter(([k])=>x[k]>0).map(([k,c])=>`<span style="width:${(x[k]/g/scale*100).toFixed(2)}%;background:${c}"></span>`).join('')}</span><span class="p num">${pct(t)}</span></li>`;}).reverse().join('')}</ul>`;
+    }
+    el.innerHTML = `<div class="segbar" role="img" aria-label="${esc(L.c.ded)}">${bar}</div>` + list + rows;
+    el.style.display='flex'; el.style.flexDirection='column'; el.style.gap='14px';
+    return [[L.c.ded, `${L.c.amount} (${L.cur})`, L.c.share], parts.map(([k,v])=>[L.c[k], money(v), pct(v/d.gross)])];
+  }
+};
+
+/* ================= building blocks ================= */
+function legend(items){ return `<div class="legend">${items.map(([c,t,ln])=>`<span><i class="${ln?'ln':''}" style="background:${c}"></i>${t}</span>`).join('')}</div>`; }
+function card(ctx, o){
+  const L=S[ctx.lang];
+  return `<section class="card ${o.cls||''}" ${o.style?`style="${o.style}"`:''}>
+    <div class="ch"><div class="tx"><h2 class="disp">${o.title}</h2>${o.sub?`<p>${o.sub}</p>`:''}</div>${o.noTable?'':`<button class="tblbtn" data-tbl>${ic('table')}<span>${L.c.table}</span></button>`}</div>
+    ${o.pre||''}${o.body}</section>`;
+}
+const chart = (kind, h, extra='') => `<div class="chart ${String(h).startsWith('fill')?'fill':''}" data-kind="${kind}" data-h="${String(h).startsWith('fill')?'fill':h}" ${String(h).startsWith('fill')?`style="min-height:${h.split(':')[1]}px"`:''} ${extra}></div><div class="ctable" data-for="${kind}"></div>`;
+
+function tilesStd(ctx){
+  const L=S[ctx.lang], T=L.t, e=ctx.empty;
+  const stages = (e?NEW.stages:STAGES.filter(s=>s[0]!=='none')).map(([k,v])=>`<li>${L.stage[k]}<b class="num">${v}</b></li>`).join('');
+  return {
+    active:`<div class="tile tone-f ${ctx.activeCls||''}"><div class="tt"><span class="ic">${ic('users-three')}</span><span class="lbl">${T.active}</span></div><div class="val"><b class="num">${e?NEW.active:142}</b></div><div class="sb"><ul class="stages">${stages}</ul></div></div>`,
+    payroll:`<div class="tile tone-p"><div class="tt"><span class="ic">${ic('money')}</span><span class="lbl">${T.payroll}</span></div><div class="val"><span class="u">${L.cur}</span><b class="num">${money(e?NEW.net:1284500)}</b></div><div class="sb sbrow"><span class="pill pill-ok">${ic('check-circle')}${T.approved}</span><span class="cta">${T.openRun}${ic('caret-right','flip')}</span></div></div>`,
+    pending:`<div class="tile ${e?'tone-i':'tone-w'}"><div class="tt"><span class="ic">${ic('gavel')}</span><span class="lbl">${T.pending}</span></div><div class="val"><b class="num">${e?0:3}</b></div><div class="sb">${T.pendingSub}</div></div>`,
+    approved:`<div class="tile tone-i"><div class="tt"><span class="ic">${ic('gavel')}</span><span class="lbl">${T.apprPen}</span></div><div class="val"><b class="num">${e?1:9}</b></div><div class="sb">${T.apprSub}</div></div>`,
+  };
+}
+function tile(tone, icon, label, value, sub, unit){ return `<div class="tile ${tone}"><div class="tt"><span class="ic">${ic(icon)}</span><span class="lbl">${label}</span></div><div class="val">${unit?`<span class="u">${unit}</span>`:''}<b class="num">${value}</b></div><div class="sb">${sub}</div></div>`; }
+function quick(ctx){
+  const Q=S[ctx.lang].ql;
+  return `<section class="card"><h2 class="disp" style="margin:0;font-size:16px;font-weight:800">${Q.title}</h2><div class="ql">${[['plus-circle',Q.add],['gavel',Q.pen],['clock',Q.late],['calculator',Q.run],['gear-six',Q.settings]].map(([i,t])=>`<a>${ic(i)}${t}</a>`).join('')}</div></section>`;
+}
+function header(ctx, withRange=true){
+  const L=S[ctx.lang];
+  return `<div class="ph"><div><h1 class="disp">${L.greeting.replace('School ERP Demo','<bdi>School ERP Demo</bdi>')}</h1><p>${L.desc}</p></div>${withRange?`<div class="end">${rangeSeg(ctx)}</div>`:''}</div>`;
+}
+const rangeSeg = ctx => { const L=S[ctx.lang]; return `<div class="segc" role="group">${[['6',L.r6],['12',L.r12]].map(([v,t])=>`<button data-range="${v}" aria-pressed="${ctx.range===v}">${v==='6'?ic('calendar-blank'):ic('calendar-dots')}${t}</button>`).join('')}</div>`; };
+
+/* cards used by several options */
+const C = {
+  payroll:(ctx,h=260)=>card(ctx,{title:S[ctx.lang].c.pay, sub:S[ctx.lang].c.paySub, body:chart('payroll',h)}),
+  head:(ctx)=>{const L=S[ctx.lang]; return card(ctx,{title:L.c.head, sub:L.c.headSub, body:chart('stages',0)+`<div class="divider hidewhentable"></div><div class="subhead hidewhentable">${L.c.flow}</div>`+legend([['var(--s1)',L.c.joiners],['var(--s2)',L.c.leavers]])+chart('flow',150)});},
+  flowOnly:(ctx,h=230)=>{const L=S[ctx.lang]; return card(ctx,{title:L.c.flow, sub:L.c.flowSub, pre:legend([['var(--s1)',L.c.joiners],['var(--s2)',L.c.leavers]]), body:chart('flow',h)});},
+  stagesOnly:(ctx)=>{const L=S[ctx.lang]; return card(ctx,{title:L.c.head, sub:L.c.headSub, body:chart('stages',0)});},
+  pen:(ctx,hp=160,hl=118)=>{const L=S[ctx.lang]; return card(ctx,{title:L.c.pen, sub:L.c.penSub, pre:legend([['var(--s1)',L.c.notice],['var(--s2)',L.c.deduct],['var(--s3)',L.c.other]]), body:chart('penalties',ctx.phone?hp:'fill:'+hp)+`<div class="divider hidewhentable"></div><div class="subhead hidewhentable">${L.c.late} <small>${L.c.lateSub2}</small></div>`+chart('lateness',hl)});},
+  penOnly:(ctx,h=230)=>{const L=S[ctx.lang]; return card(ctx,{title:L.c.penTitle, sub:L.c.penSub, pre:legend([['var(--s1)',L.c.notice],['var(--s2)',L.c.deduct],['var(--s3)',L.c.other]]), body:chart('penalties',h)});},
+  lateOnly:(ctx,h=230)=>{const L=S[ctx.lang]; return card(ctx,{title:L.c.late, sub:L.c.lateSub2, body:chart('lateness',h)});},
+  ded:(ctx,trend=true)=>{const L=S[ctx.lang]; return card(ctx,{title:L.c.ded, sub:ctx.empty?L.empty.dedSub:L.c.dedSub, body:chart('deductions',0, trend?'':'data-trend="0"')});},
+};
+function emptyCard(ctx){
+  const E=S[ctx.lang].empty;
+  return `<section class="card empty"><svg class="art" viewBox="0 0 92 72" aria-hidden="true"><rect x="4" y="8" width="84" height="60" rx="14" fill="#fff" stroke="var(--border)" stroke-width="1.5"/><rect x="20" y="40" width="12" height="18" rx="3" fill="var(--s1)"/><rect x="40" y="30" width="12" height="28" rx="3" fill="none" stroke="var(--s1-muted)" stroke-width="2" stroke-dasharray="3 3"/><rect x="60" y="22" width="12" height="36" rx="3" fill="none" stroke="var(--s1-muted)" stroke-width="2" stroke-dasharray="3 3"/><circle cx="76" cy="12" r="9" fill="var(--accent)"/><path d="M72 12l3 3 5-6" stroke="#4a3400" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <h2 class="disp">${E.title}</h2><p>${E.body}</p><div class="steps"><span>${ic('check-circle')}${E.done}</span>${ic('caret-right','flip')}<span class="todo">${ic('hourglass-medium')}${E.todo}</span></div><span class="btn">${ic('money')}${E.cta}</span></section>`;
+}
+
+/* ================= options ================= */
+const OPT = {
+  A(ctx){
+    const t=tilesStd(ctx), tiles=`<section class="tiles">${t.active}${t.payroll}${t.pending}${t.approved}</section>`;
+    if(ctx.empty) return header(ctx,false) + tiles + emptyCard(ctx) + `<div class="g2">${C.stagesOnly(ctx)}${C.ded(ctx,false)}</div>` + quick(ctx);
+    return header(ctx) + tiles + `<div class="g2">${C.payroll(ctx, ctx.phone?230:'fill:300')}${C.head(ctx)}</div><div class="g2">${C.pen(ctx)}${C.ded(ctx)}</div>` + quick(ctx);
+  },
+  B(ctx){
+    const L=S[ctx.lang], t=tilesStd({...ctx, activeCls:'span2'});
+    const d = NET[11]-NET[10];
+    const hero = `<div class="hero hidewhentable"><div class="fig"><span class="u">${L.cur}</span><b class="num">${money(NET[11])}</b></div><div class="meta"><span>${L.c.heroLbl}</span><span class="sbrow"><span class="pill pill-ok">${ic('check-circle')}${L.t.approved}</span><span class="delta">${ic('trend-up')}<bdi class="num">+${money(d)} (+${pct(d/NET[10])})</bdi></span><span>${L.c.deltaVsOct}</span></span></div><span class="cta" style="margin-inline-start:auto;padding-bottom:6px">${L.t.openRun}${ic('caret-right','flip')}</span></div>`;
+    const heroCard = card(ctx,{title:L.c.pay, sub:L.c.paySub, pre:hero, body:chart('payroll', ctx.phone?220:'fill:300', 'data-cap="0"'), cls:'herocard'});
+    return header(ctx) + `<div class="heroRow">${heroCard}<div class="stack">${t.active}${t.pending}${t.approved}</div></div><div class="g3">${C.head(ctx)}${C.pen(ctx)}${C.ded(ctx)}</div>` + quick(ctx);
+  },
+  C(ctx){
+    const L=S[ctx.lang], T=L.t, t=tilesStd(ctx), tab=ctx.tab;
+    const tabs = `<div class="tabsbar"><div class="segc" role="tablist">${[['overview','squares-four'],['payroll','money'],['people','users-three'],['discipline','gavel']].map(([k,i])=>`<button role="tab" data-tab="${k}" aria-pressed="${tab===k}">${ic(i)}${L.tabs[k]}</button>`).join('')}</div>${ctx.phone?'':`<span style="margin-inline-start:auto">${rangeSeg(ctx)}</span>`}</div>`;
+    let body='';
+    if(tab==='overview') body = `<section class="tiles">${t.active}${t.payroll}${t.pending}${t.approved}</section><div class="g2">${C.payroll(ctx,ctx.phone?230:'fill:250')}${C.penOnly(ctx,250)}</div>` + quick(ctx);
+    if(tab==='payroll') body = `<section class="tiles">${tile('tone-f','money',L.c.heroLbl,money(1284500),`<span class="sbrow"><span class="pill pill-ok" style="background:rgb(255 255 255 / .16);color:#fff">${ic('check-circle')}${T.approved}</span></span>`,L.cur)}${tile('tone-p','receipt',T.gross,money(1476300),T.grossSub,L.cur)}${tile('tone-w','minus-circle',T.ded,money(191800),T.dedSub,L.cur)}${tile('tone-i','user-circle',T.avg,money(9045.77),T.avgSub,L.cur)}</section><div class="g32">${C.payroll(ctx,ctx.phone?230:'fill:300')}${C.ded(ctx)}</div>`;
+    if(tab==='people') body = `<section class="tiles">${t.active}${tile('tone-p','user-plus',T.joined,'14',T.joinedSub)}${tile('tone-w','user-minus',T.left,'2',T.leftSub)}${tile('tone-i','trend-up',T.change,'+11',T.changeSub)}</section><div class="g2">${C.stagesOnly(ctx)}${C.flowOnly(ctx,ctx.phone?200:230)}</div>`;
+    if(tab==='discipline') body = `<section class="tiles">${t.pending}${t.approved}${tile('tone-w','clock',T.lateMin,`1,975 <span style="font-size:.55em;font-weight:700;color:var(--muted-foreground)">${T.min}</span>`,T.lateSub)}${tile('tone-i','user-focus',T.lateEmp,'38',T.lateEmpSub)}</section><div class="g2">${C.penOnly(ctx,ctx.phone?200:250)}${C.lateOnly(ctx,ctx.phone?200:250)}</div>`;
+    return header(ctx,false) + tabs + (ctx.phone? `<div>${rangeSeg(ctx)}</div>`:'') + body;
+  }
+};
+
+/* ================= app shell ================= */
+function sidebar(lang){
+  const N=S[lang].nav;
+  const soon = (i,t,tone='n') => `<li><div class="mod soon"><span class="mt ${tone}">${ic(i)}</span><span class="grow">${t}</span><span class="soontag">${N.soon}</span></div></li>`;
+  const grp = (i,t,tone,items,open=true) => `<li class="grp ${open?'open':''}"><div class="mod"><span class="mt ${tone}">${ic(i)}</span><span class="grow">${t}</span><span class="chev">${ic(open?'caret-up':'caret-down')}</span></div>${open?`<ul class="sub">${items}</ul>`:''}</li>`;
+  const it = (i,t,cls='') => `<li class="${cls}">${ic(i)}<span>${t}</span>${cls==='lock'?`<span class="soontag" style="margin-inline-start:auto">${N.soon}</span>`:''}</li>`;
+  return `<aside class="side"><div class="brand"><span class="logo">${ic('graduation-cap')}</span><div><b>School ERP Demo</b><small>${S[lang].schoolSub}</small></div></div>
+  <ul class="nav">
+    <li><div class="mod cur"><span class="mt n" style="background:#fff">${ic('house')}</span><span class="grow">${N.dashboard}</span></div></li>
+    ${soon('buildings',N.school)}
+    ${grp('identification-card',N.hr,'p', it('users',N.employees)+it('gavel',N.penalties)+it('clock',N.lateness)+it('money',N.payroll)+it('calendar-check',N.leave,'lock'))}
+    ${grp('calculator',N.accounting,'p', it('seal-check',N.approvedPay)+it('receipt',N.taxes)+it('wallet',N.fees,'lock'))}
+    ${soon('bus',N.transport)}${soon('users-four',N.parents)}
+    ${grp('shield-check',N.admin,'a','',false)}
+  </ul>
+  <div class="userchip"><span class="av">DA</span><div style="min-width:0;flex:1"><b>${S[lang].user}</b><small>${S[lang].role}</small></div>${ic('caret-up-down')}</div></aside>`;
+}
+const locBtn = lang => `<span class="loc">${lang==='en'?`<span class="g">ع</span>`:'EN'}</span>`;
+const bell = `<span class="iconbtn">${ic('bell')}<span class="badge num">2</span></span>`;
+function frameHtml(f){
+  const ctx = {...f, phone:f.device==='phone', range:f.device==='phone'?'6':'12'};
+  ctx.idx = MONTHS.map((_,i)=>i).slice(-(+ctx.range));
+  const content = OPT[f.opt](ctx);
+  const dir = f.lang==='ar'?'rtl':'ltr';
+  const data = `data-opt="${f.opt}" data-lang="${f.lang}" data-device="${f.device}" data-range="${ctx.range}" data-tab="${f.tab||''}" data-empty="${f.empty?1:''}"`;
+  if(f.device==='desk') return `<div class="frame dev-desk" lang="${f.lang}" dir="${dir}" ${data}>${sidebar(f.lang)}<div style="min-width:0"><div class="topright">${bell}${locBtn(f.lang)}</div><main>${content}</main></div></div>`;
+  return `<div class="frame dev-phone" lang="${f.lang}" dir="${dir}" ${data}><header class="ptop"><span class="iconbtn">${ic('list')}</span><span class="nm">School ERP Demo</span>${bell}${locBtn(f.lang)}</header><main>${content}</main></div>`;
+}
+function renderCharts(fr){
+  const ctx = {lang:fr.dataset.lang, empty:!!fr.dataset.empty};
+  const n=+fr.dataset.range; ctx.idx = MONTHS.map((_,i)=>i).slice(-n);
+  [...fr.querySelectorAll('.chart')].sort((x,y)=>x.classList.contains('fill')-y.classList.contains('fill')).forEach(el=>{
+    const r = R[el.dataset.kind](el, ctx);
+    const tb = el.nextElementSibling; if(tb && tb.classList.contains('ctable') && r) tb.innerHTML = tableHtml(r[0], r[1]);
+  });
+}
+function rebuild(fr){
+  const f = {opt:fr.dataset.opt, lang:fr.dataset.lang, device:fr.dataset.device, tab:fr.dataset.tab, empty:!!fr.dataset.empty};
+  const range = fr.dataset.range;
+  const tmp = document.createElement('div'); tmp.innerHTML = frameHtml(f); const nf = tmp.firstElementChild;
+  nf.dataset.range = range; nf.querySelectorAll('[data-range]').forEach(b=>b.setAttribute('aria-pressed', b.dataset.range===range));
+  fr.replaceWith(nf); renderCharts(nf);
+}
+
+/* ================= board ================= */
+const params = new URLSearchParams(location.search);
+const opt = (params.get('opt')||'A').toUpperCase();
+document.querySelectorAll('.optseg a').forEach(a=>{ if(a.getAttribute('href')==='?opt='+opt) a.setAttribute('aria-current','page'); });
+const NOTES = {
+  A:'A · Grid — today’s header, tiles and quick links stay; a 2×2 chart grid sits between tiles and quick links. Phone: everything stacks. Also shows the empty state (new school, one approved month).',
+  B:'B · Hero — the payroll trend is the hero (it replaces the payroll tile, so the figure appears once); the other tiles stack in a narrow column; three smaller charts below.',
+  C:'C · Sections — Overview / Payroll / People / Discipline, each with its own tiles and charts. A tab shows only with its screen’s permission (Payroll → View payroll, People → View employees, Discipline → View penalties). Frames show different tabs; every tab is clickable.'
+};
+document.getElementById('note').textContent = NOTES[opt];
+const frames = opt==='C'
+  ? [{lang:'en',device:'desk',tab:'overview',cap:'English · desktop 1440 · Overview tab'},{lang:'ar',device:'desk',tab:'payroll',cap:'Arabic · desktop 1440 · Payroll tab'},{lang:'en',device:'phone',tab:'people',cap:'English · phone 390 · People tab'},{lang:'ar',device:'phone',tab:'discipline',cap:'Arabic · phone 390 · Discipline tab'}]
+  : [{lang:'en',device:'desk',cap:'English · desktop 1440'},{lang:'ar',device:'desk',cap:'Arabic · desktop 1440 (RTL — time runs right to left)'},{lang:'en',device:'phone',cap:'English · phone 390'},{lang:'ar',device:'phone',cap:'Arabic · phone 390'}];
+if(opt==='A') frames.push({lang:'en',device:'phone',empty:true,cap:'Empty state · English phone'},{lang:'ar',device:'phone',empty:true,cap:'Empty state · Arabic phone'});
+const capEl = (c,d) => `<p class="cap">${ic(d==='desk'?'monitor':'device-mobile')} ${c}</p>`;
+let html = '';
+frames.filter(f=>f.device==='desk').forEach(f=>{ html += `<div>${capEl(f.cap,'desk')}${frameHtml({...f,opt})}</div>`; });
+html += `<div class="phones">${frames.filter(f=>f.device==='phone').map(f=>`<div>${capEl(f.cap)}${frameHtml({...f,opt})}</div>`).join('')}</div>`;
+document.getElementById('board').innerHTML = html;
+const all = () => document.querySelectorAll('.frame').forEach(renderCharts);
+all(); document.fonts && document.fonts.ready.then(all);
+
+/* interactions: range, tabs, table toggle, tooltip */
+document.addEventListener('click', e=>{
+  const fr = e.target.closest('.frame'); if(!fr) return;
+  const rb = e.target.closest('[data-range]'); if(rb){ fr.dataset.range = rb.dataset.range; rebuild(fr); return; }
+  const tb = e.target.closest('[data-tab]'); if(tb && tb.tagName==='BUTTON'){ fr.dataset.tab = tb.dataset.tab; rebuild(fr); return; }
+  const tt = e.target.closest('[data-tbl]'); if(tt){ const c=tt.closest('.card'); const on=c.classList.toggle('tabled'); const L=S[fr.dataset.lang].c; tt.innerHTML = on? `${ic('chart-bar')}<span>${L.chart}</span>` : `${ic('table')}<span>${L.table}</span>`; }
+});
+const tipEl = document.getElementById('tip');
+document.addEventListener('mousemove', e=>{
+  const h = e.target.closest('[data-tip]');
+  if(!h){ tipEl.classList.remove('on'); return; }
+  const fr = h.closest('.frame'); const d = JSON.parse(decodeURIComponent(h.dataset.tip));
+  tipEl.lang = fr.dataset.lang; tipEl.dir = fr.dataset.lang==='ar'?'rtl':'ltr';
+  tipEl.innerHTML = `<div class="tt">${d.title}</div>` + d.rows.map(([c,k,v])=>`<div class="r">${c?`<i style="background:${c}"></i>`:'<i></i>'}<span class="k">${k}</span><span class="v">${v}</span></div>`).join('');
+  const r = tipEl.getBoundingClientRect(); let x = e.clientX+14, y = e.clientY+14;
+  if(x+r.width>innerWidth-8) x = e.clientX-r.width-14; if(y+r.height>innerHeight-8) y = e.clientY-r.height-14;
+  tipEl.style.left=x+'px'; tipEl.style.top=y+'px'; tipEl.classList.add('on');
+});
+</script>
+</body>
+</html>

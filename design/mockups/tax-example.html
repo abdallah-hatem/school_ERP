@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tax example options</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#f2f8f6;--fg:#11302b;--card:#fff;--muted:#587069;--primary:#0b7a68;--psoft:#d5efe8;--accent:#ffc43d;--asoft:#fff1c9;--border:#dce9e5;--danger:#c2410c}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:"Plus Jakarta Sans","IBM Plex Sans Arabic",sans-serif;padding:24px 16px}
+  [dir=rtl]{font-family:"IBM Plex Sans Arabic","Plus Jakarta Sans",sans-serif}
+  h1{font-size:22px;margin:0 0 4px} .sub{color:var(--muted);margin:0 0 24px;font-size:14px}
+  h2{font-size:17px;margin:36px 0 4px} .why{color:var(--muted);font-size:13px;margin:0 0 12px;max-width:760px}
+  .row{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start}
+  .desk{width:720px;max-width:100%} .phone{width:360px;max-width:100%}
+  .tag{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:0 0 6px}
+  .box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px}
+  .lbl{font-size:13px;font-weight:600;margin-bottom:6px;display:block}
+  .input{display:flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:12px;padding:10px 12px;background:#fff;font-variant-numeric:tabular-nums;font-weight:600;width:200px;direction:ltr}
+  .input .cur{color:var(--muted);font-size:12px;font-weight:600}
+  .hint{font-size:12px;color:var(--muted);margin-top:10px}
+  .num{font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate}
+  /* A: receipt */
+  .a-wrap{display:flex;gap:20px;flex-wrap:wrap}
+  .receipt{flex:1;min-width:220px;border-radius:12px;background:var(--bg);padding:12px 14px}
+  .receipt .ln{display:flex;justify-content:space-between;padding:6px 0;font-size:14px}
+  .receipt .ln span:first-child{color:var(--muted)}
+  .receipt .plus{color:var(--danger);font-weight:600}
+  .receipt .tot{border-top:1px dashed #b9d3cc;margin-top:4px;padding-top:10px;font-weight:800;font-size:16px}
+  .receipt .tot span:first-child{color:var(--fg)}
+  .receipt .tot .num{color:var(--primary)}
+  /* B: tiles */
+  .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
+  .phone .tiles{grid-template-columns:1fr 1fr}
+  .t{border-radius:12px;background:var(--bg);padding:10px 12px}
+  .t .k{font-size:12px;color:var(--muted)} .t .v{font-weight:800;font-size:16px;margin-top:4px}
+  .t.g{background:var(--primary);color:#fff} .t.g .k{color:#cfeee6}
+  /* C: equation + bar */
+  .eq{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:14px}
+  .chip{border-radius:999px;padding:6px 12px;font-size:13px;background:var(--bg)}
+  .chip b{font-weight:800;margin-inline-start:6px}
+  .chip.g{background:var(--primary);color:#fff}
+  .op{color:var(--muted);font-weight:800}
+  .bar{display:flex;height:12px;border-radius:999px;overflow:hidden;margin-top:14px;background:var(--bg)}
+  .bar i{display:block} .bar .n{background:var(--psoft);width:86.8%} .bar .tx{background:var(--accent);width:13.1%} .bar .f{background:var(--danger);width:.5%}
+  .legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-top:8px;flex-wrap:wrap}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-inline-end:6px;vertical-align:-1px}
+</style>
+</head>
+<body>
+<h1>Settings → Accounting · tax example — 3 options</h1>
+<p class="sub">Same numbers in each: net 15,000.00 → income tax 2,267.78 · martyrs' fund 8.64 · gross 17,276.42. Desktop (EN) and phone (AR).</p>
+
+<!-- ============ A ============ -->
+<h2>A · Receipt</h2>
+<p class="why">The net on the left; on the right the sum written out like a small receipt, one line each, the gross at the bottom. Reads top to bottom, plain.</p>
+<div class="row">
+  <div class="desk"><p class="tag">Desktop · English</p>
+    <div class="box"><div class="a-wrap">
+      <div><span class="lbl">Net pay</span><div class="input"><span class="cur">EGP</span>15,000</div></div>
+      <div class="receipt">
+        <div class="ln"><span>Net pay</span><span class="num">15,000.00</span></div>
+        <div class="ln"><span>+ Income tax</span><span class="num plus">2,267.78</span></div>
+        <div class="ln"><span>+ Martyrs' fund</span><span class="num plus">8.64</span></div>
+        <div class="ln tot"><span>Gross the school pays</span><span class="num">EGP 17,276.42</span></div>
+      </div></div>
+      <p class="hint">For an employee who isn't insured. An insured employee's share is added to the gross.</p>
+    </div></div>
+  <div class="phone" dir="rtl"><p class="tag">Phone · العربية</p>
+    <div class="box"><div class="a-wrap">
+      <div><span class="lbl">صافي الراتب</span><div class="input"><span class="cur">ج.م</span>15,000</div></div>
+      <div class="receipt">
+        <div class="ln"><span>صافي الراتب</span><span class="num">15,000.00</span></div>
+        <div class="ln"><span>+ ضريبة كسب العمل</span><span class="num plus">2,267.78</span></div>
+        <div class="ln"><span>+ صندوق الشهداء</span><span class="num plus">8.64</span></div>
+        <div class="ln tot"><span>الإجمالي على المدرسة</span><span class="num">17,276.42 ج.م</span></div>
+      </div></div>
+      <p class="hint">لموظف غير مؤمَّن عليه. حصة التأمينات تُضاف إلى الإجمالي للمؤمَّن عليه.</p>
+    </div></div>
+</div>
+
+<!-- ============ B ============ -->
+<h2>B · Mini tiles</h2>
+<p class="why">The same four tiles as the Approved payroll month (Net, Income tax, Martyrs' fund, Gross in teal), small. Matches the rest of the app.</p>
+<div class="row">
+  <div class="desk"><p class="tag">Desktop · English</p>
+    <div class="box">
+      <span class="lbl">Net pay</span><div class="input"><span class="cur">EGP</span>15,000</div>
+      <div class="tiles">
+        <div class="t"><div class="k">Net pay</div><div class="v num">15,000.00</div></div>
+        <div class="t"><div class="k">Income tax</div><div class="v num">2,267.78</div></div>
+        <div class="t"><div class="k">Martyrs' fund</div><div class="v num">8.64</div></div>
+        <div class="t g"><div class="k">Gross</div><div class="v num">17,276.42</div></div>
+      </div>
+      <p class="hint">For an employee who isn't insured. An insured employee's share is added to the gross.</p>
+    </div></div>
+  <div class="phone" dir="rtl"><p class="tag">Phone · العربية</p>
+    <div class="box">
+      <span class="lbl">صافي الراتب</span><div class="input"><span class="cur">ج.م</span>15,000</div>
+      <div class="tiles">
+        <div class="t"><div class="k">صافي الراتب</div><div class="v num">15,000.00</div></div>
+        <div class="t"><div class="k">ضريبة كسب العمل</div><div class="v num">2,267.78</div></div>
+        <div class="t"><div class="k">صندوق الشهداء</div><div class="v num">8.64</div></div>
+        <div class="t g"><div class="k">الإجمالي</div><div class="v num">17,276.42</div></div>
+      </div>
+      <p class="hint">لموظف غير مؤمَّن عليه. حصة التأمينات تُضاف إلى الإجمالي للمؤمَّن عليه.</p>
+    </div></div>
+</div>
+
+<!-- ============ C ============ -->
+<h2>C · Equation + bar</h2>
+<p class="why">The sum as chips (net + tax + fund = gross), and a bar showing how much of the gross is tax. Most visual; good for explaining the rule to the client.</p>
+<div class="row">
+  <div class="desk"><p class="tag">Desktop · English</p>
+    <div class="box">
+      <span class="lbl">Net pay</span><div class="input"><span class="cur">EGP</span>15,000</div>
+      <div class="eq">
+        <span class="chip">Net<b class="num">15,000.00</b></span><span class="op">+</span>
+        <span class="chip">Income tax<b class="num">2,267.78</b></span><span class="op">+</span>
+        <span class="chip">Fund<b class="num">8.64</b></span><span class="op">=</span>
+        <span class="chip g">Gross<b class="num">17,276.42</b></span>
+      </div>
+      <div class="bar"><i class="n"></i><i class="tx"></i><i class="f"></i></div>
+      <div class="legend"><span><i style="background:var(--psoft)"></i>Net 86.8%</span><span><i style="background:var(--accent)"></i>Income tax 13.1%</span><span><i style="background:var(--danger)"></i>Fund 0.05%</span></div>
+      <p class="hint">For an employee who isn't insured. An insured employee's share is added to the gross.</p>
+    </div></div>
+  <div class="phone" dir="rtl"><p class="tag">Phone · العربية</p>
+    <div class="box">
+      <span class="lbl">صافي الراتب</span><div class="input"><span class="cur">ج.م</span>15,000</div>
+      <div class="eq">
+        <span class="chip">الصافي<b class="num">15,000.00</b></span><span class="op">+</span>
+        <span class="chip">الضريبة<b class="num">2,267.78</b></span><span class="op">+</span>
+        <span class="chip">الصندوق<b class="num">8.64</b></span><span class="op">=</span>
+        <span class="chip g">الإجمالي<b class="num">17,276.42</b></span>
+      </div>
+      <div class="bar" dir="rtl"><i class="n"></i><i class="tx"></i><i class="f"></i></div>
+      <div class="legend"><span><i style="background:var(--psoft)"></i>الصافي 86.8%</span><span><i style="background:var(--accent)"></i>الضريبة 13.1%</span><span><i style="background:var(--danger)"></i>الصندوق 0.05%</span></div>
+      <p class="hint">لموظف غير مؤمَّن عليه. حصة التأمينات تُضاف إلى الإجمالي للمؤمَّن عليه.</p>
+    </div></div>
+</div>
+</body>
+</html>

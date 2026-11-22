@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign-in S2 Quality</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f2f8f6;--fg:#11302b;--muted:#587069;--primary:#0b7a68;--deep:#07493e;--psoft:#d5efe8;--accent:#ffc43d;--border:#dce9e5}
+*{box-sizing:border-box}
+body{margin:0;background:#e9efed;color:var(--fg);font-family:"Plus Jakarta Sans","IBM Plex Sans Arabic",sans-serif;padding:24px 16px}
+[dir=rtl]{font-family:"IBM Plex Sans Arabic","Plus Jakarta Sans",sans-serif}
+h1.t{font-size:22px;margin:0 0 4px}.sub{color:var(--muted);font-size:14px;margin:0 0 8px;max-width:960px}
+h2{font-size:18px;margin:34px 0 4px}.why{color:var(--muted);font-size:13px;margin:0 0 14px;max-width:880px}
+.row{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start}
+.tag{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:0 0 6px}
+.stage{width:900px;height:560px;border-radius:16px;background:#0f1d1a;display:grid;place-items:center;box-shadow:0 10px 30px rgba(7,73,62,.15)}
+.stage.light{background:#e6eeeb}
+.desk{width:840px;height:500px;border-radius:22px;overflow:hidden;background:#fff;display:flex;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.phone{width:300px;height:620px;border-radius:30px;overflow:hidden;border:8px solid #0e1f1b;background:#fff;position:relative;box-shadow:0 10px 30px rgba(7,73,62,.15)}
+.lang{display:inline-flex;background:rgba(255,255,255,.75);border-radius:999px;padding:3px;font-size:12px;font-weight:700}
+.lang span{padding:5px 11px;border-radius:999px;color:var(--muted)}.lang span.on{background:var(--accent);color:#3a2a00}
+.f h3{font-size:25px;margin:0 0 6px;font-weight:800;text-align:center}.f p.s{color:var(--muted);font-size:12.5px;margin:0 0 18px;line-height:1.6;text-align:center}
+.f label{display:block;font-size:12px;font-weight:700;margin:0 0 6px}
+.f .in{height:42px;border-radius:11px;background:#f1f5f4;display:flex;align-items:center;gap:8px;padding:0 12px;color:#9bb0aa;font-size:12.5px;margin-bottom:13px;border:1px solid transparent;transition:border-color .2s,background .2s,box-shadow .2s}
+.f .in:hover{background:#fff;border-color:#7fcdb7;box-shadow:0 0 0 4px rgba(11,122,104,.1)}
+.f .in svg{width:16px;height:16px;flex:none;color:var(--muted)}.f .in .eye{margin-inline-start:auto}
+.f .btn{height:46px;border-radius:12px;background:var(--primary);color:#fff;font-weight:700;display:grid;place-items:center;font-size:14px;position:relative;overflow:hidden;transition:transform .15s,box-shadow .2s;box-shadow:0 8px 18px rgba(11,122,104,.3)}
+.f .btn:hover{transform:translateY(-1px);box-shadow:0 12px 24px rgba(11,122,104,.38)}
+.f .btn::after{content:"";position:absolute;inset:0 auto 0 0;width:40%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);transform:translateX(-120%) skewX(-20deg)}
+.f .btn:hover::after{animation:sheen .9s ease}
+.f .foot{margin-top:14px;font-size:11px;color:var(--muted);text-align:center}
+/* mesh panel */
+.mesh{position:relative;overflow:hidden;color:#fff;background:#07493e}
+.mesh .blob{position:absolute;border-radius:50%;filter:blur(40px);opacity:.9}
+.mesh .b1{width:340px;height:340px;background:#14a589;top:-80px;inset-inline-start:-60px;animation:float1 14s ease-in-out infinite}
+.mesh .b2{width:300px;height:300px;background:#6fd7bd;bottom:-90px;inset-inline-end:-40px;animation:float2 16s ease-in-out infinite}
+.mesh .b3{width:200px;height:200px;background:#ffc43d;top:35%;inset-inline-end:20%;opacity:.55;animation:float1 18s ease-in-out infinite reverse}
+.pill{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.18);backdrop-filter:blur(6px);padding:6px 12px;border-radius:999px;font-size:12px;font-weight:600}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.card{border-radius:14px;padding:11px;background:rgba(255,255,255,.16);backdrop-filter:blur(6px);font-size:11.5px;line-height:1.35;min-height:78px;display:flex;flex-direction:column;justify-content:space-between}
+.card .n{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:800;border:1.5px solid rgba(255,255,255,.6)}
+.card.on{background:#fff;color:var(--fg)}.card.on .n{background:var(--primary);color:#fff;border-color:var(--primary)}
+@keyframes float1{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(40px,30px) scale(1.08)}}
+@keyframes float2{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-36px,-28px) scale(1.1)}}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes sheen{from{transform:translateX(-120%) skewX(-20deg)}to{transform:translateX(220%) skewX(-20deg)}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes grow{from{transform:scaleY(.2)}to{transform:scaleY(1)}}
+.r{opacity:0;animation:rise .6s cubic-bezier(.2,.7,.2,1) forwards}
+.bob{animation:bob 4s ease-in-out infinite}
+.bar{transform-origin:bottom;animation:grow 1.2s cubic-bezier(.2,.7,.2,1) both}
+.bar{transform-box:fill-box}
+.steam{animation:steam 3.4s ease-in-out infinite}
+@keyframes steam{0%{opacity:0;transform:translateY(3px)}35%{opacity:.8}100%{opacity:0;transform:translateY(-9px)}}
+.shim{animation:shim 7s ease-in-out infinite}
+@keyframes shim{0%,100%{opacity:.6}50%{opacity:1}}
+.sway{transform-box:fill-box;transform-origin:50% 100%;animation:sway 6s ease-in-out infinite}
+@keyframes sway{0%,100%{transform:rotate(-1.5deg)}50%{transform:rotate(1.5deg)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}.r{opacity:1!important}}
+</style>
+</head>
+<body>
+<h1 class="t">Sign-in S2 · Office scene — soft 3D (clay)</h1>
+<p class="sub"><button id="replay" style="font:inherit;font-weight:700;border:0;background:#0b7a68;color:#fff;border-radius:10px;padding:6px 14px;cursor:pointer;margin-inline-end:10px">▶ Replay</button>The picked option: the office scene in soft 3D clay, with the teacher redrawn (eyes open and smiling, raised so her shoulders and hands on the keyboard show, a draped sunflower hijab, an open teal cardigan and a lanyard badge). Gentle motion stops under "reduce motion". English and Arabic, desktop and phone.</p>
+<div id="out"></div>
+<script>
+const T={
+ en:{school:'School ERP Demo',pill:'Welcome to your school 👋',head:'Run your school in one place',lead:'Staff, payroll and approvals — in Arabic and English.',cards:['Employees and HR','Payroll and taxes','Approvals and alerts'],title:'Sign in',sub:'Use the email and password your school gave you.',email:'Email',emailP:'name@school.edu.eg',pass:'Password',passP:'Your password',btn:'Sign in',foot:'Trouble signing in? Ask your school\'s system admin.'},
+ ar:{school:'مدرسة تجريبية',pill:'أهلًا بك في مدرستك 👋',head:'أدِر مدرستك من مكان واحد',lead:'الموظفون والرواتب والاعتمادات — بالعربية والإنجليزية.',cards:['الموظفون وشؤونهم','الرواتب والضرائب','الاعتمادات والتنبيهات'],title:'تسجيل الدخول',sub:'استخدم البريد الإلكتروني وكلمة المرور اللذين أعطتهما لك المدرسة.',email:'البريد الإلكتروني',emailP:'name@school.edu.eg',pass:'كلمة المرور',passP:'كلمة المرور الخاصة بك',btn:'تسجيل الدخول',foot:'مشكلة في الدخول؟ تواصل مع مدير النظام في مدرستك.'}};
+const I={
+ logo:'<svg viewBox="0 0 24 24" width="22" height="22" fill="none"><path d="M3 9.5 12 5l9 4.5-9 4.5z" fill="currentColor"/><path d="M7 11.5v4c0 1.5 2.2 3 5 3s5-1.5 5-3v-4" stroke="currentColor" stroke-width="1.6"/><circle cx="20" cy="15" r="1.6" fill="#ffc43d"/></svg>',
+ mail:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.5 6.5 8.5 6 8.5-6"/></svg>',
+ lock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></svg>',
+ eye:'<svg class="eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></svg>'};
+const d=(k)=>`class="r" style="animation-delay:${(.15+k*.08).toFixed(2)}s"`;
+const lang=(l)=>`<span class="lang"><span class="${l==='en'?'on':''}">EN</span><span class="${l==='ar'?'on':''}">ع</span></span>`;
+const brand=(l,dark)=>`<div style="display:flex;align-items:center;gap:8px;font-weight:800;font-size:14px;${dark?'color:#fff':'color:var(--fg)'}"><span style="width:30px;height:30px;border-radius:9px;display:grid;place-items:center;${dark?'background:rgba(255,255,255,.18);color:#fff':'background:var(--psoft);color:var(--primary)'}">${I.logo}</span>${T[l].school}</div>`;
+const form=(l)=>{const t=T[l];return `<div class="f"><h3 ${d(0)}>${t.title}</h3><p class="s" ${d(1)}>${t.sub}</p>
+ <div ${d(2)}><label>${t.email}</label><div class="in">${I.mail}<span dir="ltr">${t.emailP}</span></div></div>
+ <div ${d(3)}><label>${t.pass}</label><div class="in">${I.lock}<span>${t.passP}</span>${I.eye}</div></div>
+ <div ${d(4)}><div class="btn">${t.btn}</div></div><div class="foot" ${d(5)}>${t.foot}</div></div>`;};
+
+
+/* ---------- shared bits for the three scenes ---------- */
+const CT={en:{p1:'November payroll',p2:'Approved · 142 staff',a1:'Attendance',a2:'96% present today'},
+ ar:{p1:'رواتب نوفمبر',p2:'معتمدة · ١٤٢ موظفًا',a1:'الحضور',a2:'٩٦٪ حاضرون اليوم'}};
+const f1=n=>(+n).toFixed(1);
+/* a floating card: icon on the start side, two lines of text; mirrors for Arabic */
+const tcard=o=>{const {x,y,w,h,l,t1,t2,icon,rx=12,fill='#fff',filter='',delay=0,t1c='#11302b',t2c='#587069',extra=''}=o;const ar=l==='ar';
+ const icx=ar?x+w-h/2:x+h/2, tx=ar?x+w-h+2:x+h-2, dir=ar?'rtl':'ltr';
+ return `<g class="bob" style="animation-delay:${delay}s"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${fill}" ${filter?`filter="url(#${filter})"`:''}/>${extra}${icon(icx,y+h/2)}
+ <text x="${tx}" y="${y+h/2-2.5}" direction="${dir}" text-anchor="start" font-size="9.6" font-weight="700" fill="${t1c}">${t1}</text>
+ <text x="${tx}" y="${y+h/2+9}" direction="${dir}" text-anchor="start" font-size="8" font-weight="500" fill="${t2c}">${t2}</text></g>`;};
+const icCheck=(g)=>(cx,cy)=>`<circle cx="${cx}" cy="${cy}" r="11" fill="${g}"/><ellipse cx="${cx-3}" cy="${cy-5}" rx="5" ry="3" fill="#fff" opacity=".35"/><path d="M${cx-4.6} ${cy+.2}l3 3 6.2-6.6" stroke="#fff" stroke-width="2.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+const icUser=(g)=>(cx,cy)=>`<circle cx="${cx}" cy="${cy}" r="11" fill="${g}"/><ellipse cx="${cx-3}" cy="${cy-5}" rx="5" ry="3" fill="#fff" opacity=".25"/><circle cx="${cx}" cy="${cy-2.6}" r="2.9" fill="#fff"/><path d="M${cx-5.2} ${cy+6}q5.2-6.6 10.4 0" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round"/>`;
+const bars=(x0,base,hs,w,gap,fill,hi,acc,delay=.4)=>hs.map((h,i)=>`<rect class="bar" style="animation-delay:${(delay+i*.1).toFixed(2)}s" x="${x0+i*(w+gap)}" y="${base-h}" width="${w}" height="${h}" rx="${Math.min(2,w/2.5)}" fill="${i===hi?acc:fill}"/>`).join('');
+
+/* =====================================================================
+   Q1 · Soft 3D (clay)
+   ===================================================================== */
+const Q1=(l,phone)=>{const t=CT[l];
+ const leaf=(x,y,len,ang,wd,fill)=>`<g transform="translate(${x} ${y}) rotate(${ang})"><path d="M0 0C${wd} ${-len*.3} ${wd*.85} ${-len*.75} 0 ${-len}C${-wd*.85} ${-len*.75} ${-wd} ${-len*.3} 0 0Z" fill="${fill}"/><path d="M0 -3Q${wd*.18} ${-len*.5} 0 ${-len+5}" stroke="#fff" stroke-opacity=".35" stroke-width="1.1" fill="none" stroke-linecap="round"/></g>`;
+ const book=(x,y,w,h,col,band='#fff',rot=0)=>`<g ${rot?`transform="rotate(${rot} ${x+w/2} ${y})"`:''}><rect x="${x}" y="${y-h}" width="${w}" height="${h}" rx="2" fill="${col}"/><rect x="${x}" y="${y-h}" width="${w*.38}" height="${h}" rx="1.8" fill="#fff" opacity=".25"/><rect x="${x+w-1.8}" y="${y-h+1}" width="1.8" height="${h-2}" rx=".9" fill="#000" opacity=".14"/><rect x="${x+1.2}" y="${y-h+4}" width="${w-2.4}" height="2" rx="1" fill="${band}" opacity=".7"/><rect x="${x+1.2}" y="${y-6}" width="${w-2.4}" height="1.4" rx=".7" fill="${band}" opacity=".5"/></g>`;
+ const leaves=[[-66,48,8,'url(#q1leafB)'],[-46,64,9.5,'url(#q1leafA)'],[-24,80,10.5,'url(#q1leafB)'],[-4,90,11,'url(#q1leafA)'],[18,80,10.5,'url(#q1leafB)'],[40,66,9.5,'url(#q1leafA)'],[60,50,8,'url(#q1leafB)']];
+ return `<svg viewBox="${phone?'10 46 384 240':'0 0 400 300'}" width="100%" style="display:block">
+<defs>
+ <radialGradient id="q1wall" cx=".2" cy=".08" r="1.1"><stop offset="0" stop-color="#fdfefb"/><stop offset=".45" stop-color="#e3f3ee"/><stop offset="1" stop-color="#c1e2d7"/></radialGradient>
+ <linearGradient id="q1floor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c9e7dd"/><stop offset="1" stop-color="#a6d4c6"/></linearGradient>
+ <linearGradient id="q1beam" x1="0" y1="0" x2=".55" y2="1"><stop offset="0" stop-color="#fff4cf" stop-opacity=".95"/><stop offset=".7" stop-color="#fff4cf" stop-opacity=".25"/><stop offset="1" stop-color="#fff4cf" stop-opacity="0"/></linearGradient>
+ <filter id="q1ao" x="-50%" y="-80%" width="200%" height="260%"><feGaussianBlur stdDeviation="3.6"/></filter>
+ <filter id="q1ao2" x="-50%" y="-80%" width="200%" height="260%"><feGaussianBlur stdDeviation="1.6"/></filter>
+ <filter id="q1card" x="-30%" y="-50%" width="160%" height="220%"><feDropShadow dx="0" dy="5" stdDeviation="5.5" flood-color="#07493e" flood-opacity=".2"/></filter>
+ <linearGradient id="q1frame" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#cbe5dc"/></linearGradient>
+ <linearGradient id="q1sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe29a"/><stop offset=".5" stop-color="#fff3d6"/><stop offset="1" stop-color="#d4f0e7"/></linearGradient>
+ <radialGradient id="q1sun" cx=".38" cy=".35"><stop offset="0" stop-color="#fff8dc"/><stop offset=".6" stop-color="#ffd35f"/><stop offset="1" stop-color="#f4ad1a"/></radialGradient>
+ <linearGradient id="q1bld" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#d3eae2"/></linearGradient>
+ <linearGradient id="q1roof" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2ac7a4"/><stop offset="1" stop-color="#0b7a68"/></linearGradient>
+ <radialGradient id="q1tree" cx=".35" cy=".3" r=".75"><stop offset="0" stop-color="#a3ead4"/><stop offset=".55" stop-color="#22ae90"/><stop offset="1" stop-color="#0b6d5c"/></radialGradient>
+ <linearGradient id="q1wood" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fdeed6"/><stop offset="1" stop-color="#eccea2"/></linearGradient>
+ <linearGradient id="q1woodT" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3e0"/><stop offset="1" stop-color="#efd3a8"/></linearGradient>
+ <linearGradient id="q1woodF" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e6c08b"/><stop offset="1" stop-color="#c99760"/></linearGradient>
+ <linearGradient id="q1panel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c99a62"/><stop offset=".25" stop-color="#ddb47e"/><stop offset="1" stop-color="#e8c899"/></linearGradient>
+ <linearGradient id="q1dark" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#355f57"/><stop offset="1" stop-color="#0c231f"/></linearGradient>
+ <linearGradient id="q1scr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#e6f4ef"/></linearGradient>
+ <linearGradient id="q1barT" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#52dbb8"/><stop offset="1" stop-color="#0b7a68"/></linearGradient>
+ <linearGradient id="q1barY" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe394"/><stop offset="1" stop-color="#f2a516"/></linearGradient>
+ <radialGradient id="q1skin" cx=".4" cy=".32" r=".78"><stop offset="0" stop-color="#fde6d4"/><stop offset=".6" stop-color="#efc2a1"/><stop offset="1" stop-color="#d69d78"/></radialGradient>
+ <radialGradient id="q1skin2" cx=".38" cy=".32" r=".8"><stop offset="0" stop-color="#f3cdac"/><stop offset=".6" stop-color="#d9a079"/><stop offset="1" stop-color="#b67a52"/></radialGradient>
+ <radialGradient id="q1hijab" cx=".35" cy=".22" r=".95"><stop offset="0" stop-color="#46d0ad"/><stop offset=".5" stop-color="#119a80"/><stop offset="1" stop-color="#06463b"/></radialGradient>
+ <linearGradient id="q1sweater" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe697"/><stop offset=".55" stop-color="#ffc43d"/><stop offset="1" stop-color="#e59c14"/></linearGradient>
+ <linearGradient id="q1shirt" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a6ecd8"/><stop offset=".5" stop-color="#3cc0a0"/><stop offset="1" stop-color="#138c73"/></linearGradient>
+ <linearGradient id="q1pants" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3a5f58"/><stop offset="1" stop-color="#10241f"/></linearGradient>
+ <linearGradient id="q1hair" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5a463a"/><stop offset="1" stop-color="#1c1410"/></linearGradient>
+ <linearGradient id="q1lid" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#c9ded8"/></linearGradient>
+ <linearGradient id="q1chair" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#25b897"/><stop offset="1" stop-color="#07493e"/></linearGradient>
+ <linearGradient id="q1pot" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ffffff"/><stop offset=".55" stop-color="#e6f0ed"/><stop offset="1" stop-color="#bcd3cb"/></linearGradient>
+ <linearGradient id="q1leafA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#64dcba"/><stop offset="1" stop-color="#0a7563"/></linearGradient>
+ <linearGradient id="q1leafB" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9df0d6"/><stop offset="1" stop-color="#17a083"/></linearGradient>
+ <radialGradient id="q1clock" cx=".4" cy=".35"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#e1f0eb"/></radialGradient>
+ <linearGradient id="q1mug" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ffe08a"/><stop offset="1" stop-color="#e99f15"/></linearGradient>
+ <linearGradient id="q1folder" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffdd7e"/><stop offset="1" stop-color="#eea31a"/></linearGradient>
+ <radialGradient id="q1scarf" cx=".34" cy=".22" r=".9"><stop offset="0" stop-color="#fff1c2"/><stop offset=".35" stop-color="#ffcc52"/><stop offset=".75" stop-color="#eba51c"/><stop offset="1" stop-color="#b8770a"/></radialGradient>
+ <linearGradient id="q1cardi" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3ccaa8"/><stop offset=".55" stop-color="#12927a"/><stop offset="1" stop-color="#075a4c"/></linearGradient>
+ <linearGradient id="q1cream" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffdf7"/><stop offset="1" stop-color="#eadcc0"/></linearGradient>
+ <clipPath id="q1win"><rect x="32" y="36" width="106" height="90" rx="8"/></clipPath>
+</defs>
+<rect width="400" height="300" fill="url(#q1wall)"/>
+<rect y="236" width="400" height="64" fill="url(#q1floor)"/>
+<rect y="231" width="400" height="7" fill="#f6fcfa"/><rect y="238" width="400" height="3" fill="#07493e" opacity=".07"/>
+<!-- sunlight from the window -->
+<g class="shim"><path d="M36 40L148 40L330 300L150 300Z" fill="url(#q1beam)" opacity=".55"/><ellipse cx="236" cy="270" rx="70" ry="14" fill="#fff4cf" opacity=".5" filter="url(#q1ao)"/></g>
+
+<!-- window -->
+<rect x="27" y="35" width="124" height="112" rx="16" fill="#07493e" opacity=".17" filter="url(#q1ao)"/>
+<rect x="24" y="28" width="122" height="106" rx="15" fill="url(#q1frame)"/>
+<rect x="24.8" y="28.8" width="120.4" height="104.4" rx="14.3" fill="none" stroke="#fff" stroke-width="1.6"/>
+<rect x="31" y="35" width="108" height="92" rx="9" fill="#8fc3b4"/>
+<g clip-path="url(#q1win)">
+ <rect x="32" y="36" width="106" height="90" fill="url(#q1sky)"/>
+ <circle cx="114" cy="58" r="22" fill="#ffd25e" opacity=".22"/><circle cx="114" cy="58" r="10" fill="url(#q1sun)"/>
+ <g fill="#fff"><ellipse cx="58" cy="56" rx="13" ry="5.5"/><circle cx="54" cy="52" r="6"/><circle cx="62" cy="50" r="7.5"/></g><ellipse cx="58" cy="59" rx="11" ry="2" fill="#cfe8e0" opacity=".8"/>
+ <path d="M32 106Q58 90 86 99T138 92V126H32Z" fill="#c6eadf"/>
+ <path d="M32 113Q70 102 104 109T138 105V126H32Z" fill="#a8ddca"/>
+ <rect x="42.8" y="100" width="2.6" height="15" rx="1.2" fill="#7a5442"/><circle cx="44" cy="98" r="10" fill="url(#q1tree)"/><circle cx="51" cy="106" r="6" fill="url(#q1tree)"/>
+ <rect x="124.8" y="101" width="2.4" height="13" rx="1.2" fill="#7a5442"/><circle cx="126" cy="99" r="8.5" fill="url(#q1tree)"/>
+ <ellipse cx="84" cy="117" rx="34" ry="3" fill="#07493e" opacity=".22" filter="url(#q1ao2)"/>
+ <rect x="58" y="86" width="52" height="31" rx="3" fill="url(#q1bld)"/>
+ <path d="M53 88L84 69L115 88Q116 91 113 91H55Q52 91 53 88Z" fill="url(#q1roof)"/>
+ <path d="M59 87L84 71.8" stroke="#fff" stroke-opacity=".45" stroke-width="1.3" stroke-linecap="round"/>
+ <rect x="58" y="91" width="52" height="2.5" fill="#07493e" opacity=".08"/>
+ <circle cx="84" cy="83" r="3.7" fill="#fff"/><path d="M84 81.2v2l1.5 1" stroke="#07493e" stroke-width=".8" fill="none" stroke-linecap="round"/>
+ ${[63,71,92.5,100.5].map(x=>[96,106].map(y=>`<rect x="${x}" y="${y}" width="5.5" height="6" rx="1.4" fill="url(#q1barY)"/><rect x="${x+.8}" y="${y+.8}" width="1.6" height="2.2" rx=".6" fill="#fff" opacity=".6"/>`).join('')).join('')}
+ <rect x="79.5" y="101" width="9" height="16" rx="4.5" fill="url(#q1roof)"/><circle cx="86.2" cy="110" r=".9" fill="#ffc43d"/>
+ <path d="M84 69V54.5" stroke="#07493e" stroke-width="1.4" stroke-linecap="round"/>
+ <path d="M84.7 55.2q5-2.2 9 0t8.4 0v6.2q-4.2-2.2-8.4 0t-9 0z" fill="url(#q1barY)"/>
+ <path d="M32 117Q85 111 138 117V126H32Z" fill="#8ad2ba"/>
+ <path d="M32 36H58L36 126H32Z" fill="#fff" opacity=".2"/><path d="M66 36H72L50 126H44Z" fill="#fff" opacity=".14"/>
+</g>
+<rect x="31" y="35" width="108" height="92" rx="9" fill="none" stroke="#07493e" stroke-opacity=".12" stroke-width="2"/>
+<rect x="24" y="138" width="122" height="6" rx="3" fill="#07493e" opacity=".2" filter="url(#q1ao2)"/>
+<rect x="18" y="128" width="134" height="10" rx="5" fill="url(#q1woodT)"/><rect x="18" y="133.5" width="134" height="4.5" rx="2.2" fill="#dcb27c" opacity=".75"/>
+<!-- succulent on the sill -->
+<ellipse cx="129" cy="129" rx="9" ry="2" fill="#07493e" opacity=".25" filter="url(#q1ao2)"/>
+<path d="M122 117h14l-1.6 11.5q-.3 1.5-2 1.5h-6.8q-1.7 0-2-1.5z" fill="url(#q1mug)"/><rect x="121" y="115.5" width="16" height="3.6" rx="1.8" fill="#ffe08a"/>
+<g fill="url(#q1leafB)"><ellipse cx="125" cy="111" rx="3" ry="6" transform="rotate(-25 125 111)"/><ellipse cx="133" cy="111" rx="3" ry="6" transform="rotate(25 133 111)"/><ellipse cx="129" cy="109" rx="3.2" ry="7.5"/></g>
+
+<!-- shelf with books -->
+<rect x="204" y="48" width="96" height="6" rx="3" fill="#07493e" opacity=".22" filter="url(#q1ao2)"/>
+${book(206,41,9,24,'#0b7a68','#ffc43d')}${book(216,41,8,20,'#ffc43d','#0b7a68')}${book(225,41,10.5,27,'#07493e','#6fd7bd')}${book(236.5,41,7,18,'#6fd7bd','#fff')}${book(246,41,8,22,'#f0a81c','#fff',-16)}
+<ellipse cx="282" cy="41" rx="11" ry="2" fill="#07493e" opacity=".22" filter="url(#q1ao2)"/>
+<path d="M273 29h18l-2 10.5q-.4 2-2.4 2h-9.2q-2 0-2.4-2z" fill="url(#q1pot)"/>
+<g fill="url(#q1leafA)"><circle cx="276" cy="25" r="5.5"/><circle cx="288" cy="25" r="5"/></g><circle cx="282" cy="21" r="6.5" fill="url(#q1leafB)"/><circle cx="280" cy="19" r="2" fill="#fff" opacity=".35"/>
+<rect x="200" y="40" width="100" height="8" rx="4" fill="url(#q1woodT)"/><rect x="200" y="44.5" width="100" height="3.5" rx="1.75" fill="#d9ad74"/>
+
+<!-- clock -->
+<circle cx="348.5" cy="59" r="20" fill="#07493e" opacity=".2" filter="url(#q1ao)"/>
+<circle cx="346" cy="54" r="20" fill="url(#q1frame)"/><circle cx="346" cy="54" r="15.5" fill="url(#q1clock)"/>
+<circle cx="346" cy="54" r="15.5" fill="none" stroke="#07493e" stroke-opacity=".1" stroke-width="1.5"/>
+${Array.from({length:12},(_,i)=>{const a=i*Math.PI/6,r1=i%3?12.5:11.4,r2=13.6;return `<line x1="${f1(346+Math.sin(a)*r1)}" y1="${f1(54-Math.cos(a)*r1)}" x2="${f1(346+Math.sin(a)*r2)}" y2="${f1(54-Math.cos(a)*r2)}" stroke="#0b7a68" stroke-width="${i%3?1:1.8}" stroke-linecap="round"/>`}).join('')}
+<path d="M346 54L346 45.5M346 54L354 57.5" stroke="#07493e" stroke-width="2.2" stroke-linecap="round"/><circle cx="346" cy="54" r="2.4" fill="#ffc43d"/>
+<path d="M332 46a15 15 0 0 1 10-6.5" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".9"/>
+
+<!-- plant -->
+<ellipse cx="55" cy="285" rx="24" ry="4" fill="#07493e" opacity=".3" filter="url(#q1ao2)"/>
+<g class="sway">${leaves.map(([a,len,w,fl])=>leaf(55,250,len,a,w,fl)).join('')}</g>
+<path d="M36 247H74L70 280Q69 285 64 285H46Q41 285 40 280Z" fill="url(#q1pot)"/>
+<rect x="38.5" y="262" width="33" height="3" fill="#ffc43d" opacity=".9"/>
+<rect x="33" y="242" width="44" height="8" rx="4" fill="#ffffff"/><rect x="33" y="246" width="44" height="4" rx="2" fill="#d4e4df"/>
+<ellipse cx="55" cy="243" rx="18" ry="2" fill="#6b4a3a"/>
+
+<!-- chair back -->
+<rect x="136" y="112" width="68" height="96" rx="20" fill="url(#q1chair)"/><rect x="141" y="116" width="24" height="80" rx="11" fill="#fff" opacity=".14"/>
+
+<!-- teacher (hijab), smiling, hands on the keyboard -->
+<g>
+ <path d="M134 206C134 178 145 160 160 156L180 156C195 160 206 178 206 206Z" fill="url(#q1cream)"/>
+ <path d="M134 206C134 178 145 160 157 156L161 170L154 206Z" fill="url(#q1cardi)"/>
+ <path d="M206 206C206 178 195 160 183 156L179 170L186 206Z" fill="url(#q1cardi)"/>
+ <path d="M157 156L161 170L154 206M183 156L179 170L186 206" stroke="#8ae6cc" stroke-opacity=".7" stroke-width="1.2" fill="none" stroke-linejoin="round"/>
+ <path d="M143 184q4 9 3 20M197 184q-4 9-3 20" stroke="#053c33" stroke-opacity=".35" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+ <path d="M163.5 160L170 170M176.5 160L170 170" stroke="#07493e" stroke-width="1"/>
+ <rect x="165.5" y="169.5" width="9" height="10.5" rx="1.8" fill="url(#q1folder)"/><rect x="167.3" y="171.5" width="5.4" height="2.4" rx=".8" fill="#fff"/>
+ <ellipse cx="170" cy="166" rx="31" ry="5" fill="#07493e" opacity=".3" filter="url(#q1ao2)"/>
+ <path d="M152 146C146 153 140 158 141 164C152 170.5 188 170.5 199 164C200 158 194 153 188 146Z" fill="#b8770a"/>
+ <path d="M170 100C157 100 151 109 151 122C151 133 153 140 150 146C146 152 141 156 141 161C148 167.5 192 167.5 199 161C199 156 194 152 190 146C187 140 189 133 189 122C189 109 183 100 170 100Z" fill="url(#q1scarf)"/>
+ <path d="M143 160C150 166 190 166 197 160" stroke="#8a5806" stroke-opacity=".4" stroke-width="3" fill="none" stroke-linecap="round" filter="url(#q1ao2)"/>
+ <path d="M156 145Q152 153 146.5 159.5M184 145Q188 153 193.5 159.5M163.5 149Q162.5 156 160.5 164M176.5 149Q177.5 156 179.5 164" stroke="#a46606" stroke-opacity=".5" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+ <path d="M154.5 144.5Q150 151.5 145 156.5M161 149Q159.5 155 157.5 161" stroke="#fff3cf" stroke-opacity=".6" stroke-width="1.1" fill="none" stroke-linecap="round"/>
+ <path d="M187.5 116C189.5 128 188.5 137 186.5 143" stroke="#8a5806" stroke-opacity=".3" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+ <path d="M155 115Q159 104 170 103" stroke="#fff" stroke-opacity=".55" stroke-width="3" fill="none" stroke-linecap="round"/>
+ <ellipse cx="170" cy="124.5" rx="13.6" ry="15.6" fill="#c8860c" opacity=".55"/>
+ <ellipse cx="170" cy="125" rx="11.2" ry="13.2" fill="url(#q1skin)"/>
+ <path d="M157 121.5Q157.5 110.5 170 110Q182.5 110.5 183 121.5Q177 115 170 115Q163 115 157 121.5Z" fill="url(#q1scarf)"/>
+ <path d="M159 113Q164 111.1 169 111.1" stroke="#fff" stroke-opacity=".45" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+ <path d="M158.5 136Q170 146.5 181.5 136" stroke="#a46606" stroke-opacity=".6" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+ <ellipse cx="165" cy="119.5" rx="4" ry="2.4" fill="#fff" opacity=".3"/>
+ <path d="M162.4 120.3q3-1.8 6-.4M171.6 119.9q3-1.4 6 .4" stroke="#5b3d2e" stroke-width="1.05" fill="none" stroke-linecap="round" opacity=".8"/>
+ <ellipse cx="165.6" cy="125.5" rx="1.75" ry="2.15" fill="#2a1d17"/><ellipse cx="174.4" cy="125.5" rx="1.75" ry="2.15" fill="#2a1d17"/>
+ <circle cx="166.2" cy="124.7" r=".65" fill="#fff"/><circle cx="175" cy="124.7" r=".65" fill="#fff"/>
+ <path d="M163.4 123.7q2.2-1.5 4.4 0M172.2 123.7q2.2-1.5 4.4 0" stroke="#2a1d17" stroke-width="1" fill="none" stroke-linecap="round"/>
+ <path d="M170.2 127.1q-1.4 3.2.8 4.2" stroke="#c48663" stroke-width="1.1" fill="none" stroke-linecap="round"/>
+ <path d="M165.2 132.9Q170 138.1 174.8 132.9Q170 134.7 165.2 132.9Z" fill="#a8473d"/><path d="M165.2 132.9Q170 138.1 174.8 132.9" stroke="#a8473d" stroke-width="1.1" fill="none" stroke-linecap="round"/>
+ <path d="M166.6 133.6Q170 134.7 173.4 133.6L173 134.3Q170 135.1 167 134.3Z" fill="#fff" opacity=".85"/>
+ <circle cx="162.2" cy="130.5" r="2.8" fill="#ff8f7a" opacity=".25"/><circle cx="177.8" cy="130.5" r="2.8" fill="#ff8f7a" opacity=".25"/>
+ <ellipse cx="170" cy="132.5" rx="12" ry="7" fill="#c9fff0" opacity=".1"/>
+</g>
+
+<!-- desk -->
+<ellipse cx="226" cy="285" rx="122" ry="6" fill="#07493e" opacity=".28" filter="url(#q1ao)"/>
+<rect x="124" y="212" width="202" height="48" rx="6" fill="url(#q1panel)"/>
+<path d="M132 236H318" stroke="#b98a52" stroke-opacity=".35" stroke-width="1.2"/>
+<rect x="120" y="210" width="10" height="75" rx="4.5" fill="url(#q1woodF)"/><rect x="320" y="210" width="10" height="75" rx="4.5" fill="url(#q1woodF)"/>
+<rect x="121.5" y="212" width="3" height="70" rx="1.5" fill="#fff" opacity=".25"/><rect x="321.5" y="212" width="3" height="70" rx="1.5" fill="#fff" opacity=".25"/>
+<path d="M118 197H332Q338 197 340 204H110Q112 197 118 197Z" fill="url(#q1woodT)"/>
+<rect x="110" y="203" width="230" height="12" rx="6" fill="url(#q1woodF)"/>
+<path d="M115 203.7H335" stroke="#fff" stroke-opacity=".75" stroke-width="1.1" stroke-linecap="round"/>
+
+<!-- laptop: base, her hands on the keys, then the back of the lid -->
+<ellipse cx="171" cy="203" rx="32" ry="2.5" fill="#07493e" opacity=".3" filter="url(#q1ao2)"/>
+<rect x="140" y="198.5" width="60" height="4.6" rx="2.2" fill="#b4ccc5"/><rect x="142" y="198.6" width="56" height="1.3" rx=".6" fill="#fff" opacity=".7"/>
+<path d="M141 168C133 180 135 194 150 197.5" stroke="url(#q1cardi)" stroke-width="11" fill="none" stroke-linecap="round"/>
+<path d="M199 168C207 180 205 194 190 197.5" stroke="url(#q1cardi)" stroke-width="11" fill="none" stroke-linecap="round"/>
+<path d="M140.5 170C135 179 135 189 141 195" stroke="#fff" stroke-opacity=".22" stroke-width="2" fill="none" stroke-linecap="round"/>
+<ellipse cx="153" cy="197" rx="5.6" ry="3.4" fill="url(#q1skin)"/><ellipse cx="187" cy="197" rx="5.6" ry="3.4" fill="url(#q1skin)"/>
+<path d="M155 195.6h3.4M155 197.6h3.6M185 195.6h-3.4M185 197.6h-3.6" stroke="#c48663" stroke-width=".8" stroke-linecap="round"/>
+<rect x="151" y="183" width="38" height="19" rx="5" fill="url(#q1lid)"/>
+<rect x="151.7" y="183.7" width="36.6" height="17.6" rx="4.4" fill="none" stroke="#fff" stroke-width="1.3"/>
+<path d="M170 189.2l6 3-6 3-6-3z" fill="#9ccfc0"/><path d="M166 193.6v2.4q4 2.6 8 0v-2.4" stroke="#9ccfc0" stroke-width="1.3" fill="none"/>
+
+<!-- monitor -->
+<ellipse cx="271" cy="200" rx="28" ry="2.6" fill="#07493e" opacity=".3" filter="url(#q1ao2)"/>
+<path d="M265 184h12l2 13h-16z" fill="url(#q1frame)"/><rect x="249" y="195.5" width="44" height="5" rx="2.5" fill="url(#q1frame)"/>
+<rect x="214" y="113" width="120" height="78" rx="10" fill="#07493e" opacity=".25" filter="url(#q1ao)"/>
+<rect x="212" y="108" width="120" height="78" rx="10" fill="url(#q1dark)"/>
+<rect x="212.7" y="108.7" width="118.6" height="76.6" rx="9.4" fill="none" stroke="#fff" stroke-opacity=".18" stroke-width="1.3"/>
+<rect x="217" y="113" width="110" height="65" rx="5" fill="url(#q1scr)"/>
+<path d="M217 118a5 5 0 0 1 5-5h100a5 5 0 0 1 5 5v5H217z" fill="#0b7a68"/>
+<circle cx="223" cy="118" r="1.6" fill="#fff" opacity=".7"/><circle cx="228" cy="118" r="1.6" fill="#fff" opacity=".7"/><circle cx="233" cy="118" r="1.6" fill="#ffc43d"/>
+<rect x="290" y="116.5" width="30" height="3" rx="1.5" fill="#fff" opacity=".55"/>
+<rect x="223" y="128" width="30" height="3.6" rx="1.8" fill="#11302b" opacity=".75"/><rect x="223" y="134" width="20" height="3" rx="1.5" fill="#cde9e1"/>
+<path d="M222 172.5H290" stroke="#d5efe8" stroke-width="1"/>
+${bars(225,172,[13,21,17,29,24,33],7,4.5,'url(#q1barT)',3,'url(#q1barY)')}
+<circle cx="307" cy="144" r="11" fill="none" stroke="#dcefe9" stroke-width="5"/>
+<circle cx="307" cy="144" r="11" fill="none" stroke="url(#q1barT)" stroke-width="5" stroke-linecap="round" stroke-dasharray="50 70" transform="rotate(-90 307 144)"/>
+<text x="307" y="146.4" text-anchor="middle" font-size="6.5" font-weight="800" fill="#11302b" direction="ltr">72%</text>
+<rect x="297" y="161" width="20" height="3" rx="1.5" fill="#cde9e1"/><rect x="297" y="166.5" width="13" height="3" rx="1.5" fill="#cde9e1"/>
+<circle cx="272" cy="182" r="1.3" fill="#fff" opacity=".35"/>
+
+<g transform="translate(186 0)"><!-- mug with steam -->
+<ellipse cx="125" cy="199" rx="10" ry="2.2" fill="#07493e" opacity=".28" filter="url(#q1ao2)"/>
+<path d="M129 187q7-.5 7 5t-7 5" stroke="#e99f15" stroke-width="2.6" fill="none"/>
+<rect x="117" y="184" width="13" height="15" rx="3.5" fill="url(#q1mug)"/><ellipse cx="123.5" cy="184.6" rx="6.2" ry="1.7" fill="#7a4a24"/><rect x="118.5" y="187" width="2.4" height="9" rx="1.2" fill="#fff" opacity=".45"/>
+<g fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" opacity=".5"><path class="steam" d="M121 179q-3-4 0-8t0-8"/><path class="steam" style="animation-delay:1.3s" d="M126 180q-3-4 0-8t0-8"/></g>
+
+</g>
+<!-- colleague, pointing -->
+<g>
+ <ellipse cx="361" cy="285" rx="24" ry="3.6" fill="#07493e" opacity=".32" filter="url(#q1ao2)"/>
+ <path d="M349 214L347 279Q347 281 349.5 281H357.5L360 224Z" fill="url(#q1pants)"/>
+ <path d="M360 224L363.5 281H371.5Q374 281 374 279L373.5 214Z" fill="url(#q1pants)"/>
+ <path d="M352 222l-.8 52M366 226l1.4 50" stroke="#fff" stroke-opacity=".1" stroke-width="1.2"/>
+ <path d="M343.5 279.5q0-3.2 3.4-3.2h11.6v6.7h-15z" fill="#0d211d"/><path d="M346 277.5h8" stroke="#fff" stroke-opacity=".25" stroke-width="1" stroke-linecap="round"/>
+ <path d="M362.5 276.3h11.6q3.6 0 3.6 3.2v3.5h-15.2z" fill="#0d211d"/>
+ <path d="M377 158Q384 174 381.5 196" stroke="#1d9a7e" stroke-width="8.5" stroke-linecap="round" fill="none"/>
+ <rect x="371" y="184" width="18" height="24" rx="2.5" fill="url(#q1folder)" transform="rotate(8 380 196)"/>
+ <rect x="373" y="186" width="14" height="3" rx="1" fill="#fff" opacity=".8" transform="rotate(8 380 196)"/>
+ <path d="M346 160Q347 150 356 148L368 148Q377 150 378 160L376.5 216Q362 221 347.5 216Z" fill="url(#q1shirt)"/>
+ <path d="M353 188q4 11 1.5 26M371 184q-2 12 0 30" stroke="#0d7d66" stroke-opacity=".3" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+ <rect x="347" y="211.5" width="30" height="4.5" rx="2" fill="#0d211d"/><rect x="360" y="211.8" width="5" height="3.9" rx="1" fill="#ffc43d"/>
+ <path d="M356 148L362 158L368 148Z" fill="#e9f7f3"/><path d="M357 148l5 7.5 5-7.5" fill="none" stroke="#0d7d66" stroke-opacity=".4" stroke-width="1"/>
+ <path d="M358 150L364 172M366 150L364 172" stroke="#07493e" stroke-width="1" opacity=".8"/><rect x="360" y="171" width="8.5" height="11" rx="1.8" fill="url(#q1folder)"/><rect x="361.8" y="173" width="5" height="2.4" rx=".8" fill="#fff"/>
+ <circle cx="381.5" cy="198" r="3.6" fill="url(#q1skin2)"/>
+ <path d="M350 157Q339 159 332.5 153" stroke="#36b896" stroke-width="8.5" stroke-linecap="round" fill="none"/>
+ <path d="M332.5 153L322 146" stroke="url(#q1skin2)" stroke-width="5.4" stroke-linecap="round"/>
+ <path d="M323 146.5L315 140.5" stroke="#d9a079" stroke-width="2.4" stroke-linecap="round"/><circle cx="321.5" cy="145.5" r="3.4" fill="#d9a079"/>
+ <rect x="356.5" y="138" width="10" height="12" rx="3.5" fill="#c98d64"/>
+ <circle cx="361" cy="128" r="13.5" fill="url(#q1skin2)"/>
+ <ellipse cx="373.5" cy="130" rx="2.8" ry="3.8" fill="#d59a72"/><path d="M373.5 128.5q1.5 1.5 0 3" stroke="#a96f4a" stroke-width=".9" fill="none"/>
+ <path d="M347.6 126.5C346 113.5 356 109.5 363 110C372.5 110.5 377.5 118 375.5 129C374.5 124 371.5 121 366 120.5C360 122.5 352 122 347.6 126.5Z" fill="url(#q1hair)"/>
+ <path d="M353.5 115q6-3.4 12.5-1.4" stroke="#9c7a62" stroke-opacity=".65" stroke-width="1.7" fill="none" stroke-linecap="round"/>
+ <path d="M349 133q2.5 7 9 8.5q6 .5 10-3.5" stroke="#8a5a3a" stroke-opacity=".18" stroke-width="3" fill="none" stroke-linecap="round"/>
+ <path d="M349.5 124.6q2.6-1.4 5 0M357.5 124.4q2.6-1.4 5 .2" stroke="#2a1d17" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+ <ellipse cx="352" cy="129" rx="1.4" ry="1.8" fill="#1f1611"/><ellipse cx="360" cy="129" rx="1.4" ry="1.8" fill="#1f1611"/>
+ <circle cx="352.5" cy="128.4" r=".5" fill="#fff"/><circle cx="360.5" cy="128.4" r=".5" fill="#fff"/>
+ <path d="M349.4 131q-2.2 3 .6 4.2" stroke="#a96f4a" stroke-width="1.1" fill="none" stroke-linecap="round"/>
+ <path d="M352 137.4q3.4 2.4 7 0" stroke="#8c4a3c" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+ <circle cx="364" cy="134" r="2.6" fill="#ff8f7a" opacity=".2"/>
+ <ellipse cx="355" cy="122.8" rx="4" ry="1.6" fill="#fff" opacity=".18"/>
+</g>
+
+<!-- floating cards -->
+${tcard({x:168,y:56,w:138,h:40,l,t1:t.p1,t2:t.p2,icon:icCheck('url(#q1folder)'),filter:'q1card',delay:.6})}
+${tcard({x:10,y:154,w:120,h:40,l,t1:t.a1,t2:t.a2,icon:icUser('url(#q1barT)'),filter:'q1card',delay:1.4})}
+</svg>`;};
+
+let illo='';
+/* S2 — Illustration panel (pin 2) */
+const S2=(l,phone)=>{const t=T[l];
+ const panel=`<div style="position:relative;overflow:hidden;background:linear-gradient(160deg,#eef8f5,#d5efe8);${phone?'padding:18px 18px 6px':'width:52%;padding:28px 30px'};display:flex;flex-direction:column">
+   <div style="position:absolute;width:280px;height:280px;border-radius:50%;background:#bfe7dc;top:-120px;inset-inline-end:-80px;opacity:.7"></div>
+   <div style="position:relative;display:flex;justify-content:space-between;align-items:center">${brand(l,false)}${phone?lang(l):''}</div>
+   ${phone?'':`<div class="r" style="position:relative;animation-delay:.15s;font-size:28px;font-weight:800;line-height:1.2;margin-top:22px">${t.head}</div><div class="r" style="animation-delay:.25s;font-size:13px;color:var(--muted);margin-top:6px">${t.lead}</div>`}
+   <div style="position:relative;margin-top:${phone?'12px':'auto'};border-radius:18px;overflow:hidden;box-shadow:0 10px 24px rgba(7,73,62,.12)">${illo(l,phone)}</div></div>`;
+ const right=`<div style="flex:1;display:flex;flex-direction:column;padding:${phone?'20px':'22px 50px'}">${phone?'':`<div style="display:flex;justify-content:flex-end">${lang(l)}</div>`}<div style="margin:auto 0">${form(l)}</div></div>`;
+ return `<div dir="${l==='ar'?'rtl':'ltr'}" style="display:flex;${phone?'flex-direction:column':''};width:100%;height:100%">${panel}${right}</div>`;};
+
+const opts=[
+ ['Q1 · Soft 3D (clay)','Rounded, volumetric shapes lit from the top-left: every object has gradients, soft contact shadows and highlights. A warm beam of sunlight falls from the window across the wall and floor. The teacher, in a sunflower hijab and an open teal cardigan, smiles as she types at her laptop, her colleague points at the dashboard; the bars grow in, the mug steams, the cards bob.',Q1,'q1']]; 
+const render=()=>{document.getElementById('out').innerHTML=opts.map(([h,w,fn,id])=>{illo=fn;return `<h2 id="${id}">${h}</h2><p class="why">${w}</p>
+ <div class="row"><div><p class="tag">Desktop · English</p><div class="stage light"><div class="desk">${S2('en',false)}</div></div></div><div><p class="tag">Phone · English</p><div class="phone">${S2('en',true)}</div></div></div>
+ <div class="row" style="margin-top:14px"><div><p class="tag">Desktop · العربية</p><div class="stage light"><div class="desk">${S2('ar',false)}</div></div></div><div><p class="tag">Phone · العربية</p><div class="phone">${S2('ar',true)}</div></div></div>`;}).join('');};
+render();document.getElementById('replay').onclick=render;
+</script>
+</body>
+</html>

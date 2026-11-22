@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Employee Avatars Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Tajawal:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/duotone/style.css">
+<style>
+:root{
+  --bg:#EAF4F1;--surface:#FFFFFF;--surface-2:#F5FAF8;--muted-fill:#F1F7F5;--line:#DCE9E5;
+  --text:#11302B;--muted:#5D7671;
+  --primary:#0B7A68;--primary-ink:#FFFFFF;--primary-soft:#D5EFE8;
+  --accent:#FFC43D;--accent-ink:#4A3400;--accent-soft:#FFF1C9;
+  --success:#1F9A62;--success-soft:#DDF4E7;--success-ink:#14704A;
+  --warning:#D9771C;--warning-soft:#FFE8D2;--warning-ink:#9A4D0B;
+  --danger:#D9473A;--danger-soft:#FDE3DF;--danger-ink:#B4352A;
+  --sky:#2F6FB3;--sky-soft:#E0EEFB;
+  --shadow:0 1px 2px rgba(11,72,62,.06),0 10px 30px -12px rgba(11,72,62,.18);
+  --bar:#0F2F2A;--bar-ink:#E7F4F0;
+  --font-latin:"Plus Jakarta Sans",system-ui,sans-serif;
+  --font-ar:"IBM Plex Sans Arabic","Plus Jakarta Sans",system-ui,sans-serif;
+  --font-ar-display:"Tajawal","IBM Plex Sans Arabic",system-ui,sans-serif;
+  --font:var(--font-latin);--font-display:var(--font-latin);
+  color-scheme:light;
+}
+:root[lang="ar"]{--font:var(--font-ar);--font-display:var(--font-ar-display)}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;cursor:pointer}
+.num{font-variant-numeric:tabular-nums lining-nums;font-family:var(--font-latin)}
+.ph-duotone{line-height:1}
+
+/* mockup bar */
+.mockbar{background:var(--bar);color:var(--bar-ink);display:flex;align-items:center;gap:16px;padding:10px 24px;position:sticky;top:0;z-index:50;flex-wrap:wrap;font-size:13px}
+.mockbar strong{font-size:14px}
+.mockbar .hint{opacity:.7}
+.mockbar .sp{flex:1}
+.seg{display:inline-flex;background:rgb(255 255 255 / .08);border-radius:999px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;padding:5px 14px;border-radius:999px;font-weight:700;font-size:13px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#3a2900}
+.seg .ar{font-family:var(--font-ar-display);font-size:15px}
+
+.wrap{max-width:1240px;margin-inline:auto;padding:28px 24px 48px;display:flex;flex-direction:column;gap:22px}
+.intro{background:var(--surface);border-radius:24px;box-shadow:var(--shadow);padding:22px 24px;display:flex;gap:22px;align-items:center;flex-wrap:wrap}
+.intro h1{margin:0;font-family:var(--font-display);font-weight:800;font-size:26px;line-height:1.2}
+.intro p{margin:6px 0 0;color:var(--muted);max-width:720px}
+.intro .tag{display:inline-flex;align-items:center;gap:6px;background:var(--primary-soft);color:var(--primary);border-radius:999px;padding:3px 12px;font-weight:700;font-size:12.5px;margin-block-end:6px}
+.intro .duo{display:flex;gap:10px;margin-inline-start:auto}
+.sec-t{font-family:var(--font-display);font-weight:800;font-size:18px;margin:6px 0 -8px;display:flex;align-items:center;gap:8px}
+.sec-t small{font-family:var(--font);font-weight:600;font-size:13px;color:var(--muted)}
+.panel{background:var(--surface);border-radius:24px;box-shadow:var(--shadow);padding:22px 24px}
+
+/* avatar shapes */
+.av{display:block;flex:none;overflow:hidden}
+.shape-circle{border-radius:50%}
+.shape-round{border-radius:30%}
+.shape-squircle{border-radius:28%}
+
+/* sizes */
+.sizes{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.sizerow{background:var(--surface-2);border:1px solid var(--line);border-radius:18px;padding:16px 18px;display:flex;align-items:flex-end;gap:22px;flex-wrap:wrap}
+.sizerow .lab{font-size:12.5px;font-weight:700;color:var(--muted);width:100%;margin-block-end:-8px}
+.sz{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.strip{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:10px;margin-block-start:16px}
+.strip .it{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);text-align:center;line-height:1.25}
+.strip .it b{color:var(--text);font-weight:700;font-size:12px}
+
+/* employee cards */
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.ecard{background:var(--surface);border-radius:24px;box-shadow:var(--shadow);overflow:hidden}
+.band{height:74px;position:relative;padding:12px 16px;display:flex;justify-content:space-between;align-items:flex-start;overflow:hidden}
+.band::after{content:"";position:absolute;width:110px;height:110px;border-radius:50%;inset-block-start:-50px;inset-inline-end:-30px;background:rgb(255 255 255 / .35)}
+.band > *{position:relative;z-index:1}
+.st-none{background:#E3ECE9}.st-kg{background:#D6E6FA}.st-pri{background:#C9EBE1}.st-prep{background:#FFE6A8}
+.stchip{display:inline-flex;align-items:center;gap:6px;background:rgb(255 255 255 / .8);border-radius:999px;padding:2px 10px;font-size:12.5px;font-weight:700}
+.st-kg .stchip{color:#245a94}.st-pri .stchip{color:var(--primary)}.st-prep .stchip{color:#7a5300}.st-none .stchip{color:var(--muted)}
+.code{font-size:12px;color:var(--muted);font-weight:600}
+.cbody{padding:0 18px 18px}
+.toprow{display:flex;align-items:flex-end;justify-content:space-between;margin-block-start:-40px;position:relative;z-index:2}
+.frame{background:var(--surface);padding:4px;box-shadow:0 2px 8px rgb(11 72 62 / .14)}
+.frame.shape-circle{border-radius:50%}.frame.shape-round{border-radius:24px}.frame.shape-squircle{border-radius:22px}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 11px 3px 9px;font-size:12.5px;font-weight:700;white-space:nowrap}
+.pill .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.p-active,.p-ok{background:var(--success-soft);color:var(--success-ink)}
+.p-pend{background:var(--warning-soft);color:var(--warning-ink)}
+.ename{font-family:var(--font-display);font-weight:800;font-size:18px;margin:10px 0 0;line-height:1.25}
+.ejob{font-size:13px;color:var(--muted)}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-block:14px 10px}
+.field{background:var(--muted-fill);border-radius:12px;padding:7px 10px}
+.field .l{font-size:11.5px;color:var(--muted)}.field .v{font-size:13px;font-weight:700}
+.sal{display:flex;justify-content:space-between;align-items:center;background:var(--primary-soft);border-radius:12px;padding:10px 12px;color:var(--primary)}
+.sal .l{font-size:12.5px;font-weight:700}.sal .v{font-weight:800;font-size:17px}.sal .cur{font-weight:600;font-size:14px}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-block-start:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:12px;padding:8px 12px;font-weight:700;font-size:14px;border:1px solid var(--line);background:var(--surface)}
+.photo{width:64px;height:64px;border-radius:16px;background:#C9D2CF;color:#5d6866;display:grid;place-items:center;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+
+/* table */
+.tbl{width:100%;border-collapse:separate;border-spacing:0}
+.tbl th{font-size:12.5px;color:var(--muted);font-weight:600;text-align:start;padding:10px 14px;background:var(--surface-2)}
+.tbl th:first-child{border-start-start-radius:12px;border-end-start-radius:12px}
+.tbl th:last-child{border-start-end-radius:12px;border-end-end-radius:12px}
+.tbl td{padding:12px 14px;border-block-end:1px solid var(--line);font-size:14px;vertical-align:middle}
+.tbl tr:last-child td{border-block-end:0}
+.who{display:flex;align-items:center;gap:12px}
+.who .n{font-weight:700;font-size:14px;line-height:1.25}.who .c{font-size:12px;color:var(--muted)}
+.lvl .l{font-size:12px;color:var(--muted)}.lvl .d{color:var(--danger-ink);font-weight:600}
+
+/* profile header */
+.profiles{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.prof{display:flex;align-items:center;gap:16px;padding:6px 4px}
+.prof .crumb{font-size:12.5px;color:var(--muted)}
+.prof h3{margin:0;font-family:var(--font-display);font-weight:800;font-size:26px;line-height:1.2;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.prof .meta{font-size:13.5px;color:var(--muted)}
+
+.note{font-size:13px;color:var(--muted);margin:10px 0 0}
+.note b{color:var(--text)}
+code{font-size:12px;background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:1px 6px}
+
+@media (max-width:980px){.cards{grid-template-columns:1fr 1fr}.strip{grid-template-columns:repeat(6,1fr)}.sizes,.profiles{grid-template-columns:1fr}}
+@media (max-width:640px){.cards{grid-template-columns:1fr}.tbl .hide-s{display:none}}
+</style>
+</head>
+<body>
+<div class="mockbar" role="toolbar" aria-label="Mockup controls">
+  <strong id="barTitle">Employee avatars</strong>
+  <span class="hint" id="barHint">Static mockup · shown only when there is no photo</span>
+  <span class="sp"></span>
+  <div class="seg" id="optSeg">
+    <button data-opt="A" aria-pressed="true">Option A</button>
+    <button data-opt="B" aria-pressed="false">Option B</button>
+    <button data-opt="C" aria-pressed="false">Option C</button>
+  </div>
+  <div class="seg" id="langSeg">
+    <button data-lang="en" aria-pressed="true">EN</button>
+    <button data-lang="ar" aria-pressed="false" class="ar">ع</button>
+  </div>
+</div>
+<main class="wrap" id="root"></main>
+
+<script>
+/* ============================================================
+   AVATAR SVGs — production-shaped: one 64×64 viewBox, colours only
+   through CSS custom properties (set per variant) or currentColor,
+   no ids, no clipPaths. The rounded/circle shape is CSS border-radius.
+   ============================================================ */
+const INK="var(--av-ink,#1F2D2A)";
+
+/* stable hash of the employee id → variant (FNV-1a) */
+function hash(s){let h=2166136261;for(const ch of String(s)){h^=ch.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;}
+
+function svg(size,shape,vars,body,extra=""){
+  const style=Object.entries(vars).map(([k,v])=>`--av-${k}:${v}`).join(";");
+  return `<svg class="av ${shape}" width="${size}" height="${size}" viewBox="0 0 64 64" aria-hidden="true" focusable="false" style="${style}" ${extra}>${body}</svg>`;
+}
+
+/* ---------- A · friendly illustrated faces ---------- */
+const A_SKIN=["#F2CFAE","#DDA77D","#B27650"];
+const A_MEN=[ // tile, cloth, hair, extras
+  {tile:"#FFF1C9",cloth:"#0B7A68",hair:"#2A1F1A"},
+  {tile:"#D5EFE8",cloth:"#2F6FB3",hair:"#3B2A20",glasses:1},
+  {tile:"#E0EEFB",cloth:"#E2A62C",hair:"#241A15",beard:1},
+  {tile:"#FFE8D2",cloth:"#35524D",hair:"#9FA7A4"},
+];
+const A_WOMEN=[ // tile, scarf, cloth
+  {tile:"#FFF1C9",scarf:"#0E8A75",cloth:"#0A5E50"},
+  {tile:"#D5EFE8",scarf:"#E9A93A",cloth:"#B97B12"},
+  {tile:"#E0EEFB",scarf:"#C46C7E",cloth:"#8E4556"},
+  {tile:"#FFE8D2",scarf:"#3D6FA8",cloth:"#284E7A",glasses:1},
+];
+const aFace=(ex,ey,gap,smileY,cheekY)=>`
+<circle cx="${32-gap-2.2}" cy="${cheekY}" r="2.1" fill="#E5735C" fill-opacity=".22"/><circle cx="${32+gap+2.2}" cy="${cheekY}" r="2.1" fill="#E5735C" fill-opacity=".22"/>
+<circle cx="${32-gap}" cy="${ey}" r="1.5" fill="${INK}"/><circle cx="${32+gap}" cy="${ey}" r="1.5" fill="${INK}"/>
+<path d="M${32-3.3} ${smileY}q3.3 2.7 6.6 0" fill="none" stroke="${INK}" stroke-width="1.5" stroke-linecap="round"/>`;
+const aGlasses=(ey,gap)=>`<g fill="#fff" fill-opacity=".25" stroke="${INK}" stroke-width="1.3"><rect x="${32-gap-3.9}" y="${ey-3.1}" width="7.8" height="6.2" rx="2.6"/><rect x="${32+gap-3.9}" y="${ey-3.1}" width="7.8" height="6.2" rx="2.6"/></g><path d="M${32-gap+3.9} ${ey-.8}h${2*gap-7.8}" stroke="${INK}" stroke-width="1.3"/>`;
+function aMan(v,skin){
+  return `<rect width="64" height="64" fill="var(--av-tile)"/>
+<path d="M10 64c0-11 9-18 22-18s22 7 22 18z" fill="var(--av-cloth)"/>
+<path d="M27 36h10v9.5c0 2.6-10 2.6-10 0z" fill="var(--av-skin)"/>
+<path d="M27 38.5c3 2.4 7 2.4 10 0V36H27z" fill="#000" fill-opacity=".12"/>
+<path d="M25.4 46.4 32 53l6.6-6.6" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="20.9" cy="29" r="2.8" fill="var(--av-skin)"/><circle cx="43.1" cy="29" r="2.8" fill="var(--av-skin)"/>
+<ellipse cx="32" cy="28" rx="11.2" ry="12.6" fill="var(--av-skin)"/>
+${v.beard?`<path d="M21.2 31c.4 7.6 4.8 11.8 10.8 11.8s10.4-4.2 10.8-11.8c-1.2 3.2-2.8 5.2-5.2 5.8q-5.6 1.8-11.2 0c-2.4-.6-4-2.6-5.2-5.8z" fill="var(--av-hair)"/>`:""}
+<path d="M20.6 28c-1-9 3.6-14.5 11.4-14.5S44.4 19 43.4 28c-1.2-4.4-3.4-6.4-6-7.2-3.4 1.6-8.4 2-13.4 1.2-2 1.4-3 3.4-3.4 6z" fill="var(--av-hair)"/>
+${aFace(0,29.4,4.4,34.2,33.2)}${v.glasses?aGlasses(29.4,4.4):""}`;
+}
+function aWoman(v){
+  return `<rect width="64" height="64" fill="var(--av-tile)"/>
+<path d="M6 64c0-9 10-15 26-15s26 6 26 15z" fill="var(--av-cloth)"/>
+<path d="M32 12.4c-10.4 0-16.2 7.8-16.2 18 0 6.2 2 11 5.2 14.4-4.6 2.6-8 7.2-9 12.2L11 64h42l-1-7c-1-5-4.4-9.6-9-12.2 3.2-3.4 5.2-8.2 5.2-14.4 0-10.2-5.8-18-16.2-18z" fill="var(--av-scarf)"/>
+<ellipse cx="32" cy="29.6" rx="11" ry="12.6" fill="#000" fill-opacity=".13"/>
+<ellipse cx="32" cy="29.8" rx="9.4" ry="11" fill="var(--av-skin)"/>
+<path d="M22.6 45.4c2.8 2.4 5.8 3.6 9.4 3.6s6.6-1.2 9.4-3.6" fill="none" stroke="#000" stroke-opacity=".15" stroke-width="1.6" stroke-linecap="round"/>
+<path d="M23.4 18.6c2.2-2.2 5-3.4 8.4-3.6" fill="none" stroke="#fff" stroke-opacity=".45" stroke-width="2" stroke-linecap="round"/>
+${aFace(0,30.4,3.9,35.1,34.2)}${v.glasses?aGlasses(30.4,3.9):""}`;
+}
+function avatarA(emp,size){
+  const h=hash(emp.id), skin=A_SKIN[(h>>>4)%3];
+  if(emp.g==="m"){const v=A_MEN[h%4];return svg(size,"shape-circle",{tile:v.tile,cloth:v.cloth,hair:v.hair,skin},aMan(v));}
+  const v=A_WOMEN[h%4];return svg(size,"shape-circle",{tile:v.tile,cloth:v.cloth,scarf:v.scarf,skin},aWoman(v));
+}
+
+/* ---------- B · refined line-art (duotone, like Phosphor) ---------- */
+const B_TONES=[
+  {ink:"#0B7A68",tile:"#E3F3EE"},
+  {ink:"#2F6FB3",tile:"#E5EFFA"},
+  {ink:"#A1650A",tile:"#FFF3D3"},
+  {ink:"#6E4F96",tile:"#EFE9F7"},
+];
+function bMan(k){
+  const hairs=[
+    `<path d="M21.1 26.2C20.6 18.4 25.2 13.6 32 13.6s11.4 4.8 10.9 12.6c-2.2-3.4-5-5-8.6-5.2-2.8 1.8-7 2.6-10.6 2.2-1.2.8-2 1.8-2.6 3z" fill="currentColor" fill-opacity=".38"/>`,
+    `<path d="M21.1 26.6c-.8-8 3.6-13.4 10.9-13.4 6.4 0 11.2 4.4 10.9 12.8-1.8-4-4.6-6.2-8.6-6.6-4 .2-8.2 2.2-10.6 4.6-1.2.6-2 1.6-2.6 2.6z" fill="currentColor" fill-opacity=".38"/>`,
+  ];
+  const beard=k===3?`<path d="M21.6 29.4c.6 6.4 4.4 9.6 10.4 9.6s9.8-3.2 10.4-9.6c-1.6 2.6-3.2 4-5.4 4.4q-5 1.4-10 0c-2.2-.4-3.8-1.8-5.4-4.4z" fill="currentColor" fill-opacity=".38"/>`:"";
+  const glasses=k===2?`<rect x="23.6" y="25.6" width="7.4" height="6" rx="2.6" fill="none" stroke-width="1.8"/><rect x="33" y="25.6" width="7.4" height="6" rx="2.6" fill="none" stroke-width="1.8"/><path d="M31 27.6h2" stroke-width="1.8"/>`:"";
+  return `<rect width="64" height="64" fill="var(--av-tile)"/>
+<g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+<path d="M11 66v-4.6C11 51.6 20 45.4 32 45.4s21 6.2 21 16V66" fill="currentColor" fill-opacity=".16"/>
+<path d="M27.6 37v6.8c0 2.6 8.8 2.6 8.8 0V37" fill="#fff"/>
+<path d="M26.4 46 32 51.6l5.6-5.6"/>
+<circle cx="32" cy="27.4" r="11" fill="#fff"/>
+${beard}${hairs[k%2]}
+<circle cx="28" cy="28.6" r="1.25" fill="currentColor" stroke="none"/><circle cx="36" cy="28.6" r="1.25" fill="currentColor" stroke="none"/>
+${k===3?"":`<path d="M29.6 32.8q2.4 1.8 4.8 0" stroke-width="1.8"/>`}
+${glasses}
+</g>`;
+}
+function bWoman(k){
+  const extra=[
+    `<path d="M23.4 22.6c2.4-2.4 5.4-3.6 8.6-3.6s6.2 1.2 8.6 3.6"/>`,
+    `<path d="M42.2 41.6c3.6 3 5.8 7.2 6.4 12"/>`,
+    `<path d="M23.4 22.6c2.4-2.4 5.4-3.6 8.6-3.6s6.2 1.2 8.6 3.6"/><circle cx="41.6" cy="40.6" r="1.9" fill="var(--av-pin,#FFC43D)" stroke-width="1.4"/>`,
+    `<path d="M42.2 41.6c3.6 3 5.8 7.2 6.4 12"/><rect x="23.6" y="26.6" width="7" height="5.6" rx="2.4" stroke-width="1.8"/><rect x="33.4" y="26.6" width="7" height="5.6" rx="2.4" stroke-width="1.8"/><path d="M30.6 28.4h2.8" stroke-width="1.8"/>`,
+  ][k];
+  return `<rect width="64" height="64" fill="var(--av-tile)"/>
+<g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+<path d="M32 11.6c-10 0-15.6 7.4-15.6 17.2 0 6.2 2 10.8 5.2 14-4.6 2.6-8.6 7.4-9.6 13L11 66h42l-1-10.2c-1-5.6-5-10.4-9.6-13 3.2-3.2 5.2-7.8 5.2-14 0-9.8-5.6-17.2-15.6-17.2z" fill="currentColor" fill-opacity=".16"/>
+<ellipse cx="32" cy="29.4" rx="9" ry="10.6" fill="#fff"/>
+<path d="M22.8 43.4c2.8 2.4 5.8 3.6 9.2 3.6s6.4-1.2 9.2-3.6"/>
+${extra}
+<circle cx="28.4" cy="29.6" r="1.25" fill="currentColor" stroke="none"/><circle cx="35.6" cy="29.6" r="1.25" fill="currentColor" stroke="none"/>
+<path d="M29.6 33.8q2.4 1.8 4.8 0" stroke-width="1.8"/>
+</g>`;
+}
+function avatarB(emp,size){
+  const h=hash(emp.id), t=B_TONES[(h>>>3)%4], k=h%4;
+  return svg(size,"shape-round",{tile:t.tile},emp.g==="m"?bMan(k):bWoman(k),`color="${t.ink}"`);
+}
+
+/* ---------- C · abstract / geometric ---------- */
+const C_TONES=[ // tile, mid, deep — gender-neutral, picked by id
+  {tile:"#D5EFE8",mid:"#74C4B1",deep:"#0B7A68"},
+  {tile:"#FFF1C9",mid:"#F5C451",deep:"#9A6A00"},
+  {tile:"#E0EEFB",mid:"#8FB9E5",deep:"#2F6FB3"},
+  {tile:"#FFE8D2",mid:"#F1A86C",deep:"#B0561A"},
+  {tile:"#ECE6F7",mid:"#B3A2DC",deep:"#6A4FA3"},
+  {tile:"#DDF4E7",mid:"#86CFA6",deep:"#1F8A57"},
+];
+function cMan(k){
+  const cap=k%2===0
+    ?`<path d="M22.29 24A10.5 10.5 0 0 1 41.71 24Z" fill="var(--av-deep)"/>`
+    :`<path d="M21.55 27A10.5 10.5 0 0 1 41.71 24Q31 20.5 21.55 27Z" fill="var(--av-deep)"/>`;
+  return `<rect width="64" height="64" fill="var(--av-tile)"/>
+<path d="M13 64v-6a14 14 0 0 1 14-14h10a14 14 0 0 1 14 14v6z" fill="var(--av-deep)"/>
+<path d="M27 44l5 6.5 5-6.5z" fill="var(--av-tile)"/>
+<circle cx="32" cy="28" r="10.5" fill="var(--av-mid)"/>${cap}`;
+}
+function cWoman(k){
+  return `<rect width="64" height="64" fill="var(--av-tile)"/>
+<path d="M10 64v-3.4c0-6.6 4.4-12 10-13.6V33a12 12 0 0 1 24 0v14c5.6 1.6 10 7 10 13.6V64z" fill="var(--av-deep)"/>
+<circle cx="32" cy="32.6" r="8.2" fill="var(--av-mid)"/>
+${k%2?`<path d="M23.4 46.6q8.6 4.6 17.2 0" fill="none" stroke="var(--av-mid)" stroke-opacity=".55" stroke-width="1.8" stroke-linecap="round"/>`:""}`;
+}
+function avatarC(emp,size){
+  const h=hash(emp.id), t=C_TONES[h%6], k=(h>>>5)%2;
+  return svg(size,"shape-squircle",{tile:t.tile,mid:t.mid,deep:t.deep},emp.g==="m"?cMan(k):cWoman(k));
+}
+
+const AV={A:avatarA,B:avatarB,C:avatarC};
+const SHAPE={A:"shape-circle",B:"shape-round",C:"shape-squircle"};
+
+/* ============================================================ data */
+const STAGES={none:["بدون","None","st-none"],kg:["رياض الأطفال","Kindergarten","st-kg"],pri:["الابتدائية","Primary","st-pri"],prep:["الإعدادية","Preparatory","st-prep"]};
+const EMP=[
+ {id:"EMP-0001",g:"m",n:["أحمد سمير فؤاد","Ahmed Samir Fouad"],j:["مدير المدرسة","Principal"],d:["الإدارة","Administration"],s:"none",sal:20000,photo:1},
+ {id:"EMP-0002",g:"f",n:["منى عادل حسن","Mona Adel Hassan"],j:["وكيلة المدرسة","Vice Principal"],d:["الإدارة","Administration"],s:"kg",sal:16500},
+ {id:"EMP-0003",g:"m",n:["كريم حسام نبيل","Karim Hossam Nabil"],j:["وكيل المدرسة","Vice Principal"],d:["الإدارة","Administration"],s:"pri",sal:17000},
+ {id:"EMP-0004",g:"f",n:["هبة طارق منصور","Heba Tarek Mansour"],j:["رئيسة قسم","Head of Department"],d:["اللغة العربية","Arabic Language"],s:"prep",sal:14000},
+ {id:"EMP-0005",g:"m",n:["يوسف مجدي علي","Youssef Magdy Ali"],j:["أخصائي موارد بشرية","HR Specialist"],d:["الموارد البشرية","Human Resources"],s:"none",sal:9500},
+ {id:"EMP-0006",g:"f",n:["سلمى وليد عزت","Salma Waleed Ezzat"],j:["محاسبة","Accountant"],d:["المالية","Finance"],s:"none",sal:10500},
+ {id:"EMP-0007",g:"m",n:["محمود رضا إبراهيم","Mahmoud Reda Ibrahim"],j:["معلم أول","Senior Teacher"],d:["الرياضيات","Mathematics"],s:"pri",sal:12000},
+ {id:"EMP-0008",g:"f",n:["نور إيهاب كامل","Nour Ehab Kamel"],j:["معلمة","Teacher"],d:["اللغة الإنجليزية","English Language"],s:"pri",sal:11000},
+ {id:"EMP-0009",g:"m",n:["هاني جمال صبحي","Hany Gamal Sobhy"],j:["معلم","Teacher"],d:["العلوم","Science"],s:"prep",sal:10000},
+ {id:"EMP-0010",g:"f",n:["دينا أشرف زكي","Dina Ashraf Zaki"],j:["معلمة رياض أطفال","Kindergarten Teacher"],d:["رياض الأطفال","Kindergarten"],s:"kg",sal:8000},
+ {id:"EMP-0011",g:"m",n:["عمر خالد شاكر","Omar Khaled Shaker"],j:["معلم","Teacher"],d:["الدراسات الدينية","Religious Studies"],s:"prep",sal:9800},
+ {id:"EMP-0012",g:"f",n:["رنا شريف فهمي","Rana Sherif Fahmy"],j:["معلمة","Teacher"],d:["الرياضيات","Mathematics"],s:"pri",sal:10200},
+];
+
+const T={
+ en:{bar:"Employee avatars",hint:"Static mockup · shown only when there is no photo — a photo always wins · no initials",
+  A:{tag:"Option A",t:"Friendly illustrated faces",d:"Simple flat busts with a face and a smile. Men: short hair (some with glasses, a beard or grey hair). Women: a headscarf in a palette colour. Three skin tones. Circle tile. Warm and human — the most \"school\" of the three."},
+  B:{tag:"Option B",t:"Refined line-art",d:"Outline busts drawn like our Phosphor duotone icons: one ink line plus a soft fill of the same ink. Minimal features. Man with short hair (or glasses, or a beard); woman with a headscarf (fold, front band, pin). Four inks from the palette, rounded-square tile. Calm and professional."},
+  C:{tag:"Option C",t:"Abstract geometric mark",d:"A geometric person — circle head and rounded shoulders. Gender shows in the shape: men have a hair cap over a separate head; women a scarf arch that flows into the shoulders. Six gender-neutral tile colours picked by the employee id, so a page of cards is never monotone."},
+  sizes:"Sizes",sizesN:"36 · 48 · 64 · 96 px",men:"Man",women:"Woman",strip:"Twelve employees",stripN:"variant chosen by a stable hash of the employee id",
+  cards:"Employee cards",cardsN:"one real photo (grey box) — a photo always wins",photo:"photo",active:"Active",dept:"Department",ws:"Work system",ft:"Full-time",basic:"Basic salary",view:"View",edit:"Edit",
+  rows:"Table rows",rowsN:"penalties list, 36 px",date:"Date",emp:"Employee",viol:"Violation",lvl:"Level · action",status:"Status",level:"Level",approved:"Approved",pending:"Pending",
+  prof:"Profile header",profN:"64 px",crumb:"Employees",
+  viols:[["Late to class","Deduct 1 day",3,"pend"],["Absence without an accepted excuse","Deduct 2 days",3,"ok"],["Not following the dress code","Notice",1,"ok"],["Eating during lessons","Warning",2,"ok"],["Mobile phone use during lessons","Notice",1,"pend"],["Not recording attendance","Deduct 0.5 day",2,"ok"]],
+  dates:["16 Nov 2026","15 Nov 2026","12 Nov 2026","11 Nov 2026","10 Nov 2026","9 Nov 2026"],
+  svgNote:'Each avatar is one <code>&lt;svg viewBox="0 0 64 64"&gt;</code> with colours through CSS variables (<code>--av-tile</code>, <code>--av-skin</code>…) or <code>currentColor</code>; no ids, so many can sit on one page. The shape is CSS <code>border-radius</code>.'},
+ ar:{bar:"صور الموظفين الافتراضية",hint:"نموذج ثابت · تظهر فقط عند عدم وجود صورة — الصورة الحقيقية لها الأولوية · بدون أحرف أولى",
+  A:{tag:"الخيار أ",t:"وجوه مرسومة ودودة",d:"رسوم بسيطة بوجه وابتسامة. الرجال: شعر قصير (بعضهم بنظارة أو لحية أو شعر رمادي). السيدات: حجاب بلون من ألوان النظام. ثلاث درجات للبشرة. خلفية دائرية. دافئة وإنسانية — الأقرب لروح المدرسة."},
+  B:{tag:"الخيار ب",t:"رسم خطي أنيق",d:"صور بالخط فقط بنفس أسلوب أيقونات النظام: خط واحد وتعبئة خفيفة من نفس اللون. ملامح بسيطة. رجل بشعر قصير (أو نظارة أو لحية)، وسيدة بحجاب (طيّة، أو حافة أمامية، أو دبوس). أربعة ألوان من الهوية، خلفية مربعة بحواف دائرية. هادئة ومهنية."},
+  C:{tag:"الخيار ج",t:"رمز هندسي مجرد",d:"شخص هندسي: رأس دائري وكتفان مستديران. يظهر الفرق في الشكل: للرجل غطاء شعر فوق رأس منفصل، وللسيدة قوس حجاب متصل بالكتفين. ستة ألوان محايدة للخلفية تُختار حسب كود الموظف، فلا تبدو صفحة البطاقات متكررة."},
+  sizes:"المقاسات",sizesN:"36 · 48 · 64 · 96 بكسل",men:"رجل",women:"سيدة",strip:"اثنا عشر موظفًا",stripN:"الشكل يُختار ثابتًا حسب كود الموظف",
+  cards:"بطاقات الموظفين",cardsN:"صورة حقيقية واحدة (مربع رمادي) — الصورة لها الأولوية",photo:"صورة",active:"نشط",dept:"القسم",ws:"نظام العمل",ft:"دوام كامل",basic:"الراتب الأساسي",view:"عرض",edit:"تعديل",
+  rows:"صفوف الجدول",rowsN:"قائمة الجزاءات، 36 بكسل",date:"التاريخ",emp:"الموظف",viol:"المخالفة",lvl:"المستوى · الإجراء",status:"الحالة",level:"المستوى",approved:"معتمد",pending:"قيد المراجعة",
+  prof:"رأس ملف الموظف",profN:"64 بكسل",crumb:"الموظفون",
+  viols:[["التأخر عن الحصة","خصم يوم",3,"pend"],["الغياب بدون عذر مقبول","خصم يومين",3,"ok"],["عدم الالتزام بالزي","تنبيه",1,"ok"],["الأكل أثناء الحصص","إنذار",2,"ok"],["استخدام الهاتف أثناء الحصص","تنبيه",1,"pend"],["عدم تسجيل الحضور","خصم نصف يوم",2,"ok"]],
+  dates:["16 نوفمبر 2026","15 نوفمبر 2026","12 نوفمبر 2026","11 نوفمبر 2026","10 نوفمبر 2026","9 نوفمبر 2026"],
+  svgNote:'كل صورة عنصر <code>&lt;svg viewBox="0 0 64 64"&gt;</code> واحد، ألوانه عبر متغيرات CSS أو <code>currentColor</code> وبدون معرّفات، والشكل الدائري عبر <code>border-radius</code>.'}
+};
+
+let opt="A",lang="en";
+const L=()=>T[lang],AR=()=>lang==="ar",tx=a=>a[AR()?0:1];
+const ic=n=>`<i class="ph-duotone ph-${n}" aria-hidden="true"></i>`;
+const fmt=n=>n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const money=n=>AR()?`<span class="v num">${fmt(n)}</span> <span class="cur">ج.م</span>`:`<span class="cur">EGP</span> <span class="v num">${fmt(n)}</span>`;
+const avatar=(e,size)=>e.photo&&size>=64?`<div class="photo" style="width:${size}px;height:${size}px">${L().photo}</div>`
+  :e.photo?`<div class="photo" style="width:${size}px;height:${size}px;font-size:${size<40?7:9}px;border-radius:${size<40?10:14}px">${L().photo}</div>`
+  :AV[opt](e,size);
+
+function render(){
+  const t=L(),o=t[opt],sh=SHAPE[opt];
+  const man=EMP.find(e=>e.g==="m"&&!e.photo),woman=EMP.find(e=>e.g==="f");
+  document.getElementById("barTitle").textContent=t.bar;
+  document.getElementById("barHint").textContent=t.hint;
+  const sizes=[36,48,64,96];
+  const sizeRow=(e,label)=>`<div class="sizerow"><div class="lab">${label} · <span class="num">${e.id}</span></div>${sizes.map(s=>`<div class="sz">${AV[opt](e,s)}<span class="num">${s}</span></div>`).join("")}</div>`;
+  const cardEmps=[EMP[0],EMP[1],EMP[2],EMP[3],EMP[6],EMP[5]];
+  const card=e=>{const st=STAGES[e.s];return `<article class="ecard">
+    <div class="band ${st[2]}"><span class="stchip">${ic("chalkboard-teacher")}${tx(st)}</span><span class="code num">${e.id}</span></div>
+    <div class="cbody"><div class="toprow"><div class="frame ${e.photo?"shape-round":sh}">${avatar(e,64)}</div><span class="pill p-active"><span class="dot"></span>${t.active}</span></div>
+    <h3 class="ename">${tx(e.n)}</h3><div class="ejob">${tx(e.j)}</div>
+    <div class="fields"><div class="field"><div class="l">${t.dept}</div><div class="v">${tx(e.d)}</div></div><div class="field"><div class="l">${t.ws}</div><div class="v">${t.ft}</div></div></div>
+    <div class="sal"><span class="l">${t.basic}</span><span>${money(e.sal)}</span></div>
+    <div class="btns"><span class="btn">${ic("eye")}${t.view}</span><span class="btn">${ic("pencil-simple")}${t.edit}</span></div></div></article>`;};
+  const rowEmps=[EMP[10],EMP[7],EMP[0],EMP[9],EMP[4],EMP[11]];
+  const rows=rowEmps.map((e,i)=>{const v=t.viols[i];const ded=/Deduct|خصم/.test(v[1]);return `<tr><td class="num hide-s">${t.dates[i]}</td>
+    <td><div class="who">${avatar(e,36)}<div><div class="n">${tx(e.n)}</div><div class="c num">${e.id}</div></div></div></td>
+    <td class="hide-s">${v[0]}</td><td><div class="lvl"><div class="l">${t.level} <span class="num">${v[2]}</span></div><div class="${ded?"d":""}">${v[1]}</div></div></td>
+    <td><span class="pill ${v[3]==="ok"?"p-ok":"p-pend"}"><span class="dot"></span>${v[3]==="ok"?t.approved:t.pending}</span></td></tr>`;}).join("");
+  const prof=e=>`<div class="panel"><div class="prof">${avatar(e,64)}<div><div class="crumb">${t.crumb} › ${tx(e.n)}</div><h3>${tx(e.n)} <span class="pill p-active" style="font-size:12.5px"><span class="dot"></span>${t.active}</span></h3><div class="meta"><span class="num">${e.id}</span> · ${tx(e.j)} · ${tx(e.d)}</div></div></div></div>`;
+
+  document.getElementById("root").innerHTML=`
+  <section class="intro"><div><span class="tag">${o.tag}</span><h1>${o.t}</h1><p>${o.d}</p><p class="note">${t.svgNote}</p></div>
+    <div class="duo">${AV[opt](man,96)}${AV[opt](woman,96)}</div></section>
+  <h2 class="sec-t">${t.sizes} <small>${t.sizesN}</small></h2>
+  <section class="panel"><div class="sizes">${sizeRow(man,t.men)}${sizeRow(woman,t.women)}</div>
+    <div class="sec-t" style="margin:18px 0 0;font-size:15px">${t.strip} <small>${t.stripN}</small></div>
+    <div class="strip">${EMP.map(e=>`<div class="it">${AV[opt]({...e,photo:0},48)}<b class="num">${e.id.slice(4)}</b><span>${tx(e.n).split(" ")[0]}</span></div>`).join("")}</div></section>
+  <h2 class="sec-t">${t.cards} <small>${t.cardsN}</small></h2>
+  <section class="cards">${cardEmps.map(card).join("")}</section>
+  <h2 class="sec-t">${t.rows} <small>${t.rowsN}</small></h2>
+  <section class="panel" style="padding:12px 12px 4px"><table class="tbl"><thead><tr><th class="hide-s">${t.date}</th><th>${t.emp}</th><th class="hide-s">${t.viol}</th><th>${t.lvl}</th><th>${t.status}</th></tr></thead><tbody>${rows}</tbody></table></section>
+  <h2 class="sec-t">${t.prof} <small>${t.profN}</small></h2>
+  <section class="profiles">${prof(EMP[2])}${prof(EMP[3])}</section>`;
+}
+function sync(){
+  document.documentElement.lang=lang;document.documentElement.dir=AR()?"rtl":"ltr";
+  document.querySelectorAll("#optSeg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.opt===opt));
+  document.querySelectorAll("#langSeg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.lang===lang));
+}
+const q=new URLSearchParams(location.search);
+if(["A","B","C"].includes(q.get("opt")))opt=q.get("opt");
+if(q.get("lang")==="ar")lang="ar";
+document.querySelectorAll("#optSeg button").forEach(b=>b.addEventListener("click",()=>{opt=b.dataset.opt;sync();render();}));
+document.querySelectorAll("#langSeg button").forEach(b=>b.addEventListener("click",()=>{lang=b.dataset.lang;sync();render();}));
+sync();render();
+</script>
+</body>
+</html>
