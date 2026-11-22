@@ -1,4 +1,5 @@
-import { SEARCH_FIXTURE, searchKey } from '@school-erp/shared';
+import { searchKey } from '@school-erp/shared';
+import { SEARCH_FIXTURE } from '@school-erp/shared/testing';
 import type { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../src/database/database.service';
 import { e2eDatabaseUrl } from './helpers/setup-db';
