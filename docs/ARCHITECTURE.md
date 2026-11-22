@@ -143,22 +143,33 @@ envelope, `params.count` = seconds to wait (EN/AR plural message in `errors.json
 app's `apiErrorText` shows), plus a `Retry-After-<bucket>` header. Counts are in memory — one API
 process per school; a second replica would need a shared store.
 
+**A whole school may share one public IP** (owner, 2026-11-22): an office NAT in front of our VPS,
+or the app on the school's own server. So nothing people do in normal use is counted per IP alone
+at a low limit — the 8 AM rush, dozens of teachers signing in within minutes, must never lock the
+staff out. Accounts are counted per account; the per-IP figures are high ceilings a NAT full of
+staff never reaches and a script trying many accounts (password spraying) does.
+
 | Bucket | Routes | Counted by | Default per 60 s | Env |
 |---|---|---|---|---|
-| `global` | every route but `/health` | the user when signed in, else the client IP | 300 | `RATE_LIMIT_GLOBAL` |
-| `auth` | `POST /auth/login`, `POST /account/password`, `POST /users/:id/password` | client IP | 10 | `RATE_LIMIT_AUTH` |
-| `refresh` | `POST /auth/refresh` | client IP | 60 | `RATE_LIMIT_REFRESH` |
-| `heavy` | the payroll exports (`/accounting/payroll/:month/export`, `/hr/payroll-runs/:id/bank-sheet`), logo and photo uploads | user (IP signed out) | 20 | `RATE_LIMIT_HEAVY` |
+| `global` | every route but `/health` | the signed-in user | 300 | `RATE_LIMIT_GLOBAL` |
+| `global` (signed out) | the sign-in page's calls, the logo, the app icons | client IP | 1200 | `RATE_LIMIT_GLOBAL_IP` |
+| `auth` | `POST /auth/login` · `POST /account/password` · `POST /users/:id/password` | the email typed + IP · the user + IP · the target user + IP | 10 | `RATE_LIMIT_AUTH` |
+| `authIp` | those three and `POST /auth/refresh` together | client IP | 200 | `RATE_LIMIT_AUTH_IP` |
+| `refresh` | `POST /auth/refresh` | the session (a hash of its refresh token); IP without one | 60 | `RATE_LIMIT_REFRESH` |
+| `heavy` | the payroll exports (`/accounting/payroll/:month/export`, `/hr/payroll-runs/:id/bank-sheet`), logo and photo uploads | the user (IP signed out) | 20 | `RATE_LIMIT_HEAVY` |
 
 The window is `RATE_LIMIT_TTL_SECONDS` (60); once over, the caller waits out the window. A
-bucket's count spans all its routes (key = bucket + caller). `auth` is **on top of** the
-per-account lockout: the lockout stops guessing one account's password, the IP limit stops trying
-many accounts. Why by user once signed in: every page the web app renders reaches the API from the
-web server's own address, so counting by IP would make the whole school one caller. Why `refresh`
-is looser than `auth`: a page load refreshes once per parallel request (prefetches), and a whole
-school may share one public IP. The e2e and smoke suites run with limits nobody reaches (one test
-user on 127.0.0.1, much faster than a person — `test/setup-env.ts`, `scripts/smoke.sh`);
-`security.e2e-spec.ts` sets its own small limits and tests them.
+bucket's count spans all its routes (key = bucket + caller). A route names whose attempt it is
+with `@RateLimit('auth', subject)` (the email is normalised like the lockout's). **Layers on
+sign-in:** `auth` stops hammering one account from one place; the **per-account lockout** (5 wrong
+in 15 min, the email alone, any IP) stops guessing one password from many places; `authIp` stops
+one place trying many accounts. Why by user once signed in: every page the web app renders reaches
+the API from the web server's own address, so counting by IP would make the whole school one
+caller. Why the signed-out ceiling is high: every device at the school loads the sign-in page, the
+logo and the app icons in the same few minutes. The e2e and smoke suites run with limits nobody
+reaches (one test user on 127.0.0.1, much faster than a person — `test/setup-env.ts`,
+`scripts/smoke.sh`); `security.e2e-spec.ts` sets its own limits and tests them (30 staff signing in
+from one IP all get in; 11 rapid sign-ins on one email → 429).
 
 ### Who the client is (proxies)
 
@@ -709,7 +720,7 @@ Roles are rows, not code (spec P2, R2 / R5 / R8 / R9). A school changes them thr
 ### Sign-in limits
 
 Wrong-password counting per account (`core/sign-in-limit`, owner 2026-11-18, §2). **Per account**
-— the per-IP limit on sign-in is the separate rate limit (Security → Rate limits), on top of it.
+— the rate limits on sign-in (per email + IP, and a high per-IP ceiling; Security → Rate limits) sit on top of it.
 
 - **Rule.** `security.login.maxAttempts` wrong passwords within `security.login.windowMinutes` lock
   that account's sign-in for `security.login.lockMinutes` — core settings, defaults 5 / 15 / 15

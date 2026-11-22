@@ -65,14 +65,16 @@ describe('validateEnv', () => {
   });
 
   describe('proxies and rate limits (security hardening)', () => {
-    it('defaults: no proxy trusted, Cloudflare off, 300 / 10 / 60 / 20 a minute', () => {
+    it('defaults: no proxy trusted, Cloudflare off; per-IP ceilings high enough for a school behind one NAT', () => {
       const env = validateEnv(BASE);
       expect(env.TRUST_PROXY).toBeUndefined();
       expect(env.TRUST_CLOUDFLARE).toBeUndefined();
       expect(env).toMatchObject({
         RATE_LIMIT_TTL_SECONDS: 60,
         RATE_LIMIT_GLOBAL: 300,
+        RATE_LIMIT_GLOBAL_IP: 1200,
         RATE_LIMIT_AUTH: 10,
+        RATE_LIMIT_AUTH_IP: 200,
         RATE_LIMIT_REFRESH: 60,
         RATE_LIMIT_HEAVY: 20,
       });

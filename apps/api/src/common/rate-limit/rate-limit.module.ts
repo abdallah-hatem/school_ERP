@@ -2,9 +2,9 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ThrottlerModule, type ThrottlerModuleOptions } from '@nestjs/throttler';
 import { RATE_LIMIT_BUCKETS, type RateLimits } from './rate-limit.pure';
+import { RATE_LIMITS } from './rate-limit.tokens';
 
-/** The limits in force (`AppConfig.rateLimit`). A token, so an e2e test can set its own. */
-export const RATE_LIMITS = Symbol('RATE_LIMITS');
+export { RATE_LIMITS };
 
 @Module({
   providers: [
@@ -21,10 +21,12 @@ export class RateLimitConfigModule {}
 /**
  * The rate limits' counters: one named throttler per bucket, kept in memory — one API process
  * per school (docs/ARCHITECTURE.md → Deployment model); a second replica would need a shared
- * store. `RateLimitGuard` (registered in AppModule after the auth guard) applies them.
+ * store. `RateLimitGuard` (registered in AppModule after the auth guard) applies them, and sets
+ * each request's limit itself (`rateLimitFor`): the numbers here are only the defaults.
  */
 @Module({
   imports: [
+    RateLimitConfigModule,
     ThrottlerModule.forRootAsync({
       imports: [RateLimitConfigModule],
       inject: [RATE_LIMITS],
@@ -37,6 +39,6 @@ export class RateLimitConfigModule {}
       }),
     }),
   ],
-  exports: [ThrottlerModule],
+  exports: [ThrottlerModule, RateLimitConfigModule],
 })
 export class RateLimitModule {}

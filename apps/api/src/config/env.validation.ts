@@ -114,21 +114,44 @@ export class EnvironmentVariables {
   @Min(1)
   RATE_LIMIT_TTL_SECONDS: number = 60;
 
-  /** Requests per window for every route: per user when signed in, per client IP otherwise. */
+  /** Requests per window for every route, per signed-in user. */
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
   RATE_LIMIT_GLOBAL: number = 300;
 
-  /** Sign-in and password changes per window per client IP (on top of the per-account lockout). */
+  /**
+   * Signed-out requests per window per client IP (the sign-in page, the logo, the app icons). High:
+   * a whole school can share one IP, and every device loads these at the 8 AM rush.
+   */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  RATE_LIMIT_GLOBAL_IP: number = 1200;
+
+  /**
+   * Sign-in attempts per window per account + IP (the email typed; for a password change the user,
+   * for an admin reset the target), on top of the per-account lockout.
+   */
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
   RATE_LIMIT_AUTH: number = 10;
 
-  /** Session refreshes per window per client IP (a page load can refresh several times at once). */
+  /**
+   * Sign-ins, password changes and refreshes together per window per client IP: a ceiling a school
+   * behind one NAT never reaches, but a script trying many accounts does.
+   */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  RATE_LIMIT_AUTH_IP: number = 200;
+
+  /** Refreshes per window per session (a page load refreshes once per parallel request). */
   @IsOptional()
   @Type(() => Number)
   @IsInt()

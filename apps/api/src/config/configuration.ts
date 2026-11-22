@@ -55,7 +55,9 @@ export const configuration = (): AppConfig => {
     rateLimit: {
       ttlSeconds: env.RATE_LIMIT_TTL_SECONDS,
       global: env.RATE_LIMIT_GLOBAL,
+      globalIp: env.RATE_LIMIT_GLOBAL_IP,
       auth: env.RATE_LIMIT_AUTH,
+      authIp: env.RATE_LIMIT_AUTH_IP,
       refresh: env.RATE_LIMIT_REFRESH,
       heavy: env.RATE_LIMIT_HEAVY,
     },

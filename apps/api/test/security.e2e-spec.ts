@@ -13,7 +13,7 @@ import { ANONYMOUS_HEADER, createAppAsTestUser } from './helpers/as-test-user';
  * Users are made through the API (POST /users) and sign in through POST /auth/login.
  */
 
-const LIMITS: RateLimits = { ttlSeconds: 60, global: 30, auth: 6, refresh: 10, heavy: 10 };
+const LIMITS: RateLimits = { ttlSeconds: 60, global: 60, globalIp: 200, auth: 10, authIp: 100, refresh: 10, heavy: 10 };
 const PASSWORD = 'correct-horse-battery-staple';
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
@@ -31,7 +31,6 @@ describe('security hardening (e2e)', () => {
   let app: INestApplication;
   let db: DatabaseService;
   const userIds: string[] = [];
-  const triedEmails: string[] = [];
 
   beforeAll(async () => {
     ({ app } = await createAppAsTestUser((b) => b.overrideProvider(RATE_LIMITS).useValue(LIMITS)));
@@ -40,7 +39,7 @@ describe('security hardening (e2e)', () => {
 
   afterAll(async () => {
     const made = await db.user.findMany({ where: { id: { in: userIds } }, select: { email: true } });
-    await db.loginAttempt.deleteMany({ where: { email: { in: [...made.map((u) => u.email), ...triedEmails] } } });
+    await db.loginAttempt.deleteMany({ where: { email: { in: [...made.map((u) => u.email)] } } });
     await db.user.deleteMany({ where: { id: { in: userIds } } }); // tokens cascade
     await app.close();
   });
@@ -99,84 +98,60 @@ describe('security hardening (e2e)', () => {
     });
   });
 
-  describe('rate limits', () => {
+  describe('rate limits — a whole school may share one IP', () => {
+    /** A user made through the API (a temporary password: enough to sign in and call /auth/me). */
+    async function account(label: string): Promise<string> {
+      const email = `${unique(label)}@school.test`.toLowerCase();
+      const made = await http(app).post('/users').send({ name: unique('Rate'), email, password: PASSWORD, roleIds: [] }).expect(201);
+      userIds.push((made.body.data as UserAccount).id);
+      return email;
+    }
+    const signIn = (email: string) =>
+      http(app).post('/auth/login').set(ANONYMOUS_HEADER, '1').set('Accept-Language', 'en').send({ email, password: PASSWORD });
+
     it('several users signed in from one IP are each counted alone: together far over the limit, none refused', async () => {
       const users: string[] = [];
-      for (let i = 0; i < 3; i++) {
-        const email = `${unique('rl')}@school.test`.toLowerCase();
-        const made = await http(app)
-          .post('/users')
-          .send({ name: `Rate ${i}`, email, password: PASSWORD, roleIds: [] })
-          .expect(201);
-        userIds.push((made.body.data as UserAccount).id);
-        const login = await http(app)
-          .post('/auth/login')
-          .set(ANONYMOUS_HEADER, '1')
-          .send({ email, password: PASSWORD })
-          .expect(200);
-        users.push(sessionCookie(login));
+      for (let i = 0; i < 3; i++) users.push(sessionCookie(await signIn(await account('rl')).expect(200)));
+      const me = (cookie: string) => http(app).get('/auth/me').set(ANONYMOUS_HEADER, '1').set('Cookie', cookie);
+      // 3 users × 50 = 150 requests from 127.0.0.1 against a per-user limit of 60: all answered.
+      for (let round = 0; round < 50; round++) {
+        expect((await Promise.all(users.map(me))).map((r) => r.status)).toEqual([200, 200, 200]);
       }
-      // 3 users × 25 = 75 requests from 127.0.0.1 against a global limit of 30: all answered.
-      for (let round = 0; round < 25; round++) {
-        const answers = await Promise.all(
-          users.map((cookie) => http(app).get('/auth/me').set(ANONYMOUS_HEADER, '1').set('Cookie', cookie)),
-        );
-        expect(answers.map((r) => r.status)).toEqual([200, 200, 200]);
-      }
-      // One of them going on past their own 30 is refused; the others are not.
+      // One of them going on past their own 60 is refused; the others are not.
       const [first, second] = users as [string, string];
-      for (let i = 0; i < 5; i++) {
-        await http(app).get('/auth/me').set(ANONYMOUS_HEADER, '1').set('Cookie', first).expect(200);
-      }
-      const over = await http(app).get('/auth/me').set(ANONYMOUS_HEADER, '1').set('Cookie', first).expect(429);
-      expect(over.body.error).toBe(ErrorCode.TOO_MANY_REQUESTS);
-      await http(app).get('/auth/me').set(ANONYMOUS_HEADER, '1').set('Cookie', second).expect(200);
-      // The admin (another user on the same IP) still works.
+      for (let i = 0; i < 10; i++) await me(first).expect(200);
+      expect((await me(first).expect(429)).body.error).toBe(ErrorCode.TOO_MANY_REQUESTS);
+      await me(second).expect(200);
       await http(app).get('/settings/school').expect(200);
     });
 
-    it('rapid sign-ins from one IP → 429 TOO_MANY_REQUESTS in the envelope, whatever X-Forwarded-For claims', async () => {
+    it('the 8 AM rush: 30 different staff signing in from one IP within a minute all get in', async () => {
+      const emails: string[] = [];
+      for (let i = 0; i < 30; i++) emails.push(await account('staff'));
+      // One after another, as fast as the API answers (the whole lot well within the 60 s window);
+      // not all at once, which would only measure the connection pool.
       const statuses: number[] = [];
-      let refused: { body: Record<string, unknown>; headers: Record<string, unknown> } | null = null;
-      // Different emails each time, so the per-account lockout never decides; the IP limit does.
-      for (let i = 0; i < LIMITS.auth + 1 && !refused; i++) {
-        const email = `${unique('nobody')}@school.test`.toLowerCase();
-        triedEmails.push(email);
-        const res = await http(app)
-          .post('/auth/login')
-          .set(ANONYMOUS_HEADER, '1')
-          .set('X-Forwarded-For', `203.0.113.${i + 1}`) // ignored: no proxy is trusted here
-          .set('Accept-Language', 'en')
-          .send({ email, password: 'wrong-password-123' });
-        statuses.push(res.status);
-        if (res.status === 429) refused = res;
-      }
-      // Earlier sign-ins in this file used part of the window: wrong passwords until the limit, then 429.
-      expect(statuses.slice(0, -1).every((s) => s === 401)).toBe(true);
-      expect(statuses.at(-1)).toBe(429);
-      expect(refused?.body).toMatchObject({
+      for (const email of emails) statuses.push((await signIn(email)).status);
+      expect(statuses).toEqual(emails.map(() => 200));
+    }, 90_000);
+
+    it('11 rapid sign-ins on one email → the 11th is 429 TOO_MANY_REQUESTS in the envelope (EN/AR); others from that IP go on', async () => {
+      const email = await account('rapid');
+      for (let i = 0; i < LIMITS.auth; i++) await signIn(email).expect(200);
+      const refused = await signIn(email).set('X-Forwarded-For', '203.0.113.9').expect(429); // the header is ignored: no proxy is trusted here
+      expect(refused.body).toMatchObject({
         success: false,
         statusCode: 429,
         error: ErrorCode.TOO_MANY_REQUESTS,
         params: { count: expect.any(Number) },
       });
-      expect(refused?.body.message).toMatch(/^Too many requests\. Try again in \d+ seconds?\.$/);
-      expect(refused?.headers['retry-after-auth']).toBeDefined();
-
-      // In Arabic for an Arabic page; the password change shares the same per-IP count.
-      const ar = await http(app)
-        .post('/auth/login')
-        .set(ANONYMOUS_HEADER, '1')
-        .set('Accept-Language', 'ar')
-        .send({ email: 'nobody@school.test', password: 'wrong-password-123' })
-        .expect(429);
+      expect(refused.body.message).toMatch(/^Too many requests\. Try again in \d+ seconds?\.$/);
+      expect(refused.headers['retry-after-auth']).toBeDefined();
+      const ar = await signIn(email).set('Accept-Language', 'ar').expect(429);
       expect(ar.body.message).toMatch(/^طلبات كثيرة جدًا/);
-      await http(app)
-        .post('/account/password')
-        .send({ currentPassword: 'x'.repeat(12), newPassword: 'y'.repeat(12) })
-        .expect(429);
 
-      // Everything else from that IP goes on.
+      // Another person behind the same IP signs in; the rest of the API answers.
+      await signIn(await account('colleague')).expect(200);
       await http(app).get('/settings/school').expect(200);
       await http(app).get('/health').expect(200);
     });

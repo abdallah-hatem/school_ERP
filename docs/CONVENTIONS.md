@@ -176,9 +176,12 @@ The API refuses anything undeclared (403) and CI fails on it (`docs/ARCHITECTURE
   A sensitive document folder (contracts, medical, legal, investigations) also sets `permission`
   and an `onOpen` that records the opening in the audit log. Storage refuses an unregistered folder
   and `file-folders.guard.spec.ts` fails CI on one.
-- **An endpoint that signs in, changes a password, exports or uploads**: `@RateLimit('auth')` /
-  `@RateLimit('heavy')` (`common/rate-limit`), next to its `@Permission`. New limits are env values
-  with their defaults in `env.validation.ts`, `.env.example` and the Security table.
+- **An endpoint that signs in, changes a password, exports or uploads**: `@RateLimit('auth',
+  subject)` — `subject` names the account the attempt is about (the email typed, the user, the
+  target user) — or `@RateLimit('heavy')` (`common/rate-limit`), next to its `@Permission`. Never a
+  low limit per IP alone: a whole school may share one IP (an office NAT, its own server); count by
+  account or user, with only a high per-IP ceiling. New limits are env values with their defaults
+  in `env.validation.ts`, `.env.example` and the Security table.
 
 ## Lists: the server pages, searches, filters, sorts and totals (owner, 2026-11-21)
 

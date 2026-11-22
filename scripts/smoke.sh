@@ -92,7 +92,9 @@ api_env=(
   # Every spec signs in through the API and the browser from 127.0.0.1, far quicker than a person:
   # limits nobody reaches here. The real values are tested in the API e2e (security.e2e-spec.ts).
   RATE_LIMIT_GLOBAL=1000000
+  RATE_LIMIT_GLOBAL_IP=1000000
   RATE_LIMIT_AUTH=1000000
+  RATE_LIMIT_AUTH_IP=1000000
   RATE_LIMIT_REFRESH=1000000
   RATE_LIMIT_HEAVY=1000000
 )

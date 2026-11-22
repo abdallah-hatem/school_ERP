@@ -1,4 +1,4 @@
-import { ExecutionContext, HttpStatus, Injectable } from '@nestjs/common';
+import { ExecutionContext, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import {
@@ -14,15 +14,20 @@ import { ErrorCode } from '@school-erp/shared';
 import type { Request } from 'express';
 import { CodedException } from '../errors/coded.exception';
 import { clientIpOf } from '../security/client-ip';
-import { RATE_LIMIT_BUCKET } from './rate-limit.decorator';
+import { RATE_LIMIT_ROUTE, type RouteRateLimitMeta } from './rate-limit.decorator';
+import { RATE_LIMITS } from './rate-limit.tokens';
 import {
   bucketApplies,
+  rateLimitFor,
   rateLimitKey,
   rateLimitTracker,
   retryAfterSeconds,
   type RateLimitBucket,
-  type RouteRateLimit,
+  type RateLimits,
+  type RateLimitSubject,
 } from './rate-limit.pure';
+
+type RequestWithUser = Request & { user?: { id?: string } };
 
 /**
  * The rate limits (`rate-limit.pure.ts`) as a global guard. It runs after `JwtAuthGuard`, so a
@@ -38,6 +43,7 @@ export class RateLimitGuard extends ThrottlerGuard {
     @InjectThrottlerStorage() storage: ThrottlerStorage,
     reflector: Reflector,
     config: ConfigService,
+    @Inject(RATE_LIMITS) private readonly limits: RateLimits,
   ) {
     super(options, storage, reflector);
     this.trustCloudflare = config.get<boolean>('http.trustCloudflare') ?? false;
@@ -45,20 +51,22 @@ export class RateLimitGuard extends ThrottlerGuard {
 
   protected override async handleRequest(props: ThrottlerRequest): Promise<boolean> {
     const bucket = props.throttler.name as RateLimitBucket;
-    const route = this.reflector.getAllAndOverride<RouteRateLimit | undefined>(RATE_LIMIT_BUCKET, [
+    const route = this.reflector.getAllAndOverride<RouteRateLimitMeta | undefined>(RATE_LIMIT_ROUTE, [
       props.context.getHandler(),
       props.context.getClass(),
     ]);
-    if (!bucketApplies(bucket, route)) return true;
+    if (!bucketApplies(bucket, route?.bucket)) return true;
+    const req = props.context.switchToHttp().getRequest<RequestWithUser>();
+    const subject: RateLimitSubject = route?.subject?.(req) ?? null;
     return super.handleRequest({
       ...props,
-      getTracker: (req) => {
-        const request = req as Request & { user?: { id?: string } };
-        return rateLimitTracker(bucket, {
-          userId: request.user?.id,
-          ip: clientIpOf(request, { trustCloudflare: this.trustCloudflare }),
-        });
-      },
+      limit: rateLimitFor(bucket, this.limits, Boolean(req.user?.id)),
+      getTracker: () =>
+        rateLimitTracker(bucket, {
+          userId: req.user?.id,
+          ip: clientIpOf(req, { trustCloudflare: this.trustCloudflare }),
+          subject,
+        }),
       generateKey: (_context, tracker) => rateLimitKey(bucket, tracker),
     });
   }

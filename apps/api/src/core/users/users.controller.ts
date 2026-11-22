@@ -107,7 +107,8 @@ export class UsersController {
 
   /** A temporary password: the user must change it, and their sessions end. */
   @Post(':id/password')
-  @RateLimit('auth')
+  // Per target user + IP: an admin resetting many people's passwords isn't one count.
+  @RateLimit('auth', (req) => ({ kind: 'user', userId: String(req.params.id ?? '') }))
   @Permission('core.users.manage')
   @Audited('core.user.set_password')
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -136,7 +137,8 @@ export class AccountController {
    * only `/auth/me` and sign-out) until they have chosen their own (P3).
    */
   @Post('password')
-  @RateLimit('auth')
+  // Per signed-in user + IP.
+  @RateLimit('auth', (req) => ({ kind: 'user', userId: req.user?.id ?? '' }))
   @SignedIn()
   @AllowedBeforePasswordChange()
   @NotAudited(
