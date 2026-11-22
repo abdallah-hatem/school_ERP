@@ -32,5 +32,10 @@ process.env.PORT = process.env.PORT ?? '0';
 process.env.UPLOADS_DIR = process.env.UPLOADS_DIR ?? join(tmpdir(), `${dbName}-uploads`);
 // A throwaway signing secret for tests only (the real one comes from the deployment's env).
 process.env.JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET ?? 'e2e-only-secret-'.repeat(4);
+// Rate limits: each e2e file is one test user on 127.0.0.1, far quicker than any person, so the
+// suites run with limits nobody reaches. security.e2e-spec.ts tests the limits with its own values.
+for (const key of ['RATE_LIMIT_GLOBAL', 'RATE_LIMIT_GLOBAL_IP', 'RATE_LIMIT_AUTH', 'RATE_LIMIT_AUTH_IP', 'RATE_LIMIT_REFRESH', 'RATE_LIMIT_HEAVY']) {
+  process.env[key] = process.env[key] ?? '1000000';
+}
 // The seed suite's HR admin password (test only; the real one comes from the operator's env).
 process.env.SEED_ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? 'e2e-only-seed-password';

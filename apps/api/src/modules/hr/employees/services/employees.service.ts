@@ -24,6 +24,7 @@ import {
   NamedRef,
   oneYearContractEnd,
   Paginated,
+  type AuthUser,
   type PermissionKey,
   schoolDayOf,
   socialInsuranceIssues,
@@ -205,6 +206,22 @@ export class EmployeesService {
     const row = await this.repository.findDetail(id, await this.access.where('hr.employees.view'));
     if (!row) throw new NotFoundException();
     return this.present(row);
+  }
+
+  /**
+   * Whether `user` may open the stored photo at `photoUrl` (files follow their record): it must be
+   * an employee's current photo, and `hr.employees.view` must cover that employee for `user` — the
+   * rule for opening the employee — or it is `user`'s own linked employee (their avatar in the top
+   * bar). A replaced photo belongs to nobody any more: false.
+   */
+  async canOpenPhoto(user: Pick<AuthUser, 'id'>, photoUrl: string): Promise<boolean> {
+    const owner = await this.repository.findScopeFieldsByPhoto(photoUrl);
+    if (!owner) return false;
+    const [scope, linked] = await Promise.all([
+      this.access.scopeOf(user, 'hr.employees.view'),
+      this.access.linkedEmployeeOf(user),
+    ]);
+    return owner.id === linked || inScope(scope, owner);
   }
 
   /**

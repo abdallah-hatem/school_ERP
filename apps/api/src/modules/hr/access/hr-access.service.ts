@@ -40,6 +40,19 @@ export class HrAccessService {
     return toEmployeeScope(await this.permissions.scopeFor(user, key));
   }
 
+  /**
+   * The employees `key` covers for `user`, given explicitly — never "everyone" for a missing user,
+   * unlike `scope` (a file request names its reader: `HrFileAccess`).
+   */
+  async scopeOf(user: Pick<AuthUser, 'id'>, key: PermissionKey): Promise<EmployeeScope> {
+    return toEmployeeScope(await this.permissions.scopeFor(user, key));
+  }
+
+  /** `user`'s linked employee, or null. */
+  linkedEmployeeOf(user: Pick<AuthUser, 'id'>): Promise<string | null> {
+    return this.permissions.linkedEmployeeOf(user);
+  }
+
   /** Whether the current user holds `key` at all (any scope). */
   async holds(key: PermissionKey): Promise<boolean> {
     const user = this.user();

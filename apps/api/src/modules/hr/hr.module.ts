@@ -6,6 +6,7 @@ import { SettingsModule } from '../../core/settings';
 import { UsersModule } from '../../core/users';
 import { HrAccessService } from './access/hr-access.service';
 import { HrAuditAccess } from './access/hr-audit-access';
+import { HrFileAccess } from './access/hr-file-access';
 import { HrNotificationScopes } from './access/hr-notification-scopes';
 import { HrRemindersJob } from './reminders/hr-reminders.job';
 import { HrRemindersService } from './reminders/hr-reminders.service';
@@ -69,6 +70,8 @@ import { LatenessService } from './staff-attendance/services/lateness.service';
     // who sees which employees, and whose salary (P4: scopes R5, salary R7)
     HrAccessService,
     HrAuditAccess,
+    // whose stored files are whose (employee photos follow the employee)
+    HrFileAccess,
     // which scoped recipients cover an HR notification's subject (§11, N5)
     HrNotificationScopes,
     // reminders (§11, N3): resolved at the change, sent by the daily job

@@ -11,6 +11,7 @@ import {
   authCookie,
 } from '@/lib/middlewareFunctions';
 import { expireTags } from '@/lib/revalidate';
+import { clientAddressHeaders } from '@/lib/security-headers';
 import type { ApiResult, DownloadedFile } from '@/lib/types';
 import { LOCALE_COOKIE, requestLocale } from '@/shared/lib/i18n';
 
@@ -104,17 +105,19 @@ export async function apiFetch<T = unknown>(
   const includeAuth = options.includeAuth !== false;
   const isFormData = options.body instanceof FormData;
 
-  const headers: Record<string, string> = {
-    Accept: 'application/json',
-    ...normalizeHeaders(options.headers),
-  };
-  if (!isFormData) headers['Content-Type'] = 'application/json';
-
   const cookieStore = await cookies();
   const accessToken = cookieStore.get(ACCESS_TOKEN_KEY)?.value;
   const refreshToken = cookieStore.get(REFRESH_TOKEN_KEY)?.value;
   // The page's own language, not the cookie: every toast and error matches the screen.
   const requestHeaders = await nextHeaders();
+
+  const headers: Record<string, string> = {
+    // Who the browser is (the API's signed-out and sign-in rate limits count by client IP).
+    ...clientAddressHeaders(requestHeaders),
+    Accept: 'application/json',
+    ...normalizeHeaders(options.headers),
+  };
+  if (!isFormData) headers['Content-Type'] = 'application/json';
   const lang = requestLocale({
     pathname: requestHeaders.get('x-pathname'),
     referer: requestHeaders.get('referer'),
@@ -184,7 +187,7 @@ async function executeRequest<T>(
         const cookieStore = await cookies();
         try {
           const refreshToken = cookieStore.get(REFRESH_TOKEN_KEY)?.value;
-          const tokens = refreshToken ? await refreshTokens(refreshToken) : null;
+          const tokens = refreshToken ? await refreshTokens(refreshToken, clientAddressHeaders(hdrs)) : null;
           if (tokens) {
             sessionCookies(tokens).forEach((c) => cookieStore.set(c));
             return executeRequest<T>(

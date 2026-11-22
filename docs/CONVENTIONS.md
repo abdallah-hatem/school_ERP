@@ -156,6 +156,33 @@ The API refuses anything undeclared (403) and CI fails on it (`docs/ARCHITECTURE
 5. `@SignedIn()` (any signed-in user) and `@Public()` (no session) are rare and reviewed: the scan
    lists them, so adding one changes a test.
 
+## Security: origins, uploads, limits (2026-11-22)
+
+`docs/ARCHITECTURE.md` → Security has the whole picture. When you add:
+
+- **A new external origin the browser loads from** (a script, font, image host, analytics, a map, a
+  direct API call): add it to the right directive in `contentSecurityPolicy`
+  (`apps/web/src/lib/security-headers.ts`) and its test, in the same PR — otherwise the browser
+  blocks it and the smoke spec `34-security-headers` fails on the violation. Never add
+  `'unsafe-inline'` to `script-src` or drop the nonce; a third-party script goes through
+  `next/script`, which carries the nonce.
+- **A new upload type**: its signature goes in `detectImageType` (or a sibling for non-images), its
+  rules in `packages/shared` (`maxBytes`, `mimeTypes`), and a unit test with a real file and a
+  renamed one. Never trust the name or the browser's type, and never serve an uploaded document
+  type a browser runs (HTML, SVG): convert it, as SVG logos are converted to PNG.
+- **A new upload folder**: its owning module registers it with `FileFolders.register(<FOLDER>, {
+  owner, canOpen })` on start (as `HrFileAccess` does) — `canOpen` finds the record through the
+  stored link and applies that record's view permission and scope; outside it the file is 404.
+  A sensitive document folder (contracts, medical, legal, investigations) also sets `permission`
+  and an `onOpen` that records the opening in the audit log. Storage refuses an unregistered folder
+  and `file-folders.guard.spec.ts` fails CI on one.
+- **An endpoint that signs in, changes a password, exports or uploads**: `@RateLimit('auth',
+  subject)` — `subject` names the account the attempt is about (the email typed, the user, the
+  target user) — or `@RateLimit('heavy')` (`common/rate-limit`), next to its `@Permission`. Never a
+  low limit per IP alone: a whole school may share one IP (an office NAT, its own server); count by
+  account or user, with only a high per-IP ceiling. New limits are env values with their defaults
+  in `env.validation.ts`, `.env.example` and the Security table.
+
 ## Lists: the server pages, searches, filters, sorts and totals (owner, 2026-11-21)
 
 **No list is paged, filtered, sorted or searched in the browser — anywhere.** Every table, card

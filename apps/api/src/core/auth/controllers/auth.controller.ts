@@ -2,7 +2,9 @@ import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseInterceptors } fr
 import type { AuthUser, SessionUser } from '@school-erp/shared';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { Public } from '../../../common/decorators/public.decorator';
+import { RateLimit } from '../../../common/rate-limit';
 import { RefreshTokenValue } from '../decorators/refresh-token.decorator';
+import { refreshTokenFrom } from '../tokens/extract-token';
 import { LoginDto } from '../dto/login.dto';
 import { AuthCookiesInterceptor } from '../interceptors/auth-cookies.interceptor';
 import { AuthService } from '../services/auth.service';
@@ -10,6 +12,12 @@ import { ClearedSession, type IssuedSession } from '../session';
 import { Audited, NotAudited } from '../../audit';
 import { AllowedBeforePasswordChange, PermissionsService, SignedIn } from '../../permissions';
 import { UsersService } from '../../users';
+
+/** The email a sign-in names, before validation (the rate limit runs before the body pipe). */
+function emailTyped(body: unknown): string {
+  const email = (body as { email?: unknown } | undefined)?.email;
+  return typeof email === 'string' ? email : '';
+}
 
 /** There is no sign-up route (§2: accounts come from the seed). */
 @Controller('auth')
@@ -26,6 +34,8 @@ export class AuthController {
     'records its own entries: core.auth.sign_in in one transaction with the session; failed sign-ins and lockouts each in their own, since a request transaction would hold a connection while they wait for another',
   )
   @Post('login')
+  // Per email typed + IP: a school behind one IP signs in together (docs/ARCHITECTURE.md → Security).
+  @RateLimit('auth', (req) => ({ kind: 'email', email: emailTyped(req.body) }))
   @HttpCode(HttpStatus.OK)
   login(@Body() dto: LoginDto): Promise<IssuedSession> {
     return this.auth.login(dto.email, dto.password);
@@ -34,6 +44,8 @@ export class AuthController {
   @Public()
   @NotAudited('token refresh rotates the session; not an audited action in v1')
   @Post('refresh')
+  // Per session (its refresh token); per IP when there is none.
+  @RateLimit('refresh', (req) => ({ kind: 'session', token: refreshTokenFrom(req) ?? '' }))
   @HttpCode(HttpStatus.OK)
   refresh(@RefreshTokenValue() refreshToken: string | undefined): Promise<IssuedSession> {
     return this.auth.refresh(refreshToken);

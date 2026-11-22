@@ -1,7 +1,8 @@
 import { appIconVersion } from '@school-erp/shared';
 import type { NextRequest } from 'next/server';
 import { GET_APP_ICON } from '@/core/pwa/apis';
-import { offlineHtml } from '@/core/pwa/offline-page';
+import { offlineHtml, offlinePageCsp } from '@/core/pwa/offline-page';
+import { createNonce } from '@/lib/security-headers';
 import { getSchoolBranding } from '@/core/settings/get-branding';
 import { DEFAULT_LOCALE, isLocale } from '@/shared/lib/i18n';
 
@@ -16,12 +17,18 @@ export async function GET(req: NextRequest) {
   const branding = await getSchoolBranding();
   const icon = await GET_APP_ICON('icon-192.png', appIconVersion(branding.logoUrl));
   const iconDataUrl = icon.success && icon.data ? `data:image/png;base64,${icon.data.base64}` : null;
+  const nonce = createNonce();
   const html = offlineHtml({
     locale,
     schoolName: locale === 'ar' ? branding.nameAr : branding.nameEn,
     iconDataUrl,
+    nonce,
   });
   return new Response(html, {
-    headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' },
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-cache',
+      'Content-Security-Policy': offlinePageCsp(nonce),
+    },
   });
 }

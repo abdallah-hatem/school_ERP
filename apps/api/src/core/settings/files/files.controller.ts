@@ -7,26 +7,35 @@ import {
   Query,
   StreamableFile,
 } from '@nestjs/common';
-import { APP_ICON_FOLDER, isAppIconName } from '@school-erp/shared';
+import { APP_ICON_FOLDER, isAppIconName, type AuthUser } from '@school-erp/shared';
+import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { Public } from '../../../common/decorators/public.decorator';
+import { FileFolders } from './file-folders';
 import { LOGO_FOLDER } from '../settings.pure';
 import { AppIconsService } from './app-icons.service';
 import { FileStorageService } from './file-storage.service';
+import { LegacySvgLogos } from './svg-logo';
 import { SignedIn } from '../../permissions';
 
-/** Stops an uploaded SVG from running script or loading anything when opened directly. */
+/**
+ * Stops a stored file from running script or loading anything when opened directly. Uploaded SVGs
+ * are converted to PNG (`svg-logo.ts`), so none is served; the policy stays as a second wall.
+ */
 const FILE_CSP = "default-src 'none'; style-src 'unsafe-inline'; sandbox";
 
 /**
  * Uploaded files. The logo is public (the sign-in page shows it), and so are the app icons drawn
  * from it (the browser fetches them for the manifest and the tab before anyone signs in); every
- * other file needs a session (contract). Routes are matched in order, so the public ones stay first.
+ * other file needs a session and the right to see its record (`FileFolders`). Routes are matched
+ * in order, so the public ones stay first.
  */
 @Controller('files')
 export class FilesController {
   constructor(
     private readonly files: FileStorageService,
     private readonly icons: AppIconsService,
+    private readonly legacySvgLogos: LegacySvgLogos,
+    private readonly folders: FileFolders,
   ) {}
 
   @Public()
@@ -35,6 +44,8 @@ export class FilesController {
   @Header('X-Content-Type-Options', 'nosniff')
   @Header('Cache-Control', 'public, max-age=86400')
   logo(@Param('name') name: string): Promise<StreamableFile> {
+    // A logo stored as SVG before uploads were converted is answered as its PNG (`svg-logo.ts`).
+    if (/\.svg$/i.test(name)) return this.legacySvgLogos.png(LOGO_FOLDER, name);
     return this.files.open(LOGO_FOLDER, name);
   }
 
@@ -57,13 +68,22 @@ export class FilesController {
     return new StreamableFile(icon.data, { type: 'image/png', length: icon.data.length });
   }
 
+  /**
+   * Any other stored file: it opens for whoever may see the record it belongs to — the folder's
+   * owner decides (`FileFolders`; an employee photo follows `hr.employees.view` and its scope).
+   * An unknown folder, a file of a record outside the user's view, or a missing file → 404 alike.
+   */
   @Get(':folder/:name')
   @SignedIn()
   @Header('Content-Security-Policy', FILE_CSP)
   @Header('X-Content-Type-Options', 'nosniff')
   @Header('Cache-Control', 'private, no-store')
-  file(@Param('folder') folder: string, @Param('name') name: string): Promise<StreamableFile> {
-    if (folder === APP_ICON_FOLDER) throw new NotFoundException();
+  async file(
+    @CurrentUser() user: AuthUser,
+    @Param('folder') folder: string,
+    @Param('name') name: string,
+  ): Promise<StreamableFile> {
+    await this.folders.assertCanOpen(user, folder, name);
     return this.files.open(folder, name);
   }
 }

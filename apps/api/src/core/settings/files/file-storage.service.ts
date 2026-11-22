@@ -3,6 +3,7 @@ import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { extname, join, resolve, sep } from 'node:path';
 import { Injectable, NotFoundException, StreamableFile } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { FileFolders } from './file-folders';
 
 /** A folder or file name we accept in a `/files/<folder>/<name>` path — no traversal possible. */
 const SAFE_FOLDER = /^[a-z0-9-]{1,40}$/;
@@ -25,7 +26,10 @@ const CONTENT_TYPES: Record<string, string> = {
 export class FileStorageService {
   private readonly root: string;
 
-  constructor(config: ConfigService) {
+  constructor(
+    config: ConfigService,
+    private readonly folders: FileFolders,
+  ) {
     this.root = resolve(config.getOrThrow<string>('uploadsDir'));
   }
 
@@ -34,7 +38,14 @@ export class FileStorageService {
     return `/files/${folder}/${name}`;
   }
 
+  /**
+   * Writes a file. Only into a public folder or one whose owner registered who may open its files
+   * (`FileFolders`): a file nobody could open safely is never stored.
+   */
   async save(folder: string, name: string, data: Buffer): Promise<string> {
+    if (!this.folders.isKnown(folder)) {
+      throw new Error(`files: "${folder}" has no registered owner (FileFolders.register) — refusing to store into it`);
+    }
     const path = this.pathFor(folder, name);
     await mkdir(join(this.root, folder), { recursive: true });
     await writeFile(path, data);

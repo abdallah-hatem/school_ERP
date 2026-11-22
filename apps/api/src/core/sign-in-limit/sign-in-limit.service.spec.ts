@@ -117,6 +117,20 @@ describe('SignInLimitService', () => {
     expect(audit.record).not.toHaveBeenCalled();
   });
 
+  it('one email tried from many IPs still adds up to one lockout: the count knows the email alone', async () => {
+    // The rate limit counts sign-ins per email + IP (a school behind one IP signs in together), so
+    // a guesser spreading over IPs passes it; this count has no IP in it and stops them.
+    const { service, attempts } = makeService({ failedCount: 2 });
+    for (const typed of ['mona@school.test', ' Mona@School.test', 'MONA@SCHOOL.TEST ']) {
+      await service.recordFailure(typed, {}, NOW);
+    }
+    expect(attempts.recordFailure.mock.calls.map((c: unknown[]) => c[0])).toEqual([
+      'mona@school.test',
+      'mona@school.test',
+      'mona@school.test',
+    ]);
+  });
+
   it('the attempt that locks records core.auth.locked_out in its own transaction', async () => {
     const { service, audit, txHost } = makeService({ failedCount: 5 });
     await service.recordFailure('mona@school.test', { actor: null }, NOW);

@@ -35,6 +35,26 @@ function runSql(schema: string, sql: string): void {
   });
 }
 
+/** The first later migration that fails when replayed one by one in a fresh schema (diagnosis only). */
+function failingMigration(): string | null {
+  const probe = `deleted_roles_probe_${Date.now()}`;
+  try {
+    for (const m of upToRoles) runSql(probe, `CREATE SCHEMA IF NOT EXISTS "${probe}";\n${migrationSql(m)}`);
+    const list = deletedKeys.map((k) => `'${k}'`).join(', ');
+    runSql(probe, `DELETE FROM "roles" WHERE "key" IN (${list});`);
+    for (const m of later) {
+      try {
+        runSql(probe, migrationSql(m));
+      } catch {
+        return m;
+      }
+    }
+    return null;
+  } finally {
+    runSql('public', `DROP SCHEMA IF EXISTS "${probe}" CASCADE;`);
+  }
+}
+
 describe('grant migrations after a starting role was deleted (migration, e2e)', () => {
   const schema = `deleted_roles_${Date.now()}_${Math.floor(Math.random() * 1e6)}`;
   let db: DatabaseService;
@@ -71,8 +91,14 @@ describe('grant migrations after a starting role was deleted (migration, e2e)', 
   });
 
   it('every later migration runs without an error and brings no deleted role back', async () => {
-    for (const m of later) {
-      expect(() => runSql(schema, migrationSql(m))).not.toThrow();
+    // One `prisma db execute` for all of them, in order: a process per migration costs about a
+    // second each, and "every later migration" grows with every migration added (it passed the
+    // 30 s test timeout at 2026-11-22's). On a failure, replay them one by one in a fresh schema
+    // to name the migration that broke.
+    try {
+      runSql(schema, later.map(migrationSql).join('\n;\n'));
+    } catch (e) {
+      throw new Error(`a later migration failed: ${failingMigration() ?? 'not reproduced one by one'} — ${String(e)}`);
     }
     const roles = await db.role.findMany({ select: { key: true } });
     expect(roles.map((r) => r.key)).toEqual([SYSTEM_ADMIN_ROLE]);

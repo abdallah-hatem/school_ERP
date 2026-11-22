@@ -93,6 +93,23 @@ describe('the offline page', () => {
     expect(html).not.toMatch(/<link |src="(https?:)?\/[^/]/);
   });
 
+  it('its one script carries the response’s nonce; no inline handlers', () => {
+    const html = offlineHtml({ locale: 'en', schoolName: 'Test Academy', iconDataUrl: null, nonce: 'n0nce==' });
+    expect(html).toContain('<script nonce="n0nce==">');
+    expect(html).not.toMatch(/\son[a-z]+=/i);
+  });
+
+  it('route: its own CSP, whose nonce is the script’s', async () => {
+    branding.getSchoolBranding.mockResolvedValue(SCHOOL);
+    apis.GET_APP_ICON.mockResolvedValue({ success: false, status: 404, data: null, message: '' });
+    const res = await offlineRoute(new NextRequest('http://app.test/offline.html'));
+    const csp = res.headers.get('content-security-policy') ?? '';
+    expect(csp).toContain("default-src 'none'");
+    const nonce = /'nonce-([^']+)'/.exec(csp)?.[1];
+    expect(nonce).toBeTruthy();
+    expect(await res.text()).toContain(`<script nonce="${nonce}">`);
+  });
+
   it('route: inlines the current icon; serves English by default', async () => {
     branding.getSchoolBranding.mockResolvedValue(SCHOOL);
     apis.GET_APP_ICON.mockResolvedValue({ success: true, status: 200, data: { base64: 'QUJD', contentType: 'image/png', fileName: 'i.png' } });

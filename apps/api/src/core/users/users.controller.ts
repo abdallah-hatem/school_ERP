@@ -14,6 +14,7 @@ import {
 import type { ApiResponse, AuthUser, EmployeeOption, UserAccount } from '@school-erp/shared';
 import type { Request } from 'express';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { RateLimit } from '../../common/rate-limit';
 import { ResponseUtil } from '../../common/utils/response.util';
 import { Audited, NotAudited } from '../audit';
 import { AllowedBeforePasswordChange, Permission, SignedIn } from '../permissions';
@@ -106,6 +107,8 @@ export class UsersController {
 
   /** A temporary password: the user must change it, and their sessions end. */
   @Post(':id/password')
+  // Per target user + IP: an admin resetting many people's passwords isn't one count.
+  @RateLimit('auth', (req) => ({ kind: 'user', userId: String(req.params.id ?? '') }))
   @Permission('core.users.manage')
   @Audited('core.user.set_password')
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -134,6 +137,8 @@ export class AccountController {
    * only `/auth/me` and sign-out) until they have chosen their own (P3).
    */
   @Post('password')
+  // Per signed-in user + IP.
+  @RateLimit('auth', (req) => ({ kind: 'user', userId: req.user?.id ?? '' }))
   @SignedIn()
   @AllowedBeforePasswordChange()
   @NotAudited(

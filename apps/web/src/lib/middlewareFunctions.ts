@@ -103,13 +103,18 @@ export function tokenPairFromSetCookies(setCookies: string[]): TokenPair | null 
 }
 
 /** Rotates the refresh token at the API. Null when it is missing, expired, revoked or reused. */
-export async function refreshTokens(refreshToken: string): Promise<TokenPair | null> {
+export async function refreshTokens(
+  refreshToken: string,
+  /** The browser's client-address headers (`clientAddressHeaders`): the API's refresh limit is per client IP. */
+  clientAddress: Record<string, string> = {},
+): Promise<TokenPair | null> {
   const baseURL = process.env.BASE_URL;
   if (!baseURL) return null;
   try {
     const res = await fetch(`${baseURL}/auth/refresh`, {
       method: 'POST',
       headers: {
+        ...clientAddress,
         Accept: 'application/json',
         Authorization: `Bearer ${refreshToken}`,
       },

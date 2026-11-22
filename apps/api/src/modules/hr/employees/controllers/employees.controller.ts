@@ -14,6 +14,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { EMPLOYEE_PHOTO_UPLOAD } from '@school-erp/shared';
+import { RateLimit } from '../../../../common/rate-limit';
 import { ResponseUtil } from '../../../../common/utils/response.util';
 import { CreateEmployeeDto, ListEmployeesQueryDto, UpdateEmployeeDto } from '../dto/employee.dto';
 import { EmployeesService } from '../services/employees.service';
@@ -73,6 +74,7 @@ export class EmployeesController {
   /** Multipart `file`: PNG, JPG or WebP, up to 2 MB (§3). Returns the employee. */
   @Audited('hr.employee.update')
   @Post(':id/photo')
+  @RateLimit('heavy')
   @Permission('hr.employees.edit')
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(PhotoUploadInterceptor)

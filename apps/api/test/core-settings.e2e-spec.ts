@@ -1,5 +1,8 @@
 import { randomUUID } from 'node:crypto';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
 import { INestApplication } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   LOGO_UPLOAD,
   SETTINGS_HISTORY_ACTION_KEYS,
@@ -17,7 +20,9 @@ const PNG = Buffer.concat([
   Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
   Buffer.alloc(64, 1),
 ]);
-const SVG = Buffer.from('<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg"></svg>');
+const SVG = Buffer.from(
+  '<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2 1"><rect width="2" height="1"/></svg>',
+);
 
 describe('core settings and school structure (e2e)', () => {
   let app: INestApplication;
@@ -273,15 +278,29 @@ describe('core settings and school structure (e2e)', () => {
       await http(app).get('/files/logo/missing.png').expect(404);
     });
 
-    it('an SVG logo is accepted and served with a script-blocking policy', async () => {
+    it('an SVG logo is accepted, stored as a PNG and served with a script-blocking policy', async () => {
       const res = await http(app)
         .post('/settings/school/logo')
         .attach('file', SVG, { filename: 'logo.svg', contentType: 'image/svg+xml' })
         .expect(201);
+      expect(res.body.data.logoUrl).toMatch(/\.png$/);
       const file = await http(app).get(res.body.data.logoUrl).expect(200);
-      expect(file.headers['content-type']).toBe('image/svg+xml');
+      expect(file.headers['content-type']).toBe('image/png');
       expect(file.headers['content-security-policy']).toContain('sandbox');
       expect(file.headers['x-content-type-options']).toBe('nosniff');
+    });
+
+    it('an SVG logo stored before conversion still shows: answered as a PNG, never as SVG', async () => {
+      const config = app.get(ConfigService);
+      const dir = join(resolve(config.getOrThrow<string>('uploadsDir')), 'logo');
+      const name = `logo-${randomUUID()}.svg`;
+      await mkdir(dir, { recursive: true });
+      await writeFile(join(dir, name), SVG);
+      const file = await http(app).get(`/files/logo/${name}`).set(ANONYMOUS_HEADER, '1').expect(200);
+      expect(file.headers['content-type']).toBe('image/png');
+      expect(Buffer.from(file.body as Buffer).subarray(0, 4).toString('latin1')).toBe('\x89PNG');
+      await rm(join(dir, name), { force: true });
+      await rm(join(dir, name.replace('.svg', '-svg.png')), { force: true });
     });
   });
 

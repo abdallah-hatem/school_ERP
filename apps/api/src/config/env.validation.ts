@@ -84,6 +84,88 @@ export class EnvironmentVariables {
   COOKIE_SECURE?: boolean;
 
   /**
+   * Express `trust proxy` (docs/ARCHITECTURE.md → Security): unset = trust nobody, so the client
+   * IP is the socket's and `X-Forwarded-For` is ignored. Set it only when a proxy in front sets
+   * that header: a hop count (`1`), or addresses / presets (`loopback, uniquelocal`, `10.0.0.0/8`).
+   * `true` trusts every hop and lets any client choose its own IP — refused.
+   */
+  @IsOptional()
+  @Transform(emptyToUndefined)
+  @IsString()
+  @Matches(/^(?!\s*true\s*$).+$/i, { message: 'TRUST_PROXY=true would trust any client: give a hop count or addresses' })
+  TRUST_PROXY?: string;
+
+  /**
+   * Behind Cloudflare: take the client IP from `CF-Connecting-IP` — only on requests that came
+   * through a trusted proxy (TRUST_PROXY), and only safe when the server accepts nothing but
+   * Cloudflare (and the web app) on its public ports. Default off.
+   */
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    value === undefined || value === '' ? undefined : value === true || value === 'true',
+  )
+  @IsBoolean()
+  TRUST_CLOUDFLARE?: boolean;
+
+  /** Rate limits (docs/ARCHITECTURE.md → Security): the window, in seconds, every limit counts in. */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  RATE_LIMIT_TTL_SECONDS: number = 60;
+
+  /** Requests per window for every route, per signed-in user. */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  RATE_LIMIT_GLOBAL: number = 300;
+
+  /**
+   * Signed-out requests per window per client IP (the sign-in page, the logo, the app icons). High:
+   * a whole school can share one IP, and every device loads these at the 8 AM rush.
+   */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  RATE_LIMIT_GLOBAL_IP: number = 1200;
+
+  /**
+   * Sign-in attempts per window per account + IP (the email typed; for a password change the user,
+   * for an admin reset the target), on top of the per-account lockout.
+   */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  RATE_LIMIT_AUTH: number = 10;
+
+  /**
+   * Sign-ins, password changes and refreshes together per window per client IP: a ceiling a school
+   * behind one NAT never reaches, but a script trying many accounts does.
+   */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  RATE_LIMIT_AUTH_IP: number = 200;
+
+  /** Refreshes per window per session (a page load refreshes once per parallel request). */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  RATE_LIMIT_REFRESH: number = 60;
+
+  /** Exports and uploads per window per user (per IP when signed out). */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  RATE_LIMIT_HEAVY: number = 20;
+
+  /**
    * Whether scheduled jobs (core/jobs) run on their clock. Defaults to on, except under
    * NODE_ENV=test: unit and e2e tests run a job only by triggering it (`JobRunner.run(name)`).
    */
