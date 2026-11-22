@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { INestApplication } from '@nestjs/common';
-import { SEARCH_FIXTURE } from '@school-erp/shared';
+import { SEARCH_FIXTURE } from '@school-erp/shared/testing';
 import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
 import { createAppAsTestUser } from './helpers/as-test-user';

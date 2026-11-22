@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { matchesSearch, SEARCH_FIXTURE, searchKey, searchTerms } from '../src';
+import { matchesSearch, searchKey, searchTerms } from '../src';
+import { SEARCH_FIXTURE } from '../src/testing';
 
 describe('searchKey (the JS twin of the database search_fold)', () => {
   it('folds case, accents, Arabic marks and letter variants', () => {
