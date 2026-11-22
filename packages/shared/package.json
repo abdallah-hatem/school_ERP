@@ -5,6 +5,13 @@
   "description": "Enums, keys, error codes, API types, pure rules and locales shared by api and web. No framework imports.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "testing": [
+        "dist/testing/index.d.ts"
+      ]
+    }
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
