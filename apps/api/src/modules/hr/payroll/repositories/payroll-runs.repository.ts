@@ -15,6 +15,7 @@ import {
 import { BaseRepository } from '../../../../common/repositories/base.repository';
 import { DatabaseService } from '../../../../database/database.service';
 import type { DbAdapter, DbClient } from '../../../../database/transactions';
+import { searchWhere } from '../../../../common/repositories/search';
 
 export const RUN_SELECT = {
   id: true,
@@ -154,10 +155,8 @@ function lineWhere(runId: string, filter: LineFilter, scope: Prisma.EmployeeWher
   const where: Prisma.PayrollLineWhereInput = { runId, employee: scope };
   if (filter.departmentId) where.departmentId = filter.departmentId;
   if (filter.flagged !== undefined) where.flags = { isEmpty: !filter.flagged };
-  if (filter.search) {
-    const contains = { contains: filter.search, mode: 'insensitive' as const };
-    where.OR = [{ employeeCode: contains }, { nameEn: contains }, { nameAr: contains }, { nationalId: contains }];
-  }
+  const searched = searchWhere(filter.search);
+  if (searched) where.OR = searched.OR;
   return where;
 }
 
@@ -204,7 +203,7 @@ export class PayrollRunsRepository extends BaseRepository<
   }
 
   list(page: number | undefined, limit: number | undefined) {
-    return this.findAllWithPagination(page, limit, undefined, undefined, undefined, {
+    return this.findAllWithPagination(page, limit, undefined, undefined, {
       select: RUN_SELECT,
       orderBy: { month: 'desc' },
       maxLimit: PAYROLL_PAGINATION.maxLimit,

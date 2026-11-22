@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { PAGINATION, type Paginated, type Stage } from '@school-erp/shared';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import type { DbAdapter, DbClient } from '../../../database/transactions';
+import { searchWhere } from '../../../common/repositories/search';
 
 const stageSelect = {
   id: true,
@@ -37,12 +38,8 @@ export class StageRepository {
     const current = Math.max(1, page);
     const where: Prisma.StageWhereInput = includeHidden ? {} : { isActive: true };
     if (ids) where.id = { in: ids };
-    if (search) {
-      where.OR = [
-        { nameEn: { contains: search, mode: 'insensitive' } },
-        { nameAr: { contains: search, mode: 'insensitive' } },
-      ];
-    }
+    const searched = searchWhere(search);
+    if (searched) where.OR = searched.OR;
     const [data, total] = await Promise.all([
       this.db.stage.findMany({
         where,

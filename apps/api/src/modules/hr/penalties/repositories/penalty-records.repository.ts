@@ -15,6 +15,7 @@ import { fromIsoDate, monthDateRange, toIsoDate } from '../../../../common/utils
 import { DatabaseService } from '../../../../database/database.service';
 import type { DbAdapter, DbClient } from '../../../../database/transactions';
 import { LEVEL_SELECT, type LevelData } from './penalty-catalogue.repository';
+import { codeContains, searchWhere } from '../../../../common/repositories/search';
 
 const USER_REF = { select: { id: true, name: true } } as const;
 
@@ -267,17 +268,10 @@ export class PenaltyRecordsRepository extends BaseRepository<
     else if (filter.status) where.status = filter.status;
     if (filter.stageId) where.stageId = filter.stageId;
     if (filter.month) where.date = monthDateRange(filter.month);
-    if (filter.search) {
-      const contains = { contains: filter.search, mode: 'insensitive' as const };
-      where.OR = [
-        { employee: { code: contains } },
-        { employee: { nameEn: contains } },
-        { employee: { nameAr: contains } },
-        { violation: { nameEn: contains } },
-        { violation: { nameAr: contains } },
-      ];
-    }
-    return this.findAllWithPagination(page, limit, undefined, undefined, where, {
+    // The employee's code or names, or the violation's names (the shared search on each).
+    const searched = searchWhere(filter.search);
+    if (searched) where.OR = [{ employee: searched }, { violation: searched }];
+    return this.findAllWithPagination(page, limit, undefined, where, {
       select: RECORD_SELECT,
       orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
     });
@@ -332,7 +326,7 @@ export class PenaltyRecordsRepository extends BaseRepository<
       where:
         'employeeId' in by
           ? { employeeId: by.employeeId }
-          : { employee: { code: { contains: by.code, mode: 'insensitive' } } },
+          : { employee: { code: codeContains(by.code) } },
       select: { id: true },
     });
     return rows.map((r) => r.id);

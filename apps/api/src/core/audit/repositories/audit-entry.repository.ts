@@ -14,6 +14,7 @@ import {
   type Paginated,
 } from '@school-erp/shared';
 import type { DbAdapter } from '../../../database/transactions';
+import { searchSql, searchWhere } from '../../../common/repositories/search';
 
 export interface NewAuditEntry {
   action: string;
@@ -96,15 +97,11 @@ const inRecords = (records: readonly RecordSet[]): Prisma.AuditEntryWhereInput[]
 function whereOf(filter: AuditEntryFilter): Prisma.AuditEntryWhereInput {
   const and: Prisma.AuditEntryWhereInput[] = [];
   if (filter.records) and.push({ OR: inRecords(filter.records) });
-  // The record's name in either language, or a record the search matched by its code.
-  if (filter.q) {
-    and.push({
-      OR: [
-        { entityLabel: { contains: filter.q, mode: 'insensitive' } },
-        { entityLabelAr: { contains: filter.q, mode: 'insensitive' } },
-        ...inRecords(filter.qRecords ?? []),
-      ],
-    });
+  // The record's name in either language (the shared search), or a record the search matched by
+  // its code.
+  const named = searchWhere(filter.q);
+  if (named) {
+    and.push({ OR: [...named.OR, ...inRecords(filter.qRecords ?? [])] });
   }
   for (const r of filter.restricted ?? []) {
     and.push({ NOT: { entityType: r.entityType, entityId: { notIn: [...r.ids] } } });
@@ -237,10 +234,9 @@ export class AuditEntryRepository {
     const record = recordsSql(filter.records);
     const scope = restrictionSql(restricted);
     const one = filter.id ? Prisma.sql`AND "actor_id" = ${filter.id}::uuid` : Prisma.empty;
-    // The search is on the name the person had most recently (what the picker shows), any case.
-    const named = filter.search
-      ? Prisma.sql`WHERE latest.name ILIKE ${`%${filter.search.replace(/[\\%_]/g, (c) => `\\${c}`)}%`}`
-      : Prisma.empty;
+    // The search is on the name the person had most recently (what the picker shows), by the shared
+    // rule (a handful of people: the fold runs on the fly, no index needed).
+    const named = filter.search ? Prisma.sql`WHERE ${searchSql(Prisma.sql`latest.name`, filter.search)}` : Prisma.empty;
     const limit = Math.min(Math.max(1, filter.limit ?? ACTORS_CAP), ACTORS_CAP);
     // The avatar comes from the account's linked employee (core's users and HR's employees tables:
     // reading is allowed, writing is not); none when the account is unlinked or gone.
