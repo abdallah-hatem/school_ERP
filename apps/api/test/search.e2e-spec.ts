@@ -23,6 +23,7 @@ describe('Arabic-aware database search (e2e)', () => {
   let app: INestApplication;
   let db: DatabaseService;
   let stageId: string;
+  let groupId: string;
   let violationId: string;
   /** Per case (index into `all`): the rows made for it. */
   const employees: string[] = [];
@@ -44,10 +45,20 @@ describe('Arabic-aware database search (e2e)', () => {
       (await http(app).post(path).send({ nameEn: unique('Search'), nameAr: 'بحث' }).expect(201)).body.data.id as string;
     const departmentId = await mk('/hr/departments');
     const jobTitleId = await mk('/hr/job-titles');
-    const group = await db.penaltyGroup.create({ data: { nameEn: unique('Search group'), nameAr: 'مجموعة' } });
+    // Through the API, so the violation has its levels (the penalties list works out each record's
+    // shown level from them).
+    groupId = (
+      await http(app)
+        .post('/hr/penalty-groups')
+        .send({ nameEn: unique('Search group'), nameAr: 'مجموعة' })
+        .expect(201)
+    ).body.data.id as string;
     violationId = (
-      await db.violation.create({ data: { groupId: group.id, nameEn: 'Qv lateness', nameAr: 'التأخير الصباحي' } })
-    ).id;
+      await http(app)
+        .post(`/hr/penalty-groups/${groupId}/violations`)
+        .send({ nameEn: 'Qv lateness', nameAr: 'التأخير الصباحي', levels: [{ level: 1, action: 'NOTICE' }] })
+        .expect(201)
+    ).body.data.id as string;
 
     for (const [i, [stored]] of all.entries()) {
       const other = `Qx${i}`;
@@ -107,7 +118,9 @@ describe('Arabic-aware database search (e2e)', () => {
 
   afterAll(async () => {
     await db.penaltyRecord.deleteMany({ where: { id: { in: penalties } } });
+    await db.violationLevel.deleteMany({ where: { violationId } });
     await db.violation.deleteMany({ where: { id: violationId } });
+    await db.penaltyGroup.deleteMany({ where: { id: groupId } });
     await db.user.deleteMany({ where: { id: { in: users } } });
     await db.role.deleteMany({ where: { id: { in: roles } } });
     await db.employee.deleteMany({ where: { id: { in: employees } } });
