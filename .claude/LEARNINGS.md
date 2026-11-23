@@ -17,9 +17,10 @@ Corrections recorded so they don't have to be repeated. Loaded at session start.
 - Only the merger writes `docs/BUILD_LOG.md` (CONVENTIONS → The PR): never tell an agent to edit it;
   its PR body carries a "Log entry". At session start, compare the log with PRs merged into `dev`
   and add what's missing. — 2026-11-18
-- Update `docs/BUILD_LOG.md` in the same turn as each merge or owner decision (a small docs PR is
-  fast now: docs-only PRs skip e2e/smoke). Never batch it for "after the next few merges" — the
-  owner had to ask twice ("dont forget frequent documentation"). — 2026-11-18
+- Update `docs/BUILD_LOG.md` in the same turn as each merge, owner decision, review result or work
+  started — not only after a merge, never batched (a small docs PR is fast: docs-only PRs skip
+  e2e/smoke). The owner has had to ask three times ("dont forget frequent documentation", "dont forget
+  to frequently document"). — 2026-11-18, 2026-11-23
 - Every brief for a PR that changes a screen asks for headless screenshots (EN desktop + AR phone)
   from a scratch copy on a throwaway database before reporting — "stay off the shared databases"
   means use a throwaway one, not skip the look. The owner wants changed screens seen before merge
