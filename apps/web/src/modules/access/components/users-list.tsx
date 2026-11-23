@@ -108,7 +108,9 @@ export function UsersList({ basePath, query, rows, total, selectedRole = null, l
       id: 'name',
       header: t('access.users.columns.name'),
       card: 'title',
-      className: 'min-w-48',
+      // Capped like the email: a long name truncates instead of pushing the table past its card at
+      // 1440 (the smoke users' long emails and the seeded heads' three-part names did).
+      className: 'min-w-48 max-w-52',
       skeleton: <SkeletonIdentity />,
       cell: (u) => (
         <span className="flex min-w-0 items-center gap-3">
@@ -132,7 +134,7 @@ export function UsersList({ basePath, query, rows, total, selectedRole = null, l
       id: 'email',
       header: t('access.users.columns.email'),
       card: 'hidden',
-      className: 'max-w-56',
+      className: 'max-w-48',
       cell: (u) => (
         <bdi dir="ltr" title={u.email} className="block truncate text-muted-foreground">
           {u.email}
@@ -143,7 +145,7 @@ export function UsersList({ basePath, query, rows, total, selectedRole = null, l
       id: 'roles',
       header: t('access.users.columns.roles'),
       card: 'wide',
-      className: 'min-w-44 whitespace-normal',
+      className: 'min-w-40 whitespace-normal',
       skeleton: <SkeletonPill className="w-24" />,
       cell: (u) =>
         u.roles.length ? <RoleChips roles={u.roles} /> : <span className="text-muted-foreground">—</span>,

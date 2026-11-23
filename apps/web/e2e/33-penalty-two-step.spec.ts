@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import {
+  BuiltInRole,
   EmployeeStatus,
   PAGINATION,
   type EmployeeSummary,
@@ -12,7 +13,7 @@ import { Api } from './support/api';
 import { env } from './support/env';
 import { t } from './support/i18n';
 import { openDay } from './support/penalties';
-import { settled } from './support/role-access';
+import { makeRoleUser, settled } from './support/role-access';
 import { settle, shoot } from './support/ui';
 import { settleStreams } from './support/stream';
 
@@ -21,10 +22,12 @@ settleStreams();
 
 /**
  * Runs in the `desktop-en` project (1440×900). §4 two steps and §3 several stages (owner
- * 2026-11-21), end to end on the seeded demo: the primary head records a penalty for the
+ * 2026-11-21), end to end on the seeded demo: an HR officer records a penalty for the
  * multi-stage teacher **in prep** → it waits for the prep head (Pending stage review) → the prep
  * head approves it from the list (→ Waiting for HR) and rejects another with a reason → the
- * primary head never sees either (404). The seed's stage heads sign in with the admin's password.
+ * primary head never sees either (404). The primary head can't record it in prep at all: a stage
+ * head records only in their own stages (owner 2026-11-23, security review M2 — this spec used
+ * to have them record it). The seed's stage heads sign in with the admin's password.
  */
 
 const locale = 'en' as const;
@@ -56,16 +59,21 @@ test('the stage review: recorded in prep → the prep head approves one and reje
   const date = await openDay(admin);
   await admin.dispose();
 
-  // The primary head records two in prep: not their stage, so their recording is no review.
+  const body = {
+    employeeId: teacher!.id,
+    violationId: repeatable!.id,
+    stageId: prep!.id,
+    date,
+    note: 'Smoke: two-step review',
+  };
+  // The primary head can't record it in prep: not their stage (M2).
   const primaryHead = await Api.as(PRIMARY_HEAD, env.adminPassword);
-  const record = () =>
-    primaryHead.post<PenaltyRecord>('/hr/penalties', {
-      employeeId: teacher!.id,
-      violationId: repeatable!.id,
-      stageId: prep!.id,
-      date,
-      note: 'Smoke: two-step review',
-    });
+  expect(await primaryHead.status('post', '/hr/penalties', body)).toBe(400);
+  // An HR officer records two in prep: they review nothing, so it waits for the prep head.
+  const officer = await makeRoleUser(BuiltInRole.HR_OFFICER);
+  const officerApi = await Api.as(officer.email, officer.password);
+  expect(await officerApi.status('post', '/account/password', { newPassword: 'own-officer-password-33' })).toBe(204);
+  const record = () => officerApi.post<PenaltyRecord>('/hr/penalties', body);
   const toApprove = await record();
   const toReject = await record();
   expect(toApprove).toMatchObject({ status: 'PENDING_REVIEW', stage: { id: prep!.id } });
@@ -105,10 +113,11 @@ test('the stage review: recorded in prep → the prep head approves one and reje
   await rejectButton.click();
   await expect(reject).toBeHidden();
 
-  // The other stage's head (the recorder here) never sees them: 404, and acting on them 404 too (L2).
+  // The other stage's head never sees them: 404, and acting on them 404 too (L2).
   expect(await primaryHead.status('get', `/hr/penalties/${toApprove.id}`)).toBe(404);
   expect(await primaryHead.status('post', `/hr/penalties/${toReject.id}/review/approve`)).toBe(404);
   const rejected = await (await Api.asAdmin()).get<PenaltyRecord>(`/hr/penalties/${toReject.id}`);
   expect(rejected).toMatchObject({ status: 'REJECTED', rejectedStep: 'REVIEW', rejectionReason: 'He was on an official task that day' });
   await primaryHead.dispose();
+  await officerApi.dispose();
 });

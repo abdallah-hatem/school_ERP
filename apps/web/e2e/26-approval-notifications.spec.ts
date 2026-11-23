@@ -80,7 +80,8 @@ test('a recorded penalty reaches the principal’s bell, opens on itself, and re
   await expect(bell(hrPage)).toHaveAccessibleName(t(locale, 'notifications.bell.label'));
   await bell(hrPage).click();
   const done = list(hrPage).getByTestId('notification-row').filter({ hasText: employee });
-  await expect(done).toContainText(t(locale, 'notifications.resolved.approved', { name: 'Smoke Principal / administrative director' }));
+  // Named as HR knows them: the principal's account is linked to its employee record (§6).
+  await expect(done).toContainText(t(locale, 'notifications.resolved.approved', { name: principal.displayName }));
   await settle(hrPage);
   await shoot(hrPage, info, 'penalty-approved-by-en-desktop');
   // Unread lists what the bell counts: the done one, though never read, isn't there.
