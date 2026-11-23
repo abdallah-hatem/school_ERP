@@ -29,13 +29,14 @@ function makeService(found: RefreshToken | null = row()) {
     insert: jest.fn().mockResolvedValue(undefined),
     rotate: jest.fn().mockResolvedValue(true),
     revokeFamily: jest.fn().mockResolvedValue(undefined),
+    findById: jest.fn().mockResolvedValue(null),
   };
   const config = {
     getOrThrow: () => ({
       accessSecret: 'x'.repeat(32),
       accessTtlSeconds: 900,
       refreshTtlDays: 14,
-      refreshReuseGraceSeconds: 30,
+      refreshReuseGraceSeconds: 10,
       cookieSecure: false,
     }),
   } as unknown as ConfigService;
@@ -62,14 +63,52 @@ describe('TokensService.rotate', () => {
     expect(next).toMatchObject({ familyId: 'fam-1', tokenHash: sha(result.refreshToken) });
   });
 
-  it('accepts a reuse inside the grace window (parallel refreshes)', async () => {
-    const { service, repo } = makeService(row({ usedAt: new Date(NOW.getTime() - 29_000) }));
-    await expect(service.rotate('raw', NOW)).resolves.toMatchObject({ ok: true });
+  /** The successor a first rotation of 'raw' gives (it is derived from the token, so always the same). */
+  async function successorOfRaw(): Promise<string> {
+    const result = await makeService().service.rotate('raw', NOW);
+    if (!result.ok) throw new Error('expected ok');
+    return result.refreshToken;
+  }
+
+  it('L5 — a reuse inside the grace window gets the pair already issued, minting nothing (idempotent)', async () => {
+    const successor = await successorOfRaw();
+    const usedAt = new Date(NOW.getTime() - 9_000);
+    const { service, repo } = makeService(row({ usedAt, replacedById: 'rt-2' }));
+    repo.findById.mockResolvedValue(row({ id: 'rt-2', tokenHash: sha(successor) }));
+    await expect(service.rotate('raw', NOW)).resolves.toEqual({
+      ok: true,
+      userId: 'u-1',
+      familyId: 'fam-1',
+      refreshToken: successor,
+      // The access token is signed as of the first use: the same token again.
+      issuedAt: usedAt,
+    });
+    expect(repo.rotate).not.toHaveBeenCalled();
+    expect(repo.insert).not.toHaveBeenCalled();
     expect(repo.revokeFamily).not.toHaveBeenCalled();
   });
 
-  it('revokes the family on a reuse after the grace window', async () => {
-    const { service, repo } = makeService(row({ usedAt: new Date(NOW.getTime() - 31_000) }));
+  it('L5 — a parallel refresh that loses the claim answers with the winner’s pair', async () => {
+    const successor = await successorOfRaw();
+    const { service, repo } = makeService();
+    repo.rotate.mockResolvedValue(false);
+    repo.findByHash
+      .mockResolvedValueOnce(row())
+      .mockResolvedValueOnce(row({ usedAt: NOW, replacedById: 'rt-2' }));
+    repo.findById.mockResolvedValue(row({ id: 'rt-2', tokenHash: sha(successor) }));
+    await expect(service.rotate('raw', NOW)).resolves.toMatchObject({ ok: true, refreshToken: successor });
+  });
+
+  it('L5 — inside the grace window but the successor is revoked (signed out) → refused, nothing new', async () => {
+    const successor = await successorOfRaw();
+    const { service, repo } = makeService(row({ usedAt: new Date(NOW.getTime() - 5_000), replacedById: 'rt-2' }));
+    repo.findById.mockResolvedValue(row({ id: 'rt-2', tokenHash: sha(successor), revokedAt: NOW }));
+    await expect(service.rotate('raw', NOW)).resolves.toEqual({ ok: false, reason: 'revoked' });
+    expect(repo.rotate).not.toHaveBeenCalled();
+  });
+
+  it('L5 — revokes the family on a reuse after the (10 s) grace window', async () => {
+    const { service, repo } = makeService(row({ usedAt: new Date(NOW.getTime() - 11_000) }));
     await expect(service.rotate('raw', NOW)).resolves.toEqual({ ok: false, reason: 'reused' });
     expect(repo.revokeFamily).toHaveBeenCalledWith('fam-1', NOW);
     expect(repo.rotate).not.toHaveBeenCalled();

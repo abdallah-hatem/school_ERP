@@ -6,7 +6,9 @@ import {
   SYSTEM_ADMIN_ROLE,
   type AuthUser,
   type EmployeeOption,
+  type HeldGrants,
   type Paginated,
+  type RoleRef,
   type UserAccount,
   type UserSessionsEndedEvent,
 } from '@school-erp/shared';
@@ -27,11 +29,25 @@ import type {
 import { UsersRepository, type UserAccountRow } from './repositories/users.repository';
 import { accountSnapshot, toEmployeeOption, toUserAccount } from './users.pure';
 
+/** Who is acting: the signed-in user; absent when the system itself acts (seed, scripts). */
+type Actor = Pick<AuthUser, 'id'> | undefined;
+
 /**
  * Administration → Users (R9, spec P2): a System admin creates accounts (no self sign-up), gives
  * them roles, links an employee, deactivates and reactivates them and sets temporary passwords;
  * every user changes their own password. Every write is audited (R8, `core.user.*`) inside the
  * request's transaction, and the last active System admin can never lose the role (edge case 5).
+ *
+ * The access ceiling (security review H1, owner 2026-11-23). Someone with `core.users.manage` who
+ * isn't a System admin:
+ * - can't give or take away the System admin role, nor edit, reset the password of, deactivate or
+ *   reactivate a user who holds it (403 `SYSTEM_ADMIN_ONLY`);
+ * - may give or take away only roles whose every grant is within their own (`grantWithinCeiling`:
+ *   the same key, a scope reaching no further), and may manage only users whose every grant is
+ *   within it — else they could reset a stronger user's password and sign in as them (403
+ *   `GRANT_EXCEEDS_OWN`).
+ * Nobody — a System admin included — changes their own roles or employee record (403
+ * `OWN_ACCESS_CHANGE`): another administrator does.
  */
 @Injectable()
 export class UserAccountsService {
@@ -67,10 +83,10 @@ export class UserAccountsService {
     return toUserAccount(row, locked.get(row.email) ?? null);
   }
 
-  async create(dto: CreateUserDto): Promise<UserAccount> {
+  async create(dto: CreateUserDto, actor?: Actor): Promise<UserAccount> {
     const email = normalizeEmail(dto.email);
     await this.assertEmailFree(email);
-    await this.roles.refsByIds(dto.roleIds);
+    await this.assertMayAssign(await this.roles.refsByIds(dto.roleIds), await this.roles.ceilingOf(actor));
     const employeeId = dto.employeeId ?? null;
     if (employeeId) await this.assertEmployeeFree(employeeId);
 
@@ -90,8 +106,22 @@ export class UserAccountsService {
     return user;
   }
 
-  async update(id: string, dto: UpdateUserDto): Promise<UserAccount> {
+  async update(id: string, dto: UpdateUserDto, actor?: Actor): Promise<UserAccount> {
     const before = await this.get(id);
+    const ceiling = await this.roles.ceilingOf(actor);
+    await this.assertMayManage(before, ceiling);
+    const heldIds = new Set(before.roles.map((r) => r.id));
+    const nextIds = dto.roleIds === undefined ? heldIds : new Set(dto.roleIds);
+    const changedRoleIds = [
+      ...[...nextIds].filter((r) => !heldIds.has(r)),
+      ...[...heldIds].filter((r) => !nextIds.has(r)),
+    ];
+    const changesEmployee =
+      dto.employeeId !== undefined && (dto.employeeId ?? null) !== (before.employee?.id ?? null);
+    // H1: nobody changes their own access — not their roles, not who they are in HR.
+    if (actor?.id === id && (changedRoleIds.length > 0 || changesEmployee)) {
+      throw new CodedException(HttpStatus.FORBIDDEN, ErrorCode.OWN_ACCESS_CHANGE);
+    }
     const email = dto.email === undefined ? undefined : normalizeEmail(dto.email);
     if (email !== undefined && email !== before.email) await this.assertEmailFree(email, id);
     if (dto.employeeId && dto.employeeId !== before.employee?.id) {
@@ -100,6 +130,8 @@ export class UserAccountsService {
 
     if (dto.roleIds !== undefined) {
       const next = await this.roles.refsByIds(dto.roleIds);
+      // H1: the roles given or taken away must be within the actor's own grants.
+      await this.assertMayAssign(await this.roles.refsByIds(changedRoleIds), ceiling);
       const losesAdmin =
         before.roles.some((r) => r.key === SYSTEM_ADMIN_ROLE) &&
         !next.some((r) => r.key === SYSTEM_ADMIN_ROLE);
@@ -119,8 +151,9 @@ export class UserAccountsService {
   }
 
   /** Edge case 6 — the user's sessions end at once: their next request is a 401. */
-  async deactivate(id: string): Promise<UserAccount> {
+  async deactivate(id: string, actor?: Actor): Promise<UserAccount> {
     const before = await this.get(id);
+    await this.assertMayManage(before, await this.roles.ceilingOf(actor));
     if (!before.isActive) return this.recordStatus('core.user.deactivate', before, before);
     if (before.roles.some((r) => r.key === SYSTEM_ADMIN_ROLE)) {
       await this.roles.assertAnotherSystemAdmin(id);
@@ -130,15 +163,17 @@ export class UserAccountsService {
     return this.recordStatus('core.user.deactivate', before, await this.get(id));
   }
 
-  async reactivate(id: string): Promise<UserAccount> {
+  async reactivate(id: string, actor?: Actor): Promise<UserAccount> {
     const before = await this.get(id);
+    await this.assertMayManage(before, await this.roles.ceilingOf(actor));
     if (!before.isActive) await this.users.update(id, { isActive: true });
     return this.recordStatus('core.user.reactivate', before, await this.get(id));
   }
 
   /** An admin sets a temporary password: the user must change it, and their sessions end. */
-  async setTemporaryPassword(id: string, password: string): Promise<void> {
+  async setTemporaryPassword(id: string, password: string, actor?: Actor): Promise<void> {
     const user = await this.get(id);
+    await this.assertMayManage(user, await this.roles.ceilingOf(actor));
     await this.users.update(id, {
       passwordHash: await hashPassword(password),
       mustChangePassword: true,
@@ -190,8 +225,17 @@ export class UserAccountsService {
    *
    * Both paths have the sign-in limit: while the account is locked the change is refused (429)
    * before any password is checked, and a wrong current password counts as a wrong sign-in.
+   *
+   * Security review M3 (2026-11-23): a changed password ends every **other** sign-in of the user
+   * (`core.user.sessions_ended`, reason `password_changed`, after the commit) — whoever knew the old
+   * password is signed out. `currentSession` (the refresh-token family of the request's access
+   * token) is kept, so the person changing it stays signed in.
    */
-  async changeOwnPassword(me: AuthUser, dto: ChangePasswordDto): Promise<void> {
+  async changeOwnPassword(
+    me: AuthUser,
+    dto: ChangePasswordDto,
+    currentSession?: string,
+  ): Promise<void> {
     await this.signInLimit.assertNotLocked(me.email);
     const hash = await this.users.findPasswordHash(me.id);
     if (!hash) throw new CodedException(HttpStatus.BAD_REQUEST, ErrorCode.WRONG_PASSWORD);
@@ -219,6 +263,8 @@ export class UserAccountsService {
         action: 'core.user.change_password',
         entity: { type: AuditEntityType.USER, id: me.id, label: me.name },
       });
+      // M3: every other sign-in ends after the commit; the one that changed it stays.
+      await this.endSessions(me.id, 'password_changed', currentSession);
     });
   }
 
@@ -240,10 +286,40 @@ export class UserAccountsService {
   private async endSessions(
     userId: string,
     reason: UserSessionsEndedEvent['reason'],
+    keepFamilyId?: string,
   ): Promise<void> {
-    const event: UserSessionsEndedEvent = { userId, reason, at: new Date().toISOString() };
+    const event: UserSessionsEndedEvent = {
+      userId,
+      reason,
+      at: new Date().toISOString(),
+      ...(keepFamilyId ? { keepFamilyId } : {}),
+    };
     // Fire-and-forget, after the commit.
     await this.events.publish(CoreEvent.USER_SESSIONS_ENDED, event);
+  }
+
+  /**
+   * H1: a non-System-admin manages only users within their ceiling — never a System admin (403
+   * `SYSTEM_ADMIN_ONLY`), never someone holding a grant beyond theirs (403 `GRANT_EXCEEDS_OWN`).
+   */
+  private async assertMayManage(target: UserAccount, ceiling: HeldGrants): Promise<void> {
+    if (ceiling.isSystemAdmin) return;
+    if (target.roles.some((r) => r.key === SYSTEM_ADMIN_ROLE)) {
+      throw new CodedException(HttpStatus.FORBIDDEN, ErrorCode.SYSTEM_ADMIN_ONLY);
+    }
+    this.roles.assertWithinCeiling(ceiling, await this.roles.grantsOfRoles(target.roles.map((r) => r.id)));
+  }
+
+  /**
+   * H1: a non-System-admin gives or takes away only roles within their ceiling — never the System
+   * admin role (403 `SYSTEM_ADMIN_ONLY`), never one granting beyond theirs (403 `GRANT_EXCEEDS_OWN`).
+   */
+  private async assertMayAssign(roles: readonly RoleRef[], ceiling: HeldGrants): Promise<void> {
+    if (ceiling.isSystemAdmin || roles.length === 0) return;
+    if (roles.some((r) => r.key === SYSTEM_ADMIN_ROLE)) {
+      throw new CodedException(HttpStatus.FORBIDDEN, ErrorCode.SYSTEM_ADMIN_ONLY);
+    }
+    this.roles.assertWithinCeiling(ceiling, await this.roles.grantsOfRoles(roles.map((r) => r.id)));
   }
 
   private async row(id: string): Promise<UserAccountRow> {

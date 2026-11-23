@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type { AuthUser, PermissionKey, PermissionScope } from '@school-erp/shared';
+import type { AuthUser, HeldGrants, PermissionKey, PermissionScope } from '@school-erp/shared';
 import { ClsService } from 'nestjs-cls';
-import { resolveGrants, type ResolvedGrants } from './grants.pure';
+import { heldGrantsFrom, resolveGrants, type ResolvedGrants } from './grants.pure';
 import { GrantsRepository, type UserLink } from './repositories/grants.repository';
 
 /**
@@ -59,6 +59,15 @@ export class PermissionsService {
       if (scope) out.push({ userId, scope });
     }
     return out;
+  }
+
+  /**
+   * Every grant of every role the user holds, and whether they are a System admin — the ceiling of
+   * what they may give others (security review H1/H2; `grantWithinCeiling` in shared). Read fresh,
+   * not from the request cache: it guards a write.
+   */
+  async heldGrants(user: Who): Promise<HeldGrants> {
+    return heldGrantsFrom(await this.grants.grantsOf(user.id));
   }
 
   /** The user's linked employee (who they are in HR), or null. */

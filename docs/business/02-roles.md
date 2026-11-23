@@ -58,9 +58,13 @@
   Stage head holds it for their own stages; the System admin holds everything. The HR step stays
   **Approve penalties** (HR manager, principal). The HR manager does not hold the stage review.
   Cancelling stays as before (HR manager, principal). Nobody reviews, approves or rejects a penalty
-  given to themselves.
+  given to themselves — **nor cancels it** (owner, 2026-11-23).
 - **GUESS** — Payroll is prepared by an HR officer and **approved by the HR manager**; the
   accountant views and exports it.
+- **DECIDED** (owner, 2026-11-23) — **Separation of duties in payroll** (§6): nobody adds or removes
+  an adjustment on their own payroll line, and nobody approves a month in which they adjusted their
+  own line. Whoever created the month's run may still approve it, as long as they adjusted no line of
+  their own.
 - **DECIDED** (owner, 2026-11-21; not built) — **Leave** (Planned) will need the approval of **every
   one** of the employee's stage heads (an employee can belong to several stages, §3), then HR. This
   records the decision only; leave isn't built.
@@ -71,15 +75,19 @@
   payroll lines — names, codes, departments, days deducted, lateness minutes and flags — without any
   money, plus the run **totals** for the whole school (on the Payroll screen, the dashboard and the
   activity log alike), never one person's pay. Adding an employee needs to see
-  every salary (the pay is set when adding); the bank sheet too.
+  every salary (the pay is set when adding); the bank sheet too. Someone who may edit an employee but
+  not see their salary can't change it either — that includes setting them **not insured** while they
+  have an insured salary, which would clear it (2026-11-23).
 - **GUESS** (enforced, P4) — A stage head sees only their stage's employees; a direct manager only
   the employees they directly manage. **DECIDED** (owner, 2026-11-21): a user is tied to stages
   through their employee record — the linked employee's **main stage and their other stages** ("also
   teaches in", §3) — so a stage head of two stages sees the employees of both, and an employee of
   two stages is seen by both stages' heads. **Penalties go by the penalty's stage** (where the
   violation happened, §4), not the employee's: the head of an employee's other stage doesn't see,
-  isn't told about and can't act on a penalty from a stage that isn't theirs (opening it shows
-  "This page isn't here"). That covers every list, count, search, picker and dashboard
+  isn't told about and can't act on a penalty from a stage that isn't theirs (opening it, or acting on
+  it, shows "This page isn't here"). **DECIDED** (owner, 2026-11-23): a stage head records penalties
+  only in their own stages — for a teacher shared with another stage, the record form offers only
+  theirs. That covers every list, count, search, picker and dashboard
   figure, their penalties, lateness and payroll lines, and the activity log's entries about them.
   Opening anyone else shows "This page isn't here", as for a record that doesn't exist. Someone in
   such a role who has no employee record sees nobody. Each screen, tab, section and button is
@@ -111,6 +119,25 @@
   permission ("Adjust payroll"), held by the System admin, HR manager and HR officer (§6). Anyone
   else who sees the run sees its adjustments without being able to change them.
 - **DECIDED** — The last System admin can't be removed or deactivated.
+- **DECIDED** (owner, 2026-11-23, security review "fix all") — **Nobody gives more than they hold.**
+  Someone who may manage users or roles but isn't a System admin:
+  - can't give or take away the **System admin** role, and can't edit, give a temporary password to,
+    deactivate or reactivate a **System admin's** account ("Only a System admin can …");
+  - may give or take away only roles whose every permission they hold themselves, reaching no
+    further than theirs, and may manage only accounts that hold no more than they do (so nobody can
+    reset a stronger person's password and sign in as them);
+  - may put into a role only permissions they hold, at the same reach or narrower, and can't change
+    a role they hold themselves or one a System admin holds.
+
+  "Reaching no further": *everyone* covers every reach; *their stage* covers their stage and
+  *themselves only*; *their team* covers their team and *themselves only*; *themselves only* covers
+  only itself. A stage and a team don't cover each other. A System admin has no such limit. The
+  screens grey out what can't be given, with the reason.
+- **DECIDED** (owner, 2026-11-23) — **Nobody changes their own roles or their own employee record**,
+  a System admin included: another administrator does it. Their name and email they may change.
+- **DECIDED** (owner, 2026-11-23) — **Changing your password signs you out everywhere else**: every
+  other signed-in device must sign in again with the new password; the one you changed it from stays
+  signed in.
 - **DECIDED** (owner, 2026-11-19) — **Any role but the System admin can be deleted once nobody holds
   it** — a starting role as well as a custom one. A role someone still holds can't be deleted: Delete
   says who still holds it ("3 users still hold it"), and the role must be taken away from them on

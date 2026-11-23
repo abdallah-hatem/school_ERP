@@ -67,6 +67,14 @@
       "other": "Approving this will raise the level of {count} approved penalties:"
     },
     "item": "{date}: level {from} → {to}, {action}",
+    "elsewhere": {
+      "zero": "And approved penalties in other stages, which you don't see.",
+      "one": "And 1 approved penalty in another stage, which you don't see.",
+      "two": "And 2 approved penalties in other stages, which you don't see.",
+      "few": "And {count} approved penalties in other stages, which you don't see.",
+      "many": "And {count} approved penalties in other stages, which you don't see.",
+      "other": "And {count} approved penalties in other stages, which you don't see."
+    },
     "actionChange": "{from} → {to}",
     "recordNote": "Recording changes nothing: they change only when this penalty is approved.",
     "approveNote": "It was recorded with an earlier date than these, so they move up one level each."

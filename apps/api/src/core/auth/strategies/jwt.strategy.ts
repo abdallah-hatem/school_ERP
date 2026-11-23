@@ -3,6 +3,10 @@ import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import type { AuthUser } from '@school-erp/shared';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import {
+  SESSION_FAMILY_KEY,
+  type RequestWithSession,
+} from '../../../common/decorators/current-session.decorator';
 import type { AppConfig } from '../../../config';
 import { UsersService } from '../../users';
 import type { AccessPayload } from '../services/tokens.service';
@@ -24,12 +28,15 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       ignoreExpiration: false,
       secretOrKey: config.getOrThrow<AppConfig['auth']>('auth').accessSecret,
       algorithms: ['HS256'],
+      passReqToCallback: true,
     });
   }
 
-  async validate(payload: AccessPayload): Promise<AuthUser> {
+  async validate(req: RequestWithSession, payload: AccessPayload): Promise<AuthUser> {
     const user = await this.users.findActiveAuthUser(payload.sub);
     if (!user) throw new UnauthorizedException();
+    // Which sign-in this is (`CurrentSession`): a password change keeps it and ends the others (M3).
+    if (typeof payload.fam === 'string') req[SESSION_FAMILY_KEY] = payload.fam;
     return user;
   }
 }

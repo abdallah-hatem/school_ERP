@@ -1,5 +1,6 @@
-import { ErrorCode, PERMISSION_KEYS } from '@school-erp/shared';
+import { ErrorCode, PERMISSION_KEYS, type HeldGrants } from '@school-erp/shared';
 import type { AuditService } from '../audit';
+import type { PermissionsService } from '../permissions';
 import type { RoleRow, RolesRepository } from './repositories/roles.repository';
 import { RolesService } from './roles.service';
 
@@ -16,7 +17,10 @@ function row(overrides: Partial<RoleRow> = {}): RoleRow {
   };
 }
 
-function makeService(found: RoleRow = row(), opts: { otherAdmins?: number } = {}) {
+function makeService(
+  found: RoleRow = row(),
+  opts: { otherAdmins?: number; held?: HeldGrants; heldByActor?: boolean; heldByAdmin?: boolean } = {},
+) {
   let current = found;
   const repo = {
     findById: jest.fn(() => Promise.resolve(current)),
@@ -30,11 +34,15 @@ function makeService(found: RoleRow = row(), opts: { otherAdmins?: number } = {}
     findRefsByIds: jest.fn(),
     lockSystemAdminRole: jest.fn(() => Promise.resolve()),
     countOtherActiveSystemAdmins: jest.fn(() => Promise.resolve(opts.otherAdmins ?? 0)),
+    isHeldBy: jest.fn(() => Promise.resolve(opts.heldByActor ?? false)),
+    isHeldBySystemAdmin: jest.fn(() => Promise.resolve(opts.heldByAdmin ?? false)),
   };
   const audit = { record: jest.fn(() => Promise.resolve()) };
+  const permissions = { heldGrants: jest.fn(() => Promise.resolve(opts.held ?? { isSystemAdmin: true, grants: [] })) };
   const service = new RolesService(
     repo as unknown as RolesRepository,
     audit as unknown as AuditService,
+    permissions as unknown as PermissionsService,
   );
   return { service, repo, audit };
 }
@@ -166,5 +174,64 @@ describe('RolesService', () => {
     await expect(
       makeService(row(), { otherAdmins: 1 }).service.assertAnotherSystemAdmin('u-1'),
     ).resolves.toBeUndefined();
+  });
+
+  describe('H2 — core.roles.manage has a ceiling (security review, owner 2026-11-23)', () => {
+    const me = { id: 'u-me' };
+    const held: HeldGrants = {
+      isSystemAdmin: false,
+      grants: [
+        { key: 'core.roles.manage', scope: 'all' },
+        { key: 'hr.employees.view', scope: 'own_stage' },
+      ],
+    };
+
+    it('creating a role with a key the actor lacks, or wider than theirs → 403 GRANT_EXCEEDS_OWN; within → created', async () => {
+      const { service, repo } = makeService(row(), { held });
+      for (const permissions of [
+        [{ key: 'hr.payroll.approve' as const, scope: 'all' as const }],
+        [{ key: 'hr.employees.view' as const, scope: 'all' as const }],
+        [{ key: 'hr.employees.view' as const, scope: 'own_team' as const }],
+      ]) {
+        await expect(service.create({ nameEn: 'X', nameAr: 'س', permissions }, me)).rejects.toMatchObject({
+          code: ErrorCode.GRANT_EXCEEDS_OWN,
+        });
+      }
+      expect(repo.create).not.toHaveBeenCalled();
+      await service.create({ nameEn: 'X', nameAr: 'س', permissions: [{ key: 'hr.employees.view', scope: 'self' }] }, me);
+      expect(repo.create).toHaveBeenCalled();
+    });
+
+    it('editing a role the actor holds → 403 ROLE_HELD_BY_YOU, names included', async () => {
+      const { service, repo } = makeService(row(), { held, heldByActor: true });
+      await expect(service.update('r-1', { nameEn: 'Renamed' }, me)).rejects.toMatchObject({
+        code: ErrorCode.ROLE_HELD_BY_YOU,
+      });
+      expect(repo.updateNames).not.toHaveBeenCalled();
+    });
+
+    it('editing a role a System admin holds, or the System admin role → 403 ROLE_HELD_BY_SYSTEM_ADMIN', async () => {
+      await expect(
+        makeService(row(), { held, heldByAdmin: true }).service.update('r-1', { nameEn: 'X' }, me),
+      ).rejects.toMatchObject({ code: ErrorCode.ROLE_HELD_BY_SYSTEM_ADMIN });
+      await expect(
+        makeService(row({ key: 'system_admin', builtIn: true }), { held }).service.update('r-1', { nameEn: 'X' }, me),
+      ).rejects.toMatchObject({ code: ErrorCode.ROLE_HELD_BY_SYSTEM_ADMIN });
+    });
+
+    it('editing permissions beyond the ceiling → 403 GRANT_EXCEEDS_OWN, nothing replaced', async () => {
+      const { service, repo } = makeService(row(), { held });
+      await expect(
+        service.update('r-1', { permissions: [{ key: 'core.users.manage', scope: 'all' }] }, me),
+      ).rejects.toMatchObject({ code: ErrorCode.GRANT_EXCEEDS_OWN });
+      expect(repo.replaceGrants).not.toHaveBeenCalled();
+    });
+
+    it('a System admin (or the system itself) has no ceiling', async () => {
+      const { service, repo } = makeService(row(), { held: { isSystemAdmin: true, grants: [] }, heldByActor: true });
+      await service.update('r-1', { permissions: [{ key: 'core.users.manage', scope: 'all' }] }, me);
+      expect(repo.replaceGrants).toHaveBeenCalled();
+      await makeService().service.create({ nameEn: 'X', nameAr: 'س', permissions: [{ key: 'core.users.manage', scope: 'all' }] });
+    });
   });
 });

@@ -123,6 +123,8 @@ for (const locale of ['en', 'ar'] as const) {
     const api = await Api.asAdmin();
     const admin = await adminAccount(api);
     const roles = await rolesByKey(api);
+    // Someone else's page, for the employee picker: nobody changes their own employee record (H1).
+    const other = await makeUser(api, { name: `Picker Person ${locale}`, roleIds: [roles.get('hr_officer')?.id ?? ''] });
     await api.dispose();
 
     await signIn(page, locale);
@@ -149,11 +151,15 @@ for (const locale of ['en', 'ar'] as const) {
     await expect(page.getByText(t(locale, 'access.users.lastAdmin'))).toBeVisible();
     await expect(page.getByRole('button', { name: t(locale, 'access.userForm.save') })).toBeDisabled();
     await expect(page.getByText(t(locale, 'access.userForm.noChanges'))).toBeVisible();
+    // Their own account (the admin is signed in): roles and employee record are locked, saying why.
+    await expect(page.getByTestId('own-access-note')).toHaveCount(2);
+    await expect(page.getByRole('combobox', { name: t(locale, 'access.userForm.employeeField') })).toBeDisabled();
     await expectNoHorizontalScroll(page);
     await settle(page);
     await shoot(page, info, `user-edit-${locale}-desktop`);
 
-    // The linked-employee picker searches on the server.
+    // The linked-employee picker searches on the server (on someone else's page).
+    await page.goto(`/${locale}/users/${other.id}`);
     await page.getByRole('combobox', { name: t(locale, 'access.userForm.employeeField') }).click();
     await expect(page.getByRole('listbox', { name: t(locale, 'access.userForm.employeeField') })).toBeVisible();
     await settle(page);

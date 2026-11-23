@@ -186,6 +186,31 @@ from one IP all get in; 11 rapid sign-ins on one email → 429).
   uniquelocal` and `TRUST_CLOUDFLARE=true`. A school's own server without Cloudflare:
   `TRUST_PROXY` naming its proxy, Cloudflare off.
 
+### Sessions and the fetch cache (security review, 2026-11-23)
+
+- **Refresh-token reuse grace** (`REFRESH_REUSE_GRACE_SECONDS`, default **10 s**, max 120): a rotated
+  refresh token used again inside it — parallel requests refreshing with the same cookie — gets the
+  **very pair its first use got**, never a new one. The successor refresh token is derived from the
+  used one with HMAC-SHA-512 under the signing secret (`TokensService.successorOf`), so it can be
+  given again without being stored in the clear; the access token is signed as of the rotation
+  (`iat` = the token's `used_at`), so it is the same string too. A parallel refresh that loses the
+  claim (the row's `used_at` is set first, inside the rotation's transaction) answers with the
+  winner's pair. A successor already revoked (signed out) → 401. After the window a reuse is theft:
+  the whole family is revoked (401).
+- **Access tokens name their sign-in** (`fam`: the refresh-token family). A password change
+  (`POST /account/password`) ends every other sign-in of the user — `core.user.sessions_ended` with
+  `keepFamilyId`, after the change commits — and keeps the caller's. Their access tokens die within
+  their 15 minutes, like after a temporary password; refresh is refused at once. A token issued before
+  `fam` existed keeps no sign-in: all end, the caller signs in again.
+- **No per-user answer in Next's data cache.** Next 16 without `cacheComponents` (ours) caches no
+  `fetch` by default, and `next: { tags }` alone doesn't opt in — but `apiFetch` doesn't rely on that:
+  any request carrying a session is `cache: 'no-store'` and loses any `revalidate`
+  (`withCachePolicy`, `apps/web/src/lib/fetch-cache.ts`). Tags stay, so a write's `updateTag` still
+  refreshes the page, which then fetches afresh. Only public requests (the sign-in page's school name
+  and logo, the app icons) may be cached. `fetch-cache.test.ts` guards it: the policy, no
+  `use cache` / `unstable_cache` / route `revalidate` or `fetchCache` in `src`, no `cacheComponents`
+  in `next.config.ts`, and no `fetch()` to the API outside `apiFetch` (and the token refresh).
+
 ### Uploads
 
 - **Checked by their bytes** (`detectImageType`, the magic numbers: PNG, JPEG, WebP, an `<svg` root),
@@ -687,6 +712,17 @@ Roles are rows, not code (spec P2, R2 / R5 / R8 / R9). A school changes them thr
 - **Last System admin** (R8, edge case 5): removing the role from, or deactivating, the last active
   System admin is refused (`LAST_SYSTEM_ADMIN`, 409). The check locks the System admin role row for
   the rest of the transaction, so two such changes at once can't both pass.
+- **The access ceiling** (security review H1/H2, owner 2026-11-23). What a non-System-admin may give
+  is what they hold: `PermissionsService.heldGrants` (every grant of every role, not only the widest)
+  checked by `grantWithinCeiling` / `firstGrantOverCeiling` (shared, `rules/grant-ceiling.ts`). Scopes
+  form a partial order — `all` covers everything; `own_stage` covers itself and `self`; `own_team`
+  covers itself and `self`; `self` only itself; stage and team don't cover each other. Users: the
+  System admin role, or any action on a System admin's account → 403 `SYSTEM_ADMIN_ONLY`; a role
+  given or taken away, or an account managed, beyond the ceiling → 403 `GRANT_EXCEEDS_OWN`; one's own
+  `roleIds` or `employeeId` (anyone, a System admin too) → 403 `OWN_ACCESS_CHANGE`. Roles: a grant
+  beyond the ceiling → `GRANT_EXCEEDS_OWN`; editing a role one holds → `ROLE_HELD_BY_YOU`; one a
+  System admin holds (or the System admin role) → `ROLE_HELD_BY_SYSTEM_ADMIN`. The web greys these out
+  from the session (`giveCeiling`: keys only — the API also checks scopes).
 - Every user and role write is `@Audited` (`core.user.*`, `core.role.*`); passwords are never in the
   log (the entry says only that one was set or changed).
 - Area order inside core: `audit` ← `permissions` ← `roles` ← `users` ← `auth`, and `audit` ← `settings` ← `sign-in-limit` ← `users`, `auth`; `jobs` depends on no other area (a job lives in its own area and only uses `@ScheduledJob`); `audit`, `permissions`, `settings` ← `notifications` (no other area imports it — `.dependency-cruiser.cjs`). `core/audit` reads

@@ -103,6 +103,8 @@ export function approveBlockedReason(
 ): string | null {
   if (!isOpenPenaltyStatus(record.status)) return null;
   if (record.earlierPending) {
+    // In a stage the user doesn't see: no date (security review L1).
+    if (record.earlierPending.date === null) return t('errors.PENALTY_EARLIER_PENDING_ELSEWHERE');
     return t('errors.PENALTY_EARLIER_PENDING', { date: formatDate(record.earlierPending.date, locale) });
   }
   if (record.recountLockedMonth) {
@@ -127,11 +129,18 @@ export function recountItem(change: PenaltyRecountChange, t: Translate, locale: 
   });
 }
 
-/** The 409 of an unconfirmed or stale recount carries the fresh list (`data.recount`), else null. */
-export function recountFromConflict(res: { error?: unknown; data?: unknown }): PenaltyRecountChange[] | null {
+/**
+ * The 409 of an unconfirmed or stale recount carries the fresh list (`data.recount`) and how many
+ * more are in stages the user doesn't see (`data.recountElsewhere`), else null.
+ */
+export function recountFromConflict(
+  res: { error?: unknown; data?: unknown },
+): { recount: PenaltyRecountChange[]; recountElsewhere: number } | null {
   if (res.error !== ErrorCode.PENALTY_RECOUNT_UNCONFIRMED && res.error !== ErrorCode.PENALTY_RECOUNT_CHANGED) return null;
-  const recount = (res.data as { recount?: unknown } | null | undefined)?.recount;
-  return Array.isArray(recount) ? (recount as PenaltyRecountChange[]) : null;
+  const data = res.data as { recount?: unknown; recountElsewhere?: unknown } | null | undefined;
+  if (!Array.isArray(data?.recount)) return null;
+  const elsewhere = typeof data.recountElsewhere === 'number' ? data.recountElsewhere : 0;
+  return { recount: data.recount as PenaltyRecountChange[], recountElsewhere: elsewhere };
 }
 
 /**

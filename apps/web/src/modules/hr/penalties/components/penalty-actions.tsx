@@ -42,6 +42,8 @@ export function PenaltyActions({ record, variant = 'menu' }: { record: PenaltyRe
   const [open, setOpen] = useState<Pending>(null);
   const [error, setError] = useState<string | null>(null);
   const [recount, setRecount] = useState<PenaltyRecountChange[]>(record.recount);
+  // Recounted penalties in stages this user doesn't see: confirmed by their number (L1).
+  const [elsewhere, setElsewhere] = useState<number>(record.recountElsewhere);
   const stale = useRef(false);
 
   const steps = penaltySteps(record, can);
@@ -55,7 +57,10 @@ export function PenaltyActions({ record, variant = 'menu' }: { record: PenaltyRe
 
   function show(next: Pending) {
     setError(null);
-    if (next === 'approve' && open !== 'approve') setRecount(record.recount);
+    if (next === 'approve' && open !== 'approve') {
+      setRecount(record.recount);
+      setElsewhere(record.recountElsewhere);
+    }
     setOpen(next);
   }
 
@@ -78,7 +83,8 @@ export function PenaltyActions({ record, variant = 'menu' }: { record: PenaltyRe
     stale.current = true;
     const fresh = recountFromConflict(res);
     if (fresh) {
-      setRecount(fresh);
+      setRecount(fresh.recount);
+      setElsewhere(fresh.recountElsewhere);
       setError(t('penalties.approve.recountRefreshed'));
       return false;
     }
@@ -186,13 +192,13 @@ export function PenaltyActions({ record, variant = 'menu' }: { record: PenaltyRe
         description={
           <>
             {t('penalties.approve.body', { name, violation, action })}
-            <RecountList recount={recount} note={t('penalties.recount.approveNote')} className="mt-3" />
+            <RecountList recount={recount} elsewhere={elsewhere} note={t('penalties.recount.approveNote')} className="mt-3" />
             {alert}
           </>
         }
         confirmLabel={
-          recount.length > 0
-            ? t('penalties.approve.confirmRecount', { count: formatCount(recount.length) })
+          recount.length + elsewhere > 0
+            ? t('penalties.approve.confirmRecount', { count: formatCount(recount.length + elsewhere) })
             : t('penalties.approve.confirm')
         }
         optionalNote
@@ -201,7 +207,12 @@ export function PenaltyActions({ record, variant = 'menu' }: { record: PenaltyRe
         onConfirm={(note) =>
           run(
             // Confirms exactly what the dialog lists (§4): the server refuses anything else.
-            APPROVE_PENALTY(record.id, acknowledged.length > 0 ? acknowledged : undefined, note),
+            APPROVE_PENALTY(
+              record.id,
+              acknowledged.length > 0 ? acknowledged : undefined,
+              note,
+              elsewhere > 0 ? elsewhere : undefined,
+            ),
             t('penalties.approve.done'),
           )
         }

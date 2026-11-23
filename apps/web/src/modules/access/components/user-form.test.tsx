@@ -23,7 +23,7 @@ vi.mock('../apis', () => ({
 }));
 
 import { CREATE_USER, GET_EMPLOYEE_OPTIONS, GET_ROLES, UNLOCK_SIGN_IN, UPDATE_USER } from '../apis';
-import { sessionWithout } from '@/test/render';
+import { sessionWith, sessionWithout, TEST_SESSION } from '@/test/render';
 import { account, fail, NOW, ok, renderAccess, role, ROLES } from '../test/fixtures';
 import { UserForm } from './user-form';
 
@@ -250,5 +250,35 @@ describe('UserForm', () => {
     expect((screen.getByRole('textbox', { name: /Full name/ }) as HTMLInputElement).disabled).toBe(true);
     expect(screen.queryByRole('button', { name: /Deactivate account/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /temporary password/ })).toBeNull();
+  });
+
+  describe('H1 — the access ceiling, as the screen shows it (security review, owner 2026-11-23)', () => {
+    // A user manager who isn't a System admin, holding what an HR officer holds.
+    const manager = sessionWith('core.users.view', 'core.users.manage', ...role('hr_officer').permissions.map((g) => g.key));
+
+    it('a non-System-admin can’t tick the System admin role or a role beyond their own; their own level can', async () => {
+      renderAccess(<UserForm basePath="/en/users" user={officer} roles={ROLES} now={NOW} />, 'en', manager);
+      expect((roleBox('System admin') as HTMLButtonElement).disabled).toBe(true);
+      expect(screen.getByText('Only a System admin can give or take away this role.')).toBeTruthy();
+      expect((roleBox('HR manager') as HTMLButtonElement).disabled).toBe(true);
+      expect((roleBox('HR officer') as HTMLButtonElement).disabled).toBe(false);
+    });
+
+    it('a System admin’s account is view-only for them, saying why', () => {
+      renderAccess(<UserForm basePath="/en/users" user={account()} roles={ROLES} now={NOW} />, 'en', manager);
+      expect(screen.getByTestId('beyond-access-note').textContent).toContain('Only a System admin can change');
+      expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
+      expect(screen.queryByRole('button', { name: /Deactivate account/ })).toBeNull();
+      expect(screen.queryByRole('button', { name: /temporary password/ })).toBeNull();
+    });
+
+    it('nobody changes their own roles or employee record: both are locked on their own account', () => {
+      const me = account({ id: TEST_SESSION.id });
+      renderAccess(<UserForm basePath="/en/users" user={me} roles={ROLES} now={NOW} />);
+      expect((roleBox('HR officer') as HTMLButtonElement).disabled).toBe(true);
+      expect(screen.getAllByTestId('own-access-note')).toHaveLength(2);
+      // The name can still change.
+      expect((screen.getByRole('textbox', { name: /Full name/ }) as HTMLInputElement).disabled).toBe(false);
+    });
   });
 });

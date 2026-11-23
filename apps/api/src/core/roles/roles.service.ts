@@ -3,13 +3,18 @@ import {
   AuditEntityType,
   ErrorCode,
   SYSTEM_ADMIN_ROLE,
+  firstGrantOverCeiling,
+  type AuthUser,
+  type HeldGrants,
   type Paginated,
   type Role,
+  type RoleGrant,
   type RoleRef,
 } from '@school-erp/shared';
 import { randomBytes } from 'node:crypto';
 import { CodedException } from '../../common/errors/coded.exception';
 import { AuditService } from '../audit';
+import { PermissionsService } from '../permissions';
 import type { CreateRoleDto, UpdateRoleDto } from './dto/role.dto';
 import { RolesRepository, type RoleRow } from './repositories/roles.repository';
 import { duplicateKey, roleSnapshot, storedGrants, toRole, wronglyScoped } from './roles.pure';
@@ -17,19 +22,51 @@ import { duplicateKey, roleSnapshot, storedGrants, toRole, wronglyScoped } from 
 const fromRow = (row: RoleRow): Role =>
   toRole({ ...row, userCount: row._count.users, permissions: row.permissions });
 
+/** Who is acting: the signed-in user; absent when the system itself acts (seed, scripts). */
+type Actor = Pick<AuthUser, 'id'> | undefined;
+
+/** The system itself (no signed-in user) has no ceiling. */
+const NO_CEILING: HeldGrants = { isSystemAdmin: true, grants: [] };
+
 /**
  * Roles as data (R2): named sets of permissions with a scope each (R5). Built-in roles (the
  * spec's starting roles) can be edited, and deleted once unused like any other; the System admin
  * can't be deleted and always holds every key.
  * Also owns who holds which role (`user_roles`) and the last-System-admin rule (R8) — core/users
  * calls those when it changes a user.
+ *
+ * The access ceiling (security review H2, owner 2026-11-23): someone with `core.roles.manage` who
+ * isn't a System admin may put into a role only permissions they hold themselves, at a scope that
+ * reaches no further than theirs (`grantWithinCeiling`: 403 `GRANT_EXCEEDS_OWN`); may not edit a
+ * role they hold (403 `ROLE_HELD_BY_YOU`) nor one a System admin user holds, the System admin role
+ * included (403 `ROLE_HELD_BY_SYSTEM_ADMIN`). Deleting needs nobody to hold the role, so a held role
+ * is never deleted anyway.
  */
 @Injectable()
 export class RolesService {
   constructor(
     private readonly roles: RolesRepository,
     private readonly audit: AuditService,
+    private readonly permissions: PermissionsService,
   ) {}
+
+  /** What `actor` may give (H1/H2): every grant they hold, or no ceiling for a System admin. */
+  async ceilingOf(actor: Actor): Promise<HeldGrants> {
+    return actor ? this.permissions.heldGrants(actor) : NO_CEILING;
+  }
+
+  /** 403 `GRANT_EXCEEDS_OWN` when `grants` holds anything over `ceiling` (H1/H2). */
+  assertWithinCeiling(ceiling: HeldGrants, grants: readonly RoleGrant[]): void {
+    if (firstGrantOverCeiling(ceiling, grants)) {
+      throw new CodedException(HttpStatus.FORBIDDEN, ErrorCode.GRANT_EXCEEDS_OWN);
+    }
+  }
+
+  /** Every permission the roles with these ids grant (the System admin role: every key, `all`). */
+  async grantsOfRoles(ids: readonly string[]): Promise<RoleGrant[]> {
+    const roles = await Promise.all([...new Set(ids)].map((id) => this.get(id)));
+    return roles.flatMap((r) => r.permissions);
+  }
 
   /** One page of the roles (starting ones first), searched by either name when `search` is given. */
   async list(page: number, limit: number, search?: string): Promise<Paginated<Role>> {
@@ -43,8 +80,9 @@ export class RolesService {
     return fromRow(row);
   }
 
-  async create(dto: CreateRoleDto): Promise<Role> {
+  async create(dto: CreateRoleDto, actor?: Actor): Promise<Role> {
     this.assertNoDuplicates(dto.permissions);
+    this.assertWithinCeiling(await this.ceilingOf(actor), dto.permissions);
     const id = await this.roles.create({
       key: `custom_${randomBytes(4).toString('hex')}`,
       nameEn: dto.nameEn,
@@ -60,14 +98,25 @@ export class RolesService {
     return role;
   }
 
-  async update(id: string, dto: UpdateRoleDto): Promise<Role> {
+  async update(id: string, dto: UpdateRoleDto, actor?: Actor): Promise<Role> {
     const before = await this.get(id);
+    const ceiling = await this.ceilingOf(actor);
+    if (!ceiling.isSystemAdmin && actor) {
+      // H2: not a role they hold (they would raise their own access), nor a System admin's.
+      if (await this.roles.isHeldBy(id, actor.id)) {
+        throw new CodedException(HttpStatus.FORBIDDEN, ErrorCode.ROLE_HELD_BY_YOU);
+      }
+      if (before.key === SYSTEM_ADMIN_ROLE || (await this.roles.isHeldBySystemAdmin(id))) {
+        throw new CodedException(HttpStatus.FORBIDDEN, ErrorCode.ROLE_HELD_BY_SYSTEM_ADMIN);
+      }
+    }
     if (dto.permissions !== undefined) {
       // R8 — the System admin holds every key, always: its set can't be narrowed.
       if (before.key === SYSTEM_ADMIN_ROLE) {
         throw new CodedException(HttpStatus.CONFLICT, ErrorCode.SYSTEM_ADMIN_FIXED);
       }
       this.assertNoDuplicates(dto.permissions);
+      this.assertWithinCeiling(ceiling, dto.permissions);
       await this.roles.replaceGrants(id, storedGrants(dto.permissions));
     }
     if (dto.nameEn !== undefined || dto.nameAr !== undefined) {

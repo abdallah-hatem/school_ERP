@@ -105,8 +105,13 @@ export type CoreEvent = (typeof CoreEvent)[keyof typeof CoreEvent];
 
 export interface UserSessionsEndedEvent {
   userId: Uuid;
-  reason: 'deactivated' | 'temporary_password';
+  reason: 'deactivated' | 'temporary_password' | 'password_changed';
   at: string;
+  /**
+   * The sign-in (refresh-token family) left alive: on `password_changed`, the one that changed it
+   * (security review M3). Absent: every sign-in ends.
+   */
+  keepFamilyId?: Uuid;
 }
 
 // ── core: notifications (§11) ──────────────────────────────────────────────

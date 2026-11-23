@@ -129,6 +129,19 @@ export class RolesRepository {
     await this.db.$queryRaw`SELECT "id" FROM "roles" WHERE "key" = ${SYSTEM_ADMIN_ROLE} FOR UPDATE`;
   }
 
+  /** Whether `userId` holds the role. */
+  async isHeldBy(roleId: string, userId: string): Promise<boolean> {
+    return (await this.db.userRoleAssignment.count({ where: { roleId, userId } })) > 0;
+  }
+
+  /** Whether any user who holds the System admin role also holds this role (active or not). */
+  async isHeldBySystemAdmin(roleId: string): Promise<boolean> {
+    const count = await this.db.userRoleAssignment.count({
+      where: { roleId, user: { roles: { some: { role: { key: SYSTEM_ADMIN_ROLE } } } } },
+    });
+    return count > 0;
+  }
+
   /** Active users holding the System admin role, other than `exceptUserId`. */
   countOtherActiveSystemAdmins(exceptUserId: string): Promise<number> {
     return this.db.userRoleAssignment.count({

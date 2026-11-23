@@ -84,8 +84,16 @@
   "CHANNEL_NOT_AVAILABLE": "This channel isn't available.",
   "PENALTY_WRONG_STEP": "This penalty has moved on: someone else acted on it first. Refresh to see where it stands.",
   "PENALTY_REJECTED": "This penalty was rejected.",
-  "PENALTY_OWN": "You can't review or approve a penalty given to you.",
+  "PENALTY_OWN": "You can't review, approve, reject or cancel a penalty given to you.",
   "PENALTY_STAGE_REQUIRED": "This employee works in several stages. Choose the stage where the violation happened.",
   "PENALTY_STAGE_INVALID": "Choose one of this employee's stages.",
-  "INVALID_OTHER_STAGES": "Pick other stages than the main stage, each once, from the stages in use."
+  "INVALID_OTHER_STAGES": "Pick other stages than the main stage, each once, from the stages in use.",
+  "SYSTEM_ADMIN_ONLY": "Only a System admin can give or take away the System admin role, or change a System admin's account.",
+  "GRANT_EXCEEDS_OWN": "You can only give permissions you hold yourself, reaching no further than yours.",
+  "OWN_ACCESS_CHANGE": "You can't change your own roles or employee record. Ask another administrator.",
+  "ROLE_HELD_BY_YOU": "You can't change or delete a role you hold yourself. Ask another administrator.",
+  "ROLE_HELD_BY_SYSTEM_ADMIN": "Only a System admin can change or delete a role a System admin holds.",
+  "PENALTY_EARLIER_PENDING_ELSEWHERE": "An earlier penalty for this violation, in another stage, is still waiting. It must be approved or cancelled first.",
+  "PAYROLL_OWN_LINE": "You can't add or remove an adjustment on your own payroll line. Ask someone else.",
+  "PAYROLL_APPROVER_ADJUSTED_OWN_LINE": "You adjusted your own line in this month's payroll, so someone else must approve it."
 }

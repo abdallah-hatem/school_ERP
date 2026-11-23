@@ -40,17 +40,25 @@ export class RefreshTokensRepository extends BaseRepository<
   }
 
   /**
-   * Marks a token used and links it to its successor, in one transaction with the successor's
-   * insert. Returns false when another request had already used it (a parallel refresh).
+   * Claims a token (marks it used) and inserts its successor, linked, in one transaction. The
+   * claim comes first: a parallel refresh with the same token waits on the row and then finds it
+   * used, so it returns false and inserts nothing (the successor is derived from the token, so a
+   * second insert would collide anyway). The caller then answers with the successor already issued.
    */
   async rotate(usedId: string, next: NewRefreshToken, at: Date): Promise<boolean> {
     return this.databaseService.$transaction(async (tx) => {
-      const created = await tx.refreshToken.create({ data: next });
       const claimed = await tx.refreshToken.updateMany({
         where: { id: usedId, usedAt: null },
-        data: { usedAt: at, replacedById: created.id },
+        data: { usedAt: at },
       });
-      return claimed.count === 1;
+      if (claimed.count !== 1) return false;
+      const created = await tx.refreshToken.create({ data: next, select: { id: true } });
+      await tx.refreshToken.update({
+        where: { id: usedId },
+        data: { replacedById: created.id },
+        select: { id: true },
+      });
+      return true;
     });
   }
 
@@ -61,10 +69,13 @@ export class RefreshTokensRepository extends BaseRepository<
     });
   }
 
-  /** Ends every sign-in of a user (deactivated, or given a temporary password). */
-  async revokeAllOf(userId: string, at: Date): Promise<number> {
+  /**
+   * Ends every sign-in of a user (deactivated, given a temporary password, or changed their
+   * password) — except the family `keepFamilyId`, the sign-in that changed the password (M3).
+   */
+  async revokeAllOf(userId: string, at: Date, keepFamilyId?: string): Promise<number> {
     const { count } = await this.db.refreshToken.updateMany({
-      where: { userId, revokedAt: null },
+      where: { userId, revokedAt: null, ...(keepFamilyId ? { familyId: { not: keepFamilyId } } : {}) },
       data: { revokedAt: at },
     });
     return count;

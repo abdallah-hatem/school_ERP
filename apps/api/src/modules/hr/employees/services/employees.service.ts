@@ -430,14 +430,21 @@ export class EmployeesService {
 
   /**
    * 404 outside the user's `hr.employees.edit` scope (edge case 3); 403 when the edit sends a
-   * salary field (`EMPLOYEE_SALARY_FIELDS`) for an employee whose salary the user can't see (R7).
+   * salary field (`EMPLOYEE_SALARY_FIELDS`) for an employee whose salary the user can't see (R7) —
+   * or sets them not insured while they have an insured salary, which that would clear (L4).
    */
   async update(id: Uuid, dto: UpdateEmployeeDto): Promise<Employee> {
     // The change and its audit entry commit together (audit D2), for the seed too.
     return this.afterCommit.inTransaction(async () => {
       const current = await this.repository.findDetail(id, await this.access.where('hr.employees.edit'));
       if (!current) throw new NotFoundException();
-      const sendsSalary = EMPLOYEE_SALARY_FIELDS.some((f) => dto[f] !== undefined);
+      // L4 (security review, 2026-11-23): turning insurance off clears the insured salary, so it is a
+      // salary change too when there is one to clear.
+      const clearsInsuredSalary =
+        dto.insuranceStatus !== undefined &&
+        dto.insuranceStatus !== InsuranceStatus.INSURED &&
+        current.insuredSalary != null;
+      const sendsSalary = EMPLOYEE_SALARY_FIELDS.some((f) => dto[f] !== undefined) || clearsInsuredSalary;
       if (sendsSalary && !inScope(await this.access.salaryScope(), detailScopeFields(current))) {
         throw new ForbiddenException();
       }

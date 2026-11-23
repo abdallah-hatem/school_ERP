@@ -356,8 +356,13 @@ export interface PenaltyPreview extends PenaltyLevelValues {
    * not backdated before approved ones. Recording changes nothing. When one of them sits in a month
    * whose payroll is approved, the preview (and recording) is refused instead: 409
    * `PENALTY_RECOUNT_MONTH_LOCKED`, `params.month`.
+   *
+   * Only the penalties the user's `hr.penalties.view` covers are listed (security review L1); the
+   * ones in stages they don't see are only counted, in `recountElsewhere` — no id, date or level.
    */
   recount: PenaltyRecountChange[];
+  /** How many more approved penalties approving it would move up, in stages the user doesn't see. */
+  recountElsewhere: number;
 }
 
 /** One recounted penalty the user confirmed: the level, action and days it was shown to get. */
@@ -373,6 +378,11 @@ export interface PenaltyRecountAcknowledgement extends PenaltyLevelValues {
  */
 export interface ApprovePenaltyRequest {
   acknowledgedRecount?: PenaltyRecountAcknowledgement[];
+  /**
+   * The record's `recountElsewhere` as the screen showed it (security review L1): those moves are
+   * confirmed by their number, since the user sees nothing else of them.
+   */
+  acknowledgedRecountElsewhere?: number;
   /** Optional note with the HR approval. */
   note?: string | null;
 }
@@ -398,6 +408,7 @@ export interface PenaltyStepConflict {
 /** The `data` of a 409 `PENALTY_RECOUNT_UNCONFIRMED` / `PENALTY_RECOUNT_CHANGED`. */
 export interface PenaltyRecountConflict {
   recount: PenaltyRecountChange[];
+  recountElsewhere: number;
 }
 
 export interface CreatePenaltyRequest {
@@ -466,13 +477,19 @@ export interface PenaltyRecord {
    * either step —
    * approving this one is refused (409 `PENALTY_EARLIER_PENDING`) until it is approved or
    * cancelled. Null otherwise (and always for approved and cancelled records).
+   *
+   * When that earlier penalty is in a stage the user's `hr.penalties.view` doesn't cover, `id` and
+   * `date` are null: the screen says "an earlier penalty in another stage" (security review L1).
    */
-  earlierPending: { id: Uuid; date: IsoDate } | null;
+  earlierPending: { id: Uuid; date: IsoDate } | { id: null; date: null } | null;
   /**
    * §4 backdated penalty (owner 2026-11-20): for a PENDING record, the approved penalties that
-   * approving it now would move up one level (by date). Empty otherwise.
+   * approving it now would move up one level (by date). Empty otherwise. Only those the user's
+   * `hr.penalties.view` covers (L1); the others are counted in `recountElsewhere`.
    */
   recount: PenaltyRecountChange[];
+  /** How many more approved penalties approving it would move up, in stages the user doesn't see. */
+  recountElsewhere: number;
   /**
    * The earliest month among `recount` whose payroll is approved (`YYYY-MM`): approving is refused
    * (409 `PENALTY_RECOUNT_MONTH_LOCKED`). Null otherwise.

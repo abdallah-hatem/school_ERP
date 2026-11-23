@@ -32,6 +32,16 @@ lines each role sees: §2 Roles (enforced, P4).
 - **GUESS** (2026-11-18, §2) — Adding or removing an **adjustment** needs the "Adjust payroll"
   permission (System admin, HR manager, HR officer). Without it, a draft's adjustments can be
   opened and read but not changed, and the screen says why.
+- **DECIDED** (owner, 2026-11-23) — **Separation of duties.** Nobody adds or removes an adjustment
+  on **their own line** (the employee their account is linked to): "You can't add or remove an
+  adjustment on your own payroll line. Ask someone else." Nobody **approves** a month in which they
+  adjusted their own line (possible only for an adjustment made before their account was linked to
+  that employee): "You adjusted your own line in this month's payroll, so someone else must approve
+  it." That is the whole rule: whoever **created** the run may still approve it, as long as they made
+  no adjustment on their own line. Each adjustment keeps who added it.
+- **DECIDED** (2026-11-23) — The draft's **pending penalties** count shown to someone who sees only
+  some lines (their stage or team) counts only those employees' penalties; the month's approval still
+  waits for every pending penalty of the school.
 - **DECIDED** (owner, 2026-11-18) — Anyone who may view a run also sees the HR rules behind it (day
   divisor, part-time percentages, the lateness rule, the penalty repetition window), so the
   Principal and the Accountant see them without the right to see HR settings. No salary comes with

@@ -10,6 +10,7 @@ import {
   sessionCookies,
   authCookie,
 } from '@/lib/middlewareFunctions';
+import { withCachePolicy } from '@/lib/fetch-cache';
 import { expireTags } from '@/lib/revalidate';
 import { clientAddressHeaders } from '@/lib/security-headers';
 import type { ApiResult, DownloadedFile } from '@/lib/types';
@@ -135,7 +136,8 @@ export async function apiFetch<T = unknown>(
     ? JSON.stringify(options.body)
     : (options.body as BodyInit | null | undefined);
 
-  return executeRequest<T>(fullUrl, options, headers, body);
+  // Never kept by Next's data cache when it carries a session: every answer is per-user.
+  return executeRequest<T>(fullUrl, withCachePolicy(options, !!headers.Authorization), headers, body);
 }
 
 /**

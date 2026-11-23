@@ -482,12 +482,18 @@ describe('users and roles (e2e)', () => {
       });
       const otherIds = others.map((o) => o.id);
       await db.user.updateMany({ where: { id: { in: otherIds } }, data: { isActive: false } });
+      // Another System admin acts (nobody changes their own roles, H1) — with their account off, so
+      // the test user stays the last active one.
+      const deputy = await makeUser(['system_admin']);
+      await db.user.update({ where: { id: deputy.id }, data: { isActive: false } });
       try {
         const mark = await historyMark(db);
-        const lose = await http(app)
-          .patch(`/users/${user.id}`)
-          .send({ roleIds: [roleId('hr_manager')] })
-          .expect(409);
+        const lose = await as(deputy.id, () =>
+          http(app)
+            .patch(`/users/${user.id}`)
+            .send({ roleIds: [roleId('hr_manager')] })
+            .expect(409),
+        );
         expect(lose.body.error).toBe(ErrorCode.LAST_SYSTEM_ADMIN);
         const off = await http(app).post(`/users/${user.id}/deactivate`).expect(409);
         expect(off.body.error).toBe(ErrorCode.LAST_SYSTEM_ADMIN);

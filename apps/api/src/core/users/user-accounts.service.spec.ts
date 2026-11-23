@@ -1,4 +1,12 @@
-import { CoreEvent, ErrorCode, type AuthUser, type RoleRef } from '@school-erp/shared';
+import {
+  CoreEvent,
+  ErrorCode,
+  firstGrantOverCeiling,
+  type AuthUser,
+  type HeldGrants,
+  type RoleGrant,
+  type RoleRef,
+} from '@school-erp/shared';
 import { hashPassword } from '../../common/utils/password.util';
 import type { AfterCommit } from '../../database/transactions';
 import type { AuditService } from '../audit';
@@ -10,6 +18,17 @@ import { UserAccountsService } from './user-accounts.service';
 
 const ADMIN: RoleRef = { id: 'r-admin', key: 'system_admin', nameEn: 'System admin', nameAr: 'م' };
 const HR: RoleRef = { id: 'r-hr', key: 'hr_manager', nameEn: 'HR manager', nameAr: 'م' };
+const OFFICER: RoleRef = { id: 'r-off', key: 'hr_officer', nameEn: 'HR officer', nameAr: 'م' };
+const HR_GRANTS: RoleGrant[] = [
+  { key: 'hr.employees.view', scope: 'all' },
+  { key: 'hr.payroll.approve', scope: 'all' },
+];
+const OFFICER_GRANTS: RoleGrant[] = [{ key: 'hr.employees.view', scope: 'all' }];
+/** A user manager who isn't a System admin: holds what an officer holds, plus managing users. */
+const MANAGER: HeldGrants = {
+  isSystemAdmin: false,
+  grants: [{ key: 'core.users.manage', scope: 'all' }, ...OFFICER_GRANTS],
+};
 
 function row(overrides: Partial<UserAccountRow> = {}): UserAccountRow {
   return {
@@ -29,7 +48,7 @@ function row(overrides: Partial<UserAccountRow> = {}): UserAccountRow {
 
 function makeService(
   start: UserAccountRow = row(),
-  opts: { otherAdmins?: number; lockedUntil?: Date } = {},
+  opts: { otherAdmins?: number; lockedUntil?: Date; held?: HeldGrants } = {},
 ) {
   let current = start;
   let lockedUntil = opts.lockedUntil;
@@ -46,13 +65,23 @@ function makeService(
     create: jest.fn(),
   };
   const roles = {
+    // The System admin (or the system itself) unless `opts.held` says otherwise (H1).
+    ceilingOf: jest.fn(() => Promise.resolve(opts.held ?? { isSystemAdmin: true, grants: [] })),
+    assertWithinCeiling: jest.fn((held: HeldGrants, grants: RoleGrant[]) => {
+      if (firstGrantOverCeiling(held, grants)) {
+        throw Object.assign(new Error('over'), { code: ErrorCode.GRANT_EXCEEDS_OWN });
+      }
+    }),
+    grantsOfRoles: jest.fn((ids: string[]) =>
+      Promise.resolve(ids.flatMap((id) => (id === HR.id ? HR_GRANTS : id === OFFICER.id ? OFFICER_GRANTS : []))),
+    ),
     refsByIds: jest.fn((ids: string[]) =>
-      Promise.resolve([ADMIN, HR].filter((r) => ids.includes(r.id))),
+      Promise.resolve([ADMIN, HR, OFFICER].filter((r) => ids.includes(r.id))),
     ),
     setRolesOf: jest.fn((_id: string, ids: string[]) => {
       current = {
         ...current,
-        roles: [ADMIN, HR].filter((r) => ids.includes(r.id)).map((role) => ({ role })),
+        roles: [ADMIN, HR, OFFICER].filter((r) => ids.includes(r.id)).map((role) => ({ role })),
       };
       return Promise.resolve();
     }),
@@ -339,5 +368,79 @@ describe('UserAccountsService', () => {
         expect.objectContaining({ before: { lockedUntil: null }, after: { lockedUntil: null } }),
       );
     });
+  });
+
+  describe('H1 — core.users.manage has a ceiling (security review, owner 2026-11-23)', () => {
+    const me = { id: 'u-me' };
+    const officer = () => row({ id: 'u-2', roles: [{ role: OFFICER }] });
+
+    it('a non-System-admin can’t touch a System admin: edit, reset, deactivate, reactivate → 403 SYSTEM_ADMIN_ONLY', async () => {
+      const { service, users, queued } = makeService(row(), { held: MANAGER, otherAdmins: 1 });
+      for (const attempt of [
+        () => service.update('u-1', { name: 'X' }, me),
+        () => service.setTemporaryPassword('u-1', 'temporary-1234', me),
+        () => service.deactivate('u-1', me),
+        () => service.reactivate('u-1', me),
+      ]) {
+        await expect(attempt()).rejects.toMatchObject({ code: ErrorCode.SYSTEM_ADMIN_ONLY });
+      }
+      expect(users.update).not.toHaveBeenCalled();
+      expect(queued).toHaveLength(0);
+    });
+
+    it('a non-System-admin can’t give the System admin role → 403 SYSTEM_ADMIN_ONLY', async () => {
+      const { service, roles } = makeService(officer(), { held: MANAGER });
+      await expect(service.update('u-2', { roleIds: [OFFICER.id, ADMIN.id] }, me)).rejects.toMatchObject({
+        code: ErrorCode.SYSTEM_ADMIN_ONLY,
+      });
+      await expect(
+        service.create({ name: 'N', email: 'n@school.test', password: 'password-123', roleIds: [ADMIN.id] }, me),
+      ).rejects.toMatchObject({ code: ErrorCode.SYSTEM_ADMIN_ONLY });
+      expect(roles.setRolesOf).not.toHaveBeenCalled();
+    });
+
+    it('a role stronger than the actor’s own → 403 GRANT_EXCEEDS_OWN; one within it is given', async () => {
+      const { service, roles } = makeService(officer(), { held: MANAGER });
+      await expect(service.update('u-2', { roleIds: [OFFICER.id, HR.id] }, me)).rejects.toMatchObject({
+        code: ErrorCode.GRANT_EXCEEDS_OWN,
+      });
+      expect(roles.setRolesOf).not.toHaveBeenCalled();
+      await service.update('u-2', { roleIds: [] }, me);
+      expect(roles.setRolesOf).toHaveBeenCalledWith('u-2', []);
+    });
+
+    it('a user holding more than the actor can’t be reset or deactivated (no takeover of a stronger account)', async () => {
+      const { service } = makeService(row({ id: 'u-3', roles: [{ role: HR }] }), { held: MANAGER });
+      await expect(service.setTemporaryPassword('u-3', 'temporary-1234', me)).rejects.toMatchObject({
+        code: ErrorCode.GRANT_EXCEEDS_OWN,
+      });
+      await expect(service.deactivate('u-3', me)).rejects.toMatchObject({ code: ErrorCode.GRANT_EXCEEDS_OWN });
+    });
+
+    it('nobody — a System admin included — changes their own roles or employee link → 403 OWN_ACCESS_CHANGE', async () => {
+      const { service, roles, users } = makeService();
+      const self = { id: 'u-1' };
+      await expect(service.update('u-1', { roleIds: [ADMIN.id] }, self)).rejects.toMatchObject({
+        code: ErrorCode.OWN_ACCESS_CHANGE,
+      });
+      await expect(service.update('u-1', { employeeId: 'e-9' }, self)).rejects.toMatchObject({
+        code: ErrorCode.OWN_ACCESS_CHANGE,
+      });
+      expect(roles.setRolesOf).not.toHaveBeenCalled();
+      expect(users.update).not.toHaveBeenCalled();
+      // The same roles and no employee change (the form sends them back): the rest saves.
+      await service.update('u-1', { name: 'Mona B', roleIds: [HR.id, ADMIN.id], employeeId: null }, self);
+      expect(users.update).toHaveBeenCalled();
+    });
+  });
+
+  it('M3 — a changed password ends the user’s other sign-ins, keeping the one that changed it', async () => {
+    const { service, users, queued } = makeService();
+    users.findPasswordHash.mockResolvedValue(await hashPassword('the-right-one', 4));
+    const me = { id: 'u-1', name: 'Mona' } as AuthUser;
+    await service.changeOwnPassword(me, { currentPassword: 'the-right-one', newPassword: 'new-password-1' }, 'fam-1');
+    expect(queued).toEqual([
+      [CoreEvent.USER_SESSIONS_ENDED, expect.objectContaining({ userId: 'u-1', reason: 'password_changed', keepFamilyId: 'fam-1' })],
+    ]);
   });
 });

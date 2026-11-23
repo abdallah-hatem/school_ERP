@@ -4,6 +4,7 @@
 export * from './days';
 export * from './employee-details';
 export * from './employees';
+export * from './grant-ceiling';
 export * from './lateness';
 export * from './payroll-tax';
 export * from './penalties';

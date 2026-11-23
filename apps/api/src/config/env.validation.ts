@@ -65,15 +65,16 @@ export class EnvironmentVariables {
   REFRESH_TOKEN_TTL_DAYS: number = 14;
 
   /**
-   * A rotated refresh token reused within this many seconds gets a new pair in the same family
-   * (parallel requests refreshing at once). Reuse after it revokes the family.
+   * A rotated refresh token reused within this many seconds gets the pair its first use got (security
+   * review L5: idempotent, never a new one) — parallel requests refreshing at once. Default 10 s; reuse
+   * after it revokes the family.
    */
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(0)
   @Max(120)
-  REFRESH_REUSE_GRACE_SECONDS: number = 30;
+  REFRESH_REUSE_GRACE_SECONDS: number = 10;
 
   /** `Secure` flag on the session cookies. Defaults to true in production. */
   @IsOptional()

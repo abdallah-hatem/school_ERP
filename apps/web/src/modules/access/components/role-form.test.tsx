@@ -14,7 +14,7 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('../apis', () => ({ CREATE_ROLE: vi.fn(), UPDATE_ROLE: vi.fn(), DELETE_ROLE: vi.fn() }));
 
 import { PERMISSION_KEYS } from '@school-erp/shared';
-import { sessionWithout } from '@/test/render';
+import { sessionWith, sessionWithout } from '@/test/render';
 import { CREATE_ROLE, UPDATE_ROLE } from '../apis';
 import { account, customRole, ok, renderAccess, role } from '../test/fixtures';
 import { RoleForm } from './role-form';
@@ -164,5 +164,29 @@ describe('RoleForm', () => {
     expect(document.querySelectorAll('[data-permission]')).toHaveLength(PERMISSION_KEYS.length);
     expect(screen.queryAllByRole('switch')).toHaveLength(0);
     expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
+  });
+
+  describe('H2 — the access ceiling, as the screen shows it (security review, owner 2026-11-23)', () => {
+    const manager = sessionWith('core.roles.view', 'core.roles.manage', 'hr.employees.view');
+
+    it('a permission the user doesn’t hold can’t be turned on, and turning a module on skips it', async () => {
+      const user = userEvent.setup({ pointerEventsCheck: 0 });
+      renderAccess(<RoleForm basePath="/en/roles" usersPath="/en/users" role={customRole} />, 'en', manager);
+      await openModules(user, 'HR');
+      expect((within(row('hr.payroll.approve')).getByRole('switch') as HTMLButtonElement).disabled).toBe(true);
+      expect(within(row('hr.payroll.approve')).getByText("You don't hold this permission, so you can't give it.")).toBeTruthy();
+      // Held (and on): it can still be turned off.
+      expect((within(row('hr.employees.view')).getByRole('switch') as HTMLButtonElement).disabled).toBe(false);
+      const hr = screen.getByRole('region', { name: /^HR/ });
+      await user.click(within(hr).getByRole('button', { name: 'Turn all on' }));
+      expect(row('hr.payroll.approve').querySelector('[role="switch"]')?.getAttribute('aria-checked')).toBe('false');
+    });
+
+    it('a role the user holds is view-only for them, saying why', () => {
+      const holder = { ...manager, roles: [{ id: customRole.id, key: customRole.key, nameEn: customRole.nameEn, nameAr: customRole.nameAr }] };
+      renderAccess(<RoleForm basePath="/en/roles" usersPath="/en/users" role={customRole} />, 'en', holder);
+      expect(screen.getByTestId('role-held-note').textContent).toBe("You hold this role, so you can't change it. Another administrator can.");
+      expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
+    });
   });
 });

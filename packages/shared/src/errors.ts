@@ -50,6 +50,22 @@ export const ErrorCode = {
   PASSWORD_CHANGE_REQUIRED: 'PASSWORD_CHANGE_REQUIRED',
   /** The new password is the one already in use (the temporary one, after a reset). */
   SAME_PASSWORD: 'SAME_PASSWORD',
+  /**
+   * Access ceiling (security review H1/H2, owner 2026-11-23): only a System admin gives or takes
+   * away the System admin role, or edits, resets, deactivates or reactivates a user who holds it.
+   */
+  SYSTEM_ADMIN_ONLY: 'SYSTEM_ADMIN_ONLY',
+  /**
+   * A grant given (a role to a user, or a permission into a role) that the actor doesn't hold, or
+   * holds narrower (`grantCovers` in core/permissions).
+   */
+  GRANT_EXCEEDS_OWN: 'GRANT_EXCEEDS_OWN',
+  /** Nobody changes their own roles or their own employee record. */
+  OWN_ACCESS_CHANGE: 'OWN_ACCESS_CHANGE',
+  /** A non-System-admin can't edit or delete a role they hold themselves. */
+  ROLE_HELD_BY_YOU: 'ROLE_HELD_BY_YOU',
+  /** Only a System admin edits or deletes a role a System admin user holds. */
+  ROLE_HELD_BY_SYSTEM_ADMIN: 'ROLE_HELD_BY_SYSTEM_ADMIN',
 
   // settings and files
   INVALID_WORK_HOURS: 'INVALID_WORK_HOURS',
@@ -102,6 +118,11 @@ export const ErrorCode = {
    */
   PENALTY_EARLIER_PENDING: 'PENALTY_EARLIER_PENDING',
   /**
+   * The same, when that earlier penalty is in a stage the user doesn't see (security review L1):
+   * nothing about it — no id, date or level — is given.
+   */
+  PENALTY_EARLIER_PENDING_ELSEWHERE: 'PENALTY_EARLIER_PENDING_ELSEWHERE',
+  /**
    * §4 backdated penalty (owner 2026-11-20): approving it would move up approved penalties, and the
    * request didn't confirm that (`acknowledgedRecount`). `params.count`; `data.recount`: the list.
    */
@@ -122,6 +143,10 @@ export const ErrorCode = {
   PAYROLL_RUN_EXISTS: 'PAYROLL_RUN_EXISTS',
   PENDING_PENALTIES: 'PENDING_PENALTIES',
   EMPLOYEE_NOT_IN_RUN: 'EMPLOYEE_NOT_IN_RUN',
+  /** §6 separation of duties (owner 2026-11-23): nobody adds or removes an adjustment on their own line. */
+  PAYROLL_OWN_LINE: 'PAYROLL_OWN_LINE',
+  /** §6 (owner 2026-11-23): whoever adjusted their own line in a run can't approve that run. */
+  PAYROLL_APPROVER_ADJUSTED_OWN_LINE: 'PAYROLL_APPROVER_ADJUSTED_OWN_LINE',
 
   // audit log
   /** An `@Audited` handler finished without recording its action (D6b); the change rolled back. */

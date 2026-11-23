@@ -322,7 +322,7 @@ describe('HR penalty catalogue and records (e2e)', () => {
     const emp = await employee();
     const v = await violation();
     const ok = await preview(emp, v, '2025-10-01').expect(200);
-    expect(ok.body.data).toEqual({ level: 1, action: 'NOTICE', days: null, priorCount: 0, recount: [], startsAs: 'WAITING_HR', reviewSkip: 'RECORDER_IS_HEAD' });
+    expect(ok.body.data).toEqual({ level: 1, action: 'NOTICE', days: null, priorCount: 0, recount: [], recountElsewhere: 0, startsAs: 'WAITING_HR', reviewSkip: 'RECORDER_IS_HEAD' });
     expect(await db.penaltyRecord.count({ where: { employeeId: emp } })).toBe(0);
 
     await preview(emp, v, tomorrow()).expect(400);
@@ -350,7 +350,7 @@ describe('HR penalty catalogue and records (e2e)', () => {
     await cancel(cancelled.id, 'entered by mistake').expect(200);
 
     const res = await preview(emp, v, '2025-09-10').expect(200);
-    expect(res.body.data).toEqual({ level: 2, action: 'WARNING', days: null, priorCount: 1, recount: [], startsAs: 'WAITING_HR', reviewSkip: 'RECORDER_IS_HEAD' });
+    expect(res.body.data).toEqual({ level: 2, action: 'WARNING', days: null, priorCount: 1, recount: [], recountElsewhere: 0, startsAs: 'WAITING_HR', reviewSkip: 'RECORDER_IS_HEAD' });
     const rec = await recordOk(emp, v, '2025-09-10');
     expect(rec).toMatchObject({ level: 2, action: 'WARNING', status: 'WAITING_HR' });
   });

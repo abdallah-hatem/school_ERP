@@ -1,12 +1,12 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import type { IsoDateTime, Role, UserAccount } from '@school-erp/shared';
+import { SYSTEM_ADMIN_ROLE, type IsoDateTime, type Role, type UserAccount } from '@school-erp/shared';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useId, useMemo, useRef, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
-import { useCan } from '@/core/auth';
+import { useCan, useSession } from '@/core/auth';
 import { callApi } from '@/lib/callApi';
 import { FieldShell } from '@/shared/components/form/field-shell';
 import { TextField } from '@/shared/components/form/fields';
@@ -28,6 +28,7 @@ import { StatusPill } from '@/shared/components/ui/status-pill';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { CREATE_USER, UPDATE_USER } from '../apis';
 import { formatLockEnd, formatSignIn } from '../lib/sign-in-time';
+import { giveCeiling } from '../lib/role-grants';
 import { generateTemporaryPassword } from '../lib/temp-password';
 import {
   changedFields,
@@ -73,7 +74,18 @@ export interface UserFormProps {
 export function UserForm({ basePath, user, roles, lastAdmin = false, initialPassword, now }: UserFormProps) {
   const { t, has, locale } = useTranslation();
   const router = useRouter();
-  const canManage = useCan()('core.users.manage');
+  const session = useSession();
+  const ceiling = giveCeiling(session);
+  const rolesById = new Map(roles.map((r) => [r.id, r]));
+  // H1 (view only, the API decides): a non-System-admin can't manage a System admin or anyone
+  // holding more than they do, and nobody changes their own roles or employee record.
+  const beyondTarget = Boolean(
+    user &&
+      !ceiling.isSystemAdmin &&
+      user.roles.some((r) => !ceiling.canGiveRole(rolesById.get(r.id) ?? { key: r.key, permissions: [] })),
+  );
+  const self = Boolean(user && session?.id === user.id);
+  const canManage = useCan()('core.users.manage') && !beyondTarget;
   const readOnly = !canManage;
   const initial = useMemo(() => (user ? userToForm(user) : emptyUserForm()), [user]);
   const form = useForm<UserFormValues>({ resolver: zodResolver(userFormSchema), defaultValues: initial });
@@ -138,6 +150,23 @@ export function UserForm({ basePath, user, roles, lastAdmin = false, initialPass
       : t('access.userForm.editDescription')
     : t('access.userForm.addDescription');
   const lockedReason = lastAdmin && user ? t('access.userForm.lockedAdmin', { name: user.name }) : null;
+  // Why the roles or the employee record can't be changed here (H1), under each.
+  const ownAccessNote =
+    self && !readOnly ? (
+      <p data-testid="own-access-note" className="flex items-start gap-1.5 text-sm text-muted-foreground">
+        <LockedIcon className="mt-0.5 size-4 shrink-0" />
+        {t('access.userForm.ownAccess')}
+      </p>
+    ) : null;
+  const beyondNote = beyondTarget ? (
+    <p
+      data-testid="beyond-access-note"
+      className="flex items-start gap-2.5 rounded-xl bg-warning-soft p-3 text-sm font-semibold text-warning-ink"
+    >
+      <LockedIcon className="mt-0.5 size-5 shrink-0" />
+      {t(user?.roles.some((r) => r.key === SYSTEM_ADMIN_ROLE) ? 'access.userForm.systemAdminOnly' : 'access.userForm.beyondYours')}
+    </p>
+  ) : null;
 
   const account = (
     <FormCard title={t('access.userForm.account')}>
@@ -180,9 +209,11 @@ export function UserForm({ basePath, user, roles, lastAdmin = false, initialPass
               value={field.value}
               onChange={field.onChange}
               lockedReason={lockedReason}
-              disabled={readOnly}
+              disabled={readOnly || self}
               labelledBy={rolesTitleId}
+              givable={ceiling.canGiveRole}
             />
+            {ownAccessNote}
             {fieldState.error?.message ? (
               <p role="alert" className="flex items-start gap-1.5 text-sm font-semibold text-destructive-ink">
                 <ErrorIcon className="mt-0.5 size-4 shrink-0" />
@@ -219,7 +250,7 @@ export function UserForm({ basePath, user, roles, lastAdmin = false, initialPass
                 value={field.value}
                 onChange={field.onChange}
                 userId={user?.id}
-                disabled={readOnly}
+                disabled={readOnly || self}
                 invalid={a11y['aria-invalid']}
                 describedBy={a11y['aria-describedby']}
               />
@@ -227,6 +258,7 @@ export function UserForm({ basePath, user, roles, lastAdmin = false, initialPass
           </FieldShell>
         )}
       />
+      {ownAccessNote}
       {employeeNeeded ? (
         <p
           className="flex items-start gap-2.5 rounded-xl bg-warning-soft p-3 text-sm font-semibold text-warning-ink"
@@ -354,6 +386,7 @@ export function UserForm({ basePath, user, roles, lastAdmin = false, initialPass
         ]}
         breadcrumbsLabel={t('ui.shell.breadcrumbs')}
       />
+      {beyondNote}
       <Form onSubmit={(e) => void form.handleSubmit(onSubmit)(e)} aria-label={title}>
         <FormColumns
           sideFirst={Boolean(user)}
