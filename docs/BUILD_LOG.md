@@ -608,6 +608,11 @@ phase live in `docs/build-log/`.
   locks; `sessions_valid_after` kills old tokens after deactivate/reactivate; CI's 2 e2e failures were
   test mistakes (no rule changed). Release note: pay users must be linked to their employee record. A
   final focused review is running before merge.
+- 2026-11-23 — #258 final review of round 3: one High left — an unlinked account could still change its
+  own lateness or act on its own penalty, and editing a role could hand pay powers to an unlinked
+  holder. Plus lows: a few pay keys missing from the pay-role list, deactivate/temporary password
+  ending sessions only after commit, the actor's own roles not locked. Sent back as round 4; release
+  dry run gains a check listing pay users without an employee link.
 ## Next up
 
 - Scope widening by editing others: an employee editor can set another employee's manager to
