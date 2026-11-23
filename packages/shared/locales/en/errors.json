@@ -98,5 +98,8 @@
   "PAYROLL_APPROVER_ADJUSTED_OWN_LINE": "You adjusted your own line in this month's payroll, so someone else must approve it.",
   "EMPLOYEE_LINK_ADMIN_ONLY": "Only a System admin can choose who an account is in HR.",
   "PENALTY_RECOUNT_MONTH_LOCKED_ELSEWHERE": "This would raise the level of an approved penalty, in another stage, in a month whose payroll is approved. Corrections for an approved month go into the next month as adjustments.",
-  "OWN_PAY_CHANGE": "You can't change your own pay, insurance or lateness. Ask someone else."
+  "OWN_PAY_CHANGE": "You can't change your own pay, insurance or lateness. Ask someone else.",
+  "LINKED_ACCOUNT_ADMIN_ONLY": "Only a System admin can set a temporary password, change the email or unlock the sign-in of an account linked to an employee record.",
+  "UNLINKED_PAY_ROLE": "This account has no employee record, so it can't be given a role that acts on pay or penalties. A System admin must link it first.",
+  "ACCOUNT_NOT_LINKED": "Link your account to your employee record first. Ask a System admin."
 }

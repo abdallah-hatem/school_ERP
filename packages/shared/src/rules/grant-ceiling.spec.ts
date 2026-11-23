@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { PermissionScope, type PermissionScope as Scope } from '../permissions';
 import type { RoleGrant } from '../types/core';
-import { firstGrantOverCeiling, grantWithinCeiling, scopeCovers, type HeldGrants } from './grant-ceiling';
+import { actsOnPay, firstGrantOverCeiling, grantWithinCeiling, scopeCovers, type HeldGrants } from './grant-ceiling';
 
 const { ALL, OWN_STAGE, OWN_TEAM, SELF } = PermissionScope;
 const g = (key: RoleGrant['key'], scope: Scope): RoleGrant => ({ key, scope });
@@ -28,6 +28,22 @@ describe('H1/H2 grant ceiling — scopeCovers (the partial scope order)', () => 
   });
   it('an unknown stored scope covers nothing', () => {
     expect(scopeCovers('everyone' as Scope, SELF)).toBe(false);
+  });
+});
+
+describe('M2 — actsOnPay (an account holding these must be linked to its employee record)', () => {
+  it('the pay and penalty keys act on pay', () => {
+    for (const key of ['hr.payroll.adjust', 'hr.payroll.approve', 'hr.lateness.edit', 'hr.penalties.approve', 'hr.penalties.cancel'] as const) {
+      expect(actsOnPay([{ key }])).toBe(true);
+    }
+  });
+  it('editing employees counts only together with seeing salaries', () => {
+    expect(actsOnPay([{ key: 'hr.employees.edit' }])).toBe(false);
+    expect(actsOnPay([{ key: 'hr.employees.edit' }, { key: 'hr.employees.view_salary' }])).toBe(true);
+  });
+  it('viewing and recording do not', () => {
+    expect(actsOnPay([{ key: 'hr.payroll.view' }, { key: 'hr.penalties.record' }, { key: 'hr.employees.view' }])).toBe(false);
+    expect(actsOnPay([])).toBe(false);
   });
 });
 

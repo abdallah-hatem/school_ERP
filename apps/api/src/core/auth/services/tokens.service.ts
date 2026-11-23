@@ -98,14 +98,15 @@ export class TokensService {
   }
 
   /**
-   * Whether an access token may still be used, given when its user's password last changed
+   * Whether an access token may still be used, given its user's cut-off (the last password change,
+   * deactivation or reactivation)
    * (security review L-1): one issued after the change, yes; one issued before it only while its
    * sign-in (`fam`) still has a live refresh token — the sign-in that changed the password is kept,
    * the others were ended (and a temporary password ends them all). A token without `fam` (issued
    * before 2026-11-23) can't tell: refused, once, after a password change.
    */
-  async stillValid(payload: AccessPayload, passwordChangedAt: Date | null): Promise<boolean> {
-    if (!passwordChangedAt || (payload.iat ?? 0) * 1000 >= passwordChangedAt.getTime()) return true;
+  async stillValid(payload: AccessPayload, validAfter: Date | null): Promise<boolean> {
+    if (!validAfter || (payload.iat ?? 0) * 1000 >= validAfter.getTime()) return true;
     return !!payload.fam && (await this.refreshTokens.familyAlive(payload.fam));
   }
 

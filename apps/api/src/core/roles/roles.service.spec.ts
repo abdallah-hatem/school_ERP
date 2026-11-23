@@ -232,8 +232,12 @@ describe('RolesService', () => {
       const { service, repo } = makeService(row(), { held: { isSystemAdmin: true, grants: [] }, heldByActor: true });
       await service.update('r-1', { permissions: [{ key: 'core.users.manage', scope: 'all' }] }, me);
       expect(repo.replaceGrants).toHaveBeenCalled();
-      const system = makeService();
-      await system.service.create({ nameEn: 'X', nameAr: 'س', permissions: [{ key: 'core.users.manage', scope: 'all' }] });
+      // A signed-in System admin (not the system): their ceiling is read, and it is none.
+      const system = makeService(row(), { held: { isSystemAdmin: true, grants: [] } });
+      await system.service.create(
+        { nameEn: 'X', nameAr: 'س', permissions: [{ key: 'core.users.manage', scope: 'all' }] },
+        me,
+      );
       expect(system.repo.create).toHaveBeenCalledWith(
         expect.objectContaining({ grants: [{ permissionKey: 'core.users.manage', scope: 'all' }] }),
       );

@@ -35,8 +35,8 @@ export class UsersService {
     return this.users.findActiveAuthUser(id);
   }
 
-  /** The same, with when their password last changed (the access-token check, L-1). */
-  findActiveSession(id: string): Promise<{ user: AuthUser; passwordChangedAt: Date | null } | null> {
+  /** The same, with the cut-off its access tokens are checked against (L-1). */
+  findActiveSession(id: string): Promise<{ user: AuthUser; validAfter: Date | null } | null> {
     return this.users.findActiveSession(id);
   }
 

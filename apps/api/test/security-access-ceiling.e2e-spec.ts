@@ -7,8 +7,13 @@ import {
   type RoleGrant,
   type UserAccount,
 } from '@school-erp/shared';
+import { TransactionHost } from '@nestjs-cls/transactional';
+import { ClsService } from 'nestjs-cls';
 import { createHash } from 'node:crypto';
+import { RolesRepository } from '../src/core/roles/repositories/roles.repository';
+import { UsersRepository } from '../src/core/users/repositories/users.repository';
 import { DatabaseService } from '../src/database/database.service';
+import type { DbAdapter } from '../src/database/transactions';
 import { http, unique } from './helpers';
 import { ANONYMOUS_HEADER, createAppAsTestUser } from './helpers/as-test-user';
 
@@ -51,6 +56,8 @@ describe('Security review — access ceilings and sessions (e2e)', () => {
   let weakRole: Role;
   let weakUser: UserAccount;
   let admin: UserAccount;
+  /** M1: two stages, an employee in each (third review). */
+  const ref = { primary: '', prep: '', department: '', jobTitle: '', empPrimary: '', empPrep: '' };
 
   async function as<T>(id: string, fn: () => Promise<T>): Promise<T> {
     const me = user.id;
@@ -98,8 +105,37 @@ describe('Security review — access ceilings and sessions (e2e)', () => {
       { key: 'core.roles.manage', scope: 'all' },
       { key: 'hr.employees.view', scope: 'all' },
       { key: 'hr.penalties.view', scope: 'own_stage' },
+      // Acts on pay (M2): what they may give, but only to a linked account.
+      { key: 'hr.lateness.edit', scope: 'all' },
     ]);
     weakRole = await createRole([{ key: 'hr.employees.view', scope: 'self' }]);
+    const named = async (path: string) =>
+      (await http(app).post(path).send({ nameEn: unique('Ref'), nameAr: unique('مرجع') }).expect(201)).body.data.id as string;
+    ref.primary = await named('/stages');
+    ref.prep = await named('/stages');
+    ref.department = await named('/hr/departments');
+    ref.jobTitle = await named('/hr/job-titles');
+    const employee = async (stageId: string) =>
+      (
+        await http(app)
+          .post('/hr/employees')
+          .send({
+            nameEn: unique('Ceiling'),
+            nameAr: unique('سقف'),
+            gender: 'MALE',
+            dateOfBirth: '1990-01-01',
+            phone: '01000000000',
+            hireDate: '2015-09-01',
+            stageId,
+            departmentId: ref.department,
+            jobTitleId: ref.jobTitle,
+            workSystem: 'FULL_TIME',
+            basicSalary: 1_000_000,
+          })
+          .expect(201)
+      ).body.data.id as string;
+    ref.empPrimary = await employee(ref.primary);
+    ref.empPrep = await employee(ref.prep);
     manager = await createUser([managerRole.id]);
     weakUser = await createUser([weakRole.id]);
     admin = await createUser([roleId('system_admin')]);
@@ -108,6 +144,10 @@ describe('Security review — access ceilings and sessions (e2e)', () => {
   afterAll(async () => {
     await db.user.deleteMany({ where: { id: { in: userIds } } });
     await db.role.deleteMany({ where: { id: { in: roleIds } } });
+    await db.employee.deleteMany({ where: { id: { in: [ref.empPrimary, ref.empPrep].filter(Boolean) } } });
+    await db.department.deleteMany({ where: { id: ref.department } });
+    await db.jobTitle.deleteMany({ where: { id: ref.jobTitle } });
+    await db.stage.deleteMany({ where: { id: { in: [ref.primary, ref.prep].filter(Boolean) } } });
     await app.close();
   });
 
@@ -222,6 +262,167 @@ describe('Security review — access ceilings and sessions (e2e)', () => {
         expect(onStronger.body.error).toBe(ErrorCode.GRANT_EXCEEDS_OWN);
         await http(app).post(`/users/${weakUser.id}/unlock-sign-in`).expect(200);
       });
+    });
+  });
+
+  describe('third review (owner 2026-11-23)', () => {
+    const createLinked = async (ids: string[], employeeId: string, password = PASSWORD) => {
+      const account = (
+        await http(app)
+          .post('/users')
+          .send({ name: unique('Linked'), email: `${unique('linked')}@school.test`.toLowerCase(), password, roleIds: ids, employeeId })
+          .expect(201)
+      ).body.data as UserAccount;
+      userIds.push(account.id);
+      return account;
+    };
+
+    it('M1 — same scope, different link: the Primary user manager can’t take over the Prep head (LINKED_ACCOUNT_ADMIN_ONLY)', async () => {
+      const stageManager = await createLinked(
+        [
+          (
+            await createRole([
+              { key: 'core.users.view', scope: 'all' },
+              { key: 'core.users.manage', scope: 'all' },
+              { key: 'hr.employees.view', scope: 'own_stage' },
+            ])
+          ).id,
+        ],
+        ref.empPrimary,
+      );
+      // The Prep head holds exactly the same label (own_stage) — anchored to Prep.
+      const prepHead = await createLinked([(await createRole([{ key: 'hr.employees.view', scope: 'own_stage' }])).id], ref.empPrep);
+      const before = await db.user.findUniqueOrThrow({ where: { id: prepHead.id }, select: { passwordHash: true, email: true } });
+      await as(stageManager.id, async () => {
+        for (const res of [
+          await http(app).post(`/users/${prepHead.id}/password`).send({ password: 'taken-over-123' }).expect(403),
+          await http(app).patch(`/users/${prepHead.id}`).send({ email: `${unique('mine')}@school.test` }).expect(403),
+          await http(app).post(`/users/${prepHead.id}/unlock-sign-in`).expect(403),
+        ]) {
+          expect(res.body.error).toBe(ErrorCode.LINKED_ACCOUNT_ADMIN_ONLY);
+        }
+      });
+      expect(await db.user.findUniqueOrThrow({ where: { id: prepHead.id }, select: { passwordHash: true, email: true } })).toEqual(before);
+      // A System admin may.
+      await http(app).post(`/users/${prepHead.id}/password`).send({ password: 'admin-reset-123' }).expect(204);
+    });
+
+    it('M2-A — a non-admin can’t give an unlinked account a role acting on pay (UNLINKED_PAY_ROLE), create or update', async () => {
+      const clerk = await createRole([{ key: 'hr.lateness.edit', scope: 'all' }]);
+      await as(manager.id, async () => {
+        const created = await http(app)
+          .post('/users')
+          .send({ name: 'Clerk', email: `${unique('clerk')}@school.test`.toLowerCase(), password: PASSWORD, roleIds: [clerk.id] })
+          .expect(403);
+        expect(created.body.error).toBe(ErrorCode.UNLINKED_PAY_ROLE);
+        const updated = await http(app).patch(`/users/${weakUser.id}`).send({ roleIds: [weakRole.id, clerk.id] }).expect(403);
+        expect(updated.body.error).toBe(ErrorCode.UNLINKED_PAY_ROLE);
+      });
+      // A System admin may (they link accounts; the link is theirs to keep).
+      await http(app).patch(`/users/${weakUser.id}`).send({ roleIds: [weakRole.id, clerk.id] }).expect(200);
+      await http(app).patch(`/users/${weakUser.id}`).send({ roleIds: [weakRole.id] }).expect(200);
+    });
+
+    it('M2-C — a link change is in the log by name, before and after', async () => {
+      const person = await createUser([weakRole.id]);
+      await http(app).patch(`/users/${person.id}`).send({ employeeId: ref.empPrimary }).expect(200);
+      const [entry] = await db.auditEntry.findMany({
+        where: { entityId: person.id, action: 'core.user.update' },
+        orderBy: { seq: 'desc' },
+        take: 1,
+      });
+      const change = (entry?.changes as unknown as { field: string; before: unknown; after: unknown }[]).find(
+        (c) => c.field === 'employeeId',
+      );
+      expect(change).toMatchObject({ after: { nameEn: expect.stringContaining('Ceiling') } });
+      expect(change?.before ?? null).toBeNull();
+      await http(app).patch(`/users/${person.id}`).send({ employeeId: null }).expect(200);
+    });
+
+    it('pre-existing — a reactivated user’s access tokens from before the deactivation stay dead', async () => {
+      const person = await createUser([weakRole.id]);
+      const cookies = cookiesOf(
+        await http(app).post('/auth/login').set(ANONYMOUS_HEADER, '1').send({ email: person.email, password: PASSWORD }).expect(200),
+      );
+      const me = () =>
+        http(app).get('/auth/me').set(ANONYMOUS_HEADER, '1').set('Cookie', `${AUTH_COOKIES.access}=${cookies[AUTH_COOKIES.access]}`);
+      await me().expect(200);
+      await http(app).post(`/users/${person.id}/deactivate`).expect(200);
+      await http(app).post(`/users/${person.id}/reactivate`).expect(200);
+      await me().expect(401);
+    });
+
+    it('L3 — while a user’s row is locked for a check, signing in (a refresh-token insert) isn’t held up', async () => {
+      const person = await createUser([weakRole.id]);
+      const users = app.get(UsersRepository, { strict: false });
+      const roles = app.get(RolesRepository, { strict: false });
+      const txHost = app.get<TransactionHost<DbAdapter>>(TransactionHost, { strict: false });
+      const within = <T>(p: Promise<T>, ms: number) =>
+        Promise.race([p.then(() => 'done' as const), new Promise<'blocked'>((r) => setTimeout(() => r('blocked'), ms))]);
+      const outcome = await app.get(ClsService).run(() =>
+        txHost.withTransaction(async () => {
+          await users.lockUser(person.id);
+          await roles.lockRole(weakRole.id);
+          // Another connection: a token for that user, and that role given to someone — both only
+          // reference the locked rows (foreign keys), so neither waits.
+          const token = within(
+            db.refreshToken.create({
+              data: { userId: person.id, familyId: '00000000-0000-4000-8000-000000000777', tokenHash: unique('h'), expiresAt: new Date(Date.now() + 60_000) },
+            }),
+            2_000,
+          );
+          return token;
+        }),
+      );
+      expect(outcome).toBe('done');
+    });
+
+    it('L-6 — two admin actions at once on one account: the ceiling check never passes on roles that changed under it', async () => {
+      // Real sessions (the test-user swap can't run two people at once).
+      const signedIn = async (account: UserAccount, temp: string, own: string) => {
+        const first = cookiesOf(
+          await http(app).post('/auth/login').set(ANONYMOUS_HEADER, '1').send({ email: account.email, password: temp }).expect(200),
+        );
+        await http(app)
+          .post('/account/password')
+          .set(ANONYMOUS_HEADER, '1')
+          .set('Cookie', `${AUTH_COOKIES.access}=${first[AUTH_COOKIES.access]}`)
+          .send({ newPassword: own })
+          .expect(204);
+        const c = cookiesOf(
+          await http(app).post('/auth/login').set(ANONYMOUS_HEADER, '1').send({ email: account.email, password: own }).expect(200),
+        );
+        return `${AUTH_COOKIES.access}=${c[AUTH_COOKIES.access]}`;
+      };
+      const promoter = await createUser([roleId('system_admin')], 'temp-promoter-1');
+      const promoterCookie = await signedIn(promoter, 'temp-promoter-1', 'own-promoter-1');
+      const managerAccount = await createUser([managerRole.id], 'temp-manager-1');
+      const managerCookie = await signedIn(managerAccount, 'temp-manager-1', 'own-manager-1');
+      for (let round = 0; round < 3; round++) {
+        const target = await createUser([weakRole.id]);
+        const [promote, deactivate] = await Promise.all([
+          http(app)
+            .patch(`/users/${target.id}`)
+            .set(ANONYMOUS_HEADER, '1')
+            .set('Cookie', promoterCookie)
+            .send({ roleIds: [weakRole.id, roleId('system_admin')] }),
+          http(app).post(`/users/${target.id}/deactivate`).set(ANONYMOUS_HEADER, '1').set('Cookie', managerCookie),
+        ]);
+        expect(promote.status).toBe(200);
+        if (deactivate.status === 403) {
+          // It ran after the promotion: refused for the right reason.
+          expect(deactivate.body.error).toBe(ErrorCode.SYSTEM_ADMIN_ONLY);
+        } else {
+          // It ran first: its entry comes before the promotion's — never a deactivation of an admin.
+          expect(deactivate.status).toBe(200);
+          const entries = await db.auditEntry.findMany({
+            where: { entityId: target.id, action: { in: ['core.user.update', 'core.user.deactivate'] } },
+            orderBy: { seq: 'asc' },
+            select: { action: true },
+          });
+          expect(entries.map((e) => e.action)).toEqual(['core.user.deactivate', 'core.user.update']);
+        }
+      }
     });
   });
 

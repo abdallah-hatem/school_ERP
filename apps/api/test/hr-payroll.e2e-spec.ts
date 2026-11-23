@@ -610,15 +610,16 @@ describe('HR payroll and dashboard (e2e)', () => {
   it('hr.payroll.adjust: an HR officer adds and removes an adjustment; a Principal (views payroll, no adjust) → 403 on both, nothing changes', async () => {
     const emp = await employee();
     const run = await createRun(nextMonth());
-    const roleUser = async (role: string) => {
+    const roleUser = async (role: string, employeeId: string | null = null) => {
       const row = await db.user.create({
-        data: { email: `${unique(role)}@example.test`, name: role, passwordHash: 'x' },
+        data: { email: `${unique(role)}@example.test`, name: role, passwordHash: 'x', employeeId },
         select: { id: true },
       });
       await giveRoles(db, row.id, [role]);
       return row.id;
     };
-    const officer = await roleUser(BuiltInRole.HR_OFFICER);
+    // Acting on pay needs the account linked to its employee record (§6, owner 2026-11-23).
+    const officer = await roleUser(BuiltInRole.HR_OFFICER, await employee());
     const principal = await roleUser(BuiltInRole.PRINCIPAL);
     const as = async <T>(userId: string, fn: () => Promise<T>): Promise<T> => {
       const own = user.id;

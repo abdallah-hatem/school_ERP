@@ -559,7 +559,7 @@ describe('HR penalty catalogue and records (e2e)', () => {
     const v = await violation(LEVELS_5, 'doubles on repeat');
     for (let d = 1; d <= 7; d++) await approvedOn(emp, v, `2025-07-0${d}`);
     const res = await preview(emp, v, '2025-07-10').expect(200);
-    expect(res.body.data).toEqual({ level: 5, action: 'DEDUCT_DAYS', days: 5, priorCount: 7, recount: [], startsAs: 'WAITING_HR', reviewSkip: 'RECORDER_IS_HEAD' });
+    expect(res.body.data).toEqual({ level: 5, action: 'DEDUCT_DAYS', days: 5, priorCount: 7, recount: [], recountElsewhere: 0, startsAs: 'WAITING_HR', reviewSkip: 'RECORDER_IS_HEAD' });
     expect(await approvedOn(emp, v, '2025-07-10')).toMatchObject({ level: 5, days: 5 });
   });
 

@@ -340,7 +340,9 @@ export class PayrollService {
     // The change and its audit entry commit together (audit D2).
     return this.afterCommit.inTransaction(async () => {
       const run = await this.findDraft(id);
-      // §6 separation of duties (owner 2026-11-23): not someone who adjusted their own line in it.
+      // §6 separation of duties (owner 2026-11-23): an approver linked to their employee record
+      // (M2-B), and not someone who adjusted their own line in it.
+      await this.access.assertLinkedForPay();
       const actor = await this.access.actor();
       if (actor?.employeeId && (await this.repository.hasAdjustmentBy(id, actor.employeeId, actor.userId))) {
         throw new CodedException(HttpStatus.FORBIDDEN, ErrorCode.PAYROLL_APPROVER_ADJUSTED_OWN_LINE);
@@ -708,6 +710,8 @@ export class PayrollService {
    * line — the signed-in user's linked employee (403 `PAYROLL_OWN_LINE`). The system (seed) may.
    */
   private async assertNotOwnLine(employeeId: Uuid): Promise<void> {
+    // M2-B: whose line is "their own" must be known first.
+    await this.access.assertLinkedForPay();
     const actor = await this.access.actor();
     if (actor?.employeeId && actor.employeeId === employeeId) {
       throw new CodedException(HttpStatus.FORBIDDEN, ErrorCode.PAYROLL_OWN_LINE);

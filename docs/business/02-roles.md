@@ -136,7 +136,17 @@
     one: "their stage", "their team" and "themselves only" are worked out from that record, so
     choosing it chooses whom the account reaches. Only a System admin links employee records
     (simpler than checking the employee against every reach; linking is rare admin work);
-  - can't unlock a System admin's sign-in, or that of someone holding more than they do.
+  - can't unlock a System admin's sign-in, or that of someone holding more than they do;
+  - can't give a temporary password to, change the email of, or unlock the sign-in of **any account
+    linked to an employee record** (third review, owner 2026-11-23). Comparing permissions isn't
+    enough: "their stage" for the Primary head and for the Prep head look the same but reach
+    different people, so signing in as the Prep head would reach Prep. Only a System admin does it;
+    an account with no employee record (which reaches nobody through their stage, team or
+    themselves, and can't act on pay — §6) they still may;
+  - can't give an account with no employee record a role that acts on pay or penalties (adjusting or
+    approving payroll, entering lateness, approving or cancelling penalties, or editing employees
+    together with seeing salaries): "not your own" can't be checked without the record. A System
+    admin links the account first.
 
   "Reaching no further": *everyone* covers every reach; *their stage* covers their stage and
   *themselves only*; *their team* covers their team and *themselves only*; *themselves only* covers

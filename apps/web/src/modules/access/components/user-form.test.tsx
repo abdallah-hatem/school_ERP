@@ -282,6 +282,20 @@ describe('UserForm', () => {
       expect((screen.getByRole('textbox', { name: /Full name/ }) as HTMLInputElement).disabled).toBe(false);
     });
 
+    it('M1 — a linked account: a user manager can’t change its email, reset its password or unlock it', () => {
+      const linked = account({
+        id: '00000000-0000-4000-8000-000000000009',
+        roles: [{ ...role('hr_officer') }].map(({ id, key, nameEn, nameAr }) => ({ id, key, nameEn, nameAr })),
+        lockedUntil: '2026-11-17T13:00:00.000Z',
+      });
+      const viewer = sessionWith('core.users.view', 'core.users.manage', ...role('hr_officer').permissions.map((g) => g.key));
+      renderAccess(<UserForm basePath="/en/users" user={linked} roles={ROLES} now={NOW} />, 'en', viewer);
+      expect((screen.getByRole('textbox', { name: /Email/ }) as HTMLInputElement).disabled).toBe(true);
+      expect(screen.getByTestId('takeover-note')).toBeTruthy();
+      expect(screen.queryByRole('button', { name: /temporary password/ })).toBeNull();
+      expect(screen.queryByRole('button', { name: /Unlock/ })).toBeNull();
+    });
+
     it('H-1 — only a System admin chooses the employee record: locked for a user manager, saying why', () => {
       renderAccess(<UserForm basePath="/en/users" user={officer} roles={ROLES} now={NOW} />, 'en', manager);
       expect((screen.getByRole('combobox', { name: /Employee/ }) as HTMLButtonElement).disabled).toBe(true);

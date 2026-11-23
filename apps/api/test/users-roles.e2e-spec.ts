@@ -488,9 +488,11 @@ describe('users and roles (e2e)', () => {
       await db.user.update({ where: { id: deputy.id }, data: { isActive: false } });
       try {
         const mark = await historyMark(db);
+        // The test user's id, read before `as` swaps the signed-in id to the deputy's.
+        const testUserId = user.id;
         const lose = await as(deputy.id, () =>
           http(app)
-            .patch(`/users/${user.id}`)
+            .patch(`/users/${testUserId}`)
             .send({ roleIds: [roleId('hr_manager')] })
             .expect(409),
         );

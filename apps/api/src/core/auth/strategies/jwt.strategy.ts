@@ -36,13 +36,13 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   async validate(req: RequestWithSession, payload: AccessPayload): Promise<AuthUser> {
     const session = await this.users.findActiveSession(payload.sub);
     if (!session) throw new UnauthorizedException();
-    const { user, passwordChangedAt } = session;
+    const { user, validAfter } = session;
     // L-1 (security review): a token issued before the password last changed is good only while its
     // sign-in is still alive — the one that changed it is kept, the others were ended, and their
     // tokens stop now rather than at expiry. A token without `fam` (issued before 2026-11-23) can't
     // say which sign-in it is: after a password change it is refused once and the person signs in.
     // The extra read happens only for tokens older than the change.
-    if (!(await this.tokens.stillValid(payload, passwordChangedAt))) throw new UnauthorizedException();
+    if (!(await this.tokens.stillValid(payload, validAfter))) throw new UnauthorizedException();
     // Which sign-in this is (`CurrentSession`): a password change keeps it and ends the others (M3).
     if (typeof payload.fam === 'string') req[SESSION_FAMILY_KEY] = payload.fam;
     return user;

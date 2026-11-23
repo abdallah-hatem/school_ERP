@@ -461,6 +461,8 @@ export class EmployeesService {
       if (sendsSalary && !inScope(await this.access.salaryScope(), detailScopeFields(current))) {
         throw new ForbiddenException();
       }
+      // §6 (M2-B): a pay change needs to know whose pay is the editor's own — a linked account.
+      if (sendsSalary || OWN_PAY_FIELDS.some((f) => dto[f] !== undefined)) await this.access.assertLinkedForPay();
       await this.assertNotOwnAccessOrPay(current, dto);
 
       const cleared = REQUIRED_FIELDS.filter((f) => dto[f] === null);

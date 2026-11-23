@@ -205,7 +205,12 @@ from one IP all get in; 11 rapid sign-ins on one email → 429).
   once** (L-1): every request loads the user with `password_changed_at` (the same read as before), and
   a token issued before it (`iat`) is accepted only while its family still has a live refresh token
   (`TokensService.stillValid`, one indexed lookup, only for such older tokens; the file middleware
-  does the same). This also ends the old access tokens after a temporary password. A token issued
+  does the same). This also ends the old access tokens after a temporary password. The cut-off is
+  the later of `password_changed_at` and `sessions_valid_after`, which deactivate and reactivate set:
+  a reactivated user's tokens from before stay dead (their families were revoked). The other
+  sign-ins' refresh tokens are revoked **inside** the password change's transaction (third review
+  L2: `SessionRevocation`, which core/auth registers on start, since core/users can't depend on
+  it); the `core.user.sessions_ended` event still follows for logging and other listeners. A token issued
   before `fam` existed (before 2026-11-23) can't say which sign-in it is: after a password change it
   is refused once, the caller included, who signs in again.
 - **No per-user answer in Next's data cache.** Next 16 without `cacheComponents` (ours) caches no
@@ -734,10 +739,21 @@ Roles are rows, not code (spec P2, R2 / R5 / R8 / R9). A school changes them thr
   stage, team and self scopes are anchored to the linked employee, so a link is access; checking the
   employee against every scoped grant would be finer but needs HR's scope rules in core, so the simple
   rule was picked. A System admin may change their own link (they reach everyone already), never their
-  own roles. **Races** (L-6): every check on a user first locks their `users` row (`lockUser`), and
-  `setRolesOf` locks it too (and the roles it gives, `FOR SHARE`); a role edit or delete locks the
-  role's row (`lockRole`) before its held-by checks — so neither check can pass on roles that change
-  before the write. The web greys these out from the session (`giveCeiling`: keys only — the API also
+  own roles. **Races** (L-6, L1): every check on a user first locks their `users` row (`lockUser`) and
+  then, `FOR SHARE`, the rows of the roles they hold and the roles about to be given (`lockTarget` /
+  `lockForGiving`) — before any grant is read for the ceiling; `setRolesOf` takes the same locks. A
+  role edit or delete locks the role's row (`lockRole`) before its held-by checks. The exclusive
+  locks are `FOR NO KEY UPDATE` (third review L3): they still conflict with `FOR SHARE`, but not with
+  the key-share lock a foreign-key insert takes, so signing in (a refresh token for that user) or
+  giving that role to someone else isn't held up. **Takeover** (third review M1): the ceiling compares
+  scope labels, not reach (the Primary head's `own_stage` is not the Prep head's), so a
+  non-System-admin can't set a temporary password, change the email or unlock any account linked to
+  an employee (`LINKED_ACCOUNT_ADMIN_ONLY`). **Pay needs a link** (M2): a non-System-admin can't give
+  an unlinked account a role that `actsOnPay` (shared: payroll adjust / approve, lateness edit,
+  penalties approve / cancel, employees edit + view salary; `UNLINKED_PAY_ROLE`), and HR refuses an
+  unlinked non-admin's payroll adjustment, approval or salary edit (`HrAccessService.
+  assertLinkedForPay`, `ACCOUNT_NOT_LINKED`). The user snapshot in the log names the linked employee
+  (`employeeId: { nameEn, nameAr }` with the code), so a link change reads before → after. The web greys these out from the session (`giveCeiling`: keys only — the API also
   checks scopes).
 - Every user and role write is `@Audited` (`core.user.*`, `core.role.*`); passwords are never in the
   log (the entry says only that one was set or changed).

@@ -30,6 +30,11 @@ export function fakeAccess(
     // No signed-in user unless a test sets one (`actor`): the system acts.
     actor: () => Promise.resolve(actor ?? null),
     salaryScope: () => Promise.resolve(scopeOf('hr.employees.view_salary')),
+    // The system, or an actor with a linked employee, may act on pay (M2-B); an unlinked one may not.
+    assertLinkedForPay: () =>
+      actor && !actor.employeeId
+        ? Promise.reject(Object.assign(new Error('not linked'), { code: 'ACCOUNT_NOT_LINKED', status: 403 }))
+        : Promise.resolve(),
     assertInScope: (key: PermissionKey, employee: ScopedEmployee | null) => {
       if (!employee || !inScope(scopeOf(key), employee)) {
         return Promise.reject(new NotFoundException());

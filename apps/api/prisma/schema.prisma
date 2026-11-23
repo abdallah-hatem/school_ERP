@@ -30,6 +30,9 @@ model User {
   lastSignInAt       DateTime? @map("last_sign_in_at")
   /// When the password was last set by an admin or changed by the user (P3); null: before P3.
   passwordChangedAt  DateTime? @map("password_changed_at")
+  /// Access tokens issued before this are good only while their sign-in is alive (set on deactivate
+  /// and reactivate; a password change uses `passwordChangedAt`). Security review, 2026-11-23.
+  sessionsValidAfter DateTime? @map("sessions_valid_after")
   /// The linked employee (core-owned link, P2). Scopes (`own_stage`, `own_team`, `self`) read it.
   employeeId         String?   @unique @map("employee_id") @db.Uuid
   createdAt          DateTime  @default(now()) @map("created_at")

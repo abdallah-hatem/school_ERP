@@ -40,6 +40,8 @@ const MONTH = {
   locked: '2013-07',
   backdated: '2013-06',
   lateness: '2013-08',
+  /** M2-B: an unlinked HR manager's refusals. */
+  unlinked: '2013-09',
 };
 
 describe('Security review — HR access (e2e)', () => {
@@ -48,7 +50,7 @@ describe('Security review — HR access (e2e)', () => {
   let user: AuthUser;
   const stage = { primary: '', prep: '', kg: '' };
   const emp = { hPrim: '', hPrep: '', teacher: '', k1: '', prin: '', hrMgr: '', deputy: '', approver: '', viewer: '' };
-  const who = { primaryHead: '', prepHead: '', principal: '', hrMgr: '', deputy: '', approver: '', viewer: '', editor: '' };
+  const who = { primaryHead: '', prepHead: '', principal: '', hrMgr: '', deputy: '', approver: '', viewer: '', editor: '', unlinked: '' };
   let departmentId = '';
   let jobTitleId = '';
   let groupId = '';
@@ -179,8 +181,11 @@ describe('Security review — HR access (e2e)', () => {
     who.prepHead = await createUser([stageHead], emp.hPrep);
     who.principal = await createUser([await roleIdOf(BuiltInRole.PRINCIPAL)], emp.prin);
     who.hrMgr = await createUser([hrManager], emp.hrMgr);
-    // Not linked yet: linked to `emp.deputy` in the M4 test, after adjusting that line.
-    who.deputy = await createUser([hrManager]);
+    // A System admin not linked yet — the only one who may act on pay unlinked (M2-B) — linked to
+    // `emp.deputy` in the M4 test, after adjusting that line.
+    who.deputy = await createUser([await roleIdOf(BuiltInRole.SYSTEM_ADMIN)]);
+    // An HR manager with no employee record (M2-B).
+    who.unlinked = await createUser([hrManager]);
     who.approver = await createUser(
       [await createRole([{ key: 'hr.penalties.approve', scope: 'own_stage' }, { key: 'hr.penalties.view', scope: 'own_stage' }])],
       emp.approver,
@@ -407,6 +412,24 @@ describe('Security review — HR access (e2e)', () => {
     });
     const stored = (await http(app).get(`/hr/employees/${emp.hrMgr}`).expect(200)).body.data as Employee;
     expect(stored).toMatchObject({ basicSalary: 1_000_000, workSystem: 'FULL_TIME' });
+  });
+
+  it('M2-B — an HR manager with no employee record can’t act on pay: adjust, approve, edit a salary (ACCOUNT_NOT_LINKED)', async () => {
+    const run = (await http(app).post('/hr/payroll-runs').send({ month: MONTH.unlinked }).expect(201)).body.data as PayrollRun;
+    await as(who.unlinked, async () => {
+      for (const res of [
+        await http(app)
+          .post(`/hr/payroll-runs/${run.id}/adjustments`)
+          .send({ employeeId: emp.k1, type: 'ADDITION', amount: 10_000, reason: 'Exam committee' })
+          .expect(403),
+        await http(app).post(`/hr/payroll-runs/${run.id}/approve`).expect(403),
+        await http(app).patch(`/hr/employees/${emp.k1}`).send({ basicSalary: 1_200_000 }).expect(403),
+      ]) {
+        expect(res.body.error).toBe(ErrorCode.ACCOUNT_NOT_LINKED);
+      }
+      // Anything else they still do.
+      await http(app).patch(`/hr/employees/${emp.k1}`).send({ phone: '01000000003' }).expect(200);
+    });
   });
 
   it('M-3 — nobody moves their own record’s stages or manager (403 OWN_ACCESS_CHANGE)', async () => {

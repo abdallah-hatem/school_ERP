@@ -85,6 +85,9 @@ export function UserForm({ basePath, user, roles, lastAdmin = false, initialPass
       user.roles.some((r) => !ceiling.canGiveRole(rolesById.get(r.id) ?? { key: r.key, permissions: [] })),
   );
   const self = Boolean(user && session?.id === user.id);
+  // M1 (third review): only a System admin resets, re-emails or unlocks an account linked to an
+  // employee record — view only, the API decides.
+  const takeoverLocked = Boolean(user?.employee) && !self && !ceiling.isSystemAdmin;
   const canManage = useCan()('core.users.manage') && !beyondTarget;
   const readOnly = !canManage;
   const initial = useMemo(() => (user ? userToForm(user) : emptyUserForm()), [user]);
@@ -194,9 +197,10 @@ export function UserForm({ basePath, user, roles, lastAdmin = false, initialPass
           placeholder={t('access.userForm.emailPlaceholder')}
           hint={t('access.userForm.emailHint')}
           required
-          disabled={readOnly}
+          disabled={readOnly || takeoverLocked}
         />
       </div>
+      {takeoverLocked && !readOnly ? note('takeover-note', t('errors.LINKED_ACCOUNT_ADMIN_ONLY')) : null}
     </FormCard>
   );
 
@@ -295,7 +299,7 @@ export function UserForm({ basePath, user, roles, lastAdmin = false, initialPass
               <span>{t('access.userForm.lockedBody', { time: formatLockEnd(user.lockedUntil, locale) })}</span>
             </div>
           </div>
-          {canManage ? (
+          {canManage && !takeoverLocked ? (
             <Button type="button" variant="secondary" className="w-full" onClick={() => actions.unlock(user)}>
               <UnlockIcon />
               {t('access.userForm.unlock')}
@@ -332,7 +336,7 @@ export function UserForm({ basePath, user, roles, lastAdmin = false, initialPass
   ) : null;
 
   const passwordCard = user ? (
-    canManage && user.isActive ? (
+    canManage && user.isActive && !takeoverLocked ? (
       <FormCard title={t('access.userForm.password')}>
         {user.mustChangePassword ? (
           <div className="flex items-start gap-2.5 rounded-xl bg-warning-soft p-3 text-warning-ink">

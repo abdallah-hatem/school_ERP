@@ -71,6 +71,16 @@ export const ErrorCode = {
    * team or self scope is anchored to it, so a link is access (security review H-1, 2026-11-23).
    */
   EMPLOYEE_LINK_ADMIN_ONLY: 'EMPLOYEE_LINK_ADMIN_ONLY',
+  /**
+   * Only a System admin gives a temporary password to, changes the email of, or unlocks an account
+   * linked to an employee record (security review M1): taking it over would reach what it reaches.
+   */
+  LINKED_ACCOUNT_ADMIN_ONLY: 'LINKED_ACCOUNT_ADMIN_ONLY',
+  /**
+   * A role acting on pay or penalties (`PAY_AND_PENALTY_KEYS`) given to an account with no employee
+   * record, by someone who isn't a System admin (M2): "your own" can't be told apart without it.
+   */
+  UNLINKED_PAY_ROLE: 'UNLINKED_PAY_ROLE',
 
   // settings and files
   INVALID_WORK_HOURS: 'INVALID_WORK_HOURS',
@@ -159,6 +169,11 @@ export const ErrorCode = {
    * bank fields of their own employee record, or their own lateness.
    */
   OWN_PAY_CHANGE: 'OWN_PAY_CHANGE',
+  /**
+   * §6 (owner 2026-11-23): someone who isn't a System admin acts on pay (adjusts or approves payroll,
+   * edits a salary) only once their account is linked to their employee record.
+   */
+  ACCOUNT_NOT_LINKED: 'ACCOUNT_NOT_LINKED',
 
   // audit log
   /** An `@Audited` handler finished without recording its action (D6b); the change rolled back. */

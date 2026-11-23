@@ -4,6 +4,7 @@ import {
   CoreEvent,
   ErrorCode,
   SYSTEM_ADMIN_ROLE,
+  actsOnPay,
   type AuthUser,
   type EmployeeOption,
   type HeldGrants,
@@ -27,6 +28,7 @@ import type {
   UpdateUserDto,
 } from './dto/user.dto';
 import { UsersRepository, type UserAccountRow } from './repositories/users.repository';
+import { SessionRevocation } from './session-revocation';
 import { accountSnapshot, toEmployeeOption, toUserAccount } from './users.pure';
 
 /** Who is acting: the signed-in user; absent when the system itself acts (seed, scripts). */
@@ -48,6 +50,16 @@ type Actor = Pick<AuthUser, 'id'> | undefined;
  *   `GRANT_EXCEEDS_OWN`).
  * Nobody — a System admin included — changes their own roles or employee record (403
  * `OWN_ACCESS_CHANGE`): another administrator does.
+ *
+ * Third review (owner 2026-11-23):
+ * - M1: the ceiling compares scope labels, not reach (a Primary head's `own_stage` is not the Prep
+ *   head's). So only a System admin gives a temporary password to, changes the email of, or unlocks
+ *   an account **linked to an employee record** (403 `LINKED_ACCOUNT_ADMIN_ONLY`) — taking it over
+ *   would reach what it reaches. Unlinked accounts can't act on pay (M2), and reach nobody through
+ *   a stage, team or self scope.
+ * - M2: a non-System-admin can't give an unlinked account a role acting on pay or penalties
+ *   (`actsOnPay`, 403 `UNLINKED_PAY_ROLE`) — its "own" line couldn't be told apart.
+ * - L1: the roles given are locked (`FOR SHARE`) before their grants are read for the ceiling.
  */
 @Injectable()
 export class UserAccountsService {
@@ -58,6 +70,7 @@ export class UserAccountsService {
     private readonly afterCommit: AfterCommit,
     private readonly events: DomainEvents,
     private readonly signInLimit: SignInLimitService,
+    private readonly sessions: SessionRevocation,
   ) {}
 
   async list(query: ListUsersQueryDto): Promise<Paginated<UserAccount>> {
@@ -87,9 +100,12 @@ export class UserAccountsService {
     const email = normalizeEmail(dto.email);
     await this.assertEmailFree(email);
     const ceiling = await this.roles.ceilingOf(actor);
+    // L1: the roles given can't change between the ceiling check and the write.
+    await this.roles.lockForGiving(dto.roleIds);
     await this.assertMayAssign(await this.roles.refsByIds(dto.roleIds), ceiling);
     const employeeId = dto.employeeId ?? null;
     if (employeeId) this.assertMayLinkEmployee(ceiling);
+    if (dto.roleIds.length > 0) await this.assertPayRolesLinked(dto.roleIds, employeeId, ceiling);
     if (employeeId) await this.assertEmployeeFree(employeeId);
 
     const id = await this.users.create({
@@ -109,9 +125,8 @@ export class UserAccountsService {
   }
 
   async update(id: string, dto: UpdateUserDto, actor?: Actor): Promise<UserAccount> {
-    // L-6: their roles can't change between the ceiling check and the write.
-    await this.users.lockUser(id);
-    const before = await this.get(id);
+    // L-6 / L1: their roles, and the roles given, can't change between the ceiling check and the write.
+    const before = await this.lockTarget(id, dto.roleIds ?? []);
     const ceiling = await this.roles.ceilingOf(actor);
     await this.assertMayManage(before, ceiling);
     const heldIds = new Set(before.roles.map((r) => r.id));
@@ -130,7 +145,11 @@ export class UserAccountsService {
     // H-1: a stage, team or self scope is anchored to the link, so only a System admin changes it.
     if (changesEmployee) this.assertMayLinkEmployee(ceiling);
     const email = dto.email === undefined ? undefined : normalizeEmail(dto.email);
-    if (email !== undefined && email !== before.email) await this.assertEmailFree(email, id);
+    if (email !== undefined && email !== before.email) {
+      // M1: changing the email (then resetting through it) is a takeover too.
+      this.assertMayTakeOver(before, actor, ceiling);
+      await this.assertEmailFree(email, id);
+    }
     if (dto.employeeId && dto.employeeId !== before.employee?.id) {
       await this.assertEmployeeFree(dto.employeeId, id);
     }
@@ -139,6 +158,11 @@ export class UserAccountsService {
       const next = await this.roles.refsByIds(dto.roleIds);
       // H1: the roles given or taken away must be within the actor's own grants.
       await this.assertMayAssign(await this.roles.refsByIds(changedRoleIds), ceiling);
+      // M2: a role acting on pay or penalties needs an employee record behind the account.
+      if ([...nextIds].some((r) => !heldIds.has(r))) {
+        const linked = dto.employeeId !== undefined ? (dto.employeeId ?? null) : (before.employee?.id ?? null);
+        await this.assertPayRolesLinked(dto.roleIds, linked, ceiling);
+      }
       const losesAdmin =
         before.roles.some((r) => r.key === SYSTEM_ADMIN_ROLE) &&
         !next.some((r) => r.key === SYSTEM_ADMIN_ROLE);
@@ -159,31 +183,31 @@ export class UserAccountsService {
 
   /** Edge case 6 — the user's sessions end at once: their next request is a 401. */
   async deactivate(id: string, actor?: Actor): Promise<UserAccount> {
-    await this.users.lockUser(id);
-    const before = await this.get(id);
+    const before = await this.lockTarget(id);
     await this.assertMayManage(before, await this.roles.ceilingOf(actor));
     if (!before.isActive) return this.recordStatus('core.user.deactivate', before, before);
     if (before.roles.some((r) => r.key === SYSTEM_ADMIN_ROLE)) {
       await this.roles.assertAnotherSystemAdmin(id);
     }
-    await this.users.update(id, { isActive: false });
+    // Pre-existing gap (third review): the access tokens from before stay dead after a reactivation.
+    await this.users.update(id, { isActive: false, sessionsValidAfter: new Date() });
     await this.endSessions(id, 'deactivated');
     return this.recordStatus('core.user.deactivate', before, await this.get(id));
   }
 
   async reactivate(id: string, actor?: Actor): Promise<UserAccount> {
-    await this.users.lockUser(id);
-    const before = await this.get(id);
+    const before = await this.lockTarget(id);
     await this.assertMayManage(before, await this.roles.ceilingOf(actor));
-    if (!before.isActive) await this.users.update(id, { isActive: true });
+    if (!before.isActive) await this.users.update(id, { isActive: true, sessionsValidAfter: new Date() });
     return this.recordStatus('core.user.reactivate', before, await this.get(id));
   }
 
   /** An admin sets a temporary password: the user must change it, and their sessions end. */
   async setTemporaryPassword(id: string, password: string, actor?: Actor): Promise<void> {
-    await this.users.lockUser(id);
-    const user = await this.get(id);
-    await this.assertMayManage(user, await this.roles.ceilingOf(actor));
+    const user = await this.lockTarget(id);
+    const ceiling = await this.roles.ceilingOf(actor);
+    await this.assertMayManage(user, ceiling);
+    this.assertMayTakeOver(user, actor, ceiling);
     await this.users.update(id, {
       passwordHash: await hashPassword(password),
       mustChangePassword: true,
@@ -200,9 +224,10 @@ export class UserAccountsService {
    * when it wasn't locked. Under the same ceiling as a deactivation (security review M-1).
    */
   async unlockSignIn(id: string, actor?: Actor): Promise<UserAccount> {
-    await this.users.lockUser(id);
-    const before = await this.get(id);
-    await this.assertMayManage(before, await this.roles.ceilingOf(actor));
+    const before = await this.lockTarget(id);
+    const ceiling = await this.roles.ceilingOf(actor);
+    await this.assertMayManage(before, ceiling);
+    this.assertMayTakeOver(before, actor, ceiling);
     await this.signInLimit.unlock(before.email);
     const after = await this.get(id);
     await this.audit.record({
@@ -266,16 +291,19 @@ export class UserAccountsService {
     // The new password and its entry commit together, in a transaction opened only now: the checks
     // above (and a wrong password's count and lockout entry) hold no connection meanwhile (gap 10).
     await this.afterCommit.inTransaction(async () => {
+      const changedAt = new Date();
       await this.users.update(me.id, {
         passwordHash,
         mustChangePassword: false,
-        passwordChangedAt: new Date(),
+        passwordChangedAt: changedAt,
       });
       await this.audit.record({
         action: 'core.user.change_password',
         entity: { type: AuditEntityType.USER, id: me.id, label: me.name },
       });
-      // M3: every other sign-in ends after the commit; the one that changed it stays.
+      // M3 / L2: every other sign-in ends in this transaction, with the new password; the one that
+      // changed it stays. The event follows after the commit (logging, other listeners).
+      await this.sessions.endOtherSessions(me.id, changedAt, currentSession);
       await this.endSessions(me.id, 'password_changed', currentSession);
     });
   }
@@ -344,6 +372,47 @@ export class UserAccountsService {
   private assertMayLinkEmployee(ceiling: HeldGrants): void {
     if (!ceiling.isSystemAdmin) {
       throw new CodedException(HttpStatus.FORBIDDEN, ErrorCode.EMPLOYEE_LINK_ADMIN_ONLY);
+    }
+  }
+
+  /**
+   * The account `id`, after locking its row and its roles' rows (with `giving`, the roles about to be
+   * given) until the transaction ends (L-6 / L1): the ceiling check reads those grants, so neither
+   * the account's roles nor the roles' grants can change before the write.
+   */
+  private async lockTarget(id: string, giving: readonly string[] = []): Promise<UserAccount> {
+    await this.users.lockUser(id);
+    const user = await this.get(id);
+    await this.roles.lockForGiving([...user.roles.map((r) => r.id), ...giving]);
+    return user;
+  }
+
+  /**
+   * M1 (third review, owner 2026-11-23): only a System admin gives a temporary password to, changes
+   * the email of, or unlocks someone else's account that is linked to an employee record (403
+   * `LINKED_ACCOUNT_ADMIN_ONLY`). The ceiling compares scope labels, not reach — a Primary head's
+   * `own_stage` and the Prep head's look alike — so signing in as a linked account could reach what
+   * it reaches. Unlinked accounts reach nobody through a stage, team or self scope, and can't act on
+   * pay (M2).
+   */
+  private assertMayTakeOver(target: UserAccount, actor: Actor, ceiling: HeldGrants): void {
+    if (ceiling.isSystemAdmin || actor?.id === target.id || !target.employee) return;
+    throw new CodedException(HttpStatus.FORBIDDEN, ErrorCode.LINKED_ACCOUNT_ADMIN_ONLY);
+  }
+
+  /**
+   * M2 (third review): a role acting on pay or penalties (`actsOnPay`) may go to an account only if
+   * it is linked to its employee record — else "not your own line / penalty / pay" can't be checked.
+   * A System admin may (they link accounts); anyone else → 403 `UNLINKED_PAY_ROLE`.
+   */
+  private async assertPayRolesLinked(
+    roleIds: readonly string[],
+    employeeId: string | null,
+    ceiling: HeldGrants,
+  ): Promise<void> {
+    if (ceiling.isSystemAdmin || employeeId) return;
+    if (actsOnPay(await this.roles.grantsOfRoles(roleIds))) {
+      throw new CodedException(HttpStatus.FORBIDDEN, ErrorCode.UNLINKED_PAY_ROLE);
     }
   }
 

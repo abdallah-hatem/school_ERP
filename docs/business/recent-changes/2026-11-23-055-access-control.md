@@ -32,6 +32,13 @@ Decided by the owner ("fix all", after an independent security review; §2, §3,
   viewer covers (by the penalty's stage), and the "penalties changed" notice likewise.
 - **Nobody changes their own pay (§6)**: their salary, work system, insurance or bank details, or
   their own lateness minutes.
+- **Taking over an account (§2):** someone who isn't a System admin can't set a temporary password,
+  change the email or unlock the sign-in of an account linked to an employee record, and can't give
+  an unlinked account a role acting on pay or penalties.
+- **Acting on pay needs a linked account (§6):** adjusting or approving payroll and changing a
+  salary need the account linked to its employee record (a System admin excepted). Link changes are
+  in the activity log by name.
+- **A reactivated account's old sessions stay ended (§2).**
 - **Signing out elsewhere is immediate (§2)**: after a password change the other devices stop at
   once, not within 15 minutes.
 - **Insured salary (§2, §3):** someone who can't see an employee's salary can't set them "not

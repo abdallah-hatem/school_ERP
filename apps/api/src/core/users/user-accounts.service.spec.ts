@@ -14,6 +14,7 @@ import type { DomainEvents } from '../events';
 import type { RolesService } from '../roles';
 import type { SignInLimitService } from '../sign-in-limit';
 import type { UserAccountRow, UsersRepository } from './repositories/users.repository';
+import type { SessionRevocation } from './session-revocation';
 import { UserAccountsService } from './user-accounts.service';
 
 const ADMIN: RoleRef = { id: 'r-admin', key: 'system_admin', nameEn: 'System admin', nameAr: 'م' };
@@ -24,6 +25,10 @@ const HR_GRANTS: RoleGrant[] = [
   { key: 'hr.payroll.approve', scope: 'all' },
 ];
 const OFFICER_GRANTS: RoleGrant[] = [{ key: 'hr.employees.view', scope: 'all' }];
+/** A role acting on pay (M2): entering lateness. */
+const CLERK: RoleRef = { id: 'r-clerk', key: 'custom_clerk', nameEn: 'Lateness clerk', nameAr: 'م' };
+const CLERK_GRANTS: RoleGrant[] = [{ key: 'hr.lateness.edit', scope: 'all' }];
+const LINKED = { id: 'e-5', code: 'EMP-0005', nameEn: 'Prep Head', nameAr: 'رئيس', photoUrl: null, gender: 'MALE' as const };
 /** A user manager who isn't a System admin: holds what an officer holds, plus managing users. */
 const MANAGER: HeldGrants = {
   isSystemAdmin: false,
@@ -66,6 +71,7 @@ function makeService(
     create: jest.fn(),
   };
   const roles = {
+    lockForGiving: jest.fn(() => Promise.resolve()),
     // The System admin (or the system itself) unless `opts.held` says otherwise (H1).
     ceilingOf: jest.fn(() => Promise.resolve(opts.held ?? { isSystemAdmin: true, grants: [] })),
     assertWithinCeiling: jest.fn((held: HeldGrants, grants: RoleGrant[]) => {
@@ -74,15 +80,19 @@ function makeService(
       }
     }),
     grantsOfRoles: jest.fn((ids: string[]) =>
-      Promise.resolve(ids.flatMap((id) => (id === HR.id ? HR_GRANTS : id === OFFICER.id ? OFFICER_GRANTS : []))),
+      Promise.resolve(
+        ids.flatMap((id) =>
+          id === HR.id ? HR_GRANTS : id === OFFICER.id ? OFFICER_GRANTS : id === CLERK.id ? CLERK_GRANTS : [],
+        ),
+      ),
     ),
     refsByIds: jest.fn((ids: string[]) =>
-      Promise.resolve([ADMIN, HR, OFFICER].filter((r) => ids.includes(r.id))),
+      Promise.resolve([ADMIN, HR, OFFICER, CLERK].filter((r) => ids.includes(r.id))),
     ),
     setRolesOf: jest.fn((_id: string, ids: string[]) => {
       current = {
         ...current,
-        roles: [ADMIN, HR, OFFICER].filter((r) => ids.includes(r.id)).map((role) => ({ role })),
+        roles: [ADMIN, HR, OFFICER, CLERK].filter((r) => ids.includes(r.id)).map((role) => ({ role })),
       };
       return Promise.resolve();
     }),
@@ -113,6 +123,13 @@ function makeService(
       return Promise.resolve();
     }),
   };
+  /** Ends the other sign-ins inside the transaction (L2): records whether it ran inside one. */
+  const sessions = {
+    endOtherSessions: jest.fn(() => {
+      tx.seen.push(tx.open ? 'sessions ended in a transaction' : 'sessions ended outside a transaction');
+      return Promise.resolve();
+    }),
+  };
   const signInLimit = {
     lockedUntil: jest.fn((emails: string[]) =>
       Promise.resolve(new Map(lockedUntil ? emails.map((e) => [e, lockedUntil as Date]) : [])),
@@ -140,8 +157,9 @@ function makeService(
     afterCommit as unknown as AfterCommit,
     events as unknown as DomainEvents,
     signInLimit as unknown as SignInLimitService,
+    sessions as unknown as SessionRevocation,
   );
-  return { service, users, roles, audit, queued, events, signInLimit, afterCommit, tx };
+  return { service, users, roles, audit, queued, events, signInLimit, afterCommit, tx, sessions };
 }
 
 describe('UserAccountsService', () => {
@@ -186,7 +204,8 @@ describe('UserAccountsService', () => {
     const { service, users, queued, events, audit } = makeService(row(), { otherAdmins: 1 });
     const result = await service.deactivate('u-1');
     expect(result.isActive).toBe(false);
-    expect(users.update).toHaveBeenCalledWith('u-1', { isActive: false });
+    // The cut-off moves too: access tokens from before stay dead after a reactivation.
+    expect(users.update).toHaveBeenCalledWith('u-1', { isActive: false, sessionsValidAfter: expect.any(Date) });
     // Fire-and-forget: DomainEvents holds it until the commit.
     expect(queued).toHaveLength(1);
     expect(events.publish).toHaveBeenCalledWith(
@@ -473,6 +492,74 @@ describe('UserAccountsService', () => {
       await service.unlockSignIn('u-1', me);
       expect(users.lockUser).toHaveBeenCalledTimes(5);
       expect(users.lockUser.mock.invocationCallOrder[0]).toBeLessThan(users.findAccount.mock.invocationCallOrder[0]);
+    });
+  });
+
+  describe('third review (owner 2026-11-23)', () => {
+    const me = { id: 'u-me' };
+    const linkedOfficer = () => row({ id: 'u-5', roles: [{ role: OFFICER }], linkedEmployee: LINKED });
+
+    it('M1 — same scope, different link: a linked account can’t be reset, re-emailed or unlocked by a non-admin (LINKED_ACCOUNT_ADMIN_ONLY)', async () => {
+      const { service, users, signInLimit } = makeService(linkedOfficer(), { held: MANAGER, lockedUntil: new Date('2026-11-17T11:00:00Z') });
+      for (const attempt of [
+        () => service.setTemporaryPassword('u-5', 'temporary-1234', me),
+        () => service.update('u-5', { email: 'mine@school.test' }, me),
+        () => service.unlockSignIn('u-5', me),
+      ]) {
+        await expect(attempt()).rejects.toMatchObject({ code: ErrorCode.LINKED_ACCOUNT_ADMIN_ONLY, status: 403 });
+      }
+      expect(users.update).not.toHaveBeenCalled();
+      expect(signInLimit.unlock).not.toHaveBeenCalled();
+      // Their name may still be edited; a System admin may do all three.
+      await service.update('u-5', { name: 'Renamed' }, me);
+      const admin = makeService(linkedOfficer());
+      await admin.service.setTemporaryPassword('u-5', 'temporary-1234', me);
+      await admin.service.update('u-5', { email: 'new@school.test' }, me);
+    });
+
+    it('M1 — an unlinked account within the ceiling can still be reset by a user manager', async () => {
+      const { service, users } = makeService(row({ id: 'u-2', roles: [{ role: OFFICER }] }), { held: MANAGER });
+      await service.setTemporaryPassword('u-2', 'temporary-1234', me);
+      expect(users.update).toHaveBeenCalled();
+    });
+
+    it('M2-A — a non-admin can’t give an unlinked account a role acting on pay (UNLINKED_PAY_ROLE), on create or update', async () => {
+      const held: HeldGrants = { isSystemAdmin: false, grants: [...MANAGER.grants, ...CLERK_GRANTS] };
+      const { service, roles } = makeService(row({ id: 'u-2', roles: [{ role: OFFICER }] }), { held });
+      await expect(
+        service.create({ name: 'N', email: 'n@school.test', password: 'password-123', roleIds: [CLERK.id] }, me),
+      ).rejects.toMatchObject({ code: ErrorCode.UNLINKED_PAY_ROLE });
+      await expect(service.update('u-2', { roleIds: [OFFICER.id, CLERK.id] }, me)).rejects.toMatchObject({
+        code: ErrorCode.UNLINKED_PAY_ROLE,
+      });
+      expect(roles.setRolesOf).not.toHaveBeenCalled();
+      // Linked, it may be given; a System admin may give it anyway.
+      const linked = makeService(linkedOfficer(), { held });
+      await expect(linked.service.update('u-5', { roleIds: [OFFICER.id, CLERK.id] }, me)).resolves.toBeDefined();
+      await expect(makeService(row({ id: 'u-2', roles: [] })).service.update('u-2', { roleIds: [CLERK.id] }, me)).resolves.toBeDefined();
+    });
+
+    it('L1 — the roles given are locked before their grants are read for the ceiling', async () => {
+      const { service, roles } = makeService(row({ id: 'u-2', roles: [{ role: OFFICER }] }), { held: MANAGER });
+      await service.update('u-2', { roleIds: [] }, me);
+      expect(roles.lockForGiving).toHaveBeenCalledWith([OFFICER.id]); // held (taken away) and given (none)
+      expect(roles.lockForGiving.mock.invocationCallOrder[0]).toBeLessThan(roles.grantsOfRoles.mock.invocationCallOrder[0]);
+      await service.create({ name: 'N', email: 'n@school.test', password: 'password-123', roleIds: [OFFICER.id] }, me);
+      expect(roles.lockForGiving).toHaveBeenLastCalledWith([OFFICER.id]);
+    });
+
+    it('L2 — a password change ends the other sign-ins inside its transaction, keeping the caller’s', async () => {
+      const { service, users, sessions, tx } = makeService();
+      users.findPasswordHash.mockResolvedValue(await hashPassword('the-right-one', 4));
+      await service.changeOwnPassword({ id: 'u-1', name: 'Mona' } as AuthUser, { currentPassword: 'the-right-one', newPassword: 'new-password-1' }, 'fam-1');
+      expect(sessions.endOtherSessions).toHaveBeenCalledWith('u-1', expect.any(Date), 'fam-1');
+      expect(tx.seen).toContain('sessions ended in a transaction');
+    });
+
+    it('a deactivation and a reactivation move the session cut-off (old access tokens stay dead)', async () => {
+      const { service, users } = makeService(row({ isActive: false }), { otherAdmins: 1 });
+      await service.reactivate('u-1');
+      expect(users.update).toHaveBeenCalledWith('u-1', { isActive: true, sessionsValidAfter: expect.any(Date) });
     });
   });
 

@@ -172,7 +172,7 @@ one per event in `DomainEventMap`.
 | Published by | core — `UserAccountsService.deactivate`, `setTemporaryPassword` and `changeOwnPassword` via `endSessions`, `apps/api/src/core/users/user-accounts.service.ts` |
 | When | an active user is deactivated, or an admin sets a temporary password — after the `@Audited` request transaction commits; or the user changes their own password (security review M3, 2026-11-23) — after `changeOwnPassword`'s own transaction commits, with `keepFamilyId` the sign-in that changed it. A rollback ends nothing |
 | Listeners | core/auth — `SessionsEndedListener`, `apps/api/src/core/auth/listeners/sessions-ended.listener.ts` |
-| What it does | `RefreshTokensRepository.revokeAllOf(userId, at, keepFamilyId)` — revokes every unrevoked refresh token of the user, except those of the family `keepFamilyId` when given |
+| What it does | `RefreshTokensRepository.revokeAllOf(userId, at, keepFamilyId)` — revokes every unrevoked refresh token of the user, except those of the family `keepFamilyId` when given. For `password_changed` the revoke already happened inside the change's own transaction (`SessionRevocation`, registered by this listener on start); this run finds nothing left and stays for logging and other listeners |
 | Its transaction | none: one `updateMany` on the plain client (it runs after the commit, so `txHost.tx` is not in a transaction) |
 | Idempotent | yes — only rows with `revoked_at` null are touched |
 | If it fails | logged by `DomainEvents`. A deactivated user is still locked out (every request and every refresh re-reads the user). After a temporary password the old sessions would survive until their refresh tokens expire — acceptable for fire-and-forget (owner's design) |

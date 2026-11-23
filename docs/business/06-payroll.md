@@ -44,6 +44,14 @@ lines each role sees: §2 Roles (enforced, P4).
   number, registration date, insured salary) or bank details; and not their own lateness minutes.
   "You can't change your own pay, insurance or lateness. Ask someone else." Their own row sent back
   unchanged (the lateness screen saves the whole month) is fine.
+- **DECIDED** (owner, 2026-11-23, separation of duties) — **Acting on pay needs a linked account.**
+  Someone who isn't a System admin adjusts or approves payroll, or changes a salary, only once their
+  account is linked to their employee record ("Link your account to your employee record first. Ask
+  a System admin.") — otherwise "your own line" can't be told apart. An HR manager or HR officer must
+  be linked. A System admin is the exception (they link accounts, and may unlink themselves); that is
+  the rule's limit: an unlinked System admin could adjust a line that is theirs, and approving
+  catches it only once they are linked to it. Every link change is in the activity log, by name,
+  before and after.
 - **DECIDED** (2026-11-23) — The draft's **pending penalties** count shown to someone who sees only
   some lines (their stage or team) counts only those employees' penalties; the month's approval still
   waits for every pending penalty of the school.

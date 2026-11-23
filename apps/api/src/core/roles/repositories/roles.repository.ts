@@ -114,10 +114,8 @@ export class RolesRepository {
   async setRolesOf(userId: string, roleIds: readonly string[]): Promise<void> {
     // L-6: the user's row (a ceiling check on them waits, `UsersRepository.lockUser`) and the roles
     // given, shared (an edit of one of them, `lockRole`, waits — its held-by check sees this).
-    await this.db.$queryRaw`SELECT "id" FROM "users" WHERE "id" = ${userId}::uuid FOR UPDATE`;
-    if (roleIds.length > 0) {
-      await this.db.$queryRaw`SELECT "id" FROM "roles" WHERE "id" = ANY(${[...roleIds]}::uuid[]) FOR SHARE`;
-    }
+    await this.db.$queryRaw`SELECT "id" FROM "users" WHERE "id" = ${userId}::uuid FOR NO KEY UPDATE`;
+    await this.lockShared(roleIds);
     await this.db.userRoleAssignment.deleteMany({
       where: { userId, roleId: { notIn: [...roleIds] } },
     });
@@ -140,7 +138,19 @@ export class RolesRepository {
    * (`setRolesOf` takes it shared) waits, so the held-by checks of an edit can't go stale.
    */
   async lockRole(roleId: string): Promise<void> {
-    await this.db.$queryRaw`SELECT "id" FROM "roles" WHERE "id" = ${roleId}::uuid FOR UPDATE`;
+    // `FOR NO KEY UPDATE` (L3): still conflicts with `lockShared`'s `FOR SHARE`, but not with the
+    // key-share locks of inserts that merely reference the role.
+    await this.db.$queryRaw`SELECT "id" FROM "roles" WHERE "id" = ${roleId}::uuid FOR NO KEY UPDATE`;
+  }
+
+  /**
+   * Takes the roles' rows shared until the transaction ends (L-6 / L1): an edit of one of them
+   * (`lockRole`) waits until the giving is written — and the giving's ceiling check reads the grants
+   * under this lock, so they can't change in between.
+   */
+  async lockShared(roleIds: readonly string[]): Promise<void> {
+    if (roleIds.length === 0) return;
+    await this.db.$queryRaw`SELECT "id" FROM "roles" WHERE "id" = ANY(${[...roleIds]}::uuid[]) FOR SHARE`;
   }
 
   /** Whether `userId` holds the role. */

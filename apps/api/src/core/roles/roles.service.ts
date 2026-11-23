@@ -62,6 +62,14 @@ export class RolesService {
     }
   }
 
+  /**
+   * Locks the roles about to be given (or taken away) shared, until the transaction ends (L1): an
+   * edit of one of them waits, so the grants the ceiling check reads are the ones given.
+   */
+  lockForGiving(ids: readonly string[]): Promise<void> {
+    return this.roles.lockShared([...new Set(ids)]);
+  }
+
   /** Every permission the roles with these ids grant (the System admin role: every key, `all`). */
   async grantsOfRoles(ids: readonly string[]): Promise<RoleGrant[]> {
     const roles = await Promise.all([...new Set(ids)].map((id) => this.get(id)));
