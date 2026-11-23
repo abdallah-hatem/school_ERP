@@ -9,9 +9,9 @@ import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 
 /**
- * A wrong address, outside the shell, signed in or not (`app/[locale]/not-found.tsx` and
- * `app/global-not-found.tsx`): the school's name and the language switch on top, the "404" and the
- * way out in the middle (option 2 of design/mockups/error-pages.html).
+ * A wrong address, outside the shell, signed in or not (`app/[locale]/not-found.tsx`, reached
+ * through `[...missing]`): the school's name and the language switch on top, the "404" and the way
+ * out in the middle (option 2 of design/mockups/error-pages.html).
  */
 export function NotFoundPage({ branding, signedIn }: { branding: SchoolBranding; signedIn: boolean }) {
   const { locale } = useTranslation();

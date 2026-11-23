@@ -1472,7 +1472,7 @@ moves focus to its heading and sets the tab's title. The words live in `ui.error
 | What happened | File | Screen |
 |---|---|---|
 | A wrong address under `/<locale>/`, or with an extension (`/x.php` → `/en/x.php`) | `app/[locale]/[...missing]/page.tsx` → `app/[locale]/not-found.tsx` | Outside the shell: "Page not found", **404 status**. Back to the dashboard when signed in, Sign in when not (`hasLiveSession`, the proxy's own token check, with no API call) |
-| A wrong address the proxy never sees (`/api/…`) | `app/global-not-found.tsx` (`experimental.globalNotFound`) | The same screen, in English, **without a CSP** (see below) |
+| An unknown `/api/…` (route handlers, never pages) | `app/api/[...missing]/route.ts` | A JSON 404 in the API's envelope (`{ success: false, error: 'NOT_FOUND' }`), `no-store` |
 | A missing, out-of-scope or forbidden record or page | `app/[locale]/(dashboard)/not-found.tsx` | In the shell: "We couldn't find that page", the same words for all three. Status 200 once the page has streamed (Next can't change it then) |
 | A dashboard page fails | `app/[locale]/(dashboard)/error.tsx` → `RouteError` | In the shell: "Something went wrong", Try again (`router.refresh()` + `reset()`), Back to the dashboard, the **reference code** with Copy. One boundary for every section |
 | The sign-in pages fail | `app/[locale]/(auth)/error.tsx` | The same screen, without Back to the dashboard |
@@ -1503,11 +1503,14 @@ moves focus to its heading and sets the tab's title. The words live in `ui.error
   and no inline event-handler attributes. Pages are never cached (`private, no-store`). The proxy
   sees every address but Next's internals, `/api/…`, `/files/…` and the app's own files with an
   extension (`favicon.ico`, `sw.js`, `manifest.webmanifest`, `offline.html`), so a missing `/x.php` gets
-  the nonce CSP and its language. **The gap:** a wrong `/api/…` address renders `global-not-found`
-  with no CSP, because the proxy doesn't run there and a static policy can't work — Next's inline
-  bootstrap scripts need the per-response nonce (`script-src 'self'` alone blocks them). The page reads
-  nothing from the request but the session cookie's expiry and the public branding, so the risk is
-  small; the static headers (`nosniff`, `X-Frame-Options: DENY`, …) still apply.
+  the nonce CSP and its language. A static CSP for the skipped paths wouldn't work for pages: Next's
+  inline bootstrap scripts need the per-response nonce. So no page is served there: `/api/…` is
+  JSON (above), `/files/…` is the API's, `/_next/…` is Next's own.
+- **No `global-not-found`:** `[locale]` matches every first segment and `[...missing]` every
+  rest, so no address is ever unmatched and Next never uses one. A `notFound()` from the root layout
+  itself (a first segment that isn't a language on a path the proxy skips, in practice only
+  `/favicon.ico`) is Next's built-in 404; `experimental.globalNotFound` didn't change that (CI,
+  #267), so it was removed.
 - **Smoke-only pages** (`page.e2e.tsx`): `(dashboard)/e2e/server-error` (throws in the shell) and
   `(e2e)/e2e-root-error` (throws outside every boundary, so it reaches `global-error`). They are
   pages only when the build has `NEXT_PUBLIC_E2E_HOOKS=true` (`next.config.ts` → `pageExtensions`,

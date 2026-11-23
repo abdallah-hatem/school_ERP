@@ -6,7 +6,7 @@ import { t } from './i18n';
 export const MISSING_PATH = '/no-such-page-404';
 /** A missing address with an extension (the proxy sees it, so it gets the locale's 404). */
 export const DOTTED_MISSING_PATH = '/no-such.php';
-/** A missing address the proxy never sees: `app/global-not-found.tsx` answers it. */
+/** A missing route handler (`app/api/[...missing]/route.ts` answers a JSON 404). */
 export const API_MISSING_PATH = '/api/no-such';
 export const FORCED_ERROR_PATH = '/e2e/server-error';
 /** Smoke-only too: a page outside every error boundary, so the root `global-error` renders. */

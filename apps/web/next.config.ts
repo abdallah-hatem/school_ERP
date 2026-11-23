@@ -12,9 +12,6 @@ const nextConfig: NextConfig = {
   transpilePackages: ['@school-erp/shared'],
   poweredByHeader: false,
   pageExtensions: ['tsx', 'ts', 'jsx', 'js', ...E2E_PAGE_EXTENSIONS],
-  // A 404 page for addresses outside every route (`app/global-not-found.tsx`): the root layout
-  // is `app/[locale]/layout.tsx`, so there is no root `not-found` to fall back on.
-  experimental: { globalNotFound: true },
   // On every response. The Content-Security-Policy needs a nonce per page, so the proxy sets it
   // (src/proxy.ts; docs/ARCHITECTURE.md → Security).
   async headers() {

@@ -49,12 +49,11 @@ test('a wrong address signed out: 404, "Page not found" and Sign in', async ({ p
   expect(new URL(page.url()).pathname).toBe(`/en${DOTTED_MISSING_PATH}`);
   await expectPageNotFound(page, 'en', false);
 
-  // An address the proxy never sees (under /api/): app/global-not-found.tsx, the same screen.
-  const outside = await page.goto(API_MISSING_PATH);
-  expect(outside?.status()).toBe(404);
-  expectNoStore(outside);
-  await expect(page.getByRole('heading', { level: 1, name: t('en', 'ui.errorPages.notFoundTitle') })).toBeVisible();
-  await expect(page.getByRole('link', { name: t('en', 'ui.errorPages.signIn') })).toHaveAttribute('href', '/en/login');
+  // `/api/…` is route handlers, never pages: an unknown one is a JSON 404 in the API's envelope.
+  const api = await page.request.get(API_MISSING_PATH);
+  expect(api.status()).toBe(404);
+  expect(api.headers()['cache-control']).toContain('no-store');
+  expect(await api.json()).toEqual({ success: false, error: 'NOT_FOUND' });
 
   // Sign in leads to the sign-in page.
   await page.getByRole('link', { name: t(locale, 'ui.errorPages.signIn') }).click();
