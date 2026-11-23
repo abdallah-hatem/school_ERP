@@ -622,8 +622,20 @@ phase live in `docs/build-log/`.
 - 2026-11-23 — #258 final review of round 4: nothing above Low (a possible deadlock between two role
   edits, a message wording). Last polish round plus screenshots of the screens rounds 3–4 changed, then
   merge. Note: only a System admin can create or link HR-staff accounts now.
+- 2026-11-23 — Access-control fixes merged → #258, after five fix rounds and four independent reviews
+  (the last found nothing above Low) and a fully green CI. Release notes: accounts that act on pay must
+  be linked to their employee record (run `apps/api/prisma/checks/unlinked-pay-accounts.ts`, DRY_RUN
+  § 2b, and link the ones it lists); only a System admin creates or links HR-staff accounts; a
+  password change from a session opened before this release signs that session out once. Also fixed:
+  the Users table overflowing its card at 1440 with long names.
 ## Next up
 
+- Pay buttons for unlinked HR accounts: hide or disable Approve / adjust / lateness edits with the
+  reason, instead of refusing on click.
+- Users table fits its card with no spare width since #258 (names and emails truncate); give it room
+  (fewer columns on desktop, or cards below a width) before adding a column.
+- 404 and error pages: three mockups shown (`design/mockups/error-pages.html` on the `design` branch);
+  build after the owner's pick.
 - Scope widening by editing others: an employee editor can set another employee's manager to
   themselves or move them into the editor's stage, widening their own team/stage reach (found by the
   #258 review, left out of that PR).
