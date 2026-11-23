@@ -613,6 +613,12 @@ phase live in `docs/build-log/`.
   holder. Plus lows: a few pay keys missing from the pay-role list, deactivate/temporary password
   ending sessions only after commit, the actor's own roles not locked. Sent back as round 4; release
   dry run gains a check listing pay users without an employee link.
+- 2026-11-23 — #258 round 4 pushed: an unlinked non-admin can no longer change lateness or review,
+  approve, reject or cancel a penalty; a role edit that makes a role pay-acting is refused while any
+  holder is unlinked; the pay-role list gains penalty review and plain employee edit; deactivate and
+  temporary passwords end sessions inside the transaction; the actor's own roles are locked before the
+  ceiling check; new release check `apps/api/prisma/checks/unlinked-pay-accounts.ts` (DRY_RUN § 2b)
+  lists pay users without an employee link. Final focused review running.
 ## Next up
 
 - Scope widening by editing others: an employee editor can set another employee's manager to
