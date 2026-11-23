@@ -104,10 +104,12 @@ export async function APPROVE_PENALTY(
   id: Uuid,
   acknowledgedRecount?: PenaltyRecountAcknowledgement[],
   note?: string | null,
+  acknowledgedRecountElsewhere?: number,
 ) {
   const body: ApprovePenaltyRequest = {
     ...(acknowledgedRecount ? { acknowledgedRecount } : {}),
     ...(note ? { note } : {}),
+    ...(acknowledgedRecountElsewhere ? { acknowledgedRecountElsewhere } : {}),
   };
   const response = await apiFetch<PenaltyRecord>(`/hr/penalties/${encodeURIComponent(id)}/approve`, {
     method: 'POST',

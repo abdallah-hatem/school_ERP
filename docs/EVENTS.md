@@ -101,7 +101,7 @@ add. Keep the `###` heading format: `` `Group.KEY` — `'name'` ``.
 | `hr.employee.deactivated` | hr / `EmployeesService.deactivate` | none yet | must-deliver | outbox row in the change's transaction |
 | `hr.payroll.approved` | hr / `PayrollService.approve` | accounting / `PayrollApprovedListener` | must-deliver | outbox row in the approval's transaction |
 | `core.settings.changed` | core / `SettingsService.writeValues`, `SettingsHistory.record` | none | fire-and-forget | after commit, per changed key |
-| `core.user.sessions_ended` | core / `UserAccountsService` deactivate, temporary password | core/auth / `SessionsEndedListener` | fire-and-forget | after commit |
+| `core.user.sessions_ended` | core / `UserAccountsService` deactivate, temporary password, change own password | core/auth / `SessionsEndedListener` | fire-and-forget | after commit |
 | `core.notification.push_requested` | core / `NotificationsService.notify` (a new item for someone with alerts on a device) | core/notifications / `PushNotificationListener` | must-deliver | outbox row in the notifying change's transaction |
 
 ## Events catalogue
@@ -168,11 +168,11 @@ one per event in `DomainEventMap`.
 | | |
 |---|---|
 | Kind | **fire-and-forget** |
-| Payload | `UserSessionsEndedEvent` `{ userId, reason: 'deactivated' \| 'temporary_password', at }` |
-| Published by | core — `UserAccountsService.deactivate` and `setTemporaryPassword` via `endSessions`, `apps/api/src/core/users/user-accounts.service.ts` |
-| When | an active user is deactivated, or an admin sets a temporary password; sent after the `@Audited` request transaction commits (a rollback ends nothing) |
+| Payload | `UserSessionsEndedEvent` `{ userId, reason: 'deactivated' \| 'temporary_password' \| 'password_changed', at, keepFamilyId? }` |
+| Published by | core — `UserAccountsService.deactivate`, `setTemporaryPassword` and `changeOwnPassword` via `endSessions`, `apps/api/src/core/users/user-accounts.service.ts` |
+| When | an active user is deactivated, or an admin sets a temporary password — after the `@Audited` request transaction commits; or the user changes their own password (security review M3, 2026-11-23) — after `changeOwnPassword`'s own transaction commits, with `keepFamilyId` the sign-in that changed it. A rollback ends nothing |
 | Listeners | core/auth — `SessionsEndedListener`, `apps/api/src/core/auth/listeners/sessions-ended.listener.ts` |
-| What it does | `RefreshTokensRepository.revokeAllOf(userId, at)` — revokes every unrevoked refresh token of the user |
+| What it does | `RefreshTokensRepository.revokeAllOf(userId, at, keepFamilyId)` — revokes every unrevoked refresh token of the user, except those of the family `keepFamilyId` when given. For `password_changed` the revoke already happened inside the change's own transaction (`SessionRevocation`, registered by this listener on start); this run finds nothing left and stays for logging and other listeners |
 | Its transaction | none: one `updateMany` on the plain client (it runs after the commit, so `txHost.tx` is not in a transaction) |
 | Idempotent | yes — only rows with `revoked_at` null are touched |
 | If it fails | logged by `DomainEvents`. A deactivated user is still locked out (every request and every refresh re-reads the user). After a temporary password the old sessions would survive until their refresh tokens expire — acceptable for fire-and-forget (owner's design) |
@@ -236,7 +236,7 @@ How a write gets its transaction:
 | `apps/api/src/core/jobs/repositories/job-runs.repository.ts` | `withLock` (every scheduled job run with `lock` on, via `JobRunner` in `apps/api/src/core/jobs/job-runner.service.ts`) | `db.$transaction` on the plain client (outside any request), holding `pg_try_advisory_xact_lock(hashtextextended('job:<name>', 0))` — released when the transaction ends, also if the process dies. `lock: false` jobs (the outbox's) run without it | the job's own work (e.g. `login-attempts.cleanup`) runs inside it; `job_runs` is written afterwards by `record`, outside it | — |
 | `apps/api/src/core/auth/repositories/refresh-tokens.repository.ts` | token refresh (`rotate`) | `databaseService.$transaction` (not CLS; `@NotAudited`, deliberately — see Known gaps) | the new token + marking the old one used | — |
 | `apps/api/src/core/users/user-accounts.service.ts` | create, update, deactivate, reactivate, unlock sign-in, temporary password | request transaction (`@Audited`) | the user + roles + the `core.user.*` entry (unlock: deletes the `login_attempts` row) | `core.user.sessions_ended` (deactivate, temporary password) |
-| `apps/api/src/core/users/user-accounts.service.ts` | change own password (`POST /account/password`) | **no request transaction** (`@NotAudited`, with the reason): the checks, a wrong password's count and lockout hold no connection; then `afterCommit.inTransaction` | the new password + the `core.user.change_password` entry, together | — |
+| `apps/api/src/core/users/user-accounts.service.ts` | change own password (`POST /account/password`) | **no request transaction** (`@NotAudited`, with the reason): the checks, a wrong password's count and lockout hold no connection; then `afterCommit.inTransaction` | the new password + the `core.user.change_password` entry, together | `core.user.sessions_ended` (the other sign-ins) |
 | `apps/api/src/core/roles/roles.service.ts` | role create, update, delete | request transaction (`@Audited`) | the role + grants + the `core.role.*` entry | — |
 | `apps/api/src/core/settings/settings.service.ts` | `writeValues` (school settings, logo, HR and accounting settings); `setLogo` | `afterCommit.inTransaction` (joins the request's); the logo file is saved inside it with `afterCommit.onRollback` deleting it again | the changed keys + one entry for the owner's action | `core.settings.changed` per changed key |
 | `apps/api/src/core/settings/repositories/school-setting.repository.ts` | `upsertMany` | `txHost.withTransaction` | every key or none | — |

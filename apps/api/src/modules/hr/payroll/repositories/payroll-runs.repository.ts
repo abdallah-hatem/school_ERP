@@ -428,6 +428,14 @@ export class PayrollRunsRepository extends BaseRepository<
     });
   }
 
+  /** Whether `userId` made an adjustment on `employeeId`'s line of the run (§6 separation of duties). */
+  async hasAdjustmentBy(runId: string, employeeId: string, userId: string): Promise<boolean> {
+    const count = await this.db.payrollAdjustment.count({
+      where: { runId, employeeId, createdById: userId },
+    });
+    return count > 0;
+  }
+
   findAdjustment(runId: string, adjustmentId: string): Promise<AdjustmentRow | null> {
     return this.db.payrollAdjustment.findFirst({
       where: { id: adjustmentId, runId },

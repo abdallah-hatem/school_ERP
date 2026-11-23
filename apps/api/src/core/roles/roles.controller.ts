@@ -12,8 +12,9 @@ import {
   Query,
   Req,
 } from '@nestjs/common';
-import { PAGINATION, type ApiResponse, type Role } from '@school-erp/shared';
+import { PAGINATION, type ApiResponse, type AuthUser, type Role } from '@school-erp/shared';
 import type { Request } from 'express';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { ResponseUtil } from '../../common/utils/response.util';
 import { Audited } from '../audit';
@@ -46,15 +47,20 @@ export class RolesController {
   @Post()
   @Permission('core.roles.manage')
   @Audited('core.role.create')
-  create(@Body() dto: CreateRoleDto): Promise<Role> {
-    return this.roles.create(dto);
+  create(@Body() dto: CreateRoleDto, @CurrentUser() me?: AuthUser): Promise<Role> {
+    return this.roles.create(dto, me);
   }
 
+  /** A non-System-admin: not a role they or a System admin hold, nothing beyond their own grants (H2). */
   @Patch(':id')
   @Permission('core.roles.manage')
   @Audited('core.role.update')
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateRoleDto): Promise<Role> {
-    return this.roles.update(id, dto);
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateRoleDto,
+    @CurrentUser() me?: AuthUser,
+  ): Promise<Role> {
+    return this.roles.update(id, dto, me);
   }
 
   /** A role nobody holds (held → 409 `ROLE_IN_USE`); the System admin → 409 `SYSTEM_ADMIN_UNDELETABLE`. */
@@ -62,7 +68,7 @@ export class RolesController {
   @Permission('core.roles.manage')
   @Audited('core.role.delete')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
-    return this.roles.remove(id);
+  remove(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() me?: AuthUser): Promise<void> {
+    return this.roles.remove(id, me);
   }
 }

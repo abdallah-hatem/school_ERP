@@ -524,6 +524,7 @@ describe('PenaltyRecordsService — backdated penalty recount (§4, owner 2026-1
       days: null,
       priorCount: 0,
       recount: [change],
+      recountElsewhere: 0,
       startsAs: 'WAITING_HR',
       reviewSkip: 'NO_STAGE_HEAD',
     });
@@ -780,14 +781,14 @@ describe('PenaltyRecordsService — the two steps (§4, owner 2026-11-21)', () =
       expect(repository.reject).not.toHaveBeenCalled();
     });
 
-    it('multi-stage visibility (edge cases 11, 12): the other stage’s head gets 403 on the actions and 404 on the detail', async () => {
+    it('L2 — multi-stage visibility (edge cases 11, 12): the other stage’s head gets 404 on the actions and on the detail', async () => {
       const asPrep = fakeAccess(
         { 'hr.penalties.review': PREP, 'hr.penalties.view': PREP },
         { userId: 'u-prep', employeeId: 'e-prep' },
       );
       const { service, repository } = reviewing({ findOne: jest.fn().mockResolvedValue(null) }, asPrep);
-      await expect(service.reviewApprove('r1', 'u-prep', null)).rejects.toMatchObject({ status: 403 });
-      await expect(service.reject('r1', 'REVIEW_REJECT', 'x', 'u-prep')).rejects.toMatchObject({ status: 403 });
+      await expect(service.reviewApprove('r1', 'u-prep', null)).rejects.toMatchObject({ status: 404 });
+      await expect(service.reject('r1', 'REVIEW_REJECT', 'x', 'u-prep')).rejects.toMatchObject({ status: 404 });
       expect(repository.findOne).toHaveBeenCalledWith('r1', { stageId: { in: ['prep'] } });
       await expect(service.get('r1')).rejects.toMatchObject({ status: 404 });
       expect(repository.review).not.toHaveBeenCalled();
@@ -993,5 +994,23 @@ describe('PenaltyRecordsService — the two steps (§4, owner 2026-11-21)', () =
     const inputs = await service.payrollInputs('2025-11');
     expect(inputs.pending.get('e1')).toBe(2);
     expect(inputs.deductingDays.get('e2')).toEqual([1]);
+  });
+});
+
+describe('PenaltyRecordsService — fourth review H1: acting on a penalty needs a linked account', () => {
+  const unlinked = () => fakeAccess({}, { userId: 'u-unlinked', employeeId: null });
+
+  it('an unlinked account can’t cancel, approve, review or reject (ACCOUNT_NOT_LINKED); nothing is written', async () => {
+    const { service, repository } = makeService({ findOne: jest.fn().mockResolvedValue(row()) }, true, unlinked());
+    await expect(service.cancel('r1', { reason: 'x' }, 'u-unlinked')).rejects.toMatchObject({ code: 'ACCOUNT_NOT_LINKED' });
+    await expect(service.approve('r1', 'u-unlinked')).rejects.toMatchObject({ code: 'ACCOUNT_NOT_LINKED' });
+    await expect(service.reviewApprove('r1', 'u-unlinked', null)).rejects.toMatchObject({ code: 'ACCOUNT_NOT_LINKED' });
+    await expect(service.reject('r1', 'HR_REJECT', 'Not proven', 'u-unlinked')).rejects.toMatchObject({
+      code: 'ACCOUNT_NOT_LINKED',
+    });
+    expect(repository.cancel).not.toHaveBeenCalled();
+    expect(repository.approve).not.toHaveBeenCalled();
+    expect(repository.review).not.toHaveBeenCalled();
+    expect(repository.reject).not.toHaveBeenCalled();
   });
 });

@@ -223,7 +223,7 @@ describe('Penalties in two steps — stage review, then HR (e2e)', () => {
   });
 
   describe('who sees and acts on it: the penalty’s stage (edge cases 11, 12)', () => {
-    it('the other stage’s head: not in the list or the search, the detail is 404, the actions 403', async () => {
+    it('L2 — the other stage’s head: not in the list or the search, the detail and the actions are 404', async () => {
       const p = await recordAs(who.officer, emp.teacher, { stageId: stage.primary });
       await as(who.prepHead, async () => {
         const list = (await http(app).get('/hr/penalties').query({ month: MONTH, limit: 100 }).expect(200)).body
@@ -233,8 +233,8 @@ describe('Penalties in two steps — stage review, then HR (e2e)', () => {
           .data as PenaltyRecord[];
         expect(search.map((r) => r.id)).not.toContain(p.id);
         await get(p.id).expect(404);
-        await reviewApprove(p.id).expect(403);
-        await reviewReject(p.id, 'Not mine').expect(403);
+        await reviewApprove(p.id).expect(404);
+        await reviewReject(p.id, 'Not mine').expect(404);
       });
       // Never told either.
       expect(await itemsAbout(who.prepHead, p.id, REVIEW)).toHaveLength(0);

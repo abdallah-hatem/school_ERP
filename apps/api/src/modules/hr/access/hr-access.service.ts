@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
-import type { AuthUser, PermissionKey } from '@school-erp/shared';
+import { ErrorCode, type AuthUser, type PermissionKey } from '@school-erp/shared';
+import { CodedException } from '../../../common/errors/coded.exception';
 import type { Request } from 'express';
 import { CLS_REQ, ClsService } from 'nestjs-cls';
 import { PermissionsService } from '../../../core/permissions';
@@ -78,6 +79,20 @@ export class HrAccessService {
     const user = this.user();
     if (!user) return null;
     return { userId: user.id, employeeId: await this.permissions.linkedEmployeeOf(user) };
+  }
+
+  /**
+   * §6 separation of duties (owner 2026-11-23; third review M2-B): someone who isn't a System admin
+   * acts on pay — adjusts or approves payroll, edits a salary — only once their account is linked to
+   * their employee record; otherwise "not your own line / pay" can't be checked (403
+   * `ACCOUNT_NOT_LINKED`). The system itself (no signed-in user) and a System admin may.
+   */
+  async assertLinkedForPay(): Promise<void> {
+    const user = this.user();
+    if (!user) return;
+    if (await this.permissions.linkedEmployeeOf(user)) return;
+    if ((await this.permissions.heldGrants(user)).isSystemAdmin) return;
+    throw new CodedException(HttpStatus.FORBIDDEN, ErrorCode.ACCOUNT_NOT_LINKED);
   }
 
   /** Whose salary the current user may see. */

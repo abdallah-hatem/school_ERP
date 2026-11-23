@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import type { ApiResponse, AuthUser, EmployeeOption, UserAccount } from '@school-erp/shared';
 import type { Request } from 'express';
+import { CurrentSession } from '../../common/decorators/current-session.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RateLimit } from '../../common/rate-limit';
 import { ResponseUtil } from '../../common/utils/response.util';
@@ -65,15 +66,20 @@ export class UsersController {
   @Post()
   @Permission('core.users.manage')
   @Audited('core.user.create')
-  create(@Body() dto: CreateUserDto): Promise<UserAccount> {
-    return this.accounts.create(dto);
+  create(@Body() dto: CreateUserDto, @CurrentUser() me?: AuthUser): Promise<UserAccount> {
+    return this.accounts.create(dto, me);
   }
 
+  /** H1: a non-System-admin within their ceiling; nobody changes their own roles or employee link. */
   @Patch(':id')
   @Permission('core.users.manage')
   @Audited('core.user.update')
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateUserDto): Promise<UserAccount> {
-    return this.accounts.update(id, dto);
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateUserDto,
+    @CurrentUser() me?: AuthUser,
+  ): Promise<UserAccount> {
+    return this.accounts.update(id, dto, me);
   }
 
   /** Edge case 6 — the user's sessions end at once. The last System admin → 409. */
@@ -81,16 +87,22 @@ export class UsersController {
   @Permission('core.users.manage')
   @Audited('core.user.deactivate')
   @HttpCode(HttpStatus.OK)
-  deactivate(@Param('id', ParseUUIDPipe) id: string): Promise<UserAccount> {
-    return this.accounts.deactivate(id);
+  deactivate(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() me?: AuthUser,
+  ): Promise<UserAccount> {
+    return this.accounts.deactivate(id, me);
   }
 
   @Post(':id/reactivate')
   @Permission('core.users.manage')
   @Audited('core.user.reactivate')
   @HttpCode(HttpStatus.OK)
-  reactivate(@Param('id', ParseUUIDPipe) id: string): Promise<UserAccount> {
-    return this.accounts.reactivate(id);
+  reactivate(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() me?: AuthUser,
+  ): Promise<UserAccount> {
+    return this.accounts.reactivate(id, me);
   }
 
   /**
@@ -101,8 +113,11 @@ export class UsersController {
   @Permission('core.users.manage')
   @Audited('core.user.unlock_sign_in')
   @HttpCode(HttpStatus.OK)
-  unlockSignIn(@Param('id', ParseUUIDPipe) id: string): Promise<UserAccount> {
-    return this.accounts.unlockSignIn(id);
+  unlockSignIn(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() me?: AuthUser,
+  ): Promise<UserAccount> {
+    return this.accounts.unlockSignIn(id, me);
   }
 
   /** A temporary password: the user must change it, and their sessions end. */
@@ -115,8 +130,9 @@ export class UsersController {
   setPassword(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: SetTemporaryPasswordDto,
+    @CurrentUser() me?: AuthUser,
   ): Promise<void> {
-    return this.accounts.setTemporaryPassword(id, dto.password);
+    return this.accounts.setTemporaryPassword(id, dto.password, me);
   }
 }
 
@@ -147,7 +163,12 @@ export class AccountController {
       "while a wrong password's count and lockout entry need another (docs/EVENTS.md)",
   )
   @HttpCode(HttpStatus.NO_CONTENT)
-  changePassword(@CurrentUser() me: AuthUser, @Body() dto: ChangePasswordDto): Promise<void> {
-    return this.accounts.changeOwnPassword(me, dto);
+  changePassword(
+    @CurrentUser() me: AuthUser,
+    @Body() dto: ChangePasswordDto,
+    @CurrentSession() session?: string,
+  ): Promise<void> {
+    // M3: the user's other sign-ins end; this one (`session`) stays.
+    return this.accounts.changeOwnPassword(me, dto, session);
   }
 }

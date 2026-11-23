@@ -280,7 +280,11 @@ export function RecordPenaltyDialog({ open, onOpenChange, employee }: RecordPena
             />
           )}
           {preview.kind === 'ready' ? (
-            <RecountList recount={preview.preview.recount} note={t('penalties.recount.recordNote')} />
+            <RecountList
+              recount={preview.preview.recount}
+              elsewhere={preview.preview.recountElsewhere}
+              note={t('penalties.recount.recordNote')}
+            />
           ) : null}
           <TextareaField
             control={control}

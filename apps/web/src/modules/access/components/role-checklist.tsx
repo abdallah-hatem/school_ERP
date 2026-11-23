@@ -27,6 +27,7 @@ export function RoleChecklist({
   lockedReason,
   disabled = false,
   labelledBy,
+  givable = () => true,
 }: {
   roles: Role[];
   value: string[];
@@ -34,6 +35,11 @@ export function RoleChecklist({
   /** Set when the System admin role can't be taken away here. */
   lockedReason?: string | null;
   disabled?: boolean;
+  /**
+   * Whether the signed-in user may give or take away this role (security review H1): a role beyond
+   * their own access is shown greyed out with why. View only — the API decides.
+   */
+  givable?: (role: Role) => boolean;
   /** The section heading naming the group. */
   labelledBy?: string;
 }) {
@@ -92,17 +98,20 @@ export function RoleChecklist({
           const system = role.key === SYSTEM_ADMIN_ROLE;
           const locked = system && Boolean(lockedReason);
           const checked = chosen.has(role.id) || locked;
+          const beyond = !disabled && !locked && !givable(role);
           return (
             <label
               key={role.id}
               htmlFor={id}
               data-role={role.key}
+              data-beyond={beyond || undefined}
               className={cn(
                 'flex min-w-0 cursor-pointer items-start gap-3 rounded-xl border border-border bg-card p-3 transition-colors duration-150',
                 'hover:border-primary/50',
                 checked && 'border-primary/60 bg-primary-soft',
                 locked && 'cursor-not-allowed border-dashed border-border bg-muted hover:border-border',
-                disabled && 'cursor-not-allowed hover:border-border',
+                (disabled || beyond) && 'cursor-not-allowed hover:border-border',
+                beyond && 'opacity-70',
               )}
             >
               {locked ? (
@@ -113,10 +122,10 @@ export function RoleChecklist({
               <Checkbox
                 id={id}
                 checked={checked}
-                disabled={disabled || locked}
+                disabled={disabled || locked || beyond}
                 onCheckedChange={(v) => toggle(role.id, v === true)}
                 className={cn('mt-0.5', locked && 'sr-only')}
-                aria-describedby={locked ? `${id}-locked` : undefined}
+                aria-describedby={locked ? `${id}-locked` : beyond ? `${id}-beyond` : undefined}
               />
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="flex flex-wrap items-center gap-1.5 text-sm font-bold">
@@ -137,6 +146,12 @@ export function RoleChecklist({
                   <span id={`${id}-locked`} className="mt-1 flex items-start gap-1.5 text-xs font-semibold text-warning-ink">
                     <ErrorIcon className="mt-px size-3.5 shrink-0" />
                     {lockedReason}
+                  </span>
+                ) : null}
+                {beyond ? (
+                  <span id={`${id}-beyond`} className="mt-1 flex items-start gap-1.5 text-xs font-semibold text-muted-foreground">
+                    <LockedIcon className="mt-px size-3.5 shrink-0" />
+                    {t(system ? 'access.roles.systemAdminOnly' : 'access.roles.beyondYours')}
                   </span>
                 ) : null}
               </span>

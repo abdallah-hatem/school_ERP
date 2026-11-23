@@ -140,7 +140,10 @@
     },
     "lockedTitle": "Sign-in locked",
     "lockedBody": "Too many wrong passwords. Sign-in is locked until {time}, unless you unlock it.",
-    "unlock": "Unlock sign-in"
+    "unlock": "Unlock sign-in",
+    "ownAccess": "You can't change your own roles. Another administrator can.",
+    "beyondYours": "This person holds more access than you do, so you can only view their account.",
+    "systemAdminOnly": "Only a System admin can change a System admin's account. You can only view it."
   },
   "tempPassword": {
     "label": "Temporary password",
@@ -212,7 +215,9 @@
       "blockedBody": "Take the role away from them in Users first."
     },
     "emptyTitle": "No roles yet",
-    "emptyBody": "Add a custom role to group the permissions some users need."
+    "emptyBody": "Add a custom role to group the permissions some users need.",
+    "beyondYours": "Beyond your own access: only someone who holds all of it can give it.",
+    "systemAdminOnly": "Only a System admin can give or take away this role."
   },
   "roleForm": {
     "addTitle": "Add custom role",
@@ -253,7 +258,10 @@
     "errors": {
       "nameEn": "Enter the role's English name.",
       "nameAr": "Enter the role's Arabic name."
-    }
+    },
+    "beyondYours": "You don't hold this permission, so you can't give it.",
+    "heldByYou": "You hold this role, so you can't change it. Another administrator can.",
+    "ceilingNote": "You can give only permissions you hold, reaching no further than yours. The others are greyed out."
   },
   "account": {
     "title": "My account",

@@ -112,6 +112,10 @@ export class RolesRepository {
 
   /** Replaces the user's roles with `roleIds`. */
   async setRolesOf(userId: string, roleIds: readonly string[]): Promise<void> {
+    // L-6: the user's row (a ceiling check on them waits, `UsersRepository.lockUser`) and the roles
+    // given, shared (an edit of one of them, `lockRole`, waits — its held-by check sees this).
+    await this.db.$queryRaw`SELECT "id" FROM "users" WHERE "id" = ${userId}::uuid FOR NO KEY UPDATE`;
+    await this.lockShared(roleIds);
     await this.db.userRoleAssignment.deleteMany({
       where: { userId, roleId: { notIn: [...roleIds] } },
     });
@@ -127,6 +131,56 @@ export class RolesRepository {
    */
   async lockSystemAdminRole(): Promise<void> {
     await this.db.$queryRaw`SELECT "id" FROM "roles" WHERE "key" = ${SYSTEM_ADMIN_ROLE} FOR UPDATE`;
+  }
+
+  /**
+   * Locks the role's row until the transaction ends (L-6): giving the role to someone
+   * (`setRolesOf` takes it shared) waits, so the held-by checks of an edit can't go stale.
+   */
+  async lockRole(roleId: string): Promise<void> {
+    // `FOR NO KEY UPDATE` (L3): still conflicts with `lockShared`'s `FOR SHARE`, but not with the
+    // key-share locks of inserts that merely reference the role.
+    await this.db.$queryRaw`SELECT "id" FROM "roles" WHERE "id" = ${roleId}::uuid FOR NO KEY UPDATE`;
+  }
+
+  /**
+   * Takes the roles' rows shared until the transaction ends (L-6 / L1): an edit of one of them
+   * (`lockRole`) waits until the giving is written — and the giving's ceiling check reads the grants
+   * under this lock, so they can't change in between.
+   */
+  async lockShared(roleIds: readonly string[]): Promise<void> {
+    if (roleIds.length === 0) return;
+    await this.db.$queryRaw`SELECT "id" FROM "roles" WHERE "id" = ANY(${[...roleIds]}::uuid[]) FOR SHARE`;
+  }
+
+  /**
+   * Takes the rows of the roles `userId` holds shared until the transaction ends (fourth review L-d):
+   * the actor's own grants, read as their ceiling, can't change under the check. Always after any
+   * `users` row lock (users first, then roles).
+   */
+  async lockRolesOfUser(userId: string): Promise<void> {
+    await this.db.$queryRaw`
+      SELECT r."id" FROM "roles" r JOIN "user_roles" ur ON ur."role_id" = r."id"
+      WHERE ur."user_id" = ${userId}::uuid FOR SHARE OF r`;
+  }
+
+  /** Whether someone holding the role has no employee record (fourth review H1). */
+  async hasUnlinkedHolder(roleId: string): Promise<boolean> {
+    const count = await this.db.userRoleAssignment.count({ where: { roleId, user: { employeeId: null } } });
+    return count > 0;
+  }
+
+  /** Whether `userId` holds the role. */
+  async isHeldBy(roleId: string, userId: string): Promise<boolean> {
+    return (await this.db.userRoleAssignment.count({ where: { roleId, userId } })) > 0;
+  }
+
+  /** Whether any user who holds the System admin role also holds this role (active or not). */
+  async isHeldBySystemAdmin(roleId: string): Promise<boolean> {
+    const count = await this.db.userRoleAssignment.count({
+      where: { roleId, user: { roles: { some: { role: { key: SYSTEM_ADMIN_ROLE } } } } },
+    });
+    return count > 0;
   }
 
   /** Active users holding the System admin role, other than `exceptUserId`. */

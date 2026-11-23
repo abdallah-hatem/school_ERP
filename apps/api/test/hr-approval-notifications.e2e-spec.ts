@@ -305,7 +305,8 @@ describe('HR approval notifications — N2 (e2e)', () => {
 
     it('approved by the principal → resolved for everyone, "Approved by …", out of the count; nothing new (edge 4)', async () => {
       const hrManager = await newUser('hr-manager', [BuiltInRole.HR_MANAGER]);
-      const principal = await newUser('principal', [BuiltInRole.PRINCIPAL]);
+      // Approving needs the account linked to its employee record (§6, owner 2026-11-23).
+      const principal = await newUser('principal', [BuiltInRole.PRINCIPAL], await createEmployee({ stageId: prep }));
       const penalty = await as(who.stageHead, () => recordOk(emp.p1));
       expect(await unread(hrManager)).toBe(1);
 
@@ -313,8 +314,13 @@ describe('HR approval notifications — N2 (e2e)', () => {
 
       const seen = await bellItem(hrManager, penalty.id);
       expect(seen?.item.resolved).toMatchObject({ resolution: 'approved' });
-      const principalName = (await db.user.findUniqueOrThrow({ where: { id: principal } })).name;
-      expect(seen?.item.resolved?.by).toEqual({ en: principalName, ar: principalName });
+      // "Approved by" names the person as HR knows them: their linked employee's two names (the
+      // principal is linked now — acting on penalties needs it, §6, owner 2026-11-23).
+      const linked = await db.user.findUniqueOrThrow({
+        where: { id: principal },
+        select: { linkedEmployee: { select: { nameEn: true, nameAr: true } } },
+      });
+      expect(seen?.item.resolved?.by).toEqual({ en: linked.linkedEmployee?.nameEn, ar: linked.linkedEmployee?.nameAr });
       expect(seen?.n.openCount).toBe(0);
       expect(seen?.n.resolved).not.toBeNull();
       expect(await unread(hrManager)).toBe(0);
@@ -328,7 +334,8 @@ describe('HR approval notifications — N2 (e2e)', () => {
     });
 
     it('cancelled while pending → resolved as cancelled; an approved one cancelled later → nothing (edges 5, 6)', async () => {
-      const principal = await newUser('principal', [BuiltInRole.PRINCIPAL]);
+      // Approving needs the account linked to its employee record (§6, owner 2026-11-23).
+      const principal = await newUser('principal', [BuiltInRole.PRINCIPAL], await createEmployee({ stageId: prep }));
       const pending = await as(who.stageHead, () => recordOk(emp.p2));
       await cancel(pending.id);
       const [item] = await itemsAbout(principal, pending.id);

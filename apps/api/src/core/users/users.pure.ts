@@ -36,13 +36,23 @@ export function toEmployeeOption(row: EmployeeOptionRow): EmployeeOption {
   };
 }
 
-/** What an audit entry compares for a user (D7): only these fields, never a password. */
+/**
+ * What an audit entry compares for a user (D7): only these fields, never a password. The linked
+ * employee by both names (third review M2-C: a link is access, so its change reads clearly in the
+ * log — "Employee: none → Ahmed …"), like the other references in the log.
+ */
 export function accountSnapshot(user: UserAccount) {
   return {
     name: user.name,
     email: user.email,
     status: user.isActive ? 'active' : 'inactive',
     roles: user.roles.map((r) => r.key).sort(),
-    employeeId: user.employee?.id ?? null,
+    employeeId: user.employee
+      ? {
+          id: user.employee.id,
+          nameEn: `${user.employee.nameEn} · ${user.employee.code}`,
+          nameAr: `${user.employee.nameAr} · ${user.employee.code}`,
+        }
+      : null,
   };
 }

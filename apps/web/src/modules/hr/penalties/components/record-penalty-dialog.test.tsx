@@ -68,6 +68,7 @@ const preview = (overrides: Partial<PenaltyPreview> = {}): PenaltyPreview => ({
   days: null,
   priorCount: 0,
   recount: [],
+  recountElsewhere: 0,
   startsAs: 'WAITING_HR',
   reviewSkip: 'NO_STAGE_HEAD',
   ...overrides,

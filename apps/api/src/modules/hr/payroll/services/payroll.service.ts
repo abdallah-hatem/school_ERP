@@ -207,7 +207,8 @@ export class PayrollService {
 
   /**
    * A run with its totals (all lines), the lines matching the filters and — on a draft — the live
-   * count of PENDING penalties dated in its month (0 on an approved run, whose month is locked).
+   * count of PENDING penalties dated in its month (0 on an approved run, whose month is locked):
+   * of the whole school for a viewer of every line, else only of the employees they see (L3).
    */
   /**
    * Only the lines and adjustments of the employees the viewer's `hr.payroll.view` covers (R5),
@@ -226,10 +227,14 @@ export class PayrollService {
       this.repository.findLinesPage(id, filter, scope, query.page, query.limit),
       this.repository.findAdjustments(id, undefined, scope),
       this.repository.lineEmployeeIds(id),
-      draft ? this.penalties.pendingCountInMonth(run.month) : 0,
+      // L3 / L-5: a scoped viewer counts only the penalties they cover — by the penalty's stage.
+      draft ? this.penalties.pendingCountInMonth(run.month, view.lines.kind === 'all' ? undefined : view.lines) : 0,
       draft ? this.hrSettings.payrollRulesChangedAt() : null,
-      // §4 backdated penalty: one dated in the month moved up a level since the last calculation.
-      draft ? this.penalties.recountedInMonthSince(run.month, run.calculatedAt) : false,
+      // §4 backdated penalty: one dated in the month moved up a level since the last calculation
+      // (L-5: among the penalties a scoped viewer covers).
+      draft
+        ? this.penalties.recountedInMonthSince(run.month, run.calculatedAt, view.lines.kind === 'all' ? undefined : view.lines)
+        : false,
       this.hrSettings.get().then(runRules),
       draft ? this.repository.countPendingPenaltyLines(id, scope) : 0,
     ]);
@@ -326,13 +331,22 @@ export class PayrollService {
   /**
    * DRAFT → APPROVED: recalculates the lines from current data and locks the run (and with it the
    * month's penalties, lateness and adjustments) in one transaction. Refused with 409
-   * `PENDING_PENALTIES` while a penalty dated in the month is pending. Publishes
+   * `PENDING_PENALTIES` while a penalty dated in the month is pending, and with 403
+   * `PAYROLL_APPROVER_ADJUSTED_OWN_LINE` when the approver made an adjustment on their own line in
+   * it (§6, owner 2026-11-23 — creating the run doesn't bar approving it; adjusting oneself does). Publishes
    * `hr.payroll.approved` (must-deliver: an outbox row in this transaction, delivered after the commit).
    */
   async approve(id: Uuid, approvedById: Uuid | null): Promise<PayrollRun> {
     // The change and its audit entry commit together (audit D2).
     return this.afterCommit.inTransaction(async () => {
       const run = await this.findDraft(id);
+      // §6 separation of duties (owner 2026-11-23): an approver linked to their employee record
+      // (M2-B), and not someone who adjusted their own line in it.
+      await this.access.assertLinkedForPay();
+      const actor = await this.access.actor();
+      if (actor?.employeeId && (await this.repository.hasAdjustmentBy(id, actor.employeeId, actor.userId))) {
+        throw new CodedException(HttpStatus.FORBIDDEN, ErrorCode.PAYROLL_APPROVER_ADJUSTED_OWN_LINE);
+      }
       const inputs = await this.penalties.payrollInputs(run.month);
       if (inputs.pending.size > 0) throw conflict(ErrorCode.PENDING_PENALTIES);
 
@@ -376,6 +390,7 @@ export class PayrollService {
     // The change and its audit entry commit together (audit D2).
     return this.afterCommit.inTransaction(async () => {
       await this.findDraft(id);
+      await this.assertNotOwnLine(dto.employeeId);
       if (!(await this.repository.findLineByEmployee(id, dto.employeeId))) {
         throw new CodedException(HttpStatus.BAD_REQUEST, ErrorCode.EMPLOYEE_NOT_IN_RUN);
       }
@@ -408,6 +423,7 @@ export class PayrollService {
       await this.findDraft(id);
       const adjustment = await this.repository.findAdjustment(id, adjustmentId);
       if (!adjustment) throw new NotFoundException();
+      await this.assertNotOwnLine(adjustment.employeeId);
       if (!(await this.repository.deleteAdjustment(id, adjustment, withAdjustments))) {
         throw conflict(ErrorCode.PAYROLL_APPROVED);
       }
@@ -687,6 +703,19 @@ export class PayrollService {
       },
       actorId,
     );
+  }
+
+  /**
+   * §6 separation of duties (owner 2026-11-23): nobody adds or removes an adjustment on their own
+   * line — the signed-in user's linked employee (403 `PAYROLL_OWN_LINE`). The system (seed) may.
+   */
+  private async assertNotOwnLine(employeeId: Uuid): Promise<void> {
+    // M2-B: whose line is "their own" must be known first.
+    await this.access.assertLinkedForPay();
+    const actor = await this.access.actor();
+    if (actor?.employeeId && actor.employeeId === employeeId) {
+      throw new CodedException(HttpStatus.FORBIDDEN, ErrorCode.PAYROLL_OWN_LINE);
+    }
   }
 
   /** The whole run's totals (every line), whoever is asking. */

@@ -36,6 +36,7 @@ export function PermissionGroups({
   onScope,
   onModule,
   readOnly = false,
+  canGive = () => true,
 }: {
   value: GrantMap;
   /** What is stored, so a changed row is highlighted. */
@@ -44,6 +45,11 @@ export function PermissionGroups({
   onScope: (key: PermissionKey, scope: PermissionScope) => void;
   onModule: (module: PermissionModule, on: boolean) => void;
   readOnly?: boolean;
+  /**
+   * Whether the signed-in user may put this permission into a role (security review H2): one they
+   * don't hold can't be turned on (only off). View only — the API decides, scopes included.
+   */
+  canGive?: (key: PermissionKey) => boolean;
 }) {
   const { t } = useTranslation();
   const groups = moduleGroups(value);
@@ -109,6 +115,7 @@ export function PermissionGroups({
                     scope={value[key]}
                     changed={isChanged(saved, value, key)}
                     readOnly={readOnly}
+                    beyond={!canGive(key)}
                     onToggle={onToggle}
                     onScope={onScope}
                   />
@@ -127,6 +134,7 @@ function PermissionRow({
   scope,
   changed,
   readOnly,
+  beyond,
   onToggle,
   onScope,
 }: {
@@ -134,6 +142,8 @@ function PermissionRow({
   scope: PermissionScope | undefined;
   changed: boolean;
   readOnly: boolean;
+  /** Not held by the signed-in user: it can be turned off, never on (H2). */
+  beyond: boolean;
   onToggle: (key: PermissionKey, on: boolean) => void;
   onScope: (key: PermissionKey, scope: PermissionScope) => void;
 }) {
@@ -161,6 +171,7 @@ function PermissionRow({
           <Switch
             id={id}
             checked={on}
+            disabled={beyond && !on}
             onCheckedChange={(v) => onToggle(permission, v)}
             aria-describedby={`${id}-desc`}
             className="mt-0.5"
@@ -171,6 +182,11 @@ function PermissionRow({
           <span id={`${id}-desc`} className="text-xs text-muted-foreground">
             {t(`permissions.keys.${permission}.description`)}
           </span>
+          {!readOnly && beyond ? (
+            <span data-beyond className="sr-only">
+              {t('access.roleForm.beyondYours')}
+            </span>
+          ) : null}
         </label>
       </div>
       {/* On a narrow card only a scope that is in use is shown (under its row), like the mockup. */}

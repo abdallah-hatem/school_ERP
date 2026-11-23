@@ -96,6 +96,13 @@ export class ApprovePenaltyDto implements ApprovePenaltyRequest {
   @Type(() => PenaltyRecountAcknowledgementDto)
   acknowledgedRecount?: PenaltyRecountAcknowledgementDto[];
 
+  /** How many recounted penalties in stages the approver doesn't see they confirmed (L1). */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(200)
+  acknowledgedRecountElsewhere?: number;
+
   /** Optional note with the HR approval. */
   @IsOptional()
   @Transform(trimToNull)

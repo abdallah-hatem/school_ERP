@@ -3,13 +3,19 @@ import {
   AuditEntityType,
   ErrorCode,
   SYSTEM_ADMIN_ROLE,
+  actsOnPay,
+  firstGrantOverCeiling,
+  type AuthUser,
+  type HeldGrants,
   type Paginated,
   type Role,
+  type RoleGrant,
   type RoleRef,
 } from '@school-erp/shared';
 import { randomBytes } from 'node:crypto';
 import { CodedException } from '../../common/errors/coded.exception';
 import { AuditService } from '../audit';
+import { PermissionsService } from '../permissions';
 import type { CreateRoleDto, UpdateRoleDto } from './dto/role.dto';
 import { RolesRepository, type RoleRow } from './repositories/roles.repository';
 import { duplicateKey, roleSnapshot, storedGrants, toRole, wronglyScoped } from './roles.pure';
@@ -17,19 +23,67 @@ import { duplicateKey, roleSnapshot, storedGrants, toRole, wronglyScoped } from 
 const fromRow = (row: RoleRow): Role =>
   toRole({ ...row, userCount: row._count.users, permissions: row.permissions });
 
+/** Who is acting: the signed-in user; absent when the system itself acts (seed, scripts). */
+type Actor = Pick<AuthUser, 'id'> | undefined;
+
+/** The system itself (no signed-in user) has no ceiling. */
+const NO_CEILING: HeldGrants = { isSystemAdmin: true, grants: [] };
+
 /**
  * Roles as data (R2): named sets of permissions with a scope each (R5). Built-in roles (the
  * spec's starting roles) can be edited, and deleted once unused like any other; the System admin
  * can't be deleted and always holds every key.
  * Also owns who holds which role (`user_roles`) and the last-System-admin rule (R8) — core/users
  * calls those when it changes a user.
+ *
+ * The access ceiling (security review H2, owner 2026-11-23): someone with `core.roles.manage` who
+ * isn't a System admin may put into a role only permissions they hold themselves, at a scope that
+ * reaches no further than theirs (`grantWithinCeiling`: 403 `GRANT_EXCEEDS_OWN`); may not edit a
+ * role they hold (403 `ROLE_HELD_BY_YOU`) nor one a System admin user holds, the System admin role
+ * included (403 `ROLE_HELD_BY_SYSTEM_ADMIN`). Deleting needs nobody to hold the role, so a held role
+ * is never deleted anyway.
  */
 @Injectable()
 export class RolesService {
   constructor(
     private readonly roles: RolesRepository,
     private readonly audit: AuditService,
+    private readonly permissions: PermissionsService,
   ) {}
+
+  /**
+   * What `actor` may give (H1/H2): every grant they hold, or no ceiling for a System admin. Their
+   * roles' rows are locked shared first (fourth review L-d), so the grants read can't change before
+   * the write — on the user-account paths. A role edit or delete passes `lockOwnRoles: false`: it
+   * already holds its role's row exclusively, and taking the actor's role rows after it would let two
+   * admins editing each other's held roles deadlock (fifth review Low 1).
+   */
+  async ceilingOf(actor: Actor, { lockOwnRoles = true }: { lockOwnRoles?: boolean } = {}): Promise<HeldGrants> {
+    if (!actor) return NO_CEILING;
+    if (lockOwnRoles) await this.roles.lockRolesOfUser(actor.id);
+    return this.permissions.heldGrants(actor);
+  }
+
+  /** 403 `GRANT_EXCEEDS_OWN` when `grants` holds anything over `ceiling` (H1/H2). */
+  assertWithinCeiling(ceiling: HeldGrants, grants: readonly RoleGrant[]): void {
+    if (firstGrantOverCeiling(ceiling, grants)) {
+      throw new CodedException(HttpStatus.FORBIDDEN, ErrorCode.GRANT_EXCEEDS_OWN);
+    }
+  }
+
+  /**
+   * Locks the roles about to be given (or taken away) shared, until the transaction ends (L1): an
+   * edit of one of them waits, so the grants the ceiling check reads are the ones given.
+   */
+  lockForGiving(ids: readonly string[]): Promise<void> {
+    return this.roles.lockShared([...new Set(ids)]);
+  }
+
+  /** Every permission the roles with these ids grant (the System admin role: every key, `all`). */
+  async grantsOfRoles(ids: readonly string[]): Promise<RoleGrant[]> {
+    const roles = await Promise.all([...new Set(ids)].map((id) => this.get(id)));
+    return roles.flatMap((r) => r.permissions);
+  }
 
   /** One page of the roles (starting ones first), searched by either name when `search` is given. */
   async list(page: number, limit: number, search?: string): Promise<Paginated<Role>> {
@@ -43,8 +97,9 @@ export class RolesService {
     return fromRow(row);
   }
 
-  async create(dto: CreateRoleDto): Promise<Role> {
+  async create(dto: CreateRoleDto, actor?: Actor): Promise<Role> {
     this.assertNoDuplicates(dto.permissions);
+    this.assertWithinCeiling(await this.ceilingOf(actor), dto.permissions);
     const id = await this.roles.create({
       key: `custom_${randomBytes(4).toString('hex')}`,
       nameEn: dto.nameEn,
@@ -60,14 +115,34 @@ export class RolesService {
     return role;
   }
 
-  async update(id: string, dto: UpdateRoleDto): Promise<Role> {
+  async update(id: string, dto: UpdateRoleDto, actor?: Actor): Promise<Role> {
+    // L-6: nobody is given this role while it is checked and changed.
+    await this.roles.lockRole(id);
     const before = await this.get(id);
+    const ceiling = await this.ceilingOf(actor, { lockOwnRoles: false });
+    if (!ceiling.isSystemAdmin && actor) {
+      // H2: not a role they hold (they would raise their own access), nor a System admin's.
+      if (await this.roles.isHeldBy(id, actor.id)) {
+        throw new CodedException(HttpStatus.FORBIDDEN, ErrorCode.ROLE_HELD_BY_YOU);
+      }
+      if (before.key === SYSTEM_ADMIN_ROLE || (await this.roles.isHeldBySystemAdmin(id))) {
+        throw new CodedException(HttpStatus.FORBIDDEN, ErrorCode.ROLE_HELD_BY_SYSTEM_ADMIN);
+      }
+    }
+    // L-4: what it grants now and what it will grant — removing a grant beyond theirs (taking it from
+    // its holders) is as much over the ceiling as adding one.
+    this.assertWithinCeiling(ceiling, [...before.permissions, ...(dto.permissions ?? [])]);
     if (dto.permissions !== undefined) {
       // R8 — the System admin holds every key, always: its set can't be narrowed.
       if (before.key === SYSTEM_ADMIN_ROLE) {
         throw new CodedException(HttpStatus.CONFLICT, ErrorCode.SYSTEM_ADMIN_FIXED);
       }
       this.assertNoDuplicates(dto.permissions);
+      // Fourth review H1: a role turned into one acting on pay or penalties would reach its holders
+      // without an employee record — M2-A, by the role-edit door. A System admin links them first.
+      if (!ceiling.isSystemAdmin && actsOnPay(dto.permissions) && (await this.roles.hasUnlinkedHolder(id))) {
+        throw new CodedException(HttpStatus.FORBIDDEN, ErrorCode.ROLE_HAS_UNLINKED_HOLDER);
+      }
       await this.roles.replaceGrants(id, storedGrants(dto.permissions));
     }
     if (dto.nameEn !== undefined || dto.nameAr !== undefined) {
@@ -86,13 +161,16 @@ export class RolesService {
 
   /**
    * Any role but the System admin, once nobody holds it (owner 2026-11-19) — starting roles
-   * included. Grant migrations join on the role's key, so they skip a deleted starting role.
+   * included. Grant migrations join on the role's key, so they skip a deleted starting role. A
+   * non-System-admin deletes only a role within their ceiling (L-4: 403 `GRANT_EXCEEDS_OWN`).
    */
-  async remove(id: string): Promise<void> {
+  async remove(id: string, actor?: Actor): Promise<void> {
+    await this.roles.lockRole(id);
     const role = await this.get(id);
     if (role.key === SYSTEM_ADMIN_ROLE) {
       throw new CodedException(HttpStatus.CONFLICT, ErrorCode.SYSTEM_ADMIN_UNDELETABLE);
     }
+    this.assertWithinCeiling(await this.ceilingOf(actor, { lockOwnRoles: false }), role.permissions);
     if (role.userCount > 0) throw new CodedException(HttpStatus.CONFLICT, ErrorCode.ROLE_IN_USE);
     await this.roles.delete(id);
     await this.audit.record({

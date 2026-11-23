@@ -98,6 +98,21 @@
 - **DECIDED** (owner, 2026-11-21) — Nobody reviews, approves or rejects a **penalty given to
   themselves**: a stage head or HR approver who is the penalised employee is refused, and the
   screens leave those buttons out for them.
+- **DECIDED** (owner, 2026-11-23) — **Nobody cancels their own penalty** either: someone who may
+  cancel penalties but is the penalised employee is refused ("You can't review, approve, reject or
+  cancel a penalty given to you"); another person who may cancel does it.
+- **DECIDED** (owner, 2026-11-23) — A stage head records a penalty only in **their own stages**: for
+  an employee who also teaches in another stage, the record form offers only the head's stages (one
+  fills in by itself), and any other stage is refused ("Choose one of this employee's stages").
+- **DECIDED** (owner, 2026-11-23) — The level still counts **every stage** (above), but someone who
+  sees only their stage's penalties is never shown another stage's penalty: the record dialog's
+  preview and the approve confirmation list only the recounted penalties they see, and say "And N
+  approved penalties in other stages, which you don't see" for the rest; an earlier penalty waiting
+  in another stage blocks approving with "An earlier penalty for this violation, in another stage,
+  is still waiting", without its date; and when a recounted penalty they don't see sits in a month
+  whose payroll is approved, recording or approving is refused without naming that month ("…an
+  approved penalty, in another stage, in a month whose payroll is approved"). They are never
+  notified about it either (§2).
 - **DECIDED** (Claude, from the owner's edge case 3, 2026-11-21) — If a penalty waits for the stage
   review and its stage **no longer has a stage head** (the head left or lost the role), **HR may
   approve or reject it directly** from Pending stage review; the penalty says "has no stage head now:

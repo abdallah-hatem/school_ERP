@@ -88,6 +88,19 @@ export const EMPLOYEE_PHOTO_FOLDER = 'employee-photos';
 
 const bad = (code: ErrorCode) => new CodedException(HttpStatus.BAD_REQUEST, code);
 
+/**
+ * What someone's pay is made of (§6): the salary fields, the work system (its percentage) and the
+ * insurance (what accounting works the month out from) — nobody changes these on their own record
+ * (security review M-2, owner 2026-11-23).
+ */
+const OWN_PAY_FIELDS = [
+  ...EMPLOYEE_SALARY_FIELDS,
+  'workSystem',
+  'insuranceStatus',
+  'insuranceNumber',
+  'insuranceRegistrationDate',
+] as const satisfies readonly (keyof UpdateEmployeeDto)[];
+
 /** The scope fields of a detail row (its stage and manager come as references). */
 const detailScopeFields = (row: EmployeeDetailRow): EmployeeScopeFields => ({
   id: row.id,
@@ -430,17 +443,27 @@ export class EmployeesService {
 
   /**
    * 404 outside the user's `hr.employees.edit` scope (edge case 3); 403 when the edit sends a
-   * salary field (`EMPLOYEE_SALARY_FIELDS`) for an employee whose salary the user can't see (R7).
+   * salary field (`EMPLOYEE_SALARY_FIELDS`) for an employee whose salary the user can't see (R7) —
+   * or sets them not insured while they have an insured salary, which that would clear (L4).
    */
   async update(id: Uuid, dto: UpdateEmployeeDto): Promise<Employee> {
     // The change and its audit entry commit together (audit D2), for the seed too.
     return this.afterCommit.inTransaction(async () => {
       const current = await this.repository.findDetail(id, await this.access.where('hr.employees.edit'));
       if (!current) throw new NotFoundException();
-      const sendsSalary = EMPLOYEE_SALARY_FIELDS.some((f) => dto[f] !== undefined);
+      // L4 (security review, 2026-11-23): turning insurance off clears the insured salary, so it is a
+      // salary change too when there is one to clear.
+      const clearsInsuredSalary =
+        dto.insuranceStatus !== undefined &&
+        dto.insuranceStatus !== InsuranceStatus.INSURED &&
+        current.insuredSalary != null;
+      const sendsSalary = EMPLOYEE_SALARY_FIELDS.some((f) => dto[f] !== undefined) || clearsInsuredSalary;
       if (sendsSalary && !inScope(await this.access.salaryScope(), detailScopeFields(current))) {
         throw new ForbiddenException();
       }
+      // §6 (M2-B): a pay change needs to know whose pay is the editor's own — a linked account.
+      if (sendsSalary || OWN_PAY_FIELDS.some((f) => dto[f] !== undefined)) await this.access.assertLinkedForPay();
+      await this.assertNotOwnAccessOrPay(current, dto);
 
       const cleared = REQUIRED_FIELDS.filter((f) => dto[f] === null);
       if (cleared.length) throw new BadRequestException(`${cleared.join(', ')} cannot be empty`);
@@ -633,6 +656,33 @@ export class EmployeesService {
    * employee out of their own edit scope — to another stage (400 `FOREIGN_KEY_VIOLATION`, like an
    * unknown stage) or another manager's team (400 `INVALID_MANAGER`).
    */
+  /**
+   * The editor's own employee record (security review, owner 2026-11-23):
+   * - M-3: not their stages or manager — a stage or team scope is anchored to them, so moving
+   *   themselves would widen whom they reach (403 `OWN_ACCESS_CHANGE`);
+   * - M-2: not their pay — salary, work system, insurance and bank fields (`OWN_PAY_FIELDS`):
+   *   they could raise their own pay, then approve the month (403 `OWN_PAY_CHANGE`).
+   * Only fields that actually change count: a form sending its values back is fine.
+   */
+  private async assertNotOwnAccessOrPay(current: EmployeeDetailRow, dto: UpdateEmployeeDto): Promise<void> {
+    const actor = await this.access.actor();
+    if (!actor?.employeeId || actor.employeeId !== current.id) return;
+    const otherStages = current.otherStages.map((s) => s.stage.id).sort();
+    const movesScope =
+      (dto.stageId !== undefined && dto.stageId !== current.stage.id) ||
+      (dto.managerId !== undefined && dto.managerId !== (current.manager?.id ?? null)) ||
+      (dto.otherStageIds !== undefined && [...dto.otherStageIds].sort().join() !== otherStages.join());
+    if (movesScope) throw new CodedException(HttpStatus.FORBIDDEN, ErrorCode.OWN_ACCESS_CHANGE);
+    const saved = current as unknown as Record<string, unknown>;
+    const changesPay = OWN_PAY_FIELDS.some((f) => {
+      const next = dto[f];
+      if (next === undefined) return false;
+      const was = saved[f] instanceof Date ? toIsoDate(saved[f]) : (saved[f] ?? null);
+      return next !== was;
+    });
+    if (changesPay) throw new CodedException(HttpStatus.FORBIDDEN, ErrorCode.OWN_PAY_CHANGE);
+  }
+
   private async assertStaysInScope(current: EmployeeDetailRow, dto: UpdateEmployeeDto): Promise<void> {
     const managerChanges = dto.managerId !== undefined && dto.managerId !== (current.manager?.id ?? null);
     if (managerChanges && dto.managerId) await this.assertManagerVisible(dto.managerId);

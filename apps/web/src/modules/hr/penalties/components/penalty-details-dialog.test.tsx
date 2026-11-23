@@ -40,7 +40,7 @@ describe('PenaltyDetailsDialog', () => {
     const confirm = await screen.findByRole('dialog', { name: 'Approve this penalty?' });
     await user.click(within(confirm).getByRole('button', { name: 'Approve' }));
     await waitFor(() => expect(router.refresh).toHaveBeenCalled());
-    expect(apis.APPROVE_PENALTY).toHaveBeenCalledWith('p-1', undefined, undefined);
+    expect(apis.APPROVE_PENALTY).toHaveBeenCalledWith('p-1', undefined, undefined, undefined);
   });
 
   it('§4 date order: a penalty waiting for an earlier one says why, and its Approve is disabled (EN + AR)', () => {

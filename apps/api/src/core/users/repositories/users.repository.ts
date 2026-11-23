@@ -71,6 +71,33 @@ export class UsersRepository {
     return this.db.user.findFirst({ where: { id, isActive: true }, select: AUTH_USER_SELECT });
   }
 
+  /**
+   * Locks the user's row until the transaction ends (security review L-6): a change to their roles
+   * (`setRolesOf` locks it too) waits for a ceiling check on them, and the other way round, so the
+   * check can't pass on roles that change before the write. `FOR NO KEY UPDATE` (L3): a sign-in
+   * inserting a refresh token (a foreign key to the user) isn't held up by it. Needs a transaction.
+   */
+  async lockUser(id: string): Promise<void> {
+    await this.db.$queryRaw`SELECT "id" FROM "users" WHERE "id" = ${id}::uuid FOR NO KEY UPDATE`;
+  }
+
+  /**
+   * The active user behind an access token, with the cut-off its tokens are checked against — the
+   * later of the last password change and the last deactivation or reactivation — one read per
+   * request (the token check, security review L-1). Null: deleted or deactivated.
+   */
+  async findActiveSession(id: string): Promise<{ user: AuthUser; validAfter: Date | null } | null> {
+    const row = await this.db.user.findFirst({
+      where: { id, isActive: true },
+      select: { ...AUTH_USER_SELECT, passwordChangedAt: true, sessionsValidAfter: true },
+    });
+    if (!row) return null;
+    const { passwordChangedAt, sessionsValidAfter, ...user } = row;
+    const cutoffs = [passwordChangedAt, sessionsValidAfter].filter((d): d is Date => d !== null);
+    const validAfter = cutoffs.length ? new Date(Math.max(...cutoffs.map((d) => d.getTime()))) : null;
+    return { user, validAfter };
+  }
+
   async findPasswordHash(id: string): Promise<string | null> {
     const row = await this.db.user.findUnique({ where: { id }, select: { passwordHash: true } });
     return row?.passwordHash ?? null;
@@ -156,6 +183,7 @@ export class UsersRepository {
       | 'passwordHash'
       | 'mustChangePassword'
       | 'passwordChangedAt'
+      | 'sessionsValidAfter'
       | 'lastSignInAt'
     >,
   ): Promise<void> {

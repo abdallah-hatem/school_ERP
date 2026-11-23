@@ -26,6 +26,10 @@ function makeService(over: {
   rule?: typeof RULE;
   /** The employees the user's `hr.lateness.edit` covers (default: all of them). */
   editable?: string[];
+  /** The signed-in user's linked employee (M-2). */
+  me?: string;
+  /** The account-link check (fourth review H1). */
+  linkCheck?: jest.Mock;
 } = {}) {
   const calls: string[] = [];
   const repository = {
@@ -84,6 +88,10 @@ function makeService(over: {
     audit as never,
     { inTransaction: (fn: () => unknown) => fn(), run: (fn: () => unknown) => Promise.resolve(fn()) } as never,
     reminders as never,
+    {
+      actor: jest.fn().mockResolvedValue(over.me ? { userId: 'u-me', employeeId: over.me } : null),
+      assertLinkedForPay: over.linkCheck ?? jest.fn().mockResolvedValue(undefined),
+    } as never,
   );
   return { service, repository, employees, monthLock, calls, audit, reminders };
 }
@@ -228,5 +236,26 @@ describe('LatenessService', () => {
       service.put('2026-11', { entries: [{ employeeId: '1', minutes: 5 }] }, 'u1'),
     ).rejects.toMatchObject({ code: ErrorCode.EMPLOYEE_INACTIVE });
     expect(repository.upsertMany).not.toHaveBeenCalled();
+  });
+
+  it('M-2 — nobody changes their own lateness (403 OWN_PAY_CHANGE); their row sent back unchanged is fine', async () => {
+    const { service, repository } = makeService({ me: '1', stored: [{ employeeId: '1', minutes: 30 }] });
+    await expect(
+      service.put('2026-11', { entries: [{ employeeId: '1', minutes: 0 }, { employeeId: '2', minutes: 5 }] }, 'u-me'),
+    ).rejects.toMatchObject({ code: ErrorCode.OWN_PAY_CHANGE, status: 403 });
+    expect(repository.upsertMany).not.toHaveBeenCalled();
+    await service.put('2026-11', { entries: [{ employeeId: '1', minutes: 30 }, { employeeId: '2', minutes: 5 }] }, 'u-me');
+    expect(repository.upsertMany).toHaveBeenCalled();
+  });
+
+  it('fourth review H1 — changing minutes needs a linked account; sending them back unchanged doesn’t ask', async () => {
+    const refuse = jest.fn().mockRejectedValue(Object.assign(new Error('no'), { code: ErrorCode.ACCOUNT_NOT_LINKED }));
+    const { service, repository } = makeService({ stored: [{ employeeId: '1', minutes: 30 }], linkCheck: refuse });
+    await expect(service.put('2026-11', { entries: [{ employeeId: '1', minutes: 45 }] }, 'u')).rejects.toMatchObject({
+      code: ErrorCode.ACCOUNT_NOT_LINKED,
+    });
+    expect(repository.upsertMany).not.toHaveBeenCalled();
+    await service.put('2026-11', { entries: [{ employeeId: '1', minutes: 30 }] }, 'u');
+    expect(refuse).toHaveBeenCalledTimes(1);
   });
 });

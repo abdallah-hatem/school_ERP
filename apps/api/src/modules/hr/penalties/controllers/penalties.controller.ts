@@ -102,7 +102,13 @@ export class PenaltiesController {
     @Body() dto: ApprovePenaltyDto,
     @CurrentUser() user?: AuthUser,
   ) {
-    return this.penalties.approve(id, user?.id ?? null, dto?.acknowledgedRecount, dto?.note ?? null);
+    return this.penalties.approve(
+      id,
+      user?.id ?? null,
+      dto?.acknowledgedRecount,
+      dto?.note ?? null,
+      dto?.acknowledgedRecountElsewhere,
+    );
   }
 
   /** The HR step rejects, with a reason: WAITING_HR → REJECTED. */

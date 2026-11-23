@@ -117,6 +117,8 @@ export interface ApprovedCandidate extends RepeatKey, LevelData {
   date: IsoDate;
   recordedAt: Date;
   status: PenaltyStatus;
+  /** Where it happened: who may see it (a stage scope, security review L1). */
+  stageId: string;
 }
 
 const CANDIDATE_SELECT = {
@@ -126,6 +128,7 @@ const CANDIDATE_SELECT = {
   date: true,
   createdAt: true,
   status: true,
+  stageId: true,
   level: true,
   action: true,
   days: true,
@@ -140,6 +143,7 @@ const toCandidate = (
   date: toIsoDate(r.date),
   recordedAt: r.createdAt,
   status: r.status,
+  stageId: r.stageId,
   level: r.level,
   action: r.action,
   days: r.days === null ? null : Number(r.days),
@@ -163,12 +167,12 @@ const candidatesWhere = (
   OR: keys.map((k) => ({ employeeId: k.employeeId, violationId: k.violationId })),
 });
 
-/** How an approval ended (`approve`); `earlierPending`: the date of the penalty to approve first (§4). */
+/** How an approval ended (`approve`); `earlierPending`: the date (and stage) of the penalty to approve first (§4). */
 export type ApproveOutcome =
   | 'APPROVED'
   | 'NOT_PENDING'
   | 'ONCE_PER_DAY'
-  | { earlierPending: IsoDate };
+  | { earlierPending: IsoDate; stageId: string };
 
 /** §4 approve in date order: the pair's earlier PENDING record that blocks the approval, or null. */
 export type EarlierPendingCheck = (pairRecords: ApprovedCandidate[]) => ApprovedCandidate | null;
@@ -420,7 +424,7 @@ export class PenaltyRecordsRepository extends BaseRepository<
       });
       const pairRecords = rows.map(toCandidate);
       const blocker = earlier(pairRecords);
-      if (blocker) return { earlierPending: blocker.date };
+      if (blocker) return { earlierPending: blocker.date, stageId: blocker.stageId };
       const fixed = resolve(pairRecords.filter((r) => r.status === PenaltyStatus.APPROVED));
       const updates = await recount(pairRecords);
       const now = new Date();
@@ -452,9 +456,9 @@ export class PenaltyRecordsRepository extends BaseRepository<
    * Whether a penalty dated in `month` was recounted after `since` (§4, §6): a draft run calculated
    * before then is due a Recalculate.
    */
-  async recountedInMonthSince(month: string, since: Date): Promise<boolean> {
+  async recountedInMonthSince(month: string, since: Date, scope: PenaltyScopeWhere = {}): Promise<boolean> {
     const found = await this.db.penaltyRecord.findFirst({
-      where: { date: monthDateRange(month), recountedAt: { gt: since } },
+      where: { AND: [{ date: monthDateRange(month), recountedAt: { gt: since } }, scope] },
       select: { id: true },
     });
     return found !== null;
@@ -481,9 +485,10 @@ export class PenaltyRecordsRepository extends BaseRepository<
   }
 
   /** How many records dated in a month still wait at either step (the payroll run's live notice). */
-  countPendingInMonth(month: string): Promise<number> {
+  /** `scope`: only the penalties a scoped payroll viewer covers (`penaltyWhere`, L3 / L-5); `{}`: all. */
+  countPendingInMonth(month: string, scope: PenaltyScopeWhere = {}): Promise<number> {
     return this.db.penaltyRecord.count({
-      where: { date: monthDateRange(month), status: { in: [...OPEN_PENALTY_STATUSES] } },
+      where: { AND: [{ date: monthDateRange(month), status: { in: [...OPEN_PENALTY_STATUSES] } }, scope] },
     });
   }
 

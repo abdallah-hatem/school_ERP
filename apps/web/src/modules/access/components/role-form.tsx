@@ -11,8 +11,8 @@ import {
 } from '@school-erp/shared';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useId, useMemo, useRef, useState, type FormEvent } from 'react';
-import { useCan } from '@/core/auth';
+import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useCan, useSession } from '@/core/auth';
 import { callApi } from '@/lib/callApi';
 import { FieldShell } from '@/shared/components/form/field-shell';
 import { Form } from '@/shared/components/form/form';
@@ -27,7 +27,7 @@ import { formatCount } from '@/shared/lib/format';
 import { localName } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { CREATE_ROLE, DELETE_ROLE, UPDATE_ROLE } from '../apis';
-import { changedCount, setModule, setScope, toGrantMap, toGrants, toggle, type GrantMap } from '../lib/role-grants';
+import { changedCount, giveCeiling, setModule, setScope, toGrantMap, toGrants, toggle, type GrantMap } from '../lib/role-grants';
 import { FormCard, FormColumns } from './form-card';
 import { PermissionGroups } from './permission-groups';
 import { RoleKindBadge } from './role-bits';
@@ -87,7 +87,11 @@ export function RoleScopesCard() {
 export function RoleForm({ basePath, usersPath, role, copyFrom, holders = [], holdersTotal = 0 }: RoleFormProps) {
   const { t, has, locale } = useTranslation();
   const router = useRouter();
-  const canManage = useCan()('core.roles.manage');
+  const session = useSession();
+  const ceiling = giveCeiling(session);
+  // H2 (view only, the API decides): a non-System-admin can't change a role they hold.
+  const heldByMe = Boolean(role && !ceiling.isSystemAdmin && session?.roles.some((r) => r.id === role.id));
+  const canManage = useCan()('core.roles.manage') && !heldByMe;
   const systemAdmin = role?.key === SYSTEM_ADMIN_ROLE;
   const readOnly = !canManage || systemAdmin;
 
@@ -106,6 +110,11 @@ export function RoleForm({ basePath, usersPath, role, copyFrom, holders = [], ho
   );
   const [errors, setErrors] = useState<{ nameEn?: string; nameAr?: string }>({});
   const [formError, setFormError] = useState<string | null>(null);
+  // A refusal (e.g. ROLE_HAS_UNLINKED_HOLDER) shows under the long permission list: bring it into view.
+  const formErrorRef = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    if (formError) formErrorRef.current?.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+  }, [formError]);
   const [busy, setBusy] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const inFlight = useRef(false);
@@ -276,14 +285,29 @@ export function RoleForm({ basePath, usersPath, role, copyFrom, holders = [], ho
             {t('access.roleForm.permissions')}
           </h2>
           {readOnly ? null : <p className="text-sm text-muted-foreground">{t('access.roleForm.permissionsHint')}</p>}
+          {!readOnly && !ceiling.isSystemAdmin ? (
+            <p data-testid="role-ceiling-note" className="flex items-start gap-1.5 text-sm font-semibold text-muted-foreground">
+              <LockedIcon className="mt-0.5 size-4 shrink-0" />
+              {t('access.roleForm.ceilingNote')}
+            </p>
+          ) : null}
+          {heldByMe ? (
+            <p data-testid="role-held-note" className="flex items-start gap-1.5 text-sm font-semibold text-warning-ink">
+              <LockedIcon className="mt-0.5 size-4 shrink-0" />
+              {t('access.roleForm.heldByYou')}
+            </p>
+          ) : null}
         </div>
         <PermissionGroups
           value={grants}
           saved={role ? savedGrants : grants}
           readOnly={readOnly}
+          canGive={ceiling.canGive}
           onToggle={(key: PermissionKey, on: boolean) => setGrants((g) => toggle(g, key, on))}
           onScope={(key: PermissionKey, scope: PermissionScope) => setGrants((g) => setScope(g, key, scope))}
-          onModule={(module: PermissionModule, on: boolean) => setGrants((g) => setModule(g, module, on))}
+          onModule={(module: PermissionModule, on: boolean) =>
+            setGrants((g) => setModule(g, module, on, ceiling.canGive))
+          }
         />
       </section>
     </>
@@ -321,7 +345,11 @@ export function RoleForm({ basePath, usersPath, role, copyFrom, holders = [], ho
           }
         />
         {formError ? (
-          <p role="alert" className="flex items-start gap-2 rounded-xl bg-destructive-soft px-4 py-3 text-sm font-semibold text-destructive-ink">
+          <p
+            ref={formErrorRef}
+            role="alert"
+            className="flex items-start gap-2 rounded-xl bg-destructive-soft px-4 py-3 text-sm font-semibold text-destructive-ink"
+          >
             <ErrorIcon className="mt-0.5 size-5 shrink-0" />
             {formError}
           </p>

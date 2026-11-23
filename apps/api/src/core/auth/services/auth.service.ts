@@ -1,5 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { Propagation, TransactionHost } from '@nestjs-cls/transactional';
+import { randomUUID } from 'node:crypto';
 import {
   AUDIT_FAILED_SIGN_IN,
   AuditEntityType,
@@ -59,7 +60,8 @@ export class AuthService {
     await this.signInLimit.clear(email);
     return this.afterCommit.inTransaction(async () => {
       await this.users.recordSignIn(user.id);
-      const session = await this.issue(user, await this.tokens.issueRefresh(user.id));
+      const familyId = randomUUID();
+      const session = await this.issue(user, await this.tokens.issueRefresh(user.id, familyId), familyId);
       // The request has no signed-in user yet: the actor is the one signing in.
       await this.audit.record({
         action: 'core.auth.sign_in',
@@ -80,7 +82,8 @@ export class AuthService {
       await this.tokens.revokeFamily(rotated.familyId);
       throw new CodedException(HttpStatus.UNAUTHORIZED, ErrorCode.INVALID_REFRESH_TOKEN);
     }
-    return this.issue(user, rotated.refreshToken);
+    // Signed as of the rotation: a replay inside the grace window gets this very pair (L5).
+    return this.issue(user, rotated.refreshToken, rotated.familyId, rotated.issuedAt);
   }
 
   async logout(user: AuthUser, rawRefreshToken: string | undefined): Promise<void> {
@@ -109,9 +112,14 @@ export class AuthService {
     return { type: AuditEntityType.USER, id: user.id, label: user.name };
   }
 
-  private async issue(user: AuthUser, refreshToken: string): Promise<IssuedSession> {
+  private async issue(
+    user: AuthUser,
+    refreshToken: string,
+    familyId: string,
+    issuedAt?: Date,
+  ): Promise<IssuedSession> {
     return new IssuedSession(user, {
-      accessToken: await this.tokens.signAccess(user),
+      accessToken: await this.tokens.signAccess(user, familyId, issuedAt),
       refreshToken,
     });
   }

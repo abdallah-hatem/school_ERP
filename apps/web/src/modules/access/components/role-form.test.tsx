@@ -14,9 +14,9 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('../apis', () => ({ CREATE_ROLE: vi.fn(), UPDATE_ROLE: vi.fn(), DELETE_ROLE: vi.fn() }));
 
 import { PERMISSION_KEYS } from '@school-erp/shared';
-import { sessionWithout } from '@/test/render';
+import { sessionWith, sessionWithout } from '@/test/render';
 import { CREATE_ROLE, UPDATE_ROLE } from '../apis';
-import { account, customRole, ok, renderAccess, role } from '../test/fixtures';
+import { account, customRole, fail, ok, renderAccess, role } from '../test/fixtures';
 import { RoleForm } from './role-form';
 
 const update = vi.mocked(UPDATE_ROLE);
@@ -164,5 +164,44 @@ describe('RoleForm', () => {
     expect(document.querySelectorAll('[data-permission]')).toHaveLength(PERMISSION_KEYS.length);
     expect(screen.queryAllByRole('switch')).toHaveLength(0);
     expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
+  });
+
+  describe('H2 — the access ceiling, as the screen shows it (security review, owner 2026-11-23)', () => {
+    const manager = sessionWith('core.roles.view', 'core.roles.manage', 'hr.employees.view');
+
+    it('a permission the user doesn’t hold can’t be turned on, and turning a module on skips it', async () => {
+      const user = userEvent.setup({ pointerEventsCheck: 0 });
+      renderAccess(<RoleForm basePath="/en/roles" usersPath="/en/users" role={customRole} />, 'en', manager);
+      await openModules(user, 'HR');
+      expect((within(row('hr.payroll.approve')).getByRole('switch') as HTMLButtonElement).disabled).toBe(true);
+      expect(within(row('hr.payroll.approve')).getByText("You don't hold this permission, so you can't give it.")).toBeTruthy();
+      expect(screen.getByTestId('role-ceiling-note')).toBeTruthy();
+      // Held (and on): it can still be turned off.
+      expect((within(row('hr.employees.view')).getByRole('switch') as HTMLButtonElement).disabled).toBe(false);
+      const hr = screen.getByRole('region', { name: /^HR/ });
+      await user.click(within(hr).getByRole('button', { name: 'Turn all on' }));
+      expect(row('hr.payroll.approve').querySelector('[role="switch"]')?.getAttribute('aria-checked')).toBe('false');
+    });
+
+    it('fifth review — a refused save (ROLE_HAS_UNLINKED_HOLDER) shows the reason and brings it into view', async () => {
+      const user = userEvent.setup({ pointerEventsCheck: 0 });
+      const scrolled = vi.fn();
+      HTMLElement.prototype.scrollIntoView = scrolled;
+      update.mockResolvedValue(fail('ROLE_HAS_UNLINKED_HOLDER', 'x') as unknown as Res<typeof UPDATE_ROLE>);
+      renderAccess(<RoleForm basePath="/en/roles" usersPath="/en/users" role={customRole} />);
+      await openModules(user, 'HR');
+      await user.click(within(row('hr.penalties.view')).getByRole('switch'));
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+      const alert = await screen.findByRole('alert');
+      expect(alert.textContent).toContain('Someone holding this role has no employee record');
+      await waitFor(() => expect(scrolled).toHaveBeenCalled());
+    });
+
+    it('a role the user holds is view-only for them, saying why', () => {
+      const holder = { ...manager, roles: [{ id: customRole.id, key: customRole.key, nameEn: customRole.nameEn, nameAr: customRole.nameAr }] };
+      renderAccess(<RoleForm basePath="/en/roles" usersPath="/en/users" role={customRole} />, 'en', holder);
+      expect(screen.getByTestId('role-held-note').textContent).toBe("You hold this role, so you can't change it. Another administrator can.");
+      expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
+    });
   });
 });

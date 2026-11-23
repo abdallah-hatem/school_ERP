@@ -1,12 +1,15 @@
 import {
   PERMISSION_MODULES,
   PermissionScope,
+  SYSTEM_ADMIN_ROLE,
   isRowScoped,
   permissionsByModule,
   type PermissionKey,
   type PermissionModule,
   type PermissionScope as Scope,
+  type Role,
   type RoleGrant,
+  type SessionUser,
 } from '@school-erp/shared';
 
 /*
@@ -46,10 +49,39 @@ export function setScope(map: GrantMap, key: PermissionKey, scope: Scope): Grant
 }
 
 /** Every permission of a module on (keeping scopes already chosen) or off. */
-export function setModule(map: GrantMap, module: PermissionModule, on: boolean): GrantMap {
+export function setModule(
+  map: GrantMap,
+  module: PermissionModule,
+  on: boolean,
+  canGive: (key: PermissionKey) => boolean = () => true,
+): GrantMap {
   let next = map;
-  for (const key of permissionsByModule()[module]) next = toggle(next, key, on);
+  // Turning a module on gives only what the user may give (H2); turning it off takes everything off.
+  for (const key of permissionsByModule()[module]) if (!on || canGive(key)) next = toggle(next, key, on);
   return next;
+}
+
+/**
+ * What the signed-in user may give (security review H1/H2), as far as the screen knows: a System
+ * admin anything; anyone else only permissions they hold, never the System admin role. Scopes the
+ * screen doesn't know — the API still refuses one wider than theirs (`GRANT_EXCEEDS_OWN`).
+ */
+export interface GiveCeiling {
+  isSystemAdmin: boolean;
+  canGive: (key: PermissionKey) => boolean;
+  canGiveRole: (role: Pick<Role, 'key' | 'permissions'>) => boolean;
+}
+
+export function giveCeiling(user: Pick<SessionUser, 'roles' | 'permissions'> | null): GiveCeiling {
+  const isSystemAdmin = Boolean(user?.roles.some((r) => r.key === SYSTEM_ADMIN_ROLE));
+  const held = new Set<PermissionKey>(user?.permissions ?? []);
+  const canGive = (key: PermissionKey) => isSystemAdmin || held.has(key);
+  return {
+    isSystemAdmin,
+    canGive,
+    canGiveRole: (role) =>
+      isSystemAdmin || (role.key !== SYSTEM_ADMIN_ROLE && role.permissions.every((g) => canGive(g.key))),
+  };
 }
 
 /** How many permissions differ from `saved` — switched, or the same switch with another scope. */

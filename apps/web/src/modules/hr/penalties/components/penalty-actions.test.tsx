@@ -45,7 +45,7 @@ describe('PenaltyActions', () => {
 
     await waitFor(() => expect(router.refresh).toHaveBeenCalled());
     expect(apis.APPROVE_PENALTY).toHaveBeenCalledTimes(1);
-    expect(apis.APPROVE_PENALTY).toHaveBeenCalledWith('p-1', undefined, undefined);
+    expect(apis.APPROVE_PENALTY).toHaveBeenCalledWith('p-1', undefined, undefined, undefined);
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 
@@ -247,7 +247,7 @@ describe('PenaltyActions', () => {
       expect(within(dialog).queryByRole('button', { name: 'Approve' })).toBeNull();
       await user.click(within(dialog).getByRole('button', { name: 'Approve and update 2 penalties' }));
       await waitFor(() => expect(router.refresh).toHaveBeenCalled());
-      expect(apis.APPROVE_PENALTY).toHaveBeenCalledWith('p-1', ACK, undefined);
+      expect(apis.APPROVE_PENALTY).toHaveBeenCalledWith('p-1', ACK, undefined, undefined);
     });
 
     it('Arabic: the same list and button', async () => {
@@ -280,7 +280,40 @@ describe('PenaltyActions', () => {
       );
       expect(items(dialog)).toEqual(['19 Nov 2026: level 1 → 2, Deduct 0.5 day → Deduct 1 day']);
       await user.click(within(dialog).getByRole('button', { name: 'Approve and update 1 penalty' }));
-      await waitFor(() => expect(apis.APPROVE_PENALTY).toHaveBeenLastCalledWith('p-1', [ACK[0]], undefined));
+      await waitFor(() => expect(apis.APPROVE_PENALTY).toHaveBeenLastCalledWith('p-1', [ACK[0]], undefined, undefined));
+    });
+
+    it('L1 — penalties in stages the approver doesn’t see are only counted, and confirmed by their number', async () => {
+      const user = userEvent.setup();
+      apis.APPROVE_PENALTY.mockResolvedValue(ok(record({ status: 'APPROVED' })));
+      renderPenalties(<PenaltyActions record={record({ recount: [RECOUNT[0]!], recountElsewhere: 2 })} />);
+      await chooseRowAction(user, 'Mona Khalil', 'Approve');
+      const dialog = await screen.findByRole('dialog', { name: 'Approve this penalty?' });
+      expect(dialog.textContent).toContain('Approving this will raise the level of 3 approved penalties:');
+      expect(items(dialog)).toEqual(['19 Nov 2026: level 1 → 2, Deduct 0.5 day → Deduct 1 day']);
+      expect(within(dialog).getByTestId('penalty-recount-elsewhere').textContent).toBe(
+        'And 2 approved penalties in other stages, which you don’t see.'.replace('’', "'"),
+      );
+      await user.click(within(dialog).getByRole('button', { name: 'Approve and update 3 penalties' }));
+      await waitFor(() => expect(apis.APPROVE_PENALTY).toHaveBeenCalledWith('p-1', [ACK[0]], undefined, 2));
+    });
+
+    it('L-3 — a locked month among penalties of another stage blocks Approve without naming it', async () => {
+      const user = userEvent.setup();
+      renderPenalties(<PenaltyActions record={record({ recountElsewhere: 1, recountLockedElsewhere: true })} />);
+      const menu = await openRowActions(user, 'Mona Khalil');
+      const approve = within(menu).getByRole('menuitem', { name: /Approve/ });
+      expect(approve.getAttribute('aria-disabled')).toBe('true');
+      expect(approve.textContent).toContain('an approved penalty, in another stage, in a month whose payroll is approved');
+    });
+
+    it('L1 — an earlier pending penalty in another stage blocks Approve without its date', async () => {
+      const user = userEvent.setup();
+      renderPenalties(<PenaltyActions record={record({ earlierPending: { id: null, date: null } })} />);
+      const menu = await openRowActions(user, 'Mona Khalil');
+      const approve = within(menu).getByRole('menuitem', { name: /Approve/ });
+      expect(approve.getAttribute('aria-disabled')).toBe('true');
+      expect(approve.textContent).toContain('An earlier penalty for this violation, in another stage, is still waiting.');
     });
 
     it('one of them in an approved payroll month: Approve is disabled naming the month (EN + AR)', async () => {

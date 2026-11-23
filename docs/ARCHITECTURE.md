@@ -186,6 +186,42 @@ from one IP all get in; 11 rapid sign-ins on one email → 429).
   uniquelocal` and `TRUST_CLOUDFLARE=true`. A school's own server without Cloudflare:
   `TRUST_PROXY` naming its proxy, Cloudflare off.
 
+### Sessions and the fetch cache (security review, 2026-11-23)
+
+- **Refresh-token reuse grace** (`REFRESH_REUSE_GRACE_SECONDS`, default **10 s**, max 120): a rotated
+  refresh token used again inside it — parallel requests refreshing with the same cookie — gets the
+  **very pair its first use got**, never a new one. The successor refresh token is derived from the
+  used one with HMAC-SHA-512 under the signing secret (`TokensService.successorOf`), so it can be
+  given again without being stored in the clear; the access token is signed as of the rotation
+  (`iat` = the token's `used_at`), so it is the same string too. A parallel refresh that loses the
+  claim (the row's `used_at` is set first, inside the rotation's transaction) answers with the
+  winner's pair. When the successor was itself rotated already (two tabs refreshing in turn), the
+  replay follows the chain (up to 10 links) to the live token and answers with it, as of the rotation
+  that issued it — two tabs never sign the user out. A revoked or broken link → 401, without
+  revoking the sign-in. After the window a reuse is theft: the whole family is revoked (401).
+- **Access tokens name their sign-in** (`fam`: the refresh-token family). A password change
+  (`POST /account/password`) ends every other sign-in of the user — `core.user.sessions_ended` with
+  `keepFamilyId`, after the change commits — and keeps the caller's. Their access tokens stop **at
+  once** (L-1): every request loads the user with `password_changed_at` (the same read as before), and
+  a token issued before it (`iat`) is accepted only while its family still has a live refresh token
+  (`TokensService.stillValid`, one indexed lookup, only for such older tokens; the file middleware
+  does the same). This also ends the old access tokens after a temporary password. The cut-off is
+  the later of `password_changed_at` and `sessions_valid_after`, which deactivate and reactivate set:
+  a reactivated user's tokens from before stay dead (their families were revoked). The other
+  sign-ins' refresh tokens are revoked **inside** the password change's transaction (third review
+  L2: `SessionRevocation`, which core/auth registers on start, since core/users can't depend on
+  it); the `core.user.sessions_ended` event still follows for logging and other listeners. A token issued
+  before `fam` existed (before 2026-11-23) can't say which sign-in it is: after a password change it
+  is refused once, the caller included, who signs in again.
+- **No per-user answer in Next's data cache.** Next 16 without `cacheComponents` (ours) caches no
+  `fetch` by default, and `next: { tags }` alone doesn't opt in — but `apiFetch` doesn't rely on that:
+  any request carrying a session is `cache: 'no-store'` and loses any `revalidate`
+  (`withCachePolicy`, `apps/web/src/lib/fetch-cache.ts`). Tags stay, so a write's `updateTag` still
+  refreshes the page, which then fetches afresh. Only public requests (the sign-in page's school name
+  and logo, the app icons) may be cached. `fetch-cache.test.ts` guards it: the policy, no
+  `use cache` / `unstable_cache` / route `revalidate` or `fetchCache` in `src`, no `cacheComponents`
+  in `next.config.ts`, and no `fetch()` to the API outside `apiFetch` (and the token refresh).
+
 ### Uploads
 
 - **Checked by their bytes** (`detectImageType`, the magic numbers: PNG, JPEG, WebP, an `<svg` root),
@@ -687,6 +723,45 @@ Roles are rows, not code (spec P2, R2 / R5 / R8 / R9). A school changes them thr
 - **Last System admin** (R8, edge case 5): removing the role from, or deactivating, the last active
   System admin is refused (`LAST_SYSTEM_ADMIN`, 409). The check locks the System admin role row for
   the rest of the transaction, so two such changes at once can't both pass.
+- **The access ceiling** (security review H1/H2, owner 2026-11-23). What a non-System-admin may give
+  is what they hold: `PermissionsService.heldGrants` (every grant of every role, not only the widest)
+  checked by `grantWithinCeiling` / `firstGrantOverCeiling` (shared, `rules/grant-ceiling.ts`). Scopes
+  form a partial order — `all` covers everything; `own_stage` covers itself and `self`; `own_team`
+  covers itself and `self`; `self` only itself; stage and team don't cover each other. Users: the
+  System admin role, or any action on a System admin's account → 403 `SYSTEM_ADMIN_ONLY`; a role
+  given or taken away, or an account managed, beyond the ceiling → 403 `GRANT_EXCEEDS_OWN`; one's own
+  `roleIds` or `employeeId` (anyone, a System admin too) → 403 `OWN_ACCESS_CHANGE`. Roles: a grant
+  beyond the ceiling → `GRANT_EXCEEDS_OWN`; editing a role one holds → `ROLE_HELD_BY_YOU`; one a
+  System admin holds (or the System admin role) → `ROLE_HELD_BY_SYSTEM_ADMIN`; the ceiling covers the
+  role's current grants and its new ones (removing one beyond theirs is refused too) and deleting it.
+  Unlocking a sign-in is under the same ceiling as deactivating. **Employee links** (H-1): only a
+  System admin sets or changes `employeeId`, on create or update (`EMPLOYEE_LINK_ADMIN_ONLY`) — the
+  stage, team and self scopes are anchored to the linked employee, so a link is access; checking the
+  employee against every scoped grant would be finer but needs HR's scope rules in core, so the simple
+  rule was picked. A System admin may change their own link (they reach everyone already), never their
+  own roles. **Races** (L-6, L1): every check on a user first locks their `users` row (`lockUser`) and
+  then, `FOR SHARE`, the rows of the roles they hold and the roles about to be given (`lockTarget` /
+  `lockForGiving`) — before any grant is read for the ceiling; `setRolesOf` takes the same locks. A
+  role edit or delete locks the role's row (`lockRole`) before its held-by checks. The exclusive
+  locks are `FOR NO KEY UPDATE` (third review L3): they still conflict with `FOR SHARE`, but not with
+  the key-share lock a foreign-key insert takes, so signing in (a refresh token for that user) or
+  giving that role to someone else isn't held up. **Takeover** (third review M1): the ceiling compares
+  scope labels, not reach (the Primary head's `own_stage` is not the Prep head's), so a
+  non-System-admin can't set a temporary password, change the email or unlock any account linked to
+  an employee (`LINKED_ACCOUNT_ADMIN_ONLY`). **Pay needs a link** (M2): a non-System-admin can't give
+  an unlinked account a role that `actsOnPay` (shared `PAY_AND_PENALTY_KEYS`: payroll adjust /
+  approve, lateness edit, penalties review / approve / cancel, employees edit;
+  `UNLINKED_PAY_ROLE`), nor add such a permission to a role an unlinked account holds; and HR
+  refuses an unlinked non-admin's payroll adjustment or approval, pay-field edit, lateness change and
+  penalty review / approval / rejection / cancellation (`HrAccessService.assertLinkedForPay`,
+  `ACCOUNT_NOT_LINKED`). The release check `apps/api/prisma/checks/unlinked-pay-accounts.ts`
+  (`docs/demo/DRY_RUN.md` 2b) lists the accounts to link. The actor's own role rows are locked
+  `FOR SHARE` before their ceiling is read (users first, then roles). Deactivating, a temporary
+  password and a password change all revoke the refresh tokens inside their own transaction
+  (`SessionRevocation`, one registered revoker). The user snapshot in the log names the linked employee
+  (`employeeId: { id, nameEn, nameAr }`, the names with the code), so a link change reads before →
+  after. The web greys these out from the session (`giveCeiling`: keys only — the API also
+  checks scopes).
 - Every user and role write is `@Audited` (`core.user.*`, `core.role.*`); passwords are never in the
   log (the entry says only that one was set or changed).
 - Area order inside core: `audit` ← `permissions` ← `roles` ← `users` ← `auth`, and `audit` ← `settings` ← `sign-in-limit` ← `users`, `auth`; `jobs` depends on no other area (a job lives in its own area and only uses `@ScheduledJob`); `audit`, `permissions`, `settings` ← `notifications` (no other area imports it — `.dependency-cruiser.cjs`). `core/audit` reads

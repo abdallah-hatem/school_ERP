@@ -5,7 +5,9 @@ import {
   isPermissionKey,
   isPermissionScope,
   widerScope,
+  type HeldGrants,
   type PermissionKey,
+  type RoleGrant,
 } from '@school-erp/shared';
 
 /*
@@ -55,4 +57,22 @@ export function resolveGrants(rows: readonly StoredGrant[]): ResolvedGrants {
     if (scope) scopes.set(key, scope);
   }
   return { scopes, unknown };
+}
+
+/**
+ * What the user holds for the access ceiling (security review H1/H2, owner 2026-11-23): every
+ * known (key, scope) of every role — not only the widest per key, so `own_stage` from one role and
+ * `own_team` from another can both be given — and whether they are a System admin (no ceiling).
+ */
+export function heldGrantsFrom(rows: readonly StoredGrant[]): HeldGrants {
+  const seen = new Set<string>();
+  const grants: RoleGrant[] = [];
+  for (const row of rows) {
+    if (!isPermissionKey(row.permissionKey) || !isPermissionScope(row.scope)) continue;
+    const id = `${row.permissionKey}:${row.scope}`;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    grants.push({ key: row.permissionKey, scope: row.scope });
+  }
+  return { isSystemAdmin: rows.some((r) => r.roleKey === SYSTEM_ADMIN_ROLE), grants };
 }

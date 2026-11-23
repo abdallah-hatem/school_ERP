@@ -1,5 +1,6 @@
-import { ErrorCode, PERMISSION_KEYS } from '@school-erp/shared';
+import { ErrorCode, PERMISSION_KEYS, type HeldGrants } from '@school-erp/shared';
 import type { AuditService } from '../audit';
+import type { PermissionsService } from '../permissions';
 import type { RoleRow, RolesRepository } from './repositories/roles.repository';
 import { RolesService } from './roles.service';
 
@@ -16,10 +17,22 @@ function row(overrides: Partial<RoleRow> = {}): RoleRow {
   };
 }
 
-function makeService(found: RoleRow = row(), opts: { otherAdmins?: number } = {}) {
+function makeService(
+  found: RoleRow = row(),
+  opts: {
+    otherAdmins?: number;
+    held?: HeldGrants;
+    heldByActor?: boolean;
+    heldByAdmin?: boolean;
+    unlinkedHolder?: boolean;
+  } = {},
+) {
   let current = found;
   const repo = {
     findById: jest.fn(() => Promise.resolve(current)),
+    lockRole: jest.fn(() => Promise.resolve()),
+    lockRolesOfUser: jest.fn(() => Promise.resolve()),
+    hasUnlinkedHolder: jest.fn(() => Promise.resolve(opts.unlinkedHolder ?? false)),
     replaceGrants: jest.fn((_id: string, grants: RoleRow['permissions']) => {
       current = { ...current, permissions: grants };
       return Promise.resolve();
@@ -30,13 +43,17 @@ function makeService(found: RoleRow = row(), opts: { otherAdmins?: number } = {}
     findRefsByIds: jest.fn(),
     lockSystemAdminRole: jest.fn(() => Promise.resolve()),
     countOtherActiveSystemAdmins: jest.fn(() => Promise.resolve(opts.otherAdmins ?? 0)),
+    isHeldBy: jest.fn(() => Promise.resolve(opts.heldByActor ?? false)),
+    isHeldBySystemAdmin: jest.fn(() => Promise.resolve(opts.heldByAdmin ?? false)),
   };
   const audit = { record: jest.fn(() => Promise.resolve()) };
+  const permissions = { heldGrants: jest.fn(() => Promise.resolve(opts.held ?? { isSystemAdmin: true, grants: [] })) };
   const service = new RolesService(
     repo as unknown as RolesRepository,
     audit as unknown as AuditService,
+    permissions as unknown as PermissionsService,
   );
-  return { service, repo, audit };
+  return { service, repo, audit, permissions };
 }
 
 describe('RolesService', () => {
@@ -166,5 +183,147 @@ describe('RolesService', () => {
     await expect(
       makeService(row(), { otherAdmins: 1 }).service.assertAnotherSystemAdmin('u-1'),
     ).resolves.toBeUndefined();
+  });
+
+  describe('H2 — core.roles.manage has a ceiling (security review, owner 2026-11-23)', () => {
+    const me = { id: 'u-me' };
+    const held: HeldGrants = {
+      isSystemAdmin: false,
+      grants: [
+        { key: 'core.roles.manage', scope: 'all' },
+        { key: 'hr.employees.view', scope: 'own_stage' },
+      ],
+    };
+
+    it('creating a role with a key the actor lacks, or wider than theirs → 403 GRANT_EXCEEDS_OWN; within → created', async () => {
+      const { service, repo } = makeService(row(), { held });
+      for (const permissions of [
+        [{ key: 'hr.payroll.approve' as const, scope: 'all' as const }],
+        [{ key: 'hr.employees.view' as const, scope: 'all' as const }],
+        [{ key: 'hr.employees.view' as const, scope: 'own_team' as const }],
+      ]) {
+        await expect(service.create({ nameEn: 'X', nameAr: 'س', permissions }, me)).rejects.toMatchObject({
+          code: ErrorCode.GRANT_EXCEEDS_OWN,
+        });
+      }
+      expect(repo.create).not.toHaveBeenCalled();
+      await service.create({ nameEn: 'X', nameAr: 'س', permissions: [{ key: 'hr.employees.view', scope: 'self' }] }, me);
+      expect(repo.create).toHaveBeenCalled();
+    });
+
+    it('editing a role the actor holds → 403 ROLE_HELD_BY_YOU, names included', async () => {
+      const { service, repo } = makeService(row(), { held, heldByActor: true });
+      await expect(service.update('r-1', { nameEn: 'Renamed' }, me)).rejects.toMatchObject({
+        code: ErrorCode.ROLE_HELD_BY_YOU,
+      });
+      expect(repo.updateNames).not.toHaveBeenCalled();
+    });
+
+    it('editing a role a System admin holds, or the System admin role → 403 ROLE_HELD_BY_SYSTEM_ADMIN', async () => {
+      await expect(
+        makeService(row(), { held, heldByAdmin: true }).service.update('r-1', { nameEn: 'X' }, me),
+      ).rejects.toMatchObject({ code: ErrorCode.ROLE_HELD_BY_SYSTEM_ADMIN });
+      await expect(
+        makeService(row({ key: 'system_admin', builtIn: true }), { held }).service.update('r-1', { nameEn: 'X' }, me),
+      ).rejects.toMatchObject({ code: ErrorCode.ROLE_HELD_BY_SYSTEM_ADMIN });
+    });
+
+    it('editing permissions beyond the ceiling → 403 GRANT_EXCEEDS_OWN, nothing replaced', async () => {
+      const { service, repo } = makeService(row(), { held });
+      await expect(
+        service.update('r-1', { permissions: [{ key: 'core.users.manage', scope: 'all' }] }, me),
+      ).rejects.toMatchObject({ code: ErrorCode.GRANT_EXCEEDS_OWN });
+      expect(repo.replaceGrants).not.toHaveBeenCalled();
+    });
+
+    it('a System admin (or the system itself) has no ceiling', async () => {
+      const { service, repo } = makeService(row(), { held: { isSystemAdmin: true, grants: [] }, heldByActor: true });
+      await service.update('r-1', { permissions: [{ key: 'core.users.manage', scope: 'all' }] }, me);
+      expect(repo.replaceGrants).toHaveBeenCalled();
+      // A signed-in System admin (not the system): their ceiling is read, and it is none.
+      const system = makeService(row(), { held: { isSystemAdmin: true, grants: [] } });
+      await system.service.create(
+        { nameEn: 'X', nameAr: 'س', permissions: [{ key: 'core.users.manage', scope: 'all' }] },
+        me,
+      );
+      expect(system.repo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ grants: [{ permissionKey: 'core.users.manage', scope: 'all' }] }),
+      );
+    });
+
+    it('L-4 — removing a grant beyond the ceiling (or keeping one in a renamed role) is refused too', async () => {
+      const strong = row({ permissions: [{ permissionKey: 'hr.payroll.approve', scope: 'all' }] });
+      const { service, repo } = makeService(strong, { held });
+      // Taking "approve payroll" away from its holders is beyond someone who doesn't hold it.
+      await expect(service.update('r-1', { permissions: [] }, me)).rejects.toMatchObject({ code: ErrorCode.GRANT_EXCEEDS_OWN });
+      await expect(service.update('r-1', { nameEn: 'Renamed' }, me)).rejects.toMatchObject({ code: ErrorCode.GRANT_EXCEEDS_OWN });
+      expect(repo.replaceGrants).not.toHaveBeenCalled();
+      expect(repo.updateNames).not.toHaveBeenCalled();
+    });
+
+    it('L-4 — deleting a role beyond the ceiling is refused; within it, deleted', async () => {
+      const strong = makeService(row({ permissions: [{ permissionKey: 'hr.payroll.approve', scope: 'all' }] }), { held });
+      await expect(strong.service.remove('r-1', me)).rejects.toMatchObject({ code: ErrorCode.GRANT_EXCEEDS_OWN });
+      expect(strong.repo.delete).not.toHaveBeenCalled();
+      const within = makeService(row(), { held });
+      await within.service.remove('r-1', me);
+      expect(within.repo.delete).toHaveBeenCalledWith('r-1');
+    });
+
+    it('L-6 — an edit or a delete locks the role before its checks', async () => {
+      const { service, repo } = makeService(row(), { held });
+      await service.update('r-1', { nameEn: 'X' }, me);
+      expect(repo.lockRole.mock.invocationCallOrder[0]).toBeLessThan(repo.isHeldBy.mock.invocationCallOrder[0]);
+      await service.remove('r-1', me);
+      expect(repo.lockRole).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('fourth review', () => {
+    const me = { id: 'u-me' };
+    const held: HeldGrants = {
+      isSystemAdmin: false,
+      grants: [
+        { key: 'core.roles.manage', scope: 'all' },
+        { key: 'hr.employees.view', scope: 'all' },
+        { key: 'hr.lateness.edit', scope: 'all' },
+      ],
+    };
+    const next = [
+      { key: 'hr.employees.view' as const, scope: 'all' as const },
+      { key: 'hr.lateness.edit' as const, scope: 'all' as const },
+    ];
+
+    it('H1 — turning a role held by an unlinked account into one acting on pay → 403 ROLE_HAS_UNLINKED_HOLDER', async () => {
+      const { service, repo } = makeService(row({ permissions: [{ permissionKey: 'hr.employees.view', scope: 'all' }] }), {
+        held,
+        unlinkedHolder: true,
+      });
+      await expect(service.update('r-1', { permissions: next }, me)).rejects.toMatchObject({
+        code: ErrorCode.ROLE_HAS_UNLINKED_HOLDER,
+      });
+      expect(repo.replaceGrants).not.toHaveBeenCalled();
+      // Every holder linked: allowed.
+      const linked = makeService(row({ permissions: [{ permissionKey: 'hr.employees.view', scope: 'all' }] }), { held });
+      await linked.service.update('r-1', { permissions: next }, me);
+      expect(linked.repo.replaceGrants).toHaveBeenCalled();
+    });
+
+    it('L-d — on the user-account paths, the actor’s own roles are locked before their ceiling is read', async () => {
+      const { service, repo, permissions } = makeService(row(), { held });
+      await service.ceilingOf(me);
+      expect(repo.lockRolesOfUser).toHaveBeenCalledWith('u-me');
+      expect(repo.lockRolesOfUser.mock.invocationCallOrder[0]).toBeLessThan(permissions.heldGrants.mock.invocationCallOrder[0]);
+    });
+
+    it('fifth review Low 1 — a role edit or delete locks only its own role, never the actor’s roles (no deadlock)', async () => {
+      const { service, repo, permissions } = makeService(row(), { held });
+      await service.update('r-1', { nameEn: 'X' }, me);
+      await service.remove('r-1', me);
+      expect(repo.lockRole).toHaveBeenCalledTimes(2);
+      expect(repo.lockRolesOfUser).not.toHaveBeenCalled();
+      // The role row first, then the ceiling read.
+      expect(repo.lockRole.mock.invocationCallOrder[0]).toBeLessThan(permissions.heldGrants.mock.invocationCallOrder[0]);
+    });
   });
 });
