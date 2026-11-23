@@ -749,10 +749,16 @@ Roles are rows, not code (spec P2, R2 / R5 / R8 / R9). A school changes them thr
   scope labels, not reach (the Primary head's `own_stage` is not the Prep head's), so a
   non-System-admin can't set a temporary password, change the email or unlock any account linked to
   an employee (`LINKED_ACCOUNT_ADMIN_ONLY`). **Pay needs a link** (M2): a non-System-admin can't give
-  an unlinked account a role that `actsOnPay` (shared: payroll adjust / approve, lateness edit,
-  penalties approve / cancel, employees edit + view salary; `UNLINKED_PAY_ROLE`), and HR refuses an
-  unlinked non-admin's payroll adjustment, approval or salary edit (`HrAccessService.
-  assertLinkedForPay`, `ACCOUNT_NOT_LINKED`). The user snapshot in the log names the linked employee
+  an unlinked account a role that `actsOnPay` (shared `PAY_AND_PENALTY_KEYS`: payroll adjust /
+  approve, lateness edit, penalties review / approve / cancel, employees edit;
+  `UNLINKED_PAY_ROLE`), nor add such a permission to a role an unlinked account holds; and HR
+  refuses an unlinked non-admin's payroll adjustment or approval, pay-field edit, lateness change and
+  penalty review / approval / rejection / cancellation (`HrAccessService.assertLinkedForPay`,
+  `ACCOUNT_NOT_LINKED`). The release check `apps/api/prisma/checks/unlinked-pay-accounts.ts`
+  (`docs/demo/DRY_RUN.md` 2b) lists the accounts to link. The actor's own role rows are locked
+  `FOR SHARE` before their ceiling is read (users first, then roles). Deactivating, a temporary
+  password and a password change all revoke the refresh tokens inside their own transaction
+  (`SessionRevocation`, one registered revoker). The user snapshot in the log names the linked employee
   (`employeeId: { nameEn, nameAr }` with the code), so a link change reads before → after. The web greys these out from the session (`giveCeiling`: keys only — the API also
   checks scopes).
 - Every user and role write is `@Audited` (`core.user.*`, `core.role.*`); passwords are never in the

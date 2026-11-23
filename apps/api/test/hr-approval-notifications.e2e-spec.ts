@@ -305,7 +305,8 @@ describe('HR approval notifications — N2 (e2e)', () => {
 
     it('approved by the principal → resolved for everyone, "Approved by …", out of the count; nothing new (edge 4)', async () => {
       const hrManager = await newUser('hr-manager', [BuiltInRole.HR_MANAGER]);
-      const principal = await newUser('principal', [BuiltInRole.PRINCIPAL]);
+      // Approving needs the account linked to its employee record (§6, owner 2026-11-23).
+      const principal = await newUser('principal', [BuiltInRole.PRINCIPAL], await createEmployee({ stageId: prep }));
       const penalty = await as(who.stageHead, () => recordOk(emp.p1));
       expect(await unread(hrManager)).toBe(1);
 
@@ -328,7 +329,8 @@ describe('HR approval notifications — N2 (e2e)', () => {
     });
 
     it('cancelled while pending → resolved as cancelled; an approved one cancelled later → nothing (edges 5, 6)', async () => {
-      const principal = await newUser('principal', [BuiltInRole.PRINCIPAL]);
+      // Approving needs the account linked to its employee record (§6, owner 2026-11-23).
+      const principal = await newUser('principal', [BuiltInRole.PRINCIPAL], await createEmployee({ stageId: prep }));
       const pending = await as(who.stageHead, () => recordOk(emp.p2));
       await cancel(pending.id);
       const [item] = await itemsAbout(principal, pending.id);

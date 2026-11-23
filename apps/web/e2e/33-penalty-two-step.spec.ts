@@ -105,9 +105,9 @@ test('the stage review: recorded in prep → the prep head approves one and reje
   await rejectButton.click();
   await expect(reject).toBeHidden();
 
-  // The other stage's head (the recorder here) never sees them: 404, and their reject/approve 403.
+  // The other stage's head (the recorder here) never sees them: 404, and acting on them 404 too (L2).
   expect(await primaryHead.status('get', `/hr/penalties/${toApprove.id}`)).toBe(404);
-  expect(await primaryHead.status('post', `/hr/penalties/${toReject.id}/review/approve`)).toBe(403);
+  expect(await primaryHead.status('post', `/hr/penalties/${toReject.id}/review/approve`)).toBe(404);
   const rejected = await (await Api.asAdmin()).get<PenaltyRecord>(`/hr/penalties/${toReject.id}`);
   expect(rejected).toMatchObject({ status: 'REJECTED', rejectedStep: 'REVIEW', rejectionReason: 'He was on an official task that day' });
   await primaryHead.dispose();

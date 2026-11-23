@@ -144,9 +144,10 @@
     an account with no employee record (which reaches nobody through their stage, team or
     themselves, and can't act on pay — §6) they still may;
   - can't give an account with no employee record a role that acts on pay or penalties (adjusting or
-    approving payroll, entering lateness, approving or cancelling penalties, or editing employees
-    together with seeing salaries): "not your own" can't be checked without the record. A System
-    admin links the account first.
+    approving payroll, entering lateness, reviewing, approving or cancelling penalties, or editing
+    employees), nor add such a permission to a role an unlinked account holds: "not your own" can't
+    be checked without the record. A System admin links the account first. (Adding employees isn't
+    on the list: it sets a new person's pay, never the adder's own.)
 
   "Reaching no further": *everyone* covers every reach; *their stage* covers their stage and
   *themselves only*; *their team* covers their team and *themselves only*; *themselves only* covers

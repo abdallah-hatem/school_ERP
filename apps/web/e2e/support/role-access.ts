@@ -1,6 +1,7 @@
 import { expect, type Browser, type Page } from '@playwright/test';
 import {
   BUILT_IN_ROLES,
+  actsOnPay,
   PayrollStatus,
   PermissionScope,
   SCREENS,
@@ -11,6 +12,7 @@ import {
   type Language,
   type PayrollRun,
   type PayrollRunSummary,
+  type PermissionKey,
   type ScreenId,
   type UserAccount,
 } from '@school-erp/shared';
@@ -88,6 +90,12 @@ export async function makeRoleUser(role: BuiltInRole): Promise<RoleUser> {
       record = everyone.find((e) => !linked.has(e.id));
       if (!record) throw new Error('smoke: every employee already has an account');
       employeeId = record.id;
+    } else if (actsOnPay(Object.keys(definition(role).permissions).map((key) => ({ key: key as PermissionKey })))) {
+      // Acting on pay or penalties needs the account linked to its employee record (§6, owner
+      // 2026-11-23). The last unlinked one: specs record penalties for the first employees.
+      const own = [...everyone].reverse().find((e) => !linked.has(e.id));
+      if (!own) throw new Error('smoke: every employee already has an account');
+      employeeId = own.id;
     }
     if (!record) throw new Error('smoke: no employees');
 

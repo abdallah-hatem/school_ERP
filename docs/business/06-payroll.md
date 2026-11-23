@@ -45,7 +45,8 @@ lines each role sees: §2 Roles (enforced, P4).
   "You can't change your own pay, insurance or lateness. Ask someone else." Their own row sent back
   unchanged (the lateness screen saves the whole month) is fine.
 - **DECIDED** (owner, 2026-11-23, separation of duties) — **Acting on pay needs a linked account.**
-  Someone who isn't a System admin adjusts or approves payroll, or changes a salary, only once their
+  Someone who isn't a System admin adjusts or approves payroll, changes a salary or other pay field,
+  changes lateness minutes, or reviews, approves, rejects or cancels a penalty only once their
   account is linked to their employee record ("Link your account to your employee record first. Ask
   a System admin.") — otherwise "your own line" can't be told apart. An HR manager or HR officer must
   be linked. A System admin is the exception (they link accounts, and may unlink themselves); that is

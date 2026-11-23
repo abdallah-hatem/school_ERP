@@ -19,12 +19,20 @@ function row(overrides: Partial<RoleRow> = {}): RoleRow {
 
 function makeService(
   found: RoleRow = row(),
-  opts: { otherAdmins?: number; held?: HeldGrants; heldByActor?: boolean; heldByAdmin?: boolean } = {},
+  opts: {
+    otherAdmins?: number;
+    held?: HeldGrants;
+    heldByActor?: boolean;
+    heldByAdmin?: boolean;
+    unlinkedHolder?: boolean;
+  } = {},
 ) {
   let current = found;
   const repo = {
     findById: jest.fn(() => Promise.resolve(current)),
     lockRole: jest.fn(() => Promise.resolve()),
+    lockRolesOfUser: jest.fn(() => Promise.resolve()),
+    hasUnlinkedHolder: jest.fn(() => Promise.resolve(opts.unlinkedHolder ?? false)),
     replaceGrants: jest.fn((_id: string, grants: RoleRow['permissions']) => {
       current = { ...current, permissions: grants };
       return Promise.resolve();
@@ -45,7 +53,7 @@ function makeService(
     audit as unknown as AuditService,
     permissions as unknown as PermissionsService,
   );
-  return { service, repo, audit };
+  return { service, repo, audit, permissions };
 }
 
 describe('RolesService', () => {
@@ -268,6 +276,42 @@ describe('RolesService', () => {
       expect(repo.lockRole.mock.invocationCallOrder[0]).toBeLessThan(repo.isHeldBy.mock.invocationCallOrder[0]);
       await service.remove('r-1', me);
       expect(repo.lockRole).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('fourth review', () => {
+    const me = { id: 'u-me' };
+    const held: HeldGrants = {
+      isSystemAdmin: false,
+      grants: [
+        { key: 'core.roles.manage', scope: 'all' },
+        { key: 'hr.employees.view', scope: 'all' },
+        { key: 'hr.lateness.edit', scope: 'all' },
+      ],
+    };
+    const next = [
+      { key: 'hr.employees.view' as const, scope: 'all' as const },
+      { key: 'hr.lateness.edit' as const, scope: 'all' as const },
+    ];
+
+    it('H1 — turning a role held by an unlinked account into one acting on pay → 403 UNLINKED_PAY_ROLE', async () => {
+      const { service, repo } = makeService(row({ permissions: [{ permissionKey: 'hr.employees.view', scope: 'all' }] }), {
+        held,
+        unlinkedHolder: true,
+      });
+      await expect(service.update('r-1', { permissions: next }, me)).rejects.toMatchObject({ code: ErrorCode.UNLINKED_PAY_ROLE });
+      expect(repo.replaceGrants).not.toHaveBeenCalled();
+      // Every holder linked: allowed.
+      const linked = makeService(row({ permissions: [{ permissionKey: 'hr.employees.view', scope: 'all' }] }), { held });
+      await linked.service.update('r-1', { permissions: next }, me);
+      expect(linked.repo.replaceGrants).toHaveBeenCalled();
+    });
+
+    it('L-d — the actor’s own roles are locked before their ceiling is read', async () => {
+      const { service, repo, permissions } = makeService(row(), { held });
+      await service.update('r-1', { nameEn: 'X' }, me);
+      expect(repo.lockRolesOfUser).toHaveBeenCalledWith('u-me');
+      expect(repo.lockRolesOfUser.mock.invocationCallOrder[0]).toBeLessThan(permissions.heldGrants.mock.invocationCallOrder[0]);
     });
   });
 });

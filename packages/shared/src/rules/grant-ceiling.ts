@@ -61,23 +61,25 @@ export function firstGrantOverCeiling(
 
 /**
  * Permissions that act on pay or on penalties (security review M2, owner 2026-11-23): an account
- * holding one must be linked to its employee record — "nobody adjusts, approves or edits their own"
- * can't be checked otherwise. Editing employees counts only together with seeing salaries (that is
- * what lets one change a salary).
+ * holding one must be linked to its employee record — "nobody adjusts, approves, reviews or edits
+ * their own" can't be checked otherwise. The same set the API enforces at run time
+ * (`assertLinkedForPay`). Editing employees counts on its own: it can change a work system or the
+ * insurance (pay) even without seeing salaries. Adding employees (`hr.employees.create`) doesn't:
+ * it sets a new person's pay, never the adder's own — their record exists already, and editing it
+ * afterwards is covered here.
  */
 export const PAY_AND_PENALTY_KEYS = [
   'hr.payroll.adjust',
   'hr.payroll.approve',
   'hr.lateness.edit',
+  'hr.penalties.review',
   'hr.penalties.approve',
   'hr.penalties.cancel',
+  'hr.employees.edit',
 ] as const;
 
-/** Whether `grants` act on pay or penalties (`PAY_AND_PENALTY_KEYS`, or editing employees with salaries). */
+/** Whether `grants` act on pay or penalties (`PAY_AND_PENALTY_KEYS`). */
 export function actsOnPay(grants: readonly Pick<RoleGrant, 'key'>[]): boolean {
   const keys = new Set<string>(grants.map((g) => g.key));
-  return (
-    PAY_AND_PENALTY_KEYS.some((k) => keys.has(k)) ||
-    (keys.has('hr.employees.edit') && keys.has('hr.employees.view_salary'))
-  );
+  return PAY_AND_PENALTY_KEYS.some((k) => keys.has(k));
 }

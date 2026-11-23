@@ -117,6 +117,9 @@ export class LatenessService {
       );
       // §6 (security review M-2, owner 2026-11-23): nobody changes their own lateness — it is pay.
       // The screen saves the whole month, so their own row sent back unchanged is fine.
+      // Fourth review H1: changing anyone's minutes needs a linked account (a System admin excepted) —
+      // else whose minutes are "their own" can't be told.
+      if (body.entries.some((e) => (before.get(e.employeeId) ?? 0) !== e.minutes)) await this.access.assertLinkedForPay();
       const actor = await this.access.actor();
       const own = actor?.employeeId ? body.entries.find((e) => e.employeeId === actor.employeeId) : undefined;
       if (own && (before.get(own.employeeId) ?? 0) !== own.minutes) {

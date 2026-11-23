@@ -153,6 +153,23 @@ export class RolesRepository {
     await this.db.$queryRaw`SELECT "id" FROM "roles" WHERE "id" = ANY(${[...roleIds]}::uuid[]) FOR SHARE`;
   }
 
+  /**
+   * Takes the rows of the roles `userId` holds shared until the transaction ends (fourth review L-d):
+   * the actor's own grants, read as their ceiling, can't change under the check. Always after any
+   * `users` row lock (users first, then roles).
+   */
+  async lockRolesOfUser(userId: string): Promise<void> {
+    await this.db.$queryRaw`
+      SELECT r."id" FROM "roles" r JOIN "user_roles" ur ON ur."role_id" = r."id"
+      WHERE ur."user_id" = ${userId}::uuid FOR SHARE OF r`;
+  }
+
+  /** Whether someone holding the role has no employee record (fourth review H1). */
+  async hasUnlinkedHolder(roleId: string): Promise<boolean> {
+    const count = await this.db.userRoleAssignment.count({ where: { roleId, user: { employeeId: null } } });
+    return count > 0;
+  }
+
   /** Whether `userId` holds the role. */
   async isHeldBy(roleId: string, userId: string): Promise<boolean> {
     return (await this.db.userRoleAssignment.count({ where: { roleId, userId } })) > 0;

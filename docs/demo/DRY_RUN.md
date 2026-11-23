@@ -37,6 +37,21 @@ cd apps/web && env BASE_URL="http://localhost:4301" PORT=4300 node node_modules/
 
 Open http://localhost:4300/ar and sign in with the login in `CREDENTIALS.local.md` (git-ignored).
 
+## 2b. Release check: accounts acting on pay with no employee record
+
+Since 2026-11-23 (security review), an account that isn't a System admin can't adjust or approve
+payroll, enter lateness, review, approve or cancel penalties, or edit employees until it is linked
+to its employee record (§6). List the accounts to link before the release, read-only, on the copy:
+
+```bash
+cd apps/api && env DATABASE_URL="postgresql://postgres:postgres@localhost:5442/school_erp_dryrun?schema=public" \
+  pnpm exec ts-node --transpile-only prisma/checks/unlinked-pay-accounts.ts
+```
+
+It prints each account with the permissions concerned and exits 1 when there is any. Link each one
+(Users → the account → "Who is this person in HR?", as a System admin), then run it against the
+school's database right after the release too. Record the result in the dry run's notes.
+
 ## 3. Walk the script
 
 Follow `docs/demo/DEMO_SCRIPT.md`: Arabic first, then English, then phone width (browser device

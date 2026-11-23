@@ -323,6 +323,31 @@ describe('Security review — access ceilings and sessions (e2e)', () => {
       await http(app).patch(`/users/${weakUser.id}`).send({ roleIds: [weakRole.id] }).expect(200);
     });
 
+    it('fourth review H1 — a role held by an unlinked account can’t be turned into one acting on pay (UNLINKED_PAY_ROLE)', async () => {
+      await as(manager.id, async () => {
+        const role = (
+          await http(app)
+            .post('/roles')
+            .send({ nameEn: unique('Plain'), nameAr: unique('عادي'), permissions: [{ key: 'hr.employees.view', scope: 'self' }] })
+            .expect(201)
+        ).body.data as Role;
+        roleIds.push(role.id);
+        const holder = (
+          await http(app)
+            .post('/users')
+            .send({ name: 'Holder', email: `${unique('holder')}@school.test`.toLowerCase(), password: PASSWORD, roleIds: [role.id] })
+            .expect(201)
+        ).body.data as UserAccount;
+        userIds.push(holder.id);
+        const res = await http(app)
+          .patch(`/roles/${role.id}`)
+          .send({ permissions: [{ key: 'hr.employees.view', scope: 'self' }, { key: 'hr.lateness.edit', scope: 'all' }] })
+          .expect(403);
+        expect(res.body.error).toBe(ErrorCode.UNLINKED_PAY_ROLE);
+        expect(((await http(app).get(`/roles/${role.id}`).expect(200)).body.data as Role).permissions).toHaveLength(1);
+      });
+    });
+
     it('M2-C — a link change is in the log by name, before and after', async () => {
       const person = await createUser([weakRole.id]);
       await http(app).patch(`/users/${person.id}`).send({ employeeId: ref.empPrimary }).expect(200);
@@ -334,7 +359,7 @@ describe('Security review — access ceilings and sessions (e2e)', () => {
       const change = (entry?.changes as unknown as { field: string; before: unknown; after: unknown }[]).find(
         (c) => c.field === 'employeeId',
       );
-      expect(change).toMatchObject({ after: { nameEn: expect.stringContaining('Ceiling') } });
+      expect(change).toMatchObject({ after: { id: ref.empPrimary, nameEn: expect.stringContaining('Ceiling') } });
       expect(change?.before ?? null).toBeNull();
       await http(app).patch(`/users/${person.id}`).send({ employeeId: null }).expect(200);
     });
@@ -352,29 +377,42 @@ describe('Security review — access ceilings and sessions (e2e)', () => {
       await me().expect(401);
     });
 
-    it('L3 — while a user’s row is locked for a check, signing in (a refresh-token insert) isn’t held up', async () => {
+    it('L3 — while a user’s and a role’s rows are locked for a check, a refresh token for that user and that role given to someone both still go in', async () => {
       const person = await createUser([weakRole.id]);
       const users = app.get(UsersRepository, { strict: false });
       const roles = app.get(RolesRepository, { strict: false });
       const txHost = app.get<TransactionHost<DbAdapter>>(TransactionHost, { strict: false });
-      const within = <T>(p: Promise<T>, ms: number) =>
-        Promise.race([p.then(() => 'done' as const), new Promise<'blocked'>((r) => setTimeout(() => r('blocked'), ms))]);
+      const within = async <T>(p: Promise<T>, ms: number) => {
+        let timer: NodeJS.Timeout | undefined;
+        try {
+          return await Promise.race([
+            p.then(() => 'done' as const),
+            new Promise<'blocked'>((r) => {
+              timer = setTimeout(() => r('blocked'), ms);
+            }),
+          ]);
+        } finally {
+          clearTimeout(timer);
+        }
+      };
       const outcome = await app.get(ClsService).run(() =>
         txHost.withTransaction(async () => {
           await users.lockUser(person.id);
           await roles.lockRole(weakRole.id);
           // Another connection: a token for that user, and that role given to someone — both only
           // reference the locked rows (foreign keys), so neither waits.
-          const token = within(
+          const token = await within(
             db.refreshToken.create({
               data: { userId: person.id, familyId: '00000000-0000-4000-8000-000000000777', tokenHash: unique('h'), expiresAt: new Date(Date.now() + 60_000) },
             }),
             2_000,
           );
-          return token;
+          const given = await within(db.userRoleAssignment.create({ data: { userId: admin.id, roleId: weakRole.id } }), 2_000);
+          return { token, given };
         }),
       );
-      expect(outcome).toBe('done');
+      expect(outcome).toEqual({ token: 'done', given: 'done' });
+      await db.userRoleAssignment.deleteMany({ where: { userId: admin.id, roleId: weakRole.id } });
     });
 
     it('L-6 — two admin actions at once on one account: the ceiling check never passes on roles that changed under it', async () => {

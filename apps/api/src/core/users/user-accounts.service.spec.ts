@@ -16,6 +16,7 @@ import type { SignInLimitService } from '../sign-in-limit';
 import type { UserAccountRow, UsersRepository } from './repositories/users.repository';
 import type { SessionRevocation } from './session-revocation';
 import { UserAccountsService } from './user-accounts.service';
+import { accountSnapshot, toUserAccount } from './users.pure';
 
 const ADMIN: RoleRef = { id: 'r-admin', key: 'system_admin', nameEn: 'System admin', nameAr: 'م' };
 const HR: RoleRef = { id: 'r-hr', key: 'hr_manager', nameEn: 'HR manager', nameAr: 'م' };
@@ -571,5 +572,25 @@ describe('UserAccountsService', () => {
     expect(queued).toEqual([
       [CoreEvent.USER_SESSIONS_ENDED, expect.objectContaining({ userId: 'u-1', reason: 'password_changed', keepFamilyId: 'fam-1' })],
     ]);
+  });
+
+  describe('fourth review', () => {
+    it('L-b — a deactivation and a temporary password end every sign-in inside the transaction', async () => {
+      const { service, sessions } = makeService(row(), { otherAdmins: 1 });
+      await service.deactivate('u-1');
+      expect(sessions.endOtherSessions).toHaveBeenCalledWith('u-1', expect.any(Date));
+      const reset = makeService();
+      await reset.service.setTemporaryPassword('u-1', 'temporary-1234');
+      expect(reset.sessions.endOtherSessions).toHaveBeenCalledWith('u-1', expect.any(Date));
+    });
+
+    it('M2-C — the log names the linked employee and keeps its id', () => {
+      const account = toUserAccount(row({ linkedEmployee: LINKED }));
+      expect(accountSnapshot(account).employeeId).toEqual({
+        id: 'e-5',
+        nameEn: 'Prep Head · EMP-0005',
+        nameAr: 'رئيس · EMP-0005',
+      });
+    });
   });
 });

@@ -33,13 +33,20 @@ describe('H1/H2 grant ceiling — scopeCovers (the partial scope order)', () => 
 
 describe('M2 — actsOnPay (an account holding these must be linked to its employee record)', () => {
   it('the pay and penalty keys act on pay', () => {
-    for (const key of ['hr.payroll.adjust', 'hr.payroll.approve', 'hr.lateness.edit', 'hr.penalties.approve', 'hr.penalties.cancel'] as const) {
+    for (const key of [
+      'hr.payroll.adjust',
+      'hr.payroll.approve',
+      'hr.lateness.edit',
+      'hr.penalties.review',
+      'hr.penalties.approve',
+      'hr.penalties.cancel',
+    ] as const) {
       expect(actsOnPay([{ key }])).toBe(true);
     }
   });
-  it('editing employees counts only together with seeing salaries', () => {
-    expect(actsOnPay([{ key: 'hr.employees.edit' }])).toBe(false);
-    expect(actsOnPay([{ key: 'hr.employees.edit' }, { key: 'hr.employees.view_salary' }])).toBe(true);
+  it('L-a — editing employees counts on its own (work system, insurance); adding them does not', () => {
+    expect(actsOnPay([{ key: 'hr.employees.edit' }])).toBe(true);
+    expect(actsOnPay([{ key: 'hr.employees.create' }, { key: 'hr.employees.view_salary' }])).toBe(false);
   });
   it('viewing and recording do not', () => {
     expect(actsOnPay([{ key: 'hr.payroll.view' }, { key: 'hr.penalties.record' }, { key: 'hr.employees.view' }])).toBe(false);

@@ -48,7 +48,11 @@ export function accountSnapshot(user: UserAccount) {
     status: user.isActive ? 'active' : 'inactive',
     roles: user.roles.map((r) => r.key).sort(),
     employeeId: user.employee
-      ? { nameEn: `${user.employee.nameEn} · ${user.employee.code}`, nameAr: `${user.employee.nameAr} · ${user.employee.code}` }
+      ? {
+          id: user.employee.id,
+          nameEn: `${user.employee.nameEn} · ${user.employee.code}`,
+          nameAr: `${user.employee.nameAr} · ${user.employee.code}`,
+        }
       : null,
   };
 }

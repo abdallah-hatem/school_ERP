@@ -190,7 +190,10 @@ export class UserAccountsService {
       await this.roles.assertAnotherSystemAdmin(id);
     }
     // Pre-existing gap (third review): the access tokens from before stay dead after a reactivation.
-    await this.users.update(id, { isActive: false, sessionsValidAfter: new Date() });
+    const at = new Date();
+    await this.users.update(id, { isActive: false, sessionsValidAfter: at });
+    // L-b: every sign-in ends inside this transaction; the event follows for logging.
+    await this.sessions.endOtherSessions(id, at);
     await this.endSessions(id, 'deactivated');
     return this.recordStatus('core.user.deactivate', before, await this.get(id));
   }
@@ -208,11 +211,14 @@ export class UserAccountsService {
     const ceiling = await this.roles.ceilingOf(actor);
     await this.assertMayManage(user, ceiling);
     this.assertMayTakeOver(user, actor, ceiling);
+    const at = new Date();
     await this.users.update(id, {
       passwordHash: await hashPassword(password),
       mustChangePassword: true,
-      passwordChangedAt: new Date(),
+      passwordChangedAt: at,
     });
+    // L-b: every sign-in ends inside this transaction; the event follows for logging.
+    await this.sessions.endOtherSessions(id, at);
     await this.endSessions(id, 'temporary_password');
     // The password itself is never stored in the log (D7): the entry says only that it was set.
     await this.audit.record({ action: 'core.user.set_password', entity: this.entity(user) });

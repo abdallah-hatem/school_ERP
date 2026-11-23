@@ -432,6 +432,23 @@ describe('Security review — HR access (e2e)', () => {
     });
   });
 
+  it('fourth review H1 — the unlinked HR manager can’t change lateness, nor cancel or approve a penalty (ACCOUNT_NOT_LINKED)', async () => {
+    const p = await recordOk({ employeeId: emp.k1, violationId: violation(), date: `${MONTH.unlinked}-10` });
+    await as(who.unlinked, async () => {
+      const lateness = await http(app)
+        .put(`/hr/lateness/${MONTH.unlinked}`)
+        .send({ entries: [{ employeeId: emp.k1, minutes: 30 }] })
+        .expect(403);
+      expect(lateness.body.error).toBe(ErrorCode.ACCOUNT_NOT_LINKED);
+      const cancelled = await http(app).post(`/hr/penalties/${p.id}/cancel`).send({ reason: 'Mine to cancel' }).expect(403);
+      expect(cancelled.body.error).toBe(ErrorCode.ACCOUNT_NOT_LINKED);
+      const approved = await http(app).post(`/hr/penalties/${p.id}/approve`).send({}).expect(403);
+      expect(approved.body.error).toBe(ErrorCode.ACCOUNT_NOT_LINKED);
+    });
+    expect(((await get(p.id).expect(200)).body.data as PenaltyRecord).status).toBe('WAITING_HR');
+    await http(app).post(`/hr/penalties/${p.id}/cancel`).send({ reason: 'Test over' }).expect(200);
+  });
+
   it('M-3 — nobody moves their own record’s stages or manager (403 OWN_ACCESS_CHANGE)', async () => {
     await as(who.hrMgr, async () => {
       for (const body of [{ stageId: stage.kg }, { otherStageIds: [stage.prep] }, { managerId: emp.hPrim }]) {

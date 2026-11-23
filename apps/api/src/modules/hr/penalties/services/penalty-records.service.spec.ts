@@ -996,3 +996,19 @@ describe('PenaltyRecordsService — the two steps (§4, owner 2026-11-21)', () =
     expect(inputs.deductingDays.get('e2')).toEqual([1]);
   });
 });
+
+describe('PenaltyRecordsService — fourth review H1: acting on a penalty needs a linked account', () => {
+  const unlinked = () => fakeAccess({}, { userId: 'u-unlinked', employeeId: null });
+
+  it('an unlinked account can’t cancel, approve, review or reject (ACCOUNT_NOT_LINKED); nothing is written', async () => {
+    const { service, repository } = makeService({ findOne: jest.fn().mockResolvedValue(row()) }, true, unlinked());
+    await expect(service.cancel('r1', { reason: 'x' }, 'u-unlinked')).rejects.toMatchObject({ code: 'ACCOUNT_NOT_LINKED' });
+    await expect(service.approve('r1', 'u-unlinked')).rejects.toMatchObject({ code: 'ACCOUNT_NOT_LINKED' });
+    await expect(service.reviewApprove('r1', 'u-unlinked', null)).rejects.toMatchObject({ code: 'ACCOUNT_NOT_LINKED' });
+    await expect(service.reject('r1', 'HR_REJECT', 'Not proven', 'u-unlinked')).rejects.toMatchObject({
+      code: 'ACCOUNT_NOT_LINKED',
+    });
+    expect(repository.cancel).not.toHaveBeenCalled();
+    expect(repository.approve).not.toHaveBeenCalled();
+  });
+});

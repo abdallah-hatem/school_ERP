@@ -764,6 +764,9 @@ export class PenaltyRecordsService {
 
   /** Nobody reviews, approves, rejects or cancels their own penalty (owner 2026-11-21, 2026-11-23). */
   private async assertNotOwn(row: RecordRow): Promise<void> {
+    // Fourth review H1: "not your own" needs to know who you are in HR — a linked account (a System
+    // admin excepted; 403 `ACCOUNT_NOT_LINKED`).
+    await this.access.assertLinkedForPay();
     const actor = await this.access.actor();
     if (actor && actsOnOwnPenalty(actor.employeeId, row.employeeId)) {
       throw new CodedException(HttpStatus.FORBIDDEN, ErrorCode.PENALTY_OWN);

@@ -3,6 +3,7 @@ import {
   AuditEntityType,
   ErrorCode,
   SYSTEM_ADMIN_ROLE,
+  actsOnPay,
   firstGrantOverCeiling,
   type AuthUser,
   type HeldGrants,
@@ -50,9 +51,15 @@ export class RolesService {
     private readonly permissions: PermissionsService,
   ) {}
 
-  /** What `actor` may give (H1/H2): every grant they hold, or no ceiling for a System admin. */
+  /**
+   * What `actor` may give (H1/H2): every grant they hold, or no ceiling for a System admin. Their
+   * roles' rows are locked shared first (fourth review L-d), so the grants read can't change before
+   * the write.
+   */
   async ceilingOf(actor: Actor): Promise<HeldGrants> {
-    return actor ? this.permissions.heldGrants(actor) : NO_CEILING;
+    if (!actor) return NO_CEILING;
+    await this.roles.lockRolesOfUser(actor.id);
+    return this.permissions.heldGrants(actor);
   }
 
   /** 403 `GRANT_EXCEEDS_OWN` when `grants` holds anything over `ceiling` (H1/H2). */
@@ -129,6 +136,11 @@ export class RolesService {
         throw new CodedException(HttpStatus.CONFLICT, ErrorCode.SYSTEM_ADMIN_FIXED);
       }
       this.assertNoDuplicates(dto.permissions);
+      // Fourth review H1: a role turned into one acting on pay or penalties would reach its holders
+      // without an employee record — M2-A, by the role-edit door. A System admin links them first.
+      if (!ceiling.isSystemAdmin && actsOnPay(dto.permissions) && (await this.roles.hasUnlinkedHolder(id))) {
+        throw new CodedException(HttpStatus.FORBIDDEN, ErrorCode.UNLINKED_PAY_ROLE);
+      }
       await this.roles.replaceGrants(id, storedGrants(dto.permissions));
     }
     if (dto.nameEn !== undefined || dto.nameAr !== undefined) {

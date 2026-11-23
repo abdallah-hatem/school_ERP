@@ -15,6 +15,8 @@ export class SessionRevocation {
   private revoker: SessionRevoker | null = null;
 
   register(revoker: SessionRevoker): void {
+    // One owner: a second registration would silently replace how sessions end.
+    if (this.revoker) throw new Error('SessionRevocation: a revoker is already registered');
     this.revoker = revoker;
   }
 
