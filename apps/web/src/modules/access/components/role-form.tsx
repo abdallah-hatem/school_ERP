@@ -280,6 +280,12 @@ export function RoleForm({ basePath, usersPath, role, copyFrom, holders = [], ho
             {t('access.roleForm.permissions')}
           </h2>
           {readOnly ? null : <p className="text-sm text-muted-foreground">{t('access.roleForm.permissionsHint')}</p>}
+          {!readOnly && !ceiling.isSystemAdmin ? (
+            <p data-testid="role-ceiling-note" className="flex items-start gap-1.5 text-sm font-semibold text-muted-foreground">
+              <LockedIcon className="mt-0.5 size-4 shrink-0" />
+              {t('access.roleForm.ceilingNote')}
+            </p>
+          ) : null}
           {heldByMe ? (
             <p data-testid="role-held-note" className="flex items-start gap-1.5 text-sm font-semibold text-warning-ink">
               <LockedIcon className="mt-0.5 size-4 shrink-0" />

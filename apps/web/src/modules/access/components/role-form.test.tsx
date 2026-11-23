@@ -175,6 +175,7 @@ describe('RoleForm', () => {
       await openModules(user, 'HR');
       expect((within(row('hr.payroll.approve')).getByRole('switch') as HTMLButtonElement).disabled).toBe(true);
       expect(within(row('hr.payroll.approve')).getByText("You don't hold this permission, so you can't give it.")).toBeTruthy();
+      expect(screen.getByTestId('role-ceiling-note')).toBeTruthy();
       // Held (and on): it can still be turned off.
       expect((within(row('hr.employees.view')).getByRole('switch') as HTMLButtonElement).disabled).toBe(false);
       const hr = screen.getByRole('region', { name: /^HR/ });

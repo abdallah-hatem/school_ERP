@@ -260,7 +260,8 @@
       "nameAr": "Enter the role's Arabic name."
     },
     "beyondYours": "You don't hold this permission, so you can't give it.",
-    "heldByYou": "You hold this role, so you can't change it. Another administrator can."
+    "heldByYou": "You hold this role, so you can't change it. Another administrator can.",
+    "ceilingNote": "You can give only permissions you hold, reaching no further than yours. The others are greyed out."
   },
   "account": {
     "title": "My account",

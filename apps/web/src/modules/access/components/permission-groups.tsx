@@ -10,7 +10,7 @@ import {
 import { RadioGroup } from 'radix-ui';
 import { useState } from 'react';
 import { Switch } from '@/shared/components/ui/switch';
-import { AccountingModuleIcon, CheckIcon, ChevronDownIcon, CoreModuleIcon, HrModuleIcon, LockedIcon, type AppIcon } from '@/shared/components/ui/icons';
+import { AccountingModuleIcon, CheckIcon, ChevronDownIcon, CoreModuleIcon, HrModuleIcon, type AppIcon } from '@/shared/components/ui/icons';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { isChanged, moduleGroups, type GrantMap } from '../lib/role-grants';
@@ -181,13 +181,12 @@ function PermissionRow({
           <span className={cn('text-sm', on ? 'font-bold' : 'font-semibold text-foreground/85')}>{label}</span>
           <span id={`${id}-desc`} className="text-xs text-muted-foreground">
             {t(`permissions.keys.${permission}.description`)}
-            {!readOnly && beyond ? (
-              <span data-beyond className="mt-0.5 flex items-center gap-1 font-semibold">
-                <LockedIcon className="size-3.5 shrink-0" />
-                {t('access.roleForm.beyondYours')}
-              </span>
-            ) : null}
           </span>
+          {!readOnly && beyond ? (
+            <span data-beyond className="sr-only">
+              {t('access.roleForm.beyondYours')}
+            </span>
+          ) : null}
         </label>
       </div>
       {/* On a narrow card only a scope that is in use is shown (under its row), like the mockup. */}
