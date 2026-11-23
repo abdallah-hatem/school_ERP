@@ -58,7 +58,18 @@ describe('Security review — access ceilings and sessions (e2e)', () => {
   let weakUser: UserAccount;
   let admin: UserAccount;
   /** M1: two stages, an employee in each (third review). */
-  const ref = { primary: '', prep: '', department: '', jobTitle: '', empPrimary: '', empPrep: '' };
+  const ref = {
+    primary: '',
+    prep: '',
+    department: '',
+    jobTitle: '',
+    empPrimary: '',
+    empPrep: '',
+    /** Linked only by the L-c test (M1 links the two above). */
+    empCheck: '',
+    /** Linked only by the M2-C test. */
+    empLog: '',
+  };
 
   async function as<T>(id: string, fn: () => Promise<T>): Promise<T> {
     const me = user.id;
@@ -137,6 +148,8 @@ describe('Security review — access ceilings and sessions (e2e)', () => {
       ).body.data.id as string;
     ref.empPrimary = await employee(ref.primary);
     ref.empPrep = await employee(ref.prep);
+    ref.empCheck = await employee(ref.prep);
+    ref.empLog = await employee(ref.primary);
     manager = await createUser([managerRole.id]);
     weakUser = await createUser([weakRole.id]);
     admin = await createUser([roleId('system_admin')]);
@@ -145,7 +158,9 @@ describe('Security review — access ceilings and sessions (e2e)', () => {
   afterAll(async () => {
     await db.user.deleteMany({ where: { id: { in: userIds } } });
     await db.role.deleteMany({ where: { id: { in: roleIds } } });
-    await db.employee.deleteMany({ where: { id: { in: [ref.empPrimary, ref.empPrep].filter(Boolean) } } });
+    await db.employee.deleteMany({
+      where: { id: { in: [ref.empPrimary, ref.empPrep, ref.empCheck, ref.empLog].filter(Boolean) } },
+    });
     await db.department.deleteMany({ where: { id: ref.department } });
     await db.jobTitle.deleteMany({ where: { id: ref.jobTitle } });
     await db.stage.deleteMany({ where: { id: { in: [ref.primary, ref.prep].filter(Boolean) } } });
@@ -351,7 +366,7 @@ describe('Security review — access ceilings and sessions (e2e)', () => {
 
     it('L-c — the release check lists an unlinked account acting on pay, not a linked one or a System admin', async () => {
       const unlinked = await createUser([roleId('hr_officer')]);
-      const linked = await createLinked([roleId('hr_officer')], ref.empPrep);
+      const linked = await createLinked([roleId('hr_officer')], ref.empCheck);
       const found = await unlinkedPayAccounts(db);
       const emails = found.map((a) => a.email);
       expect(emails).toContain(unlinked.email);
@@ -366,7 +381,7 @@ describe('Security review — access ceilings and sessions (e2e)', () => {
 
     it('M2-C — a link change is in the log by name, before and after', async () => {
       const person = await createUser([weakRole.id]);
-      await http(app).patch(`/users/${person.id}`).send({ employeeId: ref.empPrimary }).expect(200);
+      await http(app).patch(`/users/${person.id}`).send({ employeeId: ref.empLog }).expect(200);
       const [entry] = await db.auditEntry.findMany({
         where: { entityId: person.id, action: 'core.user.update' },
         orderBy: { seq: 'desc' },
@@ -375,7 +390,7 @@ describe('Security review — access ceilings and sessions (e2e)', () => {
       const change = (entry?.changes as unknown as { field: string; before: unknown; after: unknown }[]).find(
         (c) => c.field === 'employeeId',
       );
-      expect(change).toMatchObject({ after: { id: ref.empPrimary, nameEn: expect.stringContaining('Ceiling') } });
+      expect(change).toMatchObject({ after: { id: ref.empLog, nameEn: expect.stringContaining('Ceiling') } });
       expect(change?.before ?? null).toBeNull();
       await http(app).patch(`/users/${person.id}`).send({ employeeId: null }).expect(200);
     });
@@ -452,14 +467,17 @@ describe('Security review — access ceilings and sessions (e2e)', () => {
       const promoterCookie = await signedIn(promoter, 'temp-promoter-1', 'own-promoter-1');
       const managerAccount = await createUser([managerRole.id], 'temp-manager-1');
       const managerCookie = await signedIn(managerAccount, 'temp-manager-1', 'own-manager-1');
+      // Its own role: the targets become System admins, and a role they hold would then be one
+      // "a System admin holds" for every later test that edits it.
+      const raceRole = await createRole([{ key: 'hr.employees.view', scope: 'self' }]);
       for (let round = 0; round < 3; round++) {
-        const target = await createUser([weakRole.id]);
+        const target = await createUser([raceRole.id]);
         const [promote, deactivate] = await Promise.all([
           http(app)
             .patch(`/users/${target.id}`)
             .set(ANONYMOUS_HEADER, '1')
             .set('Cookie', promoterCookie)
-            .send({ roleIds: [weakRole.id, roleId('system_admin')] }),
+            .send({ roleIds: [raceRole.id, roleId('system_admin')] }),
           http(app).post(`/users/${target.id}/deactivate`).set(ANONYMOUS_HEADER, '1').set('Cookie', managerCookie),
         ]);
         expect(promote.status).toBe(200);
@@ -517,9 +535,16 @@ describe('Security review — access ceilings and sessions (e2e)', () => {
           .send({ nameEn: unique('Within'), nameAr: unique('ض'), permissions: [{ key: 'hr.penalties.view', scope: 'own_stage' }] })
           .expect(201);
         roleIds.push(ok.body.data.id);
-        // Adding a key they lack to a role they may edit is refused too.
+        // Adding a key they lack to a role they may edit (their own, held by nobody) is refused too.
+        const own = (
+          await http(app)
+            .post('/roles')
+            .send({ nameEn: unique('Editable'), nameAr: unique('قابل'), permissions: [{ key: 'hr.employees.view', scope: 'self' }] })
+            .expect(201)
+        ).body.data as Role;
+        roleIds.push(own.id);
         const res = await http(app)
-          .patch(`/roles/${weakRole.id}`)
+          .patch(`/roles/${own.id}`)
           .send({ permissions: [{ key: 'hr.employees.view', scope: 'self' }, { key: 'core.audit.view', scope: 'all' }] })
           .expect(403);
         expect(res.body.error).toBe(ErrorCode.GRANT_EXCEEDS_OWN);

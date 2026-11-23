@@ -314,8 +314,13 @@ describe('HR approval notifications — N2 (e2e)', () => {
 
       const seen = await bellItem(hrManager, penalty.id);
       expect(seen?.item.resolved).toMatchObject({ resolution: 'approved' });
-      const principalName = (await db.user.findUniqueOrThrow({ where: { id: principal } })).name;
-      expect(seen?.item.resolved?.by).toEqual({ en: principalName, ar: principalName });
+      // "Approved by" names the person as HR knows them: their linked employee's two names (the
+      // principal is linked now — acting on penalties needs it, §6, owner 2026-11-23).
+      const linked = await db.user.findUniqueOrThrow({
+        where: { id: principal },
+        select: { linkedEmployee: { select: { nameEn: true, nameAr: true } } },
+      });
+      expect(seen?.item.resolved?.by).toEqual({ en: linked.linkedEmployee?.nameEn, ar: linked.linkedEmployee?.nameAr });
       expect(seen?.n.openCount).toBe(0);
       expect(seen?.n.resolved).not.toBeNull();
       expect(await unread(hrManager)).toBe(0);
