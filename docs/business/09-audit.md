@@ -36,7 +36,7 @@ Who did what, to which record, and when — for the whole system. Spec:
   approved it, and Accounting returning it or marking it transferred — with the same field and
   person filters as an employee's History, amounts in pounds and statuses in words. It is shown to
   whoever may open the run and read the activity log; like the run's entries on Activity, it needs
-  the whole school's payroll (someone who sees only part of it gets "This page isn't here").
+  the whole school's payroll (someone who sees only part of it gets "We couldn't find that page").
   An employee's History does not list lateness months or payroll runs: those entries hold several
   employees' figures at once.
 - **DECIDED** (owner, 2026-11-20) — A run's figures in History and Activity read as a person would
@@ -55,8 +55,8 @@ Who did what, to which record, and when — for the whole system. Spec:
   HR manager, principal) sees the Activity page and the History tab — but only entries about
   records they may see (§2): an employee, their penalties, their lateness minutes and their payroll
   lines outside the viewer's stage or team are left out, and so are the people and counts on
-  "Today at a glance" that come from them. The History of an employee they can't see shows "This
-  page isn't here". Salary-type amounts (salaries, insured salary, bank details, payroll amounts)
+  "Today at a glance" that come from them. The History of an employee they can't see shows "We
+  couldn't find that page". Salary-type amounts (salaries, insured salary, bank details, payroll amounts)
   read "Changed (amount hidden)" for someone who can't see salaries; a payroll run's totals follow
   the Payroll screen (shown to whoever sees the whole school's payroll).
 - **DECIDED** — Every entry reads in English and in Arabic, including entries made before a

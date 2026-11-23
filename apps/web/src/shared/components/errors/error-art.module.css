@@ -1,0 +1,57 @@
+/*
+ * The not-found and error art (design/mockups/error-pages.html on the `design` branch, option 2 ·
+ * "Big number, light art"): the sunflower ball with its paper and the sparkles float gently, and
+ * the message rises in once. Everything here stops under reduced motion; nothing depends on it.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .float {
+    animation: float 6s ease-in-out infinite;
+  }
+  .twinkle {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: twinkle 3s ease-in-out infinite;
+  }
+  .rise {
+    animation: rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Outside the shell: a light teal and sunflower glow behind the page. */
+.glow {
+  background:
+    radial-gradient(600px 400px at 85% 10%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%),
+    radial-gradient(700px 500px at 10% 90%, color-mix(in srgb, var(--primary) 10%, transparent), transparent 70%),
+    var(--background);
+}

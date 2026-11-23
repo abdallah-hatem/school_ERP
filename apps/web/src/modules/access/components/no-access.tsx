@@ -13,7 +13,7 @@ export function AccessState({ kind }: { kind: 'users' | 'roles' | 'notFound' }) 
   return (
     <div className="rounded-3xl bg-card shadow-card">
       {kind === 'notFound' ? (
-        <EmptyState icon={EmptyIcon} title={t('access.noAccess.notFoundTitle')} description={t('access.noAccess.notFoundBody')} />
+        <EmptyState icon={EmptyIcon} title={t('ui.states.notFoundTitle')} description={t('ui.states.notFoundBody')} />
       ) : (
         <EmptyState
           icon={BlockedIcon}

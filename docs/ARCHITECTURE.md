@@ -1461,6 +1461,62 @@ doesn't update its skeleton fails CI (owner, 2026-11-18).
   `new` and `[id]`, and `employees/[id]/loading.tsx` draws the page being opened (the edit form, or
   the profile over the opened tab's skeleton).
 
+#### Error pages
+
+Not found and error screens (owner's pick: option 2 of `design/mockups/error-pages.html` on the
+`design` branch, "Big number, light art"; 2026-11-23). The art is fixed inline SVG
+(`shared/components/errors/error-art.tsx`): a soft-3D teal "404" whose 0 is a sunflower ball, and a
+calm sunflower "!" in a ring. Its float and sparkle stop under `prefers-reduced-motion`. Every screen
+moves focus to its heading and sets the tab's title. The words live in `ui.errorPages` (EN/AR).
+
+| What happened | File | Screen |
+|---|---|---|
+| A wrong address under `/<locale>/`, or with an extension (`/x.php` → `/en/x.php`) | `app/[locale]/[...missing]/page.tsx` → `app/[locale]/not-found.tsx` | Outside the shell: "Page not found", **404 status**. Back to the dashboard when signed in, Sign in when not (`hasLiveSession`, the proxy's own token check, with no API call) |
+| An unknown `/api/…` (route handlers, never pages) | `app/api/[...missing]/route.ts` | A JSON 404 in the API's envelope (`{ success: false, error: 'NOT_FOUND' }`), `no-store` |
+| A missing, out-of-scope or forbidden record or page | `app/[locale]/(dashboard)/not-found.tsx` | In the shell: "We couldn't find that page", the same words for all three. Status 200 once the page has streamed (Next can't change it then) |
+| A dashboard page fails | `app/[locale]/(dashboard)/error.tsx` → `RouteError` | In the shell: "Something went wrong", Try again (`router.refresh()` + `reset()`), Back to the dashboard, the **reference code** with Copy. One boundary for every section |
+| The sign-in pages fail | `app/[locale]/(auth)/error.tsx` | The same screen, without Back to the dashboard |
+| The root layout fails | `app/global-error.tsx` | Standalone: its own `<html lang dir>` (from the first path segment), system fonts, one inline SVG, inline styles, a reload button. Nothing of the app's CSS, fonts or providers |
+
+- **Signed out on an unknown section** (`/en/nope`): the proxy lets it through to the 404 (with Sign
+  in) instead of sending the visitor to sign in. Known sections still go to sign in, so a deeper wrong
+  address there (`/en/employees/x/y`) reveals nothing. The sections are `APP_SECTIONS`
+  (`core/auth/routes.ts`). `routes.test.ts` fails closed: it knows every route group under
+  `app/[locale]`, and each group's every top-level folder must be in `APP_SECTIONS` or in its public
+  allow-list with a reason. A new group or section fails until someone decides. The smoke-only `e2e`
+  section is in the list only in an e2e build. **No second redirect in the dashboard layout:** a null
+  user there also means the API is unreachable, and sending that to sign in would loop (the proxy
+  sends a live token back from sign-in to the dashboard); a refused session already goes through
+  `apiFetch`'s 401 → refresh → sign in.
+- **The reference code is Next's `error.digest`.** For an error thrown while rendering on the
+  server, Next sends the browser only a digest, never the message. The web server logs the error
+  under the same digest twice: Next's own log (the stack, then `digest: '<code>'`), and one JSON
+  line from `src/instrumentation.ts` (`onRequestError`):
+  `{"level":"error","msg":"web request error","digest":"<code>","method":…,"path":…,"route":…,"type":…}`.
+  The path is logged without its query, and the message isn't repeated (Next's own line has it). **To find what a person quoted:** on the server,
+  `docker logs <the school's web container> 2>&1 | grep '<code>'` (in Coolify, the web app's
+  **Logs** tab, searched for the code). An error thrown in the browser has no digest. It gets a short
+  random code (`C-XXXXXX`), which is logged to the browser console with the error
+  (`[error-ref C-XXXXXX]`), so only a screenshot of the console ties it to the error.
+- **Under the CSP:** every one of these pages is dynamic, so Next's scripts carry the nonce.
+  `global-error` uses a `<style>` element and inline style attributes (`style-src 'unsafe-inline'`)
+  and no inline event-handler attributes. Pages are never cached (`private, no-store`). The proxy
+  sees every address but Next's internals, `/api/…`, `/files/…` and the app's own files with an
+  extension (`favicon.ico`, `sw.js`, `manifest.webmanifest`, `offline.html`), so a missing `/x.php` gets
+  the nonce CSP and its language. A static CSP for the skipped paths wouldn't work for pages: Next's
+  inline bootstrap scripts need the per-response nonce. So no page is served there: `/api/…` is
+  JSON (above), `/files/…` is the API's, `/_next/…` is Next's own.
+- **No `global-not-found`:** `[locale]` matches every first segment and `[...missing]` every
+  rest, so no address is ever unmatched and Next never uses one. A `notFound()` from the root layout
+  itself (a first segment that isn't a language on a path the proxy skips, in practice only
+  `/favicon.ico`) is Next's built-in 404; `experimental.globalNotFound` didn't change that (CI,
+  #267), so it was removed.
+- **Smoke-only pages** (`page.e2e.tsx`): `(dashboard)/e2e/server-error` (throws in the shell) and
+  `(e2e)/e2e-root-error` (throws outside every boundary, so it reaches `global-error`). They are
+  pages only when the build has `NEXT_PUBLIC_E2E_HOOKS=true` (`next.config.ts` → `pageExtensions`,
+  set by `scripts/smoke.sh`). In every other build the files aren't routes, and the addresses are a
+  plain 404. Checked by `e2e/35-error-pages*.spec.ts`.
+
 ### `packages/shared`
 
 Plain TypeScript, no framework imports.

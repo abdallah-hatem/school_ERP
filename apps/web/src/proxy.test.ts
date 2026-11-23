@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { proxy } from './proxy';
+import { config, proxy } from './proxy';
 
 /*
  * The page proxy's security part (docs/ARCHITECTURE.md → Security): every page response carries a
@@ -72,5 +72,21 @@ describe('proxy: Content-Security-Policy', () => {
     );
     const init = fetchMock.mock.calls[0]?.[1];
     expect(init?.headers).toMatchObject({ 'x-forwarded-for': '41.33.2.1', 'cf-connecting-ip': '41.33.2.1' });
+  });
+});
+
+describe('which requests the proxy sees (config.matcher)', () => {
+  const matches = (path: string) => new RegExp(`^${config.matcher[0]}$`).test(path);
+
+  it('pages, and unknown addresses with an extension (their 404 gets the nonce CSP and the language)', () => {
+    for (const path of ['/', '/en', '/en/employees/12', '/no-such.php', '/ar/x.php', '/.env', '/apple-touch-icon.png']) {
+      expect(matches(path), path).toBe(true);
+    }
+  });
+
+  it("not Next internals, route handlers, the API's files or the app's own files", () => {
+    for (const path of ['/_next/static/x.js', '/api/auth/refresh', '/files/logo.png', '/favicon.ico', '/sw.js', '/manifest.webmanifest', '/offline.html']) {
+      expect(matches(path), path).toBe(false);
+    }
   });
 });

@@ -21,6 +21,9 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  // Pages only: not Next internals, route handlers, the API's public files or static assets.
-  matcher: ['/((?!_next/|api/|files/|favicon\\.ico|.*\\.[A-Za-z0-9]+$).*)'],
+  // Pages only: not Next internals, route handlers, the API's public files or the app's own files
+  // with an extension (the service worker, the manifest, the offline page, the favicon). Any other
+  // address with an extension (`/x.php`) comes through, so its 404 is the locale's not-found page
+  // with the nonce CSP, in the visitor's language (docs/ARCHITECTURE.md → Error pages).
+  matcher: ['/((?!_next/|api/|files/|favicon\\.ico$|sw\\.js$|manifest\\.webmanifest$|offline\\.html$).*)'],
 };

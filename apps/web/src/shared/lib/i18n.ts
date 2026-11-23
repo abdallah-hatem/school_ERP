@@ -6,7 +6,7 @@ import enUi from '@school-erp/shared/locales/en/ui.json';
 
 export type Locale = Language;
 export const LOCALES: readonly Locale[] = LANGUAGES;
-/** Arabic is the default for this deployment (spec); the school setting overrides it later (T4). */
+/** English is the default (owner, 2026-11-17); the school setting overrides it later (T4). */
 export const DEFAULT_LOCALE: Locale = 'en';
 /** The language switch writes it; the proxy uses it to pick a locale for paths without one. */
 export const LOCALE_COOKIE = 'lang';
