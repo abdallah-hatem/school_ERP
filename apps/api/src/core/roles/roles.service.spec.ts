@@ -24,6 +24,7 @@ function makeService(
   let current = found;
   const repo = {
     findById: jest.fn(() => Promise.resolve(current)),
+    lockRole: jest.fn(() => Promise.resolve()),
     replaceGrants: jest.fn((_id: string, grants: RoleRow['permissions']) => {
       current = { ...current, permissions: grants };
       return Promise.resolve();
@@ -231,7 +232,38 @@ describe('RolesService', () => {
       const { service, repo } = makeService(row(), { held: { isSystemAdmin: true, grants: [] }, heldByActor: true });
       await service.update('r-1', { permissions: [{ key: 'core.users.manage', scope: 'all' }] }, me);
       expect(repo.replaceGrants).toHaveBeenCalled();
-      await makeService().service.create({ nameEn: 'X', nameAr: 'س', permissions: [{ key: 'core.users.manage', scope: 'all' }] });
+      const system = makeService();
+      await system.service.create({ nameEn: 'X', nameAr: 'س', permissions: [{ key: 'core.users.manage', scope: 'all' }] });
+      expect(system.repo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ grants: [{ permissionKey: 'core.users.manage', scope: 'all' }] }),
+      );
+    });
+
+    it('L-4 — removing a grant beyond the ceiling (or keeping one in a renamed role) is refused too', async () => {
+      const strong = row({ permissions: [{ permissionKey: 'hr.payroll.approve', scope: 'all' }] });
+      const { service, repo } = makeService(strong, { held });
+      // Taking "approve payroll" away from its holders is beyond someone who doesn't hold it.
+      await expect(service.update('r-1', { permissions: [] }, me)).rejects.toMatchObject({ code: ErrorCode.GRANT_EXCEEDS_OWN });
+      await expect(service.update('r-1', { nameEn: 'Renamed' }, me)).rejects.toMatchObject({ code: ErrorCode.GRANT_EXCEEDS_OWN });
+      expect(repo.replaceGrants).not.toHaveBeenCalled();
+      expect(repo.updateNames).not.toHaveBeenCalled();
+    });
+
+    it('L-4 — deleting a role beyond the ceiling is refused; within it, deleted', async () => {
+      const strong = makeService(row({ permissions: [{ permissionKey: 'hr.payroll.approve', scope: 'all' }] }), { held });
+      await expect(strong.service.remove('r-1', me)).rejects.toMatchObject({ code: ErrorCode.GRANT_EXCEEDS_OWN });
+      expect(strong.repo.delete).not.toHaveBeenCalled();
+      const within = makeService(row(), { held });
+      await within.service.remove('r-1', me);
+      expect(within.repo.delete).toHaveBeenCalledWith('r-1');
+    });
+
+    it('L-6 — an edit or a delete locks the role before its checks', async () => {
+      const { service, repo } = makeService(row(), { held });
+      await service.update('r-1', { nameEn: 'X' }, me);
+      expect(repo.lockRole.mock.invocationCallOrder[0]).toBeLessThan(repo.isHeldBy.mock.invocationCallOrder[0]);
+      await service.remove('r-1', me);
+      expect(repo.lockRole).toHaveBeenCalledTimes(2);
     });
   });
 });

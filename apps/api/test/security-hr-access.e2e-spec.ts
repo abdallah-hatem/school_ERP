@@ -31,7 +31,16 @@ import { outboxIdle } from './helpers/events';
  */
 
 /** Months no other suite uses (penalties can't be in the future; one payroll run per month). */
-const MONTH = { penalties: '2013-05', adjust: '2013-02', creator: '2013-04', pending: '2013-03' };
+const MONTH = {
+  penalties: '2013-05',
+  adjust: '2013-02',
+  creator: '2013-04',
+  pending: '2013-03',
+  /** L-3: approved, holding an approved Prep penalty a backdated one would move up. */
+  locked: '2013-07',
+  backdated: '2013-06',
+  lateness: '2013-08',
+};
 
 describe('Security review — HR access (e2e)', () => {
   let app: INestApplication;
@@ -192,6 +201,7 @@ describe('Security review — HR access (e2e)', () => {
     await db.payrollRun.deleteMany({ where: { month: { in: months } } });
     await db.notification.deleteMany({ where: { recipientKind: 'user', recipientId: { in: users } } });
     await db.penaltyRecord.deleteMany({ where: { employeeId: { in: employees } } });
+    await db.latenessEntry.deleteMany({ where: { employeeId: { in: employees } } });
     await db.user.deleteMany({ where: { id: { in: users } } });
     await db.role.deleteMany({ where: { id: { in: roles } } });
     await db.employeeStage.deleteMany({ where: { employeeId: { in: employees } } });
@@ -346,13 +356,70 @@ describe('Security review — HR access (e2e)', () => {
     });
   });
 
-  it('L3 — a scoped payroll viewer counts only the pending penalties of the employees they see', async () => {
+  it('L3 / L-5 — a scoped payroll viewer counts only the pending penalties they cover, by the penalty’s stage', async () => {
     await recordOk({ employeeId: emp.hPrim, violationId: violation(), date: `${MONTH.pending}-05` });
     await recordOk({ employeeId: emp.k1, violationId: violation(), date: `${MONTH.pending}-06` });
+    // The shared teacher is one of the Primary viewer's employees, but this penalty is Prep's (L-5).
+    await recordOk({ employeeId: emp.teacher, violationId: violation(), date: `${MONTH.pending}-07`, stageId: stage.prep });
     const run = (await http(app).post('/hr/payroll-runs').send({ month: MONTH.pending }).expect(201)).body.data as PayrollRun;
-    expect(((await http(app).get(`/hr/payroll-runs/${run.id}`).expect(200)).body.data as PayrollRun).pendingPenalties).toBe(2);
+    expect(((await http(app).get(`/hr/payroll-runs/${run.id}`).expect(200)).body.data as PayrollRun).pendingPenalties).toBe(3);
     const scoped = await as(who.viewer, () => http(app).get(`/hr/payroll-runs/${run.id}`).expect(200));
     expect((scoped.body.data as PayrollRun).pendingPenalties).toBe(1);
+  });
+
+  it('L-3 — an approved month among another stage’s penalties is refused without naming the month', async () => {
+    const v = violation();
+    const inPrep = await recordOk({ employeeId: emp.teacher, violationId: v, date: `${MONTH.locked}-20`, stageId: stage.prep });
+    await http(app).post(`/hr/penalties/${inPrep.id}/approve`).send({}).expect(200);
+    const run = (await http(app).post('/hr/payroll-runs').send({ month: MONTH.locked }).expect(201)).body.data as PayrollRun;
+    await http(app).post(`/hr/payroll-runs/${run.id}/approve`).expect(200);
+    await outboxIdle(app);
+    const query = { employeeId: emp.teacher, violationId: v, date: `${MONTH.backdated}-25`, stageId: stage.primary };
+    const asHead = await as(who.primaryHead, () => http(app).get('/hr/penalties/preview').query(query).expect(409));
+    expect(asHead.body.error).toBe(ErrorCode.PENALTY_RECOUNT_MONTH_LOCKED_ELSEWHERE);
+    expect(JSON.stringify(asHead.body)).not.toContain(MONTH.locked);
+    const recorded = await as(who.primaryHead, () => record(query).expect(409));
+    expect(recorded.body.error).toBe(ErrorCode.PENALTY_RECOUNT_MONTH_LOCKED_ELSEWHERE);
+    // HR, who sees the Prep penalty, is told which month.
+    const asHr = await http(app).get('/hr/penalties/preview').query(query).expect(409);
+    expect(asHr.body).toMatchObject({ error: ErrorCode.PENALTY_RECOUNT_MONTH_LOCKED, params: { month: MONTH.locked } });
+  });
+
+  it('M-2 — nobody changes their own pay: salary fields (403 OWN_PAY_CHANGE) or their own lateness', async () => {
+    await as(who.hrMgr, async () => {
+      const salary = await http(app).patch(`/hr/employees/${emp.hrMgr}`).send({ basicSalary: 2_000_000 }).expect(403);
+      expect(salary.body.error).toBe(ErrorCode.OWN_PAY_CHANGE);
+      const work = await http(app).patch(`/hr/employees/${emp.hrMgr}`).send({ workSystem: 'PART_TIME_4' }).expect(403);
+      expect(work.body.error).toBe(ErrorCode.OWN_PAY_CHANGE);
+      // Their own phone is fine; someone else's salary too.
+      await http(app).patch(`/hr/employees/${emp.hrMgr}`).send({ phone: '01000000007' }).expect(200);
+      await http(app).patch(`/hr/employees/${emp.k1}`).send({ basicSalary: 1_100_000 }).expect(200);
+      const lateness = await http(app)
+        .put(`/hr/lateness/${MONTH.lateness}`)
+        .send({ entries: [{ employeeId: emp.hrMgr, minutes: 0 }, { employeeId: emp.k1, minutes: 45 }] })
+        .expect(200);
+      expect(lateness.body.success).toBe(true);
+      const own = await http(app)
+        .put(`/hr/lateness/${MONTH.lateness}`)
+        .send({ entries: [{ employeeId: emp.hrMgr, minutes: 120 }] })
+        .expect(403);
+      expect(own.body.error).toBe(ErrorCode.OWN_PAY_CHANGE);
+    });
+    const stored = (await http(app).get(`/hr/employees/${emp.hrMgr}`).expect(200)).body.data as Employee;
+    expect(stored).toMatchObject({ basicSalary: 1_000_000, workSystem: 'FULL_TIME' });
+  });
+
+  it('M-3 — nobody moves their own record’s stages or manager (403 OWN_ACCESS_CHANGE)', async () => {
+    await as(who.hrMgr, async () => {
+      for (const body of [{ stageId: stage.kg }, { otherStageIds: [stage.prep] }, { managerId: emp.hPrim }]) {
+        const res = await http(app).patch(`/hr/employees/${emp.hrMgr}`).send(body).expect(403);
+        expect(res.body.error).toBe(ErrorCode.OWN_ACCESS_CHANGE);
+      }
+      // Moving someone else is their job.
+      await http(app).patch(`/hr/employees/${emp.deputy}`).send({ otherStageIds: [stage.prep] }).expect(200);
+    });
+    const stored = (await http(app).get(`/hr/employees/${emp.hrMgr}`).expect(200)).body.data as Employee;
+    expect(stored.stage.id).toBe(stage.primary);
   });
 
   it('L4 — a non-salary editor can’t clear the insured salary by turning insurance off', async () => {

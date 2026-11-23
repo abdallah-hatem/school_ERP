@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { withCachePolicy } from './fetch-cache';
+import { carriesSession, withCachePolicy } from './fetch-cache';
 
 /*
  * Security review (2026-11-23), the cache check: no answer fetched with someone's session is kept
@@ -16,6 +16,14 @@ describe('withCachePolicy — an authenticated API fetch is never cached across 
       next: { tags: ['t'] },
     });
     expect(withCachePolicy({ method: 'GET' } as { method: string; cache?: RequestCache }, true)).toEqual({ method: 'GET', cache: 'no-store' });
+  });
+
+  it('a session is recognised in any letter case of the header (a caller passing its own headers)', () => {
+    expect(carriesSession({ Authorization: 'Bearer x' })).toBe(true);
+    expect(carriesSession({ authorization: 'Bearer x' })).toBe(true);
+    expect(carriesSession({ AUTHORIZATION: 'Bearer x' })).toBe(true);
+    expect(carriesSession({ Accept: 'application/json' })).toBe(false);
+    expect(carriesSession({ authorization: '' })).toBe(false);
   });
 
   it('a public request (no session) keeps what it asked for', () => {
@@ -37,7 +45,7 @@ describe('guard: nothing opts the app into a shared cache behind apiFetch’s ba
     });
 
   it('apiFetch applies the policy to every request', () => {
-    expect(readFileSync(join(SRC, 'lib', 'api.ts'), 'utf8')).toMatch(/withCachePolicy\(options, !!headers\.Authorization\)/);
+    expect(readFileSync(join(SRC, 'lib', 'api.ts'), 'utf8')).toMatch(/withCachePolicy\(options, carriesSession\(headers\)\)/);
   });
 
   it('no `use cache`, `unstable_cache`, route `revalidate` / `fetchCache`, and no cacheComponents in next.config', () => {

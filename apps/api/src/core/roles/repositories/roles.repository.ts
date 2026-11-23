@@ -112,6 +112,12 @@ export class RolesRepository {
 
   /** Replaces the user's roles with `roleIds`. */
   async setRolesOf(userId: string, roleIds: readonly string[]): Promise<void> {
+    // L-6: the user's row (a ceiling check on them waits, `UsersRepository.lockUser`) and the roles
+    // given, shared (an edit of one of them, `lockRole`, waits — its held-by check sees this).
+    await this.db.$queryRaw`SELECT "id" FROM "users" WHERE "id" = ${userId}::uuid FOR UPDATE`;
+    if (roleIds.length > 0) {
+      await this.db.$queryRaw`SELECT "id" FROM "roles" WHERE "id" = ANY(${[...roleIds]}::uuid[]) FOR SHARE`;
+    }
     await this.db.userRoleAssignment.deleteMany({
       where: { userId, roleId: { notIn: [...roleIds] } },
     });
@@ -127,6 +133,14 @@ export class RolesRepository {
    */
   async lockSystemAdminRole(): Promise<void> {
     await this.db.$queryRaw`SELECT "id" FROM "roles" WHERE "key" = ${SYSTEM_ADMIN_ROLE} FOR UPDATE`;
+  }
+
+  /**
+   * Locks the role's row until the transaction ends (L-6): giving the role to someone
+   * (`setRolesOf` takes it shared) waits, so the held-by checks of an edit can't go stale.
+   */
+  async lockRole(roleId: string): Promise<void> {
+    await this.db.$queryRaw`SELECT "id" FROM "roles" WHERE "id" = ${roleId}::uuid FOR UPDATE`;
   }
 
   /** Whether `userId` holds the role. */

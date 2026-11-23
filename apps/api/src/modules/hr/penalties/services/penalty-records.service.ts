@@ -1,5 +1,4 @@
 import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
 import { isUUID } from 'class-validator';
 import {
   AuditEntityType,
@@ -53,7 +52,7 @@ import {
 } from '../../domain';
 import { PermissionsService } from '../../../../core/permissions';
 import { UsersService } from '../../../../core/users';
-import { headsStage, penaltyInScope, toEmployeeScope, type EmployeeScope } from '../../access/employee-scope.pure';
+import { headsStage, penaltyInScope, penaltyWhere, toEmployeeScope, type EmployeeScope } from '../../access/employee-scope.pure';
 import { HrAccessService } from '../../access/hr-access.service';
 import { EmployeesService } from '../../employees/services/employees.service';
 import { MonthLockService } from '../../month-lock/month-lock.service';
@@ -92,6 +91,7 @@ interface Shown extends CatalogueLevel {
   recount: PenaltyRecountChange[];
   recountElsewhere: number;
   recountLockedMonth: Month | null;
+  recountLockedElsewhere: boolean;
   hrMayDecide: boolean;
   ownPenalty?: boolean;
 }
@@ -172,6 +172,7 @@ function toRecord(row: RecordRow, shown: Shown): PenaltyRecord {
     recount: shown.recount,
     recountElsewhere: shown.recountElsewhere,
     recountLockedMonth: shown.recountLockedMonth,
+    recountLockedElsewhere: shown.recountLockedElsewhere,
   };
 }
 
@@ -194,6 +195,7 @@ const storedShown = (row: RecordRow): Shown => ({
   recount: [],
   recountElsewhere: 0,
   recountLockedMonth: null,
+  recountLockedElsewhere: false,
   hrMayDecide: false,
 });
 
@@ -335,6 +337,7 @@ export class PenaltyRecordsService {
     // §4 backdated: say before saving what approving it would change, or that it can't be.
     const recount = await this.assertRecountOpen(
       recountAfterApproval({ ...query, date: query.date }, window, pair, levels),
+      sees,
     );
     return {
       level,
@@ -361,7 +364,8 @@ export class PenaltyRecordsService {
     const pair = await this.pairRecords(dto, dto.date, window);
     const priorCount = countPriorInWindow({ ...dto, date: dto.date }, window, pair);
     // §4 backdated: refused when approving it could never happen (a recount in an approved month).
-    await this.assertRecountOpen(recountAfterApproval({ ...dto, date: dto.date }, window, pair, levels));
+    const sees = await this.seesPenalty((await this.employees.stagesOf(dto.employeeId))?.managerId ?? null);
+    await this.assertRecountOpen(recountAfterApproval({ ...dto, date: dto.date }, window, pair, levels), sees);
     const row = await this.repository.createRecord(
       {
         employeeId: dto.employeeId,
@@ -509,6 +513,7 @@ export class PenaltyRecordsService {
       async (pairRecords) => {
         const changes = await this.assertRecountOpen(
           recountAfterApproval(positionOf(current), window, pairRecords, levels),
+          sees,
         );
         // L1: the ones the approver sees are confirmed one by one, the others by their number.
         const visible = changes.filter((c) => sees(c.record));
@@ -605,17 +610,18 @@ export class PenaltyRecordsService {
    * Whether a penalty dated in `month` was recounted (§4 backdated penalty) after `since`: a draft
    * run calculated before then is due a Recalculate (§6).
    */
-  recountedInMonthSince(month: Month, since: Date): Promise<boolean> {
-    return this.repository.recountedInMonthSince(month, since);
+  recountedInMonthSince(month: Month, since: Date, scope?: EmployeeScope): Promise<boolean> {
+    // L-5: a scoped viewer isn't told a penalty outside their scope moved.
+    return this.repository.recountedInMonthSince(month, since, scope ? penaltyWhere(scope) : {});
   }
 
   /**
    * How many penalties dated in a month still wait at either step right now (blocks payroll
-   * approval). `employees`: only those employees' (what a scoped payroll viewer may count, security
-   * review L3); absent: the whole school.
+   * approval). `scope`: only what a scoped payroll viewer covers — by the penalty's stage, like
+   * `penaltyWhere` (security review L3 / L-5); absent: the whole school.
    */
-  pendingCountInMonth(month: Month, employees?: Prisma.EmployeeWhereInput): Promise<number> {
-    return this.repository.countPendingInMonth(month, employees);
+  pendingCountInMonth(month: Month, scope?: EmployeeScope): Promise<number> {
+    return this.repository.countPendingInMonth(month, scope ? penaltyWhere(scope) : {});
   }
 
   /** One employee's APPROVED penalties dated in a month, by date, as fixed at approval. */
@@ -872,14 +878,30 @@ export class PenaltyRecordsService {
   /**
    * The months of `changes` whose payroll is approved — the earliest refuses (409
    * PENALTY_RECOUNT_MONTH_LOCKED naming it, §4: corrections for an approved month go into the next
-   * month as adjustments, §6). Returns `changes` when none is locked.
+   * month as adjustments, §6). Returns `changes` when none is locked. Security review L-3: the month
+   * is named only from penalties the user sees (`sees`); a locked one only among the others refuses
+   * with `PENALTY_RECOUNT_MONTH_LOCKED_ELSEWHERE`, no month.
    */
-  private async assertRecountOpen<C extends RecountChange>(changes: C[]): Promise<C[]> {
-    const month = await this.recountLocked(changes);
+  private async assertRecountOpen<C extends RecountChange<ApprovedCandidate>>(
+    changes: C[],
+    sees: SeesPenalty,
+  ): Promise<C[]> {
+    const { month, elsewhere } = await this.recountLockedFor(changes, sees);
     if (month) {
       throw CodedException.withParams(HttpStatus.CONFLICT, ErrorCode.PENALTY_RECOUNT_MONTH_LOCKED, { month });
     }
+    if (elsewhere) throw new CodedException(HttpStatus.CONFLICT, ErrorCode.PENALTY_RECOUNT_MONTH_LOCKED_ELSEWHERE);
     return changes;
+  }
+
+  /** `recountLocked` split by what the user sees: the visible locked month, and whether a hidden one is. */
+  private async recountLockedFor(
+    changes: readonly RecountChange<ApprovedCandidate>[],
+    sees: SeesPenalty,
+  ): Promise<{ month: Month | null; elsewhere: boolean }> {
+    const month = await this.recountLocked(changes.filter((c) => sees(c.record)));
+    const elsewhere = month ? false : (await this.recountLocked(changes.filter((c) => !sees(c.record)))) !== null;
+    return { month, elsewhere };
   }
 
   /** The earliest month among `changes` whose payroll is approved, or null. */
@@ -969,11 +991,14 @@ export class PenaltyRecordsService {
       const prior = countPriorInWindow(positionOf(row), window, pair);
       const blocker = earlierPendingPenalty(positionOf(row), window, pair);
       const recount = recountAfterApproval(positionOf(row), window, pair, levels);
+      // L-3: the locked month only from what they see; otherwise just that one elsewhere is.
+      const locked = await this.recountLockedFor(recount, sees);
       shown.set(row.id, {
         ...resolvePenalty(prior, levels),
         earlierPending: shownBlocker(blocker, sees),
         ...shownRecount(recount, sees),
-        recountLockedMonth: await this.recountLocked(recount),
+        recountLockedMonth: locked.month,
+        recountLockedElsewhere: locked.elsewhere,
         hrMayDecide: await this.hrMayDecide(row, holders),
         ownPenalty: own(row),
       });

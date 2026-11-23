@@ -97,7 +97,8 @@ function errorParams(params: unknown, locale: Locale): Record<string, string | n
  * backdated penalty — `PENALTY_RECOUNT_MONTH_LOCKED`, naming the month).
  */
 export function approveBlockedReason(
-  record: Pick<PenaltyRecord, 'status' | 'earlierPending' | 'recountLockedMonth'>,
+  record: Pick<PenaltyRecord, 'status' | 'earlierPending' | 'recountLockedMonth'> &
+    Partial<Pick<PenaltyRecord, 'recountLockedElsewhere'>>,
   t: Translate,
   locale: Locale,
 ): string | null {
@@ -110,6 +111,8 @@ export function approveBlockedReason(
   if (record.recountLockedMonth) {
     return t('errors.PENALTY_RECOUNT_MONTH_LOCKED', { month: formatMonth(record.recountLockedMonth, locale) });
   }
+  // In a stage the user doesn't see: no month (security review L-3).
+  if (record.recountLockedElsewhere) return t('errors.PENALTY_RECOUNT_MONTH_LOCKED_ELSEWHERE');
   return null;
 }
 

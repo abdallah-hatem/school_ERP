@@ -17,6 +17,11 @@ export interface FetchCacheOptions {
   next?: { tags?: string[]; revalidate?: number | false };
 }
 
+/** Whether the request's headers carry a session: an `Authorization` header, in any letter case. */
+export function carriesSession(headers: Record<string, string>): boolean {
+  return Object.entries(headers).some(([name, value]) => name.toLowerCase() === 'authorization' && Boolean(value));
+}
+
 /** `options` with the cache policy for a request with (`authenticated`) or without a session. */
 export function withCachePolicy<T extends FetchCacheOptions>(options: T, authenticated: boolean): T {
   if (!authenticated) return options;

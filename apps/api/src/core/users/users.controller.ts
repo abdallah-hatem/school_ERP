@@ -113,8 +113,11 @@ export class UsersController {
   @Permission('core.users.manage')
   @Audited('core.user.unlock_sign_in')
   @HttpCode(HttpStatus.OK)
-  unlockSignIn(@Param('id', ParseUUIDPipe) id: string): Promise<UserAccount> {
-    return this.accounts.unlockSignIn(id);
+  unlockSignIn(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() me?: AuthUser,
+  ): Promise<UserAccount> {
+    return this.accounts.unlockSignIn(id, me);
   }
 
   /** A temporary password: the user must change it, and their sessions end. */

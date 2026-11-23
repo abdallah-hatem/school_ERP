@@ -54,6 +54,7 @@ function makeService(
   let lockedUntil = opts.lockedUntil;
   const users = {
     findAccount: jest.fn(() => Promise.resolve(current)),
+    lockUser: jest.fn(() => Promise.resolve()),
     update: jest.fn((_id: string, data: Partial<UserAccountRow>) => {
       current = { ...current, ...data };
       return Promise.resolve();
@@ -417,13 +418,10 @@ describe('UserAccountsService', () => {
       await expect(service.deactivate('u-3', me)).rejects.toMatchObject({ code: ErrorCode.GRANT_EXCEEDS_OWN });
     });
 
-    it('nobody — a System admin included — changes their own roles or employee link → 403 OWN_ACCESS_CHANGE', async () => {
+    it('nobody — a System admin included — changes their own roles → 403 OWN_ACCESS_CHANGE; a System admin may link their own employee', async () => {
       const { service, roles, users } = makeService();
       const self = { id: 'u-1' };
       await expect(service.update('u-1', { roleIds: [ADMIN.id] }, self)).rejects.toMatchObject({
-        code: ErrorCode.OWN_ACCESS_CHANGE,
-      });
-      await expect(service.update('u-1', { employeeId: 'e-9' }, self)).rejects.toMatchObject({
         code: ErrorCode.OWN_ACCESS_CHANGE,
       });
       expect(roles.setRolesOf).not.toHaveBeenCalled();
@@ -431,6 +429,50 @@ describe('UserAccountsService', () => {
       // The same roles and no employee change (the form sends them back): the rest saves.
       await service.update('u-1', { name: 'Mona B', roleIds: [HR.id, ADMIN.id], employeeId: null }, self);
       expect(users.update).toHaveBeenCalled();
+      // A (sole) System admin links themselves: they reach everyone already (no lock-out at setup).
+      await service.update('u-1', { employeeId: 'e-9' }, self);
+      expect(users.update).toHaveBeenLastCalledWith('u-1', expect.objectContaining({ employeeId: 'e-9' }));
+    });
+
+    it('…but a non-System-admin can’t change their own employee link (OWN_ACCESS_CHANGE)', async () => {
+      const { service } = makeService(row({ id: 'u-me', roles: [{ role: OFFICER }] }), { held: MANAGER });
+      await expect(service.update('u-me', { employeeId: 'e-9' }, { id: 'u-me' })).rejects.toMatchObject({
+        code: ErrorCode.OWN_ACCESS_CHANGE,
+      });
+    });
+
+    it('H-1 — only a System admin sets or changes an employee link (create and update) → 403 EMPLOYEE_LINK_ADMIN_ONLY', async () => {
+      const { service, users } = makeService(row({ id: 'u-2', roles: [{ role: OFFICER }] }), { held: MANAGER });
+      await expect(
+        service.create({ name: 'N', email: 'n@school.test', password: 'password-123', roleIds: [], employeeId: 'e-9' }, me),
+      ).rejects.toMatchObject({ code: ErrorCode.EMPLOYEE_LINK_ADMIN_ONLY });
+      await expect(service.update('u-2', { employeeId: 'e-9' }, me)).rejects.toMatchObject({
+        code: ErrorCode.EMPLOYEE_LINK_ADMIN_ONLY,
+      });
+      await expect(service.update('u-2', { employeeId: null }, me)).resolves.toBeDefined();
+      expect(users.create).not.toHaveBeenCalled();
+    });
+
+    it('M-1 — unlocking a sign-in has the same ceiling: a System admin → 403 SYSTEM_ADMIN_ONLY, a stronger user → 403 GRANT_EXCEEDS_OWN', async () => {
+      const admin = makeService(row(), { held: MANAGER, lockedUntil: new Date('2026-11-17T11:00:00Z') });
+      await expect(admin.service.unlockSignIn('u-1', me)).rejects.toMatchObject({ code: ErrorCode.SYSTEM_ADMIN_ONLY });
+      expect(admin.signInLimit.unlock).not.toHaveBeenCalled();
+      const stronger = makeService(row({ id: 'u-3', roles: [{ role: HR }] }), { held: MANAGER });
+      await expect(stronger.service.unlockSignIn('u-3', me)).rejects.toMatchObject({ code: ErrorCode.GRANT_EXCEEDS_OWN });
+      const within = makeService(row({ id: 'u-2', roles: [{ role: OFFICER }] }), { held: MANAGER });
+      await within.service.unlockSignIn('u-2', me);
+      expect(within.signInLimit.unlock).toHaveBeenCalled();
+    });
+
+    it('L-6 — every check on a user locks their row first (their roles can’t change under the check)', async () => {
+      const { service, users } = makeService(row(), { otherAdmins: 1 });
+      await service.update('u-1', { name: 'X' }, me);
+      await service.setTemporaryPassword('u-1', 'temporary-1234', me);
+      await service.deactivate('u-1', me);
+      await service.reactivate('u-1', me);
+      await service.unlockSignIn('u-1', me);
+      expect(users.lockUser).toHaveBeenCalledTimes(5);
+      expect(users.lockUser.mock.invocationCallOrder[0]).toBeLessThan(users.findAccount.mock.invocationCallOrder[0]);
     });
   });
 

@@ -68,7 +68,7 @@ export class RolesController {
   @Permission('core.roles.manage')
   @Audited('core.role.delete')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
-    return this.roles.remove(id);
+  remove(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() me?: AuthUser): Promise<void> {
+    return this.roles.remove(id, me);
   }
 }

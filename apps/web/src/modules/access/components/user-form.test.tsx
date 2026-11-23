@@ -272,13 +272,20 @@ describe('UserForm', () => {
       expect(screen.queryByRole('button', { name: /temporary password/ })).toBeNull();
     });
 
-    it('nobody changes their own roles or employee record: both are locked on their own account', () => {
+    it('nobody changes their own roles; a System admin may still link their own employee record', () => {
       const me = account({ id: TEST_SESSION.id });
       renderAccess(<UserForm basePath="/en/users" user={me} roles={ROLES} now={NOW} />);
       expect((roleBox('HR officer') as HTMLButtonElement).disabled).toBe(true);
-      expect(screen.getAllByTestId('own-access-note')).toHaveLength(2);
+      expect(screen.getAllByTestId('own-access-note')).toHaveLength(1);
+      expect((screen.getByRole('combobox', { name: /Employee/ }) as HTMLButtonElement).disabled).toBe(false);
       // The name can still change.
       expect((screen.getByRole('textbox', { name: /Full name/ }) as HTMLInputElement).disabled).toBe(false);
+    });
+
+    it('H-1 — only a System admin chooses the employee record: locked for a user manager, saying why', () => {
+      renderAccess(<UserForm basePath="/en/users" user={officer} roles={ROLES} now={NOW} />, 'en', manager);
+      expect((screen.getByRole('combobox', { name: /Employee/ }) as HTMLButtonElement).disabled).toBe(true);
+      expect(screen.getByTestId('employee-link-note').textContent).toBe('Only a System admin can choose who an account is in HR.');
     });
   });
 });

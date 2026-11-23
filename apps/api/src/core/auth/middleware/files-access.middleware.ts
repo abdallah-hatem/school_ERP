@@ -25,8 +25,11 @@ export class FilesAccessMiddleware implements NestMiddleware {
     if (PUBLIC_FILES_PREFIXES.some((prefix) => path.startsWith(prefix)) && !climbs) return next();
 
     const payload = await this.tokens.verifyAccess(accessTokenFrom(req));
-    const user = payload ? await this.users.findActiveAuthUser(payload.sub) : null;
-    if (!user) throw new UnauthorizedException();
+    const session = payload ? await this.users.findActiveSession(payload.sub) : null;
+    // The same check as every API request (L-1): an ended sign-in opens no file either.
+    if (!payload || !session || !(await this.tokens.stillValid(payload, session.passwordChangedAt))) {
+      throw new UnauthorizedException();
+    }
     next();
   }
 }

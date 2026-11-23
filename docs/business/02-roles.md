@@ -84,8 +84,11 @@
   teaches in", §3) — so a stage head of two stages sees the employees of both, and an employee of
   two stages is seen by both stages' heads. **Penalties go by the penalty's stage** (where the
   violation happened, §4), not the employee's: the head of an employee's other stage doesn't see,
-  isn't told about and can't act on a penalty from a stage that isn't theirs (opening it, or acting on
-  it, shows "This page isn't here"). **DECIDED** (owner, 2026-11-23): a stage head records penalties
+  isn't notified about and can't act on a penalty from a stage that isn't theirs (opening it, or
+  acting on it, shows "This page isn't here"). Where such a penalty changes what they can do with
+  one of theirs — the level counts every stage — they are told only that one exists ("an earlier
+  penalty for this violation, in another stage, is still waiting", "and N approved penalties in
+  other stages"), never its date, level or month (§4). **DECIDED** (owner, 2026-11-23): a stage head records penalties
   only in their own stages — for a teacher shared with another stage, the record form offers only
   theirs. That covers every list, count, search, picker and dashboard
   figure, their penalties, lateness and payroll lines, and the activity log's entries about them.
@@ -126,18 +129,31 @@
   - may give or take away only roles whose every permission they hold themselves, reaching no
     further than theirs, and may manage only accounts that hold no more than they do (so nobody can
     reset a stronger person's password and sign in as them);
-  - may put into a role only permissions they hold, at the same reach or narrower, and can't change
-    a role they hold themselves or one a System admin holds.
+  - may put into a role only permissions they hold, at the same reach or narrower; a role whose
+    permissions reach beyond theirs they can't change (not even to remove one) or delete, and they
+    can't change a role they hold themselves or one a System admin holds;
+  - can't choose **who an account is in HR** (its employee record), on a new account or an existing
+    one: "their stage", "their team" and "themselves only" are worked out from that record, so
+    choosing it chooses whom the account reaches. Only a System admin links employee records
+    (simpler than checking the employee against every reach; linking is rare admin work);
+  - can't unlock a System admin's sign-in, or that of someone holding more than they do.
 
   "Reaching no further": *everyone* covers every reach; *their stage* covers their stage and
   *themselves only*; *their team* covers their team and *themselves only*; *themselves only* covers
   only itself. A stage and a team don't cover each other. A System admin has no such limit. The
   screens grey out what can't be given, with the reason.
-- **DECIDED** (owner, 2026-11-23) — **Nobody changes their own roles or their own employee record**,
-  a System admin included: another administrator does it. Their name and email they may change.
-- **DECIDED** (owner, 2026-11-23) — **Changing your password signs you out everywhere else**: every
-  other signed-in device must sign in again with the new password; the one you changed it from stays
-  signed in.
+- **DECIDED** (owner, 2026-11-23) — **Nobody changes their own roles**, a System admin included:
+  another administrator does it (the last-System-admin rule still applies to them). **Nor their own
+  employee record** — except a System admin, who already reaches everyone, so the link widens
+  nothing; a school's only System admin must be able to say who they are in HR. Their name and email
+  anyone may change.
+- **DECIDED** (owner, 2026-11-23) — **Nobody widens their own reach through HR**: editing their own
+  employee record, they can't change its stages ("also teaches in" included) or its manager
+  ("You can't change your own roles or employee record").
+- **DECIDED** (owner, 2026-11-23) — **Changing your password signs you out everywhere else**, at once:
+  every other signed-in device must sign in again with the new password; the one you changed it from
+  stays signed in. (A device signed in before 2026-11-23 is signed out once after a password change,
+  even the one that changed it.)
 - **DECIDED** (owner, 2026-11-19) — **Any role but the System admin can be deleted once nobody holds
   it** — a starting role as well as a custom one. A role someone still holds can't be deleted: Delete
   says who still holds it ("3 users still hold it"), and the role must be taken away from them on

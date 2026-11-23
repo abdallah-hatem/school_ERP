@@ -39,6 +39,11 @@ lines each role sees: §2 Roles (enforced, P4).
   that employee): "You adjusted your own line in this month's payroll, so someone else must approve
   it." That is the whole rule: whoever **created** the run may still approve it, as long as they made
   no adjustment on their own line. Each adjustment keeps who added it.
+- **DECIDED** (owner, 2026-11-23, part of "fix all") — **Nobody changes their own pay** by any other
+  door either: on their own employee record, not the basic salary, work system, insurance (status,
+  number, registration date, insured salary) or bank details; and not their own lateness minutes.
+  "You can't change your own pay, insurance or lateness. Ask someone else." Their own row sent back
+  unchanged (the lateness screen saves the whole month) is fine.
 - **DECIDED** (2026-11-23) — The draft's **pending penalties** count shown to someone who sees only
   some lines (their stage or team) counts only those employees' penalties; the month's approval still
   waits for every pending penalty of the school.

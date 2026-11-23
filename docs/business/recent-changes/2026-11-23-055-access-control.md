@@ -9,7 +9,12 @@ Decided by the owner ("fix all", after an independent security review; §2, §3,
   permissions they hold (same reach or narrower), and can't change a role they hold or one a System
   admin holds. Reach: everyone > their stage / their team > themselves only; a stage and a team don't
   cover each other. The Users and Roles screens grey these out with the reason.
-- **Nobody changes their own roles or employee record (§2)**, a System admin included.
+- **Nobody changes their own roles (§2)**, a System admin included; nor their own employee record,
+  except a System admin (so a school's only admin can link themselves). Editing their own HR record,
+  nobody changes its stages or manager.
+- **Only a System admin links an account to an employee record (§2)**: the record anchors "their
+  stage / team / themselves", so the link is access. Unlocking a sign-in follows the same limits as
+  deactivating.
 - **Changing your password signs you out everywhere else (§2)**; the device you changed it on stays
   signed in.
 - **Nobody cancels their own penalty (§4)** — as nobody reviews, approves or rejects it.
@@ -23,7 +28,11 @@ Decided by the owner ("fix all", after an independent security review; §2, §3,
 - **Payroll separation of duties (§6):** nobody adds or removes an adjustment on their own payroll
   line, and nobody approves a month in which they adjusted their own line. The run's creator may
   still approve it when they adjusted no line of their own.
-- **Pending penalties on the payroll screen (§6)** count only the employees a stage- or team-limited
-  viewer sees.
+- **Pending penalties on the payroll screen (§6)** count only the penalties a stage- or team-limited
+  viewer covers (by the penalty's stage), and the "penalties changed" notice likewise.
+- **Nobody changes their own pay (§6)**: their salary, work system, insurance or bank details, or
+  their own lateness minutes.
+- **Signing out elsewhere is immediate (§2)**: after a password change the other devices stop at
+  once, not within 15 minutes.
 - **Insured salary (§2, §3):** someone who can't see an employee's salary can't set them "not
   insured" while they have an insured salary (that would clear it).

@@ -39,6 +39,9 @@ export type RotationResult =
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/** How far a replay follows the chain of rotations to the live token (a few tabs, a few seconds). */
+const MAX_REPLAY_HOPS = 10;
+
 const sha256 = (value: string) => createHash('sha256').update(value).digest('hex');
 
 /**
@@ -92,6 +95,18 @@ export class TokensService {
     } catch {
       return null;
     }
+  }
+
+  /**
+   * Whether an access token may still be used, given when its user's password last changed
+   * (security review L-1): one issued after the change, yes; one issued before it only while its
+   * sign-in (`fam`) still has a live refresh token — the sign-in that changed the password is kept,
+   * the others were ended (and a temporary password ends them all). A token without `fam` (issued
+   * before 2026-11-23) can't tell: refused, once, after a password change.
+   */
+  async stillValid(payload: AccessPayload, passwordChangedAt: Date | null): Promise<boolean> {
+    if (!passwordChangedAt || (payload.iat ?? 0) * 1000 >= passwordChangedAt.getTime()) return true;
+    return !!payload.fam && (await this.refreshTokens.familyAlive(payload.fam));
   }
 
   /** A new refresh token in a new family (a fresh sign-in) or an existing one (rotation). */
@@ -152,18 +167,29 @@ export class TokensService {
       await this.refreshTokens.revokeFamily(row.familyId, now);
       return { ok: false, reason: 'reused' };
     }
-    const successor = row.replacedById ? await this.refreshTokens.findById(row.replacedById) : null;
-    const next = this.successorOf(raw);
-    if (!successor || successor.tokenHash !== sha256(next) || successor.revokedAt) {
-      return { ok: false, reason: 'revoked' };
+    // Follow the chain to the live token (L-2): two tabs may each have refreshed in turn, so the
+    // successor can itself be used already. Each link is derived from the one before, so it can be
+    // given again; it is answered as of the rotation that issued it. A broken chain or a revoked link
+    // (signed out) is refused — without ending the sign-in.
+    let current = row;
+    let currentRaw = raw;
+    for (let hop = 0; hop < MAX_REPLAY_HOPS; hop++) {
+      const nextRaw = this.successorOf(currentRaw);
+      const next = current.replacedById ? await this.refreshTokens.findById(current.replacedById) : null;
+      if (!next || next.tokenHash !== sha256(nextRaw) || next.revokedAt) return { ok: false, reason: 'revoked' };
+      if (!next.usedAt) {
+        return {
+          ok: true,
+          userId: row.userId,
+          familyId: row.familyId,
+          refreshToken: nextRaw,
+          issuedAt: current.usedAt ?? usedAt,
+        };
+      }
+      current = next;
+      currentRaw = nextRaw;
     }
-    return {
-      ok: true,
-      userId: row.userId,
-      familyId: row.familyId,
-      refreshToken: next,
-      issuedAt: usedAt,
-    };
+    return { ok: false, reason: 'revoked' };
   }
 
   /** Ends the sign-in a refresh token belongs to (logout). Unknown tokens are ignored. */

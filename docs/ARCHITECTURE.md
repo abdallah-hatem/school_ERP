@@ -195,13 +195,19 @@ from one IP all get in; 11 rapid sign-ins on one email → 429).
   given again without being stored in the clear; the access token is signed as of the rotation
   (`iat` = the token's `used_at`), so it is the same string too. A parallel refresh that loses the
   claim (the row's `used_at` is set first, inside the rotation's transaction) answers with the
-  winner's pair. A successor already revoked (signed out) → 401. After the window a reuse is theft:
-  the whole family is revoked (401).
+  winner's pair. When the successor was itself rotated already (two tabs refreshing in turn), the
+  replay follows the chain (up to 10 links) to the live token and answers with it, as of the rotation
+  that issued it — two tabs never sign the user out. A revoked or broken link → 401, without
+  revoking the sign-in. After the window a reuse is theft: the whole family is revoked (401).
 - **Access tokens name their sign-in** (`fam`: the refresh-token family). A password change
   (`POST /account/password`) ends every other sign-in of the user — `core.user.sessions_ended` with
-  `keepFamilyId`, after the change commits — and keeps the caller's. Their access tokens die within
-  their 15 minutes, like after a temporary password; refresh is refused at once. A token issued before
-  `fam` existed keeps no sign-in: all end, the caller signs in again.
+  `keepFamilyId`, after the change commits — and keeps the caller's. Their access tokens stop **at
+  once** (L-1): every request loads the user with `password_changed_at` (the same read as before), and
+  a token issued before it (`iat`) is accepted only while its family still has a live refresh token
+  (`TokensService.stillValid`, one indexed lookup, only for such older tokens; the file middleware
+  does the same). This also ends the old access tokens after a temporary password. A token issued
+  before `fam` existed (before 2026-11-23) can't say which sign-in it is: after a password change it
+  is refused once, the caller included, who signs in again.
 - **No per-user answer in Next's data cache.** Next 16 without `cacheComponents` (ours) caches no
   `fetch` by default, and `next: { tags }` alone doesn't opt in — but `apiFetch` doesn't rely on that:
   any request carrying a session is `cache: 'no-store'` and loses any `revalidate`
@@ -721,8 +727,18 @@ Roles are rows, not code (spec P2, R2 / R5 / R8 / R9). A school changes them thr
   given or taken away, or an account managed, beyond the ceiling → 403 `GRANT_EXCEEDS_OWN`; one's own
   `roleIds` or `employeeId` (anyone, a System admin too) → 403 `OWN_ACCESS_CHANGE`. Roles: a grant
   beyond the ceiling → `GRANT_EXCEEDS_OWN`; editing a role one holds → `ROLE_HELD_BY_YOU`; one a
-  System admin holds (or the System admin role) → `ROLE_HELD_BY_SYSTEM_ADMIN`. The web greys these out
-  from the session (`giveCeiling`: keys only — the API also checks scopes).
+  System admin holds (or the System admin role) → `ROLE_HELD_BY_SYSTEM_ADMIN`; the ceiling covers the
+  role's current grants and its new ones (removing one beyond theirs is refused too) and deleting it.
+  Unlocking a sign-in is under the same ceiling as deactivating. **Employee links** (H-1): only a
+  System admin sets or changes `employeeId`, on create or update (`EMPLOYEE_LINK_ADMIN_ONLY`) — the
+  stage, team and self scopes are anchored to the linked employee, so a link is access; checking the
+  employee against every scoped grant would be finer but needs HR's scope rules in core, so the simple
+  rule was picked. A System admin may change their own link (they reach everyone already), never their
+  own roles. **Races** (L-6): every check on a user first locks their `users` row (`lockUser`), and
+  `setRolesOf` locks it too (and the roles it gives, `FOR SHARE`); a role edit or delete locks the
+  role's row (`lockRole`) before its held-by checks — so neither check can pass on roles that change
+  before the write. The web greys these out from the session (`giveCeiling`: keys only — the API also
+  checks scopes).
 - Every user and role write is `@Audited` (`core.user.*`, `core.role.*`); passwords are never in the
   log (the entry says only that one was set or changed).
 - Area order inside core: `audit` ← `permissions` ← `roles` ← `users` ← `auth`, and `audit` ← `settings` ← `sign-in-limit` ← `users`, `auth`; `jobs` depends on no other area (a job lives in its own area and only uses `@ScheduledJob`); `audit`, `permissions`, `settings` ← `notifications` (no other area imports it — `.dependency-cruiser.cjs`). `core/audit` reads

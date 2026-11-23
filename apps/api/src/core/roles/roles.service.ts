@@ -99,6 +99,8 @@ export class RolesService {
   }
 
   async update(id: string, dto: UpdateRoleDto, actor?: Actor): Promise<Role> {
+    // L-6: nobody is given this role while it is checked and changed.
+    await this.roles.lockRole(id);
     const before = await this.get(id);
     const ceiling = await this.ceilingOf(actor);
     if (!ceiling.isSystemAdmin && actor) {
@@ -110,13 +112,15 @@ export class RolesService {
         throw new CodedException(HttpStatus.FORBIDDEN, ErrorCode.ROLE_HELD_BY_SYSTEM_ADMIN);
       }
     }
+    // L-4: what it grants now and what it will grant — removing a grant beyond theirs (taking it from
+    // its holders) is as much over the ceiling as adding one.
+    this.assertWithinCeiling(ceiling, [...before.permissions, ...(dto.permissions ?? [])]);
     if (dto.permissions !== undefined) {
       // R8 — the System admin holds every key, always: its set can't be narrowed.
       if (before.key === SYSTEM_ADMIN_ROLE) {
         throw new CodedException(HttpStatus.CONFLICT, ErrorCode.SYSTEM_ADMIN_FIXED);
       }
       this.assertNoDuplicates(dto.permissions);
-      this.assertWithinCeiling(ceiling, dto.permissions);
       await this.roles.replaceGrants(id, storedGrants(dto.permissions));
     }
     if (dto.nameEn !== undefined || dto.nameAr !== undefined) {
@@ -135,13 +139,16 @@ export class RolesService {
 
   /**
    * Any role but the System admin, once nobody holds it (owner 2026-11-19) — starting roles
-   * included. Grant migrations join on the role's key, so they skip a deleted starting role.
+   * included. Grant migrations join on the role's key, so they skip a deleted starting role. A
+   * non-System-admin deletes only a role within their ceiling (L-4: 403 `GRANT_EXCEEDS_OWN`).
    */
-  async remove(id: string): Promise<void> {
+  async remove(id: string, actor?: Actor): Promise<void> {
+    await this.roles.lockRole(id);
     const role = await this.get(id);
     if (role.key === SYSTEM_ADMIN_ROLE) {
       throw new CodedException(HttpStatus.CONFLICT, ErrorCode.SYSTEM_ADMIN_UNDELETABLE);
     }
+    this.assertWithinCeiling(await this.ceilingOf(actor), role.permissions);
     if (role.userCount > 0) throw new CodedException(HttpStatus.CONFLICT, ErrorCode.ROLE_IN_USE);
     await this.roles.delete(id);
     await this.audit.record({

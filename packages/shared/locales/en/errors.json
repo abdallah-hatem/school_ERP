@@ -95,5 +95,8 @@
   "ROLE_HELD_BY_SYSTEM_ADMIN": "Only a System admin can change or delete a role a System admin holds.",
   "PENALTY_EARLIER_PENDING_ELSEWHERE": "An earlier penalty for this violation, in another stage, is still waiting. It must be approved or cancelled first.",
   "PAYROLL_OWN_LINE": "You can't add or remove an adjustment on your own payroll line. Ask someone else.",
-  "PAYROLL_APPROVER_ADJUSTED_OWN_LINE": "You adjusted your own line in this month's payroll, so someone else must approve it."
+  "PAYROLL_APPROVER_ADJUSTED_OWN_LINE": "You adjusted your own line in this month's payroll, so someone else must approve it.",
+  "EMPLOYEE_LINK_ADMIN_ONLY": "Only a System admin can choose who an account is in HR.",
+  "PENALTY_RECOUNT_MONTH_LOCKED_ELSEWHERE": "This would raise the level of an approved penalty, in another stage, in a month whose payroll is approved. Corrections for an approved month go into the next month as adjustments.",
+  "OWN_PAY_CHANGE": "You can't change your own pay, insurance or lateness. Ask someone else."
 }

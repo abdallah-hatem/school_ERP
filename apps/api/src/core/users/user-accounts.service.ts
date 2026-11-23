@@ -86,8 +86,10 @@ export class UserAccountsService {
   async create(dto: CreateUserDto, actor?: Actor): Promise<UserAccount> {
     const email = normalizeEmail(dto.email);
     await this.assertEmailFree(email);
-    await this.assertMayAssign(await this.roles.refsByIds(dto.roleIds), await this.roles.ceilingOf(actor));
+    const ceiling = await this.roles.ceilingOf(actor);
+    await this.assertMayAssign(await this.roles.refsByIds(dto.roleIds), ceiling);
     const employeeId = dto.employeeId ?? null;
+    if (employeeId) this.assertMayLinkEmployee(ceiling);
     if (employeeId) await this.assertEmployeeFree(employeeId);
 
     const id = await this.users.create({
@@ -107,6 +109,8 @@ export class UserAccountsService {
   }
 
   async update(id: string, dto: UpdateUserDto, actor?: Actor): Promise<UserAccount> {
+    // L-6: their roles can't change between the ceiling check and the write.
+    await this.users.lockUser(id);
     const before = await this.get(id);
     const ceiling = await this.roles.ceilingOf(actor);
     await this.assertMayManage(before, ceiling);
@@ -118,10 +122,13 @@ export class UserAccountsService {
     ];
     const changesEmployee =
       dto.employeeId !== undefined && (dto.employeeId ?? null) !== (before.employee?.id ?? null);
-    // H1: nobody changes their own access — not their roles, not who they are in HR.
-    if (actor?.id === id && (changedRoleIds.length > 0 || changesEmployee)) {
+    // H1: nobody changes their own roles. Nor who they are in HR — except a System admin, who holds
+    // every scope already, so the link widens nothing (a sole admin must be able to link themselves).
+    if (actor?.id === id && (changedRoleIds.length > 0 || (changesEmployee && !ceiling.isSystemAdmin))) {
       throw new CodedException(HttpStatus.FORBIDDEN, ErrorCode.OWN_ACCESS_CHANGE);
     }
+    // H-1: a stage, team or self scope is anchored to the link, so only a System admin changes it.
+    if (changesEmployee) this.assertMayLinkEmployee(ceiling);
     const email = dto.email === undefined ? undefined : normalizeEmail(dto.email);
     if (email !== undefined && email !== before.email) await this.assertEmailFree(email, id);
     if (dto.employeeId && dto.employeeId !== before.employee?.id) {
@@ -152,6 +159,7 @@ export class UserAccountsService {
 
   /** Edge case 6 — the user's sessions end at once: their next request is a 401. */
   async deactivate(id: string, actor?: Actor): Promise<UserAccount> {
+    await this.users.lockUser(id);
     const before = await this.get(id);
     await this.assertMayManage(before, await this.roles.ceilingOf(actor));
     if (!before.isActive) return this.recordStatus('core.user.deactivate', before, before);
@@ -164,6 +172,7 @@ export class UserAccountsService {
   }
 
   async reactivate(id: string, actor?: Actor): Promise<UserAccount> {
+    await this.users.lockUser(id);
     const before = await this.get(id);
     await this.assertMayManage(before, await this.roles.ceilingOf(actor));
     if (!before.isActive) await this.users.update(id, { isActive: true });
@@ -172,6 +181,7 @@ export class UserAccountsService {
 
   /** An admin sets a temporary password: the user must change it, and their sessions end. */
   async setTemporaryPassword(id: string, password: string, actor?: Actor): Promise<void> {
+    await this.users.lockUser(id);
     const user = await this.get(id);
     await this.assertMayManage(user, await this.roles.ceilingOf(actor));
     await this.users.update(id, {
@@ -187,10 +197,12 @@ export class UserAccountsService {
   /**
    * Unlocks the user's sign-in before the lock ends (a System admin, from the Users page): their
    * wrong-password count is forgotten. Recorded as `core.user.unlock_sign_in`; nothing is written
-   * when it wasn't locked.
+   * when it wasn't locked. Under the same ceiling as a deactivation (security review M-1).
    */
-  async unlockSignIn(id: string): Promise<UserAccount> {
+  async unlockSignIn(id: string, actor?: Actor): Promise<UserAccount> {
+    await this.users.lockUser(id);
     const before = await this.get(id);
+    await this.assertMayManage(before, await this.roles.ceilingOf(actor));
     await this.signInLimit.unlock(before.email);
     const after = await this.get(id);
     await this.audit.record({
@@ -320,6 +332,19 @@ export class UserAccountsService {
       throw new CodedException(HttpStatus.FORBIDDEN, ErrorCode.SYSTEM_ADMIN_ONLY);
     }
     this.roles.assertWithinCeiling(ceiling, await this.roles.grantsOfRoles(roles.map((r) => r.id)));
+  }
+
+  /**
+   * H-1 (security review, owner 2026-11-23): only a System admin sets or changes an account's
+   * employee record (403 `EMPLOYEE_LINK_ADMIN_ONLY`). A stage, team or self scope is anchored to the
+   * linked employee, so choosing it chooses whose records the account reaches — and who it is for
+   * "not your own penalty / pay line". Checking that the employee sits inside the actor's own scope
+   * for every scoped grant would be the finer rule; linking is rare and admin work, so the simple one.
+   */
+  private assertMayLinkEmployee(ceiling: HeldGrants): void {
+    if (!ceiling.isSystemAdmin) {
+      throw new CodedException(HttpStatus.FORBIDDEN, ErrorCode.EMPLOYEE_LINK_ADMIN_ONLY);
+    }
   }
 
   private async row(id: string): Promise<UserAccountRow> {

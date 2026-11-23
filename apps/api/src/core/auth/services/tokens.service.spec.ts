@@ -30,6 +30,7 @@ function makeService(found: RefreshToken | null = row()) {
     rotate: jest.fn().mockResolvedValue(true),
     revokeFamily: jest.fn().mockResolvedValue(undefined),
     findById: jest.fn().mockResolvedValue(null),
+    familyAlive: jest.fn().mockResolvedValue(true),
   };
   const config = {
     getOrThrow: () => ({
@@ -107,6 +108,44 @@ describe('TokensService.rotate', () => {
     expect(repo.rotate).not.toHaveBeenCalled();
   });
 
+  it('L-2 — the successor was rotated already (two tabs in turn): follows the chain to the live token, no revoke', async () => {
+    const first = await successorOfRaw();
+    const second = await (async () => {
+      const r = await makeService(row({ tokenHash: sha(first) })).service.rotate(first, NOW);
+      if (!r.ok) throw new Error('expected ok');
+      return r.refreshToken;
+    })();
+    const usedAt = new Date(NOW.getTime() - 6_000);
+    const secondAt = new Date(NOW.getTime() - 3_000);
+    const { service, repo } = makeService(row({ usedAt, replacedById: 'rt-2' }));
+    repo.findById.mockImplementation((id: string) =>
+      Promise.resolve(
+        id === 'rt-2'
+          ? row({ id: 'rt-2', tokenHash: sha(first), usedAt: secondAt, replacedById: 'rt-3' })
+          : row({ id: 'rt-3', tokenHash: sha(second) }),
+      ),
+    );
+    await expect(service.rotate('raw', NOW)).resolves.toEqual({
+      ok: true,
+      userId: 'u-1',
+      familyId: 'fam-1',
+      refreshToken: second,
+      issuedAt: secondAt,
+    });
+    expect(repo.revokeFamily).not.toHaveBeenCalled();
+    expect(repo.rotate).not.toHaveBeenCalled();
+  });
+
+  it('L-2 — a broken chain is refused cleanly (401), never by revoking the sign-in', async () => {
+    const first = await successorOfRaw();
+    const { service, repo } = makeService(row({ usedAt: new Date(NOW.getTime() - 2_000), replacedById: 'rt-2' }));
+    repo.findById.mockImplementation((id: string) =>
+      Promise.resolve(id === 'rt-2' ? row({ id: 'rt-2', tokenHash: sha(first), usedAt: NOW, replacedById: 'rt-x' }) : null),
+    );
+    await expect(service.rotate('raw', NOW)).resolves.toEqual({ ok: false, reason: 'revoked' });
+    expect(repo.revokeFamily).not.toHaveBeenCalled();
+  });
+
   it('L5 — revokes the family on a reuse after the (10 s) grace window', async () => {
     const { service, repo } = makeService(row({ usedAt: new Date(NOW.getTime() - 11_000) }));
     await expect(service.rotate('raw', NOW)).resolves.toEqual({ ok: false, reason: 'reused' });
@@ -138,5 +177,30 @@ describe('TokensService.revoke', () => {
     expect(repo.revokeFamily).not.toHaveBeenCalled();
     await service.revoke('raw', 'u-1', NOW);
     expect(repo.revokeFamily).toHaveBeenCalledWith('fam-1', NOW);
+  });
+});
+
+describe('TokensService.stillValid (security review L-1)', () => {
+  const changedAt = new Date(NOW.getTime());
+  const before = Math.floor(NOW.getTime() / 1000) - 60;
+  const after = Math.floor(NOW.getTime() / 1000) + 1;
+
+  it('no password change, or a token issued after it: valid without a lookup', async () => {
+    const { service, repo } = makeService();
+    await expect(service.stillValid({ sub: 'u-1', fam: 'fam-1', iat: before }, null)).resolves.toBe(true);
+    await expect(service.stillValid({ sub: 'u-1', fam: 'fam-1', iat: after }, changedAt)).resolves.toBe(true);
+    expect(repo.familyAlive).not.toHaveBeenCalled();
+  });
+
+  it('a token from before the change: valid only while its sign-in is alive (the kept one)', async () => {
+    const { service, repo } = makeService();
+    await expect(service.stillValid({ sub: 'u-1', fam: 'fam-1', iat: before }, changedAt)).resolves.toBe(true);
+    repo.familyAlive.mockResolvedValue(false);
+    await expect(service.stillValid({ sub: 'u-1', fam: 'fam-2', iat: before }, changedAt)).resolves.toBe(false);
+  });
+
+  it('a token without a sign-in id (issued before 2026-11-23) is refused once the password changed', async () => {
+    const { service } = makeService();
+    await expect(service.stillValid({ sub: 'u-1', iat: before }, changedAt)).resolves.toBe(false);
   });
 });

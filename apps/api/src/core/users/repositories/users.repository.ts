@@ -71,6 +71,29 @@ export class UsersRepository {
     return this.db.user.findFirst({ where: { id, isActive: true }, select: AUTH_USER_SELECT });
   }
 
+  /**
+   * Locks the user's row until the transaction ends (security review L-6): a change to their roles
+   * (`setRolesOf` locks it too) waits for a ceiling check on them, and the other way round, so the
+   * check can't pass on roles that change before the write. Needs an open transaction.
+   */
+  async lockUser(id: string): Promise<void> {
+    await this.db.$queryRaw`SELECT "id" FROM "users" WHERE "id" = ${id}::uuid FOR UPDATE`;
+  }
+
+  /**
+   * The active user behind an access token, with when their password last changed — one read per
+   * request (the token check, security review L-1). Null: deleted or deactivated.
+   */
+  async findActiveSession(id: string): Promise<{ user: AuthUser; passwordChangedAt: Date | null } | null> {
+    const row = await this.db.user.findFirst({
+      where: { id, isActive: true },
+      select: { ...AUTH_USER_SELECT, passwordChangedAt: true },
+    });
+    if (!row) return null;
+    const { passwordChangedAt, ...user } = row;
+    return { user, passwordChangedAt };
+  }
+
   async findPasswordHash(id: string): Promise<string | null> {
     const row = await this.db.user.findUnique({ where: { id }, select: { passwordHash: true } });
     return row?.passwordHash ?? null;

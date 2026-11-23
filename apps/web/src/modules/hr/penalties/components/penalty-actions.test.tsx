@@ -298,6 +298,15 @@ describe('PenaltyActions', () => {
       await waitFor(() => expect(apis.APPROVE_PENALTY).toHaveBeenCalledWith('p-1', [ACK[0]], undefined, 2));
     });
 
+    it('L-3 — a locked month among penalties of another stage blocks Approve without naming it', async () => {
+      const user = userEvent.setup();
+      renderPenalties(<PenaltyActions record={record({ recountElsewhere: 1, recountLockedElsewhere: true })} />);
+      const menu = await openRowActions(user, 'Mona Khalil');
+      const approve = within(menu).getByRole('menuitem', { name: /Approve/ });
+      expect(approve.getAttribute('aria-disabled')).toBe('true');
+      expect(approve.textContent).toContain('an approved penalty, in another stage, in a month whose payroll is approved');
+    });
+
     it('L1 — an earlier pending penalty in another stage blocks Approve without its date', async () => {
       const user = userEvent.setup();
       renderPenalties(<PenaltyActions record={record({ earlierPending: { id: null, date: null } })} />);

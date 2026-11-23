@@ -66,6 +66,11 @@ export const ErrorCode = {
   ROLE_HELD_BY_YOU: 'ROLE_HELD_BY_YOU',
   /** Only a System admin edits or deletes a role a System admin user holds. */
   ROLE_HELD_BY_SYSTEM_ADMIN: 'ROLE_HELD_BY_SYSTEM_ADMIN',
+  /**
+   * Only a System admin sets or changes who an account is in HR (its employee record): a stage,
+   * team or self scope is anchored to it, so a link is access (security review H-1, 2026-11-23).
+   */
+  EMPLOYEE_LINK_ADMIN_ONLY: 'EMPLOYEE_LINK_ADMIN_ONLY',
 
   // settings and files
   INVALID_WORK_HOURS: 'INVALID_WORK_HOURS',
@@ -134,6 +139,8 @@ export const ErrorCode = {
    * the backdated penalty is refused. `params.month` (`YYYY-MM`).
    */
   PENALTY_RECOUNT_MONTH_LOCKED: 'PENALTY_RECOUNT_MONTH_LOCKED',
+  /** The same, when the penalty in the approved month is in a stage the user doesn't see: no month given. */
+  PENALTY_RECOUNT_MONTH_LOCKED_ELSEWHERE: 'PENALTY_RECOUNT_MONTH_LOCKED_ELSEWHERE',
 
   // payroll
   PAYROLL_APPROVED: 'PAYROLL_APPROVED',
@@ -147,6 +154,11 @@ export const ErrorCode = {
   PAYROLL_OWN_LINE: 'PAYROLL_OWN_LINE',
   /** §6 (owner 2026-11-23): whoever adjusted their own line in a run can't approve that run. */
   PAYROLL_APPROVER_ADJUSTED_OWN_LINE: 'PAYROLL_APPROVER_ADJUSTED_OWN_LINE',
+  /**
+   * §6 (owner 2026-11-23): nobody changes their own pay — the salary, work system, insurance and
+   * bank fields of their own employee record, or their own lateness.
+   */
+  OWN_PAY_CHANGE: 'OWN_PAY_CHANGE',
 
   // audit log
   /** An `@Audited` handler finished without recording its action (D6b); the change rolled back. */

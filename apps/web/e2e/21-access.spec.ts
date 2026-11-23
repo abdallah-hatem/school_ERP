@@ -151,9 +151,9 @@ for (const locale of ['en', 'ar'] as const) {
     await expect(page.getByText(t(locale, 'access.users.lastAdmin'))).toBeVisible();
     await expect(page.getByRole('button', { name: t(locale, 'access.userForm.save') })).toBeDisabled();
     await expect(page.getByText(t(locale, 'access.userForm.noChanges'))).toBeVisible();
-    // Their own account (the admin is signed in): roles and employee record are locked, saying why.
-    await expect(page.getByTestId('own-access-note')).toHaveCount(2);
-    await expect(page.getByRole('combobox', { name: t(locale, 'access.userForm.employeeField') })).toBeDisabled();
+    // Their own account (the admin is signed in): roles are locked, saying why; a System admin may still link their own employee record.
+    await expect(page.getByTestId('own-access-note')).toHaveCount(1);
+    await expect(page.getByRole('combobox', { name: t(locale, 'access.userForm.employeeField') })).toBeEnabled();
     await expectNoHorizontalScroll(page);
     await settle(page);
     await shoot(page, info, `user-edit-${locale}-desktop`);

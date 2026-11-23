@@ -150,14 +150,17 @@ export function UserForm({ basePath, user, roles, lastAdmin = false, initialPass
       : t('access.userForm.editDescription')
     : t('access.userForm.addDescription');
   const lockedReason = lastAdmin && user ? t('access.userForm.lockedAdmin', { name: user.name }) : null;
-  // Why the roles or the employee record can't be changed here (H1), under each.
-  const ownAccessNote =
-    self && !readOnly ? (
-      <p data-testid="own-access-note" className="flex items-start gap-1.5 text-sm text-muted-foreground">
-        <LockedIcon className="mt-0.5 size-4 shrink-0" />
-        {t('access.userForm.ownAccess')}
-      </p>
-    ) : null;
+  // Why the roles or the employee record can't be changed here (H1), under each. Only a System
+  // admin links employee records (H-1) — their own too, since they already reach everyone.
+  const note = (testId: string, text: string) => (
+    <p data-testid={testId} className="flex items-start gap-1.5 text-sm text-muted-foreground">
+      <LockedIcon className="mt-0.5 size-4 shrink-0" />
+      {text}
+    </p>
+  );
+  const ownAccessNote = self && !readOnly ? note('own-access-note', t('access.userForm.ownAccess')) : null;
+  const employeeNote =
+    readOnly || ceiling.isSystemAdmin ? null : note('employee-link-note', t('errors.EMPLOYEE_LINK_ADMIN_ONLY'));
   const beyondNote = beyondTarget ? (
     <p
       data-testid="beyond-access-note"
@@ -250,7 +253,7 @@ export function UserForm({ basePath, user, roles, lastAdmin = false, initialPass
                 value={field.value}
                 onChange={field.onChange}
                 userId={user?.id}
-                disabled={readOnly || self}
+                disabled={readOnly || !ceiling.isSystemAdmin}
                 invalid={a11y['aria-invalid']}
                 describedBy={a11y['aria-describedby']}
               />
@@ -258,7 +261,7 @@ export function UserForm({ basePath, user, roles, lastAdmin = false, initialPass
           </FieldShell>
         )}
       />
-      {ownAccessNote}
+      {employeeNote}
       {employeeNeeded ? (
         <p
           className="flex items-start gap-2.5 rounded-xl bg-warning-soft p-3 text-sm font-semibold text-warning-ink"

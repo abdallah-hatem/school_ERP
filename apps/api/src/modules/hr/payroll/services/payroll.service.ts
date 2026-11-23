@@ -227,11 +227,14 @@ export class PayrollService {
       this.repository.findLinesPage(id, filter, scope, query.page, query.limit),
       this.repository.findAdjustments(id, undefined, scope),
       this.repository.lineEmployeeIds(id),
-      // L3: a scoped viewer counts only the penalties of the employees they see.
-      draft ? this.penalties.pendingCountInMonth(run.month, view.lines.kind === 'all' ? undefined : scope) : 0,
+      // L3 / L-5: a scoped viewer counts only the penalties they cover — by the penalty's stage.
+      draft ? this.penalties.pendingCountInMonth(run.month, view.lines.kind === 'all' ? undefined : view.lines) : 0,
       draft ? this.hrSettings.payrollRulesChangedAt() : null,
-      // §4 backdated penalty: one dated in the month moved up a level since the last calculation.
-      draft ? this.penalties.recountedInMonthSince(run.month, run.calculatedAt) : false,
+      // §4 backdated penalty: one dated in the month moved up a level since the last calculation
+      // (L-5: among the penalties a scoped viewer covers).
+      draft
+        ? this.penalties.recountedInMonthSince(run.month, run.calculatedAt, view.lines.kind === 'all' ? undefined : view.lines)
+        : false,
       this.hrSettings.get().then(runRules),
       draft ? this.repository.countPendingPenaltyLines(id, scope) : 0,
     ]);

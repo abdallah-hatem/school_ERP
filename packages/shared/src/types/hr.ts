@@ -495,6 +495,12 @@ export interface PenaltyRecord {
    * (409 `PENALTY_RECOUNT_MONTH_LOCKED`). Null otherwise.
    */
   recountLockedMonth: Month | null;
+  /**
+   * A recounted penalty the user doesn't see (another stage) sits in a month whose payroll is
+   * approved: approving is refused (409 `PENALTY_RECOUNT_MONTH_LOCKED_ELSEWHERE`), and the month
+   * isn't named (security review L-3). `recountLockedMonth` names only visible ones.
+   */
+  recountLockedElsewhere: boolean;
 }
 
 // ── Monthly lateness ───────────────────────────────────────────────────────

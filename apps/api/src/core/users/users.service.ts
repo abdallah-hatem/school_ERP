@@ -35,6 +35,11 @@ export class UsersService {
     return this.users.findActiveAuthUser(id);
   }
 
+  /** The same, with when their password last changed (the access-token check, L-1). */
+  findActiveSession(id: string): Promise<{ user: AuthUser; passwordChangedAt: Date | null } | null> {
+    return this.users.findActiveSession(id);
+  }
+
   /** Notes a successful sign-in (the Users screen's "Last sign-in", P3). */
   async recordSignIn(id: string, at: Date = new Date()): Promise<void> {
     await this.users.update(id, { lastSignInAt: at });

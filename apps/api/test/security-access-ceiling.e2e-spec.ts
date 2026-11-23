@@ -191,7 +191,61 @@ describe('Security review — access ceilings and sessions (e2e)', () => {
     });
   });
 
+  describe('H-1 / M-1 — the employee link and unlocking a sign-in', () => {
+    it('H-1 — only a System admin sets or changes the employee link, on create and on update (403 EMPLOYEE_LINK_ADMIN_ONLY)', async () => {
+      // Any employee id: the refusal comes before the employee is even looked up.
+      const someone = '00000000-0000-4000-8000-000000000456';
+      await as(manager.id, async () => {
+        const created = await http(app)
+          .post('/users')
+          .send({ name: 'Linked', email: `${unique('linked')}@school.test`.toLowerCase(), password: PASSWORD, roleIds: [weakRole.id], employeeId: someone })
+          .expect(403);
+        expect(created.body.error).toBe(ErrorCode.EMPLOYEE_LINK_ADMIN_ONLY);
+        const updated = await http(app).patch(`/users/${weakUser.id}`).send({ employeeId: someone }).expect(403);
+        expect(updated.body.error).toBe(ErrorCode.EMPLOYEE_LINK_ADMIN_ONLY);
+        // Without a link, creating still works.
+        const plain = await http(app)
+          .post('/users')
+          .send({ name: 'Plain', email: `${unique('plain')}@school.test`.toLowerCase(), password: PASSWORD, roleIds: [weakRole.id] })
+          .expect(201);
+        userIds.push(plain.body.data.id);
+      });
+      expect((await http(app).get(`/users/${weakUser.id}`).expect(200)).body.data.employee).toBeNull();
+    });
+
+    it('M-1 — unlocking a sign-in is under the ceiling: a System admin → 403 SYSTEM_ADMIN_ONLY, a stronger user → 403 GRANT_EXCEEDS_OWN', async () => {
+      const officer = await createUser([roleId('hr_officer')]);
+      await as(manager.id, async () => {
+        const onAdmin = await http(app).post(`/users/${admin.id}/unlock-sign-in`).expect(403);
+        expect(onAdmin.body.error).toBe(ErrorCode.SYSTEM_ADMIN_ONLY);
+        const onStronger = await http(app).post(`/users/${officer.id}/unlock-sign-in`).expect(403);
+        expect(onStronger.body.error).toBe(ErrorCode.GRANT_EXCEEDS_OWN);
+        await http(app).post(`/users/${weakUser.id}/unlock-sign-in`).expect(200);
+      });
+    });
+  });
+
   describe('H2 — core.roles.manage without being a System admin', () => {
+    it('L-4 — removing a grant they don’t hold, or deleting a role beyond theirs, is refused', async () => {
+      const strong = await createRole([
+        { key: 'hr.employees.view', scope: 'all' },
+        { key: 'hr.payroll.approve', scope: 'all' },
+      ]);
+      await as(manager.id, async () => {
+        const narrowed = await http(app)
+          .patch(`/roles/${strong.id}`)
+          .send({ permissions: [{ key: 'hr.employees.view', scope: 'all' }] })
+          .expect(403);
+        expect(narrowed.body.error).toBe(ErrorCode.GRANT_EXCEEDS_OWN);
+        const deleted = await http(app).delete(`/roles/${strong.id}`).expect(403);
+        expect(deleted.body.error).toBe(ErrorCode.GRANT_EXCEEDS_OWN);
+      });
+      expect(((await http(app).get(`/roles/${strong.id}`).expect(200)).body.data as Role).permissions).toHaveLength(2);
+      // A role within their own access they may delete.
+      const within = await createRole([{ key: 'hr.employees.view', scope: 'self' }]);
+      await as(manager.id, () => http(app).delete(`/roles/${within.id}`).expect(204));
+    });
+
     it('can’t grant keys they lack, or a wider scope than theirs (403 GRANT_EXCEEDS_OWN); within is created', async () => {
       await as(manager.id, async () => {
         for (const permissions of [
@@ -261,9 +315,15 @@ describe('Security review — access ceilings and sessions (e2e)', () => {
         .send({ currentPassword: 'own-password-m3-1', newPassword: 'own-password-m3-2' })
         .expect(204);
 
-      // B is signed out: its refresh is refused.
+      // B is signed out: its refresh is refused…
       const refused = await refresh(b[AUTH_COOKIES.refresh]).expect(401);
       expect(refused.body.error).toBe(ErrorCode.INVALID_REFRESH_TOKEN);
+      // …and (L-1) its access token stops at once, not when it expires.
+      await http(app)
+        .get('/auth/me')
+        .set(ANONYMOUS_HEADER, '1')
+        .set('Cookie', `${AUTH_COOKIES.access}=${b[AUTH_COOKIES.access]}`)
+        .expect(401);
       // A keeps working: its access token, and its refresh.
       await withA(http(app).get('/auth/me')).expect(200);
       await refresh(a[AUTH_COOKIES.refresh]).expect(200);
@@ -295,6 +355,28 @@ describe('Security review — access ceilings and sessions (e2e)', () => {
       expect(again[AUTH_COOKIES.access]).toBe(once[AUTH_COOKIES.access]);
       // The sign-in's token and its one successor: the replay minted no third.
       expect(await db.refreshToken.count({ where: { userId: person.id } })).toBe(2);
+    });
+
+    it('L-7 — two refreshes at once with the same cookie get the same pair and stay signed in', async () => {
+      const person = await createUser([weakRole.id]);
+      const first = cookiesOf(
+        await http(app).post('/auth/login').set(ANONYMOUS_HEADER, '1').send({ email: person.email, password: PASSWORD }).expect(200),
+      )[AUTH_COOKIES.refresh];
+      const [x, y] = await Promise.all([refresh(first), refresh(first)]);
+      expect([x.status, y.status]).toEqual([200, 200]);
+      const [cx, cy] = [cookiesOf(x), cookiesOf(y)];
+      expect(cx[AUTH_COOKIES.refresh]).toBe(cy[AUTH_COOKIES.refresh]);
+      // Still signed in: the pair works, and refreshes on.
+      await http(app)
+        .get('/auth/me')
+        .set(ANONYMOUS_HEADER, '1')
+        .set('Cookie', `${AUTH_COOKIES.access}=${cx[AUTH_COOKIES.access]}`)
+        .expect(200);
+      const next = cookiesOf(await refresh(cx[AUTH_COOKIES.refresh]).expect(200));
+      // L-2: a late replay of the first token (inside the window) follows on to the live one.
+      const late = cookiesOf(await refresh(first).expect(200));
+      expect(late[AUTH_COOKIES.refresh]).toBe(next[AUTH_COOKIES.refresh]);
+      expect(await db.refreshToken.count({ where: { userId: person.id, revokedAt: null } })).toBe(3);
     });
 
     it('a reuse after the window revokes the family', async () => {

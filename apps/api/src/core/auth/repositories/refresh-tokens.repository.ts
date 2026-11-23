@@ -62,6 +62,15 @@ export class RefreshTokensRepository extends BaseRepository<
     });
   }
 
+  /** Whether the sign-in still has a live (unrevoked) token — an access token of it may still be used. */
+  async familyAlive(familyId: string): Promise<boolean> {
+    const live = await this.databaseService.refreshToken.findFirst({
+      where: { familyId, revokedAt: null },
+      select: { id: true },
+    });
+    return live !== null;
+  }
+
   async revokeFamily(familyId: string, at: Date): Promise<void> {
     await this.db.refreshToken.updateMany({
       where: { familyId, revokedAt: null },

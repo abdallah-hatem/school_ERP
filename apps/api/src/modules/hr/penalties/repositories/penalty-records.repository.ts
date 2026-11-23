@@ -456,9 +456,9 @@ export class PenaltyRecordsRepository extends BaseRepository<
    * Whether a penalty dated in `month` was recounted after `since` (§4, §6): a draft run calculated
    * before then is due a Recalculate.
    */
-  async recountedInMonthSince(month: string, since: Date): Promise<boolean> {
+  async recountedInMonthSince(month: string, since: Date, scope: PenaltyScopeWhere = {}): Promise<boolean> {
     const found = await this.db.penaltyRecord.findFirst({
-      where: { date: monthDateRange(month), recountedAt: { gt: since } },
+      where: { AND: [{ date: monthDateRange(month), recountedAt: { gt: since } }, scope] },
       select: { id: true },
     });
     return found !== null;
@@ -485,14 +485,10 @@ export class PenaltyRecordsRepository extends BaseRepository<
   }
 
   /** How many records dated in a month still wait at either step (the payroll run's live notice). */
-  /** `employees`: only the penalties of those employees (a scoped payroll viewer, L3); absent: all. */
-  countPendingInMonth(month: string, employees?: Prisma.EmployeeWhereInput): Promise<number> {
+  /** `scope`: only the penalties a scoped payroll viewer covers (`penaltyWhere`, L3 / L-5); `{}`: all. */
+  countPendingInMonth(month: string, scope: PenaltyScopeWhere = {}): Promise<number> {
     return this.db.penaltyRecord.count({
-      where: {
-        date: monthDateRange(month),
-        status: { in: [...OPEN_PENALTY_STATUSES] },
-        ...(employees ? { employee: employees } : {}),
-      },
+      where: { AND: [{ date: monthDateRange(month), status: { in: [...OPEN_PENALTY_STATUSES] } }, scope] },
     });
   }
 

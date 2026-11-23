@@ -108,6 +108,7 @@ export function record(overrides: Partial<PenaltyRecord> = {}): PenaltyRecord {
     recount: [],
     recountElsewhere: 0,
     recountLockedMonth: null,
+    recountLockedElsewhere: false,
     ...overrides,
   };
 }

@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import {
   AuditEntityType,
+  ErrorCode,
   type AuditChange,
   matchesSearch,
   type LatenessMonth,
@@ -12,7 +13,9 @@ import {
   type PermissionKey,
   type PutLatenessRequest,
 } from '@school-erp/shared';
+import { CodedException } from '../../../../common/errors/coded.exception';
 import { pageOf } from '../../../../common/utils/list-page.util';
+import { HrAccessService } from '../../access/hr-access.service';
 import { AuditService } from '../../../../core/audit';
 import { AfterCommit } from '../../../../database/transactions';
 import { latenessDays } from '../../domain';
@@ -36,6 +39,7 @@ export class LatenessService {
     private readonly audit: AuditService,
     private readonly tx: AfterCommit,
     private readonly reminders: HrRemindersService,
+    private readonly access: HrAccessService,
   ) {}
 
   /**
@@ -111,6 +115,13 @@ export class LatenessService {
       const before = new Map(
         (await this.repository.findByMonth(month)).map((e) => [e.employeeId, e.minutes]),
       );
+      // §6 (security review M-2, owner 2026-11-23): nobody changes their own lateness — it is pay.
+      // The screen saves the whole month, so their own row sent back unchanged is fine.
+      const actor = await this.access.actor();
+      const own = actor?.employeeId ? body.entries.find((e) => e.employeeId === actor.employeeId) : undefined;
+      if (own && (before.get(own.employeeId) ?? 0) !== own.minutes) {
+        throw new CodedException(HttpStatus.FORBIDDEN, ErrorCode.OWN_PAY_CHANGE);
+      }
       await this.repository.upsertMany(
         month,
         body.entries.map(({ employeeId, minutes }) => ({ employeeId, minutes })),
