@@ -54,11 +54,13 @@ export class RolesService {
   /**
    * What `actor` may give (H1/H2): every grant they hold, or no ceiling for a System admin. Their
    * roles' rows are locked shared first (fourth review L-d), so the grants read can't change before
-   * the write.
+   * the write — on the user-account paths. A role edit or delete passes `lockOwnRoles: false`: it
+   * already holds its role's row exclusively, and taking the actor's role rows after it would let two
+   * admins editing each other's held roles deadlock (fifth review Low 1).
    */
-  async ceilingOf(actor: Actor): Promise<HeldGrants> {
+  async ceilingOf(actor: Actor, { lockOwnRoles = true }: { lockOwnRoles?: boolean } = {}): Promise<HeldGrants> {
     if (!actor) return NO_CEILING;
-    await this.roles.lockRolesOfUser(actor.id);
+    if (lockOwnRoles) await this.roles.lockRolesOfUser(actor.id);
     return this.permissions.heldGrants(actor);
   }
 
@@ -117,7 +119,7 @@ export class RolesService {
     // L-6: nobody is given this role while it is checked and changed.
     await this.roles.lockRole(id);
     const before = await this.get(id);
-    const ceiling = await this.ceilingOf(actor);
+    const ceiling = await this.ceilingOf(actor, { lockOwnRoles: false });
     if (!ceiling.isSystemAdmin && actor) {
       // H2: not a role they hold (they would raise their own access), nor a System admin's.
       if (await this.roles.isHeldBy(id, actor.id)) {
@@ -139,7 +141,7 @@ export class RolesService {
       // Fourth review H1: a role turned into one acting on pay or penalties would reach its holders
       // without an employee record — M2-A, by the role-edit door. A System admin links them first.
       if (!ceiling.isSystemAdmin && actsOnPay(dto.permissions) && (await this.roles.hasUnlinkedHolder(id))) {
-        throw new CodedException(HttpStatus.FORBIDDEN, ErrorCode.UNLINKED_PAY_ROLE);
+        throw new CodedException(HttpStatus.FORBIDDEN, ErrorCode.ROLE_HAS_UNLINKED_HOLDER);
       }
       await this.roles.replaceGrants(id, storedGrants(dto.permissions));
     }
@@ -168,7 +170,7 @@ export class RolesService {
     if (role.key === SYSTEM_ADMIN_ROLE) {
       throw new CodedException(HttpStatus.CONFLICT, ErrorCode.SYSTEM_ADMIN_UNDELETABLE);
     }
-    this.assertWithinCeiling(await this.ceilingOf(actor), role.permissions);
+    this.assertWithinCeiling(await this.ceilingOf(actor, { lockOwnRoles: false }), role.permissions);
     if (role.userCount > 0) throw new CodedException(HttpStatus.CONFLICT, ErrorCode.ROLE_IN_USE);
     await this.roles.delete(id);
     await this.audit.record({

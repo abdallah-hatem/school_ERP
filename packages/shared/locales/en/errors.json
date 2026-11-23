@@ -101,5 +101,6 @@
   "OWN_PAY_CHANGE": "You can't change your own pay, insurance or lateness. Ask someone else.",
   "LINKED_ACCOUNT_ADMIN_ONLY": "Only a System admin can set a temporary password, change the email or unlock the sign-in of an account linked to an employee record.",
   "UNLINKED_PAY_ROLE": "This account has no employee record, so it can't be given a role that acts on pay or penalties. A System admin must link it first.",
-  "ACCOUNT_NOT_LINKED": "Link your account to your employee record first. Ask a System admin."
+  "ACCOUNT_NOT_LINKED": "Link your account to your employee record first. Ask a System admin.",
+  "ROLE_HAS_UNLINKED_HOLDER": "Someone holding this role has no employee record. A System admin must link them first (deactivated accounts count too)."
 }

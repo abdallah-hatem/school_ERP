@@ -294,12 +294,14 @@ describe('RolesService', () => {
       { key: 'hr.lateness.edit' as const, scope: 'all' as const },
     ];
 
-    it('H1 — turning a role held by an unlinked account into one acting on pay → 403 UNLINKED_PAY_ROLE', async () => {
+    it('H1 — turning a role held by an unlinked account into one acting on pay → 403 ROLE_HAS_UNLINKED_HOLDER', async () => {
       const { service, repo } = makeService(row({ permissions: [{ permissionKey: 'hr.employees.view', scope: 'all' }] }), {
         held,
         unlinkedHolder: true,
       });
-      await expect(service.update('r-1', { permissions: next }, me)).rejects.toMatchObject({ code: ErrorCode.UNLINKED_PAY_ROLE });
+      await expect(service.update('r-1', { permissions: next }, me)).rejects.toMatchObject({
+        code: ErrorCode.ROLE_HAS_UNLINKED_HOLDER,
+      });
       expect(repo.replaceGrants).not.toHaveBeenCalled();
       // Every holder linked: allowed.
       const linked = makeService(row({ permissions: [{ permissionKey: 'hr.employees.view', scope: 'all' }] }), { held });
@@ -307,11 +309,21 @@ describe('RolesService', () => {
       expect(linked.repo.replaceGrants).toHaveBeenCalled();
     });
 
-    it('L-d — the actor’s own roles are locked before their ceiling is read', async () => {
+    it('L-d — on the user-account paths, the actor’s own roles are locked before their ceiling is read', async () => {
       const { service, repo, permissions } = makeService(row(), { held });
-      await service.update('r-1', { nameEn: 'X' }, me);
+      await service.ceilingOf(me);
       expect(repo.lockRolesOfUser).toHaveBeenCalledWith('u-me');
       expect(repo.lockRolesOfUser.mock.invocationCallOrder[0]).toBeLessThan(permissions.heldGrants.mock.invocationCallOrder[0]);
+    });
+
+    it('fifth review Low 1 — a role edit or delete locks only its own role, never the actor’s roles (no deadlock)', async () => {
+      const { service, repo, permissions } = makeService(row(), { held });
+      await service.update('r-1', { nameEn: 'X' }, me);
+      await service.remove('r-1', me);
+      expect(repo.lockRole).toHaveBeenCalledTimes(2);
+      expect(repo.lockRolesOfUser).not.toHaveBeenCalled();
+      // The role row first, then the ceiling read.
+      expect(repo.lockRole.mock.invocationCallOrder[0]).toBeLessThan(permissions.heldGrants.mock.invocationCallOrder[0]);
     });
   });
 });

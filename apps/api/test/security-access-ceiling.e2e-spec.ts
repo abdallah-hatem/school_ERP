@@ -344,7 +344,7 @@ describe('Security review — access ceilings and sessions (e2e)', () => {
           .patch(`/roles/${role.id}`)
           .send({ permissions: [{ key: 'hr.employees.view', scope: 'self' }, { key: 'hr.lateness.edit', scope: 'all' }] })
           .expect(403);
-        expect(res.body.error).toBe(ErrorCode.UNLINKED_PAY_ROLE);
+        expect(res.body.error).toBe(ErrorCode.ROLE_HAS_UNLINKED_HOLDER);
         expect(((await http(app).get(`/roles/${role.id}`).expect(200)).body.data as Role).permissions).toHaveLength(1);
       });
     });

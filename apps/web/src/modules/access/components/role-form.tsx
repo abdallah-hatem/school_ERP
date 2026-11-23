@@ -11,7 +11,7 @@ import {
 } from '@school-erp/shared';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useId, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useCan, useSession } from '@/core/auth';
 import { callApi } from '@/lib/callApi';
 import { FieldShell } from '@/shared/components/form/field-shell';
@@ -110,6 +110,11 @@ export function RoleForm({ basePath, usersPath, role, copyFrom, holders = [], ho
   );
   const [errors, setErrors] = useState<{ nameEn?: string; nameAr?: string }>({});
   const [formError, setFormError] = useState<string | null>(null);
+  // A refusal (e.g. ROLE_HAS_UNLINKED_HOLDER) shows under the long permission list: bring it into view.
+  const formErrorRef = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    if (formError) formErrorRef.current?.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+  }, [formError]);
   const [busy, setBusy] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const inFlight = useRef(false);
@@ -340,7 +345,11 @@ export function RoleForm({ basePath, usersPath, role, copyFrom, holders = [], ho
           }
         />
         {formError ? (
-          <p role="alert" className="flex items-start gap-2 rounded-xl bg-destructive-soft px-4 py-3 text-sm font-semibold text-destructive-ink">
+          <p
+            ref={formErrorRef}
+            role="alert"
+            className="flex items-start gap-2 rounded-xl bg-destructive-soft px-4 py-3 text-sm font-semibold text-destructive-ink"
+          >
             <ErrorIcon className="mt-0.5 size-5 shrink-0" />
             {formError}
           </p>

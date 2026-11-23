@@ -147,7 +147,10 @@
     approving payroll, entering lateness, reviewing, approving or cancelling penalties, or editing
     employees), nor add such a permission to a role an unlinked account holds: "not your own" can't
     be checked without the record. A System admin links the account first. (Adding employees isn't
-    on the list: it sets a new person's pay, never the adder's own.)
+    on the list: it sets a new person's pay, never the adder's own.) In practice, since reviewing
+    penalties and editing employees count, **only a System admin creates or links the accounts of
+    HR staff** — stage heads, HR officers, HR managers and the principal: those roles all act on pay
+    or penalties, and only a System admin links an account to its employee record.
 
   "Reaching no further": *everyone* covers every reach; *their stage* covers their stage and
   *themselves only*; *their team* covers their team and *themselves only*; *themselves only* covers

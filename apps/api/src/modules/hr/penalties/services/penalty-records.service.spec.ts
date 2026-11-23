@@ -1010,5 +1010,7 @@ describe('PenaltyRecordsService — fourth review H1: acting on a penalty needs 
     });
     expect(repository.cancel).not.toHaveBeenCalled();
     expect(repository.approve).not.toHaveBeenCalled();
+    expect(repository.review).not.toHaveBeenCalled();
+    expect(repository.reject).not.toHaveBeenCalled();
   });
 });

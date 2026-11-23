@@ -81,6 +81,11 @@ export const ErrorCode = {
    * record, by someone who isn't a System admin (M2): "your own" can't be told apart without it.
    */
   UNLINKED_PAY_ROLE: 'UNLINKED_PAY_ROLE',
+  /**
+   * A role edit would make it act on pay or penalties while someone holding it (active or not) has no
+   * employee record (fourth review H1, fifth review Low 2). A System admin links them first.
+   */
+  ROLE_HAS_UNLINKED_HOLDER: 'ROLE_HAS_UNLINKED_HOLDER',
 
   // settings and files
   INVALID_WORK_HOURS: 'INVALID_WORK_HOURS',

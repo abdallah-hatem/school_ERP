@@ -759,7 +759,8 @@ Roles are rows, not code (spec P2, R2 / R5 / R8 / R9). A school changes them thr
   `FOR SHARE` before their ceiling is read (users first, then roles). Deactivating, a temporary
   password and a password change all revoke the refresh tokens inside their own transaction
   (`SessionRevocation`, one registered revoker). The user snapshot in the log names the linked employee
-  (`employeeId: { nameEn, nameAr }` with the code), so a link change reads before → after. The web greys these out from the session (`giveCeiling`: keys only — the API also
+  (`employeeId: { id, nameEn, nameAr }`, the names with the code), so a link change reads before →
+  after. The web greys these out from the session (`giveCeiling`: keys only — the API also
   checks scopes).
 - Every user and role write is `@Audited` (`core.user.*`, `core.role.*`); passwords are never in the
   log (the entry says only that one was set or changed).

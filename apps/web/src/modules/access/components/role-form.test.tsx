@@ -16,7 +16,7 @@ vi.mock('../apis', () => ({ CREATE_ROLE: vi.fn(), UPDATE_ROLE: vi.fn(), DELETE_R
 import { PERMISSION_KEYS } from '@school-erp/shared';
 import { sessionWith, sessionWithout } from '@/test/render';
 import { CREATE_ROLE, UPDATE_ROLE } from '../apis';
-import { account, customRole, ok, renderAccess, role } from '../test/fixtures';
+import { account, customRole, fail, ok, renderAccess, role } from '../test/fixtures';
 import { RoleForm } from './role-form';
 
 const update = vi.mocked(UPDATE_ROLE);
@@ -181,6 +181,20 @@ describe('RoleForm', () => {
       const hr = screen.getByRole('region', { name: /^HR/ });
       await user.click(within(hr).getByRole('button', { name: 'Turn all on' }));
       expect(row('hr.payroll.approve').querySelector('[role="switch"]')?.getAttribute('aria-checked')).toBe('false');
+    });
+
+    it('fifth review — a refused save (ROLE_HAS_UNLINKED_HOLDER) shows the reason and brings it into view', async () => {
+      const user = userEvent.setup({ pointerEventsCheck: 0 });
+      const scrolled = vi.fn();
+      HTMLElement.prototype.scrollIntoView = scrolled;
+      update.mockResolvedValue(fail('ROLE_HAS_UNLINKED_HOLDER', 'x') as unknown as Res<typeof UPDATE_ROLE>);
+      renderAccess(<RoleForm basePath="/en/roles" usersPath="/en/users" role={customRole} />);
+      await openModules(user, 'HR');
+      await user.click(within(row('hr.penalties.view')).getByRole('switch'));
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+      const alert = await screen.findByRole('alert');
+      expect(alert.textContent).toContain('Someone holding this role has no employee record');
+      await waitFor(() => expect(scrolled).toHaveBeenCalled());
     });
 
     it('a role the user holds is view-only for them, saying why', () => {
