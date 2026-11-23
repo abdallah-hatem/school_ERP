@@ -601,6 +601,18 @@ phase live in `docs/build-log/`.
   strength, old tokens after reactivation. All sent back to be fixed on #258 (round 3), with CI's 2
   API e2e failures (last-admin edge case, "doubles on repeat"). Decided: acting on pay (adjust, approve,
   salary edits) needs the account linked to its employee record, System admin aside.
+- 2026-11-23 — #258 round 3 pushed: only a System admin resets the password, changes the email or unlocks
+  a linked account; a non-admin can't give an unlinked account a pay-acting role, and an unlinked
+  non-admin can't adjust/approve payroll or edit pay; link changes show in the audit; role locks taken
+  before the ceiling read; a password change revokes other sessions inside its transaction; lighter row
+  locks; `sessions_valid_after` kills old tokens after deactivate/reactivate; CI's 2 e2e failures were
+  test mistakes (no rule changed). Release note: pay users must be linked to their employee record. A
+  final focused review is running before merge.
+- 2026-11-23 — #258 final review of round 3: one High left — an unlinked account could still change its
+  own lateness or act on its own penalty, and editing a role could hand pay powers to an unlinked
+  holder. Plus lows: a few pay keys missing from the pay-role list, deactivate/temporary password
+  ending sessions only after commit, the actor's own roles not locked. Sent back as round 4; release
+  dry run gains a check listing pay users without an employee link.
 ## Next up
 
 - Scope widening by editing others: an employee editor can set another employee's manager to
