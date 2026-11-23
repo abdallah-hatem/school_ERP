@@ -281,6 +281,11 @@ What reviewers check:
 
 How:
 
+- **An independent review on every feature before merge** (owner, 2026-11-23): a fresh agent that wrote
+  none of it reads the diff cold — read-only, never switching a checkout — and reports findings ranked
+  by severity with the exact path to each (access control, business rules, leaks). The author checks
+  each in the code; real ones are fixed with a test that fails without the fix, the rest go to the
+  owner.
 - Review within **one working day**.
 - Mark comments **must fix** or **nit**. Nits don't block.
 - Comments are about the code, not the person.

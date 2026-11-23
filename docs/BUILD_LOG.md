@@ -576,8 +576,24 @@ phase live in `docs/build-log/`.
 - 2026-11-22 — Dependabot removed (owner chose "remove completely"): `.github/dependabot.yml` deleted and
   its 10 open upgrade PRs (#234–#244, GitHub Actions and npm) closed; upgrades by hand, the weekly `pnpm audit` flags
   vulnerabilities.
+- 2026-11-23 — Access-control review (owner: "do 2"): a fresh agent that wrote none of the code read every
+  endpoint cold. Found: user and role managers had no ceiling (could make themselves System admin, grant
+  any permission), self-cancel of penalties, recording in another stage, password change not ending
+  sessions, no payroll separation of duties, other-stage penalty details in level previews, and smaller
+  leaks. Owner: "fix all" — no self-cancel; nobody adjusts or approves their own pay. Fixes in progress →
+  #258; a second fresh review of #258 found more (the employee link bypassing the ceiling, own salary
+  and lateness edits, unlock without a ceiling, own-record scope widening, token edge cases), being fixed
+  on the same PR. Decided on the owner's behalf: a System admin may link their own employee record
+  (otherwise a sole admin never can); nobody edits their own pay or lateness.
+- 2026-11-23 — Process (owner: "lets add it after each feature"): after each feature, before merge, a
+  fresh agent that didn't write it reviews the diff cold (read-only, never switches a checkout); real
+  findings are fixed with a test each before merging. CONVENTIONS → Review; build-software skill 1.62.25.
 ## Next up
 
+- Client proposal (kept outside the repo): add ownership/licence, payment schedule, timeline, VAT,
+  acceptance, several campuses, academics in or out — owner to fill the blanks.
+- Reselling: make the repo private before selling; a written IP agreement with the team; map each new
+  school's rules to settings / data / fixed.
 - Sign-in follow-ups (from #218): a show/hide eye on the password box (smoke helpers must first find
   the field with `{ exact: true }`); the filled-input look and button sheen from the mockup if wanted.
 
