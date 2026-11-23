@@ -104,6 +104,7 @@ import {
   DesktopIcon as Desktop,
   DownloadSimpleIcon as DownloadSimple,
   ExportIcon as ShareArrow,
+  HouseIcon as House,
 } from '@phosphor-icons/react/ssr';
 import type { ComponentType, SVGProps } from 'react';
 import { cn } from '@/shared/lib/utils';
@@ -253,6 +254,8 @@ export const FilterIcon = duotone(Funnel, 'Filter');
 export const ClearFiltersIcon = duotone(Eraser, 'ClearFilters');
 export const OpenRecordIcon = duotone(ArrowSquareOut, 'OpenRecord');
 export const SignInIcon = duotone(SignIn, 'SignIn');
+// Not-found and error screens: the way back to the dashboard.
+export const HomeIcon = duotone(House, 'Home');
 export const FailedSignInIcon = duotone(LockKey, 'FailedSignIn');
 export const CreatedIcon = duotone(PlusCircle, 'Created');
 export const CancelledIcon = duotone(XCircle, 'Cancelled');

@@ -43,7 +43,8 @@ for (const role of BUILT_IN_ROLES) {
     const page = await signInAsRoleUser(browser, user, locale, { width: 1440, height: 900 });
     const main = page.locator('main');
     const notFound = main.getByText(t(locale, 'ui.states.notFoundTitle'));
-    const failed = main.getByText(t(locale, 'ui.states.errorTitle'));
+    // A block that couldn't load, or the whole page's error screen.
+    const failed = main.getByText(t(locale, 'ui.states.errorTitle')).or(main.getByText(t(locale, 'ui.errorPages.errorTitle')));
     const allowed: string[] = [];
     const refused: string[] = [];
 
@@ -67,7 +68,10 @@ for (const role of BUILT_IN_ROLES) {
       } else {
         refused.push(id);
         await expect(notFound, `${role.key} should be refused ${id}`).toBeVisible();
-        await expect(main.getByRole('heading', { level: 1 }), `${role.key} should be refused ${id}`).toHaveCount(0);
+        // The only heading is the not-found screen's own: nothing of the page leaks.
+        await expect(main.getByRole('heading', { level: 1 }), `${role.key} should be refused ${id}`).toHaveText([
+          t(locale, 'ui.states.notFoundTitle'),
+        ]);
       }
     }
     test.info().annotations.push({ type: 'allowed', description: allowed.join(', ') }, { type: 'refused', description: refused.join(', ') });

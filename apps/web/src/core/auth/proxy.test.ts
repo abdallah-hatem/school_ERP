@@ -59,6 +59,25 @@ describe('auth routing (proxy)', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it('signed-out visitor on an address no section answers → passes through to the 404 (with Sign in)', async () => {
+    for (const path of ['/en/nope', '/ar/wp-admin/setup.php?x=1', '/en/employee']) {
+      const res = await authProxy(request(path));
+      expect(res.headers.get('location'), path).toBeNull();
+      expect(res.headers.get('x-middleware-next')).toBe('1');
+    }
+  });
+
+  it('signed-out visitor deeper inside a known section still goes to sign in (reveals nothing)', async () => {
+    const res = await authProxy(request('/en/employees/12/nope'));
+    expect(location(res)).toBe(`/en/login?next=${encodeURIComponent('/en/employees/12/nope')}`);
+  });
+
+  it('a stale session on an unknown address is cleared on the way to the 404', async () => {
+    const res = await authProxy(request('/en/nope', { auth_token: token(-60) }));
+    expect(res.headers.get('location')).toBeNull();
+    expect(res.headers.get('set-cookie') ?? '').toMatch(/auth_token=;/);
+  });
+
   it('signed-in visitor opening /login → redirected to the dashboard (every user’s home)', async () => {
     const res = await authProxy(request('/en/login', { auth_token: token(600) }));
     expect(location(res)).toBe('/en');

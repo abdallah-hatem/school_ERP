@@ -11,6 +11,7 @@ import {
 import { clientAddressHeaders } from '@/lib/security-headers';
 import { DEFAULT_LOCALE, isLocale, type Locale } from '@/shared/lib/i18n';
 import { homeFor, loginPathFor } from './paths';
+import { isUnknownSection } from './routes';
 
 /** Pages a signed-in user never sees (they go home instead). */
 const GUEST_ONLY = new Set([LOGIN_PATH]);
@@ -47,6 +48,7 @@ function withPathname(req: NextRequest, extra: Record<string, string>): NextResp
  * routing):
  * - no locale in the path → the visitor's language (`lang` cookie, else Arabic);
  * - signed out on a protected page → the login page, keeping the path to come back to;
+ * - signed out on an address no section answers (`routes.ts`) → passes through to the 404;
  * - signed in on a guest-only page (login) → home (the dashboard);
  * - access token expired but refresh token valid → refreshed in place: the new access token is
  *   forwarded to this same request and both cookies are set on its response. No refresh URL
@@ -78,7 +80,8 @@ export async function authProxy(
   const staleSession = !signedIn && Boolean(refresh || req.cookies.get(ACCESS_TOKEN_KEY));
 
   if (!signedIn) {
-    if (guestOnly) {
+    // An address no page answers: show the 404 (with Sign in), not a sign-in that leads nowhere.
+    if (guestOnly || isUnknownSection(page)) {
       const res = withPathname(req, requestHeaders);
       return staleSession ? clearSession(res) : res;
     }

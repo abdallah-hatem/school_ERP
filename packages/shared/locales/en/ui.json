@@ -27,8 +27,8 @@
     "errorBody": "Check your connection, then try again.",
     "retry": "Try again",
     "loading": "Loading…",
-    "notFoundTitle": "This page isn't here",
-    "notFoundBody": "It may have moved, or your account can't open it. Ask the school's admin if you need it."
+    "notFoundTitle": "We couldn't find that page",
+    "notFoundBody": "It may have moved, or you may not have access to it."
   },
   "toast": {
     "region": "Notifications",
@@ -71,5 +71,21 @@
   "comingSoon": {
     "title": "This screen is being built",
     "body": "It arrives in an upcoming update. The rest of the app works as usual."
+  },
+  "errorPages": {
+    "notFoundTitle": "Page not found",
+    "notFoundBody": "The address may be mistyped, or the page has moved.",
+    "errorTitle": "Something went wrong",
+    "errorBody": "This page didn't load. Try again — if it keeps happening, contact support.",
+    "backToDashboard": "Back to the dashboard",
+    "signIn": "Sign in",
+    "retry": "Try again",
+    "reference": "Reference",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyLabel": "Copy the reference code",
+    "referenceHelp": "Quote this code if you contact support.",
+    "globalBody": "The app couldn't load. Please try again in a moment.",
+    "globalCode": "Code"
   }
 }
