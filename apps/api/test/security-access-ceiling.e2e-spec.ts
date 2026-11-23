@@ -10,6 +10,7 @@ import {
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { ClsService } from 'nestjs-cls';
 import { createHash } from 'node:crypto';
+import { unlinkedPayAccounts } from '../prisma/checks/unlinked-pay-accounts';
 import { RolesRepository } from '../src/core/roles/repositories/roles.repository';
 import { UsersRepository } from '../src/core/users/repositories/users.repository';
 import { DatabaseService } from '../src/database/database.service';
@@ -346,6 +347,21 @@ describe('Security review — access ceilings and sessions (e2e)', () => {
         expect(res.body.error).toBe(ErrorCode.UNLINKED_PAY_ROLE);
         expect(((await http(app).get(`/roles/${role.id}`).expect(200)).body.data as Role).permissions).toHaveLength(1);
       });
+    });
+
+    it('L-c — the release check lists an unlinked account acting on pay, not a linked one or a System admin', async () => {
+      const unlinked = await createUser([roleId('hr_officer')]);
+      const linked = await createLinked([roleId('hr_officer')], ref.empPrep);
+      const found = await unlinkedPayAccounts(db);
+      const emails = found.map((a) => a.email);
+      expect(emails).toContain(unlinked.email);
+      expect(emails).not.toContain(linked.email);
+      expect(emails).not.toContain(admin.email);
+      expect(found.find((a) => a.email === unlinked.email)?.permissions).toEqual(
+        expect.arrayContaining(['hr.employees.edit', 'hr.lateness.edit', 'hr.payroll.adjust']),
+      );
+      // Leave nothing for the next suites to trip on.
+      await http(app).post(`/users/${unlinked.id}/deactivate`).expect(200);
     });
 
     it('M2-C — a link change is in the log by name, before and after', async () => {
