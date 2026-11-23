@@ -628,14 +628,17 @@ phase live in `docs/build-log/`.
   § 2b, and link the ones it lists); only a System admin creates or links HR-staff accounts; a
   password change from a session opened before this release signs that session out once. Also fixed:
   the Users table overflowing its card at 1440 with long names.
+- 2026-11-23 — 404 and error pages → #267 (owner picked option 2, "big number"): a real-404 page for
+  wrong addresses (Back to the dashboard / Sign in), the in-app "We couldn't find that page", one
+  shared error screen for every page (Try again, Back, a reference code = the server error digest,
+  logged by `onRequestError`), and a minimal `global-error`. Signed-out visits to unknown sections now
+  show the 404 instead of sign-in. Independent review running before merge.
 ## Next up
 
 - Pay buttons for unlinked HR accounts: hide or disable Approve / adjust / lateness edits with the
   reason, instead of refusing on click.
 - Users table fits its card with no spare width since #258 (names and emails truncate); give it room
   (fewer columns on desktop, or cards below a width) before adding a column.
-- 404 and error pages: three mockups shown (`design/mockups/error-pages.html` on the `design` branch);
-  build after the owner's pick.
 - Scope widening by editing others: an employee editor can set another employee's manager to
   themselves or move them into the editor's stage, widening their own team/stage reach (found by the
   #258 review, left out of that PR).
