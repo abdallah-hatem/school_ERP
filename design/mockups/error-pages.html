@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Error Pages Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Tajawal:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/duotone/style.css">
+<style>
+/*
+ * Not-found (404) and error pages — three options. Tokens copied from apps/web/src/app/globals.css
+ * (direction "Campus"). Light theme only. Option 1 reuses the sign-in illustration
+ * (apps/web/src/core/auth/components/sign-in-illustration.tsx), converted to plain SVG below.
+ * Every frame carries its own lang/dir, so EN desktop and AR phone sit side by side.
+ * All motion runs only under prefers-reduced-motion: no-preference.
+ */
+:root{
+  --radius:14px;
+  --background:#f2f8f6; --foreground:#11302b; --card:#ffffff;
+  --muted:#f5faf8; --muted-foreground:#587069; --secondary:#eaf4f1;
+  --primary:#0b7a68; --primary-foreground:#ffffff; --primary-soft:#d5efe8; --primary-hover:#096656;
+  --accent:#ffc43d; --accent-foreground:#4a3400; --accent-soft:#fff1c9;
+  --destructive-soft:#fde3df; --destructive-ink:#a82d22;
+  --band-2:#bfe6db;
+  --border:#dce9e5; --input:#cfe0db;
+  --shadow-card:0 1px 2px rgb(11 72 62 / .06),0 10px 30px -12px rgb(11 72 62 / .18);
+  --shadow-raised:0 2px 4px rgb(11 72 62 / .05),0 30px 60px -24px rgb(11 72 62 / .28);
+  --shadow-primary:0 8px 20px -8px rgb(11 122 104 / .7);
+  --bar:#0f2f2a; --bar-ink:#e7f4f0;
+  --font-latin:"Plus Jakarta Sans",system-ui,sans-serif;
+  --font-ar:"IBM Plex Sans Arabic","Plus Jakarta Sans",system-ui,sans-serif;
+  --font-ar-display:"Tajawal","IBM Plex Sans Arabic",system-ui,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:#e4efec;color:var(--foreground);font-family:var(--font-latin);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;min-width:1980px}
+button{font:inherit;color:inherit;cursor:pointer}
+a{color:inherit}
+:focus-visible{outline:3px solid color-mix(in srgb,var(--primary) 55%,transparent);outline-offset:2px}
+.num{font-family:var(--font-latin);font-variant-numeric:tabular-nums lining-nums}
+[dir="rtl"] .flip{transform:scaleX(-1)}
+.ph-duotone{line-height:1;display:inline-block}
+bdi{unicode-bidi:isolate}
+.frame{font-family:var(--font-latin)}
+.frame[lang="ar"]{font-family:var(--font-ar)}
+.disp{font-family:var(--font-latin);font-weight:800;letter-spacing:-.015em}
+[lang="ar"] .disp{font-family:var(--font-ar-display);letter-spacing:0}
+
+/* ---------- mockup chrome ---------- */
+.mockbar{background:var(--bar);color:var(--bar-ink);display:flex;align-items:center;gap:16px;padding:10px 24px;position:sticky;top:0;z-index:80;font-size:13px}
+.mockbar strong{font-size:14px}
+.mockbar .sp{flex:1}
+.seg{display:inline-flex;background:rgb(255 255 255 / .08);border-radius:999px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;color:inherit;padding:5px 14px;border-radius:999px;font-weight:700;font-size:13px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#3a2900}
+.opt{padding:28px 24px 40px}
+.opt + .opt{border-top:6px solid #d3e4df}
+.opt-h{max-width:1900px;margin:0 auto 6px;display:flex;align-items:baseline;gap:14px}
+.opt-h h2{margin:0;font-size:24px;font-weight:800;letter-spacing:-.01em}
+.opt-h span{color:var(--muted-foreground);font-size:14px}
+.opt-note{max-width:1900px;margin:0 auto 10px;color:var(--muted-foreground);font-size:13.5px}
+.scr-h{max-width:1900px;margin:22px auto 10px;font-weight:800;font-size:15px;display:flex;gap:10px;align-items:baseline}
+.scr-h small{font-weight:500;color:var(--muted-foreground);font-size:13px}
+.row{display:flex;gap:30px;align-items:flex-start;justify-content:center}
+.fw{display:flex;flex-direction:column;gap:8px}
+.cap{font-size:12.5px;color:var(--muted-foreground);font-weight:700}
+.desk{width:1440px;height:900px;position:relative;background:var(--background);border-radius:22px;box-shadow:var(--shadow-raised);overflow:hidden;border:1px solid var(--border);display:flex}
+.phone{width:410px;height:864px;background:var(--background);border-radius:46px;border:10px solid #1b2e2a;box-shadow:var(--shadow-raised);overflow:hidden;position:relative;display:flex;flex-direction:column}
+.phone .scroll{overflow-y:auto;flex:1;scrollbar-width:none;display:flex;flex-direction:column}
+body[data-show="1"] .opt:not(#opt1),body[data-show="2"] .opt:not(#opt2),body[data-show="3"] .opt:not(#opt3),body[data-show="d"] .opt:not(#optD){display:none}
+
+/* ---------- shell (same as the app: 17rem sidebar ≥1280, phone top bar <768) ---------- */
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:38px;height:38px;flex:none;border-radius:12px;background:var(--primary);color:#fff;display:grid;place-items:center;font-size:22px;position:relative}
+.logo::after{content:"";position:absolute;width:9px;height:9px;border-radius:50%;background:var(--accent);inset-block-start:-2px;inset-inline-end:-2px;box-shadow:0 0 0 2px var(--card)}
+.brand-name{font-weight:800;font-size:14.5px;line-height:1.25}
+[lang="ar"] .brand-name{font-family:var(--font-ar-display)}
+.brand-sub{font-size:11.5px;color:var(--muted-foreground)}
+.sb{width:272px;flex:none;background:var(--card);border-inline-end:1px solid var(--border);padding:22px 14px;display:flex;flex-direction:column;gap:20px}
+.sb nav{display:flex;flex-direction:column;gap:6px}
+.navlink{display:flex;align-items:center;gap:11px;min-height:38px;padding:7px 10px;border-radius:12px;color:var(--muted-foreground);text-decoration:none;font-weight:600;font-size:13.5px}
+.navlink .ph-duotone{font-size:19px}
+.navlink[aria-current="page"]{background:var(--primary-soft);color:var(--primary)}
+.single{display:flex;align-items:center;gap:11px;min-height:46px;padding:8px 10px;border-radius:14px;font-weight:700;font-size:14.5px;text-decoration:none}
+.mi{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;font-size:18px;flex:none;background:var(--secondary);color:var(--muted-foreground)}
+.grp{border-radius:16px;background:var(--muted);box-shadow:inset 0 0 0 1px var(--border);padding-bottom:8px}
+.grp .gh{display:flex;align-items:center;gap:11px;min-height:46px;padding:8px 10px;font-weight:700;font-size:14.5px}
+.grp .kids{display:flex;flex-direction:column;gap:2px;margin-inline-start:34px;border-inline-start:2px solid var(--border);padding-inline:8px}
+.user{display:flex;align-items:center;gap:10px;padding:10px;border-radius:16px;background:var(--muted);border:1px solid var(--border);margin-top:auto;text-decoration:none}
+.user .n{font-weight:700;font-size:13px;line-height:1.2}
+.user .r{font-size:11.5px;color:var(--muted-foreground)}
+.av{border-radius:12px;background:var(--secondary);color:var(--muted-foreground);display:grid;place-items:center;flex:none;width:34px;height:34px;font-size:18px}
+.main{flex:1;min-width:0;padding:20px 32px 32px;display:flex;flex-direction:column;gap:14px;position:relative}
+.topline{display:flex;align-items:center;gap:10px;min-height:42px;justify-content:flex-end}
+.lang{display:inline-flex;background:var(--secondary);border-radius:999px;padding:3px;flex:none}
+.lang span{padding:4px 12px;border-radius:999px;font-weight:700;font-size:12.5px;font-family:var(--font-latin)}
+.lang span.on{background:var(--accent);color:var(--accent-foreground)}
+.lang .ar{font-family:var(--font-ar-display);font-size:14px}
+.bell{position:relative;width:42px;height:42px;border-radius:13px;border:1px solid var(--border);background:var(--card);display:grid;place-items:center;font-size:21px;flex:none}
+.mbar{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--card);border-bottom:1px solid var(--border);flex:none}
+.mbar .menub{width:38px;height:38px;border-radius:12px;border:1px solid var(--border);background:var(--card);display:grid;place-items:center;font-size:20px;flex:none}
+.mbar .brand-name{font-size:14px;flex:1;min-width:0}
+.mbar .bell{width:38px;height:38px;font-size:19px;border-radius:12px}
+.pbody{padding:18px 16px 24px;display:flex;flex-direction:column;gap:16px;flex:1}
+
+/* ---------- shared pieces ---------- */
+.card{background:var(--card);border-radius:24px;box-shadow:var(--shadow-card)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:var(--radius);padding:10px 18px;min-height:44px;font-weight:700;font-size:14px;border:1px solid var(--input);background:var(--card);white-space:nowrap;text-decoration:none}
+.btn .ph-duotone{font-size:19px}
+.btn-primary{background:var(--primary);color:#fff;border-color:transparent;box-shadow:var(--shadow-primary)}
+.acts{display:flex;gap:10px;flex-wrap:wrap}
+.eyebrow{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 12px;font-size:12.5px;font-weight:800;background:var(--accent-soft);color:#6b4b00;width:max-content}
+.eyebrow.teal{background:var(--primary-soft);color:var(--primary)}
+.ttl{margin:0;line-height:1.15}
+.lead{margin:0;color:var(--muted-foreground);text-wrap:pretty}
+.ref{display:flex;flex-direction:column;gap:6px}
+.ref-box{display:inline-flex;align-items:center;gap:10px;background:var(--muted);border:1px dashed var(--input);border-radius:12px;padding-block:5px;padding-inline:12px 5px;width:max-content;max-width:100%}
+.ref-l{font-size:12px;font-weight:700;color:var(--muted-foreground)}
+.ref-c{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-weight:700;font-size:13.5px;letter-spacing:.04em;direction:ltr;unicode-bidi:isolate}
+.copy{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--border);background:var(--card);border-radius:9px;padding:5px 10px;font-weight:700;font-size:12.5px;color:var(--primary);min-height:32px}
+.copy .ph-duotone{font-size:16px}
+.copy.done{color:#126b42;background:#ddf4e7;border-color:transparent}
+.ref-h{margin:0;font-size:12.5px;color:var(--muted-foreground)}
+.state-note{position:absolute;inset-block-end:14px;inset-inline-end:16px;font-size:11.5px;color:var(--muted-foreground);background:rgb(255 255 255 / .8);padding:4px 10px;border-radius:999px;font-weight:600}
+
+/* ---------- motion (all of it stops under reduced motion) ---------- */
+@media (prefers-reduced-motion: no-preference){
+  .bob{animation:bob 4s ease-in-out infinite}
+  .bar{transform-box:fill-box;transform-origin:bottom;animation:grow 1.2s cubic-bezier(.2,.7,.2,1) both}
+  .steam{animation:steam 3.4s ease-in-out infinite}
+  .shim{animation:shim 7s ease-in-out infinite}
+  .sway{transform-box:fill-box;transform-origin:50% 100%;animation:sway 6s ease-in-out infinite}
+  .paper{transform-box:fill-box;transform-origin:center;animation:paper 5.5s ease-in-out infinite}
+  .paper-out{animation:paperOut 9s ease-in-out infinite}
+  .wave{animation:wave 1.6s ease-in-out infinite}
+  .blink{animation:blink 1.1s steps(1) infinite}
+  .dot3 circle{animation:dot3 1.4s ease-in-out infinite}
+  .dot3 circle:nth-child(2){animation-delay:.2s}
+  .dot3 circle:nth-child(3){animation-delay:.4s}
+  .float{animation:float 6s ease-in-out infinite}
+  .orbit{transform-box:view-box;animation:orbit 14s linear infinite}
+  .rise{animation:rise .6s cubic-bezier(.2,.7,.2,1) both}
+  .twinkle{transform-box:fill-box;transform-origin:center;animation:twinkle 3s ease-in-out infinite}
+}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes grow{from{transform:scaleY(.2)}to{transform:scaleY(1)}}
+@keyframes steam{0%{opacity:0;transform:translateY(3px)}35%{opacity:.8}100%{opacity:0;transform:translateY(-9px)}}
+@keyframes shim{0%,100%{opacity:.6}50%{opacity:1}}
+@keyframes sway{0%,100%{transform:rotate(-1.5deg)}50%{transform:rotate(1.5deg)}}
+@keyframes paper{0%,100%{transform:translate(0,0) rotate(0)}50%{transform:translate(-6px,-7px) rotate(-8deg)}}
+@keyframes paperOut{0%,100%{transform:translate(0,0)}50%{transform:translate(-8px,-4px)}}
+@keyframes wave{0%,100%{opacity:.25}50%{opacity:1}}
+@keyframes blink{0%{opacity:1}50%{opacity:0}}
+@keyframes dot3{0%,100%{opacity:.3}50%{opacity:1}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes orbit{to{transform:rotate(360deg)}}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes twinkle{0%,100%{opacity:.35;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}
+
+/* ================= OPTION 1 · Illustrated (soft 3D) ================= */
+.art{display:block;width:100%;height:auto;direction:ltr}
+.o1a{display:flex;width:100%;background:var(--card)}
+.o1a-panel{position:relative;isolation:isolate;overflow:hidden;width:52%;background:linear-gradient(160deg,var(--secondary),var(--primary-soft));padding:40px;display:flex;flex-direction:column;gap:24px}
+.o1a-panel::before{content:"";position:absolute;inset-inline-end:-80px;top:-120px;width:280px;height:280px;border-radius:50%;background:var(--band-2);opacity:.7;z-index:-1}
+.o1a-art{margin-block:auto;border-radius:18px;overflow:hidden;box-shadow:var(--shadow-card)}
+.o1a-side{flex:1;display:flex;flex-direction:column;padding:28px 48px}
+.o1a-msg{margin:auto 0;max-width:440px;display:flex;flex-direction:column;gap:14px}
+.o1a-msg .ttl{font-size:44px}
+.o1a-msg .lead{font-size:16px}
+.o1a-msg .acts{margin-top:10px}
+.o1-in{display:grid;grid-template-columns:1.15fr 1fr;align-items:center;gap:40px;padding:22px;}
+.o1-in .art-wrap{border-radius:18px;overflow:hidden}
+.o1-in .txt{display:flex;flex-direction:column;gap:12px;padding-inline-end:24px}
+.o1-in .ttl{font-size:32px}
+.o1-in .lead{font-size:15px;max-width:400px}
+.o1-in .acts{margin-top:8px}
+.o1-in .ref{margin-top:14px}
+/* phone */
+.o1p-panel{background:linear-gradient(160deg,var(--secondary),var(--primary-soft));padding:16px 16px 8px;position:relative;overflow:hidden;isolation:isolate}
+.o1p-panel::before{content:"";position:absolute;inset-inline-end:-60px;top:-90px;width:200px;height:200px;border-radius:50%;background:var(--band-2);opacity:.7;z-index:-1}
+.o1p-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.o1p-art{margin-top:16px;border-radius:16px;overflow:hidden;box-shadow:var(--shadow-card)}
+.o1p-msg{padding:26px 20px 28px;display:flex;flex-direction:column;gap:10px;text-align:center;align-items:center;background:var(--card);flex:1}
+.o1p-msg .ttl,.o1pc .ttl{font-size:26px}
+.o1p-msg .lead,.o1pc .lead{font-size:14.5px}
+.o1p-msg .acts,.o1pc .acts{flex-direction:column;align-self:stretch;margin-top:10px}
+.o1pc{padding:12px 12px 22px;display:flex;flex-direction:column;gap:10px;text-align:center;align-items:center}
+.o1pc .art-wrap{border-radius:16px;overflow:hidden;align-self:stretch;margin-bottom:6px}
+.o1pc .ref{align-items:center;margin-top:8px}
+
+/* ================= OPTION 2 · Big number, light art ================= */
+.o2a{flex:1;display:flex;flex-direction:column;background:
+  radial-gradient(600px 400px at 85% 10%,rgb(255 196 61 / .16),transparent 70%),
+  radial-gradient(700px 500px at 10% 90%,rgb(11 122 104 / .10),transparent 70%),var(--background)}
+.o2a-top{display:flex;align-items:center;justify-content:space-between;padding:26px 40px}
+.o2-col{display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;margin:auto;padding-bottom:40px}
+.o2-col .ttl{font-size:36px}
+.o2-col .lead{font-size:16px;max-width:460px}
+.o2-col .acts{justify-content:center;margin-top:8px}
+.o2-col .ref{align-items:center;margin-top:12px}
+.o2-in{flex:1;display:flex}
+.o2-in .ttl{font-size:30px}
+.o2p .o2-col{padding:8px 4px 20px}
+.o2p .o2-col .ttl{font-size:26px}
+.o2p .o2-col .lead{font-size:14.5px}
+.o2p .o2-col .acts{flex-direction:column;align-self:stretch}
+
+/* ================= OPTION 3 · Card in context ================= */
+.o3a{flex:1;display:flex;flex-direction:column}
+.o3a-top{display:flex;align-items:center;justify-content:space-between;padding:26px 40px}
+.o3a-card{margin:auto;width:460px;padding:36px 36px 32px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;position:relative;top:-30px}
+.o3a-card .ttl{font-size:24px}
+.o3a-card .lead{font-size:14.5px}
+.o3a-card .acts{margin-top:12px;justify-content:center}
+.spot{width:76px;height:76px;flex:none;border-radius:22px;background:linear-gradient(160deg,var(--secondary),var(--primary-soft));display:grid;place-items:center}
+.spot svg{width:56px;height:56px}
+.o3-in{padding:30px 32px;display:flex;gap:22px;align-items:flex-start;max-width:760px}
+.o3-in .txt{display:flex;flex-direction:column;gap:6px;min-width:0}
+.o3-in .ttl{font-size:21px}
+.o3-in .lead{font-size:14.5px}
+.o3-in .acts{margin-top:14px}
+.o3-in .ref{margin-top:18px;padding-top:16px;border-top:1px solid var(--border)}
+.o3p .o3-in{flex-direction:column;padding:24px 20px;gap:14px}
+.o3p .o3-in .acts{flex-direction:column;align-self:stretch}
+.o3p .o3-in .acts .btn{width:100%}
+.o3p .o3-in .txt{align-self:stretch}
+.o3p-a{flex:1;display:flex;flex-direction:column;padding:16px}
+.o3p-a .o3a-card{width:100%;padding:28px 20px 24px;top:-20px}
+.o3p-a .o3a-card .acts{flex-direction:column;align-self:stretch}
+
+/* ================= D · Global error: system fonts only, nothing external ================= */
+.gd{flex:1;display:flex;align-items:center;justify-content:center;padding:24px;background:#f2f8f6;color:#11302b;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Arabic",Tahoma,sans-serif !important}
+.gd *{font-family:inherit !important}
+.gd-box{max-width:420px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px}
+.gd h1{margin:6px 0 0;font-size:26px;line-height:1.2;font-weight:800}
+.gd p{margin:0;color:#587069;font-size:15px}
+.gd button{margin-top:10px;font:inherit;font-weight:700;font-size:15px;background:#0b7a68;color:#fff;border:0;border-radius:14px;padding:12px 22px;min-height:46px}
+.gd small{color:#587069;font-size:12.5px;margin-top:6px}
+.gd small b{font-family:ui-monospace,Menlo,monospace !important;direction:ltr;unicode-bidi:isolate;letter-spacing:.04em}
+.code-note{max-width:1900px;margin:14px auto 0;background:var(--card);border-radius:16px;padding:14px 18px;font-size:13px;color:var(--muted-foreground);box-shadow:var(--shadow-card)}
+.code-note code{font-size:12px;color:var(--foreground)}
+</style>
+</head>
+<body data-show="all">
+<div class="mockbar">
+  <strong>Not found &amp; error pages — 3 options</strong>
+  <div class="seg" id="showSeg" aria-label="Show"><button data-s="all" aria-pressed="true">All</button><button data-s="1">Option 1</button><button data-s="2">Option 2</button><button data-s="3">Option 3</button><button data-s="d">D · Global</button></div>
+  <span class="sp"></span><span style="opacity:.75">Each screen: EN desktop 1440 · AR phone 390 · sample names only · motion stops under reduced motion</span>
+</div>
+<div id="app"></div>
+<script>
+/* The sign-in scene, converted from sign-in-illustration.tsx (ids prefixed per instance). */
+const PARTS={"defs":"<defs><radialGradient id=\"signin-art-wall\" cx=\".2\" cy=\".08\" r=\"1.1\"><stop offset=\"0\" stop-color=\"#fdfefb\" /><stop offset=\".45\" stop-color=\"#e3f3ee\" /><stop offset=\"1\" stop-color=\"#c1e2d7\" /></radialGradient><linearGradient id=\"signin-art-floor\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#c9e7dd\" /><stop offset=\"1\" stop-color=\"#a6d4c6\" /></linearGradient><linearGradient id=\"signin-art-beam\" x1=\"0\" y1=\"0\" x2=\".55\" y2=\"1\"><stop offset=\"0\" stop-color=\"#fff4cf\" stop-opacity=\".95\" /><stop offset=\".7\" stop-color=\"#fff4cf\" stop-opacity=\".25\" /><stop offset=\"1\" stop-color=\"#fff4cf\" stop-opacity=\"0\" /></linearGradient><filter id=\"signin-art-ao\" x=\"-50%\" y=\"-80%\" width=\"200%\" height=\"260%\"><feGaussianBlur stdDeviation=\"3.6\" /></filter><filter id=\"signin-art-ao2\" x=\"-50%\" y=\"-80%\" width=\"200%\" height=\"260%\"><feGaussianBlur stdDeviation=\"1.6\" /></filter><filter id=\"signin-art-card\" x=\"-30%\" y=\"-50%\" width=\"160%\" height=\"220%\"><feDropShadow dx=\"0\" dy=\"5\" stdDeviation=\"5.5\" flood-color=\"#07493e\" flood-opacity=\".2\" /></filter><linearGradient id=\"signin-art-frame\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#ffffff\" /><stop offset=\"1\" stop-color=\"#cbe5dc\" /></linearGradient><linearGradient id=\"signin-art-sky\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#ffe29a\" /><stop offset=\".5\" stop-color=\"#fff3d6\" /><stop offset=\"1\" stop-color=\"#d4f0e7\" /></linearGradient><radialGradient id=\"signin-art-sun\" cx=\".38\" cy=\".35\"><stop offset=\"0\" stop-color=\"#fff8dc\" /><stop offset=\".6\" stop-color=\"#ffd35f\" /><stop offset=\"1\" stop-color=\"#f4ad1a\" /></radialGradient><linearGradient id=\"signin-art-bld\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#ffffff\" /><stop offset=\"1\" stop-color=\"#d3eae2\" /></linearGradient><linearGradient id=\"signin-art-roof\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#2ac7a4\" /><stop offset=\"1\" stop-color=\"#0b7a68\" /></linearGradient><radialGradient id=\"signin-art-tree\" cx=\".35\" cy=\".3\" r=\".75\"><stop offset=\"0\" stop-color=\"#a3ead4\" /><stop offset=\".55\" stop-color=\"#22ae90\" /><stop offset=\"1\" stop-color=\"#0b6d5c\" /></radialGradient><linearGradient id=\"signin-art-wood\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#fdeed6\" /><stop offset=\"1\" stop-color=\"#eccea2\" /></linearGradient><linearGradient id=\"signin-art-woodT\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#fff3e0\" /><stop offset=\"1\" stop-color=\"#efd3a8\" /></linearGradient><linearGradient id=\"signin-art-woodF\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#e6c08b\" /><stop offset=\"1\" stop-color=\"#c99760\" /></linearGradient><linearGradient id=\"signin-art-panel\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#c99a62\" /><stop offset=\".25\" stop-color=\"#ddb47e\" /><stop offset=\"1\" stop-color=\"#e8c899\" /></linearGradient><linearGradient id=\"signin-art-dark\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#355f57\" /><stop offset=\"1\" stop-color=\"#0c231f\" /></linearGradient><linearGradient id=\"signin-art-scr\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#ffffff\" /><stop offset=\"1\" stop-color=\"#e6f4ef\" /></linearGradient><linearGradient id=\"signin-art-barT\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#52dbb8\" /><stop offset=\"1\" stop-color=\"#0b7a68\" /></linearGradient><linearGradient id=\"signin-art-barY\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#ffe394\" /><stop offset=\"1\" stop-color=\"#f2a516\" /></linearGradient><radialGradient id=\"signin-art-skin\" cx=\".4\" cy=\".32\" r=\".78\"><stop offset=\"0\" stop-color=\"#fde6d4\" /><stop offset=\".6\" stop-color=\"#efc2a1\" /><stop offset=\"1\" stop-color=\"#d69d78\" /></radialGradient><radialGradient id=\"signin-art-skin2\" cx=\".38\" cy=\".32\" r=\".8\"><stop offset=\"0\" stop-color=\"#f3cdac\" /><stop offset=\".6\" stop-color=\"#d9a079\" /><stop offset=\"1\" stop-color=\"#b67a52\" /></radialGradient><radialGradient id=\"signin-art-hijab\" cx=\".35\" cy=\".22\" r=\".95\"><stop offset=\"0\" stop-color=\"#46d0ad\" /><stop offset=\".5\" stop-color=\"#119a80\" /><stop offset=\"1\" stop-color=\"#06463b\" /></radialGradient><linearGradient id=\"signin-art-sweater\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#ffe697\" /><stop offset=\".55\" stop-color=\"#ffc43d\" /><stop offset=\"1\" stop-color=\"#e59c14\" /></linearGradient><linearGradient id=\"signin-art-shirt\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#a6ecd8\" /><stop offset=\".5\" stop-color=\"#3cc0a0\" /><stop offset=\"1\" stop-color=\"#138c73\" /></linearGradient><linearGradient id=\"signin-art-pants\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"0\"><stop offset=\"0\" stop-color=\"#3a5f58\" /><stop offset=\"1\" stop-color=\"#10241f\" /></linearGradient><linearGradient id=\"signin-art-hair\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#5a463a\" /><stop offset=\"1\" stop-color=\"#1c1410\" /></linearGradient><linearGradient id=\"signin-art-lid\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#ffffff\" /><stop offset=\"1\" stop-color=\"#c9ded8\" /></linearGradient><linearGradient id=\"signin-art-chair\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#25b897\" /><stop offset=\"1\" stop-color=\"#07493e\" /></linearGradient><linearGradient id=\"signin-art-pot\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"0\"><stop offset=\"0\" stop-color=\"#ffffff\" /><stop offset=\".55\" stop-color=\"#e6f0ed\" /><stop offset=\"1\" stop-color=\"#bcd3cb\" /></linearGradient><linearGradient id=\"signin-art-leafA\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#64dcba\" /><stop offset=\"1\" stop-color=\"#0a7563\" /></linearGradient><linearGradient id=\"signin-art-leafB\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#9df0d6\" /><stop offset=\"1\" stop-color=\"#17a083\" /></linearGradient><radialGradient id=\"signin-art-clock\" cx=\".4\" cy=\".35\"><stop offset=\"0\" stop-color=\"#ffffff\" /><stop offset=\"1\" stop-color=\"#e1f0eb\" /></radialGradient><linearGradient id=\"signin-art-mug\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"0\"><stop offset=\"0\" stop-color=\"#ffe08a\" /><stop offset=\"1\" stop-color=\"#e99f15\" /></linearGradient><linearGradient id=\"signin-art-folder\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#ffdd7e\" /><stop offset=\"1\" stop-color=\"#eea31a\" /></linearGradient><radialGradient id=\"signin-art-scarf\" cx=\".34\" cy=\".22\" r=\".9\"><stop offset=\"0\" stop-color=\"#fff1c2\" /><stop offset=\".35\" stop-color=\"#ffcc52\" /><stop offset=\".75\" stop-color=\"#eba51c\" /><stop offset=\"1\" stop-color=\"#b8770a\" /></radialGradient><linearGradient id=\"signin-art-cardi\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#3ccaa8\" /><stop offset=\".55\" stop-color=\"#12927a\" /><stop offset=\"1\" stop-color=\"#075a4c\" /></linearGradient><linearGradient id=\"signin-art-cream\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#fffdf7\" /><stop offset=\"1\" stop-color=\"#eadcc0\" /></linearGradient><clipPath id=\"signin-art-win\"><rect x=\"32\" y=\"36\" width=\"106\" height=\"90\" rx=\"8\" /></clipPath></defs><rect width=\"400\" height=\"300\" fill=\"url(#signin-art-wall)\" /><rect y=\"236\" width=\"400\" height=\"64\" fill=\"url(#signin-art-floor)\" /><rect y=\"231\" width=\"400\" height=\"7\" fill=\"#f6fcfa\" /><rect y=\"238\" width=\"400\" height=\"3\" fill=\"#07493e\" opacity=\".07\" />","sunlight":"<g class=\"shim\"><path d=\"M36 40L148 40L330 300L150 300Z\" fill=\"url(#signin-art-beam)\" opacity=\".55\" /><ellipse cx=\"236\" cy=\"270\" rx=\"70\" ry=\"14\" fill=\"#fff4cf\" opacity=\".5\" filter=\"url(#signin-art-ao)\" /></g>","window":"<rect x=\"27\" y=\"35\" width=\"124\" height=\"112\" rx=\"16\" fill=\"#07493e\" opacity=\".17\" filter=\"url(#signin-art-ao)\" /><rect x=\"24\" y=\"28\" width=\"122\" height=\"106\" rx=\"15\" fill=\"url(#signin-art-frame)\" /><rect x=\"24.8\" y=\"28.8\" width=\"120.4\" height=\"104.4\" rx=\"14.3\" fill=\"none\" stroke=\"#fff\" stroke-width=\"1.6\" /><rect x=\"31\" y=\"35\" width=\"108\" height=\"92\" rx=\"9\" fill=\"#8fc3b4\" /><g clip-path=\"url(#signin-art-win)\"><rect x=\"32\" y=\"36\" width=\"106\" height=\"90\" fill=\"url(#signin-art-sky)\" /><circle cx=\"114\" cy=\"58\" r=\"22\" fill=\"#ffd25e\" opacity=\".22\" /><circle cx=\"114\" cy=\"58\" r=\"10\" fill=\"url(#signin-art-sun)\" /><g fill=\"#fff\"><ellipse cx=\"58\" cy=\"56\" rx=\"13\" ry=\"5.5\" /><circle cx=\"54\" cy=\"52\" r=\"6\" /><circle cx=\"62\" cy=\"50\" r=\"7.5\" /></g><ellipse cx=\"58\" cy=\"59\" rx=\"11\" ry=\"2\" fill=\"#cfe8e0\" opacity=\".8\" /><path d=\"M32 106Q58 90 86 99T138 92V126H32Z\" fill=\"#c6eadf\" /><path d=\"M32 113Q70 102 104 109T138 105V126H32Z\" fill=\"#a8ddca\" /><rect x=\"42.8\" y=\"100\" width=\"2.6\" height=\"15\" rx=\"1.2\" fill=\"#7a5442\" /><circle cx=\"44\" cy=\"98\" r=\"10\" fill=\"url(#signin-art-tree)\" /><circle cx=\"51\" cy=\"106\" r=\"6\" fill=\"url(#signin-art-tree)\" /><rect x=\"124.8\" y=\"101\" width=\"2.4\" height=\"13\" rx=\"1.2\" fill=\"#7a5442\" /><circle cx=\"126\" cy=\"99\" r=\"8.5\" fill=\"url(#signin-art-tree)\" /><ellipse cx=\"84\" cy=\"117\" rx=\"34\" ry=\"3\" fill=\"#07493e\" opacity=\".22\" filter=\"url(#signin-art-ao2)\" /><rect x=\"58\" y=\"86\" width=\"52\" height=\"31\" rx=\"3\" fill=\"url(#signin-art-bld)\" /><path d=\"M53 88L84 69L115 88Q116 91 113 91H55Q52 91 53 88Z\" fill=\"url(#signin-art-roof)\" /><path d=\"M59 87L84 71.8\" stroke=\"#fff\" stroke-opacity=\".45\" stroke-width=\"1.3\" stroke-linecap=\"round\" /><rect x=\"58\" y=\"91\" width=\"52\" height=\"2.5\" fill=\"#07493e\" opacity=\".08\" /><circle cx=\"84\" cy=\"83\" r=\"3.7\" fill=\"#fff\" /><path d=\"M84 81.2v2l1.5 1\" stroke=\"#07493e\" stroke-width=\".8\" fill=\"none\" stroke-linecap=\"round\" /><rect x=\"63\" y=\"96\" width=\"5.5\" height=\"6\" rx=\"1.4\" fill=\"url(#signin-art-barY)\" /><rect x=\"63.8\" y=\"96.8\" width=\"1.6\" height=\"2.2\" rx=\".6\" fill=\"#fff\" opacity=\".6\" /><rect x=\"63\" y=\"106\" width=\"5.5\" height=\"6\" rx=\"1.4\" fill=\"url(#signin-art-barY)\" /><rect x=\"63.8\" y=\"106.8\" width=\"1.6\" height=\"2.2\" rx=\".6\" fill=\"#fff\" opacity=\".6\" /><rect x=\"71\" y=\"96\" width=\"5.5\" height=\"6\" rx=\"1.4\" fill=\"url(#signin-art-barY)\" /><rect x=\"71.8\" y=\"96.8\" width=\"1.6\" height=\"2.2\" rx=\".6\" fill=\"#fff\" opacity=\".6\" /><rect x=\"71\" y=\"106\" width=\"5.5\" height=\"6\" rx=\"1.4\" fill=\"url(#signin-art-barY)\" /><rect x=\"71.8\" y=\"106.8\" width=\"1.6\" height=\"2.2\" rx=\".6\" fill=\"#fff\" opacity=\".6\" /><rect x=\"92.5\" y=\"96\" width=\"5.5\" height=\"6\" rx=\"1.4\" fill=\"url(#signin-art-barY)\" /><rect x=\"93.3\" y=\"96.8\" width=\"1.6\" height=\"2.2\" rx=\".6\" fill=\"#fff\" opacity=\".6\" /><rect x=\"92.5\" y=\"106\" width=\"5.5\" height=\"6\" rx=\"1.4\" fill=\"url(#signin-art-barY)\" /><rect x=\"93.3\" y=\"106.8\" width=\"1.6\" height=\"2.2\" rx=\".6\" fill=\"#fff\" opacity=\".6\" /><rect x=\"100.5\" y=\"96\" width=\"5.5\" height=\"6\" rx=\"1.4\" fill=\"url(#signin-art-barY)\" /><rect x=\"101.3\" y=\"96.8\" width=\"1.6\" height=\"2.2\" rx=\".6\" fill=\"#fff\" opacity=\".6\" /><rect x=\"100.5\" y=\"106\" width=\"5.5\" height=\"6\" rx=\"1.4\" fill=\"url(#signin-art-barY)\" /><rect x=\"101.3\" y=\"106.8\" width=\"1.6\" height=\"2.2\" rx=\".6\" fill=\"#fff\" opacity=\".6\" /><rect x=\"79.5\" y=\"101\" width=\"9\" height=\"16\" rx=\"4.5\" fill=\"url(#signin-art-roof)\" /><circle cx=\"86.2\" cy=\"110\" r=\".9\" fill=\"#ffc43d\" /><path d=\"M84 69V54.5\" stroke=\"#07493e\" stroke-width=\"1.4\" stroke-linecap=\"round\" /><path d=\"M84.7 55.2q5-2.2 9 0t8.4 0v6.2q-4.2-2.2-8.4 0t-9 0z\" fill=\"url(#signin-art-barY)\" /><path d=\"M32 117Q85 111 138 117V126H32Z\" fill=\"#8ad2ba\" /><path d=\"M32 36H58L36 126H32Z\" fill=\"#fff\" opacity=\".2\" /><path d=\"M66 36H72L50 126H44Z\" fill=\"#fff\" opacity=\".14\" /></g><rect x=\"31\" y=\"35\" width=\"108\" height=\"92\" rx=\"9\" fill=\"none\" stroke=\"#07493e\" stroke-opacity=\".12\" stroke-width=\"2\" /><rect x=\"24\" y=\"138\" width=\"122\" height=\"6\" rx=\"3\" fill=\"#07493e\" opacity=\".2\" filter=\"url(#signin-art-ao2)\" /><rect x=\"18\" y=\"128\" width=\"134\" height=\"10\" rx=\"5\" fill=\"url(#signin-art-woodT)\" /><rect x=\"18\" y=\"133.5\" width=\"134\" height=\"4.5\" rx=\"2.2\" fill=\"#dcb27c\" opacity=\".75\" />","succulent":"<ellipse cx=\"129\" cy=\"129\" rx=\"9\" ry=\"2\" fill=\"#07493e\" opacity=\".25\" filter=\"url(#signin-art-ao2)\" /><path d=\"M122 117h14l-1.6 11.5q-.3 1.5-2 1.5h-6.8q-1.7 0-2-1.5z\" fill=\"url(#signin-art-mug)\" /><rect x=\"121\" y=\"115.5\" width=\"16\" height=\"3.6\" rx=\"1.8\" fill=\"#ffe08a\" /><g fill=\"url(#signin-art-leafB)\"><ellipse cx=\"125\" cy=\"111\" rx=\"3\" ry=\"6\" transform=\"rotate(-25 125 111)\" /><ellipse cx=\"133\" cy=\"111\" rx=\"3\" ry=\"6\" transform=\"rotate(25 133 111)\" /><ellipse cx=\"129\" cy=\"109\" rx=\"3.2\" ry=\"7.5\" /></g>","shelf":"<rect x=\"204\" y=\"48\" width=\"96\" height=\"6\" rx=\"3\" fill=\"#07493e\" opacity=\".22\" filter=\"url(#signin-art-ao2)\" /><g><rect x=\"206\" y=\"17\" width=\"9\" height=\"24\" rx=\"2\" fill=\"#0b7a68\" /><rect x=\"206\" y=\"17\" width=\"3.42\" height=\"24\" rx=\"1.8\" fill=\"#fff\" opacity=\".25\" /><rect x=\"213.2\" y=\"18\" width=\"1.8\" height=\"22\" rx=\".9\" fill=\"#000\" opacity=\".14\" /><rect x=\"207.2\" y=\"21\" width=\"6.6\" height=\"2\" rx=\"1\" fill=\"#ffc43d\" opacity=\".7\" /><rect x=\"207.2\" y=\"35\" width=\"6.6\" height=\"1.4\" rx=\".7\" fill=\"#ffc43d\" opacity=\".5\" /></g><g><rect x=\"216\" y=\"21\" width=\"8\" height=\"20\" rx=\"2\" fill=\"#ffc43d\" /><rect x=\"216\" y=\"21\" width=\"3.04\" height=\"20\" rx=\"1.8\" fill=\"#fff\" opacity=\".25\" /><rect x=\"222.2\" y=\"22\" width=\"1.8\" height=\"18\" rx=\".9\" fill=\"#000\" opacity=\".14\" /><rect x=\"217.2\" y=\"25\" width=\"5.6\" height=\"2\" rx=\"1\" fill=\"#0b7a68\" opacity=\".7\" /><rect x=\"217.2\" y=\"35\" width=\"5.6\" height=\"1.4\" rx=\".7\" fill=\"#0b7a68\" opacity=\".5\" /></g><g><rect x=\"225\" y=\"14\" width=\"10.5\" height=\"27\" rx=\"2\" fill=\"#07493e\" /><rect x=\"225\" y=\"14\" width=\"3.99\" height=\"27\" rx=\"1.8\" fill=\"#fff\" opacity=\".25\" /><rect x=\"233.7\" y=\"15\" width=\"1.8\" height=\"25\" rx=\".9\" fill=\"#000\" opacity=\".14\" /><rect x=\"226.2\" y=\"18\" width=\"8.1\" height=\"2\" rx=\"1\" fill=\"#6fd7bd\" opacity=\".7\" /><rect x=\"226.2\" y=\"35\" width=\"8.1\" height=\"1.4\" rx=\".7\" fill=\"#6fd7bd\" opacity=\".5\" /></g><g><rect x=\"236.5\" y=\"23\" width=\"7\" height=\"18\" rx=\"2\" fill=\"#6fd7bd\" /><rect x=\"236.5\" y=\"23\" width=\"2.66\" height=\"18\" rx=\"1.8\" fill=\"#fff\" opacity=\".25\" /><rect x=\"241.7\" y=\"24\" width=\"1.8\" height=\"16\" rx=\".9\" fill=\"#000\" opacity=\".14\" /><rect x=\"237.7\" y=\"27\" width=\"4.6\" height=\"2\" rx=\"1\" fill=\"#fff\" opacity=\".7\" /><rect x=\"237.7\" y=\"35\" width=\"4.6\" height=\"1.4\" rx=\".7\" fill=\"#fff\" opacity=\".5\" /></g><g transform=\"rotate(-16 250 41)\"><rect x=\"246\" y=\"19\" width=\"8\" height=\"22\" rx=\"2\" fill=\"#f0a81c\" /><rect x=\"246\" y=\"19\" width=\"3.04\" height=\"22\" rx=\"1.8\" fill=\"#fff\" opacity=\".25\" /><rect x=\"252.2\" y=\"20\" width=\"1.8\" height=\"20\" rx=\".9\" fill=\"#000\" opacity=\".14\" /><rect x=\"247.2\" y=\"23\" width=\"5.6\" height=\"2\" rx=\"1\" fill=\"#fff\" opacity=\".7\" /><rect x=\"247.2\" y=\"35\" width=\"5.6\" height=\"1.4\" rx=\".7\" fill=\"#fff\" opacity=\".5\" /></g><ellipse cx=\"282\" cy=\"41\" rx=\"11\" ry=\"2\" fill=\"#07493e\" opacity=\".22\" filter=\"url(#signin-art-ao2)\" /><path d=\"M273 29h18l-2 10.5q-.4 2-2.4 2h-9.2q-2 0-2.4-2z\" fill=\"url(#signin-art-pot)\" /><g fill=\"url(#signin-art-leafA)\"><circle cx=\"276\" cy=\"25\" r=\"5.5\" /><circle cx=\"288\" cy=\"25\" r=\"5\" /></g><circle cx=\"282\" cy=\"21\" r=\"6.5\" fill=\"url(#signin-art-leafB)\" /><circle cx=\"280\" cy=\"19\" r=\"2\" fill=\"#fff\" opacity=\".35\" /><rect x=\"200\" y=\"40\" width=\"100\" height=\"8\" rx=\"4\" fill=\"url(#signin-art-woodT)\" /><rect x=\"200\" y=\"44.5\" width=\"100\" height=\"3.5\" rx=\"1.75\" fill=\"#d9ad74\" />","clock":"<circle cx=\"348.5\" cy=\"59\" r=\"20\" fill=\"#07493e\" opacity=\".2\" filter=\"url(#signin-art-ao)\" /><circle cx=\"346\" cy=\"54\" r=\"20\" fill=\"url(#signin-art-frame)\" /><circle cx=\"346\" cy=\"54\" r=\"15.5\" fill=\"url(#signin-art-clock)\" /><circle cx=\"346\" cy=\"54\" r=\"15.5\" fill=\"none\" stroke=\"#07493e\" stroke-opacity=\".1\" stroke-width=\"1.5\" /><line x1=\"346.0\" y1=\"42.6\" x2=\"346.0\" y2=\"40.4\" stroke=\"#0b7a68\" stroke-width=\"1.8\" stroke-linecap=\"round\" /><line x1=\"352.3\" y1=\"43.2\" x2=\"352.8\" y2=\"42.2\" stroke=\"#0b7a68\" stroke-width=\"1\" stroke-linecap=\"round\" /><line x1=\"356.8\" y1=\"47.8\" x2=\"357.8\" y2=\"47.2\" stroke=\"#0b7a68\" stroke-width=\"1\" stroke-linecap=\"round\" /><line x1=\"357.4\" y1=\"54.0\" x2=\"359.6\" y2=\"54.0\" stroke=\"#0b7a68\" stroke-width=\"1.8\" stroke-linecap=\"round\" /><line x1=\"356.8\" y1=\"60.3\" x2=\"357.8\" y2=\"60.8\" stroke=\"#0b7a68\" stroke-width=\"1\" stroke-linecap=\"round\" /><line x1=\"352.3\" y1=\"64.8\" x2=\"352.8\" y2=\"65.8\" stroke=\"#0b7a68\" stroke-width=\"1\" stroke-linecap=\"round\" /><line x1=\"346.0\" y1=\"65.4\" x2=\"346.0\" y2=\"67.6\" stroke=\"#0b7a68\" stroke-width=\"1.8\" stroke-linecap=\"round\" /><line x1=\"339.8\" y1=\"64.8\" x2=\"339.2\" y2=\"65.8\" stroke=\"#0b7a68\" stroke-width=\"1\" stroke-linecap=\"round\" /><line x1=\"335.2\" y1=\"60.3\" x2=\"334.2\" y2=\"60.8\" stroke=\"#0b7a68\" stroke-width=\"1\" stroke-linecap=\"round\" /><line x1=\"334.6\" y1=\"54.0\" x2=\"332.4\" y2=\"54.0\" stroke=\"#0b7a68\" stroke-width=\"1.8\" stroke-linecap=\"round\" /><line x1=\"335.2\" y1=\"47.8\" x2=\"334.2\" y2=\"47.2\" stroke=\"#0b7a68\" stroke-width=\"1\" stroke-linecap=\"round\" /><line x1=\"339.8\" y1=\"43.2\" x2=\"339.2\" y2=\"42.2\" stroke=\"#0b7a68\" stroke-width=\"1\" stroke-linecap=\"round\" /><path d=\"M346 54L346 45.5M346 54L354 57.5\" stroke=\"#07493e\" stroke-width=\"2.2\" stroke-linecap=\"round\" /><circle cx=\"346\" cy=\"54\" r=\"2.4\" fill=\"#ffc43d\" /><path d=\"M332 46a15 15 0 0 1 10-6.5\" stroke=\"#fff\" stroke-width=\"2.4\" fill=\"none\" stroke-linecap=\"round\" opacity=\".9\" />","plant":"<ellipse cx=\"55\" cy=\"285\" rx=\"24\" ry=\"4\" fill=\"#07493e\" opacity=\".3\" filter=\"url(#signin-art-ao2)\" /><g class=\"sway\"><g transform=\"translate(55 250) rotate(-66)\"><path d=\"M0 0C8 -14.399999999999999 6.8 -36 0 -48C-6.8 -36 -8 -14.399999999999999 0 0Z\" fill=\"url(#signin-art-leafB)\" /><path d=\"M0 -3Q1.44 -24 0 -43\" stroke=\"#fff\" stroke-opacity=\".35\" stroke-width=\"1.1\" fill=\"none\" stroke-linecap=\"round\" /></g><g transform=\"translate(55 250) rotate(-46)\"><path d=\"M0 0C9.5 -19.2 8.075 -48 0 -64C-8.075 -48 -9.5 -19.2 0 0Z\" fill=\"url(#signin-art-leafA)\" /><path d=\"M0 -3Q1.71 -32 0 -59\" stroke=\"#fff\" stroke-opacity=\".35\" stroke-width=\"1.1\" fill=\"none\" stroke-linecap=\"round\" /></g><g transform=\"translate(55 250) rotate(-24)\"><path d=\"M0 0C10.5 -24 8.924999999999999 -60 0 -80C-8.924999999999999 -60 -10.5 -24 0 0Z\" fill=\"url(#signin-art-leafB)\" /><path d=\"M0 -3Q1.89 -40 0 -75\" stroke=\"#fff\" stroke-opacity=\".35\" stroke-width=\"1.1\" fill=\"none\" stroke-linecap=\"round\" /></g><g transform=\"translate(55 250) rotate(-4)\"><path d=\"M0 0C11 -27 9.35 -67.5 0 -90C-9.35 -67.5 -11 -27 0 0Z\" fill=\"url(#signin-art-leafA)\" /><path d=\"M0 -3Q1.98 -45 0 -85\" stroke=\"#fff\" stroke-opacity=\".35\" stroke-width=\"1.1\" fill=\"none\" stroke-linecap=\"round\" /></g><g transform=\"translate(55 250) rotate(18)\"><path d=\"M0 0C10.5 -24 8.924999999999999 -60 0 -80C-8.924999999999999 -60 -10.5 -24 0 0Z\" fill=\"url(#signin-art-leafB)\" /><path d=\"M0 -3Q1.89 -40 0 -75\" stroke=\"#fff\" stroke-opacity=\".35\" stroke-width=\"1.1\" fill=\"none\" stroke-linecap=\"round\" /></g><g transform=\"translate(55 250) rotate(40)\"><path d=\"M0 0C9.5 -19.8 8.075 -49.5 0 -66C-8.075 -49.5 -9.5 -19.8 0 0Z\" fill=\"url(#signin-art-leafA)\" /><path d=\"M0 -3Q1.71 -33 0 -61\" stroke=\"#fff\" stroke-opacity=\".35\" stroke-width=\"1.1\" fill=\"none\" stroke-linecap=\"round\" /></g><g transform=\"translate(55 250) rotate(60)\"><path d=\"M0 0C8 -15 6.8 -37.5 0 -50C-6.8 -37.5 -8 -15 0 0Z\" fill=\"url(#signin-art-leafB)\" /><path d=\"M0 -3Q1.44 -25 0 -45\" stroke=\"#fff\" stroke-opacity=\".35\" stroke-width=\"1.1\" fill=\"none\" stroke-linecap=\"round\" /></g></g><path d=\"M36 247H74L70 280Q69 285 64 285H46Q41 285 40 280Z\" fill=\"url(#signin-art-pot)\" /><rect x=\"38.5\" y=\"262\" width=\"33\" height=\"3\" fill=\"#ffc43d\" opacity=\".9\" /><rect x=\"33\" y=\"242\" width=\"44\" height=\"8\" rx=\"4\" fill=\"#ffffff\" /><rect x=\"33\" y=\"246\" width=\"44\" height=\"4\" rx=\"2\" fill=\"#d4e4df\" /><ellipse cx=\"55\" cy=\"243\" rx=\"18\" ry=\"2\" fill=\"#6b4a3a\" />","chair":"<rect x=\"136\" y=\"112\" width=\"68\" height=\"96\" rx=\"20\" fill=\"url(#signin-art-chair)\" /><rect x=\"141\" y=\"116\" width=\"24\" height=\"80\" rx=\"11\" fill=\"#fff\" opacity=\".14\" />","teacher":"<g><path d=\"M134 206C134 178 145 160 160 156L180 156C195 160 206 178 206 206Z\" fill=\"url(#signin-art-cream)\" /><path d=\"M134 206C134 178 145 160 157 156L161 170L154 206Z\" fill=\"url(#signin-art-cardi)\" /><path d=\"M206 206C206 178 195 160 183 156L179 170L186 206Z\" fill=\"url(#signin-art-cardi)\" /><path d=\"M157 156L161 170L154 206M183 156L179 170L186 206\" stroke=\"#8ae6cc\" stroke-opacity=\".7\" stroke-width=\"1.2\" fill=\"none\" stroke-linejoin=\"round\" /><path d=\"M143 184q4 9 3 20M197 184q-4 9-3 20\" stroke=\"#053c33\" stroke-opacity=\".35\" stroke-width=\"1.5\" fill=\"none\" stroke-linecap=\"round\" /><path d=\"M163.5 160L170 170M176.5 160L170 170\" stroke=\"#07493e\" stroke-width=\"1\" /><rect x=\"165.5\" y=\"169.5\" width=\"9\" height=\"10.5\" rx=\"1.8\" fill=\"url(#signin-art-folder)\" /><rect x=\"167.3\" y=\"171.5\" width=\"5.4\" height=\"2.4\" rx=\".8\" fill=\"#fff\" /><ellipse cx=\"170\" cy=\"166\" rx=\"31\" ry=\"5\" fill=\"#07493e\" opacity=\".3\" filter=\"url(#signin-art-ao2)\" /><path d=\"M152 146C146 153 140 158 141 164C152 170.5 188 170.5 199 164C200 158 194 153 188 146Z\" fill=\"#b8770a\" /><path d=\"M170 100C157 100 151 109 151 122C151 133 153 140 150 146C146 152 141 156 141 161C148 167.5 192 167.5 199 161C199 156 194 152 190 146C187 140 189 133 189 122C189 109 183 100 170 100Z\" fill=\"url(#signin-art-scarf)\" /><path d=\"M143 160C150 166 190 166 197 160\" stroke=\"#8a5806\" stroke-opacity=\".4\" stroke-width=\"3\" fill=\"none\" stroke-linecap=\"round\" filter=\"url(#signin-art-ao2)\" /><path d=\"M156 145Q152 153 146.5 159.5M184 145Q188 153 193.5 159.5M163.5 149Q162.5 156 160.5 164M176.5 149Q177.5 156 179.5 164\" stroke=\"#a46606\" stroke-opacity=\".5\" stroke-width=\"1.5\" fill=\"none\" stroke-linecap=\"round\" /><path d=\"M154.5 144.5Q150 151.5 145 156.5M161 149Q159.5 155 157.5 161\" stroke=\"#fff3cf\" stroke-opacity=\".6\" stroke-width=\"1.1\" fill=\"none\" stroke-linecap=\"round\" /><path d=\"M187.5 116C189.5 128 188.5 137 186.5 143\" stroke=\"#8a5806\" stroke-opacity=\".3\" stroke-width=\"2.5\" fill=\"none\" stroke-linecap=\"round\" /><path d=\"M155 115Q159 104 170 103\" stroke=\"#fff\" stroke-opacity=\".55\" stroke-width=\"3\" fill=\"none\" stroke-linecap=\"round\" /><ellipse cx=\"170\" cy=\"124.5\" rx=\"13.6\" ry=\"15.6\" fill=\"#c8860c\" opacity=\".55\" /><ellipse cx=\"170\" cy=\"125\" rx=\"11.2\" ry=\"13.2\" fill=\"url(#signin-art-skin)\" /><path d=\"M157 121.5Q157.5 110.5 170 110Q182.5 110.5 183 121.5Q177 115 170 115Q163 115 157 121.5Z\" fill=\"url(#signin-art-scarf)\" /><path d=\"M159 113Q164 111.1 169 111.1\" stroke=\"#fff\" stroke-opacity=\".45\" stroke-width=\"1.2\" fill=\"none\" stroke-linecap=\"round\" /><path d=\"M158.5 136Q170 146.5 181.5 136\" stroke=\"#a46606\" stroke-opacity=\".6\" stroke-width=\"1.4\" fill=\"none\" stroke-linecap=\"round\" /><ellipse cx=\"165\" cy=\"119.5\" rx=\"4\" ry=\"2.4\" fill=\"#fff\" opacity=\".3\" /><path d=\"M162.4 120.3q3-1.8 6-.4M171.6 119.9q3-1.4 6 .4\" stroke=\"#5b3d2e\" stroke-width=\"1.05\" fill=\"none\" stroke-linecap=\"round\" opacity=\".8\" /><ellipse cx=\"165.6\" cy=\"125.5\" rx=\"1.75\" ry=\"2.15\" fill=\"#2a1d17\" /><ellipse cx=\"174.4\" cy=\"125.5\" rx=\"1.75\" ry=\"2.15\" fill=\"#2a1d17\" /><circle cx=\"166.2\" cy=\"124.7\" r=\".65\" fill=\"#fff\" /><circle cx=\"175\" cy=\"124.7\" r=\".65\" fill=\"#fff\" /><path d=\"M163.4 123.7q2.2-1.5 4.4 0M172.2 123.7q2.2-1.5 4.4 0\" stroke=\"#2a1d17\" stroke-width=\"1\" fill=\"none\" stroke-linecap=\"round\" /><path d=\"M170.2 127.1q-1.4 3.2.8 4.2\" stroke=\"#c48663\" stroke-width=\"1.1\" fill=\"none\" stroke-linecap=\"round\" /><path d=\"M165.2 132.9Q170 138.1 174.8 132.9Q170 134.7 165.2 132.9Z\" fill=\"#a8473d\" /><path d=\"M165.2 132.9Q170 138.1 174.8 132.9\" stroke=\"#a8473d\" stroke-width=\"1.1\" fill=\"none\" stroke-linecap=\"round\" /><path d=\"M166.6 133.6Q170 134.7 173.4 133.6L173 134.3Q170 135.1 167 134.3Z\" fill=\"#fff\" opacity=\".85\" /><circle cx=\"162.2\" cy=\"130.5\" r=\"2.8\" fill=\"#ff8f7a\" opacity=\".25\" /><circle cx=\"177.8\" cy=\"130.5\" r=\"2.8\" fill=\"#ff8f7a\" opacity=\".25\" /><ellipse cx=\"170\" cy=\"132.5\" rx=\"12\" ry=\"7\" fill=\"#c9fff0\" opacity=\".1\" /></g>","desk":"<ellipse cx=\"226\" cy=\"285\" rx=\"122\" ry=\"6\" fill=\"#07493e\" opacity=\".28\" filter=\"url(#signin-art-ao)\" /><rect x=\"124\" y=\"212\" width=\"202\" height=\"48\" rx=\"6\" fill=\"url(#signin-art-panel)\" /><path d=\"M132 236H318\" stroke=\"#b98a52\" stroke-opacity=\".35\" stroke-width=\"1.2\" /><rect x=\"120\" y=\"210\" width=\"10\" height=\"75\" rx=\"4.5\" fill=\"url(#signin-art-woodF)\" /><rect x=\"320\" y=\"210\" width=\"10\" height=\"75\" rx=\"4.5\" fill=\"url(#signin-art-woodF)\" /><rect x=\"121.5\" y=\"212\" width=\"3\" height=\"70\" rx=\"1.5\" fill=\"#fff\" opacity=\".25\" /><rect x=\"321.5\" y=\"212\" width=\"3\" height=\"70\" rx=\"1.5\" fill=\"#fff\" opacity=\".25\" /><path d=\"M118 197H332Q338 197 340 204H110Q112 197 118 197Z\" fill=\"url(#signin-art-woodT)\" /><rect x=\"110\" y=\"203\" width=\"230\" height=\"12\" rx=\"6\" fill=\"url(#signin-art-woodF)\" /><path d=\"M115 203.7H335\" stroke=\"#fff\" stroke-opacity=\".75\" stroke-width=\"1.1\" stroke-linecap=\"round\" />","laptop":"<ellipse cx=\"171\" cy=\"203\" rx=\"32\" ry=\"2.5\" fill=\"#07493e\" opacity=\".3\" filter=\"url(#signin-art-ao2)\" /><rect x=\"140\" y=\"198.5\" width=\"60\" height=\"4.6\" rx=\"2.2\" fill=\"#b4ccc5\" /><rect x=\"142\" y=\"198.6\" width=\"56\" height=\"1.3\" rx=\".6\" fill=\"#fff\" opacity=\".7\" /><path d=\"M141 168C133 180 135 194 150 197.5\" stroke=\"url(#signin-art-cardi)\" stroke-width=\"11\" fill=\"none\" stroke-linecap=\"round\" /><path d=\"M199 168C207 180 205 194 190 197.5\" stroke=\"url(#signin-art-cardi)\" stroke-width=\"11\" fill=\"none\" stroke-linecap=\"round\" /><path d=\"M140.5 170C135 179 135 189 141 195\" stroke=\"#fff\" stroke-opacity=\".22\" stroke-width=\"2\" fill=\"none\" stroke-linecap=\"round\" /><ellipse cx=\"153\" cy=\"197\" rx=\"5.6\" ry=\"3.4\" fill=\"url(#signin-art-skin)\" /><ellipse cx=\"187\" cy=\"197\" rx=\"5.6\" ry=\"3.4\" fill=\"url(#signin-art-skin)\" /><path d=\"M155 195.6h3.4M155 197.6h3.6M185 195.6h-3.4M185 197.6h-3.6\" stroke=\"#c48663\" stroke-width=\".8\" stroke-linecap=\"round\" /><rect x=\"151\" y=\"183\" width=\"38\" height=\"19\" rx=\"5\" fill=\"url(#signin-art-lid)\" /><rect x=\"151.7\" y=\"183.7\" width=\"36.6\" height=\"17.6\" rx=\"4.4\" fill=\"none\" stroke=\"#fff\" stroke-width=\"1.3\" /><path d=\"M170 189.2l6 3-6 3-6-3z\" fill=\"#9ccfc0\" /><path d=\"M166 193.6v2.4q4 2.6 8 0v-2.4\" stroke=\"#9ccfc0\" stroke-width=\"1.3\" fill=\"none\" />","monitor":"<ellipse cx=\"271\" cy=\"200\" rx=\"28\" ry=\"2.6\" fill=\"#07493e\" opacity=\".3\" filter=\"url(#signin-art-ao2)\" /><path d=\"M265 184h12l2 13h-16z\" fill=\"url(#signin-art-frame)\" /><rect x=\"249\" y=\"195.5\" width=\"44\" height=\"5\" rx=\"2.5\" fill=\"url(#signin-art-frame)\" /><rect x=\"214\" y=\"113\" width=\"120\" height=\"78\" rx=\"10\" fill=\"#07493e\" opacity=\".25\" filter=\"url(#signin-art-ao)\" /><rect x=\"212\" y=\"108\" width=\"120\" height=\"78\" rx=\"10\" fill=\"url(#signin-art-dark)\" /><rect x=\"212.7\" y=\"108.7\" width=\"118.6\" height=\"76.6\" rx=\"9.4\" fill=\"none\" stroke=\"#fff\" stroke-opacity=\".18\" stroke-width=\"1.3\" /><rect x=\"217\" y=\"113\" width=\"110\" height=\"65\" rx=\"5\" fill=\"url(#signin-art-scr)\" /><path d=\"M217 118a5 5 0 0 1 5-5h100a5 5 0 0 1 5 5v5H217z\" fill=\"#0b7a68\" /><circle cx=\"223\" cy=\"118\" r=\"1.6\" fill=\"#fff\" opacity=\".7\" /><circle cx=\"228\" cy=\"118\" r=\"1.6\" fill=\"#fff\" opacity=\".7\" /><circle cx=\"233\" cy=\"118\" r=\"1.6\" fill=\"#ffc43d\" /><rect x=\"290\" y=\"116.5\" width=\"30\" height=\"3\" rx=\"1.5\" fill=\"#fff\" opacity=\".55\" /><rect x=\"223\" y=\"128\" width=\"30\" height=\"3.6\" rx=\"1.8\" fill=\"#11302b\" opacity=\".75\" /><rect x=\"223\" y=\"134\" width=\"20\" height=\"3\" rx=\"1.5\" fill=\"#cde9e1\" /><path d=\"M222 172.5H290\" stroke=\"#d5efe8\" stroke-width=\"1\" /><rect class=\"bar\" style=\"animation-delay:0.40s\" x=\"225\" y=\"159\" width=\"7\" height=\"13\" rx=\"2\" fill=\"url(#signin-art-barT)\" /><rect class=\"bar\" style=\"animation-delay:0.50s\" x=\"236.5\" y=\"151\" width=\"7\" height=\"21\" rx=\"2\" fill=\"url(#signin-art-barT)\" /><rect class=\"bar\" style=\"animation-delay:0.60s\" x=\"248\" y=\"155\" width=\"7\" height=\"17\" rx=\"2\" fill=\"url(#signin-art-barT)\" /><rect class=\"bar\" style=\"animation-delay:0.70s\" x=\"259.5\" y=\"143\" width=\"7\" height=\"29\" rx=\"2\" fill=\"url(#signin-art-barY)\" /><rect class=\"bar\" style=\"animation-delay:0.80s\" x=\"271\" y=\"148\" width=\"7\" height=\"24\" rx=\"2\" fill=\"url(#signin-art-barT)\" /><rect class=\"bar\" style=\"animation-delay:0.90s\" x=\"282.5\" y=\"139\" width=\"7\" height=\"33\" rx=\"2\" fill=\"url(#signin-art-barT)\" /><circle cx=\"307\" cy=\"144\" r=\"11\" fill=\"none\" stroke=\"#dcefe9\" stroke-width=\"5\" /><circle cx=\"307\" cy=\"144\" r=\"11\" fill=\"none\" stroke=\"url(#signin-art-barT)\" stroke-width=\"5\" stroke-linecap=\"round\" stroke-dasharray=\"50 70\" transform=\"rotate(-90 307 144)\" /><text x=\"307\" y=\"146.4\" text-anchor=\"middle\" font-size=\"6.5\" font-weight=\"800\" fill=\"#11302b\" direction=\"ltr\"> 72% </text><rect x=\"297\" y=\"161\" width=\"20\" height=\"3\" rx=\"1.5\" fill=\"#cde9e1\" /><rect x=\"297\" y=\"166.5\" width=\"13\" height=\"3\" rx=\"1.5\" fill=\"#cde9e1\" /><circle cx=\"272\" cy=\"182\" r=\"1.3\" fill=\"#fff\" opacity=\".35\" /><g transform=\"translate(186 0)\">","mug":"<ellipse cx=\"125\" cy=\"199\" rx=\"10\" ry=\"2.2\" fill=\"#07493e\" opacity=\".28\" filter=\"url(#signin-art-ao2)\" /><path d=\"M129 187q7-.5 7 5t-7 5\" stroke=\"#e99f15\" stroke-width=\"2.6\" fill=\"none\" /><rect x=\"117\" y=\"184\" width=\"13\" height=\"15\" rx=\"3.5\" fill=\"url(#signin-art-mug)\" /><ellipse cx=\"123.5\" cy=\"184.6\" rx=\"6.2\" ry=\"1.7\" fill=\"#7a4a24\" /><rect x=\"118.5\" y=\"187\" width=\"2.4\" height=\"9\" rx=\"1.2\" fill=\"#fff\" opacity=\".45\" /><g fill=\"none\" stroke=\"#fff\" stroke-width=\"1.9\" stroke-linecap=\"round\" opacity=\".5\"><path class=\"steam\" d=\"M121 179q-3-4 0-8t0-8\" /><path class=\"steam\" style=\"animation-delay:1.3s\" d=\"M126 180q-3-4 0-8t0-8\" /></g></g>","colleague":"<g><ellipse cx=\"361\" cy=\"285\" rx=\"24\" ry=\"3.6\" fill=\"#07493e\" opacity=\".32\" filter=\"url(#signin-art-ao2)\" /><path d=\"M349 214L347 279Q347 281 349.5 281H357.5L360 224Z\" fill=\"url(#signin-art-pants)\" /><path d=\"M360 224L363.5 281H371.5Q374 281 374 279L373.5 214Z\" fill=\"url(#signin-art-pants)\" /><path d=\"M352 222l-.8 52M366 226l1.4 50\" stroke=\"#fff\" stroke-opacity=\".1\" stroke-width=\"1.2\" /><path d=\"M343.5 279.5q0-3.2 3.4-3.2h11.6v6.7h-15z\" fill=\"#0d211d\" /><path d=\"M346 277.5h8\" stroke=\"#fff\" stroke-opacity=\".25\" stroke-width=\"1\" stroke-linecap=\"round\" /><path d=\"M362.5 276.3h11.6q3.6 0 3.6 3.2v3.5h-15.2z\" fill=\"#0d211d\" /><path d=\"M377 158Q384 174 381.5 196\" stroke=\"#1d9a7e\" stroke-width=\"8.5\" stroke-linecap=\"round\" fill=\"none\" /><rect x=\"371\" y=\"184\" width=\"18\" height=\"24\" rx=\"2.5\" fill=\"url(#signin-art-folder)\" transform=\"rotate(8 380 196)\" /><rect x=\"373\" y=\"186\" width=\"14\" height=\"3\" rx=\"1\" fill=\"#fff\" opacity=\".8\" transform=\"rotate(8 380 196)\" /><path d=\"M346 160Q347 150 356 148L368 148Q377 150 378 160L376.5 216Q362 221 347.5 216Z\" fill=\"url(#signin-art-shirt)\" /><path d=\"M353 188q4 11 1.5 26M371 184q-2 12 0 30\" stroke=\"#0d7d66\" stroke-opacity=\".3\" stroke-width=\"1.5\" fill=\"none\" stroke-linecap=\"round\" /><rect x=\"347\" y=\"211.5\" width=\"30\" height=\"4.5\" rx=\"2\" fill=\"#0d211d\" /><rect x=\"360\" y=\"211.8\" width=\"5\" height=\"3.9\" rx=\"1\" fill=\"#ffc43d\" /><path d=\"M356 148L362 158L368 148Z\" fill=\"#e9f7f3\" /><path d=\"M357 148l5 7.5 5-7.5\" fill=\"none\" stroke=\"#0d7d66\" stroke-opacity=\".4\" stroke-width=\"1\" /><path d=\"M358 150L364 172M366 150L364 172\" stroke=\"#07493e\" stroke-width=\"1\" opacity=\".8\" /><rect x=\"360\" y=\"171\" width=\"8.5\" height=\"11\" rx=\"1.8\" fill=\"url(#signin-art-folder)\" /><rect x=\"361.8\" y=\"173\" width=\"5\" height=\"2.4\" rx=\".8\" fill=\"#fff\" /><circle cx=\"381.5\" cy=\"198\" r=\"3.6\" fill=\"url(#signin-art-skin2)\" /><path d=\"M350 157Q339 159 332.5 153\" stroke=\"#36b896\" stroke-width=\"8.5\" stroke-linecap=\"round\" fill=\"none\" /><path d=\"M332.5 153L322 146\" stroke=\"url(#signin-art-skin2)\" stroke-width=\"5.4\" stroke-linecap=\"round\" /><path d=\"M323 146.5L315 140.5\" stroke=\"#d9a079\" stroke-width=\"2.4\" stroke-linecap=\"round\" /><circle cx=\"321.5\" cy=\"145.5\" r=\"3.4\" fill=\"#d9a079\" /><rect x=\"356.5\" y=\"138\" width=\"10\" height=\"12\" rx=\"3.5\" fill=\"#c98d64\" /><circle cx=\"361\" cy=\"128\" r=\"13.5\" fill=\"url(#signin-art-skin2)\" /><ellipse cx=\"373.5\" cy=\"130\" rx=\"2.8\" ry=\"3.8\" fill=\"#d59a72\" /><path d=\"M373.5 128.5q1.5 1.5 0 3\" stroke=\"#a96f4a\" stroke-width=\".9\" fill=\"none\" /><path d=\"M347.6 126.5C346 113.5 356 109.5 363 110C372.5 110.5 377.5 118 375.5 129C374.5 124 371.5 121 366 120.5C360 122.5 352 122 347.6 126.5Z\" fill=\"url(#signin-art-hair)\" /><path d=\"M353.5 115q6-3.4 12.5-1.4\" stroke=\"#9c7a62\" stroke-opacity=\".65\" stroke-width=\"1.7\" fill=\"none\" stroke-linecap=\"round\" /><path d=\"M349 133q2.5 7 9 8.5q6 .5 10-3.5\" stroke=\"#8a5a3a\" stroke-opacity=\".18\" stroke-width=\"3\" fill=\"none\" stroke-linecap=\"round\" /><path d=\"M349.5 124.6q2.6-1.4 5 0M357.5 124.4q2.6-1.4 5 .2\" stroke=\"#2a1d17\" stroke-width=\"1.2\" fill=\"none\" stroke-linecap=\"round\" /><ellipse cx=\"352\" cy=\"129\" rx=\"1.4\" ry=\"1.8\" fill=\"#1f1611\" /><ellipse cx=\"360\" cy=\"129\" rx=\"1.4\" ry=\"1.8\" fill=\"#1f1611\" /><circle cx=\"352.5\" cy=\"128.4\" r=\".5\" fill=\"#fff\" /><circle cx=\"360.5\" cy=\"128.4\" r=\".5\" fill=\"#fff\" /><path d=\"M349.4 131q-2.2 3 .6 4.2\" stroke=\"#a96f4a\" stroke-width=\"1.1\" fill=\"none\" stroke-linecap=\"round\" /><path d=\"M352 137.4q3.4 2.4 7 0\" stroke=\"#8c4a3c\" stroke-width=\"1.4\" fill=\"none\" stroke-linecap=\"round\" /><circle cx=\"364\" cy=\"134\" r=\"2.6\" fill=\"#ff8f7a\" opacity=\".2\" /><ellipse cx=\"355\" cy=\"122.8\" rx=\"4\" ry=\"1.6\" fill=\"#fff\" opacity=\".18\" /></g>"};
+
+/* ---------- i18n ---------- */
+const C={
+ nfTitle:["Page not found","الصفحة غير موجودة"],
+ nfBody:["The address may be mistyped, or the page has moved.","ربما كُتب العنوان بشكل خاطئ، أو نُقلت الصفحة إلى مكان آخر."],
+ inTitle:["We couldn't find that page","لم نعثر على هذه الصفحة"],
+ inBody:["It may have moved, or you may not have access to it.","ربما نُقلت، أو ليست لديك صلاحية الوصول إليها."],
+ errTitle:["Something went wrong","حدث خطأ ما"],
+ errBody:["This page didn't load. Try again — if it keeps happening, contact support.","تعذّر تحميل هذه الصفحة. حاول مرة أخرى، وإن تكرّر ذلك فتواصل مع الدعم الفني."],
+ back:["Back to the dashboard","العودة إلى لوحة التحكم"],
+ signin:["Sign in","تسجيل الدخول"],
+ retry:["Try again","حاول مرة أخرى"],
+ ref:["Reference","رمز المرجع"],
+ copy:["Copy","نسخ"], copied:["Copied","تم النسخ"],
+ refHelp:["Quote this code if you contact support.","اذكر هذا الرمز إذا تواصلت مع الدعم الفني."],
+ e404:["Error 404","خطأ 404"],
+ school:["Green Valley School","مدرسة الوادي الأخضر"], erp:["School ERP","نظام إدارة المدرسة"],
+ gBody:["The app couldn't load. Please try again in a moment.","تعذّر تحميل النظام. حاول مرة أخرى بعد لحظات."],
+ gCode:["Code","الرمز"],
+ artA:[["Page moved?","هل نُقلت الصفحة؟"],["Check the address","تحقّق من العنوان"]],
+ artB:[["Not on this shelf","ليست في هذا الرف"],["Looked everywhere","بحثنا في كل مكان"]],
+ artC:[["Reconnecting…","نعيد المحاولة…"],["Back in a moment","لحظات ونعود"]],
+};
+const tr=L=>(k)=>{const v=Array.isArray(k)?k:C[k];return L==="ar"?v[1]:v[0];};
+const ic=(n,x="")=>`<i class="ph-duotone ph-${n} ${x}" aria-hidden="true"></i>`;
+const REF="ERR-7F3A2C";
+
+/* ---------- Option 1 scene ---------- */
+let UID=0;
+function elems(s){return s.match(/<[^>]+\/>/g);}
+function fcard(id,x,y,w,h,rtl,title,detail,kind,delay){
+ const cx=rtl?x+w-h/2:x+h/2, cy=y+h/2, tx=rtl?x+w-h+2:x+h-2, dir=rtl?"rtl":"ltr";
+ const icons={
+  q:`<circle cx="${cx}" cy="${cy}" r="11" fill="url(#${id}folder)"/><ellipse cx="${cx-3}" cy="${cy-5}" rx="5" ry="3" fill="#fff" opacity=".35"/><text x="${cx}" y="${cy+4.2}" text-anchor="middle" font-size="12" font-weight="800" fill="#fff" font-family="Plus Jakarta Sans,system-ui">?</text>`,
+  s:`<circle cx="${cx}" cy="${cy}" r="11" fill="url(#${id}barT)"/><ellipse cx="${cx-3}" cy="${cy-5}" rx="5" ry="3" fill="#fff" opacity=".25"/><circle cx="${cx-1.2}" cy="${cy-1.2}" r="4" fill="none" stroke="#fff" stroke-width="2"/><path d="M${cx+1.8} ${cy+1.8}l3 3" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/>`,
+  r:`<circle cx="${cx}" cy="${cy}" r="11" fill="url(#${id}folder)"/><ellipse cx="${cx-3}" cy="${cy-5}" rx="5" ry="3" fill="#fff" opacity=".35"/><path d="M${cx+4.6} ${cy-1}a4.8 4.8 0 1 1-1.6-3.8" stroke="#fff" stroke-width="2.1" fill="none" stroke-linecap="round"/><path d="M${cx+4.8} ${cy-6.2}v3.6h-3.6" stroke="#fff" stroke-width="2.1" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+ };
+ return `<g class="bob" style="animation-delay:${delay}s"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="12" fill="#fff" filter="url(#${id}card)"/>${icons[kind]}
+ <text x="${tx}" y="${cy-2.5}" direction="${dir}" text-anchor="start" font-size="9.6" font-weight="700" fill="#11302b">${title}</text>
+ <text x="${tx}" y="${cy+9}" direction="${dir}" text-anchor="start" font-size="8" font-weight="500" fill="#587069">${detail}</text></g>`;
+}
+function scene(kind,L,viewBox="0 0 400 300"){
+ const t=tr(L), rtl=L==="ar", P=PARTS;
+ const id="a"+(++UID)+"-";
+ // monitor: frame / screen header / screen content / tail (stand light + mug wrapper)
+ const m=P.monitor, i1=m.indexOf('<rect x="223" y="128"'), i2=m.indexOf('<circle cx="272" cy="182"');
+ const monHead=m.slice(0,i1), monOrig=m.slice(i1,i2), monTail=m.slice(i2);
+ const lap=elems(P.laptop);
+ let screen=monOrig, shelf=P.shelf, colleague=P.colleague, teacher=P.teacher, laptop=P.laptop, extra="", after="";
+ if(kind==="nf"){
+  teacher="";
+  laptop=[0,1,2,9,10,11,12].map(i=>lap[i]).join("");
+  screen=`<rect x="223" y="128" width="30" height="3.6" rx="1.8" fill="#11302b" opacity=".75"/><rect x="223" y="134" width="20" height="3" rx="1.5" fill="#cde9e1"/>
+   <rect x="250" y="140" width="44" height="33" rx="4" fill="none" stroke="#9ccfc0" stroke-width="1.4" stroke-dasharray="3 3"/>
+   <circle cx="270" cy="154" r="7" fill="#fff" stroke="url(#signin-art-barT)" stroke-width="2.6"/><path d="M275 159l5 5" stroke="#0b7a68" stroke-width="3" stroke-linecap="round"/>
+   <rect class="blink" x="300" y="132" width="1.6" height="7" rx=".8" fill="#0b7a68"/>`;
+  // a page drifting toward the window, and one already outside
+  extra=`<path d="M196 182Q170 128 176 104T148 76" stroke="#fff" stroke-width="1.6" fill="none" stroke-dasharray="1.5 5" stroke-linecap="round" opacity=".9"/>
+   <g class="paper"><g transform="translate(166 78) rotate(-16)">
+    <rect x="-11" y="-14" width="22" height="28" rx="2.6" fill="url(#signin-art-cream)" filter="url(#signin-art-card)"/>
+    <path d="M5 -14h3.4q2.6 0 2.6 2.6V-8z" fill="#e3d2b0"/>
+    <rect x="-7" y="-9" width="10" height="2.2" rx="1.1" fill="#0b7a68" opacity=".75"/>
+    <rect x="-7" y="-4" width="14" height="1.6" rx=".8" fill="#cde9e1"/><rect x="-7" y="-.6" width="12" height="1.6" rx=".8" fill="#cde9e1"/><rect x="-7" y="2.8" width="14" height="1.6" rx=".8" fill="#cde9e1"/>
+    <rect x="-7" y="7" width="6" height="3" rx="1" fill="#ffc43d"/></g></g>
+   <g clip-path="url(#signin-art-win)"><g class="paper-out"><g transform="translate(100 47) rotate(22)"><rect x="-5" y="-6.5" width="10" height="13" rx="1.4" fill="#fffdf7" opacity=".95"/><rect x="-3" y="-3.5" width="6" height="1.2" rx=".6" fill="#0b7a68" opacity=".6"/><rect x="-3" y="-.8" width="5" height="1" rx=".5" fill="#cde9e1"/></g></g></g>`;
+ } else if(kind==="shelf"){
+  shelf=shelf.replace(/<g><rect x="216"[\s\S]*?<\/g>/,`<ellipse cx="220" cy="31" rx="9" ry="13" fill="#ffc43d" opacity=".35" filter="url(#signin-art-ao2)" class="twinkle"/><rect x="216.6" y="21.6" width="6.8" height="18.8" rx="2" fill="#0b7a68" fill-opacity=".06" stroke="#b8770a" stroke-opacity=".8" stroke-width="1.1" stroke-dasharray="2.4 2"/>`);
+  colleague=colleague
+   .replace('M350 157Q339 159 332.5 153','M350 157Q342 151 338 140')
+   .replace('M332.5 153L322 146','M338 140L328.5 128.5')
+   .replace('M323 146.5L315 140.5','M329 129L322 122')
+   .replace('<circle cx="321.5" cy="145.5" r="3.4" fill="#d9a079" />','<circle cx="328" cy="128" r="3.4" fill="#d9a079" />');
+  after=`<g class="float"><circle cx="384" cy="97" r="10.5" fill="#fff" filter="url(#signin-art-card)"/><text x="384" y="101.6" text-anchor="middle" font-size="13" font-weight="800" fill="#0b7a68" font-family="Plus Jakarta Sans,system-ui">?</text><circle cx="377" cy="112" r="2.4" fill="#fff"/></g>
+   <circle cx="220" cy="12" r="2" fill="#ffc43d" class="twinkle"/><circle cx="228" cy="8" r="1.3" fill="#ffc43d" class="twinkle" style="animation-delay:.6s"/>`;
+ } else if(kind==="err"){
+  const raised=`<path d="M143 170C128 162 121 144 125 121" stroke="url(#signin-art-cardi)" stroke-width="11" fill="none" stroke-linecap="round"/>
+   <path d="M141 166C130 158 126 146 127 132" stroke="#fff" stroke-opacity=".22" stroke-width="2" fill="none" stroke-linecap="round"/>
+   <ellipse cx="125.5" cy="114" rx="4.6" ry="5.8" fill="url(#signin-art-skin)"/><path d="M122 109.5v-3M125 108.6v-3.6M128 109.4v-3" stroke="url(#signin-art-skin)" stroke-width="2.4" stroke-linecap="round"/>
+   <g class="wave" fill="none" stroke="#ffc43d" stroke-width="1.8" stroke-linecap="round"><path d="M114 108q-3 4 0 9"/><path d="M137 106q3 4 0 9"/></g>`;
+  laptop=[0,1,2].map(i=>lap[i]).join("")+raised+lap[4]+lap[7]+`<path d="M185 195.6h-3.4M185 197.6h-3.6" stroke="#c48663" stroke-width=".8" stroke-linecap="round"/>`+[9,10,11,12].map(i=>lap[i]).join("");
+  screen=`<path d="M272 131.5L287.5 158Q289 161.4 285 161.4H259Q255 161.4 256.5 158Z" fill="url(#signin-art-barY)"/>
+   <path d="M272 133.6L262 151" stroke="#fff" stroke-opacity=".5" stroke-width="1.4" stroke-linecap="round"/>
+   <rect x="270.7" y="140" width="2.6" height="11" rx="1.3" fill="#4a3400"/><circle cx="272" cy="155.4" r="1.6" fill="#4a3400"/>
+   <rect x="252" y="167" width="34" height="2.6" rx="1.3" fill="#cde9e1"/><rect class="blink" x="289" y="165" width="1.6" height="6.6" rx=".8" fill="#0b7a68"/>`;
+  after=`<g class="float"><rect x="148" y="66" width="38" height="22" rx="11" fill="#fff" filter="url(#signin-art-card)"/><path d="M160 87l-2 7 8-7z" fill="#fff"/>
+   <g class="dot3" fill="#0b7a68"><circle cx="159" cy="77" r="2.2"/><circle cx="167" cy="77" r="2.2"/><circle cx="175" cy="77" r="2.2"/></g></g>`;
+ }
+ const card = kind==="nf"?fcard(id,8,158,124,40,rtl,t(C.artA[0]),t(C.artA[1]),"q",.6)
+            : kind==="shelf"?fcard(id,8,158,124,40,rtl,t(C.artB[0]),t(C.artB[1]),"s",.6)
+            : fcard(id,4,160,122,40,rtl,t(C.artC[0]),t(C.artC[1]),"r",.6);
+ let svg = P.defs+P.sunlight+P.window+P.succulent+shelf+P.clock+P.plant+P.chair+teacher+P.desk+laptop+monHead+screen+monTail+P.mug+colleague+extra+after+card;
+ svg=svg.replaceAll("signin-art-",id);
+ return `<svg class="art" viewBox="${viewBox}" aria-hidden="true" focusable="false">${svg}</svg>`;
+}
+
+/* ---------- Option 2 art ---------- */
+function digit(ch,x,y,size,id){
+ let s="";
+ for(let i=9;i>=1;i--) s+=`<text x="${x+i*.7}" y="${y+i*1.1}" font-size="${size}" font-weight="800" font-family="Plus Jakarta Sans,system-ui" fill="#07493e" opacity="${(.5+i*.04).toFixed(2)}">${ch}</text>`;
+ s+=`<text x="${x}" y="${y}" font-size="${size}" font-weight="800" font-family="Plus Jakarta Sans,system-ui" fill="url(#${id}g)">${ch}</text>`;
+ s+=`<text x="${x}" y="${y}" font-size="${size}" font-weight="800" font-family="Plus Jakarta Sans,system-ui" fill="url(#${id}hl)">${ch}</text>`;
+ return s;
+}
+function big404(){
+ const id="b"+(++UID)+"-";
+ return `<svg class="art" viewBox="0 0 560 270" aria-hidden="true" focusable="false"><defs>
+  <linearGradient id="${id}g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3fd0ab"/><stop offset=".55" stop-color="#119a80"/><stop offset="1" stop-color="#0b7a68"/></linearGradient>
+  <linearGradient id="${id}hl" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".45"/><stop offset=".35" stop-color="#fff" stop-opacity="0"/></linearGradient>
+  <radialGradient id="${id}sun" cx=".36" cy=".3" r=".8"><stop offset="0" stop-color="#fff6d6"/><stop offset=".45" stop-color="#ffd35f"/><stop offset="1" stop-color="#e59c14"/></radialGradient>
+  <radialGradient id="${id}in" cx=".5" cy=".5" r=".5"><stop offset=".55" stop-color="#fff8e1"/><stop offset="1" stop-color="#ffe8a8"/></radialGradient>
+  <filter id="${id}blur"><feGaussianBlur stdDeviation="6"/></filter>
+  <filter id="${id}sh" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#07493e" flood-opacity=".22"/></filter>
+ </defs>
+ <ellipse cx="280" cy="250" rx="230" ry="12" fill="#07493e" opacity=".14" filter="url(#${id}blur)"/>
+ <g direction="ltr">${digit("4",40,226,230,id)}${digit("4",372,226,230,id)}</g>
+ <g class="float">
+  <circle cx="286" cy="148" r="82" fill="#b8770a" opacity=".35" filter="url(#${id}blur)" transform="translate(4 10)"/>
+  <circle cx="282" cy="140" r="82" fill="url(#${id}sun)"/>
+  <circle cx="282" cy="140" r="44" fill="url(#${id}in)"/>
+  <circle cx="282" cy="140" r="44" fill="none" stroke="#b8770a" stroke-opacity=".25" stroke-width="3"/>
+  <path d="M226 104a70 70 0 0 1 48-34" stroke="#fff" stroke-width="7" fill="none" stroke-linecap="round" opacity=".65"/>
+  <g transform="translate(282 142) rotate(-12)"><rect x="-17" y="-22" width="34" height="44" rx="4" fill="#fff" filter="url(#${id}sh)"/><path d="M8 -22h5q4 0 4 4v4z" fill="#e7ddc6"/>
+   <rect x="-11" y="-14" width="15" height="3.4" rx="1.7" fill="#0b7a68" opacity=".8"/><rect x="-11" y="-6" width="22" height="2.6" rx="1.3" fill="#cde9e1"/><rect x="-11" y="-.5" width="19" height="2.6" rx="1.3" fill="#cde9e1"/><rect x="-11" y="5" width="22" height="2.6" rx="1.3" fill="#cde9e1"/><rect x="-11" y="11" width="9" height="4.4" rx="1.4" fill="#ffc43d"/></g>
+ </g>
+ <g class="float" style="animation-delay:1s"><g transform="translate(372 36) rotate(-18)"><path d="M-14 -9L16 0L-14 9L-7 0Z" fill="#0b7a68"/><path d="M-7 0L16 0L-14 9Z" fill="#07493e" opacity=".45"/></g><path d="M350 46q-14 6-26 2" stroke="#0b7a68" stroke-opacity=".35" stroke-width="2" fill="none" stroke-dasharray="2 4" stroke-linecap="round"/></g>
+ <path class="twinkle" d="M500 40l3 8 8 3-8 3-3 8-3-8-8-3 8-3z" fill="#ffc43d"/>
+ <path class="twinkle" style="animation-delay:1s" d="M30 60l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#ffc43d"/>
+ <circle cx="520" cy="190" r="7" fill="#d5efe8"/><circle cx="18" cy="170" r="5" fill="#bfe6db"/><circle cx="196" cy="34" r="4" fill="#ffc43d" opacity=".7"/>
+ </svg>`;
+}
+function bigWarn(){
+ const id="w"+(++UID)+"-";
+ return `<svg class="art" viewBox="0 0 400 250" aria-hidden="true" focusable="false"><defs>
+  <radialGradient id="${id}sun" cx=".36" cy=".3" r=".8"><stop offset="0" stop-color="#fff6d6"/><stop offset=".45" stop-color="#ffd35f"/><stop offset="1" stop-color="#e59c14"/></radialGradient>
+  <linearGradient id="${id}t" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3fd0ab"/><stop offset="1" stop-color="#0b7a68"/></linearGradient>
+  <filter id="${id}blur"><feGaussianBlur stdDeviation="6"/></filter>
+ </defs>
+ <ellipse cx="200" cy="232" rx="120" ry="10" fill="#07493e" opacity=".14" filter="url(#${id}blur)"/>
+ <ellipse cx="200" cy="150" rx="150" ry="40" fill="none" stroke="#bfe6db" stroke-width="10" transform="rotate(-8 200 150)"/>
+ <g class="float">
+  <circle cx="204" cy="132" r="88" fill="#b8770a" opacity=".3" filter="url(#${id}blur)"/>
+  <circle cx="200" cy="122" r="88" fill="url(#${id}sun)"/>
+  <path d="M138 80a76 76 0 0 1 50-34" stroke="#fff" stroke-width="8" fill="none" stroke-linecap="round" opacity=".6"/>
+  <rect x="188" y="66" width="24" height="70" rx="12" fill="#07493e" opacity=".9"/>
+  <rect x="190" y="66" width="8" height="66" rx="4" fill="#fff" opacity=".18"/>
+  <circle cx="200" cy="166" r="13" fill="#07493e" opacity=".9"/><circle cx="196" cy="162" r="4" fill="#fff" opacity=".2"/>
+ </g>
+ <path d="M50 150A150 40 0 0 0 350 150" stroke="#8fd8c3" stroke-width="10" fill="none" stroke-linecap="round" transform="rotate(-8 200 150)" opacity=".95"/>
+ <g class="float" style="animation-delay:1.2s"><rect x="318" y="46" width="30" height="30" rx="9" fill="url(#${id}t)" transform="rotate(14 333 61)"/><rect x="322" y="50" width="10" height="7" rx="3" fill="#fff" opacity=".3" transform="rotate(14 333 61)"/></g>
+ <g class="float" style="animation-delay:.6s"><circle cx="70" cy="190" r="12" fill="url(#${id}t)"/><ellipse cx="66" cy="185" rx="4" ry="2.6" fill="#fff" opacity=".35"/></g>
+ <path class="twinkle" d="M76 46l3 8 8 3-8 3-3 8-3-8-8-3 8-3z" fill="#ffc43d"/>
+ <path class="twinkle" style="animation-delay:1.1s" d="M340 186l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#ffc43d"/>
+ </svg>`;
+}
+
+/* ---------- Option 3 spots ---------- */
+const spotNF=()=>{const id="s"+(++UID)+"-";return `<svg viewBox="0 0 56 56" aria-hidden="true"><defs><linearGradient id="${id}f" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffdd7e"/><stop offset="1" stop-color="#eea31a"/></linearGradient><linearGradient id="${id}t" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3fd0ab"/><stop offset="1" stop-color="#0b7a68"/></linearGradient></defs>
+ <path d="M7 15q0-4 4-4h10l4 4h16q4 0 4 4v20q0 4-4 4H11q-4 0-4-4z" fill="url(#${id}f)"/><path d="M7 21h38" stroke="#fff" stroke-opacity=".5" stroke-width="2"/>
+ <circle cx="34" cy="33" r="9" fill="#fff" stroke="url(#${id}t)" stroke-width="4"/><path d="M41 40l6 6" stroke="#0b7a68" stroke-width="5" stroke-linecap="round"/><circle cx="31.5" cy="30.5" r="2.4" fill="#d5efe8"/></svg>`;};
+const spotErr=()=>{const id="s"+(++UID)+"-";return `<svg viewBox="0 0 56 56" aria-hidden="true"><defs><linearGradient id="${id}y" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe394"/><stop offset="1" stop-color="#f2a516"/></linearGradient></defs>
+ <rect x="6" y="9" width="44" height="32" rx="6" fill="#0f2f2a"/><rect x="9" y="12" width="38" height="26" rx="3" fill="#fff"/><path d="M22 47h12" stroke="#0b7a68" stroke-width="4" stroke-linecap="round"/><path d="M28 41v6" stroke="#0b7a68" stroke-width="3"/>
+ <path d="M28 15.5L38 33q1 2-1.4 2H19.4Q17 35 18 33Z" fill="url(#${id}y)"/><rect x="26.8" y="21" width="2.4" height="7.4" rx="1.2" fill="#4a3400"/><circle cx="28" cy="31" r="1.5" fill="#4a3400"/></svg>`;};
+
+/* ---------- shell ---------- */
+const langT=L=>`<span class="lang"><span class="${L==="en"?"on":""}">EN</span><span class="ar ${L==="ar"?"on":""}">ع</span></span>`;
+const bellB=()=>`<span class="bell">${ic("bell")}</span>`;
+const brand=L=>{const t=tr(L);return `<div class="brand"><div class="logo">${ic("graduation-cap")}</div><div><div class="brand-name">${t("school")}</div><div class="brand-sub">${t("erp")}</div></div></div>`;};
+function side(L,cur){
+ const t=tr(L), l=(i,txt,k)=>`<a class="navlink" href="#" ${cur===k?'aria-current="page"':""}>${ic(i)}<span>${txt}</span></a>`;
+ return `<aside class="sb">${brand(L)}<nav>
+ <a class="single" href="#"><span class="mi">${ic("squares-four")}</span>${t(["Dashboard","لوحة التحكم"])}</a>
+ <div class="grp"><div class="gh"><span class="mi" style="background:var(--primary-soft);color:var(--primary)">${ic("users-three")}</span>${t(["HR","الموارد البشرية"])}</div><div class="kids">
+ ${l("users",t(["Employees","الموظفون"]),"emp")}${l("gavel",t(["Penalties","الجزاءات"]),"pen")}${l("clock-countdown",t(["Lateness","التأخير"]),"lat")}${l("wallet",t(["Payroll","الرواتب"]),"pay")}</div></div>
+ <div class="grp"><div class="gh"><span class="mi" style="background:var(--accent-soft);color:#6b4b00">${ic("buildings")}</span>${t(["Administration","الإدارة"])}</div><div class="kids">
+ ${l("gear-six",t(["Settings","الإعدادات"]),"set")}${l("clock-counter-clockwise",t(["Activity","سجل النشاط"]),"act")}${l("user-circle-gear",t(["Users","المستخدمون"]),"usr")}</div></div>
+ </nav><a href="#" class="user" style="color:inherit"><div class="av">${ic("user")}</div><div style="min-width:0;flex:1"><div class="n">${t(["Laila Hassan","ليلى حسن"])}</div><div class="r">${t(["HR manager","مدير شؤون الموظفين"])}</div></div>${ic("caret-up-down")}</a></aside>`;
+}
+const deskShell=(L,cur,content)=>`<div class="desk frame" lang="${L}" dir="${L==="ar"?"rtl":"ltr"}">${side(L,cur)}<div class="main"><div class="topline">${bellB()}${langT(L)}</div>${content}</div></div>`;
+const phoneShell=(L,content)=>`<div class="phone frame" lang="${L}" dir="${L==="ar"?"rtl":"ltr"}"><div class="mbar"><span class="menub">${ic("list")}</span><div class="brand-name">${tr(L)("school")}</div>${bellB()}${langT(L)}</div><div class="scroll">${content}</div></div>`;
+const deskBare=(L,content)=>`<div class="desk frame" lang="${L}" dir="${L==="ar"?"rtl":"ltr"}">${content}</div>`;
+const phoneBare=(L,content)=>`<div class="phone frame" lang="${L}" dir="${L==="ar"?"rtl":"ltr"}"><div class="scroll">${content}</div></div>`;
+
+/* ---------- shared bits ---------- */
+const btnBack=(L,primary=true)=>`<a href="#" class="btn ${primary?"btn-primary":""}">${ic("house")}${tr(L)("back")}</a>`;
+const btnSignin=L=>`<a href="#" class="btn btn-primary">${ic("sign-in","flip")}${tr(L)("signin")}</a>`;
+const btnRetry=L=>`<button class="btn btn-primary" type="button">${ic("arrow-clockwise")}${tr(L)("retry")}</button>`;
+const refBlock=L=>{const t=tr(L);return `<div class="ref"><div class="ref-box"><span class="ref-l">${t("ref")}</span><span class="ref-c">${REF}</span><button type="button" class="copy" data-copy="${REF}" data-l="${L}">${ic("copy")}<span>${t("copy")}</span></button></div><p class="ref-h">${t("refHelp")}</p></div>`;};
+const actsA=(L,signedIn)=>`<div class="acts">${signedIn?btnBack(L):btnSignin(L)}</div>`;
+const actsC=L=>`<div class="acts">${btnRetry(L)}${btnBack(L,false)}</div>`;
+const note=(txt)=>`<span class="state-note">${txt}</span>`;
+
+/* ================= OPTION 1 ================= */
+const O1={
+ aD:L=>{const t=tr(L);return deskBare(L,`<div class="o1a"><section class="o1a-panel">${brand(L)}<div class="o1a-art">${scene("nf",L)}</div></section>
+   <section class="o1a-side"><div style="display:flex;justify-content:flex-end">${langT(L)}</div>
+   <div class="o1a-msg rise"><span class="eyebrow">${t("e404")}</span><h1 class="ttl disp">${t("nfTitle")}</h1><p class="lead">${t("nfBody")}</p>${actsA(L,true)}</div></section></div>`);},
+ aP:L=>{const t=tr(L);return phoneBare(L,`<div class="o1p-panel"><div class="o1p-top">${brand(L)}${langT(L)}</div><div class="o1p-art">${scene("nf",L,"0 38 400 250")}</div></div>
+   <div class="o1p-msg"><span class="eyebrow">${t("e404")}</span><h1 class="ttl disp">${t("nfTitle")}</h1><p class="lead">${t("nfBody")}</p>${actsA(L,false)}</div>`);},
+ bD:L=>{const t=tr(L);return deskShell(L,"emp",`<div class="card o1-in"><div class="art-wrap">${scene("shelf",L)}</div><div class="txt"><h1 class="ttl disp">${t("inTitle")}</h1><p class="lead">${t("inBody")}</p><div class="acts">${btnBack(L)}</div></div></div>`);},
+ bP:L=>{const t=tr(L);return phoneShell(L,`<div class="pbody"><div class="card o1pc"><div class="art-wrap">${scene("shelf",L,"0 6 400 250")}</div><h1 class="ttl disp">${t("inTitle")}</h1><p class="lead">${t("inBody")}</p><div class="acts">${btnBack(L)}</div></div></div>`);},
+ cD:L=>{const t=tr(L);return deskShell(L,"pay",`<div class="card o1-in"><div class="art-wrap">${scene("err",L)}</div><div class="txt"><h1 class="ttl disp">${t("errTitle")}</h1><p class="lead">${t("errBody")}</p>${actsC(L)}${refBlock(L)}</div></div>`);},
+ cP:L=>{const t=tr(L);return phoneShell(L,`<div class="pbody"><div class="card o1pc"><div class="art-wrap">${scene("err",L,"0 38 400 250")}</div><h1 class="ttl disp">${t("errTitle")}</h1><p class="lead">${t("errBody")}</p>${actsC(L)}${refBlock(L)}</div></div>`);},
+};
+/* ================= OPTION 2 ================= */
+const O2={
+ aD:L=>{const t=tr(L);return deskBare(L,`<div class="o2a"><div class="o2a-top">${brand(L)}${langT(L)}</div><div class="o2-col rise"><div style="width:600px">${big404()}</div><h1 class="ttl disp">${t("nfTitle")}</h1><p class="lead">${t("nfBody")}</p>${actsA(L,true)}</div></div>`);},
+ aP:L=>{const t=tr(L);return phoneBare(L,`<div class="o2a o2p"><div class="o2a-top" style="padding:16px">${brand(L)}${langT(L)}</div><div class="o2-col"><div style="width:100%;padding:0 6px">${big404()}</div><h1 class="ttl disp">${t("nfTitle")}</h1><p class="lead">${t("nfBody")}</p><div class="acts">${btnSignin(L)}</div></div></div>`);},
+ bD:L=>{const t=tr(L);return deskShell(L,"emp",`<div class="o2-in"><div class="o2-col"><div style="width:480px">${big404()}</div><h1 class="ttl disp">${t("inTitle")}</h1><p class="lead">${t("inBody")}</p><div class="acts">${btnBack(L)}</div></div></div>`);},
+ bP:L=>{const t=tr(L);return phoneShell(L,`<div class="pbody o2p"><div class="o2-col"><div style="width:100%">${big404()}</div><h1 class="ttl disp">${t("inTitle")}</h1><p class="lead">${t("inBody")}</p><div class="acts">${btnBack(L)}</div></div></div>`);},
+ cD:L=>{const t=tr(L);return deskShell(L,"pay",`<div class="o2-in"><div class="o2-col"><div style="width:380px">${bigWarn()}</div><h1 class="ttl disp">${t("errTitle")}</h1><p class="lead">${t("errBody")}</p>${actsC(L)}${refBlock(L)}</div></div>`);},
+ cP:L=>{const t=tr(L);return phoneShell(L,`<div class="pbody o2p"><div class="o2-col"><div style="width:86%">${bigWarn()}</div><h1 class="ttl disp">${t("errTitle")}</h1><p class="lead">${t("errBody")}</p>${actsC(L)}${refBlock(L)}</div></div>`);},
+};
+/* ================= OPTION 3 ================= */
+const O3={
+ aD:L=>{const t=tr(L);return deskBare(L,`<div class="o3a"><div class="o3a-top">${brand(L)}${langT(L)}</div><div class="card o3a-card rise"><span class="spot">${spotNF()}</span><span class="eyebrow teal" style="margin-top:8px">${t("e404")}</span><h1 class="ttl disp">${t("nfTitle")}</h1><p class="lead">${t("nfBody")}</p>${actsA(L,true)}</div></div>`);},
+ aP:L=>{const t=tr(L);return phoneBare(L,`<div class="o3a"><div class="o3a-top" style="padding:16px">${brand(L)}${langT(L)}</div><div class="o3p-a"><div class="card o3a-card"><span class="spot">${spotNF()}</span><span class="eyebrow teal" style="margin-top:8px">${t("e404")}</span><h1 class="ttl disp">${t("nfTitle")}</h1><p class="lead">${t("nfBody")}</p><div class="acts">${btnSignin(L)}</div></div></div></div>`);},
+ bD:L=>{const t=tr(L);return deskShell(L,"emp",`<div class="card o3-in"><span class="spot">${spotNF()}</span><div class="txt"><h1 class="ttl disp">${t("inTitle")}</h1><p class="lead">${t("inBody")}</p><div class="acts">${btnBack(L)}</div></div></div>`);},
+ bP:L=>{const t=tr(L);return phoneShell(L,`<div class="pbody o3p"><div class="card o3-in"><span class="spot">${spotNF()}</span><div class="txt"><h1 class="ttl disp">${t("inTitle")}</h1><p class="lead">${t("inBody")}</p><div class="acts">${btnBack(L)}</div></div></div></div>`);},
+ cD:L=>{const t=tr(L);return deskShell(L,"pay",`<div class="card o3-in"><span class="spot">${spotErr()}</span><div class="txt"><h1 class="ttl disp">${t("errTitle")}</h1><p class="lead">${t("errBody")}</p>${actsC(L)}${refBlock(L)}</div></div>`);},
+ cP:L=>{const t=tr(L);return phoneShell(L,`<div class="pbody o3p"><div class="card o3-in"><span class="spot">${spotErr()}</span><div class="txt"><h1 class="ttl disp">${t("errTitle")}</h1><p class="lead">${t("errBody")}</p>${actsC(L)}${refBlock(L)}</div></div></div>`);},
+};
+/* ================= D · global error ================= */
+const gMark=`<svg width="72" height="72" viewBox="0 0 72 72" aria-hidden="true"><circle cx="36" cy="36" r="34" fill="#fff1c9"/><circle cx="36" cy="36" r="24" fill="#ffc43d"/><rect x="33" y="22" width="6" height="18" rx="3" fill="#4a3400"/><circle cx="36" cy="47.5" r="3.4" fill="#4a3400"/></svg>`;
+const gPage=L=>{const t=tr(L);return `<div class="gd"><div class="gd-box">${gMark}<h1>${t("errTitle")}</h1><p>${t("gBody")}</p><button type="button">${t("retry")}</button><small>${t("gCode")}: <b>${REF}</b></small></div></div>`;};
+
+/* ---------- page ---------- */
+const SCREENS=[
+ ["a","A · Not found, outside the app shell","Wrong URL; the person may be signed out. Desktop shows the signed-in button, phone the signed-out one."],
+ ["b","B · Not found inside the shell","Missing record, out of scope, or a page they can't open — one message for all three."],
+ ["c","C · Something went wrong, inside the shell","Retry + back, and a reference code to quote to support."],
+];
+function optSection(id,name,sub,noteTxt,O){
+ return `<section class="opt" id="${id}"><div class="opt-h"><h2>${name}</h2><span>${sub}</span></div><p class="opt-note">${noteTxt}</p>
+ ${SCREENS.map(([k,h,d])=>`<div class="scr-h">${h}<small>${d}</small></div><div class="row">
+  <div class="fw"><span class="cap">EN · desktop 1440${k==="a"?" · signed in":""}</span>${O[k+"D"]("en")}</div>
+  <div class="fw"><span class="cap">AR · phone 390${k==="a"?" · signed out":""}</span>${O[k+"P"]("ar")}</div></div>`).join("")}</section>`;
+}
+function render(){
+ document.getElementById("app").innerHTML=
+  optSection("opt1","Option 1 · Illustrated (soft 3D)","the sign-in office scene, one story per page","A: the desk is empty and a page drifts out of the window. B: the colleague points at a gap on the shelf. C: the monitor shows a gentle warning and the teacher waves for help. Same art, ids and palette as the sign-in page.",O1)+
+  optSection("opt2","Option 2 · Big number, light art","a soft-3D “404” in teal, the 0 a sunflower sun; a calm warning mark for errors","No people; one strong shape, then the message. Lighter to build and to load than option 1.",O2)+
+  optSection("opt3","Option 3 · Card in context","the most understated: a clean card with a small spot icon","Inside the shell it reads like any other card on the page, start-aligned; outside it is one centred card.",O3)+
+  `<section class="opt" id="optD"><div class="opt-h"><h2>D · Whole-app failure (global error)</h2><span>the same for every option</span></div>
+   <p class="opt-note">No shell, no web fonts, no icon font, no images: system fonts, one inline SVG and inline styles, so it renders even when the app's CSS or fonts fail. One button reloads.</p>
+   <div class="row"><div class="fw"><span class="cap">EN · desktop 1440</span>${deskBare("en",gPage("en"))}</div><div class="fw"><span class="cap">AR · phone 390</span>${phoneBare("ar",gPage("ar"))}</div></div>
+   <div class="code-note">Language: <code>global-error.tsx</code> replaces the root layout, so it reads the locale from the URL's first segment (<code>/ar/…</code>) and sets <code>&lt;html lang dir&gt;</code> itself; both strings live inline in the file, not in the message files. The code is Next's error <code>digest</code>, shortened.</div></section>`;
+}
+render();
+document.addEventListener("click",e=>{
+ const b=e.target.closest(".copy");
+ if(b){const L=b.dataset.l;try{navigator.clipboard?.writeText(b.dataset.copy)}catch{};b.classList.add("done");b.innerHTML=`${ic("check")}<span>${tr(L)("copied")}</span>`;setTimeout(()=>{b.classList.remove("done");b.innerHTML=`${ic("copy")}<span>${tr(L)("copy")}</span>`},1800);}
+ const s=e.target.closest("[data-s]");
+ if(s){document.body.dataset.show=s.dataset.s;document.querySelectorAll("#showSeg button").forEach(x=>x.setAttribute("aria-pressed",x===s));}
+});
+</script>
+</body>
+</html>
