@@ -11,7 +11,7 @@ settleStreams();
 /**
  * Runs in the `phone-ar` project only (390×844, touch): a notification's link to one penalty
  * (`/ar/penalties?penalty=<id>`, §11, N2) opens it over its month's list, in Arabic, at phone width;
- * an id the viewer can't open is "This page isn't here".
+ * an id the viewer can't open is "We couldn't find that page".
  */
 const locale = 'ar' as const;
 

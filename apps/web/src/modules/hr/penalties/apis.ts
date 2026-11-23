@@ -45,7 +45,7 @@ export async function GET_PENALTIES(query: ListPenaltiesQuery = {}) {
 
 /**
  * `GET /hr/penalties/:id` — one record (a notification's link, `?penalty=<id>`). 404 when unknown or
- * outside the viewer's scope (§2: "This page isn't here").
+ * outside the viewer's scope (§2: "We couldn't find that page").
  */
 export async function GET_PENALTY(id: Uuid) {
   const response = await apiFetch<PenaltyRecord>(`/hr/penalties/${encodeURIComponent(id)}`, {

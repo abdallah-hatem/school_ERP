@@ -1,9 +1,13 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Page, type Response } from '@playwright/test';
 import type { Language } from '@school-erp/shared';
 import { t } from './i18n';
 
 /** A path no page answers, and the smoke-only page whose server render throws (`page.e2e.tsx`). */
 export const MISSING_PATH = '/no-such-page-404';
+/** A missing address with an extension (the proxy sees it, so it gets the locale's 404). */
+export const DOTTED_MISSING_PATH = '/no-such.php';
+/** A missing address the proxy never sees: `app/global-not-found.tsx` answers it. */
+export const API_MISSING_PATH = '/api/no-such';
 export const FORCED_ERROR_PATH = '/e2e/server-error';
 /** Smoke-only too: a page outside every error boundary, so the root `global-error` renders. */
 export const ROOT_ERROR_PATH = '/e2e-root-error';
@@ -21,6 +25,11 @@ export async function watchCsp(page: Page): Promise<string[]> {
     });
   });
   return violations;
+}
+
+/** Never cached anywhere: every page is per-user (CLAUDE.md rule 7). */
+export function expectNoStore(res: Response | null): void {
+  expect(res?.headers()['cache-control'], `cache-control of ${res?.url()}`).toContain('no-store');
 }
 
 /** The outside-the-shell "Page not found", with the way out for the signed-in state. */
@@ -48,7 +57,8 @@ export async function expectGlobalError(page: Page, locale: Language): Promise<v
   await expect(page.getByRole('heading', { level: 1, name: t(locale, 'ui.errorPages.errorTitle') })).toBeVisible();
   await expect(page.getByText(t(locale, 'ui.errorPages.globalBody'))).toBeVisible();
   await expect(page.getByRole('button', { name: t(locale, 'ui.errorPages.retry') })).toBeVisible();
-  await expect(page.locator('main code')).toHaveText(/^[0-9A-Za-z@_-]{4,}$/);
+  // Next's digest (the server logged it), not a browser-made `C-` code.
+  await expect(page.locator('main code')).toHaveText(/^(?!C-)[0-9A-Za-z@_-]{4,}$/);
   await expect(page).toHaveTitle(t(locale, 'ui.errorPages.errorTitle'));
 }
 

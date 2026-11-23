@@ -14,8 +14,9 @@ describe('errorLogLine (onRequestError)', () => {
       path: '/en/payroll/5',
       route: '/[locale]/(dashboard)/payroll/[id]',
       type: 'render',
-      error: 'db down',
     });
+    // The message is Next's own log line's business (with the same digest), not repeated here.
+    expect(line).not.toHaveProperty('error');
   });
 
   it('logs the path without its query (it can hold search terms)', () => {

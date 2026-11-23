@@ -3,8 +3,9 @@ import type { Instrumentation } from 'next';
 /**
  * One line per server error, carrying the `digest` the error screen shows as its reference code, so
  * support finds the error from the code a person quotes: `docker logs <web> | grep <code>`
- * (docs/ARCHITECTURE.md → Error pages). Next also prints the error itself with its stack and the
- * same `digest`. The path is logged without its query (it can hold search terms).
+ * (docs/ARCHITECTURE.md → Error pages). Next prints the error itself (message, stack) with the same
+ * `digest`, so this line doesn't repeat the message. The path is logged without its query (it can
+ * hold search terms).
  */
 export function errorLogLine(
   err: unknown,
@@ -20,7 +21,6 @@ export function errorLogLine(
     path: request.path.split('?')[0],
     route: context.routePath,
     type: context.routeType,
-    error: err instanceof Error ? err.message : String(err),
   });
 }
 

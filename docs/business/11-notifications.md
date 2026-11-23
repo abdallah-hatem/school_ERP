@@ -182,7 +182,7 @@ and its list, My account → Notifications, Settings → Notifications).
 
 - **DECIDED** (§2) — A notification never shows more than its reader may see. Someone who loses the
   right to approve, or whose stage or team no longer covers the employee, no longer sees those
-  notifications (they leave the list and the count). Opening one shows "This page isn't here", as
+  notifications (they leave the list and the count). Opening one shows "We couldn't find that page", as
   for any record outside their reach.
 - **GUESS** — Payroll notifications show the month's net only to someone who may see the school's
   payroll totals (§2): whoever sees payroll for the whole school (the HR manager, the principal,

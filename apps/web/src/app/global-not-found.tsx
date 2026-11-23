@@ -21,10 +21,10 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * An address outside every route — mostly ones the proxy doesn't see (a path with a file
- * extension, an unknown `/api/…`); addresses under `/<locale>/` get `app/[locale]/not-found.tsx`.
- * Next renders this without any layout, so it brings its own document, styles, fonts and
- * providers. Same screen as the locale one.
+ * An address outside every route the proxy doesn't see (an unknown `/api/…`); every other wrong
+ * address gets `app/[locale]/not-found.tsx`. Next renders this without any layout, so it brings
+ * its own document, styles, fonts and providers. Same screen as the locale one, but without the
+ * nonce CSP (docs/ARCHITECTURE.md → Error pages, "The gap").
  */
 export default async function GlobalNotFound() {
   const [locale, branding, signedIn] = await Promise.all([localeOfRequest(), getSchoolBranding(), hasLiveSession()]);

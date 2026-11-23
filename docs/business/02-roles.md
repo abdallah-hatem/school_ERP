@@ -85,14 +85,14 @@
   two stages is seen by both stages' heads. **Penalties go by the penalty's stage** (where the
   violation happened, §4), not the employee's: the head of an employee's other stage doesn't see,
   isn't notified about and can't act on a penalty from a stage that isn't theirs (opening it, or
-  acting on it, shows "This page isn't here"). Where such a penalty changes what they can do with
+  acting on it, shows "We couldn't find that page"). Where such a penalty changes what they can do with
   one of theirs — the level counts every stage — they are told only that one exists ("an earlier
   penalty for this violation, in another stage, is still waiting", "and N approved penalties in
   other stages"), never its date, level or month (§4). **DECIDED** (owner, 2026-11-23): a stage head records penalties
   only in their own stages — for a teacher shared with another stage, the record form offers only
   theirs. That covers every list, count, search, picker and dashboard
   figure, their penalties, lateness and payroll lines, and the activity log's entries about them.
-  Opening anyone else shows "This page isn't here", as for a record that doesn't exist. Someone in
+  Opening anyone else shows "We couldn't find that page", as for a record that doesn't exist. Someone in
   such a role who has no employee record sees nobody. Each screen, tab, section and button is
   shown only to those who may use it.
 - **GUESS** — The payroll tax rule (§10) belongs to the Accountant (view and change) and the
