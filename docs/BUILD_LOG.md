@@ -595,8 +595,17 @@ phase live in `docs/build-log/`.
   chain (two tabs never log out); row locks close check-then-write races; `no-store` check is
   case-insensitive. Left: adjustments made under an earlier employee link (only an admin can move a
   link now). A third fresh review is running before merge.
+- 2026-11-23 — #258 third fresh review: no critical/high. Medium: a delegated user manager could still
+  take over a same-scope account in another stage (ceilings compare scope labels, not reach), and an
+  unlinked account escapes the own-pay rules. Low: lock ordering, a password-change race, row-lock
+  strength, old tokens after reactivation. All sent back to be fixed on #258 (round 3), with CI's 2
+  API e2e failures (last-admin edge case, "doubles on repeat"). Decided: acting on pay (adjust, approve,
+  salary edits) needs the account linked to its employee record, System admin aside.
 ## Next up
 
+- Scope widening by editing others: an employee editor can set another employee's manager to
+  themselves or move them into the editor's stage, widening their own team/stage reach (found by the
+  #258 review, left out of that PR).
 - Client proposal (kept outside the repo): add ownership/licence, payment schedule, timeline, VAT,
   acceptance, several campuses, academics in or out — owner to fill the blanks.
 - Reselling: make the repo private before selling; a written IP agreement with the team; map each new
