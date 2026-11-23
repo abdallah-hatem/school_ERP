@@ -633,6 +633,10 @@ phase live in `docs/build-log/`.
   shared error screen for every page (Try again, Back, a reference code = the server error digest,
   logged by `onRequestError`), and a minimal `global-error`. Signed-out visits to unknown sections now
   show the 404 instead of sign-in. Independent review running before merge.
+- 2026-11-23 — #267 merged (404 and error pages, option 2) after an independent review (nothing above
+  Low; lows fixed: the sign-in section list now fails closed, odd addresses like `/x.php` get the
+  localized 404 with CSP, one not-found wording, no-store asserted) and a CI fix: a wrong `/api/…` now
+  answers JSON 404 (the fallback `global-not-found` could never run and was removed).
 ## Next up
 
 - Pay buttons for unlinked HR accounts: hide or disable Approve / adjust / lateness edits with the
