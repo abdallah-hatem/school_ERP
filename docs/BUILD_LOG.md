@@ -588,6 +588,13 @@ phase live in `docs/build-log/`.
 - 2026-11-23 — Process (owner: "lets add it after each feature"): after each feature, before merge, a
   fresh agent that didn't write it reviews the diff cold (read-only, never switches a checkout); real
   findings are fixed with a test each before merging. CONVENTIONS → Review; build-software skill 1.62.25.
+- 2026-11-23 — #258 round 2 pushed: only a System admin sets employee links (a System admin may set
+  their own; nobody changes their own roles); unlock under the ceiling; nobody edits their own pay,
+  lateness, stage, other stages or manager; recount months and payroll counts follow the penalty's stage;
+  a password change kills other sessions' access tokens at once; a refresh replay follows the rotation
+  chain (two tabs never log out); row locks close check-then-write races; `no-store` check is
+  case-insensitive. Left: adjustments made under an earlier employee link (only an admin can move a
+  link now). A third fresh review is running before merge.
 ## Next up
 
 - Client proposal (kept outside the repo): add ownership/licence, payment schedule, timeline, VAT,
