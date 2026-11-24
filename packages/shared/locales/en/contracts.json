@@ -304,7 +304,14 @@
     "done": "Contract created."
   },
   "signedCopy": {
-    "count": "Signed copy ({count})",
+    "count": {
+      "zero": "Signed copy ({count})",
+      "one": "Signed copy ({count})",
+      "two": "Signed copy ({count})",
+      "few": "Signed copy ({count})",
+      "many": "Signed copy ({count})",
+      "other": "Signed copy ({count})"
+    },
     "none": "No signed copy",
     "open": "Open the signed copy of {name}",
     "upload": "Upload signed copy",
