@@ -29,23 +29,23 @@ function renderLine(
 describe('SignInAccountLine (employee profile)', () => {
   afterEach(cleanup);
 
-  it('linked, viewer may open users: "Signs in as:" and the name links to the user page', () => {
+  it('linked, viewer may open users: "System user:" and the name links to the user page', () => {
     renderLine(MONA);
-    expect(screen.getByText('Signs in as:')).toBeTruthy();
+    expect(screen.getByText('System user:')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Mona Adel' }).getAttribute('href')).toBe('/en/users/u-7');
   });
 
   it('linked, viewer without core.users.view: the name as plain text, no link', () => {
     renderLine(MONA, 'en', sessionWithout('core.users.view'));
-    expect(screen.getByText('Signs in as:')).toBeTruthy();
+    expect(screen.getByText('System user:')).toBeTruthy();
     expect(screen.getByText('Mona Adel')).toBeTruthy();
     expect(screen.queryByRole('link')).toBeNull();
   });
 
-  it('not linked: "No sign-in account"', () => {
+  it('not linked: "Not a system user"', () => {
     renderLine(null);
-    expect(screen.getByText('No sign-in account')).toBeTruthy();
-    expect(screen.queryByText('Signs in as:')).toBeNull();
+    expect(screen.getByText('Not a system user')).toBeTruthy();
+    expect(screen.queryByText('System user:')).toBeNull();
     expect(screen.queryByRole('link')).toBeNull();
   });
 

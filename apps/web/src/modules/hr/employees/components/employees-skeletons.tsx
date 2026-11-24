@@ -149,7 +149,7 @@ function ProfileSkeleton({ body }: { body?: ReactNode }) {
         leading={<Skeleton className="size-16 shrink-0 rounded-[1.25rem]" />}
         // An active employee, as most profiles opened are: the Active pill and Edit · Deactivate.
         status={<SkeletonPill>{t(`common.enums.employeeStatus.${EmployeeStatus.ACTIVE}`)}</SkeletonPill>}
-        // The loaded header's two lines: code · job · department, then "Signs in as" / "No sign-in account".
+        // The loaded header's two lines: code · job · department, then "System user" / "Not a system user".
         description={
           <span className="flex flex-col gap-1">
             <SkeletonText width="w-72" />
