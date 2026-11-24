@@ -8,6 +8,13 @@ import { ContractsI18n } from '../messages';
 
 export const TODAY = '2026-11-24';
 
+export const calendar = {
+  term1Start: '2026-09-20',
+  term1End: '2027-01-28',
+  term2Start: '2027-02-07',
+  nonRenewalDeadline: '2027-04-30',
+};
+
 export function contract(overrides: Partial<Contract> & { id?: string } = {}): Contract {
   return {
     id: 'c-1',
@@ -28,6 +35,7 @@ export function contract(overrides: Partial<Contract> & { id?: string } = {}): C
     status: 'ACTIVE',
     decision: 'UNDECIDED',
     nonRenewalBy: null,
+    note: null,
     notice: null,
     earlyTermination: null,
     endedOn: null,
@@ -39,13 +47,15 @@ export function contract(overrides: Partial<Contract> & { id?: string } = {}): C
     next: null,
     toDeactivate: false,
     ownContract: false,
+    carriedOver: false,
+    calendars: { notice: calendar, earlyTermination: calendar },
     ...overrides,
   };
 }
 
 export const totals: ContractTotals = {
   ending: 42,
-  activeContracts: 118,
+  carriedOver: 1,
   decided: 27,
   renewing: 21,
   notRenewing: 6,
@@ -55,13 +65,6 @@ export const totals: ContractTotals = {
   noticesEarly: 1,
   noticesLate: 0,
   toDeactivate: 1,
-};
-
-export const calendar = {
-  term1Start: '2026-09-20',
-  term1End: '2027-01-28',
-  term2Start: '2027-02-07',
-  nonRenewalDeadline: '2027-04-30',
 };
 
 /** Render a contracts component with the `contracts` + `errors` namespaces, like its route does. */

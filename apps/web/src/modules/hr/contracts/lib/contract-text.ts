@@ -5,6 +5,7 @@ import {
   decisionRefusal,
   EarlyTerminationStatus,
   ErrorCode,
+  nonRenewalUndoRefusal,
   noticeWithdrawalRefusal,
   renewalRefusal,
   type Contract,
@@ -30,6 +31,8 @@ export const DECISION_TONE: Record<ContractDecision, StatusTone> = {
   NOTICE: 'warning',
   EARLY_REQUESTED: 'info',
   ENDED_EARLY: 'neutral',
+  // A renewal's next contract that never started (the one before it ended early): history only.
+  CANCELLED: 'neutral',
 };
 
 /** The rule's view of a row (`ContractState`, shared with the API). */
@@ -57,6 +60,9 @@ export interface ContractAbilities {
   decide: boolean;
   approveOrReject: boolean;
   withdrawNotice: boolean;
+  /** The school's not-renewing, before the end: undone with a reason. */
+  undoNotRenewing: boolean;
+  /** Ended for another reason — a renewed one too (its next contract is cancelled with it). */
   end: boolean;
   deactivate: boolean;
   /** The viewer's own contract: no action, with this said on the row. */
@@ -72,6 +78,7 @@ export function abilitiesOf(
     decide: false,
     approveOrReject: false,
     withdrawNotice: false,
+    undoNotRenewing: false,
     end: false,
     deactivate: false,
     own: c.ownContract,
@@ -84,10 +91,11 @@ export function abilitiesOf(
     decide: manage && decisionRefusal(state) === null,
     approveOrReject: manage && state.earlyTerminationStatus === EarlyTerminationStatus.REQUESTED,
     withdrawNotice: manage && noticeWithdrawalRefusal(state, today) === null,
+    undoNotRenewing: manage && nonRenewalUndoRefusal(state, today) === null,
     end:
       manage &&
-      c.status !== ContractStatus.RENEWED &&
       c.status !== ContractStatus.ENDED_EARLY &&
+      c.status !== ContractStatus.CANCELLED &&
       state.earlyTerminationStatus !== EarlyTerminationStatus.REQUESTED &&
       c.endsOn >= today,
     deactivate: changeStatus && c.toDeactivate,

@@ -216,7 +216,8 @@
       "saved": "School calendar saved.",
       "invalid": "Inside the contract year, and after the date above it.",
       "previousYear": "Previous year",
-      "nextYear": "Next year"
+      "nextYear": "Next year",
+      "save": "Save calendar"
     }
   },
   "catalogue": {

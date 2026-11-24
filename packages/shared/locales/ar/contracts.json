@@ -10,14 +10,7 @@
   "tiles": {
     "label": "العقود حسب القرار",
     "ending": "تنتهي هذا العام",
-    "endingSub": {
-      "zero": "من أصل {count} عقد ساري",
-      "one": "من أصل عقد واحد ساري",
-      "two": "من أصل عقدين ساريين",
-      "few": "من أصل {count} عقود سارية",
-      "many": "من أصل {count} عقدًا ساريًا",
-      "other": "من أصل {count} عقد ساري"
-    },
+    "endingSub": "{start} – {end}",
     "decided": "تم القرار",
     "decidedSub": "تجديد {renewing} · عدم تجديد {notRenewing}",
     "open": "بلا قرار",
@@ -33,6 +26,14 @@
     "noticesSub": "مبكر {early} · متأخر {late}",
     "toDeactivate": "لإلغاء التفعيل",
     "toDeactivateSub": "لم يُجدد أو انتهى، وما زال نشطًا",
+    "carriedOverSub": {
+      "zero": "لا شيء من أعوام سابقة",
+      "one": "عقد واحد من عام سابق",
+      "two": "عقدان من أعوام سابقة",
+      "few": "{count} عقود من أعوام سابقة",
+      "many": "{count} عقدًا من أعوام سابقة",
+      "other": "{count} عقد من أعوام سابقة"
+    },
     "showing": "يُعرض هذا فقط"
   },
   "calendar": {
@@ -82,7 +83,8 @@
     "EARLY": "مبكر",
     "LATE": "متأخر",
     "CALENDAR_NOT_SET": "التقويم غير محدد",
-    "toDeactivate": "لإلغاء التفعيل"
+    "toDeactivate": "لإلغاء التفعيل",
+    "from": "من {year}"
   },
   "sub": {
     "decidedBy": "{name} · {when}",
@@ -91,7 +93,8 @@
     "requestedNoEnd": "طُلب {date}",
     "endedNoDecision": "انتهى {date} · ما زال نشطًا",
     "ended": "انتهى {date}",
-    "renewedTo": "التالي: {start} – {end}"
+    "renewedTo": "التالي: {start} – {end}",
+    "note": "ملاحظة: {note}"
   },
   "actions": {
     "renew": "تجديد",
@@ -106,7 +109,9 @@
     "withdrawNotice": "سحب الإخطار",
     "history": "سجل العقود",
     "end": "إنهاء لسبب آخر…",
-    "ownContract": "عقدك الشخصي: يقرر فيه شخص آخر."
+    "ownContract": "عقدك الشخصي: يقرر فيه شخص آخر.",
+    "undoNotRenewing": "التراجع عن عدم التجديد",
+    "rejectRequest": "رفض الطلب"
   },
   "bulk": {
     "label": "العقود المحددة",
@@ -233,7 +238,8 @@
     "notePlaceholder": "ما حدث، في كلمات قليلة",
     "attachment": "مرفق",
     "confirm": "إنهاء العقد",
-    "done": "تم إنهاء العقد."
+    "done": "تم إنهاء العقد.",
+    "renewedWarning": "يُلغى التجديد أيضًا (عقد العام التالي)."
   },
   "deactivate": {
     "title": "إلغاء تفعيل {name}؟",
@@ -268,5 +274,23 @@
   "form": {
     "tooLong": "اجعلها أقل من 1,000 حرف.",
     "futureDate": "لا يمكن أن يكون في المستقبل."
+  },
+  "undo": {
+    "title": "التراجع عن عدم التجديد؟",
+    "body": "يعود عقد {name} إلى «بلا قرار».",
+    "reasonLabel": "السبب",
+    "reasonPlaceholder": "لماذا غيّرت المدرسة رأيها",
+    "confirm": "تراجع",
+    "done": "تم التراجع عن عدم التجديد."
+  },
+  "newContract": {
+    "button": "عقد جديد",
+    "title": "عقد جديد",
+    "description": "عقد لمدة عام لـ {name}.",
+    "startsOn": "تاريخ البداية",
+    "startsOnHint": "اتركه ليبدأ في 1 يونيو من عام العقد هذا ({date}).",
+    "ends": "ينتهي بعد عام: {date}.",
+    "confirm": "إنشاء العقد",
+    "done": "تم إنشاء العقد."
   }
 }

@@ -164,7 +164,8 @@
       "ACTIVE": "Active",
       "RENEWED": "Renewed",
       "NOT_RENEWED": "Not renewed",
-      "ENDED_EARLY": "Ended early"
+      "ENDED_EARLY": "Ended early",
+      "CANCELLED": "Cancelled"
     },
     "contractDecision": {
       "UNDECIDED": "Not decided",
@@ -173,7 +174,8 @@
       "NOT_RENEWED_SCHOOL": "Not renewing — school",
       "NOTICE": "Employee gave notice",
       "EARLY_REQUESTED": "Early termination requested",
-      "ENDED_EARLY": "Ended early"
+      "ENDED_EARLY": "Ended early",
+      "CANCELLED": "Cancelled"
     },
     "nonRenewalBy": {
       "SCHOOL": "The school",

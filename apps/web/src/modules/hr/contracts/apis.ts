@@ -8,8 +8,8 @@ import type {
   EmployeeContractsQuery,
   EndContractRequest,
   ListContractsQuery,
+  NewContractRequest,
   NotRenewContractRequest,
-  SchoolCalendar,
   Uuid,
 } from '@school-erp/shared';
 import { apiFetch } from '@/lib/api';
@@ -81,6 +81,30 @@ export async function NOT_RENEW_CONTRACT(id: Uuid, body: NotRenewContractRequest
   return handleResponse({ response });
 }
 
+/** `POST /hr/contracts/:id/not-renewed/undo` — the school changed its mind, before the end; the reason is required. */
+export async function UNDO_NOT_RENEW(id: Uuid, reason: string) {
+  const response = await apiFetch<Contract>(`/hr/contracts/${encodeURIComponent(id)}/not-renewed/undo`, {
+    method: 'POST',
+    body: { reason },
+    revalidateTags: WRITE_TAGS,
+  });
+  return handleResponse({ response });
+}
+
+/**
+ * `POST /hr/employees/:id/contracts` — a new one-year contract for an active employee with no active
+ * one (a reactivated employee, or after the school's not-renewing); `startsOn` defaults to 1 June of
+ * the current contract year.
+ */
+export async function CREATE_EMPLOYEE_CONTRACT(employeeId: Uuid, body: NewContractRequest) {
+  const response = await apiFetch<Contract>(`/hr/employees/${encodeURIComponent(employeeId)}/contracts`, {
+    method: 'POST',
+    body: { ...body },
+    revalidateTags: WRITE_TAGS,
+  });
+  return handleResponse({ response });
+}
+
 /** `POST /hr/contracts/:id/notice/withdraw` — while the contract still runs; the reason is required. */
 export async function WITHDRAW_NOTICE(id: Uuid, reason: string) {
   const response = await apiFetch<Contract>(`/hr/contracts/${encodeURIComponent(id)}/notice/withdraw`, {
@@ -120,7 +144,10 @@ export async function REJECT_EARLY_TERMINATION(id: Uuid, reason: string) {
   return handleResponse({ response });
 }
 
-/** `POST /hr/contracts/:id/end` — another reason (Article 148, resignation by agreement, death, other). */
+/**
+ * `POST /hr/contracts/:id/end` — another reason (Article 148, resignation by agreement, death, other).
+ * On a renewed contract the next one is cancelled with it.
+ */
 export async function END_CONTRACT(id: Uuid, body: EndContractRequest) {
   const response = await apiFetch<Contract>(`/hr/contracts/${encodeURIComponent(id)}/end`, {
     method: 'POST',
@@ -148,19 +175,6 @@ export async function UPLOAD_CONTRACT_FILE(id: Uuid, form: FormData) {
   const response = await apiFetch<ContractFileUpload>(`/hr/contracts/${encodeURIComponent(id)}/files`, {
     method: 'POST',
     body: form,
-  });
-  return handleResponse({ response, showErrorToast: false });
-}
-
-/**
- * `GET /hr/settings/school-calendar/:year` — the term dates a contract's notice window and early
- * termination read (`calendar` null: not set). The decision sheet asks for it when the list didn't
- * carry it (the employee's tab, a mid-year contract).
- */
-export async function GET_SCHOOL_CALENDAR(year: number) {
-  const response = await apiFetch<SchoolCalendar>(`/hr/settings/school-calendar/${encodeURIComponent(String(year))}`, {
-    method: 'GET',
-    next: { tags: ['hr-school-calendar'] },
   });
   return handleResponse({ response, showErrorToast: false });
 }

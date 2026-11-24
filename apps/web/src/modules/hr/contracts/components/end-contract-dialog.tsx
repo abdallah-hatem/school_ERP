@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { CONTRACT_END_REASONS, type Contract, type ContractEndRequestReason } from '@school-erp/shared';
+import { CONTRACT_END_REASONS, ContractStatus, type Contract, type ContractEndRequestReason } from '@school-erp/shared';
 import { useId, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { callApi } from '@/lib/callApi';
@@ -9,6 +9,7 @@ import { DateField, SelectField, TextareaField } from '@/shared/components/form/
 import { Form } from '@/shared/components/form/form';
 import { Button } from '@/shared/components/ui/button';
 import { Dialog, DialogClose, DialogContent } from '@/shared/components/ui/dialog';
+import { WarningIcon } from '@/shared/components/ui/icons';
 import { formatDate } from '@/shared/lib/format';
 import { localName } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
@@ -112,6 +113,17 @@ export function EndContractDialog({
         }
       >
         <Form id={formId} onSubmit={(e) => void form.handleSubmit(save)(e)}>
+          {contract.status === ContractStatus.RENEWED ? (
+            // Review 2026-11-24: ending a renewed contract cancels the next year's one with it.
+            <p
+              role="note"
+              data-testid="renewal-cancelled-warning"
+              className="flex items-start gap-2.5 rounded-xl bg-warning-soft px-3.5 py-3 text-sm font-semibold text-warning-ink"
+            >
+              <WarningIcon className="mt-0.5 size-5 shrink-0" />
+              <span className="min-w-0 break-words">{t('contracts.end.renewedWarning')}</span>
+            </p>
+          ) : null}
           <SelectField
             control={form.control}
             name="reason"

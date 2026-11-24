@@ -1,12 +1,12 @@
 import {
   CONTRACT_END_REASONS,
-  calendarYearOfContract,
+  contractYearOf,
   earlyTerminationTiming,
   formatContractYear,
   noticeTiming,
   type CalendarTiming,
+  type Contract,
   type IsoDate,
-  type SchoolCalendarDates,
 } from '@school-erp/shared';
 import { z } from 'zod';
 import { formatDate, todayIso } from '@/shared/lib/format';
@@ -57,20 +57,22 @@ export type EndValues = z.input<typeof endSchema>;
 
 /**
  * The line under a dated choice's date (spec edge cases 6, 7): where a notice or a request falls
- * against the year's school calendar — read with the shared `noticeTiming` / `earlyTerminationTiming`,
- * the rule the API applies. `calendar` undefined: not known (it couldn't be read) → no line.
+ * against the school calendar the contract reads — `contract.calendars`, picked by the API (the
+ * notice window's, the early termination's; null = not set) — with the shared `noticeTiming` /
+ * `earlyTerminationTiming`, the rule the API applies.
  */
 export function timingLine(
   choice: DecisionChoice,
   date: IsoDate | null | undefined,
-  contractStart: IsoDate,
-  calendar: SchoolCalendarDates | null | undefined,
+  calendars: Contract['calendars'],
   t: Translate,
   locale: Locale,
 ): { timing: CalendarTiming; text: string } | null {
-  if (!date || calendar === undefined) return null;
+  if (!date) return null;
   if (choice !== 'NOTICE' && choice !== 'EARLY_TERMINATION') return null;
-  const year = formatContractYear(calendarYearOfContract(contractStart));
+  const calendar = choice === 'NOTICE' ? calendars.notice : calendars.earlyTermination;
+  // Not set: the year the letter or the request is dated in.
+  const year = formatContractYear(contractYearOf(date));
   const day = (d: IsoDate | undefined) => (d ? formatDate(d, locale) : '');
   // Every value a message may name; each message picks the ones it uses.
   const values: TranslateValues = { year };

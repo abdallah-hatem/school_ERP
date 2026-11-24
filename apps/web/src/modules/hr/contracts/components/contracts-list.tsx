@@ -35,7 +35,8 @@ import {
   SearchIcon,
   SettingsIcon,
 } from '@/shared/components/ui/icons';
-import { StatTile, StatTileSubSkeleton } from '@/shared/components/ui/stat-tile';
+import { SkeletonProse } from '@/shared/components/ui/skeleton';
+import { StatTile } from '@/shared/components/ui/stat-tile';
 import { formatCount, formatDate } from '@/shared/lib/format';
 import { localName } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
@@ -51,6 +52,7 @@ const EMPTY_SELECTION = new Map<string, Contract>();
 
 /** Typical figures the tiles lay out invisibly while they load (same width as loaded). */
 const TYPICAL = { ending: 42, decided: 27, open: 15, notices: 3, toDeactivate: 1 };
+const TYPICAL_SUBS = { renewing: 21, notRenewing: 6, endedNoDecision: 1, noticesEarly: 1, noticesLate: 0, carriedOver: 0 };
 
 export interface ContractsListProps {
   /** `/ar/contracts`. */
@@ -212,21 +214,30 @@ export function ContractsList({
     const value = { ending: totals.ending, decided: totals.decided, open: totals.open, notices: totals.notices, toDeactivate: totals.toDeactivate }[key];
     return formatCount(value);
   };
-  const tileSub = (key: Tile['key']) => {
-    if (!totals) return <StatTileSubSkeleton />;
+  const range = contractYearRange(query.year);
+  /** A tile's line under its figure, from `x` (the API's totals, or typical figures while loading). */
+  const subText = (key: Tile['key'], x: Pick<ContractTotals, 'renewing' | 'notRenewing' | 'endedNoDecision' | 'noticesEarly' | 'noticesLate' | 'carriedOver'>) => {
     switch (key) {
       case 'ending':
-        return t('contracts.tiles.endingSub', { count: formatCount(totals.activeContracts) });
+        return t('contracts.tiles.endingSub', { start: formatDate(range.start, locale), end: formatDate(range.end, locale) });
       case 'decided':
-        return t('contracts.tiles.decidedSub', { renewing: formatCount(totals.renewing), notRenewing: formatCount(totals.notRenewing) });
+        return t('contracts.tiles.decidedSub', { renewing: formatCount(x.renewing), notRenewing: formatCount(x.notRenewing) });
       case 'open':
-        return t('contracts.tiles.openSub', { count: formatCount(totals.endedNoDecision) });
+        return t('contracts.tiles.openSub', { count: formatCount(x.endedNoDecision) });
       case 'notices':
-        return t('contracts.tiles.noticesSub', { early: formatCount(totals.noticesEarly), late: formatCount(totals.noticesLate) });
+        return t('contracts.tiles.noticesSub', { early: formatCount(x.noticesEarly), late: formatCount(x.noticesLate) });
       case 'toDeactivate':
-        return t('contracts.tiles.toDeactivateSub');
+        // Rows carried over from earlier seasons (to deactivate, ended with no decision) are listed
+        // first and counted in the action tiles; the API says how many.
+        return x.carriedOver > 0
+          ? t('contracts.tiles.carriedOverSub', { count: formatCount(x.carriedOver) })
+          : t('contracts.tiles.toDeactivateSub');
     }
   };
+  // While loading, the same sentence with typical figures, drawn as bars: it wraps onto as many
+  // lines as the loaded one in a narrow tile (5 across on a desktop, 2 on a phone), in either language.
+  const tileSub = (key: Tile['key']) =>
+    totals ? subText(key, totals) : <SkeletonProse>{subText(key, TYPICAL_SUBS)}</SkeletonProse>;
   const TILE_LOOK = {
     ending: { icon: CalendarIcon, tone: 'primary' },
     decided: { icon: ReadyIcon, tone: 'primary' },
@@ -316,8 +327,6 @@ export function ContractsList({
         label={t('contracts.list.tableLabel', { year: yearText })}
         rows={rows}
         today={today}
-        year={query.year}
-        calendar={calendar}
         historyHref={(id) => `${employeesPath}/${id}/contracts`}
         selection={selection}
         refreshing={pending}

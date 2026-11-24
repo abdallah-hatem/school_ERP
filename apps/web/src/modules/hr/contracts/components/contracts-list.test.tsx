@@ -20,19 +20,20 @@ const api = vi.hoisted(() => ({
   RENEW_CONTRACTS: vi.fn(),
   NOT_RENEW_CONTRACT: vi.fn(),
   WITHDRAW_NOTICE: vi.fn(),
+  UNDO_NOT_RENEW: vi.fn(),
   REQUEST_EARLY_TERMINATION: vi.fn(),
   APPROVE_EARLY_TERMINATION: vi.fn(),
   REJECT_EARLY_TERMINATION: vi.fn(),
   END_CONTRACT: vi.fn(),
   DEACTIVATE_CONTRACTS: vi.fn(),
   UPLOAD_CONTRACT_FILE: vi.fn(),
-  GET_SCHOOL_CALENDAR: vi.fn(),
 }));
 vi.mock('../apis', () => api);
 vi.mock('../../employees/apis', () => ({ GET_STAGES: vi.fn().mockResolvedValue({ success: true, status: 200, data: [] }) }));
 
 import { PAGINATION, type Contract } from '@school-erp/shared';
 import { sessionWithout } from '@/test/render';
+import { menuItemNames, openRowActions } from '@/test/row-actions';
 import type { ContractsListQuery } from '../lib/list-query';
 import { calendar, contract, failure, ok, renderContracts, TODAY, totals } from '../test/fixtures';
 import { ContractsList, type ContractsListProps } from './contracts-list';
@@ -94,7 +95,8 @@ describe('ContractsList (renewals, option A)', () => {
     const tiles = screen.getByRole('region', { name: 'Contracts by decision' });
     expect(within(tiles).getByRole('button', { name: /Ending this year/ }).textContent).toContain('42');
     expect(within(tiles).getByRole('button', { name: /Not decided/ }).textContent).toContain('15');
-    expect(within(tiles).getByRole('button', { name: /Ending this year/ }).textContent).toContain('of 118 active contracts');
+    // "Ending this year" says which year: its dates.
+    expect(within(tiles).getByRole('button', { name: /Ending this year/ }).textContent).toContain('1 Jun 2026 – 31 May 2027');
   });
 
   it('the tiles filter the list through the URL (pressed again: all), from the first page, without scrolling', async () => {
@@ -122,7 +124,8 @@ describe('ContractsList (renewals, option A)', () => {
     expect(router.push).toHaveBeenLastCalledWith('/en/contracts?year=2027&decision=DECIDED', { scroll: false });
   });
 
-  it('each row shows its one next step: Renew, Approve + Reject, Deactivate, the notice letter — none once renewed', () => {
+  it('each row shows its one next step: Renew, Approve (Reject in the ⋯), Deactivate, the notice letter — none once renewed', async () => {
+    const user = userEvent.setup();
     const early = contract({
       id: 'c-4',
       decision: 'EARLY_REQUESTED',
@@ -161,7 +164,11 @@ describe('ContractsList (renewals, option A)', () => {
 
     expect(within(rowOf('Mona Khalil')).getByRole('button', { name: 'Renew' })).toBeTruthy();
     expect(within(rowOf('Dina Hassan')).getByRole('button', { name: 'Approve' })).toBeTruthy();
-    expect(within(rowOf('Dina Hassan')).getByRole('button', { name: 'Reject' })).toBeTruthy();
+    // One line like the others: Reject is a destructive item of the ⋯.
+    expect(within(rowOf('Dina Hassan')).queryByRole('button', { name: 'Reject' })).toBeNull();
+    const menu = await openRowActions(user, 'Dina Hassan', within(rowOf('Dina Hassan')));
+    expect(within(menu).getByRole('menuitem', { name: 'Reject request' }).getAttribute('data-destructive')).toBe('true');
+    await user.keyboard('{Escape}');
     expect(within(rowOf('Dina Hassan')).queryByRole('button', { name: 'Renew' })).toBeNull();
     expect(rowOf('Dina Hassan').textContent).toContain('Requested 12 Nov 2026 · would end 28 Jan 2027');
     expect(within(rowOf('Youssef Gamal')).getByRole('button', { name: 'Deactivate' })).toBeTruthy();
@@ -242,6 +249,81 @@ describe('ContractsList (renewals, option A)', () => {
     renderList({}, 'ar');
     expect(rowOf('منى خليل').textContent).toContain('بلا قرار');
     expect(screen.getByTestId('contracts-count').textContent).toBe('42 عقدًا');
+  });
+
+  it("review 10 — the school's note shows", () => {
+    renderList({
+      rows: [
+        contract({
+          status: 'NOT_RENEWED',
+          decision: 'NOT_RENEWED_SCHOOL',
+          nonRenewalBy: 'SCHOOL',
+          note: 'Position closed next year',
+          decidedBy: { id: 'u-1', name: 'Laila Hassan' },
+          decidedAt: '2026-11-18T08:42:00.000Z',
+        }),
+      ],
+    });
+    expect(within(rowOf('Mona Khalil')).getByTestId('decision-note').textContent).toBe('Note: Position closed next year');
+  });
+
+  it('review 3 — undo not renewing', async () => {
+    const user = userEvent.setup();
+    api.UNDO_NOT_RENEW.mockResolvedValue(ok(contract()));
+    const school = contract({ status: 'NOT_RENEWED', decision: 'NOT_RENEWED_SCHOOL', nonRenewalBy: 'SCHOOL' });
+    const notice = contract({
+      id: 'c-7',
+      status: 'NOT_RENEWED',
+      decision: 'NOTICE',
+      nonRenewalBy: 'EMPLOYEE',
+      notice: { receivedOn: '2026-11-10', timing: 'ON_TIME', fileUrl: null, note: null },
+      employee: { ...undecided.employee, id: 'e-tm', nameEn: 'Tarek Mansour', nameAr: 'طارق منصور' },
+    });
+    renderList({ rows: [school, notice] });
+    // An employee's notice is withdrawn instead; no undo there.
+    const noticeMenu = await openRowActions(user, 'Tarek Mansour', within(rowOf('Tarek Mansour')));
+    expect(menuItemNames(noticeMenu)).toContain('Withdraw the notice');
+    expect(menuItemNames(noticeMenu)).not.toContain('Undo not renewing');
+    await user.keyboard('{Escape}');
+
+    const menu = await openRowActions(user, 'Mona Khalil', within(rowOf('Mona Khalil')));
+    await user.click(within(menu).getByRole('menuitem', { name: 'Undo not renewing' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Undo not renewing?' });
+    const confirm = within(dialog).getByRole('button', { name: 'Undo' });
+    // The reason is required.
+    expect(confirm).toHaveProperty('disabled', true);
+    await user.type(within(dialog).getByRole('textbox'), 'Budget approved');
+    await user.click(confirm);
+    await waitFor(() => expect(api.UNDO_NOT_RENEW).toHaveBeenCalledWith('c-1', 'Budget approved'));
+    expect(router.refresh).toHaveBeenCalled();
+  });
+
+  it('carried-over row shows its year', () => {
+    renderList({
+      rows: [
+        contract({
+          year: 2025,
+          startsOn: '2025-06-01',
+          endsOn: '2026-05-31',
+          decision: 'ENDED_NO_DECISION',
+          carriedOver: true,
+        }),
+      ],
+    });
+    expect(within(rowOf('Mona Khalil')).getByText('From 2025/26')).toBeTruthy();
+    expect(rowOf('Mona Khalil').textContent).toContain('Ended, no decision');
+  });
+
+  it('review 2 — end a renewed contract warns about the cancelled renewal', async () => {
+    const user = userEvent.setup();
+    api.END_CONTRACT.mockResolvedValue(ok(renewed));
+    renderList({ rows: [renewed] });
+    const menu = await openRowActions(user, 'Nourhan Adel', within(rowOf('Nourhan Adel')));
+    await user.click(within(menu).getByRole('menuitem', { name: 'End for another reason…' }));
+    const dialog = await screen.findByRole('dialog', { name: 'End the contract early' });
+    expect(within(dialog).getByTestId('renewal-cancelled-warning').textContent).toBe(
+      "The renewal (next year's contract) is cancelled too.",
+    );
   });
 
   it('an empty year and an empty filter result say different things', () => {

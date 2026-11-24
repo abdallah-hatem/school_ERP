@@ -55,6 +55,7 @@ export function SaveBar({
   saving,
   saved,
   onDiscard,
+  saveLabel,
 }: {
   dirty: boolean;
   valid: boolean;
@@ -62,6 +63,8 @@ export function SaveBar({
   /** Just saved and untouched since. */
   saved: boolean;
   onDiscard: () => void;
+  /** Save's own words when a section has two forms (Settings → HR rules: "Save calendar"). */
+  saveLabel?: string;
 }) {
   const { t } = useTranslation();
   const status = dirty ? (valid ? t('settings.save.unsaved') : t('settings.save.fixErrors')) : saved ? t('settings.save.saved') : null;
@@ -78,7 +81,7 @@ export function SaveBar({
         {t('settings.save.discard')}
       </Button>
       <Button type="submit" variant="primary" disabled={!dirty || !valid} loading={saving}>
-        {t('common.actions.save')}
+        {saveLabel ?? t('common.actions.save')}
       </Button>
     </FormActionBar>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { renewedContractDates, type Contract, type SchoolCalendarDates } from '@school-erp/shared';
+import { renewedContractDates, type Contract } from '@school-erp/shared';
 import { useRouter } from 'next/navigation';
 import { useRef, useState, type ReactNode } from 'react';
 import { useCan } from '@/core/auth';
@@ -30,6 +30,7 @@ import {
   DEACTIVATE_CONTRACTS,
   REJECT_EARLY_TERMINATION,
   RENEW_CONTRACTS,
+  UNDO_NOT_RENEW,
   WITHDRAW_NOTICE,
 } from '../apis';
 import { abilitiesOf, contractError, nextAction } from '../lib/contract-text';
@@ -37,13 +38,15 @@ import type { DecisionChoice } from '../lib/decision-form';
 import { DecisionSheet } from './decision-sheet';
 import { EndContractDialog } from './end-contract-dialog';
 
-type Confirm = 'renew' | 'approve' | 'reject' | 'withdraw' | 'deactivate' | null;
+type Confirm = 'renew' | 'approve' | 'reject' | 'withdraw' | 'undo' | 'deactivate' | null;
 
 /**
  * One contract's actions (spec → Screens; mockup option A): the one next step as a button — Renew,
- * Approve + Reject a waiting early termination, Deactivate an ended one, or open the notice letter —
- * then a ⋯ menu with the other decisions (not renewing, the employee's notice, an early termination
- * request, withdrawing a notice), the employee's contract history and "End for another reason…".
+ * Approve a waiting early termination, Deactivate an ended one, or open the notice letter — then a ⋯
+ * menu with the other decisions (not renewing, the employee's notice, an early termination request,
+ * rejecting a waiting request, withdrawing a notice, undoing the school's not-renewing), the
+ * employee's contract history and "End for another reason…" (a renewed contract too: its renewal is
+ * cancelled with it). One line per row: one button and the ⋯.
  * Below the table width a "Decide" button opens the same decision sheet as a bottom sheet.
  * Only for `hr.contracts.manage` (deactivating: `hr.employees.change_status`); nobody acts on their
  * own contract — the row says why instead. View only: the API decides every write.
@@ -51,15 +54,12 @@ type Confirm = 'renew' | 'approve' | 'reject' | 'withdraw' | 'deactivate' | null
 export function ContractActions({
   contract,
   today,
-  calendar,
   historyHref,
   decideBelow = 'cards',
 }: {
   contract: Contract;
   /** The school's today (`YYYY-MM-DD`, Cairo). */
   today: string;
-  /** The contract year's calendar when the screen has it; undefined: the sheet asks. */
-  calendar?: SchoolCalendarDates | null;
   /** The employee's Contracts tab; left out on the tab itself. */
   historyHref?: string;
   /**
@@ -137,6 +137,15 @@ export function ContractActions({
       hidden: !abilities.decide,
       onSelect: () => setSheet({ choice: 'EARLY_TERMINATION' }),
     },
+    {
+      id: 'rejectRequest',
+      label: t('contracts.actions.rejectRequest'),
+      icon: BlockedIcon,
+      destructive: true,
+      hidden: !abilities.approveOrReject,
+      onSelect: () => open('reject'),
+    },
+    { id: 'undoNotRenewing', label: t('contracts.actions.undoNotRenewing'), icon: RestoreIcon, hidden: !abilities.undoNotRenewing, onSelect: () => open('undo') },
     { id: 'withdrawNotice', label: t('contracts.actions.withdrawNotice'), icon: RestoreIcon, hidden: !abilities.withdrawNotice, onSelect: () => open('withdraw') },
     { id: 'history', label: t('contracts.actions.history'), icon: HistoryIcon, hidden: !historyHref, href: historyHref },
     { id: 'end', label: t('contracts.actions.end'), icon: CloseIcon, destructive: true, hidden: !abilities.end, onSelect: () => setEnding(true) },
@@ -152,16 +161,11 @@ export function ContractActions({
     );
   } else if (next === 'decideEarly') {
     primary = (
-      <>
-        <Button size="sm" variant="success-soft" className="cursor-pointer" onClick={() => open('approve')}>
-          <ApproveIcon />
-          {t('contracts.actions.approve')}
-        </Button>
-        <Button size="sm" variant="destructive-outline" className="cursor-pointer" onClick={() => open('reject')}>
-          <CloseIcon />
-          {t('contracts.actions.reject')}
-        </Button>
-      </>
+      // Reject is in the ⋯ (a destructive item), so the row keeps one line like the others.
+      <Button size="sm" variant="success-soft" className="cursor-pointer" onClick={() => open('approve')}>
+        <ApproveIcon />
+        {t('contracts.actions.approve')}
+      </Button>
     );
   } else if (next === 'deactivate') {
     primary = (
@@ -197,7 +201,7 @@ export function ContractActions({
   const renewed = renewedContractDates(contract.endsOn);
 
   return (
-    <div className="flex flex-wrap items-center justify-end gap-2">
+    <div className="flex flex-nowrap items-center justify-end gap-2">
       {abilities.own ? (
         <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground" data-testid="own-contract">
           <LockedIcon className="size-4 shrink-0" />
@@ -270,6 +274,22 @@ export function ContractActions({
         onConfirm={(reason) => run(WITHDRAW_NOTICE(contract.id, reason ?? ''), t('contracts.withdraw.done'))}
       />
       <ConfirmDialog
+        open={confirm === 'undo'}
+        onOpenChange={(o) => (o ? open('undo') : close())}
+        title={t('contracts.undo.title')}
+        description={
+          <>
+            {t('contracts.undo.body', { name })}
+            {alert}
+          </>
+        }
+        confirmLabel={t('contracts.undo.confirm')}
+        requireReason
+        reasonLabel={t('contracts.undo.reasonLabel')}
+        reasonPlaceholder={t('contracts.undo.reasonPlaceholder')}
+        onConfirm={(reason) => run(UNDO_NOT_RENEW(contract.id, reason ?? ''), t('contracts.undo.done'))}
+      />
+      <ConfirmDialog
         open={confirm === 'deactivate'}
         onOpenChange={(o) => (o ? open('deactivate') : close())}
         tone="destructive"
@@ -291,7 +311,6 @@ export function ContractActions({
           contract={sheet ? contract : null}
           choice={sheet?.choice}
           choices={choices}
-          calendar={calendar}
           onClose={() => setSheet(null)}
           onDone={() => {
             setSheet(null);
