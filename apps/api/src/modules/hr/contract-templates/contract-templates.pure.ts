@@ -29,12 +29,24 @@ export function versionFacts(bodyAr: ContractDocument, bodyEn: ContractDocument 
   };
 }
 
+/**
+ * JSON with object keys sorted at every level: the stored text comes back from `jsonb` with its keys
+ * reordered, so a plain `JSON.stringify` would call an unchanged text changed (a needless version).
+ */
+export function canonicalJson(value: unknown): string {
+  return JSON.stringify(value, (_key, v: unknown) =>
+    v && typeof v === 'object' && !Array.isArray(v)
+      ? Object.fromEntries(Object.entries(v as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
+      : v,
+  );
+}
+
 /** Whether a template's text changed (either language): a change is a new version. */
 export function textChanged(
   before: { bodyAr: unknown; bodyEn: unknown },
   after: { bodyAr: ContractDocument; bodyEn: ContractDocument | null },
 ): boolean {
-  return JSON.stringify(before.bodyAr) !== JSON.stringify(after.bodyAr) || JSON.stringify(before.bodyEn ?? null) !== JSON.stringify(after.bodyEn);
+  return canonicalJson(before.bodyAr) !== canonicalJson(after.bodyAr) || canonicalJson(before.bodyEn ?? null) !== canonicalJson(after.bodyEn);
 }
 
 export function templateAuditLabel(row: Pick<TemplateRow, 'nameEn' | 'nameAr'>): AuditLabel {

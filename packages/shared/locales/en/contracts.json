@@ -302,5 +302,76 @@
     "ends": "It ends one year later: {date}.",
     "confirm": "Create contract",
     "done": "Contract created."
+  },
+  "signedCopy": {
+    "count": {
+      "zero": "Signed copy ({count})",
+      "one": "Signed copy ({count})",
+      "two": "Signed copy ({count})",
+      "few": "Signed copy ({count})",
+      "many": "Signed copy ({count})",
+      "other": "Signed copy ({count})"
+    },
+    "none": "No signed copy",
+    "open": "Open the signed copy of {name}",
+    "upload": "Upload signed copy",
+    "title": "Signed copy",
+    "description": "{name} · contract {year}",
+    "listLabel": "Pages of the signed copy",
+    "page": "Page {page}",
+    "uploadedOn": "Uploaded {date}",
+    "addPages": "Add pages",
+    "hint": "A photo of each page, or the PDF — PDF, PNG, JPG or WebP, up to {max} MB each.",
+    "download": "Download",
+    "remove": "Remove",
+    "openPdf": "Open PDF",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "emptyTitle": "No signed copy yet",
+    "emptyBody": "Add a photo of each page, or the PDF.",
+    "emptyBodyView": "Nobody has uploaded the signed contract yet.",
+    "loading": "Loading the signed copy",
+    "loadFailed": "The signed copy couldn't be loaded.",
+    "retry": "Try again",
+    "uploading": "Uploading page {done} of {total}…",
+    "added": {
+      "zero": "No pages added.",
+      "one": "{count} page added.",
+      "two": "{count} pages added.",
+      "few": "{count} pages added.",
+      "many": "{count} pages added.",
+      "other": "{count} pages added."
+    },
+    "failed": {
+      "zero": "Every page was uploaded.",
+      "one": "{count} page couldn't be uploaded. Add it from the signed copy.",
+      "two": "{count} pages couldn't be uploaded. Add them from the signed copy.",
+      "few": "{count} pages couldn't be uploaded. Add them from the signed copy.",
+      "many": "{count} pages couldn't be uploaded. Add them from the signed copy.",
+      "other": "{count} pages couldn't be uploaded. Add them from the signed copy."
+    },
+    "failedNames": "Not uploaded: {names}.",
+    "listSeparator": ", ",
+    "waiting": "Too many uploads at once: page {done} of {total} goes up in {seconds} s…",
+    "newEmployee": {
+      "hint": "A photo of each page, or the PDF — PDF, PNG, JPG or WebP, up to {max} MB each. Attached to their first contract after you save, if you manage contracts for the stage you chose.",
+      "notCovered": "The employee was saved, but your access doesn't cover their stage, so the signed contract wasn't attached. Someone who manages that stage's contracts can add it.",
+      "failed": "The employee was saved, but the signed contract couldn't be uploaded. Add it from their Contracts tab."
+    },
+    "ownContract": "Your own contract: someone else uploads its signed copy.",
+    "removeTitle": "Remove page {page}?",
+    "removeBody": "{name} leaves the signed copy. It is kept, with your reason, in the contract's history.",
+    "removeReasonLabel": "Reason",
+    "removeReasonPlaceholder": "e.g. A blurry photo, uploaded again",
+    "removeConfirm": "Remove page",
+    "removed": "Page removed.",
+    "field": {
+      "label": "Signed contract (optional)",
+      "hint": "A photo of each page, or the PDF — PDF, PNG, JPG or WebP, up to {max} MB each. Uploaded after saving.",
+      "choose": "Choose files or take photos",
+      "removeFile": "Remove {name}",
+      "type": "Choose a PDF, PNG, JPG or WebP file.",
+      "size": "{name} is larger than {max} MB."
+    }
   }
 }

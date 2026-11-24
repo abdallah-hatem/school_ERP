@@ -353,9 +353,12 @@ describe('Contract templates and printed copies (e2e)', () => {
       const manager = await newUser('HR manager own', ['hr_manager'], self);
       const res = await as(manager, () => http(app).get(`/hr/contracts/${c.id}/print?templateId=${tpl.id}&language=AR`).expect(403));
       expect(res.body.error).toBe(ErrorCode.OWN_CONTRACT);
-      const sysAdmin = await newUser('Admin own', ['system_admin'], self);
+      // A System admin too, on their own (another employee: one account per employee).
+      const adminSelf = await employee();
+      const own = await currentOf(adminSelf);
+      const sysAdmin = await newUser('Admin own', ['system_admin'], adminSelf);
       const res2 = await as(sysAdmin, () =>
-        http(app).post(`/hr/contracts/${c.id}/copies`).send({ templateId: tpl.id, templateVersion: 1, language: 'AR', valuesHash: '0'.repeat(64), output: 'PDF' }).expect(403),
+        http(app).post(`/hr/contracts/${own.id}/copies`).send({ templateId: tpl.id, templateVersion: 1, language: 'AR', valuesHash: '0'.repeat(64), output: 'PDF' }).expect(403),
       );
       expect(res2.body.error).toBe(ErrorCode.OWN_CONTRACT);
     });
@@ -572,16 +575,19 @@ describe('Contract templates and printed copies (e2e)', () => {
       expect(copy.downloadName).toMatch(new RegExp(`^${code}-${YEAR}-${(YEAR + 1) % 100}-full-time-contract-[a-z0-9-]+\\.pdf$`));
     });
 
-    it('edge case 26 — the seed’s sample text (Latin codes, a table) with a manual page break: one more page in the PDF', async () => {
-      const tpl = await createTemplate({ bodyAr: sampleContractDocument() });
+    it('edge case 26 — the seed’s sample text (Latin codes, a table) prints on two A4 pages; a manual page break adds one', async () => {
+      const sample = await createTemplate({ bodyAr: sampleContractDocument() });
       const c = await currentOf(await employee());
-      const plainCopy = await printOk(c.id, tpl.id);
-      expect(plainCopy.pageCount).toBeGreaterThanOrEqual(2);
-      const withBreak = sampleContractDocument();
-      withBreak.content.splice(1, 0, { type: 'pageBreak' });
-      const edited = await printOk(c.id, tpl.id, 'AR', { bodyEdited: withBreak });
-      expect(edited.textEdited).toBe(true);
-      expect(edited.pageCount).toBe(plainCopy.pageCount + 1);
+      const sampleCopy = await printOk(c.id, sample.id);
+      expect(sampleCopy.pageCount).toBe(2);
+      const short = await createTemplate({ bodyAr: withoutSalary() });
+      const one = await printOk(c.id, short.id);
+      expect(one.pageCount).toBe(1);
+      const broken = withoutSalary();
+      broken.content.splice(1, 0, { type: 'pageBreak' });
+      const two = await printOk(c.id, short.id, 'AR', { bodyEdited: broken });
+      expect(two.textEdited).toBe(true);
+      expect(two.pageCount).toBe(2);
     });
   });
 

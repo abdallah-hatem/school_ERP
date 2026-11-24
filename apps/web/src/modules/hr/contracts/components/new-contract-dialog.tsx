@@ -13,6 +13,7 @@ import { formatDate } from '@/shared/lib/format';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { CREATE_EMPLOYEE_CONTRACT } from '../apis';
 import { contractError } from '../lib/contract-text';
+import { SignedCopyField, uploadPickedPages } from './signed-copy';
 
 /**
  * A new contract for an active employee with no active one (review 2026-11-24: a reactivated
@@ -42,6 +43,8 @@ export function NewContractDialog({
   const startsOn = useWatch({ control: form.control, name: 'startsOn' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The new contract's signed copy, optional (owner, 2026-11-24): uploaded once the contract exists.
+  const [pages, setPages] = useState<File[]>([]);
   const inFlight = useRef(false);
 
   function change(next: boolean) {
@@ -49,6 +52,7 @@ export function NewContractDialog({
     if (!next) {
       form.reset({ startsOn: null });
       setError(null);
+      setPages([]);
     }
     onOpenChange(next);
   }
@@ -66,7 +70,9 @@ export function NewContractDialog({
       });
       if (res.unauthorized) return;
       if (res.success) {
+        if (res.data?.id && pages.length > 0) await uploadPickedPages(res.data.id, pages, t);
         form.reset({ startsOn: null });
+        setPages([]);
         onOpenChange(false);
         onDone();
         return;
@@ -112,6 +118,7 @@ export function NewContractDialog({
             <InfoIcon className="mt-0.5 size-5 shrink-0" />
             <span>{t('contracts.newContract.ends', { date: formatDate(oneYearContractEnd(startsOn || fallback), locale) })}</span>
           </p>
+          <SignedCopyField files={pages} onChange={setPages} disabled={busy} />
           {error ? (
             <p role="alert" className="rounded-xl bg-destructive-soft px-3.5 py-2.5 text-sm font-semibold text-destructive-ink">
               {error}

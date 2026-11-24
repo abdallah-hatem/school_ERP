@@ -30,6 +30,7 @@ import { departments, employee, grades, jobTitles, renderEmployees, stages, summ
 const page = <T,>(data: T[]) => ({ success: true as const, status: 200, data, meta: { total: data.length, page: 1, limit: 20 } });
 const managerOptions = vi.mocked(GET_MANAGER_OPTIONS);
 import { EmployeeForm } from './employee-form';
+import { useEmployeeCreateExtras } from './employee-create-extras';
 
 const update = vi.mocked(UPDATE_EMPLOYEE);
 const create = vi.mocked(CREATE_EMPLOYEE);
@@ -182,6 +183,26 @@ describe('EmployeeForm', () => {
     renderForm({ editing: employee });
     expect(screen.queryByRole('button', { name: /Contract start/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /Contract end/ })).toBeNull();
+  });
+
+  it("another module's part (the signed contract) sits in the contract section of the create form only, with the form's state", () => {
+    function Extra() {
+      const { disabled } = useEmployeeCreateExtras();
+      return <p data-testid="contract-extra">{disabled ? 'busy' : 'ready'}</p>;
+    }
+    const render = (editing?: Employee) => {
+      vi.mocked(GET_DEPARTMENTS).mockResolvedValue(page(departments) as never);
+      vi.mocked(GET_STAGES).mockResolvedValue(page(stages) as never);
+      vi.mocked(GET_JOB_TITLES).mockResolvedValue(page(jobTitles) as never);
+      vi.mocked(GET_EMPLOYEE_GRADES).mockResolvedValue(page(grades) as never);
+      managerOptions.mockResolvedValue(page([]) as never);
+      return renderEmployees(<EmployeeForm basePath="/en/employees" employee={editing} contractExtra={<Extra />} />);
+    };
+    const { unmount } = render();
+    expect(screen.getByTestId('contract-extra').textContent).toBe('ready');
+    unmount();
+    render(employee);
+    expect(screen.queryByTestId('contract-extra')).toBeNull();
   });
 
   describe('probation end (§3, N0)', () => {

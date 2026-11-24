@@ -3,6 +3,7 @@
  * modules (penalties T12, payroll T14 — the profile tabs) import from here only.
  */
 export { EmployeeForm, type EmployeeFormProps } from './components/employee-form';
+export { useEmployeeCreateExtras, type AfterCreate, type EmployeeCreateExtras } from './components/employee-create-extras';
 export {
   EmployeeDetails,
   EmployeeProfileShell,

@@ -49,6 +49,8 @@ model User {
   penaltiesRejected        PenaltyRecord[]           @relation("PenaltyRejectedBy")
   contractsDecided         EmployeeContract[]        @relation("ContractDecidedBy")
   earlyTerminationsDecided EmployeeContract[]        @relation("ContractEarlyTerminationDecidedBy")
+  contractFilesUploaded    EmployeeContractFile[]    @relation("ContractFileUploadedBy")
+  contractFilesRemoved     EmployeeContractFile[]    @relation("ContractFileRemovedBy")
   contractTemplatesCreated ContractTemplate[]        @relation("ContractTemplateCreatedBy")
   contractTemplatesUpdated ContractTemplate[]        @relation("ContractTemplateUpdatedBy")
   contractTemplateVersions ContractTemplateVersion[] @relation("ContractTemplateVersionCreatedBy")
@@ -925,11 +927,13 @@ model EmployeeContract {
   createdAt                    DateTime                @default(now()) @map("created_at")
   updatedAt                    DateTime                @updatedAt @map("updated_at")
 
-  employee                  Employee          @relation(fields: [employeeId], references: [id], onDelete: Restrict)
-  decidedBy                 User?             @relation("ContractDecidedBy", fields: [decidedById], references: [id], onDelete: SetNull)
-  earlyTerminationDecidedBy User?             @relation("ContractEarlyTerminationDecidedBy", fields: [earlyTerminationDecidedById], references: [id], onDelete: SetNull)
-  nextContract              EmployeeContract? @relation("ContractRenewal", fields: [nextContractId], references: [id], onDelete: SetNull)
-  previousContract          EmployeeContract? @relation("ContractRenewal")
+  employee                  Employee               @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  decidedBy                 User?                  @relation("ContractDecidedBy", fields: [decidedById], references: [id], onDelete: SetNull)
+  earlyTerminationDecidedBy User?                  @relation("ContractEarlyTerminationDecidedBy", fields: [earlyTerminationDecidedById], references: [id], onDelete: SetNull)
+  nextContract              EmployeeContract?      @relation("ContractRenewal", fields: [nextContractId], references: [id], onDelete: SetNull)
+  previousContract          EmployeeContract?      @relation("ContractRenewal")
+  /// Its signed copy, one row per page (owner, 2026-11-24).
+  signedCopyFiles           EmployeeContractFile[]
   /// Its printed copies (contract templates spec), kept forever.
   copies                    ContractCopy[]
 
@@ -943,6 +947,36 @@ model EmployeeContract {
   @@index([earlyTerminationFileUrl])
   @@index([endFileUrl])
   @@map("employee_contracts")
+}
+
+/// §3 → Contracts (owner, 2026-11-24): one page (file) of a contract's signed copy — a phone photo is
+/// one page each. Kept in upload order (`pageOrder`). Never deleted: removing is soft (`removedAt`,
+/// `removedById`, `removedReason`), kept for the audit log.
+model EmployeeContractFile {
+  id            String    @id @default(uuid()) @db.Uuid
+  contractId    String    @map("contract_id") @db.Uuid
+  /// `/files/contract-signed-copies/<contractId>-<uuid>.<ext>`: files follow their record, by this link.
+  url           String    @unique
+  /// The name it was uploaded with (shown in the viewer, never trusted for its type).
+  name          String
+  mimeType      String    @map("mime_type")
+  sizeBytes     Int       @map("size_bytes")
+  /// 1, 2, 3… in upload order, per contract; removed pages keep theirs.
+  pageOrder     Int       @map("page_order")
+  uploadedById  String?   @map("uploaded_by_id") @db.Uuid
+  uploadedAt    DateTime  @default(now()) @map("uploaded_at")
+  removedAt     DateTime? @map("removed_at")
+  removedById   String?   @map("removed_by_id") @db.Uuid
+  removedReason String?   @map("removed_reason")
+
+  contract   EmployeeContract @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  uploadedBy User?            @relation("ContractFileUploadedBy", fields: [uploadedById], references: [id], onDelete: SetNull)
+  removedBy  User?            @relation("ContractFileRemovedBy", fields: [removedById], references: [id], onDelete: SetNull)
+
+  @@unique([contractId, pageOrder])
+  @@index([uploadedById])
+  @@index([removedById])
+  @@map("employee_contract_files")
 }
 
 /// The language a contract copy is printed in (contract templates spec).

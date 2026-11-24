@@ -34,6 +34,7 @@ import { ContractDates, ContractDecisionPill, DecisionNote, decisionSubLine } fr
 import { ContractCopiesBlock } from './contract-copies';
 import { NewContractDialog } from './new-contract-dialog';
 import { PrintContractButton } from './print-contract';
+import { SignedCopyLink, SignedCopyLinkSkeleton, SignedCopyViewer } from './signed-copy';
 
 export interface EmployeeContractsProps {
   employeeId: string;
@@ -84,11 +85,14 @@ export function EmployeeContracts({ employeeId, employee, basePath, rows, total,
   // The actions: on the contract in force (End on a renewed one cancels its next), on an ended one
   // still waiting for HR ("Ended, no decision", "To deactivate"), and on an upcoming one only
   // "Cancel contract" when it isn't a renewal (the abilities decide; a renewal's next has none).
+  // Any contract but a cancelled one takes a signed copy (owner, 2026-11-24: old contracts are
+  // scanned too), so whoever may manage gets the ⋯ on those rows as well — not on their own.
   const hasActions = (c: Contract) =>
     c.status !== ContractStatus.CANCELLED &&
     (c.phase === ContractPhase.CURRENT ||
       (c.phase === ContractPhase.UPCOMING && c.renewalOf === null) ||
-      (c.phase === ContractPhase.PAST && (c.decision === ContractDecision.ENDED_NO_DECISION || c.toDeactivate)));
+      (c.phase === ContractPhase.PAST && (c.decision === ContractDecision.ENDED_NO_DECISION || c.toDeactivate)) ||
+      (can('hr.contracts.manage') && !c.ownContract));
 
   function goToPage(next: number) {
     const params = new URLSearchParams();
@@ -153,8 +157,9 @@ export function EmployeeContracts({ employeeId, employee, basePath, rows, total,
     {
       id: 'documents',
       header: t('contracts.history.columns.documents'),
-      className: 'w-36 whitespace-normal',
-      skeleton: <SkeletonText className="text-xs" width="w-20" />,
+      className: 'w-40 whitespace-normal',
+      // The usual row: its signed copy's line ("Signed copy (n)" / "No signed copy").
+      skeleton: <SignedCopyLinkSkeleton />,
       cell: (c) => <Documents contract={c} />,
     },
     {
@@ -267,17 +272,29 @@ function Details({ contract: c }: { contract: Contract }) {
   );
 }
 
-/** The contract's documents (the notice letter, the request, the end's attachment) as links. */
+/**
+ * The contract's documents: its signed copy ("Signed copy (2)", opening the viewer, or "No signed
+ * copy" — a cancelled contract never had one to sign), then the notice letter, the request and the
+ * end's attachment as links.
+ */
 function Documents({ contract: c }: { contract: Contract }) {
   const { t } = useTranslation();
+  const [viewing, setViewing] = useState(false);
   const docs = [
     { key: 'notice', url: c.notice?.fileUrl },
     { key: 'request', url: c.earlyTermination?.fileUrl },
     { key: 'attachment', url: c.endFileUrl },
   ].filter((d): d is { key: string; url: string } => !!d.url);
-  if (docs.length === 0) return <span className="text-xs text-muted-foreground">{t('contracts.history.noDocuments')}</span>;
+  const signedCopy = c.status !== ContractStatus.CANCELLED || c.signedCopyPages > 0;
+  if (docs.length === 0 && !signedCopy) return <span className="text-xs text-muted-foreground">{t('contracts.history.noDocuments')}</span>;
   return (
     <span className="flex flex-col items-start gap-1">
+      {signedCopy ? (
+        <>
+          <SignedCopyLink contract={c} onOpen={() => setViewing(true)} />
+          {c.signedCopyPages > 0 ? <SignedCopyViewer contract={c} open={viewing} onOpenChange={setViewing} /> : null}
+        </>
+      ) : null}
       {docs.map((d) => (
         <a
           key={d.key}

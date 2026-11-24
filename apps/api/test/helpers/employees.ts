@@ -12,6 +12,8 @@ export async function deleteEmployees(
 ): Promise<Prisma.BatchPayload> {
   // Printed copies point at the contract (RESTRICT) and are never deleted in the app either.
   await db.contractCopy.deleteMany({ where: { employee: args.where ?? {} } });
+  // A contract's signed copy pages are kept forever too (`employee_contract_files.contract_id` RESTRICT).
+  await db.employeeContractFile.deleteMany({ where: { contract: { employee: args.where ?? {} } } });
   await db.employeeContract.deleteMany({ where: { employee: args.where ?? {} } });
   return db.employee.deleteMany(args);
 }

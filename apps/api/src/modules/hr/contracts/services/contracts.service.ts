@@ -604,9 +604,10 @@ export class ContractsService {
    * The rows to act on: locked (unless `lock: false`), each known and covered by the viewer's view
    * scope (else 404, edge case 12), and — unless `own: false` — none the actor's own (403
    * `OWN_CONTRACT`, §2; with `ownAsRefusal` the caller lists them instead). The account must be
-   * linked to tell (`ACCOUNT_NOT_LINKED`).
+   * linked to tell (`ACCOUNT_NOT_LINKED`). The signed copy's writes (`ContractSignedCopyService`)
+   * load through it too: the same checks as every other contract write.
    */
-  private async loadForWrite(
+  async loadForWrite(
     ids: readonly string[],
     options: { lock?: boolean; own?: boolean; ownAsRefusal?: boolean } = {},
   ): Promise<ContractRow[]> {

@@ -76,7 +76,14 @@ for (const locale of ['en', 'ar'] as const) {
       await openSettled(page, `/${locale}${path}`);
       const gaps = await rowGaps(page);
       expect(gaps.length, path).toBeGreaterThan(0);
-      for (const gap of gaps) expect({ path, ...gap }).toEqual({ path, row: gap.row, start: 0, end: 0 });
+      // On a failure, say which column is too wide: each header cell's width and its widest cell.
+      const columns = await page.locator('section[data-cards-below] [data-view="table"] table').first().evaluate((table) =>
+        [...table.querySelectorAll<HTMLElement>('thead th')].map((th, i) => {
+          const cells = [...table.querySelectorAll<HTMLElement>(`tbody tr > :nth-child(${i + 1})`)];
+          return `${th.textContent?.trim() || i}: ${Math.round(th.getBoundingClientRect().width)}px, widest content ${Math.max(0, ...cells.map((c) => c.scrollWidth))}px`;
+        }),
+      );
+      for (const gap of gaps) expect({ path, ...gap }, columns.join(' | ')).toEqual({ path, row: gap.row, start: 0, end: 0 });
     }
   });
 

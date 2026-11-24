@@ -146,7 +146,9 @@
         "cancel": "Cancelled a contract of {entity}",
         "not_renew_undo": "Undid the not-renewing of {entity}'s contract",
         "copy_print": "Printed a copy of the contract of {entity}",
-        "copy_open": "Opened a printed copy of the contract of {entity}"
+        "copy_open": "Opened a printed copy of the contract of {entity}",
+        "signed_copy_add": "Added a page to the signed contract of {entity}",
+        "signed_copy_remove": "Removed a page from the signed contract of {entity}"
       },
       "contract_template": {
         "create": "Created the contract template {entity}",
@@ -333,7 +335,9 @@
     "version": "Version",
     "defaultForWorkSystem": "Default for",
     "hidden": "Hidden",
-    "languages": "Languages"
+    "languages": "Languages",
+    "signedCopyPages": "Signed copy pages",
+    "signedCopyFile": "Signed copy page"
   },
   "totals": {
     "net": "Net",

@@ -39,6 +39,7 @@ import { FileStorageService, SettingsService } from '../../../../core/settings';
 import { AfterCommit } from '../../../../database/transactions';
 import { inScope, type EmployeeScope, type ScopedEmployee } from '../../access/employee-scope.pure';
 import { HrAccessService, VIEW_SALARY } from '../../access/hr-access.service';
+import { canonicalJson } from '../../contract-templates/contract-templates.pure';
 import { ContractTemplatesRepository, type TemplateWithVersion } from '../../contract-templates/repositories/contract-templates.repository';
 import {
   contractFooterTemplate,
@@ -213,7 +214,7 @@ export class ContractPrintService {
       if (!parsed.ok) throw new CodedException(HttpStatus.BAD_REQUEST, ErrorCode[parsed.problem]);
       document = parsed.document;
     }
-    const textEdited = JSON.stringify(document) !== JSON.stringify(templateDocument);
+    const textEdited = canonicalJson(document) !== canonicalJson(templateDocument);
     const containsSalary = documentUsesSalary(document, isSalary);
     // Edge case 4: a salary field added in "Edit text" is refused like a template's.
     if (containsSalary && !context.salaryVisible) {

@@ -47,6 +47,7 @@ export function contract(overrides: Partial<Contract> & { id?: string } = {}): C
     decidedAt: null,
     next: null,
     renewalOf: null,
+    signedCopyPages: 0,
     toDeactivate: false,
     ownContract: false,
     carriedOver: false,

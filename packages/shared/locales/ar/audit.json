@@ -146,7 +146,9 @@
         "cancel": "إلغاء عقد للموظف {entity}",
         "not_renew_undo": "التراجع عن عدم تجديد عقد {entity}",
         "copy_print": "طباعة نسخة من عقد {entity}",
-        "copy_open": "فتح نسخة مطبوعة من عقد {entity}"
+        "copy_open": "فتح نسخة مطبوعة من عقد {entity}",
+        "signed_copy_add": "إضافة صفحة إلى العقد الموقّع لـ {entity}",
+        "signed_copy_remove": "حذف صفحة من العقد الموقّع لـ {entity}"
       },
       "contract_template": {
         "create": "إنشاء نموذج العقد {entity}",
@@ -333,7 +335,9 @@
     "version": "الإصدار",
     "defaultForWorkSystem": "افتراضي لـ",
     "hidden": "مخفي",
-    "languages": "اللغات"
+    "languages": "اللغات",
+    "signedCopyPages": "صفحات العقد الموقّع",
+    "signedCopyFile": "صفحة العقد الموقّع"
   },
   "totals": {
     "net": "الصافي",

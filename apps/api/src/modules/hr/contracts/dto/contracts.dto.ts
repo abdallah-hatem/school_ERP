@@ -17,6 +17,7 @@ import {
   type RenewContractsRequest,
   type WithdrawNoticeRequest,
   type CancelContractRequest,
+  type RemoveSignedCopyFileRequest,
 } from '@school-erp/shared';
 import { Transform, Type } from 'class-transformer';
 import {
@@ -112,6 +113,15 @@ export class NotRenewContractDto implements NotRenewContractRequest {
 
 /** `POST /hr/contracts/:id/notice/withdraw` — the reason is required. */
 export class WithdrawNoticeDto implements WithdrawNoticeRequest {
+  @Transform(trim)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(1000)
+  reason: string;
+}
+
+/** `POST /hr/contracts/:id/signed-copy/:fileId/remove` — soft (the page is kept); the reason is required. */
+export class RemoveSignedCopyFileDto implements RemoveSignedCopyFileRequest {
   @Transform(trim)
   @IsString()
   @IsNotEmpty()

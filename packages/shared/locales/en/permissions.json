@@ -158,11 +158,11 @@
       "contracts": {
         "view": {
           "label": "View contracts",
-          "description": "See employees' contract history and the renewal season."
+          "description": "See employees' contract history, their signed copies and the renewal season."
         },
         "manage": {
           "label": "Manage contracts",
-          "description": "Renew contracts, record that one isn't renewed or the employee's notice, decide early termination and end a contract. Never your own."
+          "description": "Renew contracts, record that one isn't renewed or the employee's notice, decide early termination, end a contract and upload or remove its signed copy. Never your own."
         }
       },
       "contract_templates": {

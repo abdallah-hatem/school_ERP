@@ -8,7 +8,7 @@ import { FileButton } from '@/shared/components/ui/file-button';
 import { RemoveIcon, UploadIcon } from '@/shared/components/ui/icons';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
-import { UPLOAD_CONTRACT_FILE } from '../apis';
+import { uploadContractFile } from '../lib/uploads';
 
 const MAX_MB = CONTRACT_DOCUMENT_UPLOAD.maxBytes / (1024 * 1024);
 
@@ -64,9 +64,7 @@ export function ContractFileField({
     setUploading(file.name);
     onBusyChange?.(true);
     try {
-      const form = new FormData();
-      form.append('file', file);
-      const res = await callApi(UPLOAD_CONTRACT_FILE(contractId, form), { showErrorToast: false });
+      const res = await callApi(uploadContractFile(contractId, file), { showErrorToast: false });
       if (mine !== seq.current || res.unauthorized) return;
       if (res.success && res.data?.fileUrl) onChange({ name: file.name, fileUrl: res.data.fileUrl });
       else setProblem(t('contracts.file.failed'));

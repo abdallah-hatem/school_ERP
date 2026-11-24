@@ -64,6 +64,8 @@ export const CONTRACT_SELECT = {
   nextContract: { select: { id: true, startsOn: true, endsOn: true } },
   // The contract this one renews: a renewal's next contract isn't cancelled on its own.
   previousContract: { select: { id: true } },
+  // Its signed copy's pages, removed ones aside: "Signed copy (2)" (owner, 2026-11-24).
+  _count: { select: { signedCopyFiles: { where: { removedAt: null } } } },
 } satisfies Prisma.EmployeeContractSelect;
 
 export type ContractRow = Prisma.EmployeeContractGetPayload<{ select: typeof CONTRACT_SELECT }>;

@@ -223,6 +223,10 @@ export const ErrorCode = {
   CONTRACT_NOT_TO_DEACTIVATE: 'CONTRACT_NOT_TO_DEACTIVATE',
   /** The file wasn't uploaded for this contract (`POST /hr/contracts/:id/files`). */
   CONTRACT_FILE_INVALID: 'CONTRACT_FILE_INVALID',
+  /** A cancelled contract never started: it gets no signed copy and can't be printed (contract templates). */
+  CONTRACT_CANCELLED: 'CONTRACT_CANCELLED',
+  /** A signed copy holds at most `params.max` pages (removed ones aside). */
+  SIGNED_COPY_PAGE_LIMIT: 'SIGNED_COPY_PAGE_LIMIT',
   /** A new contract: the employee still has an active contract. */
   CONTRACT_ACTIVE_EXISTS: 'CONTRACT_ACTIVE_EXISTS',
   /** A new contract would overlap one the employee already has (contracts never overlap). */
@@ -231,8 +235,6 @@ export const ErrorCode = {
   CONTRACT_NOT_SCHOOL_DECISION: 'CONTRACT_NOT_SCHOOL_DECISION',
 
   // contract templates and printed copies (spec 2026-11-24-contract-templates)
-  /** A cancelled contract can't be printed. */
-  CONTRACT_CANCELLED: 'CONTRACT_CANCELLED',
   /** The template uses a salary field and the printer may not see this employee's salary (edge case 4). */
   SALARY_NOT_VISIBLE: 'SALARY_NOT_VISIBLE',
   /** A hidden template is out of the print picker; making it a default needs it shown first (edge case 10). */

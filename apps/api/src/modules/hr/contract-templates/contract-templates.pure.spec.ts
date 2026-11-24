@@ -21,6 +21,11 @@ describe('textChanged', () => {
     expect(textChanged(before, { bodyAr: doc('employee.code'), bodyEn: null })).toBe(true);
     expect(textChanged(before, { bodyAr: doc('today'), bodyEn: doc('today') })).toBe(true);
   });
+
+  it('the same text with its keys in another order (as jsonb returns it) is not a change — a rename is not a version', () => {
+    const stored = { content: [{ content: [{ attrs: { key: 'today' }, type: 'field' }], type: 'paragraph' }], type: 'doc' };
+    expect(textChanged({ bodyAr: stored, bodyEn: null }, { bodyAr: doc('today'), bodyEn: null })).toBe(false);
+  });
 });
 
 describe('languagesOf', () => {

@@ -3,6 +3,7 @@ import '@/test/dom-polyfills';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { AnchorHTMLAttributes, ReactNode } from 'react';
+import { PAGINATION } from '@school-erp/shared';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const nav = vi.hoisted(() => ({ search: '' }));
@@ -60,7 +61,7 @@ describe('Settings → Contract templates — the list', () => {
     expect(within(rows[0]!).getByText('v3')).toBeTruthy();
     // 12 templates in all, so a second page exists even though only two rows came.
     expect(screen.getAllByText(/12/).length).toBeGreaterThan(0);
-    expect(api.GET_CONTRACT_TEMPLATES).toHaveBeenCalledWith({ search: undefined, hidden: false, page: 1, limit: 25 });
+    expect(api.GET_CONTRACT_TEMPLATES).toHaveBeenCalledWith({ search: undefined, hidden: false, page: 1, limit: PAGINATION.defaultLimit });
   });
 
   it('searches through the API after a pause — the browser never filters the rows on screen', async () => {
