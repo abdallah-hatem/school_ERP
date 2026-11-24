@@ -701,6 +701,12 @@ phase live in `docs/build-log/`.
 - 2026-11-25 — #292 merged: dev's smoke 27 failure fixed (the Users table sat 2–3px past its card on
   desktop; Status and Last sign-in columns narrowed). The check now names each column's width when it
   fails.
+- 2026-11-25 — **#290 merged: signed copy of each contract.** Pages (PDF/photos, 10 MB each, at most
+  30) on every contract, uploaded from the Contracts tab, renewals, Add employee, Renew and New contract;
+  removed only with a reason; every open audited. Review fixes in the same PR: uploads go through their
+  own route (`/api/upload/...`, session + origin + size checked before reading), so the global Server
+  Action limit stays 3 MB; one upload component shared by contracts and Add employee; 429s retried and
+  failed pages named. This also fixed uploads over 1 MB (employee photos) that had been failing.
 
 ## Next up
 
@@ -713,10 +719,6 @@ phase live in `docs/build-log/`.
   queries loading full texts, a print also logging an "opened" entry, the default not preselected past
   the first page. Accepted: copy printing audited inside the service instead of `@Audited` (the render
   can outlast the transaction). Builder fixing.
-- **Signed copy of each contract** (owner, 2026-11-24): PR #290 open, CI green apart from dev's own
-  smoke failure (fixed in #292). Independent review (2026-11-25): no blockers; fixing the global 11 MB
-  Server Action body limit (reached sign-in too — uploads move to their own route), the upload code
-  copied into the employees module, and 20+ page uploads hitting the rate limit.
 - **Pentest with ARTEX** (owner, 2026-11-25): try https://github.com/BaaRai/ARTEX against the app
   later — on a throwaway or testing environment, never production. Not started.
 - **Employee documents tab** (proposed 2026-11-24): ID copy, certificates, insurance forms.
