@@ -24,7 +24,15 @@ const SETTINGS: NotificationSettings = {
   retention: { readDays: 90, resolvedDays: 30, maxDays: 365 },
 };
 
-const REMINDERS = { contractEndDays: 30, contractEndSecondDays: 7, probationEndDays: 7, latenessCheckDay: 25, payrollCheckDay: 28 };
+const REMINDERS = {
+  contractEndDays: 30,
+  contractEndSecondDays: 7,
+  probationEndDays: 7,
+  latenessCheckDay: 25,
+  payrollCheckDay: 28,
+  renewalDecisionsDays: 91,
+  noticeWindowCloseDays: 7,
+};
 
 async function loaded() {
   await screen.findByText('What everyone receives');

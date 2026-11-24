@@ -23,6 +23,7 @@
   "nav": {
     "dashboard": "Dashboard",
     "employees": "Employees",
+    "contracts": "Contracts",
     "penalties": "Penalties",
     "lateness": "Lateness",
     "payroll": "Payroll",
@@ -158,6 +159,43 @@
       "BACHELOR": "Bachelor's degree",
       "MASTER": "Master's degree",
       "DOCTORATE": "Doctorate"
+    },
+    "contractStatus": {
+      "ACTIVE": "Active",
+      "RENEWED": "Renewed",
+      "NOT_RENEWED": "Not renewed",
+      "ENDED_EARLY": "Ended early"
+    },
+    "contractDecision": {
+      "UNDECIDED": "Not decided",
+      "ENDED_NO_DECISION": "Ended, no decision",
+      "RENEWED": "Renewed",
+      "NOT_RENEWED_SCHOOL": "Not renewing — school",
+      "NOTICE": "Employee gave notice",
+      "EARLY_REQUESTED": "Early termination requested",
+      "ENDED_EARLY": "Ended early"
+    },
+    "nonRenewalBy": {
+      "SCHOOL": "The school",
+      "EMPLOYEE": "The employee's notice"
+    },
+    "calendarTiming": {
+      "ON_TIME": "On time",
+      "EARLY": "Early",
+      "LATE": "Late",
+      "CALENDAR_NOT_SET": "Calendar not set"
+    },
+    "earlyTerminationStatus": {
+      "REQUESTED": "Requested",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected"
+    },
+    "contractEndReason": {
+      "ARTICLE_148": "Dismissal (Article 148)",
+      "RESIGNATION_BY_AGREEMENT": "Resignation by agreement",
+      "DEATH": "Death",
+      "OTHER": "Other",
+      "EARLY_TERMINATION": "Early termination"
     }
   }
 }

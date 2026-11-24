@@ -178,7 +178,8 @@ const checkDay = () => wholeNumber(SETTING_LIMITS.checkDayMin, SETTING_LIMITS.ch
 
 /**
  * The reminder timings (HR rules, spec → Reminder settings): the first contract reminder 1–120
- * days, the second 0 (none) – 60 and fewer than the first, probation 1–60, the check days 1–31.
+ * days, the second 0 (none) – 60 and fewer than the first, probation 1–60, the check days 1–31,
+ * renewal decisions 1–180 days before 31 May, the notice window's close 1–60 days before it.
  */
 export const reminderTimingSchema = z
   .object({
@@ -199,6 +200,18 @@ export const reminderTimingSchema = z
     ),
     latenessCheckDay: checkDay(),
     payrollCheckDay: checkDay(),
+    // Contracts (spec 2026-11-24, §11): renewal decisions from N days before 31 May; the notice
+    // window's close N days before the deadline.
+    renewalDecisionsDays: wholeNumber(
+      SETTING_LIMITS.renewalDecisionsDaysMin,
+      SETTING_LIMITS.renewalDecisionsDaysMax,
+      'notifications.settings.errors.renewalDecisionsDays',
+    ),
+    noticeWindowCloseDays: wholeNumber(
+      SETTING_LIMITS.noticeWindowCloseDaysMin,
+      SETTING_LIMITS.noticeWindowCloseDaysMax,
+      'notifications.settings.errors.noticeWindowCloseDays',
+    ),
   })
   .refine((v) => v.contractEndSecondDays === 0 || v.contractEndSecondDays < v.contractEndDays, {
     path: ['contractEndSecondDays'],

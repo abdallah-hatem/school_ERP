@@ -6,6 +6,7 @@ import {
   ActivityIcon,
   AdministrationModuleIcon,
   AttendanceIcon,
+  ContractsIcon,
   DashboardIcon,
   ExamsIcon,
   FeesIcon,
@@ -31,6 +32,7 @@ export interface NavItem {
   key:
     | 'dashboard'
     | 'employees'
+    | 'contracts'
     | 'penalties'
     | 'lateness'
     | 'payroll'
@@ -125,6 +127,7 @@ export const NAV_MODULES: readonly NavModule[] = [
     tone: 'primary',
     items: [
       page('employees', StaffIcon),
+      page('contracts', ContractsIcon),
       page('penalties', PenaltiesIcon),
       page('lateness', LatenessIcon),
       page('payroll', PayrollIcon),

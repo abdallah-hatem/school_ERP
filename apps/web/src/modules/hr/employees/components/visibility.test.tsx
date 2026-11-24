@@ -57,9 +57,9 @@ const withSalary: Employee = {
 afterEach(cleanup);
 
 describe('profile tabs (R6)', () => {
-  it('a Stage head sees Details and Penalties — no Payroll, no History', () => {
+  it('a Stage head sees Details, Contracts and Penalties — no Payroll, no History', () => {
     renderEmployees(<ProfileTabs profileHref="/en/employees/e-mona" />, 'en', STAGE_HEAD);
-    expect(screen.getAllByRole('link').map((l) => l.textContent)).toEqual(['Details', 'Penalties']);
+    expect(screen.getAllByRole('link').map((l) => l.textContent)).toEqual(['Details', 'Contracts', 'Penalties']);
   });
 
   it('without hr.penalties.view the Penalties tab goes too', () => {
@@ -69,7 +69,7 @@ describe('profile tabs (R6)', () => {
 
   it('the HR manager still sees every tab', () => {
     renderEmployees(<ProfileTabs profileHref="/en/employees/e-mona" />, 'en', TEST_SESSION);
-    expect(screen.getAllByRole('link')).toHaveLength(4);
+    expect(screen.getAllByRole('link')).toHaveLength(5);
   });
 });
 

@@ -25,6 +25,7 @@ import { EmployeeStatusAction } from './employee-status-action';
 export const PROFILE_TABS = [
   { key: 'details', labelKey: 'employees.profile.details', segment: '' },
   // Each tab only for people who may read what it shows (R6); its page refuses the rest (not found).
+  { key: 'contracts', labelKey: 'common.nav.contracts', segment: 'contracts', permission: 'hr.contracts.view' },
   { key: 'penalties', labelKey: 'common.nav.penalties', segment: 'penalties', permission: 'hr.penalties.view' },
   { key: 'payroll', labelKey: 'common.nav.payroll', segment: 'payroll', permission: 'hr.payroll.view' },
   // Who changed what on this employee (audit log, T30); only for people who may read the log.

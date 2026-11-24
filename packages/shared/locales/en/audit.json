@@ -468,6 +468,11 @@
         "changed": "School logo changed",
         "removed": "School logo removed"
       },
+      "document": {
+        "added": "Document attached",
+        "changed": "Document changed",
+        "removed": "Document removed"
+      },
       "uploaded": "Uploaded"
     }
   }

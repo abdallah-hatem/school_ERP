@@ -133,7 +133,7 @@ describe('SidebarNav (grouped by module)', () => {
     expect(school.getAttribute('aria-expanded')).toBe('true');
     expect(groupEntries(school)).toEqual(['locked:Students', 'locked:Academics', 'locked:Attendance', 'locked:Exams & grades']);
     // Leave after Payroll in HR, Fees after the live pages in Accounting.
-    expect(groupEntries(hrButton())).toEqual(['Employees', 'Penalties', 'Lateness', 'Payroll', 'locked:Leave & permissions']);
+    expect(groupEntries(hrButton())).toEqual(['Employees', 'Contracts', 'Penalties', 'Lateness', 'Payroll', 'locked:Leave & permissions']);
     expect(groupEntries(screen.getByRole('button', { name: 'Accounting' }))).toEqual([
       'Approved pay',
       'Payroll taxes',
@@ -269,14 +269,14 @@ describe('SidebarNav (grouped by module)', () => {
     });
 
     it('a module with no visible page is not drawn; coming modules still are', () => {
-      renderNav('full', 'en', sessionWithout('hr.employees.view', 'hr.penalties.view', 'hr.lateness.view', 'hr.payroll.view'));
+      renderNav('full', 'en', sessionWithout('hr.employees.view', 'hr.contracts.view', 'hr.penalties.view', 'hr.lateness.view', 'hr.payroll.view'));
       expect(screen.queryByRole('button', { name: 'HR' })).toBeNull();
       // HR's Leave goes with HR; School (4), Accounting's Fees, Transport and Parent portal stay.
       expect(screen.queryByText('Leave & permissions')).toBeNull();
       expect(screen.getAllByText('Soon')).toHaveLength(7);
       expect(screen.getByRole('button', { name: 'School' })).toBeTruthy();
       cleanup();
-      renderNav('rail', 'en', sessionWithout('hr.employees.view', 'hr.penalties.view', 'hr.lateness.view', 'hr.payroll.view'));
+      renderNav('rail', 'en', sessionWithout('hr.employees.view', 'hr.contracts.view', 'hr.penalties.view', 'hr.lateness.view', 'hr.payroll.view'));
       expect(screen.queryByRole('button', { name: 'HR' })).toBeNull();
     });
 

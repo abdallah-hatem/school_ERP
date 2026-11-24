@@ -515,7 +515,11 @@
       "latenessCheckDay": "يوم مراجعة التأخير",
       "latenessCheckDayHint": "يوم الشهر الذي يُستحق فيه إدخال التأخير.",
       "payrollCheckDay": "يوم مراجعة الرواتب",
-      "payrollCheckDayHint": "يوم الشهر الذي تُستحق فيه الرواتب."
+      "payrollCheckDayHint": "يوم الشهر الذي تُستحق فيه الرواتب.",
+      "renewalDecisionsDays": "تذكير قرارات التجديد",
+      "renewalDecisionsDaysHint": "عدد الأيام قبل 31 مايو، و91 تعني من 1 مارس.",
+      "noticeWindowCloseDays": "تذكير الموعد النهائي لعدم التجديد",
+      "noticeWindowCloseDaysHint": "عدد الأيام قبل الموعد النهائي لإخطار عدم التجديد."
     },
     "retention": {
       "title": "مدة حفظ الإشعارات",
@@ -537,7 +541,9 @@
       "contractEndDays": "من 1 إلى 120 يومًا.",
       "contractEndSecondDays": "من 0 إلى 60 يومًا، وأقل من التذكير الأول.",
       "probationEndDays": "من 1 إلى 60 يومًا.",
-      "checkDay": "يوم من 1 إلى 31."
+      "checkDay": "يوم من 1 إلى 31.",
+      "renewalDecisionsDays": "من 1 إلى 180 يومًا.",
+      "noticeWindowCloseDays": "من 1 إلى 60 يومًا."
     }
   }
 }

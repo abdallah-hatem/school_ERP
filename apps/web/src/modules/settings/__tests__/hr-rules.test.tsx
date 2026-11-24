@@ -1,9 +1,14 @@
 // @vitest-environment jsdom
-import { cleanup, screen, waitFor } from '@testing-library/react';
+import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const api = vi.hoisted(() => ({ GET_HR_SETTINGS: vi.fn(), UPDATE_HR_SETTINGS: vi.fn() }));
+const api = vi.hoisted(() => ({
+  GET_HR_SETTINGS: vi.fn(),
+  UPDATE_HR_SETTINGS: vi.fn(),
+  GET_SCHOOL_CALENDAR: vi.fn(),
+  PUT_SCHOOL_CALENDAR: vi.fn(),
+}));
 vi.mock('../apis', () => api);
 vi.mock('next/navigation', () => ({ redirect: vi.fn() }));
 
@@ -27,6 +32,11 @@ async function loaded(title = 'Lateness rule') {
   await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
 }
 
+/** The HR rules form's own Save (the School calendar card below has its own). */
+function rulesSave() {
+  return within(document.querySelector('form') as HTMLElement).getByRole('button', { name: 'Save' });
+}
+
 function example() {
   return screen.getByTestId('lateness-example').textContent ?? '';
 }
@@ -34,6 +44,7 @@ function example() {
 describe('HR rules — lateness rule editor', () => {
   beforeEach(() => {
     api.GET_HR_SETTINGS.mockImplementation(() => ok(hrSettings));
+    api.GET_SCHOOL_CALENDAR.mockImplementation((year: number) => ok({ year, calendar: null }));
   });
   afterEach(() => {
     cleanup();
@@ -83,7 +94,7 @@ describe('HR rules — lateness rule editor', () => {
     const user = userEvent.setup();
     renderSettings(<HrRulesSection />);
     await loaded();
-    const bar = () => screen.getByRole('button', { name: 'Save' }).parentElement as HTMLElement;
+    const bar = () => rulesSave().parentElement as HTMLElement;
     // A direct child of the form (spanning every card), so it can follow the whole form.
     expect(bar().parentElement?.tagName).toBe('FORM');
     expect(bar().dataset.sticky).toBeUndefined();
@@ -93,7 +104,7 @@ describe('HR rules — lateness rule editor', () => {
     await user.type(grace, '5');
     await waitFor(() => expect(bar().dataset.sticky).toBe('true'));
 
-    await user.click(screen.getByRole('button', { name: 'Discard' }));
+    await user.click(within(document.querySelector('form') as HTMLElement).getByRole('button', { name: 'Discard' }));
     await waitFor(() => expect(bar().dataset.sticky).toBeUndefined());
   });
 
@@ -119,7 +130,7 @@ describe('HR rules — lateness rule editor', () => {
     await user.type(hour1, '0.3');
     expect(await screen.findByText('Use quarter days from 0 to 30, like 0.25, 0.5 or 1.25.')).toBeTruthy();
     expect(example()).toContain('Fix the rule above to see an example.');
-    expect(screen.getByRole('button', { name: 'Save' })).toHaveProperty('disabled', true);
+    expect(rulesSave()).toHaveProperty('disabled', true);
   });
 
   it('adding a step and changing the divisor saves only the changed keys, hours numbered 1..n', async () => {
@@ -144,7 +155,7 @@ describe('HR rules — lateness rule editor', () => {
     const divisor = screen.getByRole('textbox', { name: /Day value divisor/ });
     await user.clear(divisor);
     await user.type(divisor, '26');
-    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await user.click(rulesSave());
 
     await waitFor(() => expect(api.UPDATE_HR_SETTINGS).toHaveBeenCalledTimes(1));
     expect(api.UPDATE_HR_SETTINGS).toHaveBeenCalledWith({
@@ -172,7 +183,7 @@ describe('HR rules — lateness rule editor', () => {
     await user.clear(pt3);
     await user.type(pt3, '0');
     expect(await screen.findByText('أدخل نسبة صحيحة من 1 إلى 100.')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'حفظ' })).toHaveProperty('disabled', true);
+    expect(within(document.querySelector('form') as HTMLElement).getByRole('button', { name: 'حفظ' })).toHaveProperty('disabled', true);
   });
 
   describe('default probation length (§7, N0)', () => {
@@ -187,7 +198,7 @@ describe('HR rules — lateness rule editor', () => {
       expect(screen.getByText(/0 means no probation. Existing employees keep their dates./)).toBeTruthy();
       await user.clear(probation());
       await user.type(probation(), '0');
-      await user.click(screen.getByRole('button', { name: 'Save' }));
+      await user.click(rulesSave());
       await waitFor(() => expect(api.UPDATE_HR_SETTINGS).toHaveBeenCalledWith({ employees: { defaultProbationMonths: 0 } }));
       expect(await screen.findByText('Saved.')).toBeTruthy();
     });
@@ -199,7 +210,7 @@ describe('HR rules — lateness rule editor', () => {
       await user.clear(probation());
       await user.type(probation(), '7');
       expect(await screen.findByText('Enter whole months from 0 to 6.')).toBeTruthy();
-      expect(screen.getByRole('button', { name: 'Save' })).toHaveProperty('disabled', true);
+      expect(rulesSave()).toHaveProperty('disabled', true);
       cleanup();
       renderSettings(<HrRulesSection />, 'ar');
       await loaded('قاعدة التأخير');

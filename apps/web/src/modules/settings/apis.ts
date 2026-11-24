@@ -10,6 +10,8 @@ import type {
   JobTitle,
   ListItem,
   PenaltyGroup,
+  PutSchoolCalendarRequest,
+  SchoolCalendar,
   SchoolSettings,
   UpdateHrSettingsRequest,
   UpdateJobTitleRequest,
@@ -123,6 +125,29 @@ export async function UPDATE_HR_SETTINGS(data: UpdateHrSettingsRequest) {
     revalidateTags: [HR_SETTINGS_TAG, ...HR_RULE_READERS_TAGS],
   });
   return handleResponse({ response: res });
+}
+
+// ── School calendar (contracts, spec 2026-11-24) ────────────────────────────
+
+/** Read by the contracts screens (the notice window, early termination) and the "calendar not set" banner. */
+const SCHOOL_CALENDAR_READERS_TAGS = ['hr-school-calendar', 'hr-contracts'];
+
+/** `GET /hr/settings/school-calendar/:year` — one contract year's term dates (`calendar` null: not set). */
+export async function GET_SCHOOL_CALENDAR(year: number) {
+  const res = await apiFetch<SchoolCalendar>(`/hr/settings/school-calendar/${encodeURIComponent(String(year))}`, {
+    cache: 'no-store',
+  });
+  return handleResponse({ response: res, showErrorToast: false });
+}
+
+/** `PUT /hr/settings/school-calendar/:year` — all four dates, in order, inside the contract year (`hr.settings.edit`). */
+export async function PUT_SCHOOL_CALENDAR(year: number, data: PutSchoolCalendarRequest) {
+  const res = await apiFetch<SchoolCalendar>(`/hr/settings/school-calendar/${encodeURIComponent(String(year))}`, {
+    method: 'PUT',
+    body: { ...data },
+    revalidateTags: SCHOOL_CALENDAR_READERS_TAGS,
+  });
+  return handleResponse({ response: res, showErrorToast: false });
 }
 
 // ── Accounting rules (§10) ───────────────────────────────────────────────────
