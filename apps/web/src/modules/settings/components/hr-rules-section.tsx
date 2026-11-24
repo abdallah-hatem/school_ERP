@@ -30,6 +30,7 @@ import { GET_HR_SETTINGS, UPDATE_HR_SETTINGS } from '../apis';
 import { useReportDirty } from '../hooks/unsaved-changes';
 import { useResource } from '../hooks/use-resource';
 import { hrRulesSchema, type HrRulesFormValues } from '../schemas';
+import { SchoolCalendarCard } from './school-calendar-card';
 import { SaveBar, SectionPanel } from './section-panel';
 
 /** Hours of a month's maximum minutes (6,000 → 100) — the API's cap on steps. */
@@ -76,15 +77,20 @@ export function HrRulesSection() {
       </SectionPanel>
     );
   }
-  if (!settings.data) {
-    // The form itself as its skeleton (the §7 defaults as placeholders): every field in place.
-    return (
-      <SkeletonMask>
-        <HrRulesForm initial={HR_SETTINGS_DEFAULTS} onSaved={() => undefined} />
-      </SkeletonMask>
-    );
-  }
-  return <HrRulesForm initial={settings.data} onSaved={(next) => settings.setData(() => next)} />;
+  return (
+    <div className="flex flex-col gap-6">
+      {settings.data ? (
+        <HrRulesForm initial={settings.data} onSaved={(next) => settings.setData(() => next)} />
+      ) : (
+        // The form itself as its skeleton (the §7 defaults as placeholders): every field in place.
+        <SkeletonMask>
+          <HrRulesForm initial={HR_SETTINGS_DEFAULTS} onSaved={() => undefined} />
+        </SkeletonMask>
+      )}
+      {/* Contracts (spec 2026-11-24): the term dates per contract year, saved on their own. */}
+      <SchoolCalendarCard />
+    </div>
+  );
 }
 
 function HrRulesForm({ initial, onSaved }: { initial: HrSettings; onSaved: (next: HrSettings) => void }) {

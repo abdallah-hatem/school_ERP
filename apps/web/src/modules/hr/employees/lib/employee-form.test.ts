@@ -63,6 +63,13 @@ describe('employee form rules (§3)', () => {
     expect(formToUpdate({ ...initial, hireDate: '2020-10-01' }, initial)).toEqual({ hireDate: '2020-10-01' });
   });
 
+  it('an edit never sends the contract dates: after creation they change only through Contracts (edge case 13)', () => {
+    const initial = employeeToForm(employee);
+    expect(formToUpdate({ ...initial, contractStart: '2026-09-01', contractEnd: '2027-08-31' }, initial)).toEqual({});
+    // Creating still sets the first contract.
+    expect(formToRequest(initial)).toMatchObject({ contractStart: initial.contractStart, contractEnd: initial.contractEnd });
+  });
+
   it('an edit sends only what changed; clearing an optional field sends null', () => {
     const initial = employeeToForm(employee);
     expect(formToUpdate(initial, initial)).toEqual({});

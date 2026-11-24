@@ -17,6 +17,7 @@ import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
 import { createAppAsTestUser } from './helpers/as-test-user';
 import { outboxIdle } from './helpers/events';
+import { deleteEmployees } from './helpers/employees';
 
 /*
  * Security review (2026-11-23) in HR, against the real database. Everything is made through the API
@@ -210,7 +211,7 @@ describe('Security review — HR access (e2e)', () => {
     await db.user.deleteMany({ where: { id: { in: users } } });
     await db.role.deleteMany({ where: { id: { in: roles } } });
     await db.employeeStage.deleteMany({ where: { employeeId: { in: employees } } });
-    await db.employee.deleteMany({ where: { id: { in: employees } } });
+    await deleteEmployees(db, { where: { id: { in: employees } } });
     await db.violation.deleteMany({ where: { groupId } });
     await db.penaltyGroup.deleteMany({ where: { id: groupId } });
     await db.department.deleteMany({ where: { id: departmentId } });

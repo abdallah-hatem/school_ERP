@@ -157,6 +157,20 @@ export class UpdateReminderRuleDto {
   @Min(SETTING_LIMITS.checkDayMin)
   @Max(SETTING_LIMITS.checkDayMax)
   payrollCheckDay?: number;
+
+  /** Contracts (spec 2026-11-24): "Renewal decisions due" from this many days before 31 May. */
+  @IsOptionalNotNull()
+  @IsInt()
+  @Min(SETTING_LIMITS.renewalDecisionsDaysMin)
+  @Max(SETTING_LIMITS.renewalDecisionsDaysMax)
+  renewalDecisionsDays?: number;
+
+  /** Contracts: "Non-renewal window closes soon", days before the deadline. */
+  @IsOptionalNotNull()
+  @IsInt()
+  @Min(SETTING_LIMITS.noticeWindowCloseDaysMin)
+  @Max(SETTING_LIMITS.noticeWindowCloseDaysMax)
+  noticeWindowCloseDays?: number;
 }
 
 /** `PATCH /hr/settings` — any subset. Unknown keys at any level → 400 (whitelist). */

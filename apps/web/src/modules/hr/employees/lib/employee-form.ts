@@ -320,15 +320,20 @@ export function formToRequest(v: EmployeeFormValues): CreateEmployeeRequest {
   };
 }
 
+/** Create-only fields: the first contract's dates, which later change only through Contracts (renew, end). */
+const CREATE_ONLY: readonly (keyof CreateEmployeeRequest)[] = ['contractStart', 'contractEnd'];
+
 /**
  * Only what changed since `initial`, so an untouched hidden department or a manager who has since
- * left isn't re-validated as a new choice. A cleared optional field is sent as `null`.
+ * left isn't re-validated as a new choice. A cleared optional field is sent as `null`. The contract
+ * dates are never sent (spec 2026-11-24, edge case 13).
  */
 export function formToUpdate(values: EmployeeFormValues, initial: EmployeeFormValues): UpdateEmployeeRequest {
   const next = formToRequest(values);
   const before = formToRequest(initial);
   const patch: Record<string, unknown> = {};
   for (const key of Object.keys(next) as (keyof CreateEmployeeRequest)[]) {
+    if (CREATE_ONLY.includes(key)) continue;
     const a = next[key];
     const b = before[key];
     // A list (the other stages) changes when its items do, not when it is a new array.

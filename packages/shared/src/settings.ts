@@ -36,6 +36,10 @@ export const HrSettingKey = {
   REMINDERS_LATENESS_CHECK_DAY: 'hr.reminders.latenessCheckDay',
   /** §11 (N3): from this day of the month, remind while the month's payroll isn't prepared / approved. */
   REMINDERS_PAYROLL_CHECK_DAY: 'hr.reminders.payrollCheckDay',
+  /** §11 (contracts): days before a contract year ends (31 May) that "Renewal decisions due" starts — 91 = 1 March. */
+  REMINDERS_RENEWAL_DECISIONS_DAYS: 'hr.reminders.renewalDecisionsDays',
+  /** §11 (contracts): days before the non-renewal deadline (30 April) for "Non-renewal window closes soon". */
+  REMINDERS_NOTICE_WINDOW_CLOSE_DAYS: 'hr.reminders.noticeWindowCloseDays',
 } as const;
 export type HrSettingKey = (typeof HrSettingKey)[keyof typeof HrSettingKey];
 
@@ -135,6 +139,8 @@ export interface SettingValueMap {
   'hr.reminders.probationEndDays': number;
   'hr.reminders.latenessCheckDay': number;
   'hr.reminders.payrollCheckDay': number;
+  'hr.reminders.renewalDecisionsDays': number;
+  'hr.reminders.noticeWindowCloseDays': number;
   'accounting.payroll.taxBrackets': TaxBracket[];
   'accounting.payroll.martyrPercent': number;
   'accounting.payroll.insurancePercent': number;
@@ -176,6 +182,10 @@ export const SETTING_DEFAULTS: { [K in SettingKey]: SettingValueMap[K] } = {
   'hr.reminders.probationEndDays': 7,
   'hr.reminders.latenessCheckDay': 25,
   'hr.reminders.payrollCheckDay': 28,
+  // Contracts (§11, spec 2026-11-24, GUESS): renewal decisions from 1 March (91 days before 31 May),
+  // the non-renewal window's close 7 days before the deadline.
+  'hr.reminders.renewalDecisionsDays': 91,
+  'hr.reminders.noticeWindowCloseDays': 7,
   // §10 GUESS (the school's previous HR system; to confirm with the accountant): Egypt's annual
   // scale ÷ 12 — 60,000 at 0%, 15,000 at 10%, 15,000 at 15%, 130,000 at 20%, 200,000 at 22.5%,
   // the rest at 25%.
@@ -227,6 +237,12 @@ export const SETTING_LIMITS = {
   /** A check day past the month's end means its last day (31 → 28 February). */
   checkDayMin: 1,
   checkDayMax: 31,
+  /** §11 contracts: "Renewal decisions due" from this many days before 31 May (1 March = 91). */
+  renewalDecisionsDaysMin: 1,
+  renewalDecisionsDaysMax: 180,
+  /** §11 contracts: "Non-renewal window closes soon", days before the deadline. */
+  noticeWindowCloseDaysMin: 1,
+  noticeWindowCloseDaysMax: 60,
 } as const;
 
 /**
@@ -275,6 +291,16 @@ export const LOGO_UPLOAD = {
 export const EMPLOYEE_PHOTO_UPLOAD = {
   maxBytes: 2 * 1024 * 1024,
   mimeTypes: ['image/png', 'image/jpeg', 'image/webp'],
+} as const;
+
+/**
+ * Contract documents (spec 2026-11-24): the employee's notice letter, an early termination request,
+ * an end's attachment — PDF, PNG, JPG or WebP, up to 5 MB, checked by their bytes. A sensitive
+ * folder: opened only by whoever may see the contract, and each opening is recorded.
+ */
+export const CONTRACT_DOCUMENT_UPLOAD = {
+  maxBytes: 5 * 1024 * 1024,
+  mimeTypes: ['application/pdf', 'image/png', 'image/jpeg', 'image/webp'],
 } as const;
 
 /** Employee code format (§3): EMP-0001. */

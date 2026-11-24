@@ -72,6 +72,11 @@ describe('notification types (N2)', () => {
         'hr.penalty.awaiting_review',
         'hr.penalty.rejected',
         'hr.probation.ending_soon',
+        // Contracts (spec 2026-11-24)
+        'hr.contract.renewals_due',
+        'hr.contract.notice_window_opens',
+        'hr.contract.notice_window_closing',
+        'hr.contract.early_termination_waiting',
       ].sort(),
     );
     for (const key of NOTIFICATION_TYPE_KEYS) {

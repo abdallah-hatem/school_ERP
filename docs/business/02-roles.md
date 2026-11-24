@@ -61,6 +61,14 @@
   given to themselves — **nor cancels it** (owner, 2026-11-23).
 - **GUESS** — Payroll is prepared by an HR officer and **approved by the HR manager**; the
   accountant views and exports it.
+- **GUESS** (spec 2026-11-24, approved as drafted) — **Contracts** (§3): **View contracts** — the
+  contract history and the renewal season — HR manager, HR officer and principal (whole school),
+  stage head (their own stage; another stage's contract shows "We couldn't find that page").
+  **Manage contracts** — renew, not renew, record notices, end early, decide early termination —
+  HR manager (whole school). The **school calendar** is part of HR rules (changing HR rules).
+  Nobody acts on their own contract — a System admin neither — so an account that manages
+  contracts must be linked to its employee record, like pay and penalties. Roles stay editable by
+  the admin, so these are only the starting defaults.
 - **DECIDED** (owner, 2026-11-23) — **Separation of duties in payroll** (§6): nobody adds or removes
   an adjustment on their own payroll line, and nobody approves a month in which they adjusted their
   own line. Whoever created the month's run may still approve it, as long as they adjusted no line of

@@ -10,6 +10,7 @@ import { ErrorCode, type AuthUser, type CreateEmployeeRequest, type Employee } f
 import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
 import { ANONYMOUS_HEADER, createAppAsTestUser } from './helpers/as-test-user';
+import { deleteEmployees } from './helpers/employees';
 
 const PNG = Buffer.concat([
   Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
@@ -77,7 +78,7 @@ describe('HR employee details and photo (e2e)', () => {
 
   afterAll(async () => {
     await db.employee.updateMany({ data: { managerId: null } });
-    await db.employee.deleteMany({});
+    await deleteEmployees(db);
     await db.department.deleteMany({});
     await db.jobTitle.deleteMany({});
     await db.stage.deleteMany({});

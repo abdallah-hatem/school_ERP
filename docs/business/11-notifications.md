@@ -84,7 +84,11 @@ and its list, My account → Notifications, Settings → Notifications).
 | Penalty waiting for your approval | Whoever may approve penalties at the HR step, for that penalty (§2) | A penalty is recorded straight to HR, or the stage head approves it | It is approved, rejected or cancelled, by anyone |
 | Penalty you recorded was rejected | The person who recorded it (only them) | It is rejected at either step | Read (nothing to do) |
 | Payroll ready to approve | Whoever may approve payroll | A draft month is calculated and has no pending penalties | It is approved (or a pending penalty appears in the month again) |
-| Contract ends soon | Whoever may edit that employee | 30 days, and again 7 days, before the contract ends | The contract is extended, or the employee is deactivated |
+| Contract ends soon | Whoever may edit that employee | 30 days, and again 7 days, before the contract ends | A renewal decision is made (renewed, not renewed, ended), or the employee is deactivated |
+| Renewal decisions due | Whoever may manage contracts | From 1 March, while contracts ending 31 May have no decision | Every one has a decision |
+| Non-renewal window opens | Whoever may manage contracts | The first day of term 2 | Read |
+| Non-renewal window closes soon | Whoever may manage contracts | 7 days before 30 April | Read |
+| Early termination waiting | Whoever may manage contracts | A request is recorded | It is approved or rejected |
 | Probation ends soon | Whoever may edit that employee | 7 days before the employee's probation end date | The date passes or moves, or the employee is deactivated |
 | Lateness not entered | Whoever may enter lateness | From the 25th, while the month's lateness was never saved | The month is saved, or its payroll is approved |
 | Payroll not prepared | Whoever may prepare payroll | From the 28th, while the month has no payroll run | A run is created |
@@ -172,6 +176,8 @@ and its list, My account → Notifications, Settings → Notifications).
 | Remind before a contract ends | 30 days (1–120), and again 7 days (0 = no second reminder; 0–60, fewer than the first) | DECIDED (owner, 2026-11-18) |
 | Default probation length (fills a new employee's probation end) | 3 months (0 = no probation) | DECIDED (owner, 2026-11-18) |
 | Remind before probation ends | 7 days (1–60) | GUESS |
+| Renewal decisions due from | 91 days before 31 May, i.e. 1 March (1–180) | GUESS (spec 2026-11-24) |
+| Non-renewal window closes soon | 7 days before the deadline (1–60) | GUESS (spec 2026-11-24) |
 | Lateness due by (day of the month) | 25 (1–31; past the month's end = its last day) | DECIDED setting; day GUESS until the school confirms |
 | Payroll prepared and approved by (day of the month) | 28 (1–31; same) | DECIDED setting; day GUESS until the school confirms |
 | Keep read notifications | 90 days | DECIDED (owner, 2026-11-18) |

@@ -51,6 +51,7 @@ import { DepartmentsService } from '../../lists/services/departments.service';
 import { JobTitlesService } from '../../lists/services/job-titles.service';
 import { HrRemindersService } from '../../reminders/hr-reminders.service';
 import { HrSettingsService } from '../../settings/hr-settings.service';
+import { ContractRecords } from '../../contracts/services/contract-records.service';
 import { CreateEmployeeDto, ListEmployeesQueryDto, UpdateEmployeeDto } from '../dto/employee.dto';
 import {
   EmployeeDetailRow,
@@ -75,13 +76,11 @@ const REQUIRED_FIELDS = [
   'jobTitleId',
   'workSystem',
   'basicSalary',
-  'contractStart',
-  'contractEnd',
   'usesBus',
   'insuranceStatus',
 ] as const satisfies readonly (keyof UpdateEmployeeDto)[];
 
-const DATE_FIELDS = ['dateOfBirth', 'hireDate', 'contractStart', 'contractEnd', 'probationEnd'] as const;
+const DATE_FIELDS = ['dateOfBirth', 'hireDate', 'probationEnd'] as const;
 
 /** Folder under UPLOADS_DIR (and `/files/…`) holding employee photos — signed-in only. */
 export const EMPLOYEE_PHOTO_FOLDER = 'employee-photos';
@@ -177,6 +176,7 @@ export class EmployeesService {
     private readonly hrSettings: HrSettingsService,
     private readonly reminders: HrRemindersService,
     private readonly users: UsersService,
+    private readonly contracts: ContractRecords,
   ) {}
 
   /** The employees `hr.employees.view` covers for the user (R5), salary per row (R7). */
@@ -432,6 +432,8 @@ export class EmployeesService {
         ? await this.writeOtherStages(created.id, otherStageIds)
         : created;
       await this.record('hr.employee.create', null, row);
+      // Contracts (spec 2026-11-24): the first contract, from the same dates, in the same transaction.
+      await this.contracts.createFirst(row.id, contract.start, contract.end);
       await this.events.publish(HrEvent.EMPLOYEE_HIRED, {
         employeeId: row.id,
         hireDate: toIsoDate(row.hireDate),
@@ -482,12 +484,6 @@ export class EmployeesService {
       if (dto.managerId) {
         await this.assertManager(id, dto.managerId, dto.managerId !== current.manager?.id);
       }
-      if (dto.contractStart !== undefined || dto.contractEnd !== undefined) {
-        this.assertContractOrder(
-          dto.contractStart ?? toIsoDate(current.contractStart),
-          dto.contractEnd ?? toIsoDate(current.contractEnd),
-        );
-      }
       // §3: a changed hire date never moves the probation end, but both must stay in order.
       if (dto.hireDate !== undefined || dto.probationEnd !== undefined) {
         this.assertProbationOrder(
@@ -518,10 +514,9 @@ export class EmployeesService {
       if (!sameIds(otherStageIds, currentOthers)) row = await this.writeOtherStages(id, otherStageIds);
       // Always recorded: a save that changes nothing writes no entry but still answers `@Audited`.
       await this.record('hr.employee.update', current, row);
-      // §11 (N3): a moved contract or probation end ends its open reminder; the daily job sends a
-      // new one if the new date is inside a window.
+      // §11 (N3): a moved probation end ends its open reminder; the daily job sends a new one if the
+      // new date is inside its window. (The contract dates move only through Contracts.)
       const day = (d: Date | null) => (d ? toIsoDate(d) : null);
-      if (day(current.contractEnd) !== day(row.contractEnd)) await this.reminders.contractChanged(id);
       if (day(current.probationEnd) !== day(row.probationEnd)) await this.reminders.probationChanged(id);
       await this.publishUpdated(current, row);
       return this.present(row);

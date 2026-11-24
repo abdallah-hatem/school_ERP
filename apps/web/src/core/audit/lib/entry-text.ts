@@ -131,12 +131,14 @@ function isStep(value: unknown): value is { hour: number; days: number } {
 }
 
 /** Fields holding a stored file: their changes read as words ("Photo changed"), never file names. */
-const FILE_FIELDS: Readonly<Record<string, 'photo' | 'logo'>> = {
+const FILE_FIELDS: Readonly<Record<string, 'photo' | 'logo' | 'document'>> = {
   photoUrl: 'photo',
   [SchoolSettingKey.LOGO_URL]: 'logo',
+  // A contract's notice letter, request or end attachment (spec 2026-11-24): a sensitive folder.
+  document: 'document',
 };
 
-function fileKind(field: string): 'photo' | 'logo' | null {
+function fileKind(field: string): 'photo' | 'logo' | 'document' | null {
   return FILE_FIELDS[field] ?? null;
 }
 
@@ -168,7 +170,18 @@ function enumOf(field: string, entityType: AuditEntityType | undefined): string 
       return 'penaltyAction';
     case 'type':
       return 'adjustmentType';
+    // Contracts (spec 2026-11-24): who didn't renew, where a notice or request fell, why it ended.
+    case 'nonRenewalBy':
+      return 'nonRenewalBy';
+    case 'noticeTiming':
+    case 'earlyTerminationTiming':
+      return 'calendarTiming';
+    case 'earlyTermination':
+      return 'earlyTerminationStatus';
+    case 'endReason':
+      return 'contractEndReason';
     case 'status':
+      if (entityType === 'employee_contract') return 'contractStatus';
       if (entityType === 'penalty') return 'penaltyStatus';
       if (entityType === 'payroll_run') return 'payrollStatus';
       if (entityType === 'accounting_payroll') return 'accountingPayrollStatus';

@@ -57,5 +57,7 @@ export const hrSettings: HrSettings = {
     probationEndDays: SETTING_DEFAULTS['hr.reminders.probationEndDays'],
     latenessCheckDay: SETTING_DEFAULTS['hr.reminders.latenessCheckDay'],
     payrollCheckDay: SETTING_DEFAULTS['hr.reminders.payrollCheckDay'],
+    renewalDecisionsDays: SETTING_DEFAULTS['hr.reminders.renewalDecisionsDays'],
+    noticeWindowCloseDays: SETTING_DEFAULTS['hr.reminders.noticeWindowCloseDays'],
   },
 };

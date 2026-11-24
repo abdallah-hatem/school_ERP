@@ -4,7 +4,9 @@ import {
   daysUntil,
   effectiveCheckDay,
   latenessReminders,
+  noticeWindowReminders,
   pastCheckDay,
+  renewalsDueReminders,
   payrollNotApprovedReminders,
   payrollNotPreparedReminders,
   probationReminders,
@@ -22,6 +24,8 @@ const RULE = {
   probationEndDays: 7,
   latenessCheckDay: 25,
   payrollCheckDay: 28,
+  renewalDecisionsDays: 91,
+  noticeWindowCloseDays: 7,
 };
 
 const emp = (id: string, contractEnd: string, probationEnd: string | null = null): ReminderEmployee => ({
@@ -361,5 +365,84 @@ describe('payroll not prepared / still a draft', () => {
     const rule = { ...RULE, payrollCheckDay: 31 };
     const feb = new Map([['2027-02', { latenessSaved: true, run: null }]]);
     expect(keys(payrollNotPreparedReminders('2027-02-28', rule, feb, []))).toEqual(['payroll_missing:2027-02']);
+  });
+});
+
+describe('contracts (spec 2026-11-24, §11) — the renewal season', () => {
+  const CAL = { term1Start: '2026-09-15', term1End: '2027-01-28', term2Start: '2027-02-07', nonRenewalDeadline: '2027-04-30' };
+  const season = (undecided: number, calendar: typeof CAL | null = CAL) => ({ year: 2026, undecided, calendar });
+  const openOf = (type: string, year: number): OpenReminder => ({
+    entityType: 'contract_year',
+    entityId: String(year),
+    dedupeKey: `${type}:${year}`,
+  });
+
+  it('"Contract ends soon" goes away once a decision is made, and isn\'t sent for a decided contract', () => {
+    const decided = { ...emp('a', '2027-05-31'), contractDecided: true };
+    const open = [{ entityType: 'employee', entityId: 'a', dedupeKey: 'contract_end:a:2027-05-31:30' }];
+    const plan = contractReminders('2027-05-05', RULE, [decided], open);
+    expect(plan.resolve.map((r) => r.dedupeKey)).toEqual(['contract_end:a:2027-05-31:30']);
+    expect(plan.notify).toEqual([]);
+  });
+
+  it('edge 10 — a contract ended early takes the probation reminder too', () => {
+    const ended = { ...emp('a', '2026-12-31', '2026-12-05'), contractDecided: true, contractEndedEarly: true };
+    expect(probationReminders('2026-12-01', RULE, [ended], []).notify).toEqual([]);
+  });
+
+  const seasons = (...list: ReturnType<typeof season>[]) => new Map(list.map((x) => [x.year, x]));
+
+  it('renewal decisions due from 1 March (91 days before 31 May) while contracts have no decision', () => {
+    expect(renewalsDueReminders('2027-02-28', RULE, seasons(season(15)), 2026, []).notify).toEqual([]);
+    const plan = renewalsDueReminders('2027-03-01', RULE, seasons(season(15)), 2026, []);
+    expect(plan.notify).toEqual([
+      expect.objectContaining({
+        dedupeKey: 'renewals_due:2026',
+        subject: { entityType: 'contract_year', entityId: '2026' },
+        params: { season: '2026/27', count: 15 },
+      }),
+    ]);
+  });
+
+  it('every one decided → the open reminder is done; while some are undecided it stays', () => {
+    const open = [openOf('renewals_due', 2026)];
+    expect(renewalsDueReminders('2027-04-01', RULE, seasons(season(0)), 2026, open).resolve).toHaveLength(1);
+    expect(renewalsDueReminders('2027-04-01', RULE, seasons(season(3)), 2026, open).resolve).toEqual([]);
+  });
+
+  it('review 5 — on 1 June last season\'s reminder stays open while its contracts (ended with no decision) remain undecided', () => {
+    const open = [openOf('renewals_due', 2026)];
+    const june = renewalsDueReminders('2027-06-01', RULE, seasons(season(2), { ...season(40), year: 2027 }), 2027, open);
+    expect(june.resolve).toEqual([]);
+    // The new season isn't due before its own 1 March.
+    expect(june.notify).toEqual([]);
+    // Once they are decided, it is done.
+    expect(renewalsDueReminders('2027-06-02', RULE, seasons(season(0), { ...season(40), year: 2027 }), 2027, open).resolve).toHaveLength(1);
+  });
+
+  it('review 13 — a withdrawn notice re-arms "contract ends soon": a new key, sent again for the same end', () => {
+    const rearmed = { ...emp('a', '2027-05-31'), contractRearmedAt: 1795000000000 };
+    const plan = contractReminders('2027-05-05', RULE, [rearmed], []);
+    expect(plan.notify.map((n) => n.dedupeKey)).toEqual(['contract_end:a:2027-05-31:30:1795000000000']);
+    // An item of the re-armed key still open is not sent twice.
+    const open = [{ entityType: 'employee', entityId: 'a', dedupeKey: 'contract_end:a:2027-05-31:30:1795000000000' }];
+    expect(contractReminders('2027-05-06', RULE, [rearmed], open).notify).toEqual([]);
+  });
+
+  it('the window opens on the first day of term 2, and closes soon 7 days before 30 April', () => {
+    expect(noticeWindowReminders('2027-02-06', RULE, season(1), [], 'hr.contract.notice_window_opens').notify).toEqual([]);
+    expect(
+      noticeWindowReminders('2027-02-07', RULE, season(1), [], 'hr.contract.notice_window_opens').notify.map((n) => n.dedupeKey),
+    ).toEqual(['notice_window_opens:2026']);
+    expect(noticeWindowReminders('2027-04-22', RULE, season(1), [], 'hr.contract.notice_window_closing').notify).toEqual([]);
+    expect(
+      noticeWindowReminders('2027-04-23', RULE, season(1), [], 'hr.contract.notice_window_closing').notify[0],
+    ).toMatchObject({ dedupeKey: 'notice_window_closing:2026', params: { season: '2026/27', date: '2027-04-30' } });
+  });
+
+  it('edge 7 — no calendar for the year: no window reminders; after the deadline the open ones are done', () => {
+    expect(noticeWindowReminders('2027-03-01', RULE, season(1, null), [], 'hr.contract.notice_window_opens').notify).toEqual([]);
+    const open = [openOf('notice_window_opens', 2026)];
+    expect(noticeWindowReminders('2027-05-01', RULE, season(1), open, 'hr.contract.notice_window_opens').resolve).toHaveLength(1);
   });
 });

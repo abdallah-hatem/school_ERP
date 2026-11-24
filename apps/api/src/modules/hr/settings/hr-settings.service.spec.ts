@@ -41,6 +41,8 @@ const DEFAULTS = {
     probationEndDays: 7,
     latenessCheckDay: 25,
     payrollCheckDay: 28,
+    renewalDecisionsDays: 91,
+    noticeWindowCloseDays: 7,
   },
 };
 

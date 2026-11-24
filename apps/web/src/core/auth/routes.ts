@@ -3,6 +3,7 @@ const SIGNED_IN_SECTIONS = [
   'account',
   'accounting',
   'activity',
+  'contracts',
   'employees',
   'lateness',
   'payroll',

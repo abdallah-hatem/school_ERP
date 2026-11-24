@@ -15,6 +15,7 @@ import type {
 import type { HrRemindersService } from '../../reminders/hr-reminders.service';
 import type { HrSettingsService } from '../../settings/hr-settings.service';
 import { EmployeesService } from './employees.service';
+import type { ContractRecords } from '../../contracts/services/contract-records.service';
 
 /*
  * P4 — what each role can see of employees: scopes (R5, edge case 3) and salary (R7, edge case 4).
@@ -125,6 +126,7 @@ function makeService(scopes: Parameters<typeof fakeAccess>[0], repo: Record<stri
       employeeDeactivated: jest.fn(),
     } as unknown as HrRemindersService,
     { accountOfEmployee: jest.fn().mockResolvedValue(null) } as unknown as UsersService,
+    { createFirst: jest.fn().mockResolvedValue({}) } as unknown as ContractRecords,
   );
   return { service, repository };
 }

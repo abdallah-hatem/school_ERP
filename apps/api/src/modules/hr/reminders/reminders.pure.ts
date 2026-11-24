@@ -1,6 +1,9 @@
 import {
+  contractYearRange,
+  formatContractYear,
   notificationDedupeKey,
   type IsoDate,
+  type SchoolCalendarDates,
   type Month,
   type NotificationSubject,
   type ReminderRule,
@@ -22,6 +25,10 @@ export const REMINDER_TYPES = [
   'hr.lateness.not_entered',
   'hr.payroll.not_prepared',
   'hr.payroll.not_approved',
+  // Contracts (spec 2026-11-24): the renewal season.
+  'hr.contract.renewals_due',
+  'hr.contract.notice_window_opens',
+  'hr.contract.notice_window_closing',
 ] as const;
 export type ReminderType = (typeof REMINDER_TYPES)[number];
 
@@ -31,6 +38,8 @@ export const ReminderEntity = {
   LATENESS_MONTH: 'lateness_month',
   PAYROLL_MONTH: 'payroll_month',
   PAYROLL_RUN: 'payroll_run',
+  /** A contract year's renewal season (`2026` = 2026/27): whole-school. */
+  CONTRACT_YEAR: 'contract_year',
 } as const;
 
 /** An active employee's dates the contract and probation reminders look at. */
@@ -40,6 +49,19 @@ export interface ReminderEmployee {
   nameAr: string;
   contractEnd: IsoDate;
   probationEnd: IsoDate | null;
+  /**
+   * Contracts (spec 2026-11-24): the current contract has a decision (renewed, not renewed, ended)
+   * — "contract ends soon" goes away and isn't sent.
+   */
+  contractDecided?: boolean;
+  /** The current contract ended early: no more reminders about them (edge case 10). */
+  contractEndedEarly?: boolean;
+  /**
+   * When the current contract's notice was withdrawn or its not-renewing undone (review 13), as a
+   * number: "Contract ends soon" for the same end gets a new dedupe key, so it is sent again (the
+   * earlier one was resolved by the decision).
+   */
+  contractRearmedAt?: number | null;
 }
 
 /** A month as the lateness and payroll reminders see it. */
@@ -137,7 +159,9 @@ export function contractReminders(
   const type = 'hr.contract.ending_soon' as const;
   const first = rule.contractEndDays;
   const second = rule.contractEndSecondDays;
-  const byId = new Map(employees.map((e) => [e.id, e]));
+  // A contract with a decision isn't chased (spec 2026-11-24, §11).
+  const undecided = employees.filter((e) => !e.contractDecided && !e.contractEndedEarly);
+  const byId = new Map(undecided.map((e) => [e.id, e]));
   const inSecond = (d: number) => second > 0 && d >= 0 && d <= second;
 
   const resolve: StaleReminder[] = [];
@@ -156,7 +180,7 @@ export function contractReminders(
   }
 
   const notify: DueReminder[] = [];
-  for (const e of employees) {
+  for (const e of undecided) {
     const d = daysUntil(today, e.contractEnd);
     if (d < 0) continue;
     const stage = inSecond(d) ? 'second' : d <= first ? 'first' : null;
@@ -168,7 +192,10 @@ export function contractReminders(
     notify.push({
       type,
       subject: employeeSubject(e.id),
-      dedupeKey: notificationDedupeKey(type, e.id, e.contractEnd, window),
+      // `contract_end:<id>:<date>:<days>`, plus `:<re-armed at>` once a decision was undone.
+      dedupeKey: e.contractRearmedAt
+        ? notificationDedupeKey(type, e.id, e.contractEnd, window, e.contractRearmedAt)
+        : notificationDedupeKey(type, e.id, e.contractEnd, window),
       params: { employee: names(e), date: e.contractEnd, count: d, days: window },
       // "12 contracts end within 30 days" and "… within 7 days" are separate groups.
       groupKey: `${today}:${window}`,
@@ -190,7 +217,9 @@ export function probationReminders(
   open: readonly OpenReminder[],
 ): ReminderPlan {
   const type = 'hr.probation.ending_soon' as const;
-  const byId = new Map(employees.map((e) => [e.id, e]));
+  // A contract ended early takes the employee's future reminders with it (edge case 10).
+  const current = employees.filter((e) => !e.contractEndedEarly);
+  const byId = new Map(current.map((e) => [e.id, e]));
   const resolve = open
     .filter((o) => {
       const [id = '', date = ''] = keyParts(o.dedupeKey);
@@ -200,7 +229,7 @@ export function probationReminders(
     .map((o) => stale(type, o));
 
   const notify: DueReminder[] = [];
-  for (const e of employees) {
+  for (const e of current) {
     if (!e.probationEnd) continue;
     const d = daysUntil(today, e.probationEnd);
     if (d < 0 || d > rule.probationEndDays) continue;
@@ -326,4 +355,92 @@ export function payrollNotApprovedReminders(
         ]
       : [];
   return { resolve, notify };
+}
+
+/** The facts of one contract year's renewal season (spec 2026-11-24, §11). */
+export interface RenewalSeason {
+  /** The contract year (`2026` = 2026/27). */
+  year: number;
+  /**
+   * Active contracts of active employees ending by the season's end with no decision — including
+   * those that already ended with no decision (review 5).
+   */
+  undecided: number;
+  calendar: SchoolCalendarDates | null;
+}
+
+const seasonSubject = (year: number) => ({ entityType: ReminderEntity.CONTRACT_YEAR, entityId: String(year) });
+const yearOfKey = (key: string): number => Number(keyParts(key)[0]);
+
+/**
+ * Renewal decisions due (`hr.contract.renewals_due`): from `renewalDecisionsDays` (91 = 1 March)
+ * before the current season's end (31 May), while contracts ending by then have no decision.
+ * Dedupe `renewals_due:<year>`. An open one stays — past 31 May too (review 5) — until every one of
+ * its season's contracts, those that ended with no decision included, has a decision.
+ * `seasons` holds the current season and every open item's.
+ */
+export function renewalsDueReminders(
+  today: IsoDate,
+  rule: Pick<ReminderRule, 'renewalDecisionsDays'>,
+  seasons: ReadonlyMap<number, RenewalSeason>,
+  currentYear: number,
+  open: readonly OpenReminder[],
+): ReminderPlan {
+  const type = 'hr.contract.renewals_due' as const;
+  const resolve = open
+    .filter((o) => (seasons.get(yearOfKey(o.dedupeKey))?.undecided ?? 0) === 0)
+    .map((o) => stale(type, o));
+  const season = seasons.get(currentYear) ?? { year: currentYear, undecided: 0, calendar: null };
+  const d = daysUntil(today, contractYearRange(season.year).end);
+  const due = d <= rule.renewalDecisionsDays && season.undecided > 0;
+  const notify: DueReminder[] = due
+    ? [
+        {
+          type,
+          subject: seasonSubject(season.year),
+          dedupeKey: notificationDedupeKey(type, season.year),
+          params: { season: formatContractYear(season.year), count: season.undecided },
+          groupKey: today,
+        },
+      ]
+    : [];
+  return { resolve, notify };
+}
+
+/**
+ * The non-renewal window (spec 2026-11-24, §11): "opens" on the first day of term 2 and "closes
+ * soon" `noticeWindowCloseDays` (7) before the deadline (30 April) — each once per season, read
+ * and done; resolved once the deadline has passed. Nothing without the year's calendar.
+ */
+export function noticeWindowReminders(
+  today: IsoDate,
+  rule: Pick<ReminderRule, 'noticeWindowCloseDays'>,
+  season: RenewalSeason,
+  open: readonly OpenReminder[],
+  which: 'hr.contract.notice_window_opens' | 'hr.contract.notice_window_closing',
+): ReminderPlan {
+  const cal = season.calendar;
+  const resolve = open
+    .filter((o) => yearOfKey(o.dedupeKey) !== season.year || !cal || today > cal.nonRenewalDeadline)
+    .map((o) => stale(which, o));
+  if (!cal || today > cal.nonRenewalDeadline) return { resolve, notify: [] };
+  const from =
+    which === 'hr.contract.notice_window_opens'
+      ? cal.term2Start
+      : daysUntil(today, cal.nonRenewalDeadline) <= rule.noticeWindowCloseDays
+        ? today
+        : null;
+  if (!from || today < from) return { resolve, notify: [] };
+  return {
+    resolve,
+    notify: [
+      {
+        type: which,
+        subject: seasonSubject(season.year),
+        dedupeKey: notificationDedupeKey(which, season.year),
+        params: { season: formatContractYear(season.year), date: cal.nonRenewalDeadline },
+        groupKey: today,
+      },
+    ],
+  };
 }

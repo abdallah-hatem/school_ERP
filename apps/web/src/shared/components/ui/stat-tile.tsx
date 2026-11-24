@@ -29,6 +29,8 @@ export function StatTile({
   loading = false,
   placeholder,
   href,
+  onSelect,
+  pressed,
   className,
 }: {
   label: ReactNode;
@@ -46,6 +48,12 @@ export function StatTile({
   placeholder?: ReactNode;
   /** The whole tile links to the screen behind the figure (e.g. the filtered list). */
   href?: string;
+  /**
+   * The whole tile is a toggle button that filters the list it sits above (the contract renewals'
+   * tiles): `pressed` while its filter is on, drawn with a ring.
+   */
+  onSelect?: () => void;
+  pressed?: boolean;
   className?: string;
 }) {
   const feature = tone === 'feature';
@@ -53,8 +61,9 @@ export function StatTile({
     // A size container, so the figure shrinks in a half-width phone tile instead of overflowing.
     '@container/tile relative isolate flex min-w-0 flex-col gap-3 overflow-hidden rounded-2xl bg-card px-5 pt-4.5 pb-5 shadow-card',
     tones[tone].tile,
-    href &&
-      'cursor-pointer transition-shadow duration-150 ease-snappy hover:shadow-raised focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring/55',
+    pressed && 'ring-2 ring-primary ring-inset',
+    (href || onSelect) &&
+      'cursor-pointer text-start transition-shadow duration-150 ease-snappy hover:shadow-raised focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring/55',
     className,
   );
   const body = (
@@ -105,6 +114,13 @@ export function StatTile({
       ) : null}
     </>
   );
+  if (onSelect) {
+    return (
+      <button type="button" data-skeleton-block="tile" aria-pressed={pressed ?? false} onClick={onSelect} disabled={loading} className={cn(classes, 'disabled:cursor-default')}>
+        {body}
+      </button>
+    );
+  }
   return href ? (
     <Link href={href} data-skeleton-block="tile" className={classes}>
       {body}

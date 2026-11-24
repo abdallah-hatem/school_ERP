@@ -11,6 +11,7 @@ import {
 import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
 import { createAppAsTestUser } from './helpers/as-test-user';
+import { deleteEmployees } from './helpers/employees';
 
 // Months far from any real data, so this suite owns its rows.
 const MONTH = '2098-01';
@@ -87,7 +88,7 @@ describe('Monthly lateness — /hr/lateness (e2e)', () => {
     await db.latenessEntry.deleteMany({});
     await db.payrollRun.deleteMany({ where: { month: { in: MONTHS } } });
     await db.employee.updateMany({ data: { managerId: null } });
-    await db.employee.deleteMany({});
+    await deleteEmployees(db);
     await db.department.deleteMany({});
     await db.jobTitle.deleteMany({});
     await db.stage.deleteMany({});

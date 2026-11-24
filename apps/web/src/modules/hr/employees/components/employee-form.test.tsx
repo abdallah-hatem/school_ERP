@@ -173,6 +173,15 @@ describe('EmployeeForm', () => {
     expect(screen.getByRole('combobox', { name: /Direct manager/ }).getAttribute('aria-invalid')).toBe('true');
   });
 
+  it('the contract dates are on the create form only: an edit changes them through Contracts', () => {
+    const { unmount } = renderForm();
+    expect(screen.getByRole('button', { name: /Contract start/ })).toBeTruthy();
+    unmount();
+    renderForm({ editing: employee });
+    expect(screen.queryByRole('button', { name: /Contract start/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Contract end/ })).toBeNull();
+  });
+
   describe('probation end (§3, N0)', () => {
     const probationField = () => screen.getByRole('button', { name: /Probation ends/ });
 

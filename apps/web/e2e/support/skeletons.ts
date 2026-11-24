@@ -272,11 +272,13 @@ async function readPaths(): Promise<Record<SkeletonScreenName, string | null>> {
       dashboard: '',
       employees: '/employees',
       'employee-details': e,
+      'employee-contracts': `${e}/contracts`,
       'employee-penalties': `${e}/penalties`,
       'employee-payroll': `${e}/payroll`,
       'employee-history': `${e}/history`,
       'employee-new': '/employees/new',
       'employee-edit': `${e}/edit`,
+      contracts: '/contracts',
       penalties: '/penalties',
       // The newest open month before this one (above): an approved month locks its lateness board
       // and drops its Save button — a state the skeleton can't know.

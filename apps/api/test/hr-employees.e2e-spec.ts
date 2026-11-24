@@ -13,6 +13,7 @@ import { http, unique } from './helpers';
 import { createAppAsTestUser } from './helpers/as-test-user';
 import { clearRecorded, EventRecorderModule, outboxEvents, recorded } from './helpers/events';
 import { historyMark, historyRows } from './helpers/history';
+import { deleteEmployees } from './helpers/employees';
 
 describe('HR lists and employees (e2e)', () => {
   let app: INestApplication;
@@ -107,7 +108,7 @@ describe('HR lists and employees (e2e)', () => {
 
   afterAll(async () => {
     await db.employee.updateMany({ data: { managerId: null } });
-    await db.employee.deleteMany({});
+    await deleteEmployees(db);
     await db.department.deleteMany({});
     await db.jobTitle.deleteMany({});
     await db.stage.deleteMany({});
@@ -255,7 +256,7 @@ describe('HR lists and employees (e2e)', () => {
       // Remove the highest-coded row outright: the next employee still gets a new, higher code.
       const num = (c: string) => Number(c.slice(4));
       const highest = Math.max(...codes.map(num));
-      await db.employee.deleteMany({ where: { code: codes.find((c) => num(c) === highest) } });
+      await deleteEmployees(db, { where: { code: codes.find((c) => num(c) === highest) } });
       const next = await createOk();
       expect(num(next.code)).toBeGreaterThan(highest);
       expect(codes).not.toContain(next.code);
@@ -371,7 +372,7 @@ describe('HR lists and employees (e2e)', () => {
       const ok = await create({ contractStart: '2026-09-01' }).expect(201);
       expect(ok.body.data.contractEnd).toBe('2027-08-31');
 
-      // PATCH checks the merged dates too.
+      // Contracts edge 13: the dates can't be changed on the employee any more (only through Contracts).
       await http(app)
         .patch(`/hr/employees/${ok.body.data.id}`)
         .send({ contractEnd: '2026-08-01' })

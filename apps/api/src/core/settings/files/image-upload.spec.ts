@@ -1,5 +1,5 @@
-import { EMPLOYEE_PHOTO_UPLOAD, ErrorCode, LOGO_UPLOAD } from '@school-erp/shared';
-import { checkImageUpload, type UploadedFileLike } from './image-upload';
+import { CONTRACT_DOCUMENT_UPLOAD, EMPLOYEE_PHOTO_UPLOAD, ErrorCode, LOGO_UPLOAD } from '@school-erp/shared';
+import { checkDocumentUpload, checkImageUpload, type UploadedFileLike } from './image-upload';
 
 /*
  * Uploads are checked by their bytes (magic numbers), never by the name or the type the browser
@@ -68,5 +68,34 @@ describe('checkImageUpload', () => {
     const big = { ...file(PNG, 'image/png'), size: LOGO_UPLOAD.maxBytes + 1 };
     expect(codeOf(() => checkImageUpload(big, LOGO_UPLOAD))).toBe(ErrorCode.FILE_TOO_LARGE);
     expect(codeOf(() => checkImageUpload(undefined, LOGO_UPLOAD))).toBe('BadRequestException');
+  });
+});
+
+describe('checkDocumentUpload (contract documents, spec 2026-11-24)', () => {
+  it.each([
+    ['PDF', PDF, 'application/pdf', 'pdf'],
+    ['PNG', PNG, 'image/png', 'png'],
+    ['JPG', JPG, 'image/jpeg', 'jpg'],
+    ['WebP', WEBP, 'image/webp', 'webp'],
+  ])('a real %s letter is accepted with its type from the bytes', (_, buffer, mimetype, type) => {
+    expect(checkDocumentUpload(file(buffer, mimetype), CONTRACT_DOCUMENT_UPLOAD)).toEqual({ type, buffer });
+  });
+
+  it.each([
+    ['an executable renamed to .pdf', EXE, 'application/pdf'],
+    ['an HTML page renamed to .pdf', HTML, 'application/pdf'],
+    ['an SVG (a browser runs it)', SVG, 'image/svg+xml'],
+    ['a PDF declared as an image', PDF, 'image/png'],
+    ['a PNG declared as a PDF', PNG, 'application/pdf'],
+  ])('%s → 400 INVALID_FILE_TYPE', (_, buffer, mimetype) => {
+    expect(codeOf(() => checkDocumentUpload(file(buffer, mimetype), CONTRACT_DOCUMENT_UPLOAD))).toBe(
+      ErrorCode.INVALID_FILE_TYPE,
+    );
+  });
+
+  it('over 5 MB → 413 FILE_TOO_LARGE; none → 400', () => {
+    const big = { buffer: PDF, mimetype: 'application/pdf', size: CONTRACT_DOCUMENT_UPLOAD.maxBytes + 1 };
+    expect(codeOf(() => checkDocumentUpload(big, CONTRACT_DOCUMENT_UPLOAD))).toBe(ErrorCode.FILE_TOO_LARGE);
+    expect(codeOf(() => checkDocumentUpload(undefined, CONTRACT_DOCUMENT_UPLOAD))).toBe('BadRequestException');
   });
 });

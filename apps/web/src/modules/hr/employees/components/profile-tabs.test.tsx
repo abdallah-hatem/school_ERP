@@ -23,12 +23,13 @@ function renderTabs(locale: 'en' | 'ar' = 'en', session = undefined as ReturnTyp
 describe('Profile tabs — History (T30)', () => {
   afterEach(cleanup);
 
-  it('History is the fourth tab, current on its own path', () => {
+  it('History is the last tab, current on its own path', () => {
     pathname = '/en/employees/e-mona/history';
     renderTabs();
     const tabs = screen.getAllByRole('link').map((l) => [l.textContent, l.getAttribute('href')]);
     expect(tabs).toEqual([
       ['Details', '/en/employees/e-mona'],
+      ['Contracts', '/en/employees/e-mona/contracts'],
       ['Penalties', '/en/employees/e-mona/penalties'],
       ['Payroll', '/en/employees/e-mona/payroll'],
       ['History', '/en/employees/e-mona/history'],
@@ -40,7 +41,16 @@ describe('Profile tabs — History (T30)', () => {
     pathname = '/en/employees/e-mona';
     renderTabs('en', sessionWithout('core.audit.view'));
     expect(screen.queryByRole('link', { name: 'History' })).toBeNull();
-    expect(screen.getAllByRole('link')).toHaveLength(3);
+    expect(screen.getAllByRole('link')).toHaveLength(4);
+  });
+
+  it('Contracts is shown only with hr.contracts.view (can(), view only)', () => {
+    pathname = '/en/employees/e-mona/contracts';
+    renderTabs();
+    expect(screen.getByRole('link', { name: 'Contracts' }).getAttribute('aria-current')).toBe('page');
+    cleanup();
+    renderTabs('en', sessionWithout('hr.contracts.view'));
+    expect(screen.queryByRole('link', { name: 'Contracts' })).toBeNull();
   });
 
   it('Arabic label', () => {

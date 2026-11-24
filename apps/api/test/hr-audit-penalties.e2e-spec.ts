@@ -11,6 +11,7 @@ import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
 import { createAppAsTestUser } from './helpers/as-test-user';
 import { historyMark } from './helpers/history';
+import { deleteEmployees } from './helpers/employees';
 
 /*
  * T29 — recording, approving and cancelling a penalty each write one audit entry in the same
@@ -144,7 +145,7 @@ describe('HR audit wiring — penalties (T29, e2e)', () => {
     await db.violationLevel.deleteMany({});
     await db.violation.deleteMany({});
     await db.penaltyGroup.deleteMany({});
-    await db.employee.deleteMany({});
+    await deleteEmployees(db);
     await db.department.deleteMany({});
     await db.jobTitle.deleteMany({});
     await db.stage.deleteMany({});
@@ -261,6 +262,9 @@ describe('HR audit wiring — penalties (T29, e2e)', () => {
       ['hr.penalty.record', 'penalty'],
       ['hr.penalty.approve', 'penalty'],
       ['hr.penalty.record', 'penalty'],
+      // Contracts (2026-11-24): the first contract is written with the employee, and the employee's
+      // History lists their contracts' entries too.
+      ['hr.contract.create', 'employee_contract'],
       ['hr.employee.create', 'employee'],
     ]);
     expect(list[0]?.entityLabel).toEqual({ en: emp.nameEn, ar: emp.nameAr });
@@ -313,7 +317,8 @@ describe('HR audit wiring — penalties (T29, e2e)', () => {
       ]),
     );
     // Only this employee's entries (codes are unique; the number is long enough to be exact).
-    expect(found.every((x) => x.entityId === emp.id || x.entityId === p.id)).toBe(true);
+    // (Contracts, 2026-11-24: the employee's first contract is found by the code too.)
+    expect(found.every((x) => x.entityId === emp.id || x.entityId === p.id || x.entityType === 'employee_contract')).toBe(true);
     // Names still match as before.
     const byName = (await http(app).get('/audit').query({ q: emp.nameAr, limit: 100 }).expect(200)).body
       .data as AuditEntry[];

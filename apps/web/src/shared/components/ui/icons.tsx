@@ -95,6 +95,7 @@ import {
   NotEqualsIcon as NotEquals,
   BellIcon as Bell,
   FileTextIcon as FileText,
+  HandshakeIcon as Handshake,
   HourglassMediumIcon as HourglassMedium,
   ClockCountdownIcon as ClockCountdown,
   CalendarCheckIcon as CalendarCheck,
@@ -128,6 +129,7 @@ function duotone(Base: PhosphorIcon, name: string): AppIcon {
 export const DashboardIcon = duotone(SquaresFour, 'Dashboard');
 export const EmployeesIcon = duotone(UsersThree, 'Employees');
 export const PenaltiesIcon = duotone(Gavel, 'Penalties');
+export const ContractsIcon = duotone(Handshake, 'Contracts');
 export const LatenessIcon = duotone(Clock, 'Lateness');
 export const PayrollIcon = duotone(Wallet, 'Payroll');
 export const SettingsIcon = duotone(SlidersHorizontal, 'Settings');

@@ -19,6 +19,7 @@ import { SettingsService } from '../src/core/settings';
 import { DatabaseService } from '../src/database/database.service';
 import { PayrollService, PenaltyCatalogueService } from '../src/modules/hr';
 import { countPriorInWindow, penaltyLevel } from '../src/modules/hr/domain';
+import { deleteEmployees } from './helpers/employees';
 
 const REPO_ROOT = resolve(__dirname, '..', '..', '..');
 const data = loadSeedData();
@@ -34,7 +35,7 @@ async function wipe(db: DatabaseService): Promise<void> {
   await db.violation.deleteMany({});
   await db.penaltyGroup.deleteMany({});
   await db.employee.updateMany({ data: { managerId: null } });
-  await db.employee.deleteMany({});
+  await deleteEmployees(db);
   await db.department.deleteMany({});
   await db.jobTitle.deleteMany({});
   await db.stage.deleteMany({});

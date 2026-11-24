@@ -15,6 +15,7 @@ import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
 import { ANONYMOUS_HEADER, createAppAsTestUser, giveRoles } from './helpers/as-test-user';
 import { historyMark } from './helpers/history';
+import { deleteEmployees } from './helpers/employees';
 
 /*
  * Users and roles API (spec roles-permissions P2): R2, R5, R8, R9 and edge cases 5–8 against the
@@ -113,7 +114,7 @@ describe('users and roles (e2e)', () => {
   afterAll(async () => {
     await db.user.deleteMany({ where: { id: { in: userIds } } });
     await db.role.deleteMany({ where: { id: { in: roleIds } } });
-    if (listRefs.employee) await db.employee.deleteMany({ where: { id: listRefs.employee } });
+    if (listRefs.employee) await deleteEmployees(db, { where: { id: listRefs.employee } });
     if (listRefs.stage) await db.stage.deleteMany({ where: { id: listRefs.stage } });
     if (listRefs.department) {
       await db.department.deleteMany({ where: { id: listRefs.department } });

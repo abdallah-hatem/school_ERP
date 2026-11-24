@@ -1,4 +1,5 @@
 import { AuditRecordAccess } from '../../../core/audit';
+import type { ContractsService } from '../contracts/services/contracts.service';
 import type { EmployeesService } from '../employees/services/employees.service';
 import type { PenaltyRecordsService } from '../penalties/services/penalty-records.service';
 import { fakeAccess } from './hr-access.testing';
@@ -22,6 +23,11 @@ function setup(scopes: Parameters<typeof fakeAccess>[0]) {
       idsOfEmployee: jest.fn((id: string) => Promise.resolve(id === 'e1' ? ['p1'] : [])),
       idsWithEmployeeCode: jest.fn((q: string) => Promise.resolve(q === 'EMP-0001' ? ['p1'] : [])),
     } as unknown as PenaltyRecordsService,
+    {
+      idsInViewScope: jest.fn().mockResolvedValue('all'),
+      idsOfEmployee: jest.fn((id: string) => Promise.resolve(id === 'e1' ? ['c1'] : [])),
+      idsWithEmployeeCode: jest.fn((q: string) => Promise.resolve(q === 'EMP-0001' ? ['c1'] : [])),
+    } as unknown as ContractsService,
   ).onModuleInit();
   return audit;
 }
@@ -45,16 +51,18 @@ describe('HrAuditAccess', () => {
     await expect(audit.canSee('payroll_run', 'r1')).resolves.toBe(true);
   });
 
-  it('an employee’s History takes in their penalties; search finds both by the employee’s code (T29, T31)', async () => {
+  it('an employee’s History takes in their penalties and contracts; search finds all by the employee’s code (T29, T31, contracts)', async () => {
     const audit = setup({});
     await expect(audit.historyRecords('employee', 'e1')).resolves.toEqual([
       { entityType: 'employee', ids: ['e1'] },
       { entityType: 'penalty', ids: ['p1'] },
+      { entityType: 'employee_contract', ids: ['c1'] },
     ]);
     await expect(audit.historyRecords('employee', 'e2')).resolves.toEqual([{ entityType: 'employee', ids: ['e2'] }]);
     await expect(audit.searchMatches('EMP-0001')).resolves.toEqual([
       { entityType: 'employee', ids: ['e1'] },
       { entityType: 'penalty', ids: ['p1'] },
+      { entityType: 'employee_contract', ids: ['c1'] },
     ]);
     await expect(audit.searchMatches('nobody')).resolves.toEqual([]);
   });

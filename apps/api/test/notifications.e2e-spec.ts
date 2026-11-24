@@ -25,6 +25,7 @@ import { AfterCommit } from '../src/database/transactions';
 import { http, unique } from './helpers';
 import { createAppAsTestUser, giveRoles } from './helpers/as-test-user';
 import { historyMark } from './helpers/history';
+import { deleteEmployees } from './helpers/employees';
 
 /*
  * core/notifications (N1, plan docs/plans/2026-11-18-notifications-plan.md → N1 edge cases). No
@@ -200,7 +201,7 @@ describe('Notifications — core mechanism (e2e)', () => {
     await db.notificationPreference.deleteMany({ where: { userId: { in: users } } });
     await db.user.deleteMany({ where: { id: { in: users } } });
     await db.role.deleteMany({ where: { id: { in: roles } } });
-    await db.employee.deleteMany({ where: { id: { in: employees } } });
+    await deleteEmployees(db, { where: { id: { in: employees } } });
     await db.department.deleteMany({ where: { id: departmentId } });
     await db.jobTitle.deleteMany({ where: { id: jobTitleId } });
     await db.stage.deleteMany({ where: { id: stageId } });

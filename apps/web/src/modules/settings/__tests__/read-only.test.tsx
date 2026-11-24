@@ -11,6 +11,8 @@ const api = vi.hoisted(() => ({
   UPLOAD_SCHOOL_LOGO: vi.fn(),
   GET_HR_SETTINGS: vi.fn(),
   UPDATE_HR_SETTINGS: vi.fn(),
+  GET_SCHOOL_CALENDAR: vi.fn(),
+  PUT_SCHOOL_CALENDAR: vi.fn(),
   GET_LIST_ITEMS: vi.fn(),
   CREATE_LIST_ITEM: vi.fn(),
   UPDATE_LIST_ITEM: vi.fn(),
@@ -75,6 +77,7 @@ const catalogue: PenaltyGroup[] = [
 beforeEach(() => {
   api.GET_SCHOOL_SETTINGS_FOR_EDIT.mockImplementation(() => ok(school));
   api.GET_HR_SETTINGS.mockImplementation(() => ok(hrSettings));
+  api.GET_SCHOOL_CALENDAR.mockImplementation((year: number) => ok({ year, calendar: null }));
   api.GET_LIST_ITEMS.mockImplementation(() => ok(stages));
   api.GET_PENALTY_GROUPS.mockImplementation(() => ok(catalogue));
 });
@@ -114,6 +117,8 @@ describe('Settings → HR rules, view only vs edit', () => {
     expect(screen.queryByRole('button', { name: 'Add an hour step' })).toBeNull();
     expect(screen.queryByRole('button', { name: /Remove hour/ })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
+    // The School calendar is read-only too.
+    expect(screen.getByRole('button', { name: /First day of term 1/ })).toHaveProperty('disabled', true);
     // The example is a calculator, not a setting: it still shows.
     expect(screen.getByTestId('lateness-example').textContent).not.toBe('');
   });
@@ -125,7 +130,9 @@ describe('Settings → HR rules, view only vs edit', () => {
     expect(textbox(/Grace minutes/)).toHaveProperty('disabled', false);
     await user.click(screen.getByRole('button', { name: 'Add an hour step' }));
     expect(screen.getAllByRole('button', { name: /Remove hour/ }).length).toBeGreaterThan(1);
+    // The rules' Save bar, and the School calendar's in its own words.
     expect(screen.getByRole('button', { name: 'Save' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Save calendar' })).toBeTruthy();
   });
 });
 

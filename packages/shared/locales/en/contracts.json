@@ -1,0 +1,296 @@
+{
+  "title": "Contract renewals",
+  "description": "Every contract ending in the chosen year, with the decision for each. Renewing creates next year's contract (1 Jun – 31 May).",
+  "year": {
+    "label": "Contract year",
+    "previous": "Previous year",
+    "next": "Next year",
+    "ends": "Ends {date}"
+  },
+  "tiles": {
+    "label": "Contracts by decision",
+    "ending": "Ending this year",
+    "endingSub": "{start} – {end}",
+    "decided": "Decided",
+    "decidedSub": "Renewing {renewing} · not renewing {notRenewing}",
+    "open": "Not decided",
+    "openSub": {
+      "zero": "{count} ended with no decision",
+      "one": "{count} ended with no decision",
+      "two": "{count} ended with no decision",
+      "few": "{count} ended with no decision",
+      "many": "{count} ended with no decision",
+      "other": "{count} ended with no decision"
+    },
+    "notices": "Notices received",
+    "noticesSub": "{early} early · {late} late",
+    "toDeactivate": "To deactivate",
+    "toDeactivateSub": "Not renewed or ended, still active",
+    "carriedOverSub": {
+      "zero": "No open rows from earlier years",
+      "one": "Incl. {count} still open from an earlier year",
+      "two": "Incl. {count} still open from earlier years",
+      "few": "Incl. {count} still open from earlier years",
+      "many": "Incl. {count} still open from earlier years",
+      "other": "Incl. {count} still open from earlier years"
+    },
+    "showing": "Showing only these"
+  },
+  "calendar": {
+    "missingTitle": "The school calendar for {year} isn't set",
+    "missingBody": "Notices and early termination can still be recorded, but they're marked “Calendar not set” until the term dates are in.",
+    "set": "Set the calendar"
+  },
+  "filters": {
+    "searchLabel": "Search contracts",
+    "searchPlaceholder": "Name or employee code",
+    "stage": "Stage",
+    "allStages": "All stages",
+    "decision": "Decision",
+    "allDecisions": "All decisions",
+    "open": "Not decided",
+    "decided": "Decided",
+    "toDeactivate": "To deactivate",
+    "count": {
+      "zero": "{count} contracts",
+      "one": "{count} contract",
+      "two": "{count} contracts",
+      "few": "{count} contracts",
+      "many": "{count} contracts",
+      "other": "{count} contracts"
+    }
+  },
+  "list": {
+    "tableLabel": "Contracts ending in {year}",
+    "emptyTitle": "No contracts end this year",
+    "emptyBody": "Contracts that end in this contract year show here, with the decision for each.",
+    "noResultsTitle": "No contracts match",
+    "noResultsBody": "Try another name or code, or clear the filters."
+  },
+  "columns": {
+    "select": "Select",
+    "selectAll": "Select every contract on this page that can be renewed",
+    "selectRow": "Select {name}",
+    "employee": "Employee",
+    "stage": "Stage",
+    "contract": "Contract",
+    "decision": "Decision",
+    "actions": "Actions"
+  },
+  "noStage": "No stage",
+  "dates": "{start} – {end}",
+  "tags": {
+    "EARLY": "Early",
+    "LATE": "Late",
+    "CALENDAR_NOT_SET": "Calendar not set",
+    "toDeactivate": "To deactivate",
+    "from": "From {year}"
+  },
+  "sub": {
+    "decidedBy": "{name} · {when}",
+    "received": "Received {date}",
+    "requested": "Requested {date} · would end {end}",
+    "requestedNoEnd": "Requested {date}",
+    "endedNoDecision": "Ended {date} · still active",
+    "ended": "Ended {date}",
+    "renewedTo": "Next: {start} – {end}",
+    "note": "Note: {note}"
+  },
+  "actions": {
+    "renew": "Renew",
+    "approve": "Approve",
+    "reject": "Reject",
+    "deactivate": "Deactivate",
+    "letter": "Letter",
+    "decide": "Decide",
+    "notRenewing": "Not renewing — school's decision",
+    "notice": "Record the employee's notice",
+    "earlyTermination": "Record an early termination request",
+    "withdrawNotice": "Withdraw the notice",
+    "history": "Contract history",
+    "end": "End for another reason…",
+    "ownContract": "Your own contract: someone else decides on it.",
+    "undoNotRenewing": "Undo not renewing",
+    "rejectRequest": "Reject request"
+  },
+  "bulk": {
+    "label": "Selected contracts",
+    "selected": {
+      "zero": "{count} selected",
+      "one": "{count} selected",
+      "two": "{count} selected",
+      "few": "{count} selected",
+      "many": "{count} selected",
+      "other": "{count} selected"
+    },
+    "eachGets": "Each gets {start} – {end}",
+    "eachGetsOwn": "Each gets one more year from its end",
+    "clear": "Clear",
+    "renew": "Renew selected"
+  },
+  "renew": {
+    "title": "Renew this contract?",
+    "body": "{name} gets a new contract from {start} to {end}, with the same salary, job and stage.",
+    "confirm": "Renew",
+    "done": "Contract renewed.",
+    "bulkTitle": {
+      "zero": "Renew {count} contracts?",
+      "one": "Renew {count} contract?",
+      "two": "Renew {count} contracts?",
+      "few": "Renew {count} contracts?",
+      "many": "Renew {count} contracts?",
+      "other": "Renew {count} contracts?"
+    },
+    "bulkBody": "Each gets one more year from its end, with the same salary, job and stage. If one of them can't be renewed, none is.",
+    "bulkConfirm": {
+      "zero": "Renew {count} contracts",
+      "one": "Renew {count} contract",
+      "two": "Renew {count} contracts",
+      "few": "Renew {count} contracts",
+      "many": "Renew {count} contracts",
+      "other": "Renew {count} contracts"
+    },
+    "bulkDone": {
+      "zero": "{count} contracts renewed.",
+      "one": "{count} contract renewed.",
+      "two": "{count} contracts renewed.",
+      "few": "{count} contracts renewed.",
+      "many": "{count} contracts renewed.",
+      "other": "{count} contracts renewed."
+    },
+    "refusedLabel": "Can't be renewed",
+    "refusedItem": "{name}: {reason}"
+  },
+  "decide": {
+    "title": "Decision",
+    "description": "{name} · {code}",
+    "choices": "Decision",
+    "RENEW": "Renew",
+    "NOT_RENEWING": "Not renewing — school's decision",
+    "NOTICE": "Employee gave notice",
+    "EARLY_TERMINATION": "Early termination request",
+    "renewHint": "Next contract: {start} – {end}.",
+    "notRenewingHint": "The contract ends on {date} and isn't renewed.",
+    "receivedOn": "Date received",
+    "requestedOn": "Date requested",
+    "datePlaceholder": "Pick a date",
+    "letter": "Scanned letter",
+    "note": "Note",
+    "notePlaceholder": "Anything HR should remember about it",
+    "cancel": "Cancel",
+    "save": "Save decision",
+    "saved": "Decision saved.",
+    "noticeTiming": {
+      "ON_TIME": "Received inside the notice window (until {deadline}).",
+      "EARLY": "Received before term 2 starts ({date}) — it will be recorded and marked “Early”. The school decides case by case.",
+      "LATE": "Received after the deadline ({date}) — it will be recorded and marked “Late”. The school decides case by case.",
+      "CALENDAR_NOT_SET": "The school calendar for {year} isn't set — it will be recorded and marked “Calendar not set”."
+    },
+    "earlyTiming": {
+      "ON_TIME": "If approved, the contract ends on {date}, the last day of term 1.",
+      "EARLY": "Term 1 starts {date}: a request can be recorded from that day.",
+      "LATE": "Term 1 ended {date}: a request can't be recorded after it.",
+      "CALENDAR_NOT_SET": "The school calendar for {year} isn't set — it will be recorded and marked “Calendar not set”."
+    }
+  },
+  "file": {
+    "upload": "Upload the letter (PDF or photo)",
+    "uploadAttachment": "Upload an attachment (PDF or photo)",
+    "hint": "PDF, PNG, JPG or WebP, up to {max} MB.",
+    "uploading": "Uploading {name}…",
+    "attached": "Attached: {name}",
+    "remove": "Remove the file",
+    "type": "Choose a PDF, PNG, JPG or WebP file.",
+    "size": "The file is larger than {max} MB.",
+    "failed": "The file couldn't be uploaded. Try again."
+  },
+  "approve": {
+    "title": "Approve the early termination?",
+    "body": "{name}'s contract ends on {date}, the last day of term 1. Leaving before that owes the compensation written in the contract.",
+    "bodyNoDate": "{name}'s contract ends on the last day of term 1.",
+    "confirm": "Approve",
+    "done": "Early termination approved."
+  },
+  "reject": {
+    "title": "Reject the early termination request?",
+    "body": "{name}'s contract continues as it is.",
+    "reasonLabel": "Reason",
+    "reasonPlaceholder": "Why the request is rejected",
+    "confirm": "Reject",
+    "done": "Request rejected."
+  },
+  "withdraw": {
+    "title": "Withdraw the notice?",
+    "body": "{name}'s contract goes back to “Not decided”.",
+    "reasonLabel": "Reason",
+    "reasonPlaceholder": "Why the notice is withdrawn",
+    "confirm": "Withdraw",
+    "done": "Notice withdrawn."
+  },
+  "end": {
+    "title": "End the contract early",
+    "description": "{name} · {start} – {end}",
+    "reason": "Reason",
+    "reasonPlaceholder": "Choose a reason",
+    "endsOn": "Last day",
+    "endsOnHint": "Today or later, within the contract.",
+    "note": "Note",
+    "notePlaceholder": "What happened, in a few words",
+    "attachment": "Attachment",
+    "confirm": "End the contract",
+    "done": "Contract ended.",
+    "renewedWarning": "The renewal (next year's contract) is cancelled too."
+  },
+  "deactivate": {
+    "title": "Deactivate {name}?",
+    "body": "Their contract has ended. They no longer appear in active lists; the record and its history are kept.",
+    "confirm": "Deactivate",
+    "done": "Employee deactivated."
+  },
+  "history": {
+    "tableLabel": "Contracts of {name}",
+    "title": "Contracts",
+    "columns": {
+      "year": "Year",
+      "dates": "Dates",
+      "status": "Status",
+      "details": "Details",
+      "documents": "Documents"
+    },
+    "current": "Current",
+    "emptyTitle": "No contracts yet",
+    "emptyBody": "The employee's contracts show here once one is recorded.",
+    "noticeReceived": "Notice received {date}",
+    "earlyRequested": "Early termination requested {date}",
+    "earlyRejected": "Rejected: {reason}",
+    "endReason": "{reason} · last day {date}",
+    "noDocuments": "None",
+    "docs": {
+      "notice": "Notice letter",
+      "request": "Request",
+      "attachment": "Attachment"
+    }
+  },
+  "form": {
+    "tooLong": "Keep it under 1,000 characters.",
+    "futureDate": "Can't be in the future."
+  },
+  "undo": {
+    "title": "Undo not renewing?",
+    "body": "{name}'s contract goes back to “Not decided”.",
+    "reasonLabel": "Reason",
+    "reasonPlaceholder": "Why the school changed its mind",
+    "confirm": "Undo",
+    "done": "Not renewing undone."
+  },
+  "newContract": {
+    "button": "New contract",
+    "title": "New contract",
+    "description": "A one-year contract for {name}.",
+    "startsOn": "Start date",
+    "startsOnHint": "Leave it for 1 June of this contract year ({date}).",
+    "ends": "It ends one year later: {date}.",
+    "confirm": "Create contract",
+    "done": "Contract created."
+  }
+}

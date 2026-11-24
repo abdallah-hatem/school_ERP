@@ -23,6 +23,7 @@
   "nav": {
     "dashboard": "لوحة التحكم",
     "employees": "الموظفون",
+    "contracts": "العقود",
     "penalties": "الجزاءات",
     "lateness": "التأخير",
     "payroll": "الرواتب",
@@ -158,6 +159,45 @@
       "BACHELOR": "بكالوريوس / ليسانس",
       "MASTER": "ماجستير",
       "DOCTORATE": "دكتوراه"
+    },
+    "contractStatus": {
+      "ACTIVE": "ساري",
+      "RENEWED": "مُجدد",
+      "NOT_RENEWED": "لن يُجدد",
+      "ENDED_EARLY": "انتهى مبكرًا",
+      "CANCELLED": "ملغى"
+    },
+    "contractDecision": {
+      "UNDECIDED": "بلا قرار",
+      "ENDED_NO_DECISION": "انتهى بلا قرار",
+      "RENEWED": "مُجدد",
+      "NOT_RENEWED_SCHOOL": "عدم تجديد — المدرسة",
+      "NOTICE": "الموظف قدّم إخطارًا",
+      "EARLY_REQUESTED": "طلب إنهاء مبكر",
+      "ENDED_EARLY": "انتهى مبكرًا",
+      "CANCELLED": "ملغى"
+    },
+    "nonRenewalBy": {
+      "SCHOOL": "المدرسة",
+      "EMPLOYEE": "إخطار الموظف"
+    },
+    "calendarTiming": {
+      "ON_TIME": "في الموعد",
+      "EARLY": "مبكر",
+      "LATE": "متأخر",
+      "CALENDAR_NOT_SET": "التقويم غير محدد"
+    },
+    "earlyTerminationStatus": {
+      "REQUESTED": "مطلوب",
+      "APPROVED": "موافق عليه",
+      "REJECTED": "مرفوض"
+    },
+    "contractEndReason": {
+      "ARTICLE_148": "فصل (المادة 148)",
+      "RESIGNATION_BY_AGREEMENT": "استقالة بالاتفاق",
+      "DEATH": "وفاة",
+      "OTHER": "سبب آخر",
+      "EARLY_TERMINATION": "إنهاء مبكر"
     }
   }
 }

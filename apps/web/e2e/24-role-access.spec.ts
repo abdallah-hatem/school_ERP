@@ -36,6 +36,30 @@ const locale = 'en' as const;
  */
 const ACCOUNTING_SECTION_LIVE = 'accounting' in SETTINGS_SECTION_ACCESS;
 
+/**
+ * Contracts (spec 2026-11-24): the renewals screen and the employee's Contracts tab. The loop below
+ * checks each role against `SCREENS`; this pins who that is, so a role drifting from the spec's
+ * "Who can do it" fails here by name: HR manager, HR officer, principal and the System admin (all),
+ * the stage head (their stage); not the accountant nor a direct manager.
+ */
+test('Contracts: the roles that see the renewals screen and the Contracts tab', () => {
+  const sees = Object.fromEntries(
+    BUILT_IN_ROLES.map((role) => {
+      const keys = Object.keys(role.permissions);
+      return [role.key, [canOpenScreen(keys, 'contracts'), canOpenScreen(keys, 'employeeContracts')]];
+    }),
+  );
+  expect(sees).toEqual({
+    system_admin: [true, true],
+    hr_manager: [true, true],
+    hr_officer: [true, true],
+    principal: [true, true],
+    stage_head: [true, true],
+    accountant: [false, false],
+    direct_manager: [false, false],
+  });
+});
+
 for (const role of BUILT_IN_ROLES) {
   test(`${role.key}: opens exactly the screens its permissions allow`, async ({ browser }) => {
     test.setTimeout(240_000);

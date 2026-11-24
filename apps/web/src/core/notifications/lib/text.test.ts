@@ -105,6 +105,38 @@ describe('notification sentences (N3, N17)', () => {
     expect(notificationText(group, deps('ar')).title).toBe('ينتهي عقدان خلال 30 يومًا');
   });
 
+  it('the renewal season (spec 2026-11-24): the season as 2026/27, counts in plural forms, dates in words', () => {
+    const due = notification('hr.contract.renewals_due', [entry({ season: '2026/27', count: 15 })]);
+    expect(notificationText(due, deps('en'))).toEqual({
+      title: 'Renewal decisions due for 2026/27',
+      body: '15 contracts have no decision yet',
+    });
+    expect(notificationText(notification('hr.contract.renewals_due', [entry({ season: '2026/27', count: 1 })]), deps('en')).body).toBe(
+      '1 contract has no decision yet',
+    );
+    expect(notificationText(due, deps('ar')).title).toContain('2026/27');
+
+    const opens = notification('hr.contract.notice_window_opens', [entry({ season: '2026/27', date: '2027-04-30' })]);
+    expect(notificationText(opens, deps('en'))).toEqual({
+      title: 'The non-renewal window for 2026/27 is open',
+      body: 'Employees can hand in their notice until 30 April 2027.',
+    });
+    const closing = notification('hr.contract.notice_window_closing', [entry({ season: '2026/27', date: '2027-04-30' })]);
+    expect(notificationText(closing, deps('en')).title).toBe('The non-renewal window for 2026/27 closes 30 April 2027');
+
+    const waiting = notification('hr.contract.early_termination_waiting', [entry({ employee: omar, date: '2026-11-12' })]);
+    expect(notificationText(waiting, deps('en'))).toEqual({
+      title: 'Early termination request from Omar Khalil',
+      body: 'Requested 12 November 2026',
+    });
+    expect(notificationText(waiting, deps('ar')).title).toContain('عمر خليل');
+    const two = notification(
+      'hr.contract.early_termination_waiting',
+      [omar, salma].map((employee, i) => entry({ employee, date: '2026-11-1' + i }, `e${i}`)),
+    );
+    expect(notificationText(two, deps('en')).title).toBe('2 early termination requests waiting');
+  });
+
   it('a type the screen does not know still reads (as "Notifications"), never a raw key', () => {
     expect(notificationText(notification('fees.invoice.overdue', [entry({})]), deps('en')).title).toBe('Notifications');
   });

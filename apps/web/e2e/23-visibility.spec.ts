@@ -51,10 +51,14 @@ test('a Stage head sees only their stage, no salary, no Payroll or History; the 
     await settle(head);
     await shoot(head, info, `p4-stage-head-employees-${locale}-desktop`);
 
-    // Their own profile: Details and Penalties only, no salary or bank details.
+    // Their own profile: Details, Contracts (their stage's, view only) and Penalties, no salary or bank details.
     await head.goto(`/${locale}/employees/${setup.own.id}`);
     const tabs = head.getByRole('navigation', { name: t(locale, 'employees.profile.tabs') }).getByRole('link');
-    await expect(tabs).toHaveText([t(locale, 'employees.profile.details'), t(locale, 'common.nav.penalties')]);
+    await expect(tabs).toHaveText([
+      t(locale, 'employees.profile.details'),
+      t(locale, 'common.nav.contracts'),
+      t(locale, 'common.nav.penalties'),
+    ]);
     await expect(head.getByText(t(locale, 'employees.fields.basicSalary'))).toHaveCount(0);
     await expect(head.getByRole('heading', { name: t(locale, 'employees.sections.bank') })).toHaveCount(0);
     await settle(head);
@@ -77,7 +81,8 @@ test('a Stage head sees only their stage, no salary, no Payroll or History; the 
   await signIn(page, 'en');
   await page.goto(`/en/employees/${setup.own.id}`);
   const tabs = page.getByRole('navigation', { name: t('en', 'employees.profile.tabs') }).getByRole('link');
-  await expect(tabs).toHaveCount(4);
+  // Details, Contracts, Penalties, Payroll, History.
+  await expect(tabs).toHaveCount(5);
   await expect(salaryInContract(page, 'en')).toBeVisible();
   await settle(page);
   await shoot(page, info, 'p4-hr-manager-profile-en-desktop');

@@ -14,6 +14,7 @@ import { outboxEvents } from './helpers/events';
 import { outboxIdle } from './helpers/events';
 import { createAppAsTestUser } from './helpers/as-test-user';
 import { historyMark } from './helpers/history';
+import { deleteEmployees } from './helpers/employees';
 
 /*
  * T29 — lateness and payroll write their audit entries in the same transaction as the
@@ -145,7 +146,7 @@ describe('HR audit wiring — lateness and payroll (T29, e2e)', () => {
     await db.violationLevel.deleteMany({});
     await db.violation.deleteMany({});
     await db.penaltyGroup.deleteMany({});
-    await db.employee.deleteMany({});
+    await deleteEmployees(db);
     await db.department.deleteMany({});
     await db.jobTitle.deleteMany({});
     await db.stage.deleteMany({});

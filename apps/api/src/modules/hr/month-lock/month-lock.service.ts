@@ -18,6 +18,12 @@ export class MonthLockService {
     return this.repository.hasApprovedRun(month);
   }
 
+  /** The locked months from `month` on, in order (a contract's early end can't cut into one). */
+  approvedMonthsFrom(month: Month): Promise<Month[]> {
+    if (!isMonth(month)) throw new RangeError(`month must be YYYY-MM, got "${month}"`);
+    return this.repository.approvedMonthsFrom(month);
+  }
+
   /** Throws 409 `PAYROLL_APPROVED` when the month is locked. */
   async assertMonthOpen(month: Month): Promise<void> {
     if (await this.isMonthLocked(month)) {

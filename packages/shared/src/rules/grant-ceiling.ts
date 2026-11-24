@@ -76,6 +76,8 @@ export const PAY_AND_PENALTY_KEYS = [
   'hr.penalties.approve',
   'hr.penalties.cancel',
   'hr.employees.edit',
+  // Contracts (spec 2026-11-24): nobody decides on their own contract — needs the record too.
+  'hr.contracts.manage',
 ] as const;
 
 /** Whether `grants` act on pay or penalties (`PAY_AND_PENALTY_KEYS`). */

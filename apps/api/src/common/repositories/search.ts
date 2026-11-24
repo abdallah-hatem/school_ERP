@@ -51,6 +51,25 @@ export function searchSql(expr: Prisma.Sql, query: string | null | undefined): P
 }
 
 /**
+ * `searchWhere`'s rule in raw SQL on a table's two generated columns (`<alias>.search_text`,
+ * `<alias>.search_compact`) — trigram-indexed like the Prisma form. For a list whose order Prisma
+ * can't express (the renewal list's "needs action first"). `TRUE` for an empty query. `alias` is
+ * code, never user input.
+ */
+export function searchColumnsSql(alias: string, query: string | null | undefined): Prisma.Sql {
+  const terms = searchTerms(query);
+  if (!terms) return Prisma.sql`TRUE`;
+  if (!/^[a-z_][a-z0-9_]*$/.test(alias)) throw new Error(`searchColumnsSql: bad alias "${alias}"`);
+  const like = (s: string) => `%${escapeLike(s)}%`;
+  const text = Prisma.raw(`${alias}."search_text"`);
+  const compact = Prisma.raw(`${alias}."search_compact"`);
+  const compactMatch = Prisma.sql`${compact} LIKE ${like(terms.compact)}`;
+  if (terms.words.length === 1) return compactMatch;
+  const words = Prisma.join(terms.words.map((w) => Prisma.sql`${text} LIKE ${like(w)}`), ' AND ');
+  return Prisma.sql`((${words}) OR ${compactMatch})`;
+}
+
+/**
  * A code search ("EMP-0" finds EMP-001), any case, `%` / `_` literal: the Activity log's look-up of
  * records by code. Codes are not names, so this is a plain contains on the code column.
  */

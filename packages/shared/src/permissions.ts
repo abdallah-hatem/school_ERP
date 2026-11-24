@@ -73,6 +73,10 @@ export const PERMISSIONS = {
   // the HR step: fixes the level and the deduction
   'hr.penalties.approve': hr,
   'hr.penalties.cancel': hr,
+  // hr — contracts (spec 2026-11-24): the history and the renewal season; renew, not renew,
+  // notices, early termination and ending a contract
+  'hr.contracts.view': hr,
+  'hr.contracts.manage': hr,
   // hr — lateness
   'hr.lateness.view': hr,
   'hr.lateness.edit': hr,
@@ -171,6 +175,7 @@ export const ROW_SCOPED_PERMISSIONS: ReadonlySet<PermissionKey> = new Set<Permis
   'hr.penalties.review',
   'hr.penalties.approve',
   'hr.penalties.cancel',
+  'hr.contracts.view',
   'hr.lateness.view',
   'hr.lateness.edit',
   'hr.payroll.view',

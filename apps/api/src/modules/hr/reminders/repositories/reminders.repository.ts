@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { TransactionHost } from '@nestjs-cls/transactional';
-import { EmployeeStatus } from '@prisma/client';
-import type { Month } from '@school-erp/shared';
-import { toIsoDate } from '../../../../common/utils/dates.util';
+import { ContractStatus, EmployeeStatus } from '@prisma/client';
+import { contractYearRange, type IsoDate, type Month } from '@school-erp/shared';
+import { fromIsoDate, toIsoDate } from '../../../../common/utils/dates.util';
 import type { DbAdapter } from '../../../../database/transactions';
-import type { ReminderEmployee, ReminderMonth } from '../reminders.pure';
+import type { RenewalSeason, ReminderEmployee, ReminderMonth } from '../reminders.pure';
 
 /**
  * The facts HR's daily reminders job reads (§11, N3): read-only, in the job's transaction for the
@@ -19,15 +19,67 @@ export class RemindersRepository {
     const rows = await this.txHost.tx.employee.findMany({
       where: { status: EmployeeStatus.ACTIVE },
       orderBy: { code: 'asc' },
-      select: { id: true, nameEn: true, nameAr: true, contractEnd: true, probationEnd: true },
+      select: {
+        id: true,
+        nameEn: true,
+        nameAr: true,
+        contractEnd: true,
+        probationEnd: true,
+        // The current contract's state (spec 2026-11-24): the active one, else the latest.
+        contracts: {
+          where: { status: { not: ContractStatus.CANCELLED } },
+          select: { status: true, remindersRearmedAt: true },
+          orderBy: { startsOn: 'desc' },
+          take: 1,
+        },
+      },
     });
-    return rows.map((r) => ({
-      id: r.id,
-      nameEn: r.nameEn,
-      nameAr: r.nameAr,
-      contractEnd: toIsoDate(r.contractEnd),
-      probationEnd: r.probationEnd ? toIsoDate(r.probationEnd) : null,
-    }));
+    return rows.map((r) => {
+      const current = r.contracts[0];
+      const status = current?.status ?? ContractStatus.ACTIVE;
+      return {
+        id: r.id,
+        nameEn: r.nameEn,
+        nameAr: r.nameAr,
+        contractEnd: toIsoDate(r.contractEnd),
+        probationEnd: r.probationEnd ? toIsoDate(r.probationEnd) : null,
+        contractDecided: status !== ContractStatus.ACTIVE,
+        contractEndedEarly: status === ContractStatus.ENDED_EARLY,
+        contractRearmedAt: current?.remindersRearmedAt?.getTime() ?? null,
+      };
+    });
+  }
+
+  /**
+   * A contract year's renewal season: its undecided contracts ending by its end — those that already
+   * ended with no decision too (review 5) — of active employees with no early termination waiting,
+   * and its school calendar.
+   */
+  async season(year: number, _today: IsoDate): Promise<RenewalSeason> {
+    const end = contractYearRange(year).end;
+    const [undecided, calendar] = await Promise.all([
+      this.txHost.tx.employeeContract.count({
+        where: {
+          status: ContractStatus.ACTIVE,
+          endsOn: { lte: fromIsoDate(end) },
+          employee: { status: EmployeeStatus.ACTIVE },
+          OR: [{ earlyTerminationStatus: null }, { earlyTerminationStatus: { not: 'REQUESTED' } }],
+        },
+      }),
+      this.txHost.tx.schoolCalendar.findUnique({ where: { year } }),
+    ]);
+    return {
+      year,
+      undecided,
+      calendar: calendar
+        ? {
+            term1Start: toIsoDate(calendar.term1Start),
+            term1End: toIsoDate(calendar.term1End),
+            term2Start: toIsoDate(calendar.term2Start),
+            nonRenewalDeadline: toIsoDate(calendar.nonRenewalDeadline),
+          }
+        : null,
+    };
   }
 
   /** Each month's lateness state (saved at least once) and its payroll run, if any. */

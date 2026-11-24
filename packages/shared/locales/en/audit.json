@@ -31,7 +31,9 @@
     "outbox_delivery": "Event delivery",
     "notification_preferences": "Notification preferences",
     "notification_settings": "Notification settings",
-    "push_device": "Alerts device"
+    "push_device": "Alerts device",
+    "employee_contract": "Contract",
+    "school_calendar": "School calendar"
   },
   "actions": {
     "core": {
@@ -122,6 +124,23 @@
         "transferred": "Marked the payroll run for {entity} as transferred",
         "adjustment_add": "Added an adjustment to the payroll run for {entity}",
         "adjustment_remove": "Removed an adjustment from the payroll run for {entity}"
+      },
+      "contract": {
+        "create": "Added a contract for {entity}",
+        "renew": "Renewed the contract of {entity}",
+        "not_renew": "Recorded that the contract of {entity} isn't renewed",
+        "notice_record": "Recorded the non-renewal notice of {entity}",
+        "notice_withdraw": "Withdrew the non-renewal notice of {entity}",
+        "early_termination_request": "Recorded an early termination request from {entity}",
+        "early_termination_approve": "Approved the early termination of {entity}",
+        "early_termination_reject": "Rejected the early termination request of {entity}",
+        "end": "Ended the contract of {entity}",
+        "document_open": "Opened a contract document of {entity}",
+        "cancel": "Cancelled the next contract of {entity}",
+        "not_renew_undo": "Undid the not-renewing of {entity}'s contract"
+      },
+      "school_calendar": {
+        "update": "Changed the school calendar for {entity}"
       }
     },
     "accounting": {
@@ -230,7 +249,9 @@
         "contractEndSecondDays": "Second contract reminder (days before)",
         "probationEndDays": "Probation reminder (days before)",
         "latenessCheckDay": "Lateness check day",
-        "payrollCheckDay": "Payroll check day"
+        "payrollCheckDay": "Payroll check day",
+        "renewalDecisionsDays": "Renewal decisions reminder (days before 31 May)",
+        "noticeWindowCloseDays": "Non-renewal deadline reminder (days before)"
       },
       "departments": "Department",
       "jobTitles": "Job title",
@@ -263,7 +284,23 @@
     "reviewSkip": "Stage review",
     "approvalNote": "HR note",
     "rejectionReason": "Rejection reason",
-    "rejectedStep": "Rejected at"
+    "rejectedStep": "Rejected at",
+    "startsOn": "Contract start",
+    "endsOn": "Contract end",
+    "nonRenewalBy": "Not renewed by",
+    "noticeReceivedOn": "Notice received on",
+    "noticeTiming": "Notice timing",
+    "earlyTermination": "Early termination",
+    "earlyTerminationRequestedOn": "Early termination requested on",
+    "earlyTerminationTiming": "Early termination timing",
+    "endedOn": "Ended on",
+    "endReason": "End reason",
+    "document": "Document",
+    "nextContract": "Next contract",
+    "term1Start": "First day of term 1",
+    "term1End": "Last day of term 1",
+    "term2Start": "First day of term 2",
+    "nonRenewalDeadline": "Non-renewal deadline"
   },
   "totals": {
     "net": "Net",
@@ -432,6 +469,11 @@
         "added": "School logo added",
         "changed": "School logo changed",
         "removed": "School logo removed"
+      },
+      "document": {
+        "added": "Document attached",
+        "changed": "Document changed",
+        "removed": "Document removed"
       },
       "uploaded": "Uploaded"
     }

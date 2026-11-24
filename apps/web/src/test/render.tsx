@@ -60,4 +60,6 @@ export const STAGE_HEAD_KEYS = [
   'hr.penalties.record',
   'core.stages.view',
   'hr.penalty_catalogue.view',
+  // Contracts (spec 2026-11-24): their stage's contracts, view only.
+  'hr.contracts.view',
 ] as const;

@@ -113,9 +113,9 @@ export interface CreateEmployeeRequest extends Names {
   workSystem: WorkSystem;
   basicSalary: Piastres;
   fingerprintId?: string | null;
-  /** Defaults to 1 June of the current contract year. */
+  /** The first contract (create only). Defaults to 1 June of the current contract year. */
   contractStart?: IsoDate;
-  /** Defaults to 31 May of the next year. */
+  /** The first contract's end (create only). Defaults to 31 May of the next year. */
   contractEnd?: IsoDate;
   /**
    * §3 (N0): on or after the hire date. Left out or empty on create → hire date + the school's
@@ -145,7 +145,11 @@ export interface CreateEmployeeRequest extends Names {
   graduationYear?: number | null;
 }
 
-export type UpdateEmployeeRequest = Partial<CreateEmployeeRequest>;
+/**
+ * An edit: any create field but the contract dates — after creation they change only through
+ * Contracts (renew, end; spec 2026-11-24 edge case 13).
+ */
+export type UpdateEmployeeRequest = Partial<Omit<CreateEmployeeRequest, 'contractStart' | 'contractEnd'>>;
 
 /** The employee fields R7 treats as salary: absent from responses when `salaryVisible` is false. */
 export const EMPLOYEE_SALARY_FIELDS = [
@@ -586,6 +590,10 @@ export interface ReminderRule {
   latenessCheckDay: number;
   /** From this day of each month while its payroll isn't prepared or approved (same). */
   payrollCheckDay: number;
+  /** "Renewal decisions due" from this many days before a contract year's end (91 = 1 March; 1–180). */
+  renewalDecisionsDays: number;
+  /** "Non-renewal window closes soon", days before the non-renewal deadline (1–60). */
+  noticeWindowCloseDays: number;
 }
 
 export interface HrSettings {

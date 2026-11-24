@@ -4,6 +4,7 @@ import { SEARCH_FIXTURE } from '@school-erp/shared/testing';
 import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
 import { createAppAsTestUser } from './helpers/as-test-user';
+import { deleteEmployees } from './helpers/employees';
 
 /*
  * The database searches find Arabic letter variants, joined / split names, any word order, partial
@@ -123,7 +124,7 @@ describe('Arabic-aware database search (e2e)', () => {
     await db.penaltyGroup.deleteMany({ where: { id: groupId } });
     await db.user.deleteMany({ where: { id: { in: users } } });
     await db.role.deleteMany({ where: { id: { in: roles } } });
-    await db.employee.deleteMany({ where: { id: { in: employees } } });
+    await deleteEmployees(db, { where: { id: { in: employees } } });
     await app.close();
   });
 

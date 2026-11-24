@@ -59,6 +59,9 @@ export const SCREENS = {
   employeePenalties: profileTab('/employees/:id/penalties', 'hr.penalties.view'),
   employeePayroll: profileTab('/employees/:id/payroll', 'hr.payroll.view'),
   employeeHistory: profileTab('/employees/:id/history', 'core.audit.view'),
+  // Contracts (spec 2026-11-24): the employee's contract history, and the renewal season.
+  employeeContracts: profileTab('/employees/:id/contracts', 'hr.contracts.view'),
+  contracts: screen('/contracts', 'hr.contracts.view'),
   penalties: screen('/penalties', 'hr.penalties.view'),
   lateness: screen('/lateness', 'hr.lateness.view'),
   payroll: screen('/payroll', 'hr.payroll.view'),
@@ -91,6 +94,7 @@ export const SCREEN_IDS = Object.keys(SCREENS) as ScreenId[];
 export const SIDEBAR_SCREENS = [
   'dashboard',
   'employees',
+  'contracts',
   'penalties',
   'lateness',
   'payroll',

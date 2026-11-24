@@ -199,6 +199,25 @@
       "probation": "Default probation length",
       "probationHint": "A new employee’s probation ends this many months after their hire date. 0 means no probation. Existing employees keep their dates.",
       "probationPlaceholder": "3"
+    },
+    "calendar": {
+      "title": "School calendar",
+      "description": "The term dates of each contract year: the non-renewal notice window and early termination read them.",
+      "year": "Contract year",
+      "term1Start": "First day of term 1",
+      "term1End": "Last day of term 1 (exams included)",
+      "term2Start": "First day of term 2",
+      "nonRenewalDeadline": "Non-renewal deadline",
+      "term1EndHint": "An approved early termination ends the contract here.",
+      "term2StartHint": "The employees' non-renewal window opens.",
+      "nonRenewalDeadlineHint": "The last day a notice is on time (usually 30 April).",
+      "placeholder": "Pick a date",
+      "notSet": "Not set for {year} yet.",
+      "saved": "School calendar saved.",
+      "invalid": "Inside the contract year, and after the date above it.",
+      "previousYear": "Previous year",
+      "nextYear": "Next year",
+      "save": "Save calendar"
     }
   },
   "catalogue": {

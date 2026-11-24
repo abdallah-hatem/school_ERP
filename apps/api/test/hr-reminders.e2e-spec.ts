@@ -7,6 +7,7 @@ import { RemindersRepository } from '../src/modules/hr/reminders/repositories/re
 import { http, unique } from './helpers';
 import { createAppAsTestUser, giveRoles } from './helpers/as-test-user';
 import { outboxIdle } from './helpers/events';
+import { deleteEmployees } from './helpers/employees';
 
 /*
  * HR's daily reminders (N3, plan docs/plans/2026-11-18-notifications-plan.md → N3 edge cases),
@@ -142,7 +143,7 @@ describe('HR reminders — hr.reminders.daily (e2e)', () => {
     await db.schoolSetting.deleteMany({ where: { key: { in: REMINDER_KEYS } } });
     await db.user.deleteMany({ where: { id: { in: users } } });
     await db.role.deleteMany({ where: { id: roleId } });
-    await db.employee.deleteMany({ where: { id: { in: employees } } });
+    await deleteEmployees(db, { where: { id: { in: employees } } });
     await db.department.deleteMany({ where: { id: departmentId } });
     await db.jobTitle.deleteMany({ where: { id: jobTitleId } });
     await db.stage.deleteMany({ where: { id: { in: [stageA, stageB] } } });
@@ -203,16 +204,21 @@ describe('HR reminders — hr.reminders.daily (e2e)', () => {
       expect(secondB?.notificationId).toBe(items[1]?.notificationId);
     });
 
-    it('edge 2 — contract extended outside the window → resolved at once; moved inside → old resolved, a new one next run', async () => {
-      await http(app).patch(`/hr/employees/${a}`).send({ contractEnd: '2032-05-31' }).expect(200);
+    it('edge 2 / contracts §11 — a renewal decision resolves "contract ends soon" at once; an ended contract gets nothing more (contracts edge 10)', async () => {
+      const contractOf = async (employeeId: string) =>
+        (await http(app).get(`/hr/employees/${employeeId}/contracts`).expect(200)).body.data[0].id as string;
+      // a: renewed (the dates move to next year, and a decision exists).
+      await http(app).post('/hr/contracts/renew').send({ contractIds: [await contractOf(a)] }).expect(200);
       expect((await itemsAbout(officer, 'hr.contract.ending_soon', a)).every((i) => i.resolvedAt)).toBe(true);
 
-      await http(app).patch(`/hr/employees/${b}`).send({ contractEnd: '2031-05-28' }).expect(200);
+      // b: ended early, inside the window — its reminder goes and none is sent for the new end.
+      await http(app)
+        .post(`/hr/contracts/${await contractOf(b)}/end`)
+        .send({ reason: 'OTHER', endsOn: '2031-05-28', note: 'Moved abroad' })
+        .expect(200);
       expect((await itemsAbout(officer, 'hr.contract.ending_soon', b)).every((i) => i.resolvedAt)).toBe(true);
       expect(await runAt('2031-05-24')).toBe('success');
-      const open = (await itemsAbout(officer, 'hr.contract.ending_soon', b)).filter((i) => !i.resolvedAt);
-      expect(open.map((i) => i.dedupeKey)).toEqual([`contract_end:${b}:2031-05-28:7`]);
-      // The extended one gets nothing new.
+      expect((await itemsAbout(officer, 'hr.contract.ending_soon', b)).filter((i) => !i.resolvedAt)).toEqual([]);
       expect((await itemsAbout(officer, 'hr.contract.ending_soon', a)).filter((i) => !i.resolvedAt)).toEqual([]);
     });
 

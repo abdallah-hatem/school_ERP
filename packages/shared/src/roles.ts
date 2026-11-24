@@ -96,6 +96,7 @@ export const BUILT_IN_ROLES: readonly BuiltInRoleDefinition[] = [
       'hr.penalty_catalogue.view',
       'hr.penalties.view',
       'hr.penalties.record',
+      'hr.contracts.view',
       'hr.lateness.view',
       'hr.lateness.edit',
       'hr.payroll.view',
@@ -134,6 +135,7 @@ export const BUILT_IN_ROLES: readonly BuiltInRoleDefinition[] = [
       'hr.penalties.view',
       'hr.penalties.approve',
       'hr.penalties.cancel',
+      'hr.contracts.view',
       'hr.lateness.view',
       'hr.payroll.view',
     ),
@@ -142,7 +144,8 @@ export const BUILT_IN_ROLES: readonly BuiltInRoleDefinition[] = [
     key: BuiltInRole.STAGE_HEAD,
     nameEn: 'Stage head',
     nameAr: 'رئيس المرحلة',
-    permissions: lineManager(PermissionScope.OWN_STAGE, 'hr.penalties.review'),
+    // Contracts (spec 2026-11-24, GUESS): the stage head views their stage's contracts.
+    permissions: lineManager(PermissionScope.OWN_STAGE, 'hr.penalties.review', 'hr.contracts.view'),
   },
   {
     key: BuiltInRole.DIRECT_MANAGER,
