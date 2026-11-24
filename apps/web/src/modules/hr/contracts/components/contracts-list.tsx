@@ -316,6 +316,7 @@ export function ContractsList({
         label={t('contracts.list.tableLabel', { year: yearText })}
         rows={rows}
         today={today}
+        year={query.year}
         calendar={calendar}
         historyHref={(id) => `${employeesPath}/${id}/contracts`}
         selection={selection}

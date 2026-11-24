@@ -4,7 +4,7 @@ import type { Locale } from '@/shared/lib/i18n';
 import { GET_STAGES } from '../employees/apis';
 import { GET_CONTRACTS, GET_EMPLOYEE_CONTRACTS } from './apis';
 import { ContractsList } from './components/contracts-list';
-import { EmployeeContracts } from './components/employee-contracts';
+import { ProfileEmployeeContracts } from './components/employee-contracts';
 import { parseContractsQuery, parsePagingQuery, type SearchParamsRecord } from './lib/list-query';
 import { ContractsI18n } from './messages';
 
@@ -60,7 +60,7 @@ export async function EmployeeContractsScreen({
   if (res.success === false && (res.status === 404 || res.status === 400)) notFound();
   return (
     <ContractsI18n locale={locale}>
-      <EmployeeContracts
+      <ProfileEmployeeContracts
         employeeId={employeeId}
         basePath={`/${locale}/employees/${employeeId}/contracts`}
         rows={res.success ? (res.data ?? []) : []}

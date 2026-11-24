@@ -6,6 +6,7 @@ import {
   formatContractYear,
   PAGINATION,
   type Contract,
+  type Employee,
 } from '@school-erp/shared';
 import { useRouter } from 'next/navigation';
 import { useTransition, type ReactNode } from 'react';
@@ -26,6 +27,8 @@ import { ContractDates, ContractDecisionPill, decisionSubLine } from './contract
 
 export interface EmployeeContractsProps {
   employeeId: string;
+  /** The profile's employee (its name, and its current contract's start); null before it loads. */
+  employee: Pick<Employee, 'id' | 'nameEn' | 'nameAr' | 'contractStart'> | null;
   /** `/ar/employees/<id>/contracts`. */
   basePath: string;
   /** `undefined` while the first page loads: skeleton rows. */
@@ -44,11 +47,10 @@ export interface EmployeeContractsProps {
  * the documents — with the decisions on the current contract for whoever may manage contracts (the
  * same actions, dialogs and sheet as the renewals screen).
  */
-export function EmployeeContracts({ employeeId, basePath, rows, total, page, limit, today, error = false }: EmployeeContractsProps) {
+export function EmployeeContracts({ employeeId, employee, basePath, rows, total, page, limit, today, error = false }: EmployeeContractsProps) {
   const { t, locale } = useTranslation();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const employee = useProfileEmployeeIfLoaded();
   // The record's current contract is the one its dates name (written only by Contracts).
   const isCurrent = (c: Contract) => !!employee && employee.id === employeeId && c.startsOn === employee.contractStart;
 
@@ -140,6 +142,11 @@ export function EmployeeContracts({ employeeId, basePath, rows, total, page, lim
       cardsBelow={1100}
     />
   );
+}
+
+/** The Contracts tab inside the profile layout: the layout's employee, no second fetch. */
+export function ProfileEmployeeContracts(props: Omit<EmployeeContractsProps, 'employee'>) {
+  return <EmployeeContracts {...props} employee={useProfileEmployeeIfLoaded()} />;
 }
 
 /** What happened on a contract, one line each: who decided, the notice, the early termination, the end. */

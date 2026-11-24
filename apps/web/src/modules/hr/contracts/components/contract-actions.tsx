@@ -206,7 +206,7 @@ export function ContractActions({
       ) : null}
       {primary}
       {decide}
-      <RowActions label={t('contracts.actions.menu', { name })} actions={menu} />
+      <RowActions label={t('ui.table.actionsFor', { name })} actions={menu} />
 
       <ConfirmDialog
         open={confirm === 'renew'}

@@ -1,6 +1,6 @@
 'use client';
 
-import { ContractDecision, type Contract, type SchoolCalendarDates } from '@school-erp/shared';
+import { calendarYearOfContract, ContractDecision, type Contract, type SchoolCalendarDates } from '@school-erp/shared';
 import type { ReactNode } from 'react';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-table/data-table';
 import type { PaginationState } from '@/shared/components/data-table/pagination';
@@ -36,6 +36,7 @@ export function ContractsTable({
   label,
   rows,
   today,
+  year,
   calendar,
   historyHref,
   selection,
@@ -51,6 +52,8 @@ export function ContractsTable({
   /** `undefined` while the first page loads: skeleton rows of the same shape. */
   rows: Contract[] | undefined;
   today: string;
+  /** The listed contract year. */
+  year: number;
   /** The listed year's calendar (the decision sheet's timing line); null: not set. */
   calendar: SchoolCalendarDates | null | undefined;
   /** The employee's Contracts tab. */
@@ -156,7 +159,8 @@ export function ContractsTable({
         <ContractActions
           contract={c}
           today={today}
-          calendar={calendar}
+          // A mid-year contract reads the year it started in: the sheet asks for that one.
+          calendar={calendarYearOfContract(c.startsOn) === year ? calendar : undefined}
           historyHref={historyHref(c.employee.id)}
         />
       ),

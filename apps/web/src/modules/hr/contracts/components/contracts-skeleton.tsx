@@ -6,7 +6,7 @@ import { useTranslation } from '@/shared/providers/i18n-provider';
 import { parseContractsQuery, parsePagingQuery } from '../lib/list-query';
 import { ContractsI18n } from '../messages';
 import { ContractsList } from './contracts-list';
-import { EmployeeContracts } from './employee-contracts';
+import { ProfileEmployeeContracts } from './employee-contracts';
 
 /**
  * The renewals screen's first load: the screen itself with no data — the header with its year
@@ -41,7 +41,7 @@ export function EmployeeContractsSkeleton() {
   const { page, limit } = parsePagingQuery(Object.fromEntries(search));
   return (
     <ContractsI18n locale={locale}>
-      <EmployeeContracts
+      <ProfileEmployeeContracts
         employeeId={id}
         basePath={`/${locale}/employees/${id}/contracts`}
         rows={undefined}
