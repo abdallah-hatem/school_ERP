@@ -1,6 +1,7 @@
 'use client';
 
 import { FormActionBar } from '@/shared/components/form/form-action-bar';
+import type { SettingsPartId } from '@school-erp/shared';
 import type { ReactNode } from 'react';
 import { Button } from '@/shared/components/ui/button';
 import { cn } from '@/shared/lib/utils';
@@ -13,19 +14,28 @@ export function SectionPanel({
   actions,
   children,
   className,
+  part,
 }: {
   title: ReactNode;
   description?: ReactNode;
   actions?: ReactNode;
   children: ReactNode;
   className?: string;
+  /** The card's id for a link into it (`settingsHref(…, part)`); Settings lands on it and marks it. */
+  part?: SettingsPartId;
 }) {
   return (
     <section
       // Its height follows what it holds (a list's rows); its header and body are measured inside.
       data-skeleton-block="section-panel"
       data-skeleton-measure="width"
-      className={cn('flex min-w-0 flex-col gap-5 rounded-3xl bg-card p-5 shadow-card sm:p-6', className)}
+      data-settings-part={part}
+      className={cn(
+        'flex min-w-0 flex-col gap-5 rounded-3xl bg-card p-5 shadow-card sm:p-6',
+        // Landed on from a link: a ring for a moment, so the eye finds the card (settings-screen).
+        'ring-primary/0 ring-2 transition-[box-shadow] duration-500 data-landed:ring-primary/45',
+        className,
+      )}
     >
       <header data-skeleton-block="section-header" className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 flex-1 basis-60 flex-col gap-1">

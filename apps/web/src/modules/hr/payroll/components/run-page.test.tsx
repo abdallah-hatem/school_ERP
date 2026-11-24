@@ -64,7 +64,6 @@ function runElement(props: Partial<RunPageProps> = {}, locale: Locale = 'en') {
   return (
     <RunPage
       basePath={`/${locale}/payroll`}
-      settingsHref={`/${locale}/settings`}
       penaltiesHref={`/${locale}/penalties`}
       run={props.run ?? run()}
       asOf={0}
@@ -545,13 +544,24 @@ describe('RunPage — draft', () => {
   });
 
   it('the rules panel shows the rules the run came with, or says they are missing', () => {
-    const { unmount } = renderRun();
+    const { unmount } = renderRun({ run: run({ rules: { ...SETTINGS, lateness: { ...SETTINGS.lateness, graceMinutes: 40 } } }) });
     const panel = screen.getByRole('complementary', {
       name: 'Rules applied this month',
     });
-    expect(within(panel).getByText('1 day = salary for the month ÷ 30')).toBeTruthy();
-    expect(within(panel).getByText(/4 days 80% · 3 days 60% · 2 days 40%/)).toBeTruthy();
-    expect(within(panel).getByRole('link', { name: 'Edit in settings' }).getAttribute('href')).toBe('/en/settings');
+    // One fact per bullet, in every card (owner, 2026-11-24).
+    const bullets = (title: string) =>
+      within(within(panel).getByText(title).closest('li')!)
+        .getAllByRole('listitem')
+        .map((li) => li.textContent?.replace('•', '').trim());
+    expect(bullets('Day value')).toEqual(['1 day = salary for the month ÷ 30', 'Salary for the month = basic × work system %']);
+    expect(bullets('Work system')).toEqual(['Full-time 100%', '4 days 80%', '3 days 60%', '2 days 40% of basic']);
+    expect(bullets('Lateness')).toEqual(['40 grace minutes first', 'Hour 1 = 0.25 day', 'Hour 2 = 0.5 day', 'Each later hour = 0.5 day']);
+    expect(bullets('Penalties')).toEqual(['Approved day deductions × day value', 'Repeats counted per contract year (1 June – 31 May)']);
+    expect(bullets('Net floor')).toEqual(['Net never goes below 0', 'Lines floored at 0 need review']);
+    // Lands on Settings → HR rules → Payroll rules (a push, so Back returns here).
+    expect(within(panel).getByRole('link', { name: 'Edit in settings' }).getAttribute('href')).toBe(
+      '/en/settings?section=hrRules&part=payroll',
+    );
     unmount();
     renderRun({ run: run({ rules: undefined as unknown as typeof SETTINGS }) });
     expect(within(screen.getByRole('complementary')).getByRole('alert').textContent).toContain(
@@ -571,7 +581,9 @@ describe('RunPage — draft', () => {
       renderRun({ run: run({ rules }) }, 'en', sessionWith(...keys));
       const panel = screen.getByRole('complementary', { name: 'Rules applied this month' });
       expect(within(panel).getByText('1 day = salary for the month ÷ 26')).toBeTruthy();
-      expect(within(panel).getByText(/4 days 75% · 3 days 55% · 2 days 35%/)).toBeTruthy();
+      expect(within(panel).getByText('4 days 75%')).toBeTruthy();
+      expect(within(panel).getByText('3 days 55%')).toBeTruthy();
+      expect(within(panel).getByText('2 days 35% of basic')).toBeTruthy();
       expect(within(panel).queryByRole('alert')).toBeNull();
       expect(within(panel).queryByRole('link', { name: 'Edit in settings' })).toBeNull();
     },

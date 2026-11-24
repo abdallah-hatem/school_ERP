@@ -174,8 +174,8 @@
     "history": "History",
     "notSet": "Not set",
     "edit": "Edit",
-    "signsInAs": "Signs in as:",
-    "noAccount": "No sign-in account"
+    "signsInAs": "System user:",
+    "noAccount": "Not a system user"
   },
   "status": {
     "deactivate": "Deactivate",

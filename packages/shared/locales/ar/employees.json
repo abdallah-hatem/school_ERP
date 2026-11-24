@@ -174,8 +174,8 @@
     "history": "السجل",
     "notSet": "غير محدد",
     "edit": "تعديل",
-    "signsInAs": "يدخل باسم:",
-    "noAccount": "ليس له حساب دخول"
+    "signsInAs": "مستخدم النظام:",
+    "noAccount": "ليس مستخدمًا للنظام"
   },
   "status": {
     "deactivate": "إيقاف",

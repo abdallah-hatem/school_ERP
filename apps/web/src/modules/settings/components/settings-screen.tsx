@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { visibleSettingsSections } from '@school-erp/shared';
-import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
+import { parseSettingsPart, visibleSettingsSections, type SettingsPartId } from '@school-erp/shared';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { settingsActivityHref } from '@/core/audit';
 import { Can, useSession } from '@/core/auth';
 import { PageHeader } from '@/shared/components/layout/page-header';
@@ -23,7 +23,7 @@ import {
   type AppIcon,
 } from '@/shared/components/ui/icons';
 import { TAB_HOVER_FADE } from '@/shared/lib/tab-motion';
-import { useRevealTopOnChange } from '@/shared/hooks/use-reveal-top';
+import { scrollToTopOf, useRevealTopOnChange } from '@/shared/hooks/use-reveal-top';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { DirtyReporterProvider, useLeaveGuard } from '../hooks/unsaved-changes';
@@ -100,6 +100,43 @@ function focusFirstHeading(body: HTMLElement) {
   window.addEventListener('pointerdown', stop, true);
 }
 
+/**
+ * A link's `&part=` (`settingsHref(…, part)`): once that card is drawn with its loaded data (not
+ * the skeleton copy, which is `inert`), scroll it to the top, move focus to its heading and ring it
+ * for a moment. Waits up to 8 s for the data; gives up as soon as the person scrolls, taps or types
+ * first, so the page never jumps under them.
+ */
+function landOnPart(body: HTMLElement, part: SettingsPartId): () => void {
+  let unmark = 0;
+  const find = () =>
+    Array.from(body.querySelectorAll<HTMLElement>(`[data-settings-part="${part}"]`)).find((el) => !el.closest('[inert]'));
+  const land = () => {
+    const el = find();
+    if (!el) return;
+    stop();
+    scrollToTopOf(el);
+    el.querySelector<HTMLElement>('h2[tabindex]')?.focus({ preventScroll: true });
+    el.setAttribute('data-landed', '');
+    unmark = window.setTimeout(() => el.removeAttribute('data-landed'), 2400);
+  };
+  const observer = new MutationObserver(land);
+  const timer = window.setTimeout(() => stop(), 8000);
+  const cancel = () => stop();
+  const events = ['keydown', 'pointerdown', 'wheel', 'touchmove'] as const;
+  function stop() {
+    observer.disconnect();
+    window.clearTimeout(timer);
+    for (const e of events) window.removeEventListener(e, cancel, true);
+  }
+  observer.observe(body, { childList: true, subtree: true });
+  for (const e of events) window.addEventListener(e, cancel, true);
+  land();
+  return () => {
+    stop();
+    window.clearTimeout(unmark);
+  };
+}
+
 type Leave ={ to: SettingsSectionId | null } | { href: string } | { proceed: () => void };
 
 /**
@@ -131,6 +168,8 @@ export function SettingsScreen({ initialSection }: { initialSection: SettingsSec
   const [leaving, setLeaving] = useState<Leave | null>(null);
   const dirty = Object.values(dirtyBy).some(Boolean);
   const shown: SettingsSectionId | undefined = section ?? sections[0];
+  // Read once: switching section drops `&part=` from the address (`open`).
+  const [part] = useState(() => parseSettingsPart(shown, searchParams?.get('part')));
 
   const report = useCallback((source: string, isDirty: boolean) => {
     setDirtyBy((prev) => (Boolean(prev[source]) === isDirty ? prev : { ...prev, [source]: isDirty }));
@@ -151,6 +190,7 @@ export function SettingsScreen({ initialSection }: { initialSection: SettingsSec
   useRevealTopOnChange(section ? bodyRef : navRef, section ?? 'list', (el) => {
     if (section) focusFirstHeading(el);
   });
+  useEffect(() => (part && bodyRef.current ? landOnPart(bodyRef.current, part) : undefined), [part]);
 
   function open(to: SettingsSectionId | null) {
     setSection(to);

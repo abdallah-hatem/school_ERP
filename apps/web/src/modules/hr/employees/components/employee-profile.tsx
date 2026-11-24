@@ -144,7 +144,7 @@ export function EmployeeProfileShell({
 }
 
 /**
- * Who signs in as this employee: "Signs in as: <name>" or "No sign-in account". Everyone who sees
+ * Who signs in as this employee: "System user: <name>" or "Not a system user". Everyone who sees
  * the employee reads it; the name links to the user page only for viewers who may open users.
  */
 export function SignInAccountLine({ account }: { account: Employee['signInAccount'] }) {

@@ -83,7 +83,7 @@ function RunShellSkeleton({ children }: { children: ReactNode }) {
 
 /** The Employees tab's body while it loads: the four tiles, the lines table and the rules panel. */
 function RunLinesSkeletonBody() {
-  const { t, locale } = useTranslation();
+  const { t } = useTranslation();
   const params = useSearchParams();
   const query = parseRunQuery(Object.fromEntries(params));
   return (
@@ -120,7 +120,7 @@ function RunLinesSkeletonBody() {
           />
         </div>
         {/* An approved run's panel (today's rules, "calculated on …"), as the header traces. */}
-        <RulesPanel rules={undefined} settingsHref={`/${locale}/settings`} approvedAt={TYPICAL_APPROVED_AT} />
+        <RulesPanel rules={undefined} approvedAt={TYPICAL_APPROVED_AT} />
       </div>
     </>
   );

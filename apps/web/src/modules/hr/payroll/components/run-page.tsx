@@ -59,8 +59,6 @@ const SEARCH_DEBOUNCE_MS = 300;
 export interface RunLinesProps {
   /** `/ar/payroll`. */
   basePath: string;
-  /** `/ar/settings` — the rules panel links there. */
-  settingsHref: string;
   /**
    * With search, filters or a page in the URL: the run read with them (its lines are that page of
    * the matching ones), and the server's clock before that read. Without: null — the lines are
@@ -78,7 +76,7 @@ export interface RunLinesProps {
  * from the run layout (`useRunState`); only the filtered lines are this tab's own read. A draft is
  * editable; an approved run is read-only with the payslips.
  */
-export function RunLines({ basePath, settingsHref, filtered: filteredRead, selectedDepartment = null, query }: RunLinesProps) {
+export function RunLines({ basePath, filtered: filteredRead, selectedDepartment = null, query }: RunLinesProps) {
   const { t, locale } = useTranslation();
   const router = useRouter();
   const [navigating, startNavigation] = useTransition();
@@ -307,7 +305,7 @@ export function RunLines({ basePath, settingsHref, filtered: filteredRead, selec
           ) : null}
         </div>
 
-        <RulesPanel rules={run.rules ?? null} settingsHref={settingsHref} approvedAt={draft ? null : run.approvedAt} />
+        <RulesPanel rules={run.rules ?? null} approvedAt={draft ? null : run.approvedAt} />
       </div>
 
       <AdjustmentsDialog
