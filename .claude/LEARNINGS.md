@@ -7,7 +7,8 @@ Corrections recorded so they don't have to be repeated. Loaded at session start.
   migrations directly — no backups, no "your data changed" notes. ("I dont care at all about current
   data its fake") — 2026-11-22
 - Smoke and API e2e run on GitHub CI only — never locally, not in a worktree, not "to rule out a
-  flake", not to verify a fix. Locally: lint, typecheck, unit tests. Review screenshots come from a
+  flake", not to verify a fix. Unit tests too, on the owner's machine (2026-11-24): this clone has
+  `git config ci.skipUnitTests true`, so the hook runs lint and typecheck only. The team's default stays. Review screenshots come from a
   short headless capture script on a throwaway stack, not the smoke suite. A CI failure is fixed from
   CI's logs and artifacts, then CI re-runs. Every agent brief says so. I broke this by telling agents to
   run suites locally ("are agents running tests here locally ??? or on ci as we said ?"). Also: a
