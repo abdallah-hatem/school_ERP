@@ -287,7 +287,7 @@ export const CONTRACT_DOCUMENT_CSS = `
 .cd-doc ol,.cd-doc ul{margin:0 0 .55em;padding-inline-start:1.6em}
 .cd-doc li>p{margin:0 0 .25em}
 .cd-doc .cd-a-left{text-align:left}.cd-doc .cd-a-center{text-align:center}.cd-doc .cd-a-right{text-align:right}.cd-doc .cd-a-justify{text-align:justify}
-.cd-doc .cd-table{width:100%;border-collapse:collapse;margin:.4em 0 .8em;break-inside:auto}
+.cd-doc .cd-table{width:100%;border-collapse:collapse;margin:.4em 0 .8em;break-inside:avoid}
 .cd-doc .cd-table td,.cd-doc .cd-table th{border:1px solid #9fb3ad;padding:4px 8px;vertical-align:top;text-align:start}
 .cd-doc .cd-table th{background:#eef4f2;font-weight:600}
 .cd-doc .cd-table p{margin:0}
