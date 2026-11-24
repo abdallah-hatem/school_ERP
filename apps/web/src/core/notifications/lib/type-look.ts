@@ -1,5 +1,6 @@
 import {
   ContractEndIcon,
+  ContractsIcon,
   LatenessDueIcon,
   NotificationsIcon,
   PayrollDueIcon,
@@ -20,6 +21,11 @@ const LOOKS: Record<string, { icon: AppIcon; tone: string }> = {
   // Sent back by Accounting: needs a look before it is approved again.
   'hr.payroll.returned_by_accounting': { icon: PayrollIcon, tone: 'bg-warning-soft text-warning-ink' },
   'hr.contract.ending_soon': { icon: ContractEndIcon, tone: 'bg-info-soft text-info-ink' },
+  // The renewal season (spec 2026-11-24): reminders in info; a waiting request needs a look.
+  'hr.contract.renewals_due': { icon: ContractsIcon, tone: 'bg-info-soft text-info-ink' },
+  'hr.contract.notice_window_opens': { icon: ContractsIcon, tone: 'bg-info-soft text-info-ink' },
+  'hr.contract.notice_window_closing': { icon: ContractsIcon, tone: 'bg-accent-soft text-accent-foreground' },
+  'hr.contract.early_termination_waiting': { icon: ContractsIcon, tone: 'bg-warning-soft text-warning-ink' },
   'hr.probation.ending_soon': { icon: ProbationEndIcon, tone: 'bg-info-soft text-info-ink' },
   'hr.lateness.not_entered': { icon: LatenessDueIcon, tone: 'bg-accent-soft text-accent-foreground' },
   'hr.payroll.not_prepared': { icon: PayrollDueIcon, tone: 'bg-primary-soft text-primary' },

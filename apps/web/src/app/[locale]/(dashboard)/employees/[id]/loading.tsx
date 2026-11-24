@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { RecordHistorySkeleton } from '@/core/audit';
+import { EmployeeContractsSkeleton } from '@/modules/hr/contracts';
 import { EmployeePageSkeleton, EmployeeProfileSkeleton } from '@/modules/hr/employees';
 import { EmployeePayrollSkeleton } from '@/modules/hr/payroll';
 import { EmployeePenaltiesSkeleton } from '@/modules/hr/penalties';
@@ -18,7 +19,9 @@ export default function EmployeeLoading() {
   const segment = usePathname()?.split('/')[4] ?? '';
   if (segment === 'edit') return <EmployeePageSkeleton />;
   const body =
-    segment === 'penalties' ? (
+    segment === 'contracts' ? (
+      <EmployeeContractsSkeleton />
+    ) : segment === 'penalties' ? (
       <EmployeePenaltiesSkeleton />
     ) : segment === 'payroll' ? (
       <EmployeePayrollSkeleton />

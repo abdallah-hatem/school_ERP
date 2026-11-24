@@ -55,6 +55,30 @@ describe('formatAuditValue: employee fields read as the record shows them, never
   });
 });
 
+describe('formatAuditValue: a contract entry reads its values, never the stored enums (spec 2026-11-24)', () => {
+  const contractValue = (field: string, value: unknown, locale: Locale) => {
+    const { t, has } = deps(locale);
+    return formatAuditValue(field, value, t, has, locale, 'employee_contract');
+  };
+
+  it('status, who did not renew, the timing, the early termination and the end reason', () => {
+    expect(contractValue('status', 'RENEWED', 'en')).toBe('Renewed');
+    expect(contractValue('status', 'NOT_RENEWED', 'ar')).toBe('لن يُجدد');
+    expect(contractValue('nonRenewalBy', 'EMPLOYEE', 'en')).toBe("The employee's notice");
+    expect(contractValue('noticeTiming', 'LATE', 'en')).toBe('Late');
+    expect(contractValue('earlyTerminationTiming', 'CALENDAR_NOT_SET', 'en')).toBe('Calendar not set');
+    expect(contractValue('earlyTermination', 'REJECTED', 'en')).toBe('Rejected');
+    expect(contractValue('endReason', 'ARTICLE_148', 'en')).toBe('Dismissal (Article 148)');
+    expect(contractValue('endsOn', '2027-05-31', 'en')).toBe('31 May 2027');
+  });
+
+  it('a contract document never shows its stored path', () => {
+    const { t } = deps('en');
+    expect(fileChangeText('document', null, '/files/contract-documents/a.pdf', t)).toBe('Document attached');
+    expect(contractValue('document', '/files/contract-documents/a.pdf', 'en')).toBe('Uploaded');
+  });
+});
+
 describe('changeRows: an insurance edit', () => {
   it('keeps one line per changed field, labelled in the screen language', () => {
     const changes = [

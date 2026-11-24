@@ -303,8 +303,13 @@ export function EmployeeForm({
               <div aria-hidden="true" className="hidden sm:block" />
             </>
           ) : null}
-          <DateField control={control} name="contractStart" label={t('employees.fields.contractStart')} hint={isEdit ? undefined : t('employees.hints.contract')} required />
-          <DateField control={control} name="contractEnd" label={t('employees.fields.contractEnd')} required />
+          {/* The first contract's dates, on create only: afterwards they change only through Contracts (renew, end). */}
+          {isEdit ? null : (
+            <>
+              <DateField control={control} name="contractStart" label={t('employees.fields.contractStart')} hint={t('employees.hints.contract')} required />
+              <DateField control={control} name="contractEnd" label={t('employees.fields.contractEnd')} required />
+            </>
+          )}
           <SwitchField control={control} name="usesBus" label={t('employees.fields.usesBus')} hint={t('employees.hints.usesBus')} className="sm:col-span-2" />
         </Section>
 

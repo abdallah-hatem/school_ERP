@@ -515,7 +515,11 @@
       "latenessCheckDay": "Lateness check day",
       "latenessCheckDayHint": "The day of the month lateness is due.",
       "payrollCheckDay": "Payroll check day",
-      "payrollCheckDayHint": "The day of the month payroll is due."
+      "payrollCheckDayHint": "The day of the month payroll is due.",
+      "renewalDecisionsDays": "Renewal decisions reminder",
+      "renewalDecisionsDaysHint": "Days before 31 May; 91 = from 1 March.",
+      "noticeWindowCloseDays": "Non-renewal deadline reminder",
+      "noticeWindowCloseDaysHint": "Days before the non-renewal deadline."
     },
     "retention": {
       "title": "Keep notifications",
@@ -537,7 +541,9 @@
       "contractEndDays": "Between 1 and 120 days.",
       "contractEndSecondDays": "0 to 60 days, and fewer than the first reminder.",
       "probationEndDays": "Between 1 and 60 days.",
-      "checkDay": "A day from 1 to 31."
+      "checkDay": "A day from 1 to 31.",
+      "renewalDecisionsDays": "Between 1 and 180 days.",
+      "noticeWindowCloseDays": "Between 1 and 60 days."
     }
   }
 }

@@ -38,12 +38,13 @@ const keysOf = (role: string) => Object.keys(BUILT_IN_ROLES.find((r) => r.key ==
 afterEach(cleanup);
 
 describe('Home without hr.dashboard.view', () => {
-  it('a Stage head: greeted by name, links to Employees, Penalties, Settings and My account — no figures, no request', () => {
+  it('a Stage head: greeted by name, links to Employees, Contracts, Penalties, Settings and My account — no figures, no request', () => {
     renderAs({ ...sessionWith(...STAGE_HEAD_KEYS), name: 'Mona Adel' });
     expect(screen.getByRole('heading', { level: 1, name: 'Welcome, Mona Adel' })).toBeTruthy();
     expect(screen.getByText('Test School. These are the screens you can open.')).toBeTruthy();
     expect(links()).toEqual([
       ['Employees', '/en/employees'],
+      ['Contracts', '/en/contracts'],
       ['Penalties', '/en/penalties'],
       ['Settings', '/en/settings'],
       ['My account', '/en/account'],
@@ -73,7 +74,7 @@ describe('Home without hr.dashboard.view', () => {
   });
 
   it('welcomeScreens follows SCREENS: never Home itself, in menu order', () => {
-    expect(welcomeScreens(STAGE_HEAD_KEYS).map((s) => s.key)).toEqual(['employees', 'penalties', 'settings']);
+    expect(welcomeScreens(STAGE_HEAD_KEYS).map((s) => s.key)).toEqual(['employees', 'contracts', 'penalties', 'settings']);
     expect(welcomeScreens([]).length).toBe(0);
   });
 });

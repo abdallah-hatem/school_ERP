@@ -267,6 +267,8 @@ function NotificationSettingsForm({
               <>
                 <TimingField form={form} name="hr.reminders.latenessCheckDay" suffix={ofMonth} placeholder="25" disabled={!canEditHr} />
                 <TimingField form={form} name="hr.reminders.payrollCheckDay" suffix={ofMonth} placeholder="28" disabled={!canEditHr} />
+                <TimingField form={form} name="hr.reminders.renewalDecisionsDays" suffix={days} placeholder="91" disabled={!canEditHr} />
+                <TimingField form={form} name="hr.reminders.noticeWindowCloseDays" suffix={days} placeholder="7" disabled={!canEditHr} />
               </>
             ) : null}
           </div>
