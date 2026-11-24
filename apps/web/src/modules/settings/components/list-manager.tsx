@@ -24,10 +24,11 @@ const MANAGE_PERMISSION: Record<ListKind, PermissionKey> = {
   stages: 'core.stages.manage',
   departments: 'hr.lists.manage',
   jobTitles: 'hr.lists.manage',
+  employeeGrades: 'hr.lists.manage',
 };
 
 /**
- * One managed list — stages, departments or job titles (§3, §7): add, rename, hide / show. No
+ * One managed list — stages, departments, job titles or grades (§3, §7): add, rename, hide / show. No
  * delete: an item in use is hidden from new choices. The API pages the list (`?<kind>Page=` in the
  * URL, beside `?section=`); the browser only shows that page. Job titles also have the "Manages
  * people" switch (in the add / edit dialog) and a badge on the titles that have it.

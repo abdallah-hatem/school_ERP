@@ -226,7 +226,7 @@ export function EmployeeDetails({ employee }: { employee: Employee }) {
         <DetailsItem label={t('employees.fields.jobTitle')}>{localName(employee.jobTitle, locale)}</DetailsItem>
         <DetailsItem label={t('employees.fields.workSystem')}>{t(`common.enums.workSystem.${employee.workSystem}`)}</DetailsItem>
         {/* Grade before the manager line and the fingerprint across: the two columns stay full. */}
-        <DetailsItem label={t('employees.fields.grade')}>{text(employee.grade)}</DetailsItem>
+        <DetailsItem label={t('employees.fields.grade')}>{text(employee.employeeGrade ? localName(employee.employeeGrade, locale) : null)}</DetailsItem>
         <DetailsItem label={t('employees.fields.otherStages')} wide>
           {employee.otherStages.length > 0 ? <OtherStageTags stages={employee.otherStages} /> : t('employees.otherStages.none')}
         </DetailsItem>

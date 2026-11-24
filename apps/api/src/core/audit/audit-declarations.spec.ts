@@ -113,6 +113,8 @@ describe('every write endpoint declares its audit (D6)', () => {
       ['PATCH /hr/departments/:id', 'hr.department.update'],
       ['POST /hr/job-titles', 'hr.job_title.create'],
       ['PATCH /hr/job-titles/:id', 'hr.job_title.update'],
+      ['POST /hr/employee-grades', 'hr.employee_grade.create'],
+      ['PATCH /hr/employee-grades/:id', 'hr.employee_grade.update'],
       ['POST /hr/penalty-groups', 'hr.penalty_group.create'],
       ['PATCH /hr/penalty-groups/:id', 'hr.penalty_group.update'],
       ['POST /hr/penalty-groups/:groupId/violations', 'hr.violation.create'],

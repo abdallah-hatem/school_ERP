@@ -5,6 +5,7 @@ import type {
   Department,
   Employee,
   EmployeeSummary,
+  EmployeeGrade,
   JobTitle,
   ListEmployeesQuery,
   ListStagesQuery,
@@ -165,6 +166,16 @@ export async function GET_DEPARTMENTS(query: ListStagesQuery = {}) {
 /** `GET /hr/job-titles` — one page, as departments. */
 export async function GET_JOB_TITLES(query: ListStagesQuery = {}) {
   const response = await apiFetch<JobTitle[]>('/hr/job-titles', {
+    method: 'GET',
+    params: listParams({ limit: PAGINATION.defaultLimit, ...query }),
+    next: { tags: [LISTS_TAG] },
+  });
+  return handleResponse({ response });
+}
+
+/** `GET /hr/employee-grades` (§3, owner 2026-11-24) — one page, as departments. */
+export async function GET_EMPLOYEE_GRADES(query: ListStagesQuery = {}) {
+  const response = await apiFetch<EmployeeGrade[]>('/hr/employee-grades', {
     method: 'GET',
     params: listParams({ limit: PAGINATION.defaultLimit, ...query }),
     next: { tags: [LISTS_TAG] },

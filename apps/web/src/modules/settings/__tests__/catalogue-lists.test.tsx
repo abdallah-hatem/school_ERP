@@ -365,4 +365,42 @@ describe('Managed lists (stages, departments, job titles)', () => {
     expect((await screen.findAllByText('No stages yet'))[0]).toBeTruthy();
     expect(screen.getAllByRole('button', { name: 'Add stage' }).length).toBeGreaterThan(1);
   });
+
+  it('grades (§3, owner 2026-11-24): paged by the API, renamed and added with both names only, in both languages', async () => {
+    const user = userEvent.setup();
+    const grades: ListItem[] = [
+      { id: 'g1', nameEn: 'Grade 1', nameAr: 'الدرجة الأولى', sortOrder: 1, isActive: true },
+      { id: 'g2', nameEn: 'Grade 2', nameAr: 'الدرجة الثانية', sortOrder: 2, isActive: true },
+    ];
+    serverList(grades);
+    renderSettings(<ListManager kind="employeeGrades" />);
+    expect((await screen.findAllByText('Grade 1'))[0]).toBeTruthy();
+    expect(api.GET_LIST_ITEMS).toHaveBeenCalledWith('employeeGrades', { page: 1, limit: 10 });
+    expect(screen.getAllByRole('heading', { name: 'Employee grades' }).length).toBeGreaterThan(0);
+
+    await chooseRowAction(user, 'Grade 2', 'Rename');
+    const rename = await screen.findByRole('dialog', { name: 'Rename Grade 2' });
+    // Grades have no "Manages people" switch.
+    expect(within(rename).queryByRole('switch')).toBeNull();
+    await user.clear(within(rename).getByRole('textbox', { name: /Name in English/ }));
+    await user.type(within(rename).getByRole('textbox', { name: /Name in English/ }), 'Senior');
+    await user.click(within(rename).getByRole('button', { name: 'Save' }));
+    await waitFor(() =>
+      expect(api.UPDATE_LIST_ITEM).toHaveBeenCalledWith('employeeGrades', 'g2', { nameEn: 'Senior', nameAr: 'الدرجة الثانية' }),
+    );
+
+    await user.click(screen.getAllByRole('button', { name: 'Add grade' })[0]!);
+    const add = await screen.findByRole('dialog', { name: 'Add grade' });
+    await user.type(within(add).getByRole('textbox', { name: /Name in English/ }), 'Grade 3');
+    await user.type(within(add).getByRole('textbox', { name: /Name in Arabic/ }), 'الدرجة الثالثة');
+    await user.click(within(add).getByRole('button', { name: 'Create' }));
+    await waitFor(() =>
+      expect(api.CREATE_LIST_ITEM).toHaveBeenCalledWith('employeeGrades', { nameEn: 'Grade 3', nameAr: 'الدرجة الثالثة', sortOrder: 3 }),
+    );
+
+    cleanup();
+    renderSettings(<ListManager kind="employeeGrades" />, 'ar');
+    expect((await screen.findAllByText('الدرجة الأولى'))[0]).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: 'إضافة درجة' }).length).toBeGreaterThan(0);
+  });
 });

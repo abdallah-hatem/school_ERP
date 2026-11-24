@@ -56,6 +56,7 @@ function SectionBody({ id }: { id: SettingsSectionId }): ReactNode {
         <div className="flex flex-col gap-6">
           <ListManager kind="departments" />
           <ListManager kind="jobTitles" />
+          <ListManager kind="employeeGrades" />
         </div>
       );
     case 'hrRules':

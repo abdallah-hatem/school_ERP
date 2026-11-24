@@ -20,6 +20,7 @@
     "employee": "موظف",
     "department": "قسم",
     "job_title": "مسمى وظيفي",
+    "employee_grade": "درجة وظيفية",
     "hr_settings": "قواعد الموارد البشرية",
     "penalty_group": "مجموعة جزاءات",
     "violation": "مخالفة",
@@ -93,6 +94,10 @@
       "job_title": {
         "create": "إضافة المسمى الوظيفي {entity}",
         "update": "تعديل المسمى الوظيفي {entity}"
+      },
+      "employee_grade": {
+        "create": "إضافة الدرجة الوظيفية {entity}",
+        "update": "تعديل الدرجة الوظيفية {entity}"
       },
       "settings": {
         "update": "تعديل قواعد الموارد البشرية"
@@ -173,6 +178,7 @@
     "jobTitleId": "المسمى الوظيفي",
     "managerId": "المدير المباشر",
     "grade": "الدرجة",
+    "employeeGradeId": "الدرجة",
     "workSystem": "نظام العمل",
     "basicSalary": "الراتب الأساسي",
     "fingerprintId": "رقم البصمة",
@@ -255,6 +261,7 @@
       },
       "departments": "القسم",
       "jobTitles": "المسمى الوظيفي",
+      "employee_grades": "الدرجة الوظيفية",
       "penaltyGroups": "مجموعة الجزاءات",
       "violations": "المخالفة"
     },

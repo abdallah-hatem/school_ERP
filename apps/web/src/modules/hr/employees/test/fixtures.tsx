@@ -29,6 +29,7 @@ export const stages: Stage[] = [
   stage('s-pri', 'Primary', 'الابتدائي', 2),
 ];
 export const jobTitles: ListItem[] = [item('j-teacher', 'Teacher', 'معلم', true, 1)];
+export const grades: ListItem[] = [item('g-1', 'Grade 1', 'الدرجة الأولى', true, 1), item('g-2', 'Grade 2', 'الدرجة الثانية', true, 2)];
 
 export const employee: Employee = {
   id: 'e-mona',
@@ -46,7 +47,7 @@ export const employee: Employee = {
   department: { id: 'd-math', nameEn: 'Mathematics', nameAr: 'الرياضيات' },
   jobTitle: { id: 'j-teacher', nameEn: 'Teacher', nameAr: 'معلم' },
   manager: null,
-  grade: null,
+  employeeGrade: null,
   workSystem: 'FULL_TIME',
   basicSalary: 1400000,
   fingerprintId: '1042',

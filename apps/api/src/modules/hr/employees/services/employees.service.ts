@@ -49,6 +49,7 @@ import { checkImageUpload, FileStorageService, type UploadedFileLike } from '../
 import { fromIsoDate, todayIsoDate, toIsoDate } from '../../../../common/utils/dates.util';
 import { DepartmentsService } from '../../lists/services/departments.service';
 import { JobTitlesService } from '../../lists/services/job-titles.service';
+import { EmployeeGradesService } from '../../lists/services/employee-grades.service';
 import { HrRemindersService } from '../../reminders/hr-reminders.service';
 import { HrSettingsService } from '../../settings/hr-settings.service';
 import { ContractRecords } from '../../contracts/services/contract-records.service';
@@ -168,6 +169,7 @@ export class EmployeesService {
     private readonly repository: EmployeesRepository,
     private readonly departments: DepartmentsService,
     private readonly jobTitles: JobTitlesService,
+    private readonly employeeGrades: EmployeeGradesService,
     private readonly events: DomainEvents,
     private readonly files: FileStorageService,
     private readonly access: HrAccessService,
@@ -408,7 +410,7 @@ export class EmployeesService {
         departmentId: dto.departmentId,
         jobTitleId: dto.jobTitleId,
         managerId: dto.managerId ?? null,
-        grade: dto.grade ?? null,
+        employeeGradeId: dto.employeeGradeId ?? null,
         workSystem: dto.workSystem,
         basicSalary: dto.basicSalary,
         fingerprintId: dto.fingerprintId ?? null,
@@ -477,6 +479,7 @@ export class EmployeesService {
         stageId: dto.stageId !== current.stage.id ? dto.stageId : undefined,
         departmentId: dto.departmentId !== current.department.id ? dto.departmentId : undefined,
         jobTitleId: dto.jobTitleId !== current.jobTitle.id ? dto.jobTitleId : undefined,
+        employeeGradeId: dto.employeeGradeId && dto.employeeGradeId !== current.employeeGrade?.id ? dto.employeeGradeId : undefined,
       });
       const insurance = this.resolveInsurance(dto, current);
       await this.assertUnique({ ...dto, insuranceNumber: insurance.insuranceNumber }, id);
@@ -737,6 +740,7 @@ export class EmployeesService {
     stageId?: string;
     departmentId?: string;
     jobTitleId?: string;
+    employeeGradeId?: string | null;
   }): Promise<void> {
     if (ids.stageId) {
       const stage = await this.repository.findStage(ids.stageId);
@@ -745,6 +749,7 @@ export class EmployeesService {
     }
     if (ids.departmentId) await this.departments.getSelectable(ids.departmentId);
     if (ids.jobTitleId) await this.jobTitles.getSelectable(ids.jobTitleId);
+    if (ids.employeeGradeId) await this.employeeGrades.getSelectable(ids.employeeGradeId);
   }
 
   /** National ID and fingerprint ID are unique when given; keeping your own is fine. */

@@ -26,6 +26,7 @@ export const AuditEntityType = {
   EMPLOYEE: 'employee',
   DEPARTMENT: 'department',
   JOB_TITLE: 'job_title',
+  EMPLOYEE_GRADE: 'employee_grade',
   HR_SETTINGS: 'hr_settings',
   PENALTY_GROUP: 'penalty_group',
   VIOLATION: 'violation',
@@ -167,6 +168,16 @@ export const AUDIT_ACTIONS = {
   'hr.job_title.update': {
     module: 'hr',
     entityType: E.JOB_TITLE,
+    kind: 'update',
+  },
+  'hr.employee_grade.create': {
+    module: 'hr',
+    entityType: E.EMPLOYEE_GRADE,
+    kind: 'create',
+  },
+  'hr.employee_grade.update': {
+    module: 'hr',
+    entityType: E.EMPLOYEE_GRADE,
     kind: 'update',
   },
   // hr — rules
@@ -317,6 +328,8 @@ export const SETTINGS_HISTORY_ACTIONS = {
   'hr.department.update': 'lists',
   'hr.job_title.create': 'lists',
   'hr.job_title.update': 'lists',
+  'hr.employee_grade.create': 'lists',
+  'hr.employee_grade.update': 'lists',
   'hr.penalty_group.create': 'catalogue',
   'hr.penalty_group.update': 'catalogue',
   'hr.violation.create': 'catalogue',

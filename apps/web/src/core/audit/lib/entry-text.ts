@@ -475,6 +475,7 @@ export function recordHref(entry: Pick<AuditEntry, 'entityType' | 'entityId'>, l
       return settingsHref(locale, 'structure');
     case 'department':
     case 'job_title':
+    case 'employee_grade':
       return settingsHref(locale, 'lists');
     case 'hr_settings':
       return settingsHref(locale, 'hrRules');
