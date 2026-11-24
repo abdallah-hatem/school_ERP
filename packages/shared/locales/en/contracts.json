@@ -30,7 +30,7 @@
       "other": "{count} ended with no decision"
     },
     "notices": "Notices received",
-    "noticesSub": "Early {early} · late {late}",
+    "noticesSub": "{early} early · {late} late",
     "toDeactivate": "To deactivate",
     "toDeactivateSub": "Not renewed or ended, still active",
     "showing": "Showing only these"

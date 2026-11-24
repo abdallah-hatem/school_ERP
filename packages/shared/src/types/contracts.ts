@@ -201,7 +201,7 @@ export interface ListContractsQuery extends PaginationQuery {
 export interface ContractTotals {
   /** Every contract ending this contract year. */
   ending: number;
-  /** Of every active contract, for "of N active contracts". */
+  /** Contracts running today (any decision), active employees: "of N active contracts". */
   activeContracts: number;
   decided: number;
   renewing: number;

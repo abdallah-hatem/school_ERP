@@ -185,7 +185,7 @@ export class ContractsRepository {
     const [row] = await this.db.$queryRaw<Record<string, bigint>[]>`
       SELECT
         COUNT(*) FILTER (WHERE ${year})::bigint AS ending,
-        COUNT(*) FILTER (WHERE c."status" = 'ACTIVE' AND e."status" = 'ACTIVE' AND c."starts_on" <= ${t} AND c."ends_on" >= ${t})::bigint AS active_contracts,
+        COUNT(*) FILTER (WHERE e."status" = 'ACTIVE' AND c."starts_on" <= ${t} AND COALESCE(c."ended_on", c."ends_on") >= ${t})::bigint AS active_contracts,
         COUNT(*) FILTER (WHERE ${year} AND ${d.DECIDED})::bigint AS decided,
         COUNT(*) FILTER (WHERE ${year} AND ${d.RENEWED})::bigint AS renewing,
         COUNT(*) FILTER (WHERE ${year} AND c."status" = 'NOT_RENEWED')::bigint AS not_renewing,
