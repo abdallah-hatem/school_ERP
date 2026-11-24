@@ -193,12 +193,13 @@ export function TemplateEditor({ template, listHref }: { template: ContractTempl
       ? t('contractTemplates.editor.lastChanged', { when: formatDateTime(meta.updatedAt, locale), name: meta.updatedBy })
       : t('contractTemplates.editor.notSaved');
 
+  // Each language stays mounted (its own undo history); the other one is hidden, its loading
+  // shape too.
   const editorFor = (l: ContractLanguage) => (
+    <div key={`${meta.id ?? 'new'}-${l}`} hidden={l !== language}>
     <DocumentEditor
-      key={`${meta.id ?? 'new'}-${l}`}
       initial={initialDocs[l]}
       language={l}
-      hidden={l !== language}
       label={t('contractTemplates.editor.canvasLabel', { language: t(`contractTemplates.languages.${l}`) })}
       handleRef={(h) => {
         editors.current[l] = h;
@@ -228,6 +229,7 @@ export function TemplateEditor({ template, listHref }: { template: ContractTempl
         </Button>
       }
     />
+    </div>
   );
 
   return (
