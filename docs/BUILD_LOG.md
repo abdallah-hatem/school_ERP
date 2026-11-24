@@ -654,11 +654,15 @@ phase live in `docs/build-log/`.
   "40 of 38" tile. Plus nits (school's note hidden, `::date` casts, reminder re-arm on withdraw).
   API e2e and phone smoke failed on CI. All sent back to the build agent; the 10 indexes on
   `employee_contracts` stay (project rule: every foreign key and filtered column).
+- 2026-11-24 — **Contracts (16) merged into `dev`** (PR #275, CI all green): contract history, the
+  renewals page (layout A), notices, early termination, ending for other reasons (a renewed contract
+  too — its renewal is cancelled, kept), New contract and Undo not-renewing, the school calendar in HR
+  rules, renewal-season reminders, earlier seasons' open rows carried over. Every review finding
+  fixed with a test; screens checked (EN desktop, AR phone, loading states). The builder ran out of
+  context twice; a takeover agent overlapped it briefly and stopped without pushing.
 
 ## Next up
 
-- **Contracts (16)** (owner, 2026-11-24): spec approved, renewals layout A picked; PR #275 open, fixing
-  review findings and CI (2026-11-24). The §2/§3/§11 edits land with the code.
 - **Students module, then the clinic** (owner, 2026-11-24): the clinic treats students (and staff), so the
   students module (student records, guardians, class placement, on top of academics' basic structure)
   is planned first, then the clinic on top of it. Order in `docs/ROADMAP.md`; spec not written yet.
