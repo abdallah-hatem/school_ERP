@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { ErrorCode } from '../errors';
 import type { SchoolCalendarDates } from '../types/contracts';
 import {
-  calendarYearOfContract,
+  calendarYearsOfContract,
+  defaultNewContractStart,
+  newContractRefusal,
+  nonRenewalUndoRefusal,
+  pickCalendar,
   contractDecision,
   contractYearOf,
   contractYearRange,
@@ -48,8 +52,31 @@ describe('contract years', () => {
     expect(renewedContractDates('2026-08-31')).toEqual({ startsOn: '2026-09-01', endsOn: '2027-08-31' });
     // 1 Sep 2025 – 31 Aug 2026 ends in 2026/27 → that year's renewal screen …
     expect(contractYearOf('2026-08-31')).toBe(2026);
-    // … and reads the calendar of the year it started in (the terms it runs through).
-    expect(calendarYearOfContract('2025-09-01')).toBe(2025);
+    // … and reads the calendar of the year its terms fall in (2025/26: the terms it runs through).
+    expect(calendarYearsOfContract({ startsOn: '2025-09-01', endsOn: '2026-08-31' })).toEqual([2025, 2026]);
+    const cals = new Map([
+      [2025, { term1Start: '2025-09-15', term1End: '2026-01-28', term2Start: '2026-02-07', nonRenewalDeadline: '2026-04-30' }],
+      [2026, CAL],
+    ]);
+    expect(pickCalendar({ startsOn: '2025-09-01', endsOn: '2026-08-31' }, cals, 'notice')?.term2Start).toBe('2026-02-07');
+    expect(pickCalendar({ startsOn: '2025-09-01', endsOn: '2026-08-31' }, cals, 'earlyTermination')?.term1Start).toBe('2025-09-15');
+  });
+
+  it('review 4 — a 1 Feb – 31 Jan contract: the notice window of the year whose term 2 falls inside it, early termination of the year whose term 1 does', () => {
+    const c = { startsOn: '2026-02-01', endsOn: '2027-01-31' };
+    const prev = { term1Start: '2025-09-15', term1End: '2026-01-28', term2Start: '2026-02-07', nonRenewalDeadline: '2026-04-30' };
+    const cals = new Map([
+      [2025, prev],
+      [2026, CAL],
+    ]);
+    expect(pickCalendar(c, cals, 'notice')).toBe(prev);
+    expect(pickCalendar(c, cals, 'earlyTermination')).toBe(CAL);
+    // The year it needs isn't set → "calendar not set", never another year's dates.
+    expect(pickCalendar(c, new Map([[2025, null], [2026, CAL]]), 'notice')).toBeNull();
+    // A 1 Jun – 31 May contract reads its own year for both.
+    const std = { startsOn: '2026-06-01', endsOn: '2027-05-31' };
+    expect(pickCalendar(std, new Map([[2026, CAL]]), 'notice')).toBe(CAL);
+    expect(pickCalendar(std, new Map([[2026, CAL]]), 'earlyTermination')).toBe(CAL);
   });
 
   it('a leap day: renewing a contract ending 28 Feb 2028 starts 29 Feb', () => {
@@ -96,6 +123,7 @@ describe('decisions', () => {
     expect(contractDecision(state({ status: 'NOT_RENEWED', nonRenewalBy: 'SCHOOL' }), '2026-10-01')).toBe('NOT_RENEWED_SCHOOL');
     expect(contractDecision(state({ status: 'NOT_RENEWED', nonRenewalBy: 'EMPLOYEE' }), '2026-10-01')).toBe('NOTICE');
     expect(contractDecision(state({ status: 'ENDED_EARLY' }), '2026-10-01')).toBe('ENDED_EARLY');
+    expect(contractDecision(state({ status: 'CANCELLED' }), '2026-10-01')).toBe('CANCELLED');
   });
 
   it('edge 1 — renewing an employee who is already renewed → refused, "already renewed"', () => {
@@ -130,13 +158,33 @@ describe('decisions', () => {
     expect(noticeWithdrawalRefusal({ ...notice, status: 'ACTIVE' }, '2027-01-01')).toBe(ErrorCode.CONTRACT_NO_NOTICE);
   });
 
-  it('an end for another reason: from today, within the contract; not a renewed or ended one', () => {
+  it('review 3 — a new contract: an active employee with no active contract, after every contract they have', () => {
+    const ended = { status: 'NOT_RENEWED', startsOn: '2025-06-01', lastDay: '2026-05-31' } as const;
+    expect(newContractRefusal(true, [ended], '2026-06-01')).toBeNull();
+    expect(newContractRefusal(true, [ended], '2026-05-31')).toBe(ErrorCode.CONTRACT_OVERLAP);
+    expect(newContractRefusal(false, [ended], '2026-06-01')).toBe(ErrorCode.EMPLOYEE_INACTIVE);
+    expect(newContractRefusal(true, [{ ...ended, status: 'ACTIVE' }], '2027-06-01')).toBe(ErrorCode.CONTRACT_ACTIVE_EXISTS);
+    // A cancelled next contract (it never started) doesn't block the dates.
+    expect(newContractRefusal(true, [ended, { status: 'CANCELLED', startsOn: '2026-06-01', lastDay: '2027-05-31' }], '2026-06-01')).toBeNull();
+    expect(defaultNewContractStart('2026-11-24')).toBe('2026-06-01');
+    expect(defaultNewContractStart('2027-03-01')).toBe('2026-06-01');
+  });
+
+  it("review 3 — the school's not-renewing is undone only before the end, and only the school's", () => {
+    const school = { status: 'NOT_RENEWED', nonRenewalBy: 'SCHOOL', endsOn: '2027-05-31' } as const;
+    expect(nonRenewalUndoRefusal(school, '2027-05-31')).toBeNull();
+    expect(nonRenewalUndoRefusal(school, '2027-06-01')).toBe(ErrorCode.CONTRACT_ENDED);
+    expect(nonRenewalUndoRefusal({ ...school, nonRenewalBy: 'EMPLOYEE' }, '2027-01-01')).toBe(ErrorCode.CONTRACT_NOT_SCHOOL_DECISION);
+  });
+
+  it('an end for another reason: from today, within the contract; a renewed one too (review 2), not an ended one', () => {
     const c = { status: 'ACTIVE', startsOn: '2026-06-01', endsOn: '2027-05-31', earlyTerminationStatus: null } as const;
     expect(endRefusal(c, '2026-11-24', '2026-11-24')).toBeNull();
     expect(endRefusal(c, '2026-11-23', '2026-11-24')).toBe(ErrorCode.CONTRACT_END_DATE_INVALID);
     expect(endRefusal(c, '2027-06-01', '2026-11-24')).toBe(ErrorCode.CONTRACT_END_DATE_INVALID);
     expect(endRefusal({ ...c, status: 'NOT_RENEWED' }, '2027-01-01', '2026-11-24')).toBeNull();
-    expect(endRefusal({ ...c, status: 'RENEWED' }, '2027-01-01', '2026-11-24')).toBe(ErrorCode.CONTRACT_ALREADY_RENEWED);
+    expect(endRefusal({ ...c, status: 'RENEWED' }, '2027-01-01', '2026-11-24')).toBeNull();
+    expect(endRefusal({ ...c, status: 'CANCELLED' }, '2027-01-01', '2026-11-24')).toBe(ErrorCode.CONTRACT_DECIDED);
     expect(endRefusal({ ...c, status: 'ENDED_EARLY' }, '2027-01-01', '2026-11-24')).toBe(ErrorCode.CONTRACT_DECIDED);
   });
 

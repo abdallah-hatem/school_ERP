@@ -10,6 +10,7 @@ import {
 import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
 import { createAppAsTestUser, giveRoles } from './helpers/as-test-user';
+import { deleteEmployees } from './helpers/employees';
 
 /*
  * §4 two steps and §3 several stages (owner 2026-11-21) against the real database: where a new
@@ -174,7 +175,7 @@ describe('Penalties in two steps — stage review, then HR (e2e)', () => {
     await db.user.deleteMany({ where: { id: { in: users } } });
     await db.role.deleteMany({ where: { id: { in: roles } } });
     await db.employeeStage.deleteMany({ where: { employeeId: { in: employees } } });
-    await db.employee.deleteMany({ where: { id: { in: employees } } });
+    await deleteEmployees(db, { where: { id: { in: employees } } });
     await db.violation.deleteMany({ where: { groupId } });
     await db.penaltyGroup.deleteMany({ where: { id: groupId } });
     await db.department.deleteMany({ where: { id: departmentId } });

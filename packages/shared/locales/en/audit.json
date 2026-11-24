@@ -135,7 +135,9 @@
         "early_termination_approve": "Approved the early termination of {entity}",
         "early_termination_reject": "Rejected the early termination request of {entity}",
         "end": "Ended the contract of {entity}",
-        "document_open": "Opened a contract document of {entity}"
+        "document_open": "Opened a contract document of {entity}",
+        "cancel": "Cancelled the next contract of {entity}",
+        "not_renew_undo": "Undid the not-renewing of {entity}'s contract"
       },
       "school_calendar": {
         "update": "Changed the school calendar for {entity}"

@@ -7,6 +7,7 @@ import { RemindersRepository } from '../src/modules/hr/reminders/repositories/re
 import { http, unique } from './helpers';
 import { createAppAsTestUser, giveRoles } from './helpers/as-test-user';
 import { outboxIdle } from './helpers/events';
+import { deleteEmployees } from './helpers/employees';
 
 /*
  * HR's daily reminders (N3, plan docs/plans/2026-11-18-notifications-plan.md → N3 edge cases),
@@ -142,7 +143,7 @@ describe('HR reminders — hr.reminders.daily (e2e)', () => {
     await db.schoolSetting.deleteMany({ where: { key: { in: REMINDER_KEYS } } });
     await db.user.deleteMany({ where: { id: { in: users } } });
     await db.role.deleteMany({ where: { id: roleId } });
-    await db.employee.deleteMany({ where: { id: { in: employees } } });
+    await deleteEmployees(db, { where: { id: { in: employees } } });
     await db.department.deleteMany({ where: { id: departmentId } });
     await db.jobTitle.deleteMany({ where: { id: jobTitleId } });
     await db.stage.deleteMany({ where: { id: { in: [stageA, stageB] } } });

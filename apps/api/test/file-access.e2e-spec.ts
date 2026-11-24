@@ -3,6 +3,7 @@ import { AUTH_COOKIES, type CreateEmployeeRequest, type Employee, type Role, typ
 import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
 import { ANONYMOUS_HEADER, createAppAsTestUser } from './helpers/as-test-user';
+import { deleteEmployees } from './helpers/employees';
 
 /*
  * Files follow their record (docs/ARCHITECTURE.md → Security): an employee photo opens for whoever
@@ -119,7 +120,7 @@ describe('file access follows the record (e2e)', () => {
     await db.loginAttempt.deleteMany({ where: { email: { in: emails } } });
     await db.user.deleteMany({ where: { id: { in: made.users } } }); // tokens cascade
     await db.role.deleteMany({ where: { id: { in: made.roles } } });
-    await db.employee.deleteMany({ where: { id: { in: made.employees } } });
+    await deleteEmployees(db, { where: { id: { in: made.employees } } });
     await db.department.deleteMany({ where: { id: { in: made.departments } } });
     await db.jobTitle.deleteMany({ where: { id: { in: made.jobTitles } } });
     await db.stage.deleteMany({ where: { id: { in: made.stages } } });

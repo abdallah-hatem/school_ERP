@@ -14,6 +14,7 @@ import { MonthLockService } from '../src/modules/hr/month-lock/month-lock.servic
 import { http, unique } from './helpers';
 import { outboxIdle } from './helpers/events';
 import { createAppAsTestUser, giveRoles } from './helpers/as-test-user';
+import { deleteEmployees } from './helpers/employees';
 
 /*
  * §10 accounting payroll taxes: worked out once when HR approves a month, from the accounting tax
@@ -170,7 +171,7 @@ describe('Accounting — payroll taxes of approved months (e2e)', () => {
   afterAll(async () => {
     await db.accountingPayrollRun.deleteMany({ where: { month: { in: usedMonths } } });
     await db.payrollRun.deleteMany({ where: { month: { in: usedMonths } } });
-    await db.employee.deleteMany({});
+    await deleteEmployees(db);
     await db.department.deleteMany({});
     await db.jobTitle.deleteMany({});
     await db.stage.deleteMany({});

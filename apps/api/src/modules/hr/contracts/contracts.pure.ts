@@ -46,16 +46,24 @@ export function contractAuditSnapshot(row: ContractRow): Record<string, unknown>
   };
 }
 
+/** The school calendars a contract reads (`pickCalendar`): its notice window's and its early termination's. */
+export interface ContractCalendars {
+  notice: SchoolCalendarDates | null;
+  earlyTermination: SchoolCalendarDates | null;
+}
+
 /**
  * The row as the API returns it on `today`. `actorEmployeeId`: the viewer's linked employee (their
- * own contract has no actions); `calendar`: the school calendar the contract reads (where an early
- * termination would end).
+ * own contract has no actions); `calendars`: the school calendars the contract reads (where an
+ * early termination would end); `listedYear`: the renewal screen's year, when listed there (a row
+ * of an earlier year is "carried over").
  */
 export function toContract(
   row: ContractRow,
   today: string,
   actorEmployeeId: string | null,
-  calendar: SchoolCalendarDates | null,
+  calendars: ContractCalendars,
+  listedYear?: number,
 ): Contract {
   const endsOn = toIsoDate(row.endsOn);
   const endedOn = day(row.endedOn);
@@ -87,6 +95,7 @@ export function toContract(
       today,
     ),
     nonRenewalBy: row.nonRenewalBy,
+    note: row.note,
     notice: row.noticeReceivedOn
       ? {
           receivedOn: toIsoDate(row.noticeReceivedOn),
@@ -103,7 +112,7 @@ export function toContract(
             timing: row.earlyTerminationTiming ?? 'CALENDAR_NOT_SET',
             note: row.earlyTerminationNote,
             fileUrl: row.earlyTerminationFileUrl,
-            wouldEndOn: row.earlyTerminationStatus === 'APPROVED' ? endedOn : (calendar?.term1End ?? null),
+            wouldEndOn: row.earlyTerminationStatus === 'APPROVED' ? endedOn : (calendars.earlyTermination?.term1End ?? null),
             decidedBy: row.earlyTerminationDecidedBy,
             decidedAt: row.earlyTerminationDecidedAt?.toISOString() ?? null,
             rejectReason: row.earlyTerminationRejectReason,
@@ -120,6 +129,8 @@ export function toContract(
       : null,
     toDeactivate: isToDeactivate({ status: row.status, endsOn, endedOn }, employeeActive, today),
     ownContract: actorEmployeeId !== null && actorEmployeeId === row.employeeId,
+    carriedOver: listedYear !== undefined && contractYearOf(endsOn) < listedYear,
+    calendars,
   };
 }
 

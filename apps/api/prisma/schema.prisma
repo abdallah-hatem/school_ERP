@@ -532,6 +532,8 @@ enum ContractStatus {
   RENEWED
   NOT_RENEWED
   ENDED_EARLY
+  /// A renewal's next contract that never started: the one before it ended early.
+  CANCELLED
 }
 
 enum NonRenewalBy {
@@ -845,8 +847,13 @@ model PenaltyRecord {
 
 /// §3 Contracts (spec 2026-11-24): one row per contract year, kept forever. At most one ACTIVE per
 /// employee (a partial unique index); the employee's contract_start / contract_end are the current
-/// one, written only by the contracts service. Status changes are made under a row lock. Employees
-/// are never deleted (§3); the cascade only lets a test's cleanup remove its own employees.
+/// one, written only by the contracts service. Status changes are made under a row lock. Kept
+/// forever: an employee with contracts can't be deleted (Restrict; employees are never deleted, §3).
+///
+/// WARNING: "one ACTIVE contract per employee" is a partial unique index that exists only in SQL
+/// (`employee_contracts_one_active_per_employee`, migration 20261124100000_employee_contracts) —
+/// Prisma can't declare it. `prisma migrate dev --create-only` would generate a DROP INDEX for it:
+/// remove that line from any new migration.
 model EmployeeContract {
   id                           String                  @id @default(uuid()) @db.Uuid
   employeeId                   String                  @map("employee_id") @db.Uuid
@@ -877,10 +884,13 @@ model EmployeeContract {
   decidedAt                    DateTime?               @map("decided_at")
   /// The renewal's contract.
   nextContractId               String?                 @unique @map("next_contract_id") @db.Uuid
+  /// Set when a notice is withdrawn or a not-renewing undone: "Contract ends soon" may be sent again
+  /// for the same date (a new dedupe key), since the earlier one was resolved by the decision.
+  remindersRearmedAt           DateTime?               @map("reminders_rearmed_at")
   createdAt                    DateTime                @default(now()) @map("created_at")
   updatedAt                    DateTime                @updatedAt @map("updated_at")
 
-  employee                  Employee          @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employee                  Employee          @relation(fields: [employeeId], references: [id], onDelete: Restrict)
   decidedBy                 User?             @relation("ContractDecidedBy", fields: [decidedById], references: [id], onDelete: SetNull)
   earlyTerminationDecidedBy User?             @relation("ContractEarlyTerminationDecidedBy", fields: [earlyTerminationDecidedById], references: [id], onDelete: SetNull)
   nextContract              EmployeeContract? @relation("ContractRenewal", fields: [nextContractId], references: [id], onDelete: SetNull)

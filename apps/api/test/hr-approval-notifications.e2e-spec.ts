@@ -12,6 +12,7 @@ import {
 import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
 import { createAppAsTestUser, giveRoles } from './helpers/as-test-user';
+import { deleteEmployees } from './helpers/employees';
 
 /*
  * HR's approval notifications (§11, plan docs/plans/2026-11-18-notifications-plan.md → N2 edge
@@ -249,7 +250,7 @@ describe('HR approval notifications — N2 (e2e)', () => {
     // Everything else this suite made, so later suites (hr-visibility counts every employee) start
     // clean: its employees (managers unlinked first), catalogue, departments and stages.
     await db.employee.updateMany({ where: { id: { in: employees } }, data: { managerId: null } });
-    await db.employee.deleteMany({ where: { id: { in: employees } } });
+    await deleteEmployees(db, { where: { id: { in: employees } } });
     await db.violation.deleteMany({ where: { groupId } });
     await db.penaltyGroup.deleteMany({ where: { id: groupId } });
     await db.department.deleteMany({ where: { id: departmentId } });

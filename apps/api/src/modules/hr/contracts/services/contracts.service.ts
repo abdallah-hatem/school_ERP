@@ -1,8 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import { isUUID } from 'class-validator';
 import {
   AuditEntityType,
-  calendarYearOfContract,
+  calendarYearsOfContract,
   CalendarTiming,
   CONTRACT_DOCUMENT_UPLOAD,
   ContractEndReason,
@@ -10,17 +11,22 @@ import {
   contractYearRange,
   ContractStatus,
   decisionRefusal,
+  defaultNewContractStart,
   EarlyTerminationStatus,
   earlyTerminationTiming,
   endRefusal,
   ErrorCode,
   isToDeactivate,
   lockedMonthCutBy,
+  newContractRefusal,
   NonRenewalBy,
+  nonRenewalUndoRefusal,
   noticeTiming,
   noticeWithdrawalRefusal,
   notificationDedupeKey,
+  oneYearContractEnd,
   PAGINATION,
+  pickCalendar,
   renewalRefusal,
   renewedContractDates,
   type AuthUser,
@@ -31,7 +37,6 @@ import {
   type IsoDate,
   type Paginated,
   type RefusedRenewal,
-  type SchoolCalendarDates,
 } from '@school-erp/shared';
 import { CodedException } from '../../../../common/errors/coded.exception';
 import { fromIsoDate, todayIsoDate, toIsoDate } from '../../../../common/utils/dates.util';
@@ -44,7 +49,7 @@ import { HrAccessService } from '../../access/hr-access.service';
 import { EmployeesService } from '../../employees/services/employees.service';
 import { MonthLockService } from '../../month-lock/month-lock.service';
 import { HrRemindersService } from '../../reminders/hr-reminders.service';
-import { contractAuditLabel, contractScopeFields, toContract } from '../contracts.pure';
+import { contractAuditLabel, contractScopeFields, toContract, type ContractCalendars } from '../contracts.pure';
 import type {
   EarlyTerminationDto,
   EmployeeContractsQueryDto,
@@ -59,6 +64,7 @@ import { SchoolCalendarService } from './school-calendar.service';
 export const CONTRACT_DOCUMENT_FOLDER = 'contract-documents';
 
 const VIEW = 'hr.contracts.view' as const;
+const MANAGE = 'hr.contracts.manage' as const;
 
 /** The HTTP status each refusal code answers with. */
 function refusal(code: ErrorCode): CodedException {
@@ -112,17 +118,22 @@ export class ContractsService {
     const page = query.page ?? PAGINATION.defaultPage;
     const limit = query.limit ?? PAGINATION.defaultLimit;
     const scope = await this.access.scope(VIEW);
+    // The current season also lists earlier years' rows still needing action (review 5): on 1 June
+    // last season's "to deactivate" and "ended, no decision" don't vanish from the default screen.
+    const carryOver = year === contractYearOf(today);
     const [{ rows, total }, totals, calendar] = await Promise.all([
       this.repository.listPage(
-        { from: start, to: end, today, decision: query.decision, stageId: query.stageId, search: query.search },
+        { from: start, to: end, today, carryOver, decision: query.decision, stageId: query.stageId, search: query.search },
         scope,
         page,
         limit,
       ),
-      this.repository.totals(start, end, today, scope),
+      this.repository.totals(start, end, today, carryOver, scope),
+      // The banner reads the calendar the year's 1 Jun – 31 May contracts read (`pickCalendar`: the
+      // year itself, for both the notice window and early termination).
       this.calendars.dates(year),
     ]);
-    return { items: await this.present(rows), total, page, limit, year, totals, calendar };
+    return { items: await this.present(rows, year), total, page, limit, year, totals, calendar };
   }
 
   /** One employee's contracts, newest first. 404 outside the viewer's scope (edge case 12). */
@@ -207,7 +218,7 @@ export class ContractsService {
       const actor = await this.access.actor();
       const byEmployee = dto.by === NonRenewalBy.EMPLOYEE;
       const timing = byEmployee
-        ? noticeTiming(dto.receivedOn!, await this.calendarOf(row))
+        ? noticeTiming(dto.receivedOn!, (await this.calendarsOf(row)).notice)
         : null;
       const after = await this.repository.update(id, {
         status: ContractStatus.NOT_RENEWED,
@@ -249,9 +260,67 @@ export class ContractsService {
         note: null,
         decidedById: null,
         decidedAt: null,
+        // Review 13: "Contract ends soon" may be sent again for the same end (it was resolved by the notice).
+        remindersRearmedAt: new Date(),
       });
       await this.records.record('hr.contract.notice_withdraw', row, after, { reason });
       return this.presentOne(after);
+    });
+  }
+
+  /**
+   * Undoes the school's not-renewing (review 3: the school changed its mind) while the contract
+   * hasn't ended, with a reason: active again, its contract-end reminder re-armed.
+   */
+  async undoNotRenew(id: string, reason: string): Promise<Contract> {
+    return this.afterCommit.inTransaction(async () => {
+      const [row] = await this.loadForWrite([id]);
+      const code = nonRenewalUndoRefusal(
+        { status: row.status, nonRenewalBy: row.nonRenewalBy, endsOn: toIsoDate(row.endsOn) },
+        this.today(),
+      );
+      if (code) throw refusal(code);
+      const after = await this.repository.update(id, {
+        status: ContractStatus.ACTIVE,
+        nonRenewalBy: null,
+        note: null,
+        decidedById: null,
+        decidedAt: null,
+        remindersRearmedAt: new Date(),
+      });
+      await this.records.record('hr.contract.not_renew_undo', row, after, { reason });
+      return this.presentOne(after);
+    });
+  }
+
+  /**
+   * A new contract for an active employee with no active one (review 3): a reactivated employee,
+   * or the school changed its mind after a not-renewing ended. From `startsOn` (default 1 June of
+   * the current contract year) for one year; never overlapping their other contracts. The
+   * employee's current contract dates move to it.
+   */
+  async newContract(employeeId: string, startsOn: IsoDate | undefined): Promise<Contract> {
+    return this.afterCommit.inTransaction(async () => {
+      await this.employees.assertInScope(VIEW, employeeId);
+      await this.employees.assertInScope(MANAGE, employeeId);
+      await this.access.assertLinkedForPay();
+      const actor = await this.access.actor();
+      if (actor?.employeeId && actor.employeeId === employeeId) throw refusal(ErrorCode.OWN_CONTRACT);
+      await this.repository.lockEmployee(employeeId);
+      await this.employees.assertActive([employeeId]);
+      const start = startsOn ?? defaultNewContractStart(this.today());
+      const periods = (await this.repository.periodsOfEmployee(employeeId)).map((c) => ({
+        status: c.status,
+        startsOn: toIsoDate(c.startsOn),
+        lastDay: toIsoDate(c.endedOn ?? c.endsOn),
+      }));
+      const code = newContractRefusal(true, periods, start);
+      if (code) throw refusal(code);
+      const end = oneYearContractEnd(start);
+      const created = await this.records.createFirst(employeeId, start, end);
+      await this.repository.setEmployeeContractDates(employeeId, start, end);
+      await this.reminders.contractChanged(employeeId, actor?.userId ?? null);
+      return this.presentOne(created);
     });
   }
 
@@ -268,7 +337,7 @@ export class ContractsService {
       const [row] = await this.loadForWrite([id]);
       const code = decisionRefusal(row);
       if (code) throw refusal(code);
-      const timing = earlyTerminationTiming(dto.requestedOn, await this.calendarOf(row));
+      const timing = earlyTerminationTiming(dto.requestedOn, (await this.calendarsOf(row)).earlyTermination);
       if (timing === CalendarTiming.EARLY || timing === CalendarTiming.LATE) {
         throw refusal(ErrorCode.EARLY_TERMINATION_OUTSIDE_WINDOW);
       }
@@ -306,7 +375,7 @@ export class ContractsService {
     return this.afterCommit.inTransaction(async () => {
       const [row] = await this.loadForWrite([id]);
       this.assertPendingRequest(row);
-      const calendar = await this.calendarOf(row);
+      const calendar = (await this.calendarsOf(row)).earlyTermination;
       if (!calendar) throw refusal(ErrorCode.SCHOOL_CALENDAR_NOT_SET);
       const endsOn = calendar.term1End;
       if (endsOn < toIsoDate(row.startsOn) || endsOn > toIsoDate(row.endsOn)) {
@@ -357,10 +426,16 @@ export class ContractsService {
    * Ends a contract for another reason (Article 148, resignation by agreement, death, other): a
    * date from today, within the contract, a note, an optional attachment. The paid months stand
    * (edge case 9). The employee's future reminders go away (edge case 10).
+   *
+   * A **renewed** contract can be ended too (review 2: dismissal or death in April after the
+   * renewal): in the same transaction its next contract — which hasn't started — is cancelled
+   * (kept, `CANCELLED`, its own entry), the link is cleared, and the employee's current dates point
+   * back at this contract. A next contract that already has a decision of its own is refused.
    */
   async end(id: string, dto: EndContractRequest): Promise<Contract> {
     return this.afterCommit.inTransaction(async () => {
       const [row] = await this.loadForWrite([id]);
+      if (row.nextContractId) await this.repository.lockForUpdate([row.id, row.nextContractId]);
       const code = endRefusal(
         {
           status: row.status,
@@ -375,8 +450,21 @@ export class ContractsService {
       await this.assertPaidMonthsStand(dto.endsOn);
       if (dto.fileUrl) await this.assertOwnDocument(id, dto.fileUrl);
       const actor = await this.access.actor();
+      if (row.status === ContractStatus.RENEWED && row.nextContractId) {
+        const next = await this.repository.findOne(row.nextContractId);
+        if (!next || next.status !== ContractStatus.ACTIVE || next.earlyTerminationStatus === EarlyTerminationStatus.REQUESTED) {
+          throw refusal(ErrorCode.CONTRACT_DECIDED);
+        }
+        const cancelled = await this.repository.update(next.id, {
+          status: ContractStatus.CANCELLED,
+          decidedById: actor?.userId ?? null,
+          decidedAt: new Date(),
+        });
+        await this.records.record('hr.contract.cancel', next, cancelled);
+      }
       const after = await this.repository.update(id, {
         status: ContractStatus.ENDED_EARLY,
+        nextContractId: null,
         endedOn: fromIsoDate(dto.endsOn),
         endReason: dto.reason,
         endNote: dto.note,
@@ -462,7 +550,9 @@ export class ContractsService {
     return this.repository.idsWhereEmployee(await this.access.where(VIEW));
   }
 
-  idsOfEmployee(employeeId: string): Promise<string[]> {
+  /** An employee's contracts (their History). A record id that isn't a UUID has none. */
+  async idsOfEmployee(employeeId: string): Promise<string[]> {
+    if (!isUUID(employeeId)) return [];
     return this.repository.idsOfEmployee(employeeId);
   }
 
@@ -485,8 +575,10 @@ export class ContractsService {
     if (ids.length === 0) throw new NotFoundException();
     if (options.lock !== false) await this.repository.lockForUpdate(ids);
     const rows = await this.repository.findMany(ids);
-    const scope: EmployeeScope = await this.access.scope(VIEW);
-    if (rows.length !== ids.length || rows.some((r) => !inScope(scope, contractScopeFields(r)))) {
+    // Review 1: the action's own scope too, like penalties — outside either → not found.
+    const [view, manage]: EmployeeScope[] = await Promise.all([this.access.scope(VIEW), this.access.scope(MANAGE)]);
+    const covered = (r: ContractRow) => inScope(view, contractScopeFields(r)) && inScope(manage, contractScopeFields(r));
+    if (rows.length !== ids.length || rows.some((r) => !covered(r))) {
       throw new NotFoundException();
     }
     if (options.own === false) return rows;
@@ -522,9 +614,28 @@ export class ContractsService {
     }
   }
 
-  /** The school calendar a contract reads: the contract year it started in. */
-  private calendarOf(row: ContractRow): Promise<SchoolCalendarDates | null> {
-    return this.calendars.dates(calendarYearOfContract(toIsoDate(row.startsOn)));
+  /**
+   * The school calendars a contract reads (review 4, `pickCalendar`): its notice window's — the
+   * year whose term 2 falls inside the contract — and its early termination's — the year whose
+   * term 1 does.
+   */
+  private async calendarsOf(row: ContractRow): Promise<ContractCalendars> {
+    return (await this.calendarsFor([row])).get(row.id)!;
+  }
+
+  private async calendarsFor(rows: readonly ContractRow[]): Promise<Map<string, ContractCalendars>> {
+    const period = (r: ContractRow) => ({ startsOn: toIsoDate(r.startsOn), endsOn: toIsoDate(r.endsOn) });
+    const years = [...new Set(rows.flatMap((r) => calendarYearsOfContract(period(r))))];
+    const calendars = new Map(await Promise.all(years.map(async (y) => [y, await this.calendars.dates(y)] as const)));
+    return new Map(
+      rows.map((r) => [
+        r.id,
+        {
+          notice: pickCalendar(period(r), calendars, 'notice'),
+          earlyTermination: pickCalendar(period(r), calendars, 'earlyTermination'),
+        },
+      ]),
+    );
   }
 
   private resolveRequest(id: string, resolution: 'approved' | 'rejected', byUserId: string | null) {
@@ -541,21 +652,14 @@ export class ContractsService {
     return contract;
   }
 
-  /** The rows as the API returns them: decisions on the school's today, the viewer's own marked. */
-  private async present(rows: readonly ContractRow[]): Promise<Contract[]> {
+  /**
+   * The rows as the API returns them: decisions on the school's today, the viewer's own marked, the
+   * calendars each reads; `listedYear` marks rows carried over from earlier years.
+   */
+  private async present(rows: readonly ContractRow[], listedYear?: number): Promise<Contract[]> {
     const today = this.today();
     const actor = await this.access.actor();
-    const years = [...new Set(rows.map((r) => calendarYearOfContract(toIsoDate(r.startsOn))))];
-    const calendars = new Map(
-      await Promise.all(years.map(async (y) => [y, await this.calendars.dates(y)] as const)),
-    );
-    return rows.map((row) =>
-      toContract(
-        row,
-        today,
-        actor?.employeeId ?? null,
-        calendars.get(calendarYearOfContract(toIsoDate(row.startsOn))) ?? null,
-      ),
-    );
+    const calendars = await this.calendarsFor(rows);
+    return rows.map((row) => toContract(row, today, actor?.employeeId ?? null, calendars.get(row.id)!, listedYear));
   }
 }

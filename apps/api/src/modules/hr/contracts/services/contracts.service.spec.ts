@@ -110,11 +110,20 @@ function makeService(opts: Setup = {}) {
     totals: jest.fn().mockResolvedValue({}),
     listOfEmployee: jest.fn().mockResolvedValue({ rows: [], total: 0 }),
     findByDocument: jest.fn().mockResolvedValue(null),
+    lockEmployee: jest.fn().mockResolvedValue(undefined),
+    periodsOfEmployee: jest.fn((employeeId: string) =>
+      Promise.resolve(
+        [...store.values()]
+          .filter((r) => r.employeeId === employeeId)
+          .map((r) => ({ status: r.status, startsOn: r.startsOn, endsOn: r.endsOn, endedOn: r.endedOn })),
+      ),
+    ),
   };
   const audit = { record: jest.fn().mockResolvedValue(undefined) };
   const records = new ContractRecords(repository as unknown as ContractsRepository, audit as unknown as AuditService);
   const calendars = { dates: jest.fn().mockResolvedValue(opts.calendar === undefined ? CAL : opts.calendar) };
   const employees = {
+    assertActive: jest.fn().mockResolvedValue(undefined),
     assertInScope: jest.fn().mockResolvedValue(undefined),
     deactivate: jest.fn().mockResolvedValue({}),
   };
@@ -433,7 +442,7 @@ describe('ContractsService — the renewal list', () => {
     repository.totals.mockResolvedValue({ ending: 41 });
     const page = await service.list({ year: 2026, page: 2, limit: 10, decision: 'OPEN', search: 'mona' });
     expect(repository.listPage).toHaveBeenCalledWith(
-      { from: '2026-06-01', to: '2027-05-31', today: TODAY, decision: 'OPEN', stageId: undefined, search: 'mona' },
+      { from: '2026-06-01', to: '2027-05-31', today: TODAY, carryOver: true, decision: 'OPEN', stageId: undefined, search: 'mona' },
       stage,
       2,
       10,
@@ -452,5 +461,100 @@ describe('contracts edge 14 — the penalty repetition window is unchanged', () 
     const { repetitionWindowStart } = await import('../../domain/penalties');
     expect(repetitionWindowStart('2027-03-10', 'CONTRACT_YEAR')).toBe('2026-06-01');
     expect(repetitionWindowStart('2026-06-01', 'CONTRACT_YEAR')).toBe('2026-06-01');
+  });
+});
+
+describe('ContractsService — review fixes (2026-11-24)', () => {
+  it('review 1 — a contract outside the manage scope is not found, even inside the view scope', async () => {
+    const { service, repository } = makeService({
+      scopes: { 'hr.contracts.manage': { kind: 'stage', stageIds: ['st-2'] } },
+    });
+    expect(await codeOf(service.notRenew('c1', { by: 'SCHOOL' }))).toBe('NOT_FOUND');
+    expect(await codeOf(service.renew(['c1']))).toBe('NOT_FOUND');
+    expect(repository.update).not.toHaveBeenCalled();
+  });
+
+  it('review 2 — ending a renewed contract (Article 148 in April): the next one is cancelled, the link cleared, the dates point back', async () => {
+    const old = row({ id: 'c1', status: 'RENEWED', nextContractId: 'c2', decidedAt: d('2026-11-01') });
+    const next = row({ id: 'c2', startsOn: d('2027-06-01'), endsOn: d('2028-05-31') });
+    const { service, repository, audit, store } = makeService({ rows: [old, next] });
+    const c = await service.end('c1', { reason: 'ARTICLE_148', endsOn: '2027-04-15', note: 'Article 148' });
+    expect(c).toMatchObject({ status: 'ENDED_EARLY', endedOn: '2027-04-15', next: null });
+    expect(store.get('c2')!.status).toBe('CANCELLED');
+    expect(store.get('c1')!.nextContractId).toBeNull();
+    expect(repository.lockForUpdate).toHaveBeenCalledWith(['c1', 'c2']);
+    expect(repository.setEmployeeContractDates).toHaveBeenCalledWith('e1', '2026-06-01', '2027-04-15');
+    expect(actions(audit)).toEqual(['hr.contract.cancel', 'hr.contract.end']);
+  });
+
+  it('review 2 — a next contract with its own decision → refused, nothing changes', async () => {
+    const old = row({ id: 'c1', status: 'RENEWED', nextContractId: 'c2' });
+    const next = row({ id: 'c2', status: 'NOT_RENEWED', startsOn: d('2027-06-01'), endsOn: d('2028-05-31') });
+    const { service, repository } = makeService({ rows: [old, next] });
+    expect(await codeOf(service.end('c1', { reason: 'DEATH', endsOn: '2027-04-15', note: 'x' }))).toBe(ErrorCode.CONTRACT_DECIDED);
+    expect(repository.update).not.toHaveBeenCalled();
+  });
+
+  it('review 3 — a reactivated employee gets a new contract: 1 June of this year, for one year, audited', async () => {
+    const ended = row({ status: 'NOT_RENEWED', nonRenewalBy: 'SCHOOL', startsOn: d('2025-06-01'), endsOn: d('2026-05-31') });
+    const { service, repository, audit } = makeService({ rows: [ended] });
+    const c = await service.newContract('e1', undefined);
+    expect(c).toMatchObject({ startsOn: '2026-06-01', endsOn: '2027-05-31', status: 'ACTIVE' });
+    expect(repository.setEmployeeContractDates).toHaveBeenCalledWith('e1', '2026-06-01', '2027-05-31');
+    expect(actions(audit)).toEqual(['hr.contract.create']);
+  });
+
+  it('review 3 — no new contract while one is active, nor overlapping one, nor your own', async () => {
+    expect(await codeOf(makeService().service.newContract('e1', '2027-06-01'))).toBe(ErrorCode.CONTRACT_ACTIVE_EXISTS);
+    const ended = row({ status: 'ENDED_EARLY', endedOn: d('2026-12-31') });
+    expect(await codeOf(makeService({ rows: [ended] }).service.newContract('e1', '2026-12-31'))).toBe(ErrorCode.CONTRACT_OVERLAP);
+    expect((await makeService({ rows: [ended] }).service.newContract('e1', '2027-01-01')).startsOn).toBe('2027-01-01');
+    expect(
+      await codeOf(makeService({ rows: [ended], actor: { userId: 'u1', employeeId: 'e1' } }).service.newContract('e1', '2027-01-01')),
+    ).toBe(ErrorCode.OWN_CONTRACT);
+  });
+
+  it("review 3 — the school's not-renewing undone before the end: active again, the reason recorded, its reminder re-armed", async () => {
+    const { service, audit, repository } = makeService({ rows: [row({ status: 'NOT_RENEWED', nonRenewalBy: 'SCHOOL', note: 'Budget' })] });
+    const c = await service.undoNotRenew('c1', 'Budget found');
+    expect(c).toMatchObject({ status: 'ACTIVE', decision: 'UNDECIDED', note: null });
+    const entry = audit.record.mock.calls[0]![0] as { action: string; after: Record<string, unknown> };
+    expect(entry).toMatchObject({ action: 'hr.contract.not_renew_undo', after: expect.objectContaining({ reason: 'Budget found' }) });
+    expect(repository.update.mock.calls[0][1]).toMatchObject({ remindersRearmedAt: expect.any(Date) });
+    const notice = makeService({ rows: [row({ status: 'NOT_RENEWED', nonRenewalBy: 'EMPLOYEE', noticeReceivedOn: d('2027-03-01') })] });
+    expect(await codeOf(notice.service.undoNotRenew('c1', 'x'))).toBe(ErrorCode.CONTRACT_NOT_SCHOOL_DECISION);
+  });
+
+  it('review 13 — withdrawing a notice re-arms the contract-end reminder', async () => {
+    const { service, repository } = makeService({
+      rows: [row({ status: 'NOT_RENEWED', nonRenewalBy: 'EMPLOYEE', noticeReceivedOn: d('2027-03-01') })],
+    });
+    await service.withdrawNotice('c1', 'Stays');
+    expect(repository.update.mock.calls[0][1]).toMatchObject({ remindersRearmedAt: expect.any(Date) });
+  });
+
+  it('review 4 — a 1 Feb – 31 Jan contract: the notice reads the year of its term 2, early termination the year of its term 1', async () => {
+    const prev = { term1Start: '2025-09-15', term1End: '2026-01-28', term2Start: '2026-02-07', nonRenewalDeadline: '2026-04-30' };
+    const c = row({ startsOn: d('2026-02-01'), endsOn: d('2027-01-31') });
+    const { service, calendars } = makeService({ rows: [c] });
+    calendars.dates.mockImplementation((year: number) => Promise.resolve(year === 2025 ? prev : CAL));
+    const notice = await service.notRenew('c1', { by: 'EMPLOYEE', receivedOn: '2026-03-01' });
+    expect(notice.notice?.timing).toBe('ON_TIME');
+    expect(notice.calendars).toEqual({ notice: prev, earlyTermination: CAL });
+  });
+
+  it('review 10 — the school’s not-renewing note is returned', async () => {
+    const { service } = makeService();
+    expect((await service.notRenew('c1', { by: 'SCHOOL', note: 'Position closed' })).note).toBe('Position closed');
+  });
+
+  it('review 5 — on the current season’s screen, earlier years’ open rows are carried over and marked', async () => {
+    const { service, repository } = makeService();
+    repository.listPage.mockResolvedValue({ rows: [row({ startsOn: d('2025-06-01'), endsOn: d('2026-05-31') })], total: 1 });
+    const page = await service.list({ year: 2026 });
+    expect(repository.listPage.mock.calls[0]![0]).toMatchObject({ carryOver: true });
+    expect(page.items[0].carriedOver).toBe(true);
+    await service.list({ year: 2025 });
+    expect(repository.listPage.mock.calls[1]![0]).toMatchObject({ carryOver: false });
   });
 });

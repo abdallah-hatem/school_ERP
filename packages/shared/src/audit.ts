@@ -217,6 +217,10 @@ export const AUDIT_ACTIONS = {
   'hr.contract.early_termination_approve': { module: 'hr', entityType: E.EMPLOYEE_CONTRACT, kind: 'status' },
   'hr.contract.early_termination_reject': { module: 'hr', entityType: E.EMPLOYEE_CONTRACT, kind: 'status' },
   'hr.contract.end': { module: 'hr', entityType: E.EMPLOYEE_CONTRACT, kind: 'status' },
+  // A renewal's next contract cancelled because the one before it ended early (it never started).
+  'hr.contract.cancel': { module: 'hr', entityType: E.EMPLOYEE_CONTRACT, kind: 'status' },
+  // The school's not-renewing undone before the end, with a reason: active again.
+  'hr.contract.not_renew_undo': { module: 'hr', entityType: E.EMPLOYEE_CONTRACT, kind: 'status' },
   // A contract document (notice letter, request, attachment) was opened (a sensitive folder).
   'hr.contract.document_open': { module: 'hr', entityType: E.EMPLOYEE_CONTRACT, kind: 'access' },
   'hr.school_calendar.update': { module: 'hr', entityType: E.SCHOOL_CALENDAR, kind: 'update' },

@@ -211,6 +211,12 @@ export const ErrorCode = {
   CONTRACT_NOT_TO_DEACTIVATE: 'CONTRACT_NOT_TO_DEACTIVATE',
   /** The file wasn't uploaded for this contract (`POST /hr/contracts/:id/files`). */
   CONTRACT_FILE_INVALID: 'CONTRACT_FILE_INVALID',
+  /** A new contract: the employee still has an active contract. */
+  CONTRACT_ACTIVE_EXISTS: 'CONTRACT_ACTIVE_EXISTS',
+  /** A new contract would overlap one the employee already has (contracts never overlap). */
+  CONTRACT_OVERLAP: 'CONTRACT_OVERLAP',
+  /** Undoing a not-renewing: only the school's own decision, while the contract hasn't ended. */
+  CONTRACT_NOT_SCHOOL_DECISION: 'CONTRACT_NOT_SCHOOL_DECISION',
 
   // audit log
   /** An `@Audited` handler finished without recording its action (D6b); the change rolled back. */

@@ -26,11 +26,17 @@ export class RemindersRepository {
         contractEnd: true,
         probationEnd: true,
         // The current contract's state (spec 2026-11-24): the active one, else the latest.
-        contracts: { select: { status: true }, orderBy: { startsOn: 'desc' }, take: 1 },
+        contracts: {
+          where: { status: { not: ContractStatus.CANCELLED } },
+          select: { status: true, remindersRearmedAt: true },
+          orderBy: { startsOn: 'desc' },
+          take: 1,
+        },
       },
     });
     return rows.map((r) => {
-      const status = r.contracts[0]?.status ?? ContractStatus.ACTIVE;
+      const current = r.contracts[0];
+      const status = current?.status ?? ContractStatus.ACTIVE;
       return {
         id: r.id,
         nameEn: r.nameEn,
@@ -39,21 +45,23 @@ export class RemindersRepository {
         probationEnd: r.probationEnd ? toIsoDate(r.probationEnd) : null,
         contractDecided: status !== ContractStatus.ACTIVE,
         contractEndedEarly: status === ContractStatus.ENDED_EARLY,
+        contractRearmedAt: current?.remindersRearmedAt?.getTime() ?? null,
       };
     });
   }
 
   /**
-   * A contract year's renewal season: its undecided contracts ending from today to its end
-   * (active employees, no early termination waiting), and its school calendar.
+   * A contract year's renewal season: its undecided contracts ending by its end — those that already
+   * ended with no decision too (review 5) — of active employees with no early termination waiting,
+   * and its school calendar.
    */
-  async season(year: number, today: IsoDate): Promise<RenewalSeason> {
+  async season(year: number, _today: IsoDate): Promise<RenewalSeason> {
     const end = contractYearRange(year).end;
     const [undecided, calendar] = await Promise.all([
       this.txHost.tx.employeeContract.count({
         where: {
           status: ContractStatus.ACTIVE,
-          endsOn: { gte: fromIsoDate(today), lte: fromIsoDate(end) },
+          endsOn: { lte: fromIsoDate(end) },
           employee: { status: EmployeeStatus.ACTIVE },
           OR: [{ earlyTerminationStatus: null }, { earlyTerminationStatus: { not: 'REQUESTED' } }],
         },

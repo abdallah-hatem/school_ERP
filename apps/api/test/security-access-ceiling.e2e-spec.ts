@@ -17,6 +17,7 @@ import { DatabaseService } from '../src/database/database.service';
 import type { DbAdapter } from '../src/database/transactions';
 import { http, unique } from './helpers';
 import { ANONYMOUS_HEADER, createAppAsTestUser } from './helpers/as-test-user';
+import { deleteEmployees } from './helpers/employees';
 
 /*
  * Security review (2026-11-23), against the real database, guard and sessions:
@@ -158,7 +159,7 @@ describe('Security review — access ceilings and sessions (e2e)', () => {
   afterAll(async () => {
     await db.user.deleteMany({ where: { id: { in: userIds } } });
     await db.role.deleteMany({ where: { id: { in: roleIds } } });
-    await db.employee.deleteMany({
+    await deleteEmployees(db, {
       where: { id: { in: [ref.empPrimary, ref.empPrep, ref.empCheck, ref.empLog].filter(Boolean) } },
     });
     await db.department.deleteMany({ where: { id: ref.department } });

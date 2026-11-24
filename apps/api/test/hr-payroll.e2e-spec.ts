@@ -20,6 +20,7 @@ import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
 import { outboxEvents, outboxIdle } from './helpers/events';
 import { createAppAsTestUser, giveRoles } from './helpers/as-test-user';
+import { deleteEmployees } from './helpers/employees';
 
 const DEDUCT = (days: number): ViolationLevelInput[] => [{ level: 1, action: 'DEDUCT_DAYS', days }];
 
@@ -191,7 +192,7 @@ describe('HR payroll and dashboard (e2e)', () => {
     await db.violationLevel.deleteMany({});
     await db.violation.deleteMany({});
     await db.penaltyGroup.deleteMany({});
-    await db.employee.deleteMany({});
+    await deleteEmployees(db);
     await db.department.deleteMany({});
     await db.jobTitle.deleteMany({});
     await db.stage.deleteMany({});

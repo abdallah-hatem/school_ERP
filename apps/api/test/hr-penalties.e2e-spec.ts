@@ -12,6 +12,7 @@ import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
 import { createAppAsTestUser } from './helpers/as-test-user';
 import { historyMark, historyRows, waitForCount } from './helpers/history';
+import { deleteEmployees } from './helpers/employees';
 
 const LEVELS_5: ViolationLevelInput[] = [
   { level: 1, action: 'NOTICE' },
@@ -134,7 +135,7 @@ describe('HR penalty catalogue and records (e2e)', () => {
     await db.violationLevel.deleteMany({});
     await db.violation.deleteMany({});
     await db.penaltyGroup.deleteMany({});
-    await db.employee.deleteMany({});
+    await deleteEmployees(db);
     await db.department.deleteMany({});
     await db.jobTitle.deleteMany({});
     await db.stage.deleteMany({});

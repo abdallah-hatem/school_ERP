@@ -73,10 +73,18 @@ export interface ContractListFilter {
   to: IsoDate;
   /** The school's today: "ended", "to deactivate" and the order depend on it. */
   today: IsoDate;
+  /**
+   * The current season (review 5): rows of earlier years that still need action — to deactivate,
+   * or ended with no decision — are listed (and counted) with it until handled.
+   */
+  carryOver: boolean;
   decision?: ContractDecisionFilter;
   stageId?: string;
   search?: string;
 }
+
+/** A `YYYY-MM-DD` as a SQL date (a `date` column is compared with a date, never a timestamp). */
+const sqlDate = (d: IsoDate) => Prisma.sql`${d}::date`;
 
 /** The scope as SQL on `employees e` (same rule as `employeeWhere`). */
 function scopeSql(scope: EmployeeScope): Prisma.Sql {
@@ -97,21 +105,39 @@ function scopeSql(scope: EmployeeScope): Prisma.Sql {
 }
 
 /** Each decision as SQL on `employee_contracts c` / `employees e` (same rule as `contractDecision`). */
-function decisionSql(today: Date): Record<string, Prisma.Sql> {
+function decisionSql(today: IsoDate): Record<ContractDecisionFilter, Prisma.Sql> {
+  const t = sqlDate(today);
   const requested = Prisma.sql`c."early_termination_status" IS NOT DISTINCT FROM 'REQUESTED'`;
   const active = Prisma.sql`c."status" = 'ACTIVE'`;
   return {
-    ENDED_NO_DECISION: Prisma.sql`(${active} AND NOT ${requested} AND c."ends_on" < ${today})`,
-    UNDECIDED: Prisma.sql`(${active} AND NOT ${requested} AND c."ends_on" >= ${today})`,
+    ENDED_NO_DECISION: Prisma.sql`(${active} AND NOT ${requested} AND c."ends_on" < ${t})`,
+    UNDECIDED: Prisma.sql`(${active} AND NOT ${requested} AND c."ends_on" >= ${t})`,
     EARLY_REQUESTED: Prisma.sql`(${active} AND ${requested})`,
     RENEWED: Prisma.sql`c."status" = 'RENEWED'`,
     NOTICE: Prisma.sql`(c."status" = 'NOT_RENEWED' AND c."non_renewal_by" = 'EMPLOYEE')`,
     NOT_RENEWED_SCHOOL: Prisma.sql`(c."status" = 'NOT_RENEWED' AND c."non_renewal_by" IS DISTINCT FROM 'EMPLOYEE')`,
     ENDED_EARLY: Prisma.sql`c."status" = 'ENDED_EARLY'`,
+    CANCELLED: Prisma.sql`c."status" = 'CANCELLED'`,
     OPEN: Prisma.sql`(${active} AND NOT ${requested})`,
     DECIDED: Prisma.sql`NOT (${active} AND NOT ${requested})`,
-    TO_DEACTIVATE: Prisma.sql`(c."status" IN ('NOT_RENEWED', 'ENDED_EARLY') AND COALESCE(c."ended_on", c."ends_on") < ${today} AND e."status" = 'ACTIVE')`,
+    TO_DEACTIVATE: Prisma.sql`(c."status" IN ('NOT_RENEWED', 'ENDED_EARLY') AND COALESCE(c."ended_on", c."ends_on") < ${t} AND e."status" = 'ACTIVE')`,
   };
+}
+
+/**
+ * Who a renewal screen shows: never a cancelled contract (it never started), nor an inactive
+ * employee's undecided one (nothing to decide); within the viewer's scope.
+ */
+const visibleSql = (scope: EmployeeScope) =>
+  Prisma.sql`c."status" <> 'CANCELLED' AND (e."status" = 'ACTIVE' OR c."status" <> 'ACTIVE') AND ${scopeSql(scope)}`;
+
+/** The year's rows, and — for the current season — earlier years' rows still needing action. */
+function seasonSql(from: IsoDate, to: IsoDate, carryOver: boolean, d: Record<ContractDecisionFilter, Prisma.Sql>) {
+  const inYear = Prisma.sql`c."ends_on" BETWEEN ${sqlDate(from)} AND ${sqlDate(to)}`;
+  const carried = carryOver
+    ? Prisma.sql`(c."ends_on" < ${sqlDate(from)} AND (${d.ENDED_NO_DECISION} OR ${d.TO_DEACTIVATE}))`
+    : Prisma.sql`FALSE`;
+  return { inYear, carried };
 }
 
 /**
@@ -129,8 +155,8 @@ export class ContractsRepository {
   /**
    * One contract year's renewal list (spec → Screens): the page, ordered "needs action first" —
    * ended with no decision, to deactivate, early termination waiting, not decided, notices, not
-   * renewed, ended early, renewed — then by employee code. An inactive employee's undecided contract
-   * is left out (nothing to decide). Raw SQL for the order; the rows are read back with Prisma.
+   * renewed, ended early, renewed — then by employee code. Raw SQL for the order; the rows are read
+   * back with Prisma.
    */
   async listPage(
     filter: ContractListFilter,
@@ -138,12 +164,11 @@ export class ContractsRepository {
     page: number,
     limit: number,
   ): Promise<{ rows: ContractRow[]; total: number }> {
-    const today = fromIsoDate(filter.today);
-    const d = decisionSql(today);
+    const d = decisionSql(filter.today);
+    const { inYear, carried } = seasonSql(filter.from, filter.to, filter.carryOver, d);
     const conditions: Prisma.Sql[] = [
-      Prisma.sql`c."ends_on" BETWEEN ${fromIsoDate(filter.from)} AND ${fromIsoDate(filter.to)}`,
-      Prisma.sql`(e."status" = 'ACTIVE' OR c."status" <> 'ACTIVE')`,
-      scopeSql(scope),
+      Prisma.sql`(${inYear} OR ${carried})`,
+      visibleSql(scope),
       searchColumnsSql('e', filter.search),
     ];
     if (filter.stageId) {
@@ -166,7 +191,7 @@ export class ContractsRepository {
       this.db.$queryRaw<{ id: string }[]>`
         SELECT c."id" FROM "employee_contracts" c JOIN "employees" e ON e."id" = c."employee_id"
         WHERE ${where}
-        ORDER BY ${rank}, e."code", c."ends_on"
+        ORDER BY ${rank}, c."ends_on" < ${sqlDate(filter.from)} DESC, e."code", c."ends_on"
         LIMIT ${limit} OFFSET ${(page - 1) * limit}`,
       this.db.$queryRaw<{ count: bigint }[]>`
         SELECT COUNT(*)::bigint AS count FROM "employee_contracts" c JOIN "employees" e ON e."id" = c."employee_id"
@@ -176,31 +201,34 @@ export class ContractsRepository {
     return { rows, total: Number(count) };
   }
 
-  /** The year's five tiles over the viewer's scope (not the search or filters). */
-  async totals(from: IsoDate, to: IsoDate, today: IsoDate, scope: EmployeeScope): Promise<ContractTotals> {
-    const t = fromIsoDate(today);
-    const d = decisionSql(t);
-    const year = Prisma.sql`c."ends_on" BETWEEN ${fromIsoDate(from)} AND ${fromIsoDate(to)}`;
-    const visible = Prisma.sql`(e."status" = 'ACTIVE' OR c."status" <> 'ACTIVE') AND ${scopeSql(scope)}`;
+  /**
+   * The year's five tiles over the viewer's scope (not the search or filters). The action tiles
+   * (not decided, ended with no decision, to deactivate) include the rows carried over from earlier
+   * years; "Ending this year" and the decisions count this year's contracts only.
+   */
+  async totals(from: IsoDate, to: IsoDate, today: IsoDate, carryOver: boolean, scope: EmployeeScope): Promise<ContractTotals> {
+    const d = decisionSql(today);
+    const { inYear: year, carried } = seasonSql(from, to, carryOver, d);
+    const listed = Prisma.sql`(${year} OR ${carried})`;
     const [row] = await this.db.$queryRaw<Record<string, bigint>[]>`
       SELECT
         COUNT(*) FILTER (WHERE ${year})::bigint AS ending,
-        COUNT(*) FILTER (WHERE e."status" = 'ACTIVE' AND c."starts_on" <= ${t} AND COALESCE(c."ended_on", c."ends_on") >= ${t})::bigint AS active_contracts,
+        COUNT(*) FILTER (WHERE ${carried})::bigint AS carried_over,
         COUNT(*) FILTER (WHERE ${year} AND ${d.DECIDED})::bigint AS decided,
         COUNT(*) FILTER (WHERE ${year} AND ${d.RENEWED})::bigint AS renewing,
         COUNT(*) FILTER (WHERE ${year} AND c."status" = 'NOT_RENEWED')::bigint AS not_renewing,
-        COUNT(*) FILTER (WHERE ${year} AND ${d.OPEN})::bigint AS open,
-        COUNT(*) FILTER (WHERE ${year} AND ${d.ENDED_NO_DECISION})::bigint AS ended_no_decision,
+        COUNT(*) FILTER (WHERE ${listed} AND ${d.OPEN})::bigint AS open,
+        COUNT(*) FILTER (WHERE ${listed} AND ${d.ENDED_NO_DECISION})::bigint AS ended_no_decision,
         COUNT(*) FILTER (WHERE ${year} AND ${d.NOTICE})::bigint AS notices,
         COUNT(*) FILTER (WHERE ${year} AND ${d.NOTICE} AND c."notice_timing" = 'EARLY')::bigint AS notices_early,
         COUNT(*) FILTER (WHERE ${year} AND ${d.NOTICE} AND c."notice_timing" = 'LATE')::bigint AS notices_late,
-        COUNT(*) FILTER (WHERE ${year} AND ${d.TO_DEACTIVATE})::bigint AS to_deactivate
+        COUNT(*) FILTER (WHERE ${listed} AND ${d.TO_DEACTIVATE})::bigint AS to_deactivate
       FROM "employee_contracts" c JOIN "employees" e ON e."id" = c."employee_id"
-      WHERE ${visible}`;
+      WHERE ${visibleSql(scope)}`;
     const n = (k: string) => Number(row?.[k] ?? 0);
     return {
       ending: n('ending'),
-      activeContracts: n('active_contracts'),
+      carriedOver: n('carried_over'),
       decided: n('decided'),
       renewing: n('renewing'),
       notRenewing: n('not_renewing'),
@@ -265,6 +293,22 @@ export class ContractsRepository {
 
   async create(data: Prisma.EmployeeContractUncheckedCreateInput): Promise<ContractRow> {
     return this.db.employeeContract.create({ data, select: CONTRACT_SELECT });
+  }
+
+  /** Every contract of an employee: status and period (a new contract's checks). */
+  async periodsOfEmployee(employeeId: string): Promise<{ status: ContractRow['status']; startsOn: Date; endsOn: Date; endedOn: Date | null }[]> {
+    return this.db.employeeContract.findMany({
+      where: { employeeId },
+      select: { status: true, startsOn: true, endsOn: true, endedOn: true },
+    });
+  }
+
+  /**
+   * Locks the employee's row for the rest of the transaction: two "new contract" requests for one
+   * employee wait for each other (the partial unique index would refuse the second anyway).
+   */
+  async lockEmployee(employeeId: string): Promise<void> {
+    await this.db.$queryRaw`SELECT "id" FROM "employees" WHERE "id" = ${employeeId}::uuid FOR NO KEY UPDATE`;
   }
 
   /** The employee's current contract dates (they mirror the active contract — §3). */

@@ -25,7 +25,9 @@ import {
   EmployeeContractsQueryDto,
   EndContractDto,
   ListContractsQueryDto,
+  NewContractDto,
   NotRenewContractDto,
+  UndoNotRenewDto,
   PutSchoolCalendarDto,
   RejectEarlyTerminationDto,
   RenewContractsDto,
@@ -78,6 +80,15 @@ export class ContractsController {
   @HttpCode(HttpStatus.OK)
   notRenew(@Param('id', ParseUUIDPipe) id: string, @Body() dto: NotRenewContractDto) {
     return this.contracts.notRenew(id, dto);
+  }
+
+  /** The school's not-renewing undone before the end (review 3). */
+  @Audited('hr.contract.not_renew_undo')
+  @Post(':id/not-renewed/undo')
+  @Permission('hr.contracts.manage')
+  @HttpCode(HttpStatus.OK)
+  undoNotRenew(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UndoNotRenewDto) {
+    return this.contracts.undoNotRenew(id, dto.reason);
   }
 
   @Audited('hr.contract.notice_withdraw')
@@ -141,6 +152,14 @@ export class EmployeeContractsController {
   @Permission('hr.contracts.view')
   async list(@Param('id', ParseUUIDPipe) id: string, @Query() query: EmployeeContractsQueryDto) {
     return ResponseUtil.paginated(await this.contracts.employeeContracts(id, query));
+  }
+
+  /** A new contract for an active employee with no active one (review 3). */
+  @Audited('hr.contract.create')
+  @Post(':id/contracts')
+  @Permission('hr.contracts.manage')
+  create(@Param('id', ParseUUIDPipe) id: string, @Body() dto: NewContractDto) {
+    return this.contracts.newContract(id, dto.startsOn);
   }
 }
 

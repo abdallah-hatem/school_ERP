@@ -56,6 +56,12 @@ export interface ReminderEmployee {
   contractDecided?: boolean;
   /** The current contract ended early: no more reminders about them (edge case 10). */
   contractEndedEarly?: boolean;
+  /**
+   * When the current contract's notice was withdrawn or its not-renewing undone (review 13), as a
+   * number: "Contract ends soon" for the same end gets a new dedupe key, so it is sent again (the
+   * earlier one was resolved by the decision).
+   */
+  contractRearmedAt?: number | null;
 }
 
 /** A month as the lateness and payroll reminders see it. */
@@ -186,7 +192,10 @@ export function contractReminders(
     notify.push({
       type,
       subject: employeeSubject(e.id),
-      dedupeKey: notificationDedupeKey(type, e.id, e.contractEnd, window),
+      // `contract_end:<id>:<date>:<days>`, plus `:<re-armed at>` once a decision was undone.
+      dedupeKey: e.contractRearmedAt
+        ? notificationDedupeKey(type, e.id, e.contractEnd, window, e.contractRearmedAt)
+        : notificationDedupeKey(type, e.id, e.contractEnd, window),
       params: { employee: names(e), date: e.contractEnd, count: d, days: window },
       // "12 contracts end within 30 days" and "… within 7 days" are separate groups.
       groupKey: `${today}:${window}`,
@@ -352,7 +361,10 @@ export function payrollNotApprovedReminders(
 export interface RenewalSeason {
   /** The contract year (`2026` = 2026/27). */
   year: number;
-  /** Active contracts of active employees ending in it, from today, with no decision. */
+  /**
+   * Active contracts of active employees ending by the season's end with no decision — including
+   * those that already ended with no decision (review 5).
+   */
   undecided: number;
   calendar: SchoolCalendarDates | null;
 }
@@ -362,22 +374,25 @@ const yearOfKey = (key: string): number => Number(keyParts(key)[0]);
 
 /**
  * Renewal decisions due (`hr.contract.renewals_due`): from `renewalDecisionsDays` (91 = 1 March)
- * before the season's end (31 May) to that end, while contracts ending in it have no decision.
- * Dedupe `renewals_due:<year>`. Resolved once every one has a decision, or the season is over.
+ * before the current season's end (31 May), while contracts ending by then have no decision.
+ * Dedupe `renewals_due:<year>`. An open one stays — past 31 May too (review 5) — until every one of
+ * its season's contracts, those that ended with no decision included, has a decision.
+ * `seasons` holds the current season and every open item's.
  */
 export function renewalsDueReminders(
   today: IsoDate,
   rule: Pick<ReminderRule, 'renewalDecisionsDays'>,
-  season: RenewalSeason,
+  seasons: ReadonlyMap<number, RenewalSeason>,
+  currentYear: number,
   open: readonly OpenReminder[],
 ): ReminderPlan {
   const type = 'hr.contract.renewals_due' as const;
-  const end = contractYearRange(season.year).end;
-  const d = daysUntil(today, end);
-  const due = d >= 0 && d <= rule.renewalDecisionsDays && season.undecided > 0;
   const resolve = open
-    .filter((o) => yearOfKey(o.dedupeKey) !== season.year || !due)
+    .filter((o) => (seasons.get(yearOfKey(o.dedupeKey))?.undecided ?? 0) === 0)
     .map((o) => stale(type, o));
+  const season = seasons.get(currentYear) ?? { year: currentYear, undecided: 0, calendar: null };
+  const d = daysUntil(today, contractYearRange(season.year).end);
+  const due = d <= rule.renewalDecisionsDays && season.undecided > 0;
   const notify: DueReminder[] = due
     ? [
         {

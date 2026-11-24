@@ -3,7 +3,7 @@
 -- two permissions on the starting roles.
 
 -- CreateEnum
-CREATE TYPE "ContractStatus" AS ENUM ('ACTIVE', 'RENEWED', 'NOT_RENEWED', 'ENDED_EARLY');
+CREATE TYPE "ContractStatus" AS ENUM ('ACTIVE', 'RENEWED', 'NOT_RENEWED', 'ENDED_EARLY', 'CANCELLED');
 
 -- CreateEnum
 CREATE TYPE "NonRenewalBy" AS ENUM ('SCHOOL', 'EMPLOYEE');
@@ -44,6 +44,7 @@ CREATE TABLE "employee_contracts" (
     "decided_by_id" UUID,
     "decided_at" TIMESTAMP(3),
     "next_contract_id" UUID,
+    "reminders_rearmed_at" TIMESTAMP(3),
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -91,7 +92,7 @@ CREATE INDEX "employee_contracts_early_termination_file_url_idx" ON "employee_co
 CREATE INDEX "employee_contracts_end_file_url_idx" ON "employee_contracts"("end_file_url");
 
 -- AddForeignKey
-ALTER TABLE "employee_contracts" ADD CONSTRAINT "employee_contracts_employee_id_fkey" FOREIGN KEY ("employee_id") REFERENCES "employees"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "employee_contracts" ADD CONSTRAINT "employee_contracts_employee_id_fkey" FOREIGN KEY ("employee_id") REFERENCES "employees"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "employee_contracts" ADD CONSTRAINT "employee_contracts_decided_by_id_fkey" FOREIGN KEY ("decided_by_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;

@@ -113,7 +113,7 @@ export class HrRemindersJob implements JobHandler {
       case 'hr.payroll.not_approved':
         return payrollNotApprovedReminders(today, rule, await this.months(today, open), open);
       case 'hr.contract.renewals_due':
-        return renewalsDueReminders(today, rule, await this.season(today), open);
+        return renewalsDueReminders(today, rule, await this.seasons(today, open), contractYearOf(today), open);
       case 'hr.contract.notice_window_opens':
       case 'hr.contract.notice_window_closing':
         return noticeWindowReminders(today, rule, await this.season(today), open, type);
@@ -123,6 +123,12 @@ export class HrRemindersJob implements JobHandler {
   /** The current contract year's renewal season (Cairo's today). */
   private season(today: IsoDate) {
     return this.repository.season(contractYearOf(today), today);
+  }
+
+  /** The current season and every open "decisions due" item's season. */
+  private async seasons(today: IsoDate, open: readonly OpenReminder[]) {
+    const years = [...new Set([contractYearOf(today), ...open.map((o) => Number(o.dedupeKey.split(':')[1]))])];
+    return new Map(await Promise.all(years.map(async (y) => [y, await this.repository.season(y, today)] as const)));
   }
 
   private months(today: IsoDate, open: readonly OpenReminder[]) {

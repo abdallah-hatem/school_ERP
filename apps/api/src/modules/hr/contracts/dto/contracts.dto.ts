@@ -8,6 +8,8 @@ import {
   type DeactivateContractsRequest,
   type EarlyTerminationRequest,
   type EndContractRequest,
+  type NewContractRequest,
+  type UndoNotRenewRequest,
   type ListContractsQuery,
   type NotRenewContractRequest,
   type PutSchoolCalendarRequest,
@@ -114,6 +116,22 @@ export class WithdrawNoticeDto implements WithdrawNoticeRequest {
   @IsNotEmpty()
   @MaxLength(1000)
   reason: string;
+}
+
+/** `POST /hr/contracts/:id/not-renewed/undo` — the reason is required. */
+export class UndoNotRenewDto implements UndoNotRenewRequest {
+  @Transform(trim)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(1000)
+  reason: string;
+}
+
+/** `POST /hr/employees/:id/contracts` — from `startsOn` (default 1 June of the current contract year). */
+export class NewContractDto implements NewContractRequest {
+  @IsOptional()
+  @IsIsoDate()
+  startsOn?: string;
 }
 
 /** `POST /hr/contracts/:id/early-termination` — the day the request was handed in. */

@@ -61,26 +61,27 @@ export async function checkContracts(page: Page, info: TestInfo, locale: Languag
   await expect(tiles.getByRole('button')).toHaveCount(5);
   await expect(main.getByRole('group', { name: t(locale, 'contracts.year.label') })).toContainText(formatContractYear(year));
   const list = main.getByRole('region', { name: t(locale, 'contracts.list.tableLabel', { year: formatContractYear(year) }) });
-  await expect(list.getByText(name).first()).toBeVisible();
-  await expect(list.getByText(t(locale, 'common.enums.contractDecision.UNDECIDED')).first()).toBeVisible();
+  await expect(list.getByText(name).filter({ visible: true }).first()).toBeVisible();
+  await expect(list.getByText(t(locale, 'common.enums.contractDecision.UNDECIDED')).filter({ visible: true }).first()).toBeVisible();
   await shoot(page, info, `${shotPrefix}-contracts-renewals`);
 
   // Renew it from its row (the table row on a desktop, the card on a phone): asked first.
-  await list.getByRole('button', { name: t(locale, 'contracts.actions.renew'), exact: true }).first().click();
+  // The table and the phone cards are both in the page; only the one this width shows counts.
+  await list.getByRole('button', { name: t(locale, 'contracts.actions.renew'), exact: true }).filter({ visible: true }).first().click();
   const dialog = page.getByRole('dialog', { name: t(locale, 'contracts.renew.title') });
   await expect(dialog).toBeVisible();
   await dialog.getByRole('button', { name: t(locale, 'contracts.renew.confirm'), exact: true }).click();
   await expect(dialog).toBeHidden();
-  await expect(list.getByText(t(locale, 'common.enums.contractDecision.RENEWED')).first()).toBeVisible();
-  await expect(list.getByRole('button', { name: t(locale, 'contracts.actions.renew'), exact: true })).toHaveCount(0);
+  await expect(list.getByText(t(locale, 'common.enums.contractDecision.RENEWED')).filter({ visible: true }).first()).toBeVisible();
+  await expect(list.getByRole('button', { name: t(locale, 'contracts.actions.renew'), exact: true }).filter({ visible: true })).toHaveCount(0);
   await shoot(page, info, `${shotPrefix}-contracts-renewed`);
 
   // The employee's Contracts tab: both contracts, newest first, the old one renewed.
   await page.goto(`/${locale}/employees/${employee.id}/contracts`);
   await expect(main.getByRole('link', { name: t(locale, 'common.nav.contracts') })).toHaveAttribute('aria-current', 'page');
   const history = main.getByRole('region', { name: t(locale, 'contracts.history.tableLabel', { name }) });
-  await expect(history.getByText(formatContractYear(year + 1)).first()).toBeVisible();
-  await expect(history.getByText(formatContractYear(year)).first()).toBeVisible();
-  await expect(history.getByText(t(locale, 'common.enums.contractDecision.RENEWED')).first()).toBeVisible();
+  await expect(history.getByText(formatContractYear(year + 1)).filter({ visible: true }).first()).toBeVisible();
+  await expect(history.getByText(formatContractYear(year)).filter({ visible: true }).first()).toBeVisible();
+  await expect(history.getByText(t(locale, 'common.enums.contractDecision.RENEWED')).filter({ visible: true }).first()).toBeVisible();
   await shoot(page, info, `${shotPrefix}-employee-contracts`);
 }

@@ -12,6 +12,7 @@ import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
 import { createAppAsTestUser } from './helpers/as-test-user';
 import { historyMark } from './helpers/history';
+import { deleteEmployees } from './helpers/employees';
 
 /*
  * §4 backdated penalty (owner 2026-11-20): approving a penalty dated before approved ones of the
@@ -117,7 +118,7 @@ describe('HR penalties — backdated penalty recount (e2e, §4 owner 2026-11-20)
     await db.violationLevel.deleteMany({ where: { violationId: { in: violationIds } } });
     await db.violation.deleteMany({ where: { id: { in: violationIds } } });
     await db.penaltyGroup.deleteMany({ where: { id: groupId } });
-    await db.employee.deleteMany({ where: { id: { in: employeeIds } } });
+    await deleteEmployees(db, { where: { id: { in: employeeIds } } });
     await db.department.deleteMany({ where: { id: departmentId } });
     await db.jobTitle.deleteMany({ where: { id: jobTitleId } });
     await db.stage.deleteMany({ where: { id: stageId } });

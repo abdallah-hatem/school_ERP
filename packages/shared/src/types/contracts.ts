@@ -19,6 +19,11 @@ export const ContractStatus = {
   NOT_RENEWED: 'NOT_RENEWED',
   /** Early termination approved, or ended for another reason: ends on `endedOn`. */
   ENDED_EARLY: 'ENDED_EARLY',
+  /**
+   * A renewal's next contract that never started: the contract before it was ended (Article 148,
+   * death…) before its end. Kept, never deleted; off the renewal screen.
+   */
+  CANCELLED: 'CANCELLED',
 } as const;
 export type ContractStatus = (typeof ContractStatus)[keyof typeof ContractStatus];
 export const CONTRACT_STATUSES = Object.values(ContractStatus) as ContractStatus[];
@@ -73,7 +78,7 @@ export type ContractEndRequestReason = (typeof CONTRACT_END_REASONS)[number];
  * - `UNDECIDED` — active, not ended yet; `ENDED_NO_DECISION` — active, past its end;
  * - `RENEWED`; `NOT_RENEWED_SCHOOL`; `NOTICE` (the employee's notice);
  * - `EARLY_REQUESTED` — an early termination request waits for a decision;
- * - `ENDED_EARLY`.
+ * - `ENDED_EARLY`; `CANCELLED` (a next contract that never started).
  */
 export const ContractDecision = {
   UNDECIDED: 'UNDECIDED',
@@ -83,6 +88,7 @@ export const ContractDecision = {
   NOTICE: 'NOTICE',
   EARLY_REQUESTED: 'EARLY_REQUESTED',
   ENDED_EARLY: 'ENDED_EARLY',
+  CANCELLED: 'CANCELLED',
 } as const;
 export type ContractDecision = (typeof ContractDecision)[keyof typeof ContractDecision];
 export const CONTRACT_DECISIONS = Object.values(ContractDecision) as ContractDecision[];
@@ -171,6 +177,8 @@ export interface Contract {
   decision: ContractDecision;
   /** Not renewed: who decided. */
   nonRenewalBy: NonRenewalBy | null;
+  /** The not-renewing decision's note (the school's, or the notice's). */
+  note: string | null;
   notice: ContractNotice | null;
   earlyTermination: ContractEarlyTermination | null;
   /** Ended early: the last day, the reason, the note and the attachment. */
@@ -187,6 +195,17 @@ export interface Contract {
   toDeactivate: boolean;
   /** The viewer's own contract: no action on it (OWN_CONTRACT, §2). */
   ownContract: boolean;
+  /**
+   * On the current season's screen, a row from an earlier contract year that still needs action
+   * (to deactivate, or ended with no decision): it stays listed until it is handled.
+   */
+  carriedOver: boolean;
+  /**
+   * The school calendars this contract reads (`pickCalendar`): the notice window's and the early
+   * termination's (null = not set — the "Calendar not set" warning). The screens never pick a year
+   * themselves.
+   */
+  calendars: { notice: SchoolCalendarDates | null; earlyTermination: SchoolCalendarDates | null };
 }
 
 /** `GET /hr/contracts?year&decision&stageId&search&page&limit` — one contract year's renewal list. */
@@ -201,8 +220,8 @@ export interface ListContractsQuery extends PaginationQuery {
 export interface ContractTotals {
   /** Every contract ending this contract year. */
   ending: number;
-  /** Contracts running today (any decision), active employees: "of N active contracts". */
-  activeContracts: number;
+  /** Rows from earlier years still needing action, listed with this year (current year only). */
+  carriedOver: number;
   decided: number;
   renewing: number;
   notRenewing: number;
@@ -273,6 +292,20 @@ export interface EndContractRequest {
 /** `POST /hr/contracts/deactivate` — the "To deactivate" employees, all or nothing. */
 export interface DeactivateContractsRequest {
   contractIds: Uuid[];
+}
+
+/** `POST /hr/contracts/:id/not-renewed/undo` — the school changed its mind, before the end. */
+export interface UndoNotRenewRequest {
+  reason: string;
+}
+
+/**
+ * `POST /hr/employees/:id/contracts` — a new contract for an active employee with no active one (a
+ * reactivated employee, or after a school's not-renewing): from `startsOn` (default: 1 June of the
+ * current contract year), for one year.
+ */
+export interface NewContractRequest {
+  startsOn?: IsoDate;
 }
 
 /** `POST /hr/contracts/:id/files` (multipart `file`) → where the letter is stored. */

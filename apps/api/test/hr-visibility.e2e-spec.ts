@@ -18,6 +18,7 @@ import { monthOf, todayIsoDate } from '../src/common/utils/dates.util';
 import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
 import { createAppAsTestUser, giveRoles } from './helpers/as-test-user';
+import { deleteEmployees } from './helpers/employees';
 
 /**
  * P4 — what each role can see (spec roles-permissions R5, R7; edge cases 3 and 4). The test user
@@ -206,7 +207,7 @@ describe('P4 — scopes and salary in HR (e2e)', () => {
     await db.user.deleteMany({ where: { id: { in: Object.values(users) } } });
     await db.role.deleteMany({ where: { id: selfRoleId } });
     await db.employee.updateMany({ data: { managerId: null } });
-    await db.employee.deleteMany({});
+    await deleteEmployees(db);
     await db.department.deleteMany({});
     await db.jobTitle.deleteMany({});
     await db.stage.deleteMany({});

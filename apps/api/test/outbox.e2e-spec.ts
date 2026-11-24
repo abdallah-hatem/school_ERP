@@ -19,6 +19,7 @@ import { http, unique } from './helpers';
 import { createAppAsTestUser } from './helpers/as-test-user';
 import { outboxEvents, outboxIdle } from './helpers/events';
 import { historyMark } from './helpers/history';
+import { deleteEmployees } from './helpers/employees';
 
 /*
  * The outbox (core/events, owner 2026-11-18): must-deliver events are written with the change,
@@ -153,7 +154,7 @@ describe('Outbox — must-deliver events (e2e)', () => {
   afterAll(async () => {
     await db.accountingPayrollRun.deleteMany({ where: { month: { in: usedMonths } } });
     await db.payrollRun.deleteMany({ where: { month: { in: usedMonths } } });
-    await db.employee.deleteMany({ where: { id: { in: employees } } });
+    await deleteEmployees(db, { where: { id: { in: employees } } });
     await db.department.deleteMany({ where: { id: departmentId } });
     await db.jobTitle.deleteMany({ where: { id: jobTitleId } });
     await db.stage.deleteMany({ where: { id: stageId } });

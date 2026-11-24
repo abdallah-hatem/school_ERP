@@ -46,12 +46,37 @@ export function renewedContractDates(endsOn: IsoDate): { startsOn: IsoDate; ends
 }
 
 /**
- * Whose school calendar a contract reads (notice window, end of term 1): the contract year it
- * started in. For a 1 Jun – 31 May contract that is also the year it ends in; a mid-year contract
- * (1 Sep 2025 – 31 Aug 2026) reads 2025/26's terms, the ones it runs through.
+ * The contract years whose school calendar a contract may read: the one it starts in and the one it
+ * ends in (one year for a 1 Jun – 31 May contract, two for any other cycle). `pickCalendar` then
+ * takes the one whose term falls inside the contract.
  */
-export function calendarYearOfContract(startsOn: IsoDate): number {
-  return contractYearOf(startsOn);
+export function calendarYearsOfContract(c: { startsOn: IsoDate; endsOn: IsoDate }): number[] {
+  return [...new Set([contractYearOf(c.startsOn), contractYearOf(c.endsOn)])];
+}
+
+/**
+ * The school calendar a contract reads, among the calendars of `calendarYearsOfContract` (null =
+ * not set): for the **notice** window, the one whose term 2 starts inside the contract (its window
+ * runs before the contract ends); for **early termination**, the one whose term 1 starts inside it.
+ * When several qualify, the latest. When none of the set ones qualifies and one of the years isn't
+ * set, the calendar isn't set (null) — edge case 7. Examples:
+ * - 1 Jun 2026 – 31 May 2027 → 2026/27 for both;
+ * - 1 Sep 2025 – 31 Aug 2026 → 2025/26 for both (its terms);
+ * - 1 Feb 2026 – 31 Jan 2027 → notice: 2025/26 (term 2 in Feb 2026); early termination: 2026/27
+ *   (term 1 from Sep 2026).
+ */
+export function pickCalendar(
+  c: { startsOn: IsoDate; endsOn: IsoDate },
+  calendars: ReadonlyMap<number, SchoolCalendarDates | null>,
+  kind: 'notice' | 'earlyTermination',
+): SchoolCalendarDates | null {
+  const inside = (d: IsoDate) => d >= c.startsOn && d <= c.endsOn;
+  const years = calendarYearsOfContract(c).sort((a, b) => b - a);
+  for (const year of years) {
+    const cal = calendars.get(year);
+    if (cal && inside(kind === 'notice' ? cal.term2Start : cal.term1Start)) return cal;
+  }
+  return null;
 }
 
 /**
@@ -98,6 +123,8 @@ export function contractDecision(c: ContractState, today: IsoDate): ContractDeci
       return c.nonRenewalBy === NonRenewalBy.EMPLOYEE ? ContractDecision.NOTICE : ContractDecision.NOT_RENEWED_SCHOOL;
     case ContractStatus.ENDED_EARLY:
       return ContractDecision.ENDED_EARLY;
+    case ContractStatus.CANCELLED:
+      return ContractDecision.CANCELLED;
     case ContractStatus.ACTIVE:
       if (c.earlyTerminationStatus === EarlyTerminationStatus.REQUESTED) return ContractDecision.EARLY_REQUESTED;
       return c.endsOn < today ? ContractDecision.ENDED_NO_DECISION : ContractDecision.UNDECIDED;
@@ -168,16 +195,54 @@ export function noticeWithdrawalRefusal(
 }
 
 /**
+ * The school's not-renewing can be undone (it changed its mind) while the contract hasn't ended:
+ * only the school's own decision — an employee's notice is withdrawn instead.
+ */
+export function nonRenewalUndoRefusal(
+  c: Pick<ContractState, 'status' | 'nonRenewalBy' | 'endsOn'>,
+  today: IsoDate,
+): ErrorCode | null {
+  if (c.status !== ContractStatus.NOT_RENEWED || c.nonRenewalBy !== NonRenewalBy.SCHOOL) {
+    return ErrorCode.CONTRACT_NOT_SCHOOL_DECISION;
+  }
+  if (c.endsOn < today) return ErrorCode.CONTRACT_ENDED;
+  return null;
+}
+
+/** The default start of a new contract: 1 June of the contract year holding `today`. */
+export function defaultNewContractStart(today: IsoDate): IsoDate {
+  return contractYearRange(contractYearOf(today)).start;
+}
+
+/**
+ * Why a new contract can't be made for an employee (review 2026-11-24: a reactivated employee, or
+ * the school changed its mind after its not-renewing ended), or null: the employee is active, has no
+ * active contract, and the new one starts after every contract they have (contracts never overlap;
+ * a cancelled one doesn't count). `existing` are their contracts' periods (start, last day).
+ */
+export function newContractRefusal(
+  employeeActive: boolean,
+  existing: readonly { status: ContractStatus; startsOn: IsoDate; lastDay: IsoDate }[],
+  startsOn: IsoDate,
+): ErrorCode | null {
+  if (!employeeActive) return ErrorCode.EMPLOYEE_INACTIVE;
+  if (existing.some((c) => c.status === ContractStatus.ACTIVE)) return ErrorCode.CONTRACT_ACTIVE_EXISTS;
+  const counted = existing.filter((c) => c.status !== ContractStatus.CANCELLED);
+  if (counted.some((c) => startsOn <= c.lastDay)) return ErrorCode.CONTRACT_OVERLAP;
+  return null;
+}
+
+/**
  * An end for another reason (spec → Rules, GUESS): today or later, not before the contract's start,
- * not after its end. Only an active or not-renewed contract (a renewed one ends through its next).
+ * not after its end. An active, not-renewed or **renewed** contract (review 2026-11-24: dismissal or
+ * death in April after the renewal can't wait for 1 June — the next contract is cancelled with it).
  */
 export function endRefusal(
   c: Pick<ContractState, 'status' | 'endsOn' | 'earlyTerminationStatus'> & { startsOn: IsoDate },
   endsOn: IsoDate,
   today: IsoDate,
 ): ErrorCode | null {
-  if (c.status === ContractStatus.RENEWED) return ErrorCode.CONTRACT_ALREADY_RENEWED;
-  if (c.status === ContractStatus.ENDED_EARLY) return ErrorCode.CONTRACT_DECIDED;
+  if (c.status === ContractStatus.ENDED_EARLY || c.status === ContractStatus.CANCELLED) return ErrorCode.CONTRACT_DECIDED;
   if (c.earlyTerminationStatus === EarlyTerminationStatus.REQUESTED) return ErrorCode.EARLY_TERMINATION_PENDING;
   if (endsOn < today || endsOn < c.startsOn || endsOn > c.endsOn) return ErrorCode.CONTRACT_END_DATE_INVALID;
   return null;

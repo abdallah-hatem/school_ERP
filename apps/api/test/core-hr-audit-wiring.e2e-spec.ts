@@ -4,6 +4,7 @@ import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
 import { createAppAsTestUser } from './helpers/as-test-user';
 import { historyMark } from './helpers/history';
+import { deleteEmployees } from './helpers/employees';
 
 /*
  * T28 — core and HR people write their audit entries in the same transaction as the change (audit
@@ -95,7 +96,7 @@ describe('core + HR people audit wiring (T28, e2e)', () => {
     await db.userRoleAssignment.deleteMany({ where: { userId: { in: tempUserIds } } });
     await db.user.deleteMany({ where: { id: { in: tempUserIds } } });
     await db.role.deleteMany({ where: { id: { in: tempRoleIds } } });
-    await db.employee.deleteMany({});
+    await deleteEmployees(db);
     await db.violationLevel.deleteMany({});
     await db.violation.deleteMany({});
     await db.penaltyGroup.deleteMany({});
@@ -315,7 +316,8 @@ describe('core + HR people audit wiring (T28, e2e)', () => {
     await http(app).patch(`/hr/employees/${e.id}`).send({ grade: 'B' }).expect(200);
     const res = await http(app).get(`/audit/records/employee/${e.id}`).expect(200);
     const list = res.body.data as AuditEntry[];
-    expect(list.map((x) => x.action)).toEqual(['hr.employee.update', 'hr.employee.create']);
+    // Contracts (2026-11-24): the first contract's entry is on the employee's History too.
+    expect(list.map((x) => x.action)).toEqual(['hr.employee.update', 'hr.contract.create', 'hr.employee.create']);
     expect(list[0]?.entityLabel).toEqual({ en: e.nameEn, ar: e.nameAr });
     expect(list[0]?.changes).toEqual([{ field: 'grade', before: null, after: 'B' }]);
   });

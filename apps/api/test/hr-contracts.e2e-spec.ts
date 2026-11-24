@@ -1,9 +1,10 @@
 import type { INestApplication } from '@nestjs/common';
-import { ErrorCode, type AuthUser, type Contract, type ContractsPage } from '@school-erp/shared';
+import { AUTH_COOKIES, ErrorCode, type AuthUser, type Contract, type ContractsPage, type UserAccount } from '@school-erp/shared';
 import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
-import { createAppAsTestUser, giveRoles } from './helpers/as-test-user';
+import { ANONYMOUS_HEADER, createAppAsTestUser, giveRoles } from './helpers/as-test-user';
 import { historyMark } from './helpers/history';
+import { deleteEmployees } from './helpers/employees';
 
 /*
  * Contracts (spec docs/specs/2026-11-24-contracts.md) through the API: the renewal list, every
@@ -13,6 +14,18 @@ import { historyMark } from './helpers/history';
  */
 
 const PDF = Buffer.from('%PDF-1.7\n1 0 obj\n<<>>\nendobj\n');
+const TEMPORARY = 'a-temporary-password-1';
+const OWN = 'my-own-password-123';
+
+/** `name=value; …` for the session cookies a response set. */
+function sessionCookie(res: { headers: Record<string, unknown> }): string {
+  const raw = res.headers['set-cookie'];
+  const list = Array.isArray(raw) ? (raw as string[]) : raw ? [String(raw)] : [];
+  return list
+    .map((c) => c.split(';')[0] ?? '')
+    .filter((pair) => pair.startsWith(`${AUTH_COOKIES.access}=`) || pair.startsWith(`${AUTH_COOKIES.refresh}=`))
+    .join('; ');
+}
 const YEAR = 2045; // 1 Jun 2045 – 31 May 2046
 const CAL = { term1Start: '2045-09-15', term1End: '2046-01-28', term2Start: '2046-02-07', nonRenewalDeadline: '2046-04-30' };
 
@@ -103,9 +116,11 @@ describe('Contracts (e2e)', () => {
     await db.notification.deleteMany({ where: { items: { some: { employeeId: { in: employees } } } } });
     await db.payrollRun.deleteMany({ where: { month: { in: months } } });
     await db.schoolCalendar.deleteMany({ where: { year: { in: [YEAR, YEAR + 1] } } });
+    const emails = (await db.user.findMany({ where: { id: { in: users } }, select: { email: true } })).map((u) => u.email);
+    await db.loginAttempt.deleteMany({ where: { email: { in: emails } } });
     await db.user.deleteMany({ where: { id: { in: users } } });
-    // Contracts go with their employees (test cleanup only; employees are never deleted in the app).
-    await db.employee.deleteMany({ where: { id: { in: employees } } });
+    // Contracts first, then the employees (test cleanup only; neither is ever deleted in the app).
+    await deleteEmployees(db, { where: { id: { in: employees } } });
     await db.department.deleteMany({ where: { id: departmentId } });
     await db.jobTitle.deleteMany({ where: { id: jobTitleId } });
     await db.stage.deleteMany({ where: { id: { in: [stageA, stageB] } } });
@@ -290,8 +305,26 @@ describe('Contracts (e2e)', () => {
     });
   });
 
+  /**
+   * A real session for `roleKeys` (files are opened with the session cookie: `/files/…` is checked
+   * by the real auth before any guard, so the test user's stand-in can't open them).
+   */
+  async function readerSession(roleKeys: string[], employeeId: string | null = null): Promise<string> {
+    const roleIds = (await db.role.findMany({ where: { key: { in: roleKeys } }, select: { id: true } })).map((r) => r.id);
+    const email = `${unique('contracts')}@school.test`.toLowerCase();
+    const u = (await http(app).post('/users').send({ name: unique('Reader'), email, password: TEMPORARY, roleIds, employeeId }).expect(201))
+      .body.data as UserAccount;
+    users.push(u.id);
+    const first = await http(app).post('/auth/login').set(ANONYMOUS_HEADER, '1').send({ email, password: TEMPORARY }).expect(200);
+    await http(app).post('/account/password').set(ANONYMOUS_HEADER, '1').set('Cookie', sessionCookie(first)).send({ newPassword: OWN }).expect(204);
+    return sessionCookie(await http(app).post('/auth/login').set(ANONYMOUS_HEADER, '1').send({ email, password: OWN }).expect(200));
+  }
+  const open = (cookie: string, url: string) => http(app).get(url).set(ANONYMOUS_HEADER, '1').set('Cookie', cookie);
+
   describe('documents (a sensitive folder)', () => {
     it('a letter opens only once attached, for whoever may see the contract; each opening is recorded', async () => {
+      const officer = await readerSession(['hr_officer']);
+      const accountant = await readerSession(['accountant']);
       const c = await currentOf(await employee());
       const up = await http(app)
         .post(`/hr/contracts/${c.id}/files`)
@@ -300,19 +333,78 @@ describe('Contracts (e2e)', () => {
       const url = up.body.data.fileUrl as string;
       expect(url).toMatch(new RegExp(`^/files/contract-documents/${c.id}-.+\\.pdf$`));
       // Unattached: nobody's.
-      await http(app).get(url).expect(404);
+      await open(officer, url).expect(404);
       await http(app)
         .post(`/hr/contracts/${c.id}/not-renewed`)
         .send({ by: 'EMPLOYEE', receivedOn: '2026-01-10', fileUrl: url })
         .expect(200);
-      const opened = await http(app).get(url).expect(200);
+      const opened = await open(officer, url).expect(200);
       expect(opened.headers['content-type']).toContain('application/pdf');
+      // Without the view permission it doesn't exist; signed out → 401.
+      await open(accountant, url).expect(404);
+      await http(app).get(url).set(ANONYMOUS_HEADER, '1').expect(401);
       expect(await db.auditEntry.count({ where: { seq: { gt: mark }, action: 'hr.contract.document_open', entityId: c.id } })).toBe(1);
       // A renamed file is refused by its bytes.
       await http(app)
         .post(`/hr/contracts/${c.id}/files`)
         .attach('file', Buffer.from('<html></html>'), { filename: 'x.pdf', contentType: 'application/pdf' })
         .expect(400);
+    });
+  });
+
+  describe('review fixes (2026-11-24)', () => {
+    it('review 2 — a renewed contract can be ended (Article 148 in April): the next one is cancelled, kept, off the screen', async () => {
+      const id = await employee();
+      const c = await currentOf(id);
+      await http(app).post('/hr/contracts/renew').send({ contractIds: [c.id] }).expect(200);
+      const res = await http(app)
+        .post(`/hr/contracts/${c.id}/end`)
+        .send({ reason: 'ARTICLE_148', endsOn: `${YEAR + 1}-04-15`, note: 'Article 148' })
+        .expect(200);
+      expect(res.body.data).toMatchObject({ status: 'ENDED_EARLY', endedOn: `${YEAR + 1}-04-15`, next: null });
+      expect((await contractsOf(id)).map((h) => [h.startsOn, h.status])).toEqual([
+        [`${YEAR + 1}-06-01`, 'CANCELLED'],
+        [`${YEAR}-06-01`, 'ENDED_EARLY'],
+      ]);
+      const emp = (await http(app).get(`/hr/employees/${id}`).expect(200)).body.data;
+      expect([emp.contractStart, emp.contractEnd]).toEqual([`${YEAR}-06-01`, `${YEAR + 1}-04-15`]);
+      const nextYear = (await http(app).get(`/hr/contracts?year=${YEAR + 1}&search=${c.employee.code}`).expect(200)).body.data as ContractsPage;
+      expect(nextYear.items).toEqual([]);
+      const actions = await db.auditEntry.findMany({
+        where: { seq: { gt: mark }, entityType: 'employee_contract', action: { in: ['hr.contract.cancel', 'hr.contract.end'] }, entityLabel: c.employee.nameEn },
+        select: { action: true },
+      });
+      expect(actions.map((a) => a.action).sort()).toEqual(['hr.contract.cancel', 'hr.contract.end']);
+    });
+
+    it('review 3 — the school changes its mind: its not-renewing is undone (with a reason), then active again', async () => {
+      const c = await currentOf(await employee());
+      await http(app).post(`/hr/contracts/${c.id}/not-renewed`).send({ by: 'SCHOOL', note: 'Budget' }).expect(200);
+      expect((await currentOf(c.employee.id)).note).toBe('Budget');
+      await http(app).post(`/hr/contracts/${c.id}/not-renewed/undo`).send({ reason: '' }).expect(400);
+      const res = await http(app).post(`/hr/contracts/${c.id}/not-renewed/undo`).send({ reason: 'Budget found' }).expect(200);
+      expect(res.body.data).toMatchObject({ status: 'ACTIVE', decision: 'UNDECIDED' });
+      expect(await db.auditEntry.count({ where: { seq: { gt: mark }, action: 'hr.contract.not_renew_undo', entityId: c.id } })).toBe(1);
+    });
+
+    it('review 3 — a reactivated employee gets a new contract (no overlap, never while one is active)', async () => {
+      const id = await employee();
+      const c = await currentOf(id);
+      await http(app).post(`/hr/employees/${id}/contracts`).send({}).expect(409);
+      await http(app).post(`/hr/contracts/${c.id}/end`).send({ reason: 'OTHER', endsOn: `${YEAR}-12-31`, note: 'Left' }).expect(200);
+      await http(app).post(`/hr/employees/${id}/deactivate`).expect(200);
+      await http(app).post(`/hr/employees/${id}/reactivate`).expect(200);
+      const overlap = await http(app).post(`/hr/employees/${id}/contracts`).send({ startsOn: `${YEAR}-12-31` }).expect(409);
+      expect(overlap.body.error).toBe(ErrorCode.CONTRACT_OVERLAP);
+      const made = await http(app).post(`/hr/employees/${id}/contracts`).send({ startsOn: `${YEAR + 1}-02-01` }).expect(201);
+      expect(made.body.data).toMatchObject({ startsOn: `${YEAR + 1}-02-01`, endsOn: `${YEAR + 2}-01-31`, status: 'ACTIVE' });
+      const emp = (await http(app).get(`/hr/employees/${id}`).expect(200)).body.data;
+      expect([emp.contractStart, emp.contractEnd]).toEqual([`${YEAR + 1}-02-01`, `${YEAR + 2}-01-31`]);
+    });
+
+    it('review 7 — contracts are kept forever: an employee with contracts can’t be deleted', async () => {
+      const id = await employee();
+      await expect(db.employee.delete({ where: { id } })).rejects.toThrow();
     });
   });
 

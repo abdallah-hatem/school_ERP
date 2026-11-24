@@ -135,7 +135,9 @@
         "early_termination_approve": "الموافقة على الإنهاء المبكر لعقد {entity}",
         "early_termination_reject": "رفض طلب الإنهاء المبكر من {entity}",
         "end": "إنهاء عقد {entity}",
-        "document_open": "فتح مستند من عقد {entity}"
+        "document_open": "فتح مستند من عقد {entity}",
+        "cancel": "إلغاء العقد التالي للموظف {entity}",
+        "not_renew_undo": "التراجع عن عدم تجديد عقد {entity}"
       },
       "school_calendar": {
         "update": "تعديل تقويم المدرسة لعام {entity}"
