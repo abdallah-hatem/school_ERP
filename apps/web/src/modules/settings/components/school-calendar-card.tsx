@@ -81,7 +81,7 @@ export function SchoolCalendarCard() {
 
   if (calendar.error) {
     return (
-      <SectionPanel title={t('settings.hrRules.calendar.title')} description={t('settings.hrRules.calendar.description')} actions={stepper}>
+      <SectionPanel part="calendar" title={t('settings.hrRules.calendar.title')} description={t('settings.hrRules.calendar.description')} actions={stepper}>
         <ErrorState onRetry={calendar.retry} retrying={calendar.retrying} />
       </SectionPanel>
     );
@@ -154,6 +154,7 @@ function CalendarForm({
       className="gap-6"
     >
       <SectionPanel
+        part="calendar"
         title={t('settings.hrRules.calendar.title')}
         description={
           calendar.calendar

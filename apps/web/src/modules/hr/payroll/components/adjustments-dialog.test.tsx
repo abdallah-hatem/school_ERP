@@ -35,7 +35,6 @@ function renderRun(r = run()) {
   return renderPayroll(
     <RunPage
       basePath="/en/payroll"
-      settingsHref="/en/settings"
       penaltiesHref="/en/penalties"
       run={r}
       asOf={0}
