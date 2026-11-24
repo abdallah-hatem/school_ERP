@@ -647,11 +647,18 @@ phase live in `docs/build-log/`.
   view). Mockup on the `design` branch. Build waits for the owner's go.
 - 2026-11-24 — Owner said build contracts. A background agent builds it on `feature/contracts`
   (spec + layout A); an independent review follows before merge.
+- 2026-11-24 — Contracts PR #275 opened. Independent review found 7 should-fix items: writes
+  checked only the view scope (not the manage scope); a renewed contract couldn't be ended; a
+  reactivated employee could never get a new contract; the wrong school calendar for Feb–May starts;
+  last season's open rows vanished on 1 June; `ON DELETE CASCADE` on contracts (now Restrict); the
+  "40 of 38" tile. Plus nits (school's note hidden, `::date` casts, reminder re-arm on withdraw).
+  API e2e and phone smoke failed on CI. All sent back to the build agent; the 10 indexes on
+  `employee_contracts` stay (project rule: every foreign key and filtered column).
 
 ## Next up
 
-- **Contracts (16)** (owner, 2026-11-24): spec approved, renewals layout A picked; being built
-  (2026-11-24). The §2/§3/§11 edits land with the code.
+- **Contracts (16)** (owner, 2026-11-24): spec approved, renewals layout A picked; PR #275 open, fixing
+  review findings and CI (2026-11-24). The §2/§3/§11 edits land with the code.
 - **Students module, then the clinic** (owner, 2026-11-24): the clinic treats students (and staff), so the
   students module (student records, guardians, class placement, on top of academics' basic structure)
   is planned first, then the clinic on top of it. Order in `docs/ROADMAP.md`; spec not written yet.
