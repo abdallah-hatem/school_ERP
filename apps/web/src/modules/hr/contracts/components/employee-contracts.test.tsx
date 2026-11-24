@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import '@/test/dom-polyfills';
 import { menuItemNames, openRowActions } from '@/test/row-actions';
-import { cleanup, screen, within } from '@testing-library/react';
+import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { AnchorHTMLAttributes, ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -17,7 +17,7 @@ vi.mock('next/link', () => ({
   },
 }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
-vi.mock('../apis', () => ({
+const api = vi.hoisted(() => ({
   RENEW_CONTRACTS: vi.fn(),
   NOT_RENEW_CONTRACT: vi.fn(),
   WITHDRAW_NOTICE: vi.fn(),
@@ -27,14 +27,16 @@ vi.mock('../apis', () => ({
   END_CONTRACT: vi.fn(),
   DEACTIVATE_CONTRACTS: vi.fn(),
   UPLOAD_CONTRACT_FILE: vi.fn(),
-  GET_SCHOOL_CALENDAR: vi.fn().mockResolvedValue({ success: true, status: 200, data: { year: 2026, calendar: null } }),
+  UNDO_NOT_RENEW: vi.fn(),
+  CREATE_EMPLOYEE_CONTRACT: vi.fn(),
 }));
+vi.mock('../apis', () => api);
 
 import { sessionWithout } from '@/test/render';
-import { contract, renderContracts, TODAY } from '../test/fixtures';
+import { contract, ok, renderContracts, TODAY } from '../test/fixtures';
 import { EmployeeContracts, type EmployeeContractsProps } from './employee-contracts';
 
-const employee = { id: 'e-mona', nameEn: 'Mona Khalil', nameAr: 'منى خليل', contractStart: '2026-06-01' };
+const employee = { id: 'e-mona', nameEn: 'Mona Khalil', nameAr: 'منى خليل', contractStart: '2026-06-01', status: 'ACTIVE' as const };
 
 const current = contract();
 const previous = contract({
@@ -135,6 +137,49 @@ describe('EmployeeContracts (profile tab)', () => {
     renderTab();
     await user.click(screen.getByRole('button', { name: /Next page/ }));
     expect(router.push).toHaveBeenLastCalledWith('/en/employees/e-mona/contracts?page=2', { scroll: false });
+  });
+
+  it('review 3 — new contract button only without an active contract', async () => {
+    const user = userEvent.setup();
+    // The current contract is active: no new one.
+    const { unmount } = renderTab();
+    expect(screen.queryByRole('button', { name: 'New contract' })).toBeNull();
+    unmount();
+    // Not renewed by the school, and ended: a new contract can be made.
+    const ended = contract({ status: 'NOT_RENEWED', decision: 'NOT_RENEWED_SCHOOL', nonRenewalBy: 'SCHOOL', startsOn: '2025-06-01', endsOn: '2026-05-31', year: 2025 });
+    api.CREATE_EMPLOYEE_CONTRACT.mockResolvedValue(ok(contract()));
+    const { unmount: unmount2 } = renderTab({ rows: [ended], total: 1 });
+    await user.click(screen.getByRole('button', { name: 'New contract' }));
+    const dialog = await screen.findByRole('dialog', { name: 'New contract' });
+    // The default start (1 June of this contract year) and its end, one year later.
+    expect(dialog.textContent).toContain('1 Jun 2026');
+    expect(within(dialog).getByTestId('new-contract-end').textContent).toBe('It ends one year later: 31 May 2027.');
+    await user.click(within(dialog).getByRole('button', { name: 'Create contract' }));
+    await waitFor(() => expect(api.CREATE_EMPLOYEE_CONTRACT).toHaveBeenCalledWith('e-mona', {}));
+    expect(router.refresh).toHaveBeenCalled();
+    unmount2();
+    // Not for an inactive employee, nor without hr.contracts.manage; with no contract at all, it is the empty state's action.
+    const { unmount: unmount3 } = renderTab({ rows: [ended], employee: { ...employee, status: 'INACTIVE' } });
+    expect(screen.queryByRole('button', { name: 'New contract' })).toBeNull();
+    unmount3();
+    const { unmount: unmount4 } = renderTab({ rows: [ended] }, sessionWithout('hr.contracts.manage'));
+    expect(screen.queryByRole('button', { name: 'New contract' })).toBeNull();
+    unmount4();
+    renderTab({ rows: [], total: 0 });
+    expect(screen.getByText('No contracts yet')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'New contract' })).toBeTruthy();
+  });
+
+  it("review 10 — the school's note shows in the history", () => {
+    renderTab({
+      rows: [contract({ status: 'NOT_RENEWED', decision: 'NOT_RENEWED_SCHOOL', nonRenewalBy: 'SCHOOL', note: 'Position closed' })],
+    });
+    expect(table().getByTestId('decision-note').textContent).toBe('Note: Position closed');
+  });
+
+  it('a cancelled renewal reads as its own pill', () => {
+    renderTab({ rows: [contract({ id: 'c-9', status: 'CANCELLED', decision: 'CANCELLED', year: 2027, startsOn: '2027-06-01', endsOn: '2028-05-31' })] });
+    expect(table().getAllByRole('row')[1]?.textContent).toContain('Cancelled');
   });
 
   it('no contracts yet: says so', () => {

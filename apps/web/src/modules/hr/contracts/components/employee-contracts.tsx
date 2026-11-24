@@ -5,16 +5,20 @@ import {
   EarlyTerminationStatus,
   formatContractYear,
   PAGINATION,
+  ContractStatus,
+  EmployeeStatus,
   type Contract,
   type Employee,
 } from '@school-erp/shared';
 import { useRouter } from 'next/navigation';
-import { useTransition, type ReactNode } from 'react';
+import { useState, useTransition, type ReactNode } from 'react';
+import { useCan } from '@/core/auth';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-table/data-table';
 import { RowActionsSkeleton } from '@/shared/components/data-table/row-actions';
 import { EmptyState } from '@/shared/components/layout/empty-state';
 import { BidiText } from '@/shared/components/ui/bidi-text';
-import { ContractEndIcon, OpenIcon } from '@/shared/components/ui/icons';
+import { Button } from '@/shared/components/ui/button';
+import { AddIcon, ContractEndIcon, OpenIcon, RecalculateIcon } from '@/shared/components/ui/icons';
 import { SkeletonButton, SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
 import { SlotText, TEXT_SLOT } from '@/shared/components/ui/slot-text';
 import { StatusPill } from '@/shared/components/ui/status-pill';
@@ -23,12 +27,13 @@ import { localName } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { useProfileEmployeeIfLoaded } from '../../employees';
 import { ContractActions } from './contract-actions';
-import { ContractDates, ContractDecisionPill, decisionSubLine } from './contract-bits';
+import { ContractDates, ContractDecisionPill, DecisionNote, decisionSubLine } from './contract-bits';
+import { NewContractDialog } from './new-contract-dialog';
 
 export interface EmployeeContractsProps {
   employeeId: string;
   /** The profile's employee (its name, and its current contract's start); null before it loads. */
-  employee: Pick<Employee, 'id' | 'nameEn' | 'nameAr' | 'contractStart'> | null;
+  employee: Pick<Employee, 'id' | 'nameEn' | 'nameAr' | 'contractStart' | 'status'> | null;
   /** `/ar/employees/<id>/contracts`. */
   basePath: string;
   /** `undefined` while the first page loads: skeleton rows. */
@@ -51,6 +56,23 @@ export function EmployeeContracts({ employeeId, employee, basePath, rows, total,
   const { t, locale } = useTranslation();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const can = useCan();
+  const [creating, setCreating] = useState(false);
+  // Review 2026-11-24: a new contract for an active employee with no active one (reactivated, or
+  // after the school's not-renewing ended). The API refuses an overlap or an active one.
+  const canCreate =
+    can('hr.contracts.manage') &&
+    rows !== undefined &&
+    employee?.id === employeeId &&
+    employee.status === EmployeeStatus.ACTIVE &&
+    !rows.some((c) => c.status === ContractStatus.ACTIVE);
+  const name = employee ? localName(employee, locale) : '';
+  const newContract = canCreate ? (
+    <Button variant="primary" className="cursor-pointer" onClick={() => setCreating(true)}>
+      <AddIcon />
+      {t('contracts.newContract.button')}
+    </Button>
+  ) : null;
   // The record's current contract is the one its dates name (written only by Contracts).
   const isCurrent = (c: Contract) => !!employee && employee.id === employeeId && c.startsOn === employee.contractStart;
 
@@ -66,11 +88,17 @@ export function EmployeeContracts({ employeeId, employee, basePath, rows, total,
     {
       id: 'year',
       header: t('contracts.history.columns.year'),
-      className: 'w-28',
+      // One line: the year and the "Current" pill side by side (the row stays one line tall).
+      className: 'w-44 whitespace-nowrap',
       card: 'title',
-      skeleton: <SkeletonText className="font-bold" width="w-16" />,
+      skeleton: (
+        <span className="flex flex-nowrap items-center gap-2">
+          <SkeletonText className="font-bold" width="w-16" />
+          <SkeletonPill>{t('contracts.history.current')}</SkeletonPill>
+        </span>
+      ),
       cell: (c) => (
-        <span className="flex flex-wrap items-center gap-2">
+        <span className="flex flex-nowrap items-center gap-2">
           <bdi dir="ltr" className="tabular font-bold">
             {formatContractYear(c.year)}
           </bdi>
@@ -81,8 +109,8 @@ export function EmployeeContracts({ employeeId, employee, basePath, rows, total,
     {
       id: 'dates',
       header: t('contracts.history.columns.dates'),
-      className: 'w-36 whitespace-normal',
-      skeleton: <SkeletonText width="w-28" />,
+      className: 'w-52 whitespace-nowrap',
+      skeleton: <SkeletonText width="w-40" />,
       cell: (c) => <ContractDates contract={c} />,
     },
     {
@@ -113,10 +141,15 @@ export function EmployeeContracts({ employeeId, employee, basePath, rows, total,
       header: <span className="sr-only">{t('contracts.columns.actions')}</span>,
       cardLabel: t('contracts.columns.actions'),
       align: 'end',
-      className: 'w-56',
+      className: 'w-72 whitespace-nowrap',
       card: 'actions',
+      // The usual current contract: undecided, so Renew, Decide and the ⋯ — in their own words.
       skeleton: (
-        <span className="flex items-center justify-end gap-2">
+        <span className="flex flex-nowrap items-center justify-end gap-2">
+          <SkeletonButton size="sm">
+            <RecalculateIcon />
+            {t('contracts.actions.renew')}
+          </SkeletonButton>
           <SkeletonButton size="sm">{t('contracts.actions.decide')}</SkeletonButton>
           <RowActionsSkeleton />
         </span>
@@ -126,21 +159,41 @@ export function EmployeeContracts({ employeeId, employee, basePath, rows, total,
   ];
 
   return (
-    <DataTable
-      label={t('contracts.history.tableLabel', { name: employee ? localName(employee, locale) : '' })}
-      columns={columns}
-      rows={rows}
-      loading={rows === undefined}
-      cardHeightsVary
-      getRowId={(c) => c.id}
-      refreshing={pending}
-      error={error}
-      retrying={pending && error}
-      onRetry={() => startTransition(() => router.refresh())}
-      empty={<EmptyState icon={ContractEndIcon} title={t('contracts.history.emptyTitle')} description={t('contracts.history.emptyBody')} />}
-      pagination={{ page, limit, total, onPageChange: goToPage }}
-      cardsBelow={1100}
-    />
+    <>
+      <DataTable
+        label={t('contracts.history.tableLabel', { name })}
+        columns={columns}
+        rows={rows}
+        loading={rows === undefined}
+        cardHeightsVary
+        getRowId={(c) => c.id}
+        refreshing={pending}
+        error={error}
+        retrying={pending && error}
+        onRetry={() => startTransition(() => router.refresh())}
+        empty={
+          <EmptyState
+            icon={ContractEndIcon}
+            title={t('contracts.history.emptyTitle')}
+            description={t('contracts.history.emptyBody')}
+            action={newContract}
+          />
+        }
+        toolbar={newContract && rows?.length ? <div className="flex w-full justify-end">{newContract}</div> : undefined}
+        pagination={{ page, limit, total, onPageChange: goToPage }}
+        cardsBelow={1100}
+      />
+      {canCreate ? (
+        <NewContractDialog
+          employeeId={employeeId}
+          name={name}
+          today={today}
+          open={creating}
+          onOpenChange={setCreating}
+          onDone={() => router.refresh()}
+        />
+      ) : null}
+    </>
   );
 }
 
@@ -156,6 +209,8 @@ function Details({ contract: c }: { contract: Contract }) {
   const lines: ReactNode[] = [];
   const sub = decisionSubLine(c, t, locale);
   if (sub) lines.push(sub);
+  // The not-renewing decision's note (the school's too).
+  if (c.note) lines.push(<DecisionNote key="decision-note" note={c.note} />);
   if (c.notice && c.decision !== 'NOTICE') lines.push(t('contracts.history.noticeReceived', { date: day(c.notice.receivedOn) }));
   if (c.notice && c.notice.timing !== CalendarTiming.ON_TIME) lines.push(t(`contracts.tags.${c.notice.timing}`));
   const et = c.earlyTermination;

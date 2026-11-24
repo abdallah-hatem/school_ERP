@@ -164,7 +164,8 @@
       "ACTIVE": "ساري",
       "RENEWED": "مُجدد",
       "NOT_RENEWED": "لن يُجدد",
-      "ENDED_EARLY": "انتهى مبكرًا"
+      "ENDED_EARLY": "انتهى مبكرًا",
+      "CANCELLED": "ملغى"
     },
     "contractDecision": {
       "UNDECIDED": "بلا قرار",
@@ -173,7 +174,8 @@
       "NOT_RENEWED_SCHOOL": "عدم تجديد — المدرسة",
       "NOTICE": "الموظف قدّم إخطارًا",
       "EARLY_REQUESTED": "طلب إنهاء مبكر",
-      "ENDED_EARLY": "انتهى مبكرًا"
+      "ENDED_EARLY": "انتهى مبكرًا",
+      "CANCELLED": "ملغى"
     },
     "nonRenewalBy": {
       "SCHOOL": "المدرسة",

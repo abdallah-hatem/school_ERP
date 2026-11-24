@@ -10,14 +10,7 @@
   "tiles": {
     "label": "Contracts by decision",
     "ending": "Ending this year",
-    "endingSub": {
-      "zero": "of {count} active contracts",
-      "one": "of {count} active contract",
-      "two": "of {count} active contracts",
-      "few": "of {count} active contracts",
-      "many": "of {count} active contracts",
-      "other": "of {count} active contracts"
-    },
+    "endingSub": "{start} – {end}",
     "decided": "Decided",
     "decidedSub": "Renewing {renewing} · not renewing {notRenewing}",
     "open": "Not decided",
@@ -33,6 +26,14 @@
     "noticesSub": "{early} early · {late} late",
     "toDeactivate": "To deactivate",
     "toDeactivateSub": "Not renewed or ended, still active",
+    "carriedOverSub": {
+      "zero": "{count} from earlier years",
+      "one": "{count} from an earlier year",
+      "two": "{count} from earlier years",
+      "few": "{count} from earlier years",
+      "many": "{count} from earlier years",
+      "other": "{count} from earlier years"
+    },
     "showing": "Showing only these"
   },
   "calendar": {
@@ -82,7 +83,8 @@
     "EARLY": "Early",
     "LATE": "Late",
     "CALENDAR_NOT_SET": "Calendar not set",
-    "toDeactivate": "To deactivate"
+    "toDeactivate": "To deactivate",
+    "from": "From {year}"
   },
   "sub": {
     "decidedBy": "{name} · {when}",
@@ -91,7 +93,8 @@
     "requestedNoEnd": "Requested {date}",
     "endedNoDecision": "Ended {date} · still active",
     "ended": "Ended {date}",
-    "renewedTo": "Next: {start} – {end}"
+    "renewedTo": "Next: {start} – {end}",
+    "note": "Note: {note}"
   },
   "actions": {
     "renew": "Renew",
@@ -106,7 +109,9 @@
     "withdrawNotice": "Withdraw the notice",
     "history": "Contract history",
     "end": "End for another reason…",
-    "ownContract": "Your own contract: someone else decides on it."
+    "ownContract": "Your own contract: someone else decides on it.",
+    "undoNotRenewing": "Undo not renewing",
+    "rejectRequest": "Reject request"
   },
   "bulk": {
     "label": "Selected contracts",
@@ -233,7 +238,8 @@
     "notePlaceholder": "What happened, in a few words",
     "attachment": "Attachment",
     "confirm": "End the contract",
-    "done": "Contract ended."
+    "done": "Contract ended.",
+    "renewedWarning": "The renewal (next year's contract) is cancelled too."
   },
   "deactivate": {
     "title": "Deactivate {name}?",
@@ -268,5 +274,23 @@
   "form": {
     "tooLong": "Keep it under 1,000 characters.",
     "futureDate": "Can't be in the future."
+  },
+  "undo": {
+    "title": "Undo not renewing?",
+    "body": "{name}'s contract goes back to “Not decided”.",
+    "reasonLabel": "Reason",
+    "reasonPlaceholder": "Why the school changed its mind",
+    "confirm": "Undo",
+    "done": "Not renewing undone."
+  },
+  "newContract": {
+    "button": "New contract",
+    "title": "New contract",
+    "description": "A one-year contract for {name}.",
+    "startsOn": "Start date",
+    "startsOnHint": "Leave it for 1 June of this contract year ({date}).",
+    "ends": "It ends one year later: {date}.",
+    "confirm": "Create contract",
+    "done": "Contract created."
   }
 }

@@ -1,14 +1,8 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  calendarYearOfContract,
-  NonRenewalBy,
-  renewedContractDates,
-  type Contract,
-  type SchoolCalendarDates,
-} from '@school-erp/shared';
-import { useEffect, useId, useRef, useState } from 'react';
+import { NonRenewalBy, renewedContractDates, type Contract } from '@school-erp/shared';
+import { useId, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { callApi } from '@/lib/callApi';
 import { DateField, TextareaField } from '@/shared/components/form/fields';
@@ -22,7 +16,7 @@ import { formatDate, todayIso } from '@/shared/lib/format';
 import { localName } from '@/shared/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
-import { GET_SCHOOL_CALENDAR, NOT_RENEW_CONTRACT, RENEW_CONTRACTS, REQUEST_EARLY_TERMINATION } from '../apis';
+import { NOT_RENEW_CONTRACT, RENEW_CONTRACTS, REQUEST_EARLY_TERMINATION } from '../apis';
 import { contractError } from '../lib/contract-text';
 import {
   DATED_CHOICES,
@@ -44,15 +38,15 @@ const CHOICE_ICON: Record<DecisionChoice, AppIcon> = {
 /**
  * Deciding one contract (the mockup's "Decide" sheet): Renew, Not renewing — the school's decision,
  * the employee's notice (the date it was received, the scanned letter and a note) or an early
- * termination request. A dated choice says at once where it falls against the school calendar
- * ("Early", "Late", "Calendar not set"), with the shared rule. From the bottom on a phone, from the
+ * termination request. A dated choice says at once where it falls against the school calendar the
+ * contract reads (`contract.calendars`, picked by the API) — "Early", "Late", "Calendar not set" —
+ * with the shared rule. From the bottom on a phone, from the
  * inline-end edge on a tablet and up. Refusals keep it open with the reason.
  */
 export function DecisionSheet({
   contract,
   choice: initialChoice,
   choices,
-  calendar: knownCalendar,
   onClose,
   onDone,
 }: {
@@ -62,11 +56,6 @@ export function DecisionSheet({
   choice?: DecisionChoice;
   /** What may be chosen on this contract (renewable, decidable). */
   choices: readonly DecisionChoice[];
-  /**
-   * The contract's year calendar when the screen has it (the renewals list); undefined: the sheet
-   * asks the API (`GET /hr/settings/school-calendar/:year`).
-   */
-  calendar?: SchoolCalendarDates | null;
   onClose: () => void;
   onDone: () => void;
 }) {
@@ -81,7 +70,6 @@ export function DecisionSheet({
             contract={contract}
             initialChoice={initialChoice}
             choices={choices}
-            knownCalendar={knownCalendar}
             bottom={side === 'bottom'}
             onDone={onDone}
           />
@@ -95,14 +83,12 @@ function DecisionBody({
   contract,
   initialChoice,
   choices,
-  knownCalendar,
   bottom,
   onDone,
 }: {
   contract: Contract;
   initialChoice?: DecisionChoice;
   choices: readonly DecisionChoice[];
-  knownCalendar?: SchoolCalendarDates | null;
   bottom: boolean;
   onDone: () => void;
 }) {
@@ -119,12 +105,11 @@ function DecisionBody({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
-  const calendar = useContractCalendar(contract, knownCalendar);
   const name = localName(contract.employee, locale);
   const next = renewedContractDates(contract.endsOn);
   const dated = (DATED_CHOICES as readonly string[]).includes(choice);
   const timing = dated
-    ? timingLine(choice as DecisionChoice, date, contract.startsOn, calendar, t, locale)
+    ? timingLine(choice as DecisionChoice, date, contract.calendars, t, locale)
     : null;
 
   async function save(values: DecisionValues) {
@@ -319,25 +304,4 @@ function Hint({
       <span className="min-w-0 break-words">{children}</span>
     </p>
   );
-}
-
-/**
- * The calendar a contract reads (the year it started in): the one the screen passed, else asked
- * once from the API. Undefined while unknown, or when it can't be read (no timing line then).
- */
-function useContractCalendar(contract: Contract, known: SchoolCalendarDates | null | undefined) {
-  const year = calendarYearOfContract(contract.startsOn);
-  const [fetched, setFetched] = useState<{ year: number; calendar: SchoolCalendarDates | null } | null>(null);
-  useEffect(() => {
-    if (known !== undefined) return;
-    let live = true;
-    void callApi(GET_SCHOOL_CALENDAR(year), { showErrorToast: false }).then((res) => {
-      if (live && res.success && res.data) setFetched({ year, calendar: res.data.calendar });
-    });
-    return () => {
-      live = false;
-    };
-  }, [known, year]);
-  if (known !== undefined) return known;
-  return fetched?.year === year ? fetched.calendar : undefined;
 }

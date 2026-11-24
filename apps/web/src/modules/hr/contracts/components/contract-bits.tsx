@@ -1,9 +1,11 @@
 'use client';
 
-import { ContractDecision, lastDayOf, type Contract, type ContractDecision as Decision } from '@school-erp/shared';
+import { ContractDecision, formatContractYear, lastDayOf, type Contract, type ContractDecision as Decision } from '@school-erp/shared';
 import { EmployeeLink } from '@/core/employees';
 import { PersonAvatar } from '@/shared/components/ui/person-avatar';
 import { SkeletonIdentity, SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
+import { BidiText } from '@/shared/components/ui/bidi-text';
+import { SlotText, TEXT_SLOT } from '@/shared/components/ui/slot-text';
 import { StatusPill } from '@/shared/components/ui/status-pill';
 import { formatDate, formatDateTime } from '@/shared/lib/format';
 import { localName } from '@/shared/lib/i18n';
@@ -57,7 +59,21 @@ export function decisionSubLine(
   }
 }
 
-/** The decision column: the pill, its tags (Early / Late / Calendar not set / To deactivate) and the sub line. */
+/** The not-renewing decision's note (the school's or the notice's), its typed text isolated. */
+export function DecisionNote({ note, className }: { note: string | null; className?: string }) {
+  const { t } = useTranslation();
+  if (!note) return null;
+  return (
+    <span data-testid="decision-note" className={cn('text-xs break-words whitespace-normal text-muted-foreground', className)}>
+      <SlotText text={t('contracts.sub.note', { note: TEXT_SLOT })} slot={<BidiText>{note}</BidiText>} />
+    </span>
+  );
+}
+
+/**
+ * The decision column: the pill, its tags (From 2025/26 for a row carried over from an earlier
+ * season, Early / Late / Calendar not set, To deactivate), the sub line and the decision's note.
+ */
 export function DecisionCell({ contract }: { contract: Contract }) {
   const { t, locale } = useTranslation();
   const sub = decisionSubLine(contract, t, locale);
@@ -66,6 +82,11 @@ export function DecisionCell({ contract }: { contract: Contract }) {
     <span className="flex flex-col items-start gap-1">
       <span className="flex flex-wrap items-center gap-1.5">
         <ContractDecisionPill decision={contract.decision} />
+        {contract.carriedOver ? (
+          <StatusPill tone="info" className="tabular" title={t('contracts.tags.from', { year: formatContractYear(contract.year) })}>
+            <bdi>{t('contracts.tags.from', { year: formatContractYear(contract.year) })}</bdi>
+          </StatusPill>
+        ) : null}
         {tags.map((tag) => (
           <StatusPill
             key={tag}
@@ -77,6 +98,7 @@ export function DecisionCell({ contract }: { contract: Contract }) {
         ))}
       </span>
       {sub ? <span className="max-w-64 text-xs break-words whitespace-normal text-muted-foreground">{sub}</span> : null}
+      <DecisionNote note={contract.note} className="max-w-64" />
     </span>
   );
 }

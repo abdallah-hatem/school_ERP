@@ -130,8 +130,9 @@ describe('Settings → HR rules, view only vs edit', () => {
     expect(textbox(/Grace minutes/)).toHaveProperty('disabled', false);
     await user.click(screen.getByRole('button', { name: 'Add an hour step' }));
     expect(screen.getAllByRole('button', { name: /Remove hour/ }).length).toBeGreaterThan(1);
-    // The rules' Save bar and the School calendar's.
-    expect(screen.getAllByRole('button', { name: 'Save' })).toHaveLength(2);
+    // The rules' Save bar, and the School calendar's in its own words.
+    expect(screen.getByRole('button', { name: 'Save' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Save calendar' })).toBeTruthy();
   });
 });
 

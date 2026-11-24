@@ -11,7 +11,6 @@ const api = vi.hoisted(() => ({
   NOT_RENEW_CONTRACT: vi.fn(),
   REQUEST_EARLY_TERMINATION: vi.fn(),
   UPLOAD_CONTRACT_FILE: vi.fn(),
-  GET_SCHOOL_CALENDAR: vi.fn(),
 }));
 vi.mock('../apis', () => api);
 
@@ -36,12 +35,12 @@ function renderSheet(
   locale: 'en' | 'ar' = 'en',
 ) {
   const onDone = vi.fn();
+  const cal = 'calendar' in props ? (props.calendar ?? null) : calendar;
   renderContracts(
     <DecisionSheet
-      contract={contract()}
+      contract={contract({ calendars: { notice: cal, earlyTermination: cal } })}
       choice={props.choice}
       choices={ALL}
-      calendar={'calendar' in props ? props.calendar : calendar}
       onClose={vi.fn()}
       onDone={onDone}
     />,
@@ -100,11 +99,19 @@ describe('DecisionSheet', () => {
     expect(shared.earlyTerminationTiming).toHaveBeenCalledWith('2026-11-24', calendar);
   });
 
-  it('without the calendar on the screen, the sheet asks the API for the contract year’s', async () => {
-    api.GET_SCHOOL_CALENDAR.mockResolvedValue(ok({ year: 2026, calendar: null }));
-    renderSheet({ choice: 'NOTICE', calendar: undefined });
-    await waitFor(() => expect(api.GET_SCHOOL_CALENDAR).toHaveBeenCalledWith(2026));
-    expect((await screen.findByTestId('decision-timing')).textContent).toContain('Calendar not set');
+  it("reads the calendars the API picked for this contract (notice and early termination can differ)", () => {
+    const later = { ...calendar, term1Start: '2027-09-19', term1End: '2028-01-27' };
+    renderContracts(
+      <DecisionSheet
+        contract={contract({ calendars: { notice: calendar, earlyTermination: later } })}
+        choice="EARLY_TERMINATION"
+        choices={ALL}
+        onClose={vi.fn()}
+        onDone={vi.fn()}
+      />,
+    );
+    expect(shared.earlyTerminationTiming).toHaveBeenCalledWith('2026-11-24', later);
+    expect(screen.getByTestId('decision-timing').textContent).toMatch(/^Term 1 starts 19 Sept? 2027: a request can be recorded from that day\.$/);
   });
 
   it("saving the employee's notice sends the date and the note, as EMPLOYEE", async () => {

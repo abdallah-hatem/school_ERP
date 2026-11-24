@@ -194,6 +194,7 @@ function CalendarForm({
           valid={isValid}
           saving={isSubmitting}
           saved={saved && !isDirty}
+          saveLabel={t('settings.hrRules.calendar.save')}
           onDiscard={() => {
             form.reset();
             setSaved(false);
