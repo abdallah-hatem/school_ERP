@@ -372,6 +372,23 @@ describe('core settings and school structure (e2e)', () => {
       expect(all.body.data.map((s: { id: string }) => s.id)).toContain(stage.id);
     });
 
+    it('excludeIds leaves those stages out of the page and its total (a picker hides what is chosen)', async () => {
+      const name = unique('Excl');
+      const a = await createStage({ nameEn: `${name} A`, nameAr: 'أ' });
+      const b = await createStage({ nameEn: `${name} B`, nameAr: 'ب' });
+      const all = await http(app).get(`/stages?search=${encodeURIComponent(name)}`).expect(200);
+      expect(all.body.data.map((s: { id: string }) => s.id).sort()).toEqual([a.id, b.id].sort());
+
+      const res = await http(app)
+        .get(`/stages?search=${encodeURIComponent(name)}&excludeIds=${a.id}`)
+        .expect(200);
+      expect(res.body.data.map((s: { id: string }) => s.id)).toEqual([b.id]);
+      expect(res.body.meta.total).toBe(1);
+
+      const bad = await http(app).get('/stages?excludeIds=not-a-uuid').expect(400);
+      expect(bad.body.error).toBe('VALIDATION_FAILED');
+    });
+
     it('PATCH an unknown stage → 404; a malformed id → 400', async () => {
       await http(app)
         .patch('/stages/11111111-1111-4111-8111-111111111111')

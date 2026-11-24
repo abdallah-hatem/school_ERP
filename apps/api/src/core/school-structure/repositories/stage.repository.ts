@@ -26,18 +26,24 @@ export class StageRepository {
     return this.txHost.tx;
   }
 
-  /** One page (by order, then English name), searched by either name (any case). */
+  /**
+   * One page (by order, then English name), searched by either name (any case); `ids` keeps only
+   * those, `excludeIds` leaves those out (a picker's already-chosen stages).
+   */
   async findPage(
     includeHidden: boolean,
     page = 1,
     limit: number = PAGINATION.defaultLimit,
     search?: string,
     ids?: string[],
+    excludeIds?: string[],
   ): Promise<Paginated<Stage>> {
     const take = Math.min(Math.max(1, limit), PAGINATION.maxLimit);
     const current = Math.max(1, page);
     const where: Prisma.StageWhereInput = includeHidden ? {} : { isActive: true };
-    if (ids) where.id = { in: ids };
+    if (ids || excludeIds?.length) {
+      where.id = { ...(ids ? { in: ids } : {}), ...(excludeIds?.length ? { notIn: excludeIds } : {}) };
+    }
     const searched = searchWhere(search);
     if (searched) where.OR = searched.OR;
     const [data, total] = await Promise.all([
