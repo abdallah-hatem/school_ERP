@@ -637,11 +637,16 @@ phase live in `docs/build-log/`.
   Low; lows fixed: the sign-in section list now fails closed, odd addresses like `/x.php` get the
   localized 404 with CSP, one not-found wording, no-store asserted) and a CI fix: a wrong `/api/…` now
   answers JSON 404 (the fallback `global-not-found` could never run and was removed).
+- 2026-11-24 — Roadmap written (`docs/ROADMAP.md`): every module from the client proposal (33) plus
+  the clinic, layered by what each needs, with status and three tracks (HR, school, finance). Owner
+  added the clinic (students and staff) and fingerprint attendance; planning only, nothing built.
+
 ## Next up
 
 - **Students module, then the clinic** (owner, 2026-11-24): the clinic treats students (and staff), so the
   students module (student records, guardians, class placement, on top of academics' basic structure)
-  is planned first, then the clinic on top of it. Planning started 2026-11-24; spec not written yet.
+  is planned first, then the clinic on top of it. Order in `docs/ROADMAP.md`; spec not written yet.
+  Planning only until the owner says build.
 - **Fingerprint scanner for staff arrival and leaving** (owner, 2026-11-24): staff attendance comes from
   the device and feeds lateness (§5). Open: device brand/model and how it connects.
 

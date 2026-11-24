@@ -8,6 +8,12 @@ responsive layout.
 
 ## Planned (from the client's documents, after the demo)
 
+The build order of every module, and what each one needs, is in [`docs/ROADMAP.md`](../ROADMAP.md).
+
+- **Clinic** (owner, 2026-11-24): treats students and staff — visits, health profiles, medication,
+  the guardian told when a student is sent home, and the doctor's approval of staff sick leave and
+  sick permissions. Built after student records.
+
 - **Leave:** annual (15 / 21 / 30 days), casual (7 a year, max 1 a month, not for drivers or external
   supervision), sick (10 a year with a doctor's approval), bereavement, Hajj, Umrah, marriage,
   maternity, excused absence, the part-time leave table.

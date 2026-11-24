@@ -340,6 +340,8 @@ services to run), not full DDD (most of the system is well-understood CRUD).
 
 ### Module order
 
+This is the order in code. The order modules are **built** in is `docs/ROADMAP.md`.
+
 ```
 common            ← technical helpers (no business)
   ↑
