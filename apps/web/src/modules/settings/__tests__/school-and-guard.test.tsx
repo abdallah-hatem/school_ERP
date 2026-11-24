@@ -20,6 +20,8 @@ const api = vi.hoisted(() => ({
   UPDATE_PENALTY_GROUP: vi.fn(),
   CREATE_VIOLATION: vi.fn(),
   UPDATE_VIOLATION: vi.fn(),
+  GET_SCHOOL_CALENDAR: vi.fn(),
+  PUT_SCHOOL_CALENDAR: vi.fn(),
 }));
 vi.mock('../apis', () => api);
 
@@ -68,6 +70,7 @@ describe('Settings screen — school section', () => {
   beforeEach(() => {
     api.GET_SCHOOL_SETTINGS_FOR_EDIT.mockImplementation(() => ok(school));
     api.GET_HR_SETTINGS.mockImplementation(() => ok(hrSettings));
+    api.GET_SCHOOL_CALENDAR.mockImplementation((year: number) => ok({ year, calendar: null }));
     URL.createObjectURL = vi.fn(() => 'blob:preview-logo');
     URL.revokeObjectURL = vi.fn();
   });
@@ -182,6 +185,7 @@ describe('Settings screen — unsaved changes warning', () => {
   beforeEach(() => {
     api.GET_SCHOOL_SETTINGS_FOR_EDIT.mockImplementation(() => ok(school));
     api.GET_HR_SETTINGS.mockImplementation(() => ok(hrSettings));
+    api.GET_SCHOOL_CALENDAR.mockImplementation((year: number) => ok({ year, calendar: null }));
   });
   afterEach(() => {
     cleanup();
