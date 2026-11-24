@@ -430,14 +430,10 @@ function MakeDefaultDialog({
               variant="primary"
               disabled={!choice}
               loading={busy}
-              onClick={async () => {
+              onClick={() => {
                 if (!choice) return;
                 setBusy(true);
-                try {
-                  await onConfirm(choice);
-                } finally {
-                  setBusy(false);
-                }
+                void onConfirm(choice).finally(() => setBusy(false));
               }}
             >
               {t('contractTemplates.list.makeDefault.confirm')}

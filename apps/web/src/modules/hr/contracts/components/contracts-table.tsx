@@ -154,6 +154,7 @@ export function ContractsTable({
           contract={c}
           today={today}
           historyHref={historyHref(c.employee.id)}
+          printInMenu
         />
       ),
     },

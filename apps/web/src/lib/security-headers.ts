@@ -45,6 +45,7 @@ export function apiOrigin(env: { API_PUBLIC_ORIGIN?: string; BASE_URL?: string }
  *   charts, the sidebar's widths, branding colours), and a nonce can't cover an attribute. Styles
  *   can't run script, so this leaves the script policy whole.
  * - `img-src data: blob:`: inlined icons and the photo preview before upload.
+ * - `frame-src blob:`: the print of a contract copy (its PDF in a hidden frame).
  * - nothing may frame the app, change its base URL or post its forms elsewhere; no plugins.
  */
 export function contentSecurityPolicy(opts: { nonce: string; dev: boolean; apiOrigin: string | null }): string {
@@ -58,6 +59,9 @@ export function contentSecurityPolicy(opts: { nonce: string; dev: boolean; apiOr
     'connect-src': ["'self'", ...api],
     'worker-src': ["'self'"],
     'manifest-src': ["'self'"],
+    // A printed contract copy: its PDF is loaded into a hidden frame as a `blob:` and printed from
+    // there (contract templates spec → Printing).
+    'frame-src': ["'self'", 'blob:'],
     'frame-ancestors': ["'none'"],
     'base-uri': ["'self'"],
     'form-action': ["'self'"],

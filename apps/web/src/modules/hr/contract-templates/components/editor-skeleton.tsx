@@ -73,7 +73,7 @@ function FieldsPanelSkeleton() {
 }
 
 /** The whole editor page while the template loads (the route's `loading.tsx`). */
-export function TemplateEditorSkeleton({ listHref }: { listHref: string }) {
+export function TemplateEditorSkeleton({ listHref, isNew = false }: { listHref: string; isNew?: boolean }) {
   const { t } = useTranslation();
   return (
     <div aria-busy="true" className="flex flex-col gap-5">
@@ -82,14 +82,17 @@ export function TemplateEditorSkeleton({ listHref }: { listHref: string }) {
       </span>
       <TemplateEditorHeader
         listHref={listHref}
-        title={<SkeletonText className="text-2xl md:text-3xl" width="w-64" />}
+        title={isNew ? t('contractTemplates.editor.newTitle') : <SkeletonText className="text-2xl md:text-3xl" width="w-64" />}
+        // A new template: Arabic only, not saved; an existing one as most are: a work system's default.
         status={
           <span className="flex flex-wrap items-center gap-2">
-            <SkeletonPill>{t('contractTemplates.editor.defaultPill', { workSystem: t('common.enums.workSystem.FULL_TIME') })}</SkeletonPill>
+            {isNew ? null : (
+              <SkeletonPill>{t('contractTemplates.editor.defaultPill', { workSystem: t('common.enums.workSystem.FULL_TIME') })}</SkeletonPill>
+            )}
             <SkeletonPill>{t('contractTemplates.languagePills.AR')}</SkeletonPill>
           </span>
         }
-        description={<SkeletonText className="text-sm" width="w-72" />}
+        description={isNew ? t('contractTemplates.editor.notSaved') : <SkeletonText className="text-sm" width="w-72" />}
         actions={
           <>
             <SkeletonButton>
@@ -125,11 +128,11 @@ export function TemplateEditorSkeleton({ listHref }: { listHref: string }) {
 }
 
 /** The editor routes' `loading.tsx`: the skeleton in the page's language. */
-export function TemplateEditorLoading() {
+export function TemplateEditorLoading({ isNew = false }: { isNew?: boolean }) {
   const { locale } = useTranslation();
   return (
     <ContractTemplatesI18n locale={locale}>
-      <TemplateEditorSkeleton listHref={settingsHref(locale, 'contractTemplates')} />
+      <TemplateEditorSkeleton listHref={settingsHref(locale, 'contractTemplates')} isNew={isNew} />
     </ContractTemplatesI18n>
   );
 }

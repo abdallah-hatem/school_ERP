@@ -41,6 +41,7 @@ describe('contentSecurityPolicy', () => {
       'connect-src': ["'self'", 'https://api.school.test'],
       'worker-src': ["'self'"],
       'manifest-src': ["'self'"],
+      'frame-src': ["'self'", 'blob:'],
       'frame-ancestors': ["'none'"],
       'base-uri': ["'self'"],
       'form-action': ["'self'"],

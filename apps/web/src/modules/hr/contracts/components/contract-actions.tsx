@@ -38,6 +38,7 @@ import { abilitiesOf, contractError, nextAction } from '../lib/contract-text';
 import type { DecisionChoice } from '../lib/decision-form';
 import { DecisionSheet } from './decision-sheet';
 import { EndContractDialog } from './end-contract-dialog';
+import { usePrintContractMenu } from './print-contract';
 
 type Confirm = 'renew' | 'approve' | 'reject' | 'withdraw' | 'undo' | 'deactivate' | 'cancel' | null;
 
@@ -57,6 +58,7 @@ export function ContractActions({
   today,
   historyHref,
   decideBelow = 'cards',
+  printInMenu = false,
 }: {
   contract: Contract;
   /** The school's today (`YYYY-MM-DD`, Cairo). */
@@ -68,6 +70,8 @@ export function ContractActions({
    * or `always` (the employee's tab, where there is one current contract).
    */
   decideBelow?: 'cards' | 'always';
+  /** "Print contract" in the ⋯ (HR → Contracts); the employee's tab has its own button instead. */
+  printInMenu?: boolean;
 }) {
   const { t, has, locale } = useTranslation();
   const can = useCan();
@@ -77,6 +81,7 @@ export function ContractActions({
   const [ending, setEnding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const stale = useRef(false);
+  const print = usePrintContractMenu(contract);
 
   const abilities = abilitiesOf(contract, {
     manage: can('hr.contracts.manage'),
@@ -148,6 +153,7 @@ export function ContractActions({
     },
     { id: 'undoNotRenewing', label: t('contracts.actions.undoNotRenewing'), icon: RestoreIcon, hidden: !abilities.undoNotRenewing, onSelect: () => open('undo') },
     { id: 'withdrawNotice', label: t('contracts.actions.withdrawNotice'), icon: RestoreIcon, hidden: !abilities.withdrawNotice, onSelect: () => open('withdraw') },
+    ...(printInMenu ? print.actions : []),
     { id: 'history', label: t('contracts.actions.history'), icon: HistoryIcon, hidden: !historyHref, href: historyHref },
     { id: 'end', label: t('contracts.actions.end'), icon: CloseIcon, destructive: true, hidden: !abilities.end, onSelect: () => setEnding(true) },
     { id: 'cancel', label: t('contracts.actions.cancel'), icon: CloseIcon, destructive: true, hidden: !abilities.cancel, onSelect: () => open('cancel') },
@@ -322,6 +328,7 @@ export function ContractActions({
         confirmLabel={t('contracts.deactivate.confirm')}
         onConfirm={() => run(DEACTIVATE_CONTRACTS([contract.id]), t('contracts.deactivate.done'))}
       />
+      {printInMenu ? print.dialog : null}
       {abilities.end ? (
         <EndContractDialog contract={contract} today={today} open={ending} onOpenChange={setEnding} onDone={() => router.refresh()} />
       ) : null}

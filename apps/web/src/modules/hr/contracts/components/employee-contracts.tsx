@@ -21,7 +21,7 @@ import { RowActionsSkeleton } from '@/shared/components/data-table/row-actions';
 import { EmptyState } from '@/shared/components/layout/empty-state';
 import { BidiText } from '@/shared/components/ui/bidi-text';
 import { Button } from '@/shared/components/ui/button';
-import { AddIcon, ContractEndIcon, OpenIcon, RecalculateIcon } from '@/shared/components/ui/icons';
+import { AddIcon, ContractEndIcon, OpenIcon, PrintIcon, RecalculateIcon } from '@/shared/components/ui/icons';
 import { SkeletonButton, SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
 import { SlotText, TEXT_SLOT } from '@/shared/components/ui/slot-text';
 import { StatusPill } from '@/shared/components/ui/status-pill';
@@ -31,7 +31,9 @@ import { useTranslation } from '@/shared/providers/i18n-provider';
 import { useProfileEmployeeIfLoaded } from '../../employees';
 import { ContractActions } from './contract-actions';
 import { ContractDates, ContractDecisionPill, DecisionNote, decisionSubLine } from './contract-bits';
+import { ContractCopiesBlock } from './contract-copies';
 import { NewContractDialog } from './new-contract-dialog';
+import { PrintContractButton } from './print-contract';
 
 export interface EmployeeContractsProps {
   employeeId: string;
@@ -162,9 +164,16 @@ export function EmployeeContracts({ employeeId, employee, basePath, rows, total,
       align: 'end',
       className: 'w-72 whitespace-nowrap',
       card: 'actions',
-      // The usual current contract: undecided, so Renew, Decide and the ⋯ — in their own words.
+      // The usual current contract: undecided, so Print contract (contract templates), Renew,
+      // Decide and the ⋯ — in their own words.
       skeleton: (
         <span className="flex flex-nowrap items-center justify-end gap-2">
+          {can('hr.contracts.manage') ? (
+            <SkeletonButton size="sm">
+              <PrintIcon />
+              {t('contractTemplates.print.button')}
+            </SkeletonButton>
+          ) : null}
           <SkeletonButton size="sm">
             <RecalculateIcon />
             {t('contracts.actions.renew')}
@@ -173,7 +182,12 @@ export function EmployeeContracts({ employeeId, employee, basePath, rows, total,
           <RowActionsSkeleton />
         </span>
       ),
-      cell: (c) => (hasActions(c) ? <ContractActions contract={c} today={today} decideBelow="always" /> : null),
+      cell: (c) => (
+        <span className="flex flex-nowrap items-center justify-end gap-2">
+          <PrintContractButton contract={c} />
+          {hasActions(c) ? <ContractActions contract={c} today={today} decideBelow="always" /> : null}
+        </span>
+      ),
     },
   ];
 
@@ -200,6 +214,8 @@ export function EmployeeContracts({ employeeId, employee, basePath, rows, total,
         }
         toolbar={newContract && rows?.length ? <div className="flex w-full justify-end">{newContract}</div> : undefined}
         pagination={{ page, limit, total, onPageChange: goToPage }}
+        // Each contract's printed copies, under its row (contract templates spec → Printed copies).
+        rowDetail={(c) => (c.copies?.length ? <ContractCopiesBlock copies={c.copies} /> : null)}
         cardsBelow={1100}
       />
       {canCreate ? (

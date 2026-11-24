@@ -42,7 +42,10 @@ export const SKELETON_SCREENS = [
   'settings-lists',
   'settings-hr-rules',
   'settings-catalogue',
+  'settings-contract-templates',
   'settings-notifications',
+  'contract-template-new',
+  'contract-template-edit',
 ] as const;
 export type SkeletonScreenName = (typeof SKELETON_SCREENS)[number];
 
@@ -77,6 +80,8 @@ export const SKELETON_ROUTES: Record<string, readonly SkeletonScreenName[] | { e
   'payroll/[id]/(run)/history': ['payroll-run-history'],
   'payroll/[id]/payslip/[lineId]': ['payslip'],
   penalties: ['penalties'],
+  'settings/contract-templates/[id]': ['contract-template-edit'],
+  'settings/contract-templates/new': ['contract-template-new'],
   'roles/(list)': ['roles'],
   'roles/[id]': ['role-edit'],
   'roles/new': ['role-new'],
