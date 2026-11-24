@@ -38,7 +38,14 @@ for step in "${steps[@]}"; do
     printf '  ✓ %-11s %3ss\n' "$step" $((SECONDS - start))
   else
     printf '  ✗ %-11s %3ss  — last lines of %s:\n\n' "$step" $((SECONDS - start)) "$log"
-    tail -n 40 "$log" | sed 's/^/    /'
+    if [[ -n "${GITHUB_ACTIONS:-}" ]]; then
+      # On CI nobody can open the log file, and the last lines of a multi-package test run are often
+      # another package's output: print the whole log in a collapsible group, then the failures.
+      echo "::group::full log of $step"; cat "$log"; echo "::endgroup::"
+      grep -nE '(FAIL |●|✕|×|AssertionError|error TS)' "$log" | head -n 60 | sed 's/^/    /'
+    else
+      tail -n 40 "$log" | sed 's/^/    /'
+    fi
     printf '\nci:local FAILED at "%s". Fix it before pushing (full log: %s).\n' "$step" "$log"
     exit 1
   fi
