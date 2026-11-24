@@ -208,6 +208,8 @@ export interface Contract {
   decidedAt: IsoDateTime | null;
   /** The renewal's contract (`RENEWED` only). */
   next: { id: Uuid; startsOn: IsoDate; endsOn: IsoDate } | null;
+  /** The contract this one renews (a renewal's next contract), or null: `cancelRefusal`. */
+  renewalOf: Uuid | null;
   /** Not renewed or ended, its last day passed, the employee still active (spec → Rules). */
   toDeactivate: boolean;
   /** The viewer's own contract: no action on it (OWN_CONTRACT, §2). */
@@ -309,6 +311,14 @@ export interface EndContractRequest {
 /** `POST /hr/contracts/deactivate` — the "To deactivate" employees, all or nothing. */
 export interface DeactivateContractsRequest {
   contractIds: Uuid[];
+}
+
+/**
+ * `POST /hr/contracts/:id/cancel` — an upcoming contract that isn't a renewal (a future hire who
+ * never starts, a new contract with a future start): cancelled, kept, with a reason.
+ */
+export interface CancelContractRequest {
+  reason: string;
 }
 
 /** `POST /hr/contracts/:id/not-renewed/undo` — the school changed its mind, before the end. */

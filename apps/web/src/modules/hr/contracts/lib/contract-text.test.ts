@@ -17,7 +17,10 @@ describe('a contract row: what it allows (view only — the API decides)', () =>
 
   it('bug 2026-11-24 — an upcoming contract (a renewal’s next one) allows nothing; from its first day it is renewable', () => {
     const next = contract({ id: 'c-2', year: 2027, startsOn: '2027-06-01', endsOn: '2028-05-31', phase: 'UPCOMING' });
-    expect(abilitiesOf(next, HR)).toMatchObject({ renew: false, decide: false, end: false, deactivate: false });
+    expect(abilitiesOf({ ...next, renewalOf: 'c-1' }, HR)).toMatchObject({ renew: false, decide: false, end: false, cancel: false, deactivate: false });
+    // Not a renewal (a future new contract): only cancelled.
+    expect(abilitiesOf(next, HR)).toMatchObject({ renew: false, decide: false, end: false, cancel: true });
+    expect(abilitiesOf(next, { ...HR, manage: false }).cancel).toBe(false);
     expect(nextAction(next, abilitiesOf(next, HR))).toBeNull();
     const started = { ...next, phase: 'CURRENT' as const };
     expect(abilitiesOf(started, { ...HR, today: '2027-06-01' })).toMatchObject({ renew: true, decide: true });

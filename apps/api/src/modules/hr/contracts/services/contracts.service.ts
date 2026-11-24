@@ -5,6 +5,7 @@ import {
   AuditEntityType,
   calendarYearsOfContract,
   CalendarTiming,
+  cancelRefusal,
   CONTRACT_DOCUMENT_UPLOAD,
   ContractEndReason,
   contractYearOf,
@@ -49,7 +50,7 @@ import { HrAccessService } from '../../access/hr-access.service';
 import { EmployeesService } from '../../employees/services/employees.service';
 import { MonthLockService } from '../../month-lock/month-lock.service';
 import { HrRemindersService } from '../../reminders/hr-reminders.service';
-import { contractAuditLabel, contractScopeFields, toContract, type ContractCalendars } from '../contracts.pure';
+import { contractAuditLabel, contractScopeFields, hasLaterContract, toContract, type ContractCalendars } from '../contracts.pure';
 import type {
   EarlyTerminationDto,
   EmployeeContractsQueryDto,
@@ -331,6 +332,29 @@ export class ContractsService {
     });
   }
 
+  /**
+   * Cancels a contract that hasn't started and isn't a renewal's next one (review 2026-11-24): a
+   * future hire who never starts, or a new contract with a future start. Kept, `CANCELLED`, with
+   * the reason in its entry; the record's dates stay on (or go back to) the contract in force.
+   */
+  async cancel(id: string, reason: string): Promise<Contract> {
+    return this.afterCommit.inTransaction(async () => {
+      const [row] = await this.loadForWrite([id]);
+      const code = cancelRefusal({ status: row.status, startsOn: toIsoDate(row.startsOn) }, row.previousContract !== null, this.today());
+      if (code) throw refusal(code);
+      const actor = await this.access.actor();
+      const after = await this.repository.update(id, {
+        status: ContractStatus.CANCELLED,
+        decidedById: actor?.userId ?? null,
+        decidedAt: new Date(),
+      });
+      await this.records.record('hr.contract.cancel', row, after, { reason });
+      await this.records.syncCurrentDates(row.employeeId, this.today());
+      await this.reminders.contractChanged(row.employeeId, actor?.userId ?? null);
+      return this.presentOne(after);
+    });
+  }
+
   // ── early termination ──────────────────────────────────────────────────────
 
   /**
@@ -479,8 +503,7 @@ export class ContractsService {
         decidedById: actor?.userId ?? null,
         decidedAt: new Date(),
       });
-      // The record names the ended contract (to its new last day) — or, ending an upcoming one,
-      // still the one in force.
+      // The record names the ended contract, to its new last day.
       await this.records.syncCurrentDates(row.employeeId, this.today());
       await this.records.record('hr.contract.end', row, after);
       await this.reminders.employeeDeactivated(row.employeeId, actor?.userId ?? null);
@@ -505,6 +528,7 @@ export class ContractsService {
             { status: r.status, endsOn: toIsoDate(r.endsOn), endedOn: r.endedOn ? toIsoDate(r.endedOn) : null },
             r.employee.status === 'ACTIVE',
             today,
+            hasLaterContract(r),
           ),
       );
       if (stale.length > 0) throw refusal(ErrorCode.CONTRACT_NOT_TO_DEACTIVATE);

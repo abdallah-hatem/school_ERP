@@ -3,6 +3,7 @@ import { ErrorCode } from '../errors';
 import type { SchoolCalendarDates } from '../types/contracts';
 import {
   calendarYearsOfContract,
+  cancelRefusal,
   contractPhase,
   currentContractPeriod,
   type ContractPeriod,
@@ -190,15 +191,21 @@ describe('decisions', () => {
     expect(endRefusal({ ...c, status: 'RENEWED' }, '2027-01-01', '2026-11-24')).toBeNull();
     expect(endRefusal({ ...c, status: 'CANCELLED' }, '2027-01-01', '2026-11-24')).toBe(ErrorCode.CONTRACT_DECIDED);
     expect(endRefusal({ ...c, status: 'ENDED_EARLY' }, '2027-01-01', '2026-11-24')).toBe(ErrorCode.CONTRACT_DECIDED);
+    // Review 2026-11-24: not one that hasn't started (that would leave the one in force unendable).
+    const upcoming = { ...c, startsOn: '2027-06-01', endsOn: '2028-05-31' };
+    expect(endRefusal(upcoming, '2027-07-01', '2026-11-24')).toBe(ErrorCode.CONTRACT_NOT_STARTED);
+    expect(endRefusal(upcoming, '2027-07-01', '2027-06-01')).toBeNull();
   });
 
   it('"To deactivate": not renewed or ended, the last day passed, still active', () => {
     const notRenewed = { status: 'NOT_RENEWED', endsOn: '2027-05-31', endedOn: null } as const;
-    expect(isToDeactivate(notRenewed, true, '2027-05-31')).toBe(false);
-    expect(isToDeactivate(notRenewed, true, '2027-06-01')).toBe(true);
-    expect(isToDeactivate(notRenewed, false, '2027-06-01')).toBe(false);
-    expect(isToDeactivate({ status: 'ENDED_EARLY', endsOn: '2027-05-31', endedOn: '2027-01-28' }, true, '2027-01-29')).toBe(true);
-    expect(isToDeactivate({ status: 'ACTIVE', endsOn: '2027-05-31', endedOn: null }, true, '2027-06-02')).toBe(false);
+    expect(isToDeactivate(notRenewed, true, '2027-05-31', false)).toBe(false);
+    expect(isToDeactivate(notRenewed, true, '2027-06-01', false)).toBe(true);
+    expect(isToDeactivate(notRenewed, false, '2027-06-01', false)).toBe(false);
+    expect(isToDeactivate({ status: 'ENDED_EARLY', endsOn: '2027-05-31', endedOn: '2027-01-28' }, true, '2027-01-29', false)).toBe(true);
+    expect(isToDeactivate({ status: 'ACTIVE', endsOn: '2027-05-31', endedOn: null }, true, '2027-06-02', false)).toBe(false);
+    // Review 2026-11-24: a later contract (reactivated, new contract) takes the old row off the list.
+    expect(isToDeactivate(notRenewed, true, '2027-06-01', true)).toBe(false);
   });
 });
 
@@ -256,7 +263,8 @@ describe('one employee over time — Current vs Upcoming, decisions only once st
     const cancelled = c('2027-06-01', '2028-05-31', 'CANCELLED');
     expect(phase(ended, '2027-04-15')).toBe('CURRENT');
     expect(phase(ended, '2027-04-16')).toBe('PAST');
-    expect(phase(cancelled, '2027-04-15')).toBe('UPCOMING');
+    // A cancelled contract never runs: PAST whatever the day.
+    expect(phase(cancelled, '2027-04-15')).toBe('PAST');
     expect(phase(cancelled, '2027-06-01')).toBe('PAST');
     expect(currentContractPeriod([ended, cancelled], '2027-04-15')).toEqual({ startsOn: '2026-06-01', endsOn: '2027-04-15' });
     // On and after 1 June too: a cancelled contract never takes the record's dates.
@@ -298,6 +306,25 @@ describe('one employee over time — Current vs Upcoming, decisions only once st
     const undone = c('2026-06-01', '2027-05-31');
     expect(phase(undone, T)).toBe('CURRENT');
     expect(renewalRefusal(undone, true, T)).toBeNull();
+  });
+
+  it('a new contract with a future start can be cancelled before it starts; a renewal’s next one can’t (end the one in force)', () => {
+    const fresh = c('2027-06-01', '2028-05-31');
+    expect(cancelRefusal(fresh, false, T)).toBeNull();
+    expect(cancelRefusal(fresh, true, T)).toBe(ErrorCode.CONTRACT_NOT_CANCELLABLE);
+    expect(cancelRefusal(fresh, false, '2027-06-01')).toBe(ErrorCode.CONTRACT_NOT_CANCELLABLE);
+    expect(cancelRefusal({ ...fresh, status: 'CANCELLED' }, false, T)).toBe(ErrorCode.CONTRACT_DECIDED);
+    // Cancelled, it never takes the record's dates.
+    const old = c('2025-06-01', '2026-05-31', 'NOT_RENEWED');
+    expect(currentContractPeriod([old, { ...fresh, status: 'CANCELLED' }], '2027-06-01')).toEqual({ startsOn: '2025-06-01', endsOn: '2026-05-31' });
+  });
+
+  it('not renewed → ended → reactivated → new contract: the old row is no longer "To deactivate"', () => {
+    const old = { status: 'NOT_RENEWED', endsOn: '2026-05-31', endedOn: null } as const;
+    // 1 June 2026: ended, still active, no later contract → To deactivate.
+    expect(isToDeactivate(old, true, '2026-06-01', false)).toBe(true);
+    // Reactivated and given a new contract: the old row leaves the list.
+    expect(isToDeactivate(old, true, T, true)).toBe(false);
   });
 
   it('an ACTIVE contract past its end ("Ended, no decision") is PAST but still renewable — only an unstarted one is refused', () => {

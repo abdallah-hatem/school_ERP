@@ -27,6 +27,7 @@ import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import {
   APPROVE_EARLY_TERMINATION,
+  CANCEL_CONTRACT,
   DEACTIVATE_CONTRACTS,
   REJECT_EARLY_TERMINATION,
   RENEW_CONTRACTS,
@@ -38,7 +39,7 @@ import type { DecisionChoice } from '../lib/decision-form';
 import { DecisionSheet } from './decision-sheet';
 import { EndContractDialog } from './end-contract-dialog';
 
-type Confirm = 'renew' | 'approve' | 'reject' | 'withdraw' | 'undo' | 'deactivate' | null;
+type Confirm = 'renew' | 'approve' | 'reject' | 'withdraw' | 'undo' | 'deactivate' | 'cancel' | null;
 
 /**
  * One contract's actions (spec → Screens; mockup option A): the one next step as a button — Renew,
@@ -149,6 +150,7 @@ export function ContractActions({
     { id: 'withdrawNotice', label: t('contracts.actions.withdrawNotice'), icon: RestoreIcon, hidden: !abilities.withdrawNotice, onSelect: () => open('withdraw') },
     { id: 'history', label: t('contracts.actions.history'), icon: HistoryIcon, hidden: !historyHref, href: historyHref },
     { id: 'end', label: t('contracts.actions.end'), icon: CloseIcon, destructive: true, hidden: !abilities.end, onSelect: () => setEnding(true) },
+    { id: 'cancel', label: t('contracts.actions.cancel'), icon: CloseIcon, destructive: true, hidden: !abilities.cancel, onSelect: () => open('cancel') },
   ];
 
   let primary: ReactNode = null;
@@ -288,6 +290,23 @@ export function ContractActions({
         reasonLabel={t('contracts.undo.reasonLabel')}
         reasonPlaceholder={t('contracts.undo.reasonPlaceholder')}
         onConfirm={(reason) => run(UNDO_NOT_RENEW(contract.id, reason ?? ''), t('contracts.undo.done'))}
+      />
+      <ConfirmDialog
+        open={confirm === 'cancel'}
+        onOpenChange={(o) => (o ? open('cancel') : close())}
+        tone="destructive"
+        title={t('contracts.cancel.title')}
+        description={
+          <>
+            {t('contracts.cancel.body', { name, start: formatDate(contract.startsOn, locale) })}
+            {alert}
+          </>
+        }
+        confirmLabel={t('contracts.cancel.confirm')}
+        requireReason
+        reasonLabel={t('contracts.cancel.reasonLabel')}
+        reasonPlaceholder={t('contracts.cancel.reasonPlaceholder')}
+        onConfirm={(reason) => run(CANCEL_CONTRACT(contract.id, reason ?? ''), t('contracts.cancel.done'))}
       />
       <ConfirmDialog
         open={confirm === 'deactivate'}

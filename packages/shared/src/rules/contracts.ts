@@ -144,16 +144,32 @@ export function lastDayOf(c: { endsOn: IsoDate; endedOn: IsoDate | null }): IsoD
 /**
  * Where a contract stands on `today` (bug 2026-11-24): `CURRENT` from its start to its last day
  * (`lastDayOf`: the early end when it ended early), `UPCOMING` before its start, `PAST` after its
- * last day. A cancelled contract (a renewal's next one that never started) is never current: past
- * once its start would have come.
+ * last day. A cancelled contract never runs: always `PAST`.
  */
 export function contractPhase(
   c: { status: ContractStatus; startsOn: IsoDate; endsOn: IsoDate; endedOn: IsoDate | null },
   today: IsoDate,
 ): ContractPhase {
+  if (c.status === ContractStatus.CANCELLED) return ContractPhase.PAST;
   if (c.startsOn > today) return ContractPhase.UPCOMING;
-  if (c.status === ContractStatus.CANCELLED || lastDayOf(c) < today) return ContractPhase.PAST;
+  if (lastDayOf(c) < today) return ContractPhase.PAST;
   return ContractPhase.CURRENT;
+}
+
+/**
+ * Why a contract can't be cancelled, or null (review 2026-11-24, the way out for an upcoming
+ * contract): only one that hasn't started, still active, and not a renewal's next contract — a
+ * future hire who never starts, or a new contract with a future start. A renewal's next contract is
+ * cancelled by ending the contract in force instead.
+ */
+export function cancelRefusal(
+  c: { status: ContractStatus; startsOn: IsoDate },
+  isRenewal: boolean,
+  today: IsoDate,
+): ErrorCode | null {
+  if (c.status !== ContractStatus.ACTIVE) return ErrorCode.CONTRACT_DECIDED;
+  if (c.startsOn <= today || isRenewal) return ErrorCode.CONTRACT_NOT_CANCELLABLE;
+  return null;
 }
 
 /** A contract as `currentContractPeriod` reads it. */
@@ -186,15 +202,18 @@ export function currentContractPeriod(
 }
 
 /**
- * "To deactivate" (spec → Rules, GUESS): not renewed or ended early, the last day passed, and the
- * employee is still active. Never automatic — HR deactivates them.
+ * "To deactivate" (spec → Rules, GUESS): not renewed or ended, the last day passed, the employee
+ * still active, and no later contract (a cancelled one aside) — a reactivated employee with a new
+ * contract is not "to deactivate" because of their old one (review 2026-11-24). Never automatic —
+ * HR deactivates them.
  */
 export function isToDeactivate(
   c: { status: ContractStatus; endsOn: IsoDate; endedOn: IsoDate | null },
   employeeActive: boolean,
   today: IsoDate,
+  hasLaterContract: boolean,
 ): boolean {
-  if (!employeeActive) return false;
+  if (!employeeActive || hasLaterContract) return false;
   if (c.status !== ContractStatus.NOT_RENEWED && c.status !== ContractStatus.ENDED_EARLY) return false;
   return lastDayOf(c) < today;
 }
@@ -296,6 +315,8 @@ export function endRefusal(
   today: IsoDate,
 ): ErrorCode | null {
   if (c.status === ContractStatus.ENDED_EARLY || c.status === ContractStatus.CANCELLED) return ErrorCode.CONTRACT_DECIDED;
+  // Not one that hasn't started: it is cancelled (`cancelRefusal`), or with the contract in force.
+  if (c.startsOn > today) return ErrorCode.CONTRACT_NOT_STARTED;
   if (c.earlyTerminationStatus === EarlyTerminationStatus.REQUESTED) return ErrorCode.EARLY_TERMINATION_PENDING;
   if (endsOn < today || endsOn < c.startsOn || endsOn > c.endsOn) return ErrorCode.CONTRACT_END_DATE_INVALID;
   return null;

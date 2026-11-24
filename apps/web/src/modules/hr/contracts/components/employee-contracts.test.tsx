@@ -29,6 +29,7 @@ const api = vi.hoisted(() => ({
   UPLOAD_CONTRACT_FILE: vi.fn(),
   UNDO_NOT_RENEW: vi.fn(),
   CREATE_EMPLOYEE_CONTRACT: vi.fn(),
+  CANCEL_CONTRACT: vi.fn(),
 }));
 vi.mock('../apis', () => api);
 
@@ -180,7 +181,7 @@ describe('EmployeeContracts (profile tab)', () => {
 
   it('a cancelled renewal reads as its own pill', () => {
     renderTab({
-      rows: [contract({ id: 'c-9', status: 'CANCELLED', phase: 'UPCOMING', decision: 'CANCELLED', year: 2027, startsOn: '2027-06-01', endsOn: '2028-05-31' })],
+      rows: [contract({ id: 'c-9', status: 'CANCELLED', phase: 'PAST', decision: 'CANCELLED', year: 2027, startsOn: '2027-06-01', endsOn: '2028-05-31' })],
     });
     const row = table().getAllByRole('row')[1]!;
     expect(row.textContent).toContain('Cancelled');
@@ -201,7 +202,7 @@ describe('EmployeeContracts (profile tab)', () => {
       decision: 'RENEWED',
       next: { id: 'c-2', startsOn: '2027-06-01', endsOn: '2028-05-31' },
     });
-    const upcoming = contract({ id: 'c-2', year: 2027, startsOn: '2027-06-01', endsOn: '2028-05-31', phase: 'UPCOMING' });
+    const upcoming = contract({ id: 'c-2', year: 2027, startsOn: '2027-06-01', endsOn: '2028-05-31', phase: 'UPCOMING', renewalOf: 'c-1' });
 
     it('2026/27 is "Current"; 2027/28 is "Upcoming · starts 1 Jun 2027" with no Renew, no Decide, no menu', () => {
       renderTab({ rows: [upcoming, inForce], total: 2 });
@@ -234,6 +235,23 @@ describe('EmployeeContracts (profile tab)', () => {
       expect(within(nowCurrent!).getByRole('button', { name: 'Renew' })).toBeTruthy();
       expect(within(past!).queryByRole('button')).toBeNull();
     });
+  });
+
+  it('review 2026-11-24 — a new contract with a future start (not a renewal) offers only "Cancel contract", with a reason', async () => {
+    const user = userEvent.setup();
+    const fresh = contract({ id: 'c-5', year: 2027, startsOn: '2027-06-01', endsOn: '2028-05-31', phase: 'UPCOMING' });
+    api.CANCEL_CONTRACT.mockResolvedValue(ok({ ...fresh, status: 'CANCELLED', phase: 'PAST', decision: 'CANCELLED' }));
+    renderTab({ rows: [fresh], total: 1 });
+    const row = table().getAllByRole('row')[1] as HTMLElement;
+    expect(within(row).queryByRole('button', { name: 'Renew' })).toBeNull();
+    expect(within(row).queryByRole('button', { name: 'Decide' })).toBeNull();
+    const menu = await openRowActions(user, 'Mona Khalil', within(row));
+    expect(menuItemNames(menu)).toEqual(['Cancel contract']);
+    await user.click(within(menu).getByRole('menuitem', { name: 'Cancel contract' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Cancel this contract?' });
+    await user.type(within(dialog).getByRole('textbox'), 'Never joined');
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel contract' }));
+    await waitFor(() => expect(api.CANCEL_CONTRACT).toHaveBeenCalledWith('c-5', 'Never joined'));
   });
 
   it('review 2026-11-24 — a 1 Sep – 31 Aug contract reads the year it starts in (2026/27), not the season it ends in', () => {

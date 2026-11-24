@@ -79,11 +79,13 @@ export function EmployeeContracts({ employeeId, employee, basePath, rows, total,
   // Bug 2026-11-24: "Current" is the API's phase — the contract in force today — never the record's
   // dates (a renewal's next contract is "Upcoming" until its first day).
   const isCurrent = (c: Contract) => c.phase === ContractPhase.CURRENT;
-  // The actions: on the contract in force (End on a renewed one cancels its next), and on an ended
-  // one still waiting for HR ("Ended, no decision", "To deactivate"). None on an upcoming one.
+  // The actions: on the contract in force (End on a renewed one cancels its next), on an ended one
+  // still waiting for HR ("Ended, no decision", "To deactivate"), and on an upcoming one only
+  // "Cancel contract" when it isn't a renewal (the abilities decide; a renewal's next has none).
   const hasActions = (c: Contract) =>
     c.status !== ContractStatus.CANCELLED &&
     (c.phase === ContractPhase.CURRENT ||
+      (c.phase === ContractPhase.UPCOMING && c.renewalOf === null) ||
       (c.phase === ContractPhase.PAST && (c.decision === ContractDecision.ENDED_NO_DECISION || c.toDeactivate)));
 
   function goToPage(next: number) {

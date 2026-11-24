@@ -45,6 +45,7 @@ import {
 } from './contracts/controllers/contracts.controller';
 import { ContractsRepository } from './contracts/repositories/contracts.repository';
 import { SchoolCalendarRepository } from './contracts/repositories/school-calendar.repository';
+import { ContractDatesOnStart } from './contracts/services/contract-dates.startup';
 import { ContractRecords } from './contracts/services/contract-records.service';
 import { ContractsService } from './contracts/services/contracts.service';
 import { SchoolCalendarService } from './contracts/services/school-calendar.service';
@@ -119,6 +120,7 @@ import { LatenessService } from './staff-attendance/services/lateness.service';
     ContractsRepository,
     SchoolCalendarRepository,
     ContractRecords,
+    ContractDatesOnStart,
     SchoolCalendarService,
     ContractsService,
     // payroll + dashboard (T9)

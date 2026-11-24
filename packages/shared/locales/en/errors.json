@@ -107,6 +107,8 @@
   "CONTRACT_ALREADY_RENEWED": "This contract was already renewed.",
   "CONTRACT_DECIDED": "This contract already has a decision.",
   "CONTRACT_NOT_STARTED": "This contract hasn't started yet. Decide on it once it is in force.",
+  "CONTRACT_NOT_CANCELLABLE": "Only a contract that hasn't started, and isn't a renewal, can be cancelled. To drop a renewal, end the contract in force.",
+  "OWN_EMPLOYEE": "You can't deactivate yourself. Ask someone else.",
   "EARLY_TERMINATION_PENDING": "An early termination request is waiting. Approve or reject it first.",
   "CONTRACT_NO_NOTICE": "There is no notice from the employee to withdraw.",
   "CONTRACT_ENDED": "This contract has already ended.",

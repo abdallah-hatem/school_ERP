@@ -16,6 +16,7 @@ import {
   type RejectEarlyTerminationRequest,
   type RenewContractsRequest,
   type WithdrawNoticeRequest,
+  type CancelContractRequest,
 } from '@school-erp/shared';
 import { Transform, Type } from 'class-transformer';
 import {
@@ -120,6 +121,15 @@ export class WithdrawNoticeDto implements WithdrawNoticeRequest {
 
 /** `POST /hr/contracts/:id/not-renewed/undo` — the reason is required. */
 export class UndoNotRenewDto implements UndoNotRenewRequest {
+  @Transform(trim)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(1000)
+  reason: string;
+}
+
+/** `POST /hr/contracts/:id/cancel` — an upcoming contract that isn't a renewal, with a reason. */
+export class CancelContractDto implements CancelContractRequest {
   @Transform(trim)
   @IsString()
   @IsNotEmpty()

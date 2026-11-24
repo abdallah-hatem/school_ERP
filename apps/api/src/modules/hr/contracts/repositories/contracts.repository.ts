@@ -55,14 +55,30 @@ export const CONTRACT_SELECT = {
       stage: { select: { id: true, nameEn: true, nameAr: true, isNoStage: true } },
       jobTitle: NAMED,
       otherStages: { select: { stageId: true } },
+      // Their contracts' starts (cancelled aside): "To deactivate" only without a later one.
+      contracts: { where: { status: { not: 'CANCELLED' } }, select: { startsOn: true } },
     },
   },
   decidedBy: USER_REF,
   earlyTerminationDecidedBy: USER_REF,
   nextContract: { select: { id: true, startsOn: true, endsOn: true } },
+  // The contract this one renews: a renewal's next contract isn't cancelled on its own.
+  previousContract: { select: { id: true } },
 } satisfies Prisma.EmployeeContractSelect;
 
 export type ContractRow = Prisma.EmployeeContractGetPayload<{ select: typeof CONTRACT_SELECT }>;
+
+const EMPLOYEE_DATES_SELECT = {
+  id: true,
+  nameEn: true,
+  nameAr: true,
+  contractStart: true,
+  contractEnd: true,
+  contracts: { select: { status: true, startsOn: true, endsOn: true, endedOn: true } },
+} satisfies Prisma.EmployeeSelect;
+
+/** An employee's record dates with their contracts (the daily step). */
+export type EmployeeContractDates = Prisma.EmployeeGetPayload<{ select: typeof EMPLOYEE_DATES_SELECT }>;
 
 export type ContractUpdateData = Prisma.EmployeeContractUncheckedUpdateInput;
 
@@ -120,7 +136,9 @@ function decisionSql(today: IsoDate): Record<ContractDecisionFilter, Prisma.Sql>
     CANCELLED: Prisma.sql`c."status" = 'CANCELLED'`,
     OPEN: Prisma.sql`(${active} AND NOT ${requested})`,
     DECIDED: Prisma.sql`NOT (${active} AND NOT ${requested})`,
-    TO_DEACTIVATE: Prisma.sql`(c."status" IN ('NOT_RENEWED', 'ENDED_EARLY') AND COALESCE(c."ended_on", c."ends_on") < ${t} AND e."status" = 'ACTIVE')`,
+    // No later contract (review 2026-11-24: a reactivated employee with a new contract), as `isToDeactivate`.
+    TO_DEACTIVATE: Prisma.sql`(c."status" IN ('NOT_RENEWED', 'ENDED_EARLY') AND COALESCE(c."ended_on", c."ends_on") < ${t} AND e."status" = 'ACTIVE'
+      AND NOT EXISTS (SELECT 1 FROM "employee_contracts" l WHERE l."employee_id" = c."employee_id" AND l."status" <> 'CANCELLED' AND l."starts_on" > c."starts_on"))`,
   };
 }
 
@@ -307,23 +325,38 @@ export class ContractsRepository {
    * Every employee's record dates and contracts (status and dates only), for the daily step that
    * keeps the record on the contract in force (`ContractRecords.syncAllCurrentDates`).
    */
-  contractDatesOfAll(): Promise<
-    {
-      id: string;
-      contractStart: Date;
-      contractEnd: Date;
-      contracts: { status: ContractRow['status']; startsOn: Date; endsOn: Date; endedOn: Date | null }[];
-    }[]
-  > {
-    return this.db.employee.findMany({
-      where: { contracts: { some: {} } },
-      select: {
-        id: true,
-        contractStart: true,
-        contractEnd: true,
-        contracts: { select: { status: true, startsOn: true, endsOn: true, endedOn: true } },
-      },
+  contractDatesOfAll(): Promise<EmployeeContractDates[]> {
+    return this.db.employee.findMany({ where: { contracts: { some: {} } }, select: EMPLOYEE_DATES_SELECT });
+  }
+
+  /** One employee's record dates and contracts (the daily step's re-read under the locks). */
+  contractDatesOf(employeeId: string): Promise<EmployeeContractDates | null> {
+    return this.db.employee.findUnique({ where: { id: employeeId }, select: EMPLOYEE_DATES_SELECT });
+  }
+
+  /**
+   * Locks an employee's contract rows (in id order, as `lockForUpdate`): the daily step waits for a
+   * contract write on that employee — and that write for it — so neither moves the dates on a stale read.
+   */
+  async lockContractsOfEmployee(employeeId: string): Promise<void> {
+    await this.db.$queryRaw`
+      SELECT "id" FROM "employee_contracts" WHERE "employee_id" = ${employeeId}::uuid ORDER BY "id" FOR NO KEY UPDATE`;
+  }
+
+  /**
+   * Moves the record's dates only if they are still `from` (the daily step): 0 when another write
+   * moved them first.
+   */
+  async moveEmployeeContractDates(
+    employeeId: string,
+    from: { start: IsoDate; end: IsoDate },
+    to: { start: IsoDate; end: IsoDate },
+  ): Promise<number> {
+    const { count } = await this.db.employee.updateMany({
+      where: { id: employeeId, contractStart: fromIsoDate(from.start), contractEnd: fromIsoDate(from.end) },
+      data: { contractStart: fromIsoDate(to.start), contractEnd: fromIsoDate(to.end) },
     });
+    return count;
   }
 
   /**

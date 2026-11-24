@@ -584,6 +584,13 @@ export class EmployeesService {
     // The change and its audit entry commit together (audit D2), for the seed too.
     return this.afterCommit.inTransaction(async () => {
       await this.assertInScope('hr.employees.change_status', id);
+      if (status === EmployeeStatus.INACTIVE) {
+        // §2 (review 2026-11-24): nobody deactivates their own record.
+        const actor = await this.access.actor();
+        if (actor?.employeeId && actor.employeeId === id) {
+          throw new CodedException(HttpStatus.FORBIDDEN, ErrorCode.OWN_EMPLOYEE);
+        }
+      }
       const current = await this.repository.findDetail(id);
       if (!current) throw new NotFoundException();
       const action: AuditAction =

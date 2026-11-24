@@ -3,7 +3,7 @@ import { AuditEntityType, currentContractPeriod, type AuditAction, type IsoDate 
 import { AuditService } from '../../../../core/audit';
 import { fromIsoDate, toIsoDate } from '../../../../common/utils/dates.util';
 import { contractAuditLabel, contractAuditSnapshot } from '../contracts.pure';
-import { ContractsRepository, type ContractRow } from '../repositories/contracts.repository';
+import { ContractsRepository, type ContractRow, type EmployeeContractDates } from '../repositories/contracts.repository';
 
 /**
  * The contract writes both the employees service and the contracts service need, with their audit
@@ -41,18 +41,29 @@ export class ContractRecords {
   }
 
   /**
-   * The daily step (HR's reminders job, before its reminders): every employee whose record doesn't
-   * name the contract in force on `today` is moved to it — on 1 June a renewal's next contract takes
-   * over. Idempotent: a second run, or a run after a missed day, writes only what differs.
-   * Returns how many records moved.
+   * The daily step (HR's reminders job, before its reminders; and once at start-up): every employee
+   * whose record doesn't name the contract in force on `today` is moved to it — on 1 June a
+   * renewal's next contract takes over. Idempotent: a second run, or a run after a missed day (or a
+   * deploy on 1 June), writes only what differs. Race-safe: for each employee to move, their contract
+   * rows are locked and re-read, and the dates change only if still what was read. Each move is one
+   * audit entry on the employee (actor: the system), so their History shows it. Returns how many moved.
    */
   async syncAllCurrentDates(today: IsoDate): Promise<number> {
     let moved = 0;
-    for (const e of await this.repository.contractDatesOfAll()) {
-      const current = currentContractPeriod(e.contracts.map(toPeriod), today);
-      if (!current) continue;
-      if (toIsoDate(e.contractStart) === current.startsOn && toIsoDate(e.contractEnd) === current.endsOn) continue;
-      await this.repository.setEmployeeContractDates(e.id, current.startsOn, current.endsOn);
+    for (const snapshot of await this.repository.contractDatesOfAll()) {
+      if (!target(snapshot, today)) continue;
+      await this.repository.lockContractsOfEmployee(snapshot.id);
+      const e = await this.repository.contractDatesOf(snapshot.id);
+      const to = e ? target(e, today) : null;
+      if (!e || !to) continue;
+      const from = { start: toIsoDate(e.contractStart), end: toIsoDate(e.contractEnd) };
+      if ((await this.repository.moveEmployeeContractDates(e.id, from, to)) === 0) continue;
+      await this.audit.record({
+        action: 'hr.employee.contract_dates_move',
+        entity: { type: AuditEntityType.EMPLOYEE, id: e.id, label: { en: e.nameEn, ar: e.nameAr } },
+        before: { contractStart: from.start, contractEnd: from.end },
+        after: { contractStart: to.start, contractEnd: to.end },
+      });
       moved += 1;
     }
     return moved;
@@ -72,6 +83,14 @@ export class ContractRecords {
       after: { ...contractAuditSnapshot(after), ...extra },
     });
   }
+}
+
+/** Where the record's dates must move on `today`, or null when they already name the contract in force. */
+function target(e: EmployeeContractDates, today: IsoDate): { start: IsoDate; end: IsoDate } | null {
+  const current = currentContractPeriod(e.contracts.map(toPeriod), today);
+  if (!current) return null;
+  if (toIsoDate(e.contractStart) === current.startsOn && toIsoDate(e.contractEnd) === current.endsOn) return null;
+  return { start: current.startsOn, end: current.endsOn };
 }
 
 const toPeriod = (c: { status: ContractRow['status']; startsOn: Date; endsOn: Date; endedOn: Date | null }) => ({

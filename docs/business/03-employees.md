@@ -110,7 +110,9 @@ Spec `docs/specs/2026-11-24-contracts.md` (approved by the owner as drafted, 202
   **Upcoming** ("Upcoming · starts 1 Jun 2027") until its first day. The employee's contract start /
   end (Details tab, reminders) name the contract in force — the latest one that has started, or,
   before any has, the first upcoming one; on the start day of the next contract they move to it (the
-  daily reminders run, 07:00). Renewing in November therefore leaves 2026/27 current (Renewed) and
+  daily reminders run, 07:00, and once when the app starts, so a deploy on 1 June doesn't leave them
+  stale; a missed run is caught up by the next). Each such move is recorded in the employee's
+  History by the system. Renewing in November therefore leaves 2026/27 current (Renewed) and
   2027/28 upcoming, and the dates stay 1 Jun 2026 – 31 May 2027 until 1 June 2027.
 - **DECIDED** (owner, 2026-11-24) — **Decisions only once a contract has started.** Renewing, not
   renewing, recording the employee's notice and an early termination request are refused on an
@@ -118,8 +120,15 @@ Spec `docs/specs/2026-11-24-contracts.md` (approved by the owner as drafted, 202
   nothing is renewed. Ending the contract in force still cancels the upcoming one. The "Contract
   ends soon" reminder follows the contract in force: a renewed one is decided, so no reminder for its
   end; from its first day the new contract is chased from its own end.
-- **DECIDED** (owner, 2026-11-24) — Nobody deactivates themselves from "To deactivate" either (their
-  own contract, §2).
+- **DECIDED** (owner, 2026-11-24) — A contract that hasn't started can't be ended on its own either;
+  a renewal's next contract goes when the contract in force is ended. An upcoming contract that
+  **isn't** a renewal — a new hire who never starts, a new contract with a future start — can be
+  **cancelled** with a reason ("Cancel contract"): kept, shown as Cancelled, audited. A cancelled
+  contract never counts as current, upcoming or for the employee's dates.
+- **DECIDED** (owner, 2026-11-24) — "To deactivate" only while the employee has no later contract: a
+  reactivated employee with a new contract leaves the list, and the old row isn't carried over.
+- **DECIDED** (owner, 2026-11-24) — Nobody deactivates themselves (§2): not from "To deactivate"
+  (their own contract), nor from their employee page ("You can't deactivate yourself").
 - **GUESS** (2026-11-24) — The employee's Contracts tab names each contract by the contract year it
   **starts** in (1 Sep 2026 – 31 Aug 2027 reads 2026/27), with its exact dates beside it; the
   renewal screen still lists it in the season it ends in.

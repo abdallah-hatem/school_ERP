@@ -157,7 +157,14 @@ Timings are settings, like the existing reminders (GUESS: 1 March, 7 days).
     ended contract, also after 1 June.
 19. "Contract ends soon" follows the contract in force: none for a renewed contract's end; the new
     contract is chased from its own end once it has started.
-20. Deactivating your own employee record from "To deactivate" → refused (OWN_CONTRACT).
+20. Deactivating your own employee record → refused: from "To deactivate" (OWN_CONTRACT) and from
+    the employee page (OWN_EMPLOYEE).
+21. Ending a contract that hasn't started → refused (CONTRACT_NOT_STARTED); a renewal's next goes
+    with the contract in force. A non-renewal upcoming contract (future hire, future new contract) →
+    "Cancel contract" with a reason; a renewal's next → refused (CONTRACT_NOT_CANCELLABLE).
+22. Not renewed → ended → reactivated → new contract → the old row is no longer "To deactivate" and
+    isn't carried over.
+23. The daily date move is recorded on the employee (System); it also runs once at start-up.
 
 ## Out of scope
 
