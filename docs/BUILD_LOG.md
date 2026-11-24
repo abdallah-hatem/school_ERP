@@ -677,14 +677,31 @@ phase live in `docs/build-log/`.
   page leaves the contract active, approved early termination final at once, ends can't be backdated,
   timing tags go stale, history erased on withdraw, …) plus confusing tile counts. Queued as
   contracts round 3, after the Current/Upcoming fix.
+- 2026-11-24 — Merged into `dev`, each after an independent review and green CI:
+  - **#283 Contracts: Current = in force today, Upcoming otherwise** — no decisions on a contract
+    that hasn't started (`CONTRACT_NOT_STARTED`); employee contract dates follow the contract in force
+    (synced by every contract write, the 07:00 job and once at start-up, each move in History);
+    reminders read the in-force contract; "Cancel contract" for an upcoming first contract; an old
+    "To deactivate" row clears once a later contract exists (time-walk blocker B1); no one deactivates
+    themselves (contracts or employees page). The time walk (31 May → 1 June, the daily job) runs on CI.
+  - **#282 Employee grades** — a managed list in Settings → HR lists (renamed from "grades" to leave
+    that name to academics); old text grades merged case- and space-insensitively; demo "Pay grade 1–4".
+    Release note: rolling back past it means restoring the backup.
+  - **#284 Payroll rules panel** — bullets, one fact each; "Edit in settings" and the other settings
+    links open the exact card (`?section=&part=`).
+  - **#285** — employee header "Not a system user" / "System user: <name>".
+  - **#281** — per-clone opt-out of unit tests on push (`git config ci.skipUnitTests true`), set on the
+    owner's machine only; the team still runs them. **#286** — CI prints a failing step's full log.
 
 ## Next up
 
-- **Contracts round 3** (owner, 2026-11-24): fix the time-walk review's findings (blockers first);
+- **Contracts round 3** (owner, 2026-11-24): fix the rest of the time-walk review's findings (B1 done in
+  #283; next B2: deactivating while the last month's payroll is a draft drops that month's pay);
   mid-year hires' first contract ends 31 May (one season for everyone, GUESS); add a **signed copy**
   upload on every contract (also when adding an employee, renewing, new contract).
 - **Contract templates** (owner, 2026-11-24): editable templates with placeholders, filled per
-  contract, A4 preview, print/PDF, printed copies kept. Three mockups being made; owner picks.
+  contract, A4 preview, print/PDF, printed copies kept. Mockups A/B/C ready
+  (`design/mockups/contract-templates.html`); recommended B (clause builder). Waiting for the owner's pick.
 - **Employee documents tab** (proposed 2026-11-24): ID copy, certificates, insurance forms.
 - **Students module, then the clinic** (owner, 2026-11-24): the clinic treats students (and staff), so the
   students module (student records, guardians, class placement, on top of academics' basic structure)
