@@ -20,8 +20,8 @@
   record" when there is none). Only roles limited to *their stage*, *their team* or *themselves*
   need it: when such a role is picked without an employee record, the form warns "This person will
   see no records until you pick who they are in HR" — a warning, not a blocker. An employee's
-  profile says **"Signs in as: <name>"** (a link to the user's page for those who may open users)
-  or **"No sign-in account"**, to anyone who may see the employee.
+  profile says **"System user: <name>"** (a link to the user's page for those who may open users)
+  or **"Not a system user"** (owner, 2026-11-24), to anyone who may see the employee.
 
 ### Security: sign-in limits
 
