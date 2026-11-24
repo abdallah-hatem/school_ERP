@@ -2,7 +2,7 @@
 
 import type {
   Contract,
-  ContractFileUpload,
+  ContractSignedCopy,
   ContractsPage,
   EarlyTerminationRequest,
   EmployeeContractsQuery,
@@ -14,6 +14,7 @@ import type {
 } from '@school-erp/shared';
 import { apiFetch } from '@/lib/api';
 import { handleResponse } from '@/lib/handleResponse';
+import { CONTRACTS_TAG, EMPLOYEES_TAG } from './lib/cache-tags';
 
 /*
  * Contracts screens' endpoints (spec docs/specs/2026-11-24-contracts.md → API). Reads are tagged;
@@ -21,8 +22,6 @@ import { handleResponse } from '@/lib/handleResponse';
  * profile's contract line and a deactivation change what they show).
  */
 
-const CONTRACTS_TAG = 'hr-contracts';
-const EMPLOYEES_TAG = 'hr-employees';
 const WRITE_TAGS = [CONTRACTS_TAG, EMPLOYEES_TAG];
 
 const page = (n: number | undefined) => (n ? String(n) : undefined);
@@ -177,14 +176,23 @@ export async function DEACTIVATE_CONTRACTS(contractIds: Uuid[]) {
   return handleResponse({ response });
 }
 
-/**
- * `POST /hr/contracts/:id/files` — multipart `file` (PDF / PNG / JPG / WebP, ≤ 5 MB — checked on the
- * client too). Answers where it is stored; the action that follows passes that `fileUrl`.
- */
-export async function UPLOAD_CONTRACT_FILE(id: Uuid, form: FormData) {
-  const response = await apiFetch<ContractFileUpload>(`/hr/contracts/${encodeURIComponent(id)}/files`, {
-    method: 'POST',
-    body: form,
+// Uploads (a letter, a page of the signed copy) are not Server Actions: `lib/uploads.ts` posts them
+// to the upload Route Handler, which streams them to the API.
+
+/** `GET /hr/contracts/:id/signed-copy` — the signed copy's pages in upload order (removed ones aside). 404 outside scope. */
+export async function GET_SIGNED_COPY(id: Uuid) {
+  const response = await apiFetch<ContractSignedCopy>(`/hr/contracts/${encodeURIComponent(id)}/signed-copy`, {
+    method: 'GET',
+    next: { tags: [CONTRACTS_TAG] },
   });
+  return handleResponse({ response, showErrorToast: false });
+}
+
+/** `POST /hr/contracts/:id/signed-copy/:fileId/remove` — soft (kept, with who and why); the reason is required. */
+export async function REMOVE_SIGNED_COPY_PAGE(id: Uuid, fileId: Uuid, reason: string) {
+  const response = await apiFetch<ContractSignedCopy>(
+    `/hr/contracts/${encodeURIComponent(id)}/signed-copy/${encodeURIComponent(fileId)}/remove`,
+    { method: 'POST', body: { reason }, revalidateTags: [CONTRACTS_TAG] },
+  );
   return handleResponse({ response, showErrorToast: false });
 }

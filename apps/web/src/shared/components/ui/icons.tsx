@@ -106,6 +106,9 @@ import {
   DownloadSimpleIcon as DownloadSimple,
   ExportIcon as ShareArrow,
   HouseIcon as House,
+  MagnifyingGlassPlusIcon as MagnifyingGlassPlus,
+  MagnifyingGlassMinusIcon as MagnifyingGlassMinus,
+  SignatureIcon as Signature,
 } from '@phosphor-icons/react/ssr';
 import type { ComponentType, SVGProps } from 'react';
 import { cn } from '@/shared/lib/utils';
@@ -334,6 +337,11 @@ export const ShareIcon = duotone(ShareArrow, 'Share');
 export const MarkAllReadIcon = duotone(Checks, 'MarkAllRead');
 export const NotificationSettingsIcon = duotone(GearSix, 'NotificationSettings');
 export const ContractEndIcon = duotone(FileText, 'ContractEnd');
+// A contract's signed copy (owner, 2026-11-24): its pages, zoomed in and out, saved.
+export const SignedCopyIcon = duotone(Signature, 'SignedCopy');
+export const ZoomInIcon = duotone(MagnifyingGlassPlus, 'ZoomIn');
+export const ZoomOutIcon = duotone(MagnifyingGlassMinus, 'ZoomOut');
+export const DownloadIcon = duotone(DownloadSimple, 'Download');
 export const ProbationEndIcon = duotone(HourglassMedium, 'ProbationEnd');
 export const LatenessDueIcon = duotone(ClockCountdown, 'LatenessDue');
 export const PayrollDueIcon = duotone(CalendarCheck, 'PayrollDue');

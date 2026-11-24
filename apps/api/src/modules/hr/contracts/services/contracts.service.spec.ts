@@ -79,6 +79,7 @@ function row(over: Partial<ContractRow> & { id?: string; employeeId?: string; em
     earlyTerminationDecidedBy: null,
     nextContract: null,
     previousContract: null,
+    _count: { signedCopyFiles: 0 },
     ...rest,
   };
 }

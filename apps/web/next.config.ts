@@ -12,6 +12,14 @@ const nextConfig: NextConfig = {
   transpilePackages: ['@school-erp/shared'],
   poweredByHeader: false,
   pageExtensions: ['tsx', 'ts', 'jsx', 'js', ...E2E_PAGE_EXTENSIONS],
+  // Every Server Action — the sign-in one too — may carry at most 3 MB: enough for the uploads that
+  // are still actions (the 2 MB employee photo and school logo) and Next's 1 MB default refused
+  // them. Larger uploads (a contract's signed copy, its letters) go through the upload Route
+  // Handler instead (`src/lib/upload-proxy.ts`): session first, its own cap, streamed to the API.
+  // docs/ARCHITECTURE.md → Security → Uploads.
+  experimental: {
+    serverActions: { bodySizeLimit: '3mb' },
+  },
   // On every response. The Content-Security-Policy needs a nonce per page, so the proxy sets it
   // (src/proxy.ts; docs/ARCHITECTURE.md → Security).
   async headers() {

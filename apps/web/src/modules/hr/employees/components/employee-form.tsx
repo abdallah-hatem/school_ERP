@@ -15,7 +15,7 @@ import {
 } from '@school-erp/shared';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useCan } from '@/core/auth';
 import { Form } from '@/shared/components/form/form';
@@ -52,6 +52,7 @@ import {
   type EmployeeFormValues,
 } from '../lib/employee-form';
 import { EmployeePhotoField, uploadEmployeePhoto } from './employee-photo-field';
+import { EmployeeCreateExtrasProvider, type AfterCreate } from './employee-create-extras';
 import { OtherStagesField } from './other-stages-field';
 import { EmployeeGradeField } from './employee-grade-field';
 
@@ -71,6 +72,12 @@ export interface EmployeeFormProps {
   header?: ReactNode;
   /** The edit page's skeleton (no employee yet): the form in its edit shape. */
   editing?: boolean;
+  /**
+   * Adding only: a part another module owns, shown in the contract section (the contracts module's
+   * signed contract, placed by the route). It gets the form's state and an after-create step
+   * through `useEmployeeCreateExtras`.
+   */
+  contractExtra?: ReactNode;
 }
 
 /** Add or edit an employee (§3). Server rule errors land on their field. */
@@ -81,6 +88,7 @@ export function EmployeeForm({
   hasManagerCandidates = true,
   header,
   editing = false,
+  contractExtra,
 }: EmployeeFormProps) {
   const { t, has, locale } = useTranslation();
   const router = useRouter();
@@ -98,6 +106,11 @@ export function EmployeeForm({
   const { control, setError, setValue, getFieldState, clearErrors } = form;
   // Adding: a chosen photo is uploaded right after the employee is saved.
   const pendingPhoto = useRef<File | null>(null);
+  // Adding: what `contractExtra` runs right after the save (the signed contract's pages).
+  const afterCreate = useRef<AfterCreate | null>(null);
+  const setAfterCreate = useCallback((run: AfterCreate | null) => {
+    afterCreate.current = run;
+  }, []);
 
   // One request at a time, and the button stays busy through the navigation after a save.
   const inFlight = useRef(false);
@@ -195,11 +208,19 @@ export function EmployeeForm({
         saved = true;
         const id = res.data?.id ?? employee?.id;
         let target = id ? `${basePath}/${id}` : basePath;
+        let photoFailed = false;
         if (!employee && id && pendingPhoto.current) {
           // The employee is saved either way; a failed photo (its error toast shows) is retried
           // from their edit page.
           const photo = await uploadEmployeePhoto(id, pendingPhoto.current);
-          if (!photo.success && !photo.unauthorized) target = `${basePath}/${id}/edit`;
+          photoFailed = !photo.success && !photo.unauthorized;
+          if (photoFailed) target = `${basePath}/${id}/edit`;
+        }
+        if (!employee && id && afterCreate.current) {
+          // Saved either way; the extra says what didn't go through. A failed photo keeps the edit
+          // page (its retry); otherwise the Contracts tab, where the pages are added again.
+          const ok = await afterCreate.current(id);
+          if (!ok && !photoFailed) target = `${basePath}/${id}/contracts`;
         }
         router.push(target);
         router.refresh();
@@ -308,6 +329,9 @@ export function EmployeeForm({
             <>
               <DateField control={control} name="contractStart" label={t('employees.fields.contractStart')} hint={t('employees.hints.contract')} required />
               <DateField control={control} name="contractEnd" label={t('employees.fields.contractEnd')} required />
+              {contractExtra ? (
+                <EmployeeCreateExtrasProvider value={{ disabled: busy, setAfterCreate }}>{contractExtra}</EmployeeCreateExtrasProvider>
+              ) : null}
             </>
           )}
           <SwitchField control={control} name="usesBus" label={t('employees.fields.usesBus')} hint={t('employees.hints.usesBus')} className="sm:col-span-2" />

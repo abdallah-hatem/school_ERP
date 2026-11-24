@@ -4,5 +4,6 @@
  */
 export { ContractsScreen, EmployeeContractsScreen } from './screens';
 export { ContractsI18n, contractsMessages } from './messages';
+export { NewEmployeeSignedContract } from './components/signed-copy';
 export { ContractsSkeleton, EmployeeContractsSkeleton } from './components/contracts-skeleton';
 export type { SearchParamsRecord } from './lib/list-query';

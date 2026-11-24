@@ -46,7 +46,10 @@ import {
   EmployeeContractsController,
   SchoolCalendarController,
 } from './contracts/controllers/contracts.controller';
+import { ContractSignedCopyController } from './contracts/controllers/contract-signed-copy.controller';
+import { ContractFilesRepository } from './contracts/repositories/contract-files.repository';
 import { ContractsRepository } from './contracts/repositories/contracts.repository';
+import { ContractSignedCopyService } from './contracts/services/contract-signed-copy.service';
 import { SchoolCalendarRepository } from './contracts/repositories/school-calendar.repository';
 import { ContractDatesOnStart } from './contracts/services/contract-dates.startup';
 import { ContractRecords } from './contracts/services/contract-records.service';
@@ -79,6 +82,7 @@ import { LatenessService } from './staff-attendance/services/lateness.service';
     // contracts (spec 2026-11-24)
     ContractsController,
     EmployeeContractsController,
+    ContractSignedCopyController,
     SchoolCalendarController,
     // payroll + dashboard (T9)
     PayrollRunsController,
@@ -129,6 +133,9 @@ import { LatenessService } from './staff-attendance/services/lateness.service';
     ContractDatesOnStart,
     SchoolCalendarService,
     ContractsService,
+    // the signed copy of each contract (owner, 2026-11-24)
+    ContractFilesRepository,
+    ContractSignedCopyService,
     // payroll + dashboard (T9)
     PayrollRunsRepository,
     PayrollService,

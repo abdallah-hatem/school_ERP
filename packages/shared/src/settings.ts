@@ -304,6 +304,29 @@ export const CONTRACT_DOCUMENT_UPLOAD = {
   mimeTypes: ['application/pdf', 'image/png', 'image/jpeg', 'image/webp'],
 } as const;
 
+/**
+ * A contract's signed copy (owner, 2026-11-24): one or more files — a phone photo is one page each —
+ * PDF, PNG, JPG or WebP, each up to 10 MB, checked by their bytes like the contract documents. Kept
+ * in their upload order; removing one is soft (with a reason). A sensitive folder: opened only by
+ * whoever may see the contract, and each opening is recorded.
+ */
+export const CONTRACT_SIGNED_COPY_UPLOAD = {
+  maxBytes: 10 * 1024 * 1024,
+  mimeTypes: ['application/pdf', 'image/png', 'image/jpeg', 'image/webp'],
+  /** Pages a contract's signed copy holds at most (removed ones aside). */
+  maxPages: 30,
+} as const;
+
+/** What a phone's picker offers for a signed copy: the camera, the photos or a PDF. */
+export const CONTRACT_SIGNED_COPY_ACCEPT = 'image/*,application/pdf';
+
+/** Why a picked file can't be a page of a signed copy (its type, or over 10 MB), or null. */
+export function signedCopyFileProblem(file: { type: string; size: number }): 'type' | 'size' | null {
+  if (!(CONTRACT_SIGNED_COPY_UPLOAD.mimeTypes as readonly string[]).includes(file.type)) return 'type';
+  if (file.size > CONTRACT_SIGNED_COPY_UPLOAD.maxBytes) return 'size';
+  return null;
+}
+
 /** Employee code format (§3): EMP-0001. */
 export const EMPLOYEE_CODE_PREFIX = 'EMP-';
 export const EMPLOYEE_CODE_DIGITS = 4;

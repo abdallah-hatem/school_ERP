@@ -188,16 +188,17 @@ function ProfileSkeleton({ body }: { body?: ReactNode }) {
  * every section, field and hint, and the sticky Save bar in place, each control a pulsing block —
  * under a header whose text is a bar (the employee's name isn't known yet).
  */
-export function EmployeePageSkeleton() {
+export function EmployeePageSkeleton({ contractExtra }: { contractExtra?: ReactNode } = {}) {
   const { locale } = useTranslation();
   return (
     <EmployeesI18n locale={locale}>
-      <FormSkeleton />
+      <FormSkeleton contractExtra={contractExtra} />
     </EmployeesI18n>
   );
 }
 
-function FormSkeleton() {
+/** `contractExtra`: the add form's part from another module (the signed contract), as the page places it. */
+function FormSkeleton({ contractExtra }: { contractExtra?: ReactNode }) {
   const { t, locale } = useTranslation();
   const basePath = `/${locale}/employees`;
   const editing = usePathname()?.endsWith('/edit') ?? false;
@@ -206,6 +207,7 @@ function FormSkeleton() {
       <EmployeeForm
         basePath={basePath}
         editing={editing}
+        contractExtra={editing ? undefined : contractExtra}
         header={
           <PageHeader
             title={<SkeletonText width="w-48" />}

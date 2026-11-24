@@ -1,6 +1,6 @@
 'use client';
 
-import { renewedContractDates, type Contract } from '@school-erp/shared';
+import { ContractStatus, renewedContractDates, type Contract } from '@school-erp/shared';
 import { useRouter } from 'next/navigation';
 import { useRef, useState, type ReactNode } from 'react';
 import { useCan } from '@/core/auth';
@@ -20,6 +20,7 @@ import {
   PendingIcon,
   RecalculateIcon,
   RestoreIcon,
+  SignedCopyIcon,
 } from '@/shared/components/ui/icons';
 import { formatDate } from '@/shared/lib/format';
 import { localName } from '@/shared/lib/i18n';
@@ -38,6 +39,7 @@ import { abilitiesOf, contractError, nextAction } from '../lib/contract-text';
 import type { DecisionChoice } from '../lib/decision-form';
 import { DecisionSheet } from './decision-sheet';
 import { EndContractDialog } from './end-contract-dialog';
+import { SignedCopyField, SignedCopyViewer, uploadPickedPages, useCanManageSignedCopy } from './signed-copy';
 
 type Confirm = 'renew' | 'approve' | 'reject' | 'withdraw' | 'undo' | 'deactivate' | 'cancel' | null;
 
@@ -76,6 +78,12 @@ export function ContractActions({
   const [sheet, setSheet] = useState<{ choice?: DecisionChoice } | null>(null);
   const [ending, setEnding] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The signed copy (owner, 2026-11-24): its viewer, and the pages picked on Renew for the new contract.
+  const [viewing, setViewing] = useState(false);
+  const [renewPages, setRenewPages] = useState<File[]>([]);
+  // While renewing and uploading the picked pages, the picker waits.
+  const [renewing, setRenewing] = useState(false);
+  const canUploadSignedCopy = useCanManageSignedCopy(contract) && contract.status !== ContractStatus.CANCELLED;
   const stale = useRef(false);
 
   const abilities = abilitiesOf(contract, {
@@ -98,6 +106,7 @@ export function ContractActions({
 
   function close() {
     setConfirm(null);
+    setRenewPages([]);
     if (stale.current) {
       stale.current = false;
       router.refresh();
@@ -120,6 +129,32 @@ export function ContractActions({
     stale.current = true;
     setError(contractError(res, { t, has, locale }, t('errors.INTERNAL_ERROR')));
     return false;
+  }
+
+  /** Renews this contract; the pages picked go to the new contract once it exists (the renewal stands either way). */
+  async function renew(): Promise<boolean> {
+    setError(null);
+    setRenewing(true);
+    try {
+      const res = await callApi(RENEW_CONTRACTS([contract.id]), {
+        showErrorToast: false,
+        showSuccessToast: true,
+        successMessage: t('contracts.renew.done'),
+      });
+      if (res.unauthorized) return false;
+      if (res.success) {
+        const nextId = res.data?.[0]?.next?.id;
+        if (nextId && renewPages.length > 0) await uploadPickedPages(nextId, renewPages, t);
+        setRenewPages([]);
+        router.refresh();
+        return true;
+      }
+      stale.current = true;
+      setError(contractError(res, { t, has, locale }, t('errors.INTERNAL_ERROR')));
+      return false;
+    } finally {
+      setRenewing(false);
+    }
   }
 
   const alert = error ? (
@@ -148,6 +183,7 @@ export function ContractActions({
     },
     { id: 'undoNotRenewing', label: t('contracts.actions.undoNotRenewing'), icon: RestoreIcon, hidden: !abilities.undoNotRenewing, onSelect: () => open('undo') },
     { id: 'withdrawNotice', label: t('contracts.actions.withdrawNotice'), icon: RestoreIcon, hidden: !abilities.withdrawNotice, onSelect: () => open('withdraw') },
+    { id: 'signedCopy', label: t('contracts.signedCopy.upload'), icon: SignedCopyIcon, hidden: !canUploadSignedCopy, onSelect: () => setViewing(true) },
     { id: 'history', label: t('contracts.actions.history'), icon: HistoryIcon, hidden: !historyHref, href: historyHref },
     { id: 'end', label: t('contracts.actions.end'), icon: CloseIcon, destructive: true, hidden: !abilities.end, onSelect: () => setEnding(true) },
     { id: 'cancel', label: t('contracts.actions.cancel'), icon: CloseIcon, destructive: true, hidden: !abilities.cancel, onSelect: () => open('cancel') },
@@ -225,8 +261,12 @@ export function ContractActions({
           </>
         }
         confirmLabel={t('contracts.renew.confirm')}
-        onConfirm={() => run(RENEW_CONTRACTS([contract.id]), t('contracts.renew.done'))}
-      />
+        onConfirm={renew}
+      >
+        {/* The new contract's signed copy, optional (owner, 2026-11-24); bulk renew has none. */}
+        {abilities.renew ? <SignedCopyField files={renewPages} onChange={setRenewPages} disabled={renewing} /> : null}
+      </ConfirmDialog>
+      {canUploadSignedCopy ? <SignedCopyViewer contract={contract} open={viewing} onOpenChange={setViewing} /> : null}
       <ConfirmDialog
         open={confirm === 'approve'}
         onOpenChange={(o) => (o ? open('approve') : close())}

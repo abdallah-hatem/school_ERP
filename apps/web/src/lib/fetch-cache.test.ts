@@ -61,7 +61,9 @@ describe('guard: nothing opts the app into a shared cache behind apiFetch’s ba
       const text = readFileSync(path, 'utf8');
       return /\bfetch\(\s*(?:`\$\{|baseURL|process\.env\.BASE_URL|fullUrl)/.test(text) && !path.endsWith(join('lib', 'api.ts'));
     });
-    // middlewareFunctions refreshes the session (a POST, never cached).
-    expect(direct.filter((p) => !p.endsWith('middlewareFunctions.ts'))).toEqual([]);
+    // middlewareFunctions refreshes the session (a POST, never cached); upload-proxy streams a large
+    // upload to the API from its Route Handler (a POST, `no-store`: docs/ARCHITECTURE.md → Uploads).
+    expect(direct.filter((p) => !p.endsWith('middlewareFunctions.ts') && !p.endsWith('upload-proxy.ts'))).toEqual([]);
+    expect(readFileSync(join(SRC, 'lib', 'upload-proxy.ts'), 'utf8')).toMatch(/method: 'POST'[\s\S]*cache: 'no-store'/);
   });
 });
