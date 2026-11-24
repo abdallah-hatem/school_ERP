@@ -51,7 +51,7 @@ describe('SignInAccountLine (employee profile)', () => {
 
   it('Arabic', () => {
     renderLine(MONA, 'ar');
-    expect(screen.getByText('يدخل باسم:')).toBeTruthy();
+    expect(screen.getByText('مستخدم النظام:')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Mona Adel' }).getAttribute('href')).toBe('/ar/users/u-7');
   });
 });
