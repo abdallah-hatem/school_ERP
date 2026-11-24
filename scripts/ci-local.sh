@@ -3,6 +3,8 @@
 # sees a failure before pushing. Runs on `git push` through the pre-push hook, or by hand:
 #   pnpm ci:local          lint, typecheck, unit tests, module rules (what CI runs)
 #   pnpm ci:local --full   the above, then API e2e and the smoke specs (needs Docker)
+# A clone can opt out of the unit tests on its own machine (CI still runs them):
+#   git config ci.skipUnitTests true      (per clone, never committed; `--unset` to undo)
 # Full output of each step goes to .ci-local/<step>.log; the terminal gets one line per step.
 set -uo pipefail
 cd "$(dirname "$0")/.."
@@ -22,6 +24,10 @@ if [[ -z "${GITHUB_ACTIONS:-}" ]] && git fetch -q origin dev 2>/dev/null; then
 fi
 
 steps=("lint" "typecheck" "test" "deps:check" "plans:check")
+if [[ -z "${GITHUB_ACTIONS:-}" && "$(git config --get ci.skipUnitTests 2>/dev/null)" == "true" ]]; then
+  steps=("lint" "typecheck" "deps:check" "plans:check")
+  printf '  · unit tests skipped on this machine (git config ci.skipUnitTests) — CI runs them\n'
+fi
 $full && steps+=("test:e2e" "smoke")
 
 start_all=$SECONDS
