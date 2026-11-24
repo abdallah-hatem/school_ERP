@@ -259,10 +259,15 @@ A stored file opens for exactly the people who may see the record it belongs to 
   avatar in their top bar, even without `hr.employees.view`). A replaced photo belongs to nobody: 404.
   Where a screen shows a photo the viewer may not open (a manager outside their scope on a
   profile), `PersonAvatar` falls back to the silhouette.
-- **Sensitive documents** (contracts, medical, legal, investigations — none stored yet) register
-  their folder the same way, with `permission` (an extra key on top of seeing the record; not held
-  → 404) and `onOpen`, which records the opening in the audit log in a transaction of its own (a
-  failed record refuses the opening).
+- **Sensitive documents** (contracts, medical, legal, investigations) register their folder the
+  same way, with `permission` (an extra key on top of seeing the record; not held → 404) and
+  `onOpen`, which records the opening in the audit log in a transaction of its own (a failed record
+  refuses the opening). The first is **`contract-documents`** (2026-11-24): a notice letter, an
+  early termination request or an end's attachment — PDF or PNG / JPG / WebP up to 5 MB, checked by
+  their bytes (`checkDocumentUpload`, `%PDF-`; SVG refused). Uploaded with
+  `POST /hr/contracts/:id/files` (it belongs to nobody — 404 — until a decision attaches it), it
+  opens with `hr.contracts.view` covering the contract's employee, found through the stored link,
+  and each opening is a `hr.contract.document_open` entry.
 - **Nothing is stored where nobody could open it:** `FileStorageService.save` refuses an
   unregistered folder, and the unit guard `file-folders.guard.spec.ts` fails CI on a
   `files.save(<FOLDER>, …)` whose folder is neither public nor registered.
@@ -874,8 +879,8 @@ Work on a clock — backups, reminders, reports (`core/jobs`, `@nestjs/schedule`
   `outbox.cleanup` (`core/events`, 03:30, `lock: false`): deletes delivered events older than 30 days.
   `core.notifications.purge` (`core/notifications`, 02:30): deletes expired notifications (below).
   `hr.reminders.daily` (`modules/hr/reminders`, 07:00): HR's reminders — contracts and probation
-  ending soon, lateness not entered, payroll not prepared / still a draft (Notifications → HR's
-  reminders).
+  ending soon, lateness not entered, payroll not prepared / still a draft, and the renewal season
+  (decisions due, the non-renewal window opening and closing) (Notifications → HR's reminders).
 
 ### Notifications
 
@@ -1113,6 +1118,22 @@ The first module built, and the first demo for the client (payroll and penalties
   also reads accounting's worked-out months — a read, never a write); each part follows its
   screen's permission and scope. The web draws them with small inline-SVG components
   (`modules/hr/dashboard/charts/`), no chart library.
+- **Contracts** (spec `docs/specs/2026-11-24-contracts.md`, `modules/hr/contracts`): one
+  `employee_contracts` row per contract year, kept forever (a partial unique index allows one
+  `ACTIVE` per employee); the employee's `contract_start` / `contract_end` mirror the current one
+  and are written only by `ContractsService` (the employee DTO no longer takes them on an edit;
+  `EmployeesService.create` writes the first contract through `ContractRecords`, which exists apart
+  from `ContractsService` so the employees service can use it without a cycle). Every decision
+  locks the contract rows first (`FOR NO KEY UPDATE`, id order), refuses the actor's own contract
+  (`OWN_CONTRACT`, needs a linked account — `hr.contracts.manage` is in `PAY_AND_PENALTY_KEYS`) and
+  is one `hr.contract.*` entry; bulk renew is all or nothing (409 `CONTRACTS_NOT_RENEWABLE`, the
+  refused rows in `data`). The renewal list (`GET /hr/contracts?year&decision&stageId&search`) is
+  one raw query for the "needs action first" order (search through the employee's generated
+  columns, `searchColumnsSql`) and one for the five tiles; the rows are read back with Prisma.
+  Pure rules (decisions, notice timing, the early termination window, renewal dates, the paid
+  month check) are in `packages/shared/src/rules/contracts.ts`. The school calendar is HR's
+  `school_calendars` table, one row per contract year (`GET/PUT /hr/settings/school-calendar/:year`);
+  a contract reads the calendar of the year it started in.
 - **Events HR publishes** (for higher modules to react): `hr.employee.hired`,
   `hr.employee.updated` (fire-and-forget), `hr.employee.deactivated` and `hr.payroll.approved`
   (must-deliver). Details: `docs/EVENTS.md`.

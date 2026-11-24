@@ -49,7 +49,7 @@
 | Basic salary | Monthly, in EGP, required, greater than 0 |
 | Fingerprint ID | Optional; unique if given (for the device integration later) |
 | Probation end | Optional date, on or after the hire date. Left empty on a new employee, it is filled with the hire date + the school's default probation length (§7, 3 months), the day before: hired 1 Sep → 30 Nov; a day the month lacks counts as its last (hired 30 Nov → 27 Feb, GUESS). Length 0 = no probation: left empty. Editable, and can be cleared (no probation). Changing the hire date doesn't move it (GUESS), but a hire date after it is refused. Changing the default length changes only employees added afterwards. Not salary-type: whoever sees the employee sees it (§2). Employees who existed before it was added got hire date + 3 months. The probation reminder (§11) follows it. DECIDED (owner, 2026-11-18) |
-| Contract start / end | Required (filled automatically when left empty). Defaults to 1 June – 31 May of the current contract year; if only a start is given, the end is one year later minus a day (e.g. 1 Sep 2026 → 31 Aug 2027). End after start. DECIDED (one-year fixed contract) |
+| Contract start / end | The **current contract** (see Contracts below). Set when the employee is added — filled automatically when left empty: 1 June – 31 May of the current contract year; if only a start is given, the end is one year later minus a day (e.g. 1 Sep 2026 → 31 Aug 2027). End after start. DECIDED (one-year fixed contract). Afterwards they change only through Contracts (renewing, ending), never on the employee form (owner, 2026-11-24) |
 | Uses school bus | Yes / no, required (defaults to no) |
 | Photo | Optional; PNG, JPG or WebP, up to 2 MB, shown square-cropped. Only signed-in users can open it. Without a photo the employee shows a neutral silhouette, never initials. DECIDED (owner, 2026-11-18) |
 | Status | Active or inactive |
@@ -96,6 +96,67 @@ paying by bank transfer is Planned.
 - **DECIDED** (owner, 2026-11-21) — Each penalty records the stage where the violation happened,
   from the employee's stages (§4). Removing a stage from an employee later doesn't change the
   penalties already recorded there.
+
+## Contracts
+
+Spec `docs/specs/2026-11-24-contracts.md` (approved by the owner as drafted, 2026-11-24).
+
+- **DECIDED** — A contract is one year, 1 June – 31 May, renewed only if both sides want it
+  (regulations). It is kept forever; ending or replacing it never deletes it. Each employee has a
+  list of contracts, one per contract year; the record's contract start / end are the current one.
+- **GUESS** — A contract's status: **Active** → **Renewed** (next year's contract exists) ·
+  **Not renewed** (school's decision or the employee's notice; ends on its end date) ·
+  **Ended early** (early termination or another reason; ends on the date given). One active
+  contract per employee at a time; contracts never overlap.
+- **GUESS** — Renewing keeps the salary, job and stage as they are on the record. A raise on renewal
+  is payroll's annual raise (Planned), not this. Renewing creates next year's contract from the day
+  after the end: 1 June – 31 May; a contract started mid-year (1 Sep – 31 Aug) keeps its own cycle
+  and appears on the renewal screen of the year it ends. Many can be renewed at once — all or
+  nothing: if one can't be (already renewed, inactive employee, a decision made), none is, and the
+  screen lists the ones that can't.
+- **GUESS** — The school decides each renewal; nothing renews by itself. A contract that reaches its
+  end with no decision shows as **"Ended, no decision"** on the renewal screen until HR renews it or
+  marks it not renewed. The employee stays active meanwhile (a mid-year start is common), and the
+  contract-end reminder already chases it.
+- **GUESS** — Not renewed → on the day after the end, the employee appears in a "To deactivate" list;
+  HR deactivates them (one click, one or many). No automatic deactivation, because payroll for the
+  last month may still be open.
+- **GUESS** — An employee's non-renewal notice is recorded by HR with the date it was received and
+  the scanned letter. The regulations' window is the first day of term 2 to 30 April; a notice
+  received **outside** it (before term 2 or after 30 April) is still recorded, marked **"Late"** or
+  **"Early"** — the school decides case by case. A notice can be withdrawn while the contract is
+  still active, with a reason.
+- **DECIDED** (owner approved the default, 2026-11-24) — **Early termination** at the end of term 1:
+  HR records the employee's request from the first day of term 1 until its last day ("not before
+  this date"); approved, the contract ends on the last day of term 1 (exams included); rejected, it
+  needs a reason, and a rejected request can't be approved later — a new request is needed. Leaving
+  before that owes the compensation written in the contract; the system records it as a note, it
+  doesn't calculate it.
+- **GUESS** — Ending a contract for another reason (dismissal under Article 148, resignation by
+  agreement, death, other) takes the reason, an end date (today or later, not before the contract
+  start, not after its end) and a note; an attachment is optional. An end that would cut into a
+  month whose payroll is approved is refused — the paid month stands. Ending a contract ends the
+  employee's future reminders (contract, probation). Dismissal under Article 148 can later link to
+  an investigation (Planned).
+- **GUESS** — The school calendar (Settings, §7) for the year a contract started in gives its
+  dates: the notice window and the end of term 1. When the year's calendar isn't set, notices and
+  early termination requests are still recorded, marked "Calendar not set", and the renewal screen
+  shows a banner linking to the setting; an early termination is approved only once it's set.
+- **DECIDED** (existing rule, §2) — Nobody acts on their own contract: renew, not renew, record a
+  notice, decide an early termination or end it. A System admin neither.
+- **GUESS** — Deemed resignation (Article 166: over 20 days' unexcused absence in a year or over 10
+  in a row, after a registered warning) is **not** in this module; it needs attendance and comes
+  with it.
+- **DECIDED** — Every write is audited (contract created, renewed, not renewed, notice recorded or
+  withdrawn, early termination requested / approved / rejected, contract ended, calendar changed),
+  and opening a contract document (a letter, an attachment) is recorded too.
+- **Screens** — the employee page's **Contracts** tab (the history and the actions on the current
+  one) and **HR → Contracts**, the renewal season of one contract year: five tiles (ending this
+  year, decided, not decided, notices received, to deactivate), the list with a decision per row,
+  bulk renew; on a phone, cards and a bottom sheet.
+- **Out of scope** — deemed resignation (with attendance), the annual raise on renewal (payroll),
+  calculating compensation, employees sending notices themselves (self-service), investigations,
+  part-time contracts.
 
 ## Rules
 

@@ -46,6 +46,9 @@ affects only **draft** payroll runs (approved runs never change).
 | Sign-in limit: wrong passwords, within minutes, lock minutes (§2) | 5, 15, 15 | DECIDED (owner, 2026-11-18) — no screen yet; each at least 1 |
 | Remind before a contract ends (§11) | 30 days (1–120), and again 7 days (0 = none; 0–60, fewer than the first) | DECIDED (owner, 2026-11-18) — an HR rule; Settings → Notifications → Reminder timing |
 | Remind before probation ends (§11) | 7 days (1–60) | GUESS — an HR rule; same screen |
+| Renewal decisions due (§11) | From 1 March: 91 days before 31 May (1–180) | GUESS (spec 2026-11-24) — an HR rule; same screen |
+| Non-renewal window closes soon (§11) | 7 days before the non-renewal deadline (1–60) | GUESS (spec 2026-11-24) — an HR rule; same screen |
+| School calendar, per contract year (§3 Contracts) | Not set: first day of term 1, last day of term 1 (exams included), first day of term 2, non-renewal deadline (30 April) — all inside the contract year, in that order | GUESS (spec 2026-11-24) — Settings → HR rules; changed by whoever may change HR rules. When academics (academic years) is built, it takes these dates over |
 | Lateness check day / payroll check day (§11) | 25 / 28 (1–31; past the month's end = its last day) | DECIDED settings; the days GUESS until the school confirms — HR rules; same screen |
 | Keep read notifications / done approvals / any notification (§11) | 90 / 30 / 365 days (each 1–3650) | DECIDED (owner, 2026-11-18) — Settings → Notifications |
 | Each kind of notification on or off by default (§11) | On; approvals always on | DECIDED (owner, 2026-11-18) — Settings → Notifications |
