@@ -85,7 +85,8 @@
         "create": "Added the employee {entity}",
         "update": "Edited the employee {entity}",
         "deactivate": "Deactivated the employee {entity}",
-        "reactivate": "Reactivated the employee {entity}"
+        "reactivate": "Reactivated the employee {entity}",
+        "contract_dates_move": "Moved the contract dates of {entity} to the contract in force"
       },
       "department": {
         "create": "Added the department {entity}",
@@ -141,7 +142,7 @@
         "early_termination_reject": "Rejected the early termination request of {entity}",
         "end": "Ended the contract of {entity}",
         "document_open": "Opened a contract document of {entity}",
-        "cancel": "Cancelled the next contract of {entity}",
+        "cancel": "Cancelled a contract of {entity}",
         "not_renew_undo": "Undid the not-renewing of {entity}'s contract"
       },
       "school_calendar": {

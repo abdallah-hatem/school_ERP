@@ -82,6 +82,16 @@ export async function NOT_RENEW_CONTRACT(id: Uuid, body: NotRenewContractRequest
 }
 
 /** `POST /hr/contracts/:id/not-renewed/undo` — the school changed its mind, before the end; the reason is required. */
+/** `POST /hr/contracts/:id/cancel` — an upcoming contract that isn't a renewal, with a reason. */
+export async function CANCEL_CONTRACT(id: Uuid, reason: string) {
+  const response = await apiFetch<Contract>(`/hr/contracts/${encodeURIComponent(id)}/cancel`, {
+    method: 'POST',
+    body: { reason },
+    revalidateTags: WRITE_TAGS,
+  });
+  return handleResponse({ response });
+}
+
 export async function UNDO_NOT_RENEW(id: Uuid, reason: string) {
   const response = await apiFetch<Contract>(`/hr/contracts/${encodeURIComponent(id)}/not-renewed/undo`, {
     method: 'POST',

@@ -1,6 +1,8 @@
 import {
   CalendarTiming,
+  cancelRefusal,
   ContractDecision,
+  ContractPhase,
   ContractStatus,
   decisionRefusal,
   EarlyTerminationStatus,
@@ -39,6 +41,7 @@ export const DECISION_TONE: Record<ContractDecision, StatusTone> = {
 export function stateOf(c: Contract): ContractState {
   return {
     status: c.status,
+    startsOn: c.startsOn,
     endsOn: c.endsOn,
     nonRenewalBy: c.nonRenewalBy,
     earlyTerminationStatus: c.earlyTermination?.status ?? null,
@@ -64,6 +67,8 @@ export interface ContractAbilities {
   undoNotRenewing: boolean;
   /** Ended for another reason — a renewed one too (its next contract is cancelled with it). */
   end: boolean;
+  /** An upcoming contract that isn't a renewal (a future hire, a future new contract): cancelled. */
+  cancel: boolean;
   deactivate: boolean;
   /** The viewer's own contract: no action, with this said on the row. */
   own: boolean;
@@ -80,15 +85,21 @@ export function abilitiesOf(
     withdrawNotice: false,
     undoNotRenewing: false,
     end: false,
+    cancel: false,
     deactivate: false,
     own: c.ownContract,
   };
   if (c.ownContract) return none;
+  // Bug 2026-11-24: a contract that hasn't started (a renewal's next one, a new one with a future
+  // start) has no action — it is decided once in force; ending the one in force cancels it.
+  if (c.phase === ContractPhase.UPCOMING) {
+    return { ...none, cancel: manage && cancelRefusal(c, c.renewalOf !== null, today) === null };
+  }
   const state = stateOf(c);
   const active = c.employee.status === 'ACTIVE';
   return {
-    renew: manage && renewalRefusal(state, active) === null,
-    decide: manage && decisionRefusal(state) === null,
+    renew: manage && renewalRefusal(state, active, today) === null,
+    decide: manage && decisionRefusal(state, today) === null,
     approveOrReject: manage && state.earlyTerminationStatus === EarlyTerminationStatus.REQUESTED,
     withdrawNotice: manage && noticeWithdrawalRefusal(state, today) === null,
     undoNotRenewing: manage && nonRenewalUndoRefusal(state, today) === null,
@@ -98,6 +109,7 @@ export function abilitiesOf(
       c.status !== ContractStatus.CANCELLED &&
       state.earlyTerminationStatus !== EarlyTerminationStatus.REQUESTED &&
       c.endsOn >= today,
+    cancel: false,
     deactivate: changeStatus && c.toDeactivate,
     own: false,
   };

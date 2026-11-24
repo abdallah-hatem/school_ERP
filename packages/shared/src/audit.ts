@@ -149,6 +149,12 @@ export const AUDIT_ACTIONS = {
     entityType: E.EMPLOYEE,
     kind: 'status',
   },
+  // The daily step (System): the record's contract dates moved to the contract in force (1 June).
+  'hr.employee.contract_dates_move': {
+    module: 'hr',
+    entityType: E.EMPLOYEE,
+    kind: 'update',
+  },
   // hr — lists
   'hr.department.create': {
     module: 'hr',

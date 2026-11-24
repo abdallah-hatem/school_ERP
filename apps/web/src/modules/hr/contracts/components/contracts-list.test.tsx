@@ -21,6 +21,7 @@ const api = vi.hoisted(() => ({
   NOT_RENEW_CONTRACT: vi.fn(),
   WITHDRAW_NOTICE: vi.fn(),
   UNDO_NOT_RENEW: vi.fn(),
+  CANCEL_CONTRACT: vi.fn(),
   REQUEST_EARLY_TERMINATION: vi.fn(),
   APPROVE_EARLY_TERMINATION: vi.fn(),
   REJECT_EARLY_TERMINATION: vi.fn(),

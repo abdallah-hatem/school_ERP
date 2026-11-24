@@ -1,5 +1,6 @@
 import {
   contractDecision,
+  contractPhase,
   contractYearOf,
   EmployeeStatus,
   isToDeactivate,
@@ -85,6 +86,7 @@ export function toContract(
     startsOn: toIsoDate(row.startsOn),
     endsOn,
     status: row.status,
+    phase: contractPhase({ status: row.status, startsOn: toIsoDate(row.startsOn), endsOn, endedOn }, today),
     decision: contractDecision(
       {
         status: row.status,
@@ -124,14 +126,20 @@ export function toContract(
     endFileUrl: row.endFileUrl,
     decidedBy: row.decidedBy,
     decidedAt: row.decidedAt?.toISOString() ?? null,
+    renewalOf: row.previousContract?.id ?? null,
     next: row.nextContract
       ? { id: row.nextContract.id, startsOn: toIsoDate(row.nextContract.startsOn), endsOn: toIsoDate(row.nextContract.endsOn) }
       : null,
-    toDeactivate: isToDeactivate({ status: row.status, endsOn, endedOn }, employeeActive, today),
+    toDeactivate: isToDeactivate({ status: row.status, endsOn, endedOn }, employeeActive, today, hasLaterContract(row)),
     ownContract: actorEmployeeId !== null && actorEmployeeId === row.employeeId,
     carriedOver: listedYear !== undefined && contractYearOf(endsOn) < listedYear,
     calendars,
   };
+}
+
+/** Whether the employee has a contract (cancelled aside) starting after this one. */
+export function hasLaterContract(row: Pick<ContractRow, 'startsOn' | 'employee'>): boolean {
+  return row.employee.contracts.some((c) => c.startsOn > row.startsOn);
 }
 
 /** The scope fields of a contract's employee (`inScope`). */

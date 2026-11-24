@@ -1,6 +1,10 @@
 import type { INestApplication } from '@nestjs/common';
 import { AUTH_COOKIES, ErrorCode, type AuthUser, type Contract, type ContractsPage, type UserAccount } from '@school-erp/shared';
+import { JobRunner } from '../src/core/jobs';
+import { todayIsoDate } from '../src/common/utils/dates.util';
 import { DatabaseService } from '../src/database/database.service';
+import { ContractsService } from '../src/modules/hr/contracts/services/contracts.service';
+import { HR_REMINDERS_JOB, HrRemindersJob } from '../src/modules/hr/reminders/hr-reminders.job';
 import { http, unique } from './helpers';
 import { ANONYMOUS_HEADER, createAppAsTestUser, giveRoles } from './helpers/as-test-user';
 import { historyMark } from './helpers/history';
@@ -10,7 +14,9 @@ import { deleteEmployees } from './helpers/employees';
  * Contracts (spec docs/specs/2026-11-24-contracts.md) through the API: the renewal list, every
  * decision, the school calendar, the documents and who may do what (§2). Employees are created
  * through the API (they get their first contract there); dates are years ahead so this suite's
- * contracts are the only ones in their contract years.
+ * contracts are the only ones in their contract years. The school's today is fixed to the first day
+ * of those contracts (`ContractsService.today`), so they are in force: decisions are taken only on a
+ * contract that has started (bug 2026-11-24, `CONTRACT_NOT_STARTED`).
  */
 
 const PDF = Buffer.from('%PDF-1.7\n1 0 obj\n<<>>\nendobj\n');
@@ -42,6 +48,7 @@ describe('Contracts (e2e)', () => {
   const users: string[] = [];
   const employees: string[] = [];
   const months: string[] = [];
+  let pinnedToday: jest.SpyInstance;
 
   async function as<T>(id: string, fn: () => Promise<T>): Promise<T> {
     user.id = id;
@@ -100,6 +107,7 @@ describe('Contracts (e2e)', () => {
     ({ app, user } = await createAppAsTestUser());
     admin = user.id;
     db = app.get(DatabaseService);
+    pinnedToday = jest.spyOn(app.get(ContractsService), 'today').mockReturnValue(`${YEAR}-06-01`);
     mark = await historyMark(db);
     [stageA, stageB] = [
       (await db.stage.create({ data: { nameEn: unique('Stage A'), nameAr: unique('مرحلة أ') } })).id,
@@ -113,7 +121,19 @@ describe('Contracts (e2e)', () => {
   });
 
   afterAll(async () => {
+    pinnedToday.mockRestore();
     await db.notification.deleteMany({ where: { items: { some: { employeeId: { in: employees } } } } });
+    // The job runs in the time walk (31 May / 1 June of YEAR + 1) leave month and season reminders.
+    await db.notification.deleteMany({
+      where: {
+        items: {
+          some: {
+            entityType: { in: ['lateness_month', 'payroll_month', 'contract_year'] },
+            entityId: { in: [`${YEAR + 1}-05`, `${YEAR + 1}-06`, String(YEAR), String(YEAR + 1)] },
+          },
+        },
+      },
+    });
     await db.payrollRun.deleteMany({ where: { month: { in: months } } });
     await db.schoolCalendar.deleteMany({ where: { year: { in: [YEAR, YEAR + 1] } } });
     const emails = (await db.user.findMany({ where: { id: { in: users } }, select: { email: true } })).map((u) => u.email);
@@ -154,12 +174,13 @@ describe('Contracts (e2e)', () => {
       const res = await http(app).post('/hr/contracts/renew').send({ contractIds: [c.id] }).expect(200);
       expect(res.body.data[0]).toMatchObject({ id: c.id, status: 'RENEWED', next: { startsOn: `${YEAR + 1}-06-01`, endsOn: `${YEAR + 2}-05-31` } });
       const history = await contractsOf(id);
-      expect(history.map((h) => [h.startsOn, h.status])).toEqual([
-        [`${YEAR + 1}-06-01`, 'ACTIVE'],
-        [`${YEAR}-06-01`, 'RENEWED'],
+      expect(history.map((h) => [h.startsOn, h.status, h.phase])).toEqual([
+        [`${YEAR + 1}-06-01`, 'ACTIVE', 'UPCOMING'],
+        [`${YEAR}-06-01`, 'RENEWED', 'CURRENT'],
       ]);
+      // Bug 2026-11-24: the record keeps naming the contract in force until the next one starts.
       const emp = (await http(app).get(`/hr/employees/${id}`).expect(200)).body.data;
-      expect([emp.contractStart, emp.contractEnd]).toEqual([`${YEAR + 1}-06-01`, `${YEAR + 2}-05-31`]);
+      expect([emp.contractStart, emp.contractEnd]).toEqual([`${YEAR}-06-01`, `${YEAR + 1}-05-31`]);
       expect(await db.auditEntry.count({ where: { seq: { gt: mark }, action: 'hr.contract.renew', entityId: c.id } })).toBe(1);
     });
 
@@ -212,7 +233,13 @@ describe('Contracts (e2e)', () => {
       expect(page.items).toEqual([]);
       const next = (await http(app).get(`/hr/contracts?year=${YEAR + 1}&search=${c.employee.code}`).expect(200)).body.data as ContractsPage;
       expect(next.items.map((i) => i.id)).toEqual([c.id]);
-      await http(app).post('/hr/contracts/renew').send({ contractIds: [c.id] }).expect(200);
+      // Renewed once it has started (the suite's today is 1 June, before its 1 Sep start).
+      pinnedToday.mockReturnValue(`${YEAR}-09-01`);
+      try {
+        await http(app).post('/hr/contracts/renew').send({ contractIds: [c.id] }).expect(200);
+      } finally {
+        pinnedToday.mockReturnValue(`${YEAR}-06-01`);
+      }
       expect((await currentOf(id))).toMatchObject({ startsOn: `${YEAR + 1}-09-01`, endsOn: `${YEAR + 2}-08-31` });
     });
   });
@@ -228,7 +255,8 @@ describe('Contracts (e2e)', () => {
       const page = await list('&limit=1');
       expect(page.items).toHaveLength(1);
       expect(page.total).toBeGreaterThanOrEqual(2);
-      expect(page.totals.ending).toBe(page.total);
+      // The current season (today is fixed inside it) also lists earlier years' open rows.
+      expect(page.totals.ending + page.totals.carriedOver).toBe(page.total);
       expect(page.calendar).toBeNull();
       const byStage = await list(`&stageId=${stageB}`);
       expect(byStage.items.map((i) => i.employee.id)).toEqual([b]);
@@ -398,13 +426,160 @@ describe('Contracts (e2e)', () => {
       expect(overlap.body.error).toBe(ErrorCode.CONTRACT_OVERLAP);
       const made = await http(app).post(`/hr/employees/${id}/contracts`).send({ startsOn: `${YEAR + 1}-02-01` }).expect(201);
       expect(made.body.data).toMatchObject({ startsOn: `${YEAR + 1}-02-01`, endsOn: `${YEAR + 2}-01-31`, status: 'ACTIVE' });
+      expect(made.body.data.phase).toBe('UPCOMING');
+      // It starts later: the record keeps naming the last contract until then (bug 2026-11-24).
       const emp = (await http(app).get(`/hr/employees/${id}`).expect(200)).body.data;
-      expect([emp.contractStart, emp.contractEnd]).toEqual([`${YEAR + 1}-02-01`, `${YEAR + 2}-01-31`]);
+      expect([emp.contractStart, emp.contractEnd]).toEqual([`${YEAR}-06-01`, `${YEAR}-12-31`]);
     });
 
     it('review 7 — contracts are kept forever: an employee with contracts can’t be deleted', async () => {
       const id = await employee();
       await expect(db.employee.delete({ where: { id } })).rejects.toThrow();
+    });
+  });
+
+  /*
+   * Bug 2026-11-24 (owner, testing): 2026/27 renewed in November made 2027/28 "Current", decidable,
+   * and the employee's dates moved to it at once. One employee walked through time, the school's
+   * today moving forward.
+   */
+  describe('one employee over time — Current vs Upcoming (bug 2026-11-24)', () => {
+    const contracts = () => app.get(ContractsService);
+    const runJobOn = (day: string) => {
+      jest.spyOn(app.get(HrRemindersJob), 'now').mockReturnValue(new Date(`${day}T05:00:00Z`));
+      return app.get(JobRunner).run(HR_REMINDERS_JOB);
+    };
+    afterEach(() => {
+      pinnedToday.mockReturnValue(`${YEAR}-06-01`);
+      jest.spyOn(app.get(HrRemindersJob), 'now').mockRestore();
+    });
+    // `@IsNotFutureDate` reads the real clock, so a received / requested date is the real today: the
+    // DTO accepts it and the service is what refuses (CONTRACT_NOT_STARTED comes before any timing).
+    const realToday = todayIsoDate();
+
+    it('renewed in November: the next contract is UPCOMING and refused CONTRACT_NOT_STARTED; on its first day it is CURRENT and the record moves', async () => {
+      const id = await employee();
+      const c = await currentOf(id);
+      jest.spyOn(contracts(), 'today').mockReturnValue(`${YEAR}-11-24`);
+      await http(app).post('/hr/contracts/renew').send({ contractIds: [c.id] }).expect(200);
+      const [next, inForce] = await contractsOf(id);
+      expect(inForce).toMatchObject({ id: c.id, phase: 'CURRENT', status: 'RENEWED' });
+      expect(next).toMatchObject({ phase: 'UPCOMING', startsOn: `${YEAR + 1}-06-01`, year: YEAR + 1 });
+
+      // No decision on a contract that hasn't started: renew, not renew, a notice, an early termination.
+      const renew = await http(app).post('/hr/contracts/renew').send({ contractIds: [next.id] }).expect(409);
+      expect(renew.body.error).toBe(ErrorCode.CONTRACT_NOT_STARTED);
+      const notRenew = await http(app).post(`/hr/contracts/${next.id}/not-renewed`).send({ by: 'SCHOOL' }).expect(409);
+      expect(notRenew.body.error).toBe(ErrorCode.CONTRACT_NOT_STARTED);
+      const notice = await http(app).post(`/hr/contracts/${next.id}/not-renewed`).send({ by: 'EMPLOYEE', receivedOn: realToday }).expect(409);
+      expect(notice.body.error).toBe(ErrorCode.CONTRACT_NOT_STARTED);
+      const early = await http(app).post(`/hr/contracts/${next.id}/early-termination`).send({ requestedOn: realToday }).expect(409);
+      expect(early.body.error).toBe(ErrorCode.CONTRACT_NOT_STARTED);
+      // In a bulk renewal it is a refused row; nothing is renewed.
+      const other = await currentOf(await employee());
+      const bulk = await http(app).post('/hr/contracts/renew').send({ contractIds: [other.id, next.id] }).expect(409);
+      expect(bulk.body).toMatchObject({
+        error: ErrorCode.CONTRACTS_NOT_RENEWABLE,
+        data: [{ contractId: next.id, code: ErrorCode.CONTRACT_NOT_STARTED }],
+      });
+      expect((await currentOf(other.employee.id)).status).toBe('ACTIVE');
+
+      // The record still names the contract in force; the daily job on 31 May changes nothing.
+      const dates = async () => {
+        const emp = (await http(app).get(`/hr/employees/${id}`).expect(200)).body.data;
+        return [emp.contractStart, emp.contractEnd];
+      };
+      expect(await dates()).toEqual([`${YEAR}-06-01`, `${YEAR + 1}-05-31`]);
+      expect(await runJobOn(`${YEAR + 1}-05-31`)).toBe('success');
+      expect(await dates()).toEqual([`${YEAR}-06-01`, `${YEAR + 1}-05-31`]);
+      // 1 June: the next contract is in force, decidable, and the record moves to it.
+      expect(await runJobOn(`${YEAR + 1}-06-01`)).toBe('success');
+      expect(await dates()).toEqual([`${YEAR + 1}-06-01`, `${YEAR + 2}-05-31`]);
+      jest.spyOn(contracts(), 'today').mockReturnValue(`${YEAR + 1}-06-01`);
+      const [now, before] = await contractsOf(id);
+      expect([now.phase, before.phase]).toEqual(['CURRENT', 'PAST']);
+      await http(app).post(`/hr/contracts/${now.id}/not-renewed`).send({ by: 'SCHOOL' }).expect(200);
+    });
+
+    it('the renewed contract ended before 1 June: the upcoming one is cancelled and the record stays on the ended one', async () => {
+      const id = await employee();
+      const c = await currentOf(id);
+      jest.spyOn(contracts(), 'today').mockReturnValue(`${YEAR}-11-24`);
+      await http(app).post('/hr/contracts/renew').send({ contractIds: [c.id] }).expect(200);
+      await http(app).post(`/hr/contracts/${c.id}/end`).send({ reason: 'DEATH', endsOn: `${YEAR + 1}-04-15`, note: 'x' }).expect(200);
+      expect(await runJobOn(`${YEAR + 1}-06-01`)).toBe('success');
+      const emp = (await http(app).get(`/hr/employees/${id}`).expect(200)).body.data;
+      expect([emp.contractStart, emp.contractEnd]).toEqual([`${YEAR}-06-01`, `${YEAR + 1}-04-15`]);
+      expect((await contractsOf(id))[0]).toMatchObject({ status: 'CANCELLED', phase: 'PAST' });
+    });
+
+    it('the upcoming contract is neither ended nor cancelled on its own (the one in force is ended instead)', async () => {
+      const id = await employee();
+      const c = await currentOf(id);
+      jest.spyOn(contracts(), 'today').mockReturnValue(`${YEAR}-11-24`);
+      await http(app).post('/hr/contracts/renew').send({ contractIds: [c.id] }).expect(200);
+      const [next] = await contractsOf(id);
+      const end = await http(app).post(`/hr/contracts/${next.id}/end`).send({ reason: 'OTHER', endsOn: `${YEAR + 1}-07-01`, note: 'x' }).expect(409);
+      expect(end.body.error).toBe(ErrorCode.CONTRACT_NOT_STARTED);
+      const cancel = await http(app).post(`/hr/contracts/${next.id}/cancel`).send({ reason: 'x' }).expect(409);
+      expect(cancel.body.error).toBe(ErrorCode.CONTRACT_NOT_CANCELLABLE);
+      await http(app).post(`/hr/contracts/${c.id}/end`).send({ reason: 'OTHER', endsOn: `${YEAR + 1}-05-10`, note: 'x' }).expect(200);
+    });
+
+    it('a new contract with a future start can be cancelled (reason required, audited); the record stays on the last one', async () => {
+      const id = await employee();
+      const c = await currentOf(id);
+      await http(app).post(`/hr/contracts/${c.id}/end`).send({ reason: 'OTHER', endsOn: `${YEAR}-11-30`, note: 'Left' }).expect(200);
+      jest.spyOn(contracts(), 'today').mockReturnValue(`${YEAR}-12-01`);
+      const made = (await http(app).post(`/hr/employees/${id}/contracts`).send({ startsOn: `${YEAR + 1}-06-01` }).expect(201)).body.data as Contract;
+      expect(made.phase).toBe('UPCOMING');
+      await http(app).post(`/hr/contracts/${made.id}/cancel`).send({ reason: '' }).expect(400);
+      const res = await http(app).post(`/hr/contracts/${made.id}/cancel`).send({ reason: 'Never joined' }).expect(200);
+      expect(res.body.data).toMatchObject({ status: 'CANCELLED', phase: 'PAST' });
+      expect(await db.auditEntry.count({ where: { seq: { gt: mark }, action: 'hr.contract.cancel', entityId: made.id } })).toBe(1);
+      const emp = (await http(app).get(`/hr/employees/${id}`).expect(200)).body.data;
+      expect([emp.contractStart, emp.contractEnd]).toEqual([`${YEAR}-06-01`, `${YEAR}-11-30`]);
+    });
+
+    it('not renewed → ended → reactivated → new contract: the old row is no longer "To deactivate" nor carried over', async () => {
+      const id = await employee();
+      const c = await currentOf(id);
+      await http(app).post(`/hr/contracts/${c.id}/end`).send({ reason: 'OTHER', endsOn: `${YEAR}-11-30`, note: 'Left' }).expect(200);
+      jest.spyOn(contracts(), 'today').mockReturnValue(`${YEAR}-12-01`);
+      const toDeactivate = async () =>
+        (await list(`&decision=TO_DEACTIVATE&search=${encodeURIComponent(c.employee.code)}`)).items.map((i) => i.id);
+      expect(await toDeactivate()).toEqual([c.id]);
+      await http(app).post(`/hr/employees/${id}/deactivate`).expect(200);
+      await http(app).post(`/hr/employees/${id}/reactivate`).expect(200);
+      await http(app).post(`/hr/employees/${id}/contracts`).send({ startsOn: `${YEAR}-12-01` }).expect(201);
+      expect(await toDeactivate()).toEqual([]);
+      const old = (await contractsOf(id)).find((h) => h.id === c.id)!;
+      expect(old.toDeactivate).toBe(false);
+      await http(app).post('/hr/contracts/deactivate').send({ contractIds: [c.id] }).expect(409);
+      // Next season's screen (where earlier rows are carried over): not there either.
+      jest.spyOn(contracts(), 'today').mockReturnValue(`${YEAR + 1}-06-02`);
+      const nextSeason = (await http(app).get(`/hr/contracts?year=${YEAR + 1}&decision=TO_DEACTIVATE&search=${c.employee.code}`).expect(200)).body
+        .data as ContractsPage;
+      expect(nextSeason.items).toEqual([]);
+    });
+
+    it('nobody deactivates themselves: from the employee page (OWN_EMPLOYEE)', async () => {
+      const self = await employee();
+      const manager = await newUser('HR manager own', ['hr_manager'], self);
+      const res = await as(manager, () => http(app).post(`/hr/employees/${self}/deactivate`).expect(403));
+      expect(res.body.error).toBe(ErrorCode.OWN_EMPLOYEE);
+      expect((await http(app).get(`/hr/employees/${self}`).expect(200)).body.data.status).toBe('ACTIVE');
+    });
+
+    it('nobody deactivates themselves through "To deactivate" (OWN_CONTRACT)', async () => {
+      const self = await employee();
+      const c = await currentOf(self);
+      await http(app).post(`/hr/contracts/${c.id}/end`).send({ reason: 'OTHER', endsOn: `${YEAR}-11-30`, note: 'x' }).expect(200);
+      jest.spyOn(contracts(), 'today').mockReturnValue(`${YEAR}-12-01`);
+      const manager = await newUser('HR manager self', ['hr_manager'], self);
+      const res = await as(manager, () => http(app).post('/hr/contracts/deactivate').send({ contractIds: [c.id] }).expect(403));
+      expect(res.body.error).toBe(ErrorCode.OWN_CONTRACT);
+      expect((await http(app).get(`/hr/employees/${self}`).expect(200)).body.data.status).toBe('ACTIVE');
     });
   });
 

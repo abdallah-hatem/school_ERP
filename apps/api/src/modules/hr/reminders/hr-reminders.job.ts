@@ -3,6 +3,7 @@ import { contractYearOf, schoolDayOf, type IsoDate, type ReminderRule } from '@s
 import { ScheduledJob, type JobHandler } from '../../../core/jobs';
 import { NotificationsService } from '../../../core/notifications';
 import { AfterCommit } from '../../../database/transactions';
+import { ContractRecords } from '../contracts/services/contract-records.service';
 import { HrSettingsService } from '../settings/hr-settings.service';
 import {
   contractReminders,
@@ -23,7 +24,9 @@ import { RemindersRepository } from './repositories/reminders.repository';
 export const HR_REMINDERS_JOB = 'hr.reminders.daily';
 
 /**
- * HR's reminders (§11, N3, N16), every day at 07:00 school time (Africa/Cairo): contracts and
+ * HR's reminders (§11, N3, N16), every day at 07:00 school time (Africa/Cairo) — first moving each
+ * employee's contract dates to the contract in force (a renewal's next contract on its first day) —
+ * then: contracts and
  * probation ending soon, lateness not entered from the 25th, payroll not prepared / still a draft
  * from the 28th, and the renewal season — decisions due, the non-renewal window opening and closing
  * (HR settings `hr.reminders.*`, the school calendar).
@@ -48,6 +51,7 @@ export class HrRemindersJob implements JobHandler {
     private readonly repository: RemindersRepository,
     private readonly settings: HrSettingsService,
     private readonly afterCommit: AfterCommit,
+    private readonly contracts: ContractRecords,
   ) {}
 
   /** The moment of the run (a test fixes it). */
@@ -60,6 +64,15 @@ export class HrRemindersJob implements JobHandler {
     const today = schoolDayOf(now);
     const rule = await this.settings.reminders();
     const failures: string[] = [];
+    // First, the records' contract dates follow the contract in force (bug 2026-11-24): on 1 June a
+    // renewal's next contract takes over. Idempotent; its own transaction, so a failure here still
+    // lets the reminders run (they read the contract in force themselves).
+    try {
+      const moved = await this.afterCommit.inTransaction(() => this.contracts.syncAllCurrentDates(today));
+      if (moved) this.logger.log(`contract dates: ${moved} moved to the contract in force (${today})`);
+    } catch (e) {
+      failures.push(`contract dates: ${e instanceof Error ? (e.stack ?? e.message) : String(e)}`);
+    }
     for (const type of REMINDER_TYPES) {
       try {
         const { resolved, sent } = await this.afterCommit.inTransaction(() =>
@@ -103,9 +116,9 @@ export class HrRemindersJob implements JobHandler {
   ): Promise<ReminderPlan> {
     switch (type) {
       case 'hr.contract.ending_soon':
-        return contractReminders(today, rule, await this.repository.activeEmployees(), open);
+        return contractReminders(today, rule, await this.repository.activeEmployees(today), open);
       case 'hr.probation.ending_soon':
-        return probationReminders(today, rule, await this.repository.activeEmployees(), open);
+        return probationReminders(today, rule, await this.repository.activeEmployees(today), open);
       case 'hr.lateness.not_entered':
         return latenessReminders(today, rule, await this.months(today, open), open);
       case 'hr.payroll.not_prepared':

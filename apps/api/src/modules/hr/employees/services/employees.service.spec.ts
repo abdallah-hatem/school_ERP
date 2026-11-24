@@ -601,6 +601,17 @@ describe('EmployeesService — audit (§9, T28)', () => {
     expect(audit.record).not.toHaveBeenCalled();
   });
 
+  it('review 2026-11-24 — nobody deactivates their own record (403 OWN_EMPLOYEE); someone else may', async () => {
+    const self = makeService({}, fakeAccess({}, { userId: 'u1', employeeId: 'e1' }));
+    await expect(self.service.deactivate('e1')).rejects.toMatchObject({ code: ErrorCode.OWN_EMPLOYEE });
+    expect(self.repository.updateEmployee).not.toHaveBeenCalled();
+    const other = makeService(
+      { updateEmployee: jest.fn().mockResolvedValue(row({ status: 'INACTIVE' })) },
+      fakeAccess({}, { userId: 'u2', employeeId: 'e2' }),
+    );
+    await expect(other.service.deactivate('e1')).resolves.toMatchObject({ status: 'INACTIVE' });
+  });
+
   it('deactivate / reactivate record their own action with the status change', async () => {
     const active = makeService({
       updateEmployee: jest.fn().mockResolvedValue(row({ status: 'INACTIVE' })),

@@ -25,6 +25,7 @@ import {
   EmployeeContractsQueryDto,
   EndContractDto,
   ListContractsQueryDto,
+  CancelContractDto,
   NewContractDto,
   NotRenewContractDto,
   UndoNotRenewDto,
@@ -89,6 +90,15 @@ export class ContractsController {
   @HttpCode(HttpStatus.OK)
   undoNotRenew(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UndoNotRenewDto) {
     return this.contracts.undoNotRenew(id, dto.reason);
+  }
+
+  /** An upcoming contract that isn't a renewal: cancelled, kept, with a reason (review 2026-11-24). */
+  @Audited('hr.contract.cancel')
+  @Post(':id/cancel')
+  @Permission('hr.contracts.manage')
+  @HttpCode(HttpStatus.OK)
+  cancel(@Param('id', ParseUUIDPipe) id: string, @Body() dto: CancelContractDto) {
+    return this.contracts.cancel(id, dto.reason);
   }
 
   @Audited('hr.contract.notice_withdraw')

@@ -9,7 +9,7 @@ import {
   type IsoDate,
 } from '@school-erp/shared';
 import { z } from 'zod';
-import { formatDate, todayIso } from '@/shared/lib/format';
+import { formatDate } from '@/shared/lib/format';
 import type { Locale, Translate, TranslateValues } from '@/shared/lib/i18n';
 
 /*
@@ -27,23 +27,25 @@ export type DecisionChoice = (typeof DECISION_CHOICES)[number];
 /** Choices that are dated (when the letter or the request was received). */
 export const DATED_CHOICES: readonly DecisionChoice[] = ['NOTICE', 'EARLY_TERMINATION'];
 
-export const decisionSchema = z
-  .object({
-    choice: z.string(),
-    date: z.string().nullable(),
-    note: z.string().trim().max(NOTE_MAX, 'contracts.form.tooLong'),
-  })
-  .superRefine((v, ctx) => {
-    if (!(DECISION_CHOICES as readonly string[]).includes(v.choice)) {
-      ctx.addIssue({ code: 'custom', path: ['choice'], message: REQUIRED });
-    }
-    if ((DATED_CHOICES as readonly string[]).includes(v.choice)) {
-      if (!v.date) ctx.addIssue({ code: 'custom', path: ['date'], message: REQUIRED });
-      // A letter or a request can't be received tomorrow; ISO dates compare as text.
-      else if (v.date > todayIso()) ctx.addIssue({ code: 'custom', path: ['date'], message: 'contracts.form.futureDate' });
-    }
-  });
-export type DecisionValues = z.input<typeof decisionSchema>;
+/** The decision form's schema on the school's `today` (Cairo) — never the device's date. */
+export const decisionSchemaOn = (today: string) =>
+  z
+    .object({
+      choice: z.string(),
+      date: z.string().nullable(),
+      note: z.string().trim().max(NOTE_MAX, 'contracts.form.tooLong'),
+    })
+    .superRefine((v, ctx) => {
+      if (!(DECISION_CHOICES as readonly string[]).includes(v.choice)) {
+        ctx.addIssue({ code: 'custom', path: ['choice'], message: REQUIRED });
+      }
+      if ((DATED_CHOICES as readonly string[]).includes(v.choice)) {
+        if (!v.date) ctx.addIssue({ code: 'custom', path: ['date'], message: REQUIRED });
+        // A letter or a request can't be received tomorrow; ISO dates compare as text.
+        else if (v.date > today) ctx.addIssue({ code: 'custom', path: ['date'], message: 'contracts.form.futureDate' });
+      }
+    });
+export type DecisionValues = z.input<ReturnType<typeof decisionSchemaOn>>;
 
 export const endSchema = z.object({
   reason: z.string().refine((v) => (CONTRACT_END_REASONS as readonly string[]).includes(v), REQUIRED),

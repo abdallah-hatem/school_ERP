@@ -1,4 +1,6 @@
 import {
+  ContractStatus,
+  currentContractPeriod,
   contractYearRange,
   formatContractYear,
   notificationDedupeKey,
@@ -62,6 +64,48 @@ export interface ReminderEmployee {
    * earlier one was resolved by the decision).
    */
   contractRearmedAt?: number | null;
+}
+
+/**
+ * An active employee as the contract and probation reminders see them, from their record and their
+ * contracts (cancelled ones aside): the contract is the one **in force** on `today`
+ * (`currentContractPeriod`: the latest started) — bug 2026-11-24: after a November renewal next
+ * year's contract is not "the current one". The in-force 2026/27 is RENEWED, so it is decided and
+ * "Contract ends soon" isn't sent for 31 May; from 1 June 2027 the new one is chased from its own end.
+ */
+export function reminderEmployeeOf(
+  e: {
+    id: string;
+    nameEn: string;
+    nameAr: string;
+    /** The record's end — used only when the employee has no contract row. */
+    contractEnd: IsoDate;
+    probationEnd: IsoDate | null;
+    contracts: readonly {
+      status: ContractStatus;
+      startsOn: IsoDate;
+      endsOn: IsoDate;
+      endedOn: IsoDate | null;
+      remindersRearmedAt: number | null;
+    }[];
+  },
+  today: IsoDate,
+): ReminderEmployee {
+  const counted = e.contracts.filter((c) => c.status !== ContractStatus.CANCELLED);
+  const period = currentContractPeriod(counted, today);
+  const current = period ? counted.find((c) => c.startsOn === period.startsOn) : undefined;
+  const status = current?.status ?? ContractStatus.ACTIVE;
+  return {
+    id: e.id,
+    nameEn: e.nameEn,
+    nameAr: e.nameAr,
+    // The in-force contract's last day (the record names the same one once the daily step ran).
+    contractEnd: period?.endsOn ?? e.contractEnd,
+    probationEnd: e.probationEnd,
+    contractDecided: status !== ContractStatus.ACTIVE,
+    contractEndedEarly: status === ContractStatus.ENDED_EARLY,
+    contractRearmedAt: current?.remindersRearmedAt ?? null,
+  };
 }
 
 /** A month as the lateness and payroll reminders see it. */

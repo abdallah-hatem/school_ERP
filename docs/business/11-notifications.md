@@ -84,7 +84,7 @@ and its list, My account → Notifications, Settings → Notifications).
 | Penalty waiting for your approval | Whoever may approve penalties at the HR step, for that penalty (§2) | A penalty is recorded straight to HR, or the stage head approves it | It is approved, rejected or cancelled, by anyone |
 | Penalty you recorded was rejected | The person who recorded it (only them) | It is rejected at either step | Read (nothing to do) |
 | Payroll ready to approve | Whoever may approve payroll | A draft month is calculated and has no pending penalties | It is approved (or a pending penalty appears in the month again) |
-| Contract ends soon | Whoever may edit that employee | 30 days, and again 7 days, before the contract ends | A renewal decision is made (renewed, not renewed, ended), or the employee is deactivated |
+| Contract ends soon | Whoever may edit that employee | 30 days, and again 7 days, before the contract in force ends (a renewal's next contract only from its first day) | A renewal decision is made (renewed, not renewed, ended), or the employee is deactivated |
 | Renewal decisions due | Whoever may manage contracts | From 1 March, while contracts ending 31 May have no decision | Every one has a decision |
 | Non-renewal window opens | Whoever may manage contracts | The first day of term 2 | Read |
 | Non-renewal window closes soon | Whoever may manage contracts | 7 days before 30 April | Read |

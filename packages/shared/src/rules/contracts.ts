@@ -3,6 +3,7 @@ import type { IsoDate } from '../types/common';
 import {
   CalendarTiming,
   ContractDecision,
+  ContractPhase,
   ContractStatus,
   EarlyTerminationStatus,
   NonRenewalBy,
@@ -109,13 +110,14 @@ export function earlyTerminationTiming(
 /** What a contract's decision is worked out from. */
 export interface ContractState {
   status: ContractStatus;
+  startsOn: IsoDate;
   endsOn: IsoDate;
   nonRenewalBy: NonRenewalBy | null;
   earlyTerminationStatus: EarlyTerminationStatus | null;
 }
 
 /** The decision a contract shows on `today` (`ContractDecision`). */
-export function contractDecision(c: ContractState, today: IsoDate): ContractDecision {
+export function contractDecision(c: Omit<ContractState, 'startsOn'>, today: IsoDate): ContractDecision {
   switch (c.status) {
     case ContractStatus.RENEWED:
       return ContractDecision.RENEWED;
@@ -140,41 +142,111 @@ export function lastDayOf(c: { endsOn: IsoDate; endedOn: IsoDate | null }): IsoD
 }
 
 /**
- * "To deactivate" (spec → Rules, GUESS): not renewed or ended early, the last day passed, and the
- * employee is still active. Never automatic — HR deactivates them.
+ * Where a contract stands on `today` (bug 2026-11-24): `CURRENT` from its start to its last day
+ * (`lastDayOf`: the early end when it ended early), `UPCOMING` before its start, `PAST` after its
+ * last day. A cancelled contract never runs: always `PAST`.
+ */
+export function contractPhase(
+  c: { status: ContractStatus; startsOn: IsoDate; endsOn: IsoDate; endedOn: IsoDate | null },
+  today: IsoDate,
+): ContractPhase {
+  if (c.status === ContractStatus.CANCELLED) return ContractPhase.PAST;
+  if (c.startsOn > today) return ContractPhase.UPCOMING;
+  if (lastDayOf(c) < today) return ContractPhase.PAST;
+  return ContractPhase.CURRENT;
+}
+
+/**
+ * Why a contract can't be cancelled, or null (review 2026-11-24, the way out for an upcoming
+ * contract): only one that hasn't started, still active, and not a renewal's next contract — a
+ * future hire who never starts, or a new contract with a future start. A renewal's next contract is
+ * cancelled by ending the contract in force instead.
+ */
+export function cancelRefusal(
+  c: { status: ContractStatus; startsOn: IsoDate },
+  isRenewal: boolean,
+  today: IsoDate,
+): ErrorCode | null {
+  if (c.status !== ContractStatus.ACTIVE) return ErrorCode.CONTRACT_DECIDED;
+  if (c.startsOn <= today || isRenewal) return ErrorCode.CONTRACT_NOT_CANCELLABLE;
+  return null;
+}
+
+/** A contract as `currentContractPeriod` reads it. */
+export interface ContractPeriod {
+  status: ContractStatus;
+  startsOn: IsoDate;
+  endsOn: IsoDate;
+  endedOn: IsoDate | null;
+}
+
+/**
+ * The contract the employee's record names (its contract start / end — the Details tab, the
+ * reminders): the latest one that has **started** by `today`, cancelled ones aside — the one in
+ * force, or, between contracts, the last one; when none has started yet (a new hire with a future
+ * start), the first upcoming one. Its end is its last day (an early end included). Null: no
+ * contract. A renewal's next contract takes over on its first day, never before.
+ */
+export function currentContractPeriod(
+  contracts: readonly ContractPeriod[],
+  today: IsoDate,
+): { startsOn: IsoDate; endsOn: IsoDate } | null {
+  const counted = contracts.filter((c) => c.status !== ContractStatus.CANCELLED);
+  const started = counted.filter((c) => c.startsOn <= today);
+  const pick = started.length
+    ? started.reduce((a, b) => (b.startsOn > a.startsOn ? b : a))
+    : counted.length
+      ? counted.reduce((a, b) => (b.startsOn < a.startsOn ? b : a))
+      : null;
+  return pick ? { startsOn: pick.startsOn, endsOn: lastDayOf(pick) } : null;
+}
+
+/**
+ * "To deactivate" (spec → Rules, GUESS): not renewed or ended, the last day passed, the employee
+ * still active, and no later contract (a cancelled one aside) — a reactivated employee with a new
+ * contract is not "to deactivate" because of their old one (review 2026-11-24). Never automatic —
+ * HR deactivates them.
  */
 export function isToDeactivate(
   c: { status: ContractStatus; endsOn: IsoDate; endedOn: IsoDate | null },
   employeeActive: boolean,
   today: IsoDate,
+  hasLaterContract: boolean,
 ): boolean {
-  if (!employeeActive) return false;
+  if (!employeeActive || hasLaterContract) return false;
   if (c.status !== ContractStatus.NOT_RENEWED && c.status !== ContractStatus.ENDED_EARLY) return false;
   return lastDayOf(c) < today;
 }
 
 /**
  * Why a contract can't be renewed, or null (edge cases 1, 2): renewed already; another decision
- * (not renewed, ended early); an early termination request waiting; the employee inactive.
+ * (not renewed, ended early); it hasn't started yet (`CONTRACT_NOT_STARTED` — a renewal's next
+ * contract is renewed in its own season, bug 2026-11-24); an early termination request waiting; the
+ * employee inactive.
  */
 export function renewalRefusal(
-  c: Pick<ContractState, 'status' | 'earlyTerminationStatus'>,
+  c: Pick<ContractState, 'status' | 'startsOn' | 'earlyTerminationStatus'>,
   employeeActive: boolean,
+  today: IsoDate,
 ): ErrorCode | null {
-  if (c.status === ContractStatus.RENEWED) return ErrorCode.CONTRACT_ALREADY_RENEWED;
-  if (c.status !== ContractStatus.ACTIVE) return ErrorCode.CONTRACT_DECIDED;
-  if (c.earlyTerminationStatus === EarlyTerminationStatus.REQUESTED) return ErrorCode.EARLY_TERMINATION_PENDING;
+  const code = decisionRefusal(c, today);
+  if (code) return code;
   if (!employeeActive) return ErrorCode.EMPLOYEE_INACTIVE;
   return null;
 }
 
 /**
  * Why a decision (not renewing, a notice, an early termination request) can't be recorded, or
- * null: only on an active contract with no early termination request waiting.
+ * null: only on an active contract that has **started** (an upcoming one → `CONTRACT_NOT_STARTED`)
+ * with no early termination request waiting.
  */
-export function decisionRefusal(c: Pick<ContractState, 'status' | 'earlyTerminationStatus'>): ErrorCode | null {
+export function decisionRefusal(
+  c: Pick<ContractState, 'status' | 'startsOn' | 'earlyTerminationStatus'>,
+  today: IsoDate,
+): ErrorCode | null {
   if (c.status === ContractStatus.RENEWED) return ErrorCode.CONTRACT_ALREADY_RENEWED;
   if (c.status !== ContractStatus.ACTIVE) return ErrorCode.CONTRACT_DECIDED;
+  if (c.startsOn > today) return ErrorCode.CONTRACT_NOT_STARTED;
   if (c.earlyTerminationStatus === EarlyTerminationStatus.REQUESTED) return ErrorCode.EARLY_TERMINATION_PENDING;
   return null;
 }
@@ -243,6 +315,8 @@ export function endRefusal(
   today: IsoDate,
 ): ErrorCode | null {
   if (c.status === ContractStatus.ENDED_EARLY || c.status === ContractStatus.CANCELLED) return ErrorCode.CONTRACT_DECIDED;
+  // Not one that hasn't started: it is cancelled (`cancelRefusal`), or with the contract in force.
+  if (c.startsOn > today) return ErrorCode.CONTRACT_NOT_STARTED;
   if (c.earlyTerminationStatus === EarlyTerminationStatus.REQUESTED) return ErrorCode.EARLY_TERMINATION_PENDING;
   if (endsOn < today || endsOn < c.startsOn || endsOn > c.endsOn) return ErrorCode.CONTRACT_END_DATE_INVALID;
   return null;

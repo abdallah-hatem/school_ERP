@@ -73,10 +73,12 @@ function row(over: Partial<ContractRow> & { id?: string; employeeId?: string; em
       stage: { id: stageId, nameEn: 'Primary', nameAr: 'ابتدائي', isNoStage: false },
       jobTitle: { id: 'j1', nameEn: 'Teacher', nameAr: 'معلم' },
       otherStages: [],
+      contracts: [],
     },
     decidedBy: null,
     earlyTerminationDecidedBy: null,
     nextContract: null,
+    previousContract: null,
     ...rest,
   };
 }
@@ -91,33 +93,65 @@ interface Setup {
 
 function makeService(opts: Setup = {}) {
   const store = new Map((opts.rows ?? [row()]).map((r) => [r.id, r]));
+  /** Each employee's record dates (contract start / end), as the repository last wrote them. */
+  const recordDates = new Map<string, { start: string; end: string }>();
+  for (const r of store.values()) {
+    if (!recordDates.has(r.employeeId)) {
+      recordDates.set(r.employeeId, {
+        start: r.employee.contractStart.toISOString().slice(0, 10),
+        end: r.employee.contractEnd.toISOString().slice(0, 10),
+      });
+    }
+  }
+  const periodsOf = (employeeId: string) =>
+    [...store.values()]
+      .filter((r) => r.employeeId === employeeId)
+      .map((r) => ({ status: r.status, startsOn: r.startsOn, endsOn: r.endsOn, endedOn: r.endedOn }));
+  const datesOf = (id: string) => ({
+    id,
+    nameEn: 'Mona',
+    nameAr: 'منى',
+    contractStart: d(recordDates.get(id)!.start),
+    contractEnd: d(recordDates.get(id)!.end),
+    contracts: periodsOf(id),
+  });
   const repository = {
     lockForUpdate: jest.fn().mockResolvedValue(undefined),
     findMany: jest.fn((ids: string[]) => Promise.resolve(ids.map((id) => store.get(id)).filter(Boolean))),
     findOne: jest.fn((id: string) => Promise.resolve(store.get(id) ?? null)),
-    update: jest.fn((id: string, data: Record<string, unknown>) => {
-      const next = { ...store.get(id)!, ...data };
-      store.set(id, next);
-      return Promise.resolve(next);
-    }),
     create: jest.fn((data: { employeeId: string; startsOn: Date; endsOn: Date }) => {
       const created = row({ id: `next-${data.employeeId}`, employeeId: data.employeeId, startsOn: data.startsOn, endsOn: data.endsOn });
       store.set(created.id, created);
       return Promise.resolve(created);
     }),
-    setEmployeeContractDates: jest.fn().mockResolvedValue(undefined),
+    // A renewal links the old contract to the new one: the new one knows what it renews.
+    update: jest.fn((id: string, data: Record<string, unknown>) => {
+      const next = { ...store.get(id)!, ...data };
+      store.set(id, next);
+      if (typeof data.nextContractId === 'string' && store.has(data.nextContractId)) {
+        store.set(data.nextContractId, { ...store.get(data.nextContractId)!, previousContract: { id } });
+      }
+      return Promise.resolve(next);
+    }),
+    setEmployeeContractDates: jest.fn((employeeId: string, start: string, end: string) => {
+      recordDates.set(employeeId, { start, end });
+      return Promise.resolve();
+    }),
+    contractDatesOfAll: jest.fn(() => Promise.resolve([...recordDates.keys()].map((id) => datesOf(id)))),
+    contractDatesOf: jest.fn((id: string) => Promise.resolve(recordDates.has(id) ? datesOf(id) : null)),
+    lockContractsOfEmployee: jest.fn().mockResolvedValue(undefined),
+    moveEmployeeContractDates: jest.fn((id: string, from: { start: string; end: string }, to: { start: string; end: string }) => {
+      const r = recordDates.get(id);
+      if (!r || r.start !== from.start || r.end !== from.end) return Promise.resolve(0);
+      recordDates.set(id, to);
+      return Promise.resolve(1);
+    }),
     listPage: jest.fn().mockResolvedValue({ rows: [], total: 0 }),
     totals: jest.fn().mockResolvedValue({}),
     listOfEmployee: jest.fn().mockResolvedValue({ rows: [], total: 0 }),
     findByDocument: jest.fn().mockResolvedValue(null),
     lockEmployee: jest.fn().mockResolvedValue(undefined),
-    periodsOfEmployee: jest.fn((employeeId: string) =>
-      Promise.resolve(
-        [...store.values()]
-          .filter((r) => r.employeeId === employeeId)
-          .map((r) => ({ status: r.status, startsOn: r.startsOn, endsOn: r.endsOn, endedOn: r.endedOn })),
-      ),
-    ),
+    periodsOfEmployee: jest.fn((employeeId: string) => Promise.resolve(periodsOf(employeeId))),
   };
   const audit = { record: jest.fn().mockResolvedValue(undefined) };
   const records = new ContractRecords(repository as unknown as ContractsRepository, audit as unknown as AuditService);
@@ -152,7 +186,7 @@ function makeService(opts: Setup = {}) {
     afterCommit as unknown as AfterCommit,
   );
   jest.spyOn(service, 'today').mockReturnValue(TODAY);
-  return { service, repository, audit, store, calendars, employees, reminders, notifications, files };
+  return { service, repository, audit, store, calendars, employees, reminders, notifications, files, records, recordDates };
 }
 
 const actions = (audit: { record: jest.Mock }) =>
@@ -170,14 +204,16 @@ async function codeOf(p: Promise<unknown>): Promise<string> {
 }
 
 describe('ContractsService — renewal', () => {
-  it('renews: next year 1 Jun – 31 May, the old one RENEWED and linked, the employee dates moved, its reminder done', async () => {
+  it('renews: next year 1 Jun – 31 May, the old one RENEWED and linked, the employee dates kept on the one in force, its reminder done', async () => {
     const { service, repository, audit, reminders } = makeService();
     const [renewed] = await service.renew(['c1']);
     expect(renewed).toMatchObject({ status: 'RENEWED', decision: 'RENEWED' });
     expect(repository.create).toHaveBeenCalledWith({ employeeId: 'e1', startsOn: d('2027-06-01'), endsOn: d('2028-05-31') });
     // The old one leaves ACTIVE before the new one is created (one active per employee).
     expect(repository.update.mock.invocationCallOrder[0]).toBeLessThan(repository.create.mock.invocationCallOrder[0]);
-    expect(repository.setEmployeeContractDates).toHaveBeenCalledWith('e1', '2027-06-01', '2028-05-31');
+    // Bug 2026-11-24: the next contract starts 1 Jun 2027 — the record keeps naming 2026/27 until then.
+    expect(repository.setEmployeeContractDates).not.toHaveBeenCalledWith('e1', '2027-06-01', '2028-05-31');
+    expect(repository.setEmployeeContractDates).toHaveBeenCalledWith('e1', '2026-06-01', '2027-05-31');
     expect(actions(audit)).toEqual(['hr.contract.create', 'hr.contract.renew']);
     expect(reminders.contractChanged).toHaveBeenCalledWith('e1', 'u-hr');
   });
@@ -556,5 +592,206 @@ describe('ContractsService — review fixes (2026-11-24)', () => {
     expect(page.items[0].carriedOver).toBe(true);
     await service.list({ year: 2025 });
     expect(repository.listPage.mock.calls[1]![0]).toMatchObject({ carryOver: false });
+  });
+});
+
+/*
+ * Bug 2026-11-24 (owner, testing): renewing 2026/27 in November made 2027/28 "Current" with Renew and
+ * Decide on it, and moved the employee's dates to it a year early. Single edge cases missed it, so one
+ * employee is walked through time here — the same store, "today" moving forward.
+ */
+describe('ContractsService — one employee over time (Current vs Upcoming)', () => {
+  const NOV = '2026-11-24';
+  const at = (service: ContractsService, today: string) => jest.spyOn(service, 'today').mockReturnValue(today);
+  async function history(s: ReturnType<typeof makeService>) {
+    s.repository.listOfEmployee.mockResolvedValue({ rows: [...s.store.values()], total: s.store.size });
+    const page = await s.service.employeeContracts('e1', {});
+    return Object.fromEntries(page.data.map((c) => [c.id, c]));
+  }
+
+  it('step 1 — hired: the first contract is CURRENT and actionable; the record names it', async () => {
+    const s = makeService();
+    at(s.service, '2026-06-01');
+    expect((await history(s)).c1).toMatchObject({ phase: 'CURRENT', decision: 'UNDECIDED' });
+    expect(s.recordDates.get('e1')).toEqual({ start: '2026-06-01', end: '2027-05-31' });
+  });
+
+  it('step 2 — renewed in November: 2027/28 is UPCOMING, not actionable; the record still names 2026/27', async () => {
+    const s = makeService();
+    at(s.service, NOV);
+    await s.service.renew(['c1']);
+    const rows = await history(s);
+    expect(rows.c1).toMatchObject({ phase: 'CURRENT', status: 'RENEWED' });
+    expect(rows['next-e1']).toMatchObject({ phase: 'UPCOMING', startsOn: '2027-06-01', endsOn: '2028-05-31', year: 2027 });
+    expect(s.recordDates.get('e1')).toEqual({ start: '2026-06-01', end: '2027-05-31' });
+    // Renewing it now would make 2028/29 a year and a half early; deciding on it neither.
+    expect(await codeOf(s.service.renew(['next-e1']))).toBe(ErrorCode.CONTRACT_NOT_STARTED);
+    expect(await codeOf(s.service.notRenew('next-e1', { by: 'SCHOOL' }))).toBe(ErrorCode.CONTRACT_NOT_STARTED);
+    expect(await codeOf(s.service.notRenew('next-e1', { by: 'EMPLOYEE', receivedOn: NOV }))).toBe(ErrorCode.CONTRACT_NOT_STARTED);
+    expect(await codeOf(s.service.requestEarlyTermination('next-e1', { requestedOn: NOV }))).toBe(ErrorCode.CONTRACT_NOT_STARTED);
+  });
+
+  it('step 2b — a bulk renewal holding the upcoming contract lists it as refused, and renews nothing', async () => {
+    const s = makeService({ rows: [row(), row({ id: 'c9', employeeId: 'e9' })] });
+    at(s.service, NOV);
+    await s.service.renew(['c1']);
+    s.repository.create.mockClear();
+    try {
+      await s.service.renew(['next-e1', 'c9']);
+      throw new Error('expected a refusal');
+    } catch (e) {
+      expect((e as CodedException).code).toBe(ErrorCode.CONTRACTS_NOT_RENEWABLE);
+      expect((e as CodedException).data).toEqual([{ contractId: 'next-e1', code: ErrorCode.CONTRACT_NOT_STARTED }]);
+    }
+    expect(s.repository.create).not.toHaveBeenCalled();
+    expect(s.store.get('c9')!.status).toBe('ACTIVE');
+  });
+
+  it('step 3 — the daily step on 31 May moves nothing; on 1 Jun 2027 2027/28 becomes CURRENT, actionable, and the record moves (once)', async () => {
+    const s = makeService();
+    at(s.service, NOV);
+    await s.service.renew(['c1']);
+    expect(await s.records.syncAllCurrentDates('2027-05-31')).toBe(0);
+    expect(s.recordDates.get('e1')).toEqual({ start: '2026-06-01', end: '2027-05-31' });
+    expect(await s.records.syncAllCurrentDates('2027-06-01')).toBe(1);
+    expect(s.recordDates.get('e1')).toEqual({ start: '2027-06-01', end: '2028-05-31' });
+    // Recorded on the employee (actor: the system), so their History shows the 1 June move.
+    expect(s.audit.record).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        action: 'hr.employee.contract_dates_move',
+        entity: expect.objectContaining({ type: 'employee', id: 'e1' }),
+        before: { contractStart: '2026-06-01', contractEnd: '2027-05-31' },
+        after: { contractStart: '2027-06-01', contractEnd: '2028-05-31' },
+      }),
+    );
+    // Idempotent: a second run (or a restart) moves nothing.
+    expect(await s.records.syncAllCurrentDates('2027-06-01')).toBe(0);
+    at(s.service, '2027-06-01');
+    const rows = await history(s);
+    expect(rows.c1).toMatchObject({ phase: 'PAST' });
+    expect(rows['next-e1']).toMatchObject({ phase: 'CURRENT', decision: 'UNDECIDED' });
+    expect(await s.service.notRenew('next-e1', { by: 'SCHOOL' })).toMatchObject({ status: 'NOT_RENEWED' });
+  });
+
+  it('step 4 — the renewed contract ended in April, before 1 June: the upcoming one CANCELLED, the record stays on the ended one', async () => {
+    const s = makeService();
+    at(s.service, NOV);
+    await s.service.renew(['c1']);
+    at(s.service, '2027-04-10');
+    await s.service.end('c1', { reason: 'DEATH', endsOn: '2027-04-15', note: 'x' });
+    expect(s.store.get('next-e1')!.status).toBe('CANCELLED');
+    expect(s.recordDates.get('e1')).toEqual({ start: '2026-06-01', end: '2027-04-15' });
+    // 1 June comes: a cancelled contract never takes the record.
+    expect(await s.records.syncAllCurrentDates('2027-06-01')).toBe(0);
+    expect(s.recordDates.get('e1')).toEqual({ start: '2026-06-01', end: '2027-04-15' });
+    at(s.service, '2027-06-01');
+    expect((await history(s))['next-e1']).toMatchObject({ phase: 'PAST', status: 'CANCELLED' });
+  });
+
+  it('step 2c — the upcoming contract can be neither ended nor cancelled on its own; ending the one in force still works', async () => {
+    const s = makeService();
+    at(s.service, NOV);
+    await s.service.renew(['c1']);
+    expect(await codeOf(s.service.end('next-e1', { reason: 'OTHER', endsOn: '2027-07-01', note: 'x' }))).toBe(ErrorCode.CONTRACT_NOT_STARTED);
+    expect(await codeOf(s.service.cancel('next-e1', 'Changed plans'))).toBe(ErrorCode.CONTRACT_NOT_CANCELLABLE);
+    expect(s.store.get('next-e1')!.status).toBe('ACTIVE');
+    at(s.service, '2027-05-10');
+    await s.service.end('c1', { reason: 'DEATH', endsOn: '2027-05-10', note: 'x' });
+    expect(s.store.get('next-e1')!.status).toBe('CANCELLED');
+  });
+
+  it('a new contract with a future start is cancelled with a reason (audited, kept); the record stays on the last one', async () => {
+    const ended = row({
+      status: 'NOT_RENEWED',
+      nonRenewalBy: 'SCHOOL',
+      startsOn: d('2025-06-01'),
+      endsOn: d('2026-05-31'),
+      employee: { ...row().employee, contractStart: d('2025-06-01'), contractEnd: d('2026-05-31') },
+    });
+    const s = makeService({ rows: [ended] });
+    at(s.service, NOV);
+    const created = await s.service.newContract('e1', '2027-06-01');
+    s.audit.record.mockClear();
+    const cancelled = await s.service.cancel(created.id, 'Never joined');
+    expect(cancelled).toMatchObject({ status: 'CANCELLED', phase: 'PAST' });
+    expect(s.audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'hr.contract.cancel', after: expect.objectContaining({ reason: 'Never joined' }) }),
+    );
+    expect(await s.records.syncAllCurrentDates('2027-06-01')).toBe(0);
+    expect(s.recordDates.get('e1')).toEqual({ start: '2025-06-01', end: '2026-05-31' });
+    expect(await codeOf(s.service.cancel(created.id, 'again'))).toBe(ErrorCode.CONTRACT_DECIDED);
+  });
+
+  it('not renewed → ended → reactivated → new contract: the old row is no longer "To deactivate" (nor deactivatable)', async () => {
+    const old = row({
+      status: 'NOT_RENEWED',
+      nonRenewalBy: 'SCHOOL',
+      startsOn: d('2025-06-01'),
+      endsOn: d('2026-05-31'),
+    });
+    const s = makeService({ rows: [old] });
+    at(s.service, NOV);
+    s.repository.listOfEmployee.mockResolvedValue({ rows: [old], total: 1 });
+    expect((await s.service.employeeContracts('e1', {})).data[0]).toMatchObject({ toDeactivate: true });
+    // Reactivated, then a new contract: the repository now returns it among the employee's contracts.
+    const later = { ...old, employee: { ...old.employee, contracts: [{ startsOn: old.startsOn }, { startsOn: d('2026-06-01') }] } };
+    s.store.set('c1', later);
+    s.repository.listOfEmployee.mockResolvedValue({ rows: [later], total: 1 });
+    expect((await s.service.employeeContracts('e1', {})).data[0]).toMatchObject({ toDeactivate: false });
+    expect(await codeOf(s.service.deactivate(['c1']))).toBe(ErrorCode.CONTRACT_NOT_TO_DEACTIVATE);
+  });
+
+  it('a mid-year contract (1 Sep 2026) renewed in November: 1 Sep 2027 – 31 Aug 2028, UPCOMING until 1 Sep; then the record moves', async () => {
+    const s = makeService({
+      rows: [
+        row({
+          startsOn: d('2026-09-01'),
+          endsOn: d('2027-08-31'),
+          employee: { ...row().employee, contractStart: d('2026-09-01'), contractEnd: d('2027-08-31') },
+        }),
+      ],
+    });
+    at(s.service, NOV);
+    await s.service.renew(['c1']);
+    expect((await history(s))['next-e1']).toMatchObject({ phase: 'UPCOMING', startsOn: '2027-09-01', year: 2028 });
+    expect(s.recordDates.get('e1')).toEqual({ start: '2026-09-01', end: '2027-08-31' });
+    expect(await s.records.syncAllCurrentDates('2027-09-01')).toBe(1);
+    expect(s.recordDates.get('e1')).toEqual({ start: '2027-09-01', end: '2028-08-31' });
+  });
+
+  it('a new contract with a future start (reactivated employee): UPCOMING, not actionable; the record moves on its first day', async () => {
+    const ended = row({
+      status: 'NOT_RENEWED',
+      nonRenewalBy: 'SCHOOL',
+      startsOn: d('2025-06-01'),
+      endsOn: d('2026-05-31'),
+      employee: { ...row().employee, contractStart: d('2025-06-01'), contractEnd: d('2026-05-31') },
+    });
+    const s = makeService({ rows: [ended] });
+    at(s.service, NOV);
+    const created = await s.service.newContract('e1', '2027-06-01');
+    expect(created).toMatchObject({ phase: 'UPCOMING', status: 'ACTIVE' });
+    expect(s.recordDates.get('e1')).toEqual({ start: '2025-06-01', end: '2026-05-31' });
+    expect(await codeOf(s.service.renew([created.id]))).toBe(ErrorCode.CONTRACT_NOT_STARTED);
+    expect(await s.records.syncAllCurrentDates('2027-06-01')).toBe(1);
+    expect(s.recordDates.get('e1')).toEqual({ start: '2027-06-01', end: '2028-05-31' });
+  });
+
+  it('undo not-renewing: the started contract is CURRENT and renewable again; the record unchanged', async () => {
+    const s = makeService({ rows: [row({ status: 'NOT_RENEWED', nonRenewalBy: 'SCHOOL' })] });
+    at(s.service, NOV);
+    expect(await s.service.undoNotRenew('c1', 'Budget found')).toMatchObject({ phase: 'CURRENT', status: 'ACTIVE' });
+    const [renewed] = await s.service.renew(['c1']);
+    expect(renewed.status).toBe('RENEWED');
+    expect(s.recordDates.get('e1')).toEqual({ start: '2026-06-01', end: '2027-05-31' });
+  });
+});
+
+describe('ContractsService — deactivating your own record (review 2026-11-24)', () => {
+  it('an HR manager can’t deactivate themselves through "To deactivate" → OWN_CONTRACT, nobody deactivated', async () => {
+    const mine = row({ status: 'NOT_RENEWED', nonRenewalBy: 'EMPLOYEE', startsOn: d('2025-06-01'), endsOn: d('2026-05-31') });
+    const { service, employees } = makeService({ rows: [mine], actor: { userId: 'u1', employeeId: 'e1' } });
+    expect(await codeOf(service.deactivate(['c1']))).toBe(ErrorCode.OWN_CONTRACT);
+    expect(employees.deactivate).not.toHaveBeenCalled();
   });
 });

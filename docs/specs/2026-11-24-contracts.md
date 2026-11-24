@@ -14,7 +14,8 @@ overwrites the old contract: there is no history, no renewal decision, no notice
 ## What it adds
 
 1. **Contract history.** Each employee has a list of contracts, one per contract year. The record's
-   start/end become "the current contract". Old contracts are kept, never deleted.
+   start/end become "the current contract" — the one in force today (edge cases 15–17). Old
+   contracts are kept, never deleted.
 2. **Renewal season.** One screen per contract year: every employee whose contract ends this year,
    with the decision for each — renew, not renewing (school's decision), or the employee gave
    notice. Renewing creates next year's contract (1 June – 31 May). Many at once is allowed.
@@ -145,6 +146,25 @@ Timings are settings, like the existing reminders (GUESS: 1 March, 7 days).
 13. Changing the contract dates by hand on the employee form → no longer possible; they change only
     through this module.
 14. Penalty repetition window (contract year, §4) is unchanged; it keeps using 1 June – 31 May.
+15. (Bug, owner 2026-11-24) Renewing in November → the renewed contract stays **current** (Renewed);
+    next year's is **Upcoming** until 1 June. The employee's contract dates stay on the one in force
+    and move on 1 June (the daily job, idempotent).
+16. Renewing, not renewing, a notice or an early termination request on an upcoming contract →
+    refused, `CONTRACT_NOT_STARTED`; in a bulk renewal it is a refused row.
+17. A new contract with a future start → Upcoming, no decision on it until it starts; the employee's
+    dates stay on their last contract until then.
+18. A renewed contract ended before 1 June → the upcoming one is Cancelled; the dates stay on the
+    ended contract, also after 1 June.
+19. "Contract ends soon" follows the contract in force: none for a renewed contract's end; the new
+    contract is chased from its own end once it has started.
+20. Deactivating your own employee record → refused: from "To deactivate" (OWN_CONTRACT) and from
+    the employee page (OWN_EMPLOYEE).
+21. Ending a contract that hasn't started → refused (CONTRACT_NOT_STARTED); a renewal's next goes
+    with the contract in force. A non-renewal upcoming contract (future hire, future new contract) →
+    "Cancel contract" with a reason; a renewal's next → refused (CONTRACT_NOT_CANCELLABLE).
+22. Not renewed → ended → reactivated → new contract → the old row is no longer "To deactivate" and
+    isn't carried over.
+23. The daily date move is recorded on the employee (System); it also runs once at start-up.
 
 ## Out of scope
 

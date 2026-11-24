@@ -111,6 +111,7 @@
     "end": "End for another reason…",
     "ownContract": "Your own contract: someone else decides on it.",
     "undoNotRenewing": "Undo not renewing",
+    "cancel": "Cancel contract",
     "rejectRequest": "Reject request"
   },
   "bulk": {
@@ -258,6 +259,7 @@
       "documents": "Documents"
     },
     "current": "Current",
+    "upcoming": "Upcoming · starts {date}",
     "emptyTitle": "No contracts yet",
     "emptyBody": "The employee's contracts show here once one is recorded.",
     "noticeReceived": "Notice received {date}",
@@ -274,6 +276,14 @@
   "form": {
     "tooLong": "Keep it under 1,000 characters.",
     "futureDate": "Can't be in the future."
+  },
+  "cancel": {
+    "title": "Cancel this contract?",
+    "body": "{name}'s contract from {start} hasn't started. It is kept and marked Cancelled.",
+    "reasonLabel": "Reason",
+    "reasonPlaceholder": "Why it is cancelled",
+    "confirm": "Cancel contract",
+    "done": "Contract cancelled."
   },
   "undo": {
     "title": "Undo not renewing?",

@@ -2,6 +2,9 @@
 
 import {
   CalendarTiming,
+  ContractDecision,
+  ContractPhase,
+  contractYearOf,
   EarlyTerminationStatus,
   formatContractYear,
   PAGINATION,
@@ -32,8 +35,8 @@ import { NewContractDialog } from './new-contract-dialog';
 
 export interface EmployeeContractsProps {
   employeeId: string;
-  /** The profile's employee (its name, and its current contract's start); null before it loads. */
-  employee: Pick<Employee, 'id' | 'nameEn' | 'nameAr' | 'contractStart' | 'status'> | null;
+  /** The profile's employee (its name and status); null before it loads. */
+  employee: Pick<Employee, 'id' | 'nameEn' | 'nameAr' | 'status'> | null;
   /** `/ar/employees/<id>/contracts`. */
   basePath: string;
   /** `undefined` while the first page loads: skeleton rows. */
@@ -73,8 +76,17 @@ export function EmployeeContracts({ employeeId, employee, basePath, rows, total,
       {t('contracts.newContract.button')}
     </Button>
   ) : null;
-  // The record's current contract is the one its dates name (written only by Contracts).
-  const isCurrent = (c: Contract) => !!employee && employee.id === employeeId && c.startsOn === employee.contractStart;
+  // Bug 2026-11-24: "Current" is the API's phase — the contract in force today — never the record's
+  // dates (a renewal's next contract is "Upcoming" until its first day).
+  const isCurrent = (c: Contract) => c.phase === ContractPhase.CURRENT;
+  // The actions: on the contract in force (End on a renewed one cancels its next), on an ended one
+  // still waiting for HR ("Ended, no decision", "To deactivate"), and on an upcoming one only
+  // "Cancel contract" when it isn't a renewal (the abilities decide; a renewal's next has none).
+  const hasActions = (c: Contract) =>
+    c.status !== ContractStatus.CANCELLED &&
+    (c.phase === ContractPhase.CURRENT ||
+      (c.phase === ContractPhase.UPCOMING && c.renewalOf === null) ||
+      (c.phase === ContractPhase.PAST && (c.decision === ContractDecision.ENDED_NO_DECISION || c.toDeactivate)));
 
   function goToPage(next: number) {
     const params = new URLSearchParams();
@@ -99,10 +111,17 @@ export function EmployeeContracts({ employeeId, employee, basePath, rows, total,
       ),
       cell: (c) => (
         <span className="flex flex-nowrap items-center gap-2">
+          {/* The contract year it starts in (a 1 Sep 2026 – 31 Aug 2027 contract reads 2026/27, not
+              the 2027/28 renewal season it ends in); the dates column has the exact days. */}
           <bdi dir="ltr" className="tabular font-bold">
-            {formatContractYear(c.year)}
+            {formatContractYear(contractYearOf(c.startsOn))}
           </bdi>
           {isCurrent(c) ? <StatusPill tone="primary">{t('contracts.history.current')}</StatusPill> : null}
+          {c.phase === ContractPhase.UPCOMING && c.status !== ContractStatus.CANCELLED ? (
+            <StatusPill tone="info">
+              {t('contracts.history.upcoming', { date: formatDate(c.startsOn, locale) })}
+            </StatusPill>
+          ) : null}
         </span>
       ),
     },
@@ -154,7 +173,7 @@ export function EmployeeContracts({ employeeId, employee, basePath, rows, total,
           <RowActionsSkeleton />
         </span>
       ),
-      cell: (c) => (isCurrent(c) ? <ContractActions contract={c} today={today} decideBelow="always" /> : null),
+      cell: (c) => (hasActions(c) ? <ContractActions contract={c} today={today} decideBelow="always" /> : null),
     },
   ];
 
