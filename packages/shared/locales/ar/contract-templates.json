@@ -102,6 +102,7 @@
     "noDefault": "غير افتراضي",
     "defaultPill": "افتراضي لـ{workSystem}",
     "lastChanged": "آخر تعديل {when} بواسطة {name}",
+    "lastChangedAt": "آخر تعديل {when}",
     "notSaved": "لم يُحفظ بعد",
     "preview": "معاينة مع موظف",
     "save": "حفظ النموذج",

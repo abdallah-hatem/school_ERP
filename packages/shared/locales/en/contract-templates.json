@@ -102,6 +102,7 @@
     "noDefault": "Not a default",
     "defaultPill": "Default for {workSystem}",
     "lastChanged": "Last changed {when} by {name}",
+    "lastChangedAt": "Last changed {when}",
     "notSaved": "Not saved yet",
     "preview": "Preview with an employee",
     "save": "Save template",

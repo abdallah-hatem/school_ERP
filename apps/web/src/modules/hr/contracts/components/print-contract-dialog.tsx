@@ -92,7 +92,8 @@ export function PrintContractDialog({
   const router = useRouter();
   const wide = useMediaQuery(TABLET_UP, true);
   const [template, setTemplate] = useState<ContractPrintTemplateOption | null>(null);
-  const [noDefault, setNoDefault] = useState(false);
+  // null until the picker's first page is in: whether the work system has a default.
+  const [noDefault, setNoDefault] = useState<boolean | null>(null);
   const [language, setLanguage] = useState<ContractLanguage>('AR');
   const [reload, setReload] = useState(0);
   const [load, setLoad] = useState<Load | null>(null);
@@ -179,10 +180,11 @@ export function PrintContractDialog({
       language: preview.language,
       values: preview.values,
       highlight: true,
-      leftOutText: (keys) => t('contractTemplates.print.leftOutMark', { names: names(keys, preview.language) }),
+      // The note is in the screen's language (the PDF never shows it).
+      leftOutText: (keys) => t('contractTemplates.print.leftOutMark', { names: names(keys, locale === 'ar' ? 'AR' : 'EN') }),
       letterhead: { logoSrc: preview.logoUrl },
     });
-  }, [preview, edited, t]);
+  }, [preview, edited, t, locale]);
 
   function chooseTemplate(id: string) {
     const option = seen.current.get(id) ?? null;
@@ -418,7 +420,9 @@ export function PrintContractDialog({
 
   // ── The pages (or the copy's editor) ────────────────────────────────────
   let stage: ReactNode;
-  if (!template) {
+  if (!template && noDefault === null) {
+    stage = <Skeleton className="mx-auto aspect-[210/297] w-full max-w-[34rem] rounded-md" />;
+  } else if (!template) {
     stage = (
       <p className="m-auto max-w-sm rounded-2xl bg-card px-5 py-10 text-center text-sm text-muted-foreground">
         {noDefault ? t('contractTemplates.print.noDefault') : t('contractTemplates.print.pickFirst')}
