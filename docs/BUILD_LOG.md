@@ -660,9 +660,32 @@ phase live in `docs/build-log/`.
   rules, renewal-season reminders, earlier seasons' open rows carried over. Every review finding
   fixed with a test; screens checked (EN desktop, AR phone, loading states). The builder ran out of
   context twice; a takeover agent overlapped it briefly and stopped without pushing.
+- 2026-11-24 — Owner testing locally found: "Also teaches in" offered the main stage (fixed, PR #278:
+  the API leaves out the main stage and chosen ones); the salary field didn't say net (PR #279: "Basic
+  monthly salary (net)", hints for basic and insured salary). Both merged.
+- 2026-11-24 — Owner decisions: **Grade** becomes a configured list in Settings like departments and
+  job titles (being built, `feature/employee-grades`); a renewed contract that starts next June was
+  shown "Current" with Renew on it → **Current = in force today, Upcoming otherwise, no decisions
+  before a contract starts** (being built, `fix/contracts-current-upcoming`); Renew stays available
+  whenever a contract is open (the 1 March reminder drives the season); System admins are refused on
+  their own contract like everyone (kept).
+- 2026-11-24 — New rule (owner: "very important"): specs, tests and reviews **walk each record through
+  time** (today moving, paths back, boundary days). Added to the `build-software` skill (1.62.26). A
+  read-only time-walk review of contracts found 2 blockers (a "To deactivate" row stays after a new
+  contract or reactivation; deactivating while the last month's payroll is a draft drops that month's
+  pay) and 13 should-fix items (mid-year hires' season and calendar, deactivating from the employee
+  page leaves the contract active, approved early termination final at once, ends can't be backdated,
+  timing tags go stale, history erased on withdraw, …) plus confusing tile counts. Queued as
+  contracts round 3, after the Current/Upcoming fix.
 
 ## Next up
 
+- **Contracts round 3** (owner, 2026-11-24): fix the time-walk review's findings (blockers first);
+  mid-year hires' first contract ends 31 May (one season for everyone, GUESS); add a **signed copy**
+  upload on every contract (also when adding an employee, renewing, new contract).
+- **Contract templates** (owner, 2026-11-24): editable templates with placeholders, filled per
+  contract, A4 preview, print/PDF, printed copies kept. Three mockups being made; owner picks.
+- **Employee documents tab** (proposed 2026-11-24): ID copy, certificates, insurance forms.
 - **Students module, then the clinic** (owner, 2026-11-24): the clinic treats students (and staff), so the
   students module (student records, guardians, class placement, on top of academics' basic structure)
   is planned first, then the clinic on top of it. Order in `docs/ROADMAP.md`; spec not written yet.
