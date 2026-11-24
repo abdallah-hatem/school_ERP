@@ -93,10 +93,18 @@ export class ListItemsQueryDto implements ListStagesQuery {
   @ArrayMaxSize(50)
   @IsUUID('all', { each: true })
   ids?: string[];
+
+  /** Leave these out (a picker hiding what is already chosen); comma-separated, ≤ 50. */
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.split(',').filter(Boolean) : value))
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsUUID('all', { each: true })
+  excludeIds?: string[];
 }
 
 /** True when the list is asked for a page (the Settings screen) rather than whole (choices). */
 export function wantsPage(query: ListItemsQueryDto): boolean {
-  return query.page !== undefined || query.limit !== undefined || Boolean(query.search) || query.ids !== undefined;
+  return query.page !== undefined || query.limit !== undefined || Boolean(query.search) || query.ids !== undefined || query.excludeIds !== undefined;
 }
 

@@ -132,7 +132,6 @@ export function EmployeeForm({
   // The choices are visible items only, searched by the API; the employee's own (even hidden) item
   // stays the choice until changed.
   const stage = useListItemOptions(GET_STAGES, locale, { selected: employee?.stage });
-  const otherStages = useListItemOptions(GET_STAGES, locale);
   const department = useListItemOptions(GET_DEPARTMENTS, locale, { selected: employee?.department });
   const jobTitle = useListItemOptions(GET_JOB_TITLES, locale, { selected: employee?.jobTitle });
   const hiddenHint = t('employees.hints.hiddenItem');
@@ -289,7 +288,7 @@ export function EmployeeForm({
             required
           />
           <SelectField server={stage} control={control} name="stageId" label={t('employees.fields.stage')} placeholder={t('employees.placeholders.stage')} emptyText={t('employees.noStages')} hint={currentHidden.stage ? hiddenHint : undefined} required />
-          <OtherStagesField control={control} server={otherStages} />
+          <OtherStagesField control={control} />
           <SelectField server={department} control={control} name="departmentId" label={t('employees.fields.department')} placeholder={t('employees.placeholders.department')} emptyText={t('employees.noDepartments')} hint={currentHidden.department ? hiddenHint : undefined} required />
           <SelectField server={jobTitle} control={control} name="jobTitleId" label={t('employees.fields.jobTitle')} placeholder={t('employees.placeholders.jobTitle')} emptyText={t('employees.noJobTitles')} hint={currentHidden.jobTitle ? hiddenHint : undefined} required />
           <SelectField server={managers.server} control={control} name="managerId" label={t('employees.fields.manager')} placeholder={t('employees.placeholders.manager')} hint={managerHint} />

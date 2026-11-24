@@ -353,6 +353,63 @@ describe('EmployeeForm', () => {
     expect(create).not.toHaveBeenCalled();
   });
 
+  describe('"Also teaches in" (§3)', () => {
+    // The API leaves out what it is asked to exclude (`excludeIds`); the browser never filters.
+    function stagesApi() {
+      vi.mocked(GET_STAGES).mockImplementation((async (query: { excludeIds?: string[] } = {}) =>
+        page(stages.filter((s) => !query.excludeIds?.includes(s.id)))) as never);
+    }
+    const otherPicker = () => screen.getByRole('combobox', { name: /Also teaches in/ });
+    async function optionsOf(user: ReturnType<typeof userEvent.setup>, trigger: HTMLElement) {
+      await user.click(trigger);
+      const listbox = await screen.findByRole('listbox');
+      await waitFor(() => expect(within(listbox).queryAllByRole('option').length).toBeGreaterThan(0));
+      return within(listbox).getAllByRole('option').map((o) => o.textContent);
+    }
+
+    it('the picker asks the API to leave out the main stage, and does not offer it', async () => {
+      const user = userEvent.setup();
+      renderForm({ editing: employee });
+      stagesApi();
+      expect(await optionsOf(user, otherPicker())).toEqual(['Kindergarten']);
+      expect(GET_STAGES).toHaveBeenLastCalledWith({ includeHidden: false, search: '', limit: 20, excludeIds: ['s-pri'] });
+    });
+
+    it('a stage already added is left out too', async () => {
+      const user = userEvent.setup();
+      renderForm({ editing: { ...employee, stage: stages[0] } });
+      stagesApi();
+      await optionsOf(user, otherPicker());
+      await user.click(screen.getByRole('option', { name: 'Primary' }));
+      expect(within(screen.getByTestId('other-stages')).getByText('Primary')).toBeTruthy();
+      await user.click(otherPicker());
+      await waitFor(() =>
+        expect(GET_STAGES).toHaveBeenLastCalledWith(expect.objectContaining({ excludeIds: ['s-kg', 's-pri'] })),
+      );
+    });
+
+    it('choosing as main stage one already listed drops it from the list, with no error to clear', async () => {
+      const user = userEvent.setup();
+      update.mockResolvedValue(ok(employee));
+      renderForm({ editing: employee });
+      stagesApi();
+      await optionsOf(user, otherPicker());
+      await user.click(screen.getByRole('option', { name: 'Kindergarten' }));
+      expect(within(screen.getByTestId('other-stages')).getByText('Kindergarten')).toBeTruthy();
+
+      // Main stage → Kindergarten (the main picker isn't excluded from anything).
+      vi.mocked(GET_STAGES).mockResolvedValue(page(stages) as never);
+      await user.click(screen.getByRole('combobox', { name: /Main stage/ }));
+      await user.click(await screen.findByRole('option', { name: 'Kindergarten' }));
+      await waitFor(() => expect(screen.queryByTestId('other-stages')).toBeNull());
+      expect(screen.queryByText("The main stage is already this person's stage. Pick other stages here.")).toBeNull();
+
+      await user.click(screen.getByRole('button', { name: 'Save changes' }));
+      await waitFor(() => expect(update).toHaveBeenCalledWith('e-mona', expect.objectContaining({ stageId: 's-kg' })));
+      expect(update.mock.calls[0][1]).not.toHaveProperty('otherStageIds');
+    });
+  });
+
   it('phone takes a landline or international number as typed, and rejects letters', async () => {
     const user = userEvent.setup();
     update.mockResolvedValue(ok(employee));

@@ -1,35 +1,47 @@
 'use client';
 
-import { useId } from 'react';
-import { useController, type Control } from 'react-hook-form';
+import { useEffect, useId } from 'react';
+import { useController, useWatch, type Control } from 'react-hook-form';
 import { FieldShell } from '@/shared/components/form/field-shell';
-import { Combobox, type ServerOptions } from '@/shared/components/ui/combobox';
+import { Combobox } from '@/shared/components/ui/combobox';
 import { CloseIcon, StageIcon } from '@/shared/components/ui/icons';
 import { useTranslation } from '@/shared/providers/i18n-provider';
+import { GET_STAGES } from '../apis';
 import type { EmployeeFormValues, OtherStageChoice } from '../lib/employee-form';
+import { useListItemOptions } from '../lib/list-item-options';
 
 /**
  * "Also teaches in" (§3, owner 2026-11-21): the employee's stages besides the main one, as removable
- * tags, and a picker that adds one (the API searches the stages, like the main stage's picker). A
- * stage already listed isn't added twice; the main stage among them is refused by the form's rules
- * (and by the API).
+ * tags, and a picker that adds one. The API searches the stages and leaves out the main stage and
+ * the ones already listed (`excludeIds`), so neither is offered. Choosing as main stage one that is
+ * already listed here drops it from the list. The form's rules (and the API) still refuse the main
+ * stage among them.
  */
 export function OtherStagesField({
   control,
-  server,
   disabled,
 }: {
   control: Control<EmployeeFormValues>;
-  server: ServerOptions;
   disabled?: boolean;
 }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const id = useId();
   const { field, fieldState } = useController({ control, name: 'otherStages' });
   const chosen = (field.value ?? []) as OtherStageChoice[];
+  const mainStageId = useWatch({ control, name: 'stageId' });
+  const excludeIds = [...(mainStageId ? [mainStageId] : []), ...chosen.map((s) => s.id)];
+  const server = useListItemOptions(GET_STAGES, locale, { excludeIds });
+
+  // The main stage just became one of these: it is the main one now, so it leaves this list.
+  const { onChange } = field;
+  useEffect(() => {
+    if (mainStageId && chosen.some((s) => s.id === mainStageId)) {
+      onChange(chosen.filter((s) => s.id !== mainStageId));
+    }
+  }, [mainStageId, chosen, onChange]);
 
   function add(value: string) {
-    if (!value || chosen.some((s) => s.id === value)) return;
+    if (!value || value === mainStageId || chosen.some((s) => s.id === value)) return;
     const label = server.options.find((o) => o.value === value)?.label ?? value;
     field.onChange([...chosen, { id: value, label }]);
   }

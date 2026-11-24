@@ -15,15 +15,21 @@ export function listItemOption(item: NamedRef, locale: Locale): ComboboxOption {
  * A department / stage / job title picker whose choices the API searches (`GET_DEPARTMENTS`,
  * `GET_STAGES`, `GET_JOB_TITLES`: one page of `PICKER_PAGE` for the typed name). `selected` is the
  * chosen item, so its name shows before any answer holds it; `includeHidden` for filters (a hidden
- * item can still have employees).
+ * item can still have employees); `excludeIds` (stages only) leaves out items already chosen
+ * elsewhere — the API drops them, and the next search (opening the picker) uses the latest list.
  */
 export function useListItemOptions<T extends ListItem>(
   load: (query: ListStagesQuery) => Promise<ApiResult<T[]>>,
   locale: Locale,
-  { includeHidden = false, selected }: { includeHidden?: boolean; selected?: NamedRef | null } = {},
+  {
+    includeHidden = false,
+    selected,
+    excludeIds,
+  }: { includeHidden?: boolean; selected?: NamedRef | null; excludeIds?: string[] } = {},
 ): ServerOptions {
   return useServerOptions<T>({
-    load: (search) => load({ includeHidden, search, limit: PICKER_PAGE }),
+    load: (search) =>
+      load({ includeHidden, search, limit: PICKER_PAGE, ...(excludeIds?.length ? { excludeIds } : {}) }),
     toOption: (item) => listItemOption(item, locale),
     selected: selected ? listItemOption(selected, locale) : null,
   });
