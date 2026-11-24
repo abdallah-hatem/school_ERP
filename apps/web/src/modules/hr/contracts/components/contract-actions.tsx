@@ -72,8 +72,11 @@ export function ContractActions({
    * or `always` (the employee's tab, where there is one current contract).
    */
   decideBelow?: 'cards' | 'always';
-  /** "Print contract" in the ⋯ (HR → Contracts); the employee's tab has its own button instead. */
-  printInMenu?: boolean;
+  /**
+   * "Print contract" in the ⋯ — on HR → Contracts (a renewed row offers this year's and next year's)
+   * and on the employee's tab (this row's contract only), so the row's actions fit its width.
+   */
+  printInMenu?: boolean | 'thisRowOnly';
 }) {
   const { t, has, locale } = useTranslation();
   const can = useCan();
@@ -89,7 +92,7 @@ export function ContractActions({
   const [renewing, setRenewing] = useState(false);
   const canUploadSignedCopy = useCanManageSignedCopy(contract) && contract.status !== ContractStatus.CANCELLED;
   const stale = useRef(false);
-  const print = usePrintContractMenu(contract);
+  const print = usePrintContractMenu(contract, { withNext: printInMenu !== 'thisRowOnly' });
 
   const abilities = abilitiesOf(contract, {
     manage: can('hr.contracts.manage'),

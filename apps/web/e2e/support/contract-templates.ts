@@ -62,11 +62,10 @@ export async function checkContractTemplates(page: Page, info: TestInfo, locale:
     // (the browser's own prompt): leave without saving.
     page.once('dialog', (d) => void d.accept());
     await page.goto(`/${locale}/employees/${employee.id}/contracts`);
-    await main
-      .getByRole('button', { name: t(locale, 'contract-templates.print.button'), exact: true })
-      .filter({ visible: true })
-      .first()
-      .click();
+    // Print contract is in the row's ⋯ (the row's actions fit the card at 1440 px, review 2026-11-25).
+    const actionsFor = t(locale, 'ui.table.actionsFor', { name: '' }).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    await main.getByRole('button', { name: new RegExp(`^${actionsFor}`) }).filter({ visible: true }).first().click();
+    await page.getByRole('menuitem', { name: t(locale, 'contract-templates.print.button'), exact: true }).click();
     const dialog = page.getByRole('dialog', { name: t(locale, 'contract-templates.print.title') });
     await expect(dialog).toBeVisible();
     // The work system's default is preselected, and the pages are filled and paginated.

@@ -119,21 +119,23 @@ describe('EmployeeContracts (profile tab)', () => {
     expect(within(currentRow!).getByRole('button', { name: 'Decide' })).toBeTruthy();
     expect(within(previousRow!).queryByRole('button', { name: 'Renew' })).toBeNull();
     expect(within(previousRow!).queryByRole('button', { name: 'Decide' })).toBeNull();
-    // A past contract also prints (contract templates).
-    expect(within(previousRow!).getByRole('button', { name: 'Print contract' })).toBeTruthy();
+    // Print contract is in each row's ⋯ (contract templates), never a button beside it: the row's
+    // actions fit the card.
+    expect(table().queryByRole('button', { name: 'Print contract' })).toBeNull();
     // No "Contract history" here: this is the history.
     const menu = await openRowActions(user, 'Mona Khalil', within(currentRow!));
     expect(menuItemNames(menu)).toEqual([
       "Not renewing — school's decision",
       "Record the employee's notice",
       'Record an early termination request',
+      'Print contract',
       'Upload signed copy',
       'End for another reason…',
     ]);
     await user.keyboard('{Escape}');
-    // Owner 2026-11-24: an old contract is scanned too — its ⋯ holds only the signed copy.
+    // Owner 2026-11-24: an old contract is scanned too — its ⋯ holds the signed copy, and it prints.
     const oldMenu = await openRowActions(user, 'Mona Khalil', within(previousRow!));
-    expect(menuItemNames(oldMenu)).toEqual(['Upload signed copy']);
+    expect(menuItemNames(oldMenu)).toEqual(['Print contract', 'Upload signed copy']);
   });
 
   it('view only without hr.contracts.manage', () => {
@@ -253,7 +255,7 @@ describe('EmployeeContracts (profile tab)', () => {
       expect(upcomingRow!.textContent).not.toContain('Current');
       expect(within(upcomingRow!).queryByRole('button', { name: 'Renew' })).toBeNull();
       expect(within(upcomingRow!).queryByRole('button', { name: 'Decide' })).toBeNull();
-      expect(menuItemNames(await openRowActions(user, 'Mona Khalil', within(upcomingRow!)))).toEqual(['Upload signed copy']);
+      expect(menuItemNames(await openRowActions(user, 'Mona Khalil', within(upcomingRow!)))).toEqual(['Print contract', 'Upload signed copy']);
       expect(currentRow!.textContent).toContain('2026/27');
       expect(currentRow!.textContent).toContain('Current');
     });
@@ -264,7 +266,8 @@ describe('EmployeeContracts (profile tab)', () => {
       const [, , currentRow] = table().getAllByRole('row') as HTMLElement[];
       expect(within(currentRow!).queryByRole('button', { name: 'Renew' })).toBeNull();
       const menu = await openRowActions(user, 'Mona Khalil', within(currentRow!));
-      expect(menuItemNames(menu)).toEqual(['Upload signed copy', 'End for another reason…']);
+      // This row's contract only: next year's is its own row (no "This year's / Next year's" here).
+      expect(menuItemNames(menu)).toEqual(['Print contract', 'Upload signed copy', 'End for another reason…']);
     });
 
     it('from 1 June the API sends 2027/28 as CURRENT: it gets Renew and Decide', () => {
@@ -278,7 +281,8 @@ describe('EmployeeContracts (profile tab)', () => {
       expect(within(nowCurrent!).getByRole('button', { name: 'Renew' })).toBeTruthy();
       expect(within(past!).queryByRole('button', { name: 'Renew' })).toBeNull();
       expect(within(past!).queryByRole('button', { name: 'Decide' })).toBeNull();
-      expect(within(past!).getByRole('button', { name: 'Print contract' })).toBeTruthy();
+      // It still prints, from its ⋯.
+      expect(within(past!).getByRole('button', { name: /^Actions for/ })).toBeTruthy();
     });
   });
 
@@ -291,7 +295,7 @@ describe('EmployeeContracts (profile tab)', () => {
     expect(within(row).queryByRole('button', { name: 'Renew' })).toBeNull();
     expect(within(row).queryByRole('button', { name: 'Decide' })).toBeNull();
     const menu = await openRowActions(user, 'Mona Khalil', within(row));
-    expect(menuItemNames(menu)).toEqual(['Upload signed copy', 'Cancel contract']);
+    expect(menuItemNames(menu)).toEqual(['Print contract', 'Upload signed copy', 'Cancel contract']);
     await user.click(within(menu).getByRole('menuitem', { name: 'Cancel contract' }));
     const dialog = await screen.findByRole('dialog', { name: 'Cancel this contract?' });
     await user.type(within(dialog).getByRole('textbox'), 'Never joined');

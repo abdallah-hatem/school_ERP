@@ -49,12 +49,13 @@ export function PrintContractButton({ contract }: { contract: Contract }) {
  * HR → Contracts: the row's ⋯ items. A renewed row offers both of its contracts — this year's and
  * the renewal's next one (printed and signed before it starts).
  */
-export function usePrintContractMenu(contract: Contract): { actions: RowAction[]; dialog: ReactNode } {
+export function usePrintContractMenu(contract: Contract, options: { withNext?: boolean } = {}): { actions: RowAction[]; dialog: ReactNode } {
   const { t } = useTranslation();
   const can = useCan();
   const [printing, setPrinting] = useState<PrintableContract | null>(null);
   if (!canPrintContract(contract, can)) return { actions: [], dialog: null };
-  const next = contract.next ? { ...contract.next, employee: contract.employee } : null;
+  // On the renewals list a renewed row stands for both years; on the employee's tab each year is its own row.
+  const next = contract.next && options.withNext !== false ? { ...contract.next, employee: contract.employee } : null;
   const actions: RowAction[] = next
     ? [
         { id: 'printThisYear', label: t('contractTemplates.print.thisYear'), icon: PrintIcon, onSelect: () => setPrinting(contract) },

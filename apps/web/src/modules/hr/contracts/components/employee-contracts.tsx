@@ -22,7 +22,7 @@ import { EmptyState } from '@/shared/components/layout/empty-state';
 import { BidiText } from '@/shared/components/ui/bidi-text';
 import { Button } from '@/shared/components/ui/button';
 import { AddIcon, ContractEndIcon, OpenIcon, RecalculateIcon } from '@/shared/components/ui/icons';
-import { Skeleton, SkeletonButton, SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
+import { SkeletonButton, SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
 import { SlotText, TEXT_SLOT } from '@/shared/components/ui/slot-text';
 import { StatusPill } from '@/shared/components/ui/status-pill';
 import { formatDate } from '@/shared/lib/format';
@@ -149,7 +149,7 @@ export function EmployeeContracts({ employeeId, employee, basePath, rows, total,
     {
       id: 'details',
       header: t('contracts.history.columns.details'),
-      className: 'min-w-56 whitespace-normal',
+      className: 'min-w-40 whitespace-normal',
       card: 'wide',
       skeleton: <SkeletonText className="text-xs" width="w-40" />,
       cell: (c) => <Details contract={c} />,
@@ -169,11 +169,10 @@ export function EmployeeContracts({ employeeId, employee, basePath, rows, total,
       align: 'end',
       className: 'w-72 whitespace-nowrap',
       card: 'actions',
-      // The usual current contract: undecided, so Print contract (contract templates), Renew,
-      // Decide and the ⋯ — in their own words.
+      // The usual current contract: undecided, so Renew, Decide and the ⋯ (Print contract is in it)
+      // — in their own words.
       skeleton: (
         <span className="flex flex-nowrap items-center justify-end gap-2">
-          {can('hr.contracts.manage') ? <Skeleton className="size-9 shrink-0 rounded-lg" /> : null}
           <SkeletonButton size="sm">
             <RecalculateIcon />
             {t('contracts.actions.renew')}
@@ -184,8 +183,13 @@ export function EmployeeContracts({ employeeId, employee, basePath, rows, total,
       ),
       cell: (c) => (
         <span className="flex flex-nowrap items-center justify-end gap-2">
-          <PrintContractButton contract={c} />
-          {hasActions(c) ? <ContractActions contract={c} today={today} decideBelow="always" /> : null}
+          {/* Print contract sits in the row's ⋯ (contract templates); a row without one gets the
+              icon on its own, so the row's actions always fit the card (review, 2026-11-25). */}
+          {hasActions(c) ? (
+            <ContractActions contract={c} today={today} decideBelow="always" printInMenu="thisRowOnly" />
+          ) : (
+            <PrintContractButton contract={c} />
+          )}
         </span>
       ),
     },
