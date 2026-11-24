@@ -13,6 +13,7 @@ import {
   AccountingModuleIcon,
   ChevronEndIcon,
   ChevronStartIcon,
+  ContractsIcon,
   HistoryIcon,
   ListsIcon,
   NotificationsIcon,
@@ -27,7 +28,7 @@ import { scrollToTopOf, useRevealTopOnChange } from '@/shared/hooks/use-reveal-t
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { DirtyReporterProvider, useLeaveGuard } from '../hooks/unsaved-changes';
-import { parseSection, type SettingsSectionId } from '../sections';
+import { parseSection, type SectionSlots, type SettingsSectionId } from '../sections';
 import { AccountingRulesSection } from './accounting-rules-section';
 import { CatalogueSection } from './catalogue-section';
 import { HrRulesSection } from './hr-rules-section';
@@ -41,11 +42,12 @@ const ICONS: Record<SettingsSectionId, AppIcon> = {
   lists: ListsIcon,
   hrRules: RulesIcon,
   catalogue: PenaltiesIcon,
+  contractTemplates: ContractsIcon,
   accounting: AccountingModuleIcon,
   notifications: NotificationsIcon,
 };
 
-function SectionBody({ id }: { id: SettingsSectionId }): ReactNode {
+function SectionBody({ id, slots }: { id: SettingsSectionId; slots?: SectionSlots }): ReactNode {
   switch (id) {
     case 'school':
       return <SchoolSection />;
@@ -63,6 +65,8 @@ function SectionBody({ id }: { id: SettingsSectionId }): ReactNode {
       return <HrRulesSection />;
     case 'catalogue':
       return <CatalogueSection />;
+    case 'contractTemplates':
+      return slots?.contractTemplates ?? null;
     case 'accounting':
       return <AccountingRulesSection />;
     case 'notifications':
@@ -150,7 +154,7 @@ type Leave ={ to: SettingsSectionId | null } | { href: string } | { proceed: () 
  * click, and `?section=` follows with `history.replaceState` (Next keeps `useSearchParams` in step)
  * instead of `router.replace`, which re-rendered the server page on every switch for nothing.
  */
-export function SettingsScreen({ initialSection }: { initialSection: SettingsSectionId | null }) {
+export function SettingsScreen({ initialSection, slots }: { initialSection: SettingsSectionId | null; slots?: SectionSlots }) {
   const { t, locale } = useTranslation();
   const router = useRouter();
   const pathname = usePathname();
@@ -270,7 +274,7 @@ export function SettingsScreen({ initialSection }: { initialSection: SettingsSec
             </Button>
           ) : null}
           <DirtyReporterProvider value={report}>
-            {shown ? <SectionBody key={shown} id={shown} /> : null}
+            {shown ? <SectionBody key={shown} id={shown} slots={slots} /> : null}
           </DirtyReporterProvider>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { sectionMetadata } from '@/core/navigation/section-metadata';
 import { notFound } from 'next/navigation';
 import { requireScreen } from '@/core/auth';
+import { ContractTemplatesSettingsSection } from '@/modules/hr/contract-templates';
 import { SettingsPage } from '@/modules/settings';
 import { isLocale } from '@/shared/lib/i18n';
 
@@ -17,5 +18,6 @@ export default async function Page({
   if (!isLocale(locale)) notFound();
   // R6: a page the viewer's roles can't open is the not-found screen.
   await requireScreen('settings');
-  return <SettingsPage locale={locale} section={section} />;
+  // HR's Contract templates section, composed in here (modules meet in app/).
+  return <SettingsPage locale={locale} section={section} slots={{ contractTemplates: <ContractTemplatesSettingsSection locale={locale} /> }} />;
 }

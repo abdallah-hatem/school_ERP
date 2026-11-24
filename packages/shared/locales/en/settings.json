@@ -64,6 +64,8 @@
       "list": "Use 100 characters or fewer.",
       "group": "Use 200 characters or fewer.",
       "violation": "Use 300 characters or fewer.",
+      "address": "Use 300 characters or fewer.",
+      "signatory": "Use 100 characters or fewer.",
       "note": "Use 1,000 characters or fewer."
     },
     "time": "Choose a time on the hour or half hour.",
@@ -99,7 +101,13 @@
     "signatoryNameEn": "Signatory name in English",
     "signatoryNameAr": "Signatory name in Arabic",
     "signatoryTitleEn": "Signatory title in English",
-    "signatoryTitleAr": "Signatory title in Arabic"
+    "signatoryTitleAr": "Signatory title in Arabic",
+    "addressEnPlaceholder": "5 El Maarefa St, Nasr City, Cairo",
+    "addressArPlaceholder": "5 شارع المعرفة، مدينة نصر، القاهرة",
+    "signatoryNameEnPlaceholder": "Mr Hisham Kamel",
+    "signatoryNameArPlaceholder": "أ. هشام كامل",
+    "signatoryTitleEnPlaceholder": "Principal",
+    "signatoryTitleArPlaceholder": "مدير المدرسة"
   },
   "logo": {
     "title": "School logo",

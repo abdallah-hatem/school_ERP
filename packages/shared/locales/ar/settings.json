@@ -64,6 +64,8 @@
       "list": "استخدم 100 حرف أو أقل.",
       "group": "استخدم 200 حرف أو أقل.",
       "violation": "استخدم 300 حرف أو أقل.",
+      "address": "استخدم 300 حرف أو أقل.",
+      "signatory": "استخدم 100 حرف أو أقل.",
       "note": "استخدم 1,000 حرف أو أقل."
     },
     "time": "اختر وقتًا على رأس الساعة أو نصفها.",
@@ -99,7 +101,13 @@
     "signatoryNameEn": "اسم الموقّع بالإنجليزية",
     "signatoryNameAr": "اسم الموقّع بالعربية",
     "signatoryTitleEn": "صفة الموقّع بالإنجليزية",
-    "signatoryTitleAr": "صفة الموقّع بالعربية"
+    "signatoryTitleAr": "صفة الموقّع بالعربية",
+    "addressEnPlaceholder": "5 El Maarefa St, Nasr City, Cairo",
+    "addressArPlaceholder": "5 شارع المعرفة، مدينة نصر، القاهرة",
+    "signatoryNameEnPlaceholder": "Mr Hisham Kamel",
+    "signatoryNameArPlaceholder": "أ. هشام كامل",
+    "signatoryTitleEnPlaceholder": "Principal",
+    "signatoryTitleArPlaceholder": "مدير المدرسة"
   },
   "logo": {
     "title": "شعار المدرسة",
