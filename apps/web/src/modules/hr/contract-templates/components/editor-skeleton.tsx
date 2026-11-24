@@ -24,8 +24,8 @@ export function EditorCanvasSkeleton() {
           <Skeleton key={i} className="size-9 shrink-0 rounded-lg" />
         ))}
       </div>
-      <div data-skeleton-block="editor-canvas" data-skeleton-measure="width" className="min-w-0 flex-1 overflow-x-auto bg-muted px-4 py-6 sm:px-8">
-        <div className="mx-auto flex min-h-[297mm] w-[210mm] max-w-full flex-col gap-4 bg-card p-[20mm] shadow-card ring-1 ring-border">
+      <div data-skeleton-block="editor-canvas" data-skeleton-measure="width" className="min-w-0 flex-1 overflow-x-auto bg-muted px-2 py-3 sm:px-8 sm:py-6">
+        <div className="mx-auto flex min-h-[297mm] w-[210mm] max-w-full flex-col gap-4 bg-card p-5 shadow-card ring-1 ring-border sm:p-[20mm]">
           <SkeletonText className="mx-auto text-xl" width="w-56" />
           {[0, 1, 2, 3, 4, 5].map((p) => (
             <div key={p} className="flex flex-col gap-2">

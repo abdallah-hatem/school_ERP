@@ -28,9 +28,17 @@ export function PrintContractButton({ contract }: { contract: Contract }) {
   if (!canPrintContract(contract, can)) return null;
   return (
     <>
-      <Button size="sm" variant="secondary" className="cursor-pointer" onClick={() => setOpen(true)}>
+      {/* An icon button: the row keeps one line beside Renew, Decide and the ⋯ (named for screen
+          readers and on hover). */}
+      <Button
+        size="icon-sm"
+        variant="secondary"
+        className="cursor-pointer"
+        aria-label={t('contractTemplates.print.button')}
+        title={t('contractTemplates.print.button')}
+        onClick={() => setOpen(true)}
+      >
         <PrintIcon />
-        {t('contractTemplates.print.button')}
       </Button>
       {open ? <PrintContractDialog contract={contract} open onOpenChange={setOpen} /> : null}
     </>

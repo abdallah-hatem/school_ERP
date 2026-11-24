@@ -21,8 +21,8 @@ import { RowActionsSkeleton } from '@/shared/components/data-table/row-actions';
 import { EmptyState } from '@/shared/components/layout/empty-state';
 import { BidiText } from '@/shared/components/ui/bidi-text';
 import { Button } from '@/shared/components/ui/button';
-import { AddIcon, ContractEndIcon, OpenIcon, PrintIcon, RecalculateIcon } from '@/shared/components/ui/icons';
-import { SkeletonButton, SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
+import { AddIcon, ContractEndIcon, OpenIcon, RecalculateIcon } from '@/shared/components/ui/icons';
+import { Skeleton, SkeletonButton, SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
 import { SlotText, TEXT_SLOT } from '@/shared/components/ui/slot-text';
 import { StatusPill } from '@/shared/components/ui/status-pill';
 import { formatDate } from '@/shared/lib/format';
@@ -168,12 +168,7 @@ export function EmployeeContracts({ employeeId, employee, basePath, rows, total,
       // Decide and the ⋯ — in their own words.
       skeleton: (
         <span className="flex flex-nowrap items-center justify-end gap-2">
-          {can('hr.contracts.manage') ? (
-            <SkeletonButton size="sm">
-              <PrintIcon />
-              {t('contractTemplates.print.button')}
-            </SkeletonButton>
-          ) : null}
+          {can('hr.contracts.manage') ? <Skeleton className="size-9 shrink-0 rounded-lg" /> : null}
           <SkeletonButton size="sm">
             <RecalculateIcon />
             {t('contracts.actions.renew')}

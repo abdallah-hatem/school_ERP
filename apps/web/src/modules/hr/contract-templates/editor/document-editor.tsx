@@ -159,12 +159,12 @@ export function DocumentEditor({
         <div
           data-skeleton-block="editor-canvas"
           data-skeleton-measure="width"
-          className={cn('min-w-0 flex-1', reflow ? 'p-3' : 'overflow-x-auto bg-muted px-4 py-6 sm:px-8')}
+          className={cn('min-w-0 flex-1', reflow ? 'p-3' : 'overflow-x-auto bg-muted px-2 py-3 sm:px-8 sm:py-6')}
         >
           <div
             className={cn(
               'mx-auto bg-card',
-              reflow ? 'rounded-2xl border border-border p-4' : 'min-h-[297mm] w-[210mm] max-w-full p-[20mm] shadow-card ring-1 ring-border',
+              reflow ? 'rounded-2xl border border-border p-4' : 'min-h-[297mm] w-[210mm] max-w-full p-5 shadow-card ring-1 ring-border sm:p-[20mm]',
             )}
             onClick={(e) => {
               // A click on the sheet's margin puts the cursor in the text.
@@ -290,7 +290,8 @@ function Toolbar({
       role="toolbar"
       aria-label={tb('label')}
       data-skeleton-block="editor-toolbar"
-      className="scrollbar-clean flex min-h-14 items-center gap-1 overflow-x-auto border-b border-border bg-card px-3 py-2"
+      // A phone scrolls the buttons sideways; wider screens wrap them, so Insert field stays in sight.
+      className="scrollbar-clean flex min-h-14 items-center gap-1 overflow-x-auto border-b border-border bg-card px-3 py-2 sm:flex-wrap sm:overflow-x-visible"
     >
       {start ? (
         <>
@@ -304,11 +305,12 @@ function Toolbar({
         label={tb('redo')}
         disabled={disabled || !state?.canRedo}
         onClick={() => chain().redo().run()}
-        className="max-sm:hidden"
+        // Ctrl/⌘+Shift+Z redoes on a narrower toolbar.
+        className="max-2xl:hidden"
       />
       <Divider />
       <Select value={state?.style ?? 'normal'} onValueChange={(v) => setStyle(v as Style)} disabled={disabled}>
-        <SelectTrigger aria-label={tb('style')} className="h-9 w-36 shrink-0 max-sm:hidden" onMouseDown={(e) => e.stopPropagation()}>
+        <SelectTrigger aria-label={tb('style')} className="h-9 w-32 shrink-0 max-sm:hidden" onMouseDown={(e) => e.stopPropagation()}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

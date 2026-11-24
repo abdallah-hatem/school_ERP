@@ -118,7 +118,7 @@ describe('EmployeeContracts (profile tab)', () => {
     expect(within(currentRow!).getByRole('button', { name: 'Renew' })).toBeTruthy();
     expect(within(currentRow!).getByRole('button', { name: 'Decide' })).toBeTruthy();
     // A past contract only prints (contract templates): no decisions on it.
-    expect(within(previousRow!).getAllByRole('button').map((b) => b.textContent)).toEqual(['Print contract']);
+    expect(within(previousRow!).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['Print contract']);
     // No "Contract history" here: this is the history.
     const menu = await openRowActions(user, 'Mona Khalil', within(currentRow!));
     expect(menuItemNames(menu)).toEqual([
@@ -265,7 +265,7 @@ describe('EmployeeContracts (profile tab)', () => {
       const [, nowCurrent, past] = table().getAllByRole('row') as HTMLElement[];
       expect(nowCurrent!.textContent).toContain('Current');
       expect(within(nowCurrent!).getByRole('button', { name: 'Renew' })).toBeTruthy();
-      expect(within(past!).getAllByRole('button').map((b) => b.textContent)).toEqual(['Print contract']);
+      expect(within(past!).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['Print contract']);
     });
   });
 

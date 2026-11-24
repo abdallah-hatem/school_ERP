@@ -69,7 +69,6 @@ export function TemplateEditor({ template, listHref }: { template: ContractTempl
   const nameEnId = useId();
   const nameArId = useId();
   const defaultId = useId();
-  const fieldsSearchId = useId();
   const [meta, setMeta] = useState<Meta>({
     id: template?.id ?? null,
     version: template?.version ?? 0,
@@ -191,7 +190,9 @@ export function TemplateEditor({ template, listHref }: { template: ContractTempl
   const description =
     meta.updatedAt && meta.updatedBy
       ? t('contractTemplates.editor.lastChanged', { when: formatDateTime(meta.updatedAt, locale), name: meta.updatedBy })
-      : t('contractTemplates.editor.notSaved');
+      : meta.updatedAt && meta.id
+        ? t('contractTemplates.editor.lastChangedAt', { when: formatDateTime(meta.updatedAt, locale) })
+        : t('contractTemplates.editor.notSaved');
 
   // Each language stays mounted (its own undo history); the other one is hidden, its loading
   // shape too.
@@ -215,19 +216,7 @@ export function TemplateEditor({ template, listHref }: { template: ContractTempl
         setCurrent((c) => ({ ...c, [l]: asString(json) }));
       }}
       toolbarStart={<LanguageSwitch value={language} onChange={setLanguage} size="sm" />}
-      toolbarEnd={
-        <Button
-          size="sm"
-          variant="soft"
-          className="max-lg:hidden"
-          onMouseDown={(e) => e.preventDefault()}
-          // The panel is beside the text: its search takes the keyboard; a click on a field inserts it.
-          onClick={() => document.getElementById(fieldsSearchId)?.focus()}
-        >
-          <ContractFieldIcon />
-          {t('contractTemplates.editor.toolbar.insertField')}
-        </Button>
-      }
+      // No Insert field here: the Fields panel sits beside the text (a phone: the floating Field button).
     />
     </div>
   );
@@ -322,7 +311,7 @@ export function TemplateEditor({ template, listHref }: { template: ContractTempl
           ) : null}
         </div>
         <aside className="max-lg:hidden lg:sticky lg:top-6 lg:h-[calc(100dvh-3rem)] lg:max-h-[52rem] lg:overflow-hidden lg:rounded-3xl lg:bg-card lg:shadow-card">
-          <FieldsPanel documentLanguage={language} onInsert={insertField} className="h-full" searchId={fieldsSearchId} />
+          <FieldsPanel documentLanguage={language} onInsert={insertField} className="h-full" />
         </aside>
       </div>
 

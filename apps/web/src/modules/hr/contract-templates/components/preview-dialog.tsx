@@ -77,9 +77,11 @@ export function PreviewDialog({
       hidden: preview.hidden,
       hiddenText: t('contractTemplates.preview.hidden'),
       highlight: true,
-      leftOutText: (keys) => t('contractTemplates.print.leftOutMark', { names: keys.map((k) => fieldName(k, shown)).join('، ') }),
+      // The note is in the screen's language (the PDF never shows it).
+      leftOutText: (keys) =>
+        t('contractTemplates.print.leftOutMark', { names: keys.map((k) => fieldName(k, locale === 'ar' ? 'AR' : 'EN')).join(locale === 'ar' ? '، ' : ', ') }),
     });
-  }, [preview, shown, documents, t]);
+  }, [preview, shown, documents, t, locale]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

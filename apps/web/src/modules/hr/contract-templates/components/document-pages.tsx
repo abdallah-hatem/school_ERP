@@ -16,9 +16,16 @@ import { CONTENT_WIDTH_PX, paginateArticle, PAGE_WIDTH_PX } from '../lib/paginat
 /** The shared print CSS, once per page (React hoists and dedupes a `<style href>`). */
 export function ContractDocumentStyles() {
   return (
-    <style href="contract-document-css" precedence="default">
-      {CONTRACT_DOCUMENT_CSS}
-    </style>
+    <>
+      <style href="contract-document-css" precedence="default">
+        {CONTRACT_DOCUMENT_CSS}
+      </style>
+      {/* The preview's own note where a phrase is left out (never in the PDF): it is in the
+          screen's language, so it keeps its own direction inside the document's. */}
+      <style href="contract-preview-css" precedence="default">
+        {'.cd-doc .cd-left-out{unicode-bidi:plaintext}'}
+      </style>
+    </>
   );
 }
 
