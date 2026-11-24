@@ -35,8 +35,22 @@ export class StagesService {
   }
 
   /** One page of the stages (the Settings screen), searched by either name. */
-  page(query: { includeHidden?: boolean; page?: number; limit?: number; search?: string; ids?: string[] }): Promise<Paginated<Stage>> {
-    return this.stages.findPage(query.includeHidden ?? false, query.page, query.limit, query.search || undefined, query.ids);
+  page(query: {
+    includeHidden?: boolean;
+    page?: number;
+    limit?: number;
+    search?: string;
+    ids?: string[];
+    excludeIds?: string[];
+  }): Promise<Paginated<Stage>> {
+    return this.stages.findPage(
+      query.includeHidden ?? false,
+      query.page,
+      query.limit,
+      query.search || undefined,
+      query.ids,
+      query.excludeIds,
+    );
   }
 
   async getById(id: string): Promise<Stage> {
