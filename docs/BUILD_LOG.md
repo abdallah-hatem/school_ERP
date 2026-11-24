@@ -698,6 +698,9 @@ phase live in `docs/build-log/`.
   `feature/contract-templates`. The **signed copy** upload (several pages per contract, from the
   employee form, renew and New contract too) is being built on `feature/contract-signed-copy`, pulled
   out of contracts round 3 because the owner needs it now.
+- 2026-11-25 — #292 merged: dev's smoke 27 failure fixed (the Users table sat 2–3px past its card on
+  desktop; Status and Last sign-in columns narrowed). The check now names each column's width when it
+  fails.
 
 ## Next up
 
