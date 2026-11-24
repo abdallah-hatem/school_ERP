@@ -49,7 +49,7 @@
 | Basic salary | Monthly, in EGP, required, greater than 0 |
 | Fingerprint ID | Optional; unique if given (for the device integration later) |
 | Probation end | Optional date, on or after the hire date. Left empty on a new employee, it is filled with the hire date + the school's default probation length (§7, 3 months), the day before: hired 1 Sep → 30 Nov; a day the month lacks counts as its last (hired 30 Nov → 27 Feb, GUESS). Length 0 = no probation: left empty. Editable, and can be cleared (no probation). Changing the hire date doesn't move it (GUESS), but a hire date after it is refused. Changing the default length changes only employees added afterwards. Not salary-type: whoever sees the employee sees it (§2). Employees who existed before it was added got hire date + 3 months. The probation reminder (§11) follows it. DECIDED (owner, 2026-11-18) |
-| Contract start / end | The **current contract** (see Contracts below). Set when the employee is added — filled automatically when left empty: 1 June – 31 May of the current contract year; if only a start is given, the end is one year later minus a day (e.g. 1 Sep 2026 → 31 Aug 2027). End after start. DECIDED (one-year fixed contract). Afterwards they change only through Contracts (renewing, ending), never on the employee form (owner, 2026-11-24) |
+| Contract start / end | The **contract in force today** (see Contracts below; a renewal's next contract takes over on its first day, not when it is created). Set when the employee is added — filled automatically when left empty: 1 June – 31 May of the current contract year; if only a start is given, the end is one year later minus a day (e.g. 1 Sep 2026 → 31 Aug 2027). End after start. DECIDED (one-year fixed contract). Afterwards they change only through Contracts (renewing, ending), never on the employee form (owner, 2026-11-24) |
 | Uses school bus | Yes / no, required (defaults to no) |
 | Photo | Optional; PNG, JPG or WebP, up to 2 MB, shown square-cropped. Only signed-in users can open it. Without a photo the employee shows a neutral silhouette, never initials. DECIDED (owner, 2026-11-18) |
 | Status | Active or inactive |
@@ -104,6 +104,25 @@ Spec `docs/specs/2026-11-24-contracts.md` (approved by the owner as drafted, 202
 - **DECIDED** — A contract is one year, 1 June – 31 May, renewed only if both sides want it
   (regulations). It is kept forever; ending or replacing it never deletes it. Each employee has a
   list of contracts, one per contract year; the record's contract start / end are the current one.
+- **DECIDED** (owner, 2026-11-24, bug found in testing) — **Current vs Upcoming.** The **current**
+  contract is the one in force today (Cairo): started, its last day not passed, not cancelled. A
+  contract that starts later — a renewal's next contract, or a new contract with a future start — is
+  **Upcoming** ("Upcoming · starts 1 Jun 2027") until its first day. The employee's contract start /
+  end (Details tab, reminders) name the contract in force — the latest one that has started, or,
+  before any has, the first upcoming one; on the start day of the next contract they move to it (the
+  daily reminders run, 07:00). Renewing in November therefore leaves 2026/27 current (Renewed) and
+  2027/28 upcoming, and the dates stay 1 Jun 2026 – 31 May 2027 until 1 June 2027.
+- **DECIDED** (owner, 2026-11-24) — **Decisions only once a contract has started.** Renewing, not
+  renewing, recording the employee's notice and an early termination request are refused on an
+  upcoming contract ("This contract hasn't started yet"); in a bulk renewal it is a refused row and
+  nothing is renewed. Ending the contract in force still cancels the upcoming one. The "Contract
+  ends soon" reminder follows the contract in force: a renewed one is decided, so no reminder for its
+  end; from its first day the new contract is chased from its own end.
+- **DECIDED** (owner, 2026-11-24) — Nobody deactivates themselves from "To deactivate" either (their
+  own contract, §2).
+- **GUESS** (2026-11-24) — The employee's Contracts tab names each contract by the contract year it
+  **starts** in (1 Sep 2026 – 31 Aug 2027 reads 2026/27), with its exact dates beside it; the
+  renewal screen still lists it in the season it ends in.
 - **GUESS** — A contract's status: **Active** → **Renewed** (next year's contract exists) ·
   **Not renewed** (school's decision or the employee's notice; ends on its end date) ·
   **Ended early** (early termination or another reason; ends on the date given). One active

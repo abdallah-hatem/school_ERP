@@ -2,6 +2,7 @@ import type { INestApplication } from '@nestjs/common';
 import { HrSettingKey, type AuthUser } from '@school-erp/shared';
 import { JobRunner } from '../src/core/jobs';
 import { DatabaseService } from '../src/database/database.service';
+import { ContractsService } from '../src/modules/hr/contracts/services/contracts.service';
 import { HR_REMINDERS_JOB, HrRemindersJob } from '../src/modules/hr/reminders/hr-reminders.job';
 import { RemindersRepository } from '../src/modules/hr/reminders/repositories/reminders.repository';
 import { http, unique } from './helpers';
@@ -207,7 +208,9 @@ describe('HR reminders — hr.reminders.daily (e2e)', () => {
     it('edge 2 / contracts §11 — a renewal decision resolves "contract ends soon" at once; an ended contract gets nothing more (contracts edge 10)', async () => {
       const contractOf = async (employeeId: string) =>
         (await http(app).get(`/hr/employees/${employeeId}/contracts`).expect(200)).body.data[0].id as string;
-      // a: renewed (the dates move to next year, and a decision exists).
+      // The school's today inside the contracts (decisions only on a contract that has started).
+      jest.spyOn(app.get(ContractsService), 'today').mockReturnValue('2031-05-20');
+      // a: renewed (a decision exists; the record keeps naming the renewed contract until 1 June).
       await http(app).post('/hr/contracts/renew').send({ contractIds: [await contractOf(a)] }).expect(200);
       expect((await itemsAbout(officer, 'hr.contract.ending_soon', a)).every((i) => i.resolvedAt)).toBe(true);
 

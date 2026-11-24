@@ -1,6 +1,6 @@
 'use client';
 
-import { ContractDecision, formatContractYear, lastDayOf, type Contract, type ContractDecision as Decision } from '@school-erp/shared';
+import { ContractDecision, ContractPhase, ContractStatus, formatContractYear, lastDayOf, type Contract, type ContractDecision as Decision } from '@school-erp/shared';
 import { EmployeeLink } from '@/core/employees';
 import { PersonAvatar } from '@/shared/components/ui/person-avatar';
 import { SkeletonIdentity, SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
@@ -85,6 +85,11 @@ export function DecisionCell({ contract }: { contract: Contract }) {
         {contract.carriedOver ? (
           <StatusPill tone="info" className="tabular" title={t('contracts.tags.from', { year: formatContractYear(contract.year) })}>
             <bdi>{t('contracts.tags.from', { year: formatContractYear(contract.year) })}</bdi>
+          </StatusPill>
+        ) : null}
+        {contract.phase === ContractPhase.UPCOMING && contract.status !== ContractStatus.CANCELLED ? (
+          <StatusPill tone="info">
+            {t('contracts.history.upcoming', { date: formatDate(contract.startsOn, locale) })}
           </StatusPill>
         ) : null}
         {tags.map((tag) => (

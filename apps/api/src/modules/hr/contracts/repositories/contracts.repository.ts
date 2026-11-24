@@ -304,6 +304,29 @@ export class ContractsRepository {
   }
 
   /**
+   * Every employee's record dates and contracts (status and dates only), for the daily step that
+   * keeps the record on the contract in force (`ContractRecords.syncAllCurrentDates`).
+   */
+  contractDatesOfAll(): Promise<
+    {
+      id: string;
+      contractStart: Date;
+      contractEnd: Date;
+      contracts: { status: ContractRow['status']; startsOn: Date; endsOn: Date; endedOn: Date | null }[];
+    }[]
+  > {
+    return this.db.employee.findMany({
+      where: { contracts: { some: {} } },
+      select: {
+        id: true,
+        contractStart: true,
+        contractEnd: true,
+        contracts: { select: { status: true, startsOn: true, endsOn: true, endedOn: true } },
+      },
+    });
+  }
+
+  /**
    * Locks the employee's row for the rest of the transaction: two "new contract" requests for one
    * employee wait for each other (the partial unique index would refuse the second anyway).
    */

@@ -106,6 +106,7 @@
   "OWN_CONTRACT": "You can't decide on your own contract. Ask someone else.",
   "CONTRACT_ALREADY_RENEWED": "This contract was already renewed.",
   "CONTRACT_DECIDED": "This contract already has a decision.",
+  "CONTRACT_NOT_STARTED": "This contract hasn't started yet. Decide on it once it is in force.",
   "EARLY_TERMINATION_PENDING": "An early termination request is waiting. Approve or reject it first.",
   "CONTRACT_NO_NOTICE": "There is no notice from the employee to withdraw.",
   "CONTRACT_ENDED": "This contract has already ended.",

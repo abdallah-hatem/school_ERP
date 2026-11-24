@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { AuditEntityType, type AuditAction, type IsoDate } from '@school-erp/shared';
+import { AuditEntityType, currentContractPeriod, type AuditAction, type IsoDate } from '@school-erp/shared';
 import { AuditService } from '../../../../core/audit';
-import { fromIsoDate } from '../../../../common/utils/dates.util';
+import { fromIsoDate, toIsoDate } from '../../../../common/utils/dates.util';
 import { contractAuditLabel, contractAuditSnapshot } from '../contracts.pure';
 import { ContractsRepository, type ContractRow } from '../repositories/contracts.repository';
 
@@ -29,6 +29,35 @@ export class ContractRecords {
     return row;
   }
 
+  /**
+   * Points the employee's contract start / end at the contract in force on `today`
+   * (`currentContractPeriod`) — after every contract write, in its transaction. A renewal's next
+   * contract, or a new one with a future start, doesn't take them before its first day.
+   */
+  async syncCurrentDates(employeeId: string, today: IsoDate): Promise<void> {
+    const periods = await this.repository.periodsOfEmployee(employeeId);
+    const current = currentContractPeriod(periods.map(toPeriod), today);
+    if (current) await this.repository.setEmployeeContractDates(employeeId, current.startsOn, current.endsOn);
+  }
+
+  /**
+   * The daily step (HR's reminders job, before its reminders): every employee whose record doesn't
+   * name the contract in force on `today` is moved to it — on 1 June a renewal's next contract takes
+   * over. Idempotent: a second run, or a run after a missed day, writes only what differs.
+   * Returns how many records moved.
+   */
+  async syncAllCurrentDates(today: IsoDate): Promise<number> {
+    let moved = 0;
+    for (const e of await this.repository.contractDatesOfAll()) {
+      const current = currentContractPeriod(e.contracts.map(toPeriod), today);
+      if (!current) continue;
+      if (toIsoDate(e.contractStart) === current.startsOn && toIsoDate(e.contractEnd) === current.endsOn) continue;
+      await this.repository.setEmployeeContractDates(e.id, current.startsOn, current.endsOn);
+      moved += 1;
+    }
+    return moved;
+  }
+
   /** One audit entry on the contract: the fields that differ between the two snapshots. */
   record(
     action: AuditAction,
@@ -44,3 +73,10 @@ export class ContractRecords {
     });
   }
 }
+
+const toPeriod = (c: { status: ContractRow['status']; startsOn: Date; endsOn: Date; endedOn: Date | null }) => ({
+  status: c.status,
+  startsOn: toIsoDate(c.startsOn),
+  endsOn: toIsoDate(c.endsOn),
+  endedOn: c.endedOn ? toIsoDate(c.endedOn) : null,
+});

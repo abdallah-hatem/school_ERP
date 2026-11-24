@@ -187,6 +187,11 @@ export const ErrorCode = {
   CONTRACT_ALREADY_RENEWED: 'CONTRACT_ALREADY_RENEWED',
   /** The contract already has a decision (not renewed, or ended). */
   CONTRACT_DECIDED: 'CONTRACT_DECIDED',
+  /**
+   * The contract hasn't started yet (a renewal's next contract, a new one with a future start): it
+   * is renewed or decided on only once it is in force.
+   */
+  CONTRACT_NOT_STARTED: 'CONTRACT_NOT_STARTED',
   /** An early termination request waits for a decision: approve or reject it first. */
   EARLY_TERMINATION_PENDING: 'EARLY_TERMINATION_PENDING',
   /** There is no employee's notice on the contract to withdraw. */

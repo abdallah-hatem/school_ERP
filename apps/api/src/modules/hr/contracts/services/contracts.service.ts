@@ -83,7 +83,10 @@ function refusal(code: ErrorCode): CodedException {
  * - runs in the request's transaction, after **locking the contract rows** (edge case 4);
  * - is refused on the actor's **own contract** (403 `OWN_CONTRACT`, §2 — a System admin too), and
  *   needs a linked account to tell (`ACCOUNT_NOT_LINKED`);
- * - writes the employee's current contract dates when they move (the only writer, edge case 13);
+ * - keeps the employee's contract dates on the contract in force (`currentContractPeriod`; the
+ *   only writer, edge case 13) — a renewal's next contract takes them on its first day, through the
+ *   daily job (`ContractRecords.syncAllCurrentDates`), never when it is created (bug 2026-11-24);
+ * - refuses decisions on a contract that hasn't started (`CONTRACT_NOT_STARTED`);
  * - is one audit entry on the contract (§9), and resolves or sends its notifications (§11).
  * Reads go through `hr.contracts.view` and its scope; a contract outside it is not found (edge 12).
  */
@@ -165,12 +168,13 @@ export class ContractsService {
       const ids = [...new Set(contractIds)];
       const rows = await this.loadForWrite(ids, { ownAsRefusal: ids.length > 1 });
       const actor = await this.access.actor();
+      const today = this.today();
       const refused: RefusedRenewal[] = [];
       for (const row of rows) {
         const own = actor?.employeeId === row.employeeId;
         const code = own
           ? ErrorCode.OWN_CONTRACT
-          : renewalRefusal(row, row.employee.status === 'ACTIVE');
+          : renewalRefusal(this.stateOf(row), row.employee.status === 'ACTIVE', today);
         if (code) refused.push({ contractId: row.id, code });
       }
       if (refused.length > 0) {
@@ -193,7 +197,9 @@ export class ContractsService {
         });
         const created = await this.records.createFirst(row.employeeId, next.startsOn, next.endsOn);
         const after = await this.repository.update(row.id, { nextContractId: created.id });
-        await this.repository.setEmployeeContractDates(row.employeeId, next.startsOn, next.endsOn);
+        // The record keeps naming the contract in force: the next one takes over on its first day
+        // (the daily job), not now (bug 2026-11-24).
+        await this.records.syncCurrentDates(row.employeeId, today);
         await this.records.record('hr.contract.renew', row, after);
         // §11: a renewal decision ends its "contract ends soon" reminder.
         await this.reminders.contractChanged(row.employeeId, actor?.userId ?? null);
@@ -212,7 +218,7 @@ export class ContractsService {
   async notRenew(id: string, dto: NotRenewContractDto): Promise<Contract> {
     return this.afterCommit.inTransaction(async () => {
       const [row] = await this.loadForWrite([id]);
-      const code = decisionRefusal(row);
+      const code = decisionRefusal(this.stateOf(row), this.today());
       if (code) throw refusal(code);
       if (dto.fileUrl) await this.assertOwnDocument(id, dto.fileUrl);
       const actor = await this.access.actor();
@@ -318,7 +324,8 @@ export class ContractsService {
       if (code) throw refusal(code);
       const end = oneYearContractEnd(start);
       const created = await this.records.createFirst(employeeId, start, end);
-      await this.repository.setEmployeeContractDates(employeeId, start, end);
+      // A future start (UPCOMING) takes the record's dates only on its first day.
+      await this.records.syncCurrentDates(employeeId, this.today());
       await this.reminders.contractChanged(employeeId, actor?.userId ?? null);
       return this.presentOne(created);
     });
@@ -335,7 +342,7 @@ export class ContractsService {
   async requestEarlyTermination(id: string, dto: EarlyTerminationDto): Promise<Contract> {
     return this.afterCommit.inTransaction(async () => {
       const [row] = await this.loadForWrite([id]);
-      const code = decisionRefusal(row);
+      const code = decisionRefusal(this.stateOf(row), this.today());
       if (code) throw refusal(code);
       const timing = earlyTerminationTiming(dto.requestedOn, (await this.calendarsOf(row)).earlyTermination);
       if (timing === CalendarTiming.EARLY || timing === CalendarTiming.LATE) {
@@ -394,7 +401,7 @@ export class ContractsService {
         decidedById: actor?.userId ?? null,
         decidedAt: now,
       });
-      await this.repository.setEmployeeContractDates(row.employeeId, toIsoDate(row.startsOn), endsOn);
+      await this.records.syncCurrentDates(row.employeeId, this.today());
       await this.records.record('hr.contract.early_termination_approve', row, after);
       await this.resolveRequest(id, 'approved', actor?.userId ?? null);
       await this.reminders.employeeDeactivated(row.employeeId, actor?.userId ?? null);
@@ -472,7 +479,9 @@ export class ContractsService {
         decidedById: actor?.userId ?? null,
         decidedAt: new Date(),
       });
-      await this.repository.setEmployeeContractDates(row.employeeId, toIsoDate(row.startsOn), dto.endsOn);
+      // The record names the ended contract (to its new last day) — or, ending an upcoming one,
+      // still the one in force.
+      await this.records.syncCurrentDates(row.employeeId, this.today());
       await this.records.record('hr.contract.end', row, after);
       await this.reminders.employeeDeactivated(row.employeeId, actor?.userId ?? null);
       return this.presentOne(after);
@@ -487,7 +496,8 @@ export class ContractsService {
   async deactivate(contractIds: readonly string[]): Promise<{ deactivated: number }> {
     return this.afterCommit.inTransaction(async () => {
       const ids = [...new Set(contractIds)];
-      const rows = await this.loadForWrite(ids, { ownAsRefusal: false, own: false });
+      // Nobody deactivates themselves through their own contract (§2, review 2026-11-24): OWN_CONTRACT.
+      const rows = await this.loadForWrite(ids);
       const today = this.today();
       const stale = rows.filter(
         (r) =>
@@ -590,6 +600,11 @@ export class ContractsService {
       }
     }
     return rows;
+  }
+
+  /** The rules' view of a stored row (`ContractState`'s dates as `YYYY-MM-DD`). */
+  private stateOf(row: ContractRow) {
+    return { status: row.status, startsOn: toIsoDate(row.startsOn), earlyTerminationStatus: row.earlyTerminationStatus };
   }
 
   private assertPendingRequest(row: ContractRow): void {

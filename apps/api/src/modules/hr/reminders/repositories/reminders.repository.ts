@@ -4,7 +4,7 @@ import { ContractStatus, EmployeeStatus } from '@prisma/client';
 import { contractYearRange, type IsoDate, type Month } from '@school-erp/shared';
 import { fromIsoDate, toIsoDate } from '../../../../common/utils/dates.util';
 import type { DbAdapter } from '../../../../database/transactions';
-import type { RenewalSeason, ReminderEmployee, ReminderMonth } from '../reminders.pure';
+import { reminderEmployeeOf, type RenewalSeason, type ReminderEmployee, type ReminderMonth } from '../reminders.pure';
 
 /**
  * The facts HR's daily reminders job reads (§11, N3): read-only, in the job's transaction for the
@@ -14,8 +14,13 @@ import type { RenewalSeason, ReminderEmployee, ReminderMonth } from '../reminder
 export class RemindersRepository {
   constructor(private readonly txHost: TransactionHost<DbAdapter>) {}
 
-  /** Every ACTIVE employee's contract and probation end (inactive ones get no reminder, §3). */
-  async activeEmployees(): Promise<ReminderEmployee[]> {
+  /**
+   * Every ACTIVE employee's contract and probation end (inactive ones get no reminder, §3). The
+   * contract is the one in force on `today` (`currentContractPeriod`: the latest started, cancelled
+   * ones aside) — a renewal's next contract, which hasn't started, is not "the current one" (bug
+   * 2026-11-24: a renewed 2026/27 is decided, so it isn't chased; 2027/28 is chased from its own end).
+   */
+  async activeEmployees(today: IsoDate): Promise<ReminderEmployee[]> {
     const rows = await this.txHost.tx.employee.findMany({
       where: { status: EmployeeStatus.ACTIVE },
       orderBy: { code: 'asc' },
@@ -25,29 +30,31 @@ export class RemindersRepository {
         nameAr: true,
         contractEnd: true,
         probationEnd: true,
-        // The current contract's state (spec 2026-11-24): the active one, else the latest.
         contracts: {
           where: { status: { not: ContractStatus.CANCELLED } },
-          select: { status: true, remindersRearmedAt: true },
-          orderBy: { startsOn: 'desc' },
-          take: 1,
+          select: { status: true, startsOn: true, endsOn: true, endedOn: true, remindersRearmedAt: true },
         },
       },
     });
-    return rows.map((r) => {
-      const current = r.contracts[0];
-      const status = current?.status ?? ContractStatus.ACTIVE;
-      return {
-        id: r.id,
-        nameEn: r.nameEn,
-        nameAr: r.nameAr,
-        contractEnd: toIsoDate(r.contractEnd),
-        probationEnd: r.probationEnd ? toIsoDate(r.probationEnd) : null,
-        contractDecided: status !== ContractStatus.ACTIVE,
-        contractEndedEarly: status === ContractStatus.ENDED_EARLY,
-        contractRearmedAt: current?.remindersRearmedAt?.getTime() ?? null,
-      };
-    });
+    return rows.map((r) =>
+      reminderEmployeeOf(
+        {
+          id: r.id,
+          nameEn: r.nameEn,
+          nameAr: r.nameAr,
+          contractEnd: toIsoDate(r.contractEnd),
+          probationEnd: r.probationEnd ? toIsoDate(r.probationEnd) : null,
+          contracts: r.contracts.map((c) => ({
+            status: c.status,
+            startsOn: toIsoDate(c.startsOn),
+            endsOn: toIsoDate(c.endsOn),
+            endedOn: c.endedOn ? toIsoDate(c.endedOn) : null,
+            remindersRearmedAt: c.remindersRearmedAt?.getTime() ?? null,
+          })),
+        },
+        today,
+      ),
+    );
   }
 
   /**

@@ -33,6 +33,7 @@ export function contract(overrides: Partial<Contract> & { id?: string } = {}): C
     startsOn: '2026-06-01',
     endsOn: '2027-05-31',
     status: 'ACTIVE',
+    phase: 'CURRENT',
     decision: 'UNDECIDED',
     nonRenewalBy: null,
     note: null,

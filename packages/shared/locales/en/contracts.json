@@ -258,6 +258,7 @@
       "documents": "Documents"
     },
     "current": "Current",
+    "upcoming": "Upcoming · starts {date}",
     "emptyTitle": "No contracts yet",
     "emptyBody": "The employee's contracts show here once one is recorded.",
     "noticeReceived": "Notice received {date}",

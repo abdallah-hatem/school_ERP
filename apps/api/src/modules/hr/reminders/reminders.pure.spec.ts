@@ -1,5 +1,6 @@
 import { schoolDayOf } from '@school-erp/shared';
 import {
+  reminderEmployeeOf,
   contractReminders,
   daysUntil,
   effectiveCheckDay,
@@ -444,5 +445,50 @@ describe('contracts (spec 2026-11-24, §11) — the renewal season', () => {
     expect(noticeWindowReminders('2027-03-01', RULE, season(1, null), [], 'hr.contract.notice_window_opens').notify).toEqual([]);
     const open = [openOf('notice_window_opens', 2026)];
     expect(noticeWindowReminders('2027-05-01', RULE, season(1), open, 'hr.contract.notice_window_opens').resolve).toHaveLength(1);
+  });
+});
+
+/*
+ * Bug 2026-11-24, walked over time: one employee's 2026/27 renewed in November into 2027/28. The
+ * reminders must follow the contract in force, not the latest one by start date.
+ */
+describe('contract ends soon over time — the contract in force decides (bug 2026-11-24)', () => {
+  const rule = { contractEndDays: 30, contractEndSecondDays: 7 };
+  const base = { id: 'e1', nameEn: 'Mona', nameAr: 'منى', contractEnd: '2027-05-31', probationEnd: null };
+  const renewed = { status: 'RENEWED', startsOn: '2026-06-01', endsOn: '2027-05-31', endedOn: null, remindersRearmedAt: null } as const;
+  const next = { status: 'ACTIVE', startsOn: '2027-06-01', endsOn: '2028-05-31', endedOn: null, remindersRearmedAt: null } as const;
+  const send = (today: string, contracts: Parameters<typeof reminderEmployeeOf>[0]['contracts']) =>
+    contractReminders(today, rule, [reminderEmployeeOf({ ...base, contracts }, today)], []).notify.map((n) => n.dedupeKey);
+
+  it('step 1 — before the renewal: the undecided 2026/27 is chased 30 days before 31 May', () => {
+    expect(send('2027-05-01', [{ ...renewed, status: 'ACTIVE' }])).toEqual(['contract_end:e1:2027-05-31:30']);
+  });
+
+  it('step 2 — renewed in November: on 1 May 2027 the in-force 2026/27 is RENEWED, so no "Contract ends soon" for 31 May', () => {
+    expect(reminderEmployeeOf({ ...base, contracts: [renewed, next] }, '2027-05-01')).toMatchObject({
+      contractEnd: '2027-05-31',
+      contractDecided: true,
+    });
+    expect(send('2027-05-01', [renewed, next])).toEqual([]);
+    expect(send('2027-05-24', [renewed, next])).toEqual([]);
+  });
+
+  it('step 3 — from 1 June 2027 2027/28 is in force: chased from its own end, 31 May 2028', () => {
+    expect(reminderEmployeeOf({ ...base, contracts: [renewed, next] }, '2027-06-01')).toMatchObject({
+      contractEnd: '2028-05-31',
+      contractDecided: false,
+    });
+    expect(send('2028-05-01', [renewed, next])).toEqual(['contract_end:e1:2028-05-31:30']);
+  });
+
+  it('step 4 — the renewed contract ended in April: the next one cancelled, nothing more about them', () => {
+    const ended = { ...renewed, status: 'ENDED_EARLY', endedOn: '2027-04-15' } as const;
+    const cancelled = { ...next, status: 'CANCELLED' } as const;
+    expect(reminderEmployeeOf({ ...base, contracts: [ended, cancelled] }, '2027-04-10')).toMatchObject({
+      contractEnd: '2027-04-15',
+      contractEndedEarly: true,
+    });
+    expect(send('2027-04-10', [ended, cancelled])).toEqual([]);
+    expect(send('2028-05-01', [ended, cancelled])).toEqual([]);
   });
 });

@@ -15,6 +15,16 @@ describe('a contract row: what it allows (view only — the API decides)', () =>
     expect(nextAction(contract({ ownContract: true }), own)).toBeNull();
   });
 
+  it('bug 2026-11-24 — an upcoming contract (a renewal’s next one) allows nothing; from its first day it is renewable', () => {
+    const next = contract({ id: 'c-2', year: 2027, startsOn: '2027-06-01', endsOn: '2028-05-31', phase: 'UPCOMING' });
+    expect(abilitiesOf(next, HR)).toMatchObject({ renew: false, decide: false, end: false, deactivate: false });
+    expect(nextAction(next, abilitiesOf(next, HR))).toBeNull();
+    const started = { ...next, phase: 'CURRENT' as const };
+    expect(abilitiesOf(started, { ...HR, today: '2027-06-01' })).toMatchObject({ renew: true, decide: true });
+    // The shared rule reads the school's today too: the day before its start it refuses.
+    expect(abilitiesOf(started, { ...HR, today: '2027-05-31' })).toMatchObject({ renew: false, decide: false });
+  });
+
   it('an inactive employee is not renewable (shared renewalRefusal); without manage nothing is', () => {
     const inactive = contract({ employee: { ...contract().employee, status: 'INACTIVE' } });
     expect(abilitiesOf(inactive, HR).renew).toBe(false);

@@ -12,7 +12,7 @@ import { BlockedIcon, CloseIcon, EmailIcon, InfoIcon, PendingIcon, RecalculateIc
 import { PersonAvatar } from '@/shared/components/ui/person-avatar';
 import { Sheet, SheetClose, SheetContent, SheetTitle } from '@/shared/components/ui/sheet';
 import { TABLET_UP, useMediaQuery } from '@/shared/hooks/use-media-query';
-import { formatDate, todayIso } from '@/shared/lib/format';
+import { formatDate } from '@/shared/lib/format';
 import { localName } from '@/shared/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
@@ -20,7 +20,7 @@ import { NOT_RENEW_CONTRACT, RENEW_CONTRACTS, REQUEST_EARLY_TERMINATION } from '
 import { contractError } from '../lib/contract-text';
 import {
   DATED_CHOICES,
-  decisionSchema,
+  decisionSchemaOn,
   NOTE_MAX,
   timingLine,
   type DecisionChoice,
@@ -47,11 +47,14 @@ export function DecisionSheet({
   contract,
   choice: initialChoice,
   choices,
+  today,
   onClose,
   onDone,
 }: {
   /** The contract being decided; null closes the sheet. */
   contract: Contract | null;
+  /** The school's today (`YYYY-MM-DD`, Cairo): the date's default and its latest value. */
+  today: string;
   /** The choice it opens on (the ⋯ menu item picked); none: the person picks. */
   choice?: DecisionChoice;
   /** What may be chosen on this contract (renewable, decidable). */
@@ -70,6 +73,7 @@ export function DecisionSheet({
             contract={contract}
             initialChoice={initialChoice}
             choices={choices}
+            today={today}
             bottom={side === 'bottom'}
             onDone={onDone}
           />
@@ -83,12 +87,14 @@ function DecisionBody({
   contract,
   initialChoice,
   choices,
+  today,
   bottom,
   onDone,
 }: {
   contract: Contract;
   initialChoice?: DecisionChoice;
   choices: readonly DecisionChoice[];
+  today: string;
   bottom: boolean;
   onDone: () => void;
 }) {
@@ -96,8 +102,8 @@ function DecisionBody({
   const formId = useId();
   const groupId = useId();
   const form = useForm<DecisionValues>({
-    resolver: zodResolver(decisionSchema),
-    defaultValues: { choice: initialChoice ?? '', date: todayIso(), note: '' },
+    resolver: zodResolver(decisionSchemaOn(today)),
+    defaultValues: { choice: initialChoice ?? '', date: today, note: '' },
   });
   const [choice, date] = useWatch({ control: form.control, name: ['choice', 'date'] });
   const [file, setFile] = useState<UploadedFile | null>(null);
@@ -226,7 +232,7 @@ function DecisionBody({
                 name="date"
                 label={choice === 'NOTICE' ? t('contracts.decide.receivedOn') : t('contracts.decide.requestedOn')}
                 placeholder={t('contracts.decide.datePlaceholder')}
-                max={todayIso()}
+                max={today}
                 required
                 disabled={busy}
               />

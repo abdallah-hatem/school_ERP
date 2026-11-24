@@ -311,6 +311,7 @@ export function ContractActions({
           contract={sheet ? contract : null}
           choice={sheet?.choice}
           choices={choices}
+          today={today}
           onClose={() => setSheet(null)}
           onDone={() => {
             setSheet(null);

@@ -3,6 +3,9 @@ import { ErrorCode } from '../errors';
 import type { SchoolCalendarDates } from '../types/contracts';
 import {
   calendarYearsOfContract,
+  contractPhase,
+  currentContractPeriod,
+  type ContractPeriod,
   defaultNewContractStart,
   newContractRefusal,
   nonRenewalUndoRefusal,
@@ -32,7 +35,8 @@ const CAL: SchoolCalendarDates = {
   nonRenewalDeadline: '2027-04-30',
 };
 
-const active = { status: 'ACTIVE', earlyTerminationStatus: null } as const;
+const T = '2026-11-24';
+const active = { status: 'ACTIVE', startsOn: '2026-06-01', earlyTerminationStatus: null } as const;
 
 describe('contract years', () => {
   it('a year is named by its start: 1 Jun 2026 – 31 May 2027 is 2026 ("2026/27")', () => {
@@ -127,27 +131,27 @@ describe('decisions', () => {
   });
 
   it('edge 1 — renewing an employee who is already renewed → refused, "already renewed"', () => {
-    expect(renewalRefusal({ status: 'RENEWED', earlyTerminationStatus: null }, true)).toBe(
+    expect(renewalRefusal({ ...active, status: 'RENEWED' }, true, T)).toBe(
       ErrorCode.CONTRACT_ALREADY_RENEWED,
     );
   });
 
   it('edge 2 — renewing an inactive employee → refused', () => {
-    expect(renewalRefusal(active, false)).toBe(ErrorCode.EMPLOYEE_INACTIVE);
-    expect(renewalRefusal(active, true)).toBeNull();
+    expect(renewalRefusal(active, false, T)).toBe(ErrorCode.EMPLOYEE_INACTIVE);
+    expect(renewalRefusal(active, true, T)).toBeNull();
   });
 
   it('a decided contract, or one with an early termination waiting, is not renewed', () => {
-    expect(renewalRefusal({ status: 'NOT_RENEWED', earlyTerminationStatus: null }, true)).toBe(ErrorCode.CONTRACT_DECIDED);
-    expect(renewalRefusal({ status: 'ACTIVE', earlyTerminationStatus: 'REQUESTED' }, true)).toBe(
+    expect(renewalRefusal({ ...active, status: 'NOT_RENEWED' }, true, T)).toBe(ErrorCode.CONTRACT_DECIDED);
+    expect(renewalRefusal({ ...active, earlyTerminationStatus: 'REQUESTED' }, true, T)).toBe(
       ErrorCode.EARLY_TERMINATION_PENDING,
     );
-    expect(decisionRefusal({ status: 'ENDED_EARLY', earlyTerminationStatus: 'APPROVED' })).toBe(ErrorCode.CONTRACT_DECIDED);
-    expect(decisionRefusal(active)).toBeNull();
+    expect(decisionRefusal({ ...active, status: 'ENDED_EARLY', earlyTerminationStatus: 'APPROVED' }, T)).toBe(ErrorCode.CONTRACT_DECIDED);
+    expect(decisionRefusal(active, T)).toBeNull();
   });
 
   it('edge 8 — a rejected request is not waiting: a new request may be recorded (never re-approved)', () => {
-    expect(decisionRefusal({ status: 'ACTIVE', earlyTerminationStatus: 'REJECTED' })).toBeNull();
+    expect(decisionRefusal({ ...active, earlyTerminationStatus: 'REJECTED' }, T)).toBeNull();
   });
 
   it('a notice is withdrawn while the contract still runs, and only an employee notice', () => {
@@ -195,6 +199,111 @@ describe('decisions', () => {
     expect(isToDeactivate(notRenewed, false, '2027-06-01')).toBe(false);
     expect(isToDeactivate({ status: 'ENDED_EARLY', endsOn: '2027-05-31', endedOn: '2027-01-28' }, true, '2027-01-29')).toBe(true);
     expect(isToDeactivate({ status: 'ACTIVE', endsOn: '2027-05-31', endedOn: null }, true, '2027-06-02')).toBe(false);
+  });
+});
+
+/*
+ * Bug 2026-11-24 (owner, testing): renewing 2026/27 in November made 2027/28 "Current", with Renew and
+ * Decide on it, and moved the employee's dates to it. The single-edge tests above missed it, so one
+ * employee is walked through time here: the same contracts, the day moving forward.
+ */
+describe('one employee over time — Current vs Upcoming, decisions only once started', () => {
+  type C = ContractPeriod & { earlyTerminationStatus: null };
+  const c = (startsOn: string, endsOn: string, status: C['status'] = 'ACTIVE', endedOn: string | null = null): C => ({
+    status,
+    startsOn,
+    endsOn,
+    endedOn,
+    earlyTerminationStatus: null,
+  });
+  const phase = (x: C, today: string) => contractPhase(x, today);
+
+  it('step 1 — hired 1 Jun 2026: the first contract is current, decidable, and names the record’s dates', () => {
+    const first = c('2026-06-01', '2027-05-31');
+    expect(phase(first, '2026-06-01')).toBe('CURRENT');
+    expect(decisionRefusal(first, '2026-06-01')).toBeNull();
+    expect(currentContractPeriod([first], '2026-06-01')).toEqual({ startsOn: '2026-06-01', endsOn: '2027-05-31' });
+  });
+
+  it('step 2 — renewed in November: 2026/27 stays current (renewed); 2027/28 is UPCOMING and not actionable', () => {
+    const first = c('2026-06-01', '2027-05-31', 'RENEWED');
+    const next = c(...(Object.values(renewedContractDates('2027-05-31')) as [string, string]));
+    expect(next).toMatchObject({ startsOn: '2027-06-01', endsOn: '2028-05-31' });
+    expect(phase(first, T)).toBe('CURRENT');
+    expect(phase(next, T)).toBe('UPCOMING');
+    expect(renewalRefusal(next, true, T)).toBe(ErrorCode.CONTRACT_NOT_STARTED);
+    expect(decisionRefusal(next, T)).toBe(ErrorCode.CONTRACT_NOT_STARTED);
+    // The record's dates still name the contract in force, not the upcoming one.
+    expect(currentContractPeriod([first, next], T)).toEqual({ startsOn: '2026-06-01', endsOn: '2027-05-31' });
+    // Its year is the year it ends: the 2027/28 season, not this one.
+    expect(contractYearOf(next.endsOn)).toBe(2027);
+  });
+
+  it('step 3 — 31 May 2027, the last day: still the old one; 1 Jun 2027: 2027/28 becomes CURRENT, actionable, the dates move', () => {
+    const first = c('2026-06-01', '2027-05-31', 'RENEWED');
+    const next = c('2027-06-01', '2028-05-31');
+    expect(phase(next, '2027-05-31')).toBe('UPCOMING');
+    expect(currentContractPeriod([first, next], '2027-05-31')).toEqual({ startsOn: '2026-06-01', endsOn: '2027-05-31' });
+    expect(phase(first, '2027-06-01')).toBe('PAST');
+    expect(phase(next, '2027-06-01')).toBe('CURRENT');
+    expect(renewalRefusal(next, true, '2027-06-01')).toBeNull();
+    expect(decisionRefusal(next, '2027-06-01')).toBeNull();
+    expect(currentContractPeriod([first, next], '2027-06-01')).toEqual({ startsOn: '2027-06-01', endsOn: '2028-05-31' });
+  });
+
+  it('step 4 — the renewed contract ended in April before 1 June: the upcoming one CANCELLED, the dates stay on the ended one', () => {
+    const ended = c('2026-06-01', '2027-05-31', 'ENDED_EARLY', '2027-04-15');
+    const cancelled = c('2027-06-01', '2028-05-31', 'CANCELLED');
+    expect(phase(ended, '2027-04-15')).toBe('CURRENT');
+    expect(phase(ended, '2027-04-16')).toBe('PAST');
+    expect(phase(cancelled, '2027-04-15')).toBe('UPCOMING');
+    expect(phase(cancelled, '2027-06-01')).toBe('PAST');
+    expect(currentContractPeriod([ended, cancelled], '2027-04-15')).toEqual({ startsOn: '2026-06-01', endsOn: '2027-04-15' });
+    // On and after 1 June too: a cancelled contract never takes the record's dates.
+    expect(currentContractPeriod([ended, cancelled], '2027-06-01')).toEqual({ startsOn: '2026-06-01', endsOn: '2027-04-15' });
+  });
+
+  it('a mid-year contract (1 Sep 2026 – 31 Aug 2027) renewed in November: 1 Sep 2027 – 31 Aug 2028, upcoming until 1 Sep', () => {
+    const first = c('2026-09-01', '2027-08-31', 'RENEWED');
+    const next = c(...(Object.values(renewedContractDates('2027-08-31')) as [string, string]));
+    expect(next).toMatchObject({ startsOn: '2027-09-01', endsOn: '2028-08-31' });
+    expect(phase(next, T)).toBe('UPCOMING');
+    expect(decisionRefusal(next, '2027-08-31')).toBe(ErrorCode.CONTRACT_NOT_STARTED);
+    expect(currentContractPeriod([first, next], '2027-08-31')).toEqual({ startsOn: '2026-09-01', endsOn: '2027-08-31' });
+    expect(phase(next, '2027-09-01')).toBe('CURRENT');
+    expect(currentContractPeriod([first, next], '2027-09-01')).toEqual({ startsOn: '2027-09-01', endsOn: '2028-08-31' });
+    expect(contractYearOf(next.endsOn)).toBe(2028);
+  });
+
+  it('a new contract with a future start (a reactivated employee): UPCOMING, not actionable; the record keeps the last one until it starts', () => {
+    const old = c('2025-06-01', '2026-05-31', 'NOT_RENEWED');
+    const fresh = c('2027-06-01', '2028-05-31');
+    expect(newContractRefusal(true, [{ status: old.status, startsOn: old.startsOn, lastDay: old.endsOn }], fresh.startsOn)).toBeNull();
+    expect(phase(fresh, T)).toBe('UPCOMING');
+    expect(renewalRefusal(fresh, true, T)).toBe(ErrorCode.CONTRACT_NOT_STARTED);
+    expect(currentContractPeriod([old, fresh], T)).toEqual({ startsOn: '2025-06-01', endsOn: '2026-05-31' });
+    expect(currentContractPeriod([old, fresh], '2027-06-01')).toEqual({ startsOn: '2027-06-01', endsOn: '2028-05-31' });
+  });
+
+  it('a new hire whose first contract starts later: it is UPCOMING, and still the record’s dates (there is no other)', () => {
+    const only = c('2027-01-01', '2027-12-31');
+    expect(phase(only, T)).toBe('UPCOMING');
+    expect(currentContractPeriod([only], T)).toEqual({ startsOn: '2027-01-01', endsOn: '2027-12-31' });
+    expect(currentContractPeriod([], T)).toBeNull();
+  });
+
+  it('undo not-renewing: back to ACTIVE on a started contract, decidable and renewable again', () => {
+    const school = { status: 'NOT_RENEWED', nonRenewalBy: 'SCHOOL', endsOn: '2027-05-31' } as const;
+    expect(nonRenewalUndoRefusal(school, T)).toBeNull();
+    const undone = c('2026-06-01', '2027-05-31');
+    expect(phase(undone, T)).toBe('CURRENT');
+    expect(renewalRefusal(undone, true, T)).toBeNull();
+  });
+
+  it('an ACTIVE contract past its end ("Ended, no decision") is PAST but still renewable — only an unstarted one is refused', () => {
+    const lapsed = c('2025-06-01', '2026-05-31');
+    expect(phase(lapsed, T)).toBe('PAST');
+    expect(renewalRefusal(lapsed, true, T)).toBeNull();
   });
 });
 

@@ -1,5 +1,6 @@
 import {
   contractDecision,
+  contractPhase,
   contractYearOf,
   EmployeeStatus,
   isToDeactivate,
@@ -85,6 +86,7 @@ export function toContract(
     startsOn: toIsoDate(row.startsOn),
     endsOn,
     status: row.status,
+    phase: contractPhase({ status: row.status, startsOn: toIsoDate(row.startsOn), endsOn, endedOn }, today),
     decision: contractDecision(
       {
         status: row.status,

@@ -31,7 +31,7 @@ import { DecisionSheet } from './decision-sheet';
 const ALL: DecisionChoice[] = ['RENEW', 'NOT_RENEWING', 'NOTICE', 'EARLY_TERMINATION'];
 
 function renderSheet(
-  props: { choice?: DecisionChoice; calendar?: SchoolCalendarDates | null } = {},
+  props: { choice?: DecisionChoice; calendar?: SchoolCalendarDates | null; today?: string } = {},
   locale: 'en' | 'ar' = 'en',
 ) {
   const onDone = vi.fn();
@@ -41,6 +41,7 @@ function renderSheet(
       contract={contract({ calendars: { notice: cal, earlyTermination: cal } })}
       choice={props.choice}
       choices={ALL}
+      today={props.today ?? '2026-11-24'}
       onClose={vi.fn()}
       onDone={onDone}
     />,
@@ -57,6 +58,13 @@ describe('DecisionSheet', () => {
     cleanup();
     vi.clearAllMocks();
     vi.useRealTimers();
+  });
+
+  it("review 2026-11-24 — the date defaults to the school's today, not the device's (late evening in Cairo)", () => {
+    // The device says 23 Nov (UTC); the school's day is 24 Nov.
+    vi.setSystemTime(new Date('2026-11-23T22:30:00Z'));
+    renderSheet({ choice: 'NOTICE', today: '2026-11-24' });
+    expect(shared.noticeTiming).toHaveBeenCalledWith('2026-11-24', calendar);
   });
 
   it('the four choices, the one picked from the menu already on', () => {
@@ -80,8 +88,7 @@ describe('DecisionSheet', () => {
   });
 
   it('after the deadline it is marked Late', () => {
-    vi.setSystemTime(new Date('2027-05-10T10:00:00Z'));
-    renderSheet({ choice: 'NOTICE' });
+    renderSheet({ choice: 'NOTICE', today: '2027-05-10' });
     expect(screen.getByTestId('decision-timing').textContent).toContain('marked “Late”');
     expect(screen.getByTestId('decision-timing').textContent).toContain('30 Apr 2027');
   });
@@ -106,6 +113,7 @@ describe('DecisionSheet', () => {
         contract={contract({ calendars: { notice: calendar, earlyTermination: later } })}
         choice="EARLY_TERMINATION"
         choices={ALL}
+        today="2026-11-24"
         onClose={vi.fn()}
         onDone={vi.fn()}
       />,

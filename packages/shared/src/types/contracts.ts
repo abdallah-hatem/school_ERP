@@ -3,8 +3,9 @@ import type { IsoDate, IsoDateTime, ListPage, NamedRef, PaginationQuery, Uuid } 
 
 /*
  * Contracts (§3 → Contracts, spec docs/specs/2026-11-24-contracts.md). One row per contract year
- * per employee, kept forever. The employee's `contractStart` / `contractEnd` are the current
- * contract, written only by the contracts service.
+ * per employee, kept forever. The employee's `contractStart` / `contractEnd` are the contract in
+ * force today (`currentContractPeriod`), written only by the contracts module — a renewal's next
+ * contract moves them on its first day (the daily job), not when it is created.
  *
  * A **contract year** is named by the year it starts: `2026` is 1 June 2026 – 31 May 2027 ("2026/27").
  */
@@ -27,6 +28,16 @@ export const ContractStatus = {
 } as const;
 export type ContractStatus = (typeof ContractStatus)[keyof typeof ContractStatus];
 export const CONTRACT_STATUSES = Object.values(ContractStatus) as ContractStatus[];
+
+/**
+ * Where a contract stands on the school's today (bug 2026-11-24: a renewal's next contract showed as
+ * "Current"): `CURRENT` — in force today (started, its last day not passed, not cancelled);
+ * `UPCOMING` — starts later (a renewal's next contract, a new contract with a future start); `PAST`
+ * — its last day passed, or cancelled after its start would have come. Worked out by the API.
+ */
+export const ContractPhase = { PAST: 'PAST', CURRENT: 'CURRENT', UPCOMING: 'UPCOMING' } as const;
+export type ContractPhase = (typeof ContractPhase)[keyof typeof ContractPhase];
+export const CONTRACT_PHASES = Object.values(ContractPhase) as ContractPhase[];
 
 /** Who decided a non-renewal: the school, or the employee's written notice. */
 export const NonRenewalBy = { SCHOOL: 'SCHOOL', EMPLOYEE: 'EMPLOYEE' } as const;
@@ -174,6 +185,12 @@ export interface Contract {
   /** The end it was signed with (31 May, or its own cycle's end, edge case 5). */
   endsOn: IsoDate;
   status: ContractStatus;
+  /**
+   * In force today, upcoming or past (`contractPhase`). Decisions (renew, not renew, a notice, an
+   * early termination request) only once it has started — an upcoming one is refused
+   * `CONTRACT_NOT_STARTED`.
+   */
+  phase: ContractPhase;
   decision: ContractDecision;
   /** Not renewed: who decided. */
   nonRenewalBy: NonRenewalBy | null;

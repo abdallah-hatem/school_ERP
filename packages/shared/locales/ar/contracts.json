@@ -258,6 +258,7 @@
       "documents": "المستندات"
     },
     "current": "الحالي",
+    "upcoming": "قادم · يبدأ {date}",
     "emptyTitle": "لا عقود بعد",
     "emptyBody": "تظهر هنا عقود الموظف بمجرد تسجيل أحدها.",
     "noticeReceived": "استُلم الإخطار {date}",
