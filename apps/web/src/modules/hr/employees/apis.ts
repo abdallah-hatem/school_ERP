@@ -148,6 +148,7 @@ function listParams(query: ListStagesQuery): Record<string, string | undefined> 
     limit: query.limit ? String(query.limit) : undefined,
     search: query.search || undefined,
     ids: query.ids?.length ? query.ids.join(',') : undefined,
+    excludeIds: query.excludeIds?.length ? query.excludeIds.join(',') : undefined,
   };
 }
 

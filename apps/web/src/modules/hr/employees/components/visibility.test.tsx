@@ -76,7 +76,7 @@ describe('profile tabs (R6)', () => {
 describe('profile Details (R7)', () => {
   it('edge case 4 — without the salary: no basic salary, no insured salary, no bank account card', () => {
     renderEmployees(<EmployeeDetails employee={withoutSalary} />, 'en', STAGE_HEAD);
-    expect(screen.queryByText('Basic monthly salary')).toBeNull();
+    expect(screen.queryByText('Basic monthly salary (net)')).toBeNull();
     expect(screen.queryByText('Insured salary')).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Bank account' })).toBeNull();
     // The rest of the record is there, contract dates included.
@@ -103,7 +103,7 @@ describe('profile Details (R7)', () => {
 
   it('with the salary: every salary field and the bank card', () => {
     renderEmployees(<EmployeeDetails employee={withSalary} />);
-    expect(screen.getByText('Basic monthly salary')).toBeTruthy();
+    expect(screen.getByText('Basic monthly salary (net)')).toBeTruthy();
     expect(screen.getByText('Insured salary')).toBeTruthy();
     const bank = screen.getByRole('heading', { name: 'Bank account' }).closest('section')!;
     expect(within(bank).getByText('National Bank')).toBeTruthy();
@@ -116,11 +116,11 @@ describe('profile Details (R7)', () => {
 
   it('the skeleton matches: no salary line and no bank card without the key', () => {
     renderEmployees(<EmployeeDetailsSkeleton />, 'en', STAGE_HEAD);
-    expect(screen.queryByText('Basic monthly salary')).toBeNull();
+    expect(screen.queryByText('Basic monthly salary (net)')).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Bank account' })).toBeNull();
     cleanup();
     renderEmployees(<EmployeeDetailsSkeleton />);
-    expect(screen.getByText('Basic monthly salary')).toBeTruthy();
+    expect(screen.getByText('Basic monthly salary (net)')).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Bank account' })).toBeTruthy();
   });
 });

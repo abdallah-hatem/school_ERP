@@ -114,6 +114,11 @@ export interface ListStagesQuery {
   search?: string;
   /** Only these items (a picker's chosen ones, whose names it shows); comma-separated, ≤ 50. */
   ids?: Uuid[];
+  /**
+   * `GET /stages` only: leave these out (a picker hiding what is already chosen — the employee's
+   * main stage and the stages already in "Also teaches in"); comma-separated, ≤ 50.
+   */
+  excludeIds?: Uuid[];
 }
 
 // ── Users and roles — core/users, core/roles (spec roles-permissions, P2) ──
