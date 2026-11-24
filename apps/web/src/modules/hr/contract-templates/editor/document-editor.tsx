@@ -30,6 +30,7 @@ import { useTranslation } from '@/shared/providers/i18n-provider';
 import { ContractDocumentStyles } from '../components/document-pages';
 import { ChipContext, EDITOR_CSS, FieldNode, OptionalNode, PageBreakNode } from './nodes';
 import { toggleOptionalPhrase, type OptionalRefusal } from './optional';
+import { STARTER_KIT_OPTIONS } from './schema';
 
 /*
  * The Word-style editor (spec → Screens, mockup A): TipTap 3 on the shared document schema — the
@@ -94,15 +95,7 @@ export function DocumentEditor({
     // The toolbar reads its state through `useEditorState`; the canvas needn't re-render per key.
     shouldRerenderOnTransaction: false,
     extensions: [
-      StarterKit.configure({
-        code: false,
-        codeBlock: false,
-        blockquote: false,
-        strike: false,
-        horizontalRule: false,
-        link: false,
-        heading: { levels: [1, 2, 3] },
-      }),
+      StarterKit.configure(STARTER_KIT_OPTIONS),
       TextAlign.configure({ types: ['heading', 'paragraph'], alignments: ['left', 'center', 'right', 'justify'] }),
       TableKit.configure({ table: { resizable: false } }),
       Placeholder.configure({ placeholder: t('contractTemplates.editor.placeholder') }),

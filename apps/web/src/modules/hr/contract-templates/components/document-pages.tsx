@@ -95,7 +95,7 @@ export function DocumentPages({ html, zoom = 1, fit = false, onPages, onPageInVi
   // "Page 1 of N": the page nearest the top of the scroll box.
   useEffect(() => {
     const el = wrapRef.current;
-    if (!el || !pages) return;
+    if (!el || !pages || typeof IntersectionObserver === 'undefined') return;
     const sheets = Array.from(el.querySelectorAll<HTMLElement>('[data-a4-page]'));
     const observer = new IntersectionObserver(
       (entries) => {

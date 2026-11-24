@@ -1,23 +1,18 @@
 'use client';
 
-import {
-  EMPTY_FIELD_TEXT,
-  isContractFieldKey,
-  type ContractFieldKey,
-  type ContractFieldValues,
-  type ContractLanguage,
-} from '@school-erp/shared';
-import { Node, mergeAttributes } from '@tiptap/core';
+import { EMPTY_FIELD_TEXT, type ContractFieldKey, type ContractFieldValues, type ContractLanguage } from '@school-erp/shared';
 import { NodeViewWrapper, ReactNodeViewRenderer, type NodeViewProps } from '@tiptap/react';
 import { createContext, useContext } from 'react';
 import { cn } from '@/shared/lib/utils';
 import { fieldName } from '../lib/fields';
+import { FieldSchemaNode, PageBreakSchemaNode } from './schema';
+
+export { OptionalNode } from './schema';
 
 /*
- * The template text's own nodes (spec → How it is built): a field chip (an inline atom holding a
- * key — the cursor steps over it as one character, it can't be typed into or half-deleted), an
- * optional phrase (an inline wrapper shown as `[ … ]`) and a manual page break. ProseMirror's
- * schema refuses anything else, so a paste is reduced to these and StarterKit's basics.
+ * The React views of the template text's nodes (`schema.ts`): a field chip names its field in the
+ * document's language (or, in "Edit this copy", shows the copy's value, still locked) and a page
+ * break draws a labelled dashed line.
  */
 
 export interface ChipSettings {
@@ -54,49 +49,9 @@ function FieldChipView({ node, selected }: NodeViewProps) {
   );
 }
 
-export const FieldNode = Node.create({
-  name: 'field',
-  group: 'inline',
-  inline: true,
-  atom: true,
-  selectable: true,
-  draggable: false,
-  addAttributes() {
-    return {
-      key: {
-        default: null,
-        parseHTML: (el) => el.getAttribute('data-field'),
-        renderHTML: (attrs) => ({ 'data-field': attrs.key }),
-      },
-    };
-  },
-  parseHTML() {
-    // Only our own chips (copied within the editor); a pasted `{{name}}` stays text (edge case 22).
-    return [{ tag: 'span[data-field]', getAttrs: (el) => (isContractFieldKey((el as HTMLElement).getAttribute('data-field')) ? null : false) }];
-  },
-  renderHTML({ HTMLAttributes }) {
-    return ['span', mergeAttributes(HTMLAttributes)];
-  },
-  renderText({ node }) {
-    return `[${String(node.attrs.key)}]`;
-  },
+export const FieldNode = FieldSchemaNode.extend({
   addNodeView() {
     return ReactNodeViewRenderer(FieldChipView, { as: 'span' });
-  },
-});
-
-export const OptionalNode = Node.create({
-  name: 'optional',
-  group: 'inline',
-  inline: true,
-  // No optional inside an optional (spec → Optional phrases).
-  content: '(text | hardBreak | field)*',
-  marks: '_',
-  parseHTML() {
-    return [{ tag: 'span[data-optional]' }];
-  },
-  renderHTML() {
-    return ['span', { 'data-optional': '', class: 'ce-optional' }, 0];
   },
 });
 
@@ -115,18 +70,7 @@ function PageBreakView({ selected }: NodeViewProps) {
   );
 }
 
-export const PageBreakNode = Node.create({
-  name: 'pageBreak',
-  group: 'block',
-  atom: true,
-  selectable: true,
-  draggable: false,
-  parseHTML() {
-    return [{ tag: 'div[data-page-break]' }];
-  },
-  renderHTML() {
-    return ['div', { 'data-page-break': '' }];
-  },
+export const PageBreakNode = PageBreakSchemaNode.extend({
   addNodeView() {
     return ReactNodeViewRenderer(PageBreakView);
   },
@@ -141,8 +85,8 @@ export const EDITOR_CSS = `
 .ce-root p.is-editor-empty:first-child::before{content:attr(data-placeholder);float:inline-start;height:0;color:var(--muted-foreground);pointer-events:none}
 .ce-root .tableWrapper{overflow-x:auto}
 .ce-root table{width:100%;border-collapse:collapse;margin:.4em 0 .8em;table-layout:fixed}
-.ce-root td,.ce-root th{border:1px solid #9fb3ad;padding:4px 8px;vertical-align:top;position:relative}
-.ce-root th{background:#eef4f2;font-weight:600}
+.ce-root td,.ce-root th{border:1px solid var(--input);padding:4px 8px;vertical-align:top;position:relative}
+.ce-root th{background:var(--secondary);font-weight:600}
 .ce-root td p,.ce-root th p{margin:0}
 .ce-root .selectedCell{background:var(--primary-soft)}
 .ce-root .ProseMirror-gapcursor:after{border-top-color:var(--primary)}
