@@ -172,7 +172,9 @@ export function UsersList({ basePath, query, rows, total, selectedRole = null, l
       header: t('access.users.columns.status'),
       // On a card the pills get their own line, so the name and email keep the card's width.
       card: 'badges',
-      className: 'w-52',
+      // Narrow enough that the seven columns fit the card at desktop width (smoke 27 measures it);
+      // a second pill wraps to its own line.
+      className: 'w-44',
       skeleton: <SkeletonPill />,
       // The account's whole state in one place: active/inactive, and a temporary password still to
       // be replaced (one line each, never wrapped).
@@ -203,7 +205,7 @@ export function UsersList({ basePath, query, rows, total, selectedRole = null, l
     {
       id: 'lastSignIn',
       header: t('access.users.columns.lastSignIn'),
-      className: 'w-44',
+      className: 'w-40',
       skeleton: <SkeletonText className="text-sm" width="w-24" />,
       cell: (u) => (
         <span className="tabular">{formatSignIn(u.lastSignInAt, now, locale, t)}</span>
