@@ -61,14 +61,16 @@ export async function uploadSignedPages(
   onProgress?: (progress: UploadProgress) => void,
 ): Promise<UploadPagesResult> {
   const result: UploadPagesResult = { added: 0, failedNames: [], copy: null, unauthorized: false, lastAdded: null, lastFailed: null };
+  // The files picked (not a list from the API): "page 2 of 5" counts them.
+  const picked = files.length;
   for (const [i, file] of files.entries()) {
-    onProgress?.({ done: i + 1, total: files.length });
+    onProgress?.({ done: i + 1, total: picked });
     let res = await callApi(uploadSignedCopyPage(contractId, file), { showErrorToast: false });
     for (let attempt = 0; attempt < RETRIES_ON_429 && !res.unauthorized && res.success === false && res.error === ErrorCode.TOO_MANY_REQUESTS; attempt++) {
       const seconds = retryAfter(res);
-      onProgress?.({ done: i + 1, total: files.length, waitSeconds: seconds });
+      onProgress?.({ done: i + 1, total: picked, waitSeconds: seconds });
       await wait(seconds);
-      onProgress?.({ done: i + 1, total: files.length });
+      onProgress?.({ done: i + 1, total: picked });
       res = await callApi(uploadSignedCopyPage(contractId, file), { showErrorToast: false });
     }
     if (res.unauthorized) return { ...result, unauthorized: true };
