@@ -692,16 +692,20 @@ phase live in `docs/build-log/`.
   - **#285** — employee header "Not a system user" / "System user: <name>".
   - **#281** — per-clone opt-out of unit tests on push (`git config ci.skipUnitTests true`), set on the
     owner's machine only; the team still runs them. **#286** — CI prints a failing step's full log.
+- 2026-11-24 — Contract templates: owner picked mockup **A (Word-style editor)** over B and C; spec
+  `docs/specs/2026-11-24-contract-templates.md` approved as drafted (#288): one school signatory in
+  settings, PDFs rendered on the server (headless Chromium in the API image). Build started on
+  `feature/contract-templates`. The **signed copy** upload (several pages per contract, from the
+  employee form, renew and New contract too) is being built on `feature/contract-signed-copy`, pulled
+  out of contracts round 3 because the owner needs it now.
 
 ## Next up
 
 - **Contracts round 3** (owner, 2026-11-24): fix the rest of the time-walk review's findings (B1 done in
   #283; next B2: deactivating while the last month's payroll is a draft drops that month's pay);
-  mid-year hires' first contract ends 31 May (one season for everyone, GUESS); add a **signed copy**
-  upload on every contract (also when adding an employee, renewing, new contract).
-- **Contract templates** (owner, 2026-11-24): editable templates with placeholders, filled per
-  contract, A4 preview, print/PDF, printed copies kept. Mockups A/B/C ready
-  (`design/mockups/contract-templates.html`); recommended B (clause builder). Waiting for the owner's pick.
+  mid-year hires' first contract ends 31 May (one season for everyone, GUESS).
+- **Contract templates** (owner, 2026-11-24): option A, spec approved, being built.
+- **Signed copy of each contract** (owner, 2026-11-24): being built.
 - **Employee documents tab** (proposed 2026-11-24): ID copy, certificates, insurance forms.
 - **Students module, then the clinic** (owner, 2026-11-24): the clinic treats students (and staff), so the
   students module (student records, guardians, class placement, on top of academics' basic structure)
