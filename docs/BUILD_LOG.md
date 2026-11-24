@@ -643,11 +643,13 @@ phase live in `docs/build-log/`.
 - 2026-11-24 — Contracts spec `docs/specs/2026-11-24-contracts.md` approved by the owner as drafted
   (OPEN points take their defaults). Next: three mockups of the renewals page. Nothing built until
   the owner says build.
+- 2026-11-24 — Contracts renewals page: owner picked mockup **A (table)** over B (board) and C (split
+  view). Mockup on the `design` branch. Build waits for the owner's go.
 
 ## Next up
 
-- **Contracts (16)** (owner, 2026-11-24): spec approved; mockups of the renewals page next, then
-  build on the owner's go. The §2/§3/§11 edits land with the code.
+- **Contracts (16)** (owner, 2026-11-24): spec approved, renewals layout A picked; build on the
+  owner's go. The §2/§3/§11 edits land with the code.
 - **Students module, then the clinic** (owner, 2026-11-24): the clinic treats students (and staff), so the
   students module (student records, guardians, class placement, on top of academics' basic structure)
   is planned first, then the clinic on top of it. Order in `docs/ROADMAP.md`; spec not written yet.

@@ -95,7 +95,10 @@ Timings are settings, like the existing reminders (GUESS: 1 March, 7 days).
   and the actions on the current one. Built from the existing tabs and tables.
 - **HR → Contracts (Renewals)** — new page type: the contract year picker, tiles (ending this year,
   decided, not decided, notices received, to deactivate), and the list with a decision per row and
-  bulk renew. **Mockups first** (three options, AR + EN, phone + desktop).
+  bulk renew. **Layout: option A, table** (owner, 2026-11-24) — five tiles, filters, one row per
+  employee with a decision pill and its next action, a ⋯ menu for the other decisions, a "Renew
+  selected" bar; on phone cards and a bottom sheet. Mockup `design/mockups/contracts-renewals.html`
+  on the `design` branch.
 - **Settings → HR → School calendar** — the four dates per contract year.
 - Paged, searched and sorted by the API, as every list.
 
