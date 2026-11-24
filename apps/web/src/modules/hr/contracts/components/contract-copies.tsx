@@ -100,7 +100,9 @@ export function ContractCopiesBlock({
   return (
     <div className="flex flex-col gap-1.5 py-1">
       <span className="text-xs font-semibold text-muted-foreground">{t('contractTemplates.copies.title')}</span>
-      <CopiesList copies={[...copies, ...more]} />
+      {/* Kept to a readable width at the row's start: the table scrolls sideways when its columns
+          don't fit, and a full-width line put Open out of view (review screenshots, 2026-11-25). */}
+      <CopiesList copies={[...copies, ...more]} className="max-w-3xl" />
       {left > 0 ? (
         <button
           type="button"
