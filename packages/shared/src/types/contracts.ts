@@ -1,6 +1,6 @@
 import type { Gender } from '../enums';
 import type { IsoDate, IsoDateTime, ListPage, NamedRef, PaginationQuery, Uuid } from './common';
-import type { ContractCopy } from './contract-templates';
+import type { ContractCopy } from './contract-copies';
 
 /*
  * Contracts (§3 → Contracts, spec docs/specs/2026-11-24-contracts.md). One row per contract year

@@ -15,6 +15,7 @@ export * from './types/common';
 export * from './types/core';
 export * from './types/hr';
 export * from './types/contracts';
+export * from './types/contract-copies';
 export * from './types/contract-templates';
 export * from './contract-document';
 export * from './types/accounting';
