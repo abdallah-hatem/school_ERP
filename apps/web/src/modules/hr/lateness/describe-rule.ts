@@ -4,7 +4,7 @@ import type { Locale, Translate } from '@/shared/lib/i18n';
 
 /**
  * The lateness rule in one line (`hour 1 = 0.25 d · hour 2 = 0.5 d · each later hour = 0.5 d`),
- * from the `lateness` namespace. Used by the lateness grid and the payroll "rules applied" panel.
+ * from the `lateness` namespace. Used by the lateness grid (the payroll rules panel lists it as bullets).
  */
 export function describeLatenessRule(rule: LatenessRule, t: Translate, locale: Locale): string {
   // English keeps the compact `0.25 d`; Arabic spells the agreeing noun (`{dayCount}`).

@@ -8,6 +8,7 @@ import {
   SchoolSettingKey,
   WEEKDAYS,
   isMonth,
+  settingsHref,
   type AuditAction,
   type AuditChange,
   type AuditEntityType,
@@ -469,17 +470,23 @@ export function recordHref(entry: Pick<AuditEntry, 'entityType' | 'entityId'>, l
     case 'penalty':
       return `${base}/penalties`;
     case 'school_settings':
-      return `${base}/settings?section=school`;
+      return settingsHref(locale, 'school');
     case 'stage':
-      return `${base}/settings?section=structure`;
+      return settingsHref(locale, 'structure');
     case 'department':
     case 'job_title':
-      return `${base}/settings?section=lists`;
+      return settingsHref(locale, 'lists');
     case 'hr_settings':
-      return `${base}/settings?section=hrRules`;
+      return settingsHref(locale, 'hrRules');
+    case 'school_calendar':
+      return settingsHref(locale, 'hrRules', 'calendar');
     case 'penalty_group':
     case 'violation':
-      return `${base}/settings?section=catalogue`;
+      return settingsHref(locale, 'catalogue');
+    case 'accounting_settings':
+      return settingsHref(locale, 'accounting');
+    case 'notification_settings':
+      return settingsHref(locale, 'notifications');
     default:
       return null;
   }

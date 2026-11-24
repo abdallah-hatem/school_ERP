@@ -68,7 +68,6 @@ export async function PayrollRunLinesScreen({
     <PayrollI18n locale={locale}>
       <RunLines
         basePath={payrollPath(locale)}
-        settingsHref={`/${locale}/settings`}
         query={query}
         filtered={data.filtered}
         selectedDepartment={data.selectedDepartment}

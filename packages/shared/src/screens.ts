@@ -31,6 +31,35 @@ export const SETTINGS_SECTION_ACCESS = {
 export type SettingsSectionId = keyof typeof SETTINGS_SECTION_ACCESS;
 export const SETTINGS_SECTIONS = Object.keys(SETTINGS_SECTION_ACCESS) as SettingsSectionId[];
 
+/**
+ * The cards inside a section a link can land on (`&part=`): Settings scrolls the card into view and
+ * marks it for a moment (owner, 2026-11-24: "Edit in settings" opens the exact place the rules live).
+ */
+export const SETTINGS_SECTION_PARTS = {
+  hrRules: ['lateness', 'payroll', 'penalties', 'employees', 'calendar'],
+} as const satisfies Partial<Record<SettingsSectionId, readonly string[]>>;
+export type SettingsPartOf<S extends SettingsSectionId> = S extends keyof typeof SETTINGS_SECTION_PARTS
+  ? (typeof SETTINGS_SECTION_PARTS)[S][number]
+  : never;
+export type SettingsPartId = SettingsPartOf<SettingsSectionId>;
+
+/**
+ * The one way to link into Settings: `/{locale}/settings?section=<id>[&part=<card>]`. A section the
+ * viewer can't see opens their first one instead (the Settings screen decides that).
+ */
+export function settingsHref<S extends SettingsSectionId>(locale: string, section: S, part?: SettingsPartOf<S>): string {
+  const query = new URLSearchParams({ section });
+  if (part) query.set('part', part);
+  return `/${locale}/settings?${query.toString()}`;
+}
+
+/** `?part=` → a card of `section`, or null. */
+export function parseSettingsPart(section: SettingsSectionId | null | undefined, raw: string | null | undefined): SettingsPartId | null {
+  if (!section || !raw || !(section in SETTINGS_SECTION_PARTS)) return null;
+  const parts = SETTINGS_SECTION_PARTS[section as keyof typeof SETTINGS_SECTION_PARTS] as readonly string[];
+  return parts.includes(raw) ? (raw as SettingsPartId) : null;
+}
+
 export interface ScreenAccess {
   /**
    * Path after the locale segment; `''` is the dashboard, `:id` / `:lineId` a record's id, `:month`
