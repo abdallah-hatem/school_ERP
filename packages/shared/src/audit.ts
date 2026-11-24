@@ -238,8 +238,12 @@ export const AUDIT_ACTIONS = {
   'hr.contract.cancel': { module: 'hr', entityType: E.EMPLOYEE_CONTRACT, kind: 'status' },
   // The school's not-renewing undone before the end, with a reason: active again.
   'hr.contract.not_renew_undo': { module: 'hr', entityType: E.EMPLOYEE_CONTRACT, kind: 'status' },
-  // A contract document (notice letter, request, attachment) was opened (a sensitive folder).
+  // A contract document (notice letter, request, attachment, a page of the signed copy) was opened
+  // (a sensitive folder).
   'hr.contract.document_open': { module: 'hr', entityType: E.EMPLOYEE_CONTRACT, kind: 'access' },
+  // The contract's signed copy (owner, 2026-11-24): a page added, or removed with a reason (kept).
+  'hr.contract.signed_copy_add': { module: 'hr', entityType: E.EMPLOYEE_CONTRACT, kind: 'update' },
+  'hr.contract.signed_copy_remove': { module: 'hr', entityType: E.EMPLOYEE_CONTRACT, kind: 'update' },
   'hr.school_calendar.update': { module: 'hr', entityType: E.SCHOOL_CALENDAR, kind: 'update' },
   // hr — lateness: one entry per saved month, the changed employees' minutes before → after
   'hr.lateness.save': {

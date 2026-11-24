@@ -223,6 +223,8 @@ export const ErrorCode = {
   CONTRACT_NOT_TO_DEACTIVATE: 'CONTRACT_NOT_TO_DEACTIVATE',
   /** The file wasn't uploaded for this contract (`POST /hr/contracts/:id/files`). */
   CONTRACT_FILE_INVALID: 'CONTRACT_FILE_INVALID',
+  /** A cancelled contract never started: it gets no signed copy. */
+  CONTRACT_CANCELLED: 'CONTRACT_CANCELLED',
   /** A new contract: the employee still has an active contract. */
   CONTRACT_ACTIVE_EXISTS: 'CONTRACT_ACTIVE_EXISTS',
   /** A new contract would overlap one the employee already has (contracts never overlap). */

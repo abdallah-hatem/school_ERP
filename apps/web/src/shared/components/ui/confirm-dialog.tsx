@@ -27,6 +27,7 @@ export function ConfirmDialog({
   reasonLabel,
   reasonPlaceholder,
   onConfirm,
+  children,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -44,6 +45,8 @@ export function ConfirmDialog({
    * empty, with `optionalNote`). Return `false` to keep it open.
    */
   onConfirm: (reason?: string) => Promise<boolean | void> | boolean | void;
+  /** The body of a dialog without a reason box (an optional upload, e.g. a renewal's signed copy). */
+  children?: ReactNode;
 }) {
   const { t } = useTranslation();
   const reasonId = useId();
@@ -124,7 +127,7 @@ export function ConfirmDialog({
               </span>
             </div>
           </div>
-        ) : null}
+        ) : (children ?? null)}
       </DialogContent>
     </Dialog>
   );

@@ -186,13 +186,30 @@ Spec `docs/specs/2026-11-24-contracts.md` (approved by the owner as drafted, 202
   shows a banner linking to the setting; an early termination is approved only once it's set.
 - **DECIDED** (existing rule, §2) — Nobody acts on their own contract: renew, not renew, record a
   notice, decide an early termination or end it. A System admin neither.
+- **DECIDED** (owner, 2026-11-24: "I can't upload a photo of the contract so I can see it for each
+  employee") — **The signed copy.** Each contract can hold its signed copy as one or more files —
+  PDF, JPG, PNG or WebP, each up to 10 MB, checked by their content (a renamed file is refused) —
+  because a phone photo is one page each. The pages keep their upload order. Any contract may get
+  one — past, current or upcoming; old contracts are scanned too — but not a cancelled one (it never
+  started). Uploading and removing need **Manage contracts** covering that employee, never on one's
+  own contract (an unlinked System admin may, like the other contract writes); viewing needs **View
+  contracts** covering that employee (otherwise "We couldn't find that page"). Removing a page needs
+  a reason and is soft: the file is kept, with who removed it, when and why, and the page no longer
+  shows or opens. Files are never deleted. Every page added or removed is in the employee's History,
+  and each page opened is recorded, like the decision letters. A renewal's new contract starts with
+  no signed copy; the old one keeps its own.
+- **GUESS** (2026-11-24) — Where it is added: the Contracts tab's ⋯ ("Upload signed copy") and its
+  Documents column ("Signed copy (2)" / "No signed copy"), the renewal screen's ⋯, and optionally
+  while adding an employee (attached to their first contract after saving), renewing one contract or
+  making a new contract. Bulk renew has no upload. On a phone the picker offers the camera, the
+  photos or a PDF.
 - **GUESS** — Deemed resignation (Article 166: over 20 days' unexcused absence in a year or over 10
   in a row, after a registered warning) is **not** in this module; it needs attendance and comes
   with it.
 - **DECIDED** — Every write is audited (contract created, renewed, not renewed or undone, notice
   recorded or withdrawn, early termination requested / approved / rejected, contract ended or
-  cancelled, calendar changed),
-  and opening a contract document (a letter, an attachment) is recorded too.
+  cancelled, calendar changed, a page of the signed copy added or removed),
+  and opening a contract document (a letter, an attachment, a page of the signed copy) is recorded too.
 - **Screens** — the employee page's **Contracts** tab (the history and the actions on the current
   one) and **HR → Contracts**, the renewal season of one contract year: five tiles (ending this
   year, decided, not decided, notices received, to deactivate), the list with a decision per row,

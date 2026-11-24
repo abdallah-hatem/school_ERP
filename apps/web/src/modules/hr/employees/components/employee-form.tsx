@@ -32,6 +32,7 @@ import { PageHeader } from '@/shared/components/layout/page-header';
 import { Button } from '@/shared/components/ui/button';
 import { ErrorIcon } from '@/shared/components/ui/icons';
 import { callApi } from '@/lib/callApi';
+import { handleResponse } from '@/lib/handleResponse';
 import { localName } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { PICKER_PAGE, useServerOptions } from '@/shared/hooks/use-server-options';
@@ -52,6 +53,7 @@ import {
   type EmployeeFormValues,
 } from '../lib/employee-form';
 import { EmployeePhotoField, uploadEmployeePhoto } from './employee-photo-field';
+import { EmployeeSignedContractField, uploadSignedContract } from './employee-signed-contract-field';
 import { OtherStagesField } from './other-stages-field';
 import { EmployeeGradeField } from './employee-grade-field';
 
@@ -98,6 +100,9 @@ export function EmployeeForm({
   const { control, setError, setValue, getFieldState, clearErrors } = form;
   // Adding: a chosen photo is uploaded right after the employee is saved.
   const pendingPhoto = useRef<File | null>(null);
+  // Adding: the signed contract's pages (optional), attached to the first contract once saved.
+  const canManageContracts = useCan()('hr.contracts.manage');
+  const [signedPages, setSignedPages] = useState<File[]>([]);
 
   // One request at a time, and the button stays busy through the navigation after a save.
   const inFlight = useRef(false);
@@ -200,6 +205,14 @@ export function EmployeeForm({
           // from their edit page.
           const photo = await uploadEmployeePhoto(id, pendingPhoto.current);
           if (!photo.success && !photo.unauthorized) target = `${basePath}/${id}/edit`;
+        }
+        if (!employee && id && signedPages.length > 0 && !(await uploadSignedContract(id, signedPages))) {
+          // Saved either way; the pages that didn't go up are added from their Contracts tab.
+          await handleResponse({
+            response: { success: false, status: 0, message: t('employees.signedContract.failed') },
+            showErrorToast: true,
+          });
+          target = `${basePath}/${id}/contracts`;
         }
         router.push(target);
         router.refresh();
@@ -308,6 +321,7 @@ export function EmployeeForm({
             <>
               <DateField control={control} name="contractStart" label={t('employees.fields.contractStart')} hint={t('employees.hints.contract')} required />
               <DateField control={control} name="contractEnd" label={t('employees.fields.contractEnd')} required />
+              {canManageContracts ? <EmployeeSignedContractField files={signedPages} onChange={setSignedPages} disabled={busy} /> : null}
             </>
           )}
           <SwitchField control={control} name="usesBus" label={t('employees.fields.usesBus')} hint={t('employees.hints.usesBus')} className="sm:col-span-2" />

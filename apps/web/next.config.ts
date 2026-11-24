@@ -12,6 +12,14 @@ const nextConfig: NextConfig = {
   transpilePackages: ['@school-erp/shared'],
   poweredByHeader: false,
   pageExtensions: ['tsx', 'ts', 'jsx', 'js', ...E2E_PAGE_EXTENSIONS],
+  // Uploads go through Server Actions (`apis.ts`). Their body was capped at Next's 1 MB default, so
+  // a phone photo of a contract page (≤ 10 MB, CONTRACT_SIGNED_COPY_UPLOAD) — or a 2 MB employee
+  // photo — failed before reaching the API. 11 MB leaves room for the multipart envelope; the API
+  // still enforces each upload's own limit. The proxy reads the same body, so its cap matches.
+  experimental: {
+    serverActions: { bodySizeLimit: '11mb' },
+    proxyClientMaxBodySize: '11mb',
+  },
   // On every response. The Content-Security-Policy needs a nonce per page, so the proxy sets it
   // (src/proxy.ts; docs/ARCHITECTURE.md → Security).
   async headers() {

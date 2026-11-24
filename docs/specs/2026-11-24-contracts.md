@@ -30,6 +30,17 @@ overwrites the old contract: there is no history, no renewal decision, no notice
    term 1 (exams included), first day of term 2, the non-renewal deadline (30 April). The notice
    window and early termination read these dates.
 7. **Reminders** (§11) for the renewal season, below.
+8. **The signed copy** (owner, 2026-11-24, added after the first build: "I can't upload a photo of
+   the contract so I can see it for each employee"). Each contract holds its signed copy as one or
+   more files — PDF, JPG, PNG or WebP, each up to 10 MB — in upload order (a phone photo is one page
+   each). Uploaded from the Contracts tab's and the renewal screen's ⋯ ("Upload signed copy"), and
+   optionally while adding an employee, renewing one contract or making a new contract. A viewer
+   shows the pages in order (images inline and zoomable, a PDF in a new tab) with Download, Remove
+   (with a reason; kept) and "Add pages". Table `employee_contract_files` (contract, link, name,
+   type, size, page order, uploaded by / at, removed at / by / reason); API
+   `GET /hr/contracts/:id/signed-copy`, `POST /hr/contracts/:id/signed-copy` (multipart `file`, one
+   page), `POST /hr/contracts/:id/signed-copy/:fileId/remove` `{ reason }`; files in the sensitive
+   folder `contract-signed-copies`.
 
 ## Rules — the exact edit to §3 (employees), new section "Contracts"
 
@@ -165,6 +176,20 @@ Timings are settings, like the existing reminders (GUESS: 1 March, 7 days).
 22. Not renewed → ended → reactivated → new contract → the old row is no longer "To deactivate" and
     isn't carried over.
 23. The daily date move is recorded on the employee (System); it also runs once at start-up.
+24. Signed copy: two pages on the current contract, then renewed → the new contract has none; the
+    old one keeps its two.
+25. Signed copy: a page removed → a reason is required; the file and its row stay (who, when, why),
+    the page no longer shows or opens; removing it again → not found. Pages added later go after
+    every page the contract ever had.
+26. Signed copy: a stage head opens their own stage's copy (each page opened is recorded), gets "not
+    found" for another stage's, and can't upload or remove (403).
+27. Signed copy: on your own contract → refused (OWN_CONTRACT); an unlinked System admin may.
+28. Signed copy: a file that isn't a PDF, PNG, JPG or WebP by its content (a renamed file, an SVG) →
+    refused; over 10 MB → refused ("file too large"); a cancelled contract → refused
+    (CONTRACT_CANCELLED); past and upcoming contracts take one.
+29. Signed copy: an employee added with a signed contract → its pages go on their first contract,
+    after the save; a page that fails leaves the employee saved and says so (add it from the
+    Contracts tab). Bulk renew has no upload.
 
 ## Out of scope
 

@@ -127,6 +127,7 @@ export function toContract(
     decidedBy: row.decidedBy,
     decidedAt: row.decidedAt?.toISOString() ?? null,
     renewalOf: row.previousContract?.id ?? null,
+    signedCopyPages: row._count.signedCopyFiles,
     next: row.nextContract
       ? { id: row.nextContract.id, startsOn: toIsoDate(row.nextContract.startsOn), endsOn: toIsoDate(row.nextContract.endsOn) }
       : null,

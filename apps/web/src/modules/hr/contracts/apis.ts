@@ -3,6 +3,7 @@
 import type {
   Contract,
   ContractFileUpload,
+  ContractSignedCopy,
   ContractsPage,
   EarlyTerminationRequest,
   EmployeeContractsQuery,
@@ -186,5 +187,36 @@ export async function UPLOAD_CONTRACT_FILE(id: Uuid, form: FormData) {
     method: 'POST',
     body: form,
   });
+  return handleResponse({ response, showErrorToast: false });
+}
+
+/** `GET /hr/contracts/:id/signed-copy` — the signed copy's pages in upload order (removed ones aside). 404 outside scope. */
+export async function GET_SIGNED_COPY(id: Uuid) {
+  const response = await apiFetch<ContractSignedCopy>(`/hr/contracts/${encodeURIComponent(id)}/signed-copy`, {
+    method: 'GET',
+    next: { tags: [CONTRACTS_TAG] },
+  });
+  return handleResponse({ response, showErrorToast: false });
+}
+
+/**
+ * `POST /hr/contracts/:id/signed-copy` — multipart `file`: one page (PDF / PNG / JPG / WebP, ≤ 10 MB,
+ * checked on the client too), added at the end. Answers the pages after it.
+ */
+export async function ADD_SIGNED_COPY_PAGE(id: Uuid, form: FormData) {
+  const response = await apiFetch<ContractSignedCopy>(`/hr/contracts/${encodeURIComponent(id)}/signed-copy`, {
+    method: 'POST',
+    body: form,
+    revalidateTags: [CONTRACTS_TAG],
+  });
+  return handleResponse({ response, showErrorToast: false });
+}
+
+/** `POST /hr/contracts/:id/signed-copy/:fileId/remove` — soft (kept, with who and why); the reason is required. */
+export async function REMOVE_SIGNED_COPY_PAGE(id: Uuid, fileId: Uuid, reason: string) {
+  const response = await apiFetch<ContractSignedCopy>(
+    `/hr/contracts/${encodeURIComponent(id)}/signed-copy/${encodeURIComponent(fileId)}/remove`,
+    { method: 'POST', body: { reason }, revalidateTags: [CONTRACTS_TAG] },
+  );
   return handleResponse({ response, showErrorToast: false });
 }

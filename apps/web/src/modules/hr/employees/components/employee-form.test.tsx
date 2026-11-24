@@ -25,6 +25,7 @@ vi.mock('../apis', () => ({
 
 import type { Employee, EmployeeSummary } from '@school-erp/shared';
 import { CREATE_EMPLOYEE, GET_DEPARTMENTS, GET_EMPLOYEE_GRADES, GET_JOB_TITLES, GET_MANAGER_OPTIONS, GET_STAGES, UPDATE_EMPLOYEE } from '../apis';
+import { sessionWithout } from '@/test/render';
 import { departments, employee, grades, jobTitles, renderEmployees, stages, summary } from '../test/fixtures';
 
 const page = <T,>(data: T[]) => ({ success: true as const, status: 200, data, meta: { total: data.length, page: 1, limit: 20 } });
@@ -182,6 +183,22 @@ describe('EmployeeForm', () => {
     renderForm({ editing: employee });
     expect(screen.queryByRole('button', { name: /Contract start/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /Contract end/ })).toBeNull();
+  });
+
+  it('the optional signed contract: on the create form, for whoever may manage contracts', () => {
+    const { unmount } = renderForm();
+    expect(screen.getByRole('group', { name: 'Signed contract (optional)' })).toBeTruthy();
+    unmount();
+    const { unmount: unmountEdit } = renderForm({ editing: employee });
+    expect(screen.queryByRole('group', { name: 'Signed contract (optional)' })).toBeNull();
+    unmountEdit();
+    vi.mocked(GET_DEPARTMENTS).mockResolvedValue(page(departments) as never);
+    vi.mocked(GET_STAGES).mockResolvedValue(page(stages) as never);
+    vi.mocked(GET_JOB_TITLES).mockResolvedValue(page(jobTitles) as never);
+    vi.mocked(GET_EMPLOYEE_GRADES).mockResolvedValue(page(grades) as never);
+    managerOptions.mockResolvedValue(page([]) as never);
+    renderEmployees(<EmployeeForm basePath="/en/employees" />, 'en', sessionWithout('hr.contracts.manage'));
+    expect(screen.queryByRole('group', { name: 'Signed contract (optional)' })).toBeNull();
   });
 
   describe('probation end (§3, N0)', () => {

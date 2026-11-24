@@ -143,7 +143,9 @@
         "end": "Ended the contract of {entity}",
         "document_open": "Opened a contract document of {entity}",
         "cancel": "Cancelled a contract of {entity}",
-        "not_renew_undo": "Undid the not-renewing of {entity}'s contract"
+        "not_renew_undo": "Undid the not-renewing of {entity}'s contract",
+        "signed_copy_add": "Added a page to the signed contract of {entity}",
+        "signed_copy_remove": "Removed a page from the signed contract of {entity}"
       },
       "school_calendar": {
         "update": "Changed the school calendar for {entity}"
@@ -305,6 +307,8 @@
     "endReason": "End reason",
     "document": "Document",
     "nextContract": "Next contract",
+    "signedCopyPages": "Signed copy pages",
+    "signedCopyFile": "Signed copy page",
     "term1Start": "First day of term 1",
     "term1End": "Last day of term 1",
     "term2Start": "First day of term 2",

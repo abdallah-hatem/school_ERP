@@ -267,7 +267,14 @@ A stored file opens for exactly the people who may see the record it belongs to 
   their bytes (`checkDocumentUpload`, `%PDF-`; SVG refused). Uploaded with
   `POST /hr/contracts/:id/files` (it belongs to nobody — 404 — until a decision attaches it), it
   opens with `hr.contracts.view` covering the contract's employee, found through the stored link,
-  and each opening is a `hr.contract.document_open` entry.
+  and each opening is a `hr.contract.document_open` entry. The second is
+  **`contract-signed-copies`** (2026-11-24): the pages of a contract's signed copy, up to 10 MB each,
+  one `employee_contract_files` row per page (found by its unique `url`); a page removed (soft, with
+  a reason) opens for nobody.
+- **Uploads go through Server Actions**, whose body Next caps at 1 MB by default:
+  `next.config.ts` raises `serverActions.bodySizeLimit` (and the proxy's `proxyClientMaxBodySize`)
+  to 11 MB, the largest upload (10 MB) plus the multipart envelope. Each upload's own limit is still
+  the API's.
 - **Nothing is stored where nobody could open it:** `FileStorageService.save` refuses an
   unregistered folder, and the unit guard `file-folders.guard.spec.ts` fails CI on a
   `files.save(<FOLDER>, …)` whose folder is neither public nor registered.

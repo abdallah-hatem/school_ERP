@@ -206,6 +206,8 @@ export interface Contract {
   /** The renewal, not renewal or end: who decided, and when. */
   decidedBy: ContractActor | null;
   decidedAt: IsoDateTime | null;
+  /** How many pages its signed copy has (removed ones aside): "Signed copy (2)" / "No signed copy". */
+  signedCopyPages: number;
   /** The renewal's contract (`RENEWED` only). */
   next: { id: Uuid; startsOn: IsoDate; endsOn: IsoDate } | null;
   /** The contract this one renews (a renewal's next contract), or null: `cancelRefusal`. */
@@ -338,4 +340,34 @@ export interface NewContractRequest {
 /** `POST /hr/contracts/:id/files` (multipart `file`) → where the letter is stored. */
 export interface ContractFileUpload {
   fileUrl: string;
+}
+
+/** One page (file) of a contract's signed copy. */
+export interface ContractSignedCopyFile {
+  id: Uuid;
+  /** `/files/contract-signed-copies/…`: opened by whoever may see the contract; each opening is recorded. */
+  url: string;
+  /** The name it was uploaded with (`IMG_2041.jpg`). */
+  name: string;
+  mimeType: string;
+  sizeBytes: number;
+  /** Its place in the upload order, from 1 (removed pages leave gaps; the list is in this order). */
+  page: number;
+  uploadedBy: ContractActor | null;
+  uploadedAt: IsoDateTime;
+}
+
+/**
+ * `GET /hr/contracts/:id/signed-copy` — the pages in upload order (removed ones aside). Also the
+ * answer of adding (`POST …/signed-copy`, multipart `file`) and removing (`POST
+ * …/signed-copy/:fileId/remove` `{ reason }`) a page.
+ */
+export interface ContractSignedCopy {
+  contractId: Uuid;
+  files: ContractSignedCopyFile[];
+}
+
+/** `POST /hr/contracts/:id/signed-copy/:fileId/remove` — soft: the file is kept, with who and why. */
+export interface RemoveSignedCopyFileRequest {
+  reason: string;
 }

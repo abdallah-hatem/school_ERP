@@ -143,7 +143,9 @@
         "end": "إنهاء عقد {entity}",
         "document_open": "فتح مستند من عقد {entity}",
         "cancel": "إلغاء عقد للموظف {entity}",
-        "not_renew_undo": "التراجع عن عدم تجديد عقد {entity}"
+        "not_renew_undo": "التراجع عن عدم تجديد عقد {entity}",
+        "signed_copy_add": "إضافة صفحة إلى العقد الموقّع لـ {entity}",
+        "signed_copy_remove": "حذف صفحة من العقد الموقّع لـ {entity}"
       },
       "school_calendar": {
         "update": "تعديل تقويم المدرسة لعام {entity}"
@@ -305,6 +307,8 @@
     "endReason": "سبب الإنهاء",
     "document": "المستند",
     "nextContract": "العقد التالي",
+    "signedCopyPages": "صفحات العقد الموقّع",
+    "signedCopyFile": "صفحة العقد الموقّع",
     "term1Start": "أول يوم في الترم الأول",
     "term1End": "آخر يوم في الترم الأول",
     "term2Start": "أول يوم في الترم الثاني",
