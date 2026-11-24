@@ -1119,8 +1119,10 @@ The first module built, and the first demo for the client (payroll and penalties
   screen's permission and scope. The web draws them with small inline-SVG components
   (`modules/hr/dashboard/charts/`), no chart library.
 - **Contracts** (spec `docs/specs/2026-11-24-contracts.md`, `modules/hr/contracts`): one
-  `employee_contracts` row per contract year, kept forever (a partial unique index allows one
-  `ACTIVE` per employee); the employee's `contract_start` / `contract_end` mirror the current one
+  `employee_contracts` row per contract year, kept forever (`employee_id` is `ON DELETE RESTRICT`;
+  test cleanups delete contracts first, `test/helpers/employees.ts`). A partial unique index allows
+  one `ACTIVE` per employee — **it lives only in SQL** (Prisma can't declare it), so a generated
+  migration that drops `employee_contracts_one_active_per_employee` must be edited; the employee's `contract_start` / `contract_end` mirror the current one
   and are written only by `ContractsService` (the employee DTO no longer takes them on an edit;
   `EmployeesService.create` writes the first contract through `ContractRecords`, which exists apart
   from `ContractsService` so the employees service can use it without a cycle). Every decision
@@ -1133,7 +1135,14 @@ The first module built, and the first demo for the client (payroll and penalties
   Pure rules (decisions, notice timing, the early termination window, renewal dates, the paid
   month check) are in `packages/shared/src/rules/contracts.ts`. The school calendar is HR's
   `school_calendars` table, one row per contract year (`GET/PUT /hr/settings/school-calendar/:year`);
-  a contract reads the calendar of the year it started in.
+  a contract reads, per purpose, the calendar whose term falls inside it (`pickCalendar`: term 2 for
+  the notice window, term 1 for early termination), returned on each row as `calendars`. A renewed
+  contract can be ended (its next contract becomes `CANCELLED`); a new contract is
+  `POST /hr/employees/:id/contracts`; the school's not-renewing is undone with
+  `/:id/not-renewed/undo`. Writes check both `hr.contracts.view` and `hr.contracts.manage` scopes.
+  The current season's list carries over earlier years' rows still needing action. Withdrawing a
+  notice or undoing a not-renewing sets `reminders_rearmed_at`, which gives "Contract ends soon" a
+  new dedupe key (the earlier item was resolved by the decision).
 - **Events HR publishes** (for higher modules to react): `hr.employee.hired`,
   `hr.employee.updated` (fire-and-forget), `hr.employee.deactivated` and `hr.payroll.approved`
   (must-deliver). Details: `docs/EVENTS.md`.

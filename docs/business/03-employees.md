@@ -120,7 +120,15 @@ Spec `docs/specs/2026-11-24-contracts.md` (approved by the owner as drafted, 202
   contract-end reminder already chases it.
 - **GUESS** — Not renewed → on the day after the end, the employee appears in a "To deactivate" list;
   HR deactivates them (one click, one or many). No automatic deactivation, because payroll for the
-  last month may still be open.
+  last month may still be open. A contract of an earlier year that still needs action ("To
+  deactivate", or "Ended, no decision") stays on the current season's screen, marked with its year,
+  until it is handled — it doesn't disappear on 1 June.
+- **GUESS** (review, 2026-11-24) — **The school changes its mind:** its own "not renewing" can be undone,
+  with a reason, while the contract hasn't ended; the contract is undecided again and its
+  contract-end reminder comes back. After the end, or for an employee who was **reactivated**, HR
+  gives the employee a **new contract** — only an active employee with no active contract: from a
+  start date (default 1 June of the current contract year) for one year, never overlapping their
+  other contracts.
 - **GUESS** — An employee's non-renewal notice is recorded by HR with the date it was received and
   the scanned letter. The regulations' window is the first day of term 2 to 30 April; a notice
   received **outside** it (before term 2 or after 30 April) is still recorded, marked **"Late"** or
@@ -135,11 +143,14 @@ Spec `docs/specs/2026-11-24-contracts.md` (approved by the owner as drafted, 202
 - **GUESS** — Ending a contract for another reason (dismissal under Article 148, resignation by
   agreement, death, other) takes the reason, an end date (today or later, not before the contract
   start, not after its end) and a note; an attachment is optional. An end that would cut into a
-  month whose payroll is approved is refused — the paid month stands. Ending a contract ends the
+  month whose payroll is approved is refused — the paid month stands. A contract already **renewed**
+  can be ended too (a dismissal or death in April after the renewal): next year's contract, which
+  hasn't started, is **cancelled** with it (kept, never deleted, shown as "Cancelled"). Ending a contract ends the
   employee's future reminders (contract, probation). Dismissal under Article 148 can later link to
   an investigation (Planned).
-- **GUESS** — The school calendar (Settings, §7) for the year a contract started in gives its
-  dates: the notice window and the end of term 1. When the year's calendar isn't set, notices and
+- **GUESS** — The school calendar (Settings, §7) gives a contract its dates: the notice window from
+  the year whose term 2 falls inside the contract, the end of term 1 from the year whose term 1
+  does (for a 1 June – 31 May contract, its own year for both). When the year's calendar isn't set, notices and
   early termination requests are still recorded, marked "Calendar not set", and the renewal screen
   shows a banner linking to the setting; an early termination is approved only once it's set.
 - **DECIDED** (existing rule, §2) — Nobody acts on their own contract: renew, not renew, record a
@@ -147,8 +158,9 @@ Spec `docs/specs/2026-11-24-contracts.md` (approved by the owner as drafted, 202
 - **GUESS** — Deemed resignation (Article 166: over 20 days' unexcused absence in a year or over 10
   in a row, after a registered warning) is **not** in this module; it needs attendance and comes
   with it.
-- **DECIDED** — Every write is audited (contract created, renewed, not renewed, notice recorded or
-  withdrawn, early termination requested / approved / rejected, contract ended, calendar changed),
+- **DECIDED** — Every write is audited (contract created, renewed, not renewed or undone, notice
+  recorded or withdrawn, early termination requested / approved / rejected, contract ended or
+  cancelled, calendar changed),
   and opening a contract document (a letter, an attachment) is recorded too.
 - **Screens** — the employee page's **Contracts** tab (the history and the actions on the current
   one) and **HR → Contracts**, the renewal season of one contract year: five tiles (ending this

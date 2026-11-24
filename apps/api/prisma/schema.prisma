@@ -852,8 +852,9 @@ model PenaltyRecord {
 ///
 /// WARNING: "one ACTIVE contract per employee" is a partial unique index that exists only in SQL
 /// (`employee_contracts_one_active_per_employee`, migration 20261124100000_employee_contracts) —
-/// Prisma can't declare it. `prisma migrate dev --create-only` would generate a DROP INDEX for it:
-/// remove that line from any new migration.
+/// Prisma can't declare it and doesn't see it: never drop it, and recreate it in any migration
+/// that rebuilds this table or its `employee_id` / `status` columns (check every generated
+/// migration that touches the table for a DROP INDEX of it).
 model EmployeeContract {
   id                           String                  @id @default(uuid()) @db.Uuid
   employeeId                   String                  @map("employee_id") @db.Uuid
