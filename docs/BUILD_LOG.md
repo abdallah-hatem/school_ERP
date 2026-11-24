@@ -639,6 +639,12 @@ phase live in `docs/build-log/`.
   answers JSON 404 (the fallback `global-not-found` could never run and was removed).
 ## Next up
 
+- **Students module, then the clinic** (owner, 2026-11-24): the clinic treats students (and staff), so the
+  students module (student records, guardians, class placement, on top of academics' basic structure)
+  is planned first, then the clinic on top of it. Planning started 2026-11-24; spec not written yet.
+- **Fingerprint scanner for staff arrival and leaving** (owner, 2026-11-24): staff attendance comes from
+  the device and feeds lateness (§5). Open: device brand/model and how it connects.
+
 - Pay buttons for unlinked HR accounts: hide or disable Approve / adjust / lateness edits with the
   reason, instead of refusing on click.
 - Users table fits its card with no spare width since #258 (names and emails truncate); give it room
