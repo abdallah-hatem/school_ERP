@@ -314,7 +314,7 @@ describe('ContractsList (renewals, option A)', () => {
     expect(within(rowOf('Mona Khalil')).getByText('From 2025/26')).toBeTruthy();
     expect(rowOf('Mona Khalil').textContent).toContain('Ended, no decision');
     const tiles = screen.getByRole('region', { name: 'Contracts by decision' });
-    expect(within(tiles).getByRole('button', { name: /To deactivate/ }).textContent).toContain('2 from earlier years');
+    expect(within(tiles).getByRole('button', { name: /To deactivate/ }).textContent).toContain('Incl. 2 still open from earlier years');
   });
 
   it('review 2 — end a renewed contract warns about the cancelled renewal', async () => {

@@ -27,12 +27,12 @@
     "toDeactivate": "To deactivate",
     "toDeactivateSub": "Not renewed or ended, still active",
     "carriedOverSub": {
-      "zero": "{count} from earlier years",
-      "one": "{count} from an earlier year",
-      "two": "{count} from earlier years",
-      "few": "{count} from earlier years",
-      "many": "{count} from earlier years",
-      "other": "{count} from earlier years"
+      "zero": "No open rows from earlier years",
+      "one": "Incl. {count} still open from an earlier year",
+      "two": "Incl. {count} still open from earlier years",
+      "few": "Incl. {count} still open from earlier years",
+      "many": "Incl. {count} still open from earlier years",
+      "other": "Incl. {count} still open from earlier years"
     },
     "showing": "Showing only these"
   },
