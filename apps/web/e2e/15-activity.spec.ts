@@ -6,7 +6,9 @@ import {
   expectWorkingDaysEntry,
   firstEntry,
   renameDepartmentAr,
+  hideSmokeGrade,
   setEmployeeGrade,
+  smokeGrade,
   shootSkeleton,
   someDepartment,
 } from './support/activity';
@@ -89,8 +91,10 @@ for (const locale of ['en', 'ar'] as const) {
     page,
   }, info) => {
     const employee = await activeEmployee();
-    const grade = `Smoke ${locale} ${Date.now()}`;
-    await setEmployeeGrade(employee.id, grade);
+    const grade = await smokeGrade(locale);
+    // Left on it by an earlier run: clear it first, so this edit is a change.
+    if (employee.employeeGrade?.id === grade.id) await setEmployeeGrade(employee.id, null);
+    await setEmployeeGrade(employee.id, grade.id);
     try {
       await signIn(page, locale);
       await page.goto(`/${locale}/employees/${employee.id}`);
@@ -99,13 +103,14 @@ for (const locale of ['en', 'ar'] as const) {
       await expect(page).toHaveURL(new RegExp(`/employees/${employee.id}/history$`));
       await expect(page.getByRole('heading', { level: 2, name: t(locale, 'audit.history.title') })).toBeVisible();
       // T28 records `hr.employee.update` in the edit's transaction: the entry is there at once.
-      await expectGradeEntry(firstEntry(page), locale, grade);
+      await expectGradeEntry(firstEntry(page), locale, grade.name);
       await expectNoHorizontalScroll(page);
       await settle(page);
       await shoot(page, info, `history-${locale}-desktop`);
       await shootSkeleton(browser, page, info, `/${locale}/employees/${employee.id}/history`, `history-loading-${locale}-desktop`);
     } finally {
-      await setEmployeeGrade(employee.id, employee.grade);
+      await setEmployeeGrade(employee.id, employee.employeeGrade?.id ?? null);
+      await hideSmokeGrade(grade.id);
     }
   });
 }

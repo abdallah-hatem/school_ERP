@@ -7,6 +7,7 @@ import {
   formatContractYear,
   PAGINATION,
   renewedContractDates,
+  settingsHref,
   type Contract,
   type ContractDecisionFilter,
   type ContractTotals,
@@ -289,7 +290,7 @@ export function ContractsList({
           </div>
           {can('hr.settings.view') ? (
             <Button asChild variant="secondary" className="cursor-pointer">
-              <Link href={`/${locale}/settings?section=hrRules`}>
+              <Link href={settingsHref(locale, 'hrRules', 'calendar')}>
                 <SettingsIcon />
                 {t('contracts.calendar.set')}
               </Link>

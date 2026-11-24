@@ -12,6 +12,7 @@ import { DomainEvents } from '../../src/core/events';
 import {
   DepartmentsService,
   EmployeesService,
+  EmployeeGradesService,
   JobTitlesService,
   LatenessService,
   MonthLockService,
@@ -22,7 +23,7 @@ import {
 import { seedAdmin, seedStageHeads } from './admin';
 import { EMPLOYEES, generatedFields } from './data/employees';
 import { levelsOf, loadSeedData } from './data/load';
-import { DEPARTMENTS, JOB_TITLES, NO_STAGE_KEY, STAGES, type SeedListItem } from './data/lists';
+import { DEPARTMENTS, EMPLOYEE_GRADE_OF_TITLE, EMPLOYEE_GRADES, JOB_TITLES, NO_STAGE_KEY, STAGES, type SeedListItem } from './data/lists';
 import { HISTORY_MONTHS } from './data/history';
 import { ADJUSTMENTS, DEMO_MONTH, LATENESS, PENALTIES, STAGE_HEADS } from './data/november';
 import type { SeedCatalogue, SeedData } from './data/types';
@@ -123,20 +124,26 @@ async function seedAll(app: INestApplicationContext): Promise<SeedSummary> {
       ),
   );
   await ensureManagingTitles(get(JobTitlesService), jobTitles, admin.id);
+  const grades = await ensureList(EMPLOYEE_GRADES, db.employeeGrade.findMany({ select: listSelect }), (item) =>
+    get(EmployeeGradesService).create({ nameEn: item.nameEn, nameAr: item.nameAr }, admin.id),
+  );
   log(
-    `lists ready (${stages.size} stages, ${departments.size} departments, ${jobTitles.size} job titles)`,
+    `lists ready (${stages.size} stages, ${departments.size} departments, ${jobTitles.size} job titles, ${grades.size} employee grades)`,
   );
 
   const employees = get(EmployeesService);
   const employeeIds = new Map<number, string>();
   let created = 0;
+  // Demo grades go on employees the seed creates; existing ones get them only once (below).
+  const gradeBackfill = (await db.employee.count({ where: { employeeGradeId: { not: null } } })) === 0;
   for (const e of EMPLOYEES) {
     const fields = generatedFields(e);
     const existing = await db.employee.findUnique({
       where: { nationalId: fields.nationalId },
-      select: { id: true },
+      select: { id: true, employeeGradeId: true },
     });
     let id = existing?.id;
+    const employeeGradeId = grades.get(EMPLOYEE_GRADE_OF_TITLE[e.jobTitle])!;
     if (!id) {
       const managerId = e.manager ? employeeIds.get(e.manager) : undefined;
       id = (
@@ -154,7 +161,7 @@ async function seedAll(app: INestApplicationContext): Promise<SeedSummary> {
           departmentId: departments.get(e.department)!,
           jobTitleId: jobTitles.get(e.jobTitle)!,
           managerId: managerId ?? null,
-          grade: null,
+          employeeGradeId,
           workSystem: e.workSystem,
           basicSalary: fields.basicSalary,
           fingerprintId: fields.fingerprintId,
@@ -170,6 +177,9 @@ async function seedAll(app: INestApplicationContext): Promise<SeedSummary> {
       const has = await db.employeeStage.count({ where: { employeeId: id } });
       if (has === 0) await employees.update(id, { otherStageIds: e.otherStages.map((k) => stages.get(k)!) });
     }
+    // A database seeded before grades were a list gets the demo grades once — only while no employee
+    // has any grade — so a later run never re-grades someone the school changed or cleared.
+    if (existing && gradeBackfill && !existing.employeeGradeId) await employees.update(id, { employeeGradeId });
     employeeIds.set(e.n, id);
     if (e.inactive) await employees.deactivate(id);
   }

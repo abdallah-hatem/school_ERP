@@ -239,11 +239,11 @@ describe('ContractsList (renewals, option A)', () => {
     expect(table().queryByRole('button', { name: 'Renew' })).toBeNull();
   });
 
-  it('the calendar not set: the banner links to Settings → HR rules', () => {
+  it('the calendar not set: the banner links to Settings → HR rules → School calendar', () => {
     renderList({ calendar: null });
     const banner = screen.getByTestId('calendar-missing');
     expect(banner.textContent).toContain("The school calendar for 2026/27 isn't set");
-    expect(within(banner).getByRole('link', { name: 'Set the calendar' }).getAttribute('href')).toBe('/en/settings?section=hrRules');
+    expect(within(banner).getByRole('link', { name: 'Set the calendar' }).getAttribute('href')).toBe('/en/settings?section=hrRules&part=calendar');
   });
 
   it('reads in Arabic: the decision pills and the count', () => {

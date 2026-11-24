@@ -2,7 +2,7 @@ import { sectionMetadata } from '@/core/navigation/section-metadata';
 import { notFound } from 'next/navigation';
 import { requireScreen } from '@/core/auth';
 import { EmployeeForm, EmployeesI18n } from '@/modules/hr/employees';
-import { GET_DEPARTMENTS, GET_JOB_TITLES, GET_MANAGER_OPTIONS, GET_STAGES } from '@/modules/hr/employees/apis';
+import { GET_DEPARTMENTS, GET_EMPLOYEE_GRADES, GET_JOB_TITLES, GET_MANAGER_OPTIONS, GET_STAGES } from '@/modules/hr/employees/apis';
 import { loadEmployee } from '@/modules/hr/employees/lib/load-employee';
 import { isLocale } from '@/shared/lib/i18n';
 
@@ -23,10 +23,11 @@ export default async function EditEmployeePage({ params }: { params: Promise<{ l
     const item = r.success && Array.isArray(r.data) ? (r.data[0] as { isActive?: boolean } | undefined) : undefined;
     return item ? item.isActive === false : false;
   };
-  const [stage, department, jobTitle] = await Promise.all([
+  const [stage, department, jobTitle, employeeGrade] = await Promise.all([
     hiddenOf(GET_STAGES({ ids: [employee.stage.id], includeHidden: true })),
     hiddenOf(GET_DEPARTMENTS({ ids: [employee.department.id], includeHidden: true })),
     hiddenOf(GET_JOB_TITLES({ ids: [employee.jobTitle.id], includeHidden: true })),
+    employee.employeeGrade ? hiddenOf(GET_EMPLOYEE_GRADES({ ids: [employee.employeeGrade.id], includeHidden: true })) : false,
   ]);
 
   return (
@@ -34,7 +35,7 @@ export default async function EditEmployeePage({ params }: { params: Promise<{ l
       <EmployeeForm
         basePath={`/${locale}/employees`}
         employee={employee}
-        currentHidden={{ stage, department, jobTitle }}
+        currentHidden={{ stage, department, jobTitle, employeeGrade }}
         hasManagerCandidates={!managers.success || (managers.meta?.total ?? 0) > 0}
       />
     </EmployeesI18n>

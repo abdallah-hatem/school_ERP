@@ -256,12 +256,12 @@ async function readPaths(): Promise<Record<SkeletonScreenName, string | null>> {
     const plain = users.find((u) => u.id !== admin.id && !u.mustChangePassword) ?? (await settledUser(api, roles.get('hr_officer')?.id ?? ''));
     const role = roles.get('direct_manager') ?? [...roles.values()][0]!;
     // The History tab compares its pagination too, which shows only with entries: an employee
-    // has one from their first write (T28); on an older database, a grade edit put back adds two.
+    // has one from their first write (T28); on an older database, a bus edit put back adds two.
     const history = await api.get<unknown[]>(`/audit/records/employee/${employee.id}`, { limit: 1 });
     if (history.length === 0) {
-      const { grade } = await api.get<{ grade: string | null }>(`/hr/employees/${employee.id}`);
-      await api.patch(`/hr/employees/${employee.id}`, { grade: 'Skeleton check' });
-      await api.patch(`/hr/employees/${employee.id}`, { grade });
+      const { usesBus } = await api.get<{ usesBus: boolean }>(`/hr/employees/${employee.id}`);
+      await api.patch(`/hr/employees/${employee.id}`, { usesBus: !usesBus });
+      await api.patch(`/hr/employees/${employee.id}`, { usesBus });
     }
     // Approved payroll: a month still pending transfer, as its skeleton draws it (the pill and
     // the four buttons a pending month shows the admin); none pending, no month check.

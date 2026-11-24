@@ -11,12 +11,25 @@ import { useLayoutEffect, useRef, type RefObject } from 'react';
  */
 export function revealTop(el: HTMLElement | null): void {
   if (!el) return;
-  const bar = document.querySelector<HTMLElement>('[data-app-topbar]');
-  const barHeight = bar && getComputedStyle(bar).display !== 'none' ? bar.getBoundingClientRect().height : 0;
-  const offset = barHeight + 16;
+  const offset = topOffset();
   const top = el.getBoundingClientRect().top;
   if (top >= offset) return;
   window.scrollTo({ top: Math.max(0, window.scrollY + top - offset), behavior: 'instant' });
+}
+
+/**
+ * Scrolls so `el`'s top sits just under the phone's sticky top bar (or 16px from the top), at once —
+ * for a link that lands on one card of a long page (Settings' `?part=`).
+ */
+export function scrollToTopOf(el: HTMLElement): void {
+  const top = el.getBoundingClientRect().top;
+  window.scrollTo({ top: Math.max(0, window.scrollY + top - topOffset()), behavior: 'instant' });
+}
+
+function topOffset(): number {
+  const bar = document.querySelector<HTMLElement>('[data-app-topbar]');
+  const barHeight = bar && getComputedStyle(bar).display !== 'none' ? bar.getBoundingClientRect().height : 0;
+  return barHeight + 16;
 }
 
 /**

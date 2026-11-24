@@ -7,7 +7,7 @@ Who did what, to which record, and when — for the whole system. Spec:
   sign-ins; a sign-in locked by too many wrong passwords (with the email typed, §2; attempts refused
   while locked count as failed sign-ins) and its unlock by a System admin; users (create, edit, deactivate, reactivate, temporary password, own password change)
   and roles (create, edit, delete); school settings, logo and stages; employees (create, edit, deactivate, reactivate);
-  departments and job titles; HR rules and the penalty catalogue; penalties (record, the stage
+  departments, job titles and employee grades; HR rules and the penalty catalogue; penalties (record, the stage
   review's approval, HR's approval, a rejection at either step, cancel — owner 2026-11-21); monthly lateness (per employee, minutes before and after); payroll runs (create,
   recalculate, approve) and adjustments (add, remove).
 - **DECIDED** — Each entry keeps who did it (their name as it was then), when, from which IP and

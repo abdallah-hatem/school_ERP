@@ -4,7 +4,7 @@ Everything here is changed by the school in the Settings screen, takes effect im
 affects only **draft** payroll runs (approved runs never change).
 
 - **DECIDED** — **Change history:** every change to school settings, HR rules, lists (stages,
-  departments, job titles) and the penalty catalogue is recorded: what changed, the old and new
+  departments, job titles, employee grades) and the penalty catalogue is recorded: what changed, the old and new
   value, who changed it and when. The history is viewed on the Activity page (§9), newest first,
   page by page: Settings' **View change history** opens it filtered to settings (owner, 2026-11-17 —
   the separate Change history section was removed).
@@ -39,7 +39,7 @@ affects only **draft** payroll runs (approved runs never change).
 | Default probation length (fills a new employee's probation end, §3) | 3 months; whole months 0–6, 0 = no probation | DECIDED (owner, 2026-11-18) — Settings → HR rules → Employees |
 | Penalty catalogue | The school's 4 tables (72 violations) | DECIDED |
 | Violation "Once per day" (§4) | On, except violations that repeat within a day (late to class, leaving a task early…) | DECIDED (owner, 2026-11-18) |
-| Stages (school structure), departments, job titles | From the seed | DECIDED |
+| Stages (school structure), departments, job titles, employee grades | From the seed (employee grades: Pay grade 1–4 as generic examples, owner 2026-11-24) | DECIDED |
 | Brand colours | Teal and sunflower (the "Campus" design), fixed for now | DECIDED |
 | Currency | EGP | DECIDED |
 | Payroll tax rule (income-tax slices, martyrs' fund, insurance share) | See §10 | GUESS — Settings → Accounting |

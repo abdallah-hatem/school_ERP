@@ -147,7 +147,7 @@ function HrRulesForm({ initial, onSaved }: { initial: HrSettings; onSaved: (next
       }}
       className="gap-6"
     >
-      <SectionPanel title={t('settings.hrRules.lateness.title')} description={t('settings.hrRules.lateness.description')}>
+      <SectionPanel part="lateness" title={t('settings.hrRules.lateness.title')} description={t('settings.hrRules.lateness.description')}>
         <div className="grid gap-5 md:grid-cols-2">
           <NumberField
             control={form.control}
@@ -223,7 +223,7 @@ function HrRulesForm({ initial, onSaved }: { initial: HrSettings; onSaved: (next
         <LatenessExample control={form.control} />
       </SectionPanel>
 
-      <SectionPanel title={t('settings.hrRules.payroll.title')} description={t('settings.hrRules.payroll.description')}>
+      <SectionPanel part="payroll" title={t('settings.hrRules.payroll.title')} description={t('settings.hrRules.payroll.description')}>
         <div className="grid gap-5 md:grid-cols-2">
           <NumberField
             control={form.control}
@@ -252,7 +252,7 @@ function HrRulesForm({ initial, onSaved }: { initial: HrSettings; onSaved: (next
         <p className="text-xs text-muted-foreground">{t('settings.hrRules.payroll.partTimeHint')}</p>
       </SectionPanel>
 
-      <SectionPanel title={t('settings.hrRules.penalties.title')} description={t('settings.hrRules.penalties.description')}>
+      <SectionPanel part="penalties" title={t('settings.hrRules.penalties.title')} description={t('settings.hrRules.penalties.description')}>
         <div className="grid gap-5 md:grid-cols-2">
           <SelectField
             control={form.control}
@@ -265,7 +265,7 @@ function HrRulesForm({ initial, onSaved }: { initial: HrSettings; onSaved: (next
         </div>
       </SectionPanel>
 
-      <SectionPanel title={t('settings.hrRules.employees.title')} description={t('settings.hrRules.employees.description')}>
+      <SectionPanel part="employees" title={t('settings.hrRules.employees.title')} description={t('settings.hrRules.employees.description')}>
         <div className="grid gap-5 md:grid-cols-2">
           <NumberField
             control={form.control}
