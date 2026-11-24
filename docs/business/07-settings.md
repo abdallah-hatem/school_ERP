@@ -30,6 +30,9 @@ affects only **draft** payroll runs (approved runs never change).
 | Default language | English | DECIDED (owner, 2026-11-17) |
 | Work start / end time | 7:30 / 15:00 | DECIDED |
 | Working days | Sunday – Thursday | GUESS |
+| School address (English, Arabic) | Empty (the "School address" field prints empty until set) | GUESS (spec 2026-11-24-contract-templates) — Settings → School; up to 300 characters each |
+| School signatory: name and title (English, Arabic) — who signs contracts for the school | Empty (the "School representative" field prints empty until set) | DECIDED (owner, 2026-11-24) — one signatory, Settings → School; up to 100 characters each |
+| Contract templates | One generic sample, "Full-time contract", default for full-time | GUESS — Settings → HR → Contract templates, Manage contract templates; the school's real text is entered at setup (never in code) |
 | Lateness grace minutes | 0 | GUESS |
 | Lateness steps | 1st hour ¼ day, 2nd hour ½ day | DECIDED |
 | Lateness cost per hour beyond the steps | ½ day | GUESS |

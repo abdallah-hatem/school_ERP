@@ -1,0 +1,40 @@
+# The API image (docs/ARCHITECTURE.md → Deployment model): one image per version, run per school.
+# Build from the repository root:  docker build -f deploy/docker/Dockerfile.api -t school-erp-api .
+# Self-hosted schools receive this built image, never the source.
+
+# ── build ───────────────────────────────────────────────────────────────────────────────────────
+FROM node:22-bookworm-slim AS build
+WORKDIR /repo
+RUN apt-get update -y && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/* \
+  && corepack enable
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json turbo.json ./
+COPY packages/shared/package.json packages/shared/
+COPY apps/api/package.json apps/api/
+COPY apps/web/package.json apps/web/
+RUN pnpm install --frozen-lockfile --filter api... --ignore-scripts
+COPY packages/shared packages/shared
+COPY apps/api apps/api
+RUN pnpm --filter @school-erp/shared build \
+  && pnpm --filter api exec prisma generate \
+  && pnpm --filter api build \
+  && pnpm deploy --filter api --prod --legacy /out \
+  && cp -r apps/api/dist apps/api/prisma /out/ \
+  && cd /out && /repo/apps/api/node_modules/.bin/prisma generate --schema /out/prisma/schema.prisma
+
+# ── run ─────────────────────────────────────────────────────────────────────────────────────────
+FROM node:22-bookworm-slim
+ENV NODE_ENV=production \
+    # Contract PDFs (contract templates spec, owner 2026-11-24): Chromium's headless shell, installed
+    # with its system libraries where playwright-core looks for it. JS and network are off per
+    # render; the fonts are bundled in node_modules (@fontsource, OFL).
+    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+WORKDIR /app
+COPY --from=build /out ./
+RUN apt-get update -y && apt-get install -y --no-install-recommends openssl \
+  && node node_modules/playwright-core/cli.js install --with-deps chromium-headless-shell \
+  && rm -rf /var/lib/apt/lists/* \
+  && chown -R node:node /app
+USER node
+EXPOSE 3001
+# Migrations run per school as a release step (`prisma migrate deploy`, docs/ARCHITECTURE.md), not on start.
+CMD ["node", "dist/main"]

@@ -268,12 +268,34 @@ A stored file opens for exactly the people who may see the record it belongs to 
   `POST /hr/contracts/:id/files` (it belongs to nobody — 404 — until a decision attaches it), it
   opens with `hr.contracts.view` covering the contract's employee, found through the stored link,
   and each opening is a `hr.contract.document_open` entry.
+- **`contract-copies`** (contract templates spec, 2026-11-25): the PDF of each printed contract copy,
+  made by the API itself (never uploaded). It opens with `hr.contracts.view` covering the copy's
+  employee — plus `hr.employees.view_salary` covering them for a copy that holds a salary — found
+  through the stored link (`contract_copies.file_url`); each opening is a `hr.contract.copy_open`
+  entry. The stored name is a random UUID; the download name is built from the record.
 - **Nothing is stored where nobody could open it:** `FileStorageService.save` refuses an
   unregistered folder, and the unit guard `file-folders.guard.spec.ts` fails CI on a
   `files.save(<FOLDER>, …)` whose folder is neither public nor registered.
 - **Checked by:** `file-access.e2e-spec.ts` (a stage head: their stage's photos, 404 for another
   stage's; self: own photo only; no permission: 404; signed out: 401; unknown folder: 404; the logo
   public), `file-folders.spec.ts` (the registry) and the guard.
+
+### Contract PDFs (headless Chromium)
+
+Printed contracts (spec `docs/specs/2026-11-24-contract-templates.md`, owner 2026-11-24) are made
+on the server by `PdfRenderer` (`apps/api/src/common/pdf/`) with `playwright-core` and Chromium's
+headless shell: the page is the shared renderer's HTML (`renderContractDocument`, escaped, the same
+function and CSS as the web preview) served from memory, with **JavaScript off and every request
+blocked** (fonts — IBM Plex Sans Arabic, Plus Jakarta Sans, OFL, bundled from `@fontsource` — and
+the logo are data URLs; the page has its own `default-src 'none'` CSP). One browser is kept warm;
+**at most `PDF_RENDER_CONCURRENCY` (2) renders at once**, the rest queue; a render over
+`PDF_RENDER_TIMEOUT_MS` (20 s) fails with `PDF_RENDER_FAILED` and nothing is kept. The render runs
+outside any transaction (`POST /hr/contracts/:id/copies` is `@NotAudited` for this reason and records
+`hr.contract.copy_print` in the copy's own transaction). `PDF_CHROMIUM_PATH` names the browser; unset,
+playwright-core's own download is used (dev: `pnpm --filter api exec playwright-core install
+chromium-headless-shell`; CI installs it in the API e2e job). The image (`deploy/docker/Dockerfile.api`)
+installs the headless shell with its libraries (~+150–250 MB). JSON bodies are accepted up to 1 MB
+(a template carries two texts of up to 200 KB).
 
 ### Scanning (`.github/workflows/security.yml`)
 

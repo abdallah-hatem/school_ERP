@@ -201,6 +201,44 @@ Spec `docs/specs/2026-11-24-contracts.md` (approved by the owner as drafted, 202
   calculating compensation, employees sending notices themselves (self-service), investigations,
   part-time contracts.
 
+### Contract templates and printed copies
+
+Spec `docs/specs/2026-11-24-contract-templates.md` (approved by the owner as drafted, 2026-11-24;
+mockup option A).
+
+- **GUESS** — **Templates** live in Settings → HR → Contract templates: several, each with an English
+  and an Arabic name (unique in each language, up to 100 characters), an Arabic text (required) and
+  an optional English text, up to 200 KB. A template may be the **default for one work system**;
+  making it the default takes the mark from the template that had it. The seed brings one generic
+  sample, "Full-time contract", default for full-time; the school's real text is entered at setup.
+- **DECIDED** (owner's brief) — A template is **never deleted, only hidden**: out of the print
+  picker, its copies kept, its default mark lost for good (showing it again doesn't bring it back).
+  **Editing never changes copies already printed**: each save that changes a text is a new version
+  (v1, v2, …), kept forever; renaming, hiding and the default mark are not versions. Two people
+  saving the same template: the second is refused, never a silent overwrite.
+- **GUESS** — **Fields** are chips from the Fields panel, never typed: 19 fields from the employee
+  file, the contract (this contract's own dates as signed; the employee's salary **today**, in
+  figures and in words), school settings (name, address, representative) and today's date, filled
+  in the copy's language with Western digits ("1 يونيو 2026", "9,500 جنيه", "EGP 9,500"). An empty
+  field prints as a dotted line and the print dialog warns (printing isn't blocked). The "no stage"
+  entry prints as an empty Stage.
+- **DECIDED** (owner's brief) — **Optional phrases** (`[ … ]`) print only when every field inside
+  has a value; otherwise the whole phrase is left out and the dialog says so. GUESS: a phrase needs a
+  field and can't hold another phrase.
+- **GUESS** — **Printing** from the employee's Contracts tab or the renewal list's ⋯ menu: pick a
+  template (the work system's default preselected) and the copy's language (English only when the
+  template has English text), see the filled A4 pages, **Edit text** for this copy only (field values
+  stay locked), then Print or Download PDF (on a phone, the share sheet). The current, an upcoming
+  (a renewal's next contract) and an ended contract print; a cancelled one doesn't. If anything
+  changed since the preview (the template saved again, a value changed), printing is refused and the
+  preview reloads.
+- **DECIDED** (owner, 2026-11-24) — The **PDF is made on the server** (headless Chromium, the app's
+  fonts bundled), so a reprint is identical and the phone gets a real file. **Every printed copy is
+  kept on its contract** — template and version, language, the filled document as printed, its PDF,
+  who printed it and when, whether its text was edited — and never changes afterwards; **Open**
+  serves the same file. Copies are never deleted. The signed scan (contracts round 3) links to the
+  printed copy that was signed.
+
 ## Rules
 
 - **DECIDED** — An employee is never deleted. They are **deactivated**, keeping all history.

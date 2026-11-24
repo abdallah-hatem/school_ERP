@@ -137,6 +137,18 @@ jobs:
         if: needs.changes.outputs.docs_only != 'true'
         run: scripts/e2e-db.sh ci
 
+      # Contract PDFs are made with headless Chromium (playwright-core); the API e2e renders real ones.
+      - name: Playwright browser cache (API)
+        if: needs.changes.outputs.docs_only != 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-api-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install Chromium headless shell (contract PDFs)
+        if: needs.changes.outputs.docs_only != 'true'
+        run: pnpm --filter api exec playwright-core install --with-deps chromium-headless-shell
+
       # setup-env.ts supplies the throwaway JWT secret and seed password; PORT 0 picks a free port.
       - name: API e2e
         if: needs.changes.outputs.docs_only != 'true'
