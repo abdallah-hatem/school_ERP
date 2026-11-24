@@ -201,7 +201,9 @@ export function ContractTemplatesList({ editorHref }: { editorHref: string }) {
       header: <span className="sr-only">{t('contractTemplates.list.columns.name')}</span>,
       cardLabel: null,
       className: 'w-52 whitespace-normal',
-      card: 'status',
+      // Its own line under the names on a card: beside them, "Default for Full-time" wrapped the
+      // title on a phone, and the card grew past its skeleton.
+      card: 'badges',
       skeleton: <SkeletonPill>{t('contractTemplates.list.defaultFor', { workSystem: t('common.enums.workSystem.FULL_TIME') })}</SkeletonPill>,
       cell: (row) =>
         row.hidden ? (
