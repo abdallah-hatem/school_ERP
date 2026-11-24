@@ -271,10 +271,21 @@ A stored file opens for exactly the people who may see the record it belongs to 
   **`contract-signed-copies`** (2026-11-24): the pages of a contract's signed copy, up to 10 MB each,
   one `employee_contract_files` row per page (found by its unique `url`); a page removed (soft, with
   a reason) opens for nobody.
-- **Uploads go through Server Actions**, whose body Next caps at 1 MB by default:
-  `next.config.ts` raises `serverActions.bodySizeLimit` (and the proxy's `proxyClientMaxBodySize`)
-  to 11 MB, the largest upload (10 MB) plus the multipart envelope. Each upload's own limit is still
-  the API's.
+- **Uploads: small ones are Server Actions, large ones a Route Handler** (review of #290,
+  2026-11-25). A Server Action's body limit applies to every action, the unauthenticated sign-in
+  one included, so raising it for one upload lets anyone push that much at the app before signing
+  in. The limit is therefore **3 MB** (`next.config.ts`: the 2 MB employee photo and school logo,
+  which stay actions; Next's 1 MB default refused them). Larger uploads — a contract's signed copy
+  page (10 MB) and a decision's letter (5 MB) — post to **`/api/upload/contracts/:id/<kind>`**
+  (`app/api/upload/…/route.ts` → `src/lib/upload-proxy.ts`), which refuses before reading the
+  body unless the request is same-origin, carries a session (an expiring access token is refreshed
+  first) and is multipart with a `Content-Length` within that upload's cap (+64 KB envelope); then
+  it streams the body to the API (never buffered whole), cutting it off past the cap. The browser
+  side is `src/lib/upload.ts` (answers in `apiFetch`'s shape, so `callApi` handles it); a module
+  lists its upload paths in `lib/uploads.ts`, not in its `apis.ts`. The trade-off: a second way
+  into the API to keep in step with `apiFetch` (headers, language, refresh), in exchange for no
+  large body on any unauthenticated route. The API still checks the session, permission, type and
+  size of every file. A new large upload adds its kind to the route's list.
 - **Nothing is stored where nobody could open it:** `FileStorageService.save` refuses an
   unregistered folder, and the unit guard `file-folders.guard.spec.ts` fails CI on a
   `files.save(<FOLDER>, …)` whose folder is neither public nor registered.

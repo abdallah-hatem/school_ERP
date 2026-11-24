@@ -81,6 +81,8 @@ export function ContractActions({
   // The signed copy (owner, 2026-11-24): its viewer, and the pages picked on Renew for the new contract.
   const [viewing, setViewing] = useState(false);
   const [renewPages, setRenewPages] = useState<File[]>([]);
+  // While renewing and uploading the picked pages, the picker waits.
+  const [renewing, setRenewing] = useState(false);
   const canUploadSignedCopy = useCanManageSignedCopy(contract) && contract.status !== ContractStatus.CANCELLED;
   const stale = useRef(false);
 
@@ -132,22 +134,27 @@ export function ContractActions({
   /** Renews this contract; the pages picked go to the new contract once it exists (the renewal stands either way). */
   async function renew(): Promise<boolean> {
     setError(null);
-    const res = await callApi(RENEW_CONTRACTS([contract.id]), {
-      showErrorToast: false,
-      showSuccessToast: true,
-      successMessage: t('contracts.renew.done'),
-    });
-    if (res.unauthorized) return false;
-    if (res.success) {
-      const nextId = res.data?.[0]?.next?.id;
-      if (nextId && renewPages.length > 0) await uploadPickedPages(nextId, renewPages, t);
-      setRenewPages([]);
-      router.refresh();
-      return true;
+    setRenewing(true);
+    try {
+      const res = await callApi(RENEW_CONTRACTS([contract.id]), {
+        showErrorToast: false,
+        showSuccessToast: true,
+        successMessage: t('contracts.renew.done'),
+      });
+      if (res.unauthorized) return false;
+      if (res.success) {
+        const nextId = res.data?.[0]?.next?.id;
+        if (nextId && renewPages.length > 0) await uploadPickedPages(nextId, renewPages, t);
+        setRenewPages([]);
+        router.refresh();
+        return true;
+      }
+      stale.current = true;
+      setError(contractError(res, { t, has, locale }, t('errors.INTERNAL_ERROR')));
+      return false;
+    } finally {
+      setRenewing(false);
     }
-    stale.current = true;
-    setError(contractError(res, { t, has, locale }, t('errors.INTERNAL_ERROR')));
-    return false;
   }
 
   const alert = error ? (
@@ -257,7 +264,7 @@ export function ContractActions({
         onConfirm={renew}
       >
         {/* The new contract's signed copy, optional (owner, 2026-11-24); bulk renew has none. */}
-        {abilities.renew ? <SignedCopyField files={renewPages} onChange={setRenewPages} /> : null}
+        {abilities.renew ? <SignedCopyField files={renewPages} onChange={setRenewPages} disabled={renewing} /> : null}
       </ConfirmDialog>
       {canUploadSignedCopy ? <SignedCopyViewer contract={contract} open={viewing} onOpenChange={setViewing} /> : null}
       <ConfirmDialog

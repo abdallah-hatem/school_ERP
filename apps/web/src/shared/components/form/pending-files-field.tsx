@@ -20,6 +20,8 @@ export function PendingFilesField({
   files,
   onChange,
   check,
+  maxFiles,
+  tooManyText,
   disabled = false,
 }: {
   label: string;
@@ -32,15 +34,23 @@ export function PendingFilesField({
   onChange: (files: File[]) => void;
   /** Why a file can't be added (translated), or null. */
   check: (file: File) => string | null;
+  /** At most this many files; picking more keeps the first ones and shows `tooManyText`. */
+  maxFiles?: number;
+  tooManyText?: string;
   disabled?: boolean;
 }) {
   const labelId = useId();
   const [problem, setProblem] = useState<string | null>(null);
 
   function add(picked: File[]) {
-    const refused = picked.map(check).find((why) => why !== null) ?? null;
+    let refused = picked.map(check).find((why) => why !== null) ?? null;
+    let ok = picked.filter((file) => check(file) === null);
+    const room = maxFiles === undefined ? ok.length : Math.max(0, maxFiles - files.length);
+    if (ok.length > room) {
+      ok = ok.slice(0, room);
+      refused = tooManyText ?? refused;
+    }
     setProblem(refused);
-    const ok = picked.filter((file) => check(file) === null);
     if (ok.length > 0) onChange([...files, ...ok]);
   }
 

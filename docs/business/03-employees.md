@@ -189,7 +189,8 @@ Spec `docs/specs/2026-11-24-contracts.md` (approved by the owner as drafted, 202
 - **DECIDED** (owner, 2026-11-24: "I can't upload a photo of the contract so I can see it for each
   employee") — **The signed copy.** Each contract can hold its signed copy as one or more files —
   PDF, JPG, PNG or WebP, each up to 10 MB, checked by their content (a renamed file is refused) —
-  because a phone photo is one page each. The pages keep their upload order. Any contract may get
+  because a phone photo is one page each — at most 30 pages per contract (removed ones aside). The
+  pages keep their upload order; a page that doesn't go up is named on the screen. Any contract may get
   one — past, current or upcoming; old contracts are scanned too — but not a cancelled one (it never
   started). Uploading and removing need **Manage contracts** covering that employee, never on one's
   own contract (an unlinked System admin may, like the other contract writes); viewing needs **View
@@ -200,7 +201,9 @@ Spec `docs/specs/2026-11-24-contracts.md` (approved by the owner as drafted, 202
   no signed copy; the old one keeps its own.
 - **GUESS** (2026-11-24) — Where it is added: the Contracts tab's ⋯ ("Upload signed copy") and its
   Documents column ("Signed copy (2)" / "No signed copy"), the renewal screen's ⋯, and optionally
-  while adding an employee (attached to their first contract after saving), renewing one contract or
+  while adding an employee (attached to their first contract after saving, if the person's Manage
+  contracts covers the chosen stage — otherwise the employee is saved and the screen says why it
+  wasn't attached), renewing one contract or
   making a new contract. Bulk renew has no upload. On a phone the picker offers the camera, the
   photos or a PDF.
 - **GUESS** — Deemed resignation (Article 166: over 20 days' unexcused absence in a year or over 10

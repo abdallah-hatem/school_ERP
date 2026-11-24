@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { requireScreen } from '@/core/auth';
 import { EmployeeForm, EmployeesI18n } from '@/modules/hr/employees';
 import { GET_MANAGER_OPTIONS } from '@/modules/hr/employees/apis';
+import { NewEmployeeSignedContract } from '@/modules/hr/contracts';
 import { isLocale } from '@/shared/lib/i18n';
 
 export const generateMetadata = sectionMetadata('employees');
@@ -23,6 +24,9 @@ export default async function NewEmployeePage({ params }: { params: Promise<{ lo
       <EmployeeForm
         basePath={`/${locale}/employees`}
         hasManagerCandidates={!managers.success || (managers.meta?.total ?? 0) > 0}
+        // The optional signed contract (owner, 2026-11-24): the contracts module's part, attached to
+        // the first contract after the save.
+        contractExtra={<NewEmployeeSignedContract />}
       />
     </EmployeesI18n>
   );

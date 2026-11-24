@@ -214,14 +214,5 @@
     "search": "Type a stage name",
     "remove": "Remove {stage}",
     "none": "Only the main stage"
-  },
-  "signedContract": {
-    "label": "Signed contract (optional)",
-    "hint": "A photo of each page, or the PDF — PDF, PNG, JPG or WebP, up to {max} MB each. Attached to their first contract after you save.",
-    "choose": "Choose files or take photos",
-    "removeFile": "Remove {name}",
-    "type": "Choose a PDF, PNG, JPG or WebP file.",
-    "size": "{name} is larger than {max} MB.",
-    "failed": "The employee was saved, but the signed contract couldn't be uploaded. Add it from their Contracts tab."
   }
 }

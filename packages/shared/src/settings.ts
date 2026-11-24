@@ -313,6 +313,8 @@ export const CONTRACT_DOCUMENT_UPLOAD = {
 export const CONTRACT_SIGNED_COPY_UPLOAD = {
   maxBytes: 10 * 1024 * 1024,
   mimeTypes: ['application/pdf', 'image/png', 'image/jpeg', 'image/webp'],
+  /** Pages a contract's signed copy holds at most (removed ones aside). */
+  maxPages: 30,
 } as const;
 
 /** What a phone's picker offers for a signed copy: the camera, the photos or a PDF. */

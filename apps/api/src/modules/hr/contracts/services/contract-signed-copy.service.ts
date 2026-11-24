@@ -69,7 +69,14 @@ export class ContractSignedCopyService {
       const { type, buffer } = checkDocumentUpload(file, CONTRACT_SIGNED_COPY_UPLOAD);
       const actor = await this.access.actor();
       const pagesBefore = (await this.repository.listActive(contractId)).length;
+      if (pagesBefore >= CONTRACT_SIGNED_COPY_UPLOAD.maxPages) {
+        throw CodedException.withParams(HttpStatus.CONFLICT, ErrorCode.SIGNED_COPY_PAGE_LIMIT, {
+          max: CONTRACT_SIGNED_COPY_UPLOAD.maxPages,
+        });
+      }
       const url = await this.files.save(CONTRACT_SIGNED_COPY_FOLDER, `${contractId}-${randomUUID()}.${type}`, buffer);
+      // A failed row, entry or commit after the file is stored leaves no file behind.
+      this.afterCommit.onRollback(() => this.files.remove(url));
       const page = await this.repository.create({
         contractId,
         url,

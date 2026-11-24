@@ -5,7 +5,7 @@ each employee".
 
 - **Signed copy (§3 → Contracts):** each contract holds its signed copy as one or more files — PDF,
   JPG, PNG or WebP, each up to 10 MB, checked by their content — in upload order, because a phone
-  photo is one page each. Any contract may get one (past, current or upcoming), not a cancelled one.
+  photo is one page each; at most 30 pages per contract. Any contract may get one (past, current or upcoming), not a cancelled one.
   A renewal's new contract starts with none; the old one keeps its own.
 - **Where:** the employee's Contracts tab — the Documents column reads "Signed copy (2)" or "No
   signed copy", the row's ⋯ has "Upload signed copy" (on old contracts too) — the renewal screen's

@@ -1,8 +1,6 @@
 'use server';
 
 import type {
-  Contract,
-  ContractSignedCopy,
   CreateEmployeeRequest,
   Department,
   Employee,
@@ -110,30 +108,6 @@ export async function UPLOAD_EMPLOYEE_PHOTO(id: Uuid, form: FormData) {
     revalidateTags: photoTags(id),
   });
   return handleResponse({ response });
-}
-
-/**
- * "Add employee" → the optional signed contract (owner, 2026-11-24): `GET /hr/employees/:id/contracts`
- * names the new employee's first (only) contract; each page then goes up with
- * `POST /hr/contracts/:contractId/signed-copy`. Here and not in the contracts module's `apis.ts`
- * because contracts import employees (no cycle).
- */
-export async function GET_FIRST_CONTRACT_ID(employeeId: Uuid) {
-  const response = await apiFetch<Contract[]>(`/hr/employees/${encodeURIComponent(employeeId)}/contracts`, {
-    method: 'GET',
-    params: { page: '1', limit: '1' },
-  });
-  return handleResponse({ response, showErrorToast: false });
-}
-
-/** `POST /hr/contracts/:id/signed-copy` — one page (multipart `file`) of the new employee's signed contract. */
-export async function UPLOAD_SIGNED_CONTRACT_PAGE(contractId: Uuid, form: FormData) {
-  const response = await apiFetch<ContractSignedCopy>(`/hr/contracts/${encodeURIComponent(contractId)}/signed-copy`, {
-    method: 'POST',
-    body: form,
-    revalidateTags: ['hr-contracts'],
-  });
-  return handleResponse({ response, showErrorToast: false });
 }
 
 /** `DELETE /hr/employees/:id/photo` — back to the silhouette. */

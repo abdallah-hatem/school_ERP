@@ -189,7 +189,11 @@ Timings are settings, like the existing reminders (GUESS: 1 March, 7 days).
     (CONTRACT_CANCELLED); past and upcoming contracts take one.
 29. Signed copy: an employee added with a signed contract → its pages go on their first contract,
     after the save; a page that fails leaves the employee saved and says so (add it from the
-    Contracts tab). Bulk renew has no upload.
+    Contracts tab); a manager whose scope doesn't cover the chosen stage → saved, "your access
+    doesn't cover their stage". Bulk renew has no upload.
+30. Signed copy: a 31st page → refused (SIGNED_COPY_PAGE_LIMIT); picking past 30 uploads what fits.
+31. Signed copy: many pages at once hit the uploads limit (429) → each waits as long as the API says
+    and is sent again; a page refused for good is named ("Not uploaded: …").
 
 ## Out of scope
 

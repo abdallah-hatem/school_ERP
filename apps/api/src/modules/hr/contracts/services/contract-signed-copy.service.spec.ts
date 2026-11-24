@@ -71,8 +71,24 @@ function setup(opts: { row?: ContractRow; viewScope?: EmployeeScope; loadForWrit
     actor: jest.fn(() => Promise.resolve({ userId: 'u-hr', employeeId: 'e-hr' })),
   };
   const audit = { record: jest.fn().mockResolvedValue(undefined) };
-  const files = { save: jest.fn((folder: string, name: string) => Promise.resolve(`/files/${folder}/${name}`)) };
-  const afterCommit = { inTransaction: (fn: () => Promise<unknown>) => fn() };
+  const files = {
+    save: jest.fn((folder: string, name: string) => Promise.resolve(`/files/${folder}/${name}`)),
+    remove: jest.fn().mockResolvedValue(undefined),
+  };
+  // A transaction: what was registered for a rollback runs when the work throws.
+  let rollbacks: (() => Promise<unknown>)[] = [];
+  const afterCommit = {
+    onRollback: (fn: () => Promise<unknown>) => rollbacks.push(fn),
+    inTransaction: async (fn: () => Promise<unknown>) => {
+      rollbacks = [];
+      try {
+        return await fn();
+      } catch (e) {
+        for (const undo of rollbacks) await undo();
+        throw e;
+      }
+    },
+  };
   const service = new ContractSignedCopyService(
     contracts as unknown as ContractsService,
     contractRows as unknown as ContractsRepository,
@@ -130,6 +146,20 @@ describe('ContractSignedCopyService', () => {
     expect(three.files.map((f) => f.page)).toEqual([2, 3]);
     // Reopened: the same pages.
     expect((await service.get('c1')).files.map((f) => f.name)).toEqual(['page-2.pdf', 'again.png']);
+  });
+
+  it('at most 30 pages (removed ones aside); a failed entry after the file is stored removes the file', async () => {
+    const { service, files, audit } = setup();
+    for (let i = 1; i <= 30; i++) await service.add('c1', file(PNG, 'image/png', `p${i}.png`));
+    expect(await codeOf(service.add('c1', file(PNG, 'image/png', 'p31.png')))).toBe(ErrorCode.SIGNED_COPY_PAGE_LIMIT);
+    expect(files.save).toHaveBeenCalledTimes(30);
+    await service.remove('c1', 'f1', 'blurry');
+    await service.add('c1', file(PNG, 'image/png', 'again.png'));
+    expect(files.remove).not.toHaveBeenCalled();
+    audit.record.mockRejectedValueOnce(new Error('audit down'));
+    await expect(service.add('c2', file(PNG, 'image/png', 'x.png'))).rejects.toThrow('audit down');
+    expect(files.remove).toHaveBeenCalledTimes(1);
+    expect(files.remove.mock.calls[0][0]).toMatch(/^\/files\/contract-signed-copies\/c2-[0-9a-f-]{36}\.png$/);
   });
 
   it('a page removed twice, or of another contract, is not found', async () => {

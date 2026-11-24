@@ -25,12 +25,12 @@ vi.mock('../apis', () => ({
 
 import type { Employee, EmployeeSummary } from '@school-erp/shared';
 import { CREATE_EMPLOYEE, GET_DEPARTMENTS, GET_EMPLOYEE_GRADES, GET_JOB_TITLES, GET_MANAGER_OPTIONS, GET_STAGES, UPDATE_EMPLOYEE } from '../apis';
-import { sessionWithout } from '@/test/render';
 import { departments, employee, grades, jobTitles, renderEmployees, stages, summary } from '../test/fixtures';
 
 const page = <T,>(data: T[]) => ({ success: true as const, status: 200, data, meta: { total: data.length, page: 1, limit: 20 } });
 const managerOptions = vi.mocked(GET_MANAGER_OPTIONS);
 import { EmployeeForm } from './employee-form';
+import { useEmployeeCreateExtras } from './employee-create-extras';
 
 const update = vi.mocked(UPDATE_EMPLOYEE);
 const create = vi.mocked(CREATE_EMPLOYEE);
@@ -185,20 +185,24 @@ describe('EmployeeForm', () => {
     expect(screen.queryByRole('button', { name: /Contract end/ })).toBeNull();
   });
 
-  it('the optional signed contract: on the create form, for whoever may manage contracts', () => {
-    const { unmount } = renderForm();
-    expect(screen.getByRole('group', { name: 'Signed contract (optional)' })).toBeTruthy();
+  it("another module's part (the signed contract) sits in the contract section of the create form only, with the form's state", () => {
+    function Extra() {
+      const { disabled } = useEmployeeCreateExtras();
+      return <p data-testid="contract-extra">{disabled ? 'busy' : 'ready'}</p>;
+    }
+    const render = (editing?: Employee) => {
+      vi.mocked(GET_DEPARTMENTS).mockResolvedValue(page(departments) as never);
+      vi.mocked(GET_STAGES).mockResolvedValue(page(stages) as never);
+      vi.mocked(GET_JOB_TITLES).mockResolvedValue(page(jobTitles) as never);
+      vi.mocked(GET_EMPLOYEE_GRADES).mockResolvedValue(page(grades) as never);
+      managerOptions.mockResolvedValue(page([]) as never);
+      return renderEmployees(<EmployeeForm basePath="/en/employees" employee={editing} contractExtra={<Extra />} />);
+    };
+    const { unmount } = render();
+    expect(screen.getByTestId('contract-extra').textContent).toBe('ready');
     unmount();
-    const { unmount: unmountEdit } = renderForm({ editing: employee });
-    expect(screen.queryByRole('group', { name: 'Signed contract (optional)' })).toBeNull();
-    unmountEdit();
-    vi.mocked(GET_DEPARTMENTS).mockResolvedValue(page(departments) as never);
-    vi.mocked(GET_STAGES).mockResolvedValue(page(stages) as never);
-    vi.mocked(GET_JOB_TITLES).mockResolvedValue(page(jobTitles) as never);
-    vi.mocked(GET_EMPLOYEE_GRADES).mockResolvedValue(page(grades) as never);
-    managerOptions.mockResolvedValue(page([]) as never);
-    renderEmployees(<EmployeeForm basePath="/en/employees" />, 'en', sessionWithout('hr.contracts.manage'));
-    expect(screen.queryByRole('group', { name: 'Signed contract (optional)' })).toBeNull();
+    render(employee);
+    expect(screen.queryByTestId('contract-extra')).toBeNull();
   });
 
   describe('probation end (§3, N0)', () => {

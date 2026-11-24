@@ -19,15 +19,21 @@ vi.mock('next/image', () => ({
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 const api = vi.hoisted(() => ({
   GET_SIGNED_COPY: vi.fn(),
-  ADD_SIGNED_COPY_PAGE: vi.fn(),
+  GET_EMPLOYEE_CONTRACTS: vi.fn(),
   REMOVE_SIGNED_COPY_PAGE: vi.fn(),
+  // Not an action: the page goes to the upload Route Handler (`lib/uploads.ts`).
+  ADD_SIGNED_COPY_PAGE: vi.fn(),
 }));
 vi.mock('../apis', () => api);
+vi.mock('../lib/uploads', () => ({ uploadSignedCopyPage: api.ADD_SIGNED_COPY_PAGE, uploadContractFile: vi.fn() }));
+// The add-employee form's hook (`EmployeeForm`'s `contractExtra`): what the part registers is kept here.
+const extras = vi.hoisted(() => ({ disabled: false, setAfterCreate: vi.fn() }));
+vi.mock('../../employees', () => ({ useEmployeeCreateExtras: () => extras }));
 
 import type { ContractSignedCopy, ContractSignedCopyFile } from '@school-erp/shared';
 import { sessionWithout } from '@/test/render';
 import { contract, ok, renderContracts } from '../test/fixtures';
-import { SignedCopyLink, SignedCopyViewer } from './signed-copy';
+import { NewEmployeeSignedContract, SignedCopyLink, SignedCopyViewer } from './signed-copy';
 
 /*
  * A contract's signed copy (owner, 2026-11-24) as a timeline: "Signed copy (2)" → the viewer with
@@ -131,10 +137,94 @@ describe('Signed copy', () => {
       new File([new Uint8Array(10)], 'p2.pdf', { type: 'application/pdf' }),
     ]);
     await waitFor(() => expect(within(dialog).getAllByTestId('signed-copy-page')).toHaveLength(2));
-    expect(api.ADD_SIGNED_COPY_PAGE.mock.calls.map(([id, form]) => [id, ((form as FormData).get('file') as File).name])).toEqual([
+    expect(api.ADD_SIGNED_COPY_PAGE.mock.calls.map(([id, file]) => [id, (file as File).name])).toEqual([
       ['c-1', 'p1.jpg'],
       ['c-1', 'p2.pdf'],
     ]);
+  });
+
+  it('too many uploads at once: the page waits as long as the API says and goes again; a page refused for good is named', async () => {
+    const user = userEvent.setup({ applyAccept: false });
+    api.GET_SIGNED_COPY.mockResolvedValue(ok(copy([])));
+    const tooMany = { success: false, status: 429, error: 'TOO_MANY_REQUESTS', message: 'x', params: { count: 0.01 } };
+    const refused = { success: false, status: 400, error: 'INVALID_FILE_TYPE', message: 'x' };
+    api.ADD_SIGNED_COPY_PAGE.mockResolvedValueOnce(tooMany).mockResolvedValueOnce(ok(copy([photo]))).mockResolvedValueOnce(refused);
+    renderViewer({ signedCopyPages: 0 });
+    const dialog = await screen.findByRole('dialog', { name: 'Signed copy' });
+    await within(dialog).findByText('No signed copy yet');
+    await user.upload(dialog.querySelector<HTMLInputElement>('input[type=file]')!, [
+      new File([new Uint8Array(10)], 'p1.jpg', { type: 'image/jpeg' }),
+      new File([new Uint8Array(10)], 'renamed.jpg', { type: 'image/jpeg' }),
+    ]);
+    await waitFor(() => expect(within(dialog).getAllByTestId('signed-copy-page')).toHaveLength(1));
+    // p1 twice (the 429, then accepted), renamed.jpg once.
+    expect(api.ADD_SIGNED_COPY_PAGE.mock.calls.map(([, file]) => (file as File).name)).toEqual(['p1.jpg', 'p1.jpg', 'renamed.jpg']);
+    expect(within(dialog).getByRole('alert').textContent).toBe(
+      "1 page couldn't be uploaded. Add it from the signed copy. Not uploaded: renamed.jpg.",
+    );
+  });
+
+  describe('"Add employee" → the signed contract', () => {
+    const lastAfterCreate = () => {
+      const calls = extras.setAfterCreate.mock.calls;
+      return calls[calls.length - 1]![0] as ((id: string) => Promise<boolean>) | null;
+    };
+
+    it('pages picked on the form go to the first contract after the save, in order', async () => {
+      const user = userEvent.setup({ applyAccept: false });
+      api.GET_EMPLOYEE_CONTRACTS.mockResolvedValue(ok([contract({ id: 'c-first' })]));
+      api.ADD_SIGNED_COPY_PAGE.mockResolvedValue(ok(copy([photo])));
+      renderContracts(<NewEmployeeSignedContract />);
+      const group = screen.getByRole('group', { name: 'Signed contract (optional)' });
+      const input = group.querySelector<HTMLInputElement>('input[type=file]')!;
+      // A phone offers the camera and the photos (no forced capture), or a PDF.
+      expect([input.accept, input.multiple, input.hasAttribute('capture')]).toEqual(['image/*,application/pdf', true, false]);
+      expect(group.textContent).toContain('if you manage contracts for the stage you chose');
+      expect(lastAfterCreate()).toBeNull();
+      await user.upload(input, [
+        new File([new Uint8Array(10)], 'a.jpg', { type: 'image/jpeg' }),
+        new File([new Uint8Array(10)], 'b.jpg', { type: 'image/jpeg' }),
+      ]);
+      await waitFor(() => expect(lastAfterCreate()).not.toBeNull());
+      expect(await lastAfterCreate()!('e-new')).toBe(true);
+      expect(api.GET_EMPLOYEE_CONTRACTS).toHaveBeenCalledWith('e-new', { page: 1, limit: 1 });
+      expect(api.ADD_SIGNED_COPY_PAGE.mock.calls.map(([id, file]) => [id, (file as File).name])).toEqual([
+        ['c-first', 'a.jpg'],
+        ['c-first', 'b.jpg'],
+      ]);
+    });
+
+    it('a manager whose scope doesn’t cover the stage: the employee stays saved, the step reports it', async () => {
+      const user = userEvent.setup({ applyAccept: false });
+      api.GET_EMPLOYEE_CONTRACTS.mockResolvedValue(ok([contract({ id: 'c-first' })]));
+      api.ADD_SIGNED_COPY_PAGE.mockResolvedValue({ success: false, status: 404, error: 'NOT_FOUND', message: 'x' });
+      renderContracts(<NewEmployeeSignedContract />);
+      const input = screen.getByRole('group', { name: 'Signed contract (optional)' }).querySelector<HTMLInputElement>('input[type=file]')!;
+      await user.upload(input, [new File([new Uint8Array(10)], 'a.jpg', { type: 'image/jpeg' })]);
+      await waitFor(() => expect(lastAfterCreate()).not.toBeNull());
+      expect(await lastAfterCreate()!('e-new')).toBe(false);
+    });
+
+    it('not shown without hr.contracts.manage', () => {
+      renderContracts(<NewEmployeeSignedContract />, 'en', sessionWithout('hr.contracts.manage'));
+      expect(screen.queryByRole('group', { name: 'Signed contract (optional)' })).toBeNull();
+    });
+  });
+
+  it('30 pages at most: picking past it uploads only what fits and says why', async () => {
+    const user = userEvent.setup({ applyAccept: false });
+    const many = Array.from({ length: 29 }, (_, i) => page({ id: `f-${i}`, page: i + 1 }));
+    api.GET_SIGNED_COPY.mockResolvedValue(ok(copy(many)));
+    api.ADD_SIGNED_COPY_PAGE.mockResolvedValue(ok(copy([...many, photo])));
+    renderViewer({ signedCopyPages: 29 });
+    const dialog = await screen.findByRole('dialog', { name: 'Signed copy' });
+    await within(dialog).findAllByTestId('signed-copy-page');
+    await user.upload(dialog.querySelector<HTMLInputElement>('input[type=file]')!, [
+      new File([new Uint8Array(10)], 'a.jpg', { type: 'image/jpeg' }),
+      new File([new Uint8Array(10)], 'b.jpg', { type: 'image/jpeg' }),
+    ]);
+    await waitFor(() => expect(api.ADD_SIGNED_COPY_PAGE).toHaveBeenCalledTimes(1));
+    expect(within(dialog).getByRole('alert').textContent).toBe('A signed copy holds at most 30 pages. Remove one first.');
   });
 
   it('own contract or no hr.contracts.manage: view and download only', async () => {

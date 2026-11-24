@@ -129,6 +129,7 @@
   "CONTRACT_NOT_TO_DEACTIVATE": "Only employees whose contract ended without renewal can be deactivated here.",
   "CONTRACT_FILE_INVALID": "Upload the file again.",
   "CONTRACT_CANCELLED": "This contract was cancelled, so it has no signed copy.",
+  "SIGNED_COPY_PAGE_LIMIT": "A signed copy holds at most {max} pages. Remove one first.",
   "CONTRACT_ACTIVE_EXISTS": "This employee already has an active contract.",
   "CONTRACT_OVERLAP": "The new contract would overlap one of this employee's contracts. Start it after the last one ends.",
   "CONTRACT_NOT_SCHOOL_DECISION": "Only the school's own not-renewing can be undone, and only before the contract ends."

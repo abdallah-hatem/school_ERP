@@ -36,9 +36,21 @@ import { formatDateTime } from '@/shared/lib/format';
 import { localName, type Translate } from '@/shared/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
-import { GET_SIGNED_COPY, REMOVE_SIGNED_COPY_PAGE } from '../apis';
+import { handleResponse } from '@/lib/handleResponse';
+import { useEmployeeCreateExtras } from '../../employees';
+import { GET_EMPLOYEE_CONTRACTS, GET_SIGNED_COPY, REMOVE_SIGNED_COPY_PAGE } from '../apis';
+import { ContractsI18n } from '../messages';
 import { contractError } from '../lib/contract-text';
-import { announcePages, SIGNED_COPY_MAX_MB, signedCopyProblemText, uploadSignedPages } from '../lib/signed-copy';
+import {
+  announcePages,
+  failedPagesText,
+  SIGNED_COPY_MAX_MB,
+  SIGNED_COPY_MAX_PAGES,
+  signedCopyProblemText,
+  uploadSignedPages,
+  type UploadPagesResult,
+  type UploadProgress,
+} from '../lib/signed-copy';
 
 /*
  * A contract's signed copy (owner, 2026-11-24: "I can't upload a photo of the contract so I can see
@@ -121,7 +133,7 @@ function SignedCopyPanel({ contract }: { contract: Contract }) {
   const [copy, setCopy] = useState<ContractSignedCopy | null>(null);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
-  const [uploading, setUploading] = useState<{ done: number; total: number } | null>(null);
+  const [uploading, setUploading] = useState<UploadProgress | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [removing, setRemoving] = useState<{ page: ContractSignedCopyFile; index: number } | null>(null);
   const [removeError, setRemoveError] = useState<string | null>(null);
@@ -143,15 +155,16 @@ function SignedCopyPanel({ contract }: { contract: Contract }) {
   }
 
   async function add(files: File[]) {
-    const refused = files.map((f) => signedCopyProblemText(f, t, FIELD)).find((why) => why !== null) ?? null;
+    const { ok, problem: refused } = checkPicked(files, copy?.files.length ?? 0, t);
     setProblem(refused);
-    const ok = files.filter((f) => signedCopyProblemText(f, t, FIELD) === null);
     if (ok.length === 0) return;
-    const result = await uploadSignedPages(contract.id, ok, (done, total) => setUploading({ done, total }));
+    const result = await uploadSignedPages(contract.id, ok, setUploading);
     setUploading(null);
     if (result.unauthorized) return;
     if (result.copy) setCopy(result.copy);
-    if (result.failed > 0) setProblem(t('contracts.signedCopy.failed', { count: result.failed }));
+    // The pages that didn't go up stay named under the list until the next try.
+    const failed = failedPagesText(result, t);
+    if (failed) setProblem(failed);
     await announcePages(result, t);
     router.refresh();
   }
@@ -185,7 +198,7 @@ function SignedCopyPanel({ contract }: { contract: Contract }) {
       className="cursor-pointer"
     >
       {uploading ? null : <UploadIcon />}
-      {uploading ? t('contracts.signedCopy.uploading', uploading) : t('contracts.signedCopy.addPages')}
+      {uploadingText(uploading, t) ?? t('contracts.signedCopy.addPages')}
     </FileButton>
   ) : null;
 
@@ -404,18 +417,31 @@ export function SignedCopyPagesSkeleton() {
  * The optional signed copy of a contract about to be made (Renew, New contract): files picked now,
  * uploaded once the contract exists (`uploadPickedPages`).
  */
-export function SignedCopyField({ files, onChange, disabled }: { files: File[]; onChange: (files: File[]) => void; disabled?: boolean }) {
+export function SignedCopyField({
+  files,
+  onChange,
+  disabled,
+  hint,
+}: {
+  files: File[];
+  onChange: (files: File[]) => void;
+  disabled?: boolean;
+  /** Replaces the usual hint (Add employee says whose stage it needs). */
+  hint?: string;
+}) {
   const { t } = useTranslation();
   return (
     <PendingFilesField
       label={t(`${FIELD}.label`)}
-      hint={t(`${FIELD}.hint`, { max: SIGNED_COPY_MAX_MB })}
+      hint={hint ?? t(`${FIELD}.hint`, { max: SIGNED_COPY_MAX_MB })}
       chooseLabel={t(`${FIELD}.choose`)}
       removeLabel={(name) => t(`${FIELD}.removeFile`, { name })}
       accept={CONTRACT_SIGNED_COPY_ACCEPT}
       files={files}
       onChange={onChange}
       check={(file) => signedCopyProblemText(file, t, FIELD)}
+      maxFiles={SIGNED_COPY_MAX_PAGES}
+      tooManyText={t('errors.SIGNED_COPY_PAGE_LIMIT', { max: SIGNED_COPY_MAX_PAGES })}
       disabled={disabled}
     />
   );
@@ -423,10 +449,92 @@ export function SignedCopyField({ files, onChange, disabled }: { files: File[]; 
 
 /**
  * After the contract is made: uploads the picked pages to it and says how it went (a toast per
- * outcome); the contract stands either way.
+ * outcome, the pages that didn't go up named); the contract stands either way.
  */
-export async function uploadPickedPages(contractId: string, files: readonly File[], t: Translate): Promise<void> {
-  if (files.length === 0) return;
+export async function uploadPickedPages(contractId: string, files: readonly File[], t: Translate): Promise<UploadPagesResult | null> {
+  if (files.length === 0) return null;
   const result = await uploadSignedPages(contractId, files);
   if (!result.unauthorized) await announcePages(result, t);
+  return result;
+}
+
+/**
+ * "Add employee" → the optional signed contract (owner, 2026-11-24), placed in the employee form's
+ * contract section by the route (`EmployeeForm`'s `contractExtra`): pages picked now, attached to
+ * the new employee's first contract once they are saved, through the form's after-create hook
+ * (`useEmployeeCreateExtras`). Only for whoever may manage contracts. Whether their scope covers the
+ * chosen stage is the API's to say: when it doesn't, the employee is saved and the screen says why
+ * the contract wasn't attached.
+ */
+export function NewEmployeeSignedContract() {
+  const { locale } = useTranslation();
+  return (
+    <ContractsI18n locale={locale}>
+      <NewEmployeeSignedContractField />
+    </ContractsI18n>
+  );
+}
+
+function NewEmployeeSignedContractField() {
+  const { t } = useTranslation();
+  const can = useCan();
+  const { disabled, setAfterCreate } = useEmployeeCreateExtras();
+  const [files, setFiles] = useState<File[]>([]);
+  const manage = can('hr.contracts.manage');
+
+  useEffect(() => {
+    if (!manage || files.length === 0) {
+      setAfterCreate(null);
+      return;
+    }
+    setAfterCreate(async (employeeId) => {
+      const first = await callApi(GET_EMPLOYEE_CONTRACTS(employeeId, { page: 1, limit: 1 }), { showErrorToast: false });
+      const contractId = first.success ? first.data?.[0]?.id : undefined;
+      if (first.unauthorized) return true;
+      if (!contractId) {
+        await handleResponse({ response: { success: false, status: 0, message: t('contracts.signedCopy.newEmployee.failed') }, showErrorToast: true });
+        return false;
+      }
+      const result = await uploadSignedPages(contractId, files);
+      if (result.unauthorized) return true;
+      // Their access doesn't cover the chosen stage: say so plainly rather than "upload failed".
+      const failedStatus = result.lastFailed && 'status' in result.lastFailed ? result.lastFailed.status : null;
+      const notCovered = result.added === 0 && (failedStatus === 404 || failedStatus === 403);
+      if (notCovered) {
+        await handleResponse({ response: { success: false, status: 403, message: t('contracts.signedCopy.newEmployee.notCovered') }, showErrorToast: true });
+        return false;
+      }
+      await announcePages(result, t);
+      return result.failedNames.length === 0;
+    });
+    return () => setAfterCreate(null);
+  }, [manage, files, setAfterCreate, t]);
+
+  if (!manage) return null;
+  return (
+    <SignedCopyField
+      files={files}
+      onChange={setFiles}
+      disabled={disabled}
+      hint={t('contracts.signedCopy.newEmployee.hint', { max: SIGNED_COPY_MAX_MB })}
+    />
+  );
+}
+
+/** Picked files that can be pages: the right type and size, and room left (30 pages). */
+function checkPicked(files: readonly File[], already: number, t: Translate): { ok: File[]; problem: string | null } {
+  const valid = files.filter((f) => signedCopyProblemText(f, t, FIELD) === null);
+  const wrong = files.map((f) => signedCopyProblemText(f, t, FIELD)).find((why) => why !== null) ?? null;
+  const room = Math.max(0, SIGNED_COPY_MAX_PAGES - already);
+  if (valid.length > room) {
+    return { ok: valid.slice(0, room), problem: t('errors.SIGNED_COPY_PAGE_LIMIT', { max: SIGNED_COPY_MAX_PAGES }) };
+  }
+  return { ok: valid, problem: wrong };
+}
+
+/** "Uploading page 2 of 5…", or "Too many uploads at once: page 2 of 5 goes up in 40 s…". */
+function uploadingText(progress: UploadProgress | null, t: Translate): string | null {
+  if (!progress) return null;
+  if (progress.waitSeconds) return t('contracts.signedCopy.waiting', { done: progress.done, total: progress.total, seconds: progress.waitSeconds });
+  return t('contracts.signedCopy.uploading', { done: progress.done, total: progress.total });
 }

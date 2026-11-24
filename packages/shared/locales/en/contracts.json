@@ -350,6 +350,14 @@
       "many": "{count} pages couldn't be uploaded. Add them from the signed copy.",
       "other": "{count} pages couldn't be uploaded. Add them from the signed copy."
     },
+    "failedNames": "Not uploaded: {names}.",
+    "listSeparator": ", ",
+    "waiting": "Too many uploads at once: page {done} of {total} goes up in {seconds} s…",
+    "newEmployee": {
+      "hint": "A photo of each page, or the PDF — PDF, PNG, JPG or WebP, up to {max} MB each. Attached to their first contract after you save, if you manage contracts for the stage you chose.",
+      "notCovered": "The employee was saved, but your access doesn't cover their stage, so the signed contract wasn't attached. Someone who manages that stage's contracts can add it.",
+      "failed": "The employee was saved, but the signed contract couldn't be uploaded. Add it from their Contracts tab."
+    },
     "ownContract": "Your own contract: someone else uploads its signed copy.",
     "removeTitle": "Remove page {page}?",
     "removeBody": "{name} leaves the signed copy. It is kept, with your reason, in the contract's history.",
