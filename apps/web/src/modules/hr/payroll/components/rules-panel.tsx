@@ -18,6 +18,7 @@ import { SkeletonProse } from '@/shared/components/ui/skeleton';
 import { formatCount, formatDateTime, formatDayCount } from '@/shared/lib/format';
 import type { Locale, Translate } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
+import { latenessSteps } from '../../lateness/describe-rule';
 
 /**
  * The HR rules the run comes with (`run.rules`, so a viewer without `hr.settings.view` sees them
@@ -140,9 +141,7 @@ export function RulesPanel({
 /** The lateness rule as bullets: the grace minutes (when any), each hour's step, then later hours. */
 function latenessPoints(rule: LatenessRule, t: Translate, locale: Locale): string[] {
   const days = (value: number) => ({ dayCount: formatDayCount(value, locale) });
-  const points = [...rule.steps]
-    .sort((a, b) => a.hour - b.hour)
-    .map((step) => t('payroll.rules.latenessStep', { hour: step.hour, ...days(step.days) }));
+  const points = latenessSteps(rule).map((step) => t('payroll.rules.latenessStep', { hour: step.hour, ...days(step.days) }));
   points.push(t('payroll.rules.latenessExtra', days(rule.extraHourDays)));
   if (rule.graceMinutes > 0) points.unshift(t('lateness.ruleGrace', { count: formatCount(rule.graceMinutes) }));
   return points;
