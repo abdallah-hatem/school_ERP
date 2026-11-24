@@ -1,5 +1,6 @@
 import type { Gender } from '../enums';
 import type { IsoDate, IsoDateTime, ListPage, NamedRef, PaginationQuery, Uuid } from './common';
+import type { ContractCopy } from './contract-templates';
 
 /*
  * Contracts (§3 → Contracts, spec docs/specs/2026-11-24-contracts.md). One row per contract year
@@ -214,6 +215,11 @@ export interface Contract {
   toDeactivate: boolean;
   /** The viewer's own contract: no action on it (OWN_CONTRACT, §2). */
   ownContract: boolean;
+  /**
+   * Its printed copies, newest first (contract templates spec) — only in an employee's history
+   * (`GET /hr/employees/:id/contracts`), absent on the renewal list.
+   */
+  copies?: ContractCopy[];
   /**
    * On the current season's screen, a row from an earlier contract year that still needs action
    * (to deactivate, or ended with no decision): it stays listed until it is handled.

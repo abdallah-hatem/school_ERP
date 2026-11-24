@@ -130,5 +130,18 @@
   "CONTRACT_FILE_INVALID": "Upload the file again.",
   "CONTRACT_ACTIVE_EXISTS": "This employee already has an active contract.",
   "CONTRACT_OVERLAP": "The new contract would overlap one of this employee's contracts. Start it after the last one ends.",
-  "CONTRACT_NOT_SCHOOL_DECISION": "Only the school's own not-renewing can be undone, and only before the contract ends."
+  "CONTRACT_NOT_SCHOOL_DECISION": "Only the school's own not-renewing can be undone, and only before the contract ends.",
+  "CONTRACT_CANCELLED": "A cancelled contract can't be printed.",
+  "SALARY_NOT_VISIBLE": "This template shows the salary, and you don't have access to this employee's salary.",
+  "TEMPLATE_HIDDEN": "This template is hidden. Show the template first.",
+  "NO_ENGLISH_TEXT": "This template has no English text. Print it in Arabic, or add English text to the template.",
+  "TEMPLATE_CHANGED": "Someone saved this template while you were editing — reload to see their text.",
+  "VALUES_CHANGED": "The contract's details changed — check the preview again.",
+  "TEMPLATE_DEFAULT_TAKEN": "Another template became the default for {workSystem} — save again to take it.",
+  "TEMPLATE_NAME_TAKEN": "Another template already has this name.",
+  "TEMPLATE_TOO_LONG": "This template is too long.",
+  "TEMPLATE_TEXT_EMPTY": "Write the Arabic text of the template.",
+  "OPTIONAL_PHRASE_NEEDS_FIELD": "An optional phrase needs a field.",
+  "CONTRACT_DOCUMENT_INVALID": "The text has something the editor doesn't allow. Reload and try again.",
+  "PDF_RENDER_FAILED": "Couldn't make the PDF — try again."
 }

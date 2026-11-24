@@ -34,6 +34,7 @@
     "notification_settings": "Notification settings",
     "push_device": "Alerts device",
     "employee_contract": "Contract",
+    "contract_template": "Contract template",
     "school_calendar": "School calendar"
   },
   "actions": {
@@ -143,7 +144,15 @@
         "end": "Ended the contract of {entity}",
         "document_open": "Opened a contract document of {entity}",
         "cancel": "Cancelled a contract of {entity}",
-        "not_renew_undo": "Undid the not-renewing of {entity}'s contract"
+        "not_renew_undo": "Undid the not-renewing of {entity}'s contract",
+        "copy_print": "Printed a copy of the contract of {entity}",
+        "copy_open": "Opened a printed copy of the contract of {entity}"
+      },
+      "contract_template": {
+        "create": "Created the contract template {entity}",
+        "update": "Edited the contract template {entity}",
+        "hide": "Hid the contract template {entity}",
+        "show": "Showed the contract template {entity} again"
       },
       "school_calendar": {
         "update": "Changed the school calendar for {entity}"
@@ -308,7 +317,17 @@
     "term1Start": "First day of term 1",
     "term1End": "Last day of term 1",
     "term2Start": "First day of term 2",
-    "nonRenewalDeadline": "Non-renewal deadline"
+    "nonRenewalDeadline": "Non-renewal deadline",
+    "template": "Template",
+    "templateVersion": "Template version",
+    "language": "Language",
+    "textEdited": "Text edited",
+    "output": "Output",
+    "copy": "Printed copy",
+    "version": "Version",
+    "defaultForWorkSystem": "Default for",
+    "hidden": "Hidden",
+    "languages": "Languages"
   },
   "totals": {
     "net": "Net",

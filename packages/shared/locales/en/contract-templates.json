@@ -1,0 +1,39 @@
+{
+  "fields": {
+    "employee": {
+      "nameAr": "Employee name (Arabic)",
+      "nameEn": "Employee name (English)",
+      "code": "Employee code",
+      "nationalId": "National ID",
+      "address": "Home address",
+      "jobTitle": "Job title",
+      "department": "Department",
+      "stage": "Stage",
+      "hireDate": "Hire date"
+    },
+    "contract": {
+      "start": "Contract start",
+      "end": "Contract end",
+      "salary": "Basic salary",
+      "salaryWords": "Basic salary in words",
+      "salaryWordsAr": "Basic salary in Arabic words",
+      "workSystem": "Work system"
+    },
+    "school": {
+      "name": "School name",
+      "address": "School address",
+      "representative": "School representative"
+    },
+    "today": "Today's date"
+  },
+  "groups": {
+    "employee": "From the employee file",
+    "contract": "From the contract",
+    "school": "From school settings",
+    "other": "Other"
+  },
+  "languages": {
+    "AR": "Arabic",
+    "EN": "English"
+  }
+}

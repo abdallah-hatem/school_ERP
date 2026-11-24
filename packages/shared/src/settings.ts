@@ -14,6 +14,13 @@ export const SchoolSettingKey = {
   WORK_START: 'school.workStart',
   WORK_END: 'school.workEnd',
   WORKING_DAYS: 'school.workingDays',
+  // Contract templates (spec 2026-11-24-contract-templates, §7): the address and the signatory.
+  ADDRESS_EN: 'school.addressEn',
+  ADDRESS_AR: 'school.addressAr',
+  SIGNATORY_NAME_EN: 'school.signatoryNameEn',
+  SIGNATORY_NAME_AR: 'school.signatoryNameAr',
+  SIGNATORY_TITLE_EN: 'school.signatoryTitleEn',
+  SIGNATORY_TITLE_AR: 'school.signatoryTitleAr',
 } as const;
 export type SchoolSettingKey = (typeof SchoolSettingKey)[keyof typeof SchoolSettingKey];
 
@@ -128,6 +135,12 @@ export interface SettingValueMap {
   'school.workStart': string;
   'school.workEnd': string;
   'school.workingDays': Weekday[];
+  'school.addressEn': string;
+  'school.addressAr': string;
+  'school.signatoryNameEn': string;
+  'school.signatoryNameAr': string;
+  'school.signatoryTitleEn': string;
+  'school.signatoryTitleAr': string;
   'hr.lateness.graceMinutes': number;
   'hr.lateness.steps': LatenessStep[];
   'hr.lateness.extraHourDays': number;
@@ -165,6 +178,13 @@ export const SETTING_DEFAULTS: { [K in SettingKey]: SettingValueMap[K] } = {
   'school.workStart': '07:30',
   'school.workEnd': '15:00',
   'school.workingDays': ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY'],
+  // Empty until the school sets them (spec → Settings additions): the fields print empty.
+  'school.addressEn': '',
+  'school.addressAr': '',
+  'school.signatoryNameEn': '',
+  'school.signatoryNameAr': '',
+  'school.signatoryTitleEn': '',
+  'school.signatoryTitleAr': '',
   'hr.lateness.graceMinutes': 0,
   'hr.lateness.steps': [
     { hour: 1, days: 0.25 },

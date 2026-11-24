@@ -230,6 +230,34 @@ export const ErrorCode = {
   /** Undoing a not-renewing: only the school's own decision, while the contract hasn't ended. */
   CONTRACT_NOT_SCHOOL_DECISION: 'CONTRACT_NOT_SCHOOL_DECISION',
 
+  // contract templates and printed copies (spec 2026-11-24-contract-templates)
+  /** A cancelled contract can't be printed. */
+  CONTRACT_CANCELLED: 'CONTRACT_CANCELLED',
+  /** The template uses a salary field and the printer may not see this employee's salary (edge case 4). */
+  SALARY_NOT_VISIBLE: 'SALARY_NOT_VISIBLE',
+  /** A hidden template is out of the print picker; making it a default needs it shown first (edge case 10). */
+  TEMPLATE_HIDDEN: 'TEMPLATE_HIDDEN',
+  /** An English copy from a template with no English text (edge case 9). */
+  NO_ENGLISH_TEXT: 'NO_ENGLISH_TEXT',
+  /** Someone saved the template meanwhile (edge cases 12, 15): reload, or start from the new text. */
+  TEMPLATE_CHANGED: 'TEMPLATE_CHANGED',
+  /** A printed value changed since the preview (edge case 15): check the preview again. */
+  VALUES_CHANGED: 'VALUES_CHANGED',
+  /** Another template became the work system's default at the same time (edge case 11). `params.workSystem`. */
+  TEMPLATE_DEFAULT_TAKEN: 'TEMPLATE_DEFAULT_TAKEN',
+  /** Another template already has that English or Arabic name. */
+  TEMPLATE_NAME_TAKEN: 'TEMPLATE_NAME_TAKEN',
+  /** A template's text is over 200 KB (edge case 23). */
+  TEMPLATE_TOO_LONG: 'TEMPLATE_TOO_LONG',
+  /** A template's Arabic text is required. */
+  TEMPLATE_TEXT_EMPTY: 'TEMPLATE_TEXT_EMPTY',
+  /** An optional phrase must hold at least one field (edge case 8). */
+  OPTIONAL_PHRASE_NEEDS_FIELD: 'OPTIONAL_PHRASE_NEEDS_FIELD',
+  /** The text isn't a document the editor makes (an unknown node, mark or field). */
+  CONTRACT_DOCUMENT_INVALID: 'CONTRACT_DOCUMENT_INVALID',
+  /** The PDF couldn't be made, or took over 20 s (edge case 16): no copy was kept. */
+  PDF_RENDER_FAILED: 'PDF_RENDER_FAILED',
+
   // audit log
   /** An `@Audited` handler finished without recording its action (D6b); the change rolled back. */
   AUDIT_NOT_RECORDED: 'AUDIT_NOT_RECORDED',

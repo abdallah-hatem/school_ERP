@@ -25,6 +25,10 @@
       "title": "Penalty catalogue",
       "description": "Violations and what each repeat costs"
     },
+    "contractTemplates": {
+      "title": "Contract templates",
+      "description": "The contract texts HR prints, with fields filled from the records"
+    },
     "accounting": {
       "title": "Accounting",
       "description": "The payroll tax rule: income-tax slices, the martyrs' fund and the insurance share."
@@ -87,7 +91,15 @@
     "workEnd": "Work ends",
     "workEndPlaceholder": "Choose a time",
     "timeHint": "Every half hour.",
-    "workingDays": "Working days"
+    "workingDays": "Working days",
+    "contractDetails": "For contracts",
+    "contractDetailsHint": "Printed on contracts in the \"School address\" and \"School representative\" fields.",
+    "addressEn": "School address in English",
+    "addressAr": "School address in Arabic",
+    "signatoryNameEn": "Signatory name in English",
+    "signatoryNameAr": "Signatory name in Arabic",
+    "signatoryTitleEn": "Signatory title in English",
+    "signatoryTitleAr": "Signatory title in Arabic"
   },
   "logo": {
     "title": "School logo",
