@@ -12,6 +12,7 @@ import { DomainEvents } from '../../src/core/events';
 import {
   DepartmentsService,
   EmployeesService,
+  GradesService,
   JobTitlesService,
   LatenessService,
   MonthLockService,
@@ -22,7 +23,7 @@ import {
 import { seedAdmin, seedStageHeads } from './admin';
 import { EMPLOYEES, generatedFields } from './data/employees';
 import { levelsOf, loadSeedData } from './data/load';
-import { DEPARTMENTS, JOB_TITLES, NO_STAGE_KEY, STAGES, type SeedListItem } from './data/lists';
+import { DEPARTMENTS, GRADE_OF_TITLE, GRADES, JOB_TITLES, NO_STAGE_KEY, STAGES, type SeedListItem } from './data/lists';
 import { HISTORY_MONTHS } from './data/history';
 import { ADJUSTMENTS, DEMO_MONTH, LATENESS, PENALTIES, STAGE_HEADS } from './data/november';
 import type { SeedCatalogue, SeedData } from './data/types';
@@ -123,8 +124,11 @@ async function seedAll(app: INestApplicationContext): Promise<SeedSummary> {
       ),
   );
   await ensureManagingTitles(get(JobTitlesService), jobTitles, admin.id);
+  const grades = await ensureList(GRADES, db.grade.findMany({ select: listSelect }), (item) =>
+    get(GradesService).create({ nameEn: item.nameEn, nameAr: item.nameAr }, admin.id),
+  );
   log(
-    `lists ready (${stages.size} stages, ${departments.size} departments, ${jobTitles.size} job titles)`,
+    `lists ready (${stages.size} stages, ${departments.size} departments, ${jobTitles.size} job titles, ${grades.size} grades)`,
   );
 
   const employees = get(EmployeesService);
@@ -134,9 +138,10 @@ async function seedAll(app: INestApplicationContext): Promise<SeedSummary> {
     const fields = generatedFields(e);
     const existing = await db.employee.findUnique({
       where: { nationalId: fields.nationalId },
-      select: { id: true },
+      select: { id: true, gradeId: true },
     });
     let id = existing?.id;
+    const gradeId = grades.get(GRADE_OF_TITLE[e.jobTitle])!;
     if (!id) {
       const managerId = e.manager ? employeeIds.get(e.manager) : undefined;
       id = (
@@ -154,7 +159,7 @@ async function seedAll(app: INestApplicationContext): Promise<SeedSummary> {
           departmentId: departments.get(e.department)!,
           jobTitleId: jobTitles.get(e.jobTitle)!,
           managerId: managerId ?? null,
-          grade: null,
+          gradeId,
           workSystem: e.workSystem,
           basicSalary: fields.basicSalary,
           fingerprintId: fields.fingerprintId,
@@ -170,6 +175,8 @@ async function seedAll(app: INestApplicationContext): Promise<SeedSummary> {
       const has = await db.employeeStage.count({ where: { employeeId: id } });
       if (has === 0) await employees.update(id, { otherStageIds: e.otherStages.map((k) => stages.get(k)!) });
     }
+    // A database seeded before grades were a list gets the demo grade on the next run.
+    if (existing && !existing.gradeId) await employees.update(id, { gradeId });
     employeeIds.set(e.n, id);
     if (e.inactive) await employees.deactivate(id);
   }

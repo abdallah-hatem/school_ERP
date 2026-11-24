@@ -123,11 +123,10 @@ export class CreateEmployeeDto implements CreateEmployeeRequest {
   @IsUUID()
   managerId?: string | null;
 
+  /** From the Grades list (§3, owner 2026-11-24); null clears it. */
   @IsOptional()
-  @Transform(trimToNull)
-  @IsString()
-  @MaxLength(50)
-  grade?: string | null;
+  @IsUUID()
+  gradeId?: string | null;
 
   @IsIn(WORK_SYSTEMS)
   workSystem: WorkSystem;

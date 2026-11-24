@@ -1,4 +1,5 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, HttpStatus } from '@nestjs/common';
+import { CodedException } from '../../../../common/errors/coded.exception';
 import { contractYearFor, ErrorCode, HrEvent, schoolDayOf } from '@school-erp/shared';
 import { todayIsoDate } from '../../../../common/utils/dates.util';
 import type { AuditService } from '../../../../core/audit';
@@ -8,6 +9,7 @@ import type { FileStorageService } from '../../../../core/settings';
 import type { AfterCommit } from '../../../../database/transactions';
 import { DepartmentsService } from '../../lists/services/departments.service';
 import { JobTitlesService } from '../../lists/services/job-titles.service';
+import type { GradesService } from '../../lists/services/grades.service';
 import type { CreateEmployeeDto } from '../dto/employee.dto';
 import { EmployeeDetailRow, EmployeesRepository } from '../repositories/employees.repository';
 import type { HrRemindersService } from '../../reminders/hr-reminders.service';
@@ -102,6 +104,7 @@ function makeService(
     ...repo,
   };
   const lists = { getSelectable: jest.fn().mockResolvedValue({}) };
+  const grades = { getSelectable: jest.fn().mockResolvedValue({}) };
   // DomainEvents holds each event until the commit (its own spec); here: what was published.
   const events = { publish: jest.fn(() => Promise.resolve()) };
   const files = {
@@ -135,6 +138,7 @@ function makeService(
     repository as unknown as EmployeesRepository,
     lists as unknown as DepartmentsService,
     lists as unknown as JobTitlesService,
+    grades as unknown as GradesService,
     events as unknown as DomainEvents,
     files as unknown as FileStorageService,
     access,
@@ -145,7 +149,7 @@ function makeService(
     users as unknown as UsersService,
     contracts as unknown as ContractRecords,
   );
-  return { service, repository, events, files, audit, afterCommit, reminders, users, contracts };
+  return { service, repository, events, files, audit, afterCommit, reminders, users, contracts, grades };
 }
 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0]);
@@ -317,7 +321,7 @@ describe('EmployeesService', () => {
 
   it('gap 3 — an edit that changes nothing publishes no hr.employee.updated; a real one names its fields', async () => {
     const same = makeService();
-    await same.service.update('e1', { grade: 'A' });
+    await same.service.update('e1', { gradeId: 'gA' });
     expect(same.events.publish).not.toHaveBeenCalled();
 
     const changed = makeService({
@@ -453,8 +457,8 @@ describe('EmployeesService', () => {
         findDetail: jest.fn().mockResolvedValue(row({ manager: managerRef })),
       });
       // The whole form is sent back: the same manager, plus an unrelated change.
-      await expect(service.update('e1', { managerId: 'm1', grade: 'B' })).resolves.toBeDefined();
-      await expect(service.update('e1', { grade: 'C' })).resolves.toBeDefined();
+      await expect(service.update('e1', { managerId: 'm1', gradeId: 'gB' })).resolves.toBeDefined();
+      await expect(service.update('e1', { gradeId: 'gC' })).resolves.toBeDefined();
       expect(repository.updateEmployee).toHaveBeenCalledTimes(2);
     });
 
@@ -531,7 +535,7 @@ describe('EmployeesService', () => {
     const { service, repository } = makeService({
       findStage: jest.fn().mockResolvedValue({ id: 's1', isActive: false }),
     });
-    await expect(service.update('e1', { stageId: 's1', grade: 'B' })).resolves.toBeDefined();
+    await expect(service.update('e1', { stageId: 's1', gradeId: 'gB' })).resolves.toBeDefined();
     expect(repository.findStage).not.toHaveBeenCalled();
     await expect(service.update('e1', { stageId: 's2' })).rejects.toMatchObject({
       code: ErrorCode.LIST_ITEM_HIDDEN,
@@ -593,7 +597,7 @@ describe('EmployeesService — audit (§9, T28)', () => {
     const { service, audit } = makeService({
       updateEmployee: jest.fn().mockRejectedValue(new Error('db down')),
     });
-    await expect(service.update('e1', { grade: 'B' })).rejects.toThrow('db down');
+    await expect(service.update('e1', { gradeId: 'gB' })).rejects.toThrow('db down');
     expect(audit.record).not.toHaveBeenCalled();
   });
 
@@ -725,10 +729,10 @@ describe('EmployeesService — probation end (§3, N0)', () => {
 
   it("edge 8 — an edit that doesn't change it doesn't list it; create records it", async () => {
     const { service, audit } = makeService({
-      updateEmployee: jest.fn().mockResolvedValue(row({ grade: 'B' })),
+      updateEmployee: jest.fn().mockResolvedValue(row({ grade: ref('gB') })),
     });
-    await service.update('e1', { grade: 'B' });
-    expect(changed(recorded(audit)[0])).toEqual(['grade']);
+    await service.update('e1', { gradeId: 'gB' });
+    expect(changed(recorded(audit)[0])).toEqual(['gradeId']);
     const created = makeService();
     await created.service.create(dto());
     expect(recorded(created.audit)[0]?.after).toHaveProperty('probationEnd', '2024-03-31');
@@ -745,17 +749,17 @@ describe('EmployeesService — probation end (§3, N0)', () => {
 describe('EmployeesService — reminders resolved at the change (§11, N3)', () => {
   it('contracts edge 13 — an edit never moves the contract dates (they change only through Contracts)', async () => {
     const { service, repository, reminders } = makeService({
-      updateEmployee: jest.fn().mockResolvedValue(row({ grade: 'B' })),
+      updateEmployee: jest.fn().mockResolvedValue(row({ grade: ref('gB') })),
     });
-    await service.update('e1', { grade: 'B', contractEnd: '2026-08-31' } as never);
+    await service.update('e1', { gradeId: 'gB', contractEnd: '2026-08-31' } as never);
     const data = repository.updateEmployee.mock.calls[0]![1] as Record<string, unknown>;
     expect(data.contractEnd).not.toBeInstanceOf(Date);
     expect(reminders.contractChanged).not.toHaveBeenCalled();
   });
 
   it('N3 edge 2 — an unchanged date resolves nothing', async () => {
-    const same = makeService({ updateEmployee: jest.fn().mockResolvedValue(row({ grade: 'B' })) });
-    await same.service.update('e1', { grade: 'B' });
+    const same = makeService({ updateEmployee: jest.fn().mockResolvedValue(row({ grade: ref('gB') })) });
+    await same.service.update('e1', { gradeId: 'gB' });
     expect(same.reminders.contractChanged).not.toHaveBeenCalled();
     expect(same.reminders.probationChanged).not.toHaveBeenCalled();
   });
@@ -788,5 +792,79 @@ describe('EmployeesService — reminders resolved at the change (§11, N3)', () 
       code: ErrorCode.PROBATION_BEFORE_HIRE,
     });
     expect(reminders.probationChanged).not.toHaveBeenCalled();
+  });
+});
+
+describe('EmployeesService — grade (§3, owner 2026-11-24: picked from the Grades list)', () => {
+  type Recorded = { action: string; before: Record<string, unknown> | null; after: Record<string, unknown> };
+  const recorded = (audit: { record: jest.Mock }) => audit.record.mock.calls.map(([input]) => input as Recorded);
+  const unknownGrade = () => new CodedException(HttpStatus.BAD_REQUEST, ErrorCode.FOREIGN_KEY_VIOLATION);
+  const hiddenGrade = () => new CodedException(HttpStatus.BAD_REQUEST, ErrorCode.LIST_ITEM_HIDDEN);
+  const senior = { id: 'g1', nameEn: 'Senior', nameAr: 'أول' };
+
+  it('create with an unknown grade → 400 FOREIGN_KEY_VIOLATION, nothing written', async () => {
+    const { service, repository, grades } = makeService();
+    grades.getSelectable.mockRejectedValueOnce(unknownGrade());
+    await expect(service.create(dto({ gradeId: 'missing' }))).rejects.toMatchObject({
+      code: ErrorCode.FOREIGN_KEY_VIOLATION,
+    });
+    expect(grades.getSelectable).toHaveBeenCalledWith('missing');
+    expect(repository.createWithCode).not.toHaveBeenCalled();
+  });
+
+  it('create with a hidden grade → 400 LIST_ITEM_HIDDEN', async () => {
+    const { service, repository, grades } = makeService();
+    grades.getSelectable.mockRejectedValueOnce(hiddenGrade());
+    await expect(service.create(dto({ gradeId: 'g-hidden' }))).rejects.toMatchObject({
+      code: ErrorCode.LIST_ITEM_HIDDEN,
+    });
+    expect(repository.createWithCode).not.toHaveBeenCalled();
+  });
+
+  it('create writes the chosen grade; none given → no grade, no lookup', async () => {
+    const chosen = makeService();
+    await chosen.service.create(dto({ gradeId: 'g1' }));
+    expect(chosen.repository.createWithCode.mock.calls[0][0]).toMatchObject({ gradeId: 'g1' });
+    const none = makeService();
+    await none.service.create(dto());
+    expect(none.grades.getSelectable).not.toHaveBeenCalled();
+    expect(none.repository.createWithCode.mock.calls[0][0]).toMatchObject({ gradeId: null });
+  });
+
+  it('the employee keeps a grade hidden after they got it; a newly chosen hidden one is refused', async () => {
+    const { service, repository, grades } = makeService({
+      findDetail: jest.fn().mockResolvedValue(row({ grade: senior })),
+    });
+    grades.getSelectable.mockRejectedValue(hiddenGrade());
+    await expect(service.update('e1', { gradeId: 'g1', phone: '01000000999' })).resolves.toBeDefined();
+    expect(grades.getSelectable).not.toHaveBeenCalled();
+    await expect(service.update('e1', { gradeId: 'g2' })).rejects.toMatchObject({ code: ErrorCode.LIST_ITEM_HIDDEN });
+    expect(repository.updateEmployee).toHaveBeenCalledTimes(1);
+  });
+
+  it('clearing the grade needs no lookup and writes null', async () => {
+    const { service, repository, grades } = makeService({
+      findDetail: jest.fn().mockResolvedValue(row({ grade: senior })),
+    });
+    await service.update('e1', { gradeId: null });
+    expect(grades.getSelectable).not.toHaveBeenCalled();
+    expect(repository.updateEmployee.mock.calls[0][1]).toMatchObject({ gradeId: null });
+  });
+
+  it('the audit entry stores the grade by its two names under gradeId', async () => {
+    const { service, audit } = makeService({
+      findDetail: jest.fn().mockResolvedValue(row({ grade: senior })),
+      updateEmployee: jest.fn().mockResolvedValue(row({ grade: { id: 'g2', nameEn: 'Expert', nameAr: 'خبير' } })),
+    });
+    await service.update('e1', { gradeId: 'g2' });
+    const [entry] = recorded(audit);
+    expect(entry?.before?.gradeId).toEqual({ nameEn: 'Senior', nameAr: 'أول' });
+    expect(entry?.after.gradeId).toEqual({ nameEn: 'Expert', nameAr: 'خبير' });
+    expect(entry?.after).not.toHaveProperty('grade');
+  });
+
+  it('the record returns the grade as { id, nameEn, nameAr }', async () => {
+    const { service } = makeService({ findDetail: jest.fn().mockResolvedValue(row({ grade: senior })) });
+    expect((await service.get('e1')).grade).toEqual(senior);
   });
 });

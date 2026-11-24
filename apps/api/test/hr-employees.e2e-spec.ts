@@ -30,6 +30,10 @@ describe('HR lists and employees (e2e)', () => {
   /** Doesn't manage people (§3 direct managers). */
   let plainTitleId: string;
   let hiddenJobTitleId: string;
+  /** Grades (§3, owner 2026-11-24): two shown, one hidden. */
+  let gradeAId: string;
+  let gradeBId: string;
+  let hiddenGradeId: string;
 
   const MISSING_ID = '11111111-1111-4111-8111-111111111111';
   let nid = 0;
@@ -100,6 +104,12 @@ describe('HR lists and employees (e2e)', () => {
       .patch(`/hr/job-titles/${hiddenJobTitleId}`)
       .send({ isActive: false })
       .expect(200);
+    gradeAId = (await http(app).post('/hr/grades').send({ nameEn: 'Junior', nameAr: 'مبتدئ', sortOrder: 1 }).expect(201))
+      .body.data.id as string;
+    gradeBId = (await http(app).post('/hr/grades').send({ nameEn: 'Senior', nameAr: 'أول', sortOrder: 2 }).expect(201))
+      .body.data.id as string;
+    hiddenGradeId = await mk('/hr/grades', 'Retired grade');
+    await http(app).patch(`/hr/grades/${hiddenGradeId}`).send({ isActive: false }).expect(200);
   });
 
   beforeEach(() => {
@@ -111,6 +121,7 @@ describe('HR lists and employees (e2e)', () => {
     await deleteEmployees(db);
     await db.department.deleteMany({});
     await db.jobTitle.deleteMany({});
+    await db.grade.deleteMany({});
     await db.stage.deleteMany({});
     await app.close();
   });
@@ -185,7 +196,7 @@ describe('HR lists and employees (e2e)', () => {
       const got = await http(app).get(`/hr/employees/${emp.id}`).expect(200);
       expect(got.body.data.department.id).toBe(dept);
       // An unrelated edit keeps the (now hidden) department.
-      await http(app).patch(`/hr/employees/${emp.id}`).send({ grade: 'B' }).expect(200);
+      await http(app).patch(`/hr/employees/${emp.id}`).send({ gradeId: gradeBId }).expect(200);
     });
 
     it('list create / PATCH writes a history row (settings.changed emitted with old and new value)', async () => {
@@ -240,6 +251,93 @@ describe('HR lists and employees (e2e)', () => {
       expect(settingsEvents()).toEqual([
         expect.objectContaining({ scope: 'lists', key: HrListKey.DEPARTMENTS, oldValue: null }),
       ]);
+    });
+  });
+
+  // ── Grades (§3, owner 2026-11-24): a managed list like departments and job titles ──
+
+  describe('grades', () => {
+    it('no DELETE route; both names required; GET pages, searches and hides hidden ones unless asked', async () => {
+      await http(app).delete(`/hr/grades/${gradeAId}`).expect(404);
+      await http(app).post('/hr/grades').send({ nameEn: 'Only English' }).expect(400);
+      await http(app).post('/hr/grades').send({ nameEn: '  ', nameAr: 'عربي' }).expect(400);
+      // Job titles' switch is not a grade field.
+      await http(app).post('/hr/grades').send({ nameEn: 'X', nameAr: 'س', managesPeople: true }).expect(400);
+
+      const visible = (await http(app).get('/hr/grades').expect(200)).body.data as { id: string }[];
+      expect(visible.map((g) => g.id)).toEqual(expect.arrayContaining([gradeAId, gradeBId]));
+      expect(visible.map((g) => g.id)).not.toContain(hiddenGradeId);
+      const whole = (await http(app).get('/hr/grades?includeHidden=true').expect(200)).body as { data: unknown[]; meta?: unknown };
+      expect(whole.meta).toBeUndefined();
+      const page = (await http(app).get('/hr/grades').query({ includeHidden: true, page: 1, limit: 1 }).expect(200)).body;
+      expect(page.data).toHaveLength(1);
+      expect(page.meta).toMatchObject({ page: 1, limit: 1, total: whole.data.length });
+      const found = (await http(app).get('/hr/grades').query({ search: 'senior' }).expect(200)).body;
+      expect(found.data.map((g: { id: string }) => g.id)).toEqual([gradeBId]);
+      const byId = (await http(app).get('/hr/grades').query({ includeHidden: true, ids: hiddenGradeId }).expect(200)).body;
+      expect(byId.data).toEqual([expect.objectContaining({ id: hiddenGradeId, isActive: false })]);
+    });
+
+    it('create / rename write their history and audit entries (hr.grade.*)', async () => {
+      const mark = await historyMark(db);
+      const item = (await http(app).post('/hr/grades').send({ nameEn: 'Expert', nameAr: 'خبير' }).expect(201)).body.data;
+      await http(app).patch(`/hr/grades/${item.id}`).send({ nameEn: 'Expert teacher' }).expect(200);
+      await http(app).patch(`/hr/grades/${item.id}`).send({}).expect(200);
+      const rows = await historyRows(db, mark, HrListKey.GRADES);
+      expect(rows.map((r) => r.action)).toEqual(['hr.grade.create', 'hr.grade.update']);
+      const entries = await db.auditEntry.findMany({
+        where: { seq: { gt: mark }, entityType: 'grade', entityId: item.id },
+        orderBy: { seq: 'asc' },
+      });
+      expect(entries.map((e) => [e.action, e.actorId])).toEqual([
+        ['hr.grade.create', userId],
+        ['hr.grade.update', userId],
+      ]);
+      await http(app).patch(`/hr/grades/${item.id}`).send({ isActive: false }).expect(200);
+    });
+
+    it('an employee picks a shown grade; unknown → 400 FOREIGN_KEY_VIOLATION; hidden → 400 LIST_ITEM_HIDDEN', async () => {
+      const unknown = await create({ gradeId: MISSING_ID }).expect(400);
+      expect(unknown.body.error).toBe(ErrorCode.FOREIGN_KEY_VIOLATION);
+      const hidden = await create({ gradeId: hiddenGradeId }).expect(400);
+      expect(hidden.body.error).toBe(ErrorCode.LIST_ITEM_HIDDEN);
+      await create({ gradeId: 'not-a-uuid' }).expect(400);
+      // The old free text is gone from the contract.
+      await create({ grade: 'B' } as never).expect(400);
+
+      const e = await createOk({ gradeId: gradeAId });
+      const got = (await http(app).get(`/hr/employees/${e.id}`).expect(200)).body.data;
+      expect(got.grade).toEqual({ id: gradeAId, nameEn: 'Junior', nameAr: 'مبتدئ' });
+      const refused = await http(app).patch(`/hr/employees/${e.id}`).send({ gradeId: hiddenGradeId }).expect(400);
+      expect(refused.body.error).toBe(ErrorCode.LIST_ITEM_HIDDEN);
+      const cleared = await http(app).patch(`/hr/employees/${e.id}`).send({ gradeId: null }).expect(200);
+      expect(cleared.body.data.grade).toBeNull();
+    });
+
+    it('a grade hidden after the employee got it is kept on edits; the audit entry names the grade change', async () => {
+      const temp = (await http(app).post('/hr/grades').send({ nameEn: 'Temp grade', nameAr: 'درجة مؤقتة' }).expect(201)).body
+        .data.id as string;
+      const e = await createOk({ gradeId: temp });
+      await http(app).patch(`/hr/grades/${temp}`).send({ isActive: false }).expect(200);
+      // The whole form sent back: the same (hidden) grade, plus an unrelated change.
+      await http(app).patch(`/hr/employees/${e.id}`).send({ gradeId: temp, phone: '01000000123' }).expect(200);
+      expect((await http(app).get(`/hr/employees/${e.id}`).expect(200)).body.data.grade).toMatchObject({ id: temp });
+
+      const mark = await historyMark(db);
+      await http(app).patch(`/hr/employees/${e.id}`).send({ gradeId: gradeBId }).expect(200);
+      const [entry] = await db.auditEntry.findMany({
+        where: { seq: { gt: mark }, entityType: 'employee', entityId: e.id },
+      });
+      expect(entry?.action).toBe('hr.employee.update');
+      expect(entry?.changes).toEqual([
+        { field: 'gradeId', before: { nameEn: 'Temp grade', nameAr: 'درجة مؤقتة' }, after: { nameEn: 'Senior', nameAr: 'أول' } },
+      ]);
+    });
+
+    it('a grade in use cannot be deleted at the database either (Restrict)', async () => {
+      const e = await createOk({ gradeId: gradeBId });
+      await expect(db.grade.delete({ where: { id: gradeBId } })).rejects.toThrow();
+      expect((await db.employee.findUniqueOrThrow({ where: { id: e.id } })).gradeId).toBe(gradeBId);
     });
   });
 
@@ -570,12 +668,12 @@ describe('HR lists and employees (e2e)', () => {
       expect(kept.body.data.manager).toMatchObject({ id: boss.id, managesPeople: false });
 
       // Unrelated edit, with and without the unchanged manager in the body.
-      await http(app).patch(`/hr/employees/${e.id}`).send({ grade: 'G1' }).expect(200);
+      await http(app).patch(`/hr/employees/${e.id}`).send({ gradeId: gradeAId }).expect(200);
       const same = await http(app)
         .patch(`/hr/employees/${e.id}`)
-        .send({ managerId: boss.id, grade: 'G2' })
+        .send({ managerId: boss.id, gradeId: gradeBId })
         .expect(200);
-      expect(same.body.data).toMatchObject({ grade: 'G2', manager: { id: boss.id } });
+      expect(same.body.data).toMatchObject({ grade: { id: gradeBId }, manager: { id: boss.id } });
 
       // The manager's own title changed to a non-managing one: same rule.
       await http(app).patch(`/hr/job-titles/${title.id}`).send({ managesPeople: true }).expect(200);
@@ -583,7 +681,7 @@ describe('HR lists and employees (e2e)', () => {
         .patch(`/hr/employees/${boss.id}`)
         .send({ jobTitleId: plainTitleId })
         .expect(200);
-      await http(app).patch(`/hr/employees/${second.id}`).send({ grade: 'G3' }).expect(200);
+      await http(app).patch(`/hr/employees/${second.id}`).send({ gradeId: gradeAId }).expect(200);
 
       // Choosing them anew is refused; clearing works.
       const fresh = await createOk();
@@ -649,15 +747,15 @@ describe('HR lists and employees (e2e)', () => {
     });
 
     it('reactivate an inactive employee → ACTIVE, history kept', async () => {
-      const e = await createOk({ grade: 'A' });
+      const e = await createOk({ gradeId: gradeAId });
       await http(app).post(`/hr/employees/${e.id}/deactivate`).expect(200);
       const res = await http(app).post(`/hr/employees/${e.id}/reactivate`).expect(200);
-      expect(res.body.data).toMatchObject({ id: e.id, code: e.code, status: 'ACTIVE', grade: 'A' });
+      expect(res.body.data).toMatchObject({ id: e.id, code: e.code, status: 'ACTIVE', grade: { id: gradeAId } });
     });
 
     it('unknown employee id → 404; malformed id → 400', async () => {
       await http(app).get(`/hr/employees/${MISSING_ID}`).expect(404);
-      await http(app).patch(`/hr/employees/${MISSING_ID}`).send({ grade: 'x' }).expect(404);
+      await http(app).patch(`/hr/employees/${MISSING_ID}`).send({ gradeId: gradeAId }).expect(404);
       await http(app).post(`/hr/employees/${MISSING_ID}/deactivate`).expect(404);
       await http(app).get('/hr/employees/not-a-uuid').expect(400);
     });
@@ -692,10 +790,10 @@ describe('HR lists and employees (e2e)', () => {
       await create({ probationEnd: 'not-a-date' }).expect(400);
 
       const e = await createOk({ hireDate: '2024-09-01' });
-      const patch = await patchEmployee(e.id, { probationEnd: '2024-01-01', grade: 'Z' }).expect(400);
+      const patch = await patchEmployee(e.id, { probationEnd: '2024-01-01', gradeId: gradeAId }).expect(400);
       expect(patch.body.error).toBe(ErrorCode.PROBATION_BEFORE_HIRE);
       const after = await db.employee.findUniqueOrThrow({ where: { id: e.id } });
-      expect(after.grade).toBeNull();
+      expect(after.gradeId).toBeNull();
       expect(after.probationEnd?.toISOString().slice(0, 10)).toBe('2024-11-30');
     });
 
@@ -827,7 +925,7 @@ describe('HR lists and employees (e2e)', () => {
           departmentId: dept.id,
           jobTitleId: title.id,
           managerId: boss.id,
-          grade: 'Grade 2',
+          gradeId: gradeBId,
           workSystem: 'PART_TIME_4',
           basicSalary: 900050,
           fingerprintId: unique('fp'),
@@ -842,6 +940,7 @@ describe('HR lists and employees (e2e)', () => {
       nameAr: 'سارة علي',
       department: { id: dept.id, nameEn: 'Science', nameAr: 'العلوم' },
       jobTitle: { id: title.id },
+      grade: { id: gradeBId, nameEn: 'Senior', nameAr: 'أول' },
       stage: { id: stageId },
       manager: { id: boss.id, code: boss.code },
       basicSalary: 900050,

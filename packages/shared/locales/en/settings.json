@@ -15,7 +15,7 @@
     },
     "lists": {
       "title": "HR lists",
-      "description": "Departments and job titles"
+      "description": "Departments, job titles and grades"
     },
     "hrRules": {
       "title": "HR rules",
@@ -146,6 +146,15 @@
       "managesPeopleHint": "People with this job title can be chosen as a direct manager.",
       "edit": "Edit",
       "editItem": "Edit {name}"
+    },
+    "grades": {
+      "title": "Grades",
+      "description": "Hide a grade to stop new employees getting it. Grades are never deleted.",
+      "add": "Add grade",
+      "emptyTitle": "No grades yet",
+      "emptyBody": "Add the first grade, such as Grade 1.",
+      "placeholderEn": "Grade 1",
+      "placeholderAr": "الدرجة الأولى"
     }
   },
   "hrRules": {

@@ -2,7 +2,7 @@
 
 ## Built (demo, target 2026-11-22)
 
-Sign-in · dashboard · employees · lists (departments, stages, job titles) · penalty catalogue and
+Sign-in · dashboard · employees · lists (departments, stages, job titles, grades) · penalty catalogue and
 penalty records · monthly lateness · payroll run, payslip, bank sheet · settings · Arabic/English ·
 responsive layout.
 

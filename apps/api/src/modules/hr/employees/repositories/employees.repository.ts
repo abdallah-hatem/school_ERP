@@ -83,7 +83,7 @@ export const EMPLOYEE_DETAIL_SELECT = {
       jobTitle: { select: { managesPeople: true } },
     },
   },
-  grade: true,
+  grade: REF,
   workSystem: true,
   basicSalary: true,
   fingerprintId: true,

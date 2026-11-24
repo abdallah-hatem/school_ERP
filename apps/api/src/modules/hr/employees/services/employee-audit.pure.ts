@@ -13,6 +13,7 @@ const REF_FIELDS = {
   stage: 'stageId',
   department: 'departmentId',
   jobTitle: 'jobTitleId',
+  grade: 'gradeId',
   manager: 'managerId',
 } as const satisfies Partial<Record<keyof EmployeeDetailRow, string>>;
 
@@ -26,7 +27,7 @@ const names = (ref: Named | null): Named | null =>
 
 /**
  * The employee as the audit log stores it: every field of the record in form order, dates as
- * `YYYY-MM-DD`, money in piastres, and the stage, department, job title and direct manager as
+ * `YYYY-MM-DD`, money in piastres, and the stage, department, job title, grade and direct manager as
  * their two names under their id fields (`departmentId: { nameEn, nameAr }`) — a snapshot, so a
  * later rename never rewrites what the entry says. Salary-type values (`basicSalary`,
  * `insuredSalary`, the bank details) are stored like the rest and hidden when read by a viewer

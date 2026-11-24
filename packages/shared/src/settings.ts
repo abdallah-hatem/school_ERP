@@ -89,6 +89,7 @@ export type SettingKey =
 export const HrListKey = {
   DEPARTMENTS: 'hr.departments',
   JOB_TITLES: 'hr.jobTitles',
+  GRADES: 'hr.grades',
 } as const;
 export type HrListKey = (typeof HrListKey)[keyof typeof HrListKey];
 

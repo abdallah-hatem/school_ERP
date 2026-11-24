@@ -53,6 +53,7 @@ import {
 } from '../lib/employee-form';
 import { EmployeePhotoField, uploadEmployeePhoto } from './employee-photo-field';
 import { OtherStagesField } from './other-stages-field';
+import { GradeField } from './grade-field';
 
 export interface EmployeeFormProps {
   /** `/ar/employees`. */
@@ -63,7 +64,7 @@ export interface EmployeeFormProps {
    * The employee's own stage / department / job title has since been hidden (§3: they keep it on
    * edit; a new choice must be visible). The pickers' choices are searched by the API.
    */
-  currentHidden?: { stage?: boolean; department?: boolean; jobTitle?: boolean };
+  currentHidden?: { stage?: boolean; department?: boolean; jobTitle?: boolean; grade?: boolean };
   /** Whether any active employee manages people (the manager picker's "none yet" note). */
   hasManagerCandidates?: boolean;
   /** Replaces the page header: the form's skeleton draws one without the employee's name. */
@@ -292,7 +293,7 @@ export function EmployeeForm({
           <SelectField server={department} control={control} name="departmentId" label={t('employees.fields.department')} placeholder={t('employees.placeholders.department')} emptyText={t('employees.noDepartments')} hint={currentHidden.department ? hiddenHint : undefined} required />
           <SelectField server={jobTitle} control={control} name="jobTitleId" label={t('employees.fields.jobTitle')} placeholder={t('employees.placeholders.jobTitle')} emptyText={t('employees.noJobTitles')} hint={currentHidden.jobTitle ? hiddenHint : undefined} required />
           <SelectField server={managers.server} control={control} name="managerId" label={t('employees.fields.manager')} placeholder={t('employees.placeholders.manager')} hint={managerHint} />
-          <TextField control={control} name="grade" label={t('employees.fields.grade')} placeholder={t('employees.placeholders.grade')} maxLength={50} />
+          <GradeField control={control} selected={employee?.grade} currentHidden={currentHidden.grade} />
           <TextField control={control} name="fingerprintId" label={t('employees.fields.fingerprintId')} placeholder={t('employees.placeholders.fingerprintId')} dir="ltr" maxLength={50} />
         </Section>
 

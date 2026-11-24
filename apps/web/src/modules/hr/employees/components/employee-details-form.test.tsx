@@ -17,6 +17,7 @@ vi.mock('../apis', () => ({
   GET_DEPARTMENTS: vi.fn(),
   GET_STAGES: vi.fn(),
   GET_JOB_TITLES: vi.fn(),
+  GET_GRADES: vi.fn(),
   GET_MANAGER_OPTIONS: vi.fn(),
   UPDATE_EMPLOYEE: vi.fn(),
   UPLOAD_EMPLOYEE_PHOTO: vi.fn(),

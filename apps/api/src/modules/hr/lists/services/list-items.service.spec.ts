@@ -6,6 +6,8 @@ import { DepartmentsRepository } from '../repositories/departments.repository';
 import { JobTitlesRepository } from '../repositories/job-titles.repository';
 import { DepartmentsService } from './departments.service';
 import { JobTitlesService } from './job-titles.service';
+import { GradesRepository } from '../repositories/grades.repository';
+import { GradesService } from './grades.service';
 
 const item = (over: Partial<ListItem> = {}): ListItem => ({
   id: 'd1',
@@ -212,5 +214,49 @@ describe('JobTitlesService (managesPeople, §3 2026-11-18)', () => {
     expect(history.record).toHaveBeenCalledWith(
       expect.objectContaining({ oldValue: same, newValue: same }),
     );
+  });
+});
+
+describe('GradesService (§3, owner 2026-11-24)', () => {
+  function makeGrades(repo: Partial<Record<keyof GradesRepository, jest.Mock>> = {}) {
+    const tx = fakeTransaction();
+    const repository = { findOne: jest.fn(), createItem: jest.fn(), updateItem: jest.fn(), ...repo };
+    const history = historyIn(tx);
+    const service = new GradesService(
+      repository as unknown as GradesRepository,
+      history as unknown as SettingsHistory,
+      tx.afterCommit,
+    );
+    return { service, repository, history };
+  }
+
+  it('create and rename record their history under hr.grades (the hr.grade.* audit actions)', async () => {
+    const senior = item({ id: 'g1', nameEn: 'Senior', nameAr: 'أول' });
+    const renamed = { ...senior, nameEn: 'Senior teacher' };
+    const { service, history } = makeGrades({
+      createItem: jest.fn().mockResolvedValue(senior),
+      findOne: jest.fn().mockResolvedValue(senior),
+      updateItem: jest.fn().mockResolvedValue(renamed),
+    });
+    await service.create({ nameEn: 'Senior', nameAr: 'أول' }, 'u1');
+    await service.update('g1', { nameEn: 'Senior teacher' }, 'u1');
+    expect(history.record).toHaveBeenCalledTimes(2);
+    expect(history.record).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ scope: 'lists', key: HrListKey.GRADES, oldValue: null, newValue: senior }),
+    );
+    expect(history.record).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ scope: 'lists', key: HrListKey.GRADES, oldValue: senior, newValue: renamed }),
+    );
+  });
+
+  it('getSelectable: an unknown grade → FOREIGN_KEY_VIOLATION, a hidden one → LIST_ITEM_HIDDEN', async () => {
+    const missing = makeGrades({ findOne: jest.fn().mockResolvedValue(null) });
+    await expect(missing.service.getSelectable('x')).rejects.toMatchObject({ code: ErrorCode.FOREIGN_KEY_VIOLATION });
+    const hidden = makeGrades({ findOne: jest.fn().mockResolvedValue(item({ id: 'g1', isActive: false })) });
+    await expect(hidden.service.getSelectable('g1')).rejects.toMatchObject({ code: ErrorCode.LIST_ITEM_HIDDEN });
+    const shown = makeGrades({ findOne: jest.fn().mockResolvedValue(item({ id: 'g1' })) });
+    await expect(shown.service.getSelectable('g1')).resolves.toMatchObject({ id: 'g1' });
   });
 });

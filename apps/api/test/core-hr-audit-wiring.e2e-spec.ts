@@ -313,13 +313,15 @@ describe('core + HR people audit wiring (T28, e2e)', () => {
 
   it("the employee's History lists their entries, newest first", async () => {
     const e = await createEmployee();
-    await http(app).patch(`/hr/employees/${e.id}`).send({ grade: 'B' }).expect(200);
+    const grade = (await http(app).post('/hr/grades').send({ nameEn: 'B', nameAr: 'ب' }).expect(201)).body.data;
+    await http(app).patch(`/hr/employees/${e.id}`).send({ gradeId: grade.id }).expect(200);
     const res = await http(app).get(`/audit/records/employee/${e.id}`).expect(200);
     const list = res.body.data as AuditEntry[];
     // Contracts (2026-11-24): the first contract's entry is on the employee's History too.
     expect(list.map((x) => x.action)).toEqual(['hr.employee.update', 'hr.contract.create', 'hr.employee.create']);
     expect(list[0]?.entityLabel).toEqual({ en: e.nameEn, ar: e.nameAr });
-    expect(list[0]?.changes).toEqual([{ field: 'grade', before: null, after: 'B' }]);
+    // The grade by its two names (§3, owner 2026-11-24), as the History shows it.
+    expect(list[0]?.changes).toEqual([{ field: 'gradeId', before: null, after: { nameEn: 'B', nameAr: 'ب' } }]);
   });
 
   it('P4 — salary-type values are hidden from a viewer without hr.employees.view_salary; other fields show', async () => {

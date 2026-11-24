@@ -7,6 +7,7 @@ import { fakeAccess } from '../../access/hr-access.testing';
 import type { EmployeeScope } from '../../access/employee-scope.pure';
 import type { DepartmentsService } from '../../lists/services/departments.service';
 import type { JobTitlesService } from '../../lists/services/job-titles.service';
+import type { GradesService } from '../../lists/services/grades.service';
 import type {
   EmployeeDetailRow,
   EmployeesRepository,
@@ -114,6 +115,7 @@ function makeService(scopes: Parameters<typeof fakeAccess>[0], repo: Record<stri
     repository as unknown as EmployeesRepository,
     { getSelectable: jest.fn() } as unknown as DepartmentsService,
     { getSelectable: jest.fn() } as unknown as JobTitlesService,
+    { getSelectable: jest.fn() } as unknown as GradesService,
     { publish: jest.fn() } as unknown as DomainEvents,
     {} as unknown as FileStorageService,
     fakeAccess(scopes),
@@ -179,7 +181,7 @@ describe('employees — scopes (R5)', () => {
         findScopeFields: jest.fn().mockResolvedValue({ id: 'e2', stageId: 'kg', managerId: null }),
       },
     );
-    await expect(service.update('e2', { grade: 'B' })).rejects.toMatchObject({ status: 404 });
+    await expect(service.update('e2', { gradeId: 'gB' })).rejects.toMatchObject({ status: 404 });
     await expect(service.deactivate('e2')).rejects.toMatchObject({ status: 404 });
     await expect(service.removePhoto('e2')).rejects.toMatchObject({ status: 404 });
     expect(repository.updateEmployee).not.toHaveBeenCalled();
@@ -303,7 +305,7 @@ describe('employees — edits stay inside the scope (R5)', () => {
 
   it('an unrelated edit inside the scope goes through', async () => {
     const { service, repository } = makeService(EDITOR);
-    await service.update('e1', { grade: 'B' });
+    await service.update('e1', { gradeId: 'gB' });
     expect(repository.updateEmployee).toHaveBeenCalled();
   });
 

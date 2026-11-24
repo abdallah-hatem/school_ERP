@@ -37,6 +37,9 @@ import { isValidPhone } from '@/shared/lib/phone';
 /** The manager picker's "no direct manager" item (Radix Select items can't have an empty value). */
 export const NO_MANAGER = '__none__';
 
+/** The grade picker's "no grade" item (§3, owner 2026-11-24: the grade is optional). */
+export const NO_GRADE = '__none__';
+
 const REQUIRED = 'ui.form.required';
 const TOO_LONG = 'employees.errors.tooLong';
 
@@ -99,7 +102,7 @@ const employeeFields = z.object({
     departmentId: requiredId,
     jobTitleId: requiredId,
     managerId: z.string(),
-    grade: optionalText(50),
+    gradeId: z.string(),
     workSystem: z.string().refine((v) => (WORK_SYSTEMS as string[]).includes(v), REQUIRED),
     basicSalary: z
       .number()
@@ -194,7 +197,7 @@ export function emptyEmployeeForm(today: IsoDate = todayIso()): EmployeeFormValu
     departmentId: '',
     jobTitleId: '',
     managerId: NO_MANAGER,
-    grade: '',
+    gradeId: NO_GRADE,
     workSystem: '',
     basicSalary: null,
     fingerprintId: '',
@@ -249,7 +252,7 @@ export function employeeToForm(employee: Employee, locale: Locale = 'en'): Emplo
     departmentId: employee.department.id,
     jobTitleId: employee.jobTitle.id,
     managerId: employee.manager?.id ?? NO_MANAGER,
-    grade: employee.grade ?? '',
+    gradeId: employee.grade?.id ?? NO_GRADE,
     workSystem: employee.workSystem,
     basicSalary: employee.basicSalary ?? null,
     fingerprintId: employee.fingerprintId ?? '',
@@ -299,7 +302,7 @@ export function formToRequest(v: EmployeeFormValues): CreateEmployeeRequest {
     departmentId: v.departmentId,
     jobTitleId: v.jobTitleId,
     managerId: v.managerId && v.managerId !== NO_MANAGER ? v.managerId : null,
-    grade: orNull(v.grade),
+    gradeId: v.gradeId && v.gradeId !== NO_GRADE ? v.gradeId : null,
     workSystem: v.workSystem as WorkSystem,
     basicSalary: v.basicSalary as number,
     fingerprintId: orNull(v.fingerprintId),

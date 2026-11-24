@@ -19,12 +19,13 @@ vi.mock('../apis', () => ({
   GET_DEPARTMENTS: vi.fn(),
   GET_STAGES: vi.fn(),
   GET_JOB_TITLES: vi.fn(),
+  GET_GRADES: vi.fn(),
   GET_MANAGER_OPTIONS: vi.fn(),
 }));
 
 import type { Employee, EmployeeSummary } from '@school-erp/shared';
-import { CREATE_EMPLOYEE, GET_DEPARTMENTS, GET_JOB_TITLES, GET_MANAGER_OPTIONS, GET_STAGES, UPDATE_EMPLOYEE } from '../apis';
-import { departments, employee, jobTitles, renderEmployees, stages, summary } from '../test/fixtures';
+import { CREATE_EMPLOYEE, GET_DEPARTMENTS, GET_GRADES, GET_JOB_TITLES, GET_MANAGER_OPTIONS, GET_STAGES, UPDATE_EMPLOYEE } from '../apis';
+import { departments, employee, grades, jobTitles, renderEmployees, stages, summary } from '../test/fixtures';
 
 const page = <T,>(data: T[]) => ({ success: true as const, status: 200, data, meta: { total: data.length, page: 1, limit: 20 } });
 const managerOptions = vi.mocked(GET_MANAGER_OPTIONS);
@@ -43,11 +44,12 @@ function renderForm({
   /** What the API answers for the manager picker (it filters out the employee and the inactive). */
   candidates?: EmployeeSummary[];
   locale?: 'en' | 'ar';
-  hidden?: { department?: boolean };
+  hidden?: { department?: boolean; grade?: boolean };
 } = {}) {
   vi.mocked(GET_DEPARTMENTS).mockResolvedValue(page(departments) as never);
   vi.mocked(GET_STAGES).mockResolvedValue(page(stages) as never);
   vi.mocked(GET_JOB_TITLES).mockResolvedValue(page(jobTitles) as never);
+  vi.mocked(GET_GRADES).mockResolvedValue(page(grades) as never);
   managerOptions.mockResolvedValue(page(candidates) as never);
   return renderEmployees(
     <EmployeeForm
@@ -289,6 +291,53 @@ describe('EmployeeForm', () => {
     const trigger = screen.getByRole('combobox', { name: /Department/ });
     expect(trigger.textContent).toContain('Old Department');
     expect(screen.getByText('Hidden from new choices; kept for this employee.')).toBeTruthy();
+  });
+
+  describe('grade (§3, owner 2026-11-24: picked from the Grades list)', () => {
+    const gradeField = () => screen.getByRole('combobox', { name: /^Grade/ });
+
+    it('the API lists the grades, after "No grade"; a new employee starts with none', async () => {
+      const user = userEvent.setup();
+      renderForm();
+      expect(gradeField().textContent).toContain('No grade');
+      await user.click(gradeField());
+      const listbox = await screen.findByRole('listbox');
+      await waitFor(() =>
+        expect(within(listbox).getAllByRole('option').map((o) => o.textContent)).toEqual(['No grade', 'Grade 1', 'Grade 2']),
+      );
+      // One page of the typed text, asked of the API (never filtered here).
+      expect(vi.mocked(GET_GRADES)).toHaveBeenCalledWith({ includeHidden: false, search: '', limit: 20 });
+    });
+
+    it('choosing a grade on an edit sends its id only; "No grade" clears it', async () => {
+      const user = userEvent.setup();
+      update.mockResolvedValue(ok(employee));
+      renderForm({ editing: employee });
+      await user.click(gradeField());
+      await user.click(await screen.findByRole('option', { name: 'Grade 2' }));
+      expect(gradeField().textContent).toContain('Grade 2');
+      await user.click(screen.getByRole('button', { name: 'Save changes' }));
+      await waitFor(() => expect(update).toHaveBeenCalledWith('e-mona', { gradeId: 'g-2' }));
+
+      cleanup();
+      update.mockReset();
+      update.mockResolvedValue(ok(employee));
+      renderForm({ editing: { ...employee, grade: { id: 'g-1', nameEn: 'Grade 1', nameAr: 'الدرجة الأولى' } } });
+      await user.click(gradeField());
+      await user.click(await screen.findByRole('option', { name: 'No grade' }));
+      await user.click(screen.getByRole('button', { name: 'Save changes' }));
+      await waitFor(() => expect(update).toHaveBeenCalledWith('e-mona', { gradeId: null }));
+    });
+
+    it('keeps a grade hidden after the employee got it, in the page language, and says so', () => {
+      renderForm({
+        editing: { ...employee, grade: { id: 'g-old', nameEn: 'Old grade', nameAr: 'درجة قديمة' } },
+        hidden: { grade: true },
+        locale: 'ar',
+      });
+      expect(screen.getByRole('combobox', { name: /^الدرجة/ }).textContent).toContain('درجة قديمة');
+      expect(screen.getByText('مخفي من الاختيارات الجديدة؛ يبقى لهذا الموظف.')).toBeTruthy();
+    });
   });
 
   it('new employee: required fields block submit with translated messages; contract is prefilled', async () => {

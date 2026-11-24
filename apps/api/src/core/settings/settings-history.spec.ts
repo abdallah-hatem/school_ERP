@@ -38,6 +38,7 @@ describe('SettingsHistory (list and catalogue edits, in the change’s transacti
 
   it.each([
     ['lists', 'hr.jobTitles', 'hr.job_title.update', 'job_title'],
+    ['lists', 'hr.grades', 'hr.grade.update', 'grade'],
     ['catalogue', 'hr.penaltyGroups', 'hr.penalty_group.update', 'penalty_group'],
     ['catalogue', 'hr.violations', 'hr.violation.update', 'violation'],
   ] as const)('%s %s with an old value → %s', async (scope, key, action, type) => {

@@ -4,6 +4,7 @@ export { EmployeesService } from './employees/services/employees.service';
 // The demo seed (prisma/seed) writes through these owning services, never raw inserts.
 export { DepartmentsService } from './lists/services/departments.service';
 export { JobTitlesService } from './lists/services/job-titles.service';
+export { GradesService } from './lists/services/grades.service';
 export { PenaltyCatalogueService } from './penalties/services/penalty-catalogue.service';
 export { PenaltyRecordsService } from './penalties/services/penalty-records.service';
 export { LatenessService } from './staff-attendance/services/lateness.service';

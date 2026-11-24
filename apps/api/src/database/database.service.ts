@@ -16,6 +16,7 @@ export const SEARCH_OMIT = {
   stage: SEARCH_COLUMNS,
   department: SEARCH_COLUMNS,
   jobTitle: SEARCH_COLUMNS,
+  grade: SEARCH_COLUMNS,
   employee: SEARCH_COLUMNS,
   violation: SEARCH_COLUMNS,
   payrollLine: SEARCH_COLUMNS,

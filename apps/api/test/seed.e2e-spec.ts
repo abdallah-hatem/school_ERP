@@ -38,6 +38,7 @@ async function wipe(db: DatabaseService): Promise<void> {
   await deleteEmployees(db);
   await db.department.deleteMany({});
   await db.jobTitle.deleteMany({});
+  await db.grade.deleteMany({});
   await db.stage.deleteMany({});
   await db.schoolSetting.deleteMany({});
   await db.user.deleteMany({ where: { email: SEED_ADMIN_EMAIL } });
@@ -45,12 +46,13 @@ async function wipe(db: DatabaseService): Promise<void> {
 
 /** Row counts of everything the seed creates, plus the employee codes and the code counter. */
 async function snapshot(db: DatabaseService) {
-  const [users, stages, departments, jobTitles, employees, groups, violations, levels] =
+  const [users, stages, departments, jobTitles, grades, employees, groups, violations, levels] =
     await Promise.all([
       db.user.count({ where: { email: SEED_ADMIN_EMAIL } }),
       db.stage.count(),
       db.department.count(),
       db.jobTitle.count(),
+      db.grade.count(),
       db.employee.count(),
       db.penaltyGroup.count(),
       db.violation.count(),
@@ -70,6 +72,7 @@ async function snapshot(db: DatabaseService) {
       stages,
       departments,
       jobTitles,
+      grades,
       employees,
       groups,
       violations,
@@ -318,6 +321,9 @@ describe('Seed (e2e)', () => {
     expect(noStage).toEqual([{ nameEn: 'None' }]);
     expect(await db.department.count()).toBeGreaterThanOrEqual(10);
     expect(await db.jobTitle.count()).toBeGreaterThanOrEqual(15);
+    // §3 (owner, 2026-11-24): the example grades, and the active demo staff each hold one.
+    expect(await db.grade.count()).toBeGreaterThanOrEqual(4);
+    expect(await db.employee.count({ where: { gradeId: null } })).toBe(0);
     expect(await db.employee.count({ where: { status: 'INACTIVE' } })).toBe(2);
     expect(await db.employee.count({ where: { managerId: { not: null } } })).toBeGreaterThan(5);
     // §3: the leading titles manage people, and every seeded manager holds one.
