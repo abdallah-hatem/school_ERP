@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, Fragment, useContext, type ReactNode } from 'react';
 import { EmptyState, ErrorState } from '@/shared/components/layout/empty-state';
 import { SkeletonText } from '@/shared/components/ui/skeleton';
 import { useScrollEdges } from '@/shared/hooks/use-scroll-edges';
@@ -131,6 +131,11 @@ export interface DataTableProps<Row> {
    * has a table view stay uncapped.
    */
   scrollHeight?: 'screen';
+  /**
+   * A block under a row, across every column (a contract's printed copies); null for none. On a
+   * card it closes the card. Its presence is data, so skeleton rows don't draw it.
+   */
+  rowDetail?: (row: Row) => ReactNode;
   className?: string;
 }
 
@@ -175,6 +180,7 @@ export function DataTable<Row>({
   printRows,
   skeletonBlocks = true,
   scrollHeight,
+  rowDetail,
   className,
 }: DataTableProps<Row>) {
   // Cards on every width: no screen table at all, and the cards show at every container width.
@@ -225,9 +231,9 @@ export function DataTable<Row>({
         className={cn('transition-opacity duration-150', refreshing && 'pointer-events-none opacity-55')}
       >
         {cardsOnly ? null : (
-          <Table columns={columns} rows={rows ?? []} getRowId={getRowId} label={label} rowTone={rowTone} viewClass={view.table} footer={footer} scrollHeight={scrollHeight} />
+          <Table columns={columns} rows={rows ?? []} getRowId={getRowId} label={label} rowTone={rowTone} viewClass={view.table} footer={footer} scrollHeight={scrollHeight} rowDetail={rowDetail} />
         )}
-        <Cards columns={columns} rows={rows ?? []} getRowId={getRowId} label={label} rowTone={rowTone} viewClass={view.cards} heightsVary={cardHeightsVary} footer={footer} footerCard={footerCard} scrollHeight={cardsOnly ? scrollHeight : undefined} />
+        <Cards columns={columns} rows={rows ?? []} getRowId={getRowId} label={label} rowTone={rowTone} viewClass={view.cards} heightsVary={cardHeightsVary} footer={footer} footerCard={footerCard} scrollHeight={cardsOnly ? scrollHeight : undefined} rowDetail={rowDetail} />
       </div>
     );
   }
@@ -293,6 +299,8 @@ interface RowsProps<Row> {
   scrollHeight?: 'screen';
   /** Cards only: the totals card after the cards, or none (`footerCard`). */
   footerCard?: 'end' | 'none';
+  /** A block under each row / at the end of each card (`DataTableProps.rowDetail`). */
+  rowDetail?: (row: Row) => ReactNode;
 }
 
 const toneBar = {
@@ -303,7 +311,7 @@ const toneBar = {
 /** A capped table's totals cells: stuck to the scroll box's bottom, opaque, over the rows. */
 const STICKY_FOOT = 'sticky bottom-0 z-20 print:static';
 
-function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass, footer, scrollHeight }: RowsProps<Row>) {
+function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass, footer, scrollHeight, rowDetail }: RowsProps<Row>) {
   const capped = scrollHeight === 'screen';
   const { ref, edges } = useScrollEdges<HTMLDivElement>();
   const head = useBlock('table-head');
@@ -366,24 +374,37 @@ function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass, footer
         <tbody>
           {rows.map((row) => {
             const tone = rowTone?.(row);
+            const detail = rowDetail?.(row) ?? null;
+            const id = getRowId(row);
             return (
-              <tr key={getRowId(row)} data-skeleton-block={rowBlock} data-skeleton-each={rowBlock ? '' : undefined} className="group/row">
-                {columns.map((column, i) => (
-                  <td
-                    key={column.id}
-                    className={cn(
-                      'border-b border-border px-3 py-3 align-middle whitespace-nowrap transition-colors duration-150',
-                      'group-last/row:border-b-0 group-hover/row:bg-primary-soft/45',
-                      'first:ps-5 last:pe-5',
-                      alignClass[column.align ?? 'start'],
-                      i === 0 && tone ? toneBar[tone] : null,
-                      column.className,
-                    )}
-                  >
-                    {column.cell(row)}
-                  </td>
-                ))}
-              </tr>
+              <Fragment key={id}>
+                <tr data-skeleton-block={rowBlock} data-skeleton-each={rowBlock ? '' : undefined} className="group/row">
+                  {columns.map((column, i) => (
+                    <td
+                      key={column.id}
+                      className={cn(
+                        'border-b border-border px-3 py-3 align-middle whitespace-nowrap transition-colors duration-150',
+                        'group-last/row:border-b-0 group-hover/row:bg-primary-soft/45',
+                        'first:ps-5 last:pe-5',
+                        alignClass[column.align ?? 'start'],
+                        i === 0 && tone ? toneBar[tone] : null,
+                        column.className,
+                        // Its detail row below closes it instead.
+                        detail !== null && 'border-b-0',
+                      )}
+                    >
+                      {column.cell(row)}
+                    </td>
+                  ))}
+                </tr>
+                {detail !== null ? (
+                  <tr data-row-detail="" className="group/detail">
+                    <td colSpan={columns.length} className="border-b border-border px-5 pt-0 pb-3 group-last/detail:border-b-0">
+                      {detail}
+                    </td>
+                  </tr>
+                ) : null}
+              </Fragment>
             );
           })}
         </tbody>
@@ -430,7 +451,7 @@ function Table<Row>({ columns, rows, getRowId, label, rowTone, viewClass, footer
 
 // ── Cards (container < 740px) ────────────────────────────────────────────────
 
-function Cards<Row>({ columns, rows, getRowId, label, rowTone, viewClass, heightsVary = false, footer, footerCard = 'end', scrollHeight }: RowsProps<Row>) {
+function Cards<Row>({ columns, rows, getRowId, label, rowTone, viewClass, heightsVary = false, footer, footerCard = 'end', scrollHeight, rowDetail }: RowsProps<Row>) {
   const capped = scrollHeight === 'screen';
   const titles = columns.filter((c) => c.card === 'title');
   const statuses = columns.filter((c) => c.card === 'status');
@@ -532,6 +553,7 @@ function Cards<Row>({ columns, rows, getRowId, label, rowTone, viewClass, height
                 {c.cell(row)}
               </div>
             ))}
+            {rowDetail?.(row) ?? null}
           </li>
         );
       })}

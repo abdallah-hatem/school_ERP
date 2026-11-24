@@ -106,6 +106,22 @@ import {
   DownloadSimpleIcon as DownloadSimple,
   ExportIcon as ShareArrow,
   HouseIcon as House,
+  ArrowUUpLeftIcon as ArrowUUpLeft,
+  ArrowUUpRightIcon as ArrowUUpRight,
+  BracketsCurlyIcon as BracketsCurly,
+  BracketsSquareIcon as BracketsSquare,
+  FloppyDiskIcon as FloppyDisk,
+  ListNumbersIcon as ListNumbers,
+  MagnifyingGlassMinusIcon as MagnifyingGlassMinus,
+  MagnifyingGlassPlusIcon as MagnifyingGlassPlus,
+  ScissorsIcon as Scissors,
+  TextAlignCenterIcon as TextAlignCenter,
+  TextAlignJustifyIcon as TextAlignJustify,
+  TextAlignLeftIcon as TextAlignLeft,
+  TextAlignRightIcon as TextAlignRight,
+  TextBIcon as TextB,
+  TextItalicIcon as TextItalic,
+  TextUnderlineIcon as TextUnderline,
 } from '@phosphor-icons/react/ssr';
 import type { ComponentType, SVGProps } from 'react';
 import { cn } from '@/shared/lib/utils';
@@ -337,3 +353,21 @@ export const ContractEndIcon = duotone(FileText, 'ContractEnd');
 export const ProbationEndIcon = duotone(HourglassMedium, 'ProbationEnd');
 export const LatenessDueIcon = duotone(ClockCountdown, 'LatenessDue');
 export const PayrollDueIcon = duotone(CalendarCheck, 'PayrollDue');
+
+// Contract templates: the text editor's toolbar, fields, the preview's zoom
+export const UndoIcon = duotone(ArrowUUpLeft, 'Undo');
+export const RedoIcon = duotone(ArrowUUpRight, 'Redo');
+export const BoldIcon = duotone(TextB, 'Bold');
+export const ItalicIcon = duotone(TextItalic, 'Italic');
+export const UnderlineIcon = duotone(TextUnderline, 'Underline');
+export const AlignLeftIcon = duotone(TextAlignLeft, 'AlignLeft');
+export const AlignCenterIcon = duotone(TextAlignCenter, 'AlignCenter');
+export const AlignRightIcon = duotone(TextAlignRight, 'AlignRight');
+export const AlignJustifyIcon = duotone(TextAlignJustify, 'AlignJustify');
+export const NumberedListIcon = duotone(ListNumbers, 'NumberedList');
+export const PageBreakIcon = duotone(Scissors, 'PageBreak');
+export const OptionalPhraseIcon = duotone(BracketsSquare, 'OptionalPhrase');
+export const ContractFieldIcon = duotone(BracketsCurly, 'ContractField');
+export const SaveIcon = duotone(FloppyDisk, 'Save');
+export const ZoomInIcon = duotone(MagnifyingGlassPlus, 'ZoomIn');
+export const ZoomOutIcon = duotone(MagnifyingGlassMinus, 'ZoomOut');

@@ -113,7 +113,7 @@ per-account lockout (Sign-in limits); every endpoint declares its permission (Pe
   ```
   default-src 'self'; script-src 'self' 'nonce-<nonce>' 'strict-dynamic'; style-src 'self' 'unsafe-inline';
   img-src 'self' data: blob: <api>; font-src 'self'; connect-src 'self' <api>; worker-src 'self';
-  manifest-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
+  manifest-src 'self'; frame-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
   ```
 
   `'unsafe-eval'` is added in development only (React's dev tools). **Why `style-src

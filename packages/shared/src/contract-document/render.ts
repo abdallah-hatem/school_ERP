@@ -272,6 +272,10 @@ export function valuesOfFilledDocument(document: ContractDocument): Partial<Cont
  * The document's look (A4 text block, 20 mm margins come from the page, not from here). Scoped to
  * `.cd-doc`; the fonts are `--font-latin` / `--font-arabic` (the app's next/font faces on screen,
  * the bundled files in the PDF).
+ *
+ * Pages break between blocks, never inside a paragraph, heading, list item or table row (and not
+ * right after a heading): the web preview paginates the same way, block by block, so its page
+ * count is the PDF's (edge case 26).
  */
 export const CONTRACT_DOCUMENT_CSS = `
 .cd-doc{font-family:var(--font-latin,'Contract Latin'),var(--font-arabic,'Contract Arabic'),'Contract Arabic',sans-serif;font-size:11.5pt;line-height:1.75;color:#1a2421;word-wrap:break-word;overflow-wrap:anywhere}
@@ -288,6 +292,8 @@ export const CONTRACT_DOCUMENT_CSS = `
 .cd-doc .cd-table th{background:#eef4f2;font-weight:600}
 .cd-doc .cd-table p{margin:0}
 .cd-doc tr{break-inside:avoid}
+.cd-doc p,.cd-doc h1,.cd-doc h2,.cd-doc h3,.cd-doc li{break-inside:avoid}
+.cd-doc h1,.cd-doc h2,.cd-doc h3{break-after:avoid}
 .cd-doc .cd-page-break{break-after:page;height:0}
 .cd-doc .cd-field{unicode-bidi:isolate}
 .cd-doc .cd-empty{letter-spacing:.08em;color:#5b6b66}

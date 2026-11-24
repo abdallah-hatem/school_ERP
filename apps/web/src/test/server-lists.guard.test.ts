@@ -28,6 +28,12 @@ const ALLOWED: Record<string, { pattern: string; why: string }[]> = {
       why: "A combobox WITHOUT `server` filters its own short options: code lists (enums such as a status, a work system, a penalty action). Every picker over records passes `server` and the API searches.",
     },
   ],
+  'modules/hr/contract-templates/components/fields-panel.tsx': [
+    {
+      pattern: 'matcher',
+      why: "The template editor's Fields panel: the 19 contract fields are a constant in code (`CONTRACT_FIELDS`), searched by their names in both languages and their sample.",
+    },
+  ],
   'core/audit/components/record-history.tsx': [
     {
       pattern: 'sort',

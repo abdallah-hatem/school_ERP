@@ -30,6 +30,12 @@ const PLACEHOLDER: SchoolSettings = {
   workStart: SETTING_DEFAULTS[SchoolSettingKey.WORK_START],
   workEnd: SETTING_DEFAULTS[SchoolSettingKey.WORK_END],
   workingDays: SETTING_DEFAULTS[SchoolSettingKey.WORKING_DAYS],
+  addressEn: '',
+  addressAr: '',
+  signatoryNameEn: '',
+  signatoryNameAr: '',
+  signatoryTitleEn: '',
+  signatoryTitleAr: '',
 };
 
 function toForm(s: SchoolSettings): SchoolFormValues {
@@ -40,6 +46,12 @@ function toForm(s: SchoolSettings): SchoolFormValues {
     workStart: s.workStart,
     workEnd: s.workEnd,
     workingDays: s.workingDays,
+    addressEn: s.addressEn,
+    addressAr: s.addressAr,
+    signatoryNameEn: s.signatoryNameEn,
+    signatoryNameAr: s.signatoryNameAr,
+    signatoryTitleEn: s.signatoryTitleEn,
+    signatoryTitleAr: s.signatoryTitleAr,
   };
 }
 
@@ -191,6 +203,23 @@ function SchoolForm({ initial, onSaved }: { initial: SchoolSettings; onSaved: (n
           required
           disabled={!canEdit}
         />
+        {/* For contracts (contract templates spec, §7): the "School address" and "School
+            representative" fields. Optional: empty prints a dotted line. */}
+        <fieldset data-skeleton-block="contract-details" className="flex min-w-0 flex-col gap-4 border-t border-border pt-5">
+          <legend className="sr-only">{t('settings.school.contractDetails')}</legend>
+          <div className="flex flex-col gap-1" aria-hidden="true">
+            <h3 className="font-display text-base font-extrabold">{t('settings.school.contractDetails')}</h3>
+            <p className="text-sm text-muted-foreground">{t('settings.school.contractDetailsHint')}</p>
+          </div>
+          <div className="grid gap-5 md:grid-cols-2">
+            <TextField control={form.control} name="addressEn" label={t('settings.school.addressEn')} placeholder={t('settings.school.addressEnPlaceholder')} maxLength={NAME_MAX.address} dir="ltr" disabled={!canEdit} />
+            <TextField control={form.control} name="addressAr" label={t('settings.school.addressAr')} placeholder={t('settings.school.addressArPlaceholder')} maxLength={NAME_MAX.address} dir="rtl" disabled={!canEdit} />
+            <TextField control={form.control} name="signatoryNameEn" label={t('settings.school.signatoryNameEn')} placeholder={t('settings.school.signatoryNameEnPlaceholder')} maxLength={NAME_MAX.signatory} dir="ltr" disabled={!canEdit} />
+            <TextField control={form.control} name="signatoryNameAr" label={t('settings.school.signatoryNameAr')} placeholder={t('settings.school.signatoryNameArPlaceholder')} maxLength={NAME_MAX.signatory} dir="rtl" disabled={!canEdit} />
+            <TextField control={form.control} name="signatoryTitleEn" label={t('settings.school.signatoryTitleEn')} placeholder={t('settings.school.signatoryTitleEnPlaceholder')} maxLength={NAME_MAX.signatory} dir="ltr" disabled={!canEdit} />
+            <TextField control={form.control} name="signatoryTitleAr" label={t('settings.school.signatoryTitleAr')} placeholder={t('settings.school.signatoryTitleArPlaceholder')} maxLength={NAME_MAX.signatory} dir="rtl" disabled={!canEdit} />
+          </div>
+        </fieldset>
         <Can permission="core.settings.edit">
           <SaveBar
             dirty={isDirty}

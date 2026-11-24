@@ -267,6 +267,8 @@ async function readPaths(): Promise<Record<SkeletonScreenName, string | null>> {
     // the four buttons a pending month shows the admin); none pending, no month check.
     const accountingMonths = await api.get<AccountingPayrollMonthSummary[]>('/accounting/payroll', { limit: PAGINATION.maxLimit });
     const pendingMonth = accountingMonths.find((m) => m.status === AccountingPayrollStatus.PENDING);
+    // The seed's contract template (contract templates spec): its editor's skeleton.
+    const templates = await api.get<{ id: string }[]>('/hr/contract-templates', { limit: 1 });
     const e = `/employees/${employee.id}`;
     return {
       dashboard: '',
@@ -307,7 +309,10 @@ async function readPaths(): Promise<Record<SkeletonScreenName, string | null>> {
       'settings-lists': '/settings?section=lists',
       'settings-hr-rules': '/settings?section=hrRules',
       'settings-catalogue': '/settings?section=catalogue',
+      'settings-contract-templates': '/settings?section=contractTemplates',
       'settings-notifications': '/settings?section=notifications',
+      'contract-template-new': '/settings/contract-templates/new',
+      'contract-template-edit': templates[0] ? `/settings/contract-templates/${templates[0].id}` : null,
     };
   } finally {
     await api.dispose();

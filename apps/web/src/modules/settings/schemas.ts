@@ -23,13 +23,18 @@ import { z } from 'zod';
  */
 
 /** Name lengths from §7 / the API's DTOs. */
-export const NAME_MAX = { school: 200, list: 100, group: 200, violation: 300 } as const;
+export const NAME_MAX = { school: 200, list: 100, group: 200, violation: 300, address: 300, signatory: 100 } as const;
 export const NOTE_MAX = 1000;
 
 const required = 'ui.form.required';
 
 function name(max: keyof typeof NAME_MAX) {
   return z.string().trim().min(1, required).max(NAME_MAX[max], `settings.errors.max.${max}`);
+}
+
+/** An optional text ('' = not set), trimmed, at most its §7 length. */
+function optionalText(max: keyof typeof NAME_MAX) {
+  return z.string().trim().max(NAME_MAX[max], `settings.errors.max.${max}`);
 }
 
 /** A whole number field (the form holds `null` while it is empty). */
@@ -54,6 +59,13 @@ export const schoolSchema = z
     workStart: z.string().refine(isOnWorkTimeStep, 'settings.errors.time'),
     workEnd: z.string().refine(isOnWorkTimeStep, 'settings.errors.time'),
     workingDays: z.array(z.enum(Weekday)).min(1, 'settings.errors.workingDays'),
+    // For contracts (contract templates spec, §7): optional ('' = not set).
+    addressEn: optionalText('address'),
+    addressAr: optionalText('address'),
+    signatoryNameEn: optionalText('signatory'),
+    signatoryNameAr: optionalText('signatory'),
+    signatoryTitleEn: optionalText('signatory'),
+    signatoryTitleAr: optionalText('signatory'),
   })
   .refine((v) => !isOnWorkTimeStep(v.workStart) || !isOnWorkTimeStep(v.workEnd) || v.workEnd > v.workStart, { path: ['workEnd'], error: 'settings.errors.workHoursOrder' });
 export type SchoolFormValues = z.infer<typeof schoolSchema>;

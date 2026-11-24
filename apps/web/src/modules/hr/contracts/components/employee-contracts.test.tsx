@@ -117,7 +117,8 @@ describe('EmployeeContracts (profile tab)', () => {
     const [, currentRow, previousRow] = table().getAllByRole('row') as HTMLElement[];
     expect(within(currentRow!).getByRole('button', { name: 'Renew' })).toBeTruthy();
     expect(within(currentRow!).getByRole('button', { name: 'Decide' })).toBeTruthy();
-    expect(within(previousRow!).queryByRole('button')).toBeNull();
+    // A past contract only prints (contract templates): no decisions on it.
+    expect(within(previousRow!).getAllByRole('button').map((b) => b.textContent)).toEqual(['Print contract']);
     // No "Contract history" here: this is the history.
     const menu = await openRowActions(user, 'Mona Khalil', within(currentRow!));
     expect(menuItemNames(menu)).toEqual([
@@ -132,6 +133,37 @@ describe('EmployeeContracts (profile tab)', () => {
     renderTab({}, sessionWithout('hr.contracts.manage'));
     expect(table().queryByRole('button', { name: 'Renew' })).toBeNull();
     expect(table().queryByRole('button', { name: 'Decide' })).toBeNull();
+    // Edge case 2: printing is acting on the contract — not with "view contracts" only.
+    expect(table().queryByRole('button', { name: 'Print contract' })).toBeNull();
+  });
+
+  it('lists each contract\'s printed copies under its row: Open, or "contains salary" without a file (edge case 24)', () => {
+    const printed = {
+      id: 'cp-1',
+      contractId: 'c-1',
+      templateId: 't-1',
+      templateNameEn: 'Full-time contract',
+      templateNameAr: 'عقد عمل بدوام كامل',
+      templateVersion: 3,
+      language: 'AR' as const,
+      textEdited: true,
+      containsSalary: true,
+      output: 'PDF' as const,
+      pageCount: 2,
+      fileUrl: '/files/contract-copies/a.pdf',
+      downloadName: 'EMP-0012-2026-27-full-time-contract.pdf',
+      printedBy: { id: 'u-1', name: 'Mona Ibrahim' },
+      printedAt: '2026-06-02T08:00:00.000Z',
+      signed: false,
+    };
+    renderTab({ rows: [contract({ copies: [printed, { ...printed, id: 'cp-0', textEdited: false, fileUrl: null }] }), previous] });
+    const copies = within(document.querySelector<HTMLElement>('[data-view="table"] [data-testid="contract-copies"]')!);
+    const items = copies.getAllByRole('listitem');
+    expect(items[0]!.textContent).toContain('Printed copy · 2 Jun 2026 · Full-time contract v3 · Mona Ibrahim');
+    expect(items[0]!.textContent).toContain('Text edited');
+    expect(within(items[0]!).getByRole('link').getAttribute('href')).toBe('/files/contract-copies/a.pdf');
+    expect(items[1]!.textContent).toContain('contains salary');
+    expect(within(items[1]!).queryByRole('link')).toBeNull();
   });
 
   it('pages through the API (the URL), without scrolling', async () => {
@@ -233,7 +265,7 @@ describe('EmployeeContracts (profile tab)', () => {
       const [, nowCurrent, past] = table().getAllByRole('row') as HTMLElement[];
       expect(nowCurrent!.textContent).toContain('Current');
       expect(within(nowCurrent!).getByRole('button', { name: 'Renew' })).toBeTruthy();
-      expect(within(past!).queryByRole('button')).toBeNull();
+      expect(within(past!).getAllByRole('button').map((b) => b.textContent)).toEqual(['Print contract']);
     });
   });
 
