@@ -47,6 +47,13 @@ import {
   SchoolCalendarController,
 } from './contracts/controllers/contracts.controller';
 import { ContractsRepository } from './contracts/repositories/contracts.repository';
+import { ContractCopiesRepository } from './contracts/repositories/contract-copies.repository';
+import { ContractPrintController } from './contracts/controllers/contract-print.controller';
+import { ContractPrintService } from './contracts/services/contract-print.service';
+import { ContractTemplatesController } from './contract-templates/controllers/contract-templates.controller';
+import { ContractTemplatesRepository } from './contract-templates/repositories/contract-templates.repository';
+import { ContractTemplatesService } from './contract-templates/services/contract-templates.service';
+import { PdfRenderer } from '../../common/pdf/pdf-renderer.service';
 import { SchoolCalendarRepository } from './contracts/repositories/school-calendar.repository';
 import { ContractDatesOnStart } from './contracts/services/contract-dates.startup';
 import { ContractRecords } from './contracts/services/contract-records.service';
@@ -80,6 +87,9 @@ import { LatenessService } from './staff-attendance/services/lateness.service';
     ContractsController,
     EmployeeContractsController,
     SchoolCalendarController,
+    // contract templates and printed copies (spec 2026-11-24-contract-templates)
+    ContractTemplatesController,
+    ContractPrintController,
     // payroll + dashboard (T9)
     PayrollRunsController,
     EmployeePayrollController,
@@ -129,6 +139,12 @@ import { LatenessService } from './staff-attendance/services/lateness.service';
     ContractDatesOnStart,
     SchoolCalendarService,
     ContractsService,
+    // contract templates and printed copies (spec 2026-11-24-contract-templates)
+    ContractTemplatesRepository,
+    ContractTemplatesService,
+    ContractCopiesRepository,
+    ContractPrintService,
+    PdfRenderer,
     // payroll + dashboard (T9)
     PayrollRunsRepository,
     PayrollService,

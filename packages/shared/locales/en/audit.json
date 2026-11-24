@@ -242,7 +242,13 @@
       "defaultLanguage": "Default language",
       "workStart": "Work start",
       "workEnd": "Work end",
-      "workingDays": "Working days"
+      "workingDays": "Working days",
+      "addressEn": "School address (English)",
+      "addressAr": "School address (Arabic)",
+      "signatoryNameEn": "Signatory name (English)",
+      "signatoryNameAr": "Signatory name (Arabic)",
+      "signatoryTitleEn": "Signatory title (English)",
+      "signatoryTitleAr": "Signatory title (Arabic)"
     },
     "hr": {
       "lateness": {

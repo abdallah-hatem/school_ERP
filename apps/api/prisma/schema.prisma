@@ -38,20 +38,24 @@ model User {
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
-  linkedEmployee           Employee?                @relation("UserLinkedEmployee", fields: [employeeId], references: [id], onDelete: SetNull)
+  linkedEmployee           Employee?                 @relation("UserLinkedEmployee", fields: [employeeId], references: [id], onDelete: SetNull)
   roles                    UserRoleAssignment[]
   refreshTokens            RefreshToken[]
   settingsUpdated          SchoolSetting[]
-  penaltiesCreated         PenaltyRecord[]          @relation("PenaltyCreatedBy")
-  penaltiesApproved        PenaltyRecord[]          @relation("PenaltyApprovedBy")
-  penaltiesCancelled       PenaltyRecord[]          @relation("PenaltyCancelledBy")
-  penaltiesReviewed        PenaltyRecord[]          @relation("PenaltyReviewedBy")
-  penaltiesRejected        PenaltyRecord[]          @relation("PenaltyRejectedBy")
-  contractsDecided         EmployeeContract[]       @relation("ContractDecidedBy")
-  earlyTerminationsDecided EmployeeContract[]       @relation("ContractEarlyTerminationDecidedBy")
+  penaltiesCreated         PenaltyRecord[]           @relation("PenaltyCreatedBy")
+  penaltiesApproved        PenaltyRecord[]           @relation("PenaltyApprovedBy")
+  penaltiesCancelled       PenaltyRecord[]           @relation("PenaltyCancelledBy")
+  penaltiesReviewed        PenaltyRecord[]           @relation("PenaltyReviewedBy")
+  penaltiesRejected        PenaltyRecord[]           @relation("PenaltyRejectedBy")
+  contractsDecided         EmployeeContract[]        @relation("ContractDecidedBy")
+  earlyTerminationsDecided EmployeeContract[]        @relation("ContractEarlyTerminationDecidedBy")
+  contractTemplatesCreated ContractTemplate[]        @relation("ContractTemplateCreatedBy")
+  contractTemplatesUpdated ContractTemplate[]        @relation("ContractTemplateUpdatedBy")
+  contractTemplateVersions ContractTemplateVersion[] @relation("ContractTemplateVersionCreatedBy")
+  contractCopiesPrinted    ContractCopy[]            @relation("ContractCopyPrintedBy")
   latenessUpdated          LatenessEntry[]
-  payrollRunsCreated       PayrollRun[]             @relation("PayrollRunCreatedBy")
-  payrollRunsApproved      PayrollRun[]             @relation("PayrollRunApprovedBy")
+  payrollRunsCreated       PayrollRun[]              @relation("PayrollRunCreatedBy")
+  payrollRunsApproved      PayrollRun[]              @relation("PayrollRunApprovedBy")
   adjustmentsCreated       PayrollAdjustment[]
   notificationPrefs        NotificationPreference[]
   pushSubscriptions        PushSubscription[]
@@ -701,12 +705,13 @@ model Employee {
   linkedUser    User?          @relation("UserLinkedEmployee")
 
   /// "Also teaches in" (§3, owner 2026-11-21): stages besides the main one.
-  otherStages  EmployeeStage[]
-  penalties    PenaltyRecord[]
-  contracts    EmployeeContract[]
-  lateness     LatenessEntry[]
-  payrollLines PayrollLine[]
-  adjustments  PayrollAdjustment[]
+  otherStages    EmployeeStage[]
+  penalties      PenaltyRecord[]
+  contracts      EmployeeContract[]
+  contractCopies ContractCopy[]
+  lateness       LatenessEntry[]
+  payrollLines   PayrollLine[]
+  adjustments    PayrollAdjustment[]
 
   /// Search text the database keeps up to date (search_fold of the searched columns):
   /// read-only, never written by the app (docs/ARCHITECTURE.md -> Search).
@@ -925,6 +930,8 @@ model EmployeeContract {
   earlyTerminationDecidedBy User?             @relation("ContractEarlyTerminationDecidedBy", fields: [earlyTerminationDecidedById], references: [id], onDelete: SetNull)
   nextContract              EmployeeContract? @relation("ContractRenewal", fields: [nextContractId], references: [id], onDelete: SetNull)
   previousContract          EmployeeContract? @relation("ContractRenewal")
+  /// Its printed copies (contract templates spec), kept forever.
+  copies                    ContractCopy[]
 
   @@index([employeeId])
   @@index([endsOn])
@@ -936,6 +943,118 @@ model EmployeeContract {
   @@index([earlyTerminationFileUrl])
   @@index([endFileUrl])
   @@map("employee_contracts")
+}
+
+/// The language a contract copy is printed in (contract templates spec).
+enum ContractLanguage {
+  AR
+  EN
+}
+
+/// How a copy was made: Print (the PDF opened in the print dialog) or Download PDF.
+enum ContractCopyOutput {
+  PRINT
+  PDF
+}
+
+/// §3 → Contracts → Contract templates (spec 2026-11-24-contract-templates). Never deleted, only
+/// hidden. Names unique in each language, case-insensitive; at most one shown default per work
+/// system — both SQL-only indexes (see the migration).
+model ContractTemplate {
+  id                   String      @id @default(uuid()) @db.Uuid
+  nameEn               String      @map("name_en")
+  nameAr               String      @map("name_ar")
+  defaultForWorkSystem WorkSystem? @map("default_for_work_system")
+  /// Null = shown.
+  hiddenAt             DateTime?   @map("hidden_at")
+  /// The version the texts are read from: `contract_template_versions.version`.
+  currentVersion       Int         @default(1) @map("current_version")
+  createdById          String?     @map("created_by_id") @db.Uuid
+  createdAt            DateTime    @default(now()) @map("created_at")
+  updatedById          String?     @map("updated_by_id") @db.Uuid
+  updatedAt            DateTime    @updatedAt @map("updated_at")
+
+  createdBy User?                     @relation("ContractTemplateCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User?                     @relation("ContractTemplateUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  versions  ContractTemplateVersion[]
+  copies    ContractCopy[]
+
+  /// Search text the database keeps up to date (search_fold of both names):
+  /// read-only, never written by the app (docs/ARCHITECTURE.md -> Search).
+  searchText    String? @default(dbgenerated()) @map("search_text")
+  /// The same with every space removed.
+  searchCompact String? @default(dbgenerated()) @map("search_compact")
+
+  @@index([createdById])
+  @@index([updatedById])
+  @@index([searchText(ops: raw("gin_trgm_ops"))], type: Gin, map: "contract_templates_search_text_idx")
+  @@index([searchCompact(ops: raw("gin_trgm_ops"))], type: Gin, map: "contract_templates_search_compact_idx")
+  @@map("contract_templates")
+}
+
+/// One version of a template's texts, insert-only: each save that changes a text adds one.
+model ContractTemplateVersion {
+  id          String   @id @default(uuid()) @db.Uuid
+  templateId  String   @map("template_id") @db.Uuid
+  version     Int
+  /// ProseMirror JSON (packages/shared contractDocumentSchema).
+  bodyAr      Json     @map("body_ar")
+  bodyEn      Json?    @map("body_en")
+  /// Worked out on save: a salary field in either text.
+  usesSalary  Boolean  @map("uses_salary")
+  /// The field keys either text uses.
+  fields      String[]
+  createdById String?  @map("created_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  template  ContractTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  createdBy User?            @relation("ContractTemplateVersionCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  copies    ContractCopy[]
+
+  @@unique([templateId, version])
+  @@index([createdById])
+  @@map("contract_template_versions")
+}
+
+/// A copy printed of a contract, insert-only: the filled document as printed, its values and PDF.
+/// The signed scan (contracts round 3) links to it with its own `signed_copy_id`.
+model ContractCopy {
+  id                String             @id @default(uuid()) @db.Uuid
+  contractId        String             @map("contract_id") @db.Uuid
+  /// For the scope check.
+  employeeId        String             @map("employee_id") @db.Uuid
+  templateId        String             @map("template_id") @db.Uuid
+  templateVersionId String             @map("template_version_id") @db.Uuid
+  templateNameEn    String             @map("template_name_en")
+  templateNameAr    String             @map("template_name_ar")
+  language          ContractLanguage
+  /// The filled document as printed (values inline, the copy's edits included).
+  document          Json
+  /// Field → value as printed.
+  values            Json
+  textEdited        Boolean            @map("text_edited")
+  containsSalary    Boolean            @map("contains_salary")
+  output            ContractCopyOutput
+  /// `/files/contract-copies/<uuid>.pdf` — files follow their record, by this link.
+  fileUrl           String             @unique @map("file_url")
+  pageCount         Int                @map("page_count")
+  printedById       String?            @map("printed_by_id") @db.Uuid
+  /// The printer's name as it was then.
+  printedByName     String             @map("printed_by_name")
+  printedAt         DateTime           @default(now()) @map("printed_at")
+
+  contract        EmployeeContract        @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  employee        Employee                @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  template        ContractTemplate        @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  templateVersion ContractTemplateVersion @relation(fields: [templateVersionId], references: [id], onDelete: Restrict)
+  printedBy       User?                   @relation("ContractCopyPrintedBy", fields: [printedById], references: [id], onDelete: SetNull)
+
+  @@index([contractId])
+  @@index([employeeId])
+  @@index([templateId])
+  @@index([templateVersionId])
+  @@index([printedById])
+  @@map("contract_copies")
 }
 
 /// §7 The school calendar of one contract year (`year` 2026 = 2026/27), Settings → HR rules.

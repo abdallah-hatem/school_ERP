@@ -242,7 +242,13 @@
       "defaultLanguage": "اللغة الافتراضية",
       "workStart": "بداية العمل",
       "workEnd": "نهاية العمل",
-      "workingDays": "أيام العمل"
+      "workingDays": "أيام العمل",
+      "addressEn": "عنوان المدرسة (بالإنجليزية)",
+      "addressAr": "عنوان المدرسة (بالعربية)",
+      "signatoryNameEn": "اسم الموقّع (بالإنجليزية)",
+      "signatoryNameAr": "اسم الموقّع (بالعربية)",
+      "signatoryTitleEn": "صفة الموقّع (بالإنجليزية)",
+      "signatoryTitleAr": "صفة الموقّع (بالعربية)"
     },
     "hr": {
       "lateness": {

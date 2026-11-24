@@ -58,6 +58,7 @@ import type {
   NotRenewContractDto,
 } from '../dto/contracts.dto';
 import { ContractsRepository, type ContractRow } from '../repositories/contracts.repository';
+import { ContractPrintService } from './contract-print.service';
 import { ContractRecords } from './contract-records.service';
 import { SchoolCalendarService } from './school-calendar.service';
 
@@ -105,6 +106,7 @@ export class ContractsService {
     private readonly audit: AuditService,
     private readonly files: FileStorageService,
     private readonly afterCommit: AfterCommit,
+    private readonly print: ContractPrintService,
   ) {}
 
   /** The school's today (Cairo). A test fixes it. */
@@ -146,8 +148,10 @@ export class ContractsService {
     const page = query.page ?? PAGINATION.defaultPage;
     const limit = query.limit ?? PAGINATION.defaultLimit;
     const { rows, total } = await this.repository.listOfEmployee(employeeId, page, limit);
+    // Each contract's printed copies (contract templates spec), newest first.
+    const copies = await this.print.copiesOf(rows);
     return {
-      data: await this.present(rows),
+      data: (await this.present(rows)).map((c) => ({ ...c, copies: copies.get(c.id) ?? [] })),
       total,
       page,
       limit,

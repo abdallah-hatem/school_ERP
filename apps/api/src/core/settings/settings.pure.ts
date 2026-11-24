@@ -23,6 +23,12 @@ export const SCHOOL_FIELD_KEYS = {
   workStart: SchoolSettingKey.WORK_START,
   workEnd: SchoolSettingKey.WORK_END,
   workingDays: SchoolSettingKey.WORKING_DAYS,
+  addressEn: SchoolSettingKey.ADDRESS_EN,
+  addressAr: SchoolSettingKey.ADDRESS_AR,
+  signatoryNameEn: SchoolSettingKey.SIGNATORY_NAME_EN,
+  signatoryNameAr: SchoolSettingKey.SIGNATORY_NAME_AR,
+  signatoryTitleEn: SchoolSettingKey.SIGNATORY_TITLE_EN,
+  signatoryTitleAr: SchoolSettingKey.SIGNATORY_TITLE_AR,
 } as const satisfies { [F in keyof SchoolSettings]: SchoolSettingKey };
 
 export type SettingValues<K extends SettingKey> = { [P in K]: SettingValueMap[P] };

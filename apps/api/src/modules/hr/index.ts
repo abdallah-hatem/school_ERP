@@ -10,3 +10,4 @@ export { PenaltyRecordsService } from './penalties/services/penalty-records.serv
 export { LatenessService } from './staff-attendance/services/lateness.service';
 export { PayrollService, type ApprovedLineBreakdown } from './payroll/services/payroll.service';
 export { MonthLockService } from './month-lock/month-lock.service';
+export { ContractTemplatesService } from './contract-templates/services/contract-templates.service';

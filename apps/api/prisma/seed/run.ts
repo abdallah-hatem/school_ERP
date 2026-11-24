@@ -10,6 +10,7 @@ import { StagesService } from '../../src/core/school-structure';
 import { DatabaseService } from '../../src/database/database.service';
 import { DomainEvents } from '../../src/core/events';
 import {
+  ContractTemplatesService,
   DepartmentsService,
   EmployeesService,
   EmployeeGradesService,
@@ -22,7 +23,7 @@ import {
 } from '../../src/modules/hr';
 import { seedAdmin, seedStageHeads } from './admin';
 import { EMPLOYEES, generatedFields } from './data/employees';
-import { levelsOf, loadSeedData } from './data/load';
+import { levelsOf, loadContractTemplates, loadSeedData } from './data/load';
 import { DEPARTMENTS, EMPLOYEE_GRADE_OF_TITLE, EMPLOYEE_GRADES, JOB_TITLES, NO_STAGE_KEY, STAGES, type SeedListItem } from './data/lists';
 import { HISTORY_MONTHS } from './data/history';
 import { ADJUSTMENTS, DEMO_MONTH, LATENESS, PENALTIES, STAGE_HEADS } from './data/november';
@@ -197,6 +198,8 @@ async function seedAll(app: INestApplicationContext): Promise<SeedSummary> {
     `penalty catalogue ready (${data.catalogue.groups.length} groups, ${violationCount} violations)`,
   );
 
+  await seedContractTemplates(get(ContractTemplatesService), db);
+
   const stageHeads = await seedStageHeads(db, employeeIds);
   log(`stage heads ready (${STAGE_HEADS.map((h) => h.email).join(', ')})`);
 
@@ -214,6 +217,21 @@ async function seedAll(app: INestApplicationContext): Promise<SeedSummary> {
     month: DEMO_MONTH,
     monthSeeded,
   };
+}
+
+/**
+ * Contract templates (contract templates spec): the generic sample, or the school's from
+ * `seed-data.local/contract-templates.json` — only into a school that has none yet (idempotent; a
+ * template made in the screen is never touched). Through the service: versions and entries as usual.
+ */
+async function seedContractTemplates(templates: ContractTemplatesService, db: DatabaseService) {
+  if ((await db.contractTemplate.count()) > 0) {
+    log('contract templates already there');
+    return;
+  }
+  const { source, templates: list } = loadContractTemplates();
+  for (const template of list) await templates.create(template);
+  log(`contract templates ready (${list.length}, ${source === 'local' ? 'seed-data.local/' : 'the generic sample'})`);
 }
 
 /** School identity (§7 "from the seed"). Every other setting keeps its §7 default (no row). */

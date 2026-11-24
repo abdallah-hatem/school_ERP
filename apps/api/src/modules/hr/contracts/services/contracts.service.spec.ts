@@ -12,6 +12,7 @@ import type { MonthLockService } from '../../month-lock/month-lock.service';
 import type { HrRemindersService } from '../../reminders/hr-reminders.service';
 import type { ContractRow, ContractsRepository } from '../repositories/contracts.repository';
 import { ContractRecords } from './contract-records.service';
+import { ContractPrintService } from './contract-print.service';
 import { ContractsService } from './contracts.service';
 import type { SchoolCalendarService } from './school-calendar.service';
 
@@ -184,6 +185,7 @@ function makeService(opts: Setup = {}) {
     audit as unknown as AuditService,
     files as unknown as FileStorageService,
     afterCommit as unknown as AfterCommit,
+    { copiesOf: jest.fn((rows: { id: string }[]) => Promise.resolve(new Map(rows.map((r) => [r.id, []])))) } as unknown as ContractPrintService,
   );
   jest.spyOn(service, 'today').mockReturnValue(TODAY);
   return { service, repository, audit, store, calendars, employees, reminders, notifications, files, records, recordDates };

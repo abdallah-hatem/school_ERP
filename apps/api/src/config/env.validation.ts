@@ -167,6 +167,30 @@ export class EnvironmentVariables {
   RATE_LIMIT_HEAVY: number = 20;
 
   /**
+   * Contract PDFs (headless Chromium, contract templates spec): the browser to launch — the image's
+   * Chromium headless shell; unset = playwright-core's own download (dev, CI).
+   */
+  @IsOptional()
+  @Transform(emptyToUndefined)
+  @IsString()
+  PDF_CHROMIUM_PATH?: string;
+
+  /** At most this many PDFs are made at once; the rest wait in the queue (edge case 17). */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(8)
+  PDF_RENDER_CONCURRENCY: number = 2;
+
+  /** A PDF taking longer than this (queue wait excluded) fails with PDF_RENDER_FAILED (edge case 16). */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1000)
+  PDF_RENDER_TIMEOUT_MS: number = 20_000;
+
+  /**
    * Whether scheduled jobs (core/jobs) run on their clock. Defaults to on, except under
    * NODE_ENV=test: unit and e2e tests run a job only by triggering it (`JobRunner.run(name)`).
    */
