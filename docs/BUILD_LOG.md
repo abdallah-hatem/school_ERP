@@ -704,8 +704,12 @@ phase live in `docs/build-log/`.
 - **Contracts round 3** (owner, 2026-11-24): fix the rest of the time-walk review's findings (B1 done in
   #283; next B2: deactivating while the last month's payroll is a draft drops that month's pay);
   mid-year hires' first contract ends 31 May (one season for everyone, GUESS).
-- **Contract templates** (owner, 2026-11-24): option A, spec approved, being built.
-- **Signed copy of each contract** (owner, 2026-11-24): being built.
+- **Contract templates** (owner, 2026-11-24): option A, spec approved; PR #291 open, web screens and
+  screenshots still being finished, then review.
+- **Signed copy of each contract** (owner, 2026-11-24): PR #290 open, CI green apart from dev's own
+  smoke failure (fixed in #292); independent review running.
+- **Pentest with ARTEX** (owner, 2026-11-25): try https://github.com/BaaRai/ARTEX against the app
+  later — on a throwaway or testing environment, never production. Not started.
 - **Employee documents tab** (proposed 2026-11-24): ID copy, certificates, insurance forms.
 - **Students module, then the clinic** (owner, 2026-11-24): the clinic treats students (and staff), so the
   students module (student records, guardians, class placement, on top of academics' basic structure)
