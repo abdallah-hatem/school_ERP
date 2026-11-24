@@ -235,6 +235,100 @@
             "other": "{count} contracts — all handled"
           },
           "description": "Before an employee's contract ends, and again closer to the day."
+        },
+        "renewals_due": {
+          "name": "Renewal decisions due",
+          "title": "Renewal decisions due for {season}",
+          "body": {
+            "zero": "{count} contracts have no decision yet",
+            "one": "{count} contract has no decision yet",
+            "two": "{count} contracts have no decision yet",
+            "few": "{count} contracts have no decision yet",
+            "many": "{count} contracts have no decision yet",
+            "other": "{count} contracts have no decision yet"
+          },
+          "group": {
+            "zero": "{count} renewal seasons need decisions",
+            "one": "{count} renewal season needs decisions",
+            "two": "{count} renewal seasons need decisions",
+            "few": "{count} renewal seasons need decisions",
+            "many": "{count} renewal seasons need decisions",
+            "other": "{count} renewal seasons need decisions"
+          },
+          "groupDone": {
+            "zero": "{count} seasons — all decided",
+            "one": "{count} season — all decided",
+            "two": "{count} seasons — all decided",
+            "few": "{count} seasons — all decided",
+            "many": "{count} seasons — all decided",
+            "other": "{count} seasons — all decided"
+          },
+          "description": "From the date set in HR rules, while contracts ending this year have no decision."
+        },
+        "notice_window_opens": {
+          "name": "Non-renewal window opens",
+          "title": "The non-renewal window for {season} is open",
+          "body": "Employees can hand in their notice until {date}.",
+          "group": {
+            "zero": "{count} non-renewal windows are open",
+            "one": "{count} non-renewal window is open",
+            "two": "{count} non-renewal windows are open",
+            "few": "{count} non-renewal windows are open",
+            "many": "{count} non-renewal windows are open",
+            "other": "{count} non-renewal windows are open"
+          },
+          "groupDone": {
+            "zero": "{count} windows — closed",
+            "one": "{count} window — closed",
+            "two": "{count} windows — closed",
+            "few": "{count} windows — closed",
+            "many": "{count} windows — closed",
+            "other": "{count} windows — closed"
+          },
+          "description": "On the first day of term 2, when employees may start handing in their notice."
+        },
+        "notice_window_closing": {
+          "name": "Non-renewal window closes soon",
+          "title": "The non-renewal window for {season} closes {date}",
+          "group": {
+            "zero": "{count} non-renewal windows close soon",
+            "one": "{count} non-renewal window closes soon",
+            "two": "{count} non-renewal windows close soon",
+            "few": "{count} non-renewal windows close soon",
+            "many": "{count} non-renewal windows close soon",
+            "other": "{count} non-renewal windows close soon"
+          },
+          "groupDone": {
+            "zero": "{count} windows — closed",
+            "one": "{count} window — closed",
+            "two": "{count} windows — closed",
+            "few": "{count} windows — closed",
+            "many": "{count} windows — closed",
+            "other": "{count} windows — closed"
+          },
+          "description": "A few days before the non-renewal deadline (30 April)."
+        },
+        "early_termination_waiting": {
+          "name": "Early termination waiting",
+          "title": "Early termination request from {employee}",
+          "body": "Requested {date}",
+          "group": {
+            "zero": "{count} early termination requests waiting",
+            "one": "{count} early termination request waiting",
+            "two": "{count} early termination requests waiting",
+            "few": "{count} early termination requests waiting",
+            "many": "{count} early termination requests waiting",
+            "other": "{count} early termination requests waiting"
+          },
+          "groupDone": {
+            "zero": "{count} requests — all handled",
+            "one": "{count} request — handled",
+            "two": "{count} requests — all handled",
+            "few": "{count} requests — all handled",
+            "many": "{count} requests — all handled",
+            "other": "{count} requests — all handled"
+          },
+          "description": "An employee asks to end their contract at the end of term 1."
         }
       },
       "probation": {

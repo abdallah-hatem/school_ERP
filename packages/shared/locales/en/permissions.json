@@ -155,6 +155,16 @@
           "description": "Approve, with an optional note, or reject, with a reason, a penalty recorded in your stage before it goes to HR."
         }
       },
+      "contracts": {
+        "view": {
+          "label": "View contracts",
+          "description": "See employees' contract history and the renewal season."
+        },
+        "manage": {
+          "label": "Manage contracts",
+          "description": "Renew contracts, record that one isn't renewed or the employee's notice, decide early termination and end a contract. Never your own."
+        }
+      },
       "lateness": {
         "view": {
           "label": "View lateness",

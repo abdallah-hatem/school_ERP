@@ -38,6 +38,10 @@ export const AuditEntityType = {
   NOTIFICATION_PREFERENCES: 'notification_preferences',
   NOTIFICATION_SETTINGS: 'notification_settings',
   PUSH_DEVICE: 'push_device',
+  /** One employee contract (spec 2026-11-24). Its label is the employee's two names. */
+  EMPLOYEE_CONTRACT: 'employee_contract',
+  /** One contract year's school calendar (Settings → HR rules). Label: the year, `2026/27`. */
+  SCHOOL_CALENDAR: 'school_calendar',
 } as const;
 export type AuditEntityType = (typeof AuditEntityType)[keyof typeof AuditEntityType];
 export const AUDIT_ENTITY_TYPES = Object.values(AuditEntityType) as AuditEntityType[];
@@ -203,6 +207,19 @@ export const AUDIT_ACTIONS = {
   // §4 (owner 2026-11-20): an approved penalty moved up one level by a backdated approval — one
   // entry per recounted penalty, in the approval's transaction (`recountedAfter`: that one's date).
   'hr.penalty.recount': { module: 'hr', entityType: E.PENALTY, kind: 'update' },
+  // hr — contracts (spec 2026-11-24): every decision is one entry on the contract
+  'hr.contract.create': { module: 'hr', entityType: E.EMPLOYEE_CONTRACT, kind: 'create' },
+  'hr.contract.renew': { module: 'hr', entityType: E.EMPLOYEE_CONTRACT, kind: 'status' },
+  'hr.contract.not_renew': { module: 'hr', entityType: E.EMPLOYEE_CONTRACT, kind: 'status' },
+  'hr.contract.notice_record': { module: 'hr', entityType: E.EMPLOYEE_CONTRACT, kind: 'status' },
+  'hr.contract.notice_withdraw': { module: 'hr', entityType: E.EMPLOYEE_CONTRACT, kind: 'status' },
+  'hr.contract.early_termination_request': { module: 'hr', entityType: E.EMPLOYEE_CONTRACT, kind: 'update' },
+  'hr.contract.early_termination_approve': { module: 'hr', entityType: E.EMPLOYEE_CONTRACT, kind: 'status' },
+  'hr.contract.early_termination_reject': { module: 'hr', entityType: E.EMPLOYEE_CONTRACT, kind: 'status' },
+  'hr.contract.end': { module: 'hr', entityType: E.EMPLOYEE_CONTRACT, kind: 'status' },
+  // A contract document (notice letter, request, attachment) was opened (a sensitive folder).
+  'hr.contract.document_open': { module: 'hr', entityType: E.EMPLOYEE_CONTRACT, kind: 'access' },
+  'hr.school_calendar.update': { module: 'hr', entityType: E.SCHOOL_CALENDAR, kind: 'update' },
   // hr — lateness: one entry per saved month, the changed employees' minutes before → after
   'hr.lateness.save': {
     module: 'hr',

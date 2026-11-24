@@ -14,6 +14,7 @@ export * from './screens';
 export * from './types/common';
 export * from './types/core';
 export * from './types/hr';
+export * from './types/contracts';
 export * from './types/accounting';
 export * from './types/notifications';
 export * from './rules';

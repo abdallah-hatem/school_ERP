@@ -180,6 +180,38 @@ export const ErrorCode = {
    */
   ACCOUNT_NOT_LINKED: 'ACCOUNT_NOT_LINKED',
 
+  // contracts (spec 2026-11-24)
+  /** Nobody renews, ends or decides on their own contract — a System admin neither (§2). */
+  OWN_CONTRACT: 'OWN_CONTRACT',
+  /** The contract was renewed already (edge cases 1, 4). */
+  CONTRACT_ALREADY_RENEWED: 'CONTRACT_ALREADY_RENEWED',
+  /** The contract already has a decision (not renewed, or ended). */
+  CONTRACT_DECIDED: 'CONTRACT_DECIDED',
+  /** An early termination request waits for a decision: approve or reject it first. */
+  EARLY_TERMINATION_PENDING: 'EARLY_TERMINATION_PENDING',
+  /** There is no employee's notice on the contract to withdraw. */
+  CONTRACT_NO_NOTICE: 'CONTRACT_NO_NOTICE',
+  /** The contract's end has passed: its notice can't be withdrawn. */
+  CONTRACT_ENDED: 'CONTRACT_ENDED',
+  /** An end date must be today or later, not before the contract's start and not after its end. */
+  CONTRACT_END_DATE_INVALID: 'CONTRACT_END_DATE_INVALID',
+  /** Ending on that date would cut into a month whose payroll is approved (edge case 9). `params.month`. */
+  CONTRACT_END_MONTH_LOCKED: 'CONTRACT_END_MONTH_LOCKED',
+  /** Bulk renew: some rows can't be renewed, so nothing was (edge case 3). `params.count`; `data.refused`. */
+  CONTRACTS_NOT_RENEWABLE: 'CONTRACTS_NOT_RENEWABLE',
+  /** An early termination request is recorded from the first day of term 1 to its last day. */
+  EARLY_TERMINATION_OUTSIDE_WINDOW: 'EARLY_TERMINATION_OUTSIDE_WINDOW',
+  /** No early termination request waits on this contract (a rejected one can't be re-approved, edge case 8). */
+  EARLY_TERMINATION_NOT_PENDING: 'EARLY_TERMINATION_NOT_PENDING',
+  /** The contract year's school calendar isn't set (edge case 7): the last day of term 1 is unknown. */
+  SCHOOL_CALENDAR_NOT_SET: 'SCHOOL_CALENDAR_NOT_SET',
+  /** The calendar's dates must be inside the contract year and in order. */
+  SCHOOL_CALENDAR_INVALID: 'SCHOOL_CALENDAR_INVALID',
+  /** Only employees whose contract was not renewed or ended, and whose last day passed, are deactivated from Contracts. */
+  CONTRACT_NOT_TO_DEACTIVATE: 'CONTRACT_NOT_TO_DEACTIVATE',
+  /** The file wasn't uploaded for this contract (`POST /hr/contracts/:id/files`). */
+  CONTRACT_FILE_INVALID: 'CONTRACT_FILE_INVALID',
+
   // audit log
   /** An `@Audited` handler finished without recording its action (D6b); the change rolled back. */
   AUDIT_NOT_RECORDED: 'AUDIT_NOT_RECORDED',

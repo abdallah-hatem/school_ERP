@@ -102,5 +102,27 @@
   "LINKED_ACCOUNT_ADMIN_ONLY": "Only a System admin can set a temporary password, change the email or unlock the sign-in of an account linked to an employee record.",
   "UNLINKED_PAY_ROLE": "This account has no employee record, so it can't be given a role that acts on pay or penalties. A System admin must link it first.",
   "ACCOUNT_NOT_LINKED": "Link your account to your employee record first. Ask a System admin.",
-  "ROLE_HAS_UNLINKED_HOLDER": "Someone holding this role has no employee record. A System admin must link them first (deactivated accounts count too)."
+  "ROLE_HAS_UNLINKED_HOLDER": "Someone holding this role has no employee record. A System admin must link them first (deactivated accounts count too).",
+  "OWN_CONTRACT": "You can't decide on your own contract. Ask someone else.",
+  "CONTRACT_ALREADY_RENEWED": "This contract was already renewed.",
+  "CONTRACT_DECIDED": "This contract already has a decision.",
+  "EARLY_TERMINATION_PENDING": "An early termination request is waiting. Approve or reject it first.",
+  "CONTRACT_NO_NOTICE": "There is no notice from the employee to withdraw.",
+  "CONTRACT_ENDED": "This contract has already ended.",
+  "CONTRACT_END_DATE_INVALID": "Choose an end date from today on, within the contract's dates.",
+  "CONTRACT_END_MONTH_LOCKED": "The payroll of {month} is approved, so the contract can't end before that month's end.",
+  "CONTRACTS_NOT_RENEWABLE": {
+    "zero": "Nothing was renewed.",
+    "one": "Nothing was renewed: {count} of the selected contracts can't be renewed.",
+    "two": "Nothing was renewed: {count} of the selected contracts can't be renewed.",
+    "few": "Nothing was renewed: {count} of the selected contracts can't be renewed.",
+    "many": "Nothing was renewed: {count} of the selected contracts can't be renewed.",
+    "other": "Nothing was renewed: {count} of the selected contracts can't be renewed."
+  },
+  "EARLY_TERMINATION_OUTSIDE_WINDOW": "An early termination request is recorded only between the first and the last day of term 1.",
+  "EARLY_TERMINATION_NOT_PENDING": "There is no early termination request waiting. A rejected request can't be approved; record a new one.",
+  "SCHOOL_CALENDAR_NOT_SET": "Set the school calendar for this year first (Settings → HR rules).",
+  "SCHOOL_CALENDAR_INVALID": "The dates must be inside the contract year and in order: term 1, then term 2, then the deadline.",
+  "CONTRACT_NOT_TO_DEACTIVATE": "Only employees whose contract ended without renewal can be deactivated here.",
+  "CONTRACT_FILE_INVALID": "Upload the file again."
 }

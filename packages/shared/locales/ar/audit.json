@@ -31,7 +31,9 @@
     "outbox_delivery": "تسليم حدث",
     "notification_preferences": "تفضيلات الإشعارات",
     "notification_settings": "إعدادات الإشعارات",
-    "push_device": "جهاز التنبيهات"
+    "push_device": "جهاز التنبيهات",
+    "employee_contract": "عقد",
+    "school_calendar": "تقويم المدرسة"
   },
   "actions": {
     "core": {
@@ -122,6 +124,21 @@
         "transferred": "تسجيل تحويل رواتب مسيّر {entity}",
         "adjustment_add": "إضافة تسوية إلى مسيّر رواتب {entity}",
         "adjustment_remove": "حذف تسوية من مسيّر رواتب {entity}"
+      },
+      "contract": {
+        "create": "إضافة عقد للموظف {entity}",
+        "renew": "تجديد عقد {entity}",
+        "not_renew": "تسجيل عدم تجديد عقد {entity}",
+        "notice_record": "تسجيل إخطار عدم التجديد من {entity}",
+        "notice_withdraw": "سحب إخطار عدم التجديد من {entity}",
+        "early_termination_request": "تسجيل طلب إنهاء مبكر من {entity}",
+        "early_termination_approve": "الموافقة على الإنهاء المبكر لعقد {entity}",
+        "early_termination_reject": "رفض طلب الإنهاء المبكر من {entity}",
+        "end": "إنهاء عقد {entity}",
+        "document_open": "فتح مستند من عقد {entity}"
+      },
+      "school_calendar": {
+        "update": "تعديل تقويم المدرسة لعام {entity}"
       }
     },
     "accounting": {
@@ -230,7 +247,9 @@
         "contractEndSecondDays": "التذكير الثاني بانتهاء العقد (قبله بأيام)",
         "probationEndDays": "التذكير بانتهاء فترة الاختبار (قبلها بأيام)",
         "latenessCheckDay": "يوم مراجعة التأخير",
-        "payrollCheckDay": "يوم مراجعة الرواتب"
+        "payrollCheckDay": "يوم مراجعة الرواتب",
+        "renewalDecisionsDays": "تذكير قرارات التجديد (أيام قبل 31 مايو)",
+        "noticeWindowCloseDays": "تذكير الموعد النهائي لعدم التجديد (أيام قبل)"
       },
       "departments": "القسم",
       "jobTitles": "المسمى الوظيفي",
@@ -263,7 +282,23 @@
     "reviewSkip": "مراجعة المرحلة",
     "approvalNote": "ملاحظة شؤون الموظفين",
     "rejectionReason": "سبب الرفض",
-    "rejectedStep": "رُفض في"
+    "rejectedStep": "رُفض في",
+    "startsOn": "بداية العقد",
+    "endsOn": "نهاية العقد",
+    "nonRenewalBy": "عدم التجديد من",
+    "noticeReceivedOn": "تاريخ استلام الإخطار",
+    "noticeTiming": "توقيت الإخطار",
+    "earlyTermination": "الإنهاء المبكر",
+    "earlyTerminationRequestedOn": "تاريخ طلب الإنهاء المبكر",
+    "earlyTerminationTiming": "توقيت طلب الإنهاء المبكر",
+    "endedOn": "تاريخ الانتهاء",
+    "endReason": "سبب الإنهاء",
+    "document": "المستند",
+    "nextContract": "العقد التالي",
+    "term1Start": "أول يوم في الترم الأول",
+    "term1End": "آخر يوم في الترم الأول",
+    "term2Start": "أول يوم في الترم الثاني",
+    "nonRenewalDeadline": "الموعد النهائي لعدم التجديد"
   },
   "totals": {
     "net": "الصافي",
