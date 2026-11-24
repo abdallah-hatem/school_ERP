@@ -42,14 +42,14 @@ const ACCOUNTING_SETTINGS_TAG = 'accounting-settings';
 const CATALOGUE_TAG = 'penalty-catalogue';
 
 /** Stages, departments, job titles and grades share one shape and one set of routes. */
-export type ListKind = 'stages' | 'departments' | 'jobTitles' | 'grades';
+export type ListKind = 'stages' | 'departments' | 'jobTitles' | 'employeeGrades';
 /** A list item as the Settings screen holds it: job titles also carry `managesPeople` (§3). */
 export type ManagedListItem = ListItem & Partial<Pick<JobTitle, 'managesPeople'>>;
 const LIST_ROUTES: Record<ListKind, { path: string; tag: string }> = {
   stages: { path: '/stages', tag: 'stages' },
   departments: { path: '/hr/departments', tag: 'departments' },
   jobTitles: { path: '/hr/job-titles', tag: 'job-titles' },
-  grades: { path: '/hr/grades', tag: 'grades' },
+  employeeGrades: { path: '/hr/employee-grades', tag: 'employee-grades' },
 };
 
 // ── School ───────────────────────────────────────────────────────────────────

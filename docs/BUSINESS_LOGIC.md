@@ -18,7 +18,7 @@ is its own file; "§N" means the file listed for N below. Dated changes are one 
 |---|---|---|
 | 1 | [business/01-business.md](business/01-business.md) | What the product is, for whom, how it earns money |
 | 2 | [business/02-roles.md](business/02-roles.md) | Who can do what: roles as data, starting roles (GUESS), last System admin, sign-in limits |
-| 3 | [business/03-employees.md](business/03-employees.md) | Employee records, departments, stages (main stage and "also teaches in"), job titles, grades, work system |
+| 3 | [business/03-employees.md](business/03-employees.md) | Employee records, departments, stages (main stage and "also teaches in"), job titles, employee grades, work system |
 | 4 | [business/04-penalties.md](business/04-penalties.md) | Penalty catalogue, repeat levels, recording (the penalty's stage), the two steps (stage review, then HR), rejecting, cancelling |
 | 5 | [business/05-lateness.md](business/05-lateness.md) | Monthly lateness and early-leave minutes and the days they cost |
 | 6 | [business/06-payroll.md](business/06-payroll.md) | Monthly payroll run: salary, deductions, adjustments, approval, payslip, bank sheet |

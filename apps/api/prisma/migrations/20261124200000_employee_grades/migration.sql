@@ -1,10 +1,15 @@
--- §3 (owner, 2026-11-24): an employee's grade is picked from the school's Grades list (Settings),
--- like departments and job titles, instead of free text. Every distinct non-empty grade text
--- already on an employee (trimmed) becomes one grade — the same text in English and Arabic, in
--- alphabetical order — the employees point at it, and the text column goes.
+-- §3 (owner, 2026-11-24): an employee's grade is picked from the school's Employee grades list
+-- (Settings), like departments and job titles, instead of free text. ("Grades" alone is reserved for
+-- academics — school grades — so the table is employee_grades.)
+--
+-- Existing texts are grouped by a normalised key — trimmed, inner spaces collapsed, lower case — so
+-- "Senior", " senior " and "SENIOR  " become one grade. Each grade is named after its most common
+-- original spelling (trimmed; ties: the first alphabetically, byte order), the same text in English
+-- and Arabic, numbered in that order; employees point at their key's grade, and the text column
+-- goes. Blank grades stay empty.
 
 -- CreateTable
-CREATE TABLE "grades" (
+CREATE TABLE "employee_grades" (
     "id" UUID NOT NULL,
     "name_en" TEXT NOT NULL,
     "name_ar" TEXT NOT NULL,
@@ -15,43 +20,55 @@ CREATE TABLE "grades" (
     "search_text" TEXT GENERATED ALWAYS AS (search_fold(coalesce("name_en", '') || ' ' || coalesce("name_ar", ''))) STORED,
     "search_compact" TEXT GENERATED ALWAYS AS (replace(search_fold(coalesce("name_en", '') || ' ' || coalesce("name_ar", '')), ' ', '')) STORED,
 
-    CONSTRAINT "grades_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "employee_grades_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
-CREATE INDEX "grades_is_active_idx" ON "grades"("is_active");
+CREATE INDEX "employee_grades_is_active_idx" ON "employee_grades"("is_active");
 
 -- CreateIndex
-CREATE INDEX "grades_sort_order_idx" ON "grades"("sort_order");
+CREATE INDEX "employee_grades_sort_order_idx" ON "employee_grades"("sort_order");
 
 -- CreateIndex
-CREATE INDEX "grades_search_text_idx" ON "grades" USING GIN ("search_text" public.gin_trgm_ops);
+CREATE INDEX "employee_grades_search_text_idx" ON "employee_grades" USING GIN ("search_text" public.gin_trgm_ops);
 
 -- CreateIndex
-CREATE INDEX "grades_search_compact_idx" ON "grades" USING GIN ("search_compact" public.gin_trgm_ops);
+CREATE INDEX "employee_grades_search_compact_idx" ON "employee_grades" USING GIN ("search_compact" public.gin_trgm_ops);
 
 -- AlterTable
-ALTER TABLE "employees" ADD COLUMN "grade_id" UUID;
+ALTER TABLE "employees" ADD COLUMN "employee_grade_id" UUID;
 
 -- CreateIndex
-CREATE INDEX "employees_grade_id_idx" ON "employees"("grade_id");
+CREATE INDEX "employees_employee_grade_id_idx" ON "employees"("employee_grade_id");
 
 -- AddForeignKey
-ALTER TABLE "employees" ADD CONSTRAINT "employees_grade_id_fkey" FOREIGN KEY ("grade_id") REFERENCES "grades"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "employees" ADD CONSTRAINT "employees_employee_grade_id_fkey" FOREIGN KEY ("employee_grade_id") REFERENCES "employee_grades"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- One grade per distinct trimmed text, numbered in alphabetical (byte) order.
-INSERT INTO "grades" ("id", "name_en", "name_ar", "sort_order", "created_at", "updated_at")
-SELECT gen_random_uuid(), g.name, g.name, (row_number() OVER (ORDER BY g.name COLLATE "C"))::int, now(), now()
+-- One grade per normalised key, named after its most common spelling.
+CREATE TEMP TABLE "grade_migration" AS
+SELECT key, name, gen_random_uuid() AS id
 FROM (
-    SELECT DISTINCT btrim("grade") AS name
-    FROM "employees"
-    WHERE "grade" IS NOT NULL AND btrim("grade") <> ''
-) AS g;
+    SELECT key, spelling AS name,
+           row_number() OVER (PARTITION BY key ORDER BY count(*) DESC, spelling COLLATE "C") AS rank
+    FROM (
+        SELECT lower(regexp_replace(btrim("grade"), '\s+', ' ', 'g')) AS key, btrim("grade") AS spelling
+        FROM "employees"
+        WHERE "grade" IS NOT NULL AND btrim("grade") <> ''
+    ) AS texts
+    GROUP BY key, spelling
+) AS ranked
+WHERE rank = 1;
+
+INSERT INTO "employee_grades" ("id", "name_en", "name_ar", "sort_order", "created_at", "updated_at")
+SELECT id, name, name, (row_number() OVER (ORDER BY name COLLATE "C"))::int, now(), now()
+FROM "grade_migration";
 
 UPDATE "employees" AS e
-SET "grade_id" = g."id"
-FROM "grades" AS g
-WHERE e."grade" IS NOT NULL AND btrim(e."grade") = g."name_en";
+SET "employee_grade_id" = m.id
+FROM "grade_migration" AS m
+WHERE e."grade" IS NOT NULL AND lower(regexp_replace(btrim(e."grade"), '\s+', ' ', 'g')) = m.key;
 
 -- AlterTable
 ALTER TABLE "employees" DROP COLUMN "grade";
+
+DROP TABLE "grade_migration";

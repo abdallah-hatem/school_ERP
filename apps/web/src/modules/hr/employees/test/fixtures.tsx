@@ -47,7 +47,7 @@ export const employee: Employee = {
   department: { id: 'd-math', nameEn: 'Mathematics', nameAr: 'الرياضيات' },
   jobTitle: { id: 'j-teacher', nameEn: 'Teacher', nameAr: 'معلم' },
   manager: null,
-  grade: null,
+  employeeGrade: null,
   workSystem: 'FULL_TIME',
   basicSalary: 1400000,
   fingerprintId: '1042',

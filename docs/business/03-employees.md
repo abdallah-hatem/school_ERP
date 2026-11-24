@@ -3,7 +3,7 @@
 ## Lists
 
 - **DECIDED** — **Stages:** Kindergarten, Primary, Preparatory, plus "None" for staff not tied to a
-  stage (all four come from the seed). **Departments**, **job titles** and **grades** are lists the school manages in Settings (§7; grades: owner, 2026-11-24).
+  stage (all four come from the seed). **Departments**, **job titles** and **employee grades** are lists the school manages in Settings (§7; employee grades: owner, 2026-11-24 — "grades" alone means school grades, academics).
 - **DECIDED** (2026-11-18) — The **"no stage" entry** is one stage marked as such by the seed, not
   recognised by its name: the school can rename it (or call it anything in either language) and it
   keeps its role — employee cards still give it the neutral colour and leave it out of the stage
@@ -16,7 +16,7 @@
 - **DECIDED** (owner, 2026-11-18) — Each **job title** has a **Manages people** switch (off by
   default), set in Settings (§7). It marks the titles whose holders lead other staff — e.g.
   principal, vice principal, stage head, head of department, HR manager, administrative director.
-- **DECIDED** (owner, 2026-11-24) — **Grades** are managed like departments and job titles (Settings
+- **DECIDED** (owner, 2026-11-24) — **Employee grades** are managed like departments and job titles (Settings
   → HR lists), by the same permissions: **View HR lists** to see them, **Manage HR lists** to add,
   rename, hide or show them (§2). Every change is in the audit log (§9).
 
@@ -47,7 +47,7 @@
 | Main stage, department, job title | Required (stage can be "None"). The main stage gives the card its colour and counts the person in the dashboard's headcount and payroll groups. DECIDED |
 | Also teaches in | Optional: the employee's **other stages** besides the main one (never the main stage, each once; a newly picked stage must be shown). Shown as tags on the employee's page and card, edited in the employee form. DECIDED (owner, 2026-11-21) |
 | Direct manager | Optional; must be another active employee whose job title **manages people** (see Direct managers); no one can be their own manager or create a loop |
-| Grade | Optional, picked from the school's **Grades** list (Settings → HR lists, next to departments and job titles), like the other lists: each grade has an English and an Arabic name, a hidden grade is kept by the employees who have it but can't be newly chosen, and a grade is never deleted. Shown on the employee's page in the page's language. Grades typed as text before became list items (one per distinct text, the same text in both languages). DECIDED (owner, 2026-11-24; the client's regulations refer to grades) |
+| Grade | Optional, picked from the school's **Employee grades** list (Settings → HR lists, next to departments and job titles; e.g. "Pay grade 1"), like the other lists: each grade has an English and an Arabic name, a hidden grade is kept by the employees who have it but can't be newly chosen, and a grade is never deleted. Shown on the employee's page in the page's language. Grades typed as text before became list items: texts that differ only by spaces or case became one item, named after the most common spelling, the same text in both languages. DECIDED (owner, 2026-11-24; the client's regulations refer to grades) |
 | Work system | Full-time, or part-time 4, 3 or 2 days a week. DECIDED |
 | Basic salary | Monthly, in EGP, required, greater than 0 |
 | Fingerprint ID | Optional; unique if given (for the device integration later) |

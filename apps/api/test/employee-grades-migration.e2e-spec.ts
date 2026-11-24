@@ -5,11 +5,13 @@ import type { DatabaseService } from '../src/database/database.service';
 import { clientForSchema, e2eDatabaseUrl } from './helpers/setup-db';
 
 /*
- * The grades migration (§3, owner 2026-11-24): replays the real migration files in a throwaway
- * schema — everything before it, then employees whose free-text grades repeat, differ only by
- * spaces, are blank or missing — then the migration, and checks each distinct trimmed text became
- * one grade (the same text in English and Arabic, in alphabetical order), every employee points at
- * theirs, blank and missing ones have none, and the text column is gone.
+ * The employee grades migration (§3, owner 2026-11-24): replays the real migration files in a
+ * throwaway schema — everything before it, then employees whose free-text grades repeat, differ only
+ * by outer or inner spaces or by case, are blank or missing — then the migration, and checks each
+ * normalised text (trimmed, inner spaces collapsed, lower case) became one grade named after its
+ * most common spelling (ties: the first alphabetically), the same text in English and Arabic, in
+ * alphabetical order; every employee points at theirs, blank and missing ones have none, and the
+ * text column is gone.
  */
 
 const MIGRATIONS = join(__dirname, '..', 'prisma', 'migrations');
@@ -29,15 +31,26 @@ function runSql(schema: string, sql: string): void {
   });
 }
 
-const E = (n: number) => `99999999-9999-4999-8999-00000000000${n}`;
+const E = (n: number) => `99999999-9999-4999-8999-${String(n).padStart(12, '0')}`;
 const STAGE = '22222222-2222-4222-8222-0000000000d1';
 const DEPT = '33333333-3333-4333-8333-0000000000d1';
 const TITLE = '44444444-4444-4444-8444-0000000000d1';
 
 /** Each employee's old grade text, and the grade name it must end up with (null = none). */
-const CASES: [text: string | null, grade: string | null][] = [
+const CASES: [text: string | null, employeeGrade: string | null][] = [
+  // Outer spaces and case: "Senior" is the most common spelling once trimmed.
   ['Senior', 'Senior'],
   ['  Senior ', 'Senior'],
+  ['senior', 'Senior'],
+  ['SENIOR', 'Senior'],
+  // Inner spaces: two "Head of dept" beat one each of the others.
+  ['Head of dept', 'Head of dept'],
+  ['Head  of   dept', 'Head of dept'],
+  [' head of Dept', 'Head of dept'],
+  ['Head of dept ', 'Head of dept'],
+  // A tie: the first alphabetically (byte order: upper case first).
+  ['expert', 'Expert'],
+  ['Expert', 'Expert'],
   ['الدرجة الثالثة', 'الدرجة الثالثة'],
   ['Junior', 'Junior'],
   ['', null],
@@ -47,10 +60,10 @@ const CASES: [text: string | null, grade: string | null][] = [
 
 const sqlText = (v: string | null) => (v === null ? 'NULL' : `'${v.replace(/'/g, "''")}'`);
 const employee = (n: number, text: string | null) =>
-  `('${E(n)}','EMP-000${n}','E${n}','م${n}','FEMALE','1990-01-01','010','2020-01-01','${STAGE}','${DEPT}',
+  `('${E(n)}','EMP-${String(n).padStart(4, '0')}','E${n}','م${n}','FEMALE','1990-01-01','010','2020-01-01','${STAGE}','${DEPT}',
     '${TITLE}',${sqlText(text)},'FULL_TIME',1000000,'2026-06-01','2027-05-31',now())`;
 
-describe('employees.grade → grades (grades migration, e2e)', () => {
+describe('employees.employeeGrade → grades (grades migration, e2e)', () => {
   const schema = `grades_${Date.now()}_${Math.floor(Math.random() * 1e6)}`;
   let db: DatabaseService;
 
@@ -77,8 +90,8 @@ describe('employees.grade → grades (grades migration, e2e)', () => {
     runSql('public', `DROP SCHEMA IF EXISTS "${schema}" CASCADE;`);
   });
 
-  it('one grade per distinct trimmed text, same name in both languages, shown, in alphabetical order', async () => {
-    const grades = await db.grade.findMany({
+  it('one grade per normalised text, named after its most common spelling, same name in both languages, shown, in alphabetical order', async () => {
+    const grades = await db.employeeGrade.findMany({
       select: { nameEn: true, nameAr: true, isActive: true, sortOrder: true },
       orderBy: { sortOrder: 'asc' },
     });
@@ -90,23 +103,23 @@ describe('employees.grade → grades (grades migration, e2e)', () => {
 
   it('every employee points at the grade of their old text; blank and missing ones have none', async () => {
     const rows = await db.employee.findMany({
-      select: { code: true, grade: { select: { nameEn: true } } },
+      select: { code: true, employeeGrade: { select: { nameEn: true } } },
       orderBy: { code: 'asc' },
     });
-    expect(rows.map((r) => r.grade?.nameEn ?? null)).toEqual(CASES.map(([, g]) => g));
+    expect(rows.map((r) => r.employeeGrade?.nameEn ?? null)).toEqual(CASES.map(([, g]) => g));
   });
 
   it('the text column is gone, and a grade in use cannot be deleted (Restrict)', async () => {
     const columns = await db.$queryRaw<{ column_name: string; is_nullable: string }[]>`
       SELECT column_name, is_nullable FROM information_schema.columns
-      WHERE table_schema = ${schema} AND table_name = 'employees' AND column_name IN ('grade', 'grade_id')`;
-    expect(columns).toEqual([{ column_name: 'grade_id', is_nullable: 'YES' }]);
-    const used = await db.grade.findFirstOrThrow({ where: { nameEn: 'Junior' } });
-    await expect(db.grade.delete({ where: { id: used.id } })).rejects.toThrow();
+      WHERE table_schema = ${schema} AND table_name = 'employees' AND column_name IN ('grade', 'employee_grade_id')`;
+    expect(columns).toEqual([{ column_name: 'employee_grade_id', is_nullable: 'YES' }]);
+    const used = await db.employeeGrade.findFirstOrThrow({ where: { nameEn: 'Junior' } });
+    await expect(db.employeeGrade.delete({ where: { id: used.id } })).rejects.toThrow();
   });
 
   it('the grade search columns are filled by the database', async () => {
-    const rows = await db.grade.findMany({ where: { nameEn: 'Junior' }, omit: { searchText: false } });
+    const rows = await db.employeeGrade.findMany({ where: { nameEn: 'Junior' }, omit: { searchText: false } });
     expect(rows[0]?.searchText).toBeTruthy();
   });
 });

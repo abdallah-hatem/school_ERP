@@ -13,7 +13,7 @@ const REF_FIELDS = {
   stage: 'stageId',
   department: 'departmentId',
   jobTitle: 'jobTitleId',
-  grade: 'gradeId',
+  employeeGrade: 'employeeGradeId',
   manager: 'managerId',
 } as const satisfies Partial<Record<keyof EmployeeDetailRow, string>>;
 

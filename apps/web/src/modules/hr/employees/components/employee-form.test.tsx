@@ -19,12 +19,12 @@ vi.mock('../apis', () => ({
   GET_DEPARTMENTS: vi.fn(),
   GET_STAGES: vi.fn(),
   GET_JOB_TITLES: vi.fn(),
-  GET_GRADES: vi.fn(),
+  GET_EMPLOYEE_GRADES: vi.fn(),
   GET_MANAGER_OPTIONS: vi.fn(),
 }));
 
 import type { Employee, EmployeeSummary } from '@school-erp/shared';
-import { CREATE_EMPLOYEE, GET_DEPARTMENTS, GET_GRADES, GET_JOB_TITLES, GET_MANAGER_OPTIONS, GET_STAGES, UPDATE_EMPLOYEE } from '../apis';
+import { CREATE_EMPLOYEE, GET_DEPARTMENTS, GET_EMPLOYEE_GRADES, GET_JOB_TITLES, GET_MANAGER_OPTIONS, GET_STAGES, UPDATE_EMPLOYEE } from '../apis';
 import { departments, employee, grades, jobTitles, renderEmployees, stages, summary } from '../test/fixtures';
 
 const page = <T,>(data: T[]) => ({ success: true as const, status: 200, data, meta: { total: data.length, page: 1, limit: 20 } });
@@ -44,12 +44,12 @@ function renderForm({
   /** What the API answers for the manager picker (it filters out the employee and the inactive). */
   candidates?: EmployeeSummary[];
   locale?: 'en' | 'ar';
-  hidden?: { department?: boolean; grade?: boolean };
+  hidden?: { department?: boolean; employeeGrade?: boolean };
 } = {}) {
   vi.mocked(GET_DEPARTMENTS).mockResolvedValue(page(departments) as never);
   vi.mocked(GET_STAGES).mockResolvedValue(page(stages) as never);
   vi.mocked(GET_JOB_TITLES).mockResolvedValue(page(jobTitles) as never);
-  vi.mocked(GET_GRADES).mockResolvedValue(page(grades) as never);
+  vi.mocked(GET_EMPLOYEE_GRADES).mockResolvedValue(page(grades) as never);
   managerOptions.mockResolvedValue(page(candidates) as never);
   return renderEmployees(
     <EmployeeForm
@@ -306,7 +306,7 @@ describe('EmployeeForm', () => {
         expect(within(listbox).getAllByRole('option').map((o) => o.textContent)).toEqual(['No grade', 'Grade 1', 'Grade 2']),
       );
       // One page of the typed text, asked of the API (never filtered here).
-      expect(vi.mocked(GET_GRADES)).toHaveBeenCalledWith({ includeHidden: false, search: '', limit: 20 });
+      expect(vi.mocked(GET_EMPLOYEE_GRADES)).toHaveBeenCalledWith({ includeHidden: false, search: '', limit: 20 });
     });
 
     it('choosing a grade on an edit sends its id only; "No grade" clears it', async () => {
@@ -317,22 +317,22 @@ describe('EmployeeForm', () => {
       await user.click(await screen.findByRole('option', { name: 'Grade 2' }));
       expect(gradeField().textContent).toContain('Grade 2');
       await user.click(screen.getByRole('button', { name: 'Save changes' }));
-      await waitFor(() => expect(update).toHaveBeenCalledWith('e-mona', { gradeId: 'g-2' }));
+      await waitFor(() => expect(update).toHaveBeenCalledWith('e-mona', { employeeGradeId: 'g-2' }));
 
       cleanup();
       update.mockReset();
       update.mockResolvedValue(ok(employee));
-      renderForm({ editing: { ...employee, grade: { id: 'g-1', nameEn: 'Grade 1', nameAr: 'الدرجة الأولى' } } });
+      renderForm({ editing: { ...employee, employeeGrade: { id: 'g-1', nameEn: 'Grade 1', nameAr: 'الدرجة الأولى' } } });
       await user.click(gradeField());
       await user.click(await screen.findByRole('option', { name: 'No grade' }));
       await user.click(screen.getByRole('button', { name: 'Save changes' }));
-      await waitFor(() => expect(update).toHaveBeenCalledWith('e-mona', { gradeId: null }));
+      await waitFor(() => expect(update).toHaveBeenCalledWith('e-mona', { employeeGradeId: null }));
     });
 
     it('keeps a grade hidden after the employee got it, in the page language, and says so', () => {
       renderForm({
-        editing: { ...employee, grade: { id: 'g-old', nameEn: 'Old grade', nameAr: 'درجة قديمة' } },
-        hidden: { grade: true },
+        editing: { ...employee, employeeGrade: { id: 'g-old', nameEn: 'Old grade', nameAr: 'درجة قديمة' } },
+        hidden: { employeeGrade: true },
         locale: 'ar',
       });
       expect(screen.getByRole('combobox', { name: /^الدرجة/ }).textContent).toContain('درجة قديمة');

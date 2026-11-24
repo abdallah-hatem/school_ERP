@@ -35,8 +35,8 @@ import type { PayrollTotals } from './payroll-totals';
 
 export type Department = ListItem;
 
-/** A grade (§3, owner 2026-11-24): the school's list, picked on the employee record. */
-export type Grade = ListItem;
+/** A grade (§3, owner 2026-11-24; academics owns "grades"): the school's list, picked on the employee record. */
+export type EmployeeGrade = ListItem;
 
 /** A job title. `managesPeople`: its holders can be chosen as a direct manager (§3). */
 export interface JobTitle extends ListItem {
@@ -113,7 +113,7 @@ export interface CreateEmployeeRequest extends Names {
   jobTitleId: Uuid;
   managerId?: Uuid | null;
   /** Optional, from the Grades list; a newly chosen one must be shown (§3). */
-  gradeId?: Uuid | null;
+  employeeGradeId?: Uuid | null;
   workSystem: WorkSystem;
   basicSalary: Piastres;
   fingerprintId?: string | null;
@@ -190,7 +190,7 @@ export interface Employee extends Names, SalaryVisibility {
    */
   manager: (NamedRef & { code: string; managesPeople: boolean; photoUrl: string | null; gender: Gender }) | null;
   /** From the Grades list (§3); null = none. */
-  grade: NamedRef | null;
+  employeeGrade: NamedRef | null;
   workSystem: WorkSystem;
   basicSalary?: Piastres;
   fingerprintId: string | null;

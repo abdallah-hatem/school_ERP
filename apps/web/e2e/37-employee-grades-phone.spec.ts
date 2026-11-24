@@ -1,5 +1,5 @@
 import { test } from '@playwright/test';
-import { checkGrades } from './support/grades';
+import { checkGrades } from './support/employee-grades';
 import { signIn } from './support/ui';
 import { settleStreams } from './support/stream';
 

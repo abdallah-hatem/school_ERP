@@ -15,7 +15,7 @@
     },
     "lists": {
       "title": "قوائم الموارد البشرية",
-      "description": "الأقسام والمسميات الوظيفية والدرجات"
+      "description": "الأقسام والمسميات الوظيفية ودرجات الموظفين"
     },
     "hrRules": {
       "title": "قواعد الموارد البشرية",
@@ -147,13 +147,13 @@
       "edit": "تعديل",
       "editItem": "تعديل {name}"
     },
-    "grades": {
-      "title": "الدرجات",
+    "employeeGrades": {
+      "title": "درجات الموظفين",
       "description": "أخفِ الدرجة لمنع إعطائها لموظفين جدد. لا تُحذف الدرجات أبدًا.",
       "add": "إضافة درجة",
       "emptyTitle": "لا توجد درجات بعد",
       "emptyBody": "أضف أول درجة، مثل الدرجة الأولى.",
-      "placeholderEn": "First grade",
+      "placeholderEn": "Pay grade 1",
       "placeholderAr": "الدرجة الأولى"
     }
   },

@@ -373,10 +373,10 @@ describe('Managed lists (stages, departments, job titles)', () => {
       { id: 'g2', nameEn: 'Grade 2', nameAr: 'الدرجة الثانية', sortOrder: 2, isActive: true },
     ];
     serverList(grades);
-    renderSettings(<ListManager kind="grades" />);
+    renderSettings(<ListManager kind="employeeGrades" />);
     expect((await screen.findAllByText('Grade 1'))[0]).toBeTruthy();
-    expect(api.GET_LIST_ITEMS).toHaveBeenCalledWith('grades', { page: 1, limit: 10 });
-    expect(screen.getAllByRole('heading', { name: 'Grades' }).length).toBeGreaterThan(0);
+    expect(api.GET_LIST_ITEMS).toHaveBeenCalledWith('employeeGrades', { page: 1, limit: 10 });
+    expect(screen.getAllByRole('heading', { name: 'Employee grades' }).length).toBeGreaterThan(0);
 
     await chooseRowAction(user, 'Grade 2', 'Rename');
     const rename = await screen.findByRole('dialog', { name: 'Rename Grade 2' });
@@ -386,7 +386,7 @@ describe('Managed lists (stages, departments, job titles)', () => {
     await user.type(within(rename).getByRole('textbox', { name: /Name in English/ }), 'Senior');
     await user.click(within(rename).getByRole('button', { name: 'Save' }));
     await waitFor(() =>
-      expect(api.UPDATE_LIST_ITEM).toHaveBeenCalledWith('grades', 'g2', { nameEn: 'Senior', nameAr: 'الدرجة الثانية' }),
+      expect(api.UPDATE_LIST_ITEM).toHaveBeenCalledWith('employeeGrades', 'g2', { nameEn: 'Senior', nameAr: 'الدرجة الثانية' }),
     );
 
     await user.click(screen.getAllByRole('button', { name: 'Add grade' })[0]!);
@@ -395,11 +395,11 @@ describe('Managed lists (stages, departments, job titles)', () => {
     await user.type(within(add).getByRole('textbox', { name: /Name in Arabic/ }), 'الدرجة الثالثة');
     await user.click(within(add).getByRole('button', { name: 'Create' }));
     await waitFor(() =>
-      expect(api.CREATE_LIST_ITEM).toHaveBeenCalledWith('grades', { nameEn: 'Grade 3', nameAr: 'الدرجة الثالثة', sortOrder: 3 }),
+      expect(api.CREATE_LIST_ITEM).toHaveBeenCalledWith('employeeGrades', { nameEn: 'Grade 3', nameAr: 'الدرجة الثالثة', sortOrder: 3 }),
     );
 
     cleanup();
-    renderSettings(<ListManager kind="grades" />, 'ar');
+    renderSettings(<ListManager kind="employeeGrades" />, 'ar');
     expect((await screen.findAllByText('الدرجة الأولى'))[0]).toBeTruthy();
     expect(screen.getAllByRole('button', { name: 'إضافة درجة' }).length).toBeGreaterThan(0);
   });

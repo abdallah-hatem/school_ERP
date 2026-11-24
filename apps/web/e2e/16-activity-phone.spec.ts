@@ -5,6 +5,7 @@ import {
   expectGradeEntry,
   expectWorkingDaysEntry,
   firstEntry,
+  hideSmokeGrade,
   setEmployeeGrade,
   smokeGrade,
 } from './support/activity';
@@ -65,7 +66,7 @@ for (const locale of ['ar', 'en'] as const) {
     const employee = await activeEmployee();
     const grade = await smokeGrade(locale);
     // Left on it by an earlier run: clear it first, so this edit is a change.
-    if (employee.grade?.id === grade.id) await setEmployeeGrade(employee.id, null);
+    if (employee.employeeGrade?.id === grade.id) await setEmployeeGrade(employee.id, null);
     await setEmployeeGrade(employee.id, grade.id);
     try {
       await signIn(page, locale);
@@ -76,7 +77,8 @@ for (const locale of ['ar', 'en'] as const) {
       await settle(page);
       await shoot(page, info, `history-${locale}-phone`);
     } finally {
-      await setEmployeeGrade(employee.id, employee.grade?.id ?? null);
+      await setEmployeeGrade(employee.id, employee.employeeGrade?.id ?? null);
+      await hideSmokeGrade(grade.id);
     }
   });
 }

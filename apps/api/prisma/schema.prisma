@@ -613,8 +613,9 @@ model JobTitle {
   @@map("job_titles")
 }
 
-/// §3 (owner, 2026-11-24): the school's grades, a managed list like departments and job titles.
-model Grade {
+/// §3 (owner, 2026-11-24): the school's employee (pay) grades, a managed list like departments and job
+/// titles. "Grades" alone belongs to academics (school grades, docs/ARCHITECTURE.md).
+model EmployeeGrade {
   id        String   @id @default(uuid()) @db.Uuid
   nameEn    String   @map("name_en")
   nameAr    String   @map("name_ar")
@@ -633,9 +634,9 @@ model Grade {
 
   @@index([isActive])
   @@index([sortOrder])
-  @@index([searchText(ops: raw("gin_trgm_ops"))], type: Gin, map: "grades_search_text_idx")
-  @@index([searchCompact(ops: raw("gin_trgm_ops"))], type: Gin, map: "grades_search_compact_idx")
-  @@map("grades")
+  @@index([searchText(ops: raw("gin_trgm_ops"))], type: Gin, map: "employee_grades_search_text_idx")
+  @@index([searchCompact(ops: raw("gin_trgm_ops"))], type: Gin, map: "employee_grades_search_compact_idx")
+  @@map("employee_grades")
 }
 
 /// §3. Never deleted — deactivated. `code` comes from the 'employee_code' Counter (EMP-0001…).
@@ -656,7 +657,7 @@ model Employee {
   jobTitleId                   String          @map("job_title_id") @db.Uuid
   managerId                    String?         @map("manager_id") @db.Uuid
   /// §3 (owner, 2026-11-24): optional, picked from the school's Grades list.
-  gradeId                      String?         @map("grade_id") @db.Uuid
+  employeeGradeId              String?         @map("employee_grade_id") @db.Uuid
   workSystem                   WorkSystem      @map("work_system")
   /// Monthly, piastres.
   basicSalary                  Int             @map("basic_salary")
@@ -691,13 +692,13 @@ model Employee {
   createdAt                    DateTime        @default(now()) @map("created_at")
   updatedAt                    DateTime        @updatedAt @map("updated_at")
 
-  stage      Stage      @relation(fields: [stageId], references: [id], onDelete: Restrict)
-  department Department @relation(fields: [departmentId], references: [id], onDelete: Restrict)
-  jobTitle   JobTitle   @relation(fields: [jobTitleId], references: [id], onDelete: Restrict)
-  grade      Grade?     @relation(fields: [gradeId], references: [id], onDelete: Restrict)
-  manager   Employee?  @relation("EmployeeManager", fields: [managerId], references: [id], onDelete: Restrict)
-  reports    Employee[] @relation("EmployeeManager")
-  linkedUser User?      @relation("UserLinkedEmployee")
+  stage         Stage          @relation(fields: [stageId], references: [id], onDelete: Restrict)
+  department    Department     @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  jobTitle      JobTitle       @relation(fields: [jobTitleId], references: [id], onDelete: Restrict)
+  employeeGrade EmployeeGrade? @relation(fields: [employeeGradeId], references: [id], onDelete: Restrict)
+  manager       Employee?      @relation("EmployeeManager", fields: [managerId], references: [id], onDelete: Restrict)
+  reports       Employee[]     @relation("EmployeeManager")
+  linkedUser    User?          @relation("UserLinkedEmployee")
 
   /// "Also teaches in" (§3, owner 2026-11-21): stages besides the main one.
   otherStages  EmployeeStage[]
@@ -716,7 +717,7 @@ model Employee {
   @@index([stageId])
   @@index([departmentId])
   @@index([jobTitleId])
-  @@index([gradeId])
+  @@index([employeeGradeId])
   @@index([managerId])
   @@index([status])
   @@index([workSystem])

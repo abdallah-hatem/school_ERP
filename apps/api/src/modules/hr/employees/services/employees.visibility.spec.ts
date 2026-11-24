@@ -7,7 +7,7 @@ import { fakeAccess } from '../../access/hr-access.testing';
 import type { EmployeeScope } from '../../access/employee-scope.pure';
 import type { DepartmentsService } from '../../lists/services/departments.service';
 import type { JobTitlesService } from '../../lists/services/job-titles.service';
-import type { GradesService } from '../../lists/services/grades.service';
+import type { EmployeeGradesService } from '../../lists/services/employee-grades.service';
 import type {
   EmployeeDetailRow,
   EmployeesRepository,
@@ -45,7 +45,7 @@ const detail = (over: Partial<EmployeeDetailRow> = {}): EmployeeDetailRow => ({
   department: ref('d1'),
   jobTitle: ref('j1'),
   manager: null,
-  grade: null,
+  employeeGrade: null,
   workSystem: 'FULL_TIME',
   basicSalary: 900000,
   fingerprintId: null,
@@ -115,7 +115,7 @@ function makeService(scopes: Parameters<typeof fakeAccess>[0], repo: Record<stri
     repository as unknown as EmployeesRepository,
     { getSelectable: jest.fn() } as unknown as DepartmentsService,
     { getSelectable: jest.fn() } as unknown as JobTitlesService,
-    { getSelectable: jest.fn() } as unknown as GradesService,
+    { getSelectable: jest.fn() } as unknown as EmployeeGradesService,
     { publish: jest.fn() } as unknown as DomainEvents,
     {} as unknown as FileStorageService,
     fakeAccess(scopes),
@@ -181,7 +181,7 @@ describe('employees — scopes (R5)', () => {
         findScopeFields: jest.fn().mockResolvedValue({ id: 'e2', stageId: 'kg', managerId: null }),
       },
     );
-    await expect(service.update('e2', { gradeId: 'gB' })).rejects.toMatchObject({ status: 404 });
+    await expect(service.update('e2', { employeeGradeId: 'gB' })).rejects.toMatchObject({ status: 404 });
     await expect(service.deactivate('e2')).rejects.toMatchObject({ status: 404 });
     await expect(service.removePhoto('e2')).rejects.toMatchObject({ status: 404 });
     expect(repository.updateEmployee).not.toHaveBeenCalled();
@@ -305,7 +305,7 @@ describe('employees — edits stay inside the scope (R5)', () => {
 
   it('an unrelated edit inside the scope goes through', async () => {
     const { service, repository } = makeService(EDITOR);
-    await service.update('e1', { gradeId: 'gB' });
+    await service.update('e1', { employeeGradeId: 'gB' });
     expect(repository.updateEmployee).toHaveBeenCalled();
   });
 

@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useWatch, type Control } from 'react-hook-form';
 import { SelectField } from '@/shared/components/form/fields';
 import { useTranslation } from '@/shared/providers/i18n-provider';
-import { GET_GRADES } from '../apis';
+import { GET_EMPLOYEE_GRADES } from '../apis';
 import { NO_GRADE, type EmployeeFormValues } from '../lib/employee-form';
 import { useListItemOptions } from '../lib/list-item-options';
 
@@ -15,7 +15,7 @@ import { useListItemOptions } from '../lib/list-item-options';
  * search, so a grade can be cleared again. The employee's own grade stays the choice even after it
  * was hidden (`currentHidden`, with the same note as the other lists); a new choice must be shown.
  */
-export function GradeField({
+export function EmployeeGradeField({
   control,
   selected,
   currentHidden = false,
@@ -25,9 +25,9 @@ export function GradeField({
   currentHidden?: boolean;
 }) {
   const { t, locale } = useTranslation();
-  const grades = useListItemOptions(GET_GRADES, locale, { selected });
+  const grades = useListItemOptions(GET_EMPLOYEE_GRADES, locale, { selected });
   const [query, setQuery] = useState('');
-  const gradeId = useWatch({ control, name: 'gradeId' });
+  const employeeGradeId = useWatch({ control, name: 'employeeGradeId' });
   const none = { value: NO_GRADE, label: t('employees.noGrade') };
   const server = {
     ...grades,
@@ -36,17 +36,17 @@ export function GradeField({
       setQuery(next);
       grades.onQueryChange(next);
     },
-    selected: gradeId === NO_GRADE ? none : grades.selected,
+    selected: employeeGradeId === NO_GRADE ? none : grades.selected,
   };
   return (
     <SelectField
       server={server}
       control={control}
-      name="gradeId"
+      name="employeeGradeId"
       label={t('employees.fields.grade')}
       placeholder={t('employees.placeholders.grade')}
       emptyText={t('employees.noGrades')}
-      hint={currentHidden && selected && gradeId === selected.id ? t('employees.hints.hiddenItem') : undefined}
+      hint={currentHidden && selected && employeeGradeId === selected.id ? t('employees.hints.hiddenItem') : undefined}
     />
   );
 }

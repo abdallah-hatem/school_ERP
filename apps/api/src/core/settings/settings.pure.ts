@@ -126,10 +126,10 @@ const LIST_ACTIONS: Record<string, { type: AuditEntityType; create: AuditAction;
     create: 'hr.job_title.create',
     update: 'hr.job_title.update',
   },
-  [HrListKey.GRADES]: {
-    type: AuditEntityType.GRADE,
-    create: 'hr.grade.create',
-    update: 'hr.grade.update',
+  [HrListKey.EMPLOYEE_GRADES]: {
+    type: AuditEntityType.EMPLOYEE_GRADE,
+    create: 'hr.employee_grade.create',
+    update: 'hr.employee_grade.update',
   },
   [HrCatalogueKey.PENALTY_GROUPS]: {
     type: AuditEntityType.PENALTY_GROUP,
@@ -168,7 +168,7 @@ export function historyAuditTarget(event: SettingsChangedEvent): HistoryAuditTar
   const target = LIST_ACTIONS[event.key];
   const scopeOk =
     (event.scope === 'lists' &&
-      (event.key === HrListKey.DEPARTMENTS || event.key === HrListKey.JOB_TITLES || event.key === HrListKey.GRADES)) ||
+      (event.key === HrListKey.DEPARTMENTS || event.key === HrListKey.JOB_TITLES || event.key === HrListKey.EMPLOYEE_GRADES)) ||
     (event.scope === 'catalogue' &&
       (event.key === HrCatalogueKey.PENALTY_GROUPS || event.key === HrCatalogueKey.VIOLATIONS));
   if (!target || !scopeOk) return null;

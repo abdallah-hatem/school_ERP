@@ -474,7 +474,7 @@ export function recordHref(entry: Pick<AuditEntry, 'entityType' | 'entityId'>, l
       return `${base}/settings?section=structure`;
     case 'department':
     case 'job_title':
-    case 'grade':
+    case 'employee_grade':
       return `${base}/settings?section=lists`;
     case 'hr_settings':
       return `${base}/settings?section=hrRules`;

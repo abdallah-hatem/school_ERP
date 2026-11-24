@@ -20,13 +20,13 @@ import { EmployeesRepository } from './employees/repositories/employees.reposito
 import { EmployeesService } from './employees/services/employees.service';
 import { DepartmentsController } from './lists/controllers/departments.controller';
 import { JobTitlesController } from './lists/controllers/job-titles.controller';
-import { GradesController } from './lists/controllers/grades.controller';
+import { EmployeeGradesController } from './lists/controllers/employee-grades.controller';
 import { DepartmentsRepository } from './lists/repositories/departments.repository';
 import { JobTitlesRepository } from './lists/repositories/job-titles.repository';
-import { GradesRepository } from './lists/repositories/grades.repository';
+import { EmployeeGradesRepository } from './lists/repositories/employee-grades.repository';
 import { DepartmentsService } from './lists/services/departments.service';
 import { JobTitlesService } from './lists/services/job-titles.service';
-import { GradesService } from './lists/services/grades.service';
+import { EmployeeGradesService } from './lists/services/employee-grades.service';
 import { MonthLockService } from './month-lock/month-lock.service';
 import { MonthLockRepository } from './month-lock/repositories/month-lock.repository';
 import { HrNotificationsService } from './notifications/hr-notifications.service';
@@ -68,7 +68,7 @@ import { LatenessService } from './staff-attendance/services/lateness.service';
     // lists + employees (T5)
     DepartmentsController,
     JobTitlesController,
-    GradesController,
+    EmployeeGradesController,
     EmployeesController,
     // staff attendance — monthly lateness (T8)
     LatenessController,
@@ -107,10 +107,10 @@ import { LatenessService } from './staff-attendance/services/lateness.service';
     // lists + employees (T5)
     DepartmentsRepository,
     JobTitlesRepository,
-    GradesRepository,
+    EmployeeGradesRepository,
     DepartmentsService,
     JobTitlesService,
-    GradesService,
+    EmployeeGradesService,
     EmployeesRepository,
     EmployeesService,
     // staff attendance — monthly lateness (T8)

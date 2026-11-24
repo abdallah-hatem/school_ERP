@@ -70,19 +70,19 @@ export async function adminName(): Promise<string> {
 
 /**
  * The smoke specs' own grade for `locale` (§3, owner 2026-11-24: grades are a list), found or added
- * through the API — one stable name per language, so runs don't pile grades up — and shown.
+ * through the API — one stable name per language, so runs don't pile grades up — and shown for the run (`hideSmokeGrade` hides it again).
  */
 export async function smokeGrade(locale: Language): Promise<{ id: string; name: string }> {
   const name = `Smoke grade ${locale}`;
   const api = await Api.asAdmin();
-  const found = await api.get<{ id: string; nameEn: string; isActive: boolean }[]>('/hr/grades', {
+  const found = await api.get<{ id: string; nameEn: string; isActive: boolean }[]>('/hr/employee-grades', {
     search: name,
     includeHidden: 'true',
     limit: 20,
   });
   let grade = found.find((g) => g.nameEn === name);
-  if (!grade) grade = await api.post<{ id: string; nameEn: string; isActive: boolean }>('/hr/grades', { nameEn: name, nameAr: name });
-  else if (!grade.isActive) await api.patch(`/hr/grades/${grade.id}`, { isActive: true });
+  if (!grade) grade = await api.post<{ id: string; nameEn: string; isActive: boolean }>('/hr/employee-grades', { nameEn: name, nameAr: name });
+  else if (!grade.isActive) await api.patch(`/hr/employee-grades/${grade.id}`, { isActive: true });
   await api.dispose();
   return { id: grade.id, name };
 }
@@ -92,16 +92,23 @@ export async function smokeGrade(locale: Language): Promise<{ id: string; name: 
  * `hr.employee.update` on the employee's History. No other spec's numbers depend on it; put the old
  * grade back afterwards.
  */
-export async function setEmployeeGrade(employeeId: string, gradeId: string | null): Promise<void> {
+/** Hides the smoke grade again (it was shown only for the run), so pickers on dev stay clean. */
+export async function hideSmokeGrade(id: string): Promise<void> {
   const api = await Api.asAdmin();
-  await api.patch(`/hr/employees/${employeeId}`, { gradeId });
+  await api.patch(`/hr/employee-grades/${id}`, { isActive: false });
+  await api.dispose();
+}
+
+export async function setEmployeeGrade(employeeId: string, employeeGradeId: string | null): Promise<void> {
+  const api = await Api.asAdmin();
+  await api.patch(`/hr/employees/${employeeId}`, { employeeGradeId });
   await api.dispose();
 }
 
 /** Asserts `entry` is the grade change just made on the employee: the field and the grade's name. */
 export async function expectGradeEntry(entry: Locator, locale: Language, grade: string): Promise<void> {
   await expect(entry).toContainText(t(locale, 'audit.actions.hr.employee.update').split('{')[0]!.trim());
-  await expect(entry).toContainText(t(locale, 'audit.fields.gradeId'));
+  await expect(entry).toContainText(t(locale, 'audit.fields.employeeGradeId'));
   await expect(entry).toContainText(grade);
 }
 

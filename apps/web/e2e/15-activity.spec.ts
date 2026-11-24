@@ -6,6 +6,7 @@ import {
   expectWorkingDaysEntry,
   firstEntry,
   renameDepartmentAr,
+  hideSmokeGrade,
   setEmployeeGrade,
   smokeGrade,
   shootSkeleton,
@@ -92,7 +93,7 @@ for (const locale of ['en', 'ar'] as const) {
     const employee = await activeEmployee();
     const grade = await smokeGrade(locale);
     // Left on it by an earlier run: clear it first, so this edit is a change.
-    if (employee.grade?.id === grade.id) await setEmployeeGrade(employee.id, null);
+    if (employee.employeeGrade?.id === grade.id) await setEmployeeGrade(employee.id, null);
     await setEmployeeGrade(employee.id, grade.id);
     try {
       await signIn(page, locale);
@@ -108,7 +109,8 @@ for (const locale of ['en', 'ar'] as const) {
       await shoot(page, info, `history-${locale}-desktop`);
       await shootSkeleton(browser, page, info, `/${locale}/employees/${employee.id}/history`, `history-loading-${locale}-desktop`);
     } finally {
-      await setEmployeeGrade(employee.id, employee.grade?.id ?? null);
+      await setEmployeeGrade(employee.id, employee.employeeGrade?.id ?? null);
+      await hideSmokeGrade(grade.id);
     }
   });
 }

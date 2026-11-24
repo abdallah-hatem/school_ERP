@@ -24,7 +24,7 @@ const MANAGE_PERMISSION: Record<ListKind, PermissionKey> = {
   stages: 'core.stages.manage',
   departments: 'hr.lists.manage',
   jobTitles: 'hr.lists.manage',
-  grades: 'hr.lists.manage',
+  employeeGrades: 'hr.lists.manage',
 };
 
 /**

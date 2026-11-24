@@ -52,21 +52,21 @@ export const JOB_TITLES = [
   { key: 'security', nameEn: 'Security Guard', nameAr: 'فرد أمن' },
 ] as const satisfies readonly SeedListItem[];
 
-/** §3 (owner, 2026-11-24): generic example grades; a school sets its own in Settings. */
-export const GRADES = [
-  { key: 'g1', nameEn: 'Grade 1', nameAr: 'الدرجة الأولى' },
-  { key: 'g2', nameEn: 'Grade 2', nameAr: 'الدرجة الثانية' },
-  { key: 'g3', nameEn: 'Grade 3', nameAr: 'الدرجة الثالثة' },
-  { key: 'g4', nameEn: 'Grade 4', nameAr: 'الدرجة الرابعة' },
+/** §3 (owner, 2026-11-24): generic example employee (pay) grades; a school sets its own in Settings. */
+export const EMPLOYEE_GRADES = [
+  { key: 'g1', nameEn: 'Pay grade 1', nameAr: 'الدرجة الأولى' },
+  { key: 'g2', nameEn: 'Pay grade 2', nameAr: 'الدرجة الثانية' },
+  { key: 'g3', nameEn: 'Pay grade 3', nameAr: 'الدرجة الثالثة' },
+  { key: 'g4', nameEn: 'Pay grade 4', nameAr: 'الدرجة الرابعة' },
 ] as const satisfies readonly SeedListItem[];
 
 export type StageKey = (typeof STAGES)[number]['key'];
 export type DepartmentKey = (typeof DEPARTMENTS)[number]['key'];
 export type JobTitleKey = (typeof JOB_TITLES)[number]['key'];
-export type GradeKey = (typeof GRADES)[number]['key'];
+export type EmployeeGradeKey = (typeof EMPLOYEE_GRADES)[number]['key'];
 
 /** The demo staff's grade, by job title: the leading titles hold the higher grades. */
-export const GRADE_OF_TITLE: Record<JobTitleKey, GradeKey> = {
+export const EMPLOYEE_GRADE_OF_TITLE: Record<JobTitleKey, EmployeeGradeKey> = {
   principal: 'g1',
   vice: 'g1',
   head: 'g2',

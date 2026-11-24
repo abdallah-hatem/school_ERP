@@ -23,10 +23,10 @@ export async function checkGrades(page: Page, info: TestInfo, locale: Language, 
   try {
     // ── Settings → HR lists: the Grades panel, its Add dialog, and a rename through the row menu.
     await page.goto(`/${locale}/settings?section=lists`);
-    await expect(page.getByRole('heading', { name: t(locale, 'settings.lists.grades.title'), exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: t(locale, 'settings.lists.employeeGrades.title'), exact: true })).toBeVisible();
     await expect(page.getByText(grade.name, { exact: true }).filter({ visible: true }).first()).toBeVisible();
-    await page.getByRole('button', { name: t(locale, 'settings.lists.grades.add'), exact: true }).click();
-    const add = page.getByRole('dialog', { name: t(locale, 'settings.lists.grades.add') });
+    await page.getByRole('button', { name: t(locale, 'settings.lists.employeeGrades.add'), exact: true }).click();
+    const add = page.getByRole('dialog', { name: t(locale, 'settings.lists.employeeGrades.add') });
     await expect(add.getByLabel(t(locale, 'settings.names.nameEn'))).toBeVisible();
     await settle(page);
     await expectNoHorizontalScroll(page);
@@ -50,7 +50,7 @@ export async function checkGrades(page: Page, info: TestInfo, locale: Language, 
     await settle(page);
     await expectNoHorizontalScroll(page);
     await shoot(page, info, `grades-${tag}`);
-    await api.patch(`/hr/grades/${grade.id}`, { nameEn: grade.name, nameAr: grade.name });
+    await api.patch(`/hr/employee-grades/${grade.id}`, { nameEn: grade.name, nameAr: grade.name });
 
     // ── New employee: the picker offers "No grade" and the shown grades; the API searches them.
     await page.goto(`/${locale}/employees/new`);
@@ -68,8 +68,8 @@ export async function checkGrades(page: Page, info: TestInfo, locale: Language, 
     await expect(picker).toContainText(grade.name);
 
     // ── Kept but flagged: the employee's grade is hidden; their edit form still shows it, noted.
-    await api.patch(`/hr/employees/${employee.id}`, { gradeId: grade.id });
-    await api.patch(`/hr/grades/${grade.id}`, { isActive: false });
+    await api.patch(`/hr/employees/${employee.id}`, { employeeGradeId: grade.id });
+    await api.patch(`/hr/employee-grades/${grade.id}`, { isActive: false });
     await page.goto(`/${locale}/employees/${employee.id}/edit`);
     const kept = page.getByRole('combobox', { name: new RegExp(escape(t(locale, 'employees.fields.grade'))) });
     await expect(kept).toContainText(grade.name);
@@ -78,8 +78,10 @@ export async function checkGrades(page: Page, info: TestInfo, locale: Language, 
     await page.goto(`/${locale}/employees/${employee.id}`);
     await expect(page.getByText(grade.name, { exact: true }).filter({ visible: true }).first()).toBeVisible();
   } finally {
-    await api.patch(`/hr/grades/${grade.id}`, { nameEn: grade.name, nameAr: grade.name, isActive: true });
-    await api.patch(`/hr/employees/${employee.id}`, { gradeId: employee.grade?.id ?? null });
+    await api.patch(`/hr/employee-grades/${grade.id}`, { nameEn: grade.name, nameAr: grade.name });
+    await api.patch(`/hr/employees/${employee.id}`, { employeeGradeId: employee.employeeGrade?.id ?? null });
+    // Hidden again: the smoke grade is shown only while a run uses it (dev pickers stay clean).
+    await api.patch(`/hr/employee-grades/${grade.id}`, { isActive: false });
     await api.dispose();
   }
 }

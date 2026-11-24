@@ -6,8 +6,8 @@ import { DepartmentsRepository } from '../repositories/departments.repository';
 import { JobTitlesRepository } from '../repositories/job-titles.repository';
 import { DepartmentsService } from './departments.service';
 import { JobTitlesService } from './job-titles.service';
-import { GradesRepository } from '../repositories/grades.repository';
-import { GradesService } from './grades.service';
+import { EmployeeGradesRepository } from '../repositories/employee-grades.repository';
+import { EmployeeGradesService } from './employee-grades.service';
 
 const item = (over: Partial<ListItem> = {}): ListItem => ({
   id: 'd1',
@@ -217,20 +217,20 @@ describe('JobTitlesService (managesPeople, §3 2026-11-18)', () => {
   });
 });
 
-describe('GradesService (§3, owner 2026-11-24)', () => {
-  function makeGrades(repo: Partial<Record<keyof GradesRepository, jest.Mock>> = {}) {
+describe('EmployeeGradesService (§3, owner 2026-11-24)', () => {
+  function makeGrades(repo: Partial<Record<keyof EmployeeGradesRepository, jest.Mock>> = {}) {
     const tx = fakeTransaction();
     const repository = { findOne: jest.fn(), createItem: jest.fn(), updateItem: jest.fn(), ...repo };
     const history = historyIn(tx);
-    const service = new GradesService(
-      repository as unknown as GradesRepository,
+    const service = new EmployeeGradesService(
+      repository as unknown as EmployeeGradesRepository,
       history as unknown as SettingsHistory,
       tx.afterCommit,
     );
     return { service, repository, history };
   }
 
-  it('create and rename record their history under hr.grades (the hr.grade.* audit actions)', async () => {
+  it('create and rename record their history under hr.grades (the hr.employee_grade.* audit actions)', async () => {
     const senior = item({ id: 'g1', nameEn: 'Senior', nameAr: 'أول' });
     const renamed = { ...senior, nameEn: 'Senior teacher' };
     const { service, history } = makeGrades({
@@ -243,11 +243,11 @@ describe('GradesService (§3, owner 2026-11-24)', () => {
     expect(history.record).toHaveBeenCalledTimes(2);
     expect(history.record).toHaveBeenNthCalledWith(
       1,
-      expect.objectContaining({ scope: 'lists', key: HrListKey.GRADES, oldValue: null, newValue: senior }),
+      expect.objectContaining({ scope: 'lists', key: HrListKey.EMPLOYEE_GRADES, oldValue: null, newValue: senior }),
     );
     expect(history.record).toHaveBeenNthCalledWith(
       2,
-      expect.objectContaining({ scope: 'lists', key: HrListKey.GRADES, oldValue: senior, newValue: renamed }),
+      expect.objectContaining({ scope: 'lists', key: HrListKey.EMPLOYEE_GRADES, oldValue: senior, newValue: renamed }),
     );
   });
 
