@@ -22,13 +22,20 @@ describe('copyDownloadName', () => {
 });
 
 describe('printValuesHash', () => {
-  it('edge case 15 — any value, the version or the language changing changes the hash', () => {
-    const base = printValuesHash({ versionId: 'v1', language: 'AR', values: values() });
-    expect(printValuesHash({ versionId: 'v1', language: 'AR', values: values() })).toBe(base);
-    expect(printValuesHash({ versionId: 'v1', language: 'AR', values: values({ 'contract.salary': '10,500 جنيه' }) })).not.toBe(base);
-    expect(printValuesHash({ versionId: 'v2', language: 'AR', values: values() })).not.toBe(base);
-    expect(printValuesHash({ versionId: 'v1', language: 'EN', values: values() })).not.toBe(base);
+  it('edge case 15 — a used value, the version or the language changing changes the hash', () => {
+    const fields = ['contract.salary', 'employee.nameAr'] as const;
+    const base = printValuesHash({ versionId: 'v1', language: 'AR', values: values(), fields });
+    expect(printValuesHash({ versionId: 'v1', language: 'AR', values: values(), fields })).toBe(base);
+    expect(printValuesHash({ versionId: 'v1', language: 'AR', values: values({ 'contract.salary': '10,500 جنيه' }), fields })).not.toBe(base);
+    expect(printValuesHash({ versionId: 'v2', language: 'AR', values: values(), fields })).not.toBe(base);
+    expect(printValuesHash({ versionId: 'v1', language: 'EN', values: values(), fields })).not.toBe(base);
     expect(base).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it('a value the text doesn’t use (or today, when not printed) changing keeps the hash — no needless 409', () => {
+    const fields = ['employee.nameAr'] as const;
+    const base = printValuesHash({ versionId: 'v1', language: 'AR', values: values(), fields });
+    expect(printValuesHash({ versionId: 'v1', language: 'AR', values: values({ today: 'tomorrow', 'contract.salary': 'x' }), fields })).toBe(base);
   });
 });
 

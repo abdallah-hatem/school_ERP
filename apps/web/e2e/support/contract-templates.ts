@@ -75,7 +75,7 @@ export async function checkContractTemplates(page: Page, info: TestInfo, locale:
     await expect(sheets.first()).toBeVisible();
     await expect(sheets.first().locator('.cd-field').first()).toBeVisible();
     const pageCount = await sheets.count();
-    await expect(dialog.getByText(new RegExp(t(locale, 'contract-templates.print.page', { page: 1, count: pageCount })))).toBeVisible();
+    await expect(dialog.getByText(new RegExp(t(locale, 'contract-templates.print.page', { page: 1, total: pageCount })))).toBeVisible();
     await shoot(page, info, `${shotPrefix}-print-contract`);
 
     if (phone) {

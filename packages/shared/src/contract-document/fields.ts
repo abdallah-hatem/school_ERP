@@ -6,7 +6,7 @@
  */
 
 /** The Fields panel's four groups, in order. */
-export const CONTRACT_FIELD_GROUPS = ['employee', 'contract', 'school', 'other'] as const;
+export const CONTRACT_FIELD_GROUPS = ['employee', 'contract', 'school', 'general'] as const;
 export type ContractFieldGroup = (typeof CONTRACT_FIELD_GROUPS)[number];
 
 export interface ContractFieldDefinition {
@@ -54,7 +54,7 @@ export const CONTRACT_FIELDS = {
   'school.name': f('school', { ar: 'مدرسة تجريبية', en: 'Sample School' }),
   'school.address': f('school', { ar: '5 شارع المعرفة، مدينة نصر، القاهرة', en: '5 El Maarefa St, Nasr City, Cairo' }),
   'school.representative': f('school', { ar: 'أ. هشام كامل، مدير المدرسة', en: 'Mr Hisham Kamel, Principal' }),
-  today: f('other', { ar: '24 نوفمبر 2026', en: '24 November 2026' }),
+  today: f('general', { ar: '24 نوفمبر 2026', en: '24 November 2026' }),
 } as const satisfies Record<string, ContractFieldDefinition>;
 
 export type ContractFieldKey = keyof typeof CONTRACT_FIELDS;

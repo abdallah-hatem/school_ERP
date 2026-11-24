@@ -182,17 +182,26 @@ export class ContractTemplatesService {
     return this.afterCommit.inTransaction(async () => {
       await this.repository.lock(id);
       const before = await this.load(id);
-      const actor = await this.access.actor();
-      if ((before.template.hiddenAt !== null) !== hidden) {
-        await this.repository.update(id, {
-          hiddenAt: hidden ? new Date() : null,
-          ...(hidden ? { defaultForWorkSystem: null } : {}),
-          updatedById: actor?.userId ?? null,
+      const action = hidden ? 'hr.contract_template.hide' : 'hr.contract_template.show';
+      if ((before.template.hiddenAt !== null) === hidden) {
+        // Already so: nothing changes and no entry is written (`record` with no changes writes none,
+        // and satisfies the @Audited check).
+        await this.audit.record({
+          action,
+          entity: { type: AuditEntityType.CONTRACT_TEMPLATE, id, label: templateAuditLabel(before.template) },
+          changes: [],
         });
+        return toTemplate(before);
       }
+      const actor = await this.access.actor();
+      await this.repository.update(id, {
+        hiddenAt: hidden ? new Date() : null,
+        ...(hidden ? { defaultForWorkSystem: null } : {}),
+        updatedById: actor?.userId ?? null,
+      });
       const after = await this.load(id);
       await this.audit.record({
-        action: hidden ? 'hr.contract_template.hide' : 'hr.contract_template.show',
+        action,
         entity: { type: AuditEntityType.CONTRACT_TEMPLATE, id, label: templateAuditLabel(after.template) },
         before: templateAuditSnapshot(before),
         after: templateAuditSnapshot(after),

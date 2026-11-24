@@ -51,7 +51,7 @@ import type { DocumentEditorHandle } from '../../contract-templates/editor/docum
 import { checkEditorDocument, toStoredDocument } from '../../contract-templates/lib/editor-json';
 import { templateErrorText } from '../../contract-templates/lib/errors';
 import { fieldName, SCHOOL_SETTING_FIELDS } from '../../contract-templates/lib/fields';
-import { CREATE_CONTRACT_COPY, GET_CONTRACT_COPY_FILE, GET_CONTRACT_PRINT, GET_PRINT_TEMPLATES } from '../apis';
+import { CREATE_CONTRACT_COPY, GET_CONTRACT_PRINT, GET_PRINT_TEMPLATES } from '../apis';
 import { pdfBlob, printPdf, sharePdf } from '../lib/pdf-output';
 import { CopiesList } from './contract-copies';
 
@@ -252,8 +252,9 @@ export function PrintContractDialog({
       const copy = res.data;
       router.refresh();
       setReload((r) => r + 1);
-      const file = copy.fileUrl ? await GET_CONTRACT_COPY_FILE(copy.fileUrl) : null;
-      if (!file || !file.success || !file.data || !copy.fileUrl) {
+      // The answer carries the PDF: no second fetch (which the API would record as an opening).
+      const file = { data: { fileName: copy.downloadName, contentType: 'application/pdf', base64: copy.pdfBase64 } };
+      if (!copy.fileUrl || !copy.pdfBase64) {
         setNotice({ tone: 'info', text: t('contractTemplates.print.done') });
         return;
       }
@@ -352,7 +353,7 @@ export function PrintContractDialog({
         <Note key="school" tone="warning">
           <strong className="block font-bold">{t('contractTemplates.print.notSet', { names: names(emptySchool, screenLang) })}</strong>
           {can('core.settings.edit') ? (
-            <Link href={settingsHref(locale, 'school')} className="font-bold underline underline-offset-2">
+            <Link href={settingsHref(locale, 'school', 'contracts')} className="font-bold underline underline-offset-2">
               {t('contractTemplates.print.openSettings')}
             </Link>
           ) : (
@@ -410,6 +411,9 @@ export function PrintContractDialog({
           <div className="flex flex-col gap-1.5">
             <span className="text-xs font-semibold text-muted-foreground">{t('contractTemplates.print.earlier')}</span>
             <CopiesList copies={preview.copies} compact />
+            {preview.copiesTotal > preview.copies.length ? (
+              <p className="text-xs text-muted-foreground">{t('contractTemplates.copies.moreOnContract')}</p>
+            ) : null}
           </div>
         ) : (
           <span className="text-xs text-muted-foreground">{t('contractTemplates.print.earlierNone')}</span>
@@ -491,7 +495,7 @@ export function PrintContractDialog({
   const pagesBar = (
     <div className="flex flex-wrap items-center justify-between gap-3 px-1 pb-3 text-sm">
       <span className="font-semibold tabular-nums" aria-live="polite">
-        {pages ? t('contractTemplates.print.page', { page: formatCount(Math.min(pageInView, pages)), count: formatCount(pages) }) : ' '}
+        {pages ? t('contractTemplates.print.page', { page: formatCount(Math.min(pageInView, pages)), total: formatCount(pages) }) : ' '}
       </span>
       <span className="flex items-center gap-3">
         <span className="flex items-center gap-1.5 text-xs text-muted-foreground">

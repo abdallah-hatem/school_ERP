@@ -34,6 +34,7 @@ CREATE TABLE "contract_template_versions" (
     "version" INTEGER NOT NULL,
     "body_ar" JSONB NOT NULL,
     "body_en" JSONB,
+    "has_english" BOOLEAN NOT NULL,
     "uses_salary" BOOLEAN NOT NULL,
     "fields" TEXT[],
     "created_by_id" UUID,

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import {
   AuditEntityType,
+  CONTRACT_COPIES_SHOWN,
   CONTRACT_FIELDS,
   CONTRACT_SALARY_FIELDS,
   ContractStatus,
@@ -10,6 +11,7 @@ import {
   contractYearOf,
   documentUsesSalary,
   ErrorCode,
+  fieldsOfDocument,
   fillContractDocument,
   PAGINATION,
   parseContractDocument,
@@ -24,6 +26,7 @@ import {
   type ContractPrintTemplateOption,
   type ContractTemplatePreview,
   type CreateContractCopyRequest,
+  type CreatedContractCopy,
   type IsoDate,
   type Paginated,
   type PaginationQuery,
@@ -119,14 +122,16 @@ export class ContractPrintService {
     const { employee, salaryVisible } = await this.loadForPrint(contractId);
     const page = query.page ?? PAGINATION.defaultPage;
     const limit = query.limit ?? PAGINATION.defaultLimit;
-    const { rows, total } = await this.templates.listPage({ search: query.search, includeHidden: false }, page, limit);
+    // The work system's default leads page 1 (it is preselected), wherever it sorts by name.
+    const fallback = await this.templates.findDefault(employee.workSystem, null);
+    const { rows, total } = await this.templates.listPage({ search: query.search, includeHidden: false, pinFirst: fallback?.id ?? null }, page, limit);
     return {
       data: rows.map(({ template, version }) => ({
         id: template.id,
         nameEn: template.nameEn,
         nameAr: template.nameAr,
         version: template.currentVersion,
-        hasEnglish: version.bodyEn !== null,
+        hasEnglish: version.hasEnglish,
         usesSalary: version.usesSalary,
         isDefault: template.defaultForWorkSystem === employee.workSystem,
         salaryBlocked: version.usesSalary && !salaryVisible,
@@ -180,8 +185,8 @@ export class ContractPrintService {
       emptyFields: rendered.emptyFields,
       phrasesLeftOut: rendered.phrasesLeftOut,
       logoUrl: school.logoUrl,
-      valuesHash: printValuesHash({ versionId: template.version.id, language, values }),
-      copies: (await this.copies.ofContracts([row.id])).map((c) => toCopy(c, this.mayOpen(c, context.salaryVisible))),
+      valuesHash: printValuesHash({ versionId: template.version.id, language, values, fields: fieldsOfDocument(document) }),
+      ...(await this.newestCopies([row.id], () => context.salaryVisible)).get(row.id)!,
     };
   }
 
@@ -195,7 +200,7 @@ export class ContractPrintService {
    * `hr.contract.copy_print` entry in one transaction. A failed render keeps nothing; a failed
    * transaction leaves a file nobody's record points at (it opens for nobody) and deletes it.
    */
-  async createCopy(contractId: string, dto: CreateContractCopyRequest): Promise<ContractCopy> {
+  async createCopy(contractId: string, dto: CreateContractCopyRequest): Promise<CreatedContractCopy> {
     const context = await this.loadForPrint(contractId);
     const template = await this.printableTemplate(dto.templateId);
     if (template.template.currentVersion !== dto.templateVersion) {
@@ -215,7 +220,7 @@ export class ContractPrintService {
       throw new CodedException(HttpStatus.FORBIDDEN, ErrorCode.SALARY_NOT_VISIBLE);
     }
     const values = await this.valuesFor(context, dto.language);
-    if (printValuesHash({ versionId: template.version.id, language: dto.language, values }) !== dto.valuesHash) {
+    if (printValuesHash({ versionId: template.version.id, language: dto.language, values, fields: fieldsOfDocument(templateDocument) }) !== dto.valuesHash) {
       throw new CodedException(HttpStatus.CONFLICT, ErrorCode.VALUES_CHANGED);
     }
 
@@ -272,7 +277,7 @@ export class ContractPrintService {
           { field: 'output', before: null, after: dto.output },
         ],
       });
-      return toCopy(row, true);
+      return { ...toCopy(row, true), pdfBase64: pdf.toString('base64') };
     });
   }
 
@@ -300,13 +305,25 @@ export class ContractPrintService {
    * The copies of the contracts on one page of an employee's history (the Contracts tab), newest
    * first. The caller already checked `hr.contracts.view` covers the employee.
    */
-  async copiesOf(rows: readonly ContractRow[]): Promise<Map<string, ContractCopy[]>> {
+  async copiesOf(rows: readonly ContractRow[]): Promise<Map<string, { copies: ContractCopy[]; copiesTotal: number }>> {
     const salaryScope = await this.access.salaryScope();
     const visible = new Map(rows.map((r) => [r.id, inScope(salaryScope, contractScopeFields(r))]));
-    const out = new Map<string, ContractCopy[]>(rows.map((r) => [r.id, []]));
-    for (const copy of await this.copies.ofContracts(rows.map((r) => r.id))) {
-      out.get(copy.contractId)?.push(toCopy(copy, this.mayOpen(copy, visible.get(copy.contractId) ?? false)));
-    }
+    return this.newestCopies(
+      rows.map((r) => r.id),
+      (contractId) => visible.get(contractId) ?? false,
+    );
+  }
+
+  /** Each contract's newest `CONTRACT_COPIES_SHOWN` copies and its total. */
+  private async newestCopies(
+    contractIds: readonly string[],
+    salaryVisible: (contractId: string) => boolean,
+  ): Promise<Map<string, { copies: ContractCopy[]; copiesTotal: number }>> {
+    const { rows, totals } = await this.copies.newestOfContracts(contractIds, CONTRACT_COPIES_SHOWN);
+    const out = new Map<string, { copies: ContractCopy[]; copiesTotal: number }>(
+      contractIds.map((id) => [id, { copies: [], copiesTotal: totals.get(id) ?? 0 }]),
+    );
+    for (const copy of rows) out.get(copy.contractId)?.copies.push(toCopy(copy, this.mayOpen(copy, salaryVisible(copy.contractId))));
     return out;
   }
 

@@ -7,17 +7,20 @@ import type { DbAdapter, DbClient } from '../../../../database/transactions';
 
 const USER_REF = { select: { id: true, name: true } } as const;
 
-const VERSION_SELECT = {
+/** A version without its texts: what lists read (the texts are up to 200 KB each). */
+const VERSION_SUMMARY_SELECT = {
   id: true,
   version: true,
-  bodyAr: true,
-  bodyEn: true,
+  hasEnglish: true,
   usesSalary: true,
   fields: true,
   createdAt: true,
   createdBy: USER_REF,
 } satisfies Prisma.ContractTemplateVersionSelect;
 
+const VERSION_SELECT = { ...VERSION_SUMMARY_SELECT, bodyAr: true, bodyEn: true } satisfies Prisma.ContractTemplateVersionSelect;
+
+export type TemplateVersionSummaryRow = Prisma.ContractTemplateVersionGetPayload<{ select: typeof VERSION_SUMMARY_SELECT }>;
 export type TemplateVersionRow = Prisma.ContractTemplateVersionGetPayload<{ select: typeof VERSION_SELECT }>;
 
 export const TEMPLATE_SELECT = {
@@ -41,6 +44,12 @@ export interface TemplateWithVersion {
   version: TemplateVersionRow;
 }
 
+/** A list row: the template with its current version's facts, never its texts. */
+export interface TemplateSummaryRow {
+  template: TemplateRow;
+  version: TemplateVersionSummaryRow;
+}
+
 /**
  * Contract templates and their versions (spec 2026-11-24-contract-templates → Data). Joins the
  * caller's transaction (`txHost.tx`) so a save, its version and its audit entry commit together.
@@ -54,34 +63,44 @@ export class ContractTemplatesRepository {
     return this.txHost.tx;
   }
 
-  /** One page, searched by either name (the shared search); hidden ones only when asked. */
+  /**
+   * One page, searched by either name (the shared search); hidden ones only when asked. Lists read
+   * no texts. `pinFirst`: that template (when it matches) leads page 1 — the print picker's
+   * work-system default, so it is never beyond the first page.
+   */
   async listPage(
-    filter: { search?: string; includeHidden: boolean },
+    filter: { search?: string; includeHidden: boolean; pinFirst?: string | null },
     page: number,
     limit: number,
-  ): Promise<{ rows: TemplateWithVersion[]; total: number }> {
+  ): Promise<{ rows: TemplateSummaryRow[]; total: number }> {
     const where: Prisma.ContractTemplateWhereInput = {
       ...(filter.includeHidden ? {} : { hiddenAt: null }),
       ...(searchWhere(filter.search) ?? {}),
     };
+    // Shown first, then by name; the id breaks ties so pages never overlap.
+    const orderBy: Prisma.ContractTemplateOrderByWithRelationInput[] = [
+      { hiddenAt: { sort: 'asc', nulls: 'first' } },
+      { nameEn: 'asc' },
+      { id: 'asc' },
+    ];
+    const pinned = filter.pinFirst
+      ? await this.db.contractTemplate.findFirst({ where: { AND: [where, { id: filter.pinFirst }] }, select: TEMPLATE_SELECT })
+      : null;
+    const rest: Prisma.ContractTemplateWhereInput = pinned ? { AND: [where, { id: { not: pinned.id } }] } : where;
+    const skip = Math.max(0, (page - 1) * limit - (pinned ? 1 : 0));
+    const take = pinned && page === 1 ? limit - 1 : limit;
     const [templates, total] = await Promise.all([
-      this.db.contractTemplate.findMany({
-        where,
-        select: TEMPLATE_SELECT,
-        // Shown first, then by name; the id breaks ties so pages never overlap.
-        orderBy: [{ hiddenAt: { sort: 'asc', nulls: 'first' } }, { nameEn: 'asc' }, { id: 'asc' }],
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
+      take > 0 ? this.db.contractTemplate.findMany({ where: rest, select: TEMPLATE_SELECT, orderBy, skip, take }) : Promise.resolve([]),
       this.db.contractTemplate.count({ where }),
     ]);
-    return { rows: await this.withVersions(templates), total };
+    const rows = pinned && page === 1 ? [pinned, ...templates] : templates;
+    return { rows: await this.withVersions(rows, VERSION_SUMMARY_SELECT), total };
   }
 
   async findOne(id: string): Promise<TemplateWithVersion | null> {
     const template = await this.db.contractTemplate.findUnique({ where: { id }, select: TEMPLATE_SELECT });
     if (!template) return null;
-    const [row] = await this.withVersions([template]);
+    const [row] = await this.withVersions([template], VERSION_SELECT);
     return row ?? null;
   }
 
@@ -149,6 +168,7 @@ export class ContractTemplatesRepository {
         version: data.version,
         bodyAr: data.bodyAr as unknown as Prisma.InputJsonValue,
         bodyEn: data.bodyEn ? (data.bodyEn as unknown as Prisma.InputJsonValue) : Prisma.DbNull,
+        hasEnglish: data.bodyEn !== null,
         usesSalary: data.usesSalary,
         fields: data.fields,
         createdById: data.actorId,
@@ -156,12 +176,12 @@ export class ContractTemplatesRepository {
     });
   }
 
-  async versionsPage(templateId: string, page: number, limit: number): Promise<{ rows: TemplateVersionRow[]; total: number }> {
+  async versionsPage(templateId: string, page: number, limit: number): Promise<{ rows: TemplateVersionSummaryRow[]; total: number }> {
     const where = { templateId };
     const [rows, total] = await Promise.all([
       this.db.contractTemplateVersion.findMany({
         where,
-        select: VERSION_SELECT,
+        select: VERSION_SUMMARY_SELECT,
         orderBy: { version: 'desc' },
         skip: (page - 1) * limit,
         take: limit,
@@ -187,12 +207,16 @@ export class ContractTemplatesRepository {
     return row?.id ?? null;
   }
 
-  private async withVersions(templates: TemplateRow[]): Promise<TemplateWithVersion[]> {
+  private async withVersions<S extends typeof VERSION_SUMMARY_SELECT | typeof VERSION_SELECT>(
+    templates: TemplateRow[],
+    select: S,
+  ): Promise<Array<{ template: TemplateRow; version: Prisma.ContractTemplateVersionGetPayload<{ select: S }> }>> {
     if (templates.length === 0) return [];
-    const versions = await this.db.contractTemplateVersion.findMany({
+    const withTemplateId: Prisma.ContractTemplateVersionSelect = { ...select, templateId: true };
+    const versions = (await this.db.contractTemplateVersion.findMany({
       where: { OR: templates.map((t) => ({ templateId: t.id, version: t.currentVersion })) },
-      select: { ...VERSION_SELECT, templateId: true },
-    });
+      select: withTemplateId,
+    })) as unknown as Array<Prisma.ContractTemplateVersionGetPayload<{ select: S }> & { templateId: string }>;
     const byTemplate = new Map(versions.map((v) => [v.templateId, v]));
     return templates.flatMap((template) => {
       const version = byTemplate.get(template.id);

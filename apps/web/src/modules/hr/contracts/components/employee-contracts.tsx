@@ -210,7 +210,7 @@ export function EmployeeContracts({ employeeId, employee, basePath, rows, total,
         toolbar={newContract && rows?.length ? <div className="flex w-full justify-end">{newContract}</div> : undefined}
         pagination={{ page, limit, total, onPageChange: goToPage }}
         // Each contract's printed copies, under its row (contract templates spec → Printed copies).
-        rowDetail={(c) => (c.copies?.length ? <ContractCopiesBlock copies={c.copies} /> : null)}
+        rowDetail={(c) => (c.copies?.length ? <ContractCopiesBlock contractId={c.id} copies={c.copies} total={c.copiesTotal} /> : null)}
         cardsBelow={1100}
       />
       {canCreate ? (

@@ -287,15 +287,31 @@ on the server by `PdfRenderer` (`apps/api/src/common/pdf/`) with `playwright-cor
 headless shell: the page is the shared renderer's HTML (`renderContractDocument`, escaped, the same
 function and CSS as the web preview) served from memory, with **JavaScript off and every request
 blocked** (fonts — IBM Plex Sans Arabic, Plus Jakarta Sans, OFL, bundled from `@fontsource` — and
-the logo are data URLs; the page has its own `default-src 'none'` CSP). One browser is kept warm;
-**at most `PDF_RENDER_CONCURRENCY` (2) renders at once**, the rest queue; a render over
-`PDF_RENDER_TIMEOUT_MS` (20 s) fails with `PDF_RENDER_FAILED` and nothing is kept. The render runs
-outside any transaction (`POST /hr/contracts/:id/copies` is `@NotAudited` for this reason and records
-`hr.contract.copy_print` in the copy's own transaction). `PDF_CHROMIUM_PATH` names the browser; unset,
-playwright-core's own download is used (dev: `pnpm --filter api exec playwright-core install
-chromium-headless-shell`; CI installs it in the API e2e job). The image (`deploy/docker/Dockerfile.api`)
-installs the headless shell with its libraries (~+150–250 MB). JSON bodies are accepted up to 1 MB
-(a template carries two texts of up to 200 KB).
+the logo are data URLs; the page has its own `default-src 'none'` CSP). One browser is kept warm.
+
+- **Limits:** at most `PDF_RENDER_CONCURRENCY` (2) renders at once; at most `PDF_RENDER_QUEUE_SIZE`
+  (10) wait, each at most `PDF_RENDER_QUEUE_WAIT_MS` (30 s) — past either, 503 `PDF_RENDER_BUSY`
+  before any render starts, so an abandoned request never keeps a copy later. A freed slot passes
+  straight to the next waiter. A render over `PDF_RENDER_TIMEOUT_MS` (20 s) is stopped — its browser
+  context closed, which aborts `page.pdf` — and only then is the slot freed; it answers 503
+  `PDF_RENDER_FAILED` and nothing is kept.
+- **Outside any transaction:** `POST /hr/contracts/:id/copies` is `@NotAudited` for this reason and
+  records `hr.contract.copy_print` in the copy's own transaction. Its answer carries the PDF
+  (base64), so the printer's own Print / Download / share is one `copy_print` entry, never also a
+  `copy_open`.
+- **The browser:** `PDF_CHROMIUM_PATH` names one; unset, playwright-core's own download is used
+  (dev: `pnpm --filter api exec playwright-core install chromium-headless-shell`; CI installs it in
+  the API e2e job). The image (`deploy/docker/Dockerfile.api`) leaves it unset and installs the
+  headless shell with its libraries under `PLAYWRIGHT_BROWSERS_PATH=/ms-playwright`.
+- **No Chromium sandbox (`--no-sandbox`, playwright's default):** the sandbox needs user namespaces
+  or a setuid helper that a plain container doesn't grant. Accepted because the renderer only ever
+  loads our own page — HTML built by the shared renderer with every text and value escaped, no user
+  HTML — with JavaScript disabled and every network request blocked, in the API container running as
+  the unprivileged `node` user. Revisit if a page ever loads anything the school or a user wrote as
+  markup, or third-party content.
+- **The image ships no source:** the run stage gets only `dist/`, `prisma/schema.prisma` +
+  `prisma/migrations/`, `package.json` and the production `node_modules`.
+- JSON bodies are accepted up to 1 MB (a template carries two texts of up to 200 KB).
 
 ### Scanning (`.github/workflows/security.yml`)
 

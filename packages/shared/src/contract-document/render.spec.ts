@@ -286,6 +286,12 @@ describe('parseContractDocument', () => {
     expect(r).toEqual({ ok: false, problem: 'CONTRACT_DOCUMENT_INVALID' });
   });
 
+  it('a document nested deeper than 20 levels is refused (400), never a stack overflow', () => {
+    let node: Record<string, unknown> = { type: 'paragraph', content: [{ type: 'text', text: 'x' }] };
+    for (let i = 0; i < 30; i += 1) node = { type: 'bulletList', content: [{ type: 'listItem', content: [node] }] };
+    expect(parseContractDocument({ type: 'doc', content: [node] })).toEqual({ ok: false, problem: 'CONTRACT_DOCUMENT_INVALID' });
+  });
+
   it('edge case 23: a template over 200 KB is refused', () => {
     const big = doc(para(text('x'.repeat(CONTRACT_DOCUMENT_MAX_BYTES))));
     expect(parseContractDocument(big)).toEqual({ ok: false, problem: 'TEMPLATE_TOO_LONG' });

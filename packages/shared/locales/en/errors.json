@@ -143,5 +143,6 @@
   "TEMPLATE_TEXT_EMPTY": "Write the Arabic text of the template.",
   "OPTIONAL_PHRASE_NEEDS_FIELD": "An optional phrase needs a field.",
   "CONTRACT_DOCUMENT_INVALID": "The text has something the editor doesn't allow. Reload and try again.",
-  "PDF_RENDER_FAILED": "Couldn't make the PDF — try again."
+  "PDF_RENDER_FAILED": "Couldn't make the PDF — try again.",
+  "PDF_RENDER_BUSY": "Many contracts are being printed right now — try again in a minute."
 }

@@ -151,7 +151,7 @@ export class ContractsService {
     // Each contract's printed copies (contract templates spec), newest first.
     const copies = await this.print.copiesOf(rows);
     return {
-      data: (await this.present(rows)).map((c) => ({ ...c, copies: copies.get(c.id) ?? [] })),
+      data: (await this.present(rows)).map((c) => ({ ...c, ...(copies.get(c.id) ?? { copies: [], copiesTotal: 0 }) })),
       total,
       page,
       limit,

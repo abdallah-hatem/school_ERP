@@ -39,6 +39,8 @@ export const SETTINGS_SECTIONS = Object.keys(SETTINGS_SECTION_ACCESS) as Setting
  */
 export const SETTINGS_SECTION_PARTS = {
   hrRules: ['lateness', 'payroll', 'penalties', 'employees', 'calendar'],
+  // The address and signatory a printed contract reads (contract templates spec).
+  school: ['contracts'],
 } as const satisfies Partial<Record<SettingsSectionId, readonly string[]>>;
 export type SettingsPartOf<S extends SettingsSectionId> = S extends keyof typeof SETTINGS_SECTION_PARTS
   ? (typeof SETTINGS_SECTION_PARTS)[S][number]

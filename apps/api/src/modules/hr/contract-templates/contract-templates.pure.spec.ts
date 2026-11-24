@@ -25,7 +25,7 @@ describe('textChanged', () => {
 
 describe('languagesOf', () => {
   it('reads AR or AR+EN for the audit entry', () => {
-    expect(languagesOf({ bodyEn: null })).toBe('AR');
-    expect(languagesOf({ bodyEn: { type: 'doc', content: [] } })).toBe('AR+EN');
+    expect(languagesOf({ hasEnglish: false })).toBe('AR');
+    expect(languagesOf({ hasEnglish: true })).toBe('AR+EN');
   });
 });

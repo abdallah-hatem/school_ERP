@@ -205,7 +205,11 @@ function SchoolForm({ initial, onSaved }: { initial: SchoolSettings; onSaved: (n
         />
         {/* For contracts (contract templates spec, §7): the "School address" and "School
             representative" fields. Optional: empty prints a dotted line. */}
-        <fieldset data-skeleton-block="contract-details" className="flex min-w-0 flex-col gap-4 border-t border-border pt-5">
+        <fieldset
+          data-skeleton-block="contract-details"
+          data-settings-part="contracts"
+          className="flex min-w-0 flex-col gap-4 border-t border-border pt-5 ring-2 ring-primary/0 ring-offset-4 ring-offset-card transition-[box-shadow] duration-500 data-landed:rounded-sm data-landed:ring-primary/45"
+        >
           <legend className="sr-only">{t('settings.school.contractDetails')}</legend>
           <div className="flex flex-col gap-1" aria-hidden="true">
             <h3 className="font-display text-base font-extrabold">{t('settings.school.contractDetails')}</h3>

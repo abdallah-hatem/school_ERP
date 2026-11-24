@@ -174,6 +174,24 @@ export const contractDocumentSchema = z
   .object({ type: z.literal('doc'), content: z.array(blockNode) })
   .strict() as unknown as z.ZodType<ContractDocument>;
 
+/** How deep objects and arrays may nest (lists in tables in lists…): far beyond any real contract. */
+export const CONTRACT_DOCUMENT_MAX_DEPTH = 20;
+
+/** The deepest nesting of objects inside `content` arrays (iterative: no recursion on untrusted input). */
+export function nestingDepth(input: unknown): number {
+  let deepest = 0;
+  const stack: Array<{ node: unknown; depth: number }> = [{ node: input, depth: 0 }];
+  while (stack.length > 0) {
+    const { node, depth } = stack.pop()!;
+    if (node === null || typeof node !== 'object') continue;
+    deepest = Math.max(deepest, depth);
+    if (deepest > CONTRACT_DOCUMENT_MAX_DEPTH) return deepest;
+    const content = (node as { content?: unknown }).content;
+    if (Array.isArray(content)) for (const child of content) stack.push({ node: child, depth: depth + 1 });
+  }
+  return deepest;
+}
+
 /** Why a document is refused — each an `ErrorCode`. */
 export type ContractDocumentProblem =
   | 'CONTRACT_DOCUMENT_INVALID'
@@ -243,6 +261,8 @@ export function hasContent(document: ContractDocument): boolean {
  */
 export function parseContractDocument(input: unknown, options: { requireContent?: boolean } = {}): ContractDocumentParse {
   if (contractDocumentBytes(input) > CONTRACT_DOCUMENT_MAX_BYTES) return { ok: false, problem: 'TEMPLATE_TOO_LONG' };
+  // Checked before the recursive schema: a deeply nested paste is a 400, never a stack overflow.
+  if (nestingDepth(input) > CONTRACT_DOCUMENT_MAX_DEPTH) return { ok: false, problem: 'CONTRACT_DOCUMENT_INVALID' };
   const parsed = contractDocumentSchema.safeParse(input);
   if (!parsed.success) return { ok: false, problem: 'CONTRACT_DOCUMENT_INVALID' };
   const document = parsed.data;

@@ -10,7 +10,13 @@ import {
   type ContractTemplateVersionSummary,
   type ContractTemplateVersion,
 } from '@school-erp/shared';
-import type { TemplateRow, TemplateVersionRow, TemplateWithVersion } from './repositories/contract-templates.repository';
+import type {
+  TemplateRow,
+  TemplateSummaryRow,
+  TemplateVersionRow,
+  TemplateVersionSummaryRow,
+  TemplateWithVersion,
+} from './repositories/contract-templates.repository';
 
 const isSalary = (key: ContractFieldKey) => CONTRACT_FIELDS[key].salary;
 
@@ -36,8 +42,8 @@ export function templateAuditLabel(row: Pick<TemplateRow, 'nameEn' | 'nameAr'>):
 }
 
 /** The languages a version has: "AR" or "AR+EN" (the audit entry's "languages" line). */
-export function languagesOf(version: Pick<TemplateVersionRow, 'bodyEn'>): string {
-  return version.bodyEn ? 'AR+EN' : 'AR';
+export function languagesOf(version: Pick<TemplateVersionSummaryRow, 'hasEnglish'>): string {
+  return version.hasEnglish ? 'AR+EN' : 'AR';
 }
 
 /**
@@ -57,12 +63,12 @@ export function templateAuditSnapshot(row: TemplateWithVersion): Record<string, 
 
 const person = (user: { id: string; name: string } | null) => (user ? { id: user.id, name: user.name } : null);
 
-export function toSummary({ template, version }: TemplateWithVersion): ContractTemplateSummary {
+export function toSummary({ template, version }: TemplateSummaryRow): ContractTemplateSummary {
   return {
     id: template.id,
     nameEn: template.nameEn,
     nameAr: template.nameAr,
-    hasEnglish: version.bodyEn !== null,
+    hasEnglish: version.hasEnglish,
     defaultForWorkSystem: template.defaultForWorkSystem,
     hidden: template.hiddenAt !== null,
     version: template.currentVersion,
@@ -82,10 +88,10 @@ export function toTemplate(row: TemplateWithVersion): ContractTemplate {
   };
 }
 
-export function toVersionSummary(v: TemplateVersionRow): ContractTemplateVersionSummary {
+export function toVersionSummary(v: TemplateVersionSummaryRow): ContractTemplateVersionSummary {
   return {
     version: v.version,
-    hasEnglish: v.bodyEn !== null,
+    hasEnglish: v.hasEnglish,
     usesSalary: v.usesSalary,
     createdAt: v.createdAt.toISOString(),
     createdBy: person(v.createdBy),

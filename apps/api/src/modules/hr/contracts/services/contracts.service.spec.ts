@@ -185,7 +185,7 @@ function makeService(opts: Setup = {}) {
     audit as unknown as AuditService,
     files as unknown as FileStorageService,
     afterCommit as unknown as AfterCommit,
-    { copiesOf: jest.fn((rows: { id: string }[]) => Promise.resolve(new Map(rows.map((r) => [r.id, []])))) } as unknown as ContractPrintService,
+    { copiesOf: jest.fn((rows: { id: string }[]) => Promise.resolve(new Map(rows.map((r) => [r.id, { copies: [], copiesTotal: 0 }])))) } as unknown as ContractPrintService,
   );
   jest.spyOn(service, 'today').mockReturnValue(TODAY);
   return { service, repository, audit, store, calendars, employees, reminders, notifications, files, records, recordDates };

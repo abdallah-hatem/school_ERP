@@ -220,6 +220,8 @@ export interface Contract {
    * (`GET /hr/employees/:id/contracts`), absent on the renewal list.
    */
   copies?: ContractCopy[];
+  /** How many copies the contract has in all (`copies` holds the newest `CONTRACT_COPIES_SHOWN`; the rest page through `GET /hr/contracts/:id/copies`). */
+  copiesTotal?: number;
   /**
    * On the current season's screen, a row from an earlier contract year that still needs action
    * (to deactivate, or ended with no decision): it stays listed until it is handled.

@@ -12,6 +12,9 @@ export const ContractCopyOutput = { PRINT: 'PRINT', PDF: 'PDF' } as const;
 export type ContractCopyOutput = (typeof ContractCopyOutput)[keyof typeof ContractCopyOutput];
 export const CONTRACT_COPY_OUTPUTS = Object.values(ContractCopyOutput) as ContractCopyOutput[];
 
+/** How many of a contract's newest copies come inside its row and the print dialog; the rest are paged. */
+export const CONTRACT_COPIES_SHOWN = 5;
+
 export interface ContractPersonRef {
   id: Uuid | null;
   name: string;

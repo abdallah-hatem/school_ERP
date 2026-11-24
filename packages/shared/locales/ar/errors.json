@@ -143,5 +143,6 @@
   "TEMPLATE_TEXT_EMPTY": "اكتب النص العربي للنموذج.",
   "OPTIONAL_PHRASE_NEEDS_FIELD": "العبارة الاختيارية تحتاج إلى حقل.",
   "CONTRACT_DOCUMENT_INVALID": "يحتوي النص على ما لا يسمح به المحرر. أعد التحميل وحاول مرة أخرى.",
-  "PDF_RENDER_FAILED": "تعذر إنشاء ملف PDF — حاول مرة أخرى."
+  "PDF_RENDER_FAILED": "تعذر إنشاء ملف PDF — حاول مرة أخرى.",
+  "PDF_RENDER_BUSY": "تُطبع عقود كثيرة الآن — حاول مرة أخرى بعد دقيقة."
 }

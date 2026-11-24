@@ -30,7 +30,7 @@
     "employee": "من ملف الموظف",
     "contract": "من العقد",
     "school": "من إعدادات المدرسة",
-    "other": "أخرى"
+    "general": "أخرى"
   },
   "languages": {
     "AR": "العربية",
@@ -198,7 +198,7 @@
     "emptyField": "حقل فارغ",
     "zoomIn": "تكبير",
     "zoomOut": "تصغير",
-    "page": "صفحة {page} من {count}",
+    "page": "صفحة {page} من {total}",
     "pageLabel": "صفحة {page}",
     "emptyFields": {
       "zero": "لا حقول فارغة",
@@ -262,6 +262,15 @@
     "signed": "موقّعة",
     "open": "فتح",
     "openLabel": "فتح النسخة المطبوعة في {date}",
-    "containsSalary": "تحتوي على الراتب"
+    "containsSalary": "تحتوي على الراتب",
+    "showMore": {
+      "zero": "لا مزيد",
+      "one": "عرض نسخة أخرى",
+      "two": "عرض نسختين أخريين",
+      "few": "عرض {count} نسخ أخرى",
+      "many": "عرض {count} نسخة أخرى",
+      "other": "عرض {count} نسخة أخرى"
+    },
+    "moreOnContract": "نسخ أخرى محفوظة على العقد"
   }
 }

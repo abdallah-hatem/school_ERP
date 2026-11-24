@@ -190,6 +190,21 @@ export class EnvironmentVariables {
   @Min(1000)
   PDF_RENDER_TIMEOUT_MS: number = 20_000;
 
+  /** At most this many PDFs wait for a slot; one more is refused at once with PDF_RENDER_BUSY. */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(200)
+  PDF_RENDER_QUEUE_SIZE: number = 10;
+
+  /** A PDF waiting longer than this for a slot is refused (PDF_RENDER_BUSY) before any render starts. */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1000)
+  PDF_RENDER_QUEUE_WAIT_MS: number = 30_000;
+
   /**
    * Whether scheduled jobs (core/jobs) run on their clock. Defaults to on, except under
    * NODE_ENV=test: unit and e2e tests run a job only by triggering it (`JobRunner.run(name)`).

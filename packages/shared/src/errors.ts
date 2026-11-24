@@ -257,6 +257,8 @@ export const ErrorCode = {
   CONTRACT_DOCUMENT_INVALID: 'CONTRACT_DOCUMENT_INVALID',
   /** The PDF couldn't be made, or took over 20 s (edge case 16): no copy was kept. */
   PDF_RENDER_FAILED: 'PDF_RENDER_FAILED',
+  /** Too many PDFs are being made right now (edge case 17): refused before any render, no copy kept. */
+  PDF_RENDER_BUSY: 'PDF_RENDER_BUSY',
 
   // audit log
   /** An `@Audited` handler finished without recording its action (D6b); the change rolled back. */

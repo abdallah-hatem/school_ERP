@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '@/test/dom-polyfills';
-import type { ContractCopy, ContractPrintPreview, ContractPrintTemplateOption } from '@school-erp/shared';
+import type { ContractPrintPreview, ContractPrintTemplateOption, CreatedContractCopy } from '@school-erp/shared';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { AnchorHTMLAttributes, ReactNode } from 'react';
@@ -39,7 +39,6 @@ const api = vi.hoisted(() => ({
   GET_PRINT_TEMPLATES: vi.fn(),
   GET_CONTRACT_PRINT: vi.fn(),
   CREATE_CONTRACT_COPY: vi.fn(),
-  GET_CONTRACT_COPY_FILE: vi.fn(),
 }));
 vi.mock('../apis', () => api);
 const output = vi.hoisted(() => ({ printPdf: vi.fn(), sharePdf: vi.fn(), pdfBlob: vi.fn(() => new Blob(['%PDF'])) }));
@@ -79,11 +78,13 @@ function preview(overrides: Partial<ContractPrintPreview> = {}): ContractPrintPr
     logoUrl: null,
     valuesHash: 'hash-1',
     copies: [],
+    copiesTotal: 0,
     ...overrides,
   };
 }
 
-const copy: ContractCopy = {
+const copy: CreatedContractCopy = {
+  pdfBase64: 'JVBERg==',
   id: 'cp-1',
   contractId: 'c-1',
   templateId: 't-full',
@@ -123,7 +124,6 @@ describe('Print contract dialog', () => {
   beforeEach(() => {
     api.GET_PRINT_TEMPLATES.mockImplementation(() => ok([annex, fullTime]));
     api.GET_CONTRACT_PRINT.mockImplementation(() => ok(preview()));
-    api.GET_CONTRACT_COPY_FILE.mockImplementation(() => ok({ fileName: 'x.pdf', contentType: 'application/pdf', base64: 'JVBERg==' }));
     output.printPdf.mockResolvedValue('printed');
     output.sharePdf.mockResolvedValue('shared');
   });
@@ -211,6 +211,7 @@ describe('Print contract dialog', () => {
       valuesHash: 'hash-1',
       output: 'PRINT',
     });
-    expect(api.GET_CONTRACT_COPY_FILE).toHaveBeenCalledWith('/files/contract-copies/abc.pdf');
+    // The PDF comes with the answer: no second fetch, so no extra "opened" entry.
+    expect(output.printPdf.mock.calls[0]![1]).toBe('/files/contract-copies/abc.pdf');
   });
 });

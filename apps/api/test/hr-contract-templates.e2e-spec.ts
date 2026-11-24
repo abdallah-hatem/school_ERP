@@ -15,6 +15,7 @@ import {
 } from '@school-erp/shared';
 import { CodedException } from '../src/common/errors/coded.exception';
 import { PdfRenderer } from '../src/common/pdf/pdf-renderer.service';
+import { StagesService } from '../src/core/school-structure';
 import { DatabaseService } from '../src/database/database.service';
 import { ContractPrintService } from '../src/modules/hr/contracts/services/contract-print.service';
 import { ContractsService } from '../src/modules/hr/contracts/services/contracts.service';
@@ -72,6 +73,7 @@ describe('Contract templates and printed copies (e2e)', () => {
   const users: string[] = [];
   const roles: string[] = [];
   const templates: string[] = [];
+  const extraStages: string[] = [];
 
   async function as<T>(id: string, fn: () => Promise<T>): Promise<T> {
     user.id = id;
@@ -192,7 +194,10 @@ describe('Contract templates and printed copies (e2e)', () => {
       (await db.stage.create({ data: { nameEn: unique('Stage A'), nameAr: unique('مرحلة أ') } })).id,
       (await db.stage.create({ data: { nameEn: unique('Stage B'), nameAr: unique('مرحلة ب') } })).id,
     ];
-    noStage = (await db.stage.findFirstOrThrow({ where: { isNoStage: true }, select: { id: true } })).id;
+    // The school's "no stage" entry: the seed's when it ran first, else one made here (through the service).
+    const spare = (await db.stage.create({ data: { nameEn: unique('No stage'), nameAr: unique('بلا مرحلة') } })).id;
+    noStage = (await app.get(StagesService).ensureNoStage(spare)).id;
+    extraStages.push(spare);
     const mk = async (path: string) =>
       (await http(app).post(path).send({ nameEn: unique('x'), nameAr: unique('س') }).expect(201)).body.data.id as string;
     departmentId = await mk('/hr/departments');
@@ -210,7 +215,7 @@ describe('Contract templates and printed copies (e2e)', () => {
     await db.role.deleteMany({ where: { id: { in: roles } } });
     await db.department.deleteMany({ where: { id: departmentId } });
     await db.jobTitle.deleteMany({ where: { id: jobTitleId } });
-    await db.stage.deleteMany({ where: { id: { in: [stageA, stageB] } } });
+    await db.stage.deleteMany({ where: { id: { in: [stageA, stageB, ...extraStages] } } });
     await app.close();
   });
 
@@ -631,6 +636,28 @@ describe('Contract templates and printed copies (e2e)', () => {
       const fields = (entry.changes as Array<{ field: string }>).map((x) => x.field).sort();
       expect(fields).toEqual(['language', 'output', 'template', 'templateVersion', 'textEdited']);
       expect(JSON.stringify(entry.changes)).not.toContain('9,500');
+      // The answer carries the PDF itself: printing is one copy_print, never also a copy_open.
+      expect(await entries('hr.contract.copy_open', c.id)).toHaveLength(0);
+    });
+
+    it('the POST answer carries the PDF; the work-system default leads the picker’s first page; copies page past the newest five', async () => {
+      const def = await createTemplate({ nameEn: unique('Zzz last by name'), defaultForWorkSystem: 'PART_TIME_3', bodyAr: withoutSalary() });
+      await createTemplate({ nameEn: unique('Aaa first by name') });
+      const c = await currentOf(await employee());
+      const page1 = (await http(app).get(`/hr/contracts/${c.id}/print-templates?limit=1`).expect(200)).body;
+      expect(page1.data.map((o: ContractPrintTemplateOption) => o.id)).toEqual([def.id]);
+      const page2 = (await http(app).get(`/hr/contracts/${c.id}/print-templates?limit=1&page=2`).expect(200)).body;
+      expect(page2.data.map((o: ContractPrintTemplateOption) => o.id)).not.toContain(def.id);
+      const p = (await preview(c.id, def.id)).data as ContractPrintPreview;
+      const made = (await print(c.id, p).expect(201)).body.data as ContractCopy & { pdfBase64: string };
+      expect(Buffer.from(made.pdfBase64, 'base64').subarray(0, 5).toString('latin1')).toBe('%PDF-');
+      for (let i = 0; i < 6; i += 1) await print(c.id, p).expect(201);
+      const row = (await contractsOf(c.employee.id)).find((x) => x.id === c.id);
+      expect(row?.copies).toHaveLength(5);
+      expect(row?.copiesTotal).toBe(7);
+      const second = (await http(app).get(`/hr/contracts/${c.id}/copies?page=2&limit=5`).expect(200)).body;
+      expect(second.data).toHaveLength(2);
+      expect(second.meta).toMatchObject({ total: 7 });
     });
 
     it('school address and signatory are school settings, recorded with core.settings.update', async () => {

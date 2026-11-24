@@ -9,7 +9,6 @@ vi.mock('../apis', () => ({
   GET_PRINT_TEMPLATES: vi.fn(),
   GET_CONTRACT_PRINT: vi.fn(),
   CREATE_CONTRACT_COPY: vi.fn(),
-  GET_CONTRACT_COPY_FILE: vi.fn(),
 }));
 
 import { sessionWithout } from '@/test/render';

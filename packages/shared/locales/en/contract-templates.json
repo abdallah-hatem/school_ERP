@@ -30,7 +30,7 @@
     "employee": "From the employee file",
     "contract": "From the contract",
     "school": "From school settings",
-    "other": "Other"
+    "general": "Other"
   },
   "languages": {
     "AR": "Arabic",
@@ -198,7 +198,7 @@
     "emptyField": "Empty field",
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
-    "page": "Page {page} of {count}",
+    "page": "Page {page} of {total}",
     "pageLabel": "Page {page}",
     "emptyFields": {
       "zero": "{count} fields are empty: {names}",
@@ -262,6 +262,15 @@
     "signed": "Signed",
     "open": "Open",
     "openLabel": "Open the copy printed {date}",
-    "containsSalary": "contains salary"
+    "containsSalary": "contains salary",
+    "showMore": {
+      "zero": "Show {count} more",
+      "one": "Show 1 more",
+      "two": "Show {count} more",
+      "few": "Show {count} more",
+      "many": "Show {count} more",
+      "other": "Show {count} more"
+    },
+    "moreOnContract": "More copies are on the contract"
   }
 }

@@ -51,7 +51,7 @@ function setup(opts: { view?: EmployeeScope; manage?: EmployeeScope; salary?: Em
   };
   const copies = {
     findEmployee: jest.fn().mockResolvedValue(employee),
-    ofContracts: jest.fn().mockResolvedValue([]),
+    newestOfContracts: jest.fn().mockResolvedValue({ rows: [], totals: new Map() }),
     create: jest.fn((data: Record<string, unknown>) =>
       Promise.resolve({
         ...data,
@@ -65,7 +65,7 @@ function setup(opts: { view?: EmployeeScope; manage?: EmployeeScope; salary?: Em
   };
   const template = {
     template: { id: 't1', nameEn: 'Full-time contract', nameAr: 'عقد', currentVersion: opts.version ?? 1, hiddenAt: opts.hidden ? new Date() : null, defaultForWorkSystem: 'FULL_TIME' },
-    version: { id: 'v1', bodyAr: opts.body ?? doc('contract.salary', 'employee.nameAr'), bodyEn: opts.bodyEn ?? null, usesSalary: true },
+    version: { id: 'v1', bodyAr: opts.body ?? doc('contract.salary', 'employee.nameAr'), bodyEn: opts.bodyEn ?? null, hasEnglish: !!opts.bodyEn, usesSalary: true },
   };
   const templates = { findOne: jest.fn().mockResolvedValue(template) };
   const access = {

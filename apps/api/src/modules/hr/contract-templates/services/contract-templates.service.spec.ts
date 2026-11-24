@@ -20,7 +20,7 @@ function fakeRepository() {
     const v = versions.get(`${id}:${t.currentVersion}`)!;
     return {
       template: { id, ...t, createdAt: new Date(), updatedAt: new Date(), createdBy: null, updatedBy: null },
-      version: { id: `${id}:${t.currentVersion}`, version: t.currentVersion, fields: [], createdAt: new Date(), createdBy: null, ...v },
+      version: { id: `${id}:${t.currentVersion}`, version: t.currentVersion, fields: [], createdAt: new Date(), createdBy: null, hasEnglish: v.bodyEn != null, ...v },
     } as unknown as TemplateWithVersion;
   };
   return {
@@ -126,6 +126,17 @@ describe('ContractTemplatesService', () => {
     expect(await codeOf(service.create({ ...base, bodyAr: doc('x'.repeat(201 * 1024)) }))).toBe(ErrorCode.TEMPLATE_TOO_LONG);
     expect(await codeOf(service.create({ ...base, bodyAr: { type: 'doc', content: [{ type: 'paragraph' }] } }))).toBe(ErrorCode.TEMPLATE_TEXT_EMPTY);
     expect(repository.create).not.toHaveBeenCalled();
+  });
+
+  it('hiding a hidden template changes nothing and writes no entry', async () => {
+    const { service, audit, repository } = setup();
+    const { template } = await service.create(base);
+    await service.hide(template.id);
+    repository.update.mockClear();
+    audit.record.mockClear();
+    await service.hide(template.id);
+    expect(repository.update).not.toHaveBeenCalled();
+    expect(audit.record).toHaveBeenCalledWith(expect.objectContaining({ action: 'hr.contract_template.hide', changes: [] }));
   });
 
   it('a name already used in either language → TEMPLATE_NAME_TAKEN', async () => {

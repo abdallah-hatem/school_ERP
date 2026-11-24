@@ -4,6 +4,7 @@ import {
   contractYearOf,
   escapeHtml,
   type ContractCopy,
+  type ContractFieldKey,
   type ContractFieldValues,
   type ContractLanguage,
 } from '@school-erp/shared';
@@ -12,11 +13,17 @@ import type { CopyRow } from './repositories/contract-copies.repository';
 
 /**
  * The hash a copy is made with (spec → "What you saw is what's kept"): the template version, the
- * language and every value as filled. Anything changing between the preview and Print → 409.
+ * language and the values of the fields the text uses. A value the text uses changing between the
+ * preview and Print → 409; an unrelated edit (or today's date, when the text doesn't print it) doesn't.
  */
-export function printValuesHash(input: { versionId: string; language: ContractLanguage; values: ContractFieldValues }): string {
-  const keys = Object.keys(input.values).sort();
-  const values = keys.map((k) => [k, input.values[k as keyof ContractFieldValues]]);
+export function printValuesHash(input: {
+  versionId: string;
+  language: ContractLanguage;
+  values: ContractFieldValues;
+  fields: readonly ContractFieldKey[];
+}): string {
+  const keys = [...new Set(input.fields)].sort();
+  const values = keys.map((k) => [k, input.values[k] ?? null]);
   return createHash('sha256').update(JSON.stringify([input.versionId, input.language, values])).digest('hex');
 }
 

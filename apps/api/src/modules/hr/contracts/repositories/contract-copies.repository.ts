@@ -121,14 +121,26 @@ export class ContractCopiesRepository {
     return { rows, total };
   }
 
-  /** Every copy of these contracts, newest first (an employee's Contracts tab: the page's rows only). */
-  ofContracts(contractIds: readonly string[]): Promise<CopyRow[]> {
-    if (contractIds.length === 0) return Promise.resolve([]);
-    return this.db.contractCopy.findMany({
-      where: { contractId: { in: [...contractIds] } },
-      select: COPY_SELECT,
-      orderBy: [{ printedAt: 'desc' }, { id: 'desc' }],
-    });
+  /**
+   * The newest `perContract` copies of each of these contracts, with each contract's count (an
+   * employee's Contracts tab: the page's rows only; the rest page through `pageOfContract`).
+   */
+  async newestOfContracts(contractIds: readonly string[], perContract: number): Promise<{ rows: CopyRow[]; totals: Map<string, number> }> {
+    if (contractIds.length === 0) return { rows: [], totals: new Map() };
+    const [counts, rows] = await Promise.all([
+      this.db.contractCopy.groupBy({ by: ['contractId'], where: { contractId: { in: [...contractIds] } }, _count: { _all: true } }),
+      Promise.all(
+        contractIds.map((contractId) =>
+          this.db.contractCopy.findMany({
+            where: { contractId },
+            select: COPY_SELECT,
+            orderBy: [{ printedAt: 'desc' }, { id: 'desc' }],
+            take: perContract,
+          }),
+        ),
+      ),
+    ]);
+    return { rows: rows.flat(), totals: new Map(counts.map((c) => [c.contractId, c._count._all])) };
   }
 
   /** The copy a stored file belongs to — files follow their record, found by the link. */

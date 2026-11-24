@@ -3,6 +3,7 @@
 import type {
   Contract,
   ContractCopy,
+  CreatedContractCopy,
   ContractFileUpload,
   ContractLanguage,
   ContractPrintPreview,
@@ -19,7 +20,6 @@ import type {
 } from '@school-erp/shared';
 import { apiFetch } from '@/lib/api';
 import { handleResponse } from '@/lib/handleResponse';
-import type { DownloadedFile } from '@/lib/types';
 
 /*
  * Contracts screens' endpoints (spec docs/specs/2026-11-24-contracts.md → API). Reads are tagged;
@@ -227,10 +227,11 @@ export async function GET_CONTRACT_PRINT(contractId: Uuid, templateId: Uuid, lan
 
 /**
  * `POST /hr/contracts/:id/copies` — renders the PDF and keeps the copy. 409 `VALUES_CHANGED` /
- * `TEMPLATE_CHANGED` when the preview is stale; 503 `PDF_RENDER_FAILED`.
+ * `TEMPLATE_CHANGED` when the preview is stale; 503 `PDF_RENDER_FAILED` / `PDF_RENDER_BUSY`. The
+ * answer carries the PDF itself, so printing it records no extra opening.
  */
 export async function CREATE_CONTRACT_COPY(contractId: Uuid, body: CreateContractCopyRequest) {
-  const response = await apiFetch<ContractCopy>(`/hr/contracts/${encodeURIComponent(contractId)}/copies`, {
+  const response = await apiFetch<CreatedContractCopy>(`/hr/contracts/${encodeURIComponent(contractId)}/copies`, {
     method: 'POST',
     body: { ...body },
     revalidateTags: WRITE_TAGS,
@@ -248,16 +249,3 @@ export async function GET_CONTRACT_COPIES(contractId: Uuid, query: { page?: numb
   return handleResponse({ response, showErrorToast: false });
 }
 
-const COPY_FILES = '/files/contract-copies/';
-
-/**
- * A printed copy's PDF, as a download (base64 across the action): to print it from a hidden frame
- * or hand it to the phone's share sheet. Only a copy's own file (`/files/contract-copies/…`);
- * the API records the opening like any other.
- */
-export async function GET_CONTRACT_COPY_FILE(fileUrl: string) {
-  if (!fileUrl.startsWith(COPY_FILES) || fileUrl.includes('..') || fileUrl.includes('?')) {
-    return { success: false as const, status: 400, message: 'Not a contract copy' };
-  }
-  return apiFetch<DownloadedFile>(fileUrl, { method: 'GET', responseType: 'file', cache: 'no-store' });
-}

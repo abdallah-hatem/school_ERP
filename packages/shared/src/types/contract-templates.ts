@@ -144,7 +144,9 @@ export interface ContractPrintPreview {
   logoUrl: string | null;
   /** Sent back with the copy: a change in between → 409 `VALUES_CHANGED`. */
   valuesHash: string;
+  /** The contract's newest copies (`CONTRACT_COPIES_SHOWN`), and how many it has in all. */
   copies: ContractCopy[];
+  copiesTotal: number;
 }
 
 /** `POST /hr/contracts/:id/copies`. */
@@ -156,6 +158,15 @@ export interface CreateContractCopyRequest {
   /** "Edit text": this copy's own text (values stay chips); absent → the template's. */
   bodyEdited?: ContractDocument;
   output: ContractCopyOutput;
+}
+
+/**
+ * `POST /hr/contracts/:id/copies`'s answer: the copy and its PDF (base64), so the printer's own
+ * Print / Download / share needs no second fetch — a print is one `copy_print` entry, never also a
+ * `copy_open`.
+ */
+export interface CreatedContractCopy extends ContractCopy {
+  pdfBase64: string;
 }
 
 /** `GET /hr/contracts/:id/copies` and inside `GET /hr/employees/:id/contracts` (newest first). */

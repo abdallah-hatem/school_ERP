@@ -1000,6 +1000,8 @@ model ContractTemplateVersion {
   /// ProseMirror JSON (packages/shared contractDocumentSchema).
   bodyAr      Json     @map("body_ar")
   bodyEn      Json?    @map("body_en")
+  /// Whether `body_en` is set — lists read this, never the texts (up to 200 KB each).
+  hasEnglish  Boolean  @map("has_english")
   /// Worked out on save: a salary field in either text.
   usesSalary  Boolean  @map("uses_salary")
   /// The field keys either text uses.
