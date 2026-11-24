@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import { expect, type Page, type TestInfo } from '@playwright/test';
 import type { Employee, Language } from '@school-erp/shared';
 import { smokeGrade } from './activity';
@@ -62,9 +63,15 @@ export async function checkGrades(page: Page, info: TestInfo, locale: Language, 
     await expect(page.getByRole('option', { name: t(locale, 'employees.noGrade') })).toBeVisible();
     await settle(page);
     await expectNoHorizontalScroll(page);
-    await shoot(page, info, `grade-picker-${tag}`);
+    // A viewport shot, not a full-page one: a full-page capture resizes the viewport to the page's
+    // height and back, which scrolls the page away from the open (fixed-position) picker — nothing a
+    // person can do, and Playwright can't scroll a fixed element back into view.
+    await page.screenshot({ path: join(__dirname, '..', 'screenshots', info.project.name, `grade-picker-${tag}.png`) });
     await search.fill(grade.name);
-    await page.getByRole('option', { name: grade.name, exact: true }).click();
+    const option = page.getByRole('option', { name: grade.name, exact: true });
+    // Reachable where a person taps it, on a phone too.
+    await expect(option).toBeInViewport();
+    await option.click();
     await expect(picker).toContainText(grade.name);
 
     // ── Kept but flagged: the employee's grade is hidden; their edit form still shows it, noted.
