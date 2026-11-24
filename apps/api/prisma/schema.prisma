@@ -38,21 +38,23 @@ model User {
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
-  linkedEmployee      Employee?                @relation("UserLinkedEmployee", fields: [employeeId], references: [id], onDelete: SetNull)
-  roles               UserRoleAssignment[]
-  refreshTokens       RefreshToken[]
-  settingsUpdated     SchoolSetting[]
-  penaltiesCreated    PenaltyRecord[]          @relation("PenaltyCreatedBy")
-  penaltiesApproved   PenaltyRecord[]          @relation("PenaltyApprovedBy")
-  penaltiesCancelled  PenaltyRecord[]          @relation("PenaltyCancelledBy")
-  penaltiesReviewed   PenaltyRecord[]          @relation("PenaltyReviewedBy")
-  penaltiesRejected   PenaltyRecord[]          @relation("PenaltyRejectedBy")
-  latenessUpdated     LatenessEntry[]
-  payrollRunsCreated  PayrollRun[]             @relation("PayrollRunCreatedBy")
-  payrollRunsApproved PayrollRun[]             @relation("PayrollRunApprovedBy")
-  adjustmentsCreated  PayrollAdjustment[]
-  notificationPrefs   NotificationPreference[]
-  pushSubscriptions   PushSubscription[]
+  linkedEmployee           Employee?                @relation("UserLinkedEmployee", fields: [employeeId], references: [id], onDelete: SetNull)
+  roles                    UserRoleAssignment[]
+  refreshTokens            RefreshToken[]
+  settingsUpdated          SchoolSetting[]
+  penaltiesCreated         PenaltyRecord[]          @relation("PenaltyCreatedBy")
+  penaltiesApproved        PenaltyRecord[]          @relation("PenaltyApprovedBy")
+  penaltiesCancelled       PenaltyRecord[]          @relation("PenaltyCancelledBy")
+  penaltiesReviewed        PenaltyRecord[]          @relation("PenaltyReviewedBy")
+  penaltiesRejected        PenaltyRecord[]          @relation("PenaltyRejectedBy")
+  contractsDecided         EmployeeContract[]       @relation("ContractDecidedBy")
+  earlyTerminationsDecided EmployeeContract[]       @relation("ContractEarlyTerminationDecidedBy")
+  latenessUpdated          LatenessEntry[]
+  payrollRunsCreated       PayrollRun[]             @relation("PayrollRunCreatedBy")
+  payrollRunsApproved      PayrollRun[]             @relation("PayrollRunApprovedBy")
+  adjustmentsCreated       PayrollAdjustment[]
+  notificationPrefs        NotificationPreference[]
+  pushSubscriptions        PushSubscription[]
 
   /// Search text the database keeps up to date (search_fold of the searched columns):
   /// read-only, never written by the app (docs/ARCHITECTURE.md -> Search).
@@ -523,6 +525,41 @@ enum AdjustmentType {
   DEDUCTION
 }
 
+/// Contracts (spec 2026-11-24): a contract's status, who didn't renew it, where a dated request
+/// falls against the school calendar, an early termination request, why a contract ended early.
+enum ContractStatus {
+  ACTIVE
+  RENEWED
+  NOT_RENEWED
+  ENDED_EARLY
+}
+
+enum NonRenewalBy {
+  SCHOOL
+  EMPLOYEE
+}
+
+enum CalendarTiming {
+  ON_TIME
+  EARLY
+  LATE
+  CALENDAR_NOT_SET
+}
+
+enum EarlyTerminationStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+}
+
+enum ContractEndReason {
+  ARTICLE_148
+  RESIGNATION_BY_AGREEMENT
+  DEATH
+  OTHER
+  EARLY_TERMINATION
+}
+
 model Department {
   id        String   @id @default(uuid()) @db.Uuid
   nameEn    String   @map("name_en")
@@ -636,6 +673,7 @@ model Employee {
   /// "Also teaches in" (§3, owner 2026-11-21): stages besides the main one.
   otherStages  EmployeeStage[]
   penalties    PenaltyRecord[]
+  contracts    EmployeeContract[]
   lateness     LatenessEntry[]
   payrollLines PayrollLine[]
   adjustments  PayrollAdjustment[]
@@ -803,6 +841,74 @@ model PenaltyRecord {
   /// Repeat-level count: approved records of one violation for one employee in a date window.
   @@index([employeeId, violationId, status, date])
   @@map("penalty_records")
+}
+
+/// §3 Contracts (spec 2026-11-24): one row per contract year, kept forever. At most one ACTIVE per
+/// employee (a partial unique index); the employee's contract_start / contract_end are the current
+/// one, written only by the contracts service. Status changes are made under a row lock. Employees
+/// are never deleted (§3); the cascade only lets a test's cleanup remove its own employees.
+model EmployeeContract {
+  id                           String                  @id @default(uuid()) @db.Uuid
+  employeeId                   String                  @map("employee_id") @db.Uuid
+  startsOn                     DateTime                @map("starts_on") @db.Date
+  /// The end it was signed with; an early end is `endedOn`.
+  endsOn                       DateTime                @map("ends_on") @db.Date
+  status                       ContractStatus          @default(ACTIVE)
+  nonRenewalBy                 NonRenewalBy?           @map("non_renewal_by")
+  noticeReceivedOn             DateTime?               @map("notice_received_on") @db.Date
+  noticeTiming                 CalendarTiming?         @map("notice_timing")
+  noticeFileUrl                String?                 @map("notice_file_url")
+  /// The not-renewed decision's note (the school's, or the notice's).
+  note                         String?
+  earlyTerminationStatus       EarlyTerminationStatus? @map("early_termination_status")
+  earlyTerminationRequestedOn  DateTime?               @map("early_termination_requested_on") @db.Date
+  earlyTerminationTiming       CalendarTiming?         @map("early_termination_timing")
+  earlyTerminationNote         String?                 @map("early_termination_note")
+  earlyTerminationFileUrl      String?                 @map("early_termination_file_url")
+  earlyTerminationDecidedById  String?                 @map("early_termination_decided_by_id") @db.Uuid
+  earlyTerminationDecidedAt    DateTime?               @map("early_termination_decided_at")
+  earlyTerminationRejectReason String?                 @map("early_termination_reject_reason")
+  endedOn                      DateTime?               @map("ended_on") @db.Date
+  endReason                    ContractEndReason?      @map("end_reason")
+  endNote                      String?                 @map("end_note")
+  endFileUrl                   String?                 @map("end_file_url")
+  /// The renewal, not-renewal or end: who decided and when.
+  decidedById                  String?                 @map("decided_by_id") @db.Uuid
+  decidedAt                    DateTime?               @map("decided_at")
+  /// The renewal's contract.
+  nextContractId               String?                 @unique @map("next_contract_id") @db.Uuid
+  createdAt                    DateTime                @default(now()) @map("created_at")
+  updatedAt                    DateTime                @updatedAt @map("updated_at")
+
+  employee                  Employee          @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  decidedBy                 User?             @relation("ContractDecidedBy", fields: [decidedById], references: [id], onDelete: SetNull)
+  earlyTerminationDecidedBy User?             @relation("ContractEarlyTerminationDecidedBy", fields: [earlyTerminationDecidedById], references: [id], onDelete: SetNull)
+  nextContract              EmployeeContract? @relation("ContractRenewal", fields: [nextContractId], references: [id], onDelete: SetNull)
+  previousContract          EmployeeContract? @relation("ContractRenewal")
+
+  @@index([employeeId])
+  @@index([endsOn])
+  @@index([status])
+  @@index([decidedById])
+  @@index([earlyTerminationDecidedById])
+  /// Files follow their record: a stored document is found by its link.
+  @@index([noticeFileUrl])
+  @@index([earlyTerminationFileUrl])
+  @@index([endFileUrl])
+  @@map("employee_contracts")
+}
+
+/// §7 The school calendar of one contract year (`year` 2026 = 2026/27), Settings → HR rules.
+model SchoolCalendar {
+  year               Int      @id
+  term1Start         DateTime @map("term1_start") @db.Date
+  term1End           DateTime @map("term1_end") @db.Date
+  term2Start         DateTime @map("term2_start") @db.Date
+  nonRenewalDeadline DateTime @map("non_renewal_deadline") @db.Date
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@map("school_calendars")
 }
 
 /// Accumulated late / early-leave minutes for one employee in one month (§5).

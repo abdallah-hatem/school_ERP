@@ -33,7 +33,11 @@ export class HrNotificationScopes implements OnModuleInit {
     this.notifications.registerScopeResolver(AuditEntityType.PENALTY, (scope, subjects) =>
       this.coverPenalties(scope, subjects),
     );
+    // Contracts (spec 2026-11-24): managing contracts is whole-school (never scoped), so a scoped
+    // holder is never told about a contract or a renewal season.
     for (const entityType of [
+      ReminderEntity.CONTRACT_YEAR,
+      AuditEntityType.EMPLOYEE_CONTRACT,
       ReminderEntity.LATENESS_MONTH,
       ReminderEntity.PAYROLL_MONTH,
       ReminderEntity.PAYROLL_RUN,

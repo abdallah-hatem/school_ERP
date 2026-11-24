@@ -31,6 +31,7 @@ function makeJob(opts: { employees?: ReminderEmployee[]; open?: Record<string, u
     months: jest.fn((months: string[]) =>
       Promise.resolve(new Map(months.map((m) => [m, { latenessSaved: false, run: null }]))),
     ),
+    season: jest.fn((year: number) => Promise.resolve({ year, undecided: 0, calendar: null })),
   };
   const transactions: string[] = [];
   const afterCommit = {

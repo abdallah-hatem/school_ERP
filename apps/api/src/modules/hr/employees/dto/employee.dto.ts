@@ -1,4 +1,4 @@
-import { PartialType } from '@nestjs/mapped-types';
+import { OmitType, PartialType } from '@nestjs/mapped-types';
 import {
   DEGREES,
   Degree,
@@ -258,7 +258,11 @@ export class CreateEmployeeDto implements CreateEmployeeRequest {
 }
 
 /** `PATCH /hr/employees/:id` — any subset. Required fields can't be cleared (service check). */
-export class UpdateEmployeeDto extends PartialType(CreateEmployeeDto) {}
+/**
+ * An edit: any create field but the contract dates — after creation they change only through
+ * Contracts (renew, end; spec 2026-11-24 edge case 13). Sending them is a 400 (not whitelisted).
+ */
+export class UpdateEmployeeDto extends PartialType(OmitType(CreateEmployeeDto, ['contractStart', 'contractEnd'] as const)) {}
 
 /** `GET /hr/employees` filters on top of `?page&limit&search`. */
 export class ListEmployeesQueryDto extends PaginationQueryDto implements ListEmployeesQuery {

@@ -25,6 +25,8 @@ const REMINDER_KEYS = {
   probationEndDays: HrSettingKey.REMINDERS_PROBATION_END_DAYS,
   latenessCheckDay: HrSettingKey.REMINDERS_LATENESS_CHECK_DAY,
   payrollCheckDay: HrSettingKey.REMINDERS_PAYROLL_CHECK_DAY,
+  renewalDecisionsDays: HrSettingKey.REMINDERS_RENEWAL_DECISIONS_DAYS,
+  noticeWindowCloseDays: HrSettingKey.REMINDERS_NOTICE_WINDOW_CLOSE_DAYS,
 } as const satisfies Record<keyof ReminderRule, HrSettingKey>;
 
 const REMINDER_FIELDS = Object.keys(REMINDER_KEYS) as (keyof ReminderRule)[];
@@ -166,6 +168,8 @@ export class HrSettingsService {
       [HrSettingKey.REMINDERS_PROBATION_END_DAYS]: pick(HrSettingKey.REMINDERS_PROBATION_END_DAYS),
       [HrSettingKey.REMINDERS_LATENESS_CHECK_DAY]: pick(HrSettingKey.REMINDERS_LATENESS_CHECK_DAY),
       [HrSettingKey.REMINDERS_PAYROLL_CHECK_DAY]: pick(HrSettingKey.REMINDERS_PAYROLL_CHECK_DAY),
+      [HrSettingKey.REMINDERS_RENEWAL_DECISIONS_DAYS]: pick(HrSettingKey.REMINDERS_RENEWAL_DECISIONS_DAYS),
+      [HrSettingKey.REMINDERS_NOTICE_WINDOW_CLOSE_DAYS]: pick(HrSettingKey.REMINDERS_NOTICE_WINDOW_CLOSE_DAYS),
     };
   }
 
@@ -188,6 +192,8 @@ export class HrSettingsService {
         probationEndDays: v[REMINDER_KEYS.probationEndDays],
         latenessCheckDay: v[REMINDER_KEYS.latenessCheckDay],
         payrollCheckDay: v[REMINDER_KEYS.payrollCheckDay],
+        renewalDecisionsDays: v[REMINDER_KEYS.renewalDecisionsDays],
+        noticeWindowCloseDays: v[REMINDER_KEYS.noticeWindowCloseDays],
       },
     };
   }

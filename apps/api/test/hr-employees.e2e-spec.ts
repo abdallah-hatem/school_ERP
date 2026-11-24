@@ -371,7 +371,7 @@ describe('HR lists and employees (e2e)', () => {
       const ok = await create({ contractStart: '2026-09-01' }).expect(201);
       expect(ok.body.data.contractEnd).toBe('2027-08-31');
 
-      // PATCH checks the merged dates too.
+      // Contracts edge 13: the dates can't be changed on the employee any more (only through Contracts).
       await http(app)
         .patch(`/hr/employees/${ok.body.data.id}`)
         .send({ contractEnd: '2026-08-01' })

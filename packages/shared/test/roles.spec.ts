@@ -171,6 +171,13 @@ describe('starting roles (spec table, GUESS)', () => {
     }
   });
 
+  it('contracts (spec 2026-11-24): viewed by HR manager, HR officer, principal (all) and the stage head (own stage); managed by the HR manager', () => {
+    expect(holders('hr.contracts.view')).toEqual(['hr_manager', 'hr_officer', 'principal', 'stage_head', 'system_admin']);
+    expect(holders('hr.contracts.manage')).toEqual(['hr_manager', 'system_admin']);
+    expect(role('stage_head').permissions['hr.contracts.view']).toBe('own_stage');
+    expect(role('principal').permissions['hr.contracts.view']).toBe('all');
+  });
+
   it('the seeded admin becomes System admin + HR manager', () => {
     expect(SEED_ADMIN_ROLES).toEqual(['system_admin', 'hr_manager']);
   });

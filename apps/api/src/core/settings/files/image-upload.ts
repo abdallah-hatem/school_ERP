@@ -47,6 +47,43 @@ export function checkImageUpload(
   return { type, buffer: file.buffer };
 }
 
+/** A stored document's real type: PDF, or an image (never SVG — a browser runs it). */
+export type DocumentType = 'pdf' | Exclude<ImageType, 'svg'>;
+
+/** The file's real type from its first bytes: `%PDF-`, or a PNG / JPEG / WebP image. */
+export function detectDocumentType(buffer: Buffer): DocumentType | null {
+  if (buffer.length >= 5 && buffer.subarray(0, 5).equals(Buffer.from('%PDF-', 'ascii'))) return 'pdf';
+  const image = detectImageType(buffer);
+  return image && image !== 'svg' ? image : null;
+}
+
+const DOCUMENT_MIME: Record<DocumentType, string> = {
+  pdf: 'application/pdf',
+  png: IMAGE_MIME.png,
+  jpg: IMAGE_MIME.jpg,
+  webp: IMAGE_MIME.webp,
+};
+
+/**
+ * Checks an uploaded document (a scanned letter, an attachment) like `checkImageUpload`: missing
+ * → 400; too large → 413 `FILE_TOO_LARGE`; the declared type and the real bytes must both be
+ * allowed and agree → else 400 `INVALID_FILE_TYPE` (a renamed file is refused).
+ */
+export function checkDocumentUpload(
+  file: UploadedFileLike | undefined,
+  rules: ImageUploadRules,
+): { type: DocumentType; buffer: Buffer } {
+  if (!file) throw new BadRequestException('file is required');
+  if (file.size > rules.maxBytes) {
+    throw new CodedException(HttpStatus.PAYLOAD_TOO_LARGE, ErrorCode.FILE_TOO_LARGE);
+  }
+  const type = detectDocumentType(file.buffer);
+  if (!type || DOCUMENT_MIME[type] !== file.mimetype || !rules.mimeTypes.includes(file.mimetype)) {
+    throw new CodedException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_FILE_TYPE);
+  }
+  return { type, buffer: file.buffer };
+}
+
 /**
  * An interceptor reading the multipart `file` field into memory, refusing anything over `maxBytes`
  * while it streams in. The size error becomes `FILE_TOO_LARGE` (413) instead of multer's generic one.

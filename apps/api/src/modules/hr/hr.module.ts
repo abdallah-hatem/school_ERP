@@ -38,6 +38,16 @@ import { PenaltyRecordsRepository } from './penalties/repositories/penalty-recor
 import { PenaltyCatalogueService } from './penalties/services/penalty-catalogue.service';
 import { PenaltyRecordsService } from './penalties/services/penalty-records.service';
 import { HrSettingsController } from './settings/hr-settings.controller';
+import {
+  ContractsController,
+  EmployeeContractsController,
+  SchoolCalendarController,
+} from './contracts/controllers/contracts.controller';
+import { ContractsRepository } from './contracts/repositories/contracts.repository';
+import { SchoolCalendarRepository } from './contracts/repositories/school-calendar.repository';
+import { ContractRecords } from './contracts/services/contract-records.service';
+import { ContractsService } from './contracts/services/contracts.service';
+import { SchoolCalendarService } from './contracts/services/school-calendar.service';
 import { HrSettingsService } from './settings/hr-settings.service';
 import { LatenessController } from './staff-attendance/controllers/lateness.controller';
 import { LatenessRepository } from './staff-attendance/repositories/lateness.repository';
@@ -61,6 +71,10 @@ import { LatenessService } from './staff-attendance/services/lateness.service';
     // penalties (T7)
     PenaltyCatalogueController,
     PenaltiesController,
+    // contracts (spec 2026-11-24)
+    ContractsController,
+    EmployeeContractsController,
+    SchoolCalendarController,
     // payroll + dashboard (T9)
     PayrollRunsController,
     EmployeePayrollController,
@@ -101,6 +115,12 @@ import { LatenessService } from './staff-attendance/services/lateness.service';
     PenaltyCatalogueService,
     PenaltyRecordsRepository,
     PenaltyRecordsService,
+    // contracts (spec 2026-11-24)
+    ContractsRepository,
+    SchoolCalendarRepository,
+    ContractRecords,
+    SchoolCalendarService,
+    ContractsService,
     // payroll + dashboard (T9)
     PayrollRunsRepository,
     PayrollService,

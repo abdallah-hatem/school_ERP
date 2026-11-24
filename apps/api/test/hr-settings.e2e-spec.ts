@@ -70,6 +70,8 @@ describe('HR rule settings — /hr/settings (e2e)', () => {
         probationEndDays: 7,
         latenessCheckDay: 25,
         payrollCheckDay: 28,
+        renewalDecisionsDays: 91,
+        noticeWindowCloseDays: 7,
       },
     });
   });
@@ -149,6 +151,10 @@ describe('HR rule settings — /hr/settings (e2e)', () => {
       ['probation reminder 0 days', { reminders: { probationEndDays: 0 } }],
       ['probation reminder 2.5 days', { reminders: { probationEndDays: 2.5 } }],
       ['reminders null', { reminders: null }],
+      // Contracts (spec 2026-11-24): the renewal season's timings.
+      ['renewal decisions 0 days', { reminders: { renewalDecisionsDays: 0 } }],
+      ['renewal decisions 181 days', { reminders: { renewalDecisionsDays: 181 } }],
+      ['notice window close 61 days', { reminders: { noticeWindowCloseDays: 61 } }],
       ['second contract reminder = the first (30)', { reminders: { contractEndSecondDays: 30 } }],
       ['second contract reminder above the first', { reminders: { contractEndDays: 10, contractEndSecondDays: 20 } }],
     ])('%s → 400, nothing saved', async (_label, body) => {
@@ -259,6 +265,8 @@ describe('HR rule settings — /hr/settings (e2e)', () => {
         probationEndDays: 14,
         latenessCheckDay: 20,
         payrollCheckDay: 31,
+        renewalDecisionsDays: 60,
+        noticeWindowCloseDays: 10,
       },
     }).expect(200);
 
@@ -282,6 +290,8 @@ describe('HR rule settings — /hr/settings (e2e)', () => {
         probationEndDays: 14,
         latenessCheckDay: 20,
         payrollCheckDay: 31,
+        renewalDecisionsDays: 60,
+        noticeWindowCloseDays: 10,
       },
     });
     // 90 min − 10 grace = 80 → 2nd hour → 0.5 + 1.

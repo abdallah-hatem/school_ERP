@@ -51,7 +51,10 @@ describe('HrNotificationScopes', () => {
   it('registers each HR subject type once', () => {
     const { resolvers } = make();
     expect([...resolvers.keys()].sort()).toEqual([
+      // Contracts (spec 2026-11-24): whole-school, so never a scoped holder.
+      'contract_year',
       'employee',
+      'employee_contract',
       'lateness_month',
       'payroll_month',
       'payroll_run',

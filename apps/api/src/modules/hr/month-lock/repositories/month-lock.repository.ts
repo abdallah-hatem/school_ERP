@@ -17,4 +17,14 @@ export class MonthLockRepository {
     });
     return run !== null;
   }
+
+  /** The months from `month` on whose payroll is approved, `YYYY-MM`, in order. */
+  async approvedMonthsFrom(month: Month): Promise<Month[]> {
+    const runs = await this.db.payrollRun.findMany({
+      where: { month: { gte: month }, status: PayrollStatus.APPROVED },
+      select: { month: true },
+      orderBy: { month: 'asc' },
+    });
+    return runs.map((r) => r.month);
+  }
 }

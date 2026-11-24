@@ -13,6 +13,7 @@ import { EmployeeDetailRow, EmployeesRepository } from '../repositories/employee
 import type { HrRemindersService } from '../../reminders/hr-reminders.service';
 import type { HrSettingsService } from '../../settings/hr-settings.service';
 import { EmployeesService } from './employees.service';
+import type { ContractRecords } from '../../contracts/services/contract-records.service';
 import { fakeAccess } from '../../access/hr-access.testing';
 import type { HrAccessService } from '../../access/hr-access.service';
 
@@ -109,6 +110,7 @@ function makeService(
   };
   const audit = { record: jest.fn(() => Promise.resolve()) };
   const users = { accountOfEmployee: jest.fn().mockResolvedValue(null) };
+  const contracts = { createFirst: jest.fn().mockResolvedValue({}) };
   const reminders = {
     contractChanged: jest.fn(() => Promise.resolve()),
     probationChanged: jest.fn(() => Promise.resolve()),
@@ -141,8 +143,9 @@ function makeService(
     { defaultProbationMonths: jest.fn().mockResolvedValue(probationMonths) } as unknown as HrSettingsService,
     reminders as unknown as HrRemindersService,
     users as unknown as UsersService,
+    contracts as unknown as ContractRecords,
   );
-  return { service, repository, events, files, audit, afterCommit, reminders, users };
+  return { service, repository, events, files, audit, afterCommit, reminders, users, contracts };
 }
 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0]);
@@ -296,13 +299,15 @@ describe('EmployeesService — photo (§3)', () => {
 });
 
 describe('EmployeesService', () => {
-  it('create fills the current contract year and publishes hr.employee.hired', async () => {
-    const { service, repository, events } = makeService();
+  it('create fills the current contract year, creates the first contract and publishes hr.employee.hired', async () => {
+    const { service, repository, events, contracts } = makeService();
     await service.create(dto());
     const current = contractYearFor(todayIsoDate());
     const data = repository.createWithCode.mock.calls[0]![0];
     expect(data.contractStart).toEqual(d(current.start));
     expect(data.contractEnd).toEqual(d(current.end));
+    // Contracts (spec 2026-11-24): creation still sets the first contract.
+    expect(contracts.createFirst).toHaveBeenCalledWith('e1', current.start, current.end);
     expect(events.publish).toHaveBeenCalledWith(HrEvent.EMPLOYEE_HIRED, {
       employeeId: 'e1',
       hireDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
@@ -738,14 +743,17 @@ describe('EmployeesService — probation end (§3, N0)', () => {
 });
 
 describe('EmployeesService — reminders resolved at the change (§11, N3)', () => {
-  it('N3 edge 2 — a moved contract end resolves its open reminder; an unchanged one does not', async () => {
-    const moved = makeService({
-      updateEmployee: jest.fn().mockResolvedValue(row({ contractEnd: d('2026-08-31') })),
+  it('contracts edge 13 — an edit never moves the contract dates (they change only through Contracts)', async () => {
+    const { service, repository, reminders } = makeService({
+      updateEmployee: jest.fn().mockResolvedValue(row({ grade: 'B' })),
     });
-    await moved.service.update('e1', { contractEnd: '2026-08-31' });
-    expect(moved.reminders.contractChanged).toHaveBeenCalledWith('e1');
-    expect(moved.reminders.probationChanged).not.toHaveBeenCalled();
+    await service.update('e1', { grade: 'B', contractEnd: '2026-08-31' } as never);
+    const data = repository.updateEmployee.mock.calls[0]![1] as Record<string, unknown>;
+    expect(data.contractEnd).not.toBeInstanceOf(Date);
+    expect(reminders.contractChanged).not.toHaveBeenCalled();
+  });
 
+  it('N3 edge 2 — an unchanged date resolves nothing', async () => {
     const same = makeService({ updateEmployee: jest.fn().mockResolvedValue(row({ grade: 'B' })) });
     await same.service.update('e1', { grade: 'B' });
     expect(same.reminders.contractChanged).not.toHaveBeenCalled();

@@ -5,8 +5,10 @@ export { FileStorageService } from './files/file-storage.service';
 export { FileFolders, PUBLIC_FILE_FOLDERS, type FileFolderAccess } from './files/file-folders';
 export type { SettingValues } from './settings.pure';
 export {
+  checkDocumentUpload,
   checkImageUpload,
   imageUploadInterceptor,
+  type DocumentType,
   type ImageUploadRules,
   type UploadedFileLike,
 } from './files/image-upload';
