@@ -238,6 +238,13 @@ Setting the address and signatory is the existing `core.settings.update`. Every 
   **Fields** panel (19 fields in the four groups, each with its other-language name and a sample
   value, a search box, the `[ ]` hint). The Arabic text is edited right-to-left, the English text
   left-to-right. Leaving with unsaved changes asks first.
+  - **Discard changes** (owner, 2026-11-25): a button beside Save, enabled only while something
+    differs from the last saved version (either name, the "Default for" choice, or either text —
+    texts compared as key-sorted JSON, so typing and deleting back is not a change; the same dirty
+    state the leaving prompt uses). It asks first ("Discard your changes? The template goes back to
+    its last saved version."); confirmed, the names, default and both texts go back, the undo
+    history is cleared, the language tab stays, the cursor returns to the text, and nothing is sent.
+    A new template not yet saved goes back to empty.
   - **Phone** (`a-*-phone-editor.png`): allowed, not optimised — the page reflows to the phone's
     width, a short toolbar, a **Field** button opening the fields as a bottom sheet, and a sticky
     "Unsaved changes · Save" bar.

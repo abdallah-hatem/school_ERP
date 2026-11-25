@@ -27,6 +27,7 @@ export function ConfirmDialog({
   reasonLabel,
   reasonPlaceholder,
   onConfirm,
+  onCloseAutoFocus,
   children,
 }: {
   open: boolean;
@@ -45,6 +46,8 @@ export function ConfirmDialog({
    * empty, with `optionalNote`). Return `false` to keep it open.
    */
   onConfirm: (reason?: string) => Promise<boolean | void> | boolean | void;
+  /** Where focus goes once it closes; `preventDefault()` keeps it off the button that opened it. */
+  onCloseAutoFocus?: (event: Event) => void;
   /** The body of a dialog without a reason box (an optional upload, e.g. a renewal's signed copy). */
   children?: ReactNode;
 }) {
@@ -80,6 +83,7 @@ export function ConfirmDialog({
     <Dialog open={open} onOpenChange={change}>
       <DialogContent
         size="sm"
+        onCloseAutoFocus={onCloseAutoFocus}
         title={title}
         description={description}
         footer={

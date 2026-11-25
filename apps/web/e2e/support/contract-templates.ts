@@ -7,7 +7,8 @@ import { shoot } from './ui';
 
 /*
  * Contract templates (spec 2026-11-24-contract-templates), end to end: the seed's template is
- * listed in Settings and opens in the editor, where a field chip goes in from the Fields panel;
+ * listed in Settings and opens in the editor, where a field chip goes in from the Fields panel
+ * (Discard changes takes it out again, then it goes in for the rest of the run);
  * a new full-time employee's contract prints from its Contracts tab with that template (the
  * work system's default, preselected), filled, paginated "Page 1 of N"; Download PDF / "Print or
  * PDF" keeps a copy, listed on the contract, whose PDF has as many pages as the preview
@@ -47,12 +48,31 @@ export async function checkContractTemplates(page: Page, info: TestInfo, locale:
     await canvas.click();
     await page.keyboard.press('ControlOrMeta+End');
     const insert = t(locale, 'contract-templates.editor.fields.insert', { name: t(locale, 'contract-templates.fields.employee.nationalId') });
-    if (phone) {
-      await main.getByRole('button', { name: t(locale, 'contract-templates.editor.fields.button'), exact: true }).click();
-      await page.getByRole('dialog').getByRole('button', { name: insert }).click();
-    } else {
-      await main.getByRole('button', { name: insert }).click();
-    }
+    const insertChip = async () => {
+      if (phone) {
+        await main.getByRole('button', { name: t(locale, 'contract-templates.editor.fields.button'), exact: true }).click();
+        await page.getByRole('dialog').getByRole('button', { name: insert }).click();
+      } else {
+        await main.getByRole('button', { name: insert }).click();
+      }
+    };
+    // Discard changes: off while clean; after an edit it asks, then the saved text is back.
+    const discard = main.getByRole('button', { name: t(locale, 'contract-templates.editor.discard.button'), exact: true });
+    await expect(discard).toBeDisabled();
+    await insertChip();
+    await expect(chips).toHaveCount(before + 1);
+    await expect(discard).toBeEnabled();
+    await discard.click();
+    const discardDialog = page.getByRole('dialog', { name: t(locale, 'contract-templates.editor.discard.title') });
+    await discardDialog.getByRole('button', { name: t(locale, 'contract-templates.editor.discard.confirm'), exact: true }).click();
+    await expect(discardDialog).toBeHidden();
+    await expect(chips).toHaveCount(before);
+    await expect(discard).toBeDisabled();
+    await expect(canvas).toBeFocused();
+
+    await canvas.click();
+    await page.keyboard.press('ControlOrMeta+End');
+    await insertChip();
     await expect(chips).toHaveCount(before + 1);
     // Unsaved: the phone's sticky bar says so.
     if (phone) await expect(page.getByText(t(locale, 'contract-templates.editor.unsavedBar'))).toBeVisible();

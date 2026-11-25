@@ -8,3 +8,4 @@ export * from './schema';
 export * from './values';
 export * from './words';
 export * from './render';
+export * from './canonical';

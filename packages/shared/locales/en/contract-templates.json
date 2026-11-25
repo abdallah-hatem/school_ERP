@@ -117,6 +117,12 @@
     "optionalOneLine": "An optional phrase stays inside one paragraph.",
     "optionalNested": "An optional phrase can't hold another one.",
     "unsavedBar": "Unsaved changes",
+    "discard": {
+      "button": "Discard changes",
+      "title": "Discard your changes?",
+      "body": "The template goes back to its last saved version.",
+      "confirm": "Discard changes"
+    },
     "unsaved": {
       "title": "Leave without saving?",
       "body": "Your changes to this template will be lost.",
