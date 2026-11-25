@@ -750,8 +750,10 @@ phase live in `docs/build-log/`.
   names, hide/show), each with an effect type fixed in code — record only, deduct days, deduct a % of
   salary, deduct a fixed amount, investigation (± days) — and the school setting its numbers; no free
   formulas; raise actions stay record-only until raises exist; the seed loads today's actions so nothing
-  changes. Spec being written (`docs/specs/2026-11-25-penalty-actions.md`), then three mockups (AR + EN,
-  phone + desktop), then the owner approves before any build.
+  changes. Spec written (#311: numbers on the catalogue level, snapshot at approval, % of the month's salary or
+  basic, no new cap). No mockups: a new list in the existing Settings design plus fields on the
+  existing level editor (owner, 2026-11-25: "if mockups unnecessary dont do it"). Waiting for the
+  owner's approval and the monthly-cap answer (default: no cap, net floored at 0 and flagged).
 - **Pentest with ARTEX** (owner, 2026-11-25): try https://github.com/BaaRai/ARTEX against the app
   later — on a throwaway or testing environment, never production. Not started.
 - **Employee documents tab** (proposed 2026-11-24): ID copy, certificates, insurance forms.
