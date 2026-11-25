@@ -28,6 +28,7 @@ import { PAGINATION } from '@school-erp/shared';
 import type { PenaltiesListQuery } from '../lib/list-query';
 import { record, renderPenalties } from '../test/fixtures';
 import { PenaltiesList, type PenaltiesListProps } from './penalties-list';
+import { ACTION } from '@/test/penalty-actions';
 
 const QUERY: PenaltiesListQuery = { month: '2026-11', page: 1, limit: PAGINATION.defaultLimit };
 
@@ -37,7 +38,7 @@ function renderList(props: Partial<PenaltiesListProps> = {}, locale: 'en' | 'ar'
       basePath="/en/penalties"
       query={QUERY}
       currentMonth="2026-11"
-      rows={[record(), record({ id: 'p-2', status: 'CANCELLED', cancelReason: 'Wrong day', action: 'WARNING', days: null, level: 1 })]}
+      rows={[record(), record({ id: 'p-2', status: 'CANCELLED', cancelReason: 'Wrong day', action: ACTION.WARNING, days: null, percent: null, amount: null, level: 1 })]}
       total={2}
       {...props}
     />,

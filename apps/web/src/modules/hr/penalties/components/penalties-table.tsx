@@ -14,7 +14,7 @@ import { formatDate } from '@/shared/lib/format';
 import { nameIn } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { EmployeeIdentity } from '../../employees';
-import { describeAction } from '../lib/penalty-text';
+import { deductsPay, describeAction } from '../lib/penalty-text';
 import { PenaltyActions } from './penalty-actions';
 
 const STATUS_TONE: Record<PenaltyStatus, StatusTone> = {
@@ -125,7 +125,7 @@ export function PenaltiesTable({
       cell: (p) => (
         <span className="flex flex-col gap-0.5">
           <span className="text-xs text-muted-foreground">{t('penalties.levelValue', { level: p.level })}</span>
-          <span className={p.days ? 'font-semibold text-destructive-ink' : undefined}>{describeAction(t, locale, p.action, p.days)}</span>
+          <span className={deductsPay(p.action.effect, p) ? 'font-semibold text-destructive-ink' : undefined}>{describeAction(t, locale, p.action, p)}</span>
         </span>
       ),
     },

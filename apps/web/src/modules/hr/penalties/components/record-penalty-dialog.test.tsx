@@ -23,6 +23,7 @@ import { todayIso } from '@/shared/lib/format';
 import { matchesSearch } from '@school-erp/shared';
 import { failure, groups, ok, record, renderPenalties } from '../test/fixtures';
 import { RecordPenaltyDialog } from './record-penalty-dialog';
+import { ACTION, lvl } from '@/test/penalty-actions';
 
 const PEOPLE = [
   { id: 'e-mona', code: 'EMP-0001', nameEn: 'Mona Khalil', nameAr: 'منى خليل', status: 'ACTIVE' },
@@ -64,8 +65,10 @@ function serveViolations() {
 
 const preview = (overrides: Partial<PenaltyPreview> = {}): PenaltyPreview => ({
   level: 1,
-  action: 'NOTICE',
+  action: ACTION.NOTICE,
   days: null,
+  percent: null,
+  amount: null,
   priorCount: 0,
   recount: [],
   recountElsewhere: 0,
@@ -82,14 +85,14 @@ const RECOUNT: PenaltyPreview['recount'] = [
   {
     id: 'p-19',
     date: '2026-11-19',
-    before: { level: 1, action: 'DEDUCT_DAYS', days: 0.5 },
-    after: { level: 2, action: 'DEDUCT_DAYS', days: 1 },
+    before: lvl(1, 'DEDUCT_DAYS', 0.5),
+    after: lvl(2, 'DEDUCT_DAYS', 1),
   },
   {
     id: 'p-20',
     date: '2026-11-20',
-    before: { level: 2, action: 'DEDUCT_DAYS', days: 1 },
-    after: { level: 3, action: 'DEDUCT_DAYS', days: 2 },
+    before: lvl(2, 'DEDUCT_DAYS', 1),
+    after: lvl(3, 'DEDUCT_DAYS', 2),
   },
 ];
 
@@ -135,9 +138,9 @@ describe('RecordPenaltyDialog', () => {
       Promise.resolve(
         ok(
           employeeId === 'e-omar'
-            ? preview({ level: 3, action: 'DEDUCT_DAYS', days: 2, priorCount: 2 })
+            ? preview({ level: 3, action: ACTION.DEDUCT_DAYS, days: 2, percent: null, amount: null, priorCount: 2 })
             : date === todayIso()
-              ? preview({ level: 2, action: 'DEDUCT_DAYS', days: 0.5, priorCount: 1 })
+              ? preview({ level: 2, action: ACTION.DEDUCT_DAYS, days: 0.5, percent: null, amount: null, priorCount: 1 })
               : preview(),
         ),
       ),
@@ -196,7 +199,7 @@ describe('RecordPenaltyDialog', () => {
     const user = userEvent.setup();
     let resolveFirst: (v: unknown) => void = () => undefined;
     apis.GET_PENALTY_PREVIEW.mockImplementationOnce(() => new Promise((r) => (resolveFirst = r))).mockResolvedValue(
-      ok(preview({ level: 4, action: 'DISMISSAL' })),
+      ok(preview({ level: 4, action: ACTION.DISMISSAL })),
     );
     renderDialog();
     await choose(user, /Employee/, 'Mona Khalil · EMP-0001');
@@ -205,7 +208,7 @@ describe('RecordPenaltyDialog', () => {
     await choose(user, /Employee/, 'Omar Fathy · EMP-0002');
     await waitFor(() => expect(previewLine()).toBe('Level 4 — Dismissal'));
 
-    resolveFirst(ok(preview({ level: 2, action: 'WARNING' })));
+    resolveFirst(ok(preview({ level: 2, action: ACTION.WARNING })));
     await new Promise((r) => setTimeout(r, 0));
     expect(previewLine()).toBe('Level 4 — Dismissal');
   });

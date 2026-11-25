@@ -25,6 +25,7 @@ export function NamesDialog({
   placeholders,
   submitLabel,
   toggle,
+  extra,
   onSubmit,
 }: {
   open: boolean;
@@ -35,6 +36,8 @@ export function NamesDialog({
   placeholders: { en: string; ar: string };
   submitLabel: string;
   toggle?: { label: string; hint: string };
+  /** Shown under the names, read-only (a penalty action's effect). */
+  extra?: ReactNode;
   onSubmit: (values: NamesFormValues) => Promise<boolean>;
 }) {
   const { t } = useTranslation();
@@ -95,6 +98,7 @@ export function NamesDialog({
             required
           />
           {toggle ? <SwitchField control={form.control} name="managesPeople" label={toggle.label} hint={toggle.hint} /> : null}
+          {extra}
         </Form>
       </DialogContent>
     </Dialog>

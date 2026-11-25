@@ -4,17 +4,20 @@ import type {
   AccountingSettings,
   UpdateAccountingSettingsRequest,
   CreateJobTitleRequest,
+  CreatePenaltyActionRequest,
   CreatePenaltyGroupRequest,
   CreateViolationRequest,
   HrSettings,
   JobTitle,
   ListItem,
+  PenaltyActionItem,
   PenaltyGroup,
   PutSchoolCalendarRequest,
   SchoolCalendar,
   SchoolSettings,
   UpdateHrSettingsRequest,
   UpdateJobTitleRequest,
+  UpdatePenaltyActionRequest,
   UpdatePenaltyGroupRequest,
   UpdateSchoolSettingsRequest,
   UpdateViolationRequest,
@@ -210,6 +213,55 @@ export async function CREATE_VIOLATION(groupId: string, data: CreateViolationReq
 
 export async function UPDATE_VIOLATION(id: string, data: UpdateViolationRequest) {
   const res = await apiFetch<Violation>(`/hr/violations/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: { ...data },
+    revalidateTags: [CATALOGUE_TAG],
+  });
+  return handleResponse({ response: res });
+}
+
+// ── Penalty actions (spec 2026-11-25) ────────────────────────────────────────
+
+/**
+ * `GET /hr/penalty-actions` — one page for Settings, hidden ones too with `includeHidden`; paged,
+ * searched and counted by the API (each with how many levels use it).
+ */
+export async function GET_PENALTY_ACTIONS(query: { page?: number; limit?: number; includeHidden?: boolean } = {}) {
+  const res = await apiFetch<PenaltyActionItem[]>('/hr/penalty-actions', {
+    params: {
+      includeHidden: query.includeHidden ? 'true' : undefined,
+      page: String(query.page ?? PAGINATION.defaultPage),
+      limit: String(query.limit ?? PAGINATION.defaultLimit),
+    },
+    cache: 'no-store',
+  });
+  return handleResponse({ response: res });
+}
+
+/**
+ * The level editor's picker: the whole visible list in its order (a short list of the regulation's
+ * words, not records — the API sends it whole without `page`), plus hidden ones with
+ * `includeHidden` (a level that already holds one shows it).
+ */
+export async function GET_PENALTY_ACTION_CHOICES(includeHidden = false) {
+  const res = await apiFetch<PenaltyActionItem[]>('/hr/penalty-actions', {
+    params: { includeHidden: includeHidden ? 'true' : undefined },
+    cache: 'no-store',
+  });
+  return handleResponse({ response: res });
+}
+
+export async function CREATE_PENALTY_ACTION(data: CreatePenaltyActionRequest) {
+  const res = await apiFetch<PenaltyActionItem>('/hr/penalty-actions', {
+    method: 'POST',
+    body: { ...data },
+    revalidateTags: [CATALOGUE_TAG],
+  });
+  return handleResponse({ response: res });
+}
+
+export async function UPDATE_PENALTY_ACTION(id: string, data: UpdatePenaltyActionRequest) {
+  const res = await apiFetch<PenaltyActionItem>(`/hr/penalty-actions/${encodeURIComponent(id)}`, {
     method: 'PATCH',
     body: { ...data },
     revalidateTags: [CATALOGUE_TAG],

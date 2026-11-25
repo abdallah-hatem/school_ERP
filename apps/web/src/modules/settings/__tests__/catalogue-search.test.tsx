@@ -3,13 +3,17 @@ import '@/test/dom-polyfills';
 import type { PenaltyGroup, Violation } from '@school-erp/shared';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const api = vi.hoisted(() => ({
   GET_LIST_ITEMS: vi.fn(),
   CREATE_LIST_ITEM: vi.fn(),
   UPDATE_LIST_ITEM: vi.fn(),
   GET_PENALTY_GROUPS: vi.fn(),
+  GET_PENALTY_ACTIONS: vi.fn(),
+  GET_PENALTY_ACTION_CHOICES: vi.fn(),
+  CREATE_PENALTY_ACTION: vi.fn(),
+  UPDATE_PENALTY_ACTION: vi.fn(),
   CREATE_PENALTY_GROUP: vi.fn(),
   UPDATE_PENALTY_GROUP: vi.fn(),
   CREATE_VIOLATION: vi.fn(),
@@ -23,6 +27,7 @@ import { CatalogueSection } from '../components/catalogue-section';
 import { matchesSearch } from '@school-erp/shared';
 import { highlightParts } from '../lib/catalogue-search';
 import { deferred, ok, renderSettings } from './helpers';
+import { lvl, SEEDED_ITEMS } from '@/test/penalty-actions';
 
 const v = (id: string, nameEn: string, nameAr: string, oncePerDay = true): Violation => ({
   id,
@@ -31,7 +36,7 @@ const v = (id: string, nameEn: string, nameAr: string, oncePerDay = true): Viola
   note: null,
   isActive: true,
   oncePerDay,
-  levels: [{ level: 1, action: 'NOTICE', days: null }],
+  levels: [lvl(1, 'NOTICE', null)],
 });
 
 const catalogue: PenaltyGroup[] = [
@@ -82,6 +87,13 @@ function serveCatalogue(groups: PenaltyGroup[] = catalogue) {
     return ok(found);
   });
 }
+
+
+// The Penalty actions card and the level editor's picker (spec 2026-11-25): the seeded ten.
+beforeEach(() => {
+  api.GET_PENALTY_ACTIONS.mockImplementation(() => ok(SEEDED_ITEMS, { total: SEEDED_ITEMS.length, page: 1, limit: 20 }));
+  api.GET_PENALTY_ACTION_CHOICES.mockImplementation(() => ok(SEEDED_ITEMS));
+});
 
 describe('catalogue highlight', () => {
   it('highlight parts: the first plain occurrence, case-insensitive; none when only folding matched', () => {

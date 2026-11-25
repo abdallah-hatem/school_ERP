@@ -53,7 +53,7 @@ export function PenaltyActions({ record, variant = 'menu' }: { record: PenaltyRe
   const name = nameIn(record.employee, locale);
   const violation = nameIn(record.violation, locale);
   const stage = nameIn(record.stage, locale);
-  const action = describeAction(t, locale, record.action, record.days);
+  const action = describeAction(t, locale, record.action, record);
 
   function show(next: Pending) {
     setError(null);
@@ -92,7 +92,14 @@ export function PenaltyActions({ record, variant = 'menu' }: { record: PenaltyRe
     return false;
   }
 
-  const acknowledged: PenaltyRecountAcknowledgement[] = recount.map((c) => ({ id: c.id, ...c.after }));
+  const acknowledged: PenaltyRecountAcknowledgement[] = recount.map((c) => ({
+    id: c.id,
+    level: c.after.level,
+    actionId: c.after.action.id,
+    days: c.after.days,
+    percent: c.after.percent,
+    amount: c.after.amount,
+  }));
   // Reject at the stage review (the stage head), or at HR (also for a review nobody can give).
   const rejectStep: 'review' | 'hr' = steps.review ? 'review' : 'hr';
   const canReject = steps.review || steps.hrApprove;

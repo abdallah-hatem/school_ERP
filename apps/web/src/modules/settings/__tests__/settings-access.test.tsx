@@ -16,6 +16,10 @@ const api = vi.hoisted(() => ({
   GET_ACCOUNTING_SETTINGS: vi.fn(),
   UPDATE_ACCOUNTING_SETTINGS: vi.fn(),
   GET_PENALTY_GROUPS: vi.fn(),
+  GET_PENALTY_ACTIONS: vi.fn(),
+  GET_PENALTY_ACTION_CHOICES: vi.fn(),
+  CREATE_PENALTY_ACTION: vi.fn(),
+  UPDATE_PENALTY_ACTION: vi.fn(),
   CREATE_PENALTY_GROUP: vi.fn(),
   UPDATE_PENALTY_GROUP: vi.fn(),
   CREATE_VIOLATION: vi.fn(),
@@ -35,6 +39,7 @@ import { sessionWith } from '@/test/render';
 import { SettingsScreen } from '../components/settings-screen';
 import type { SettingsSectionId } from '../sections';
 import { hrSettings, ok, renderSettings, school } from './helpers';
+import { SEEDED_ITEMS } from '@/test/penalty-actions';
 
 /** A session holding exactly what a built-in role grants. */
 function sessionOf(role: BuiltInRole): SessionUser {
@@ -54,6 +59,13 @@ function listed(): string[] {
     .getAllByRole('button')
     .map((b) => b.querySelector('span > span')?.textContent ?? '');
 }
+
+
+// The Penalty actions card and the level editor's picker (spec 2026-11-25): the seeded ten.
+beforeEach(() => {
+  api.GET_PENALTY_ACTIONS.mockImplementation(() => ok(SEEDED_ITEMS, { total: SEEDED_ITEMS.length, page: 1, limit: 20 }));
+  api.GET_PENALTY_ACTION_CHOICES.mockImplementation(() => ok(SEEDED_ITEMS));
+});
 
 describe('Settings — who sees which section', () => {
   beforeEach(() => {

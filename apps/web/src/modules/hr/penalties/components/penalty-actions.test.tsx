@@ -20,6 +20,7 @@ import { chooseRowAction, menuItemNames, openRowActions, rowActionsButton } from
 import { sessionWithout } from '@/test/render';
 import { failure, ok, record, renderPenalties } from '../test/fixtures';
 import { PenaltyActions } from './penalty-actions';
+import { ACTION, lvl } from '@/test/penalty-actions';
 
 describe('PenaltyActions', () => {
   beforeEach(() => {
@@ -213,20 +214,20 @@ describe('PenaltyActions', () => {
       {
         id: 'p-19',
         date: '2026-11-19',
-        before: { level: 1, action: 'DEDUCT_DAYS' as const, days: 0.5 },
-        after: { level: 2, action: 'DEDUCT_DAYS' as const, days: 1 },
+        before: lvl(1, 'DEDUCT_DAYS', 0.5),
+        after: lvl(2, 'DEDUCT_DAYS', 1),
       },
       {
         id: 'p-20',
         date: '2026-11-20',
-        before: { level: 2, action: 'DEDUCT_DAYS' as const, days: 1 },
-        after: { level: 3, action: 'DEDUCT_DAYS' as const, days: 2 },
+        before: lvl(2, 'DEDUCT_DAYS', 1),
+        after: lvl(3, 'DEDUCT_DAYS', 2),
       },
     ];
     const backdated = () => record({ date: '2026-11-18', level: 1, recount: RECOUNT });
     const ACK = [
-      { id: 'p-19', level: 2, action: 'DEDUCT_DAYS', days: 1 },
-      { id: 'p-20', level: 3, action: 'DEDUCT_DAYS', days: 2 },
+      { id: 'p-19', level: 2, actionId: ACTION.DEDUCT_DAYS.id, days: 1, percent: null, amount: null },
+      { id: 'p-20', level: 3, actionId: ACTION.DEDUCT_DAYS.id, days: 2, percent: null, amount: null },
     ];
     const items = (dialog: HTMLElement) =>
       within(within(dialog).getByTestId('penalty-recount'))

@@ -9,7 +9,7 @@ import { formatDate } from '@/shared/lib/format';
 import { nameIn } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { EmployeeIdentity } from '../../employees';
-import { approveBlockedReason, describeAction, penaltyStepLines } from '../lib/penalty-text';
+import { approveBlockedReason, deductsPay, describeAction, penaltyStepLines } from '../lib/penalty-text';
 import { cn } from '@/shared/lib/utils';
 import { PenaltyActions } from './penalty-actions';
 import { PenaltyStatusPill } from './penalties-table';
@@ -79,8 +79,8 @@ export function PenaltyDetailsDialog({
               <Field label={t('penalties.columns.levelAction')}>
                 <span className="flex flex-col gap-0.5">
                   <span className="text-xs text-muted-foreground">{t('penalties.levelValue', { level: record.level })}</span>
-                  <span className={record.days ? 'font-semibold text-destructive-ink' : undefined}>
-                    {describeAction(t, locale, record.action, record.days)}
+                  <span className={deductsPay(record.action.effect, record) ? 'font-semibold text-destructive-ink' : undefined}>
+                    {describeAction(t, locale, record.action, record)}
                   </span>
                 </span>
               </Field>

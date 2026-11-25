@@ -6,8 +6,8 @@ type** from a fixed set in code and numbers set by the school; **no free formula
 today's actions exactly, so this school sees no change. Builds on §4 Penalties, §6 Payroll, §7
 Settings, §9 Audit and §2 Roles. Status of each rule: DECIDED (the owner's brief above), GUESS (my
 default — change it if wrong), OPEN (needs the owner; my default is given and is what gets built if
-he doesn't answer). **Nothing here is applied to the business docs yet**: the proposed edits are at
-the end, for after the owner approves.
+he doesn't answer). The proposed business-doc edits at the end were applied with the build
+(feature/penalty-actions, 2026-11-26).
 
 **Approved as written (owner, 2026-11-26: "Approve, no cap"):** every GUESS below stands, no mockups
 (owner, 2026-11-25: "if mockups unnecessary dont do it"), and **no monthly cap** on penalty deductions.

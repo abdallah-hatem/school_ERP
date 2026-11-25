@@ -17,6 +17,7 @@ import { formatCount, formatDate, formatDayCount, formatMonth } from '@/shared/l
 import { localName, nameIn, type Locale, type Translate } from '@/shared/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
+import { describeAction } from '@/shared/lib/penalty-action-text';
 
 /**
  * Print rules for the payslip: one A4 page, no app chrome (the shell's `no-print` parts and this
@@ -178,7 +179,7 @@ export function PayslipView({ payslip, backHref }: { payslip: Payslip; backHref:
                       <span aria-hidden="true">·</span>
                       <span>{t('payroll.payslip.level', { level: p.level })}</span>
                       <span aria-hidden="true">·</span>
-                      <span>{t(`common.enums.penaltyAction.${p.action}`)}</span>
+                      <span>{describeAction(t, locale, p.action, { days: p.days, percent: p.percent, amount: p.fixedAmount })}</span>
                       {p.days === null ? null : (
                         <>
                           <span aria-hidden="true">·</span>
@@ -211,7 +212,7 @@ export function PayslipView({ payslip, backHref }: { payslip: Payslip; backHref:
                         </Td>
                         <Td wrap>{locale === 'ar' ? p.violationNameAr : p.violationNameEn}</Td>
                         <Td>{t('payroll.payslip.level', { level: p.level })}</Td>
-                        <Td wrap>{t(`common.enums.penaltyAction.${p.action}`)}</Td>
+                        <Td wrap>{describeAction(t, locale, p.action, { days: p.days, percent: p.percent, amount: p.fixedAmount })}</Td>
                         <Td end>{p.days === null ? '—' : <Days value={p.days} unit={false} />}</Td>
                         <Td end>
                           <Money

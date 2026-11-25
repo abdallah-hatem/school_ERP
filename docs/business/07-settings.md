@@ -4,7 +4,7 @@ Everything here is changed by the school in the Settings screen, takes effect im
 affects only **draft** payroll runs (approved runs never change).
 
 - **DECIDED** — **Change history:** every change to school settings, HR rules, lists (stages,
-  departments, job titles, employee grades) and the penalty catalogue is recorded: what changed, the old and new
+  departments, job titles, employee grades), the penalty catalogue and penalty actions is recorded: what changed, the old and new
   value, who changed it and when. The history is viewed on the Activity page (§9), newest first,
   page by page: Settings' **View change history** opens it filtered to settings (owner, 2026-11-17 —
   the separate Change history section was removed).
@@ -41,6 +41,7 @@ affects only **draft** payroll runs (approved runs never change).
 | Penalty repetition window | Contract year (1 June – 31 May); alternatives: calendar year, rolling 12 months | GUESS |
 | Default probation length (fills a new employee's probation end, §3) | 3 months; whole months 0–6, 0 = no probation | DECIDED (owner, 2026-11-18) — Settings → HR rules → Employees |
 | Penalty catalogue | The school's 4 tables (72 violations) | DECIDED |
+| Penalty actions (§4) | Today's ten, with their names | DECIDED (owner, 2026-11-25) — Settings → Penalty catalogue → Penalty actions; names up to 100, unique in each language; never deleted, only hidden |
 | Violation "Once per day" (§4) | On, except violations that repeat within a day (late to class, leaving a task early…) | DECIDED (owner, 2026-11-18) |
 | Stages (school structure), departments, job titles, employee grades | From the seed (employee grades: Pay grade 1–4 as generic examples, owner 2026-11-24) | DECIDED |
 | Brand colours | Teal and sunflower (the "Campus" design), fixed for now | DECIDED |
@@ -60,8 +61,12 @@ affects only **draft** payroll runs (approved runs never change).
   switch (set when adding or editing the title; the list shows a "Manages people" badge on those
   that do). It decides who can be chosen as a direct manager (§3). Changing it is recorded in the
   change history like any list change.
+- **GUESS** (spec 2026-11-25) — A hidden penalty action can't be picked for a level; levels that
+  already use it keep it, and new penalties on them still get it. Hiding one in use says how many
+  levels and violations use it.
 - **DECIDED** — Settings are validated: times in order, percentages 1–100, divisor 1–31, days in
-  quarter steps (0.25) from 0 to 30, the default probation length in whole months from 0 to 6,
+  quarter steps (0.25) from 0 to 30, level percentages above 0 and at most 100 with two decimals,
+  level amounts above EGP 0 and at most 1,000,000, the default probation length in whole months from 0 to 6,
   the reminder timings in whole days within their ranges (§11) with the second contract reminder
   fewer days before the end than the first (or 0). Changing a timing is recorded like any HR rule.
 - **DECIDED** (owner, 2026-11-17) — Work start and work end are on a 30-minute boundary (07:00,

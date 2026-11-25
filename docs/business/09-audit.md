@@ -7,7 +7,8 @@ Who did what, to which record, and when — for the whole system. Spec:
   sign-ins; a sign-in locked by too many wrong passwords (with the email typed, §2; attempts refused
   while locked count as failed sign-ins) and its unlock by a System admin; users (create, edit, deactivate, reactivate, temporary password, own password change)
   and roles (create, edit, delete); school settings, logo and stages; employees (create, edit, deactivate, reactivate);
-  departments, job titles and employee grades; HR rules and the penalty catalogue; penalties (record, the stage
+  departments, job titles and employee grades; HR rules, the penalty catalogue and **penalty actions**
+  (add, rename, reorder, hide, show); penalties (record, the stage
   review's approval, HR's approval, a rejection at either step, cancel — owner 2026-11-21); monthly lateness (per employee, minutes before and after); payroll runs (create,
   recalculate, approve) and adjustments (add, remove); contracts (every decision, §3) and their
   signed copy — a page added (its name, the number of pages before → after) or removed (with the
@@ -36,10 +37,12 @@ Who did what, to which record, and when — for the whole system. Spec:
 - **DECIDED** — A penalty's entries (recorded, approved, cancelled — one each) name the employee
   and the violation, not codes, with the date, the level ("2nd time"), the penalty and its days,
   and the status: approving shows "Pending → Approved" (and the level fixed at approval if it
-  differs from the one at recording), cancelling the status and the reason. A refused penalty (the
+  differs from the one at recording), cancelling the status and the reason. A level's or a
+  penalty's action reads by its name as it was then, with its number ("Deduct 10% of the salary for
+  the month"). A refused penalty (the
   day already has one, the month's payroll is approved, already cancelled) leaves no entry.
   An employee's **History** tab lists their penalties too, for whoever may see that employee's
-  penalties (§2). A penalty has no amount (it is days; payroll prices them), so nothing in it is
+  penalties (§2). A penalty holds no priced amount — days, a percent or a catalogue amount; payroll prices them — so nothing in it is
   hidden as salary.
 - **DECIDED** (owner, 2026-11-20) — A payroll run has a **History** tab beside its employees: who
   created it, recalculated it, added or removed adjustments (the employee, type, amount and reason),

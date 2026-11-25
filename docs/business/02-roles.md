@@ -131,6 +131,9 @@
   head's charts count their stage), money only for those who see the payroll totals, and the
   deductions only with every salary (§10). Without it the dashboard is as before — no charts, no
   6 / 12 months switch.
+- **GUESS** (spec 2026-11-25) — **Penalty actions** are managed with the catalogue
+  (`hr.penalty_catalogue.manage`: HR manager, System admin) and seen by whoever sees the catalogue.
+  No new permission.
 - **GUESS** (enforced, 2026-11-18) — Someone who may see a Settings section but not change it sees
   it read-only (§7): a stage head and a direct manager see Structure and the penalty catalogue, the
   principal sees the lists. They keep Settings in their menu for now (owner hasn't decided

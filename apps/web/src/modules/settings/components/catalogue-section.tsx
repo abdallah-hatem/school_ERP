@@ -13,13 +13,15 @@ import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { AddIcon, ChevronDownIcon, EditIcon, RepeatsInDayIcon, RestoreIcon, RetireIcon } from '@/shared/components/ui/icons';
 import { Skeleton, SkeletonText } from '@/shared/components/ui/skeleton';
 import { StatusPill } from '@/shared/components/ui/status-pill';
-import { formatCount, formatDayCount } from '@/shared/lib/format';
+import { formatCount } from '@/shared/lib/format';
+import { describeAction } from '@/shared/lib/penalty-action-text';
 import { localName, otherName } from '@/shared/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import {
   CREATE_PENALTY_GROUP,
   CREATE_VIOLATION,
+  GET_PENALTY_ACTION_CHOICES,
   GET_PENALTY_GROUPS,
   UPDATE_PENALTY_GROUP,
   UPDATE_VIOLATION,
@@ -28,8 +30,9 @@ import { useResource } from '../hooks/use-resource';
 import { highlightParts } from '../lib/catalogue-search';
 
 const SEARCH_DEBOUNCE_MS = 250;
-import { toLevelInputs, type NamesFormValues, type ViolationFormValues } from '../schemas';
+import { toLevelInputs, type EffectOf, type NamesFormValues, type ViolationFormValues } from '../schemas';
 import { NamesDialog } from './names-dialog';
+import { PenaltyActionsCard } from './penalty-actions-card';
 import { SectionPanel } from './section-panel';
 import { ViolationDialog } from './violation-dialog';
 
@@ -50,6 +53,10 @@ export function CatalogueSection() {
   // What the API was asked: the typed text, after a pause.
   const [asked, setAsked] = useState('');
   const catalogue = useResource(`catalogue:${asked}`, () => GET_PENALTY_GROUPS({ search: asked || undefined }));
+  // The level editor's picker: the visible actions, whole and in order (spec 2026-11-25). Asked
+  // again after the Penalty actions card changes one.
+  const [actionsVersion, setActionsVersion] = useState(0);
+  const actionChoices = useResource(`penalty-action-choices:${actionsVersion}`, () => GET_PENALTY_ACTION_CHOICES());
   const askTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(
     () => () => {
@@ -183,14 +190,14 @@ export function CatalogueSection() {
     }
   }
 
-  async function saveViolation(values: ViolationFormValues): Promise<boolean> {
+  async function saveViolation(values: ViolationFormValues, effectOf: EffectOf): Promise<boolean> {
     if (!editing) return false;
     const body = {
       nameEn: values.nameEn,
       nameAr: values.nameAr,
       note: values.note.trim() || null,
       oncePerDay: values.oncePerDay,
-      levels: toLevelInputs(values.levels),
+      levels: toLevelInputs(values.levels, effectOf),
     };
     const res = editing.violation
       ? await callApi(UPDATE_VIOLATION(editing.violation.id, body))
@@ -337,7 +344,23 @@ export function CatalogueSection() {
       </div>
     );
 
+  /** "Manage actions" in the level editor: close it and bring the Penalty actions card into view. */
+  function manageActions() {
+    setEditing(null);
+    requestAnimationFrame(() => {
+      const card = document.querySelector<HTMLElement>('[data-settings-part="actions"]');
+      card?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      card?.querySelector<HTMLElement>('h2')?.focus({ preventScroll: true });
+    });
+  }
+
   return (
+    <div className="flex flex-col gap-6">
+    <PenaltyActionsCard onChanged={() => {
+      setActionsVersion((v) => v + 1);
+      // Levels show today's action names: re-read the catalogue too.
+      catalogue.retry();
+    }} />
     <SectionPanel title={t('settings.sections.catalogue.title')} description={t('settings.sections.catalogue.description')} actions={addGroup}>
       {body}
       {groupDialog ? (
@@ -357,10 +380,12 @@ export function CatalogueSection() {
           onSubmit={saveGroup}
         />
       ) : null}
-      {editing ? (
+      {editing && actionChoices.data ? (
         <ViolationDialog
           key={editing.violation?.id ?? `new-${editing.groupId}`}
           violation={editing.violation}
+          actions={actionChoices.data}
+          onManageActions={manageActions}
           // A short title (a long violation name wrapped to three lines on a phone); the name
           // follows underneath, clamped to two lines.
           title={editing.violation ? t('settings.catalogue.editViolationTitle') : t('settings.catalogue.addViolation')}
@@ -383,6 +408,7 @@ export function CatalogueSection() {
         onConfirm={async () => (retiring ? setGroupActive(retiring, false) : true)}
       />
     </SectionPanel>
+    </div>
   );
 }
 
@@ -443,13 +469,8 @@ function ViolationRow({
         <ol className="flex flex-wrap gap-1.5" aria-label={t('settings.catalogue.levels')}>
           {levels.map((l) => (
             <li key={l.level} className="rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold text-secondary-foreground">
-              {l.days != null
-                ? t('settings.catalogue.levelWithDays', {
-                    level: l.level,
-                    action: t(`common.enums.penaltyAction.${l.action}`),
-                    days: formatDayCount(l.days, locale),
-                  })
-                : t('settings.catalogue.levelPlain', { level: l.level, action: t(`common.enums.penaltyAction.${l.action}`) })}
+              {t('settings.catalogue.levelPlain', { level: l.level, action: describeAction(t, locale, l.action, l) })}
+              {l.action.isActive ? null : ` ${t('settings.catalogue.hiddenMarker')}`}
             </li>
           ))}
         </ol>

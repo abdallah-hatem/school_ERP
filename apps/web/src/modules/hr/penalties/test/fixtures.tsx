@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import type { Locale } from '@/shared/lib/i18n';
 import { renderWithI18n, TEST_SESSION } from '@/test/render';
 import { PenaltiesI18n } from '../messages';
+import { ACTION, lvl } from '@/test/penalty-actions';
 
 /** Test data for the penalties screens. */
 
@@ -21,7 +22,7 @@ export const groups: PenaltyGroup[] = [
         note: null,
         isActive: true,
         oncePerDay: true,
-        levels: [{ level: 1, action: 'WARNING', days: null }],
+        levels: [lvl(1, 'WARNING', null)],
       },
     ],
   },
@@ -40,8 +41,8 @@ export const groups: PenaltyGroup[] = [
         isActive: true,
         oncePerDay: true,
         levels: [
-          { level: 1, action: 'NOTICE', days: null },
-          { level: 2, action: 'DEDUCT_DAYS', days: 0.5 },
+          lvl(1, 'NOTICE', null),
+          lvl(2, 'DEDUCT_DAYS', 0.5),
         ],
       },
       {
@@ -51,7 +52,7 @@ export const groups: PenaltyGroup[] = [
         note: null,
         isActive: false,
         oncePerDay: true,
-        levels: [{ level: 1, action: 'NOTICE', days: null }],
+        levels: [lvl(1, 'NOTICE', null)],
       },
     ],
   },
@@ -69,7 +70,7 @@ export const groups: PenaltyGroup[] = [
         note: null,
         isActive: true,
         oncePerDay: true,
-        levels: [{ level: 1, action: 'NOTICE', days: null }],
+        levels: [lvl(1, 'NOTICE', null)],
       },
     ],
   },
@@ -82,8 +83,10 @@ export function record(overrides: Partial<PenaltyRecord> = {}): PenaltyRecord {
     violation: { id: 'v-late', nameEn: 'Late arrival without notice', nameAr: 'التأخر دون إخطار' },
     date: '2026-11-05',
     level: 2,
-    action: 'DEDUCT_DAYS',
+    action: ACTION.DEDUCT_DAYS,
     days: 0.5,
+    percent: null,
+    amount: null,
     status: 'WAITING_HR',
     stage: { id: 's-pri', nameEn: 'Primary', nameAr: 'الابتدائي' },
     note: null,

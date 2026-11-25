@@ -187,7 +187,7 @@
       "amount": "Amount"
     },
     "noPenalties": "No penalties this month.",
-    "penaltyShareNote": "Each penalty's amount is its share of the penalty deduction; the total is what is deducted.",
+    "penaltyShareNote": "A day penalty's amount is its share of the day-priced deduction; a % or fixed penalty shows its own amount. The total is what is deducted.",
     "lateness": "Lateness",
     "latenessDetail": {
       "zero": "{count} minutes = {days}",

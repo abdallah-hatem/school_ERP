@@ -6,13 +6,18 @@
   groups (the school's four tables: general table A, table B, general violations, educational
   violations), each holding **violations**, each with **levels 1 to 5** for the 1st to 5th time it
   happens.
-- **DECIDED** — Each level has one **action**:
-  - notice
-  - warning
-  - deduction of N days of pay (N can be ¼, ½, ¾, 1, 1¼, 1½, 2 … 5)
-  - loss of half the annual raise, loss of the annual raise, raise deferred 3 months
-  - pay cut by one annual raise, demotion, dismissal
-  - referral to investigation, optionally with N days of pay deducted
+- **DECIDED** (owner, 2026-11-25) — Each level has one **action** from the school's **Penalty
+  actions** list (§7). Each action has one **effect**, fixed in code: **Record only**, **Deduct days
+  of pay**, **Deduct a % of salary**, **Deduct a fixed amount**, **Referral to investigation**
+  (optionally with days deducted). No free formulas: a new effect is code.
+- **GUESS** (spec 2026-11-25) — The **numbers are on the level**: days (quarter steps, above 0, at
+  most 30), a percent (above 0, at most 100, two decimals) or an amount (above EGP 0, at most
+  1,000,000). A % action says which salary it is a % of — the salary for the month or the basic
+  salary (§6). An action's effect and salary are fixed once it is added.
+- **DECIDED** — The seeded actions are today's ten: notice, warning, deduct days, referral to
+  investigation, loss of half the annual raise, loss of the annual raise, raise deferred 3 months,
+  pay cut by one annual raise, demotion, dismissal. The raise actions, pay cut, demotion and
+  dismissal are Record only (**Planned**: a raise effect when the annual raise exists).
 - **DECIDED** — Some violations have fewer than 5 levels. Some say "doubles on repeat".
 - **GUESS** — After the last defined level, the last level repeats. "Doubles on repeat" is stored as
   written text for the reviewer; the system doesn't double automatically in the demo.
@@ -132,10 +137,12 @@
 - **DECIDED** — The level and action are fixed when the penalty is approved. Later catalogue edits
   don't change approved penalties. (Only a backdated penalty's approval moves them, above.)
 - **DECIDED** — Only approved penalties count toward the repeat level and toward payroll.
-- **DECIDED** — An approved penalty whose action is a **day deduction**, or an **investigation with
-  days**, reduces pay in the payroll of the **month the violation happened** (§6).
-- **DECIDED** — Notice, warning, raise, pay-cut, demotion, dismissal, and investigation without days
-  are **recorded only**. They don't change pay in this version (Planned).
+- **DECIDED** (owner, 2026-11-25) — An approved penalty whose action deducts (days, a %, a fixed
+  amount, or an investigation with days) reduces pay in the payroll of the **month the violation
+  happened** (§6). Record-only actions, and investigation without days, don't change pay.
+- **DECIDED** (owner, 2026-11-25) — At approval the penalty keeps a **snapshot** of its action's
+  names, effect, salary base and numbers. Renaming, hiding or re-pricing later never changes it, its
+  payslip or its History (only a backdated recount moves it, with today's catalogue, above).
 - **DECIDED** (owner, 2026-11-18) — **Once per day.** Each violation has a *Once per day* setting
   (§7). When it is on, an employee can't get a second penalty for that violation on the **same
   date** while an earlier one on that date is pending or approved; the attempt is refused with a
@@ -171,4 +178,7 @@
   rejected one, like a cancelled one, frees the day and never blocks.
 - **DECIDED** (owner, 2026-11-21) — Who approves penalties: the stage head of its stage, then HR
   (above). **OPEN** — whether an investigation is needed before a deduction.
-- **OPEN** — Whether a monthly cap on penalty deductions applies under the labour law.
+- **DECIDED** (owner, 2026-11-26) — **No monthly cap** on penalty deductions. The net floor stays: a
+  line whose deductions exceed its pay has net 0 and is flagged *needs review* ("Deductions exceed
+  this month's pay — net set to 0", §6). If the school's lawyer confirms a legal cap later, it
+  becomes an HR rule in a follow-up.
