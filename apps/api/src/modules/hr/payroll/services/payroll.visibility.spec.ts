@@ -125,8 +125,10 @@ function makeService(scopes: Parameters<typeof fakeAccess>[0], salaryIds: string
         violationNameEn: 'Late',
         violationNameAr: 'تأخير',
         level: 1,
-        action: 'DEDUCT_DAYS',
+        action: { id: 'a-days', nameEn: 'Deduct days', nameAr: 'خصم أيام', effect: 'DEDUCT_DAYS', percentBase: null },
         days: 1,
+        percent: null,
+        fixedAmount: null,
       },
     ]),
   };

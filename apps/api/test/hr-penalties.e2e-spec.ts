@@ -386,7 +386,14 @@ describe('HR penalty catalogue and records (e2e)', () => {
     expect(recount.map((c) => [c.date, c.before.level, c.after.level])).toEqual([['2025-05-31', 1, 2]]);
     await http(app)
       .post(`/hr/penalties/${june.id}/approve`)
-      .send({ acknowledgedRecount: recount.map((c) => ({ id: c.id, ...c.after })) })
+      .send({ acknowledgedRecount: recount.map((c) => ({
+        id: c.id,
+        level: c.after.level,
+        actionId: c.after.action.id,
+        days: c.after.days,
+        percent: c.after.percent,
+        amount: c.after.amount,
+      })) })
       .expect(200);
     expect((await preview(emp, v, '2025-05-31').expect(200)).body.data.priorCount).toBe(2);
   });

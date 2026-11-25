@@ -88,7 +88,15 @@ describe('HR penalties — backdated penalty recount (e2e, §4 owner 2026-11-20)
     http(app).get('/hr/penalties/preview').query({ employeeId, violationId, date });
   const getRecord = async (id: string) =>
     (await http(app).get(`/hr/penalties/${id}`).expect(200)).body.data as PenaltyRecord;
-  const ackOf = (recount: PenaltyRecountChange[]) => recount.map((c) => ({ id: c.id, ...c.after }));
+  const ackOf = (recount: PenaltyRecountChange[]) =>
+    recount.map((c) => ({
+      id: c.id,
+      level: c.after.level,
+      actionId: c.after.action.id,
+      days: c.after.days,
+      percent: c.after.percent,
+      amount: c.after.amount,
+    }));
   const approve = (id: string, acknowledgedRecount?: ReturnType<typeof ackOf>) =>
     http(app)
       .post(`/hr/penalties/${id}/approve`)
@@ -212,7 +220,7 @@ describe('HR penalties — backdated penalty recount (e2e, §4 owner 2026-11-20)
     expect((await getRecord(d10.id)).level).toBe(1);
 
     // Confirming changes that aren't there (another level) is stale too.
-    await approve(d5.id, fresh.map((c) => ({ id: c.id, ...c.after, level: c.after.level + 1 }))).expect(409);
+    await approve(d5.id, ackOf(fresh).map((a) => ({ ...a, level: a.level + 1 }))).expect(409);
     await approve(d5.id, ackOf(fresh)).expect(200);
     expect((await getRecord(d10.id)).level).toBe(2);
     // The cancelled one keeps the level it had.
