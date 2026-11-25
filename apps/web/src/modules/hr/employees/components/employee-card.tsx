@@ -8,7 +8,7 @@ import { EmployeeLink } from '@/core/employees';
 import { Button } from '@/shared/components/ui/button';
 import { Money } from '@/shared/components/ui/figures';
 import { EditIcon, ShowIcon, StageIcon } from '@/shared/components/ui/icons';
-import { Skeleton } from '@/shared/components/ui/skeleton';
+import { Skeleton, SkeletonText } from '@/shared/components/ui/skeleton';
 import { localName } from '@/shared/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
@@ -75,6 +75,15 @@ function CardFrame({
         {body}
       </div>
     </article>
+  );
+}
+
+function FactSkeleton({ label }: { label: string }) {
+  return (
+    <div className="min-w-0 rounded-xl bg-muted px-2.5 py-2">
+      <p className="text-[0.72rem] text-muted-foreground">{label}</p>
+      <SkeletonText className="text-[0.8rem] font-bold" width="w-16" />
+    </div>
   );
 }
 
@@ -182,8 +191,13 @@ export function EmployeeCard({
   );
 }
 
-/** One card's skeleton: the same frame and heights as `EmployeeCard`. */
+/**
+ * One card's skeleton: the same frame and heights as `EmployeeCard`. The body's text is drawn in its
+ * own line boxes (`SkeletonText` with the loaded classes, the labels as they read), so a card is as
+ * tall as a loaded one to the pixel in both languages (the skeleton spec holds cards to ±2px).
+ */
 export function EmployeeCardSkeleton() {
+  const { t } = useTranslation();
   const can = useCan();
   const salary = can('hr.employees.view_salary');
   const canEdit = can('hr.employees.edit');
@@ -204,15 +218,20 @@ export function EmployeeCardSkeleton() {
       }
       body={
         <>
-          <div className="flex flex-col gap-1.5 py-0.5">
-            <Skeleton className="h-6 w-3/4" />
-            <Skeleton className="h-4 w-1/2" />
+          <div className="min-w-0">
+            <SkeletonText className="font-display text-[1.1rem] leading-snug font-extrabold" width="w-3/4" />
+            <SkeletonText className="text-[0.8rem]" width="w-1/2" />
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <Skeleton className="h-13.5 rounded-xl" />
-            <Skeleton className="h-13.5 rounded-xl" />
+            <FactSkeleton label={t('employees.columns.department')} />
+            <FactSkeleton label={t('employees.columns.workSystem')} />
           </div>
-          {salary ? <Skeleton className="h-12 rounded-[0.875rem]" /> : null}
+          {salary ? (
+            <div className="flex items-center justify-between gap-2 rounded-[0.875rem] bg-primary-soft px-3 py-2.5 text-primary">
+              <span className="text-xs font-bold">{t('employees.columns.basicSalary')}</span>
+              <SkeletonText figures className="text-[1.06rem] font-extrabold" width="w-28" />
+            </div>
+          ) : null}
           <div className={cn('mt-auto grid gap-2', canEdit && 'grid-cols-2')}>
             <Skeleton className="h-9 rounded-lg" />
             {canEdit ? <Skeleton className="h-9 rounded-lg" /> : null}

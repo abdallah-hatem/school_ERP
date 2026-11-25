@@ -103,6 +103,10 @@ up-to-date branch.
       (the `23-skeletons` smoke spec, on CI; owner, 2026-11-18). A new main block gets the same
       `data-skeleton-block` on both sides; a new screen with a skeleton is added to the spec
       (`docs/ARCHITECTURE.md` → Skeletons match their screens).
+- [ ] Every table column whose cell isn't one line of text (a pill, badge, avatar, button, identity,
+      two-line or icon-and-text cell) declares `skeleton:` in its loaded shape — the
+      `column-skeletons` guard test fails otherwise — and table rows and list cards match their
+      skeleton's height within ±2px in the skeleton spec (owner, 2026-11-25).
 
 ## Plans: a new module starts with one
 

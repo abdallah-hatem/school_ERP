@@ -11,7 +11,7 @@ import { PageHeader } from '@/shared/components/layout/page-header';
 import { Button } from '@/shared/components/ui/button';
 import { Money } from '@/shared/components/ui/figures';
 import { OpenIcon, PayrollIcon } from '@/shared/components/ui/icons';
-import { SkeletonPill } from '@/shared/components/ui/skeleton';
+import { SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
 import { formatCount, formatMonth } from '@/shared/lib/format';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { listQueryString, taxesOf, type AccountingPayrollListQuery } from '../lib/accounting-payroll';
@@ -75,6 +75,7 @@ export function PayrollList({ basePath, hrPayrollHref, query, months, total }: P
       header: t('accounting.payroll.list.columns.employees'),
       align: 'end',
       className: 'w-28',
+      skeleton: <SkeletonText figures width="w-8" />,
       cell: (m) => <span className="tabular">{formatCount(m.totals.employees)}</span>,
     },
     {
@@ -82,6 +83,7 @@ export function PayrollList({ basePath, hrPayrollHref, query, months, total }: P
       header: t('accounting.payroll.list.columns.net'),
       align: 'end',
       className: 'w-40',
+      skeleton: <SkeletonText figures width="w-24" />,
       cell: (m) => money(m.totals.net),
     },
     {
@@ -89,6 +91,7 @@ export function PayrollList({ basePath, hrPayrollHref, query, months, total }: P
       header: t('accounting.payroll.list.columns.insurance'),
       align: 'end',
       className: 'w-40',
+      skeleton: <SkeletonText figures width="w-16" />,
       cell: (m) => money(m.totals.insuranceAmount),
     },
     {
@@ -96,6 +99,7 @@ export function PayrollList({ basePath, hrPayrollHref, query, months, total }: P
       header: t('accounting.payroll.list.columns.taxes'),
       align: 'end',
       className: 'w-40',
+      skeleton: <SkeletonText figures width="w-20" />,
       cell: (m) => money(taxesOf(m.totals)),
     },
     {
@@ -104,6 +108,7 @@ export function PayrollList({ basePath, hrPayrollHref, query, months, total }: P
       align: 'end',
       className: 'w-44',
       card: 'highlight',
+      skeleton: <SkeletonText figures className="font-bold" width="w-24" />,
       cell: (m) => money(m.totals.gross, true),
     },
     rowActionsColumn(t('accounting.payroll.list.columns.actions'), (m) => (

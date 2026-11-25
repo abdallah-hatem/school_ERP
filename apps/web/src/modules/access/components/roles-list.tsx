@@ -12,7 +12,7 @@ import { EmptyState } from '@/shared/components/layout/empty-state';
 import { PageHeader } from '@/shared/components/layout/page-header';
 import { Button } from '@/shared/components/ui/button';
 import { AddIcon, CopyIcon, EditIcon, OpenIcon, ReadyIcon, RemoveIcon } from '@/shared/components/ui/icons';
-import { SkeletonIdentity, SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
+import { SkeletonAvatarStack, SkeletonIdentity, SkeletonPill, SkeletonProse, SkeletonText } from '@/shared/components/ui/skeleton';
 import { formatCount } from '@/shared/lib/format';
 import { localName, otherName } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
@@ -59,7 +59,8 @@ export function RolesList({ basePath, roles, holders, error = false }: RolesList
       header: t('access.roles.columns.role'),
       card: 'title',
       className: 'min-w-60',
-      skeleton: <SkeletonIdentity />,
+      // The name inherits the size around it (text-sm in the table, the card's 16px on a phone).
+      skeleton: <SkeletonIdentity nameClassName="font-bold" />,
       cell: (r) => (
         <span className="flex min-w-0 items-center gap-3">
           <RoleTile role={r} />
@@ -90,7 +91,13 @@ export function RolesList({ basePath, roles, holders, error = false }: RolesList
       id: 'permissions',
       header: t('access.roles.columns.permissions'),
       className: 'w-44',
-      skeleton: <SkeletonText className="text-sm" width="w-24" />,
+      // The usual wording in the cell's own figures face: in Arabic its Latin line box is 2px taller
+      // than a plain text bar's, which a phone card shows.
+      skeleton: (
+        <span className="tabular font-bold">
+          <SkeletonProse>{t('access.roles.permissionCount', { count: formatCount(30) })}</SkeletonProse>
+        </span>
+      ),
       cell: (r) => (
         <span className="tabular font-bold">
           {r.key === SYSTEM_ADMIN_ROLE
@@ -103,6 +110,12 @@ export function RolesList({ basePath, roles, holders, error = false }: RolesList
       id: 'heldBy',
       header: t('access.roles.columns.heldBy'),
       className: 'w-48',
+      // The avatars (size-7) and the count beside them.
+      skeleton: (
+        <SkeletonAvatarStack>
+          <SkeletonText className="text-sm" width="w-14" />
+        </SkeletonAvatarStack>
+      ),
       cell: (r) => (
         <span className="flex items-center gap-2">
           <AvatarStack people={holders[r.id] ?? []} />

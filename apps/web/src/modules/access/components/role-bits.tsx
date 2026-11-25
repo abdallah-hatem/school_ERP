@@ -95,7 +95,11 @@ export type RoleHolder = Pick<UserAccount, 'id' | 'employee' | 'isActive'>;
 export function AvatarStack({ people, max = 3 }: { people: RoleHolder[]; max?: number }) {
   if (people.length === 0) return null;
   return (
-    <span aria-hidden="true" className="flex -space-x-2 rtl:space-x-reverse">
+    // -my-1: the 28px tiles sit in the 20px text line beside them, so a role somebody holds is as
+    // tall as one nobody does (a row or card doesn't grow with its data, and its skeleton matches).
+    // Tailwind 4's space-x is logical, so it overlaps the right way in Arabic as it is; the old
+    // `rtl:space-x-reverse` pushed the first avatar out past the start edge.
+    <span aria-hidden="true" className="-my-1 flex -space-x-2">
       {people.slice(0, max).map((p) => (
         <PersonAvatar
           key={p.id}
