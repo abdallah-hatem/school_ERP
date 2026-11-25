@@ -259,10 +259,11 @@ export class PayrollService {
     // kind ("2 penalties: 0.5 day, 5%") — catalogue data, no EGP taken — instead of a bare "0 days".
     const hidden = lines.filter((l) => !paid.has(l.employeeId));
     const byEmployee = hidden.length ? (await this.penalties.payrollInputs(run.month)).approved : new Map<string, PenaltyDeduction[]>();
-    const withKinds = (line: PayrollLine): PayrollLine =>
-      line.salaryVisible
-        ? line
-        : { ...line, deductingPenalties: (byEmployee.get(line.employeeId) ?? []).filter(costsPay) };
+    const withKinds = (line: PayrollLine): PayrollLine => {
+      if (line.salaryVisible) return line;
+      const kinds = (byEmployee.get(line.employeeId) ?? []).filter(costsPay);
+      return kinds.length ? { ...line, deductingPenalties: kinds } : line;
+    };
     return {
       ...this.toSummary(run, totals.get(id)!, view),
       pendingPenalties,

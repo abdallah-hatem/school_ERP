@@ -84,8 +84,9 @@ describe('penalty actions — money scenarios (S1–S24, S63)', () => {
     expect(shares.reduce((a, b) => a + b, 0)).toBe(25_000);
   });
 
-  it('S12 — fixed amounts are added as they are: 300 + 150.50 + 1,250 = 1,750.50, net 7,249.50', () => {
-    expect(line(900_000, [fixed(30_000), fixed(15_050), fixed(125_000)])).toMatchObject({ penaltyAmount: 175_050, net: 724_950 });
+  // The scenario says 1,750.50 / 7,249.50: its own sum is off by 50.00 (300 + 150.50 + 1,250 = 1,700.50).
+  it('S12 — fixed amounts are added as they are: 300 + 150.50 + 1,250 = 1,700.50, net 7,299.50', () => {
+    expect(line(900_000, [fixed(30_000), fixed(15_050), fixed(125_000)])).toMatchObject({ penaltyAmount: 170_050, net: 729_950 });
   });
 
   it('S13 — a fixed amount for a part-timer is not scaled: 300.00, net 5,700.00 (owner Q8)', () => {

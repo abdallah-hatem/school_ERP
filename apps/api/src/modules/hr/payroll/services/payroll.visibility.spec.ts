@@ -119,6 +119,7 @@ function makeService(scopes: Parameters<typeof fakeAccess>[0], salaryIds: string
   const penalties = {
     pendingCountInMonth: jest.fn().mockResolvedValue(0),
     recountedInMonthSince: jest.fn().mockResolvedValue(false),
+    payrollInputs: jest.fn().mockResolvedValue({ approved: new Map(), pending: new Map() }),
     approvedInMonth: jest.fn().mockResolvedValue([
       {
         date: '2026-10-05',
