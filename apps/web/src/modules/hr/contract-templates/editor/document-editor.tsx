@@ -2,6 +2,7 @@
 
 import type { ContractDocument, ContractFieldKey, ContractFieldValues, ContractLanguage } from '@school-erp/shared';
 import { TableKit } from '@tiptap/extension-table';
+import { EditorState } from '@tiptap/pm/state';
 import TextAlign from '@tiptap/extension-text-align';
 import { Placeholder } from '@tiptap/extensions';
 import { EditorContent, useEditor, useEditorState, type Editor } from '@tiptap/react';
@@ -45,6 +46,12 @@ export interface DocumentEditorHandle {
   /** Puts a field chip at the cursor (the Fields panel). */
   insertField: (key: ContractFieldKey) => void;
   focus: () => void;
+  /**
+   * Puts `document` back as the text with a fresh undo history (Discard changes), without an
+   * `onChange` and without taking focus, and returns the editor's JSON of it; null while the
+   * editor isn't created yet.
+   */
+  reset: (document: ContractDocument) => unknown;
 }
 
 export interface DocumentEditorProps {
@@ -129,6 +136,16 @@ export function DocumentEditor({
         editor.chain().focus().insertContent({ type: 'field', attrs: { key } }).run();
       },
       focus: () => editor?.commands.focus(),
+      reset: (document) => {
+        if (!editor) return null;
+        editor.commands.setContent(document as unknown as Record<string, unknown>, { emitUpdate: false });
+        // A fresh state on the same text: undo can't bring the discarded edits back.
+        const { state } = editor;
+        editor.view.updateState(EditorState.create({ schema: state.schema, doc: state.doc, plugins: state.plugins }));
+        // A no-op transaction, so the toolbar re-reads its state (undo and redo off).
+        editor.view.dispatch(editor.state.tr.setMeta('addToHistory', false));
+        return editor.getJSON();
+      },
     }),
     [editor],
   );

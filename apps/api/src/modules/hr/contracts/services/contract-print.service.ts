@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import {
   AuditEntityType,
+  canonicalJson,
   CONTRACT_COPIES_SHOWN,
   CONTRACT_FIELDS,
   CONTRACT_SALARY_FIELDS,
@@ -39,7 +40,6 @@ import { FileStorageService, SettingsService } from '../../../../core/settings';
 import { AfterCommit } from '../../../../database/transactions';
 import { inScope, type EmployeeScope, type ScopedEmployee } from '../../access/employee-scope.pure';
 import { HrAccessService, VIEW_SALARY } from '../../access/hr-access.service';
-import { canonicalJson } from '../../contract-templates/contract-templates.pure';
 import { ContractTemplatesRepository, type TemplateWithVersion } from '../../contract-templates/repositories/contract-templates.repository';
 import {
   contractFooterTemplate,

@@ -1,7 +1,7 @@
 'use client';
 
 import { Skeleton, SkeletonButton, SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
-import { ContractFieldIcon, SaveIcon, ShowIcon } from '@/shared/components/ui/icons';
+import { ContractFieldIcon, RestoreIcon, SaveIcon, ShowIcon } from '@/shared/components/ui/icons';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { settingsHref } from '@school-erp/shared';
 import { ContractTemplatesI18n } from '../messages';
@@ -9,7 +9,7 @@ import { TemplateEditorHeader } from './editor-header';
 
 /*
  * The template editor's loading shape (docs/ARCHITECTURE.md → Skeletons match their screens): the
- * back link, the header with its pills and two buttons, the names card, the toolbar over the A4
+ * back link, the header with its pills and three buttons, the names card, the toolbar over the A4
  * canvas, and the Fields panel — the same frames and `data-skeleton-block`s as the loaded page.
  */
 
@@ -98,6 +98,10 @@ export function TemplateEditorSkeleton({ listHref, isNew = false }: { listHref: 
             <SkeletonButton>
               <ShowIcon />
               {t('contractTemplates.editor.preview')}
+            </SkeletonButton>
+            <SkeletonButton>
+              <RestoreIcon />
+              {t('contractTemplates.editor.discard.button')}
             </SkeletonButton>
             <SkeletonButton>
               <SaveIcon />

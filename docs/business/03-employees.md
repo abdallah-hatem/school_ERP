@@ -245,6 +245,9 @@ mockup option A).
   **Editing never changes copies already printed**: each save that changes a text is a new version
   (v1, v2, …), kept forever; renaming, hiding and the default mark are not versions. Two people
   saving the same template: the second is refused, never a silent overwrite.
+- **DECIDED** (owner, 2026-11-25) — **Discard changes** in the template editor puts back the last
+  saved version (both names, the default mark and both texts; a new template: empty), after asking.
+  It can be pressed only while something was changed, and nothing is saved or recorded.
 - **GUESS** — **Fields** are chips from the Fields panel, never typed: 19 fields from the employee
   file, the contract (this contract's own dates as signed; the employee's salary **today**, in
   figures and in words), school settings (name, address, representative) and today's date, filled

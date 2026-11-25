@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  canonicalJson,
   emptyContractDocument,
   settingsHref,
   WORK_SYSTEMS,
@@ -16,7 +17,7 @@ import { useCallback, useId, useMemo, useRef, useState } from 'react';
 import { callApi } from '@/lib/callApi';
 import { Button } from '@/shared/components/ui/button';
 import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
-import { ContractFieldIcon, SaveIcon, ShowIcon } from '@/shared/components/ui/icons';
+import { ContractFieldIcon, RestoreIcon, SaveIcon, ShowIcon } from '@/shared/components/ui/icons';
 import { Input } from '@/shared/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select';
 import { Sheet, SheetContent, SheetTitle } from '@/shared/components/ui/sheet';
@@ -54,14 +55,25 @@ interface Meta {
   updatedBy: string | null;
 }
 
-const asString = (doc: unknown) => JSON.stringify(toStoredDocument(doc));
+/**
+ * A text as compared for "unsaved changes": cleaned, keys sorted (the editor's key order varies), and
+ * without the empty paragraphs at its end — the editor adds one after a closing table on its first
+ * change, so typing and deleting back would otherwise still count as a change.
+ */
+function asString(doc: unknown): string {
+  const stored = toStoredDocument(doc);
+  const content = [...stored.content];
+  while (content.length > 1 && isEmptyDocument({ ...stored, content: content.slice(-1) })) content.pop();
+  return canonicalJson({ ...stored, content });
+}
 
 /**
  * The template editor (spec → Screens; mockup A `a-*-editor.png`): names, the work system it is the
  * default for, the two texts (Arabic required, English optional — each its own document, edited in
  * its own direction), the Fields panel, "Preview with an employee" and Save. A save that changes a
  * text makes a new version; a stale one is refused (`TEMPLATE_CHANGED`) and says so. Leaving with
- * unsaved changes asks first. On a phone the fields open as a bottom sheet and a sticky bar saves.
+ * unsaved changes asks first, and Discard changes puts the last saved version back (names, default
+ * and both texts, the undo history cleared; nothing is sent). On a phone the fields open as a bottom sheet and a sticky bar saves.
  */
 export function TemplateEditor({ template, listHref }: { template: ContractTemplate | null; listHref: string }) {
   const { t, has, locale } = useTranslation();
@@ -90,6 +102,8 @@ export function TemplateEditor({ template, listHref }: { template: ContractTempl
   );
   // The editors' JSON now, and what was last saved (the "unsaved changes" baseline).
   const docs = useRef<Record<ContractLanguage, unknown>>({ AR: initialDocs.AR, EN: initialDocs.EN });
+  // The last saved texts themselves, which Discard changes puts back.
+  const savedDocs = useRef<Record<ContractLanguage, ContractDocument>>(initialDocs);
   const [baseline, setBaseline] = useState<Record<ContractLanguage, string | null>>({ AR: null, EN: null });
   const [current, setCurrent] = useState<Record<ContractLanguage, string | null>>({ AR: null, EN: null });
   const [saving, setSaving] = useState(false);
@@ -98,6 +112,9 @@ export function TemplateEditor({ template, listHref }: { template: ContractTempl
   const [previewing, setPreviewing] = useState<{ AR: ContractDocument; EN: ContractDocument | null } | null>(null);
   const [fieldsOpen, setFieldsOpen] = useState(false);
   const [leaving, setLeaving] = useState<string | (() => void) | null>(null);
+  const [discarding, setDiscarding] = useState(false);
+  // Set on a confirmed discard: focus goes to the text, not back to the (now disabled) button.
+  const focusTextOnClose = useRef(false);
   const editors = useRef<Record<ContractLanguage, DocumentEditorHandle | null>>({ AR: null, EN: null });
 
   const textsDirty = (['AR', 'EN'] as const).some((l) => current[l] !== null && baseline[l] !== null && current[l] !== baseline[l]);
@@ -156,6 +173,7 @@ export function TemplateEditor({ template, listHref }: { template: ContractTempl
       const next = res.data.template;
       // What is on screen is now what is saved.
       setBaseline({ AR: asString(docs.current.AR), EN: asString(docs.current.EN) });
+      savedDocs.current = { AR: toStoredDocument(docs.current.AR), EN: toStoredDocument(docs.current.EN) };
       setSavedNames({ nameEn: next.nameEn, nameAr: next.nameAr, defaultFor: next.defaultForWorkSystem });
       setMeta({ id: next.id, version: next.version, updatedAt: next.updatedAt, updatedBy: next.updatedBy?.name ?? null });
       if (!meta.id) router.replace(`${listHref.split('?')[0]}/contract-templates/${next.id}`);
@@ -163,6 +181,24 @@ export function TemplateEditor({ template, listHref }: { template: ContractTempl
     } finally {
       setSaving(false);
     }
+  }
+
+  /** Discard changes, confirmed: back to the last saved version (a new template: empty). No API call. */
+  function discard() {
+    setNameEn(savedNames.nameEn);
+    setNameAr(savedNames.nameAr);
+    setDefaultFor(savedNames.defaultFor);
+    setTouched(false);
+    setError(null);
+    const next = { ...current };
+    for (const l of ['AR', 'EN'] as const) {
+      const json = editors.current[l]?.reset(savedDocs.current[l]);
+      if (json === null || json === undefined) continue;
+      docs.current[l] = json;
+      next[l] = asString(json);
+    }
+    setCurrent(next);
+    focusTextOnClose.current = true;
   }
 
   function openPreview() {
@@ -233,6 +269,10 @@ export function TemplateEditor({ template, listHref }: { template: ContractTempl
             <Button variant="secondary" onClick={openPreview}>
               <ShowIcon />
               {t('contractTemplates.editor.preview')}
+            </Button>
+            <Button variant="secondary" disabled={!dirty || saving} onClick={() => setDiscarding(true)}>
+              <RestoreIcon />
+              {t('contractTemplates.editor.discard.button')}
             </Button>
             <Button variant="primary" loading={saving} onClick={() => void save()}>
               <SaveIcon />
@@ -349,6 +389,22 @@ export function TemplateEditor({ template, listHref }: { template: ContractTempl
       {previewing ? (
         <PreviewDialog open onOpenChange={(o) => !o && setPreviewing(null)} documents={previewing} language={previewing.EN ? language : 'AR'} />
       ) : null}
+
+      <ConfirmDialog
+        open={discarding}
+        onOpenChange={setDiscarding}
+        title={t('contractTemplates.editor.discard.title')}
+        description={t('contractTemplates.editor.discard.body')}
+        confirmLabel={t('contractTemplates.editor.discard.confirm')}
+        tone="destructive"
+        onConfirm={discard}
+        onCloseAutoFocus={(e) => {
+          if (!focusTextOnClose.current) return;
+          focusTextOnClose.current = false;
+          e.preventDefault();
+          editors.current[language]?.focus();
+        }}
+      />
 
       <ConfirmDialog
         open={leaving !== null}
