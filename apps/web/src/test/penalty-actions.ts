@@ -60,6 +60,7 @@ export function actionItem(action: PenaltyActionRef & { isActive?: boolean }, ov
     isActive: action.isActive ?? true,
     levelsUsing: 0,
     violationsUsing: 0,
+    retiredViolationsUsing: 0,
     ...over,
   };
 }

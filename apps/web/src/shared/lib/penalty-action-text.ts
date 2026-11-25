@@ -1,5 +1,6 @@
 import {
   formatAmountShort,
+  formatMoney,
   formatPercent,
   PenaltyEffect,
   PenaltySalaryBase,
@@ -48,4 +49,53 @@ export function describeAction(
 export function deductsPay(effect: PenaltyEffect, numbers: ActionNumbers): boolean {
   if (effect === PenaltyEffect.DEDUCT_PERCENT || effect === PenaltyEffect.DEDUCT_AMOUNT) return true;
   return (effect === PenaltyEffect.DEDUCT_DAYS || effect === PenaltyEffect.INVESTIGATION) && (numbers.days ?? 0) > 0;
+}
+
+/**
+ * The payslip's label for a penalty (owner Q12, Q13, 2026-11-26): the effect's text, then the
+ * action's own name in brackets when it isn't the effect's default name — "Deduct EGP 200 (Late
+ * uniform fine)"; a % of the basic salary says the base it was taken from — "Deduct 10% of the basic
+ * salary (12,345.67)". Record-only actions and investigations already read by their name.
+ */
+export function payslipActionLabel(
+  t: Translate,
+  locale: Locale,
+  action: Pick<PenaltyActionRef, 'nameEn' | 'nameAr' | 'effect' | 'percentBase'>,
+  numbers: ActionNumbers,
+  basicSalary: number | undefined,
+): string {
+  const ofBasic =
+    action.effect === PenaltyEffect.DEDUCT_PERCENT &&
+    action.percentBase === PenaltySalaryBase.BASIC_SALARY &&
+    numbers.percent != null &&
+    basicSalary !== undefined;
+  const text = ofBasic
+    ? t('common.penaltyLabel.percentBasicWithBase', { percent: formatPercent(numbers.percent!), base: formatMoney(basicSalary) })
+    : describeAction(t, locale, action, numbers);
+  const deducting =
+    action.effect === PenaltyEffect.DEDUCT_DAYS ||
+    action.effect === PenaltyEffect.DEDUCT_PERCENT ||
+    action.effect === PenaltyEffect.DEDUCT_AMOUNT;
+  const name = nameIn(action, locale);
+  return deducting && name !== t(`common.enums.penaltyEffect.${action.effect}`) ? `${text} (${name})` : text;
+}
+
+/**
+ * A payroll line's deducting penalties by kind, for a viewer without salary access (owner Q9):
+ * "2 penalties: 0.5 day, 5%" — days, percents and catalogue amounts, never the EGP taken.
+ */
+export function penaltyKinds(
+  t: Translate,
+  locale: Locale,
+  penalties: readonly (ActionNumbers & { effect: PenaltyEffect })[],
+): string {
+  const kinds = penalties.map((p) => {
+    if (p.effect === PenaltyEffect.DEDUCT_PERCENT && p.percent != null) return `${formatPercent(p.percent)}%`;
+    if (p.effect === PenaltyEffect.DEDUCT_AMOUNT && p.amount != null) {
+      const amount = formatAmountShort(p.amount);
+      return locale === 'ar' ? `${amount} ${t('ui.units.currency')}` : `${t('ui.units.currency')} ${amount}`;
+    }
+    return formatDayCount(p.days ?? 0, locale);
+  });
+  return t('payroll.penaltyKinds', { count: penalties.length, kinds: kinds.join(locale === 'ar' ? '، ' : ', ') });
 }

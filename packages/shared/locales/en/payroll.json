@@ -52,7 +52,7 @@
     "pendingLink": "Review pending penalties",
     "staleTitle": "Penalties changed since the last calculation",
     "staleBody": "Some lines still show pending penalties from the last calculation. Recalculate to update them.",
-    "recountedBody": "Approving a backdated penalty raised the level of approved penalties dated this month. Recalculate to update the deductions.",
+    "recountedBody": "Penalties dated this month were approved, cancelled or moved up a level after the last calculation. Recalculate to update the deductions.",
     "staleAction": "Recalculate now"
   },
   "tiles": {
@@ -216,7 +216,8 @@
     "netFloored": "Deductions exceeded the salary, so net pay is 0.",
     "level": "Level {level}",
     "draftTitle": "No payslip yet",
-    "printNote": "Printed from the payroll system."
+    "printNote": "Printed from the payroll system.",
+    "notDeducted": "Not deducted (pay too low)"
   },
   "profile": {
     "tableLabel": "Payroll lines",
@@ -240,5 +241,13 @@
     "history": "History",
     "historyDescription": "Who did what on this month's payroll — created, recalculated, adjusted, approved — newest first.",
     "historyEmptyBody": "Creating, recalculating, adjusting and approving this month's payroll will be listed here, with who did it."
+  },
+  "penaltyKinds": {
+    "zero": "{count} penalties",
+    "one": "{count} penalty: {kinds}",
+    "two": "{count} penalties: {kinds}",
+    "few": "{count} penalties: {kinds}",
+    "many": "{count} penalties: {kinds}",
+    "other": "{count} penalties: {kinds}"
   }
 }

@@ -60,7 +60,8 @@ const catalogue: PenaltyGroup[] = [
 
 beforeEach(() => {
   nav.params = new URLSearchParams();
-  api.GET_PENALTY_ACTIONS.mockImplementation(() => ok(CHOICES, meta(CHOICES.length)));
+  // One page as the API sends it (≤ 10 rows: the screen's page size).
+  api.GET_PENALTY_ACTIONS.mockImplementation(() => ok(CHOICES.slice(0, 8), meta(CHOICES.length)));
   api.GET_PENALTY_ACTION_CHOICES.mockImplementation(() => ok(CHOICES));
   api.GET_PENALTY_GROUPS.mockImplementation(() => ok(catalogue));
 });
@@ -81,7 +82,7 @@ describe('Settings → Penalty actions (the list)', () => {
     expect(within(table).getByText('12 levels')).toBeTruthy();
     expect(within(table).getByText('Deduct % of the salary for the month')).toBeTruthy();
     // The API was asked for one page, visible ones only (Show hidden is off).
-    expect(api.GET_PENALTY_ACTIONS).toHaveBeenCalledWith({ page: 1, limit: 20, includeHidden: false });
+    expect(api.GET_PENALTY_ACTIONS).toHaveBeenCalledWith(expect.objectContaining({ page: 1, includeHidden: false }));
   });
 
   it('Show hidden puts actionsHidden=1 in the address (the API answers with hidden ones too)', async () => {

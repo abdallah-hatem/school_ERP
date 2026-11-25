@@ -228,12 +228,18 @@ export function PenaltyActionsCard({ onChanged }: { onChanged?: () => void }) {
         onOpenChange={(o) => !o && setHiding(null)}
         title={copy('hideTitle', { name: hiding ? localName(hiding, locale) : '' })}
         description={
-          hiding && hiding.levelsUsing > 0
+          [
+            hiding && hiding.levelsUsing > 0
             ? copy('hideBody', {
                 levels: copy('hideLevels', { count: formatCount(hiding.levelsUsing) }),
                 violations: copy('hideViolations', { count: formatCount(hiding.violationsUsing) }),
               })
-            : copy('hideBodyUnused')
+            : copy('hideBodyUnused'),
+            // Retired violations still holding it, said apart (owner Q19).
+            hiding && hiding.retiredViolationsUsing > 0 ? copy('hideRetired', { count: formatCount(hiding.retiredViolationsUsing) }) : '',
+          ]
+            .join(' ')
+            .trim()
         }
         confirmLabel={t('settings.lists.hide')}
         tone="destructive"

@@ -402,6 +402,14 @@
       "few": "{count} violations",
       "many": "{count} violations",
       "other": "{count} violations"
+    },
+    "hideRetired": {
+      "zero": "",
+      "one": "A retired violation holds it too.",
+      "two": "{count} retired violations hold it too.",
+      "few": "{count} retired violations hold it too.",
+      "many": "{count} retired violations hold it too.",
+      "other": "{count} retired violations hold it too."
     }
   },
   "accounting": {

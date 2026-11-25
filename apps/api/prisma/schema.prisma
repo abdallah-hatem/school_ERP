@@ -762,8 +762,8 @@ model EmployeeStage {
 /// migration and the dashboard's chart kinds, never for a rule.
 ///
 /// WARNING: three rules exist only in SQL (migration 20261126100000_penalty_actions), Prisma can't
-/// declare them: the case-insensitive unique indexes `penalty_actions_name_en_lower_key` /
-/// `penalty_actions_name_ar_lower_key` (on lower(name)), and the check
+/// declare them: the folded unique indexes `penalty_actions_name_en_fold_key` /
+/// `penalty_actions_name_ar_fold_key` (on search_fold(name): case, Arabic variants, spaces), and the check
 /// `penalty_actions_percent_base_check` (percent_base set exactly for DEDUCT_PERCENT). Never drop
 /// them; recreate them in any migration that rebuilds this table or those columns.
 model PenaltyAction {

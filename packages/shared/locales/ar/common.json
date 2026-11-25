@@ -216,6 +216,7 @@
     "investigation": "{name} مع خصم {days}",
     "percentMonth": "خصم ⁦{percent}%⁩ من أجر الشهر",
     "percentBasic": "خصم ⁦{percent}%⁩ من الأجر الأساسي",
-    "amount": "خصم {amount} جنيه"
+    "amount": "خصم {amount} جنيه",
+    "percentBasicWithBase": "خصم ⁦{percent}%⁩ من الأجر الأساسي (⁦{base}⁩)"
   }
 }

@@ -38,10 +38,12 @@ CREATE TABLE "penalty_actions" (
 -- CreateIndex
 CREATE UNIQUE INDEX "penalty_actions_code_key" ON "penalty_actions"("code");
 
--- Names are unique in each language, any case, hidden actions included (SQL only: Prisma can't
--- declare an index on lower(...)). Two people adding the same name at once: one wins.
-CREATE UNIQUE INDEX "penalty_actions_name_en_lower_key" ON "penalty_actions"(lower("name_en"));
-CREATE UNIQUE INDEX "penalty_actions_name_ar_lower_key" ON "penalty_actions"(lower("name_ar"));
+-- Names are unique in each language, hidden actions included, compared the way search compares
+-- them (search_fold: case, accents and Arabic marks ignored, أ/إ/آ → ا, ى → ي, ة → ه, spaces
+-- collapsed and trimmed — owner Q16, 2026-11-26). SQL only: Prisma can't declare an index on an
+-- expression. Two people adding the same name at once: one wins.
+CREATE UNIQUE INDEX "penalty_actions_name_en_fold_key" ON "penalty_actions"(search_fold("name_en"));
+CREATE UNIQUE INDEX "penalty_actions_name_ar_fold_key" ON "penalty_actions"(search_fold("name_ar"));
 
 -- CreateIndex
 CREATE INDEX "penalty_actions_is_active_idx" ON "penalty_actions"("is_active");

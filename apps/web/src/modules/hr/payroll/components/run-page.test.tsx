@@ -228,7 +228,7 @@ describe('RunPage — approve', () => {
       renderRun({ run: run({ lines: [MONA], penaltiesRecounted: true, rulesChanged: true }) }, locale);
       const hint = screen.getByTestId('penalties-recounted-notice');
       expect(hint.textContent).toContain(
-        locale === 'en' ? 'raised the level of approved penalties dated this month' : 'رفع اعتماد جزاء بتاريخ سابق',
+        locale === 'en' ? 'approved, cancelled or moved up a level after the last calculation' : 'بعد آخر حساب',
       );
       // One hint, one Recalculate: the rules hint steps aside.
       expect(screen.getAllByRole('note')).toHaveLength(1);

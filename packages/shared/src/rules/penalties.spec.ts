@@ -3,6 +3,7 @@ import {
   isValidPenaltyPercent,
   levelValueProblem,
   percentHundredths,
+  storedLevelDays,
   violationLevelsProblem,
   type LevelCheck,
 } from './penalties';
@@ -50,6 +51,10 @@ describe('levelValueProblem (spec 2026-11-25-penalty-actions)', () => {
     expect(levelValueProblem('INVESTIGATION', {})).toBeNull();
     expect(levelValueProblem('INVESTIGATION', { days: 2 })).toBeNull();
     expect(levelValueProblem('INVESTIGATION', { days: 0.3 })).toBe('DAYS_INVALID');
+    // Owner Q11 (2026-11-26): 0 days on an investigation means none — valid, stored as null.
+    expect(levelValueProblem('INVESTIGATION', { days: 0 })).toBeNull();
+    expect(storedLevelDays('INVESTIGATION', 0)).toBeNull();
+    expect(storedLevelDays('DEDUCT_DAYS', 0)).toBe(0);
     expect(levelValueProblem('INVESTIGATION', { amount: 100 })).toBe('VALUE_NOT_ALLOWED');
   });
 

@@ -20,7 +20,13 @@ const api = vi.hoisted(() => ({
   UPDATE_VIOLATION: vi.fn(),
 }));
 vi.mock('../apis', () => api);
-vi.mock('next/navigation', () => ({ redirect: vi.fn() }));
+vi.mock('next/navigation', () => ({
+  redirect: vi.fn(),
+  // The Penalty actions card above the groups pages through the address.
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn(), refresh: vi.fn() }),
+  usePathname: () => '/en/settings',
+  useSearchParams: () => new URLSearchParams(),
+}));
 import { chooseRowAction } from '@/test/row-actions';
 
 import { CatalogueSection } from '../components/catalogue-section';

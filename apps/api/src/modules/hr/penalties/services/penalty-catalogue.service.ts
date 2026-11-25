@@ -3,6 +3,7 @@ import {
   ErrorCode,
   HrCatalogueKey,
   matchesSearch,
+  storedLevelDays,
   violationLevelsProblem,
   type PenaltyGroup,
   type Uuid,
@@ -263,7 +264,8 @@ export class PenaltyCatalogueService {
     }
     const problem = violationLevelsProblem(levels.map((l) => ({ ...l, effect: actions.get(l.actionId)!.effect })));
     if (problem) throw CodedException.withParams(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_LEVELS, { problem });
-    return toLevelData(levels);
+    // An investigation's 0 days are stored as none (owner Q11).
+    return toLevelData(levels.map((l) => ({ ...l, days: storedLevelDays(actions.get(l.actionId)!.effect, l.days) })));
   }
 
   private recordChange(

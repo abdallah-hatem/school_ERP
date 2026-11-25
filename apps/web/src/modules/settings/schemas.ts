@@ -4,6 +4,7 @@ import {
   Language,
   levelNumberKind,
   levelValueProblem,
+  storedLevelDays,
   MAX_VIOLATION_LEVELS,
   MIN_VIOLATION_LEVELS,
   NOTIFICATION_RETENTION_LIMITS,
@@ -197,7 +198,7 @@ export function toLevelInputs(levels: ViolationFormValues['levels'], effectOf: E
     return {
       level: i + 1,
       actionId: l.actionId,
-      days: kind === 'days' ? l.value : null,
+      days: kind === 'days' && effect ? storedLevelDays(effect, l.value) : null,
       percent: kind === 'percent' ? l.value : null,
       amount: kind === 'amount' ? l.value : null,
     };

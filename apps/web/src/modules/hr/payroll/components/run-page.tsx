@@ -51,6 +51,7 @@ import {
 } from '../lib/run-query';
 import { AdjustmentsDialog, type AdjustmentsTarget } from './adjustments-dialog';
 import { DeductionAmount, LineStatus, SignedAmount } from './payroll-bits';
+import { penaltyKinds } from '@/shared/lib/penalty-action-text';
 import { RulesPanel } from './rules-panel';
 import { useRunState } from './run-shell';
 
@@ -156,7 +157,13 @@ export function RunLines({ basePath, filtered: filteredRead, selectedDepartment 
     },
     {
       ...runColumn('penalties', t),
-      cell: (line) => <DeductionAmount value={line.penaltyAmount} />,
+      // Without salary access (owner Q9): the month's deducting penalties by kind, never "0 days".
+      cell: (line) =>
+        line.penaltyAmount === undefined && line.deductingPenalties?.length ? (
+          <span className="text-xs text-muted-foreground">{penaltyKinds(t, locale, line.deductingPenalties)}</span>
+        ) : (
+          <DeductionAmount value={line.penaltyAmount} />
+        ),
     },
     {
       ...runColumn('lateness', t),

@@ -97,6 +97,12 @@ export function ownPenaltyAmount(p: PenaltyDeduction, bases: PercentBases): Pias
   return null;
 }
 
+/** Whether an approved penalty takes anything off pay: days (an investigation's too), a %, an amount. */
+export function costsPay(p: Pick<PenaltyDeduction, 'effect' | 'days'>): boolean {
+  if (p.effect === PenaltyEffect.DEDUCT_PERCENT || p.effect === PenaltyEffect.DEDUCT_AMOUNT) return true;
+  return deductedDays(p.effect, p.days) > 0;
+}
+
 /** Sum of day counts in whole quarters, so 0.25 + 0.5 never drifts. */
 export function sumDays(days: readonly Days[]): Days {
   return quartersToDays(days.reduce((q, d) => q + daysToQuarters(d), 0));
@@ -205,4 +211,37 @@ export function payslipPenaltyAmount(
   const own = ownPenaltyAmount(p, line);
   if (own !== null) return own;
   return penaltyShare(deductedDays(p.effect, p.days), line.penaltyDays, line.penaltyDaysAmount);
+}
+
+/**
+ * What the payslip shows each approved penalty took (owner Q14, 2026-11-26): a % or fixed penalty its
+ * own amount; the day penalties split the line's day-priced part by their days with the **largest
+ * remainder** method — each gets the floor of its exact share, and the piastres left go one each to
+ * the largest remainders (the earlier penalty first on a tie) — so the day shares always add up to
+ * the line exactly. Record-only and investigation without days: 0.
+ *
+ * @example payslipPenaltyAmounts([0.25, 0.25, 0.25 days], { penaltyDaysAmount: 25_000, … }) // [8_334, 8_333, 8_333]
+ */
+export function payslipPenaltyAmounts(
+  penalties: readonly PenaltyDeduction[],
+  line: PercentBases & { penaltyDaysAmount: Piastres },
+): Piastres[] {
+  const own = penalties.map((p) => ownPenaltyAmount(p, line));
+  const weights = penalties.map((p, i) => (own[i] === null ? daysToQuarters(deductedDays(p.effect, p.days)) : 0));
+  const total = weights.reduce((a, b) => a + b, 0);
+  const amount = BigInt(line.penaltyDaysAmount);
+  const floors = weights.map((w) => (total === 0 ? 0n : (amount * BigInt(w)) / BigInt(total)));
+  const remainders = weights.map((w, i) => (total === 0 ? 0n : amount * BigInt(w) - floors[i] * BigInt(total)));
+  let left = total === 0 ? 0n : amount - floors.reduce((a, b) => a + b, 0n);
+  const order = weights
+    .map((w, i) => i)
+    .filter((i) => weights[i] > 0)
+    .sort((a, b) => (remainders[b] > remainders[a] ? 1 : remainders[b] < remainders[a] ? -1 : a - b));
+  const shares = [...floors];
+  for (const i of order) {
+    if (left <= 0n) break;
+    shares[i] = shares[i] + 1n;
+    left -= 1n;
+  }
+  return penalties.map((_, i) => own[i] ?? Number(shares[i]));
 }

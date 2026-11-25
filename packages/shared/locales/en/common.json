@@ -216,6 +216,7 @@
     "investigation": "{name}, {days} deducted",
     "percentMonth": "Deduct {percent}% of the salary for the month",
     "percentBasic": "Deduct {percent}% of the basic salary",
-    "amount": "Deduct EGP {amount}"
+    "amount": "Deduct EGP {amount}",
+    "percentBasicWithBase": "Deduct {percent}% of the basic salary ({base})"
   }
 }

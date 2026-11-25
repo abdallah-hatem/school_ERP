@@ -258,9 +258,11 @@ export interface PenaltyActionItem extends PenaltyActionRef {
   code: PenaltyAction | null;
   sortOrder: number;
   isActive: boolean;
-  /** How many catalogue levels use it, and in how many violations. */
+  /** How many catalogue levels use it, in how many violations — those in use (owner Q19). */
   levelsUsing: number;
   violationsUsing: number;
+  /** Retired violations (or in a retired group) whose levels still hold it, counted apart. */
+  retiredViolationsUsing: number;
 }
 
 /** `GET /hr/penalty-actions?includeHidden&search&page&limit` — no `page`: the whole visible list. */
@@ -739,7 +741,17 @@ export interface PayrollLine extends Names, SalaryVisibility {
   adjustmentAdditions?: Piastres;
   adjustmentDeductions?: Piastres;
   net?: Piastres;
+  /**
+   * `NET_FLOORED` is left out when the line's money is (`salaryVisible` false): beside a visible
+   * fixed amount it would hint at the pay (owner Q9, 2026-11-26).
+   */
   flags: PayrollFlag[];
+  /**
+   * Only when `salaryVisible` is false, on a run's lines: the employee's approved penalties in the
+   * month that take pay, by kind (effect and number, no EGP taken) — so the line reads "2 penalties:
+   * 0.5 day, 5%" rather than "0 days" (owner Q9).
+   */
+  deductingPenalties?: { effect: PenaltyEffect; percentBase: PenaltySalaryBase | null; days: Days | null; percent: number | null; amount: Piastres | null }[];
 }
 
 /**
@@ -856,6 +868,11 @@ export interface Payslip extends PayrollLine {
   penalties: PayslipPenalty[];
   /** `amount` is absent when the payslip's `salaryVisible` is false. */
   adjustments: { type: AdjustmentType; amount?: Piastres; reason: string }[];
+  /**
+   * What the floor at 0 left undeducted this month (owner Q4, 2026-11-26: written off, never carried
+   * forward); 0 when the net wasn't floored. Absent when `salaryVisible` is false.
+   */
+  notDeducted?: Piastres;
   school: { nameEn: string; nameAr: string; logoUrl: string | null };
 }
 

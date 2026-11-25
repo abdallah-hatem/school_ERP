@@ -34,10 +34,14 @@ export interface PenaltyActionUpdateData {
   isActive?: boolean;
 }
 
-/** How many catalogue levels use an action, and in how many violations. */
+/**
+ * Where an action is used (owner Q19, 2026-11-26): levels and violations in use now (the violation
+ * and its group active), and retired violations that still hold it, counted apart.
+ */
 export interface ActionUsage {
   levels: number;
   violations: number;
+  retiredViolations: number;
 }
 
 /** A write refused by the case-insensitive unique name indexes (`penalty_actions_name_*_lower_key`). */
@@ -122,19 +126,24 @@ export class PenaltyActionsRepository extends BaseRepository<PenaltyActionRow, P
     }
   }
 
-  /** Per action: how many levels use it, in how many violations (one query for a page). */
+  /** Per action: levels and violations in use now, and retired violations holding it (one query for a page). */
   async usage(ids: readonly string[]): Promise<Map<string, ActionUsage>> {
-    const out = new Map<string, ActionUsage>(ids.map((id) => [id, { levels: 0, violations: 0 }]));
+    const out = new Map<string, ActionUsage>(ids.map((id) => [id, { levels: 0, violations: 0, retiredViolations: 0 }]));
     if (ids.length === 0) return out;
-    const groups = await this.db.violationLevel.groupBy({
-      by: ['actionId', 'violationId'],
+    const rows = await this.db.violationLevel.findMany({
       where: { actionId: { in: [...ids] } },
-      _count: { _all: true },
+      select: { actionId: true, violationId: true, violation: { select: { isActive: true, group: { select: { isActive: true } } } } },
     });
-    for (const g of groups) {
-      const u = out.get(g.actionId)!;
-      u.levels += g._count._all;
-      u.violations += 1;
+    const seen = new Set<string>();
+    for (const r of rows) {
+      const u = out.get(r.actionId)!;
+      const active = r.violation.isActive && r.violation.group.isActive;
+      if (active) u.levels += 1;
+      const key = `${r.actionId}:${r.violationId}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      if (active) u.violations += 1;
+      else u.retiredViolations += 1;
     }
     return out;
   }

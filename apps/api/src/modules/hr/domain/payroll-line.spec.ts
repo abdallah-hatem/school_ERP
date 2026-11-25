@@ -14,6 +14,7 @@ import {
   monthSalary,
   ownPenaltyAmount,
   payslipPenaltyAmount,
+  payslipPenaltyAmounts,
   penaltyShare,
   percentOf,
   sumAdjustments,
@@ -255,7 +256,8 @@ describe('payslip amounts per penalty', () => {
  * The owner's rule for the move: today's day deductions don't change by a piastre. Every violation
  * of today's seeded catalogue, each level and all its levels in one month, over a sweep of salaries
  * and every work system: the line's penalty amount equals the old rule's
- * `round(Σ days × month salary ÷ divisor)` and each payslip share equals the old share.
+ * `round(Σ days × month salary ÷ divisor)`; the payslip shares add up to it exactly (largest
+ * remainder, owner Q14) and each is within a piastre of the old half-up share.
  */
 describe("day deductions are unchanged over today's seeded catalogue", () => {
   const effectOf = new Map(SEEDED_PENALTY_ACTIONS.map((a) => [a.code as string, a.effect]));
@@ -293,11 +295,13 @@ describe("day deductions are unchanged over today's seeded catalogue", () => {
             const old = oldAmount(dayList, salary, divisor);
             expect(got.penaltyAmount).toBe(old);
             expect(got.penaltyDaysAmount).toBe(old);
-            for (const p of group) {
-              expect(payslipPenaltyAmount(p, { ...got, basicSalary })).toBe(
-                oldShare(deductedDays(p.effect, p.days), got.penaltyDays, old),
-              );
-            }
+            // Owner Q14 (2026-11-26): the day shares are split by largest remainder, so they add up
+            // to the line exactly; each is within a piastre of the old half-up share.
+            const shares = payslipPenaltyAmounts(group, { ...got, basicSalary });
+            expect(shares.reduce((a, b) => a + b, 0)).toBe(old);
+            group.forEach((p, i) => {
+              expect(Math.abs(shares[i] - oldShare(deductedDays(p.effect, p.days), got.penaltyDays, old))).toBeLessThanOrEqual(1);
+            });
           }
         }
       }

@@ -88,7 +88,10 @@ export function levelValueProblem(effect: PenaltyEffect, level: LevelValueInput)
     case null:
       return null;
     case 'days': {
-      if (!given(level.days)) return effect === PenaltyEffect.DEDUCT_DAYS ? 'DAYS_REQUIRED' : null;
+      // An investigation's days are optional: 0 means none (stored as null — owner Q11, 2026-11-26).
+      if (!given(level.days) || (effect === PenaltyEffect.INVESTIGATION && level.days === 0)) {
+        return effect === PenaltyEffect.DEDUCT_DAYS ? 'DAYS_REQUIRED' : null;
+      }
       return isValidDays(level.days) && level.days > 0 ? null : 'DAYS_INVALID';
     }
     case 'percent':
@@ -98,6 +101,15 @@ export function levelValueProblem(effect: PenaltyEffect, level: LevelValueInput)
       if (!given(level.amount)) return 'AMOUNT_REQUIRED';
       return isValidPenaltyAmount(level.amount) ? null : 'AMOUNT_INVALID';
   }
+}
+
+/**
+ * A level's days as stored: an investigation's 0 days means none (null — owner Q11, 2026-11-26);
+ * anything else as given.
+ */
+export function storedLevelDays(effect: PenaltyEffect, days: number | null | undefined): number | null {
+  if (days === null || days === undefined) return null;
+  return effect === PenaltyEffect.INVESTIGATION && days === 0 ? null : days;
 }
 
 /** One level as the whole-list check sees it: its number, its numbers, and its action's effect. */

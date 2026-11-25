@@ -56,10 +56,12 @@ export {
 } from './payroll';
 export {
   calculateLine,
+  costsPay,
   deductedDays,
   lineNetWithFlags,
   ownPenaltyAmount,
   payslipPenaltyAmount,
+  payslipPenaltyAmounts,
   penaltyDeductions,
   penaltyShare,
   percentOf,

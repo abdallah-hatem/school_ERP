@@ -21,7 +21,7 @@ import {
 } from '../repositories/penalty-actions.repository';
 
 /** What the history (§7) and the audit entry keep of an action: names, effect, base, order, shown. */
-type ActionHistory = Omit<PenaltyActionItem, 'levelsUsing' | 'violationsUsing' | 'code'>;
+type ActionHistory = Omit<PenaltyActionItem, 'levelsUsing' | 'violationsUsing' | 'retiredViolationsUsing' | 'code'>;
 
 function toHistory(row: PenaltyActionRow): ActionHistory {
   return {
@@ -41,6 +41,7 @@ function toItem(row: PenaltyActionRow, usage: ActionUsage | undefined): PenaltyA
     code: row.code as PenaltyAction | null,
     levelsUsing: usage?.levels ?? 0,
     violationsUsing: usage?.violations ?? 0,
+    retiredViolationsUsing: usage?.retiredViolations ?? 0,
   };
 }
 
@@ -103,7 +104,7 @@ export class PenaltyActionsService {
           throw e instanceof PenaltyActionNameTaken ? taken() : e;
         });
       await this.recordChange(null, row, changedById);
-      return toItem(row, { levels: 0, violations: 0 });
+      return toItem(row, { levels: 0, violations: 0, retiredViolations: 0 });
     });
   }
 

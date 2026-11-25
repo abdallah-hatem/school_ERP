@@ -532,7 +532,15 @@ export class PenaltyRecordsRepository extends BaseRepository<
    */
   async recountedInMonthSince(month: string, since: Date, scope: PenaltyScopeWhere = {}): Promise<boolean> {
     const found = await this.db.penaltyRecord.findFirst({
-      where: { AND: [{ date: monthDateRange(month), recountedAt: { gt: since } }, scope] },
+      // Owner Q6 (2026-11-26): any penalty dated in the month approved, cancelled or recounted since
+      // the run's last calculation makes the draft stale, not only a recount.
+      where: {
+        AND: [
+          { date: monthDateRange(month) },
+          { OR: [{ recountedAt: { gt: since } }, { approvedAt: { gt: since } }, { cancelledAt: { gt: since } }] },
+          scope,
+        ],
+      },
       select: { id: true },
     });
     return found !== null;
