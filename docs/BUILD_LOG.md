@@ -715,6 +715,11 @@ phase live in `docs/build-log/`.
   entry per print. CI found a real bug on the way: a rename saved a new version (stored text came back
   with its keys reordered); fixed. A penalty-dialog unit test that failed just after midnight UTC now
   pins the date.
+- 2026-11-25 — **#298 merged: signed copy on the Contracts page rows** (owner's request after local
+  testing). Each row on HR → Contracts shows "Signed copy (n)" (opens the viewer) or "No signed copy",
+  under the contract dates, on desktop and phone cards; a renewed row shows its own (old) contract's
+  copy. The dates no longer wrap at 1440 px. One shared `SignedCopyEntry` serves this page and the
+  profile tab.
 
 ## Next up
 
@@ -722,9 +727,6 @@ phase live in `docs/build-log/`.
   #283; next B2: deactivating while the last month's payroll is a draft drops that month's pay);
   mid-year hires' first contract ends 31 May (one season for everyone, GUESS).
 
-- **Signed copy on the Contracts page rows** (owner, 2026-11-25, after local testing): see each row's
-  signed copy from HR → Contracts without opening the employee. Being built on
-  `feature/contracts-list-signed-copy`.
 - **Pentest with ARTEX** (owner, 2026-11-25): try https://github.com/BaaRai/ARTEX against the app
   later — on a throwaway or testing environment, never production. Not started.
 - **Employee documents tab** (proposed 2026-11-24): ID copy, certificates, insurance forms.
