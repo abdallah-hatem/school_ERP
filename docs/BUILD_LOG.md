@@ -720,6 +720,13 @@ phase live in `docs/build-log/`.
   under the contract dates, on desktop and phone cards; a renewed row shows its own (old) contract's
   copy. The dates no longer wrap at 1440 px. One shared `SignedCopyEntry` serves this page and the
   profile tab.
+- 2026-11-25 — **#300 merged: table skeletons guarded.** The owner found the employee Payroll tab's
+  skeleton rows shorter than the table (Status drawn as a text line, not a pill), and the ±8px check let
+  it pass. Now a guard test fails any table column whose cell isn't one plain line of text and has no
+  `skeleton` (default-deny), and smoke compares table rows and cards within ±2px. The tighter check
+  found 7 more mismatches (Roles, Users, Lateness, payroll runs and lines, Approved payroll, Payroll
+  taxes, Employees cards, Contracts decision), all fixed in the skeletons. Also fixed: the Users table
+  overflowing its card by 2–3px when an account shows several status pills (dev's intermittent smoke 27).
 
 ## Next up
 
@@ -727,12 +734,7 @@ phase live in `docs/build-log/`.
   #283; next B2: deactivating while the last month's payroll is a draft drops that month's pay);
   mid-year hires' first contract ends 31 May (one season for everyone, GUESS).
 
-- **Skeletons that match their tables, enforced** (owner, 2026-11-25, PR #300): the employee Payroll
-  tab's skeleton drew the Status pill as a thin text line, so loading rows were shorter and the table
-  jumped; the ±8px skeleton check let it pass. Owner: make sure it never happens again. In #300: the
-  tab fixed; a guard test failing any table column whose cell isn't one line of text and has no
-  `skeleton`; row and card heights must match within ±2px; every screen those checks catch fixed (at
-  least Roles → Held by); the rule in CONVENTIONS. Being built.
+
 - **Discard changes in the template editor** (owner, 2026-11-25): a button that puts a template back to
   its last saved version after a mistaken edit, enabled only when something changed, with a confirm.
   Being built on `feature/template-discard-changes`.
