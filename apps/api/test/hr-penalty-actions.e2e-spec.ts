@@ -1,6 +1,8 @@
 import { INestApplication } from '@nestjs/common';
 import {
   AUDIT_SALARY_FIELDS,
+  BuiltInRole,
+  type AuthUser,
   ErrorCode,
   type AuditChange,
   type CreatePenaltyActionRequest,
@@ -13,7 +15,7 @@ import {
 } from '@school-erp/shared';
 import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
-import { createAppAsTestUser } from './helpers/as-test-user';
+import { createAppAsTestUser, giveRoles } from './helpers/as-test-user';
 import { deleteEmployees } from './helpers/employees';
 import { outboxIdle } from './helpers/events';
 import { ACTION_ID } from './helpers/penalty-actions';
@@ -32,6 +34,8 @@ const day = (month: string, d: number) => `${month}-${String(d).padStart(2, '0')
 
 describe('Penalty actions (e2e)', () => {
   let app: INestApplication;
+  let user: AuthUser;
+  const extraUsers: string[] = [];
   let db: DatabaseService;
   let stageId: string;
   let departmentId: string;
@@ -130,7 +134,7 @@ describe('Penalty actions (e2e)', () => {
   const pct = (actionId: string, percent: number | null, level = 1): ViolationLevelInput => ({ level, actionId, percent });
 
   beforeAll(async () => {
-    ({ app } = await createAppAsTestUser());
+    ({ app, user } = await createAppAsTestUser());
     db = app.get(DatabaseService);
     stageId = (await db.stage.create({ data: { nameEn: unique('Primary'), nameAr: unique('ابتدائي') } })).id;
     const mk = async (path: string) =>
@@ -157,6 +161,8 @@ describe('Penalty actions (e2e)', () => {
     // The school's own actions this suite added; the seeded ten stay (the migration's rows).
     await db.penaltyAction.deleteMany({ where: { code: null } });
     await db.penaltyAction.updateMany({ where: { code: { not: null } }, data: { isActive: true } });
+    await db.notification.deleteMany({ where: { recipientKind: 'user', recipientId: { in: extraUsers } } });
+    await db.user.deleteMany({ where: { id: { in: extraUsers } } });
     await deleteEmployees(db);
     await db.department.deleteMany({});
     await db.jobTitle.deleteMany({});
@@ -550,5 +556,105 @@ describe('Penalty actions (e2e)', () => {
     expect(await approved(nadia, steps.id, '2012-06-01')).toMatchObject({ level: 1, action: { id: ACTION_ID.NOTICE } });
     // 31 Jan vs 28 Feb (a % takes the same EGP in both) and 00:10 Cairo are the pure rules' and the
     // Cairo date column's: payroll-line.spec.ts (walk F) and the existing date tests.
+  });
+
+  // ── the whole flow, as people do it ───────────────────────────────────────
+
+  /** Acts as another user for the length of `fn` (the e2e guard signs every request in as `user`). */
+  async function as<T>(id: string, fn: () => Promise<T>): Promise<T> {
+    const me = user.id;
+    user.id = id;
+    try {
+      return await fn();
+    } finally {
+      user.id = me;
+    }
+  }
+  const newUser = async (label: string, roleKeys: string[], employeeId: string | null = null) => {
+    const id = (
+      await db.user.create({
+        data: { email: `${unique(label)}@example.test`, name: unique(label), passwordHash: 'x', employeeId },
+        select: { id: true },
+      })
+    ).id;
+    extraUsers.push(id);
+    await giveRoles(db, id, roleKeys);
+    return id;
+  };
+
+  it('end to end: an HR officer records a % and a fixed-amount penalty → the stage head reviews → HR approves → the draft prices them → approved → the payslip lists each with its own amount, in English and Arabic', async () => {
+    const month = nextMonth();
+    // A stage with its own head, so recording waits for the stage review (§4 two steps).
+    const flowStage = (await db.stage.create({ data: { nameEn: unique('Prep'), nameAr: unique('إعدادي') } })).id;
+    const headEmployee = (
+      await http(app)
+        .post('/hr/employees')
+        .send({
+          nameEn: unique('Head'), nameAr: unique('رئيس'), gender: 'MALE', dateOfBirth: '1980-01-01', phone: '01000000000',
+          hireDate: '2010-09-01', stageId: flowStage, departmentId, jobTitleId, workSystem: 'FULL_TIME', basicSalary: 1_500_000,
+        })
+        .expect(201)
+    ).body.data.id as string;
+    const head = await newUser('flow-head', [BuiltInRole.STAGE_HEAD], headEmployee);
+    const officer = await newUser('flow-officer', [BuiltInRole.HR_OFFICER]);
+    const nadia = (
+      await http(app)
+        .post('/hr/employees')
+        .send({
+          nameEn: unique('Nadia'), nameAr: unique('نادية'), gender: 'FEMALE', dateOfBirth: '1990-01-01', phone: '01000000000',
+          hireDate: '2012-09-01', stageId: flowStage, departmentId, jobTitleId, workSystem: 'FULL_TIME', basicSalary: 900_000,
+        })
+        .expect(201)
+    ).body.data.id as string;
+    const pctAction = await percentAction('MONTH_SALARY', { nameEn: unique('Salary deduction %'), nameAr: unique('خصم نسبة') });
+    const fixed = await actionOk({ effect: 'DEDUCT_AMOUNT', nameEn: unique('Fixed deduction'), nameAr: unique('خصم ثابت') });
+    const absence = await violation([pct(pctAction.id, 10)]);
+    const phone = await violation([{ level: 1, actionId: fixed.id, amount: 20_000 }]);
+
+    const flow = async (violationId: string, date: string) => {
+      // Recorded by HR's officer → Pending stage review.
+      const recorded = (
+        await as(officer, () => http(app).post('/hr/penalties').send({ employeeId: nadia, violationId, date }).expect(201))
+      ).body.data as PenaltyRecord;
+      expect(recorded.status).toBe('PENDING_REVIEW');
+      // The stage head approves their stage's penalty → Waiting for HR.
+      const reviewed = (await as(head, () => http(app).post(`/hr/penalties/${recorded.id}/review/approve`).send({}).expect(200)))
+        .body.data as PenaltyRecord;
+      expect(reviewed.status).toBe('WAITING_HR');
+      // HR approves → the snapshot is fixed.
+      return approve(recorded.id);
+    };
+    const p1 = await flow(absence.id, day(month, 4));
+    const p2 = await flow(phone.id, day(month, 5));
+    expect(p1).toMatchObject({ status: 'APPROVED', action: { id: pctAction.id, nameEn: pctAction.nameEn, nameAr: pctAction.nameAr, effect: 'DEDUCT_PERCENT', percentBase: 'MONTH_SALARY' }, percent: 10, amount: null });
+    expect(p2).toMatchObject({ status: 'APPROVED', action: { id: fixed.id, effect: 'DEDUCT_AMOUNT' }, amount: 20_000, percent: null });
+
+    // The draft prices them: 10% of 9,000 = 900.00, plus 200.00 — net 7,900.00.
+    const draft = await createRun(month);
+    expect(lineOf(draft, nadia)).toMatchObject({ monthSalary: 900_000, penaltyDays: 0, penaltyDaysAmount: 0, penaltyAmount: 110_000, net: 790_000 });
+    const run = await approveRun(draft.id);
+    expect(run.status).toBe('APPROVED');
+    expect(lineOf(run, nadia)).toMatchObject({ penaltyAmount: 110_000, net: 790_000 });
+
+    // The payslip, read in each language: the same snapshot (both names) and the same amounts.
+    for (const lang of ['en', 'ar']) {
+      const res = await http(app).get(`/hr/payroll-runs/${run.id}/lines/${lineOf(run, nadia).id}`).set('Accept-Language', lang).expect(200);
+      const slip = res.body.data as Payslip;
+      expect(slip.penalties.map((p) => [p.action.nameEn, p.action.nameAr, p.action.effect, p.percent, p.fixedAmount, p.amount])).toEqual([
+        [pctAction.nameEn, pctAction.nameAr, 'DEDUCT_PERCENT', 10, null, 90_000],
+        [fixed.nameEn, fixed.nameAr, 'DEDUCT_AMOUNT', null, 20_000, 20_000],
+      ]);
+      expect(slip.penaltyAmount).toBe(slip.penalties.reduce((n, p) => n + (p.amount ?? 0), 0));
+      expect(slip.net).toBe(790_000);
+    }
+
+    // The new refusals read in both languages.
+    await patchAction(pctAction.id, { isActive: false }).expect(200);
+    const other = await violation([{ level: 1, actionId: ACTION_ID.NOTICE }]);
+    const en = await setLevels(other.id, [pct(pctAction.id, 5)]).set('Accept-Language', 'en').expect(400);
+    const ar = await setLevels(other.id, [pct(pctAction.id, 5)]).set('Accept-Language', 'ar').expect(400);
+    expect(en.body.error).toBe(ErrorCode.PENALTY_ACTION_HIDDEN);
+    expect(en.body.message).toBe('This action is hidden. Show it in Penalty actions first, or pick another.');
+    expect(ar.body.message).toBe('هذا الإجراء مخفي. أظهره من إجراءات الجزاءات أولًا، أو اختر إجراءً آخر.');
   });
 });
