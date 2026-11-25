@@ -122,13 +122,15 @@ export function ContractsTable({
     {
       id: 'contract',
       header: t('contracts.columns.contract'),
-      className: 'w-36 whitespace-normal',
+      // Wide enough for the date range on one line (EN and AR) at desktop widths: the row is two
+      // lines — the dates, then the signed copy — as its skeleton draws.
+      className: 'w-48 whitespace-nowrap',
       // The dates, then the signed copy of this row's contract — the one the dates and the decision
       // are about, not a renewal's next contract: "Signed copy (n)" opening the viewer (owner,
       // 2026-11-25), as on the profile's Contracts tab.
       skeleton: (
         <span className="flex flex-col items-start gap-1">
-          <SkeletonText width="w-28" />
+          <SkeletonText width="w-40" />
           <SignedCopyLinkSkeleton />
         </span>
       ),
