@@ -14,6 +14,7 @@ import { localName } from '@/shared/lib/i18n';
 import { useTranslation } from '@/shared/providers/i18n-provider';
 import { ContractActions } from './contract-actions';
 import { ContractDates, ContractEmployee, ContractEmployeeSkeleton, DecisionCell, DecisionCellSkeleton } from './contract-bits';
+import { SignedCopyEntry, SignedCopyLinkSkeleton } from './signed-copy';
 
 /** Row ticking for "Renew selected": which rows may be ticked, which are, and the handlers. */
 export interface ContractSelection {
@@ -29,7 +30,7 @@ export interface ContractSelection {
 
 /**
  * The renewal list as the shared table (cards below 1100px): employee (with the tick box), stage,
- * contract dates, the decision with its tags and line, and the row's next step with its ⋯ menu.
+ * contract dates with the contract's signed copy, the decision with its tags and line, and the row's next step with its ⋯ menu.
  * An ended contract with no decision carries the red bar; a waiting early termination the amber one.
  */
 export function ContractsTable({
@@ -122,8 +123,21 @@ export function ContractsTable({
       id: 'contract',
       header: t('contracts.columns.contract'),
       className: 'w-36 whitespace-normal',
-      skeleton: <SkeletonText width="w-28" />,
-      cell: (c) => <ContractDates contract={c} />,
+      // The dates, then the signed copy of this row's contract — the one the dates and the decision
+      // are about, not a renewal's next contract: "Signed copy (n)" opening the viewer (owner,
+      // 2026-11-25), as on the profile's Contracts tab.
+      skeleton: (
+        <span className="flex flex-col items-start gap-1">
+          <SkeletonText width="w-28" />
+          <SignedCopyLinkSkeleton />
+        </span>
+      ),
+      cell: (c) => (
+        <span className="flex flex-col items-start gap-1">
+          <ContractDates contract={c} />
+          <SignedCopyEntry contract={c} />
+        </span>
+      ),
     },
     {
       id: 'decision',

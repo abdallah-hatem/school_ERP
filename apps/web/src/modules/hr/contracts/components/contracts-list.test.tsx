@@ -28,6 +28,7 @@ const api = vi.hoisted(() => ({
   END_CONTRACT: vi.fn(),
   DEACTIVATE_CONTRACTS: vi.fn(),
   UPLOAD_CONTRACT_FILE: vi.fn(),
+  GET_SIGNED_COPY: vi.fn(),
 }));
 vi.mock('../apis', () => api);
 vi.mock('../../employees/apis', () => ({ GET_STAGES: vi.fn().mockResolvedValue({ success: true, status: 200, data: [] }) }));
@@ -231,6 +232,33 @@ describe('ContractsList (renewals, option A)', () => {
     expect(within(row).queryByRole('button', { name: 'Renew' })).toBeNull();
     expect(within(row).getByRole('checkbox')).toHaveProperty('disabled', true);
     expect(within(row).getByTestId('own-contract').textContent).toBe('Your own contract: someone else decides on it.');
+  });
+
+  it('each row shows its contract\'s signed copy — "Signed copy (n)" opens the viewer, none reads "No signed copy" — on the table and the cards', async () => {
+    const user = userEvent.setup();
+    api.GET_SIGNED_COPY.mockResolvedValue(ok({ contractId: 'c-2', files: [] }));
+    const withCopy = { ...heba, signedCopyPages: 2 };
+    renderList({ rows: [undecided, withCopy, renewed] });
+    expect(within(rowOf('Heba Saeed')).getByTestId('signed-copy-count').textContent).toBe('Signed copy (2)');
+    expect(within(rowOf('Mona Khalil')).getByTestId('signed-copy-none').textContent).toBe('No signed copy');
+    // The phone cards carry the same line.
+    const cards = within(document.querySelector<HTMLElement>('[data-view="cards"]')!);
+    expect(cards.getAllByTestId('signed-copy-count').map((n) => n.textContent)).toEqual(['Signed copy (2)']);
+    expect(cards.getAllByTestId('signed-copy-none')).toHaveLength(2);
+    // Opened from the row: the same viewer, reading this row's contract.
+    await user.click(within(rowOf('Heba Saeed')).getByRole('button', { name: 'Open the signed copy of Heba Saeed' }));
+    expect(await screen.findByRole('dialog', { name: 'Signed copy' })).toBeTruthy();
+    expect(api.GET_SIGNED_COPY).toHaveBeenCalledWith('c-2');
+  });
+
+  it('a renewed row shows the signed copy of the contract it is about, not the renewal\'s next one', () => {
+    renderList({ rows: [{ ...renewed, signedCopyPages: 1 }] });
+    expect(within(rowOf('Nourhan Adel')).getByTestId('signed-copy-count').textContent).toBe('Signed copy (1)');
+  });
+
+  it('reads in Arabic on a row: "No signed copy"', () => {
+    renderList({ rows: [undecided] }, 'ar');
+    expect(table().getByTestId('signed-copy-none').textContent).toBe('لا توجد نسخة موقّعة');
   });
 
   it('without hr.contracts.manage: no tick boxes, no steps, no decisions (view only)', () => {

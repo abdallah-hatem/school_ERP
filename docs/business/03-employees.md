@@ -206,6 +206,15 @@ Spec `docs/specs/2026-11-24-contracts.md` (approved by the owner as drafted, 202
   wasn't attached), renewing one contract or
   making a new contract. Bulk renew has no upload. On a phone the picker offers the camera, the
   photos or a PDF.
+- **DECIDED** (owner, 2026-11-25: "in contracts tab I should be able to see the contract file or
+  photo for each row if found, I don't have to go to that specific employee page to see") — **The
+  Contracts page shows each row's signed copy** under the row's contract dates: "Signed copy (2)"
+  opens the same viewer as the employee's Contracts tab (pages in order, zoom, Download, a PDF in a
+  new tab; Remove and "Add pages" only for whoever may manage it), or "No signed copy". It is the
+  copy of the row's own contract — the one whose dates and decision the row shows — so a renewed
+  row shows the old contract's copy, not the renewal's next one (that one is on the next year's
+  list). Phone cards show it too. Seeing it needs nothing beyond seeing the row (View contracts
+  covering that employee).
 - **GUESS** — Deemed resignation (Article 166: over 20 days' unexcused absence in a year or over 10
   in a row, after a registered warning) is **not** in this module; it needs attendance and comes
   with it.
