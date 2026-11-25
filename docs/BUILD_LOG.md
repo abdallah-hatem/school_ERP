@@ -722,6 +722,9 @@ phase live in `docs/build-log/`.
   #283; next B2: deactivating while the last month's payroll is a draft drops that month's pay);
   mid-year hires' first contract ends 31 May (one season for everyone, GUESS).
 
+- **Signed copy on the Contracts page rows** (owner, 2026-11-25, after local testing): see each row's
+  signed copy from HR → Contracts without opening the employee. Being built on
+  `feature/contracts-list-signed-copy`.
 - **Pentest with ARTEX** (owner, 2026-11-25): try https://github.com/BaaRai/ARTEX against the app
   later — on a throwaway or testing environment, never production. Not started.
 - **Employee documents tab** (proposed 2026-11-24): ID copy, certificates, insurance forms.
