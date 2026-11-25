@@ -133,13 +133,35 @@ export function SkeletonButton({
   );
 }
 
-/** An avatar with a name over a code (the employee cell): size-9 tile, text-sm and text-xs lines. */
-export function SkeletonIdentity({ className }: { className?: string }) {
+/**
+ * A row of overlapping avatars (`AvatarStack`: `xs` tiles, size-7 rounded-lg, `-space-x-2`, `-my-1`
+ * so they sit in the text line), `count` of them, with the text beside it when `children` is given
+ * (the Roles list's "Held by").
+ */
+export function SkeletonAvatarStack({ count = 3, children, className }: { count?: number; children?: ReactNode; className?: string }) {
+  return (
+    <span aria-hidden="true" className={cn('flex items-center gap-2', className)}>
+      <span className="-my-1 flex -space-x-2">
+        {Array.from({ length: count }, (_, i) => (
+          <Skeleton key={i} className="size-7 shrink-0 rounded-lg ring-2 ring-card" />
+        ))}
+      </span>
+      {children}
+    </span>
+  );
+}
+
+/**
+ * An avatar with a name over a code (the employee cell): size-9 tile, text-sm and text-xs lines.
+ * `nameClassName`: the name line's font classes when the loaded name doesn't set `text-sm` (it then
+ * inherits the card's 16px on a phone).
+ */
+export function SkeletonIdentity({ className, nameClassName = 'text-sm' }: { className?: string; nameClassName?: string }) {
   return (
     <span aria-hidden="true" className={cn('flex min-w-0 items-center gap-3', className)}>
       <Skeleton className="size-9 shrink-0 rounded-xl" />
       <span className="flex min-w-0 flex-1 flex-col">
-        <SkeletonText className="text-sm" width="w-28" />
+        <SkeletonText className={nameClassName} width="w-28" />
         <SkeletonText className="text-xs" width="w-16" />
       </span>
     </span>

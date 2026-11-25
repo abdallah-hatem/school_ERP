@@ -568,6 +568,12 @@ function groupColumns(t: Translate, locale: Locale, insured: boolean): DataTable
       id: 'insurance',
       header: t('accounting.payrollTaxes.columns.insurance'),
       card: 'status',
+      // The card's status pill, worded and iconed as the group's.
+      skeleton: insured ? (
+        <SkeletonPill icon>{t('accounting.payrollTaxes.statement.insuredOne')}</SkeletonPill>
+      ) : (
+        <SkeletonPill>{t('accounting.payrollTaxes.statement.notInsuredOne')}</SkeletonPill>
+      ),
       cell: () =>
         insured ? (
           <StatusPill tone="info" icon={InsuredIcon}>
@@ -580,6 +586,9 @@ function groupColumns(t: Translate, locale: Locale, insured: boolean): DataTable
     },
     ...(insured ? [money('insuredSalary')] : []),
     money('net', {
+      // One figure, as nearly every line reads; the "net is zero" note under it is data (a line
+      // whose deductions took the whole salary), which no skeleton can know.
+      skeleton: <SkeletonText className="font-bold" width="w-20" />,
       cell: (line) =>
         line.salaryVisible && line.net === 0 ? (
           <span className="flex flex-col items-end gap-0.5">

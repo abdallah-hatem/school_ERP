@@ -4,6 +4,7 @@ import { AccountingPayrollStatus, monthOf, PAGINATION, PayrollStatus, PenaltySta
 import { join } from 'node:path';
 import { Api } from './api';
 import { SKELETON_SCREENS, type SkeletonScreenName } from './skeleton-screens';
+import { diff, type MeasuredBlock } from './skeleton-diff';
 
 export { SKELETON_SCREENS, type SkeletonScreenName } from './skeleton-screens';
 import { env } from './env';
@@ -24,29 +25,17 @@ import { signIn } from './ui';
  *   - the loaded screen: the same URL with JavaScript on, once nothing in `#main` is aria-busy.
  *
  * and expects the same blocks in the same order, each as wide and as tall as the other within
- * tolerance(). A list's items carry `data-skeleton-each` too: a run of them counts once, as tall
+ * tolerance() — table rows and list cards ±2px (skeleton-diff.ts). A list's items carry `data-skeleton-each` too: a run of them counts once, as tall
  * as its shortest item (how many arrive, and whose name wraps, is data). `data-skeleton-measure="width"` on a block compares its
  * width only (a list whose height follows its row count).
  */
 
-export interface MeasuredBlock {
-  name: string;
-  width: number;
-  height: number;
-  measure: 'size' | 'width';
-  /** The loaded block's text, shown when it doesn't match (what wrapped). */
-  text?: string;
-}
-
-/** ±8px, or ±5% for blocks over 160px. */
-export function tolerance(a: number, b: number): number {
-  return Math.max(8, 0.05 * Math.max(a, b));
-}
+export { allowed, diff, isRowLike, ROW_TOLERANCE, tolerance, type MeasuredBlock } from './skeleton-diff';
 
 async function blocksOf(page: Page): Promise<MeasuredBlock[]> {
   await page.evaluate(() => document.fonts.ready.then(() => undefined));
   return page.evaluate(() => {
-    const out: { name: string; width: number; height: number; measure: 'size' | 'width'; text: string }[] = [];
+    const out: { name: string; width: number; height: number; measure: 'size' | 'width'; each: boolean; text: string }[] = [];
     for (const el of Array.from(document.querySelectorAll<HTMLElement>('#main [data-skeleton-block]'))) {
       const r = el.getBoundingClientRect();
       // Not drawn: the other view of a table (cards on desktop), a hidden streamed tree.
@@ -65,6 +54,7 @@ async function blocksOf(page: Page): Promise<MeasuredBlock[]> {
         width: Math.round(r.width * 10) / 10,
         height: Math.round(r.height * 10) / 10,
         measure: el.dataset.skeletonMeasure === 'width' ? 'width' : 'size',
+        each,
         text: (el.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 160),
       });
     }
@@ -132,26 +122,6 @@ export async function compareScreen(browser: Browser, page: Page, locale: Langua
 
 function shotPath(name: string): string {
   return join(__dirname, '..', 'screenshots', name);
-}
-
-export function diff(skeleton: MeasuredBlock[], loaded: MeasuredBlock[]): string[] {
-  const problems: string[] = [];
-  const names = (list: MeasuredBlock[]) => list.map((b) => b.name).join(' › ');
-  const sized = (list: MeasuredBlock[]) => list.map((b) => `${b.name} ${b.width}×${b.height}`).join(' › ');
-  if (names(skeleton) !== names(loaded)) {
-    problems.push(`blocks differ\n    skeleton: ${sized(skeleton)}\n    loaded:   ${sized(loaded)}`);
-    return problems;
-  }
-  skeleton.forEach((s, i) => {
-    const l = loaded[i]!;
-    const keys: ('width' | 'height')[] = s.measure === 'width' || l.measure === 'width' ? ['width'] : ['width', 'height'];
-    for (const key of keys) {
-      if (Math.abs(s[key] - l[key]) > tolerance(s[key], l[key])) {
-        problems.push(`#${i} ${s.name}.${key}: skeleton ${s[key]} vs loaded ${l[key]} — loaded: "${l.text ?? ''}"`);
-      }
-    }
-  });
-  return problems;
 }
 
 /** A new account that has already chosen its own password (no "must choose" note on its page). */
