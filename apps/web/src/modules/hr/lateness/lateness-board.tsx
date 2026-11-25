@@ -24,7 +24,7 @@ import { Days } from '@/shared/components/ui/figures';
 import { GroupedNumberInput } from '@/shared/components/ui/grouped-number-input';
 import { BlockedIcon, ErrorIcon, LatenessIcon, RetryIcon, SearchIcon } from '@/shared/components/ui/icons';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover';
-import { Skeleton, SkeletonText } from '@/shared/components/ui/skeleton';
+import { Skeleton, SkeletonProse, SkeletonText } from '@/shared/components/ui/skeleton';
 import { StatusPill } from '@/shared/components/ui/status-pill';
 import { formatCount, formatDayCount, formatMonth } from '@/shared/lib/format';
 import { nameIn } from '@/shared/lib/i18n';
@@ -239,6 +239,13 @@ export function LatenessBoard({
       header: t('lateness.columns.days'),
       align: 'end',
       className: 'w-32',
+      // One figure with its unit, laid out invisibly in the figure's own face: in Arabic its line box
+      // is 2px taller than a plain text bar's, which a phone card shows.
+      skeleton: (
+        <SkeletonProse>
+          <Days value={1} />
+        </SkeletonProse>
+      ),
       cell: (row) => {
         const view = viewEntry(row, drafts[row.employee.id]?.text, rule ?? null);
         return (

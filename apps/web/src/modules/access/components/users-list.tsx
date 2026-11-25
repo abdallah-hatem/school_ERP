@@ -25,7 +25,7 @@ import {
   UnlockIcon,
 } from '@/shared/components/ui/icons';
 import { PersonAvatar } from '@/shared/components/ui/person-avatar';
-import { SkeletonIdentity, SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
+import { Skeleton, SkeletonIdentity, SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
 import { StatusPill } from '@/shared/components/ui/status-pill';
 import { formatCount } from '@/shared/lib/format';
 import { localName } from '@/shared/lib/i18n';
@@ -109,8 +109,10 @@ export function UsersList({ basePath, query, rows, total, selectedRole = null, l
       header: t('access.users.columns.name'),
       card: 'title',
       // Capped like the email: a long name truncates instead of pushing the table past its card at
-      // 1440 (the smoke users' long emails and the seeded heads' three-part names did).
-      className: 'min-w-48 max-w-52',
+      // 1440 (the smoke users' long emails and the seeded heads' three-part names did). No minimum:
+      // with an account holding Active + Temporary password (a 187px Status), a 192px minimum here
+      // pushed the seven columns ~3px past the card (smoke 27, 2026-11-25).
+      className: 'max-w-48',
       skeleton: <SkeletonIdentity />,
       cell: (u) => (
         <span className="flex min-w-0 items-center gap-3">
@@ -156,6 +158,13 @@ export function UsersList({ basePath, query, rows, total, selectedRole = null, l
       // Across the card: "No employee record" in half a card wraps to two lines on a phone.
       card: 'wide',
       className: 'w-40',
+      // The link icon (size-4) beside the employee's code.
+      skeleton: (
+        <span aria-hidden="true" className="inline-flex items-center gap-1.5">
+          <Skeleton className="size-4 shrink-0 rounded" />
+          <SkeletonText className="font-bold" width="w-12" />
+        </span>
+      ),
       cell: (u) =>
         u.employee ? (
           <span className="inline-flex items-center gap-1.5 font-bold text-primary">

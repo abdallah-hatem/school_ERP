@@ -342,11 +342,13 @@ const RUN_COLUMN_LAYOUT: Record<RunColumnId, Omit<DataTableColumn<PayrollLine>, 
       </span>
     ),
   },
-  monthSalary: { align: 'end', className: 'w-28' },
-  penalties: { align: 'end', className: 'w-28' },
-  lateness: { align: 'end', className: 'w-28' },
-  adjustments: { align: 'end', className: 'w-28' },
-  net: { align: 'end', className: 'w-32', card: 'highlight' },
+  // Figures: their bars sit in the figures' own line box (SkeletonText `figures`), as tall as the
+  // loaded amounts in Arabic too.
+  monthSalary: { align: 'end', className: 'w-28', skeleton: <SkeletonText figures width="w-20" /> },
+  penalties: { align: 'end', className: 'w-28', skeleton: <SkeletonText figures width="w-12" /> },
+  lateness: { align: 'end', className: 'w-28', skeleton: <SkeletonText figures width="w-12" /> },
+  adjustments: { align: 'end', className: 'w-28', skeleton: <SkeletonText figures width="w-12" /> },
+  net: { align: 'end', className: 'w-32', card: 'highlight', skeleton: <SkeletonText figures className="font-extrabold" width="w-20" /> },
   status: { className: 'w-36', card: 'status', skeleton: <SkeletonPill /> },
   actions: { align: 'end', className: 'w-16', card: 'menu', skeleton: <RowActionsSkeleton /> },
 };
@@ -365,6 +367,9 @@ export function runColumn(id: RunColumnId, t: Translate) {
     id,
     ...RUN_COLUMN_LAYOUT[id],
     ...(id === 'actions' ? { header: <span className="sr-only">{label}</span>, cardLabel: label } : { header: label }),
+    // The status as most lines read ("Ready", with its icon), laid out in the pill's own inline box:
+    // a phone card's status line is as tall as the loaded pill's in Arabic too.
+    ...(id === 'status' ? { skeleton: <SkeletonPill icon>{t('payroll.table.ready')}</SkeletonPill> } : {}),
   };
 }
 

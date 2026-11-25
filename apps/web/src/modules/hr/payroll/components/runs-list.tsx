@@ -15,7 +15,7 @@ import { Button } from '@/shared/components/ui/button';
 import { Dialog, DialogClose, DialogContent } from '@/shared/components/ui/dialog';
 import { Money } from '@/shared/components/ui/figures';
 import { AddIcon, BlockedIcon, OpenIcon, PayrollIcon } from '@/shared/components/ui/icons';
-import { SkeletonPill } from '@/shared/components/ui/skeleton';
+import { SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
 import { apiErrorText } from '@/shared/lib/api-error';
 import { formatCount, formatDate, formatMonth } from '@/shared/lib/format';
 import { useTranslation } from '@/shared/providers/i18n-provider';
@@ -80,6 +80,7 @@ export function RunsList({ basePath, query, runs, total, currentMonth }: RunsLis
       header: t('payroll.list.columns.employees'),
       align: 'end',
       className: 'w-32',
+      skeleton: <SkeletonText figures width="w-8" />,
       cell: (run) => <span className="tabular">{formatCount(run.totals.employees)}</span>,
     },
     {
@@ -88,12 +89,14 @@ export function RunsList({ basePath, query, runs, total, currentMonth }: RunsLis
       align: 'end',
       className: 'w-48',
       card: 'highlight',
+      skeleton: <SkeletonText figures className="font-bold" width="w-24" />,
       cell: (run) => <Money value={run.totals.net} currency={false} className="font-bold" />,
     },
     {
       id: 'approvedAt',
       header: t('payroll.list.columns.approvedAt'),
       className: 'w-40',
+      skeleton: <SkeletonText figures width="w-24" />,
       cell: (run) =>
         run.approvedAt ? (
           <bdi className="tabular">

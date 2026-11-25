@@ -527,7 +527,16 @@ function monthColumns(t: Translate, locale: Locale): DataTableColumn<AccountingP
     id: string,
     cell: (line: AccountingPayrollLine) => ReactNode,
     extra: Partial<DataTableColumn<AccountingPayrollLine>> = {},
-  ): DataTableColumn<AccountingPayrollLine> => ({ id, header: header(id), align: 'end', className: 'w-28', cell, ...extra });
+  ): DataTableColumn<AccountingPayrollLine> => ({
+    id,
+    header: header(id),
+    align: 'end',
+    className: 'w-28',
+    // Every one of these is an amount: its bar in the figures' own line box (as tall in Arabic).
+    skeleton: <SkeletonText figures width="w-20" />,
+    cell,
+    ...extra,
+  });
   return [
     {
       id: 'employee',
