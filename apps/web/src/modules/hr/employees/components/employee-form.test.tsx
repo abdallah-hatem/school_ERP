@@ -315,16 +315,16 @@ describe('EmployeeForm', () => {
   });
 
   describe('grade (§3, owner 2026-11-24: picked from the Grades list)', () => {
-    const gradeField = () => screen.getByRole('combobox', { name: /^Grade/ });
+    const gradeField = () => screen.getByRole('combobox', { name: /^Pay grade/ });
 
     it('the API lists the grades, after "No grade"; a new employee starts with none', async () => {
       const user = userEvent.setup();
       renderForm();
-      expect(gradeField().textContent).toContain('No grade');
+      expect(gradeField().textContent).toContain('No pay grade');
       await user.click(gradeField());
       const listbox = await screen.findByRole('listbox');
       await waitFor(() =>
-        expect(within(listbox).getAllByRole('option').map((o) => o.textContent)).toEqual(['No grade', 'Grade 1', 'Grade 2']),
+        expect(within(listbox).getAllByRole('option').map((o) => o.textContent)).toEqual(['No pay grade', 'Grade 1', 'Grade 2']),
       );
       // One page of the typed text, asked of the API (never filtered here).
       expect(vi.mocked(GET_EMPLOYEE_GRADES)).toHaveBeenCalledWith({ includeHidden: false, search: '', limit: 20 });
@@ -345,7 +345,7 @@ describe('EmployeeForm', () => {
       update.mockResolvedValue(ok(employee));
       renderForm({ editing: { ...employee, employeeGrade: { id: 'g-1', nameEn: 'Grade 1', nameAr: 'الدرجة الأولى' } } });
       await user.click(gradeField());
-      await user.click(await screen.findByRole('option', { name: 'No grade' }));
+      await user.click(await screen.findByRole('option', { name: 'No pay grade' }));
       await user.click(screen.getByRole('button', { name: 'Save changes' }));
       await waitFor(() => expect(update).toHaveBeenCalledWith('e-mona', { employeeGradeId: null }));
     });
