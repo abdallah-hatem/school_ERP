@@ -390,7 +390,7 @@ describe('Managed lists (stages, departments, job titles)', () => {
     renderSettings(<ListManager kind="employeeGrades" />);
     expect((await screen.findAllByText('Grade 1'))[0]).toBeTruthy();
     expect(api.GET_LIST_ITEMS).toHaveBeenCalledWith('employeeGrades', { page: 1, limit: 10 });
-    expect(screen.getAllByRole('heading', { name: 'Employee grades' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('heading', { name: 'Pay grades' }).length).toBeGreaterThan(0);
 
     await chooseRowAction(user, 'Grade 2', 'Rename');
     const rename = await screen.findByRole('dialog', { name: 'Rename Grade 2' });
@@ -403,8 +403,8 @@ describe('Managed lists (stages, departments, job titles)', () => {
       expect(api.UPDATE_LIST_ITEM).toHaveBeenCalledWith('employeeGrades', 'g2', { nameEn: 'Senior', nameAr: 'الدرجة الثانية' }),
     );
 
-    await user.click(screen.getAllByRole('button', { name: 'Add grade' })[0]!);
-    const add = await screen.findByRole('dialog', { name: 'Add grade' });
+    await user.click(screen.getAllByRole('button', { name: 'Add pay grade' })[0]!);
+    const add = await screen.findByRole('dialog', { name: 'Add pay grade' });
     await user.type(within(add).getByRole('textbox', { name: /Name in English/ }), 'Grade 3');
     await user.type(within(add).getByRole('textbox', { name: /Name in Arabic/ }), 'الدرجة الثالثة');
     await user.click(within(add).getByRole('button', { name: 'Create' }));

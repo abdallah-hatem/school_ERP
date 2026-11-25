@@ -362,9 +362,10 @@ export function fieldForError(code: unknown): keyof EmployeeFormValues | undefin
 }
 
 /**
- * A direct-manager choice (§3): "Name · Department", in the page's language (owner, 2026-11-25).
- * The API lists the candidates as the person types, searching by name or code.
+ * A direct-manager choice (§3): the name, then the department lighter as its hint — it reads
+ * "Name · Department", in the page's language (owner, 2026-11-25). The API lists the candidates as
+ * the person types, searching by name or code.
  */
 export function managerChoice(e: NamedRef & { department: NamedRef }, locale: Locale): SelectOption {
-  return { value: e.id, label: `${localName(e, locale)} · ${localName(e.department, locale)}` };
+  return { value: e.id, label: localName(e, locale), hint: localName(e.department, locale) };
 }

@@ -734,6 +734,17 @@ phase live in `docs/build-log/`.
 - 2026-11-25 — **#307 merged: Direct manager picker shows "Name · Department"** (owner's request)
   instead of the employee code; search by name or code still works. The employee record's manager now
   carries their department (same query).
+- 2026-11-26 — **#306 merged: "Grade" reads "Pay grade"** in English (owner's request): the employee
+  field, the Settings list ("Pay grades"), History and permissions. Arabic keeps «الدرجة الوظيفية».
+  Labels only; the data and rules are unchanged.
+- 2026-11-26 — **#311 merged: penalty actions spec approved** by the owner as written, **no monthly
+  cap** (net floored at 0 and flagged, as today), no mockups. Build started on `feature/penalty-actions`.
+- 2026-11-26 — **#313 merged: dropdowns open on the chosen option.** The shared select highlighted its
+  first row on open, so Enter right after opening changed the value (Direct manager → "No direct
+  manager"; the user form's linked employee → "No employee record"). Now the chosen option is
+  highlighted and scrolled into view. Options can carry a muted second part: the manager picker shows
+  "Name · Department" with the department in grey (owner's request). Candidates for the same hint, not
+  changed: the record-penalty and template-preview employee pickers ("Name · code").
 
 ## Next up
 
@@ -743,17 +754,15 @@ phase live in `docs/build-log/`.
 
 
 
-- **Dropdowns open on the chosen option** (found reviewing #307, 2026-11-25): the shared select
-  highlights its first row on open while the check mark is on the chosen one, so Enter right after
-  opening changes the value. Being fixed in the shared component on `fix/select-highlights-selected`.
+
 - **Penalty actions as school data** (owner, 2026-11-25): a Settings list of penalty actions (EN/AR
   names, hide/show), each with an effect type fixed in code — record only, deduct days, deduct a % of
   salary, deduct a fixed amount, investigation (± days) — and the school setting its numbers; no free
   formulas; raise actions stay record-only until raises exist; the seed loads today's actions so nothing
   changes. Spec written (#311: numbers on the catalogue level, snapshot at approval, % of the month's salary or
   basic, no new cap). No mockups: a new list in the existing Settings design plus fields on the
-  existing level editor (owner, 2026-11-25: "if mockups unnecessary dont do it"). Waiting for the
-  owner's approval and the monthly-cap answer (default: no cap, net floored at 0 and flagged).
+  existing level editor (owner, 2026-11-25: "if mockups unnecessary dont do it"). Approved
+  2026-11-26 with no cap; being built on `feature/penalty-actions`.
 - **Pentest with ARTEX** (owner, 2026-11-25): try https://github.com/BaaRai/ARTEX against the app
   later — on a throwaway or testing environment, never production. Not started.
 - **Employee documents tab** (proposed 2026-11-24): ID copy, certificates, insurance forms.
@@ -774,7 +783,9 @@ phase live in `docs/build-log/`.
 - Client proposal (kept outside the repo): add ownership/licence, payment schedule, timeline, VAT,
   acceptance, several campuses, academics in or out — owner to fill the blanks.
 - Reselling: make the repo private before selling; a written IP agreement with the team; map each new
-  school's rules to settings / data / fixed.
+  school's rules to settings / data / fixed. **Feature flags / module on-off and a licence level wait
+  until a second school signs** (owner, 2026-11-26) — not built before then; per-school rules keep
+  going into settings meanwhile.
 - Sign-in follow-ups (from #218): a show/hide eye on the password box (smoke helpers must first find
   the field with `{ exact: true }`); the filled-input look and button sheen from the mockup if wanted.
 

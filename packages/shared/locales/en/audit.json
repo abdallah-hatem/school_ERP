@@ -20,7 +20,7 @@
     "employee": "Employee",
     "department": "Department",
     "job_title": "Job title",
-    "employee_grade": "Employee grade",
+    "employee_grade": "Pay grade",
     "hr_settings": "HR rules",
     "penalty_group": "Penalty group",
     "violation": "Violation",
@@ -99,8 +99,8 @@
         "update": "Edited the job title {entity}"
       },
       "employee_grade": {
-        "create": "Added the employee grade {entity}",
-        "update": "Edited the employee grade {entity}"
+        "create": "Added the pay grade {entity}",
+        "update": "Edited the pay grade {entity}"
       },
       "settings": {
         "update": "Changed the HR rules"
@@ -194,8 +194,8 @@
     "departmentId": "Department",
     "jobTitleId": "Job title",
     "managerId": "Direct manager",
-    "grade": "Grade",
-    "employeeGradeId": "Grade",
+    "grade": "Pay grade",
+    "employeeGradeId": "Pay grade",
     "workSystem": "Work system",
     "basicSalary": "Basic salary",
     "fingerprintId": "Fingerprint ID",
@@ -284,7 +284,7 @@
       },
       "departments": "Department",
       "jobTitles": "Job title",
-      "employee_grades": "Employee grade",
+      "employee_grades": "Pay grade",
       "penaltyGroups": "Penalty group",
       "violations": "Violation",
       "penaltyActions": "Penalty action"

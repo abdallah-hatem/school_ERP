@@ -15,7 +15,7 @@
     },
     "lists": {
       "title": "HR lists",
-      "description": "Departments, job titles and employee grades"
+      "description": "Departments, job titles and pay grades"
     },
     "hrRules": {
       "title": "HR rules",
@@ -168,10 +168,10 @@
       "editItem": "Edit {name}"
     },
     "employeeGrades": {
-      "title": "Employee grades",
-      "description": "Hide a grade to stop new employees getting it. Grades are never deleted.",
-      "add": "Add grade",
-      "emptyTitle": "No grades yet",
+      "title": "Pay grades",
+      "description": "Hide a pay grade to stop new employees getting it. Pay grades are never deleted.",
+      "add": "Add pay grade",
+      "emptyTitle": "No pay grades yet",
       "emptyBody": "Add the first grade, such as Pay grade 1.",
       "placeholderEn": "Pay grade 1",
       "placeholderAr": "الدرجة الأولى"
