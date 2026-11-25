@@ -129,6 +129,8 @@ describe('RecordPenaltyDialog', () => {
     vi.useRealTimers();
   });
 
+  // A long walk (four picker changes and a date pick): under a busy CI runner the default 5 s ran
+  // out mid-way (PRs #315, #291), though every step passed. 20 s for this test only.
   it('Preview updates when employee, violation or date changes', async () => {
     const user = userEvent.setup();
     apis.GET_PENALTY_PREVIEW.mockImplementation(({ employeeId, date }: { employeeId: string; date: string }) =>
@@ -173,7 +175,7 @@ describe('RecordPenaltyDialog', () => {
     const lastCall = apis.GET_PENALTY_PREVIEW.mock.lastCall?.[0] as { date: string };
     expect(lastCall.date).toMatch(/^\d{4}-\d{2}-15$/);
     expect(lastCall.date < todayIso()).toBe(true);
-  });
+  }, 20_000);
 
   it('the employee picker asks the API for active employees by Arabic name or code and picks with the keyboard', async () => {
     const user = userEvent.setup();
