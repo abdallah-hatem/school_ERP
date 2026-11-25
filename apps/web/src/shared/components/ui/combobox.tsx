@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useMemo, useRef, useState, type ComponentProps, type KeyboardEvent } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type ComponentProps, type KeyboardEvent } from 'react';
 import { CheckIcon, ChevronDownIcon, SearchIcon } from '@/shared/components/ui/icons';
 import { controlClasses } from '@/shared/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover';
@@ -11,6 +11,8 @@ export interface ComboboxOption {
   value: string;
   /** What the row and the trigger show. */
   label: string;
+  /** Lighter text after the label, " · "-separated (a manager's department). The search matches it. */
+  hint?: string;
   /** Extra text the search matches but doesn't show (the other language's name, a code). */
   keywords?: readonly string[];
   disabled?: boolean;
@@ -81,6 +83,29 @@ export interface ComboboxProps extends Omit<
 }
 
 /**
+ * An option's text: the label, then its hint lighter (muted, normal weight) after " · ". Each part is
+ * isolated so the order holds in RTL with mixed scripts (name first, then the hint); the separator
+ * is plain text, so a screen reader reads "Name · Department" as one name.
+ */
+export function OptionText({ label, hint }: { label: string; hint?: string | null }) {
+  if (!hint) return <>{label}</>;
+  return (
+    <>
+      <bdi>{label}</bdi>
+      <span className="text-muted-foreground font-normal">
+        {' · '}
+        <bdi>{hint}</bdi>
+      </span>
+    </>
+  );
+}
+
+/** A row's element id (the search box points at it with `aria-activedescendant`). */
+function optionDomId(listId: string, value: string): string {
+  return `${listId}-${value.replace(/\W/g, '-')}`;
+}
+
+/**
  * A select with a search box: the trigger opens a popover aligned to it, focus lands in the search,
  * typing filters the options (label and keywords, either language, ignoring case and marks), the
  * arrow keys / Home / End move through the matches and Enter picks one. Rows are touch-sized;
@@ -108,7 +133,11 @@ export function Combobox({
   const listId = useId();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const [active, setActive] = useState(0);
+  // The highlighted row, by value: `null` is the first match. Kept by value (not by place) so it stays
+  // on the same option when the API's answer arrives or changes order.
+  const [activeValue, setActiveValue] = useState<string | null>(null);
+  // Set on open: bring the chosen option into view once it is in the list.
+  const revealChosen = useRef(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
@@ -119,7 +148,7 @@ export function Combobox({
   const sections = useMemo(() => {
     // The API already searched a server list; a short code list filters here.
     const filter = (list: readonly ComboboxOption[]) =>
-      server ? list : list.filter((o) => matchesSearch(query, [o.label, ...(o.keywords ?? [])]));
+      server ? list : list.filter((o) => matchesSearch(query, [o.label, ...(o.hint ? [o.hint] : []), ...(o.keywords ?? [])]));
     return [
       { key: '', label: null as string | null, options: filter(options) },
       ...(groups ?? []).map((g) => ({
@@ -131,21 +160,20 @@ export function Combobox({
   }, [options, groups, query, server]);
   const matches = sections.flatMap((section) => section.options);
   const enabled = matches.filter((o) => !o.disabled);
-  const activeOption = enabled[Math.min(active, enabled.length - 1)];
-  const optionId = (v: string) => `${listId}-${v.replace(/\W/g, '-')}`;
+  // A value no longer among the matches highlights nothing — the chosen option the API's page doesn't
+  // hold (yet): Enter then keeps the value instead of silently picking the first row.
+  const activeOption = activeValue === null ? enabled[0] : enabled.find((o) => o.value === activeValue);
+  const active = activeOption ? enabled.indexOf(activeOption) : -1;
+  const optionId = (v: string) => optionDomId(listId, v);
 
   function change(next: boolean) {
     setOpen(next);
     if (next) {
       setQuery('');
       server?.onQueryChange('');
-      // Start on the chosen option so arrows continue from it.
-      setActive(
-        Math.max(
-          0,
-          all.filter((o) => !o.disabled).findIndex((o) => o.value === value),
-        ),
-      );
+      // Open on the chosen option (Enter keeps it, arrows continue from it); nothing chosen, the first.
+      setActiveValue(value ? value : null);
+      revealChosen.current = Boolean(value);
     } else {
       onClose?.();
     }
@@ -158,14 +186,32 @@ export function Combobox({
   }
 
   function moveTo(index: number) {
-    const next = Math.max(0, Math.min(index, enabled.length - 1));
-    setActive(next);
-    const target = enabled[next];
-    if (target) document.getElementById(optionId(target.value))?.scrollIntoView?.({ block: 'nearest' });
+    const target = enabled[Math.max(0, Math.min(index, enabled.length - 1))];
+    if (!target) return;
+    revealChosen.current = false;
+    setActiveValue(target.value);
+    document.getElementById(optionId(target.value))?.scrollIntoView?.({ block: 'nearest' });
   }
 
+  // On open — and when the API's answer arrives holding it — scroll the chosen option into the
+  // list's view. Only the list scrolls (not the page: the popover may not be placed yet).
+  const chosenShown = open && activeOption !== undefined && activeOption.value === value;
+  useEffect(() => {
+    if (!chosenShown || !revealChosen.current) return;
+    const list = listRef.current;
+    const row = value ? document.getElementById(optionDomId(listId, value)) : null;
+    if (!list || !row) return;
+    revealChosen.current = false;
+    const listBox = list.getBoundingClientRect();
+    const rowBox = row.getBoundingClientRect();
+    const offset = rowBox.top - listBox.top;
+    if (offset < 0 || offset + rowBox.height > listBox.height) {
+      list.scrollTop += offset - (listBox.height - rowBox.height) / 2;
+    }
+  }, [chosenShown, value, listId]);
+
   function onKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    const current = Math.min(active, enabled.length - 1);
+    const current = active;
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
@@ -206,7 +252,7 @@ export function Combobox({
         onClick={() => pick(option)}
         onPointerMove={() => {
           const index = enabled.indexOf(option);
-          if (index >= 0 && index !== active) setActive(index);
+          if (index >= 0 && index !== active) setActiveValue(option.value);
         }}
         className={cn(
           'relative flex min-h-11 cursor-pointer items-center rounded-lg py-2 ps-3 pe-9 text-sm wrap-anywhere select-none',
@@ -215,7 +261,9 @@ export function Combobox({
           option.disabled && 'pointer-events-none opacity-50',
         )}
       >
-        {option.label}
+        <span className="min-w-0">
+          <OptionText label={option.label} hint={option.hint} />
+        </span>
         {isSelected ? <CheckIcon className="text-primary absolute end-3 size-4" /> : null}
       </li>
     );
@@ -239,7 +287,9 @@ export function Combobox({
             className,
           )}
         >
-          <span className="truncate">{selected ? selected.label : placeholder}</span>
+          <span className="min-w-0 truncate">
+            {selected ? <OptionText label={selected.label} hint={selected.hint} /> : placeholder}
+          </span>
           <ChevronDownIcon className="text-muted-foreground size-4 shrink-0" />
         </button>
       </PopoverTrigger>
@@ -267,7 +317,9 @@ export function Combobox({
             onChange={(e) => {
               setQuery(e.target.value);
               server?.onQueryChange(e.target.value);
-              setActive(0);
+              // A search highlights its first match.
+              setActiveValue(null);
+              revealChosen.current = false;
               listRef.current?.scrollTo?.({ top: 0 });
             }}
             onKeyDown={onKeyDown}

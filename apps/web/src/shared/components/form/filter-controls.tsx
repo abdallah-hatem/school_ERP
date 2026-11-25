@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ComponentProps } from 'react';
 import { scrollListIntoView } from '@/shared/components/data-table/pagination';
 import { Button, Spinner } from '@/shared/components/ui/button';
-import { Combobox, needsSearch, type ServerOptions } from '@/shared/components/ui/combobox';
+import { Combobox, needsSearch, OptionText, type ServerOptions } from '@/shared/components/ui/combobox';
 import { ClearFiltersIcon, SearchIcon } from '@/shared/components/ui/icons';
 import { formatCount } from '@/shared/lib/format';
 import { Input } from '@/shared/components/ui/input';
@@ -22,6 +22,8 @@ const ALL = '__all__';
 export interface FilterOption {
   value: string;
   label: string;
+  /** Lighter text shown after the label, " · "-separated; searched too. */
+  hint?: string;
   /** Extra text the searchable version matches but doesn't show (other-language name, a code). */
   keywords?: readonly string[];
 }
@@ -96,7 +98,7 @@ export function FilterSelect({
         <SelectItem value={ALL}>{allLabel}</SelectItem>
         {options.map((o) => (
           <SelectItem key={o.value} value={o.value}>
-            {o.label}
+            <OptionText label={o.label} hint={o.hint} />
           </SelectItem>
         ))}
       </SelectContent>

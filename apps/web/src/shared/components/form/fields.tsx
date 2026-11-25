@@ -5,7 +5,7 @@ import { useId, useState, type ComponentProps, type ReactNode } from 'react';
 import { useController, type Control, type FieldPath, type FieldValues } from 'react-hook-form';
 import { Button } from '@/shared/components/ui/button';
 import { Calendar } from '@/shared/components/ui/calendar';
-import { Combobox, needsSearch, type ServerOptions } from '@/shared/components/ui/combobox';
+import { Combobox, needsSearch, OptionText, type ServerOptions } from '@/shared/components/ui/combobox';
 import { CalendarIcon, type AppIcon } from '@/shared/components/ui/icons';
 import { GroupedNumberInput } from '@/shared/components/ui/grouped-number-input';
 import { Input, controlClasses } from '@/shared/components/ui/input';
@@ -402,6 +402,8 @@ export function MoneyField<T extends FieldValues>({
 export interface SelectOption {
   value: string;
   label: string;
+  /** Lighter text shown after the label, " · "-separated (a manager's department); searched too. */
+  hint?: string;
   /** Extra text the searchable version matches but doesn't show (other-language name, a code). */
   keywords?: readonly string[];
   disabled?: boolean;
@@ -496,7 +498,7 @@ export function SelectField<T extends FieldValues>({
             <SelectContent emptyText={emptyText ?? t('ui.form.noOptions')}>
               {options.map((option) => (
                 <SelectItem key={option.value} value={option.value} disabled={option.disabled}>
-                  {option.label}
+                  <OptionText label={option.label} hint={option.hint} />
                 </SelectItem>
               ))}
               {groups?.map((group) => (
@@ -504,7 +506,7 @@ export function SelectField<T extends FieldValues>({
                   <SelectLabel>{group.label}</SelectLabel>
                   {group.options.map((option) => (
                     <SelectItem key={option.value} value={option.value} disabled={option.disabled}>
-                      {option.label}
+                      <OptionText label={option.label} hint={option.hint} />
                     </SelectItem>
                   ))}
                 </SelectGroup>
