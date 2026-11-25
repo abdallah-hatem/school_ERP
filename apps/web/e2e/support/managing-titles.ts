@@ -55,7 +55,8 @@ export async function checkManagingTitles(page: Page, info: TestInfo, locale: La
     await shoot(page, info, `managing-badge-${tag}`);
 
     // ── New employee: the picker lists the holder, not the outsider; search works by name and code.
-    // An option reads "Name · Department" (owner, 2026-11-25).
+    // An option reads "Name · Department" (owner, 2026-11-25): the department is the option's lighter
+    // hint, and the separator is plain text, so the accessible name stays "Name · Department".
     const label = (e: EmployeeSummary) => `${nameIn(locale, e)} · ${nameIn(locale, e.department)}`;
     const option = (e: EmployeeSummary) => page.getByRole('option', { name: label(e), exact: true });
     await page.goto(`/${locale}/employees/new`);

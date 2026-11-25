@@ -54,8 +54,11 @@ export function EmployeePicker({
     loading: false,
     failed: false,
   });
-  const [active, setActive] = useState(0);
+  // The highlighted row by its key ('none' is "Not linked"); `null` is the first row. By key, so it
+  // stays on the linked employee when the API's answer arrives.
+  const [activeKey, setActiveKey] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
   const request = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => {
@@ -81,8 +84,32 @@ export function EmployeePicker({
   const taken = (o: EmployeeOption) => Boolean(o.linkedUser && o.linkedUser.id !== userId);
   const choices: (EmployeeOption | null)[] = [null, ...state.rows];
   const pickable = choices.filter((o) => o === null || !taken(o));
-  const activeChoice = pickable[Math.min(active, pickable.length - 1)];
-  const optionId = (o: EmployeeOption | null) => `${listId}-${o ? o.id : 'none'}`;
+  const keyOf = (o: EmployeeOption | null) => (o ? o.id : 'none');
+  // A key not in this answer highlights nothing, so Enter can't silently swap the linked employee.
+  const activeChoice = activeKey === null ? pickable[0] : pickable.find((o) => keyOf(o) === activeKey);
+  const active = activeChoice === undefined ? -1 : pickable.indexOf(activeChoice);
+  const optionId = (o: EmployeeOption | null) => `${listId}-${keyOf(o)}`;
+
+  // When the linked employee's row shows up in the open list, bring it into the list's view (only
+  // the list scrolls, not the page).
+  const linkedId = value?.id ?? null;
+  const linkedShown = open && linkedId !== null && activeChoice?.id === linkedId;
+  useEffect(() => {
+    if (!linkedShown || !linkedId) return;
+    // After the popover's first frame: in the commit that mounts it the list can't scroll yet.
+    const frame = requestAnimationFrame(() => {
+      const list = listRef.current;
+      const row = document.getElementById(`${listId}-${linkedId}`);
+      if (!list || !row) return;
+      const listBox = list.getBoundingClientRect();
+      const rowBox = row.getBoundingClientRect();
+      const offset = rowBox.top - listBox.top;
+      if (offset < 0 || offset + rowBox.height > listBox.height) {
+        list.scrollTop += offset - (listBox.height - rowBox.height) / 2;
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [linkedShown, linkedId, listId]);
 
   function pick(o: EmployeeOption | null) {
     if (o && taken(o)) return;
@@ -91,11 +118,13 @@ export function EmployeePicker({
   }
 
   function onKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    const current = Math.min(active, pickable.length - 1);
+    const current = active;
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
       const next = Math.max(0, Math.min(current + (e.key === 'ArrowDown' ? 1 : -1), pickable.length - 1));
-      setActive(next);
+      const target = pickable[next];
+      if (target === undefined) return;
+      setActiveKey(keyOf(target));
       document.getElementById(optionId(pickable[next] ?? null))?.scrollIntoView?.({ block: 'nearest' });
     } else if (e.key === 'Enter') {
       e.preventDefault();
@@ -112,7 +141,8 @@ export function EmployeePicker({
         setOpen(next);
         if (next) {
           setQuery('');
-          setActive(0);
+          // Open on the linked employee (Enter keeps it); none linked, "Not linked" — the first row.
+          setActiveKey(value ? value.id : null);
           load('', 0);
         }
       }}
@@ -159,7 +189,7 @@ export function EmployeePicker({
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
-              setActive(0);
+              setActiveKey(null);
               load(e.target.value, DEBOUNCE_MS);
             }}
             onKeyDown={onKeyDown}
@@ -167,6 +197,7 @@ export function EmployeePicker({
           />
         </div>
         <ul
+          ref={listRef}
           id={listId}
           role="listbox"
           aria-label={t('access.userForm.employeeField')}
