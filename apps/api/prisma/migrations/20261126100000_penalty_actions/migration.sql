@@ -129,5 +129,54 @@ ALTER TABLE "penalty_records" ADD CONSTRAINT "penalty_records_action_id_fkey" FO
 ALTER TABLE "payroll_lines" ADD COLUMN "penalty_days_amount" INTEGER NOT NULL DEFAULT 0;
 UPDATE "payroll_lines" SET "penalty_days_amount" = "penalty_amount";
 
+-- 4b. How each run's payslip splits the day-priced part between day penalties: every run that
+-- exists now keeps the old half-up shares, so an approved payslip reads exactly as before; a run
+-- calculated from now on splits by largest remainder (the shares add up — owner Q14).
+CREATE TYPE "PayslipShareMethod" AS ENUM ('HALF_UP', 'LARGEST_REMAINDER');
+ALTER TABLE "payroll_runs" ADD COLUMN "payslip_share_method" "PayslipShareMethod" NOT NULL DEFAULT 'HALF_UP';
+ALTER TABLE "payroll_runs" ALTER COLUMN "payslip_share_method" SET DEFAULT 'LARGEST_REMAINDER';
+
+-- 4c. The database keeps a level's and a penalty's number matching the effect (review 2026-11-26),
+-- whatever writes them: at most one number; none for Record only; days for Deduct days, optional
+-- for an investigation; a percent for Deduct %; an amount for Deduct amount. A penalty holds its
+-- effect (the snapshot), so a check; a level's effect is its action's, so a trigger.
+ALTER TABLE "violation_levels" ADD CONSTRAINT "violation_levels_one_number_check"
+  CHECK (num_nonnulls("days", "percent", "amount") <= 1);
+
+ALTER TABLE "penalty_records" ADD CONSTRAINT "penalty_records_number_fits_effect_check" CHECK (
+  CASE "effect"
+    WHEN 'RECORD_ONLY' THEN num_nonnulls("days", "percent", "amount") = 0
+    WHEN 'DEDUCT_DAYS' THEN "days" IS NOT NULL AND "percent" IS NULL AND "amount" IS NULL
+    WHEN 'INVESTIGATION' THEN "percent" IS NULL AND "amount" IS NULL
+    WHEN 'DEDUCT_PERCENT' THEN "percent" IS NOT NULL AND "days" IS NULL AND "amount" IS NULL
+    WHEN 'DEDUCT_AMOUNT' THEN "amount" IS NOT NULL AND "days" IS NULL AND "percent" IS NULL
+  END
+);
+
+CREATE OR REPLACE FUNCTION penalty_level_number_fits_action() RETURNS trigger
+LANGUAGE plpgsql AS $$
+DECLARE
+  e "PenaltyEffect";
+BEGIN
+  SELECT "effect" INTO e FROM "penalty_actions" WHERE "id" = NEW."action_id";
+  IF NOT CASE e
+    WHEN 'RECORD_ONLY' THEN num_nonnulls(NEW."days", NEW."percent", NEW."amount") = 0
+    WHEN 'DEDUCT_DAYS' THEN NEW."days" IS NOT NULL AND NEW."percent" IS NULL AND NEW."amount" IS NULL
+    WHEN 'INVESTIGATION' THEN NEW."percent" IS NULL AND NEW."amount" IS NULL
+    WHEN 'DEDUCT_PERCENT' THEN NEW."percent" IS NOT NULL AND NEW."days" IS NULL AND NEW."amount" IS NULL
+    WHEN 'DEDUCT_AMOUNT' THEN NEW."amount" IS NOT NULL AND NEW."days" IS NULL AND NEW."percent" IS NULL
+    ELSE TRUE
+  END THEN
+    RAISE EXCEPTION 'violation level %: its number doesn''t fit its action''s effect %', NEW."level", e
+      USING ERRCODE = 'check_violation';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER "violation_levels_number_fits_action"
+  BEFORE INSERT OR UPDATE ON "violation_levels"
+  FOR EACH ROW EXECUTE FUNCTION penalty_level_number_fits_action();
+
 -- 5. The code enum is gone (the seeded rows keep the codes as text).
 DROP TYPE "PenaltyAction";

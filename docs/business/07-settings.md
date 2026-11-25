@@ -61,8 +61,9 @@ affects only **draft** payroll runs (approved runs never change).
   switch (set when adding or editing the title; the list shows a "Manages people" badge on those
   that do). It decides who can be chosen as a direct manager (§3). Changing it is recorded in the
   change history like any list change.
-- **GUESS** (spec 2026-11-25) — A hidden penalty action can't be picked for a level; levels that
-  already use it keep it, and new penalties on them still get it. Hiding one in use says how many
+- **GUESS** (spec 2026-11-25) — A hidden penalty action can't be picked for a level — not even one
+  of the same violation's other levels (review 2026-11-26); levels that already use it keep it
+  (removing a level, which renumbers the rest, still saves), and new penalties on them still get it. Hiding one in use says how many
   levels and violations use it (in use; retired violations still holding it are named apart — Q19).
 - **DECIDED** — Settings are validated: times in order, part-time percentages 1–100, divisor 1–31, days in
   quarter steps (0.25) from 0 to 30 (a catalogue level's days: above 0, Q2), level percentages

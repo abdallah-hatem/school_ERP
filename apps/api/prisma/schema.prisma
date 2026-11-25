@@ -496,6 +496,12 @@ enum PenaltyEffect {
   INVESTIGATION
 }
 
+/// How a payslip splits a line's day-priced deduction between its day penalties.
+enum PayslipShareMethod {
+  HALF_UP
+  LARGEST_REMAINDER
+}
+
 /// Which salary a DEDUCT_PERCENT action is a share of (§6).
 enum PenaltySalaryBase {
   MONTH_SALARY
@@ -845,6 +851,11 @@ model Violation {
 
 /// Level 1–5 of a violation: the action for the n-th occurrence and its number — exactly the one
 /// the action's effect asks for (shared `levelValueProblem`).
+///
+/// WARNING: the database enforces it too, in SQL only (migration 20261126100000_penalty_actions):
+/// the check `violation_levels_one_number_check` and the trigger
+/// `violation_levels_number_fits_action`; on penalty_records the check
+/// `penalty_records_number_fits_effect_check`. Keep them in any migration that rebuilds these.
 model ViolationLevel {
   id          String   @id @default(uuid()) @db.Uuid
   violationId String   @map("violation_id") @db.Uuid
@@ -1188,21 +1199,25 @@ model LatenessEntry {
 
 /// One run per month (§6). DRAFT until approved; an approved run is never edited.
 model PayrollRun {
-  id            String        @id @default(uuid()) @db.Uuid
+  id                 String             @id @default(uuid()) @db.Uuid
   /// 'YYYY-MM'
-  month         String        @unique @db.Char(7)
-  status        PayrollStatus @default(DRAFT)
-  calculatedAt  DateTime      @default(now()) @map("calculated_at")
-  createdById   String?       @map("created_by_id") @db.Uuid
-  approvedById  String?       @map("approved_by_id") @db.Uuid
-  approvedAt    DateTime?     @map("approved_at")
+  month              String             @unique @db.Char(7)
+  status             PayrollStatus      @default(DRAFT)
+  calculatedAt       DateTime           @default(now()) @map("calculated_at")
+  /// How the payslip splits the day-priced part between day penalties: LARGEST_REMAINDER for runs
+  /// calculated from 2026-11-26 (owner Q14), HALF_UP for runs last calculated before — an approved
+  /// payslip never changes (review 2026-11-26).
+  payslipShareMethod PayslipShareMethod @default(LARGEST_REMAINDER) @map("payslip_share_method")
+  createdById        String?            @map("created_by_id") @db.Uuid
+  approvedById       String?            @map("approved_by_id") @db.Uuid
+  approvedAt         DateTime?          @map("approved_at")
   /// Accounting marked the salaries transferred (finalized, §10): the run is final.
-  transferredAt DateTime?     @map("transferred_at")
+  transferredAt      DateTime?          @map("transferred_at")
   /// The last time Accounting sent the run back to HR (a draft again), and why. Cleared on approval.
-  returnedAt    DateTime?     @map("returned_at")
-  returnReason  String?       @map("return_reason")
-  createdAt     DateTime      @default(now()) @map("created_at")
-  updatedAt     DateTime      @updatedAt @map("updated_at")
+  returnedAt         DateTime?          @map("returned_at")
+  returnReason       String?            @map("return_reason")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
 
   createdBy   User?               @relation("PayrollRunCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   approvedBy  User?               @relation("PayrollRunApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)

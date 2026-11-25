@@ -23,6 +23,7 @@ export const RUN_SELECT = {
   status: true,
   approvedAt: true,
   calculatedAt: true,
+  payslipShareMethod: true,
   transferredAt: true,
   returnedAt: true,
   returnReason: true,
@@ -153,13 +154,35 @@ export interface LineFilter {
   flagged?: boolean;
 }
 
+/**
+ * "Flagged" as a viewer may know it (owner Q9, review 2026-11-26): every flag on the lines whose pay
+ * they see (`salaryScope` undefined: all of them); elsewhere only PENDING_PENALTIES — NET_FLOORED
+ * there would tell them the pay is below the deductions they see on the penalties.
+ */
+export function flaggedWhere(salaryScope: Prisma.EmployeeWhereInput | undefined): Prisma.PayrollLineWhereInput {
+  if (!salaryScope) return { flags: { isEmpty: false } };
+  return {
+    OR: [{ flags: { has: PayrollFlag.PENDING_PENALTIES } }, { flags: { isEmpty: false }, employee: salaryScope }],
+  };
+}
+
 /** The run's lines matching `filter` within `scope`: code, either name or national id; a department; flagged. */
-function lineWhere(runId: string, filter: LineFilter, scope: Prisma.EmployeeWhereInput): Prisma.PayrollLineWhereInput {
+function lineWhere(
+  runId: string,
+  filter: LineFilter,
+  scope: Prisma.EmployeeWhereInput,
+  salaryScope?: Prisma.EmployeeWhereInput,
+): Prisma.PayrollLineWhereInput {
   const where: Prisma.PayrollLineWhereInput = { runId, employee: scope };
   if (filter.departmentId) where.departmentId = filter.departmentId;
-  if (filter.flagged !== undefined) where.flags = { isEmpty: !filter.flagged };
+  const and: Prisma.PayrollLineWhereInput[] = [];
+  if (filter.flagged !== undefined) {
+    const flagged = flaggedWhere(salaryScope);
+    and.push(filter.flagged ? flagged : { NOT: flagged });
+  }
   const searched = searchWhere(filter.search);
-  if (searched) where.OR = searched.OR;
+  if (searched) and.push({ OR: searched.OR });
+  if (and.length) where.AND = and;
   return where;
 }
 
@@ -237,6 +260,8 @@ export class PayrollRunsRepository extends BaseRepository<
   async totalsFor(
     runIds: readonly string[],
     scope: Prisma.EmployeeWhereInput = {},
+    /** The viewer's salary scope (undefined: every line's pay): what "flagged" may count. */
+    salaryScope?: Prisma.EmployeeWhereInput,
   ): Promise<Map<string, PayrollTotals>> {
     const totals = new Map<string, PayrollTotals>(runIds.map((id) => [id, { ...EMPTY_TOTALS }]));
     if (!runIds.length) return totals;
@@ -257,7 +282,7 @@ export class PayrollRunsRepository extends BaseRepository<
       }),
       this.db.payrollLine.groupBy({
         by: ['runId'],
-        where: { runId: { in: ids }, flags: { isEmpty: false }, employee: scope },
+        where: { AND: [{ runId: { in: ids }, employee: scope }, flaggedWhere(salaryScope)] },
         _count: { _all: true },
       }),
     ]);
@@ -297,10 +322,11 @@ export class PayrollRunsRepository extends BaseRepository<
     scope: Prisma.EmployeeWhereInput,
     page: number = PAGINATION.defaultPage,
     limit: number = PAGINATION.defaultLimit,
+    salaryScope?: Prisma.EmployeeWhereInput,
   ): Promise<{ rows: LineRow[]; total: number; page: number; limit: number }> {
     const take = Math.min(Math.max(1, limit), PAYROLL_PAGINATION.maxLimit);
     const current = Math.max(1, page);
-    const where = lineWhere(runId, filter, scope);
+    const where = lineWhere(runId, filter, scope, salaryScope);
     const [rows, total] = await Promise.all([
       this.db.payrollLine.findMany({
         where,
@@ -504,6 +530,8 @@ export class PayrollRunsRepository extends BaseRepository<
         where: { id: runId },
         data: {
           calculatedAt: new Date(),
+          // Calculated now: its payslip splits day shares by largest remainder (owner Q14).
+          payslipShareMethod: 'LARGEST_REMAINDER',
           ...(approve
             ? {
                 status: PayrollStatus.APPROVED,

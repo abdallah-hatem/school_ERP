@@ -549,6 +549,8 @@ export class PenaltyRecordsRepository extends BaseRepository<
   /** Waiting (either step) and APPROVED records dated in a month: what payroll counts and flags (§6). */
   findForPayroll(
     month: string,
+    /** Only these employees' (a page of a run's lines); absent: everyone's. */
+    employeeIds?: readonly string[],
   ): Promise<
     {
       employeeId: string;
@@ -564,6 +566,7 @@ export class PenaltyRecordsRepository extends BaseRepository<
       where: {
         date: monthDateRange(month),
         status: { in: [...OPEN_PENALTY_STATUSES, PenaltyStatus.APPROVED] },
+        ...(employeeIds ? { employeeId: { in: [...employeeIds] } } : {}),
       },
       select: { employeeId: true, status: true, effect: true, percentBase: true, days: true, percent: true, amount: true },
     });

@@ -73,6 +73,12 @@ describe('the payslip’s label (owner Q12, Q13)', () => {
     expect(payslipActionLabel(en, 'en', ACTION.DEDUCT_DAYS, { days: 1 }, 900_000)).toBe('Deduct 1 day');
     expect(payslipActionLabel(en, 'en', plainPercent, { percent: 10 }, 900_000)).toBe('Deduct 10% of the salary for the month');
     expect(payslipActionLabel(en, 'en', ACTION.WARNING, {}, 900_000)).toBe('Warning');
+    // A seeded action's name is never added, in either language.
+    expect(payslipActionLabel(ar, 'ar', ACTION.DEDUCT_DAYS, { days: 1 }, 900_000)).toBe('خصم يوم واحد');
+    const plainAmount = { ...AMOUNT_ACTION, nameEn: 'Deduct a fixed amount', nameAr: 'خصم مبلغ ثابت' };
+    expect(payslipActionLabel(en, 'en', plainAmount, { amount: 20_000 }, undefined)).toBe('Deduct EGP 200');
+    expect(payslipActionLabel(ar, 'ar', plainAmount, { amount: 20_000 }, undefined)).toBe('خصم 200 جنيه');
+    expect(payslipActionLabel(ar, 'ar', { ...plainAmount, nameAr: 'غرامة الزي' }, { amount: 20_000 }, undefined)).toBe('خصم 200 جنيه (غرامة الزي)');
   });
 
   it('Q13 — a % of the basic salary says the base, in both languages', () => {

@@ -103,6 +103,13 @@ export function costsPay(p: Pick<PenaltyDeduction, 'effect' | 'days'>): boolean 
   return deductedDays(p.effect, p.days) > 0;
 }
 
+/**
+ * The most a line's penalty deduction is stored as (review 2026-11-26): the payroll columns are
+ * 32-bit integers of piastres, so EGP 21,474,836.47. Salaries are at most EGP 1,000,000 a month, so
+ * a line this deep is net 0 and flagged long before; only the written-off figure stops growing.
+ */
+export const MAX_LINE_AMOUNT = 2_147_483_647;
+
 /** Sum of day counts in whole quarters, so 0.25 + 0.5 never drifts. */
 export function sumDays(days: readonly Days[]): Days {
   return quartersToDays(days.reduce((q, d) => q + daysToQuarters(d), 0));
@@ -133,9 +140,9 @@ export function penaltyDeductions(
   dayDivisor: number,
 ): { penaltyDays: Days; penaltyDaysAmount: Piastres; penaltyAmount: Piastres } {
   const penaltyDays = sumDays(penalties.map((p) => deductedDays(p.effect, p.days)));
-  const penaltyDaysAmount = deductionAmount(penaltyDays, bases.monthSalary, dayDivisor);
+  const penaltyDaysAmount = Math.min(deductionAmount(penaltyDays, bases.monthSalary, dayDivisor), MAX_LINE_AMOUNT);
   const own = penalties.reduce((sum, p) => sum + (ownPenaltyAmount(p, bases) ?? 0), 0);
-  return { penaltyDays, penaltyDaysAmount, penaltyAmount: penaltyDaysAmount + own };
+  return { penaltyDays, penaltyDaysAmount, penaltyAmount: Math.min(penaltyDaysAmount + own, MAX_LINE_AMOUNT) };
 }
 
 /**
@@ -155,6 +162,21 @@ export function lineNetWithFlags(
 ): { net: Piastres; flags: PayrollFlag[] } {
   const { net, flags } = lineNet(amounts);
   return { net, flags: pendingPenalties ? [...flags, PayrollFlag.PENDING_PENALTIES] : flags };
+}
+
+/**
+ * What the floor at 0 left undeducted on a line (owner Q4, DECIDED 2026-11-26): how far below 0 the
+ * net would have gone — written off for that month, never carried forward; the payslip shows it
+ * as "Not deducted (pay too low)". 0 when the net wasn't floored.
+ *
+ * @example notDeducted({ monthSalary: 900_000, penaltyAmount: 1_040_000, latenessAmount: 15_000, adjustmentAdditions: 50_000, adjustmentDeductions: 0 }) // 105_000
+ */
+export function notDeducted(
+  amounts: Pick<LineAmounts, 'monthSalary' | 'penaltyAmount' | 'latenessAmount' | 'adjustmentAdditions' | 'adjustmentDeductions'>,
+): Piastres {
+  const raw =
+    amounts.monthSalary - amounts.penaltyAmount - amounts.latenessAmount + amounts.adjustmentAdditions - amounts.adjustmentDeductions;
+  return raw < 0 ? -raw : 0;
 }
 
 /**
@@ -225,8 +247,17 @@ export function payslipPenaltyAmount(
 export function payslipPenaltyAmounts(
   penalties: readonly PenaltyDeduction[],
   line: PercentBases & { penaltyDaysAmount: Piastres },
+  /**
+   * HALF_UP for a run last calculated before the largest remainder existed: each day share rounded
+   * half up on its own, as its payslip always read (an approved payslip never changes).
+   */
+  method: 'HALF_UP' | 'LARGEST_REMAINDER' = 'LARGEST_REMAINDER',
 ): Piastres[] {
   const own = penalties.map((p) => ownPenaltyAmount(p, line));
+  if (method === 'HALF_UP') {
+    const lineDays = sumDays(penalties.map((p, i) => (own[i] === null ? deductedDays(p.effect, p.days) : 0)));
+    return penalties.map((p, i) => own[i] ?? penaltyShare(deductedDays(p.effect, p.days), lineDays, line.penaltyDaysAmount));
+  }
   const weights = penalties.map((p, i) => (own[i] === null ? daysToQuarters(deductedDays(p.effect, p.days)) : 0));
   const total = weights.reduce((a, b) => a + b, 0);
   const amount = BigInt(line.penaltyDaysAmount);

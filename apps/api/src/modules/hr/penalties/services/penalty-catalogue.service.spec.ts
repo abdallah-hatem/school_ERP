@@ -201,6 +201,14 @@ describe('PenaltyCatalogueService', () => {
       null,
     );
     expect(holding.repository.updateViolation).toHaveBeenCalled();
+
+    // Per level (review 2026-11-26): level 1 can't newly pick the hidden action level 2 has…
+    await expect(
+      holding.service.updateViolation('v1', { levels: [{ level: 1, actionId: 'a-HIDDEN' }, { level: 2, actionId: 'a-HIDDEN', days: 2 }] }, null),
+    ).rejects.toMatchObject({ code: ErrorCode.PENALTY_ACTION_HIDDEN });
+    // …but removing level 1 (level 2 becomes 1) still saves.
+    await holding.service.updateViolation('v1', { levels: [{ level: 1, actionId: 'a-HIDDEN', days: 2 }] }, null);
+    expect(holding.repository.updateViolation).toHaveBeenCalledTimes(2);
   });
 
   it('edge case 10: a level naming an action id that does not exist → 400 PENALTY_ACTION_NOT_FOUND', async () => {

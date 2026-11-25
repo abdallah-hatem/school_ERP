@@ -4,6 +4,7 @@ import {
   formatPercent,
   PenaltyEffect,
   PenaltySalaryBase,
+  SEEDED_PENALTY_ACTIONS,
   type PenaltyActionRef,
   type PenaltyLevelNumbers,
 } from '@school-erp/shared';
@@ -77,7 +78,13 @@ export function payslipActionLabel(
     action.effect === PenaltyEffect.DEDUCT_PERCENT ||
     action.effect === PenaltyEffect.DEDUCT_AMOUNT;
   const name = nameIn(action, locale);
-  return deducting && name !== t(`common.enums.penaltyEffect.${action.effect}`) ? `${text} (${name})` : text;
+  // The effect's default words, and a seeded action's own name, are never added (only a school's
+  // own or renamed action shows its name — owner Q12, review 2026-11-26).
+  const defaults = new Set([
+    t(`common.enums.penaltyEffect.${action.effect}`),
+    ...SEEDED_PENALTY_ACTIONS.filter((a) => a.effect === action.effect).map((a) => nameIn(a, locale)),
+  ]);
+  return deducting && !defaults.has(name) ? `${text} (${name})` : text;
 }
 
 /**

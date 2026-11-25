@@ -118,7 +118,13 @@ lines each role sees: §2 Roles (enforced, P4).
   shows the minutes alone until it is recalculated.
 - **DECIDED** — A day penalty's amount on the payslip is its share of the line's day-priced
   deduction, by its days; a % or fixed penalty shows its own amount. **GUESS** (Q14, 2026-11-26) —
-  the day shares are split by the largest remainder, so they always add up to the line exactly.
+  the day shares are split by the largest remainder, so they always add up to the line exactly — on
+  runs calculated from 2026-11-26. **An approved payslip never changes**: runs last calculated before
+  keep the half-up shares they always showed (review 2026-11-26).
+- **GUESS** (review 2026-11-26) — A line's penalty deduction is stored up to EGP 21,474,836.47 (the
+  column's limit); a salary is at most EGP 1,000,000, so such a line is net 0 and flagged long before.
+- **GUESS** (review 2026-11-26) — Without salary access, "flagged" (the filter and the count)
+  means pending penalties only: the net-floored flag would give the pay away.
 - **GUESS** (Q12, Q13, 2026-11-26) — A deducting penalty's payslip label adds the action's own name
   when it isn't the effect's default ("Deduct EGP 200 (Late uniform fine)"); a % of the basic salary
   names the base ("Deduct 10% of the basic salary (12,345.67)").

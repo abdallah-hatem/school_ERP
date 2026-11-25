@@ -211,6 +211,8 @@ describe('payroll — salary (R7)', () => {
     expect('net' in slip).toBe(false);
     expect('amount' in slip.penalties[0]).toBe(false);
     expect('amount' in slip.adjustments[0]).toBe(false);
+    // Owner Q4: the written-off amount is money too.
+    expect('notDeducted' in slip).toBe(false);
   });
 
   it('a payslip with the key itemises the penalty amount', async () => {
@@ -218,6 +220,8 @@ describe('payroll — salary (R7)', () => {
     const slip = await service.payslip('r1', 'l-e1');
     expect(slip.penalties[0].amount).toBe(30000);
     expect(slip.adjustments[0].amount).toBe(5000);
+    // Not floored: nothing written off.
+    expect(slip.notDeducted).toBe(0);
   });
 
   it('the profile Payroll tab: net only with the salary key', async () => {

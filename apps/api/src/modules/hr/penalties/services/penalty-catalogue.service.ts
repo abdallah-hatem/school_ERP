@@ -80,6 +80,13 @@ function toGroup(row: GroupRow): GroupSnapshot {
   };
 }
 
+/** Whether `items` is `from` with some entries taken out, the rest in the same order. */
+function isSubsequence(items: readonly string[], from: readonly string[]): boolean {
+  let i = 0;
+  for (const f of from) if (i < items.length && items[i] === f) i++;
+  return i === items.length;
+}
+
 /** Levels as stored: sorted, and each number null when absent. */
 function toLevelData(levels: readonly ViolationLevelDto[]): LevelData[] {
   return [...levels]
@@ -247,18 +254,25 @@ export class PenaltyCatalogueService {
 
   /**
    * The levels as they will be stored, or a 400 (spec 2026-11-25): each names an action that exists
-   * (`PENALTY_ACTION_NOT_FOUND`); a hidden action only when the violation already uses it on one of
-   * its levels — levels keep a hidden action, it just can't be picked anew (`PENALTY_ACTION_HIDDEN`);
+   * (`PENALTY_ACTION_NOT_FOUND`); a hidden action only on the level that already had it (or when levels
+   * were only removed, renumbering the rest) — it can't be picked anew (`PENALTY_ACTION_HIDDEN`);
    * then the shared rules on the count, numbering and each level's number for its action's effect
    * (`INVALID_LEVELS`, `params.problem`).
    */
   private async checkedLevels(levels: readonly ViolationLevelDto[], before: readonly LevelRow[]): Promise<LevelData[]> {
     const actions = await this.actions.byIds(levels.map((l) => l.actionId));
-    const had = new Set(before.map((l) => l.action.id));
+    const hadAt = new Map(before.map((l) => [l.level, l.action.id]));
+    // Removing levels renumbers the rest (level 2 becomes 1): a list that is the old one with some
+    // levels taken out, in order, picks nothing new.
+    const sorted = [...levels].sort((a, b) => a.level - b.level).map((l) => l.actionId);
+    const oldOrder = [...before].sort((a, b) => a.level - b.level).map((l) => l.action.id);
+    const onlyRemoved = isSubsequence(sorted, oldOrder);
     for (const l of levels) {
       const action = actions.get(l.actionId);
       if (!action) throw new CodedException(HttpStatus.BAD_REQUEST, ErrorCode.PENALTY_ACTION_NOT_FOUND);
-      if (!action.isActive && !had.has(action.id)) {
+      // Per level (review 2026-11-26): a level keeps a hidden action it had; another level of the
+      // same violation can't newly pick it.
+      if (!action.isActive && hadAt.get(l.level) !== action.id && !onlyRemoved) {
         throw new CodedException(HttpStatus.BAD_REQUEST, ErrorCode.PENALTY_ACTION_HIDDEN);
       }
     }

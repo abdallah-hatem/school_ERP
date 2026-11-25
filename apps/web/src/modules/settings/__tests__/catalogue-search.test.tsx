@@ -218,10 +218,16 @@ describe('Once per day (§4)', { timeout: 20_000 }, () => {
   it('the switch shows the stored value with its explanation, and is sent on save (edit and create)', async () => {
     const user = userEvent.setup();
     serveCatalogue();
+    // The API answers with the stored violation: its levels name their actions (the request's
+    // levels name only action ids, spec 2026-11-25), so the request's levels aren't echoed back.
+    const withoutLevels = (body: object) => {
+      const { levels: _levels, ...rest } = body as { levels?: unknown };
+      return rest;
+    };
     api.UPDATE_VIOLATION.mockImplementation((id: string, body: object) =>
-      ok({ ...catalogue[1]!.violations.find((x) => x.id === id)!, ...body }),
+      ok({ ...catalogue[1]!.violations.find((x) => x.id === id)!, ...withoutLevels(body) }),
     );
-    api.CREATE_VIOLATION.mockImplementation((_g: string, body: object) => ok({ ...v('v-new', '', ''), ...body }));
+    api.CREATE_VIOLATION.mockImplementation((_g: string, body: object) => ok({ ...v('v-new', '', ''), ...withoutLevels(body) }));
     renderSettings(<CatalogueSection />);
     await user.click(await screen.findByRole('button', { name: /^Educational violations/ }));
 

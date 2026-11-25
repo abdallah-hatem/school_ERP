@@ -59,6 +59,7 @@ export {
   costsPay,
   deductedDays,
   lineNetWithFlags,
+  notDeducted,
   ownPenaltyAmount,
   payslipPenaltyAmount,
   payslipPenaltyAmounts,

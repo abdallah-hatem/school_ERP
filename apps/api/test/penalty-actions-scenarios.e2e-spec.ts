@@ -482,6 +482,24 @@ describe('Penalty actions — the blind scenarios (e2e)', () => {
     ]);
   });
 
+  it('S50 (review) — neither the flagged filter nor the flagged count gives a floored line away to a viewer without its pay', async () => {
+    const month = nextMonth();
+    const fine = await amtAction();
+    const nadia = await employee();
+    await approved(nadia, (await violation([{ level: 1, actionId: fine.id, amount: 1_000_000 }])).id, day(month, 6));
+    const run = await createRun(month);
+    // HR (every salary) sees it flagged and counted.
+    expect(run.totals.flagged).toBe(1);
+    const flaggedForHr = (await http(app).get(`/hr/payroll-runs/${run.id}`).query({ limit: '500', flagged: 'true' }).expect(200)).body.data as PayrollRun;
+    expect(flaggedForHr.lines.map((l) => l.employeeId)).toEqual([nadia]);
+    // The principal: not counted, not in "flagged", and in "not flagged" like any other line.
+    const asAdel = (q: Record<string, string>) =>
+      as(who.adel, () => http(app).get(`/hr/payroll-runs/${run.id}`).query({ limit: '500', ...q }).expect(200)).then((r) => r.body.data as PayrollRun);
+    expect((await asAdel({})).totals.flagged).toBe(0);
+    expect((await asAdel({ flagged: 'true' })).lines.map((l) => l.employeeId)).not.toContain(nadia);
+    expect((await asAdel({ flagged: 'false' })).lines.map((l) => l.employeeId)).toContain(nadia);
+  });
+
   it('S51 — the accountant: each label and priced amount on the payslip; the penalty catalogue isn’t theirs', async () => {
     const month = nextMonth();
     const basic = await pctAction('BASIC_SALARY');

@@ -604,8 +604,8 @@ export class PenaltyRecordsService {
    * and fixed amounts; record-only ones cost 0), and how many penalties dated in it still wait at
    * either step. Rejected and cancelled never count.
    */
-  async payrollInputs(month: Month): Promise<MonthPenaltyInputs> {
-    const rows = await this.repository.findForPayroll(month);
+  async payrollInputs(month: Month, employeeIds?: readonly Uuid[]): Promise<MonthPenaltyInputs> {
+    const rows = await this.repository.findForPayroll(month, employeeIds);
     const approved = new Map<Uuid, PenaltyDeduction[]>();
     const pending = new Map<Uuid, number>();
     for (const row of rows) {

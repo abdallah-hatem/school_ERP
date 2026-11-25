@@ -3,7 +3,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { SEEDED_PENALTY_ACTIONS } from '@school-erp/shared';
 import type { DatabaseService } from '../src/database/database.service';
-import { payslipPenaltyAmount } from '../src/modules/hr/domain';
+import { payslipPenaltyAmounts } from '../src/modules/hr/domain';
 import { ACTION_ID } from './helpers/penalty-actions';
 import { clientForSchema, e2eDatabaseUrl } from './helpers/setup-db';
 
@@ -46,15 +46,17 @@ const LINE = '99999999-9999-4999-8999-9999999999a1';
 
 const CODES = SEEDED_PENALTY_ACTIONS.map((a) => a.code);
 /** One violation per old action; the day ones with days (investigation's are optional). */
-const DAYS: Record<string, string> = { DEDUCT_DAYS: '1.5', INVESTIGATION: '0.5' };
+const DAYS: Record<string, string> = { DEDUCT_DAYS: '0.25', INVESTIGATION: '0.25' };
 /** Penalties as they were: [id, violation index, status, action, days]. */
 const PENALTIES: [string, number, string, string, string | null][] = [
-  [P(1), 2, 'APPROVED', 'DEDUCT_DAYS', '1.5'],
-  [P(2), 3, 'APPROVED', 'INVESTIGATION', '0.5'],
+  [P(1), 2, 'APPROVED', 'DEDUCT_DAYS', '0.25'],
+  [P(2), 3, 'APPROVED', 'INVESTIGATION', '0.25'],
   [P(3), 0, 'APPROVED', 'NOTICE', null],
   [P(4), 1, 'WAITING_HR', 'WARNING', null],
   [P(5), 9, 'CANCELLED', 'DISMISSAL', null],
   [P(6), 4, 'REJECTED', 'RAISE_HALF_LOSS', null],
+  // A third quarter day: three equal shares of 250.00 don't split evenly (83.33 × 3 = 249.99).
+  [P(7), 2, 'APPROVED', 'DEDUCT_DAYS', '0.25'],
 ];
 
 const DATA = `
@@ -64,7 +66,7 @@ INSERT INTO "job_titles" ("id","name_en","name_ar","updated_at") VALUES ('${TITL
 INSERT INTO "employees" ("id","code","name_en","name_ar","gender","date_of_birth","phone","hire_date","stage_id",
   "department_id","job_title_id","work_system","basic_salary","contract_start","contract_end","updated_at")
 VALUES ('${EMP}','EMP-9101','Nadia','نادية','FEMALE','1990-01-01','010','2015-09-01','${STAGE}','${DEPT}','${TITLE}',
-  'FULL_TIME',900000,'2025-06-01','2026-05-31',now());
+  'FULL_TIME',1000000,'2025-06-01','2026-05-31',now());
 INSERT INTO "penalty_groups" ("id","name_en","name_ar","updated_at") VALUES ('${GROUP}','Table A','جدول أ',now());
 ${CODES.map(
   (c, i) => `INSERT INTO "violations" ("id","group_id","name_en","name_ar","updated_at") VALUES ('${V(i)}','${GROUP}','V ${c}','م ${c}',now());
@@ -78,8 +80,8 @@ INSERT INTO "payroll_runs" ("id","month","status","approved_at","updated_at") VA
 INSERT INTO "payroll_lines" ("id","run_id","employee_id","employee_code","name_en","name_ar","department_id",
   "department_name_en","department_name_ar","basic_salary","work_system","month_salary","day_value","penalty_days",
   "penalty_amount","net","insurance_status","updated_at")
-VALUES ('${LINE}','${RUN}','${EMP}','EMP-9101','Nadia','نادية','${DEPT}','Science','علوم',900000,'FULL_TIME',900000,30000,
-  '2','60000',840000,'NOT_INSURED',now());
+VALUES ('${LINE}','${RUN}','${EMP}','EMP-9101','Nadia','نادية','${DEPT}','Science','علوم',1000000,'FULL_TIME',1000000,33333,
+  '0.75','25000',975000,'NOT_INSURED',now());
 `;
 
 describe('penalty actions on an existing database (migration, e2e)', () => {
@@ -172,42 +174,56 @@ describe('penalty actions on an existing database (migration, e2e)', () => {
     }
   });
 
-  it('S66 + edge case 25: the approved run’s line keeps its totals and net; penalty_days_amount = penalty_amount; its payslip amounts read as before', async () => {
+  it('S66 + edge case 25: the approved run’s line keeps its totals and net; penalty_days_amount = penalty_amount; its payslip reads byte for byte as before, even on an uneven split', async () => {
     const line = await db.payrollLine.findUniqueOrThrow({
       where: { id: LINE },
       select: { penaltyDays: true, penaltyAmount: true, penaltyDaysAmount: true, net: true, monthSalary: true, basicSalary: true },
     });
     expect({ ...line, penaltyDays: Number(line.penaltyDays) }).toEqual({
-      penaltyDays: 2,
-      penaltyAmount: 60_000,
-      penaltyDaysAmount: 60_000,
-      net: 840_000,
-      monthSalary: 900_000,
-      basicSalary: 900_000,
+      penaltyDays: 0.75,
+      penaltyAmount: 25_000,
+      penaltyDaysAmount: 25_000,
+      net: 975_000,
+      monthSalary: 1_000_000,
+      basicSalary: 1_000_000,
     });
-    // The payslip's per-penalty amounts, as the payslip works them out now: 1.5 and 0.5 of 2 days.
+    // The run existed before: it keeps the half-up shares its payslip always showed.
+    const run = await db.payrollRun.findUniqueOrThrow({ where: { id: RUN }, select: { payslipShareMethod: true } });
+    expect(run.payslipShareMethod).toBe('HALF_UP');
     const approved = await db.penaltyRecord.findMany({
       where: { status: 'APPROVED' },
       orderBy: { date: 'asc' },
       select: { effect: true, percentBase: true, days: true, percent: true, amount: true },
     });
-    const amounts = approved.map((p) =>
-      payslipPenaltyAmount(
-        { effect: p.effect, percentBase: p.percentBase, days: p.days === null ? null : Number(p.days), percent: null, amount: p.amount },
-        { ...line, penaltyDays: Number(line.penaltyDays) },
-      ),
-    );
-    expect(amounts).toEqual([45_000, 15_000, 0]);
-    expect(amounts.reduce((a, b) => a + b, 0)).toBe(line.penaltyAmount);
+    const penalties = approved.map((p) => ({
+      effect: p.effect,
+      percentBase: p.percentBase,
+      days: p.days === null ? null : Number(p.days),
+      percent: null,
+      amount: p.amount,
+    }));
+    // Before the move: each quarter day round(1 × 25,000 ÷ 3) = 8,333 (the payslip showed 249.99).
+    const before = [8_333, 8_333, 0, 8_333];
+    expect(payslipPenaltyAmounts(penalties, line, run.payslipShareMethod)).toEqual(before);
+    // A run calculated from now on splits the same line so the shares add up (owner Q14).
+    expect(payslipPenaltyAmounts(penalties, line, 'LARGEST_REMAINDER')).toEqual([8_334, 8_333, 0, 8_333]);
   });
 
-  it('the old enum is gone; the rules the migration adds hold (base only for %, names unique in any case)', async () => {
+  it('the old enum is gone; the rules the migration adds hold (base only for %, names unique, numbers fit the effect)', async () => {
     await expect(
       db.$executeRaw`INSERT INTO "penalty_actions" ("id","name_en","name_ar","effect","updated_at") VALUES (gen_random_uuid(),'X %','س %','DEDUCT_PERCENT',now())`,
     ).rejects.toThrow();
     await expect(
       db.$executeRaw`INSERT INTO "penalty_actions" ("id","name_en","name_ar","effect","updated_at") VALUES (gen_random_uuid(),'WARNING','إنذار آخر','RECORD_ONLY',now())`,
     ).rejects.toThrow();
+    // A level's and a penalty's number must fit the effect (review 2026-11-26), whoever writes them.
+    await expect(
+      db.$executeRaw`UPDATE "violation_levels" SET "days" = 1 WHERE "action_id" = ${ACTION_ID.NOTICE}::uuid`,
+    ).rejects.toThrow();
+    await expect(
+      db.$executeRaw`UPDATE "violation_levels" SET "days" = NULL WHERE "action_id" = ${ACTION_ID.DEDUCT_DAYS}::uuid`,
+    ).rejects.toThrow();
+    await expect(db.$executeRaw`UPDATE "penalty_records" SET "amount" = 100 WHERE "id" = ${P(3)}::uuid`).rejects.toThrow();
     const types = await db.$queryRaw<{ typname: string }[]>`
       SELECT t.typname FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace WHERE n.nspname = ${schema} AND t.typname = 'PenaltyAction'`;
     expect(types).toEqual([]);

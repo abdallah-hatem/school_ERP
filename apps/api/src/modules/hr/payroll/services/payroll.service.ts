@@ -32,6 +32,7 @@ import type { PayrollPaginationQueryDto } from '../../../../common/dto/paginatio
 import {
   calculateLine,
   costsPay,
+  notDeducted,
   payslipPenaltyAmounts,
   type PenaltyDeduction,
   lineNetWithFlags,
@@ -89,15 +90,6 @@ const TOTALS_MONEY_FIELDS = [
   'net',
 ] as const satisfies readonly (keyof PayrollTotals)[];
 
-/**
- * The deductions a line's floor at 0 left out (owner Q4): what the net would have gone below 0 by.
- * 0 when the net wasn't floored.
- */
-function notDeducted(row: Pick<LineRow, 'monthSalary' | 'penaltyAmount' | 'latenessAmount' | 'adjustmentAdditions' | 'adjustmentDeductions'>): number {
-  const raw = row.monthSalary - row.penaltyAmount - row.latenessAmount + row.adjustmentAdditions - row.adjustmentDeductions;
-  return raw < 0 ? -raw : 0;
-}
-
 /** A line; its money (`PAYROLL_LINE_MONEY_FIELDS`) left out unless `salaryVisible` (R7). */
 function toLine(row: LineRow, salaryVisible: boolean): PayrollLine {
   const line = {
@@ -130,6 +122,11 @@ function toAdjustment(
     createdAt: row.createdAt.toISOString(),
     applied: inRun.has(row.employeeId),
   };
+}
+
+/** The viewer's salary scope as a filter, or undefined when they see every line's pay (owner Q9). */
+function salaryWhere(view: PayrollView) {
+  return view.salary.kind === 'all' ? undefined : employeeWhere(view.salary);
 }
 
 /** What the viewer may see of payroll (R5, R7): whose lines, and whose pay. */
@@ -210,6 +207,7 @@ export class PayrollService {
     const totals = await this.repository.totalsFor(
       result.data.map((r) => r.id),
       employeeWhere(view.lines),
+      salaryWhere(view),
     );
     return {
       ...result,
@@ -235,8 +233,8 @@ export class PayrollService {
     const draft = run.status === PayrollStatus.DRAFT;
     const filter = { search: query.search, departmentId: query.departmentId, flagged: query.flagged };
     const [totals, page, adjustments, inRun, pendingPenalties, rulesChangedAt, recounted, rules, pendingPenaltyLines] = await Promise.all([
-      this.repository.totalsFor([id], scope),
-      this.repository.findLinesPage(id, filter, scope, query.page, query.limit),
+      this.repository.totalsFor([id], scope, salaryWhere(view)),
+      this.repository.findLinesPage(id, filter, scope, query.page, query.limit, salaryWhere(view)),
       this.repository.findAdjustments(id, undefined, scope),
       this.repository.lineEmployeeIds(id),
       // L3 / L-5: a scoped viewer counts only the penalties they cover — by the penalty's stage.
@@ -258,7 +256,7 @@ export class PayrollService {
     // Owner Q9 (2026-11-26): a line whose money is hidden lists its approved deducting penalties by
     // kind ("2 penalties: 0.5 day, 5%") — catalogue data, no EGP taken — instead of a bare "0 days".
     const hidden = lines.filter((l) => !paid.has(l.employeeId));
-    const byEmployee = hidden.length ? (await this.penalties.payrollInputs(run.month)).approved : new Map<string, PenaltyDeduction[]>();
+    const byEmployee = hidden.length ? (await this.penalties.payrollInputs(run.month, hidden.map((l) => l.employeeId))).approved : new Map<string, PenaltyDeduction[]>();
     const withKinds = (line: PayrollLine): PayrollLine => {
       if (line.salaryVisible) return line;
       const kinds = (byEmployee.get(line.employeeId) ?? []).filter(costsPay);
@@ -310,7 +308,7 @@ export class PayrollService {
     const run = await this.repository.findByMonth(month);
     if (!run) return null;
     const view = await this.view();
-    const totals = await this.repository.totalsFor([run.id], employeeWhere(view.lines));
+    const totals = await this.repository.totalsFor([run.id], employeeWhere(view.lines), salaryWhere(view));
     return this.toSummary(run, totals.get(run.id)!, view);
   }
 
@@ -479,6 +477,7 @@ export class PayrollService {
     const amounts = payslipPenaltyAmounts(
       penalties.map((p) => ({ effect: p.action.effect, percentBase: p.action.percentBase, days: p.days, percent: p.percent, amount: p.fixedAmount })),
       row,
+      run.payslipShareMethod,
     );
     return {
       ...toLine(row, salaryVisible),

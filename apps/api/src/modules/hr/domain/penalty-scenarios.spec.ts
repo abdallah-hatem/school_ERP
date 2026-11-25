@@ -1,5 +1,5 @@
 import { PayrollFlag, SETTING_DEFAULTS, type PayrollRule } from '@school-erp/shared';
-import { calculateLine, payslipPenaltyAmounts, type LineInput, type PenaltyDeduction } from './index';
+import { calculateLine, notDeducted, payslipPenaltyAmounts, type LineInput, type PenaltyDeduction } from './index';
 
 /*
  * The money scenarios of `docs/specs/2026-11-25-penalty-actions-scenarios.md` (S1–S24, S63), written
@@ -121,6 +121,8 @@ describe('penalty actions — money scenarios (S1–S24, S63)', () => {
   it('S17 — the net would go negative: floored at 0 and flagged NET_FLOORED; no cap', () => {
     const l = line(900_000, [month(60), fixed(500_000)], { latenessDays: 0.5, adjustments: [{ type: 'ADDITION', amount: 50_000 }] });
     expect(l).toMatchObject({ penaltyAmount: 1_040_000, latenessAmount: 15_000, net: 0, flags: [PayrollFlag.NET_FLOORED] });
+    // Owner Q4 (DECIDED): the 1,050.00 the floor left is written off — the payslip says so.
+    expect(notDeducted(l)).toBe(105_000);
   });
 
   it('S18 — a % of the basic for a part-timer above the month’s pay: accepted, net 0, NET_FLOORED', () => {
@@ -129,6 +131,7 @@ describe('penalty actions — money scenarios (S1–S24, S63)', () => {
 
   it('S19 — 100% exactly: net 0.00, not flagged (only a net below 0 is, owner Q3)', () => {
     expect(line(900_000, [month(100)])).toMatchObject({ penaltyAmount: 900_000, net: 0, flags: [] });
+    expect(notDeducted(line(900_000, [month(100)]))).toBe(0);
   });
 
   it('S20 — deductions above pay, an addition brings the net back above 0: 1,000.00, not flagged (owner Q3)', () => {
@@ -156,6 +159,11 @@ describe('penalty actions — money scenarios (S1–S24, S63)', () => {
 
   it('S24 — a seeded "Deduct days" 0.5 prices as before the feature: 150.00', () => {
     expect(line(900_000, [days(0.5)])).toMatchObject({ penaltyAmount: 15_000, penaltyDaysAmount: 15_000 });
+  });
+
+  it('a line’s penalty deduction is capped at the column’s limit (EGP 21,474,836.47); the net is 0 long before', () => {
+    const l = line(100_000_000, Array.from({ length: 30 }, () => fixed(100_000_000)));
+    expect(l).toMatchObject({ penaltyAmount: 2_147_483_647, net: 0, flags: [PayrollFlag.NET_FLOORED] });
   });
 
   it('S63 — the most a month can take (30 days + 100% + EGP 1,000,000): accepted, net 0, floored, no cap', () => {
