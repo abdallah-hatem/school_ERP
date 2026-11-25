@@ -34,7 +34,7 @@ import { ContractDates, ContractDecisionPill, DecisionNote, decisionSubLine } fr
 import { ContractCopiesBlock } from './contract-copies';
 import { NewContractDialog } from './new-contract-dialog';
 import { PrintContractButton } from './print-contract';
-import { SignedCopyLink, SignedCopyLinkSkeleton, SignedCopyViewer } from './signed-copy';
+import { hasSignedCopyLine, SignedCopyEntry, SignedCopyLinkSkeleton } from './signed-copy';
 
 export interface EmployeeContractsProps {
   employeeId: string;
@@ -283,22 +283,15 @@ function Details({ contract: c }: { contract: Contract }) {
  */
 function Documents({ contract: c }: { contract: Contract }) {
   const { t } = useTranslation();
-  const [viewing, setViewing] = useState(false);
   const docs = [
     { key: 'notice', url: c.notice?.fileUrl },
     { key: 'request', url: c.earlyTermination?.fileUrl },
     { key: 'attachment', url: c.endFileUrl },
   ].filter((d): d is { key: string; url: string } => !!d.url);
-  const signedCopy = c.status !== ContractStatus.CANCELLED || c.signedCopyPages > 0;
-  if (docs.length === 0 && !signedCopy) return <span className="text-xs text-muted-foreground">{t('contracts.history.noDocuments')}</span>;
+  if (docs.length === 0 && !hasSignedCopyLine(c)) return <span className="text-xs text-muted-foreground">{t('contracts.history.noDocuments')}</span>;
   return (
     <span className="flex flex-col items-start gap-1">
-      {signedCopy ? (
-        <>
-          <SignedCopyLink contract={c} onOpen={() => setViewing(true)} />
-          {c.signedCopyPages > 0 ? <SignedCopyViewer contract={c} open={viewing} onOpenChange={setViewing} /> : null}
-        </>
-      ) : null}
+      <SignedCopyEntry contract={c} />
       {docs.map((d) => (
         <a
           key={d.key}

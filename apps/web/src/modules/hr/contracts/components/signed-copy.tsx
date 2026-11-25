@@ -92,6 +92,28 @@ export function SignedCopyLink({ contract, onOpen }: { contract: Contract; onOpe
   );
 }
 
+/** Whether a contract has a signed-copy line at all: a cancelled one never had one to sign, unless pages were added. */
+export function hasSignedCopyLine(contract: Pick<Contract, 'status' | 'signedCopyPages'>): boolean {
+  return contract.status !== ContractStatus.CANCELLED || contract.signedCopyPages > 0;
+}
+
+/**
+ * A contract's signed-copy line with its viewer: "Signed copy (2)" opening the pages, or "No signed
+ * copy" — the profile tab's Documents column and the Contracts page's rows (owner, 2026-11-25: "I
+ * don't have to go to that specific employee page to see"). Nothing for a cancelled contract
+ * without pages.
+ */
+export function SignedCopyEntry({ contract }: { contract: Contract }) {
+  const [viewing, setViewing] = useState(false);
+  if (!hasSignedCopyLine(contract)) return null;
+  return (
+    <>
+      <SignedCopyLink contract={contract} onOpen={() => setViewing(true)} />
+      {contract.signedCopyPages > 0 ? <SignedCopyViewer contract={contract} open={viewing} onOpenChange={setViewing} /> : null}
+    </>
+  );
+}
+
 /** The Documents column's skeleton line ("Signed copy (n)"). */
 export function SignedCopyLinkSkeleton() {
   return (

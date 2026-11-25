@@ -6,6 +6,7 @@ import {
   type AuthUser,
   type Contract,
   type ContractSignedCopy,
+  type ContractsPage,
   type UserAccount,
 } from '@school-erp/shared';
 import { DatabaseService } from '../src/database/database.service';
@@ -210,6 +211,11 @@ describe('Contract signed copy (e2e)', () => {
     // Reopened: the one page left, and the old contract counts one.
     expect((await pagesOf(current.id)).files.map((f) => f.name)).toEqual(['page-2.pdf']);
     expect((await contractsOf(id)).find((c) => c.id === current.id)!.signedCopyPages).toBe(1);
+    // The Contracts page's row (owner, 2026-11-25) carries the same count, read with the list itself:
+    // this year's row is the renewed contract with its own page, not the renewal's next one.
+    const listed = (await http(app).get(`/hr/contracts?year=${YEAR}&search=${encodeURIComponent(current.employee.code)}`).expect(200))
+      .body.data as ContractsPage;
+    expect(listed.items.map((c) => [c.id, c.signedCopyPages])).toEqual([[current.id, 1]]);
     // The removed page's file no longer opens; the one left does, and its opening is recorded.
     const hr = await session(['hr_manager']);
     await withCookie(hr).get(first.url).expect(404);

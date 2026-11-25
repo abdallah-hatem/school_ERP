@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test';
+import { contractYearOf, formatContractYear } from '@school-erp/shared';
 import { Api } from './support/api';
 import { createContractEmployee } from './support/contracts';
+import { t } from './support/i18n';
 import { signIn, shoot } from './support/ui';
 import { settleStreams } from './support/stream';
 
@@ -71,4 +73,15 @@ test('signed copy: uploaded from the row, viewed in order, a page removed with a
   await expect(renew).toBeHidden();
   await expect(history.getByTestId('signed-copy-count').filter({ visible: true })).toHaveText(['Signed copy (1)', 'Signed copy (1)']);
   await shoot(page, info, 'signed-copy-after-renewal');
+
+  // The Contracts page (owner, 2026-11-25): the row — this year's contract, now renewed — shows its
+  // own copy and opens the same viewer, without going to the employee's page.
+  const year = contractYearOf(employee.contractStart);
+  await page.goto(`/en/contracts?year=${year}&search=${encodeURIComponent(employee.code)}`);
+  const list = main.getByRole('region', { name: t('en', 'contracts.list.tableLabel', { year: formatContractYear(year) }) });
+  await expect(list.getByTestId('signed-copy-count').filter({ visible: true })).toHaveText(['Signed copy (1)']);
+  await list.getByRole('button', { name: `Open the signed copy of ${employee.nameEn}` }).filter({ visible: true }).first().click();
+  await expect(pages).toHaveCount(1);
+  await expect(pages.nth(0)).toContainText('page-2.png');
+  await shoot(page, info, 'signed-copy-from-contracts-page');
 });
