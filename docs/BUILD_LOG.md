@@ -734,6 +734,11 @@ phase live in `docs/build-log/`.
 - 2026-11-25 — **#307 merged: Direct manager picker shows "Name · Department"** (owner's request)
   instead of the employee code; search by name or code still works. The employee record's manager now
   carries their department (same query).
+- 2026-11-26 — **#306 merged: "Grade" reads "Pay grade"** in English (owner's request): the employee
+  field, the Settings list ("Pay grades"), History and permissions. Arabic keeps «الدرجة الوظيفية».
+  Labels only; the data and rules are unchanged.
+- 2026-11-26 — **#311 merged: penalty actions spec approved** by the owner as written, **no monthly
+  cap** (net floored at 0 and flagged, as today), no mockups. Build started on `feature/penalty-actions`.
 
 ## Next up
 
@@ -752,8 +757,8 @@ phase live in `docs/build-log/`.
   formulas; raise actions stay record-only until raises exist; the seed loads today's actions so nothing
   changes. Spec written (#311: numbers on the catalogue level, snapshot at approval, % of the month's salary or
   basic, no new cap). No mockups: a new list in the existing Settings design plus fields on the
-  existing level editor (owner, 2026-11-25: "if mockups unnecessary dont do it"). Waiting for the
-  owner's approval and the monthly-cap answer (default: no cap, net floored at 0 and flagged).
+  existing level editor (owner, 2026-11-25: "if mockups unnecessary dont do it"). Approved
+  2026-11-26 with no cap; being built on `feature/penalty-actions`.
 - **Pentest with ARTEX** (owner, 2026-11-25): try https://github.com/BaaRai/ARTEX against the app
   later — on a throwaway or testing environment, never production. Not started.
 - **Employee documents tab** (proposed 2026-11-24): ID copy, certificates, insurance forms.
