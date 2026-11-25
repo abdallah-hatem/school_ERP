@@ -157,16 +157,19 @@ CREATE OR REPLACE FUNCTION penalty_level_number_fits_action() RETURNS trigger
 LANGUAGE plpgsql AS $$
 DECLARE
   e "PenaltyEffect";
+  fits boolean;
 BEGIN
   SELECT "effect" INTO e FROM "penalty_actions" WHERE "id" = NEW."action_id";
-  IF NOT CASE e
+  -- An assignment, not `IF CASE … THEN`: plpgsql reads an IF's condition only up to its first THEN.
+  fits := CASE e
     WHEN 'RECORD_ONLY' THEN num_nonnulls(NEW."days", NEW."percent", NEW."amount") = 0
     WHEN 'DEDUCT_DAYS' THEN NEW."days" IS NOT NULL AND NEW."percent" IS NULL AND NEW."amount" IS NULL
     WHEN 'INVESTIGATION' THEN NEW."percent" IS NULL AND NEW."amount" IS NULL
     WHEN 'DEDUCT_PERCENT' THEN NEW."percent" IS NOT NULL AND NEW."days" IS NULL AND NEW."amount" IS NULL
     WHEN 'DEDUCT_AMOUNT' THEN NEW."amount" IS NOT NULL AND NEW."days" IS NULL AND NEW."percent" IS NULL
     ELSE TRUE
-  END THEN
+  END;
+  IF NOT fits THEN
     RAISE EXCEPTION 'violation level %: its number doesn''t fit its action''s effect %', NEW."level", e
       USING ERRCODE = 'check_violation';
   END IF;
