@@ -385,8 +385,24 @@
     "effectLocked": "The effect can't be changed later.",
     "effectReadOnly": "Effect: {effect}. It can't be changed; add a new action and hide this one instead.",
     "hideTitle": "Hide {name}?",
-    "hideBody": "Used on {levels} levels in {violations} violations. They keep it; it can't be picked for other levels.",
-    "hideBodyUnused": "It can't be picked for levels until you show it again."
+    "hideBody": "Used on {levels} in {violations}. They keep it; it can't be picked for other levels.",
+    "hideBodyUnused": "It can't be picked for levels until you show it again.",
+    "hideLevels": {
+      "zero": "{count} levels",
+      "one": "{count} level",
+      "two": "{count} levels",
+      "few": "{count} levels",
+      "many": "{count} levels",
+      "other": "{count} levels"
+    },
+    "hideViolations": {
+      "zero": "{count} violations",
+      "one": "{count} violation",
+      "two": "{count} violations",
+      "few": "{count} violations",
+      "many": "{count} violations",
+      "other": "{count} violations"
+    }
   },
   "accounting": {
     "tax": {

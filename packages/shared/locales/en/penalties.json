@@ -32,13 +32,6 @@
     "profileEmptyTitle": "No penalties yet",
     "profileEmptyBody": "Penalties recorded for this employee show up here, newest first."
   },
-  "action": {
-    "deduct": "Deduct {days}",
-    "investigation": "{name}, {days} deducted",
-    "percentMonth": "Deduct {percent}% of the salary for the month",
-    "percentBasic": "Deduct {percent}% of the basic salary",
-    "amount": "Deduct EGP {amount}"
-  },
   "cancelledBecause": "Reason: {reason}",
   "approve": {
     "button": "Approve",

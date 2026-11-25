@@ -32,13 +32,6 @@
     "profileEmptyTitle": "لا توجد جزاءات بعد",
     "profileEmptyBody": "تظهر هنا الجزاءات المسجلة لهذا الموظف، الأحدث أولًا."
   },
-  "action": {
-    "deduct": "خصم {days}",
-    "investigation": "{name} مع خصم {days}",
-    "percentMonth": "خصم {percent}% من أجر الشهر",
-    "percentBasic": "خصم {percent}% من الأجر الأساسي",
-    "amount": "خصم {amount} جنيه"
-  },
   "cancelledBecause": "السبب: {reason}",
   "approve": {
     "button": "اعتماد",

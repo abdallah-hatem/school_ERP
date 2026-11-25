@@ -98,7 +98,7 @@ export async function checkPenaltyActions(page: Page, info: TestInfo, locale: La
     await expect(editor).toBeHidden();
     const label = t(locale, 'settings.catalogue.levelPlain', {
       level: 1,
-      action: t(locale, 'penalties.action.percentMonth', { percent: '10' }),
+      action: t(locale, 'common.penaltyLabel.percentMonth', { percent: '10' }),
     });
     await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
   } finally {

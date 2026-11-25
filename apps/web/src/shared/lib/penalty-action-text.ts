@@ -29,16 +29,16 @@ export function describeAction(
   const days = numbers.days != null && numbers.days > 0 ? formatDayCount(numbers.days, locale, { case: 'oblique' }) : null;
   switch (action.effect) {
     case PenaltyEffect.DEDUCT_DAYS:
-      return days ? t('penalties.action.deduct', { days }) : name;
+      return days ? t('common.penaltyLabel.deduct', { days }) : name;
     case PenaltyEffect.INVESTIGATION:
-      return days ? t('penalties.action.investigation', { name, days }) : name;
+      return days ? t('common.penaltyLabel.investigation', { name, days }) : name;
     case PenaltyEffect.DEDUCT_PERCENT:
       if (numbers.percent == null) return name;
-      return t(action.percentBase === PenaltySalaryBase.BASIC_SALARY ? 'penalties.action.percentBasic' : 'penalties.action.percentMonth', {
+      return t(action.percentBase === PenaltySalaryBase.BASIC_SALARY ? 'common.penaltyLabel.percentBasic' : 'common.penaltyLabel.percentMonth', {
         percent: formatPercent(numbers.percent),
       });
     case PenaltyEffect.DEDUCT_AMOUNT:
-      return numbers.amount == null ? name : t('penalties.action.amount', { amount: formatAmountShort(numbers.amount) });
+      return numbers.amount == null ? name : t('common.penaltyLabel.amount', { amount: formatAmountShort(numbers.amount) });
     case PenaltyEffect.RECORD_ONLY:
       return name;
   }

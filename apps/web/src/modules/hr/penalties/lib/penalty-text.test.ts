@@ -30,8 +30,8 @@ describe('describeAction', () => {
     expect(describeAction(tAr, 'ar', ACTION.DEDUCT_DAYS, { days: 3 })).toBe('خصم 3 أيام');
     expect(describeAction(tAr, 'ar', ACTION.DEDUCT_DAYS, { days: 0.5 })).toBe('خصم 0.5 يوم');
     expect(describeAction(tAr, 'ar', ACTION.INVESTIGATION, { days: 15 })).toBe('إحالة للتحقيق مع خصم 15 يومًا');
-    expect(describeAction(tAr, 'ar', PERCENT_ACTION, { percent: 10 })).toBe('خصم 10% من أجر الشهر');
-    expect(describeAction(tAr, 'ar', { ...PERCENT_ACTION, percentBase: 'BASIC_SALARY' }, { percent: 2.5 })).toBe('خصم 2.5% من الأجر الأساسي');
+    expect(describeAction(tAr, 'ar', PERCENT_ACTION, { percent: 10 })).toBe('خصم \u206610%\u2069 من أجر الشهر');
+    expect(describeAction(tAr, 'ar', { ...PERCENT_ACTION, percentBase: 'BASIC_SALARY' }, { percent: 2.5 })).toBe('خصم \u20662.5%\u2069 من الأجر الأساسي');
     expect(describeAction(tAr, 'ar', AMOUNT_ACTION, { amount: 20_000 })).toBe('خصم 200 جنيه');
     expect(describeAction(tAr, 'ar', ACTION.WARNING, {})).toBe('إنذار');
   });
@@ -45,6 +45,7 @@ describe('describeAction', () => {
     expect(describeAction(t, 'en', { ...ACTION.NOTICE, nameEn: 'Verbal note' }, {})).toBe('Verbal note');
   });
 
+  // Arabic keeps “10%” in that order inside the right-to-left sentence (an isolate around it).
   it('edge case 30: a percent stored as 10.00 or 2.50 reads “10%” and “2.5%”, Western digits and % in both languages', () => {
     expect(describeAction(t, 'en', PERCENT_ACTION, { percent: 10.0 })).toContain('10%');
     expect(describeAction(t, 'en', PERCENT_ACTION, { percent: 2.5 })).toContain('2.5%');

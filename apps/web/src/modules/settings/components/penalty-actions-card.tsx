@@ -229,7 +229,10 @@ export function PenaltyActionsCard({ onChanged }: { onChanged?: () => void }) {
         title={copy('hideTitle', { name: hiding ? localName(hiding, locale) : '' })}
         description={
           hiding && hiding.levelsUsing > 0
-            ? copy('hideBody', { levels: formatCount(hiding.levelsUsing), violations: formatCount(hiding.violationsUsing) })
+            ? copy('hideBody', {
+                levels: copy('hideLevels', { count: formatCount(hiding.levelsUsing) }),
+                violations: copy('hideViolations', { count: formatCount(hiding.violationsUsing) }),
+              })
             : copy('hideBodyUnused')
         }
         confirmLabel={t('settings.lists.hide')}

@@ -210,5 +210,12 @@
       "OTHER": "Other",
       "EARLY_TERMINATION": "Early termination"
     }
+  },
+  "penaltyLabel": {
+    "deduct": "Deduct {days}",
+    "investigation": "{name}, {days} deducted",
+    "percentMonth": "Deduct {percent}% of the salary for the month",
+    "percentBasic": "Deduct {percent}% of the basic salary",
+    "amount": "Deduct EGP {amount}"
   }
 }

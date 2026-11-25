@@ -328,15 +328,15 @@
       "VALUE_NOT_ALLOWED": "هذا الإجراء لا يأخذ رقمًا.",
       "ACTION_REQUIRED": "اختر إجراءً."
     },
-    "levelPercent": "نسبة الدرجة {level}",
-    "levelAmount": "مبلغ الدرجة {level}",
+    "levelPercent": "نسبة المستوى {level}",
+    "levelAmount": "مبلغ المستوى {level}",
     "noNumber": "بدون رقم",
     "optional": "اختياري",
     "hiddenMarker": "(مخفي)",
     "manageActions": "إدارة الإجراءات",
     "percentOfMonth": "من أجر الشهر",
     "percentOfBasic": "من الأجر الأساسي",
-    "numberLabel": "رقم الدرجة {level}"
+    "numberLabel": "رقم المستوى {level}"
   },
   "penaltyActions": {
     "title": "إجراءات الجزاءات",
@@ -385,8 +385,24 @@
     "effectLocked": "لا يمكن تغيير الأثر لاحقًا.",
     "effectReadOnly": "الأثر: {effect}. لا يمكن تغييره؛ أضف إجراءً جديدًا وأخفِ هذا الإجراء بدلًا من ذلك.",
     "hideTitle": "إخفاء {name}؟",
-    "hideBody": "مستخدم في {levels} درجات ضمن {violations} مخالفات. تحتفظ به، ولا يمكن اختياره لدرجات أخرى.",
-    "hideBodyUnused": "لا يمكن اختياره للدرجات حتى تظهره مرة أخرى."
+    "hideBody": "مستخدم في {levels} ضمن {violations}. تحتفظ به، ولا يمكن اختياره لدرجات أخرى.",
+    "hideBodyUnused": "لا يمكن اختياره للدرجات حتى تظهره مرة أخرى.",
+    "hideLevels": {
+      "zero": "لا درجات",
+      "one": "درجة واحدة",
+      "two": "درجتين",
+      "few": "{count} درجات",
+      "many": "{count} درجة",
+      "other": "{count} درجة"
+    },
+    "hideViolations": {
+      "zero": "لا مخالفات",
+      "one": "مخالفة واحدة",
+      "two": "مخالفتين",
+      "few": "{count} مخالفات",
+      "many": "{count} مخالفة",
+      "other": "{count} مخالفة"
+    }
   },
   "accounting": {
     "tax": {
