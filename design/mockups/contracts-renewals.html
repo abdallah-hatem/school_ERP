@@ -1,0 +1,718 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contract Renewals Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Tajawal:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/duotone/style.css">
+<style>
+/* Tokens copied from apps/web/src/app/globals.css (direction "Campus"). Light theme only. */
+:root{
+  --radius:14px;
+  --background:#f2f8f6; --foreground:#11302b; --card:#ffffff;
+  --muted:#f5faf8; --muted-foreground:#587069; --secondary:#eaf4f1;
+  --primary:#0b7a68; --primary-foreground:#ffffff; --primary-soft:#d5efe8; --primary-hover:#096656;
+  --accent:#ffc43d; --accent-foreground:#4a3400; --accent-soft:#fff1c9;
+  --neutral-soft:#eceef0; --neutral-ink:#4f5a60;
+  --success:#1f9a62; --success-soft:#ddf4e7; --success-ink:#126b42;
+  --warning:#d9771c; --warning-soft:#ffe8d2; --warning-ink:#8f4608;
+  --destructive:#d9473a; --destructive-soft:#fde3df; --destructive-ink:#a82d22;
+  --info:#2f6fb3; --info-soft:#e0eefb; --info-ink:#24578e;
+  --border:#dce9e5; --input:#cfe0db;
+  --overlay:rgb(9 40 35 / .42);
+  --shadow-card:0 1px 2px rgb(11 72 62 / .06),0 10px 30px -12px rgb(11 72 62 / .18);
+  --shadow-raised:0 2px 4px rgb(11 72 62 / .05),0 30px 60px -24px rgb(11 72 62 / .28);
+  --shadow-primary:0 8px 20px -8px rgb(11 122 104 / .7);
+  --bar:#0f2f2a; --bar-ink:#e7f4f0;
+  --font-latin:"Plus Jakarta Sans",system-ui,sans-serif;
+  --font-ar:"IBM Plex Sans Arabic","Plus Jakarta Sans",system-ui,sans-serif;
+  --font-ar-display:"Tajawal","IBM Plex Sans Arabic",system-ui,sans-serif;
+  --font:var(--font-latin); --font-display:var(--font-latin);
+  color-scheme:light;
+}
+:root[lang="ar"]{--font:var(--font-ar);--font-display:var(--font-ar-display)}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:#e4efec;color:var(--foreground);font-family:var(--font);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+.num{font-family:var(--font-latin);font-variant-numeric:tabular-nums lining-nums}
+[dir="rtl"] .flip{transform:scaleX(-1)}
+.ph-duotone{line-height:1}
+.ph-duotone.flip,.ph-duotone.car{display:inline-block}
+bdi{unicode-bidi:isolate}
+
+/* ---------- mockup bar ---------- */
+.mockbar{background:var(--bar);color:var(--bar-ink);display:flex;align-items:center;gap:16px;padding:10px 24px;position:sticky;top:0;z-index:50;flex-wrap:wrap;font-size:13px}
+.mockbar strong{font-size:14px}
+.mockbar .hint{opacity:.7}
+.mockbar .sp{flex:1}
+.seg{display:inline-flex;background:rgb(255 255 255 / .08);border-radius:999px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;color:inherit;padding:5px 14px;border-radius:999px;font-weight:700;font-size:13px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#3a2900}
+.seg .ar{font-family:var(--font-ar-display);font-size:15px}
+.optnote{padding:18px 24px 0;max-width:1488px;margin-inline:auto;color:var(--muted-foreground);font-size:13.5px}
+.optnote b{color:var(--foreground)}
+.section-title{max-width:1488px;margin:28px auto 10px;padding-inline:24px;font-family:var(--font-display);font-weight:800;font-size:16px}
+body.only-desktop #phoneSec, body.only-phone #deskSec{display:none}
+
+/* ---------- frames ---------- */
+.desk-scroll{overflow-x:auto;padding:6px 24px 8px}
+.desk{width:1440px;margin-inline:auto;position:relative;background:var(--background);border-radius:22px;box-shadow:var(--shadow-raised);overflow:hidden;border:1px solid var(--border);display:flex;min-height:980px;container:page / inline-size}
+.phones{display:flex;gap:32px;justify-content:center;flex-wrap:wrap;padding:6px 24px 60px;align-items:flex-start}
+.phone-wrap{display:flex;flex-direction:column;gap:8px;align-items:center}
+.phone-cap{font-size:12.5px;color:var(--muted-foreground);font-weight:600;max-width:390px;text-align:center}
+.phone{width:390px;height:844px;background:var(--background);border-radius:44px;border:10px solid #1b2e2a;box-shadow:var(--shadow-raised);overflow:hidden;position:relative;container:page / inline-size;display:flex;flex-direction:column}
+.phone .scroll{overflow-y:auto;flex:1;scrollbar-width:none;position:relative}
+
+/* ---------- sidebar (real app shell: module groups from core/navigation/nav-items.ts) ---------- */
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:38px;height:38px;flex:none;border-radius:12px;background:var(--primary);color:#fff;display:grid;place-items:center;font-size:22px;position:relative}
+.logo::after{content:"";position:absolute;width:9px;height:9px;border-radius:50%;background:var(--accent);inset-block-start:-2px;inset-inline-end:-2px;box-shadow:0 0 0 2px var(--card)}
+.brand-name{font-family:var(--font-display);font-weight:800;font-size:14.5px;line-height:1.25}
+.brand-sub{font-size:11.5px;color:var(--muted-foreground)}
+.soon{font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--secondary);color:var(--muted-foreground);margin-inline-start:auto;white-space:nowrap}
+.user{display:flex;align-items:center;gap:10px;padding:10px;border-radius:16px;background:var(--muted);border:1px solid var(--border)}
+.user .av{width:36px;height:36px;border-radius:12px;font-size:13px}
+.user .n{font-weight:700;font-size:13px;line-height:1.2}
+.user .r{font-size:11.5px;color:var(--muted-foreground)}
+.user > .ph-duotone{margin-inline-start:auto;color:var(--muted-foreground);font-size:18px}
+.navlink{display:flex;align-items:center;gap:11px;min-height:40px;padding:8px 12px;border-radius:12px;color:var(--muted-foreground);text-decoration:none;font-weight:600;font-size:14px}
+.navlink .ph-duotone{font-size:20px}
+.navlink[aria-current="page"]{background:var(--primary-soft);color:var(--primary)}
+.navlink[aria-current="page"]::after{content:"";margin-inline-start:auto;width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 30%,transparent)}
+.navlink.lock{opacity:.7}
+.sb{width:272px;flex:none;background:var(--card);border-inline-end:1px solid var(--border);padding:22px 14px;display:flex;flex-direction:column;gap:20px}
+.sb nav{display:flex;flex-direction:column;gap:6px}
+.mod{border-radius:16px}
+.mod[open]{background:var(--muted);box-shadow:inset 0 0 0 1px var(--border)}
+.mod summary{list-style:none;display:flex;align-items:center;gap:11px;min-height:46px;padding:8px 10px;border-radius:14px;font-weight:700;font-size:14.5px;cursor:pointer;color:var(--foreground)}
+.mod summary::-webkit-details-marker{display:none}
+.mi{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;font-size:18px;flex:none}
+.mod summary .car{margin-inline-start:auto;color:var(--muted-foreground);font-size:16px}
+.mod[open] summary .car{transform:rotate(180deg)}
+.mod .kids{display:flex;flex-direction:column;gap:2px;padding:0 10px 10px;margin-inline-start:24px;border-inline-start:2px solid var(--border);padding-inline-start:8px}
+.mod .kids .navlink{min-height:36px;font-size:13.5px;padding:6px 10px}
+.mod.dis summary{cursor:not-allowed;color:var(--muted-foreground);font-weight:600}
+.mod.dis summary .mi{filter:grayscale(1);opacity:.7}
+.sb .single{display:flex;align-items:center;gap:11px;min-height:46px;padding:8px 10px;border-radius:14px;font-weight:700;font-size:14.5px;color:var(--foreground);text-decoration:none}
+.sb .single .mi{background:var(--secondary);color:var(--muted-foreground)}
+.sb .bottom{margin-top:auto;display:flex;flex-direction:column;gap:10px}
+.newdot{font-size:10px;font-weight:800;padding:1px 6px;border-radius:999px;background:var(--accent-soft);color:#6b4b00;margin-inline-start:auto}
+
+/* ---------- main + common controls ---------- */
+.main{flex:1;min-width:0;padding:22px 36px 36px;display:flex;flex-direction:column;gap:18px;position:relative}
+.topline{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted-foreground);min-height:40px}
+.topline .sp{flex:1}
+.crumb{display:flex;align-items:center;gap:6px;font-size:13.5px;color:var(--muted-foreground)}
+.crumb .ph-duotone{font-size:12px}
+.lang{display:inline-flex;background:var(--secondary);border-radius:999px;padding:3px}
+.lang span{padding:4px 12px;border-radius:999px;font-weight:700;font-size:12.5px}
+.lang span.on{background:var(--accent);color:var(--accent-foreground)}
+.lang .ar{font-family:var(--font-ar-display);font-size:14px}
+.head{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.head h1{margin:0;font-family:var(--font-display);font-size:30px;font-weight:800;line-height:1.15;letter-spacing:-.01em}
+:root[lang="ar"] .head h1{letter-spacing:0}
+.head p{margin:4px 0 0;color:var(--muted-foreground);font-size:14px;max-width:640px}
+.head .acts{margin-inline-start:auto;display:flex;gap:10px;align-items:center}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:var(--radius);padding:10px 16px;font-weight:700;font-size:14px;border:1px solid var(--input);background:var(--card);white-space:nowrap}
+.btn .ph-duotone{font-size:18px}
+.btn-primary{background:var(--primary);color:#fff;border-color:transparent;box-shadow:var(--shadow-primary)}
+.btn-accent{background:var(--accent);color:var(--accent-foreground);border-color:transparent}
+.btn-soft{background:var(--primary-soft);color:var(--primary);border-color:transparent}
+.btn-danger{color:var(--destructive-ink);border-color:color-mix(in srgb,var(--destructive) 35%,transparent)}
+.btn-sm{padding:6px 11px;font-size:13px;border-radius:11px;gap:6px}
+.btn-sm .ph-duotone{font-size:16px}
+.btn-ghost{border-color:transparent;background:transparent;color:var(--primary)}
+.toolbar{background:var(--card);border-radius:20px;box-shadow:var(--shadow-card);padding:14px;display:flex;flex-direction:column;gap:12px}
+.frow{display:flex;gap:10px;flex-wrap:wrap}
+.search{flex:2.2;min-width:240px;display:flex;align-items:center;gap:8px;border:1px solid var(--input);border-radius:var(--radius);padding:0 12px;height:42px;background:var(--card);color:var(--muted-foreground)}
+.search .ph-duotone{font-size:18px;flex:none}
+.search span{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fsel{flex:1;min-width:150px;display:flex;align-items:center;gap:8px;height:42px;border:1px solid var(--input);border-radius:var(--radius);padding:0 12px;background:var(--card);font-size:13.5px;font-weight:600;color:var(--foreground);white-space:nowrap}
+.fsel .ph-duotone{color:var(--muted-foreground);font-size:16px}
+.fsel .ph-caret-down{margin-inline-start:auto}
+.resline{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted-foreground);padding:0 4px;flex-wrap:wrap}
+.resline b{color:var(--foreground)}
+.resline .sp{flex:1}
+.linkbtn{border:0;background:transparent;color:var(--primary);font-weight:700;font-size:13px;padding:0;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.card{background:var(--card);border-radius:24px;box-shadow:var(--shadow-card)}
+.av{border-radius:12px;background:var(--accent);color:var(--accent-foreground);display:grid;place-items:center;font-weight:800;flex:none;font-family:var(--font-display);width:34px;height:34px;font-size:12.5px}
+.av.sm{width:30px;height:30px;border-radius:10px;font-size:11px}
+.av.lg{width:52px;height:52px;border-radius:16px;font-size:17px}
+.av.t2{background:var(--primary-soft);color:var(--primary)}
+.av.t3{background:var(--info-soft);color:var(--info-ink)}
+.ibtn{width:34px;height:34px;border-radius:11px;border:1px solid transparent;background:transparent;display:grid;place-items:center;color:var(--muted-foreground);flex:none}
+.ibtn .ph-duotone{font-size:18px}
+.ibtn.on{background:var(--primary-soft);color:var(--primary)}
+.ibtn.bd{border-color:var(--border);background:var(--card)}
+.who{display:flex;align-items:center;gap:10px;min-width:0}
+.who .n{font-weight:700;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.who .r{font-size:12px;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:700;white-space:nowrap}
+.pill .ph-duotone{font-size:14px}
+.pill .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.p-active{background:var(--success-soft);color:var(--success-ink)}
+.p-stage{background:var(--secondary);color:var(--muted-foreground)}
+/* decisions */
+.d-none{background:var(--neutral-soft);color:var(--neutral-ink)}
+.d-renew{background:var(--success-soft);color:var(--success-ink)}
+.d-school{background:var(--destructive-soft);color:var(--destructive-ink)}
+.d-notice{background:var(--warning-soft);color:var(--warning-ink)}
+.d-early{background:var(--info-soft);color:var(--info-ink)}
+.d-ended{background:var(--destructive);color:#fff}
+.tg-early{background:var(--accent-soft);color:#6b4b00;border:1px solid color-mix(in srgb,var(--accent) 60%,transparent)}
+.tg-deact{background:var(--foreground);color:#fff}
+.tg-cal{background:var(--neutral-soft);color:var(--neutral-ink);border:1px dashed #b7c0c4}
+.dsub{font-size:12px;color:var(--muted-foreground);margin-top:3px}
+.pills{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.cb{width:18px;height:18px;border-radius:6px;border:1.5px solid var(--input);background:var(--card);display:inline-grid;place-items:center;flex:none;color:#fff;font-size:12px}
+.cb.on{background:var(--primary);border-color:var(--primary)}
+.cb.mix{background:var(--primary);border-color:var(--primary)}
+.cb.dis{background:var(--muted);border-color:var(--border);opacity:.7}
+.menu{position:absolute;z-index:6;background:var(--card);border-radius:14px;box-shadow:var(--shadow-raised);border:1px solid var(--border);padding:6px;min-width:260px}
+.menu a{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;font-size:13.5px;font-weight:600;color:var(--foreground);text-decoration:none;white-space:nowrap}
+.menu a .ph-duotone{font-size:18px;color:var(--muted-foreground)}
+.menu a.hl{background:var(--muted)}
+.menu hr{border:0;border-top:1px solid var(--border);margin:4px 6px}
+.menu a.danger,.menu a.danger .ph-duotone{color:var(--destructive-ink)}
+
+/* year stepper (same shape as the app's MonthStepper) */
+.ystep{display:inline-flex;align-items:center;gap:4px;background:var(--card);border:1px solid var(--input);border-radius:var(--radius);padding:4px}
+.ystep .ibtn{width:34px;height:34px}
+.ystep .yv{padding:0 10px;text-align:center;line-height:1.2;min-width:128px}
+.ystep .yv b{font-size:15px;font-family:var(--font-latin)}
+.ystep .yv small{display:block;font-size:11.5px;color:var(--muted-foreground);font-weight:600}
+
+/* tiles (dashboard tile style) */
+.tiles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}
+.tile{background:var(--card);border-radius:20px;box-shadow:var(--shadow-card);padding:16px 18px;display:flex;flex-direction:column;gap:6px;border:2px solid transparent;min-width:0}
+.tile.on{border-color:var(--primary)}
+.tile .tl{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700;color:var(--muted-foreground)}
+.tile .kic{width:32px;height:32px;border-radius:11px;display:grid;place-items:center;font-size:17px;flex:none}
+.tile .tv{font-family:var(--font-latin);font-size:28px;font-weight:800;line-height:1.1}
+.tile .ts{font-size:12px;color:var(--muted-foreground)}
+.k-pri{background:var(--primary-soft);color:var(--primary)}
+.k-ok{background:var(--success-soft);color:var(--success)}
+.k-warn{background:var(--warning-soft);color:var(--warning)}
+.k-acc{background:var(--accent-soft);color:#a06d00}
+.k-dark{background:var(--neutral-soft);color:var(--neutral-ink)}
+
+/* banner */
+.banner{display:flex;align-items:center;gap:14px;background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 65%,transparent);border-radius:18px;padding:14px 16px}
+.banner .kic{width:38px;height:38px;border-radius:12px;background:var(--accent);color:var(--accent-foreground);display:grid;place-items:center;font-size:20px;flex:none}
+.banner b{display:block;font-size:14px}
+.banner span{font-size:13px;color:#6b4b00}
+.banner .btn{margin-inline-start:auto}
+
+/* pagination */
+.pager{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:14px 20px;flex-wrap:wrap;border-top:1px solid var(--border)}
+.pager .info{font-size:13px;color:var(--muted-foreground)}
+.pages{display:flex;gap:6px;align-items:center}
+.pg{min-width:36px;height:36px;border-radius:11px;border:1px solid var(--border);background:var(--card);font-weight:700;font-size:13px;display:grid;place-items:center;padding:0 8px}
+.pg[aria-current="page"]{background:var(--primary);color:#fff;border-color:transparent}
+.pg[disabled]{opacity:.45;cursor:default}
+.pg .ph-duotone{font-size:16px}
+.mpager{display:flex;flex-direction:column;gap:8px;padding:12px 14px}
+.mpager .info{font-size:12.5px;color:var(--muted-foreground)}
+.mpager .row{display:flex;align-items:center;justify-content:space-between}
+.mpager .row b{font-size:13px}
+
+/* bulk bar */
+.bulk{display:flex;align-items:center;gap:12px;background:var(--foreground);color:#fff;border-radius:18px;padding:10px 12px 10px 18px;box-shadow:var(--shadow-raised)}
+[dir="rtl"] .bulk{padding:10px 18px 10px 12px}
+.bulk .cnt{font-weight:800;white-space:nowrap}
+.bulk .hint{font-size:12.5px;opacity:.75}
+.bulk .sp{flex:1}
+.bulk .btn-ghost{color:#cfe9e2}
+
+/* ---------- phone chrome ---------- */
+.mbar{display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--card);border-bottom:1px solid var(--border);flex:none}
+.mbar .menub{width:38px;height:38px;border-radius:12px;border:1px solid var(--border);background:var(--card);display:grid;place-items:center;font-size:20px}
+.mbar .brand-name{font-size:14px}
+.mbar .lang{margin-inline-start:auto}
+.scrim{position:absolute;inset:0;background:var(--overlay);z-index:5}
+.sheet{position:absolute;inset-inline:0;bottom:0;z-index:6;background:var(--card);border-radius:24px 24px 0 0;box-shadow:var(--shadow-raised);display:flex;flex-direction:column;max-height:90%}
+.sheet .grab{width:44px;height:5px;border-radius:9px;background:var(--input);margin:10px auto 4px}
+.sheet .sh{display:flex;align-items:center;gap:10px;padding:8px 16px 12px;border-bottom:1px solid var(--border)}
+.sheet .sh .sp{flex:1}
+.sheet .sb2{padding:14px 16px;display:flex;flex-direction:column;gap:10px;overflow:auto}
+.sheet .sf{padding:12px 16px 18px;border-top:1px solid var(--border);display:flex;gap:10px}
+.sheet .sf .btn{flex:1}
+.pbulk{position:absolute;inset-inline:10px;bottom:12px;z-index:4}
+.pbulk .bulk{padding:10px 10px 10px 14px;gap:8px}
+[dir="rtl"] .pbulk .bulk{padding:10px 14px 10px 10px}
+.pbulk .bulk .btn{padding:8px 12px;font-size:13px}
+
+/* radio choices (decision) */
+.choice{display:flex;gap:12px;align-items:flex-start;border:1.5px solid var(--border);border-radius:16px;padding:12px 14px;background:var(--card)}
+.choice .rd{width:20px;height:20px;border-radius:50%;border:2px solid var(--input);flex:none;margin-top:2px;display:grid;place-items:center}
+.choice.on{border-color:var(--primary);background:color-mix(in srgb,var(--primary-soft) 45%,transparent)}
+.choice.on .rd{border-color:var(--primary)}
+.choice.on .rd::after{content:"";width:10px;height:10px;border-radius:50%;background:var(--primary)}
+.choice .ct{font-weight:700;font-size:14px;display:flex;align-items:center;gap:7px}
+.choice .ct .ph-duotone{font-size:18px}
+.choice .cd{font-size:12.5px;color:var(--muted-foreground)}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:12.5px;font-weight:700}
+.input{height:42px;border:1px solid var(--input);border-radius:var(--radius);padding:0 12px;display:flex;align-items:center;gap:8px;font-size:13.5px;background:var(--card)}
+.input .ph-duotone{color:var(--muted-foreground);font-size:17px}
+.drop{border:1.5px dashed var(--input);border-radius:var(--radius);padding:12px;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted-foreground)}
+.drop .ph-duotone{font-size:22px;color:var(--primary)}
+.warnbox{display:flex;gap:10px;background:var(--accent-soft);border-radius:12px;padding:10px 12px;font-size:12.5px;color:#6b4b00}
+.warnbox .ph-duotone{font-size:18px;flex:none;color:#a06d00}
+
+/* ================= OPTION A: table ================= */
+.ta{width:calc(100% - 20px);margin:10px;border-collapse:separate;border-spacing:0}
+.ta thead th{background:var(--muted);font-size:12.5px;color:var(--muted-foreground);font-weight:600;text-align:start;padding:11px 14px;white-space:nowrap}
+.ta thead th:first-child{border-start-start-radius:12px;border-end-start-radius:12px}
+.ta thead th:last-child{border-start-end-radius:12px;border-end-end-radius:12px}
+.ta tbody td{padding:12px 14px;border-bottom:1px solid var(--border);vertical-align:middle;position:relative}
+.ta tr.sel td{background:color-mix(in srgb,var(--primary-soft) 45%,transparent)}
+.ta tr.urgent td:first-child::before{content:"";position:absolute;inset-inline-start:-10px;top:0;bottom:0;width:4px;background:var(--destructive)}
+.ta .dates{font-size:13px;white-space:nowrap}
+.ta .dates small{display:block;color:var(--muted-foreground);font-size:12px}
+.ta .acts{display:flex;gap:6px;justify-content:flex-end;align-items:center}
+.cardwrap{position:relative}
+.cardwrap .bulkfloat{position:absolute;inset-inline:24px;bottom:78px;z-index:3}
+.acards{display:flex;flex-direction:column}
+.acard{padding:14px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:9px;position:relative}
+.acard.sel{background:color-mix(in srgb,var(--primary-soft) 45%,transparent)}
+.acard.urgent::before{content:"";position:absolute;inset-inline-start:0;top:12px;bottom:12px;width:4px;border-start-end-radius:4px;border-end-end-radius:4px;background:var(--destructive)}
+.acard .top{display:flex;align-items:center;gap:10px}
+.acard .top .who{flex:1}
+.acard .meta{font-size:12.5px;color:var(--muted-foreground);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.acard .bot{display:flex;gap:8px;align-items:center}
+.acard .bot .btn{flex:1}
+
+/* ================= OPTION B: board ================= */
+.mini-tiles{display:flex;gap:10px;flex-wrap:wrap}
+.mtile{display:flex;align-items:center;gap:10px;background:var(--card);border-radius:16px;box-shadow:var(--shadow-card);padding:10px 14px;min-width:0}
+.mtile .kic{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;font-size:16px;flex:none}
+.mtile b{font-family:var(--font-latin);font-size:20px;font-weight:800;line-height:1}
+.mtile span{font-size:12.5px;color:var(--muted-foreground);font-weight:600;white-space:nowrap}
+.progress{flex:1;min-width:260px;display:flex;flex-direction:column;justify-content:center;gap:7px;background:var(--card);border-radius:16px;box-shadow:var(--shadow-card);padding:10px 16px}
+.progress .pl{display:flex;justify-content:space-between;font-size:12.5px;font-weight:700;gap:8px}
+.progress .pl span{color:var(--muted-foreground);font-weight:600}
+.bar{height:10px;border-radius:99px;background:var(--neutral-soft);display:flex;overflow:hidden}
+.bar i{display:block;height:100%}
+.board{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;align-items:start}
+.col{background:color-mix(in srgb,var(--secondary) 70%,var(--background));border-radius:20px;padding:10px;display:flex;flex-direction:column;gap:10px;border:1px solid var(--border)}
+.col .ch{display:flex;align-items:center;gap:8px;padding:4px 6px 2px;min-height:34px}
+.col .ch .t{font-weight:800;font-size:14px;font-family:var(--font-display)}
+.col .ch .c{font-family:var(--font-latin);font-size:12px;font-weight:800;padding:1px 8px;border-radius:99px;background:var(--card);color:var(--muted-foreground)}
+.col .ch .sp{flex:1}
+.col .ch .sw{width:10px;height:10px;border-radius:50%}
+.col .colbar{display:flex;align-items:center;gap:8px;background:var(--card);border-radius:12px;padding:6px 6px 6px 10px;font-size:12.5px;font-weight:700}
+[dir="rtl"] .col .colbar{padding:6px 10px 6px 6px}
+.col .colbar .sp{flex:1}
+.bcard{background:var(--card);border-radius:16px;box-shadow:0 1px 2px rgb(11 72 62 / .08);padding:12px;display:flex;flex-direction:column;gap:9px;border:1.5px solid transparent;position:relative}
+.bcard.sel{border-color:var(--primary)}
+.bcard.urgent{border-color:color-mix(in srgb,var(--destructive) 55%,transparent)}
+.bcard .top{display:flex;align-items:flex-start;gap:9px}
+.bcard .top .who{flex:1}
+.bcard .who .n{white-space:normal}
+.bcard .ln{font-size:12.5px;color:var(--muted-foreground);display:flex;align-items:center;gap:6px}
+.bcard .ln .ph-duotone{font-size:15px}
+.bcard .bot{display:flex;gap:6px}
+.bcard .bot .btn{flex:1}
+.more{border:1px dashed var(--input);background:transparent;border-radius:12px;padding:8px;font-weight:700;font-size:12.5px;color:var(--primary)}
+.btabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin-inline:-16px;padding-inline:16px}
+.btab{display:inline-flex;align-items:center;gap:7px;padding:8px 12px;border-radius:999px;background:var(--card);border:1px solid var(--border);font-weight:700;font-size:13px;white-space:nowrap}
+.btab .c{font-family:var(--font-latin);font-size:11.5px;font-weight:800;padding:0 7px;border-radius:99px;background:var(--secondary);color:var(--muted-foreground)}
+.btab.on{background:var(--primary);color:#fff;border-color:transparent}
+.btab.on .c{background:rgb(255 255 255 / .22);color:#fff}
+.btab .sw{width:8px;height:8px;border-radius:50%}
+
+/* ================= OPTION C: split ================= */
+.split{display:grid;grid-template-columns:400px minmax(0,1fr);gap:16px;align-items:start}
+.lpanel{display:flex;flex-direction:column;overflow:hidden}
+.lpanel .lh{padding:12px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid var(--border)}
+.lpanel .lh .frow .search{min-width:0;height:38px}
+.lpanel .lh .frow .fsel{min-width:0;height:38px;font-size:13px}
+.lsel{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted-foreground);font-weight:600}
+.lsel .sp{flex:1}
+.litem{display:grid;grid-template-columns:18px 30px minmax(0,1fr) auto;gap:10px;align-items:center;padding:11px 14px;border-bottom:1px solid var(--border);position:relative}
+.litem.cur{background:color-mix(in srgb,var(--primary-soft) 55%,transparent)}
+.litem.cur::before{content:"";position:absolute;inset-inline-start:0;top:8px;bottom:8px;width:4px;border-start-end-radius:4px;border-end-end-radius:4px;background:var(--primary)}
+.litem .nm{font-weight:700;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.litem .sm{font-size:12px;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.litem .end{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.litem .pill{font-size:11px;padding:1px 8px}
+.rpanel{padding:22px 24px;display:flex;flex-direction:column;gap:18px}
+.rhead{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.rhead h2{margin:0;font-family:var(--font-display);font-size:22px;font-weight:800;line-height:1.2}
+.rhead .m{font-size:13px;color:var(--muted-foreground)}
+.rhead .sp{flex:1}
+.cur-ct{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.fact{background:var(--muted);border-radius:14px;padding:10px 14px;min-width:0}
+.fact .l{font-size:11.5px;color:var(--muted-foreground);font-weight:600}
+.fact .v{font-size:14px;font-weight:700}
+.h3{margin:0;font-size:15px;font-weight:800;font-family:var(--font-display);display:flex;align-items:baseline;gap:4px 8px;flex-wrap:wrap}
+.h3 small{font-family:var(--font);font-weight:600;color:var(--muted-foreground);font-size:12.5px}
+.choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.timeline{display:flex;flex-direction:column}
+.tl-i{display:grid;grid-template-columns:22px minmax(0,1fr);gap:12px;position:relative;padding-bottom:14px}
+.tl-i::before{content:"";position:absolute;inset-inline-start:10px;top:22px;bottom:0;width:2px;background:var(--border)}
+.tl-i:last-child::before{display:none}
+.tl-i .dt{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px;margin-top:1px}
+.tl-i .row1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tl-i .row1 b{font-family:var(--font-latin)}
+.tl-i .row2{font-size:12.5px;color:var(--muted-foreground)}
+.backbar{display:flex;align-items:center;gap:8px;font-weight:700;color:var(--primary);font-size:13.5px}
+
+/* ---------- container: phone width ---------- */
+@container page (max-width:720px){
+  .main{padding:16px;gap:14px}
+  .topline{display:none}
+  .head h1{font-size:24px}
+  .head p{font-size:13px}
+  .head .acts{width:100%;margin-inline-start:0}
+  .head .acts .ystep{flex:1;justify-content:space-between}
+  .toolbar{padding:12px;border-radius:18px}
+  .search{min-width:100%}
+  .fsel{min-width:calc(50% - 5px);flex:1 1 calc(50% - 5px)}
+  .card{border-radius:20px}
+  .tiles{display:flex;overflow-x:auto;scrollbar-width:none;margin-inline:-16px;padding:2px 16px 8px;gap:10px}
+  .tile{flex:0 0 150px;padding:12px 14px;border-radius:18px}
+  .tile .tv{font-size:24px}
+  .tile .tl{font-size:12px}
+  .tile .kic{width:28px;height:28px;font-size:15px}
+  .banner{flex-wrap:wrap;padding:12px}
+  .banner .btn{margin-inline-start:0;width:100%}
+  .mini-tiles{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-inline:-16px;padding:2px 16px 8px}
+  .progress{min-width:0;flex:0 0 290px}
+  .progress .pl>*{white-space:nowrap}
+  .rhead{flex-wrap:nowrap;align-items:flex-start}
+  .mtile{flex:none}
+  .rpanel{padding:16px}
+  .cur-ct{grid-template-columns:1fr 1fr}
+  .choices{grid-template-columns:1fr}
+  .rhead h2{font-size:19px}
+  .litem{grid-template-columns:18px 30px minmax(0,1fr);row-gap:6px}
+  .litem .end{grid-column:3;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:flex-start}
+}
+</style>
+</head>
+<body>
+<div class="mockbar" role="toolbar" aria-label="Mockup controls">
+  <strong>HR · Contracts — renewals</strong>
+  <span class="hint">Static mockup · nothing is built yet</span>
+  <span class="sp"></span>
+  <div class="seg" id="optSeg">
+    <button data-opt="A" aria-pressed="true">Option A</button>
+    <button data-opt="B" aria-pressed="false">Option B</button>
+    <button data-opt="C" aria-pressed="false">Option C</button>
+  </div>
+  <div class="seg" id="langSeg">
+    <button data-lang="en" aria-pressed="true">EN</button>
+    <button data-lang="ar" aria-pressed="false" class="ar">ع</button>
+  </div>
+</div>
+<div class="optnote" id="optNote"></div>
+<section id="deskSec">
+  <div class="section-title" id="deskT"></div>
+  <div class="desk-scroll"><div class="desk" id="desk"></div></div>
+</section>
+<section id="phoneSec">
+  <div class="section-title" id="phoneT"></div>
+  <div class="phones" id="phones"></div>
+</section>
+
+<script>
+const T={
+ en:{school:"School",sys:"School ERP",home:"Home",dashboard:"Dashboard",schoolMod:"School",hr:"HR",employees:"Employees",contracts:"Contracts",penalties:"Penalties",lateness:"Lateness",payroll:"Payroll",leave:"Leave & permissions",accounting:"Accounting",transport:"Transport",parent:"Parent portal",admin:"Administration",soon:"Soon",isNew:"New",
+  title:"Contract renewals",sub:"Every contract ending in the chosen year, with the decision for each. Renewing creates next year's contract (1 Jun – 31 May).",
+  ends:"Ends 31 May 2027",ends2:"Ends 31 May 2028",prevY:"Previous year",nextY:"Next year",
+  tEnding:"Ending this year",tDecided:"Decided",tNot:"Not decided",tNotices:"Notices received",tDeact:"To deactivate",
+  sEnding:"of 118 active contracts",sDecided:"21 renew · 6 not renewing",sNot:"1 ended with no decision",sNotices:"1 received early",sDeact:"Not renewed, contract ended",
+  search:"Name or employee code",allStages:"All stages",allDec:"All decisions",results:'<b class="num">42</b> contracts',clear:"Clear filters",
+  cEmp:"Employee",cStage:"Stage",cContract:"Contract",cDec:"Decision",
+  renew:"Renew",approve:"Approve",reject:"Reject",letter:"Letter",deactivate:"Deactivate",decide:"Decide",
+  nSel:n=>`${n} selected`,renewSel:"Renew selected",clearSel:"Clear",renewHint:"Each gets 1 Jun 2027 – 31 May 2028",
+  showing:'Showing <b class="num">1–10</b> of <b class="num">42</b>',page:'Page <span class="num">1</span> of <span class="num">5</span>',
+  noStage:"No stage",
+  bannerT:"The school calendar for 2027/28 isn't set",bannerD:"Notices and early termination can still be recorded, but they're marked “Calendar not set” until the term dates are in.",bannerBtn:"Set the calendar",
+  calNot:"Calendar not set",
+  colNone:"Not decided",colRenew:"Renewing",colNot:"Not renewing",colEarly:"Ending early",selAll:"Select all on page",loadMore:n=>`Show ${n} more`,
+  decided:'<b class="num">27</b> of <b class="num">42</b> decided',daysLeft:"Season closes 30 Apr",
+  curCt:"Current contract",period:"Period",status:"Status",active:"Active",endsIn:"Ends in",days:'<span class="num">188</span> days',openProfile:"Open profile",
+  decision:"Decision",decHint:"Nobody decides on their own contract.",
+  oRenew:"Renew",oRenewD:"Creates 1 Jun 2027 – 31 May 2028. Salary, job and stage stay as they are.",
+  oSchool:"Not renewing — school's decision",oSchoolD:"The contract ends 31 May 2027. You deactivate them afterwards.",
+  oNotice:"Employee gave notice",oNoticeD:"Record the written notice: the date received and the scanned letter.",
+  oEarly:"Early termination request",oEarlyD:"If approved, the contract ends on the last day of term 1 (28 Jan 2027).",
+  endOther:"End for another reason…",save:"Save decision",cancel:"Cancel",
+  hist:"Contract history",histS:"Kept forever, newest first",
+  sheetT:"Decision",received:"Date received",letterF:"Scanned letter",letterDrop:"Upload the letter (PDF or photo)",note:"Note (optional)",noteP:"e.g. moving to another city",
+  earlyWarn:"Received before term 2 starts (7 Feb 2027) — it will be recorded and marked “Early”. The school decides case by case.",
+  backList:"Contract renewals",
+  deskT:"Desktop · 1440 px — HR → Contracts (renewals), year 2026/27",phoneT:"Phone · 390 px",
+  capA1:"List — three selected, bulk bar pinned",capA2:"Decide one row — bottom sheet",capA3:"Year 2027/28 — calendar not set",
+  capB1:"Board — one column at a time, tabs on top",capB2:"“Not renewing” column",capB3:"Year 2027/28 — calendar not set",
+  capC1:"List with progress",capC2:"Tap a row — employee's contract page",capC3:"Year 2027/28 — calendar not set"},
+ ar:{school:"المدرسة",sys:"نظام إدارة المدرسة",home:"الرئيسية",dashboard:"لوحة التحكم",schoolMod:"المدرسة",hr:"الموارد البشرية",employees:"الموظفون",contracts:"العقود",penalties:"الجزاءات",lateness:"التأخير",payroll:"الرواتب",leave:"الإجازات والأذونات",accounting:"الحسابات",transport:"النقل",parent:"بوابة أولياء الأمور",admin:"الإدارة",soon:"قريبًا",isNew:"جديد",
+  title:"تجديد العقود",sub:"كل عقد ينتهي في العام المختار، مع القرار الخاص بكل موظف. التجديد ينشئ عقد العام التالي (1 يونيو – 31 مايو).",
+  ends:"ينتهي 31 مايو 2027",ends2:"ينتهي 31 مايو 2028",prevY:"العام السابق",nextY:"العام التالي",
+  tEnding:"تنتهي هذا العام",tDecided:"تم البت فيها",tNot:"لم يُبت فيها",tNotices:"إخطارات مستلمة",tDeact:"لإلغاء التفعيل",
+  sEnding:"من 118 عقدًا ساريًا",sDecided:"21 تجديد · 6 عدم تجديد",sNot:"واحد انتهى دون قرار",sNotices:"واحد استُلم مبكرًا",sDeact:"لم يُجدد وانتهى عقده",
+  search:"الاسم أو كود الموظف",allStages:"كل المراحل",allDec:"كل القرارات",results:'<b class="num">42</b> عقدًا',clear:"مسح الفلاتر",
+  cEmp:"الموظف",cStage:"المرحلة",cContract:"العقد",cDec:"القرار",
+  renew:"تجديد",approve:"موافقة",reject:"رفض",letter:"الخطاب",deactivate:"إلغاء التفعيل",decide:"اتخاذ قرار",
+  nSel:n=>`المحدد: ${n}`,renewSel:"تجديد المحددين",clearSel:"إلغاء",renewHint:"لكل منهم عقد 1 يونيو 2027 – 31 مايو 2028",
+  showing:'عرض <b class="num">1–10</b> من <b class="num">42</b>',page:'صفحة <span class="num">1</span> من <span class="num">5</span>',
+  noStage:"بدون مرحلة",
+  bannerT:"تقويم المدرسة لعام 2027/28 غير محدد",bannerD:"يمكن تسجيل الإخطارات وطلبات الإنهاء المبكر، لكنها تُعلَّم «التقويم غير محدد» حتى تُدخل مواعيد الترمين.",bannerBtn:"تحديد التقويم",
+  calNot:"التقويم غير محدد",
+  colNone:"لم يُبت فيها",colRenew:"سيُجدد",colNot:"لن يُجدد",colEarly:"إنهاء مبكر",selAll:"تحديد كل الصفحة",loadMore:n=>`عرض ${n} أخرى`,
+  decided:'تم البت في <b class="num">27</b> من <b class="num">42</b>',daysLeft:"يُغلق الموسم 30 أبريل",
+  curCt:"العقد الحالي",period:"المدة",status:"الحالة",active:"ساري",endsIn:"ينتهي خلال",days:'<span class="num">188</span> يومًا',openProfile:"فتح ملف الموظف",
+  decision:"القرار",decHint:"لا أحد يقرر في عقده الشخصي.",
+  oRenew:"تجديد",oRenewD:"ينشئ عقد 1 يونيو 2027 – 31 مايو 2028. الراتب والوظيفة والمرحلة كما هي.",
+  oSchool:"لن يُجدد — قرار المدرسة",oSchoolD:"ينتهي العقد 31 مايو 2027، ثم تلغي تفعيل الموظف.",
+  oNotice:"قدّم الموظف إخطارًا",oNoticeD:"سجّل الإخطار المكتوب: تاريخ الاستلام والخطاب الممسوح ضوئيًا.",
+  oEarly:"طلب إنهاء مبكر",oEarlyD:"عند الموافقة ينتهي العقد في آخر يوم من الترم الأول (28 يناير 2027).",
+  endOther:"إنهاء لسبب آخر…",save:"حفظ القرار",cancel:"إلغاء",
+  hist:"سجل العقود",histS:"محفوظ دائمًا، الأحدث أولًا",
+  sheetT:"القرار",received:"تاريخ الاستلام",letterF:"الخطاب الممسوح",letterDrop:"ارفع الخطاب (PDF أو صورة)",note:"ملاحظة (اختياري)",noteP:"مثلًا: انتقال إلى مدينة أخرى",
+  earlyWarn:"استُلم قبل بداية الترم الثاني (7 فبراير 2027) — سيُسجل ويُعلَّم «مبكر». تقرر المدرسة في كل حالة.",
+  backList:"تجديد العقود",
+  deskT:"سطح المكتب · 1440 بكسل — الموارد البشرية ← العقود (التجديد)، عام 2026/27",phoneT:"الهاتف · 390 بكسل",
+  capA1:"القائمة — ثلاثة محددين، شريط الإجراء مثبت",capA2:"قرار لصف واحد — ورقة سفلية",capA3:"عام 2027/28 — التقويم غير محدد",
+  capB1:"اللوحة — عمود واحد في كل مرة، تبويبات بالأعلى",capB2:"عمود «لن يُجدد»",capB3:"عام 2027/28 — التقويم غير محدد",
+  capC1:"القائمة مع شريط التقدم",capC2:"عند لمس صف — صفحة عقد الموظف",capC3:"عام 2027/28 — التقويم غير محدد"}
+};
+const NOTE={
+ A:{en:"<b>Option A — Table with a decision per row.</b> Same table, filters and pager as Penalties. Five tiles on top (they filter the list when clicked). Each row shows the decision pill and the one next action (Renew, Approve / Reject, Deactivate); the ⋯ menu holds the rest. Ticking rows that can be renewed brings up a dark bulk bar. Phone: cards with the same pill and action, bulk bar pinned at the bottom, decisions in a bottom sheet. <b>Trade-off:</b> most familiar and densest, but the season's progress is only in the tiles.",
+    ar:"<b>الخيار A — جدول بقرار لكل صف.</b> نفس الجدول والفلاتر والترقيم الموجودة في صفحة الجزاءات. خمس بطاقات أرقام بالأعلى (تُفلتر القائمة عند الضغط). كل صف يعرض شارة القرار والإجراء التالي الوحيد (تجديد، موافقة / رفض، إلغاء التفعيل)، وباقي الإجراءات في قائمة ⋯. تحديد الصفوف القابلة للتجديد يُظهر شريطًا داكنًا للإجراء الجماعي. على الهاتف: بطاقات بنفس الشارة والإجراء، والشريط الجماعي مثبت بالأسفل، والقرار في ورقة سفلية. <b>المقابل:</b> الأكثر ألفة وكثافة، لكن تقدّم الموسم يظهر في البطاقات فقط."},
+ B:{en:"<b>Option B — Board, one column per decision.</b> Not decided · Renewing · Not renewing · Ending early. A progress bar replaces the decided / not decided tiles; notices and to-deactivate stay as small tiles. Bulk renew lives in the “Not decided” column. Each column pages on its own (“Show 10 more”). Phone: the columns become tabs with counts. <b>Trade-off:</b> the season reads at a glance and urgent cards stand out, but four columns means four paged lists from the API and less detail per card; no drag and drop (a decision needs a date, a letter or a reason).",
+    ar:"<b>الخيار B — لوحة بعمود لكل قرار.</b> لم يُبت فيها · سيُجدد · لن يُجدد · إنهاء مبكر. شريط التقدم يحل محل بطاقتي «تم البت» و«لم يُبت»، وتبقى الإخطارات وإلغاء التفعيل كبطاقات صغيرة. التجديد الجماعي داخل عمود «لم يُبت فيها». كل عمود له ترقيمه («عرض 10 أخرى»). على الهاتف تصبح الأعمدة تبويبات بالأعداد. <b>المقابل:</b> الموسم واضح من نظرة والحالات العاجلة بارزة، لكن أربعة أعمدة تعني أربع قوائم من الـAPI وتفاصيل أقل لكل بطاقة؛ ولا سحب وإفلات (القرار يحتاج تاريخًا أو خطابًا أو سببًا)."},
+ C:{en:"<b>Option C — Split view: list and the selected employee.</b> A narrow list on the start side (tick to bulk-renew), and on the other side the selected employee's current contract, the four decisions as choices, and their contract history. The tiles shrink to a progress strip. Phone: list first, tapping a row opens the employee's contract page. <b>Trade-off:</b> best for deciding one by one with full context (history, previous decisions), slowest for scanning 42 rows; on phone it is two screens.",
+    ar:"<b>الخيار C — عرض مقسوم: القائمة والموظف المحدد.</b> قائمة ضيقة في جهة البداية (حدد للتجديد الجماعي)، وفي الجهة الأخرى عقد الموظف الحالي والقرارات الأربعة كخيارات وسجل عقوده. تتحول البطاقات إلى شريط تقدم. على الهاتف: القائمة أولًا، ولمس الصف يفتح صفحة عقد الموظف. <b>المقابل:</b> الأفضل للقرار واحدًا واحدًا مع السياق الكامل (السجل والقرارات السابقة)، والأبطأ لمراجعة 42 صفًا؛ وعلى الهاتف شاشتان."}
+};
+let opt="A", lang="en";
+const L=()=>T[lang], AR=()=>lang==="ar";
+const v=x=>x==null?"":Array.isArray(x)?x[AR()?0:1]:x;
+const ic=(n,extra="")=>`<i class="ph-duotone ph-${n} ${extra}" aria-hidden="true"></i>`;
+const M_EN=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const M_AR=["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+const dt=(d,m,y)=>[`${d} ${M_AR[m-1]} ${y}`,`${d} ${M_EN[m-1]} ${y}`];
+const yr=s=>`<bdi class="num" dir="ltr">${s}</bdi>`;
+const STAGE={kg:["رياض الأطفال","KG"],pri:["الابتدائية","Primary"],prep:["الإعدادية","Preparatory"]};
+
+const DEC={
+ none:{c:"d-none",i:"circle-dashed",l:["لم يُبت فيه","Not decided"]},
+ renew:{c:"d-renew",i:"check-circle",l:["تم التجديد","Renewed"]},
+ school:{c:"d-school",i:"x-circle",l:["لن يُجدد — قرار المدرسة","Not renewing — school"]},
+ notice:{c:"d-notice",i:"envelope-simple",l:["قدّم الموظف إخطارًا","Employee gave notice"]},
+ early:{c:"d-early",i:"hourglass-medium",l:["طلب إنهاء مبكر","Early termination requested"]},
+ ended:{c:"d-ended",i:"warning-circle",l:["انتهى دون قرار","Ended, no decision"]}
+};
+const F26=dt(1,6,2026), T27=dt(31,5,2027);
+/* contracts ending in 2026/27 — page 1 of 5, sorted "needs action first" by the API */
+const E=[
+ {id:4,n:["سلمى رجب","Salma Ragab"],i:["سر","SR"],code:"EMP-0058",job:["معلمة تربية فنية","Art teacher"],st:"pri",f:dt(1,11,2025),t:dt(31,10,2026),d:"ended",
+  sub:["انتهى 31 أكتوبر 2026 · ما زالت نشطة","Ended 31 Oct 2026 · still active"],tone:"t3"},
+ {id:8,n:["يوسف جمال","Youssef Gamal"],i:["يج","YG"],code:"EMP-0063",job:["معلم تربية رياضية","PE teacher"],st:"prep",f:dt(1,9,2025),t:dt(31,8,2026),d:"school",deact:1,
+  sub:["انتهى 31 أغسطس 2026","Ended 31 Aug 2026"]},
+ {id:7,n:["دينا حسن","Dina Hassan"],i:["دح","DH"],code:"EMP-0045",job:["مساعدة معلمة","Teaching assistant"],st:"kg",d:"early",
+  sub:["طُلب 12 نوفمبر · ينتهي 28 يناير 2027 إن وُوفق","Requested 12 Nov · would end 28 Jan 2027"],tone:"t2"},
+ {id:1,n:["مصطفى عبد الرحمن","Mostafa Abdelrahman"],i:["مع","MA"],code:"EMP-0012",job:["معلم لغة عربية","Arabic teacher"],st:"pri",d:"none",sel:1},
+ {id:2,n:["هبة سعيد","Heba Saeed"],i:["هس","HS"],code:"EMP-0019",job:["معلمة رياض أطفال","KG teacher"],st:"kg",d:"none",sel:1,tone:"t2"},
+ {id:3,n:["كريم السيد","Karim El-Sayed"],i:["كس","KE"],code:"EMP-0027",job:["معلم علوم","Science teacher"],st:"prep",d:"none",sel:1,cur:1},
+ {id:6,n:["طارق منصور","Tarek Mansour"],i:["طم","TM"],code:"EMP-0041",job:["معلم رياضيات","Mathematics teacher"],st:"prep",d:"notice",tag:"early",
+  sub:["استُلم 10 نوفمبر 2026، 9:20 ص","Received 10 Nov 2026, 9:20 AM"],tone:"t3"},
+ {id:9,n:["عمرو فوزي","Amr Fawzy"],i:["عف","AF"],code:"EMP-0052",job:["محاسب","Accountant"],st:null,d:"school",
+  sub:["منى إبراهيم · 20 نوفمبر، 1:15 م","Mona Ibrahim · 20 Nov, 1:15 PM"]},
+ {id:5,n:["نورهان عادل","Nourhan Adel"],i:["نع","NA"],code:"EMP-0034",job:["معلمة لغة إنجليزية","English teacher"],st:"pri",d:"renew",
+  sub:["منى إبراهيم · 18 نوفمبر، 10:42 ص","Mona Ibrahim · 18 Nov, 10:42 AM"],tone:"t2"},
+ {id:10,n:["مريم خليل","Mariam Khalil"],i:["مخ","MK"],code:"EMP-0070",job:["أخصائية اجتماعية","Social worker"],st:"pri",d:"renew",
+  sub:["منى إبراهيم · 18 نوفمبر، 10:44 ص","Mona Ibrahim · 18 Nov, 10:44 AM"]}
+];
+E.forEach(e=>{e.f=e.f||F26;e.t=e.t||T27;});
+const byId=id=>E.find(e=>e.id===id);
+/* year 2027/28 — calendar not set */
+const E28=[
+ {id:21,n:["نورهان عادل","Nourhan Adel"],i:["نع","NA"],code:"EMP-0034",job:["معلمة لغة إنجليزية","English teacher"],st:"pri",d:"none",tone:"t2"},
+ {id:22,n:["مريم خليل","Mariam Khalil"],i:["مخ","MK"],code:"EMP-0070",job:["أخصائية اجتماعية","Social worker"],st:"pri",d:"none"},
+ {id:23,n:["أحمد شوقي","Ahmed Shawky"],i:["أش","AS"],code:"EMP-0016",job:["وكيل المرحلة الإعدادية","Preparatory vice-principal"],st:"prep",d:"notice",tag:"cal",
+  sub:["استُلم 21 نوفمبر 2026، 11:05 ص","Received 21 Nov 2026, 11:05 AM"],tone:"t3"},
+ {id:24,n:["ياسمين خالد","Yasmin Khaled"],i:["يخ","YK"],code:"EMP-0048",job:["معلمة لغة فرنسية","French teacher"],st:"prep",d:"none"}
+];
+E28.forEach(e=>{e.f=dt(1,6,2027);e.t=dt(31,5,2028);});
+
+const av=(e,cls="")=>`<div class="av ${e.tone||""} ${cls}">${v(e.i)}</div>`;
+const whoH=(e,cls="",meta)=>`<div class="who">${av(e,cls)}<div style="min-width:0"><div class="n">${v(e.n)}</div><div class="r">${meta!=null?meta:`<span class="num">${e.code}</span> · ${v(e.job)}`}</div></div></div>`;
+const stageP=e=>e.st?`<span class="pill p-stage">${v(STAGE[e.st])}</span>`:`<span style="color:var(--muted-foreground);font-size:13px">${L().noStage}</span>`;
+const stageT=e=>e.st?v(STAGE[e.st]):L().noStage;
+const decP=(e,short)=>{const d=DEC[e.d];return `<span class="pill ${d.c}">${ic(d.i)}${v(d.l)}</span>`;};
+const tags=e=>(e.tag==="early"?`<span class="pill tg-early">${ic("clock-counter-clockwise")}${AR()?"مبكر":"Early"}</span>`:"")
+ +(e.tag==="cal"?`<span class="pill tg-cal">${ic("calendar-x")}${L().calNot}</span>`:"")
+ +(e.deact?`<span class="pill tg-deact">${ic("user-minus")}${L().tDeact}</span>`:"");
+const decBlock=e=>`<div class="pills">${decP(e)}${tags(e)}</div>${e.sub?`<div class="dsub">${v(e.sub)}</div>`:""}`;
+const canRenew=e=>e.d==="none"||e.d==="ended";
+const cb=e=>canRenew(e)?`<span class="cb ${e.sel?"on":""}">${e.sel?ic("check"):""}</span>`:`<span class="cb dis" title="—"></span>`;
+const primaryAct=(e,sm=true)=>{const t=L(),s=sm?"btn-sm":"";
+ if(canRenew(e)) return `<button class="btn ${s} btn-soft">${ic("arrows-clockwise")}${t.renew}</button>`;
+ if(e.d==="early") return `<button class="btn ${s} btn-soft">${ic("check")}${t.approve}</button><button class="btn ${s} btn-danger">${ic("x")}${t.reject}</button>`;
+ if(e.deact) return `<button class="btn ${s}">${ic("user-minus")}${t.deactivate}</button>`;
+ if(e.d==="notice") return `<button class="btn ${s}">${ic("file-pdf")}${t.letter}</button>`;
+ return "";};
+const MENU=[["prohibit","لن يُجدد — قرار المدرسة","Not renewing — school's decision"],["envelope-simple","تسجيل إخطار الموظف","Record the employee's notice"],["hourglass-medium","تسجيل طلب إنهاء مبكر","Record an early termination request"],["clock-counter-clockwise","سجل العقود","Contract history"]];
+const rowMenu=style=>`<div class="menu" style="${style}">${MENU.map((m,i)=>`<a href="#" class="${i===0?"hl":""}">${ic(m[0])}${AR()?m[1]:m[2]}</a>`).join("")}<hr><a href="#" class="danger">${ic("file-x")}${L().endOther}</a></div>`;
+
+/* ---------- shell ---------- */
+const link=(icon,label,cur,extra="")=>`<a class="navlink" href="#" ${cur?'aria-current="page"':""}>${ic(icon)}<span>${label}</span>${extra}</a>`;
+const lockL=(icon,label)=>`<a class="navlink lock" href="#">${ic(icon)}<span>${label}</span><span class="soon">${L().soon}</span></a>`;
+const brand=()=>`<div class="brand"><div class="logo">${ic("graduation-cap")}</div><div><div class="brand-name">${L().school}</div><div class="brand-sub">${L().sys}</div></div></div>`;
+const ME={n:["منى إبراهيم","Mona Ibrahim"],i:["مإ","MI"],r:["مديرة الموارد البشرية","HR manager"]};
+const userCard=()=>`<div class="user"><div class="av">${v(ME.i)}</div><div><div class="n">${v(ME.n)}</div><div class="r">${v(ME.r)}</div></div>${ic("sign-out","flip")}</div>`;
+function side(){const t=L();
+ const mod=(icon,label,bg,fg,kids,open)=>`<details class="mod" ${open?"open":""}><summary><span class="mi" style="background:${bg};color:${fg}">${ic(icon)}</span>${label}${ic("caret-down","car")}</summary><div class="kids">${kids}</div></details>`;
+ const dis=(icon,label)=>`<details class="mod dis"><summary><span class="mi" style="background:var(--secondary)">${ic(icon)}</span>${label}<span class="soon">${t.soon}</span></summary></details>`;
+ return `<aside class="sb">${brand()}<nav>
+ <a class="single" href="#"><span class="mi">${ic("squares-four")}</span>${t.dashboard}</a>
+ ${dis("buildings",t.schoolMod)}
+ ${mod("users-three",t.hr,"var(--primary-soft)","var(--primary)",link("identification-badge",t.employees)+link("file-text",t.contracts,true)+link("gavel",t.penalties)+link("clock-countdown",t.lateness)+link("wallet",t.payroll)+lockL("calendar-check",t.leave),true)}
+ ${mod("calculator",t.accounting,"var(--info-soft)","var(--info)","",false)}
+ ${dis("bus",t.transport)}${dis("users-four",t.parent)}
+ ${mod("shield-check",t.admin,"var(--accent-soft)","#6b4b00","",false)}
+ </nav><div class="bottom">${userCard()}</div></aside>`;}
+const langT=()=>`<span class="lang"><span class="${!AR()?"on":""}">EN</span><span class="ar ${AR()?"on":""}">ع</span></span>`;
+const topline=()=>`<div class="topline"><span class="crumb">${L().hr}${ic("caret-right","flip")}<span>${L().contracts}</span></span><span class="sp"></span>${langT()}</div>`;
+const mbar=()=>`<div class="mbar"><button class="menub" aria-label="menu">${ic("list")}</button><div class="brand-name">${L().school}</div>${langT()}</div>`;
+const ystep=(y28)=>`<div class="ystep"><button class="ibtn" aria-label="${L().prevY}">${ic("caret-left","flip")}</button><div class="yv"><b>${yr(y28?"2027/28":"2026/27")}</b><small>${y28?L().ends2:L().ends}</small></div><button class="ibtn" aria-label="${L().nextY}">${ic("caret-right","flip")}</button></div>`;
+const head=(y28)=>`<div class="head"><div><h1>${L().title}</h1><p>${L().sub}</p></div><div class="acts">${ystep(y28)}</div></div>`;
+const banner=()=>`<div class="banner" role="status"><span class="kic">${ic("calendar-x")}</span><div><b>${L().bannerT}</b><span>${L().bannerD}</span></div><button class="btn btn-sm">${ic("gear-six")}${L().bannerBtn}</button></div>`;
+const TILES=y28=>{const t=L();return [
+ ["calendar-blank","k-pri",t.tEnding,y28?21:42,y28?(AR()?"عقود جُددت لهذا العام":"Renewed into this year"):t.sEnding,false],
+ ["check-circle","k-ok",t.tDecided,y28?1:27,y28?(AR()?"إخطار واحد":"1 notice"):t.sDecided,false],
+ ["circle-dashed","k-warn",t.tNot,y28?20:15,y28?(AR()?"الموسم يبدأ 1 مارس 2028":"Season opens 1 Mar 2028"):t.sNot,!y28],
+ ["envelope-simple","k-acc",t.tNotices,y28?1:3,y28?t.calNot:t.sNotices,false],
+ ["user-minus","k-dark",t.tDeact,y28?0:1,y28?"—":t.sDeact,false]];};
+const tiles=y28=>`<div class="tiles">${TILES(y28).map(([i,k,l,n,s,on])=>`<div class="tile"><div class="tl"><span class="kic ${k}">${ic(i)}</span>${l}</div><div class="tv">${n}</div><div class="ts">${s}</div></div>`).join("")}</div>`;
+const toolbar=(phone,res=true,y28=false)=>{const t=L();return `<section class="toolbar"><div class="frow"><label class="search">${ic("magnifying-glass")}<span>${t.search}</span></label>
+ <button class="fsel">${ic("stack")}${t.allStages}${ic("caret-down")}</button><button class="fsel">${ic("funnel-simple")}${t.allDec}${ic("caret-down")}</button></div>
+ ${res?`<div class="resline"><span>${y28?t.results.replace("42","21"):t.results}</span><span class="sp"></span><button class="linkbtn" disabled style="opacity:.5">${t.clear}</button></div>`:""}</section>`;};
+const pager=()=>`<nav class="pager" aria-label="pagination"><span class="info">${L().showing}</span><div class="pages">
+ <button class="pg" disabled>${ic("caret-left","flip")}</button><button class="pg num" aria-current="page">1</button><button class="pg num">2</button><button class="pg num">3</button><button class="pg num">4</button><button class="pg num">5</button><button class="pg">${ic("caret-right","flip")}</button></div></nav>`;
+const mpager=(y28)=>`<div class="mpager"><span class="info">${y28?L().showing.replace("42","21"):L().showing}</span><div class="row"><button class="pg" disabled>${ic("caret-left","flip")}</button><b>${y28?L().page.replace(">5<",">3<"):L().page}</b><button class="pg">${ic("caret-right","flip")}</button></div></div>`;
+const bulk=(n,phone)=>{const t=L();return `<div class="bulk"><span class="cb on" style="border-color:#fff">${ic("minus")}</span><div style="min-width:0"><div class="cnt">${t.nSel(n)}</div>${phone?"":`<div class="hint">${t.renewHint}</div>`}</div><span class="sp"></span><button class="btn btn-ghost btn-sm">${t.clearSel}</button><button class="btn btn-accent">${ic("arrows-clockwise")}${t.renewSel}</button></div>`;};
+
+/* ================= OPTION A ================= */
+function A_desk(){const t=L();
+ const rows=E.map(e=>`<tr class="${e.sel?"sel":""} ${e.d==="ended"?"urgent":""}">
+  <td style="width:44px;padding-inline-end:0">${cb(e)}</td>
+  <td style="width:270px">${whoH(e)}</td>
+  <td style="width:120px">${stageP(e)}</td>
+  <td style="width:200px" class="dates"><span class="num-ok">${v(e.f)} –</span><small>${v(e.t)}</small></td>
+  <td>${decBlock(e)}</td>
+  <td style="width:220px"><div class="acts">${primaryAct(e)}<button class="ibtn ${e.id===3?"on":""}">${ic("dots-three")}</button></div>${e.id===3?rowMenu("top:50px;inset-inline-end:14px"):""}</td></tr>`).join("");
+ return `<main class="main">${topline()}${head()}${tiles()}${toolbar()}
+ <div class="cardwrap"><section class="card"><table class="ta"><thead><tr><th><span class="cb mix" style="color:#fff">${ic("minus")}</span></th><th>${t.cEmp}</th><th>${t.cStage}</th><th>${t.cContract}</th><th>${t.cDec}</th><th></th></tr></thead><tbody>${rows}</tbody></table><div style="margin:0 10px 10px">${bulk(3)}</div>${pager()}</section></div></main>`;}
+function A_card(e){const t=L();
+ return `<article class="acard ${e.sel?"sel":""} ${e.d==="ended"?"urgent":""}"><div class="top">${cb(e)}${whoH(e,"sm")}<button class="ibtn" style="margin-inline-end:-8px">${ic("dots-three")}</button></div>
+ <div class="meta"><span>${stageT(e)}</span>·<span>${v(e.f)} – ${v(e.t)}</span></div>
+ <div>${decBlock(e)}</div>${primaryAct(e)?`<div class="bot">${primaryAct(e)}${canRenew(e)?`<button class="btn btn-sm">${t.decide}${ic("caret-down")}</button>`:""}</div>`:""}</article>`;}
+const A_list=(list,y28)=>`<main class="main" style="padding-bottom:${y28?16:96}px">${head(y28)}${y28?banner():""}${tiles(y28)}${toolbar(true,true,y28)}<section class="card acards">${list.map(A_card).join("")}${mpager(y28)}</section></main>`;
+function A_sheet(){const t=L(),e=byId(3);
+ return A_list(E.slice(3,6))+`<div class="scrim"></div><div class="sheet"><div class="grab"></div>
+ <div class="sh">${whoH(e,"sm")}<span class="sp"></span><button class="ibtn">${ic("x")}</button></div>
+ <div class="sb2"><div class="h3">${t.sheetT}</div>
+ ${choice("arrows-clockwise",t.oRenew,"",false)}${choice("prohibit",t.oSchool,"",false)}${choice("envelope-simple",t.oNotice,"",true)}
+ <div class="field"><label>${t.received}</label><div class="input">${ic("calendar-blank")}<span class="num-ok">${v(dt(24,11,2026))}</span></div></div>
+ <div class="warnbox">${ic("info")}<span>${t.earlyWarn}</span></div>
+ <div class="field"><label>${t.letterF}</label><div class="drop">${ic("upload-simple")}${t.letterDrop}</div></div>
+ ${choice("hourglass-medium",t.oEarly,"",false)}</div>
+ <div class="sf"><button class="btn">${t.cancel}</button><button class="btn btn-primary">${t.save}</button></div></div>`;}
+const choice=(i,ttl,d,on)=>`<div class="choice ${on?"on":""}"><span class="rd"></span><div><div class="ct">${ic(i)}${ttl}</div>${d?`<div class="cd">${d}</div>`:""}</div></div>`;
+
+/* ================= OPTION B ================= */
+const COLS=()=>{const t=L();return [
+ {k:"none",l:t.colNone,c:14,sw:"var(--warning)",ids:[4,1,2,3],more:10},
+ {k:"renew",l:t.colRenew,c:21,sw:"var(--success)",ids:[5,10],more:19},
+ {k:"not",l:t.colNot,c:6,sw:"var(--destructive)",ids:[8,6,9],more:3},
+ {k:"early",l:t.colEarly,c:1,sw:"var(--info)",ids:[7],more:0}];};
+function B_card(e){
+ const ln=`<div class="ln">${ic("calendar-blank")}<span>${stageT(e)} · ${AR()?"ينتهي":"Ends"} ${v(e.t)}</span></div>`;
+ const extra=(e.d==="renew"||e.d==="school"&&!e.deact)?`<div class="dsub" style="margin:0">${v(e.sub)}</div>`:(e.d!=="none"?decBlock(e):"");
+ return `<article class="bcard ${e.sel?"sel":""} ${e.d==="ended"?"urgent":""}"><div class="top">${canRenew(e)?cb(e):""}${whoH(e,"sm",v(e.job))}<button class="ibtn" style="margin:-6px;margin-inline-start:0">${ic("dots-three")}</button></div>
+ ${ln}${extra?`<div>${extra}</div>`:""}${primaryAct(e)?`<div class="bot">${primaryAct(e)}</div>`:""}</article>`;}
+const progress=()=>{const t=L();return `<div class="progress"><div class="pl"><div>${t.decided}</div><span>${t.daysLeft}</span></div><div class="bar"><i style="width:50%;background:var(--success)"></i><i style="width:14.3%;background:var(--destructive)"></i><i style="width:2.4%;background:var(--info)"></i></div></div>`;};
+const miniT=(i,k,n,l)=>`<div class="mtile"><span class="kic ${k}">${ic(i)}</span><b>${n}</b><span>${l}</span></div>`;
+function B_desk(){const t=L();
+ const cols=COLS().map(c=>`<section class="col"><div class="ch"><span class="sw" style="background:${c.sw}"></span><span class="t">${c.l}</span><span class="c">${c.c}</span><span class="sp"></span><button class="ibtn" style="width:28px;height:28px">${ic("funnel-simple")}</button></div>
+  ${c.k==="none"?`<div class="colbar"><span class="cb mix" style="color:#fff">${ic("minus")}</span>${t.nSel(3)}<span class="sp"></span><button class="btn btn-sm btn-primary">${ic("arrows-clockwise")}${t.renew} (3)</button></div>`:""}
+  ${c.ids.map(id=>B_card(byId(id))).join("")}${c.more?`<button class="more">${t.loadMore(Math.min(10,c.more))}</button>`:""}</section>`).join("");
+ return `<main class="main">${topline()}${head()}<div class="mini-tiles">${progress()}${miniT("calendar-blank","k-pri",42,t.tEnding)}${miniT("envelope-simple","k-acc",3,t.tNotices)}${miniT("user-minus","k-dark",1,t.tDeact)}</div>
+ ${toolbar(false,false).replace(`<button class="fsel">${ic("funnel-simple")}${t.allDec}${ic("caret-down")}</button>`,"")}<div class="board">${cols}</div></main>`;}
+const btabs=(on,cn)=>`<div class="btabs">${COLS().map((c,i)=>`<span class="btab ${c.k===on?"on":""}">${c.k===on?"":`<span class="sw" style="background:${c.sw}"></span>`}${c.l}<span class="c">${cn?cn[i]:c.c}</span></span>`).join("")}</div>`;
+function B_phone(on){const t=L(),c=COLS().find(x=>x.k===on);
+ return `<main class="main" style="padding-bottom:${on==="none"?96:16}px">${head()}<div class="mini-tiles">${progress()}${miniT("envelope-simple","k-acc",3,t.tNotices)}${miniT("user-minus","k-dark",1,t.tDeact)}</div>
+ <section class="toolbar"><div class="frow"><label class="search">${ic("magnifying-glass")}<span>${t.search}</span></label><button class="fsel">${ic("stack")}${t.allStages}${ic("caret-down")}</button></div></section>
+ ${btabs(on)}<div class="col" style="background:transparent;border:0;padding:0">${on==="none"?`<div class="colbar" style="box-shadow:var(--shadow-card)"><span class="cb mix" style="color:#fff">${ic("minus")}</span>${t.selAll}<span class="sp"></span></div>`:""}${c.ids.map(id=>B_card(byId(id))).join("")}${c.more?`<button class="more">${t.loadMore(Math.min(10,c.more))}</button>`:""}</div></main>`
+ +(on==="none"?`<div class="pbulk">${bulk(3,true)}</div>`:"");}
+function B_y28(){const t=L();
+ return `<main class="main">${head(true)}${banner()}<div class="mini-tiles"><div class="progress"><div class="pl"><div>${AR()?'تم البت في <b class="num">1</b> من <b class="num">21</b>':'<b class="num">1</b> of <b class="num">21</b> decided'}</div></div><div class="bar"><i style="width:4.8%;background:var(--destructive)"></i></div></div>${miniT("envelope-simple","k-acc",1,t.tNotices)}</div>
+ ${btabs("not",[20,0,1,0])}<div class="col" style="background:transparent;border:0;padding:0">${B_card(E28[2])}</div></main>`;}
+
+/* ================= OPTION C ================= */
+const litem=e=>`<div class="litem ${e.cur?"cur":""}">${canRenew(e)?cb(e):`<span></span>`}${av(e,"sm")}<div style="min-width:0"><div class="nm">${v(e.n)}</div><div class="sm">${stageT(e)} · ${AR()?"ينتهي":"ends"} ${v(e.t)}</div></div><div class="end"><span class="pill ${DEC[e.d].c}">${ic(DEC[e.d].i)}${v(DEC[e.d].l).replace(" — قرار المدرسة","").replace(" — school","").replace("Early termination requested","Early termination")}</span>${e.tag==="early"?`<span class="pill tg-early">${AR()?"مبكر":"Early"}</span>`:""}${e.tag==="cal"?`<span class="pill tg-cal">${L().calNot}</span>`:""}${e.deact?`<span class="pill tg-deact">${L().tDeact}</span>`:""}</div></div>`;
+const cProgress=(y28)=>{const t=L();return `<div class="mini-tiles">${y28?`<div class="progress"><div class="pl"><div>${AR()?'تم البت في <b class="num">1</b> من <b class="num">21</b>':'<b class="num">1</b> of <b class="num">21</b> decided'}</div></div><div class="bar"><i style="width:4.8%;background:var(--destructive)"></i></div></div>${miniT("envelope-simple","k-acc",1,t.tNotices)}`:`${progress()}${miniT("circle-dashed","k-warn",15,t.tNot)}${miniT("envelope-simple","k-acc",3,t.tNotices)}${miniT("user-minus","k-dark",1,t.tDeact)}`}</div>`;};
+const lpanel=(list,phone,y28)=>{const t=L();return `<section class="card lpanel"><div class="lh">${phone?"":`<div class="frow"><label class="search">${ic("magnifying-glass")}<span>${t.search}</span></label></div><div class="frow"><button class="fsel">${ic("stack")}${t.allStages}${ic("caret-down")}</button><button class="fsel">${ic("funnel-simple")}${t.allDec}${ic("caret-down")}</button></div>`}
+ <div class="lsel">${y28?`<span class="cb"></span>`:`<span class="cb mix" style="color:#fff">${ic("minus")}</span>`}<span>${y28?(AR()?'<b class="num">21</b> عقدًا':'<b class="num">21</b> contracts'):t.nSel(3)}</span><span class="sp"></span>${y28?"":`<button class="btn btn-sm btn-primary">${ic("arrows-clockwise")}${t.renewSel}</button>`}</div></div>
+ ${list.map(litem).join("")}${phone?mpager(y28):pager().replace('class="pager"','class="pager" style="padding:12px 14px"').replace(/<button class="pg num">4<\/button><button class="pg num">5<\/button>/,"")}</section>`;};
+const HIST=[
+ {y:"2026/27",s:"active",d:[dt(1,6,2026),dt(31,5,2027)]},
+ {y:"2025/26",s:"renew",d:[dt(1,6,2025),dt(31,5,2026)],by:["منى إبراهيم · 14 أبريل 2026، 11:05 ص","Mona Ibrahim · 14 Apr 2026, 11:05 AM"]},
+ {y:"2024/25",s:"renew",d:[dt(1,6,2024),dt(31,5,2025)],by:["منى إبراهيم · 9 أبريل 2025، 9:30 ص","Mona Ibrahim · 9 Apr 2025, 9:30 AM"]},
+ {y:"2023/24",s:"renew",d:[dt(1,6,2023),dt(31,5,2024)],by:["أحمد محمود · 2 أبريل 2024، 12:10 م","Ahmed Mahmoud · 2 Apr 2024, 12:10 PM"]}];
+function rdetail(phone){const t=L(),e=byId(3);
+ const tl=HIST.map(h=>`<div class="tl-i"><span class="dt" style="background:${h.s==="active"?"var(--primary)":"var(--success-soft)"};color:${h.s==="active"?"#fff":"var(--success)"}">${ic(h.s==="active"?"circle":"check")}</span><div><div class="row1"><b>${yr(h.y)}</b>${h.s==="active"?`<span class="pill p-active"><span class="dot"></span>${t.active}</span>`:`<span class="pill d-renew">${AR()?"جُدد":"Renewed"}</span>`}</div><div class="row2">${v(h.d[0])} – ${v(h.d[1])}${h.by?` · ${v(h.by)}`:""}</div></div></div>`).join("");
+ return `<div class="rpanel ${phone?"":"card"}">
+ ${phone?`<div class="backbar">${ic("arrow-left","flip")}${t.backList}</div>`:""}
+ <div class="rhead">${av(e,"lg")}<div style="min-width:0"><h2>${v(e.n)}</h2><div class="m"><span class="num">${e.code}</span> · ${v(e.job)} · ${stageT(e)}</div></div><span class="sp"></span>${phone?"":`<button class="btn btn-sm">${ic("arrow-square-out")}${t.openProfile}</button>`}</div>
+ <div class="cur-ct"><div class="fact" ${phone?'style="grid-column:1/-1"':""}><div class="l">${t.curCt}</div><div class="v">${v(e.f)} – ${v(e.t)}</div></div><div class="fact"><div class="l">${t.status}</div><div class="v">${decP(e)}</div></div><div class="fact"><div class="l">${t.endsIn}</div><div class="v">${t.days}</div></div></div>
+ <div class="h3">${t.decision} <small>${t.decHint}</small></div>
+ <div class="choices">${choice("arrows-clockwise",t.oRenew,t.oRenewD,true)}${choice("prohibit",t.oSchool,t.oSchoolD,false)}${choice("envelope-simple",t.oNotice,t.oNoticeD,false)}${choice("hourglass-medium",t.oEarly,t.oEarlyD,false)}</div>
+ <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn btn-primary" ${phone?'style="flex:1"':""}>${ic("arrows-clockwise")}${t.oRenew}</button><button class="btn btn-ghost" style="color:var(--destructive-ink)">${ic("file-x")}${t.endOther}</button></div>
+ <div style="border-top:1px solid var(--border);padding-top:16px;display:flex;flex-direction:column;gap:12px"><div class="h3">${t.hist} <small>${t.histS}</small></div><div class="timeline">${tl}</div></div></div>`;}
+function C_desk(){return `<main class="main">${topline()}${head()}${cProgress()}<div class="split">${lpanel(E)}${rdetail()}</div></main>`;}
+function C_phone(){const t=L();return `<main class="main">${head()}${cProgress()}${toolbar(true,false)}${lpanel(E,true)}</main>`;}
+function C_detail(){return `<main class="main">${rdetail(true)}</main>`;}
+function C_y28(){return `<main class="main">${head(true)}${banner()}${cProgress(true)}${lpanel(E28,true,true)}</main>`;}
+
+/* ---------- render ---------- */
+function render(){
+ const t=L();
+ document.documentElement.lang=lang; document.documentElement.dir=AR()?"rtl":"ltr";
+ document.getElementById("optNote").innerHTML=NOTE[opt][lang];
+ document.getElementById("deskT").textContent=t.deskT;
+ document.getElementById("phoneT").textContent=t.phoneT;
+ const D={A:A_desk,B:B_desk,C:C_desk}[opt];
+ document.getElementById("desk").innerHTML=side()+D();
+ const phones={
+  A:[[t.capA1,()=>A_list(E)+`<div class="pbulk">${bulk(3,true)}</div>`,".acard.sel"],[t.capA2,A_sheet],[t.capA3,()=>A_list(E28,true)]],
+  B:[[t.capB1,()=>B_phone("none"),".btabs"],[t.capB2,()=>B_phone("not")],[t.capB3,B_y28]],
+  C:[[t.capC1,C_phone],[t.capC2,C_detail],[t.capC3,C_y28]]}[opt];
+ document.getElementById("phones").innerHTML=phones.map(([cap,fn,to])=>{const html=fn();
+  const cut=["<div class=\"scrim\">","<div class=\"pbulk\">"].map(s=>html.indexOf(s)).filter(i=>i>=0);const i=cut.length?Math.min(...cut):-1;
+  const mainPart=i<0?html:html.slice(0,i), over=i<0?"":html.slice(i);
+  return `<div class="phone-wrap"><div class="phone">${mbar()}<div class="scroll" ${to?`data-to="${to}"`:""}>${mainPart}</div>${over}</div><div class="phone-cap">${cap}</div></div>`;}).join("");
+ document.querySelectorAll(".btabs").forEach(bt=>{const on=bt.querySelector(".btab.on");const r=on.getBoundingClientRect(),b=bt.getBoundingClientRect();if(r.right>b.right-16)bt.scrollLeft+=r.right-b.right+16;if(r.left<b.left+16)bt.scrollLeft-=b.left+16-r.left;});
+ document.querySelectorAll(".scroll[data-to]").forEach(sc=>{const el=sc.querySelector(sc.dataset.to);if(el)sc.scrollTop=el.getBoundingClientRect().top-sc.getBoundingClientRect().top-(sc.dataset.to===".btabs"?150:12);});
+}
+const q=new URLSearchParams(location.search);
+if(q.get("opt")) opt=q.get("opt"); if(q.get("lang")) lang=q.get("lang");
+if(q.get("view")==="desktop") document.body.classList.add("only-desktop");
+if(q.get("view")==="phone") document.body.classList.add("only-phone");
+const sync=()=>{document.querySelectorAll("#optSeg button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.opt===opt));document.querySelectorAll("#langSeg button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.lang===lang));};
+document.querySelectorAll("#optSeg button").forEach(b=>b.addEventListener("click",()=>{opt=b.dataset.opt;sync();render();}));
+document.querySelectorAll("#langSeg button").forEach(b=>b.addEventListener("click",()=>{lang=b.dataset.lang;sync();render();}));
+sync();render();
+</script>
+</body>
+</html>

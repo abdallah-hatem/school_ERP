@@ -46,3 +46,6 @@ Corrections recorded so they don't have to be repeated. Loaded at session start.
   and totals; only static config may be filtered in the browser. My #146 and Tamer's #171 loaded whole
   months and sliced them; every review brief checks for `.slice/.filter/.sort` on fetched lists. — 2026-11-21
 - Times shown to users are 12-hour with AM/PM (AR ص/م) through the shared formatter. — 2026-11-21
+- A record's attachments (signed copies, documents) show on its row in every list of those records,
+  not only on the detail page; the owner shouldn't have to open the employee to see a contract's
+  file ("I dont have to go to that specific employee page"). — 2026-11-25

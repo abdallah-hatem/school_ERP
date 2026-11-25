@@ -1,0 +1,875 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contract Templates Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Tajawal:wght@500;700;800&family=Noto+Naskh+Arabic:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/duotone/style.css">
+<style>
+/* Tokens copied from apps/web/src/app/globals.css (direction "Campus"). Light theme only. */
+:root{
+  --radius:14px;
+  --background:#f2f8f6; --foreground:#11302b; --card:#ffffff;
+  --muted:#f5faf8; --muted-foreground:#587069; --secondary:#eaf4f1;
+  --primary:#0b7a68; --primary-foreground:#ffffff; --primary-soft:#d5efe8; --primary-hover:#096656;
+  --accent:#ffc43d; --accent-foreground:#4a3400; --accent-soft:#fff1c9;
+  --neutral-soft:#eceef0; --neutral-ink:#4f5a60;
+  --success:#1f9a62; --success-soft:#ddf4e7; --success-ink:#126b42;
+  --warning:#d9771c; --warning-soft:#ffe8d2; --warning-ink:#8f4608;
+  --destructive:#d9473a; --destructive-soft:#fde3df; --destructive-ink:#a82d22;
+  --info:#2f6fb3; --info-soft:#e0eefb; --info-ink:#24578e;
+  --border:#dce9e5; --input:#cfe0db;
+  --overlay:rgb(9 40 35 / .42);
+  --shadow-card:0 1px 2px rgb(11 72 62 / .06),0 10px 30px -12px rgb(11 72 62 / .18);
+  --shadow-raised:0 2px 4px rgb(11 72 62 / .05),0 30px 60px -24px rgb(11 72 62 / .28);
+  --shadow-primary:0 8px 20px -8px rgb(11 122 104 / .7);
+  --bar:#0f2f2a; --bar-ink:#e7f4f0;
+  --font-latin:"Plus Jakarta Sans",system-ui,sans-serif;
+  --font-ar:"IBM Plex Sans Arabic","Plus Jakarta Sans",system-ui,sans-serif;
+  --font-ar-display:"Tajawal","IBM Plex Sans Arabic",system-ui,sans-serif;
+  --font:var(--font-latin); --font-display:var(--font-latin);
+  color-scheme:light;
+}
+:root[lang="ar"]{--font:var(--font-ar);--font-display:var(--font-ar-display)}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:#e4efec;color:var(--foreground);font-family:var(--font);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+.num{font-family:var(--font-latin);font-variant-numeric:tabular-nums lining-nums}
+[dir="rtl"] .flip{transform:scaleX(-1)}
+.ph-duotone{line-height:1}
+.ph-duotone.flip,.ph-duotone.car{display:inline-block}
+bdi{unicode-bidi:isolate}
+
+/* ---------- mockup bar ---------- */
+.mockbar{background:var(--bar);color:var(--bar-ink);display:flex;align-items:center;gap:16px;padding:10px 24px;position:sticky;top:0;z-index:50;flex-wrap:wrap;font-size:13px}
+.mockbar strong{font-size:14px}
+.mockbar .hint{opacity:.7}
+.mockbar .sp{flex:1}
+.seg{display:inline-flex;background:rgb(255 255 255 / .08);border-radius:999px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;color:inherit;padding:5px 14px;border-radius:999px;font-weight:700;font-size:13px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#3a2900}
+.seg .ar{font-family:var(--font-ar-display);font-size:15px}
+.optnote{padding:18px 24px 0;max-width:1488px;margin-inline:auto;color:var(--muted-foreground);font-size:13.5px}
+.optnote b{color:var(--foreground)}
+.section-title{max-width:1488px;margin:28px auto 10px;padding-inline:24px;font-family:var(--font-display);font-weight:800;font-size:16px}
+body.only-desktop #phoneSec, body.only-phone #deskSec{display:none}
+
+/* ---------- frames ---------- */
+.desk-scroll{overflow-x:auto;padding:6px 24px 8px}
+.desk{width:1440px;margin-inline:auto;position:relative;background:var(--background);border-radius:22px;box-shadow:var(--shadow-raised);overflow:hidden;border:1px solid var(--border);display:flex;min-height:980px;container:page / inline-size}
+.phones{display:flex;gap:32px;justify-content:center;flex-wrap:wrap;padding:6px 24px 60px;align-items:flex-start}
+.phone-wrap{display:flex;flex-direction:column;gap:8px;align-items:center}
+.phone-cap{font-size:12.5px;color:var(--muted-foreground);font-weight:600;max-width:390px;text-align:center}
+.phone{width:390px;height:844px;background:var(--background);border-radius:44px;border:10px solid #1b2e2a;box-shadow:var(--shadow-raised);overflow:hidden;position:relative;container:page / inline-size;display:flex;flex-direction:column}
+.phone .scroll{overflow-y:auto;flex:1;scrollbar-width:none;position:relative}
+
+/* ---------- sidebar (real app shell: module groups from core/navigation/nav-items.ts) ---------- */
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:38px;height:38px;flex:none;border-radius:12px;background:var(--primary);color:#fff;display:grid;place-items:center;font-size:22px;position:relative}
+.logo::after{content:"";position:absolute;width:9px;height:9px;border-radius:50%;background:var(--accent);inset-block-start:-2px;inset-inline-end:-2px;box-shadow:0 0 0 2px var(--card)}
+.brand-name{font-family:var(--font-display);font-weight:800;font-size:14.5px;line-height:1.25}
+.brand-sub{font-size:11.5px;color:var(--muted-foreground)}
+.soon{font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--secondary);color:var(--muted-foreground);margin-inline-start:auto;white-space:nowrap}
+.user{display:flex;align-items:center;gap:10px;padding:10px;border-radius:16px;background:var(--muted);border:1px solid var(--border)}
+.user .av{width:36px;height:36px;border-radius:12px;font-size:13px}
+.user .n{font-weight:700;font-size:13px;line-height:1.2}
+.user .r{font-size:11.5px;color:var(--muted-foreground)}
+.user > .ph-duotone{margin-inline-start:auto;color:var(--muted-foreground);font-size:18px}
+.navlink{display:flex;align-items:center;gap:11px;min-height:40px;padding:8px 12px;border-radius:12px;color:var(--muted-foreground);text-decoration:none;font-weight:600;font-size:14px}
+.navlink .ph-duotone{font-size:20px}
+.navlink[aria-current="page"]{background:var(--primary-soft);color:var(--primary)}
+.navlink[aria-current="page"]::after{content:"";margin-inline-start:auto;width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 30%,transparent)}
+.navlink.lock{opacity:.7}
+.sb{width:272px;flex:none;background:var(--card);border-inline-end:1px solid var(--border);padding:22px 14px;display:flex;flex-direction:column;gap:20px}
+.sb nav{display:flex;flex-direction:column;gap:6px}
+.mod{border-radius:16px}
+.mod[open]{background:var(--muted);box-shadow:inset 0 0 0 1px var(--border)}
+.mod summary{list-style:none;display:flex;align-items:center;gap:11px;min-height:46px;padding:8px 10px;border-radius:14px;font-weight:700;font-size:14.5px;cursor:pointer;color:var(--foreground)}
+.mod summary::-webkit-details-marker{display:none}
+.mi{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;font-size:18px;flex:none}
+.mod summary .car{margin-inline-start:auto;color:var(--muted-foreground);font-size:16px}
+.mod[open] summary .car{transform:rotate(180deg)}
+.mod .kids{display:flex;flex-direction:column;gap:2px;padding:0 10px 10px;margin-inline-start:24px;border-inline-start:2px solid var(--border);padding-inline-start:8px}
+.mod .kids .navlink{min-height:36px;font-size:13.5px;padding:6px 10px}
+.mod.dis summary{cursor:not-allowed;color:var(--muted-foreground);font-weight:600}
+.mod.dis summary .mi{filter:grayscale(1);opacity:.7}
+.sb .single{display:flex;align-items:center;gap:11px;min-height:46px;padding:8px 10px;border-radius:14px;font-weight:700;font-size:14.5px;color:var(--foreground);text-decoration:none}
+.sb .single .mi{background:var(--secondary);color:var(--muted-foreground)}
+.sb .bottom{margin-top:auto;display:flex;flex-direction:column;gap:10px}
+.newdot{font-size:10px;font-weight:800;padding:1px 6px;border-radius:999px;background:var(--accent-soft);color:#6b4b00;margin-inline-start:auto}
+
+/* ---------- main + common controls ---------- */
+.main{flex:1;min-width:0;padding:22px 36px 36px;display:flex;flex-direction:column;gap:18px;position:relative}
+.topline{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted-foreground);min-height:40px}
+.topline .sp{flex:1}
+.crumb{display:flex;align-items:center;gap:6px;font-size:13.5px;color:var(--muted-foreground)}
+.crumb .ph-duotone{font-size:12px}
+.lang{display:inline-flex;background:var(--secondary);border-radius:999px;padding:3px}
+.lang span{padding:4px 12px;border-radius:999px;font-weight:700;font-size:12.5px}
+.lang span.on{background:var(--accent);color:var(--accent-foreground)}
+.lang .ar{font-family:var(--font-ar-display);font-size:14px}
+.head{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.head h1{margin:0;font-family:var(--font-display);font-size:30px;font-weight:800;line-height:1.15;letter-spacing:-.01em}
+:root[lang="ar"] .head h1{letter-spacing:0}
+.head p{margin:4px 0 0;color:var(--muted-foreground);font-size:14px;max-width:640px}
+.head .acts{margin-inline-start:auto;display:flex;gap:10px;align-items:center}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:var(--radius);padding:10px 16px;font-weight:700;font-size:14px;border:1px solid var(--input);background:var(--card);white-space:nowrap}
+.btn .ph-duotone{font-size:18px}
+.btn-primary{background:var(--primary);color:#fff;border-color:transparent;box-shadow:var(--shadow-primary)}
+.btn-accent{background:var(--accent);color:var(--accent-foreground);border-color:transparent}
+.btn-soft{background:var(--primary-soft);color:var(--primary);border-color:transparent}
+.btn-danger{color:var(--destructive-ink);border-color:color-mix(in srgb,var(--destructive) 35%,transparent)}
+.btn-sm{padding:6px 11px;font-size:13px;border-radius:11px;gap:6px}
+.btn-sm .ph-duotone{font-size:16px}
+.btn-ghost{border-color:transparent;background:transparent;color:var(--primary)}
+.toolbar{background:var(--card);border-radius:20px;box-shadow:var(--shadow-card);padding:14px;display:flex;flex-direction:column;gap:12px}
+.frow{display:flex;gap:10px;flex-wrap:wrap}
+.search{flex:2.2;min-width:240px;display:flex;align-items:center;gap:8px;border:1px solid var(--input);border-radius:var(--radius);padding:0 12px;height:42px;background:var(--card);color:var(--muted-foreground)}
+.search .ph-duotone{font-size:18px;flex:none}
+.search span{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fsel{flex:1;min-width:150px;display:flex;align-items:center;gap:8px;height:42px;border:1px solid var(--input);border-radius:var(--radius);padding:0 12px;background:var(--card);font-size:13.5px;font-weight:600;color:var(--foreground);white-space:nowrap}
+.fsel .ph-duotone{color:var(--muted-foreground);font-size:16px}
+.fsel .ph-caret-down{margin-inline-start:auto}
+.resline{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted-foreground);padding:0 4px;flex-wrap:wrap}
+.resline b{color:var(--foreground)}
+.resline .sp{flex:1}
+.linkbtn{border:0;background:transparent;color:var(--primary);font-weight:700;font-size:13px;padding:0;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.card{background:var(--card);border-radius:24px;box-shadow:var(--shadow-card)}
+.av{border-radius:12px;background:var(--accent);color:var(--accent-foreground);display:grid;place-items:center;font-weight:800;flex:none;font-family:var(--font-display);width:34px;height:34px;font-size:12.5px}
+.av.sm{width:30px;height:30px;border-radius:10px;font-size:11px}
+.av.lg{width:52px;height:52px;border-radius:16px;font-size:17px}
+.av.t2{background:var(--primary-soft);color:var(--primary)}
+.av.t3{background:var(--info-soft);color:var(--info-ink)}
+.ibtn{width:34px;height:34px;border-radius:11px;border:1px solid transparent;background:transparent;display:grid;place-items:center;color:var(--muted-foreground);flex:none}
+.ibtn .ph-duotone{font-size:18px}
+.ibtn.on{background:var(--primary-soft);color:var(--primary)}
+.ibtn.bd{border-color:var(--border);background:var(--card)}
+.who{display:flex;align-items:center;gap:10px;min-width:0}
+.who .n{font-weight:700;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.who .r{font-size:12px;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:700;white-space:nowrap}
+.pill .ph-duotone{font-size:14px}
+.pill .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.p-active{background:var(--success-soft);color:var(--success-ink)}
+.p-stage{background:var(--secondary);color:var(--muted-foreground)}
+/* decisions */
+.d-none{background:var(--neutral-soft);color:var(--neutral-ink)}
+.d-renew{background:var(--success-soft);color:var(--success-ink)}
+.d-school{background:var(--destructive-soft);color:var(--destructive-ink)}
+.d-notice{background:var(--warning-soft);color:var(--warning-ink)}
+.d-early{background:var(--info-soft);color:var(--info-ink)}
+.d-ended{background:var(--destructive);color:#fff}
+.tg-early{background:var(--accent-soft);color:#6b4b00;border:1px solid color-mix(in srgb,var(--accent) 60%,transparent)}
+.tg-deact{background:var(--foreground);color:#fff}
+.tg-cal{background:var(--neutral-soft);color:var(--neutral-ink);border:1px dashed #b7c0c4}
+.dsub{font-size:12px;color:var(--muted-foreground);margin-top:3px}
+.pills{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.cb{width:18px;height:18px;border-radius:6px;border:1.5px solid var(--input);background:var(--card);display:inline-grid;place-items:center;flex:none;color:#fff;font-size:12px}
+.cb.on{background:var(--primary);border-color:var(--primary)}
+.cb.mix{background:var(--primary);border-color:var(--primary)}
+.cb.dis{background:var(--muted);border-color:var(--border);opacity:.7}
+.menu{position:absolute;z-index:6;background:var(--card);border-radius:14px;box-shadow:var(--shadow-raised);border:1px solid var(--border);padding:6px;min-width:260px}
+.menu a{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;font-size:13.5px;font-weight:600;color:var(--foreground);text-decoration:none;white-space:nowrap}
+.menu a .ph-duotone{font-size:18px;color:var(--muted-foreground)}
+.menu a.hl{background:var(--muted)}
+.menu hr{border:0;border-top:1px solid var(--border);margin:4px 6px}
+.menu a.danger,.menu a.danger .ph-duotone{color:var(--destructive-ink)}
+
+/* year stepper (same shape as the app's MonthStepper) */
+.ystep{display:inline-flex;align-items:center;gap:4px;background:var(--card);border:1px solid var(--input);border-radius:var(--radius);padding:4px}
+.ystep .ibtn{width:34px;height:34px}
+.ystep .yv{padding:0 10px;text-align:center;line-height:1.2;min-width:128px}
+.ystep .yv b{font-size:15px;font-family:var(--font-latin)}
+.ystep .yv small{display:block;font-size:11.5px;color:var(--muted-foreground);font-weight:600}
+
+/* tiles (dashboard tile style) */
+.tiles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}
+.tile{background:var(--card);border-radius:20px;box-shadow:var(--shadow-card);padding:16px 18px;display:flex;flex-direction:column;gap:6px;border:2px solid transparent;min-width:0}
+.tile.on{border-color:var(--primary)}
+.tile .tl{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700;color:var(--muted-foreground)}
+.tile .kic{width:32px;height:32px;border-radius:11px;display:grid;place-items:center;font-size:17px;flex:none}
+.tile .tv{font-family:var(--font-latin);font-size:28px;font-weight:800;line-height:1.1}
+.tile .ts{font-size:12px;color:var(--muted-foreground)}
+.k-pri{background:var(--primary-soft);color:var(--primary)}
+.k-ok{background:var(--success-soft);color:var(--success)}
+.k-warn{background:var(--warning-soft);color:var(--warning)}
+.k-acc{background:var(--accent-soft);color:#a06d00}
+.k-dark{background:var(--neutral-soft);color:var(--neutral-ink)}
+
+/* banner */
+.banner{display:flex;align-items:center;gap:14px;background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 65%,transparent);border-radius:18px;padding:14px 16px}
+.banner .kic{width:38px;height:38px;border-radius:12px;background:var(--accent);color:var(--accent-foreground);display:grid;place-items:center;font-size:20px;flex:none}
+.banner b{display:block;font-size:14px}
+.banner span{font-size:13px;color:#6b4b00}
+.banner .btn{margin-inline-start:auto}
+
+/* pagination */
+.pager{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:14px 20px;flex-wrap:wrap;border-top:1px solid var(--border)}
+.pager .info{font-size:13px;color:var(--muted-foreground)}
+.pages{display:flex;gap:6px;align-items:center}
+.pg{min-width:36px;height:36px;border-radius:11px;border:1px solid var(--border);background:var(--card);font-weight:700;font-size:13px;display:grid;place-items:center;padding:0 8px}
+.pg[aria-current="page"]{background:var(--primary);color:#fff;border-color:transparent}
+.pg[disabled]{opacity:.45;cursor:default}
+.pg .ph-duotone{font-size:16px}
+.mpager{display:flex;flex-direction:column;gap:8px;padding:12px 14px}
+.mpager .info{font-size:12.5px;color:var(--muted-foreground)}
+.mpager .row{display:flex;align-items:center;justify-content:space-between}
+.mpager .row b{font-size:13px}
+
+/* bulk bar */
+.bulk{display:flex;align-items:center;gap:12px;background:var(--foreground);color:#fff;border-radius:18px;padding:10px 12px 10px 18px;box-shadow:var(--shadow-raised)}
+[dir="rtl"] .bulk{padding:10px 18px 10px 12px}
+.bulk .cnt{font-weight:800;white-space:nowrap}
+.bulk .hint{font-size:12.5px;opacity:.75}
+.bulk .sp{flex:1}
+.bulk .btn-ghost{color:#cfe9e2}
+
+/* ---------- phone chrome ---------- */
+.mbar{display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--card);border-bottom:1px solid var(--border);flex:none}
+.mbar .menub{width:38px;height:38px;border-radius:12px;border:1px solid var(--border);background:var(--card);display:grid;place-items:center;font-size:20px}
+.mbar .brand-name{font-size:14px}
+.mbar .lang{margin-inline-start:auto}
+.scrim{position:absolute;inset:0;background:var(--overlay);z-index:5}
+.sheet{position:absolute;inset-inline:0;bottom:0;z-index:6;background:var(--card);border-radius:24px 24px 0 0;box-shadow:var(--shadow-raised);display:flex;flex-direction:column;max-height:90%}
+.sheet .grab{width:44px;height:5px;border-radius:9px;background:var(--input);margin:10px auto 4px}
+.sheet .sh{display:flex;align-items:center;gap:10px;padding:8px 16px 12px;border-bottom:1px solid var(--border)}
+.sheet .sh .sp{flex:1}
+.sheet .sb2{padding:14px 16px;display:flex;flex-direction:column;gap:10px;overflow:auto}
+.sheet .sf{padding:12px 16px 18px;border-top:1px solid var(--border);display:flex;gap:10px}
+.sheet .sf .btn{flex:1}
+.pbulk{position:absolute;inset-inline:10px;bottom:12px;z-index:4}
+.pbulk .bulk{padding:10px 10px 10px 14px;gap:8px}
+[dir="rtl"] .pbulk .bulk{padding:10px 14px 10px 10px}
+.pbulk .bulk .btn{padding:8px 12px;font-size:13px}
+
+/* radio choices (decision) */
+.choice{display:flex;gap:12px;align-items:flex-start;border:1.5px solid var(--border);border-radius:16px;padding:12px 14px;background:var(--card)}
+.choice .rd{width:20px;height:20px;border-radius:50%;border:2px solid var(--input);flex:none;margin-top:2px;display:grid;place-items:center}
+.choice.on{border-color:var(--primary);background:color-mix(in srgb,var(--primary-soft) 45%,transparent)}
+.choice.on .rd{border-color:var(--primary)}
+.choice.on .rd::after{content:"";width:10px;height:10px;border-radius:50%;background:var(--primary)}
+.choice .ct{font-weight:700;font-size:14px;display:flex;align-items:center;gap:7px}
+.choice .ct .ph-duotone{font-size:18px}
+.choice .cd{font-size:12.5px;color:var(--muted-foreground)}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:12.5px;font-weight:700}
+.input{height:42px;border:1px solid var(--input);border-radius:var(--radius);padding:0 12px;display:flex;align-items:center;gap:8px;font-size:13.5px;background:var(--card)}
+.input .ph-duotone{color:var(--muted-foreground);font-size:17px}
+.drop{border:1.5px dashed var(--input);border-radius:var(--radius);padding:12px;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted-foreground)}
+.drop .ph-duotone{font-size:22px;color:var(--primary)}
+.warnbox{display:flex;gap:10px;background:var(--accent-soft);border-radius:12px;padding:10px 12px;font-size:12.5px;color:#6b4b00}
+.warnbox .ph-duotone{font-size:18px;flex:none;color:#a06d00}
+
+
+/* ================= contract templates — shared ================= */
+:root{--font-doc:"Noto Naskh Arabic","IBM Plex Sans Arabic",serif;--canvas:#e3ece9}
+body.shot .mockbar, body.shot .optnote{display:none}
+body.shot .desk-scroll{padding:0}
+body.shot .phones{padding:0 0 4px}
+body.shot .section-title{display:none}
+.desk{height:1000px;min-height:0}
+.phones{gap:28px}
+.main{min-height:0;overflow:hidden}
+.crumb a{color:inherit;text-decoration:none}
+.crumb b{color:var(--foreground);font-weight:700}
+.backlink{display:inline-flex;align-items:center;gap:6px;color:var(--primary);font-weight:700;font-size:13.5px;text-decoration:none}
+.backlink .ph-duotone{font-size:16px}
+.p-def{background:var(--accent-soft);color:#6b4b00}
+.p-new{background:var(--accent);color:var(--accent-foreground)}
+.p-info{background:var(--info-soft);color:var(--info-ink)}
+.p-ok{background:var(--success-soft);color:var(--success-ink)}
+.p-warn{background:var(--warning-soft);color:var(--warning-ink)}
+.p-pri{background:var(--primary-soft);color:var(--primary)}
+.sep{width:1px;align-self:stretch;background:var(--border);margin:4px 2px;flex:none}
+.tbtn{height:34px;min-width:34px;padding:0 8px;border-radius:10px;border:0;background:transparent;display:inline-flex;align-items:center;justify-content:center;gap:6px;color:var(--foreground);font-weight:700;font-size:13px;white-space:nowrap;flex:none}
+.tbtn .ph-duotone{font-size:18px}
+.tbtn.on{background:var(--primary-soft);color:var(--primary)}
+.tbtn.sel{border:1px solid var(--input);background:var(--card);font-weight:600}
+.segs{display:inline-flex;background:var(--secondary);border-radius:12px;padding:3px;gap:2px;flex:none}
+.segs span{padding:5px 12px;border-radius:9px;font-weight:700;font-size:13px;color:var(--muted-foreground);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.segs span.on{background:var(--card);color:var(--foreground);box-shadow:0 1px 2px rgb(11 72 62 / .12)}
+.segs .arf{font-family:var(--font-ar)}
+.switch{width:36px;height:21px;border-radius:99px;background:var(--input);position:relative;flex:none;display:inline-block}
+.switch::after{content:"";position:absolute;top:3px;inset-inline-start:3px;width:15px;height:15px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgb(0 0 0 / .2)}
+.switch.on{background:var(--primary)}
+.switch.on::after{inset-inline-start:18px}
+.lbl{font-size:12px;font-weight:700;color:var(--muted-foreground);text-transform:none}
+.hint2{font-size:12.5px;color:var(--muted-foreground)}
+.infobox{display:flex;gap:10px;background:var(--info-soft);border-radius:12px;padding:10px 12px;font-size:12.5px;color:var(--info-ink)}
+.infobox .ph-duotone{font-size:18px;flex:none}
+.okbox{display:flex;gap:10px;background:var(--muted);border:1px solid var(--border);border-radius:12px;padding:10px 12px;font-size:12.5px;color:var(--muted-foreground)}
+.okbox .ph-duotone{font-size:18px;flex:none;color:var(--primary)}
+.okbox b{color:var(--foreground)}
+.select{height:42px;border:1px solid var(--input);border-radius:var(--radius);padding:0 12px;display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;background:var(--card);white-space:nowrap;min-width:0}
+.select .ph-caret-down{margin-inline-start:auto;color:var(--muted-foreground)}
+.select > .ph-duotone:first-child{color:var(--primary);font-size:18px}
+.select .t{overflow:hidden;text-overflow:ellipsis}
+.kbd{font-family:var(--font-latin);font-size:11px;font-weight:700;border:1px solid var(--border);border-bottom-width:2px;border-radius:6px;padding:0 5px;color:var(--muted-foreground);background:var(--card)}
+
+/* ---- the printed document (A4 at 96dpi = 794 × 1123) ---- */
+.a4{width:794px;height:1123px;background:#fff;color:#1b1f1e;font-family:var(--font-doc);font-size:14.5px;line-height:1.95;padding:56px 70px 48px;position:relative;text-align:justify;box-shadow:0 1px 3px rgb(0 0 0 / .10),0 18px 40px -18px rgb(11 72 62 / .35);flex:none;display:flex;flex-direction:column;overflow:hidden}
+.a4.fluid{width:auto;height:auto;padding:18px 16px 22px;font-size:14.5px;line-height:2;box-shadow:none;border-radius:16px;border:1px solid var(--border)}
+.a4.fluid .dhead{flex-direction:column;align-items:flex-start;gap:6px}
+.a4 p{margin:0 0 6px}
+.dhead{display:flex;align-items:center;gap:14px;border-bottom:1.5px solid #1b1f1e;padding-bottom:12px;margin-bottom:16px;line-height:1.5}
+.dhead .lg{width:52px;height:52px;border-radius:14px;border:1.5px dashed #9fb4ae;display:grid;place-items:center;color:#7f948e;font-size:24px;flex:none}
+.dhead .lg.real{border:0;background:#0b7a68;color:#fff}
+.dhead .sn{font-weight:700;font-size:17px}
+.dhead .sa{font-size:12.5px;color:#4a5552}
+.dhead .ref{margin-inline-start:auto;text-align:end;font-size:12px;color:#4a5552}
+.dtitle{text-align:center;font-weight:700;font-size:21px;margin:2px 0 10px;letter-spacing:0}
+.art{margin-top:8px}
+.art h4{margin:0;font-size:15px;font-weight:700}
+.art h4 .an{color:#0b7a68}
+.dsig{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:26px;line-height:2.2}
+.dsig b{display:block;font-size:15px}
+.dsig .ln{border-bottom:1px dotted #555;display:inline-block;min-width:150px}
+.dfoot{margin-top:auto;display:flex;justify-content:space-between;font-size:11px;color:#7b8784;border-top:1px solid #dde3e1;padding-top:8px;font-family:var(--font-ar)}
+.a4.fluid .dfoot{display:none}
+.pbreak{display:flex;align-items:center;gap:10px;color:var(--muted-foreground);font-family:var(--font);font-size:11.5px;font-weight:700;margin:12px -40px}
+.pbreak::before,.pbreak::after{content:"";flex:1;border-top:1.5px dashed var(--input)}
+/* A + B tokens: teal chips */
+.tok{display:inline-flex;align-items:center;gap:3px;background:var(--primary-soft);color:var(--primary);border-radius:7px;padding:0 7px;font-family:var(--font-ar);font-weight:700;font-size:.86em;line-height:1.75;white-space:nowrap;vertical-align:baseline;border:1px solid color-mix(in srgb,var(--primary) 22%,transparent)}
+.tok::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--accent);flex:none}
+.tok.sel{outline:2px solid var(--primary);outline-offset:1px}
+.tok.en{font-family:var(--font-latin)}
+.optseg{border-bottom:2px dotted #a06d00;padding-bottom:1px}
+/* C tokens: sunflower highlighted words */
+.tokc{background:var(--accent-soft);box-shadow:inset 0 -2px 0 var(--accent);border-radius:4px;padding:0 3px;font-weight:600;color:#5a3f00;white-space:nowrap}
+.tokc.sel{background:var(--accent);color:var(--accent-foreground);box-shadow:0 0 0 2px var(--accent)}
+/* filled values */
+mark.v{background:color-mix(in srgb,var(--accent-soft) 85%,transparent);color:inherit;border-radius:3px;padding:0 2px}
+mark.v.ov{background:var(--primary-soft);box-shadow:inset 0 -2px 0 var(--primary)}
+mark.v.focus{outline:2.5px solid var(--primary);outline-offset:2px;background:var(--accent)}
+mark.v.miss{background:var(--warning-soft);color:var(--warning-ink);font-family:var(--font-ar);font-size:.8em;font-weight:700;padding:1px 6px;border-radius:6px;white-space:nowrap}
+.edited{background:color-mix(in srgb,var(--info-soft) 80%,transparent);box-shadow:inset 0 -2px 0 var(--info);text-decoration:none;border-radius:3px}
+.caret{display:inline-block;width:2px;height:1.2em;background:var(--primary);vertical-align:-3px;margin-inline:1px;animation:none}
+.selrange{background:color-mix(in srgb,var(--info) 22%,transparent)}
+.canvas{background:var(--canvas);border-radius:18px;padding:22px;display:flex;flex-direction:column;align-items:center;gap:22px;overflow:hidden;position:relative;min-height:0}
+.zoomed{flex:none}
+
+/* ================= OPTION A ================= */
+.aed{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:18px;min-height:0;flex:1}
+.edcard{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.edtools{display:flex;align-items:center;gap:4px;padding:10px 12px;border-bottom:1px solid var(--border);flex-wrap:nowrap;overflow:hidden}
+.edcard .canvas{border-radius:0 0 24px 24px;flex:1;justify-content:flex-start}
+.phpanel{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.phpanel .ph-h{padding:16px 16px 10px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid var(--border)}
+.phpanel .ph-h h3{margin:0;font-family:var(--font-display);font-size:16px;font-weight:800;display:flex;align-items:center;gap:8px}
+.phpanel .ph-b{overflow:hidden;flex:1;padding:6px 10px 10px}
+.phg{font-size:11.5px;font-weight:800;color:var(--muted-foreground);padding:10px 6px 4px;display:flex;align-items:center;gap:6px;text-transform:uppercase;letter-spacing:.04em}
+:root[lang="ar"] .phg{letter-spacing:0}
+.phg .ph-duotone{font-size:15px}
+.phr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center;padding:7px 8px;border-radius:10px}
+.phr.hl{background:var(--muted);box-shadow:inset 0 0 0 1px var(--border)}
+.phr .l{font-weight:700;font-size:13px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.phr .o{font-size:11.5px;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.phr .add{grid-row:1 / span 2;grid-column:2;width:28px;height:28px;border-radius:9px;display:grid;place-items:center;color:var(--primary);background:transparent;font-size:16px}
+.phr.hl .add{background:var(--primary);color:#fff}
+.phr .sv{grid-column:1;font-size:11.5px;color:var(--muted-foreground)}
+.phfoot{padding:12px 14px;border-top:1px solid var(--border)}
+.modal{position:absolute;z-index:7;background:var(--card);border-radius:24px;box-shadow:var(--shadow-raised);display:flex;flex-direction:column;overflow:hidden}
+.modal .mh{display:flex;align-items:flex-start;gap:14px;padding:18px 22px;border-bottom:1px solid var(--border)}
+.modal .mh h2{margin:0;font-family:var(--font-display);font-size:20px;font-weight:800}
+.modal .mh .sp{flex:1}
+.modal .mb{display:grid;grid-template-columns:minmax(0,1fr) 360px;min-height:0;flex:1}
+.modal .mb .canvas{border-radius:0;justify-content:flex-start}
+.modal .side{padding:18px 20px;display:flex;flex-direction:column;gap:14px;border-inline-start:1px solid var(--border);overflow:hidden}
+.modal .mf{display:flex;align-items:center;gap:10px;padding:14px 22px;border-top:1px solid var(--border)}
+.modal .mf .sp{flex:1}
+.cvbar{display:flex;align-items:center;gap:8px;align-self:stretch;font-size:12.5px;font-weight:700;color:var(--muted-foreground)}
+.cvbar .sp{flex:1}
+.cvbar .pillz{display:inline-flex;align-items:center;gap:4px;background:var(--card);border-radius:10px;padding:2px;box-shadow:0 1px 2px rgb(11 72 62 / .1)}
+.cvbar .pillz .tbtn{height:28px;min-width:28px}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted-foreground);align-items:center}
+.legend i.sw{display:inline-block;width:14px;height:10px;border-radius:3px;margin-inline-end:5px;vertical-align:-1px}
+.empcard{display:flex;align-items:center;gap:16px;padding:18px 22px}
+.etabs{display:flex;gap:4px;border-bottom:1px solid var(--border);padding:0 14px;overflow:hidden}
+.etab{padding:12px 12px;font-weight:700;font-size:13.5px;color:var(--muted-foreground);border-bottom:2.5px solid transparent;white-space:nowrap;display:inline-flex;gap:7px;align-items:center}
+.etab .ph-duotone{font-size:17px}
+.etab.on{color:var(--primary);border-color:var(--primary)}
+.crow{display:grid;grid-template-columns:1.2fr 1fr 1fr auto;gap:14px;align-items:center;padding:14px 20px;border-bottom:1px solid var(--border);font-size:13.5px}
+.crow .s{font-size:12px;color:var(--muted-foreground)}
+.crow .acts{display:flex;gap:8px;align-items:center;justify-content:flex-end}
+.fab{position:absolute;z-index:4;inset-inline-end:16px;bottom:18px;box-shadow:var(--shadow-raised)}
+
+/* ================= OPTION B ================= */
+.bed{display:grid;grid-template-columns:270px minmax(0,1fr);gap:18px;min-height:0;flex:1}
+.trail{display:flex;flex-direction:column;gap:8px;min-height:0}
+.tcard{background:var(--card);border-radius:16px;box-shadow:var(--shadow-card);padding:12px 14px;display:flex;flex-direction:column;gap:6px;border:2px solid transparent}
+.tcard.on{border-color:var(--primary)}
+.tcard .tn{font-weight:800;font-size:14px;display:flex;align-items:center;gap:8px}
+.tcard .tn .ph-duotone{font-size:18px;color:var(--primary)}
+.tcard .ts{font-size:12px;color:var(--muted-foreground)}
+.dashed{border:1.5px dashed var(--input);background:transparent;border-radius:16px;padding:12px;font-weight:700;color:var(--primary);display:flex;align-items:center;justify-content:center;gap:8px;font-size:13.5px}
+.clist{display:flex;flex-direction:column;gap:10px;min-height:0;overflow:hidden}
+.blk{background:var(--card);border-radius:18px;box-shadow:var(--shadow-card);padding:12px 14px;display:grid;grid-template-columns:22px 34px minmax(0,1fr) auto;gap:12px;align-items:center;border:1.5px solid transparent}
+.blk .grip{color:#9fb4ae;font-size:18px;cursor:grab}
+.blk .no{width:34px;height:34px;border-radius:11px;background:var(--primary-soft);color:var(--primary);display:grid;place-items:center;font-weight:800;font-family:var(--font-latin);font-size:14px}
+.blk .no.lk{background:var(--secondary);color:var(--muted-foreground);font-size:17px}
+.blk .bt{font-weight:800;font-size:14px;font-family:var(--font-ar);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.blk .bx{font-family:var(--font-ar);font-size:13px;color:var(--muted-foreground);line-height:1.9;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;margin-top:2px}
+.blk .bx .tok{font-size:11.5px}
+.blk .ba{display:flex;gap:2px;align-items:center}
+.blk.open{border-color:var(--primary);grid-template-columns:22px 34px minmax(0,1fr);align-items:start;box-shadow:var(--shadow-raised)}
+.blk.open .grip,.blk.open .no{margin-top:2px}
+.cledit{display:flex;flex-direction:column;gap:10px}
+.cledit .ttl{height:40px;border:1px solid var(--input);border-radius:12px;padding:0 12px;display:flex;align-items:center;font-weight:800;font-family:var(--font-ar)}
+.cledit .body{border:1.5px solid var(--primary);border-radius:12px;padding:10px 14px;font-family:var(--font-doc);font-size:15px;line-height:2.1;position:relative;box-shadow:0 0 0 4px color-mix(in srgb,var(--primary) 12%,transparent)}
+.cledit .etool{display:flex;gap:4px;align-items:center;border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:4px;position:relative;font-family:var(--font)}
+.cledit .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.cledit .row .sp{flex:1}
+.dd{position:absolute;z-index:6;background:var(--card);border-radius:14px;box-shadow:var(--shadow-raised);border:1px solid var(--border);padding:8px;width:330px;font-family:var(--font);line-height:1.4}
+.dd .input{height:36px;margin-bottom:4px}
+.bpr{display:grid;grid-template-columns:400px minmax(0,1fr);gap:18px;min-height:0;flex:1}
+.vform{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.vform .vh{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:10px}
+.vform .vb{padding:4px 16px 12px;overflow:hidden;flex:1;display:flex;flex-direction:column;gap:10px}
+.vgrp{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;color:var(--muted-foreground);padding-top:10px}
+.vgrp a{margin-inline-start:auto;color:var(--primary);text-decoration:none;font-weight:700;display:inline-flex;gap:4px;align-items:center}
+.vf{display:flex;flex-direction:column;gap:4px}
+.vf .vl{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700}
+.vf .vl .o{font-weight:600;color:var(--muted-foreground);font-size:11.5px}
+.vf .vl .r{margin-inline-start:auto}
+.vf .input{height:38px;font-family:var(--font-ar);font-weight:600}
+.vf.ov .input{border-color:var(--primary);background:color-mix(in srgb,var(--primary-soft) 40%,#fff);box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 12%,transparent)}
+.vf.miss .input{border-color:color-mix(in srgb,var(--warning) 55%,transparent);border-style:dashed;color:var(--warning-ink);font-weight:600;font-family:var(--font)}
+.vf .was{font-size:11.5px;color:var(--muted-foreground)}
+.vf .was s{font-family:var(--font-ar)}
+.vgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pvcol{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.pvcol .canvas{flex:1;justify-content:flex-start;border-radius:24px}
+
+/* ================= OPTION C ================= */
+.cbar{display:flex;align-items:center;gap:4px;background:var(--card);border-radius:16px;box-shadow:var(--shadow-card);padding:6px 8px;flex-wrap:nowrap;overflow:hidden;flex:none}
+.cbar .sp{flex:1}
+.cbar .saved{font-size:12px;color:var(--muted-foreground);display:inline-flex;gap:5px;align-items:center;white-space:nowrap;padding:0 6px}
+.cbar .saved .ph-duotone{color:var(--success);font-size:16px}
+.ced{display:grid;grid-template-columns:200px minmax(0,1fr);gap:18px;min-height:0;flex:1}
+.outline{display:flex;flex-direction:column;gap:2px;padding-top:4px}
+.outline .oh{font-size:11.5px;font-weight:800;color:var(--muted-foreground);padding:4px 10px 8px;letter-spacing:.04em;text-transform:uppercase}
+:root[lang="ar"] .outline .oh{letter-spacing:0}
+.outline a{display:flex;gap:8px;align-items:center;padding:6px 10px;border-radius:10px;font-family:var(--font-ar);font-size:13px;font-weight:600;color:var(--muted-foreground);text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.outline a b{font-family:var(--font-latin);font-size:11.5px;color:#9fb4ae;width:14px;flex:none}
+.outline a.on{background:var(--card);color:var(--foreground);box-shadow:0 1px 2px rgb(11 72 62 / .08)}
+.outline .ostat{margin-top:14px;background:var(--card);border-radius:14px;padding:12px;font-size:12px;color:var(--muted-foreground);display:flex;flex-direction:column;gap:6px;box-shadow:0 1px 2px rgb(11 72 62 / .06)}
+.outline .ostat b{color:var(--foreground);font-size:12.5px}
+.ced .canvas{border-radius:22px;justify-content:flex-start;padding-top:28px}
+.caretwrap{position:relative;white-space:nowrap;color:var(--primary);font-weight:700;font-family:var(--font-latin)}
+.typeahead{position:absolute;top:calc(100% + 6px);inset-inline-start:-8px;z-index:6;width:300px;background:var(--card);border-radius:14px;box-shadow:var(--shadow-raised);border:1px solid var(--border);padding:6px;font-family:var(--font);font-weight:400;color:var(--foreground);line-height:1.35;white-space:normal;text-align:start}
+.typeahead .th{font-size:11.5px;font-weight:700;color:var(--muted-foreground);padding:4px 8px 6px;display:flex;gap:6px;align-items:center}
+.typeahead .it{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:9px}
+.typeahead .it.hl{background:var(--accent-soft)}
+.typeahead .it .ph-duotone{font-size:17px;color:var(--muted-foreground)}
+.typeahead .it b{font-size:13px;display:block}
+.typeahead .it small{font-size:11.5px;color:var(--muted-foreground)}
+.typeahead .it .kbd{margin-inline-start:auto}
+.typeahead .tf{border-top:1px solid var(--border);margin-top:4px;padding:6px 8px 2px;font-size:11.5px;color:var(--muted-foreground);display:flex;gap:10px}
+.full{flex:1;display:flex;flex-direction:column;min-width:0}
+.ftop{display:flex;align-items:center;gap:12px;padding:12px 18px;background:var(--card);border-bottom:1px solid var(--border);flex:none}
+.ftop .ttl{min-width:0}
+.ftop .ttl b{display:block;font-family:var(--font-display);font-size:16px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ftop .ttl span{font-size:12.5px;color:var(--muted-foreground);white-space:nowrap}
+.ftop .sp{flex:1}
+.fbody{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 380px;min-height:0}
+.fbody .canvas{border-radius:0;justify-content:flex-start;padding-top:26px}
+.drawer{background:var(--card);border-inline-start:1px solid var(--border);display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.drawer .dh{padding:16px 18px 12px;border-bottom:1px solid var(--border)}
+.drawer .dh h3{margin:0;font-family:var(--font-display);font-size:16px;font-weight:800;display:flex;align-items:center;gap:8px}
+.drawer .db{flex:1;overflow:hidden;padding:4px 12px}
+.drawer .df{padding:12px 16px;border-top:1px solid var(--border)}
+.vrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1px 10px;padding:8px 8px;border-radius:10px;align-items:center}
+.vrow .k{font-size:11.5px;color:var(--muted-foreground);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vrow .val{font-family:var(--font-ar);font-weight:700;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vrow .e{grid-row:1 / span 2;grid-column:2;display:flex;gap:4px;align-items:center}
+.vrow.focus{background:var(--accent-soft);box-shadow:inset 0 0 0 1.5px var(--accent)}
+.vrow.ov{background:color-mix(in srgb,var(--primary-soft) 55%,transparent)}
+.vrow.miss .val{color:var(--warning-ink);font-family:var(--font);font-weight:600;font-size:12.5px}
+.edtag{position:absolute;inset-inline-end:-12px;transform:translateX(100%);font-family:var(--font);font-size:11px;font-weight:700;color:var(--info-ink);background:var(--info-soft);padding:2px 8px;border-radius:99px;white-space:nowrap;line-height:1.5}
+[dir="rtl"] .edtag{transform:translateX(-100%)}
+
+/* ---------- phone bits ---------- */
+.pscreen{display:flex;flex-direction:column;flex:1;min-height:0;position:relative}
+.ptop{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--card);border-bottom:1px solid var(--border);flex:none}
+.ptop .ttl{min-width:0;flex:1}
+.ptop .ttl b{display:block;font-weight:800;font-size:15px;font-family:var(--font-display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
+.ptop .ttl span{font-size:11.5px;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.pbody{flex:1;min-height:0;overflow:hidden;padding:14px;display:flex;flex-direction:column;gap:12px;position:relative}
+.pbot{display:flex;gap:8px;padding:12px 14px 16px;background:var(--card);border-top:1px solid var(--border);flex:none;align-items:center}
+.pbot .btn{flex:1;padding:11px 10px}
+.pcanvas{background:var(--canvas);border-radius:16px;padding:12px 0;display:flex;flex-direction:column;align-items:center;gap:12px;overflow:hidden;flex:1;min-height:0}
+.ptools{display:flex;gap:2px;overflow:hidden;background:var(--card);border-radius:14px;box-shadow:var(--shadow-card);padding:4px;flex:none}
+.kb{height:200px;background:#d6dcdb;flex:none;display:grid;grid-template-rows:repeat(4,1fr);gap:8px;padding:10px 6px}
+.kb div{display:flex;gap:6px;justify-content:center}
+.kb i{flex:1;max-width:32px;background:#fff;border-radius:6px;box-shadow:0 1px 0 #a5aead}
+.kb .wide i{max-width:none}
+.chipsrow{display:flex;gap:6px;overflow:hidden;padding:8px 12px;background:var(--card);border-top:1px solid var(--border);flex:none;align-items:center}
+.chipsrow .lbl{white-space:nowrap}
+.typeahead,.typeahead .th,.typeahead .it,.typeahead .tf{display:block}
+.typeahead .it,.typeahead .th,.typeahead .tf{display:flex}
+.typeahead .it > span{display:block;min-width:0}
+.typeahead .it small{display:block}
+.mod .kids .navlink span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.blk .bx[dir="rtl"]{text-align:left}
+:root[dir="rtl"] .blk .bx{text-align:right}
+.fab{bottom:86px}
+.a4.fluid{text-align:right}
+:root[dir="ltr"] .vrow .val{text-align:left}
+.optseg .br{color:#a06d00;font-weight:700}
+
+/* ---------- phone width (container: the phone frame) ---------- */
+@container page (max-width:720px){
+  .main{padding:16px;gap:12px}
+  .head h1{font-size:22px}
+  .blk{grid-template-columns:30px minmax(0,1fr) auto;padding:10px 12px;gap:10px;border-radius:16px}
+  .blk .grip{display:none}
+  .blk .no{width:30px;height:30px;border-radius:10px;font-size:13px}
+  .blk .bt{font-size:13.5px}
+  .blk .ba .ibtn{width:30px;height:30px}
+  .vf .input{height:40px}
+}
+</style>
+</head>
+<body>
+<div class="mockbar" role="toolbar" aria-label="Mockup controls">
+  <strong>HR · Contract templates</strong>
+  <span class="hint">Static mockup · nothing is built yet</span>
+  <span class="sp"></span>
+  <div class="seg" id="optSeg">
+    <button data-v="A">Option A</button><button data-v="B">Option B</button><button data-v="C">Option C</button>
+  </div>
+  <div class="seg" id="stepSeg">
+    <button data-v="editor">1 · Template editor</button><button data-v="print">2 · Fill &amp; print</button>
+  </div>
+  <div class="seg" id="devSeg">
+    <button data-v="desktop">Desktop</button><button data-v="phone">Phone</button>
+  </div>
+  <div class="seg" id="langSeg">
+    <button data-v="en">EN</button><button data-v="ar" class="ar">ع</button>
+  </div>
+</div>
+<div class="optnote" id="optNote"></div>
+<section id="deskSec">
+  <div class="section-title" id="deskT"></div>
+  <div class="desk-scroll"><div class="desk" id="desk"></div></div>
+</section>
+<section id="phoneSec">
+  <div class="section-title" id="phoneT"></div>
+  <div class="phones" id="phones"></div>
+</section>
+
+<script>
+let opt="A",lang="en",dev="desktop",step="editor";
+const AR=()=>lang==="ar", s=(en,ar)=>AR()?ar:en;
+const ic=(n,x="")=>`<i class="ph-duotone ph-${n} ${x}" aria-hidden="true"></i>`;
+const num=x=>`<bdi class="num" dir="ltr">${x}</bdi>`;
+
+/* ---------- placeholders: key → Arabic token, English name, demo value (seed-like employee) ---------- */
+const PH={
+ "emp.nameAr":{g:"emp",ar:"اسم الموظف",en:"Employee name (Arabic)",v:"نادية فؤاد رمضان"},
+ "emp.nameEn":{g:"emp",ar:"اسم الموظف بالإنجليزية",en:"Employee name (English)",v:"Nadia Fouad Ramadan"},
+ "emp.code":{g:"emp",ar:"كود الموظف",en:"Employee code",v:"EMP-0006"},
+ "emp.nid":{g:"emp",ar:"الرقم القومي",en:"National ID",v:"28803150104527"},
+ "emp.addr":{g:"emp",ar:"عنوان الموظف",en:"Home address",v:"14 شارع النصر، المعادي، القاهرة"},
+ "emp.job":{g:"emp",ar:"المسمى الوظيفي",en:"Job title",v:"محاسبة"},
+ "emp.dept":{g:"emp",ar:"القسم",en:"Department",v:"الشؤون المالية"},
+ "emp.stage":{g:"emp",ar:"المرحلة",en:"Stage",v:null},
+ "emp.hire":{g:"emp",ar:"تاريخ التعيين",en:"Hire date",v:"1 سبتمبر 2021"},
+ "ct.start":{g:"ct",ar:"بداية العقد",en:"Contract start",v:"1 يونيو 2026"},
+ "ct.end":{g:"ct",ar:"نهاية العقد",en:"Contract end",v:"31 مايو 2027"},
+ "ct.salary":{g:"ct",ar:"الأجر الأساسي",en:"Basic salary",v:"9,500 جنيه"},
+ "ct.words":{g:"ct",ar:"الأجر الأساسي كتابةً",en:"Basic salary in words",v:"تسعة آلاف وخمسمائة جنيه مصري لا غير"},
+ "ct.sys":{g:"ct",ar:"نظام العمل",en:"Work system",v:"دوام كامل"},
+ "sc.name":{g:"sc",ar:"اسم المدرسة",en:"School name",v:"مدرسة تجريبية"},
+ "sc.addr":{g:"sc",ar:"عنوان المدرسة",en:"School address",v:"5 شارع المعرفة، مدينة نصر، القاهرة"},
+ "sc.rep":{g:"sc",ar:"ممثل المدرسة",en:"School representative",v:"أ. هشام كامل، مدير المدرسة"},
+ "today":{g:"sys",ar:"تاريخ اليوم",en:"Today's date",v:"24 نوفمبر 2026"}
+};
+const GRP={emp:["identification-card","From the employee file","من ملف الموظف"],ct:["file-text","From the contract","من العقد"],sc:["gear-six","From school settings","من إعدادات المدرسة"],sys:["calendar-blank","Other","أخرى"]};
+const OV_ADDR="شقة 7، 14 شارع النصر، المعادي، القاهرة";
+
+/* ---------- generic Arabic fixed-term contract (demo text, written for this mockup) ---------- */
+const DOC={
+ title:"عقد عمل محدد المدة",
+ pre:"إنه في يوم {today}، حُرر هذا العقد بين كلٍّ من:",
+ p1:"<b>أولًا:</b> {sc.name}، ومقرها {sc.addr}، ويمثلها في التوقيع على هذا العقد {sc.rep}، ويُشار إليها فيما بعد بـ«الطرف الأول».",
+ p2:"<b>ثانيًا:</b> السيد/السيدة {emp.nameAr}، الرقم القومي {emp.nid}، والمقيم/ة في {emp.addr}، ويُشار إليه/ا فيما بعد بـ«الطرف الثاني».",
+ intro:"وبعد أن أقرّ الطرفان بأهليتهما للتعاقد، اتفقا على ما يلي:",
+ arts:[
+  ["موضوع العقد","يعمل الطرف الثاني لدى الطرف الأول بوظيفة {emp.job} في قسم {emp.dept}[، بالمرحلة {emp.stage}]، ويلتزم بأداء ما يُكلَّف به من أعمال وفق اللوائح الداخلية للمدرسة، علمًا بأنه التحق بالعمل لديها اعتبارًا من {emp.hire}."],
+  ["مدة العقد","مدة هذا العقد سنة واحدة، تبدأ في {ct.start} وتنتهي في {ct.end}، ولا يتجدد إلا باتفاق مكتوب بين الطرفين."],
+  ["الأجر","يتقاضى الطرف الثاني أجرًا أساسيًا شهريًا قدره {ct.salary} ({ct.words})، يُصرف في آخر كل شهر، ويُستقطع منه ما يقرره القانون من ضرائب وتأمينات اجتماعية."],
+  ["ساعات العمل","نظام العمل {ct.sys}، وتُحدَّد أيام العمل وساعاته وفق الجدول الذي تعلنه المدرسة في بداية كل عام دراسي، بما لا يتجاوز الحد الذي يقرره القانون، مع راحة أسبوعية مدفوعة الأجر."],
+  ["فترة الاختبار","يخضع الطرف الثاني لفترة اختبار مدتها ثلاثة أشهر من تاريخ بدء العقد، يجوز خلالها للطرف الأول إنهاء العقد إذا ثبت عدم صلاحيته للعمل."],
+  ["إنهاء العقد","ينتهي هذا العقد بانتهاء مدته. ويجوز لأي من الطرفين إنهاؤه قبل ذلك لسبب مشروع، بشرط إخطار الطرف الآخر كتابةً قبل شهرين على الأقل من تاريخ الإنهاء."],
+  ["أحكام عامة","يخضع هذا العقد لأحكام قانون العمل ولوائح المدرسة المعتمدة، وقد حُرر من نسختين بيد كل طرف نسخة للعمل بموجبها."]
+ ]
+};
+const ORD=["الأول","الثاني","الثالث","الرابع","الخامس","السادس","السابع"];
+const EDIT4="نظام العمل {ct.sys}، <ins class=\"edited\">من الأحد إلى الخميس، من الساعة 7:30 صباحًا حتى 3:00 مساءً،</ins> وتُحدَّد أيام العمل وساعاته وفق الجدول الذي تعلنه المدرسة في بداية كل عام دراسي، بما لا يتجاوز الحد الذي يقرره القانون، مع راحة أسبوعية مدفوعة الأجر.";
+
+const val=(k,o)=>(o.ov&&o.ov[k]!==undefined)?o.ov[k]:PH[k].v;
+function tok(k,o){const p=PH[k];
+ if(o.mode==="chip") return `<span class="tok ${o.sel===k?"sel":""}">${p.ar}</span>`;
+ if(o.mode==="brace") return `<span class="tokc ${o.sel===k?"sel":""}">${p.ar}</span>`;
+ const x=`<bdi>${val(k,o)}</bdi>`;
+ if(!o.hl) return x;
+ return `<mark class="v ${o.ov&&o.ov[k]!==undefined?"ov":""} ${o.focus===k?"focus":""}">${x}</mark>`;}
+const repl=(t,o)=>t.replace(/\{([\w.]+)\}/g,(m,k)=>tok(k,o));
+function TX(t,o){
+ t=t.replace(/\[([^\]]+)\]/g,(m,inner)=>{
+  const keys=[...inner.matchAll(/\{([\w.]+)\}/g)].map(x=>x[1]);
+  const empty=keys.find(k=>val(k,o)==null);
+  if(o.mode==="fill"){ if(empty) return o.hl?` <bdi dir="${AR()?"rtl":"ltr"}"><mark class="v miss">${s(PH[empty].en+" is empty — phrase left out",PH[empty].ar+" فارغة — حُذفت العبارة")}</mark></bdi>`:""; return inner; }
+  return `<span class="optseg"><span class="br">[</span>${inner}<span class="br">]</span></span>`;});
+ return repl(t,o);}
+function page(o){
+ const from=o.from??0,to=o.to??7,pn=from===0?1:2;let h="";
+ if(from===0){
+  h+=`<div class="dhead"><div class="lg ${o.mode==="fill"?"real":""}">${ic("graduation-cap")}</div><div><div class="sn">${repl("{sc.name}",o)}</div><div class="sa">${repl("{sc.addr}",o)}</div></div>${o.fluid?"":`<div class="ref">كود الموظف: ${repl("{emp.code}",o)}<br>التاريخ: ${repl("{today}",o)}</div>`}</div>`;
+  h+=`<div class="dtitle">${DOC.title}</div><p>${TX(DOC.pre,o)}</p><p>${TX(DOC.p1,o)}</p><p>${o.p2!=null?o.p2:TX(DOC.p2,o)}</p><p>${DOC.intro}</p>`;}
+ for(let i=from;i<to;i++){
+  const body=o.body&&o.body[i]!=null?o.body[i]:TX(DOC.arts[i][1],o);
+  h+=`<div class="art"><h4><span class="an">البند ${ORD[i]}:</span> ${DOC.arts[i][0]}</h4><p>${body}</p></div>`;}
+ if(to===7&&o.sig!==false) h+=`<div class="dsig"><div><b>الطرف الأول</b>الاسم: ${repl("{sc.rep}",o)}<br>التوقيع: <span class="ln"></span></div><div><b>الطرف الثاني</b>الاسم: ${repl("{emp.nameAr}",o)}<br>التوقيع: <span class="ln"></span></div></div>`;
+ h+=`<div class="dfoot"><span>${o.mode==="fill"?"مدرسة تجريبية":"اسم المدرسة"} — عقد عمل محدد المدة</span><span>صفحة ${num(pn)} من ${num(2)}</span></div>`;
+ return `<article class="a4 ${o.fluid?"fluid":""}" dir="rtl" lang="ar">${h}</article>`;}
+const Z=(z,html)=>`<div class="zoomed" style="zoom:${z}">${html}</div>`;
+const pages=(z,o)=>Z(z,page({...o,from:0,to:5}))+Z(z,page({...o,from:5,to:7}));
+
+/* ---------- app shell ---------- */
+const link=(icon,label,cur,extra="")=>`<a class="navlink" href="#" ${cur?'aria-current="page"':""}>${ic(icon)}<span>${label}</span>${extra}</a>`;
+const lockL=(icon,label)=>`<a class="navlink lock" href="#">${ic(icon)}<span>${label}</span><span class="soon">${s("Soon","قريبًا")}</span></a>`;
+const brand=()=>`<div class="brand"><div class="logo">${ic("graduation-cap")}</div><div><div class="brand-name">${s("School","المدرسة")}</div><div class="brand-sub">${s("School ERP","نظام إدارة المدرسة")}</div></div></div>`;
+const userCard=()=>`<div class="user"><div class="av">${s("MI","مإ")}</div><div><div class="n">${s("Mona Ibrahim","منى إبراهيم")}</div><div class="r">${s("HR manager","مديرة الموارد البشرية")}</div></div>${ic("sign-out","flip")}</div>`;
+function side(active){
+ const mod=(icon,label,bg,fg,kids,open)=>`<details class="mod" ${open?"open":""}><summary><span class="mi" style="background:${bg};color:${fg}">${ic(icon)}</span>${label}${ic("caret-down","car")}</summary><div class="kids">${kids}</div></details>`;
+ const dis=(icon,label)=>`<details class="mod dis"><summary><span class="mi" style="background:var(--secondary)">${ic(icon)}</span>${label}<span class="soon">${s("Soon","قريبًا")}</span></summary></details>`;
+ const emp=active==="employees";
+ return `<aside class="sb">${brand()}<nav>
+ <a class="single" href="#"><span class="mi">${ic("squares-four")}</span>${s("Dashboard","لوحة التحكم")}</a>
+ ${dis("buildings",s("School","المدرسة"))}
+ ${mod("users-three",s("HR","الموارد البشرية"),"var(--primary-soft)","var(--primary)",link("identification-badge",s("Employees","الموظفون"),emp)+link("file-text",s("Contracts","العقود"))+link("gavel",s("Penalties","الجزاءات"))+link("clock-countdown",s("Lateness","التأخير"))+link("wallet",s("Payroll","الرواتب"))+lockL("calendar-check",s("Leave & permissions","الإجازات والأذونات")),emp)}
+ ${mod("calculator",s("Accounting","الحسابات"),"var(--info-soft)","var(--info)","",false)}
+ ${dis("bus",s("Transport","النقل"))}${dis("users-four",s("Parent portal","بوابة أولياء الأمور"))}
+ ${mod("shield-check",s("Administration","الإدارة"),"var(--accent-soft)","#6b4b00",link("gear-six",s("Settings","الإعدادات"),!emp)+link("clock-counter-clockwise",s("Activity","سجل النشاط"))+link("user-circle-gear",s("Users and roles","المستخدمون والأدوار")),!emp)}
+ </nav><div class="bottom">${userCard()}</div></aside>`;}
+const langT=()=>`<span class="lang"><span class="${!AR()?"on":""}">EN</span><span class="ar ${AR()?"on":""}">ع</span></span>`;
+const topline=(...c)=>`<div class="topline"><span class="crumb">${c.map((x,i)=>i===c.length-1?`<b>${x}</b>`:`<a href="#">${x}</a>`).join(ic("caret-right","flip"))}</span><span class="sp"></span>${langT()}</div>`;
+const mbar=()=>`<div class="mbar"><button class="menub" aria-label="menu">${ic("list")}</button><div class="brand-name">${s("School","المدرسة")}</div>${langT()}</div>`;
+const segs=(items,on,cls="")=>`<span class="segs ${cls}">${items.map((x,i)=>`<span class="${i===on?"on":""}">${x}</span>`).join("")}</span>`;
+const docLang=(on=0)=>segs([`<span class="arf">العربية</span>`,"English"],on);
+const tb=(n,on,x="")=>`<button class="tbtn ${on?"on":""}" aria-label="${n}">${ic(n,x)}</button>`;
+const crumbsSet=()=>[s("Settings","الإعدادات"),s("HR","الموارد البشرية"),s("Contract templates","نماذج العقود")];
+const tplName=()=>s("Full-time contract","عقد دوام كامل");
+const backL=(t)=>`<a class="backlink" href="#">${ic("arrow-left","flip")}${t}</a>`;
+const NADIA=()=>s("Nadia Fouad Ramadan","نادية فؤاد رمضان");
+const PERIOD=()=>`<bdi>${s("1 Jun 2026 – 31 May 2027","1 يونيو 2026 – 31 مايو 2027")}</bdi>`;
+
+/* ================= OPTION A — Word-style editor + Fields panel; print = preview dialog ================= */
+function phRow(k,hl){const p=PH[k];return `<div class="phr ${hl?"hl":""}"><div class="l">${AR()?p.ar:p.en}</div><span class="add">${ic("plus")}</span><div class="o">${AR()?p.en:`<span style="font-family:var(--font-ar)">${p.ar}</span>`} · <bdi>${p.v??s("empty for some employees","فارغ لبعض الموظفين")}</bdi></div></div>`;}
+function phList(hl,limit){let h="",n=0;for(const g of ["emp","ct","sc","sys"]){const keys=Object.keys(PH).filter(k=>PH[k].g===g);
+ h+=`<div class="phg">${ic(GRP[g][0])}${s(GRP[g][1],GRP[g][2])}</div>`+keys.map(k=>phRow(k,k===hl)).join("");}return h;}
+function A_tools(phone){
+ if(phone) return `<div class="ptools">${tb("arrow-u-up-left")}${tb("text-b")}${tb("text-italic")}${tb("text-underline")}${tb("text-align-right",1)}${tb("list-numbers")}${tb("table")}${tb("file-dashed")}</div>`;
+ return `<div class="edtools">${docLang(0)}<span class="sep"></span>${tb("arrow-u-up-left")}<span class="sep"></span><button class="tbtn sel">${s("Body text","نص عادي")}${ic("caret-down")}</button>${tb("text-b")}${tb("text-italic")}${tb("text-underline")}<span class="sep"></span>${tb("text-align-right",1)}${tb("list-numbers")}${tb("table")}${tb("file-dashed")}<span class="sp" style="flex:1"></span><button class="btn btn-sm btn-soft">${ic("brackets-curly")}${s("Insert field","إدراج حقل")}</button></div>`;}
+function A_ed(){
+ const p2=TX(DOC.p2,{mode:"chip",sel:"emp.nid"}).replace("</span>، والمقيم","</span><span class=\"caret\"></span>، والمقيم");
+ return side("settings")+`<main class="main">${topline(...crumbsSet(),tplName())}
+ <div class="head"><div>${backL(s("Contract templates","نماذج العقود"))}<h1 style="margin-top:6px">${tplName()}</h1><div class="pills" style="margin-top:8px"><span class="pill p-def">${ic("star")}${s("Default for full-time","الافتراضي للدوام الكامل")}</span><span class="pill p-stage">${s("Arabic + English","عربي + إنجليزي")}</span><span class="hint2">${s("Last changed 18 Nov 2026 by Mona Ibrahim","آخر تعديل 18 نوفمبر 2026 بواسطة منى إبراهيم")}</span></div></div>
+ <div class="acts"><button class="btn">${ic("eye")}${s("Preview with an employee","معاينة ببيانات موظف")}</button><button class="btn btn-primary">${ic("floppy-disk")}${s("Save template","حفظ النموذج")}</button></div></div>
+ <div class="aed"><section class="card edcard">${A_tools()}<div class="canvas">${Z(.8,page({mode:"chip",from:0,to:5,p2}))}${Z(.8,page({mode:"chip",from:5,to:7}))}</div></section>
+ <section class="card phpanel"><div class="ph-h"><h3>${ic("brackets-curly")}${s("Fields","الحقول")}<span class="pill p-stage num" style="margin-inline-start:auto">18</span></h3><span class="hint2">${s("Click a field to put it where the cursor is. It's filled from the employee's data when you print.","اضغط على حقل لإدراجه مكان المؤشر. يُملأ من بيانات الموظف عند الطباعة.")}</span><label class="search" style="min-width:0;height:38px;flex:none">${ic("magnifying-glass")}<span>${s("Search fields","ابحث في الحقول")}</span></label></div>
+ <div class="ph-b">${phList("emp.nid")}</div>
+ <div class="phfoot"><div class="okbox">${ic("brackets-square")}<span>${s("Text inside <b>[ ]</b> prints only when its field has a value — e.g. “, in stage «Stage»” for staff with no stage.","النص داخل <b>[ ]</b> لا يُطبع إلا إذا كان للحقل قيمة — مثل «، بالمرحلة «المرحلة»» للموظفين بدون مرحلة.")}</span></div></div></section></div></main>`;}
+
+function empPage(){
+ const row=(y,per,meta,pill,acts)=>`<div class="crow"><div><b>${num(y)}</b><div class="s">${per}</div></div><div>${meta}</div><div>${pill}</div><div class="acts">${acts}</div></div>`;
+ return `<main class="main">${topline(s("HR","الموارد البشرية"),s("Employees","الموظفون"),NADIA())}
+ <section class="card" style="overflow:hidden"><div class="empcard"><div class="av lg t2">${s("NR","نر")}</div><div style="min-width:0"><div style="font-family:var(--font-display);font-weight:800;font-size:22px">${NADIA()}</div><div class="hint2">${num("EMP-0006")} · ${s("Accountant · Finance","محاسبة · الشؤون المالية")}</div></div><span class="pill p-active" style="margin-inline-start:auto"><span class="dot"></span>${s("Active","نشطة")}</span></div>
+ <div class="etabs"><span class="etab">${ic("user")}${s("Overview","نظرة عامة")}</span><span class="etab">${ic("briefcase")}${s("Job & salary","الوظيفة والراتب")}</span><span class="etab on">${ic("file-text")}${s("Contracts","العقود")}</span><span class="etab">${ic("gavel")}${s("Penalties","الجزاءات")}</span><span class="etab">${ic("clock-countdown")}${s("Lateness","التأخير")}</span><span class="etab">${ic("folder")}${s("Documents","المستندات")}</span></div>
+ ${row("2026/27",PERIOD(),s("Full-time · 9,500 EGP","دوام كامل · 9,500 ج.م"),`<span class="pill p-active"><span class="dot"></span>${s("Active","ساري")}</span>`,`<button class="btn btn-sm btn-soft">${ic("printer")}${s("Print contract","طباعة العقد")}</button><button class="ibtn">${ic("dots-three")}</button>`)}
+ ${row("2025/26",s("1 Jun 2025 – 31 May 2026","1 يونيو 2025 – 31 مايو 2026"),s("Full-time · 8,800 EGP","دوام كامل · 8,800 ج.م"),`<span class="pill d-renew">${s("Renewed","جُدد")}</span>`,`<a class="linkbtn" href="#">${ic("file-pdf")}${s("Printed copy · 2 Jun 2025","النسخة المطبوعة · 2 يونيو 2025")}</a>`)}
+ ${row("2024/25",s("1 Jun 2024 – 31 May 2025","1 يونيو 2024 – 31 مايو 2025"),s("Full-time · 8,000 EGP","دوام كامل · 8,000 ج.م"),`<span class="pill d-renew">${s("Renewed","جُدد")}</span>`,"")}
+ </section></main>`;}
+function A_print(){
+ return side("employees")+empPage()+`<div class="scrim"></div><div class="modal" role="dialog" style="inset:26px 56px">
+ <div class="mh"><div><h2>${s("Print contract","طباعة العقد")}</h2><div class="hint2">${NADIA()} · ${num("EMP-0006")} · ${PERIOD()}</div></div><span class="sp"></span><button class="ibtn bd">${ic("x")}</button></div>
+ <div class="mb"><div class="canvas"><div class="cvbar"><span>${s("Page","صفحة")} ${num(1)} ${s("of","من")} ${num(2)}</span><span class="sp"></span><span class="legend"><span><i class="sw" style="background:var(--accent-soft);box-shadow:inset 0 -2px 0 var(--accent)"></i>${s("Filled in","قيمة مملوءة")}</span><span><i class="sw" style="background:var(--warning-soft)"></i>${s("Empty field","حقل فارغ")}</span></span><span class="pillz">${tb("minus")}<span class="num" style="padding:0 4px">86%</span>${tb("plus")}</span></div>
+ ${pages(.86,{mode:"fill",hl:1})}</div>
+ <div class="side">
+  <div class="field"><label>${s("Template","النموذج")}</label><div class="select">${ic("file-text")}<span class="t">${tplName()}</span><span class="pill p-def">${s("Default","افتراضي")}</span>${ic("caret-down")}</div></div>
+  <div class="field"><label>${s("Language of the copy","لغة النسخة")}</label>${docLang(0)}</div>
+  <div class="warnbox">${ic("warning")}<div><b>${s("1 field is empty: Stage","حقل واحد فارغ: المرحلة")}</b><br>${s("Its phrase is left out of this copy. Fill it in Nadia's file if it should print.","حُذفت عبارته من هذه النسخة. أضفه في ملف نادية إن كان يجب أن يُطبع.")} <a class="linkbtn" href="#">${s("Open file","فتح الملف")}</a></div></div>
+  <div class="field"><label>${s("Change the wording","تعديل الصياغة")}</label><div class="okbox" style="align-items:center">${ic("pencil-simple-line")}<span style="flex:1">${s("Edit the text for this copy only. The template stays as it is.","عدّل النص لهذه النسخة فقط. يبقى النموذج كما هو.")}</span><button class="btn btn-sm">${s("Edit text","تعديل النص")}</button></div></div>
+  <div class="field"><label>${s("Kept on the contract","يُحفظ مع العقد")}</label><div class="infobox">${ic("archive")}<span>${s("Printing or downloading saves this copy on Nadia's 2026/27 contract, with your name and the time.","عند الطباعة أو التنزيل تُحفظ هذه النسخة في عقد نادية لعام 2026/27 مع اسمك والوقت.")}</span></div><span class="hint2">${s("Earlier copies of this contract: none","نسخ سابقة من هذا العقد: لا يوجد")}</span></div>
+ </div></div>
+ <div class="mf"><span class="hint2">${ic("info")} ${s("A4 · 2 pages","A4 · صفحتان")}</span><span class="sp"></span><button class="btn">${s("Cancel","إلغاء")}</button><button class="btn">${ic("file-pdf")}${s("Download PDF","تنزيل PDF")}</button><button class="btn btn-primary">${ic("printer")}${s("Print","طباعة")}</button></div></div>`;}
+function A_ph_ed(sheet){
+ return `${mbar()}<div class="pscreen"><div class="pbody">${backL(s("Contract templates","نماذج العقود"))}<div class="head" style="margin-top:-6px"><div><h1>${tplName()}</h1></div></div>
+ <div style="display:flex;gap:8px;align-items:center">${docLang(0)}<span class="pill p-def">${s("Default","افتراضي")}</span></div>${A_tools(true)}
+ ${page({mode:"chip",fluid:1,from:0,to:3,sel:sheet?null:"emp.nid"})}</div>
+ ${sheet?"":`<button class="btn btn-accent fab">${ic("brackets-curly")}${s("Field","حقل")}</button><div class="pbot"><span class="hint2" style="flex:1">${s("Unsaved changes","تغييرات غير محفوظة")}</span><button class="btn btn-primary" style="flex:none">${s("Save","حفظ")}</button></div>`}
+ ${sheet?`<div class="scrim"></div><div class="sheet"><div class="grab"></div><div class="sh"><b style="font-size:16px">${s("Insert a field","إدراج حقل")}</b><span class="sp"></span><button class="ibtn">${ic("x")}</button></div><div class="sb2"><label class="search" style="min-width:0;height:40px;flex:none">${ic("magnifying-glass")}<span>${s("Search fields","ابحث في الحقول")}</span></label><div>${phList("emp.nid")}</div></div></div>`:""}</div>`;}
+function A_ph_print(edit){
+ if(edit) return `<div class="pscreen"><div class="ptop"><button class="ibtn">${ic("x")}</button><div class="ttl"><b>${s("Edit this copy","تعديل هذه النسخة")}</b><span>${NADIA()} · ${num("2026/27")}</span></div><button class="btn btn-sm btn-primary">${s("Done","تم")}</button></div>
+  <div class="pbody"><div class="infobox">${ic("info")}<span>${s("Changes apply to this printed copy only.","التعديلات على هذه النسخة المطبوعة فقط.")}</span></div>${page({mode:"fill",hl:1,fluid:1,from:2,to:5,body:{3:TX(EDIT4,{mode:"fill",hl:1}).replace("</ins>","<span class=\"caret\"></span></ins>")}})}</div>
+  <div class="kb"><div>${"<i></i>".repeat(10)}</div><div>${"<i></i>".repeat(9)}</div><div>${"<i></i>".repeat(8)}</div><div class="wide"><i style="max-width:60px"></i><i></i><i style="max-width:60px"></i></div></div></div>`;
+ return `<div class="pscreen"><div class="ptop"><button class="ibtn">${ic("x")}</button><div class="ttl"><b>${s("Print contract","طباعة العقد")}</b><span>${NADIA()} · ${num("2026/27")}</span></div></div>
+ <div class="pbody"><div style="display:flex;gap:8px"><div class="select" style="flex:1">${ic("file-text")}<span class="t">${tplName()}</span>${ic("caret-down")}</div>${segs([`<span class="arf">ع</span>`,"EN"],0)}</div>
+ <div class="warnbox">${ic("warning")}<span>${s("Stage is empty — its phrase is left out.","المرحلة فارغة — حُذفت عبارتها.")}</span></div>
+ <div class="pcanvas">${pages(.43,{mode:"fill",hl:1})}</div></div>
+ <div class="pbot"><button class="btn">${ic("pencil-simple-line")}${s("Edit text","تعديل النص")}</button><button class="btn btn-primary">${ic("printer")}${s("Print or PDF","طباعة أو PDF")}</button></div></div>`;}
+
+/* ================= OPTION B — clause builder; print = values form + live page ================= */
+const clamp=(i)=>TX(DOC.arts[i][1],{mode:"chip"});
+function blk(i,phone){return `<div class="blk"><span class="grip">${ic("dots-six-vertical")}</span><span class="no">${i+1}</span><div style="min-width:0"><div class="bt">البند ${ORD[i]} — ${DOC.arts[i][0]}${i===4?`<span class="pill p-info" style="font-family:var(--font)">${s("Full-time only","للدوام الكامل فقط")}</span>`:""}</div><div class="bx" dir="rtl">${clamp(i)}</div></div><div class="ba">${phone?`${tb("arrow-up")}${tb("arrow-down")}`:`${tb("arrow-up")}${tb("arrow-down")}${tb("pencil-simple")}`}${tb("dots-three-vertical")}</div></div>`;}
+function lockBlk(title,txt,icn){return `<div class="blk" style="background:var(--muted);box-shadow:none;border-color:var(--border)"><span class="grip" style="opacity:.0">${ic("dots-six-vertical")}</span><span class="no lk">${ic(icn)}</span><div style="min-width:0"><div class="bt" style="font-family:var(--font)">${title}<span class="pill p-stage">${s("Fixed position","موضع ثابت")}</span></div><div class="bx" dir="rtl">${txt}</div></div><div class="ba">${tb("pencil-simple")}</div></div>`;}
+function ddFields(){const rows=["ct.salary","ct.words","ct.sys","ct.start"];
+ return `<div class="dd" dir="${AR()?"rtl":"ltr"}" style="bottom:46px;left:0"><label class="search" style="min-width:0;height:36px;margin-bottom:4px">${ic("magnifying-glass")}<span>${s("Search fields","ابحث في الحقول")}</span></label><div class="phg">${ic(GRP.ct[0])}${s(GRP.ct[1],GRP.ct[2])}</div>${rows.map((k,i)=>phRow(k,i===1)).join("")}<div class="hint2" style="padding:6px 8px 2px">${s("Type to search all 18 fields","اكتب للبحث في الحقول الـ 18")}</div></div>`;}
+function B_open(phone){
+ return `<div class="blk open"><span class="grip">${ic("dots-six-vertical")}</span><span class="no">3</span><div class="cledit">
+ <div class="row"><b style="font-size:13px">${s("Clause 3","البند الثالث")}</b><span class="pill p-pri">${s("Editing","قيد التعديل")}</span><span class="sp"></span>${docLang(0)}</div>
+ <div class="ttl" dir="rtl">الأجر</div>
+ <div class="body" dir="rtl"><div class="etool" dir="rtl">${tb("text-b")}${tb("text-italic")}${tb("text-underline")}${tb("list-numbers")}<span class="sp" style="flex:1"></span><button class="btn btn-sm btn-soft">${ic("brackets-curly")}${s("Insert field","إدراج حقل")}${ic("caret-down")}</button>${ddFields()}</div>
+ يتقاضى الطرف الثاني أجرًا أساسيًا شهريًا قدره ${tok("ct.salary",{mode:"chip"})} (<span class="caret"></span>)، يُصرف في آخر كل شهر، ويُستقطع منه ما يقرره القانون من ضرائب وتأمينات اجتماعية.</div>
+ <div class="row"><span class="lbl">${s("Print this clause","طباعة هذا البند")}</span><div class="select" style="height:36px">${s("Always","دائمًا")}${ic("caret-down")}</div><span class="pill p-ok">${ic("check")}${s("English text written","النص الإنجليزي مكتوب")}</span><span class="sp"></span><button class="btn btn-sm">${s("Cancel","إلغاء")}</button><button class="btn btn-sm btn-primary">${s("Done","تم")}</button></div>
+ </div></div>`;}
+function B_ed(){
+ const tpl=(n,sub,on,def)=>`<div class="tcard ${on?"on":""}"><div class="tn">${ic("file-text")}${n}</div><div class="ts">${sub}</div>${def?`<div class="pills">${def}</div>`:""}</div>`;
+ return side("settings")+`<main class="main">${topline(...crumbsSet())}
+ <div class="head"><div><h1>${s("Contract templates","نماذج العقود")}</h1><p>${s("Write each contract once. HR prints it from an employee's contract, filled with their data.","اكتب كل عقد مرة واحدة. تطبعه الموارد البشرية من عقد الموظف مملوءًا ببياناته.")}</p></div>
+ <div class="acts"><button class="btn">${ic("eye")}${s("Preview with an employee","معاينة ببيانات موظف")}</button><button class="btn btn-primary">${ic("floppy-disk")}${s("Save changes","حفظ التغييرات")}</button></div></div>
+ <div class="bed"><div class="trail">
+ ${tpl(tplName(),s("7 clauses · Arabic + English","7 بنود · عربي + إنجليزي"),1,`<span class="pill p-def">${ic("star")}${s("Default · full-time","افتراضي · دوام كامل")}</span>`)}
+ ${tpl(s("Part-time contract","عقد دوام جزئي"),s("6 clauses · Arabic","6 بنود · عربي"),0,`<span class="pill p-stage">${s("Default · part-time","افتراضي · دوام جزئي")}</span>`)}
+ ${tpl(s("Renewal annex","ملحق تجديد"),s("3 clauses · Arabic","3 بنود · عربي"),0,`<span class="pill p-stage">${s("For renewals","للتجديد")}</span>`)}
+ <div class="dashed">${ic("plus")}${s("New template","نموذج جديد")}</div>
+ <div class="okbox" style="margin-top:6px">${ic("lightbulb")}<span>${s("When HR prints, the contract's work system picks the default template. They can switch to another.","عند الطباعة يُختار النموذج الافتراضي حسب نظام العمل في العقد، ويمكن اختيار غيره.")}</span></div></div>
+ <div class="clist">
+ <div style="display:flex;align-items:center;gap:10px"><b style="font-family:var(--font-display);font-size:16px">${tplName()}</b><span class="hint2">${s("Drag a clause to reorder · numbers follow the order","اسحب البند لتغيير ترتيبه · الترقيم يتبع الترتيب")}</span><span class="sp" style="flex:1"></span><button class="btn btn-sm btn-ghost">${ic("copy")}${s("Duplicate","نسخ")}</button></div>
+ ${lockBlk(s("Header and parties","الترويسة والأطراف"),TX(DOC.p1,{mode:"chip"}),"users")}
+ ${blk(0)}${blk(1)}${B_open()}${blk(3)}${blk(4)}${blk(5)}${blk(6)}
+ <div class="dashed">${ic("plus")}${s("Add clause","إضافة بند")}</div>
+ </div></div></main>`;}
+function vf(k,o={}){const p=PH[k];const v=o.v??p.v;
+ return `<div class="vf ${o.ov?"ov":""} ${v==null?"miss":""}"><div class="vl">${AR()?p.ar:p.en}${o.ov?`<span class="pill p-pri">${s("Changed for this copy","مُعدّل لهذه النسخة")}</span><a class="linkbtn r" href="#">${ic("arrow-counter-clockwise")}${s("Reset","استرجاع")}</a>`:""}</div><div class="input" dir="${v==null?(AR()?"rtl":"ltr"):"rtl"}">${v==null?`${ic("warning")}${s("Empty — left out. Type to fill this copy","فارغ — محذوف. اكتب لملء هذه النسخة")}`:`<bdi>${v}</bdi>`}</div>${o.ov?`<div class="was">${s("From the file:","من الملف:")} <s dir="rtl" style="unicode-bidi:isolate">${p.v}</s></div>`:""}</div>`;}
+function B_values(phone){
+ return `${vf("emp.nameAr")}${vf("emp.nid")}${vf("emp.addr",{ov:1,v:OV_ADDR})}${phone?"":`<div class="vgrid">${vf("emp.job")}${vf("emp.dept")}</div>`}${vf("emp.stage")}
+ <div class="vgrp">${ic(GRP.ct[0])}${s(GRP.ct[1],GRP.ct[2])}<a href="#">${s("Open contract","فتح العقد")}${ic("caret-right","flip")}</a></div>${vf("ct.salary")}${vf("ct.words")}`;}
+function B_print(){
+ return side("employees")+`<main class="main">${topline(s("HR","الموارد البشرية"),s("Employees","الموظفون"),NADIA(),s("Print contract","طباعة العقد"))}
+ <div class="head"><div>${backL(NADIA())}<h1 style="margin-top:6px">${s("Print contract","طباعة العقد")}</h1><p>${s("Contract","عقد")} ${PERIOD()} · ${s("Full-time","دوام كامل")} · ${num("EMP-0006")}</p></div>
+ <div class="acts"><button class="btn">${ic("file-pdf")}${s("Download PDF","تنزيل PDF")}</button><button class="btn btn-primary">${ic("printer")}${s("Print","طباعة")}</button></div></div>
+ <div class="bpr"><section class="card vform"><div class="vh"><div style="display:flex;gap:8px"><div class="select" style="flex:1">${ic("file-text")}<span class="t">${tplName()}</span>${ic("caret-down")}</div>${docLang(0)}</div>
+ <div class="okbox">${ic("info")}<span>${s("Values come from Nadia's file, her contract and school settings. Change one here to change <b>this copy only</b>.","القيم مأخوذة من ملف نادية وعقدها وإعدادات المدرسة. غيّر أي قيمة هنا لتتغير في <b>هذه النسخة فقط</b>.")}</span></div></div>
+ <div class="vb"><div class="vgrp">${ic(GRP.emp[0])}${s(GRP.emp[1],GRP.emp[2])}<a href="#">${s("Open file","فتح الملف")}${ic("caret-right","flip")}</a></div>${B_values()}</div></section>
+ <section class="pvcol"><div class="canvas"><div class="cvbar"><span>${s("Live page","الصفحة مباشرة")} · ${s("Page","صفحة")} ${num(1)} ${s("of","من")} ${num(2)}</span><span class="sp"></span><span class="legend"><span><i class="sw" style="background:var(--accent-soft);box-shadow:inset 0 -2px 0 var(--accent)"></i>${s("From data","من البيانات")}</span><span><i class="sw" style="background:var(--primary-soft);box-shadow:inset 0 -2px 0 var(--primary)"></i>${s("Changed for this copy","مُعدّل لهذه النسخة")}</span></span><span class="pillz">${tb("minus")}<span class="num" style="padding:0 4px">78%</span>${tb("plus")}</span></div>
+ ${pages(.78,{mode:"fill",hl:1,ov:{"emp.addr":OV_ADDR}})}</div></section></div>
+ <div class="hint2" style="margin-top:-6px">${ic("archive")} ${s("Printing keeps this copy on the contract — with your name, the time and the values you changed.","تُحفظ هذه النسخة مع العقد عند الطباعة — مع اسمك والوقت والقيم التي غيّرتها.")}</div></main>`;}
+function B_ph_ed(open){
+ if(open) return `<div class="pscreen"><div class="ptop"><button class="ibtn">${ic("x")}</button><div class="ttl"><b>${s("Clause 3 — Salary","البند الثالث — الأجر")}</b><span>${tplName()}</span></div><button class="btn btn-sm btn-primary">${s("Done","تم")}</button></div>
+ <div class="pbody"><div class="field"><label>${s("Clause title","عنوان البند")}</label><div class="input" dir="rtl" style="font-weight:700">الأجر</div></div>
+ <div class="field"><label>${s("Text","النص")}</label><div class="cledit"><div class="body" dir="rtl" style="font-size:14.5px">يتقاضى الطرف الثاني أجرًا أساسيًا شهريًا قدره ${tok("ct.salary",{mode:"chip"})} (${tok("ct.words",{mode:"chip",sel:"ct.words"})}<span class="caret"></span>)، يُصرف في آخر كل شهر، ويُستقطع منه ما يقرره القانون من ضرائب وتأمينات اجتماعية.</div></div></div>
+ <div style="display:flex;gap:8px;align-items:center"><span class="lbl">${s("Print","الطباعة")}</span><div class="select" style="height:36px;flex:1">${s("Always","دائمًا")}${ic("caret-down")}</div></div></div>
+ <div class="chipsrow"><span class="lbl">${ic("brackets-curly")}</span>${["ct.salary","ct.words","ct.sys","ct.start","ct.end"].map(k=>tok(k,{mode:"chip"})).join("")}</div>
+ <div class="kb"><div>${"<i></i>".repeat(10)}</div><div>${"<i></i>".repeat(9)}</div><div>${"<i></i>".repeat(8)}</div><div class="wide"><i style="max-width:60px"></i><i></i><i style="max-width:60px"></i></div></div></div>`;
+ return `${mbar()}<div class="pscreen"><div class="pbody">${backL(s("Contract templates","نماذج العقود"))}<div class="head" style="margin-top:-6px"><div><h1>${tplName()}</h1><p>${s("7 clauses · Arabic + English","7 بنود · عربي + إنجليزي")}</p></div></div>
+ ${lockBlk(s("Header and parties","الترويسة والأطراف"),TX(DOC.p1,{mode:"chip"}),"users")}${[0,1,2,3,4,5].map(i=>blk(i,1)).join("")}</div>
+ <div class="pbot"><button class="btn">${ic("plus")}${s("Add clause","إضافة بند")}</button><button class="btn btn-primary">${s("Save","حفظ")}</button></div></div>`;}
+function B_ph_print(pg){
+ return `<div class="pscreen"><div class="ptop"><button class="ibtn">${ic("arrow-left","flip")}</button><div class="ttl"><b>${s("Print contract","طباعة العقد")}</b><span>${NADIA()} · ${num("2026/27")}</span></div></div>
+ <div class="pbody">${segs([s("Values","القيم")+` <span class="pill p-pri num" style="padding:0 6px">1</span>`,s("Page","الصفحة")],pg?1:0,"").replace('class="segs "','class="segs" style="display:flex"').replace(/<span class="(on)?">/g,(m)=>m.replace('">','" style="flex:1;justify-content:center">'))}
+ ${pg?`<div class="pcanvas">${pages(.43,{mode:"fill",hl:1,ov:{"emp.addr":OV_ADDR}})}</div><div class="hint2" style="text-align:center">${s("Page","صفحة")} ${num(1)} ${s("of","من")} ${num(2)} · ${s("pinch to zoom","كبّر بإصبعين")}</div>`
+ :`<div style="display:flex;gap:8px"><div class="select" style="flex:1">${ic("file-text")}<span class="t">${tplName()}</span>${ic("caret-down")}</div>${segs([`<span class="arf">ع</span>`,"EN"],0)}</div>${B_values(1)}`}</div>
+ <div class="pbot"><button class="btn">${ic("file-pdf")}PDF</button><button class="btn btn-primary">${ic("printer")}${s("Print","طباعة")}</button></div></div>`;}
+
+/* ================= OPTION C — the page is the editor; print = full-screen view + values drawer ================= */
+function typeahead(){const items=["emp.nid","emp.job","emp.dept","emp.stage"];
+ return `<span class="typeahead" dir="${AR()?"rtl":"ltr"}"><span class="th">${ic("brackets-curly")}${s("Insert a field","إدراج حقل")} · “ال”</span>${items.map((k,i)=>`<span class="it ${i===0?"hl":""}">${ic(GRP[PH[k].g][0])}<span><b>${AR()?PH[k].ar:PH[k].en}</b><small>${AR()?PH[k].en:`<span style="font-family:var(--font-ar)">${PH[k].ar}</span>`} · <bdi>${PH[k].v??"—"}</bdi></small></span>${i===0?`<span class="kbd">↵</span>`:""}</span>`).join("")}<span class="tf"><span><span class="kbd">↑</span> <span class="kbd">↓</span> ${s("move","تنقّل")}</span><span><span class="kbd">↵</span> ${s("insert","إدراج")}</span><span><span class="kbd">Esc</span></span></span></span>`;}
+function C_bar(){
+ return `<div class="cbar"><button class="tbtn sel">${ic("file-text")}${tplName()}${ic("caret-down")}</button>${docLang(0)}<span class="sep"></span>${tb("arrow-u-up-left")}${tb("arrow-u-up-right")}<span class="sep"></span>${tb("text-b")}${tb("text-italic")}${tb("text-underline")}${tb("text-align-right",1)}${tb("list-numbers")}<span class="sep"></span><button class="btn btn-sm btn-accent">${ic("brackets-curly")}${s("Field","حقل")} <span class="kbd" dir="ltr" style="background:transparent;border-color:rgb(74 52 0 / .3);color:inherit">{{</span></button>
+ <span class="sp"></span><span class="hint2" style="display:inline-flex;gap:8px;align-items:center;white-space:nowrap;padding:0 6px"><span class="switch"></span>${s("Show sample employee","عرض موظف نموذجي")}</span><span class="saved">${ic("check-circle")}${s("Saved 1 min ago","حُفظ قبل دقيقة")}</span>${tb("dots-three")}</div>`;}
+function C_ed(){
+ const p2=`<b>ثانيًا:</b> السيد/السيدة ${tok("emp.nameAr",{mode:"brace"})}، الرقم القومي <span class="caretwrap">{{ال<span class="caret"></span>${typeahead()}</span>`;
+ const oa=[["الترويسة",0],["الأطراف",1],...DOC.arts.map((a,i)=>[a[0],0,i+1]),["التوقيعات",0]];
+ return side("settings")+`<main class="main" style="gap:14px">${topline(...crumbsSet(),tplName())}${C_bar()}
+ <div class="ced"><nav class="outline"><div class="oh">${s("On this page","في هذه الصفحة")}</div>${oa.map(([t,on,n])=>`<a href="#" class="${on?"on":""}"><b>${n?num(n):""}</b>${t}</a>`).join("")}
+ <div class="ostat"><b>${s("18 fields used","18 حقلًا مستخدمًا")}</b><span>${s("1 optional phrase [ ]","عبارة اختيارية واحدة [ ]")}</span><span>${s("English version: written","النسخة الإنجليزية: مكتوبة")}</span><a class="linkbtn" href="#">${ic("eye")}${s("Try with an employee","جرّب ببيانات موظف")}</a></div></nav>
+ <div class="canvas">${Z(.92,page({mode:"brace",from:0,to:5,p2}))}${Z(.92,page({mode:"brace",from:5,to:7}))}</div></div></main>`;}
+function vrow(k,o={}){const p=PH[k],v=o.v??p.v;
+ return `<div class="vrow ${o.focus?"focus":""} ${o.ov?"ov":""} ${v==null?"miss":""}"><div class="k">${AR()?p.ar:p.en}${o.ov?` · <b style="color:var(--primary)">${s("changed for this copy","مُعدّل لهذه النسخة")}</b>`:""}</div><div class="val" dir="rtl">${v==null?`<span dir="${AR()?"rtl":"ltr"}">${s("Empty — phrase left out","فارغ — حُذفت العبارة")}</span>`:`<bdi>${v}</bdi>`}</div><div class="e">${o.ov?tb("arrow-counter-clockwise"):""}${tb(v==null?"plus":"pencil-simple")}</div></div>`;}
+function C_values(phone){
+ const g=(x)=>`<div class="phg">${ic(GRP[x][0])}${s(GRP[x][1],GRP[x][2])}</div>`;
+ return phone?`${g("ct")}${vrow("ct.salary",{focus:1})}${vrow("ct.words")}${vrow("ct.start")}${g("emp")}${vrow("emp.addr",{ov:1,v:OV_ADDR})}${vrow("emp.stage")}`
+ :`${g("emp")}${vrow("emp.nameAr")}${vrow("emp.nid")}${vrow("emp.addr",{ov:1,v:OV_ADDR})}${vrow("emp.job")}${vrow("emp.stage")}${g("ct")}${vrow("ct.salary",{focus:1})}${vrow("ct.words")}${vrow("ct.start")}${vrow("ct.end")}${g("sc")}${vrow("sc.rep")}`;}
+const C_fill=()=>({mode:"fill",hl:1,focus:"ct.salary",ov:{"emp.addr":OV_ADDR},body:{3:TX(EDIT4,{mode:"fill",hl:1})+` <span class="pill p-info" style="font-family:var(--font);font-size:10.5px;vertical-align:2px">${s("edited in this copy","معدّل في هذه النسخة")}</span>`}});
+function C_print(){
+ return `<div class="full"><div class="ftop"><button class="ibtn bd">${ic("x")}</button><div class="ttl"><b>${NADIA()} — ${s("employment contract","عقد العمل")}</b><span>${num("EMP-0006")} · ${PERIOD()}</span></div><span class="sp"></span>
+ <button class="tbtn sel">${ic("file-text")}${tplName()}${ic("caret-down")}</button>${docLang(0)}<span class="sep"></span>
+ <span class="hint2" style="display:inline-flex;gap:8px;align-items:center;white-space:nowrap;font-weight:700;color:var(--foreground)"><span class="switch on"></span>${s("Edit this copy","تعديل هذه النسخة")}</span>
+ <button class="btn btn-soft">${ic("list-magnifying-glass")}${s("Values used","القيم المستخدمة")} <span class="num">18</span></button><button class="btn">${ic("file-pdf")}PDF</button><button class="btn btn-primary">${ic("printer")}${s("Print","طباعة")}</button></div>
+ <div class="fbody"><div class="canvas">${pages(.84,C_fill())}</div>
+ <aside class="drawer"><div class="dh"><h3>${ic("list-magnifying-glass")}${s("Values used","القيم المستخدمة")}<span class="sp" style="flex:1"></span><button class="ibtn">${ic("x")}</button></h3><span class="hint2">${s("Click a value to find it on the page. Edit it to change this copy only.","اضغط على قيمة لتجدها في الصفحة. عدّلها لتتغير في هذه النسخة فقط.")}</span></div>
+ <div class="db">${C_values()}</div>
+ <div class="df"><div class="infobox">${ic("archive")}<span>${s("Printing keeps this copy on the contract: Mona Ibrahim, 24 Nov 2026. 1 value and 1 sentence changed.","تُحفظ هذه النسخة مع العقد عند الطباعة: منى إبراهيم، 24 نوفمبر 2026. تغيّرت قيمة واحدة وجملة واحدة.")}</span></div></div></aside></div></div>`;}
+function C_ph_ed(tokSheet){
+ return `${mbar()}<div class="pscreen"><div class="pbody"><div style="display:flex;gap:6px;align-items:center"><button class="tbtn sel" style="flex:1;justify-content:flex-start;min-width:0">${ic("file-text")}<span style="overflow:hidden;text-overflow:ellipsis">${tplName()}</span>${ic("caret-down")}</button>${segs([`<span class="arf">ع</span>`,"EN"],0)}<span class="saved" style="color:var(--success);font-size:18px">${ic("check-circle")}</span></div>
+ ${page({mode:"brace",fluid:1,from:0,to:3,sel:tokSheet?"emp.nid":null})}</div>
+ ${tokSheet?`<div class="sheet"><div class="grab"></div><div class="sh"><span class="tokc sel">${PH["emp.nid"].ar}</span><div style="min-width:0"><b>${s("National ID","الرقم القومي")}</b><div class="hint2">${s("From the employee file","من ملف الموظف")}</div></div><span class="sp"></span><button class="ibtn">${ic("x")}</button></div>
+ <div class="sb2"><div class="okbox">${ic("eye")}<span>${s("Sample:","مثال:")} <b class="num">28803150104527</b></span></div>
+ <div style="display:flex;align-items:center;gap:10px;font-size:13.5px;font-weight:600"><span class="switch"></span><span>${s("Print the sentence only when it has a value","اطبع الجملة فقط إذا كان للحقل قيمة")}</span></div></div>
+ <div class="sf"><button class="btn">${ic("arrows-left-right")}${s("Change field","تغيير الحقل")}</button><button class="btn btn-danger">${ic("trash")}${s("Remove","حذف")}</button></div></div>`
+ :`<div class="ptools" style="margin:0 10px 12px;justify-content:space-between">${tb("arrow-u-up-left")}${tb("text-b")}${tb("text-italic")}${tb("list-numbers")}<button class="btn btn-sm btn-accent">${ic("brackets-curly")}${s("Field","حقل")}</button>${tb("dots-three")}</div>`}</div>`;}
+function C_ph_print(drawer){
+ return `<div class="pscreen"><div class="ptop"><button class="ibtn">${ic("x")}</button><div class="ttl"><b>${NADIA()}</b><span>${s("Employment contract","عقد العمل")} · ${num("2026/27")}</span></div><button class="ibtn">${ic("dots-three")}</button></div>
+ <div class="pcanvas" style="border-radius:0;${drawer?"justify-content:flex-start;padding-top:0":""}">${drawer?`<div style="margin-top:-150px">${pages(.43,C_fill())}</div>`:pages(.43,C_fill())}</div>
+ ${drawer?`<div class="sheet" style="max-height:58%"><div class="grab"></div><div class="sh"><b style="font-size:15px">${s("Values used","القيم المستخدمة")} <span class="num hint2">18</span></b><span class="sp"></span><button class="ibtn">${ic("x")}</button></div><div class="sb2" style="padding:6px 10px;gap:0">${C_values(1)}</div></div>`
+ :`<div class="pbot"><button class="btn">${ic("list-magnifying-glass")}${s("Values","القيم")} <span class="num">18</span></button><button class="btn">${ic("pencil-simple-line")}${s("Edit","تعديل")}</button><button class="btn btn-primary">${ic("printer")}${s("Print","طباعة")}</button></div>`}</div>`;}
+
+/* ---------- screens ---------- */
+const SCR={
+ A:{editor:{desk:A_ed,ph:[[()=>A_ph_ed(0),["Editing on the phone — field chips, toolbar scrolls; “Field” button floats","التعديل على الهاتف — الحقول كشرائح، وزر «حقل» عائم"]],[()=>A_ph_ed(1),["“Field” opens a sheet listing every field in both languages","زر «حقل» يفتح قائمة بكل الحقول باللغتين"]]]},
+    print:{desk:A_print,ph:[[()=>A_ph_print(0),["Full-screen preview, A4 pages fit the width. “Print or PDF” hands the PDF to the phone's print/share sheet","معاينة بملء الشاشة بعرض الصفحة. «طباعة أو PDF» يرسل الملف لقائمة الطباعة والمشاركة في الهاتف"],1],[()=>A_ph_print(1),["“Edit text” — the copy reflows to the phone width for typing","«تعديل النص» — النسخة تُعرض بعرض الهاتف للكتابة"],1]]}},
+ B:{editor:{desk:B_ed,ph:[[()=>B_ph_ed(0),["Clauses as cards — arrows to reorder (no drag on phone)","البنود كبطاقات — الأسهم لتغيير الترتيب"]],[()=>B_ph_ed(1),["One clause full-screen; field chips sit above the keyboard","بند واحد بملء الشاشة؛ شرائح الحقول فوق لوحة المفاتيح"],1]]},
+    print:{desk:B_print,ph:[[()=>B_ph_print(0),["“Values” tab — change one for this copy, Reset to undo","تبويب «القيم» — غيّر قيمة لهذه النسخة، و«استرجاع» للتراجع"],1],[()=>B_ph_print(1),["“Page” tab — the live A4 page; Print sends the PDF to the phone's print/share sheet","تبويب «الصفحة» — صفحة A4 مباشرة؛ «طباعة» يرسل الملف لقائمة الطباعة والمشاركة"],1]]}},
+ C:{editor:{desk:C_ed,ph:[[()=>C_ph_ed(0),["The page reflows to phone width; fields are highlighted words","الصفحة بعرض الهاتف؛ الحقول كلمات مظللة"]],[()=>C_ph_ed(1),["Tap a field — a small sheet to change or remove it","اضغط على حقل — نافذة صغيرة لتغييره أو حذفه"]]]},
+    print:{desk:C_print,ph:[[()=>C_ph_print(0),["Full-screen pages; Print sends the PDF to the phone's print/share sheet","الصفحات بملء الشاشة؛ «طباعة» يرسل الملف لقائمة الطباعة والمشاركة"],1],[()=>C_ph_print(1),["“Values” drawer as a sheet — the chosen value is outlined on the page","درج «القيم» كنافذة سفلية — القيمة المختارة محددة في الصفحة"],1]]}}
+};
+const NOTE={
+ A:["<b>Option A — Word-style editor.</b> The template is one document you type in, like Word. A <b>Fields</b> panel lists every placeholder in English and Arabic with a sample value; click one to drop a chip where the cursor is. Printing opens a large <b>preview dialog</b> from the employee's Contracts tab: the filled A4 pages on one side; template, language, empty-field warning and “Edit text for this copy” on the other.",
+    "<b>الخيار أ — محرر يشبه Word.</b> النموذج مستند واحد تكتب فيه كما في Word. لوحة <b>الحقول</b> تعرض كل حقل بالعربية والإنجليزية مع مثال؛ اضغط على حقل لإدراجه كشريحة مكان المؤشر. الطباعة تفتح <b>نافذة معاينة</b> كبيرة من تبويب العقود في ملف الموظف: صفحات A4 مملوءة في جانب، والنموذج واللغة وتنبيه الحقول الفارغة و«تعديل النص لهذه النسخة» في الجانب الآخر."],
+ B:["<b>Option B — Clause builder.</b> A template is a fixed header-and-parties block, then numbered clauses (البند الأول…). Each clause is edited on its own, reordered by dragging (arrows on phone) and can print always or only for one work system. Printing is a <b>split page</b>: every value on the left — change one and it changes this copy only, with Reset — and the live A4 page on the right.",
+    "<b>الخيار ب — بناء العقد بالبنود.</b> النموذج ترويسة وأطراف ثابتة ثم بنود مرقمة (البند الأول…). يُعدّل كل بند وحده، ويُرتّب بالسحب (وبالأسهم على الهاتف)، ويمكن أن يُطبع دائمًا أو لنظام عمل واحد فقط. الطباعة <b>صفحة مقسومة</b>: كل القيم على جانب — غيّر أي قيمة لتتغير في هذه النسخة فقط مع «استرجاع» — وصفحة A4 مباشرة على الجانب الآخر."],
+ C:["<b>Option C — The page is the editor.</b> No form around the document: a slim toolbar and the A4 sheet itself. Typing <b>{{</b> opens a field picker; fields show as highlighted words. Printing is a <b>full-screen view</b> of the pages with a “Values used” drawer — click a value to find it on the page — and an “Edit this copy” switch to type straight onto the page.",
+    "<b>الخيار ج — الصفحة هي المحرر.</b> لا نموذج حول المستند: شريط أدوات رفيع وورقة A4 نفسها. كتابة <b>{{</b> تفتح قائمة الحقول؛ وتظهر الحقول ككلمات مظللة. الطباعة <b>عرض بملء الشاشة</b> للصفحات مع درج «القيم المستخدمة» — اضغط على قيمة لتجدها في الصفحة — ومفتاح «تعديل هذه النسخة» للكتابة على الصفحة مباشرة."]
+};
+
+function render(){
+ const r=document.documentElement;r.lang=lang;r.dir=AR()?"rtl":"ltr";
+ document.getElementById("optNote").innerHTML=NOTE[opt][AR()?1:0];
+ const sc=SCR[opt][step];
+ document.getElementById("deskSec").style.display=dev==="desktop"?"":"none";
+ document.getElementById("phoneSec").style.display=dev==="phone"?"":"none";
+ document.getElementById("deskT").textContent=step==="editor"?s("Desktop · 1440 px — Settings → HR → Contract templates","سطح المكتب · 1440 — الإعدادات ← الموارد البشرية ← نماذج العقود"):s("Desktop · 1440 px — Employee → Contracts → Print contract (Nadia Fouad Ramadan, EMP-0006)","سطح المكتب · 1440 — الموظف ← العقود ← طباعة العقد (نادية فؤاد رمضان)");
+ document.getElementById("phoneT").textContent=s("Phone · 390 px","الهاتف · 390");
+ if(dev==="desktop") document.getElementById("desk").innerHTML=sc.desk();
+ else document.getElementById("phones").innerHTML=sc.ph.map(([fn,cap])=>`<div class="phone-wrap"><div class="phone">${fn()}</div><div class="phone-cap">${AR()?cap[1]:cap[0]}</div></div>`).join("");
+}
+const q=new URLSearchParams(location.search);
+["opt","lang","dev","step"].forEach(k=>{if(q.get(k)){if(k==="opt")opt=q.get(k);if(k==="lang")lang=q.get(k);if(k==="dev")dev=q.get(k);if(k==="step")step=q.get(k);}});
+if(q.get("shot")) document.body.classList.add("shot");
+const segMap={optSeg:["opt"],langSeg:["lang"],devSeg:["dev"],stepSeg:["step"]};
+const get=k=>({opt,lang,dev,step})[k];
+const set=(k,v)=>{if(k==="opt")opt=v;if(k==="lang")lang=v;if(k==="dev")dev=v;if(k==="step")step=v;};
+const sync=()=>Object.entries(segMap).forEach(([id,[k]])=>document.querySelectorAll(`#${id} button`).forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===get(k))));
+Object.entries(segMap).forEach(([id,[k]])=>document.querySelectorAll(`#${id} button`).forEach(b=>b.addEventListener("click",()=>{set(k,b.dataset.v);sync();render();})));
+sync();render();
+</script>
+</body>
+</html>
