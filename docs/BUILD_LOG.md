@@ -727,6 +727,12 @@ phase live in `docs/build-log/`.
   #283; next B2: deactivating while the last month's payroll is a draft drops that month's pay);
   mid-year hires' first contract ends 31 May (one season for everyone, GUESS).
 
+- **Skeletons that match their tables, enforced** (owner, 2026-11-25, PR #300): the employee Payroll
+  tab's skeleton drew the Status pill as a thin text line, so loading rows were shorter and the table
+  jumped; the ±8px skeleton check let it pass. Owner: make sure it never happens again. In #300: the
+  tab fixed; a guard test failing any table column whose cell isn't one line of text and has no
+  `skeleton`; row and card heights must match within ±2px; every screen those checks catch fixed (at
+  least Roles → Held by); the rule in CONVENTIONS. Being built.
 - **Pentest with ARTEX** (owner, 2026-11-25): try https://github.com/BaaRai/ARTEX against the app
   later — on a throwaway or testing environment, never production. Not started.
 - **Employee documents tab** (proposed 2026-11-24): ID copy, certificates, insurance forms.
