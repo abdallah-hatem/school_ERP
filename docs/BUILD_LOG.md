@@ -745,6 +745,9 @@ phase live in `docs/build-log/`.
   highlighted and scrolled into view. Options can carry a muted second part: the manager picker shows
   "Name · Department" with the department in grey (owner's request). Candidates for the same hint, not
   changed: the record-penalty and template-preview employee pickers ("Name · code").
+- 2026-11-26 — **#317 merged:** the record-penalty dialog's long preview test (four picker changes and a
+  date pick) gets 20 s; it timed out at the 5 s default on busy CI runners (#315, #291) though every step
+  passed. #315 (feature flags wait for a second school) merged after a re-run.
 
 ## Next up
 
