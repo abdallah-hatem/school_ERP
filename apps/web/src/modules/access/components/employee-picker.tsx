@@ -95,15 +95,20 @@ export function EmployeePicker({
   const linkedId = value?.id ?? null;
   const linkedShown = open && linkedId !== null && activeChoice?.id === linkedId;
   useEffect(() => {
-    const list = listRef.current;
-    const row = linkedShown && linkedId ? document.getElementById(`${listId}-${linkedId}`) : null;
-    if (!list || !row) return;
-    const listBox = list.getBoundingClientRect();
-    const rowBox = row.getBoundingClientRect();
-    const offset = rowBox.top - listBox.top;
-    if (offset < 0 || offset + rowBox.height > listBox.height) {
-      list.scrollTop += offset - (listBox.height - rowBox.height) / 2;
-    }
+    if (!linkedShown || !linkedId) return;
+    // After the popover's first frame: in the commit that mounts it the list can't scroll yet.
+    const frame = requestAnimationFrame(() => {
+      const list = listRef.current;
+      const row = document.getElementById(`${listId}-${linkedId}`);
+      if (!list || !row) return;
+      const listBox = list.getBoundingClientRect();
+      const rowBox = row.getBoundingClientRect();
+      const offset = rowBox.top - listBox.top;
+      if (offset < 0 || offset + rowBox.height > listBox.height) {
+        list.scrollTop += offset - (listBox.height - rowBox.height) / 2;
+      }
+    });
+    return () => cancelAnimationFrame(frame);
   }, [linkedShown, linkedId, listId]);
 
   function pick(o: EmployeeOption | null) {

@@ -198,16 +198,20 @@ export function Combobox({
   const chosenShown = open && activeOption !== undefined && activeOption.value === value;
   useEffect(() => {
     if (!chosenShown || !revealChosen.current) return;
-    const list = listRef.current;
-    const row = value ? document.getElementById(optionDomId(listId, value)) : null;
-    if (!list || !row) return;
-    revealChosen.current = false;
-    const listBox = list.getBoundingClientRect();
-    const rowBox = row.getBoundingClientRect();
-    const offset = rowBox.top - listBox.top;
-    if (offset < 0 || offset + rowBox.height > listBox.height) {
-      list.scrollTop += offset - (listBox.height - rowBox.height) / 2;
-    }
+    // After the popover's first frame: in the commit that mounts it the list can't scroll yet.
+    const frame = requestAnimationFrame(() => {
+      const list = listRef.current;
+      const row = value ? document.getElementById(optionDomId(listId, value)) : null;
+      if (!list || !row || !revealChosen.current) return;
+      revealChosen.current = false;
+      const listBox = list.getBoundingClientRect();
+      const rowBox = row.getBoundingClientRect();
+      const offset = rowBox.top - listBox.top;
+      if (offset < 0 || offset + rowBox.height > listBox.height) {
+        list.scrollTop += offset - (listBox.height - rowBox.height) / 2;
+      }
+    });
+    return () => cancelAnimationFrame(frame);
   }, [chosenShown, value, listId]);
 
   function onKeyDown(e: KeyboardEvent<HTMLInputElement>) {
