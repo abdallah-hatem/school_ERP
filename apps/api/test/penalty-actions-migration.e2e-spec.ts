@@ -109,7 +109,7 @@ describe('penalty actions on an existing database (migration, e2e)', () => {
     runSql('public', `DROP SCHEMA IF EXISTS "${schema}" CASCADE;`);
   });
 
-  it('inserts the ten seeded actions with today’s names, effects, order and fixed ids', async () => {
+  it('S64 — inserts the ten seeded actions with today’s names, effects, order and fixed ids', async () => {
     const rows = await db.penaltyAction.findMany({
       orderBy: { sortOrder: 'asc' },
       select: { id: true, code: true, nameEn: true, nameAr: true, effect: true, percentBase: true, isActive: true },
@@ -136,7 +136,7 @@ describe('penalty actions on an existing database (migration, e2e)', () => {
     expect(counts).toEqual({ levels: 20, penalties: PENALTIES.length, lines: 1 });
   });
 
-  it('each level points at the seeded row of its old action; days stay where they are', async () => {
+  it('S65 — each level points at the seeded row of its old action; days stay where they are', async () => {
     const levels = await db.violationLevel.findMany({
       where: { level: 1 },
       select: { violationId: true, actionId: true, days: true, percent: true, amount: true },
@@ -149,7 +149,7 @@ describe('penalty actions on an existing database (migration, e2e)', () => {
     }
   });
 
-  it('every penalty keeps its level and days; its snapshot reads by the same name and effect', async () => {
+  it('S65 (waiting and approved penalties) — every penalty keeps its level and days; its snapshot reads by the same name and effect', async () => {
     const rows = await db.penaltyRecord.findMany({
       select: { id: true, status: true, level: true, actionId: true, actionNameEn: true, actionNameAr: true, effect: true, percentBase: true, days: true, percent: true, amount: true },
     });
@@ -172,7 +172,7 @@ describe('penalty actions on an existing database (migration, e2e)', () => {
     }
   });
 
-  it('edge case 25: the approved run’s line keeps its totals and net; penalty_days_amount = penalty_amount; its payslip amounts read as before', async () => {
+  it('S66 + edge case 25: the approved run’s line keeps its totals and net; penalty_days_amount = penalty_amount; its payslip amounts read as before', async () => {
     const line = await db.payrollLine.findUniqueOrThrow({
       where: { id: LINE },
       select: { penaltyDays: true, penaltyAmount: true, penaltyDaysAmount: true, net: true, monthSalary: true, basicSalary: true },

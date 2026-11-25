@@ -11,7 +11,7 @@
   of pay**, **Deduct a % of salary**, **Deduct a fixed amount**, **Referral to investigation**
   (optionally with days deducted). No free formulas: a new effect is code.
 - **GUESS** (spec 2026-11-25) — The **numbers are on the level**: days (quarter steps, above 0, at
-  most 30), a percent (above 0, at most 100, two decimals) or an amount (above EGP 0, at most
+  most 30 — Q2; an investigation's 0 days means none, Q11), a percent (above 0, at most 100, two decimals) or an amount (above EGP 0, at most
   1,000,000). A % action says which salary it is a % of — the salary for the month or the basic
   salary (§6). An action's effect and salary are fixed once it is added.
 - **DECIDED** — The seeded actions are today's ten: notice, warning, deduct days, referral to
@@ -143,6 +143,11 @@
 - **DECIDED** (owner, 2026-11-25) — At approval the penalty keeps a **snapshot** of its action's
   names, effect, salary base and numbers. Renaming, hiding or re-pricing later never changes it, its
   payslip or its History (only a backdated recount moves it, with today's catalogue, above).
+- **GUESS** (Q5, 2026-11-26) — A catalogue change after the stage review needs no new review: the HR
+  approval shows the level's current effect and number and fixes them; its History entry shows the
+  action fixed at approval when it differs from recording.
+- **GUESS** (Q7, 2026-11-26) — A level's fixed amount is catalogue data: whoever sees the catalogue
+  or the penalty sees it (stage heads, direct managers).
 - **DECIDED** (owner, 2026-11-18) — **Once per day.** Each violation has a *Once per day* setting
   (§7). When it is on, an employee can't get a second penalty for that violation on the **same
   date** while an earlier one on that date is pending or approved; the attempt is refused with a

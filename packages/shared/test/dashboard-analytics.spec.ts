@@ -49,7 +49,7 @@ describe('penalty kinds', () => {
     for (const a of other) expect(kind(a)).toBe('other');
   });
 
-  it('edge case 31: a school-added Record-only action counts as "Other"; any deducting effect as "Pay deductions"', () => {
+  it('S68 (dashboard kinds) + edge case 31: a school-added Record-only action counts as "Other"; any deducting effect as "Pay deductions"', () => {
     expect(penaltyKindOf({ code: null, effect: 'RECORD_ONLY', days: null })).toBe('other');
     expect(penaltyKindOf({ code: null, effect: 'DEDUCT_PERCENT', days: null })).toBe('deduct');
     expect(penaltyKindOf({ code: null, effect: 'DEDUCT_AMOUNT', days: null })).toBe('deduct');

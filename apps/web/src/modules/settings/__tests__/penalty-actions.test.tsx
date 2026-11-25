@@ -93,7 +93,7 @@ describe('Settings → Penalty actions (the list)', () => {
     expect(nav.replace).toHaveBeenCalledWith('/en/settings?actionsHidden=1', { scroll: false });
   });
 
-  it('read-only without hr.penalty_catalogue.manage: no Add, no row menus', async () => {
+  it('S48 (read-only card) — read-only without hr.penalty_catalogue.manage: no Add, no row menus', async () => {
     renderSettings(<PenaltyActionsCard />, 'en', sessionWithout('hr.penalty_catalogue.manage'));
     await screen.findByRole('table', { name: 'Penalty actions' });
     expect(screen.queryByRole('button', { name: 'Add action' })).toBeNull();
@@ -199,7 +199,7 @@ describe('the level editor: the number field follows the action', () => {
     expect(api.GET_PENALTY_ACTION_CHOICES).toHaveBeenCalled();
   });
 
-  it('switching days → % clears the number and asks for a percent, with the salary it is of; 12.345 and 101 are refused, 10 passes', async () => {
+  it('S62 — switching days → % clears the number and asks for a percent, with the salary it is of; 12.345 and 101 are refused, 10 passes', async () => {
     const user = userEvent.setup();
     api.UPDATE_VIOLATION.mockImplementation(() => ok(catalogue[0]!.violations[0]!));
     const dialog = await openEditor(user);
@@ -242,7 +242,7 @@ describe('the level editor: the number field follows the action', () => {
     await waitFor(() => expect((amount as HTMLInputElement).value).toBe('1,500'));
   });
 
-  it('switching between two day actions keeps the typed days (same unit)', async () => {
+  it('S62 (same unit) — switching between two day actions keeps the typed days (same unit)', async () => {
     const user = userEvent.setup();
     const dialog = await openEditor(user);
     await user.click(within(dialog).getByRole('combobox', { name: /Level 2 action/ }));

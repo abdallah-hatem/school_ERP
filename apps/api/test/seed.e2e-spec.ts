@@ -122,7 +122,7 @@ describe('Seed (e2e)', () => {
     expect(new Set(second.codes).size).toBe(second.codes.length);
   }, 120_000);
 
-  it('edge case 27: seed run twice, or after the school renamed "Warning" → the ten are ensured by code, never renamed back', async () => {
+  it('S68 (seed twice, school renames kept) + edge case 27: seed run twice, or after the school renamed "Warning" → the ten are ensured by code, never renamed back', async () => {
     const actions = app.get(PenaltyActionsService);
     expect(await db.penaltyAction.count({ where: { code: { not: null } } })).toBe(10);
     await actions.update(ACTION_ID.WARNING, { nameEn: 'Written warning', isActive: false }, null);
@@ -136,7 +136,7 @@ describe('Seed (e2e)', () => {
     }
   }, 120_000);
 
-  it('edge case 28: a catalogue naming an unknown action code → the seed stops with a clear error', () => {
+  it('S68 (unknown code stops the seed) + edge case 28: a catalogue naming an unknown action code → the seed stops with a clear error', () => {
     const catalogue = {
       groups: [
         {

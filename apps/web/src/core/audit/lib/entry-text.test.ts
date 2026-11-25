@@ -197,7 +197,7 @@ describe('penalty actions in the timeline (spec 2026-11-25)', () => {
     return formatAuditValue(field, value, t, has, locale, 'penalty');
   };
 
-  it('edge case 26: old entries holding DEDUCT_DAYS etc. still read through the kept locale keys', () => {
+  it('S67 + edge case 26: old entries holding DEDUCT_DAYS etc. still read through the kept locale keys', () => {
     expect(penalty('action', 'DEDUCT_DAYS', 'en')).toBe('Deduct days');
     expect(penalty('action', 'INVESTIGATION', 'ar')).toBe('إحالة للتحقيق');
   });

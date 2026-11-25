@@ -436,8 +436,8 @@ month**, level 4 **Deduct EGP 300**.
 1. **30 Nov (last day)** — a 10% penalty dated 30 Nov, recorded at 14:00. It belongs to **November**
    (the violation's month), whatever day it is approved.
 2. **1 Dec** — HR approves it. November's run is still a draft → November deducts it at its next
-   calculation; December's run doesn't. If November had been approved on 30 Nov at 16:00, the 1 Dec
-   approval is refused (month approved) — the correction is a December adjustment.
+   calculation; December's run doesn't. November can't be approved on 30 Nov while this penalty
+   waits (§6 refuses a month with a waiting penalty — Q1 below): it is approved or cancelled first.
 3. **31 May 2027 → 1 June 2027** (contract-year window): a penalty dated 31 May is level 3 (5%); the
    same violation on 1 June starts a new window → level 1 (Notice). The effect follows the level of
    its own date, not of the approval day.
@@ -495,6 +495,46 @@ month**, level 4 **Deduct EGP 300**.
     digits and "%" in both languages.
 31. The dashboard chart → a school-added Record-only action counts as "Other"; any deducting effect as
     "Pay deductions".
+
+## Answers to the blind scenarios' questions (2026-11-26)
+
+The blind scenarios (`2026-11-25-penalty-actions-scenarios.md`) raised 20 questions. Answers:
+**DECIDED (owner, 2026-11-26)** where marked, otherwise **GUESS (decided by Claude, 2026-11-26)**.
+
+- **Q1** — Walk F step 2 was wrong: §6 refuses to approve a month while a penalty dated in it waits,
+  so "November approved at 16:00 while the 30 Nov penalty waits" can't happen (fixed below).
+- **Q2** — A level's days: more than 0 up to 30, in ¼ steps (§4, §7 match).
+- **Q3** — `NET_FLOORED` only when the net would go **below** 0 after everything, adjustments
+  included. A net of exactly 0 isn't flagged.
+- **Q4 — DECIDED (owner, 2026-11-26)** — When the net floors at 0, what couldn't be deducted is
+  **written off** for that month, never carried forward. The payslip shows "Not deducted (pay too
+  low): X" and the line stays flagged.
+- **Q5** — No new stage review when the catalogue changes after it: the HR approval shows the level's
+  current effect and number and the snapshot is taken then; its History entry shows the action fixed
+  at approval when it differs from recording.
+- **Q6** — Any penalty dated in the month approved, cancelled or moved up a level after a draft's last
+  calculation marks the draft "Penalties changed since the last calculation", not only a recount.
+- **Q7** — A fixed amount is catalogue data: stage heads and direct managers see it.
+- **Q8 — DECIDED (owner, 2026-11-26)** — A fixed amount is a fine: **not** scaled for part-timers.
+- **Q9** — Without salary access a payroll line lists its deducting penalties by kind ("2 penalties:
+  0.5 day, 5%"), never "0 days" and never money, and doesn't carry the `NET_FLOORED` flag (beside a
+  visible fixed amount it would hint at the pay).
+- **Q10** — A level's percent: 0.01 to 100 (§7's 1–100 is the part-time percentages).
+- **Q11** — An investigation with 0 days means no days: stored as none, never 0.
+- **Q12** — The payslip's label: the effect's text, then the action's own name in brackets when it
+  isn't the effect's default ("Deduct EGP 200 (Late uniform fine)").
+- **Q13** — A % of the basic salary on the payslip names its base: "Deduct 10% of the basic salary
+  (12,345.67)", in both languages.
+- **Q14** — The day-priced part is split between the day penalties by the **largest remainder**
+  method, so the payslip's shares always add up to it (S10: 75.01 + 75.00; S11: 83.34 + 83.33 + 83.33).
+- **Q15** — A month Accounting returns to HR is re-priced at its next calculation (it reopened); §6.
+- **Q16** — Name uniqueness folds Arabic letter variants (أ/إ/آ → ا, ى → ي, ة → ه), case, marks
+  and spaces — the search's own folding (`search_fold`).
+- **Q17** — The business-doc edits below are applied with the build.
+- **Q18** — Ten seeded actions (investigation with or without days is one action).
+- **Q19** — The hide warning counts the levels and violations in use (active violations in active
+  groups) and names retired ones that still hold the action separately.
+- **Q20** — Out of scope: "whether an investigation is needed before a deduction" stays OPEN in §4.
 
 ## Owner questions
 

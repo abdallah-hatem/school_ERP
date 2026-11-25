@@ -172,7 +172,7 @@ describe('Penalty actions (e2e)', () => {
 
   // ── the list ──────────────────────────────────────────────────────────────
 
-  it('the migration seeded today’s ten, with today’s names, effects and order', async () => {
+  it('S64 — the migration seeded today’s ten, with today’s names, effects and order', async () => {
     const list = (await http(app).get('/hr/penalty-actions').expect(200)).body.data as PenaltyActionItem[];
     const seeded = list.filter((a) => a.code !== null);
     expect(seeded.map((a) => [a.code, a.nameEn, a.effect])).toEqual([
@@ -213,14 +213,14 @@ describe('Penalty actions (e2e)', () => {
     expect(change.after).toMatchObject({ nameEn: `${a.nameEn} renamed`, isActive: false });
   });
 
-  it('edge case 6: a % base sent for an action that isn’t Deduct % → 400; Deduct % without a base → 400', async () => {
+  it('S60 (a, b) + edge case 6: a % base sent for an action that isn’t Deduct % → 400; Deduct % without a base → 400', async () => {
     await createAction({ effect: 'DEDUCT_AMOUNT', percentBase: 'MONTH_SALARY' }).expect(400);
     await createAction({ effect: 'DEDUCT_PERCENT' }).expect(400);
     await createAction({ effect: 'DEDUCT_PERCENT', percentBase: null }).expect(400);
     await createAction({ effect: 'DEDUCT_PERCENT', percentBase: 'BASIC_SALARY' }).expect(201);
   });
 
-  it('edge case 7: a PATCH that tries to change an action’s effect or base → 400 PENALTY_ACTION_EFFECT_LOCKED', async () => {
+  it('S60 (c, d) + edge case 7: a PATCH that tries to change an action’s effect or base → 400 PENALTY_ACTION_EFFECT_LOCKED', async () => {
     const a = await percentAction();
     expect((await patchAction(a.id, { effect: 'DEDUCT_AMOUNT' }).expect(400)).body.error).toBe(ErrorCode.PENALTY_ACTION_EFFECT_LOCKED);
     expect((await patchAction(a.id, { percentBase: 'BASIC_SALARY' }).expect(400)).body.error).toBe(ErrorCode.PENALTY_ACTION_EFFECT_LOCKED);
@@ -230,7 +230,7 @@ describe('Penalty actions (e2e)', () => {
     });
   });
 
-  it('edge case 8: two actions with the same English (or Arabic) name, any case, hidden ones included → 409 PENALTY_ACTION_NAME_TAKEN', async () => {
+  it('S60 (e, f) + edge case 8: two actions with the same English (or Arabic) name, any case, hidden ones included → 409 PENALTY_ACTION_NAME_TAKEN', async () => {
     const a = await actionOk({ nameEn: unique('Written warning') });
     await patchAction(a.id, { isActive: false }).expect(200);
     const sameEn = await createAction({ nameEn: a.nameEn.toUpperCase() }).expect(409);
@@ -242,7 +242,7 @@ describe('Penalty actions (e2e)', () => {
     expect(await db.penaltyAction.count({ where: { nameEn: { equals: a.nameEn.toUpperCase() } } })).toBe(0);
   });
 
-  it('edge case 29: two people adding an action with the same name at once → the unique index lets one win; the other gets PENALTY_ACTION_NAME_TAKEN', async () => {
+  it('S60 (i) + edge case 29: two people adding an action with the same name at once → the unique index lets one win; the other gets PENALTY_ACTION_NAME_TAKEN', async () => {
     const names = { nameEn: unique('Race'), nameAr: unique('سباق') };
     const [x, y] = await Promise.all([createAction(names), createAction(names)]);
     expect([x.status, y.status].sort()).toEqual([201, 409]);
@@ -250,7 +250,7 @@ describe('Penalty actions (e2e)', () => {
     expect(await db.penaltyAction.count({ where: { nameEn: names.nameEn } })).toBe(1);
   });
 
-  it('edge case 11: deleting an action → no endpoint; the foreign keys are RESTRICT', async () => {
+  it('S61 (no delete) + edge case 11: deleting an action → no endpoint; the foreign keys are RESTRICT', async () => {
     const a = await amountAction();
     await violation([{ level: 1, actionId: a.id, amount: 20_000 }]);
     await http(app).delete(`/hr/penalty-actions/${a.id}`).expect(404);
@@ -259,19 +259,19 @@ describe('Penalty actions (e2e)', () => {
 
   // ── catalogue levels ──────────────────────────────────────────────────────
 
-  it('edge case 1: a Record-only level with a number sent by the API → 400 INVALID_LEVELS (VALUE_NOT_ALLOWED)', async () => {
+  it('S59 (a) + edge case 1: a Record-only level with a number sent by the API → 400 INVALID_LEVELS (VALUE_NOT_ALLOWED)', async () => {
     const res = await newViolation([{ level: 1, actionId: ACTION_ID.WARNING, days: 1 }]).expect(400);
     expect(res.body).toMatchObject({ error: ErrorCode.INVALID_LEVELS, params: { problem: 'VALUE_NOT_ALLOWED' } });
   });
 
-  it('edge case 2: Deduct days with 0, a negative, 0.3 or 31 days → DAYS_INVALID; missing → DAYS_REQUIRED', async () => {
+  it('S58 + edge case 2: Deduct days with 0, a negative, 0.3 or 31 days → DAYS_INVALID; missing → DAYS_REQUIRED', async () => {
     expect((await newViolation([{ level: 1, actionId: ACTION_ID.DEDUCT_DAYS, days: 0 }]).expect(400)).body.params).toEqual({ problem: 'DAYS_INVALID' });
     // -1, 0.3 and 31 aren't day counts at all (quarter steps 0–30, §7): refused by the DTO.
     for (const days of [-1, 0.3, 31]) await newViolation([{ level: 1, actionId: ACTION_ID.DEDUCT_DAYS, days }]).expect(400);
     expect((await newViolation([{ level: 1, actionId: ACTION_ID.DEDUCT_DAYS }]).expect(400)).body.params).toEqual({ problem: 'DAYS_REQUIRED' });
   });
 
-  it('edge case 3: Deduct % with 0, -5, 100.01 or 12.345 → PERCENT_INVALID; 100 → allowed; missing → PERCENT_REQUIRED', async () => {
+  it('S56 + edge case 3: Deduct % with 0, -5, 100.01 or 12.345 → PERCENT_INVALID; 100 → allowed; missing → PERCENT_REQUIRED', async () => {
     const a = await percentAction();
     for (const percent of [0, -5, 100.01, 12.345]) {
       expect((await newViolation([pct(a.id, percent)]).expect(400)).body.params).toEqual({ problem: 'PERCENT_INVALID' });
@@ -281,7 +281,7 @@ describe('Penalty actions (e2e)', () => {
     expect(ok.levels[0]).toMatchObject({ percent: 100, days: null, amount: null, action: { id: a.id, effect: 'DEDUCT_PERCENT', percentBase: 'MONTH_SALARY', isActive: true } });
   });
 
-  it('edge case 4: Deduct amount with 0, a negative, a fraction of a piastre, or above EGP 1,000,000 → AMOUNT_INVALID; missing → AMOUNT_REQUIRED', async () => {
+  it('S57 + edge case 4: Deduct amount with 0, a negative, a fraction of a piastre, or above EGP 1,000,000 → AMOUNT_INVALID; missing → AMOUNT_REQUIRED', async () => {
     const a = await amountAction();
     for (const amount of [0, -100, 10.5, 100_000_001]) {
       expect((await newViolation([{ level: 1, actionId: a.id, amount }]).expect(400)).body.params).toEqual({ problem: 'AMOUNT_INVALID' });
@@ -290,12 +290,12 @@ describe('Penalty actions (e2e)', () => {
     expect((await violation([{ level: 1, actionId: a.id, amount: 100_000_000 }])).levels[0].amount).toBe(100_000_000);
   });
 
-  it('edge case 10: a level naming an action id that doesn’t exist → 400 PENALTY_ACTION_NOT_FOUND', async () => {
+  it('S61 (missing) + edge case 10: a level naming an action id that doesn’t exist → 400 PENALTY_ACTION_NOT_FOUND', async () => {
     const res = await newViolation([{ level: 1, actionId: '00000000-0000-4000-8000-000000000000' }]).expect(400);
     expect(res.body.error).toBe(ErrorCode.PENALTY_ACTION_NOT_FOUND);
   });
 
-  it('hr.violation.update keeps each level’s action by name and its number, before → after', async () => {
+  it('S70 — hr.violation.update keeps each level’s action by name and its number, before → after', async () => {
     const a = await percentAction();
     const v = await violation([{ level: 1, actionId: ACTION_ID.DEDUCT_DAYS, days: 1 }]);
     await setLevels(v.id, [pct(a.id, 10)]).expect(200);
@@ -318,7 +318,7 @@ describe('Penalty actions (e2e)', () => {
     expect(await db.penaltyRecord.findUniqueOrThrow({ where: { id: waiting.id }, select: { actionNameEn: true } })).toEqual({ actionNameEn: `${a.nameEn} (new)` });
   });
 
-  it('edge case 15: a level’s action switched from Deduct days to Deduct % while a penalty waits → it shows the % now and gets it at approval', async () => {
+  it('S36 (days → % while waiting) + edge case 15: a level’s action switched from Deduct days to Deduct % while a penalty waits → it shows the % now and gets it at approval', async () => {
     const a = await percentAction();
     const v = await violation([{ level: 1, actionId: ACTION_ID.DEDUCT_DAYS, days: 1 }]);
     const waiting = await record(await employee(), v.id, '2013-01-06');
@@ -366,7 +366,7 @@ describe('Penalty actions (e2e)', () => {
 
   // ── timeline walks ────────────────────────────────────────────────────────
 
-  it('walk A + edge cases 13, 14: approved, then the action renamed and its % changed — the penalty, its payslip and the approved run keep 10% and the old name', async () => {
+  it('S33 + walk A + edge cases 13, 14: approved, then the action renamed and its % changed — the penalty, its payslip and the approved run keep 10% and the old name', async () => {
     const month = nextMonth();
     // 1 Nov: Mona adds "Salary deduction %" (Deduct a %, of the salary for the month).
     const a = await percentAction('MONTH_SALARY', { nameEn: unique('Salary deduction %'), nameAr: unique('خصم نسبة من الراتب') });
@@ -403,7 +403,7 @@ describe('Penalty actions (e2e)', () => {
     expect((await getRecord(second.id)).percent).toBe(10);
   });
 
-  it('walk B + edge case 9: an action hidden while a level still uses it — the level keeps it, penalties still get it, other levels can’t pick it, shown again it is pickable', async () => {
+  it('S37 + S61 (hidden) + walk B + edge case 9: an action hidden while a level still uses it — the level keeps it, penalties still get it, other levels can’t pick it, shown again it is pickable', async () => {
     const month = nextMonth();
     const fighting = await violation([
       { level: 1, actionId: ACTION_ID.WARNING },
@@ -443,7 +443,7 @@ describe('Penalty actions (e2e)', () => {
     await setLevels(leaving.id, [{ level: 1, actionId: ACTION_ID.INVESTIGATION }]).expect(200);
   });
 
-  it('walk C + edge case 21: a % approved while the month is a draft counts at the next calculation; once approved, recording into it is refused', async () => {
+  it('S31 + S46 (recording) + walk C + edge case 21: a % approved while the month is a draft counts at the next calculation; once approved, recording into it is refused', async () => {
     const month = nextMonth();
     const a = await percentAction();
     const v = await violation([pct(a.id, 10)]);
@@ -463,7 +463,7 @@ describe('Penalty actions (e2e)', () => {
     expect(refused.body.error).toBe(ErrorCode.PAYROLL_APPROVED);
   });
 
-  it('walk D + edge cases 18, 20: the salary changes before the month’s approval → the % follows the line’s salary at approval; a part-timer’s % of the basic salary', async () => {
+  it('S39 + walk D + edge cases 18, 20: the salary changes before the month’s approval → the % follows the line’s salary at approval; a part-timer’s % of the basic salary', async () => {
     const month = nextMonth();
     const a = await percentAction('MONTH_SALARY');
     const basic = await percentAction('BASIC_SALARY');
@@ -491,7 +491,7 @@ describe('Penalty actions (e2e)', () => {
     expect(line).toMatchObject({ monthSalary: 600_000, penaltyAmount: 60_000 + 100_000 });
   });
 
-  it('walk E + edge case 22: a backdated penalty moves levels with different effects; each recount entry shows its action change; 0.5 day + 5% + EGP 300 = EGP 900.00', async () => {
+  it('S40 + walk E + edge case 22: a backdated penalty moves levels with different effects; each recount entry shows its action change; 0.5 day + 5% + EGP 300 = EGP 900.00', async () => {
     const month = nextMonth();
     const five = await percentAction();
     const three = await amountAction();
@@ -533,7 +533,7 @@ describe('Penalty actions (e2e)', () => {
     expect(lineOf(run, omar)).toMatchObject({ penaltyDaysAmount: 15_000, penaltyAmount: 90_000 });
   });
 
-  it('walk F: the violation’s month decides, whatever day it is approved; a new contract year starts the levels again', async () => {
+  it('S43, S45 + walk F: the violation’s month decides, whatever day it is approved; a new contract year starts the levels again', async () => {
     const month = nextMonth();
     const next = nextMonth();
     const a = await percentAction();
@@ -582,7 +582,7 @@ describe('Penalty actions (e2e)', () => {
     return id;
   };
 
-  it('end to end: an HR officer records a % and a fixed-amount penalty → the stage head reviews → HR approves → the draft prices them → approved → the payslip lists each with its own amount, in English and Arabic', async () => {
+  it('S25 + S71 (two steps) — end to end: an HR officer records a % and a fixed-amount penalty → the stage head reviews → HR approves → the draft prices them → approved → the payslip lists each with its own amount, in English and Arabic', async () => {
     const month = nextMonth();
     // A stage with its own head, so recording waits for the stage review (§4 two steps).
     const flowStage = (await db.stage.create({ data: { nameEn: unique('Prep'), nameAr: unique('إعدادي') } })).id;

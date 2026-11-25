@@ -28,4 +28,11 @@ fixed in code. The seed loads today's ten actions with today's names, so nothing
 - **Dashboard:** the approved-penalties chart's kinds are Notice & warning, Pay deductions (days, %,
   fixed, investigation with days) and Other.
 - **Existing data:** every level, penalty and payslip reads as before — the ten actions keep their
-  names, and old payslip amounts don't change.
+  names; old payslips' totals and nets don't change (a day penalty's own share may move by a
+  piastre now that the shares add up exactly).
+- **Answers to the blind scenarios (2026-11-26):** a floored net writes the rest off for the month
+  and the payslip says "Not deducted (pay too low)" (owner); a fixed amount isn't scaled for
+  part-timers (owner); day shares on the payslip add up exactly; a draft says penalties changed after
+  any approval or cancellation since its calculation; without salary access a line lists its
+  deducting penalties by kind; action names are unique with Arabic letter variants folded; the
+  payslip label names a school action and a % of basic's base. Full list in the spec.

@@ -72,7 +72,8 @@ lines each role sees: §2 Roles (enforced, P4).
 3. **Penalty deductions** = for the approved deducting penalties dated in the month:
    `round(total days × salary for the month ÷ divisor)` (day deductions and investigations with
    days, priced once) + each % penalty's `round(base × percent ÷ 100)` (base: the line's salary for
-   the month or basic salary) + each fixed amount. (GUESS, spec 2026-11-25)
+   the month or basic salary) + each fixed amount. (GUESS, spec 2026-11-25) A fixed amount is a fine
+   and is **not** scaled for part-timers (**DECIDED**, owner 2026-11-26, Q8).
 4. **Lateness deductions** = days from the month's lateness minutes (§5) × day value.
 5. **Adjustments** = sum of the month's one-off additions (e.g. overtime, exam bonus) minus one-off
    deductions, each with a required reason.
@@ -91,8 +92,17 @@ lines each role sees: §2 Roles (enforced, P4).
   calculation (approval recalculates first): the salary when the month is approved, like day
   deductions. A penalty stores the percent, never money.
 - **GUESS** — Net never goes below 0. If deductions exceed the salary, net is 0 and the line is
-  flagged for review ("Deductions exceed this month's pay — net set to 0"). **DECIDED** (owner,
-  2026-11-26): no monthly cap on penalty deductions (§4).
+  flagged for review ("Deductions exceed this month's pay — net set to 0") — only when the net
+  would go **below** 0 after everything, adjustments included; a net of exactly 0 isn't flagged
+  (GUESS, Q3). **DECIDED** (owner, 2026-11-26): no monthly cap on penalty deductions (§4); what
+  the floor leaves undeducted is **written off** for that month, never carried forward, and the
+  payslip shows "Not deducted (pay too low): X" (**DECIDED**, owner 2026-11-26, Q4).
+- **GUESS** (Q6, 2026-11-26) — A draft whose month has a penalty approved, cancelled or moved up a
+  level after its last calculation says "Penalties changed since the last calculation".
+- **GUESS** (Q15, 2026-11-26) — A month Accounting returns to HR is re-priced at its next calculation
+  (from the line's salary then), like any draft: it has reopened.
+- **GUESS** (Q9, 2026-11-26) — A line seen without salary access lists its deducting penalties by
+  kind ("2 penalties: 0.5 day, 5%"), no money, and without the net-floored flag.
 - **GUESS** — No pro-rata for employees who join or leave mid-month in the demo (OPEN for later).
 - **DECIDED** — A line is flagged **needs review** when it has a flag (net floored at 0) or the
   employee has pending penalties in the month.
@@ -107,9 +117,11 @@ lines each role sees: §2 Roles (enforced, P4).
   0.75 day". Each line keeps the grace of its calculation; a line calculated before 2026-11-18
   shows the minutes alone until it is recalculated.
 - **DECIDED** — A day penalty's amount on the payslip is its share of the line's day-priced
-  deduction (its days ÷ the line's penalty days × the line's day-priced amount); a % or fixed
-  penalty shows its own amount. Only the day shares can differ from the line total by a piastre;
-  the line total is what is paid.
+  deduction, by its days; a % or fixed penalty shows its own amount. **GUESS** (Q14, 2026-11-26) —
+  the day shares are split by the largest remainder, so they always add up to the line exactly.
+- **GUESS** (Q12, Q13, 2026-11-26) — A deducting penalty's payslip label adds the action's own name
+  when it isn't the effect's default ("Deduct EGP 200 (Late uniform fine)"); a % of the basic salary
+  names the base ("Deduct 10% of the basic salary (12,345.67)").
 - **GUESS** — An adjustment for an employee who is no longer in the run (deactivated before the last
   recalculate) stays recorded but doesn't count, and is shown as "not applied".
 - **DECIDED** — **Dashboard:** active headcount (by stage), the current month's payroll run (status
