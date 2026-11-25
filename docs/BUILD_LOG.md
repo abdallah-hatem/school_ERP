@@ -774,7 +774,9 @@ phase live in `docs/build-log/`.
 - Client proposal (kept outside the repo): add ownership/licence, payment schedule, timeline, VAT,
   acceptance, several campuses, academics in or out — owner to fill the blanks.
 - Reselling: make the repo private before selling; a written IP agreement with the team; map each new
-  school's rules to settings / data / fixed.
+  school's rules to settings / data / fixed. **Feature flags / module on-off and a licence level wait
+  until a second school signs** (owner, 2026-11-26) — not built before then; per-school rules keep
+  going into settings meanwhile.
 - Sign-in follow-ups (from #218): a show/hide eye on the password box (smoke helpers must first find
   the field with `{ exact: true }`); the filled-input look and button sheen from the mockup if wanted.
 
