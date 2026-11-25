@@ -707,18 +707,21 @@ phase live in `docs/build-log/`.
   own route (`/api/upload/...`, session + origin + size checked before reading), so the global Server
   Action limit stays 3 MB; one upload component shared by contracts and Add employee; 429s retried and
   failed pages named. This also fixed uploads over 1 MB (employee photos) that had been failing.
+- 2026-11-25 — **#291 merged: contract templates.** HR edits contract templates in a Word-style editor
+  (field chips, optional phrases, Arabic and English, versions that never change), and prints any
+  contract to a PDF made on the server; each printed copy is kept on its contract (row ⋯ → Print
+  contract). Review fixes in the PR: the API image ships only the built app (no source; 2.35 → 1.69 GB),
+  PDF renders time out and queue with limits (503 when busy), lists don't load full texts, one History
+  entry per print. CI found a real bug on the way: a rename saved a new version (stored text came back
+  with its keys reordered); fixed. A penalty-dialog unit test that failed just after midnight UTC now
+  pins the date.
 
 ## Next up
 
 - **Contracts round 3** (owner, 2026-11-24): fix the rest of the time-walk review's findings (B1 done in
   #283; next B2: deactivating while the last month's payroll is a draft drops that month's pay);
   mid-year hires' first contract ends 31 May (one season for everyone, GUESS).
-- **Contract templates** (owner, 2026-11-24): option A, spec approved; PR #291 open, web screens and
-  screenshots still being finished. Independent review (2026-11-25): one blocker — the API Docker image
-  shipped the TypeScript source (`apps/api` has no `files` list) — plus PDF timeout/queue limits, list
-  queries loading full texts, a print also logging an "opened" entry, the default not preselected past
-  the first page. Accepted: copy printing audited inside the service instead of `@Audited` (the render
-  can outlast the transaction). Builder fixing.
+
 - **Pentest with ARTEX** (owner, 2026-11-25): try https://github.com/BaaRai/ARTEX against the app
   later — on a throwaway or testing environment, never production. Not started.
 - **Employee documents tab** (proposed 2026-11-24): ID copy, certificates, insurance forms.
