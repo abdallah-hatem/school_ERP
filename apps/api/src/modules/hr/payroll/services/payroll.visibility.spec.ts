@@ -242,9 +242,10 @@ describe('payroll — scopes (R5)', () => {
   it('a scoped payroll viewer gets only their employees’ lines, adjustments and totals', async () => {
     const { service, repository } = makeService({ 'hr.payroll.view': PRIMARY });
     await service.get('r1');
-    expect(repository.findLinesPage).toHaveBeenCalledWith('r1', { search: undefined, departmentId: undefined, flagged: undefined }, { OR: [{ stageId: { in: ['primary'] } }, { otherStages: { some: { stageId: { in: ['primary'] } } } }] }, undefined, undefined);
+    expect(repository.findLinesPage).toHaveBeenCalledWith('r1', { search: undefined, departmentId: undefined, flagged: undefined }, { OR: [{ stageId: { in: ['primary'] } }, { otherStages: { some: { stageId: { in: ['primary'] } } } }] }, undefined, undefined, undefined);
     expect(repository.findAdjustments).toHaveBeenCalledWith('r1', undefined, { OR: [{ stageId: { in: ['primary'] } }, { otherStages: { some: { stageId: { in: ['primary'] } } } }] });
-    expect(repository.totalsFor).toHaveBeenCalledWith(['r1'], { OR: [{ stageId: { in: ['primary'] } }, { otherStages: { some: { stageId: { in: ['primary'] } } } }] });
+    // The last argument: the salary scope "flagged" may count NET_FLOORED in — undefined, every line's pay.
+    expect(repository.totalsFor).toHaveBeenCalledWith(['r1'], { OR: [{ stageId: { in: ['primary'] } }, { otherStages: { some: { stageId: { in: ['primary'] } } } }] }, undefined);
   });
 
   it('a scoped viewer’s totals hide money unless their salary scope covers it', async () => {

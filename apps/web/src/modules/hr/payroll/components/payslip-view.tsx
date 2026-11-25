@@ -180,12 +180,7 @@ export function PayslipView({ payslip, backHref }: { payslip: Payslip; backHref:
                       <span>{t('payroll.payslip.level', { level: p.level })}</span>
                       <span aria-hidden="true">·</span>
                       <span>{payslipActionLabel(t, locale, p.action, { days: p.days, percent: p.percent, amount: p.fixedAmount }, payslip.basicSalary)}</span>
-                      {p.days === null ? null : (
-                        <>
-                          <span aria-hidden="true">·</span>
-                          <Days value={p.days} />
-                        </>
-                      )}
+                      {/* The label already says the days ("Deduct 0.5 day"): no second days item on the card. */}
                     </p>
                   </li>
                 ))}
