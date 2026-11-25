@@ -3,7 +3,7 @@
 import { ContractDecision, ContractPhase, ContractStatus, formatContractYear, lastDayOf, type Contract, type ContractDecision as Decision } from '@school-erp/shared';
 import { EmployeeLink } from '@/core/employees';
 import { PersonAvatar } from '@/shared/components/ui/person-avatar';
-import { SkeletonIdentity, SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
+import { SkeletonIdentity, SkeletonPill } from '@/shared/components/ui/skeleton';
 import { BidiText } from '@/shared/components/ui/bidi-text';
 import { SlotText, TEXT_SLOT } from '@/shared/components/ui/slot-text';
 import { StatusPill } from '@/shared/components/ui/status-pill';
@@ -108,11 +108,15 @@ export function DecisionCell({ contract }: { contract: Contract }) {
   );
 }
 
+/**
+ * The decision as most rows read before the review: its pill alone. The line under it (who decided,
+ * when, the note) is data — a pill and a line drew a 68px row for the usual 64px one (smoke,
+ * 2026-11-25, rows held to ±2px).
+ */
 export function DecisionCellSkeleton() {
   return (
     <span className="flex flex-col items-start gap-1">
       <SkeletonPill />
-      <SkeletonText className="text-xs" width="w-32" />
     </span>
   );
 }

@@ -21,17 +21,35 @@ export function Skeleton({ className, ...props }: ComponentProps<'div'>) {
  * One line of text in its real line box: pass the text's font classes (`text-sm`, `font-display
  * text-2xl`…) so the line height — and so the block's height — is the loaded text's; the bar is
  * `width` wide. Use it instead of a fixed `h-4` guess wherever a skeleton stands in for text.
+ *
+ * `figures`: the loaded line is a figure in the Latin face (`Money`, `Days`, a `tabular` count or
+ * date). In Arabic that inline run sits in the Arabic line and makes it 1–2px taller than plain text
+ * (a phone card of figures grew 3–9px past its skeleton; smoke, 2026-11-25); the bar then sits in
+ * the same `tabular` inline box, so the line is as tall in both languages.
  */
-export function SkeletonText({ className, width = 'w-24', barClassName }: { className?: string; width?: string; barClassName?: string }) {
+export function SkeletonText({
+  className,
+  width = 'w-24',
+  barClassName,
+  figures = false,
+}: {
+  className?: string;
+  width?: string;
+  barClassName?: string;
+  figures?: boolean;
+}) {
+  const bar = (
+    <span
+      className={cn(
+        'inline-block h-[0.8em] max-w-full rounded-md bg-secondary align-middle motion-safe:animate-pulse motion-safe:[animation-duration:1.8s]',
+        width,
+        barClassName,
+      )}
+    />
+  );
   return (
     <span data-slot="skeleton" aria-hidden="true" className={cn('block min-w-0', className)}>
-      <span
-        className={cn(
-          'inline-block h-[0.8em] max-w-full rounded-md bg-secondary align-middle motion-safe:animate-pulse motion-safe:[animation-duration:1.8s]',
-          width,
-          barClassName,
-        )}
-      />
+      {figures ? <span className="tabular">{bar}</span> : bar}
     </span>
   );
 }
