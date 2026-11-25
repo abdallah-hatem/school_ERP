@@ -733,6 +733,9 @@ phase live in `docs/build-log/`.
   tab fixed; a guard test failing any table column whose cell isn't one line of text and has no
   `skeleton`; row and card heights must match within ±2px; every screen those checks catch fixed (at
   least Roles → Held by); the rule in CONVENTIONS. Being built.
+- **Discard changes in the template editor** (owner, 2026-11-25): a button that puts a template back to
+  its last saved version after a mistaken edit, enabled only when something changed, with a confirm.
+  Being built on `feature/template-discard-changes`.
 - **Pentest with ARTEX** (owner, 2026-11-25): try https://github.com/BaaRai/ARTEX against the app
   later — on a throwaway or testing environment, never production. Not started.
 - **Employee documents tab** (proposed 2026-11-24): ID copy, certificates, insurance forms.
