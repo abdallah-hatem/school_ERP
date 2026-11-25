@@ -1,4 +1,4 @@
-# Penalty actions — spec (draft for the owner, 2026-11-25)
+# Penalty actions — spec (approved by the owner, 2026-11-26)
 
 Owner's request (2026-11-25): make penalty actions dynamic and seed them, and make "what an action
 does to pay" dynamic too — a school-managed **Penalty actions** list, each action with **one effect
@@ -8,6 +8,9 @@ Settings, §9 Audit and §2 Roles. Status of each rule: DECIDED (the owner's bri
 default — change it if wrong), OPEN (needs the owner; my default is given and is what gets built if
 he doesn't answer). **Nothing here is applied to the business docs yet**: the proposed edits are at
 the end, for after the owner approves.
+
+**Approved as written (owner, 2026-11-26: "Approve, no cap"):** every GUESS below stands, no mockups
+(owner, 2026-11-25: "if mockups unnecessary dont do it"), and **no monthly cap** on penalty deductions.
 
 ## What exists today
 
@@ -102,12 +105,12 @@ recalculates first (§6), so it is **the salary when that month's payroll is app
   and direct managers see without salary access (§2) — a leak, and two figures that drift.
 - There is no pro-rata or effective date for a salary change (§6 GUESS), so the month has one salary.
 
-### Caps — no new cap; the existing net floor stands (OPEN, carried over from §4)
+### Caps — no cap; the existing net floor stands (DECIDED, owner 2026-11-26)
 
 §4 already has "**OPEN** — Whether a monthly cap on penalty deductions applies under the labour law",
 and §6 has the floor: net never goes below 0; a line whose deductions exceed its pay has net 0 and
 is flagged **needs review** (`NET_FLOORED`). % and fixed amounts make a large deduction easier to set
-up, so the question matters more now. **Default (built if unanswered): no cap**, the floor and flag
+up, so the question matters more now. **DECIDED (owner, 2026-11-26): no cap**, the floor and flag
 as today, and the payroll line's flag says why ("Deductions exceed this month's pay — net set to
 0"). If the owner confirms a legal cap (Egyptian labour law is commonly read as limiting penalty
 deductions to five days' pay a month — the school's lawyer should confirm), it becomes an HR rule
@@ -468,7 +471,7 @@ month**, level 4 **Deduct EGP 300**.
     and gets it at approval.
 16. Two % penalties in one month (10% and 2.5% of 9,999.99) → 1,000.00 + 250.00, each rounded on its own.
 17. Penalties exceeding the month's pay (e.g. 60% + EGP 5,000 on 9,000) → net 0, `NET_FLOORED`, needs
-    review (no cap — OPEN).
+    review (no cap — DECIDED).
 18. A % of the basic salary for a part-timer, larger than a share of their salary for the month →
     allowed; the floor still applies.
 19. A fixed amount on a stage head's screen → shown (catalogue data); the EGP taken from the employee
@@ -493,10 +496,10 @@ month**, level 4 **Deduct EGP 300**.
 31. The dashboard chart → a school-added Record-only action counts as "Other"; any deducting effect as
     "Pay deductions".
 
-## OPEN — for the owner
+## Owner questions
 
-1. **A monthly cap on penalty deductions** (carried over from §4's OPEN). Default: no cap; net floored
-   at 0 and flagged, as today.
+None left. The monthly cap is answered: **no cap** (owner, 2026-11-26); net floored at 0 and flagged,
+as today. §4's OPEN on the cap becomes DECIDED with the business-doc edits.
 
 Everything else above is GUESS (or DECIDED from the brief): the owner can change any of it in review.
 The three I would most like him to glance at: the numbers on the level (not the action), "gross" not
@@ -576,6 +579,6 @@ and add:
 
 ## Out of scope
 
-The annual raise and its effect (Planned) · a cap on deductions (OPEN) · allowances as a % base ·
+The annual raise and its effect (Planned) · a cap on deductions (decided: none) · allowances as a % base ·
 effects on lateness · formulas · per-employee overrides of a level's number · changing an action's
 effect in place · restoring a hidden action's levels in bulk.
