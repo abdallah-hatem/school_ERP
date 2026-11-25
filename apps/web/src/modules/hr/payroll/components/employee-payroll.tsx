@@ -7,6 +7,7 @@ import { DataTable, type DataTableColumn } from '@/shared/components/data-table/
 import { RowActions, rowActionsColumn } from '@/shared/components/data-table/row-actions';
 import { EmptyState } from '@/shared/components/layout/empty-state';
 import { Money } from '@/shared/components/ui/figures';
+import { SkeletonPill, SkeletonText } from '@/shared/components/ui/skeleton';
 import { OpenIcon, PayrollIcon, PayslipIcon } from '@/shared/components/ui/icons';
 import { formatMonth } from '@/shared/lib/format';
 import { useTranslation } from '@/shared/providers/i18n-provider';
@@ -46,6 +47,7 @@ export function EmployeePayroll({ payrollPath, tabPath, rows, total, page, limit
       header: t('payroll.list.columns.month'),
       className: 'min-w-40',
       card: 'title',
+      skeleton: <SkeletonText className="font-bold" width="w-28" />,
       cell: ({ month }) => <span className="font-bold">{formatMonth(month, locale)}</span>,
     },
     {
@@ -53,6 +55,8 @@ export function EmployeePayroll({ payrollPath, tabPath, rows, total, page, limit
       header: t('payroll.list.columns.status'),
       className: 'w-32',
       card: 'status',
+      // The loaded cell is a pill, taller than a line of text: the skeleton row draws one too.
+      skeleton: <SkeletonPill />,
       cell: ({ status }) => <RunStatusPill status={status} />,
     },
     {
@@ -61,6 +65,7 @@ export function EmployeePayroll({ payrollPath, tabPath, rows, total, page, limit
       align: 'end',
       className: 'w-36',
       card: 'highlight',
+      skeleton: <SkeletonText className="font-extrabold" width="w-20" />,
       cell: ({ net }) => <Money value={net} currency={false} className="font-extrabold" />,
     },
     rowActionsColumn(t('payroll.table.columns.actions'), ({ runId, lineId, status, month }) => (
