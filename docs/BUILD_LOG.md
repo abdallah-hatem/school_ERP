@@ -766,6 +766,13 @@ phase live in `docs/build-log/`.
   basic, no new cap). No mockups: a new list in the existing Settings design plus fields on the
   existing level editor (owner, 2026-11-25: "if mockups unnecessary dont do it"). Approved
   2026-11-26 with no cap; being built on `feature/penalty-actions`.
+- **On-premise school (owner, 2026-11-26):** if a school hosts it on its own server, we get SSH with
+  sudo on a clean Ubuntu LTS server (≥ 4 cores, 8 GB RAM, 100 GB SSD) and set it up like our own
+  (Docker, Coolify, Traefik, Postgres, backups). Remote access: **SSH open to the internet, hardened**
+  (key-only, no root login, fail2ban, ufw with only SSH/80/443, Coolify's panel via an SSH tunnel,
+  automatic security updates); Tailscale if their IT refuses. Also from them: `erp.<their-domain>`
+  pointed at the server, ports 80/443, outgoing internet (image pulls), an off-server backup target,
+  SMTP, a contact person. Not started — no on-premise school yet.
 - **Pentest with ARTEX** (owner, 2026-11-25): try https://github.com/BaaRai/ARTEX against the app
   later — on a throwaway or testing environment, never production. Not started.
 - **Employee documents tab** (proposed 2026-11-24): ID copy, certificates, insurance forms.
