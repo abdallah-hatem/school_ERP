@@ -234,6 +234,9 @@ export function ContractTemplatesList({ editorHref }: { editorHref: string }) {
       id: 'changed',
       header: t('contractTemplates.list.columns.changed'),
       className: 'w-60 whitespace-normal',
+      // Across the card: in a half-width cell on a phone the date and time wrapped to a second line,
+      // and the card grew past its one-line skeleton (smoke 23-skeletons, phone-ar).
+      card: 'wide',
       skeleton: <SkeletonText className="text-sm" width="w-44" />,
       cell: (row) => (
         <span className="text-sm text-muted-foreground">

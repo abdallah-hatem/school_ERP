@@ -110,6 +110,11 @@ const previewLine = () => screen.getByTestId('penalty-preview').textContent;
 
 describe('RecordPenaltyDialog', () => {
   beforeEach(() => {
+    // The form's default date and the mocks' "today" are both read from the clock: a run crossing
+    // midnight (CI at 00:00 UTC, PR #291) saw two different days. Only Date is faked, at midday, so
+    // userEvent and waitFor keep their real timers.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 10, 24, 12, 0, 0));
     router.refresh.mockReset();
     apis.GET_PENALTY_PREVIEW.mockReset();
     apis.CREATE_PENALTY.mockReset();
@@ -119,7 +124,10 @@ describe('RecordPenaltyDialog', () => {
     serveEmployees();
     serveViolations();
   });
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+  });
 
   it('Preview updates when employee, violation or date changes', async () => {
     const user = userEvent.setup();
