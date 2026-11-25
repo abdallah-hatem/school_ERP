@@ -739,6 +739,12 @@ phase live in `docs/build-log/`.
   Labels only; the data and rules are unchanged.
 - 2026-11-26 — **#311 merged: penalty actions spec approved** by the owner as written, **no monthly
   cap** (net floored at 0 and flagged, as today), no mockups. Build started on `feature/penalty-actions`.
+- 2026-11-26 — **#313 merged: dropdowns open on the chosen option.** The shared select highlighted its
+  first row on open, so Enter right after opening changed the value (Direct manager → "No direct
+  manager"; the user form's linked employee → "No employee record"). Now the chosen option is
+  highlighted and scrolled into view. Options can carry a muted second part: the manager picker shows
+  "Name · Department" with the department in grey (owner's request). Candidates for the same hint, not
+  changed: the record-penalty and template-preview employee pickers ("Name · code").
 
 ## Next up
 
@@ -748,9 +754,7 @@ phase live in `docs/build-log/`.
 
 
 
-- **Dropdowns open on the chosen option** (found reviewing #307, 2026-11-25): the shared select
-  highlights its first row on open while the check mark is on the chosen one, so Enter right after
-  opening changes the value. Being fixed in the shared component on `fix/select-highlights-selected`.
+
 - **Penalty actions as school data** (owner, 2026-11-25): a Settings list of penalty actions (EN/AR
   names, hide/show), each with an effect type fixed in code — record only, deduct days, deduct a % of
   salary, deduct a fixed amount, investigation (± days) — and the school setting its numbers; no free
