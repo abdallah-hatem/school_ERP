@@ -311,7 +311,7 @@ describe('SidebarNav (grouped by module)', () => {
       cleanup();
 
       // An HR officer: HR pages only, no Users / Roles / Activity.
-      renderNav('full', 'en', sessionWithout('core.users.view', 'core.roles.view', 'core.audit.view', 'core.settings.view', 'core.stages.view', 'hr.settings.view', 'hr.lists.view', 'hr.penalty_catalogue.view', 'accounting.settings.view', 'core.notifications.view'));
+      renderNav('full', 'en', sessionWithout('core.users.view', 'core.roles.view', 'core.audit.view', 'core.settings.view', 'core.stages.view', 'hr.settings.view', 'hr.lists.view', 'hr.penalty_catalogue.view', 'accounting.settings.view', 'core.notifications.view', 'hr.contract_templates.manage'));
       for (const name of ['Users', 'Roles', 'Activity', 'Settings']) expect(screen.queryByRole('link', { name })).toBeNull();
       expect(screen.queryByRole('button', { name: 'Administration' })).toBeNull();
       expect(screen.getByRole('link', { name: 'Employees' })).toBeTruthy();
@@ -326,6 +326,7 @@ describe('SidebarNav (grouped by module)', () => {
         'hr.penalty_catalogue.view',
         'accounting.settings.view',
         'core.notifications.view',
+        'hr.contract_templates.manage',
       ];
       renderNav('full', 'en', sessionWithout(...settingsKeys.filter((k) => k !== 'hr.lists.view')));
       expect(screen.getByRole('link', { name: 'Settings' })).toBeTruthy();

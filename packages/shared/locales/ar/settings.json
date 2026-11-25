@@ -25,6 +25,10 @@
       "title": "لائحة الجزاءات",
       "description": "المخالفات وجزاء كل تكرار"
     },
+    "contractTemplates": {
+      "title": "نماذج العقود",
+      "description": "نصوص العقود التي تطبعها شؤون الموظفين، بحقول تُملأ من السجلات"
+    },
     "accounting": {
       "title": "المحاسبة",
       "description": "قاعدة ضريبة الرواتب: شرائح ضريبة كسب العمل وصندوق الشهداء وحصة التأمينات."
@@ -60,6 +64,8 @@
       "list": "استخدم 100 حرف أو أقل.",
       "group": "استخدم 200 حرف أو أقل.",
       "violation": "استخدم 300 حرف أو أقل.",
+      "address": "استخدم 300 حرف أو أقل.",
+      "signatory": "استخدم 100 حرف أو أقل.",
       "note": "استخدم 1,000 حرف أو أقل."
     },
     "time": "اختر وقتًا على رأس الساعة أو نصفها.",
@@ -87,7 +93,21 @@
     "workEnd": "نهاية العمل",
     "workEndPlaceholder": "اختر وقتًا",
     "timeHint": "كل نصف ساعة.",
-    "workingDays": "أيام العمل"
+    "workingDays": "أيام العمل",
+    "contractDetails": "للعقود",
+    "contractDetailsHint": "تُطبع في العقود في حقلي «عنوان المدرسة» و«ممثل المدرسة».",
+    "addressEn": "عنوان المدرسة بالإنجليزية",
+    "addressAr": "عنوان المدرسة بالعربية",
+    "signatoryNameEn": "اسم الموقّع بالإنجليزية",
+    "signatoryNameAr": "اسم الموقّع بالعربية",
+    "signatoryTitleEn": "صفة الموقّع بالإنجليزية",
+    "signatoryTitleAr": "صفة الموقّع بالعربية",
+    "addressEnPlaceholder": "5 El Maarefa St, Nasr City, Cairo",
+    "addressArPlaceholder": "5 شارع المعرفة، مدينة نصر، القاهرة",
+    "signatoryNameEnPlaceholder": "Mr Hisham Kamel",
+    "signatoryNameArPlaceholder": "أ. هشام كامل",
+    "signatoryTitleEnPlaceholder": "Principal",
+    "signatoryTitleArPlaceholder": "مدير المدرسة"
   },
   "logo": {
     "title": "شعار المدرسة",

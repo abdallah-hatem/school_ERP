@@ -29,6 +29,8 @@ export interface AppConfig {
     /** Scheduled jobs run on their clock (off under NODE_ENV=test unless JOBS_ENABLED=true). */
     enabled: boolean;
   };
+  /** Contract PDFs: the Chromium to launch (null = playwright-core's), renders at once, the time limit. */
+  pdf: { chromiumPath: string | null; concurrency: number; timeoutMs: number; queueSize: number; queueWaitMs: number };
   /** Web Push (VAPID); null: push alerts are off on this server. */
   push: { publicKey: string; privateKey: string; subject: string } | null;
 }
@@ -62,6 +64,13 @@ export const configuration = (): AppConfig => {
       heavy: env.RATE_LIMIT_HEAVY,
     },
     jobs: { enabled: env.JOBS_ENABLED ?? env.NODE_ENV !== 'test' },
+    pdf: {
+      chromiumPath: env.PDF_CHROMIUM_PATH ?? null,
+      concurrency: env.PDF_RENDER_CONCURRENCY,
+      timeoutMs: env.PDF_RENDER_TIMEOUT_MS,
+      queueSize: env.PDF_RENDER_QUEUE_SIZE,
+      queueWaitMs: env.PDF_RENDER_QUEUE_WAIT_MS,
+    },
     push: vapidFrom(env),
   };
 };

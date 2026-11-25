@@ -11,7 +11,11 @@ Who did what, to which record, and when — for the whole system. Spec:
   review's approval, HR's approval, a rejection at either step, cancel — owner 2026-11-21); monthly lateness (per employee, minutes before and after); payroll runs (create,
   recalculate, approve) and adjustments (add, remove); contracts (every decision, §3) and their
   signed copy — a page added (its name, the number of pages before → after) or removed (with the
-  reason; the file is kept) — owner 2026-11-24.
+  reason; the file is kept) — owner 2026-11-24; contract templates (create, edit — a new version,
+  rename, default mark —, hide, show) and printed contract copies (printed, opened — spec
+  2026-11-24-contract-templates). A template's text change reads "version 3 → 4" (the versions keep
+  the texts); a printed copy's entry keeps the template, version, language, whether its text was
+  edited and PDF or print — no amounts.
 - **DECIDED** (spec 2026-11-24; owner 2026-11-24) — Opening a contract document is recorded, unlike
   other reads: a notice letter, a request, an end's attachment or a page of the signed copy, each
   opening an entry on the contract (who, when, which file). The viewer shows every page, so opening

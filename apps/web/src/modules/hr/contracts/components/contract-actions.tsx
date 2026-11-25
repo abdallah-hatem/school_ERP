@@ -39,6 +39,7 @@ import { abilitiesOf, contractError, nextAction } from '../lib/contract-text';
 import type { DecisionChoice } from '../lib/decision-form';
 import { DecisionSheet } from './decision-sheet';
 import { EndContractDialog } from './end-contract-dialog';
+import { usePrintContractMenu } from './print-contract';
 import { SignedCopyField, SignedCopyViewer, uploadPickedPages, useCanManageSignedCopy } from './signed-copy';
 
 type Confirm = 'renew' | 'approve' | 'reject' | 'withdraw' | 'undo' | 'deactivate' | 'cancel' | null;
@@ -59,6 +60,7 @@ export function ContractActions({
   today,
   historyHref,
   decideBelow = 'cards',
+  printInMenu = false,
 }: {
   contract: Contract;
   /** The school's today (`YYYY-MM-DD`, Cairo). */
@@ -70,6 +72,11 @@ export function ContractActions({
    * or `always` (the employee's tab, where there is one current contract).
    */
   decideBelow?: 'cards' | 'always';
+  /**
+   * "Print contract" in the ⋯ — on HR → Contracts (a renewed row offers this year's and next year's)
+   * and on the employee's tab (this row's contract only), so the row's actions fit its width.
+   */
+  printInMenu?: boolean | 'thisRowOnly';
 }) {
   const { t, has, locale } = useTranslation();
   const can = useCan();
@@ -85,6 +92,7 @@ export function ContractActions({
   const [renewing, setRenewing] = useState(false);
   const canUploadSignedCopy = useCanManageSignedCopy(contract) && contract.status !== ContractStatus.CANCELLED;
   const stale = useRef(false);
+  const print = usePrintContractMenu(contract, { withNext: printInMenu !== 'thisRowOnly' });
 
   const abilities = abilitiesOf(contract, {
     manage: can('hr.contracts.manage'),
@@ -183,6 +191,7 @@ export function ContractActions({
     },
     { id: 'undoNotRenewing', label: t('contracts.actions.undoNotRenewing'), icon: RestoreIcon, hidden: !abilities.undoNotRenewing, onSelect: () => open('undo') },
     { id: 'withdrawNotice', label: t('contracts.actions.withdrawNotice'), icon: RestoreIcon, hidden: !abilities.withdrawNotice, onSelect: () => open('withdraw') },
+    ...(printInMenu ? print.actions : []),
     { id: 'signedCopy', label: t('contracts.signedCopy.upload'), icon: SignedCopyIcon, hidden: !canUploadSignedCopy, onSelect: () => setViewing(true) },
     { id: 'history', label: t('contracts.actions.history'), icon: HistoryIcon, hidden: !historyHref, href: historyHref },
     { id: 'end', label: t('contracts.actions.end'), icon: CloseIcon, destructive: true, hidden: !abilities.end, onSelect: () => setEnding(true) },
@@ -362,6 +371,7 @@ export function ContractActions({
         confirmLabel={t('contracts.deactivate.confirm')}
         onConfirm={() => run(DEACTIVATE_CONTRACTS([contract.id]), t('contracts.deactivate.done'))}
       />
+      {printInMenu ? print.dialog : null}
       {abilities.end ? (
         <EndContractDialog contract={contract} today={today} open={ending} onOpenChange={setEnding} onDone={() => router.refresh()} />
       ) : null}

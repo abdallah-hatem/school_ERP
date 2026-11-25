@@ -69,6 +69,15 @@
   Nobody acts on their own contract — a System admin neither — so an account that manages
   contracts must be linked to its employee record, like pay and penalties. Roles stay editable by
   the admin, so these are only the starting defaults.
+- **GUESS** (spec 2026-11-24-contract-templates, approved by the owner as drafted, 2026-11-24) —
+  **Contract templates and printed copies** (§3): **Manage contract templates** (new, whole school)
+  — create, edit, hide and show templates and set a work system's default — HR manager (and the
+  System admin). **Print a contract** — Manage contracts plus View contracts covering the employee,
+  as every contract write; a template with a salary field also needs **that employee's salary**
+  (View salaries), otherwise it is refused, not printed blank. Never one's own contract. **Open a
+  printed copy** — View contracts covering the employee, plus their salary for a copy that holds
+  one; without it the copy is listed with no Open. **School address and signatory** — part of school
+  settings (changing school settings).
 - **DECIDED** (owner, 2026-11-23) — **Separation of duties in payroll** (§6): nobody adds or removes
   an adjustment on their own payroll line, and nobody approves a month in which they adjusted their
   own line. Whoever created the month's run may still approve it, as long as they adjusted no line of

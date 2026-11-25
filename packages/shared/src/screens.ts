@@ -22,6 +22,8 @@ export const SETTINGS_SECTION_ACCESS = {
   lists: 'hr.lists.view',
   hrRules: 'hr.settings.view',
   catalogue: 'hr.penalty_catalogue.view',
+  // Contract templates (spec 2026-11-24-contract-templates): one key, no view-only reader.
+  contractTemplates: 'hr.contract_templates.manage',
   // The payroll tax rule (§10): the Accountant's section.
   accounting: 'accounting.settings.view',
   // The school's notification defaults, reminder timing and retention (§11): the System admin
@@ -37,6 +39,8 @@ export const SETTINGS_SECTIONS = Object.keys(SETTINGS_SECTION_ACCESS) as Setting
  */
 export const SETTINGS_SECTION_PARTS = {
   hrRules: ['lateness', 'payroll', 'penalties', 'employees', 'calendar'],
+  // The address and signatory a printed contract reads (contract templates spec).
+  school: ['contracts'],
 } as const satisfies Partial<Record<SettingsSectionId, readonly string[]>>;
 export type SettingsPartOf<S extends SettingsSectionId> = S extends keyof typeof SETTINGS_SECTION_PARTS
   ? (typeof SETTINGS_SECTION_PARTS)[S][number]
@@ -105,6 +109,9 @@ export const SCREENS = {
   payrollTaxes: screen('/accounting/payroll-taxes', 'accounting.payroll.view'),
   payrollTaxesMonth: screen('/accounting/payroll-taxes/:month', 'accounting.payroll.view'),
   settings: screen('/settings', ...Object.values(SETTINGS_SECTION_ACCESS)),
+  // The template editor (Settings → HR → Contract templates → New template / Edit).
+  contractTemplateNew: screen('/settings/contract-templates/new', 'hr.contract_templates.manage'),
+  contractTemplate: screen('/settings/contract-templates/:id', 'hr.contract_templates.manage'),
   activity: screen('/activity', 'core.audit.view'),
   users: screen('/users', 'core.users.view'),
   userNew: screen('/users/new', 'core.users.manage'),

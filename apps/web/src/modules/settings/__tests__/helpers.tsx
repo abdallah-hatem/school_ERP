@@ -37,6 +37,12 @@ export const school: SchoolSettings = {
   workStart: '07:30',
   workEnd: '15:00',
   workingDays: ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY'],
+  addressEn: '',
+  addressAr: '',
+  signatoryNameEn: '',
+  signatoryNameAr: '',
+  signatoryTitleEn: '',
+  signatoryTitleAr: '',
 };
 
 export const hrSettings: HrSettings = {

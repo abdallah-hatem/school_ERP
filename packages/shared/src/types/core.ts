@@ -60,6 +60,14 @@ export interface SchoolSettings {
   workStart: TimeOfDay;
   workEnd: TimeOfDay;
   workingDays: Weekday[];
+  /** The school's address (contract templates: the "School address" field), each up to 300 characters; '' = not set. */
+  addressEn: string;
+  addressAr: string;
+  /** Who signs contracts for the school (the "School representative" field), each up to 100 characters. */
+  signatoryNameEn: string;
+  signatoryNameAr: string;
+  signatoryTitleEn: string;
+  signatoryTitleAr: string;
 }
 
 /** `PATCH /settings/school` — any subset, no `logoUrl`. */

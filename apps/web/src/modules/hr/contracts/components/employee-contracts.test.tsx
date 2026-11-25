@@ -119,19 +119,23 @@ describe('EmployeeContracts (profile tab)', () => {
     expect(within(currentRow!).getByRole('button', { name: 'Decide' })).toBeTruthy();
     expect(within(previousRow!).queryByRole('button', { name: 'Renew' })).toBeNull();
     expect(within(previousRow!).queryByRole('button', { name: 'Decide' })).toBeNull();
+    // Print contract is in each row's ⋯ (contract templates), never a button beside it: the row's
+    // actions fit the card.
+    expect(table().queryByRole('button', { name: 'Print contract' })).toBeNull();
     // No "Contract history" here: this is the history.
     const menu = await openRowActions(user, 'Mona Khalil', within(currentRow!));
     expect(menuItemNames(menu)).toEqual([
       "Not renewing — school's decision",
       "Record the employee's notice",
       'Record an early termination request',
+      'Print contract',
       'Upload signed copy',
       'End for another reason…',
     ]);
     await user.keyboard('{Escape}');
-    // Owner 2026-11-24: an old contract is scanned too — its ⋯ holds only the signed copy.
+    // Owner 2026-11-24: an old contract is scanned too — its ⋯ holds the signed copy, and it prints.
     const oldMenu = await openRowActions(user, 'Mona Khalil', within(previousRow!));
-    expect(menuItemNames(oldMenu)).toEqual(['Upload signed copy']);
+    expect(menuItemNames(oldMenu)).toEqual(['Print contract', 'Upload signed copy']);
   });
 
   it('view only without hr.contracts.manage', () => {
@@ -139,6 +143,37 @@ describe('EmployeeContracts (profile tab)', () => {
     expect(table().queryByRole('button', { name: 'Renew' })).toBeNull();
     expect(table().queryByRole('button', { name: 'Decide' })).toBeNull();
     expect(table().queryByRole('button', { name: /^Actions for/ })).toBeNull();
+    // Edge case 2: printing is acting on the contract — not with "view contracts" only.
+    expect(table().queryByRole('button', { name: 'Print contract' })).toBeNull();
+  });
+
+  it('lists each contract\'s printed copies under its row: Open, or "contains salary" without a file (edge case 24)', () => {
+    const printed = {
+      id: 'cp-1',
+      contractId: 'c-1',
+      templateId: 't-1',
+      templateNameEn: 'Full-time contract',
+      templateNameAr: 'عقد عمل بدوام كامل',
+      templateVersion: 3,
+      language: 'AR' as const,
+      textEdited: true,
+      containsSalary: true,
+      output: 'PDF' as const,
+      pageCount: 2,
+      fileUrl: '/files/contract-copies/a.pdf',
+      downloadName: 'EMP-0012-2026-27-full-time-contract.pdf',
+      printedBy: { id: 'u-1', name: 'Mona Ibrahim' },
+      printedAt: '2026-06-02T08:00:00.000Z',
+      signed: false,
+    };
+    renderTab({ rows: [contract({ copies: [printed, { ...printed, id: 'cp-0', textEdited: false, fileUrl: null }] }), previous] });
+    const copies = within(document.querySelector<HTMLElement>('[data-view="table"] [data-testid="contract-copies"]')!);
+    const items = copies.getAllByRole('listitem');
+    expect(items[0]!.textContent).toContain('Printed copy · 2 Jun 2026 · Full-time contract v3 · Mona Ibrahim');
+    expect(items[0]!.textContent).toContain('Text edited');
+    expect(within(items[0]!).getByRole('link').getAttribute('href')).toBe('/files/contract-copies/a.pdf');
+    expect(items[1]!.textContent).toContain('contains salary');
+    expect(within(items[1]!).queryByRole('link')).toBeNull();
   });
 
   it('pages through the API (the URL), without scrolling', async () => {
@@ -220,7 +255,7 @@ describe('EmployeeContracts (profile tab)', () => {
       expect(upcomingRow!.textContent).not.toContain('Current');
       expect(within(upcomingRow!).queryByRole('button', { name: 'Renew' })).toBeNull();
       expect(within(upcomingRow!).queryByRole('button', { name: 'Decide' })).toBeNull();
-      expect(menuItemNames(await openRowActions(user, 'Mona Khalil', within(upcomingRow!)))).toEqual(['Upload signed copy']);
+      expect(menuItemNames(await openRowActions(user, 'Mona Khalil', within(upcomingRow!)))).toEqual(['Print contract', 'Upload signed copy']);
       expect(currentRow!.textContent).toContain('2026/27');
       expect(currentRow!.textContent).toContain('Current');
     });
@@ -231,7 +266,8 @@ describe('EmployeeContracts (profile tab)', () => {
       const [, , currentRow] = table().getAllByRole('row') as HTMLElement[];
       expect(within(currentRow!).queryByRole('button', { name: 'Renew' })).toBeNull();
       const menu = await openRowActions(user, 'Mona Khalil', within(currentRow!));
-      expect(menuItemNames(menu)).toEqual(['Upload signed copy', 'End for another reason…']);
+      // This row's contract only: next year's is its own row (no "This year's / Next year's" here).
+      expect(menuItemNames(menu)).toEqual(['Print contract', 'Upload signed copy', 'End for another reason…']);
     });
 
     it('from 1 June the API sends 2027/28 as CURRENT: it gets Renew and Decide', () => {
@@ -245,6 +281,8 @@ describe('EmployeeContracts (profile tab)', () => {
       expect(within(nowCurrent!).getByRole('button', { name: 'Renew' })).toBeTruthy();
       expect(within(past!).queryByRole('button', { name: 'Renew' })).toBeNull();
       expect(within(past!).queryByRole('button', { name: 'Decide' })).toBeNull();
+      // It still prints, from its ⋯.
+      expect(within(past!).getByRole('button', { name: /^Actions for/ })).toBeTruthy();
     });
   });
 
@@ -257,7 +295,7 @@ describe('EmployeeContracts (profile tab)', () => {
     expect(within(row).queryByRole('button', { name: 'Renew' })).toBeNull();
     expect(within(row).queryByRole('button', { name: 'Decide' })).toBeNull();
     const menu = await openRowActions(user, 'Mona Khalil', within(row));
-    expect(menuItemNames(menu)).toEqual(['Upload signed copy', 'Cancel contract']);
+    expect(menuItemNames(menu)).toEqual(['Print contract', 'Upload signed copy', 'Cancel contract']);
     await user.click(within(menu).getByRole('menuitem', { name: 'Cancel contract' }));
     const dialog = await screen.findByRole('dialog', { name: 'Cancel this contract?' });
     await user.type(within(dialog).getByRole('textbox'), 'Never joined');

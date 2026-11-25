@@ -1,9 +1,10 @@
-# Contract templates — spec (draft for the owner, 2026-11-24)
+# Contract templates — spec (approved by the owner, 2026-11-24)
 
 Owner's request (2026-11-24): "a contract template where I can change and edit data and then print
 it". Layout: **option A, "Word-style editor + preview dialog"** (owner's pick, 2026-11-24; mockup
 `design/mockups/contract-templates.html`, screenshots `design/mockups/screenshots/contract-templates/a-*.png`).
-Builds on the contracts module (spec `docs/specs/2026-11-24-contracts.md`, §3 Contracts). Status of
+Builds on the contracts module (spec `docs/specs/2026-11-24-contracts.md`, §3 Contracts). **Approved as
+drafted by the owner on 2026-11-24**, with both OPEN questions taking their defaults (now DECIDED). Status of
 each rule: DECIDED (owner), GUESS (my default, change it if wrong), OPEN (needs the owner; my default
 is given and is what gets built if he doesn't answer).
 
@@ -174,7 +175,7 @@ with which salary. The signed scan upload is queued separately ("contracts round
 | Setting | Default | Source |
 |---|---|---|
 | School address (English, Arabic) | Empty (the "School address" field prints empty until set) | GUESS — Settings → School, `core.settings.edit`; up to 300 characters each |
-| School signatory: name and title (English, Arabic) — who signs contracts for the school | Empty (the "School representative" field prints empty until set) | GUESS — Settings → School, `core.settings.edit`; up to 100 characters each. See OPEN 1 |
+| School signatory: name and title (English, Arabic) — who signs contracts for the school | Empty (the "School representative" field prints empty until set) | DECIDED (owner, 2026-11-24) — one signatory, Settings → School, `core.settings.edit`; up to 100 characters each (was OPEN 1) |
 | Contract templates | One generic sample, "Full-time contract", default for full-time | GUESS — Settings → HR → Contract templates, `hr.contract_templates.manage` |
 
 Setting keys: `school.addressEn`, `school.addressAr`, `school.signatoryNameEn`,
@@ -300,7 +301,7 @@ web preview and the API's PDF use the **same** function and the same print CSS, 
 the PDF. The zod schema of a document (`contractDocumentSchema`: node types, field keys, size) is
 shared too and checked on every save and print.
 
-### PDF: made on the server with headless Chromium — GUESS (see OPEN 2)
+### PDF: made on the server with headless Chromium — DECIDED (owner, 2026-11-24; was OPEN 2)
 
 | | Browser print (`window.print()` of a print-styled page) | Server rendering (headless Chromium in the API) |
 |---|---|---|
@@ -513,13 +514,13 @@ School settings — `PUT /settings/school` takes the six new keys (`core.setting
     needed: Open serves the kept PDF; the document JSON is kept for reading and for a future re-render
     only if a PDF were ever lost (restored from backup with the database).
 
-## OPEN — the owner's decisions (few; my default is built if there's no answer)
+## Decided — the owner's answers (were OPEN)
 
-1. **Who signs for the school.** One signatory in Settings → School (name and title), printed on
+1. **DECIDED (owner, 2026-11-24): one signatory in settings.** **Who signs for the school.** One signatory in Settings → School (name and title), printed on
    every contract — or a choice of signer on each print (e.g. the principal for teachers, the
    director for administrative staff)? **Default: one signatory in settings**; for an exception,
    "Edit text" on that copy.
-2. **The PDF is made on the server.** It adds Chromium to the API's Docker image (~+150–250 MB, also
+2. **DECIDED (owner, 2026-11-24): server rendering with headless Chromium.** **The PDF is made on the server.** It adds Chromium to the API's Docker image (~+150–250 MB, also
    in the images self-hosted schools receive) and a few hundred MB of RAM while rendering, in return
    for identical PDFs, exact reprints and the phone's share sheet. The alternative — the browser's
    own print — costs nothing but keeps no PDF and prints differently per browser. **Default: server

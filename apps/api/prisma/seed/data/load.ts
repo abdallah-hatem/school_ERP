@@ -1,6 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { parseContractDocument, WORK_SYSTEMS, type CreateContractTemplateRequest } from '@school-erp/shared';
 import { violationLevelsProblem } from '@school-erp/shared';
+import { SAMPLE_CONTRACT_TEMPLATE } from './contract-template';
 import { FALLBACK_CATALOGUE, FALLBACK_SCHOOL } from './fallback';
 import {
   DEMO_VIOLATION_KEYS,
@@ -18,6 +20,11 @@ import {
  *                     oncePerDay?, levels: [{ action, days? }] }] }] }
  *                   (`oncePerDay` defaults to true — set false on violations that repeat in a day)
  *   logo.png        (or logo.jpg / logo.svg) — optional
+ *   contract-templates.json  — optional: the school's contract templates, replacing the generic
+ *                   sample: [{ nameEn, nameAr, defaultForWorkSystem: "FULL_TIME" | … | null,
+ *                   bodyAr, bodyEn: null | <document> }] — the documents as the editor saves them
+ *                   (ProseMirror JSON; easiest: build them in the screen, then copy
+ *                   `GET /hr/contract-templates/:id`'s `bodyAr` / `bodyEn`)
  *
  * `SEED_DATA_DIR` points somewhere else (absolute or relative to the working directory).
  */
@@ -86,4 +93,25 @@ export function loadSeedData(dir = localDataDir()): SeedData {
   assertCatalogue(catalogue, 'local');
   const logo = LOGO_FILES.map((f) => join(dir, f)).find((p) => existsSync(p)) ?? null;
   return { source: 'local', school, catalogue, logoPath: logo };
+}
+
+/**
+ * The contract templates to seed (contract templates spec → Settings additions): the school's from
+ * `contract-templates.json` when present — client material, git-ignored — else the generic sample.
+ * Each is checked like a save from the screen.
+ */
+export function loadContractTemplates(dir = localDataDir()): { source: 'local' | 'fallback'; templates: CreateContractTemplateRequest[] } {
+  const path = join(dir, 'contract-templates.json');
+  if (!existsSync(path)) return { source: 'fallback', templates: [SAMPLE_CONTRACT_TEMPLATE] };
+  const templates = readJson<CreateContractTemplateRequest[]>(path);
+  if (!Array.isArray(templates) || templates.length === 0) throw new Error('seed: contract-templates.json needs at least one template');
+  for (const tpl of templates) {
+    if (!tpl.nameEn || !tpl.nameAr) throw new Error('seed: contract-templates.json has a template without both names');
+    if (tpl.defaultForWorkSystem != null && !(WORK_SYSTEMS as readonly string[]).includes(tpl.defaultForWorkSystem)) {
+      throw new Error(`seed: contract template "${tpl.nameEn}" has an unknown work system`);
+    }
+    if (!parseContractDocument(tpl.bodyAr, { requireContent: true }).ok) throw new Error(`seed: contract template "${tpl.nameEn}" has an invalid bodyAr`);
+    if (tpl.bodyEn != null && !parseContractDocument(tpl.bodyEn).ok) throw new Error(`seed: contract template "${tpl.nameEn}" has an invalid bodyEn`);
+  }
+  return { source: 'local', templates: templates.map((tpl) => ({ ...tpl, defaultForWorkSystem: tpl.defaultForWorkSystem ?? null, bodyEn: tpl.bodyEn ?? null })) };
 }

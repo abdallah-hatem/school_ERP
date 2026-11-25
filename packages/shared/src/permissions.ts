@@ -77,6 +77,8 @@ export const PERMISSIONS = {
   // notices, early termination and ending a contract
   'hr.contracts.view': hr,
   'hr.contracts.manage': hr,
+  // hr — contract templates (spec 2026-11-24-contract-templates): create, edit, hide / show, defaults
+  'hr.contract_templates.manage': hr,
   // hr — lateness
   'hr.lateness.view': hr,
   'hr.lateness.edit': hr,

@@ -1,0 +1,50 @@
+# The API image (docs/ARCHITECTURE.md → Deployment model): one image per version, run per school.
+# Build from the repository root:  docker build -f deploy/docker/Dockerfile.api -t school-erp-api .
+# Self-hosted schools receive this built image, never the source.
+
+# ── build ───────────────────────────────────────────────────────────────────────────────────────
+FROM node:22-bookworm-slim AS build
+WORKDIR /repo
+RUN apt-get update -y && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/* \
+  && corepack enable
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json turbo.json ./
+COPY packages/shared/package.json packages/shared/
+COPY apps/api/package.json apps/api/
+COPY apps/web/package.json apps/web/
+RUN pnpm install --frozen-lockfile --filter api... --ignore-scripts
+COPY packages/shared packages/shared
+COPY apps/api apps/api
+RUN pnpm --filter @school-erp/shared build \
+  && pnpm --filter api exec prisma generate \
+  && pnpm --filter api build \
+  && pnpm deploy --filter api --prod --legacy /out \
+  # Only what runs: the compiled dist, the schema and migrations, package.json and the production
+  # node_modules — never src/, test/ or the seed's TypeScript (schools receive no source).
+  && mkdir -p /final/prisma \
+  && cp -r apps/api/dist /final/dist \
+  && cp -r apps/api/prisma/migrations apps/api/prisma/schema.prisma /final/prisma/ \
+  && cp /out/package.json /final/ \
+  && cp -r /out/node_modules /final/node_modules \
+  && cd /final && /repo/apps/api/node_modules/.bin/prisma generate --schema /final/prisma/schema.prisma \
+  && find /final/node_modules -name '*.map' -delete \
+  && rm -rf /final/node_modules/@fontsource/*/files/*-ext-* /final/node_modules/@fontsource/*/files/*.woff \
+     /final/node_modules/@fontsource/*/files/*cyrillic* /final/node_modules/@fontsource/*/files/*vietnamese*
+
+# ── run ─────────────────────────────────────────────────────────────────────────────────────────
+FROM node:22-bookworm-slim
+ENV NODE_ENV=production \
+    # Contract PDFs (contract templates spec, owner 2026-11-24): Chromium's headless shell, installed
+    # with its system libraries where playwright-core looks for it. JS and network are off per
+    # render; the fonts are bundled in node_modules (@fontsource, OFL).
+    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+WORKDIR /app
+# Owned by node from the start: a `chown -R` afterwards would copy all of node_modules into a new layer.
+COPY --from=build --chown=node:node /final ./
+RUN apt-get update -y && apt-get install -y --no-install-recommends openssl \
+  && node node_modules/playwright-core/cli.js install --with-deps chromium-headless-shell \
+  && rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/* /tmp/* \
+  && mkdir -p /app/uploads && chown node:node /app /app/uploads
+USER node
+EXPOSE 3001
+# Migrations run per school as a release step (`prisma migrate deploy`, docs/ARCHITECTURE.md), not on start.
+CMD ["node", "dist/main"]

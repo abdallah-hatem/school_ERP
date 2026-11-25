@@ -41,6 +41,8 @@ export const AuditEntityType = {
   PUSH_DEVICE: 'push_device',
   /** One employee contract (spec 2026-11-24). Its label is the employee's two names. */
   EMPLOYEE_CONTRACT: 'employee_contract',
+  /** One contract template (Settings → HR → Contract templates). Label: its two names. */
+  CONTRACT_TEMPLATE: 'contract_template',
   /** One contract year's school calendar (Settings → HR rules). Label: the year, `2026/27`. */
   SCHOOL_CALENDAR: 'school_calendar',
 } as const;
@@ -241,6 +243,15 @@ export const AUDIT_ACTIONS = {
   // A contract document (notice letter, request, attachment, a page of the signed copy) was opened
   // (a sensitive folder).
   'hr.contract.document_open': { module: 'hr', entityType: E.EMPLOYEE_CONTRACT, kind: 'access' },
+  // A copy printed from a template (contract templates spec): template, version, language, edited — no amounts.
+  'hr.contract.copy_print': { module: 'hr', entityType: E.EMPLOYEE_CONTRACT, kind: 'create' },
+  // A printed copy opened (a sensitive folder, like a contract document).
+  'hr.contract.copy_open': { module: 'hr', entityType: E.EMPLOYEE_CONTRACT, kind: 'access' },
+  // hr — contract templates: never deleted, only hidden; a text change is a new version
+  'hr.contract_template.create': { module: 'hr', entityType: E.CONTRACT_TEMPLATE, kind: 'create' },
+  'hr.contract_template.update': { module: 'hr', entityType: E.CONTRACT_TEMPLATE, kind: 'update' },
+  'hr.contract_template.hide': { module: 'hr', entityType: E.CONTRACT_TEMPLATE, kind: 'status' },
+  'hr.contract_template.show': { module: 'hr', entityType: E.CONTRACT_TEMPLATE, kind: 'status' },
   // The contract's signed copy (owner, 2026-11-24): a page added, or removed with a reason (kept).
   'hr.contract.signed_copy_add': { module: 'hr', entityType: E.EMPLOYEE_CONTRACT, kind: 'update' },
   'hr.contract.signed_copy_remove': { module: 'hr', entityType: E.EMPLOYEE_CONTRACT, kind: 'update' },

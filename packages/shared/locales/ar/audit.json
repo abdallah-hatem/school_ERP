@@ -34,6 +34,7 @@
     "notification_settings": "إعدادات الإشعارات",
     "push_device": "جهاز التنبيهات",
     "employee_contract": "عقد",
+    "contract_template": "نموذج عقد",
     "school_calendar": "تقويم المدرسة"
   },
   "actions": {
@@ -144,8 +145,16 @@
         "document_open": "فتح مستند من عقد {entity}",
         "cancel": "إلغاء عقد للموظف {entity}",
         "not_renew_undo": "التراجع عن عدم تجديد عقد {entity}",
+        "copy_print": "طباعة نسخة من عقد {entity}",
+        "copy_open": "فتح نسخة مطبوعة من عقد {entity}",
         "signed_copy_add": "إضافة صفحة إلى العقد الموقّع لـ {entity}",
         "signed_copy_remove": "حذف صفحة من العقد الموقّع لـ {entity}"
+      },
+      "contract_template": {
+        "create": "إنشاء نموذج العقد {entity}",
+        "update": "تعديل نموذج العقد {entity}",
+        "hide": "إخفاء نموذج العقد {entity}",
+        "show": "إظهار نموذج العقد {entity} من جديد"
       },
       "school_calendar": {
         "update": "تعديل تقويم المدرسة لعام {entity}"
@@ -235,7 +244,13 @@
       "defaultLanguage": "اللغة الافتراضية",
       "workStart": "بداية العمل",
       "workEnd": "نهاية العمل",
-      "workingDays": "أيام العمل"
+      "workingDays": "أيام العمل",
+      "addressEn": "عنوان المدرسة (بالإنجليزية)",
+      "addressAr": "عنوان المدرسة (بالعربية)",
+      "signatoryNameEn": "اسم الموقّع (بالإنجليزية)",
+      "signatoryNameAr": "اسم الموقّع (بالعربية)",
+      "signatoryTitleEn": "صفة الموقّع (بالإنجليزية)",
+      "signatoryTitleAr": "صفة الموقّع (بالعربية)"
     },
     "hr": {
       "lateness": {
@@ -307,12 +322,22 @@
     "endReason": "سبب الإنهاء",
     "document": "المستند",
     "nextContract": "العقد التالي",
-    "signedCopyPages": "صفحات العقد الموقّع",
-    "signedCopyFile": "صفحة العقد الموقّع",
     "term1Start": "أول يوم في الترم الأول",
     "term1End": "آخر يوم في الترم الأول",
     "term2Start": "أول يوم في الترم الثاني",
-    "nonRenewalDeadline": "الموعد النهائي لعدم التجديد"
+    "nonRenewalDeadline": "الموعد النهائي لعدم التجديد",
+    "template": "النموذج",
+    "templateVersion": "إصدار النموذج",
+    "language": "اللغة",
+    "textEdited": "تعديل النص",
+    "output": "طريقة الإخراج",
+    "copy": "النسخة المطبوعة",
+    "version": "الإصدار",
+    "defaultForWorkSystem": "افتراضي لـ",
+    "hidden": "مخفي",
+    "languages": "اللغات",
+    "signedCopyPages": "صفحات العقد الموقّع",
+    "signedCopyFile": "صفحة العقد الموقّع"
   },
   "totals": {
     "net": "الصافي",

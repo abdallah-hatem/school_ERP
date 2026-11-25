@@ -113,7 +113,7 @@ per-account lockout (Sign-in limits); every endpoint declares its permission (Pe
   ```
   default-src 'self'; script-src 'self' 'nonce-<nonce>' 'strict-dynamic'; style-src 'self' 'unsafe-inline';
   img-src 'self' data: blob: <api>; font-src 'self'; connect-src 'self' <api>; worker-src 'self';
-  manifest-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
+  manifest-src 'self'; frame-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
   ```
 
   `'unsafe-eval'` is added in development only (React's dev tools). **Why `style-src
@@ -271,6 +271,11 @@ A stored file opens for exactly the people who may see the record it belongs to 
   **`contract-signed-copies`** (2026-11-24): the pages of a contract's signed copy, up to 10 MB each,
   one `employee_contract_files` row per page (found by its unique `url`); a page removed (soft, with
   a reason) opens for nobody.
+- **`contract-copies`** (contract templates spec, 2026-11-25), the third: the PDF of each printed contract copy,
+  made by the API itself (never uploaded). It opens with `hr.contracts.view` covering the copy's
+  employee — plus `hr.employees.view_salary` covering them for a copy that holds a salary — found
+  through the stored link (`contract_copies.file_url`); each opening is a `hr.contract.copy_open`
+  entry. The stored name is a random UUID; the download name is built from the record.
 - **Uploads: small ones are Server Actions, large ones a Route Handler** (review of #290,
   2026-11-25). A Server Action's body limit applies to every action, the unauthenticated sign-in
   one included, so raising it for one upload lets anyone push that much at the app before signing
@@ -292,6 +297,39 @@ A stored file opens for exactly the people who may see the record it belongs to 
 - **Checked by:** `file-access.e2e-spec.ts` (a stage head: their stage's photos, 404 for another
   stage's; self: own photo only; no permission: 404; signed out: 401; unknown folder: 404; the logo
   public), `file-folders.spec.ts` (the registry) and the guard.
+
+### Contract PDFs (headless Chromium)
+
+Printed contracts (spec `docs/specs/2026-11-24-contract-templates.md`, owner 2026-11-24) are made
+on the server by `PdfRenderer` (`apps/api/src/common/pdf/`) with `playwright-core` and Chromium's
+headless shell: the page is the shared renderer's HTML (`renderContractDocument`, escaped, the same
+function and CSS as the web preview) served from memory, with **JavaScript off and every request
+blocked** (fonts — IBM Plex Sans Arabic, Plus Jakarta Sans, OFL, bundled from `@fontsource` — and
+the logo are data URLs; the page has its own `default-src 'none'` CSP). One browser is kept warm.
+
+- **Limits:** at most `PDF_RENDER_CONCURRENCY` (2) renders at once; at most `PDF_RENDER_QUEUE_SIZE`
+  (10) wait, each at most `PDF_RENDER_QUEUE_WAIT_MS` (30 s) — past either, 503 `PDF_RENDER_BUSY`
+  before any render starts, so an abandoned request never keeps a copy later. A freed slot passes
+  straight to the next waiter. A render over `PDF_RENDER_TIMEOUT_MS` (20 s) is stopped — its browser
+  context closed, which aborts `page.pdf` — and only then is the slot freed; it answers 503
+  `PDF_RENDER_FAILED` and nothing is kept.
+- **Outside any transaction:** `POST /hr/contracts/:id/copies` is `@NotAudited` for this reason and
+  records `hr.contract.copy_print` in the copy's own transaction. Its answer carries the PDF
+  (base64), so the printer's own Print / Download / share is one `copy_print` entry, never also a
+  `copy_open`.
+- **The browser:** `PDF_CHROMIUM_PATH` names one; unset, playwright-core's own download is used
+  (dev: `pnpm --filter api exec playwright-core install chromium-headless-shell`; CI installs it in
+  the API e2e job). The image (`deploy/docker/Dockerfile.api`) leaves it unset and installs the
+  headless shell with its libraries under `PLAYWRIGHT_BROWSERS_PATH=/ms-playwright`.
+- **No Chromium sandbox (`--no-sandbox`, playwright's default):** the sandbox needs user namespaces
+  or a setuid helper that a plain container doesn't grant. Accepted because the renderer only ever
+  loads our own page — HTML built by the shared renderer with every text and value escaped, no user
+  HTML — with JavaScript disabled and every network request blocked, in the API container running as
+  the unprivileged `node` user. Revisit if a page ever loads anything the school or a user wrote as
+  markup, or third-party content.
+- **The image ships no source:** the run stage gets only `dist/`, `prisma/schema.prisma` +
+  `prisma/migrations/`, `package.json` and the production `node_modules`.
+- JSON bodies are accepted up to 1 MB (a template carries two texts of up to 200 KB).
 
 ### Scanning (`.github/workflows/security.yml`)
 

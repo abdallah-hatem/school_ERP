@@ -165,6 +165,12 @@
           "description": "Renew contracts, record that one isn't renewed or the employee's notice, decide early termination, end a contract and upload or remove its signed copy. Never your own."
         }
       },
+      "contract_templates": {
+        "manage": {
+          "label": "Manage contract templates",
+          "description": "Create, edit, hide and show contract templates, and choose each work system's default template."
+        }
+      },
       "lateness": {
         "view": {
           "label": "View lateness",

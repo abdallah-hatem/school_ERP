@@ -58,4 +58,42 @@ export class UpdateSchoolSettingsDto implements UpdateSchoolSettingsRequest {
   @ArrayUnique()
   @IsIn(WEEKDAYS, { each: true })
   workingDays?: Weekday[];
+
+  /** The school address printed on contracts (empty = not set). */
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(300)
+  addressEn?: string;
+
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(300)
+  addressAr?: string;
+
+  /** Who signs contracts for the school, and their title (empty = not set). */
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(100)
+  signatoryNameEn?: string;
+
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(100)
+  signatoryNameAr?: string;
+
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(100)
+  signatoryTitleEn?: string;
+
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(100)
+  signatoryTitleAr?: string;
 }

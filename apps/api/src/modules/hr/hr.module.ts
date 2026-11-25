@@ -49,6 +49,13 @@ import {
 import { ContractSignedCopyController } from './contracts/controllers/contract-signed-copy.controller';
 import { ContractFilesRepository } from './contracts/repositories/contract-files.repository';
 import { ContractsRepository } from './contracts/repositories/contracts.repository';
+import { ContractCopiesRepository } from './contracts/repositories/contract-copies.repository';
+import { ContractPrintController } from './contracts/controllers/contract-print.controller';
+import { ContractPrintService } from './contracts/services/contract-print.service';
+import { ContractTemplatesController } from './contract-templates/controllers/contract-templates.controller';
+import { ContractTemplatesRepository } from './contract-templates/repositories/contract-templates.repository';
+import { ContractTemplatesService } from './contract-templates/services/contract-templates.service';
+import { PdfRenderer } from '../../common/pdf/pdf-renderer.service';
 import { ContractSignedCopyService } from './contracts/services/contract-signed-copy.service';
 import { SchoolCalendarRepository } from './contracts/repositories/school-calendar.repository';
 import { ContractDatesOnStart } from './contracts/services/contract-dates.startup';
@@ -84,6 +91,9 @@ import { LatenessService } from './staff-attendance/services/lateness.service';
     EmployeeContractsController,
     ContractSignedCopyController,
     SchoolCalendarController,
+    // contract templates and printed copies (spec 2026-11-24-contract-templates)
+    ContractTemplatesController,
+    ContractPrintController,
     // payroll + dashboard (T9)
     PayrollRunsController,
     EmployeePayrollController,
@@ -133,6 +143,12 @@ import { LatenessService } from './staff-attendance/services/lateness.service';
     ContractDatesOnStart,
     SchoolCalendarService,
     ContractsService,
+    // contract templates and printed copies (spec 2026-11-24-contract-templates)
+    ContractTemplatesRepository,
+    ContractTemplatesService,
+    ContractCopiesRepository,
+    ContractPrintService,
+    PdfRenderer,
     // the signed copy of each contract (owner, 2026-11-24)
     ContractFilesRepository,
     ContractSignedCopyService,

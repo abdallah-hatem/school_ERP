@@ -105,7 +105,12 @@ export class HrAccessService {
     if (!employee || !inScope(await this.scope(key), employee)) throw new NotFoundException();
   }
 
-  private user(): Pick<AuthUser, 'id'> | undefined {
+  /** The signed-in user's name as it is now (a printed copy keeps it), or null outside a request. */
+  actorName(): string | null {
+    return this.user()?.name ?? null;
+  }
+
+  private user(): Pick<AuthUser, 'id' | 'name'> | undefined {
     if (!this.cls.isActive()) return undefined;
     return this.cls.get<(Request & { user?: AuthUser }) | undefined>(CLS_REQ)?.user;
   }

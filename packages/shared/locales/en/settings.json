@@ -25,6 +25,10 @@
       "title": "Penalty catalogue",
       "description": "Violations and what each repeat costs"
     },
+    "contractTemplates": {
+      "title": "Contract templates",
+      "description": "The contract texts HR prints, with fields filled from the records"
+    },
     "accounting": {
       "title": "Accounting",
       "description": "The payroll tax rule: income-tax slices, the martyrs' fund and the insurance share."
@@ -60,6 +64,8 @@
       "list": "Use 100 characters or fewer.",
       "group": "Use 200 characters or fewer.",
       "violation": "Use 300 characters or fewer.",
+      "address": "Use 300 characters or fewer.",
+      "signatory": "Use 100 characters or fewer.",
       "note": "Use 1,000 characters or fewer."
     },
     "time": "Choose a time on the hour or half hour.",
@@ -87,7 +93,21 @@
     "workEnd": "Work ends",
     "workEndPlaceholder": "Choose a time",
     "timeHint": "Every half hour.",
-    "workingDays": "Working days"
+    "workingDays": "Working days",
+    "contractDetails": "For contracts",
+    "contractDetailsHint": "Printed on contracts in the \"School address\" and \"School representative\" fields.",
+    "addressEn": "School address in English",
+    "addressAr": "School address in Arabic",
+    "signatoryNameEn": "Signatory name in English",
+    "signatoryNameAr": "Signatory name in Arabic",
+    "signatoryTitleEn": "Signatory title in English",
+    "signatoryTitleAr": "Signatory title in Arabic",
+    "addressEnPlaceholder": "5 El Maarefa St, Nasr City, Cairo",
+    "addressArPlaceholder": "5 شارع المعرفة، مدينة نصر، القاهرة",
+    "signatoryNameEnPlaceholder": "Mr Hisham Kamel",
+    "signatoryNameArPlaceholder": "أ. هشام كامل",
+    "signatoryTitleEnPlaceholder": "Principal",
+    "signatoryTitleArPlaceholder": "مدير المدرسة"
   },
   "logo": {
     "title": "School logo",

@@ -2,6 +2,13 @@
 
 import type {
   Contract,
+  ContractCopy,
+  CreatedContractCopy,
+  ContractFileUpload,
+  ContractLanguage,
+  ContractPrintPreview,
+  ContractPrintTemplateOption,
+  CreateContractCopyRequest,
   ContractSignedCopy,
   ContractsPage,
   EarlyTerminationRequest,
@@ -183,6 +190,60 @@ export async function DEACTIVATE_CONTRACTS(contractIds: Uuid[]) {
 export async function GET_SIGNED_COPY(id: Uuid) {
   const response = await apiFetch<ContractSignedCopy>(`/hr/contracts/${encodeURIComponent(id)}/signed-copy`, {
     method: 'GET',
+    next: { tags: [CONTRACTS_TAG] },
+  });
+  return handleResponse({ response, showErrorToast: false });
+}
+
+// ── Printing (contract templates spec → Printing, Printed copies) ───────────────────────────────
+
+/**
+ * `GET /hr/contracts/:id/print-templates?search&page&limit` — the print picker: the shown
+ * templates, searched by the API; `isDefault` for the employee's work system, `salaryBlocked`
+ * when the printer may not see this employee's salary.
+ */
+export async function GET_PRINT_TEMPLATES(contractId: Uuid, query: { search?: string; page?: number; limit?: number } = {}) {
+  const response = await apiFetch<ContractPrintTemplateOption[]>(`/hr/contracts/${encodeURIComponent(contractId)}/print-templates`, {
+    method: 'GET',
+    params: { search: query.search || undefined, page: page(query.page), limit: page(query.limit) },
+    cache: 'no-store',
+  });
+  return handleResponse({ response, showErrorToast: false });
+}
+
+/**
+ * `GET /hr/contracts/:id/print?templateId&language` — the text, today's values, what prints empty
+ * or is left out, the hash the copy must carry, and the contract's earlier copies. Refusals:
+ * `OWN_CONTRACT`, `CONTRACT_CANCELLED`, `SALARY_NOT_VISIBLE`, `TEMPLATE_HIDDEN`, `NO_ENGLISH_TEXT`.
+ */
+export async function GET_CONTRACT_PRINT(contractId: Uuid, templateId: Uuid, language: ContractLanguage) {
+  const response = await apiFetch<ContractPrintPreview>(`/hr/contracts/${encodeURIComponent(contractId)}/print`, {
+    method: 'GET',
+    params: { templateId, language },
+    cache: 'no-store',
+  });
+  return handleResponse({ response, showErrorToast: false });
+}
+
+/**
+ * `POST /hr/contracts/:id/copies` — renders the PDF and keeps the copy. 409 `VALUES_CHANGED` /
+ * `TEMPLATE_CHANGED` when the preview is stale; 503 `PDF_RENDER_FAILED` / `PDF_RENDER_BUSY`. The
+ * answer carries the PDF itself, so printing it records no extra opening.
+ */
+export async function CREATE_CONTRACT_COPY(contractId: Uuid, body: CreateContractCopyRequest) {
+  const response = await apiFetch<CreatedContractCopy>(`/hr/contracts/${encodeURIComponent(contractId)}/copies`, {
+    method: 'POST',
+    body: { ...body },
+    revalidateTags: WRITE_TAGS,
+  });
+  return handleResponse({ response, showErrorToast: false });
+}
+
+/** `GET /hr/contracts/:id/copies?page&limit` — the contract's printed copies, newest first. */
+export async function GET_CONTRACT_COPIES(contractId: Uuid, query: { page?: number; limit?: number } = {}) {
+  const response = await apiFetch<ContractCopy[]>(`/hr/contracts/${encodeURIComponent(contractId)}/copies`, {
+    method: 'GET',
+    params: { page: page(query.page), limit: page(query.limit) },
     next: { tags: [CONTRACTS_TAG] },
   });
   return handleResponse({ response, showErrorToast: false });

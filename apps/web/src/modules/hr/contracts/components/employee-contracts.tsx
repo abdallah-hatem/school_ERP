@@ -31,7 +31,9 @@ import { useTranslation } from '@/shared/providers/i18n-provider';
 import { useProfileEmployeeIfLoaded } from '../../employees';
 import { ContractActions } from './contract-actions';
 import { ContractDates, ContractDecisionPill, DecisionNote, decisionSubLine } from './contract-bits';
+import { ContractCopiesBlock } from './contract-copies';
 import { NewContractDialog } from './new-contract-dialog';
+import { PrintContractButton } from './print-contract';
 import { SignedCopyLink, SignedCopyLinkSkeleton, SignedCopyViewer } from './signed-copy';
 
 export interface EmployeeContractsProps {
@@ -147,7 +149,7 @@ export function EmployeeContracts({ employeeId, employee, basePath, rows, total,
     {
       id: 'details',
       header: t('contracts.history.columns.details'),
-      className: 'min-w-56 whitespace-normal',
+      className: 'min-w-40 whitespace-normal',
       card: 'wide',
       skeleton: <SkeletonText className="text-xs" width="w-40" />,
       cell: (c) => <Details contract={c} />,
@@ -167,7 +169,8 @@ export function EmployeeContracts({ employeeId, employee, basePath, rows, total,
       align: 'end',
       className: 'w-72 whitespace-nowrap',
       card: 'actions',
-      // The usual current contract: undecided, so Renew, Decide and the ⋯ — in their own words.
+      // The usual current contract: undecided, so Renew, Decide and the ⋯ (Print contract is in it)
+      // — in their own words.
       skeleton: (
         <span className="flex flex-nowrap items-center justify-end gap-2">
           <SkeletonButton size="sm">
@@ -178,7 +181,17 @@ export function EmployeeContracts({ employeeId, employee, basePath, rows, total,
           <RowActionsSkeleton />
         </span>
       ),
-      cell: (c) => (hasActions(c) ? <ContractActions contract={c} today={today} decideBelow="always" /> : null),
+      cell: (c) => (
+        <span className="flex flex-nowrap items-center justify-end gap-2">
+          {/* Print contract sits in the row's ⋯ (contract templates); a row without one gets the
+              icon on its own, so the row's actions always fit the card (review, 2026-11-25). */}
+          {hasActions(c) ? (
+            <ContractActions contract={c} today={today} decideBelow="always" printInMenu="thisRowOnly" />
+          ) : (
+            <PrintContractButton contract={c} />
+          )}
+        </span>
+      ),
     },
   ];
 
@@ -205,6 +218,8 @@ export function EmployeeContracts({ employeeId, employee, basePath, rows, total,
         }
         toolbar={newContract && rows?.length ? <div className="flex w-full justify-end">{newContract}</div> : undefined}
         pagination={{ page, limit, total, onPageChange: goToPage }}
+        // Each contract's printed copies, under its row (contract templates spec → Printed copies).
+        rowDetail={(c) => (c.copies?.length ? <ContractCopiesBlock contractId={c.id} copies={c.copies} total={c.copiesTotal} /> : null)}
         cardsBelow={1100}
       />
       {canCreate ? (
