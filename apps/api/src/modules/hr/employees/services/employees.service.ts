@@ -141,6 +141,7 @@ export function toEmployee(row: EmployeeDetailRow, salaryVisible: boolean): Omit
           nameAr: manager.nameAr,
           photoUrl: manager.photoUrl,
           gender: manager.gender,
+          department: manager.department,
           managesPeople: manager.jobTitle.managesPeople,
         }
       : null,

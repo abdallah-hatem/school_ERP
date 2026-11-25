@@ -545,6 +545,16 @@ describe('HR lists and employees (e2e)', () => {
       const changed = await http(app).patch(`/hr/employees/${c.id}`).send({ managerId: a.id }).expect(200);
       // The manager reference carries what the avatar needs (photo, else a gendered silhouette).
       expect(changed.body.data.manager).toMatchObject({ id: a.id, photoUrl: null, gender: 'FEMALE' });
+      // …and the manager's department, in both languages: the picker reads "Name · Department"
+      // (§3, owner 2026-11-25), from the same detail request.
+      const boss = await createOk({ departmentId: otherDepartmentId });
+      await http(app).patch(`/hr/employees/${c.id}`).send({ managerId: boss.id }).expect(200);
+      const detail = await http(app).get(`/hr/employees/${c.id}`).expect(200);
+      expect(detail.body.data.manager).toMatchObject({
+        id: boss.id,
+        code: boss.code,
+        department: { id: otherDepartmentId, nameEn: 'Admin', nameAr: 'Admin-ar' },
+      });
       const cleared = await http(app)
         .patch(`/hr/employees/${c.id}`)
         .send({ managerId: null })

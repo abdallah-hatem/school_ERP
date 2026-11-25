@@ -727,6 +727,10 @@ phase live in `docs/build-log/`.
   found 7 more mismatches (Roles, Users, Lateness, payroll runs and lines, Approved payroll, Payroll
   taxes, Employees cards, Contracts decision), all fixed in the skeletons. Also fixed: the Users table
   overflowing its card by 2–3px when an account shows several status pills (dev's intermittent smoke 27).
+- 2026-11-25 — **#303 merged: Discard changes in the template editor** (owner's request). Next to Save;
+  enabled only when a name, the default or a text differs from the saved version; asks first, then
+  restores the saved version, clears undo, sends nothing. Found on the way: the editor's invisible empty
+  line after a table counted as a change — ignored now.
 
 ## Next up
 
@@ -735,12 +739,16 @@ phase live in `docs/build-log/`.
   mid-year hires' first contract ends 31 May (one season for everyone, GUESS).
 
 
-- **Discard changes in the template editor** (owner, 2026-11-25): a button that puts a template back to
-  its last saved version after a mistaken edit, enabled only when something changed, with a confirm.
-  Being built on `feature/template-discard-changes`.
+
 - **Direct manager picker shows the department** (owner, 2026-11-25): options read "Name · Department"
   instead of "Name · code"; search by name or code stays. Being built on
   `feature/manager-picker-department`.
+- **Penalty actions as school data** (owner, 2026-11-25): a Settings list of penalty actions (EN/AR
+  names, hide/show), each with an effect type fixed in code — record only, deduct days, deduct a % of
+  salary, deduct a fixed amount, investigation (± days) — and the school setting its numbers; no free
+  formulas; raise actions stay record-only until raises exist; the seed loads today's actions so nothing
+  changes. Spec being written (`docs/specs/2026-11-25-penalty-actions.md`), then three mockups (AR + EN,
+  phone + desktop), then the owner approves before any build.
 - **Pentest with ARTEX** (owner, 2026-11-25): try https://github.com/BaaRai/ARTEX against the app
   later — on a throwaway or testing environment, never production. Not started.
 - **Employee documents tab** (proposed 2026-11-24): ID copy, certificates, insurance forms.

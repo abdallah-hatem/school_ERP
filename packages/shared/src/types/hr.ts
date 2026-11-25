@@ -186,9 +186,12 @@ export interface Employee extends Names, SalaryVisibility {
   jobTitle: NamedRef;
   /**
    * `managesPeople`: the manager's job title still manages people. `false` means they no longer
-   * qualify — the employee keeps them, and the form flags it (§3).
+   * qualify — the employee keeps them, and the form flags it (§3). `department`: the picker reads
+   * "Name · Department" (owner, 2026-11-25).
    */
-  manager: (NamedRef & { code: string; managesPeople: boolean; photoUrl: string | null; gender: Gender }) | null;
+  manager:
+    | (NamedRef & { code: string; department: NamedRef; managesPeople: boolean; photoUrl: string | null; gender: Gender })
+    | null;
   /** From the Grades list (§3); null = none. */
   employeeGrade: NamedRef | null;
   workSystem: WorkSystem;

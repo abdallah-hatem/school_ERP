@@ -88,10 +88,14 @@ describe('employee form rules (§3)', () => {
     expect(fieldForError('PAYROLL_APPROVED')).toBeUndefined();
   });
 
-  it('a manager choice reads "Name · code" in the page language (the API lists the candidates)', () => {
-    const boss = { id: 'boss', code: 'EMP-0009', nameEn: 'Boss', nameAr: 'مدير' };
-    expect(managerChoice(boss, 'en')).toEqual({ value: 'boss', label: 'Boss · EMP-0009' });
-    expect(managerChoice(boss, 'ar')).toEqual({ value: 'boss', label: 'مدير · EMP-0009' });
+  it('a manager choice reads "Name · Department" in the page language, without the code (owner, 2026-11-25)', () => {
+    const department = { id: 'd-sci', nameEn: 'Science', nameAr: 'العلوم' };
+    const boss = { id: 'boss', code: 'EMP-0009', nameEn: 'Boss', nameAr: 'مدير', department };
+    expect(managerChoice(boss, 'en')).toEqual({ value: 'boss', label: 'Boss · Science' });
+    expect(managerChoice(boss, 'ar')).toEqual({ value: 'boss', label: 'مدير · العلوم' });
+    // Two managers with the same name and department read the same; the code isn't added back.
+    const twin = { ...boss, id: 'boss-2', code: 'EMP-0010' };
+    expect(managerChoice(twin, 'en').label).toBe('Boss · Science');
   });
 
   it('phone: mobiles, landlines and international numbers pass; 7–20 characters', () => {
