@@ -20,6 +20,7 @@ const row = {
     nameAr: 'عمر',
     photoUrl: null,
     gender: 'MALE',
+    department: ref('d1', 'Science', 'علوم'),
     jobTitle: { managesPeople: true },
   },
   basicSalary: 1_200_000,

@@ -80,6 +80,7 @@ export const EMPLOYEE_DETAIL_SELECT = {
       nameAr: true,
       photoUrl: true,
       gender: true,
+      department: REF,
       jobTitle: { select: { managesPeople: true } },
     },
   },

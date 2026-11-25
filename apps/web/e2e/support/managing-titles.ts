@@ -55,19 +55,24 @@ export async function checkManagingTitles(page: Page, info: TestInfo, locale: La
     await shoot(page, info, `managing-badge-${tag}`);
 
     // ── New employee: the picker lists the holder, not the outsider; search works by name and code.
+    // An option reads "Name · Department" (owner, 2026-11-25).
+    const label = (e: EmployeeSummary) => `${nameIn(locale, e)} · ${nameIn(locale, e.department)}`;
+    const option = (e: EmployeeSummary) => page.getByRole('option', { name: label(e), exact: true });
     await page.goto(`/${locale}/employees/new`);
     const picker = page.getByRole('combobox', { name: new RegExp(escape(t(locale, 'employees.fields.manager'))) });
     await picker.click();
     const search = page.getByRole('searchbox', { name: t(locale, 'ui.form.searchOptions') });
     await expect(search).toBeFocused();
     await expect(page.getByRole('option', { name: t(locale, 'employees.noManager') })).toBeVisible();
-    await expect(page.getByRole('option', { name: new RegExp(escape(holder.code)) })).toBeVisible();
-    await expect(page.getByRole('option', { name: new RegExp(escape(outsider.code)) })).toHaveCount(0);
+    await expect(option(holder).first()).toBeVisible();
+    await expect(option(outsider)).toHaveCount(0);
     await settle(page);
     await expectNoHorizontalScroll(page);
     await shoot(page, info, `manager-picker-${tag}`);
     await search.fill(nameIn(locale, holder));
-    await expect(page.getByRole('option', { name: new RegExp(escape(holder.code)) })).toBeVisible();
+    await expect(option(holder).first()).toBeVisible();
+    await search.fill(holder.code);
+    await expect(option(holder)).toHaveCount(1);
     await search.fill(outsider.code);
     await expect(page.getByText(t(locale, 'ui.form.noMatches'))).toBeVisible();
     await page.keyboard.press('Escape');
@@ -77,7 +82,7 @@ export async function checkManagingTitles(page: Page, info: TestInfo, locale: La
     await api.patch(`/hr/job-titles/${title.id}`, { managesPeople: false });
     await page.goto(`/${locale}/employees/${report.id}/edit`);
     const kept = page.getByRole('combobox', { name: new RegExp(escape(t(locale, 'employees.fields.manager'))) });
-    await expect(kept).toContainText(holder.code);
+    await expect(kept).toContainText(label(holder));
     const note = page.getByText(t(locale, 'employees.hints.managerNotManaging'));
     await expect(note).toBeVisible();
     await note.scrollIntoViewIfNeeded();

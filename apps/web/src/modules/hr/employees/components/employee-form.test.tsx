@@ -118,7 +118,7 @@ describe('EmployeeForm', () => {
     await user.click(screen.getByRole('combobox', { name: /Direct manager/ }));
     const listbox = await screen.findByRole('listbox');
     await waitFor(() =>
-      expect(within(listbox).getAllByRole('option').map((o) => o.textContent)).toEqual(['No direct manager', 'Omar Fathy · EMP-0002']),
+      expect(within(listbox).getAllByRole('option').map((o) => o.textContent)).toEqual(['No direct manager', 'Omar Fathy · Mathematics']),
     );
     // The employee is left out by the API (`excludeId`), one page for the typed text.
     expect(managerOptions).toHaveBeenCalledWith('e-mona', { search: '', limit: 20 });
@@ -127,22 +127,25 @@ describe('EmployeeForm', () => {
   it('Manager picker: a kept manager who no longer manages people is listed and flagged; search finds by code', async () => {
     const user = userEvent.setup();
     const candidates = [summary({ id: 'e-omar', code: 'EMP-0002', nameEn: 'Omar Fathy', nameAr: 'عمر فتحي' })];
-    const kept = { id: 'e-hany', code: 'EMP-0007', nameEn: 'Hany Said', nameAr: 'هاني سعيد', managesPeople: false, photoUrl: null, gender: 'MALE' as const };
+    const kept = { id: 'e-hany', code: 'EMP-0007', nameEn: 'Hany Said', nameAr: 'هاني سعيد', department: departments[1]!, managesPeople: false, photoUrl: null, gender: 'MALE' as const };
     renderForm({ editing: { ...employee, manager: kept }, candidates });
 
     const trigger = screen.getByRole('combobox', { name: /Direct manager/ });
-    expect(trigger.textContent).toContain('Hany Said · EMP-0007');
+    // The kept manager reads "Name · Department" too (from the employee's own record, no extra request).
+    expect(trigger.textContent).toContain(`Hany Said · ${departments[1]!.nameEn}`);
+    expect(trigger.textContent).not.toContain('EMP-0007');
     expect(screen.getByText('No longer in a managing role; kept for this employee.')).toBeTruthy();
 
     await user.click(trigger);
     const listbox = await screen.findByRole('listbox');
     await waitFor(() =>
-      expect(within(listbox).getAllByRole('option').map((o) => o.textContent)).toEqual(['No direct manager', 'Omar Fathy · EMP-0002']),
+      expect(within(listbox).getAllByRole('option').map((o) => o.textContent)).toEqual(['No direct manager', 'Omar Fathy · Mathematics']),
     );
+    // Search by code still finds the manager (the API matches name or code); the label shows the department.
     await user.keyboard('EMP-0002');
     await waitFor(() => expect(managerOptions).toHaveBeenLastCalledWith('e-mona', { search: 'EMP-0002', limit: 20 }));
     await waitFor(() =>
-      expect(within(screen.getByRole('listbox')).getAllByRole('option').map((o) => o.textContent)).toEqual(['Omar Fathy · EMP-0002']),
+      expect(within(screen.getByRole('listbox')).getAllByRole('option').map((o) => o.textContent)).toEqual(['Omar Fathy · Mathematics']),
     );
     await user.keyboard('{Enter}');
     // Another manager chosen: the note goes away.
@@ -150,7 +153,7 @@ describe('EmployeeForm', () => {
   });
 
   it('Manager picker in Arabic: the kept-manager note and the no-managers hint are translated', () => {
-    const kept = { id: 'e-hany', code: 'EMP-0007', nameEn: 'Hany Said', nameAr: 'هاني سعيد', managesPeople: false, photoUrl: null, gender: 'MALE' as const };
+    const kept = { id: 'e-hany', code: 'EMP-0007', nameEn: 'Hany Said', nameAr: 'هاني سعيد', department: departments[1]!, managesPeople: false, photoUrl: null, gender: 'MALE' as const };
     renderForm({ editing: { ...employee, manager: kept }, locale: 'ar' });
     expect(screen.getByText('لم يعد في منصب إداري؛ يبقى مديرًا لهذا الموظف.')).toBeTruthy();
     cleanup();
@@ -169,7 +172,7 @@ describe('EmployeeForm', () => {
     const candidates = [summary({ id: 'e-omar', code: 'EMP-0002', nameEn: 'Omar Fathy', nameAr: 'عمر فتحي' })];
     renderForm({ editing: employee, candidates });
     await user.click(screen.getByRole('combobox', { name: /Direct manager/ }));
-    await user.click(await screen.findByRole('option', { name: 'Omar Fathy · EMP-0002' }));
+    await user.click(await screen.findByRole('option', { name: 'Omar Fathy · Mathematics' }));
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
     await waitFor(() => expect(update).toHaveBeenCalledWith('e-mona', { managerId: 'e-omar' }));
     expect(await screen.findByText('The direct manager must hold a job title that manages people.')).toBeTruthy();
