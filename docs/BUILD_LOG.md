@@ -731,6 +731,9 @@ phase live in `docs/build-log/`.
   enabled only when a name, the default or a text differs from the saved version; asks first, then
   restores the saved version, clears undo, sends nothing. Found on the way: the editor's invisible empty
   line after a table counted as a change — ignored now.
+- 2026-11-25 — **#307 merged: Direct manager picker shows "Name · Department"** (owner's request)
+  instead of the employee code; search by name or code still works. The employee record's manager now
+  carries their department (same query).
 
 ## Next up
 
@@ -740,9 +743,9 @@ phase live in `docs/build-log/`.
 
 
 
-- **Direct manager picker shows the department** (owner, 2026-11-25): options read "Name · Department"
-  instead of "Name · code"; search by name or code stays. Being built on
-  `feature/manager-picker-department`.
+- **Dropdowns open on the chosen option** (found reviewing #307, 2026-11-25): the shared select
+  highlights its first row on open while the check mark is on the chosen one, so Enter right after
+  opening changes the value. Being fixed in the shared component on `fix/select-highlights-selected`.
 - **Penalty actions as school data** (owner, 2026-11-25): a Settings list of penalty actions (EN/AR
   names, hide/show), each with an effect type fixed in code — record only, deduct days, deduct a % of
   salary, deduct a fixed amount, investigation (± days) — and the school setting its numbers; no free
