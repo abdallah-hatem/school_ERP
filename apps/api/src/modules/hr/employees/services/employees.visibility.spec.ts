@@ -298,7 +298,7 @@ describe('employees — edits stay inside the scope (R5)', () => {
     const team = { kind: 'team', managerId: 'me' } as const;
     const { service } = makeService(
       { 'hr.employees.view': { kind: 'all' }, 'hr.employees.edit': team, 'hr.employees.view_salary': null },
-      { findDetail: jest.fn().mockResolvedValue(detail({ manager: { id: 'me', code: 'M', nameEn: 'M', nameAr: 'M', photoUrl: null, jobTitle: { managesPeople: true } } as never })) },
+      { findDetail: jest.fn().mockResolvedValue(detail({ manager: { id: 'me', code: 'M', nameEn: 'M', nameAr: 'M', photoUrl: null, department: { id: 'd', nameEn: 'D', nameAr: 'D' }, jobTitle: { managesPeople: true } } as never })) },
     );
     await expect(service.update('e1', { managerId: 'other' })).rejects.toMatchObject({ code: 'INVALID_MANAGER' });
   });

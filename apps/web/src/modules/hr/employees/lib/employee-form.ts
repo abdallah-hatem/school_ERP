@@ -361,7 +361,10 @@ export function fieldForError(code: unknown): keyof EmployeeFormValues | undefin
   return typeof code === 'string' ? FIELD_BY_ERROR[code] : undefined;
 }
 
-/** A direct-manager choice (§3): "Name · code". The API lists the candidates as the person types. */
-export function managerChoice(e: NamedRef & { code: string }, locale: Locale): SelectOption {
-  return { value: e.id, label: `${localName(e, locale)} · ${e.code}` };
+/**
+ * A direct-manager choice (§3): "Name · Department", in the page's language (owner, 2026-11-25).
+ * The API lists the candidates as the person types, searching by name or code.
+ */
+export function managerChoice(e: NamedRef & { department: NamedRef }, locale: Locale): SelectOption {
+  return { value: e.id, label: `${localName(e, locale)} · ${localName(e.department, locale)}` };
 }

@@ -33,6 +33,10 @@
   refused ("The direct manager must hold a job title that manages people."), unless it is the
   employee's existing manager left unchanged. The other manager rules (active, not self, no loop)
   still apply.
+- **DECIDED** (owner, 2026-11-25) — Each manager in the picker, and the chosen one, reads
+  "Name · Department" (the department's name in the page's language), not the employee code; search
+  still matches name or code, and two managers with the same name and department are not told apart
+  by code.
 
 ## Employee record
 
