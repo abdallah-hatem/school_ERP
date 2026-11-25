@@ -738,6 +738,9 @@ phase live in `docs/build-log/`.
 - **Discard changes in the template editor** (owner, 2026-11-25): a button that puts a template back to
   its last saved version after a mistaken edit, enabled only when something changed, with a confirm.
   Being built on `feature/template-discard-changes`.
+- **Direct manager picker shows the department** (owner, 2026-11-25): options read "Name · Department"
+  instead of "Name · code"; search by name or code stays. Being built on
+  `feature/manager-picker-department`.
 - **Pentest with ARTEX** (owner, 2026-11-25): try https://github.com/BaaRai/ARTEX against the app
   later — on a throwaway or testing environment, never production. Not started.
 - **Employee documents tab** (proposed 2026-11-24): ID copy, certificates, insurance forms.
