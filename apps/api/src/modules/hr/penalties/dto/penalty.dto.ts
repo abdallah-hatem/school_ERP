@@ -1,11 +1,9 @@
 import {
-  PENALTY_ACTIONS,
   PENALTY_STATUS_FILTERS,
   type ApprovePenaltyRequest,
   type CancelPenaltyRequest,
   type CreatePenaltyRequest,
   type ListPenaltiesQuery,
-  type PenaltyAction,
   type PenaltyPreviewQuery,
   type PenaltyRecountAcknowledgement,
   type PenaltyStatusFilter,
@@ -76,12 +74,20 @@ export class PenaltyRecountAcknowledgementDto implements PenaltyRecountAcknowled
   @Max(5)
   level: number;
 
-  @IsIn(PENALTY_ACTIONS)
-  action: PenaltyAction;
+  @IsUUID()
+  actionId: string;
 
   @IsOptional()
   @IsNumber()
   days: number | null;
+
+  @IsOptional()
+  @IsNumber()
+  percent: number | null;
+
+  @IsOptional()
+  @IsNumber()
+  amount: number | null;
 }
 
 /**

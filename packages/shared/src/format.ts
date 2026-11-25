@@ -84,6 +84,23 @@ export function formatDayCount(
   return `${number} يوم`;
 }
 
+/**
+ * A penalty level's percent (spec 2026-11-25): up to two decimals, no trailing zeros, Western
+ * digits — `10` → `"10"`, `2.50` → `"2.5"`, `12.75` → `"12.75"`. The `%` sign is the caller's.
+ */
+export function formatPercent(percent: number): string {
+  return formatDays(percent);
+}
+
+/**
+ * An amount in piastres, short: thousands grouped, piastres only when not zero —
+ * `20000` → `"200"`, `125050` → `"1,250.50"`. No currency label (the caller's words add it).
+ */
+export function formatAmountShort(piastres: Piastres): string {
+  const text = formatMoney(piastres);
+  return text.endsWith('.00') ? text.slice(0, -3) : text;
+}
+
 /*
  * Times of day — always 12-hour with the period: `4:07 PM` / `4:07 م`, `9:30 AM` / `9:30 ص`.
  * Never 24-hour on screen (owner, 2026-11-21); stored values (`HH:mm`, ISO instants) don't change.

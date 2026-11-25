@@ -1,4 +1,4 @@
-import type { PenaltyAction } from '@school-erp/shared';
+import type { PenaltyEffect, PenaltySalaryBase } from '@school-erp/shared';
 
 /**
  * The shapes of the seed's data. The school-specific pieces (identity, logo, penalty catalogue)
@@ -11,10 +11,25 @@ export interface SeedSchool {
   nameAr: string;
 }
 
-/** One catalogue level; its number is its position (1-based) in `levels`. */
+/**
+ * One catalogue level; its number is its position (1-based) in `levels`. `action` is an action's
+ * code: one of the ten seeded ones (`NOTICE` … `DISMISSAL`) or one of the catalogue's own
+ * `actions`. The number its effect asks for: `days`, `percent` or `amount` (piastres).
+ */
 export interface SeedLevel {
-  action: PenaltyAction;
+  action: string;
   days?: number | null;
+  percent?: number | null;
+  amount?: number | null;
+}
+
+/** A school's own penalty action (spec 2026-11-25), ensured by `code` next to the seeded ten. */
+export interface SeedAction {
+  code: string;
+  nameEn: string;
+  nameAr: string;
+  effect: PenaltyEffect;
+  percentBase?: PenaltySalaryBase | null;
 }
 
 export interface SeedViolation {
@@ -41,6 +56,8 @@ export interface SeedGroup {
 }
 
 export interface SeedCatalogue {
+  /** Optional: the school's own actions (the seeded ten always exist). */
+  actions?: SeedAction[];
   groups: SeedGroup[];
 }
 

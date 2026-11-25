@@ -1,8 +1,6 @@
 import {
-  PENALTY_ACTIONS,
   type CreatePenaltyGroupRequest,
   type CreateViolationRequest,
-  type PenaltyAction,
   type PenaltyCatalogueQuery,
   type UpdatePenaltyGroupRequest,
   type UpdateViolationRequest,
@@ -12,11 +10,12 @@ import { Transform, Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
-  IsIn,
   IsInt,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
   Min,
   ValidateNested,
@@ -33,21 +32,33 @@ const trimToNull = ({ value }: { value: unknown }) => {
 };
 
 /**
- * One catalogue level. Shape only — the cross-level rules (1–5 entries numbered 1..n, days fit
- * the action) are checked by the shared `violationLevelsProblem` (400 `INVALID_LEVELS`).
+ * One catalogue level (spec 2026-11-25): its action (`/hr/penalty-actions`) and the one number
+ * that action's effect asks for. Shape only — the rules (1–5 entries numbered 1..n, the number
+ * fits the effect: `levelValueProblem`) are the shared `violationLevelsProblem`'s (400
+ * `INVALID_LEVELS`, `params.problem`); an unknown action → 400 `PENALTY_ACTION_NOT_FOUND`.
  */
 export class ViolationLevelDto implements ViolationLevelInput {
   @IsInt()
   @Min(1)
   level: number;
 
-  @IsIn(PENALTY_ACTIONS)
-  action: PenaltyAction;
+  @IsUUID()
+  actionId: string;
 
   /** Quarter steps 0–30 (§7); `null` / missing = no days. */
   @IsOptional()
   @IsValidDays()
   days?: number | null;
+
+  /** 0.01–100, two decimals (checked by the shared rule); `null` / missing = none. */
+  @IsOptional()
+  @IsNumber({ allowNaN: false, allowInfinity: false })
+  percent?: number | null;
+
+  /** Piastres (checked by the shared rule); `null` / missing = none. */
+  @IsOptional()
+  @IsNumber({ allowNaN: false, allowInfinity: false })
+  amount?: number | null;
 }
 
 /** `POST /hr/penalty-groups/:groupId/violations`. */

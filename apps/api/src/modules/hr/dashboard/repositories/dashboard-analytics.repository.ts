@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { EmployeeStatus, PayrollStatus, PenaltyStatus, type Prisma } from '@prisma/client';
-import type { IsoDate, Month, PenaltyAction } from '@school-erp/shared';
+import type { IsoDate, Month, PenaltyKindInput } from '@school-erp/shared';
 import { toIsoDate } from '../../../../common/utils/dates.util';
 import type { DbAdapter, DbClient } from '../../../../database/transactions';
 import type { EmployeeDates } from '../analytics.pure';
@@ -83,18 +83,32 @@ export class DashboardAnalyticsRepository {
     }));
   }
 
-  /** Approved penalties with a violation day in [from, to), counted per day and action. */
+  /**
+   * Approved penalties with a violation day in [from, to), counted per day and kind input (spec
+   * 2026-11-25): the action's seeded code, the penalty's fixed effect and days.
+   */
   async approvedPenaltyCounts(
     range: { gte: Date; lt: Date },
     /** The penalties in scope — a stage scope by the penalty's stage (`penaltyWhere`). */
     scope: Prisma.PenaltyRecordWhereInput,
-  ): Promise<{ date: IsoDate; action: PenaltyAction; count: number }[]> {
+  ): Promise<({ date: IsoDate; count: number } & PenaltyKindInput)[]> {
     const groups = await this.db.penaltyRecord.groupBy({
-      by: ['date', 'action'],
+      by: ['date', 'actionId', 'effect', 'days'],
       where: { AND: [{ status: PenaltyStatus.APPROVED, date: range }, scope] },
       _count: { _all: true },
     });
-    return groups.map((g) => ({ date: toIsoDate(g.date), action: g.action, count: g._count._all }));
+    const ids = [...new Set(groups.map((g) => g.actionId))];
+    const actions = ids.length
+      ? await this.db.penaltyAction.findMany({ where: { id: { in: ids } }, select: { id: true, code: true } })
+      : [];
+    const codeOf = new Map(actions.map((a) => [a.id, a.code as PenaltyKindInput['code']]));
+    return groups.map((g) => ({
+      date: toIsoDate(g.date),
+      code: codeOf.get(g.actionId) ?? null,
+      effect: g.effect,
+      days: g.days === null ? null : Number(g.days),
+      count: g._count._all,
+    }));
   }
 
   /** Minutes late entered per month, for the employees in `scope`. */

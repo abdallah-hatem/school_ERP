@@ -12,6 +12,7 @@ import { http, unique } from './helpers';
 import { createAppAsTestUser } from './helpers/as-test-user';
 import { historyMark } from './helpers/history';
 import { deleteEmployees } from './helpers/employees';
+import { ACTION_ID } from './helpers/penalty-actions';
 
 /*
  * T29 — recording, approving and cancelling a penalty each write one audit entry in the same
@@ -21,8 +22,8 @@ import { deleteEmployees } from './helpers/employees';
  */
 
 const LEVELS: ViolationLevelInput[] = [
-  { level: 1, action: 'NOTICE' },
-  { level: 2, action: 'DEDUCT_DAYS', days: 1 },
+  { level: 1, actionId: ACTION_ID.NOTICE },
+  { level: 2, actionId: ACTION_ID.DEDUCT_DAYS, days: 1 },
 ];
 
 /** A fresh past date per test (open months, far from other suites' data). */
@@ -173,7 +174,8 @@ describe('HR audit wiring — penalties (T29, e2e)', () => {
         { field: 'violationId', before: null, after: { nameEn: v.nameEn, nameAr: v.nameAr } },
         { field: 'date', before: null, after: date },
         { field: 'level', before: null, after: 1 },
-        { field: 'action', before: null, after: 'NOTICE' },
+        { field: 'action', before: null, after: { nameEn: 'Notice', nameAr: 'لفت نظر' } },
+        { field: 'effect', before: null, after: 'RECORD_ONLY' },
         { field: 'status', before: null, after: 'WAITING_HR' },
         { field: 'note', before: null, after: 'Came at 9' },
       ]),

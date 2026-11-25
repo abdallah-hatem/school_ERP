@@ -320,9 +320,73 @@
       "COUNT": "A violation has 1 to 5 levels.",
       "NUMBERING": "Levels must be numbered 1 to 5 with no gaps.",
       "DAYS_REQUIRED": "Enter the days to deduct.",
-      "DAYS_NOT_ALLOWED": "This action deducts no days.",
-      "DAYS_INVALID": "Use quarter days above 0 and up to 30, like 0.25, 1 or 1.5."
-    }
+      "DAYS_INVALID": "Use quarter days above 0 and up to 30, like 0.25, 1 or 1.5.",
+      "PERCENT_REQUIRED": "Enter a percent.",
+      "PERCENT_INVALID": "Enter a percent above 0 and up to 100, with at most two decimals.",
+      "AMOUNT_REQUIRED": "Enter an amount.",
+      "AMOUNT_INVALID": "Enter an amount above 0 and up to EGP 1,000,000.",
+      "VALUE_NOT_ALLOWED": "This action takes no number.",
+      "ACTION_REQUIRED": "Pick an action."
+    },
+    "levelPercent": "Level {level} percent",
+    "levelAmount": "Level {level} amount",
+    "noNumber": "No number",
+    "optional": "Optional",
+    "hiddenMarker": "(hidden)",
+    "manageActions": "Manage actions",
+    "percentOfMonth": "of the salary for the month",
+    "percentOfBasic": "of the basic salary",
+    "numberLabel": "Level {level} number"
+  },
+  "penaltyActions": {
+    "title": "Penalty actions",
+    "description": "What a catalogue level can do. Each action has one effect; the numbers are set on each level.",
+    "add": "Add action",
+    "addTitle": "Add penalty action",
+    "renameTitle": "Rename {name}",
+    "name": "Name",
+    "effect": "Effect",
+    "usedOn": "Used on",
+    "usedOnCount": {
+      "zero": "{count} levels",
+      "one": "{count} level",
+      "two": "{count} levels",
+      "few": "{count} levels",
+      "many": "{count} levels",
+      "other": "{count} levels"
+    },
+    "showHidden": "Show hidden",
+    "emptyTitle": "No penalty actions yet",
+    "emptyBody": "Add the actions a catalogue level can take, such as Warning or Deduct days.",
+    "emptyHiddenBody": "Every action is hidden. Turn on Show hidden to see them.",
+    "placeholderEn": "Written warning",
+    "placeholderAr": "إنذار كتابي",
+    "effectLabel": "Effect",
+    "effectHelp": {
+      "RECORD_ONLY": "Record only — kept on the employee's file, no change to pay",
+      "DEDUCT_DAYS": "Deduct days of pay — each level sets the days",
+      "DEDUCT_PERCENT": "Deduct a % of salary — each level sets the %",
+      "DEDUCT_AMOUNT": "Deduct a fixed amount — each level sets the amount in EGP",
+      "INVESTIGATION": "Referral to investigation — each level may add days deducted"
+    },
+    "effectName": {
+      "RECORD_ONLY": "Record only",
+      "DEDUCT_DAYS": "Deduct days",
+      "DEDUCT_PERCENT_MONTH_SALARY": "Deduct % of the salary for the month",
+      "DEDUCT_PERCENT_BASIC_SALARY": "Deduct % of the basic salary",
+      "DEDUCT_AMOUNT": "Deduct a fixed amount",
+      "INVESTIGATION": "Referral to investigation"
+    },
+    "baseLabel": "Of which salary",
+    "base": {
+      "MONTH_SALARY": "Salary for the month (after the part-time %)",
+      "BASIC_SALARY": "Basic salary"
+    },
+    "effectLocked": "The effect can't be changed later.",
+    "effectReadOnly": "Effect: {effect}. It can't be changed; add a new action and hide this one instead.",
+    "hideTitle": "Hide {name}?",
+    "hideBody": "Used on {levels} levels in {violations} violations. They keep it; it can't be picked for other levels.",
+    "hideBodyUnused": "It can't be picked for levels until you show it again."
   },
   "accounting": {
     "tax": {

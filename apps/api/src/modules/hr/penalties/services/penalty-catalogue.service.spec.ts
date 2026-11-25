@@ -4,6 +4,24 @@ import { fakeTransaction } from '../../../../common/testing/fake-transaction';
 import type { SettingsHistory } from '../../../../core/settings';
 import type { PenaltyCatalogueRepository } from '../repositories/penalty-catalogue.repository';
 import { PenaltyCatalogueService } from './penalty-catalogue.service';
+import type { PenaltyActionsService } from './penalty-actions.service';
+
+/** Actions the fake list knows (spec 2026-11-25): `a-<code>`; `a-HIDDEN` is hidden. */
+const ACTIONS = {
+  'a-NOTICE': { id: 'a-NOTICE', nameEn: 'Notice', nameAr: 'لفت نظر', effect: 'RECORD_ONLY', percentBase: null, isActive: true },
+  'a-WARNING': { id: 'a-WARNING', nameEn: 'Warning', nameAr: 'إنذار', effect: 'RECORD_ONLY', percentBase: null, isActive: true },
+  'a-DEDUCT_DAYS': { id: 'a-DEDUCT_DAYS', nameEn: 'Deduct days', nameAr: 'خصم أيام', effect: 'DEDUCT_DAYS', percentBase: null, isActive: true },
+  'a-PCT': { id: 'a-PCT', nameEn: 'Salary %', nameAr: 'نسبة', effect: 'DEDUCT_PERCENT', percentBase: 'MONTH_SALARY', isActive: true },
+  'a-HIDDEN': { id: 'a-HIDDEN', nameEn: 'Referral to investigation', nameAr: 'إحالة للتحقيق', effect: 'INVESTIGATION', percentBase: null, isActive: false },
+} as const;
+type ActionKey = keyof typeof ACTIONS;
+const levelRow = (level: number, key: ActionKey, days: string | null = null) => ({
+  level,
+  action: ACTIONS[key],
+  days,
+  percent: null,
+  amount: null,
+});
 
 const violationRow = (over: Record<string, unknown> = {}) => ({
   id: 'v1',
@@ -13,7 +31,7 @@ const violationRow = (over: Record<string, unknown> = {}) => ({
   note: null,
   isActive: true,
   oncePerDay: true,
-  levels: [{ level: 1, action: 'DEDUCT_DAYS', days: '1.5' }],
+  levels: [levelRow(1, 'a-DEDUCT_DAYS', '1.5')],
   ...over,
 });
 
@@ -42,10 +60,16 @@ function makeService(repo: Partial<Record<keyof PenaltyCatalogueRepository, jest
     updateViolation: writing(violationRow()),
     ...repo,
   };
+  const actions = {
+    byIds: jest.fn((ids: readonly string[]) =>
+      Promise.resolve(new Map(ids.filter((id) => id in ACTIONS).map((id) => [id, ACTIONS[id as ActionKey]]))),
+    ),
+  };
   const service = new PenaltyCatalogueService(
     repository as unknown as PenaltyCatalogueRepository,
     history as unknown as SettingsHistory,
     tx.afterCommit,
+    actions as unknown as PenaltyActionsService,
   );
   return { service, repository, history, tx };
 }
@@ -109,7 +133,7 @@ describe('PenaltyCatalogueService', () => {
     const { service, repository, history } = makeService({
       updateViolation: jest.fn().mockResolvedValue(violationRow({ oncePerDay: false })),
     });
-    const levels = [{ level: 1, action: 'NOTICE' as const }];
+    const levels = [{ level: 1, actionId: 'a-NOTICE' }];
     await service.createViolation('g1', { nameEn: 'x', nameAr: 'y', levels }, null);
     expect(repository.createViolation.mock.calls[0][1]).not.toHaveProperty('oncePerDay');
     await service.createViolation('g1', { nameEn: 'x', nameAr: 'y', oncePerDay: false, levels }, null);
@@ -137,10 +161,53 @@ describe('PenaltyCatalogueService', () => {
     await expect(
       service.createViolation(
         'g1',
-        { nameEn: 'x', nameAr: 'y', levels: [{ level: 1, action: 'NOTICE', days: 1 }] },
+        { nameEn: 'x', nameAr: 'y', levels: [{ level: 1, actionId: 'a-NOTICE', days: 1 }] },
         null,
       ),
-    ).rejects.toMatchObject({ code: ErrorCode.INVALID_LEVELS });
+    ).rejects.toMatchObject({ code: ErrorCode.INVALID_LEVELS, params: { problem: 'VALUE_NOT_ALLOWED' } });
+    expect(repository.createViolation).not.toHaveBeenCalled();
+  });
+
+  it('edge case 1: a Record-only level with a number → 400 INVALID_LEVELS (VALUE_NOT_ALLOWED)', async () => {
+    const { service } = makeService();
+    await expect(
+      service.createViolation('g1', { nameEn: 'x', nameAr: 'y', levels: [{ level: 1, actionId: 'a-WARNING', percent: 5 }] }, null),
+    ).rejects.toMatchObject({ code: ErrorCode.INVALID_LEVELS, params: { problem: 'VALUE_NOT_ALLOWED' } });
+  });
+
+  it('a % level needs its percent: missing → PERCENT_REQUIRED; 12.345 → PERCENT_INVALID; 10 → stored', async () => {
+    const { service, repository } = makeService();
+    const make = (percent?: number) =>
+      service.createViolation('g1', { nameEn: 'x', nameAr: 'y', levels: [{ level: 1, actionId: 'a-PCT', percent }] }, null);
+    await expect(make()).rejects.toMatchObject({ params: { problem: 'PERCENT_REQUIRED' } });
+    await expect(make(12.345)).rejects.toMatchObject({ params: { problem: 'PERCENT_INVALID' } });
+    await make(10);
+    expect(repository.createViolation.mock.calls[0][2]).toEqual([{ level: 1, actionId: 'a-PCT', days: null, percent: 10, amount: null }]);
+  });
+
+  it('edge case 9: picking a hidden action for a level that did not have it → 400 PENALTY_ACTION_HIDDEN; keeping it on a level that had it → saved', async () => {
+    const { service, repository } = makeService();
+    await expect(
+      service.createViolation('g1', { nameEn: 'x', nameAr: 'y', levels: [{ level: 1, actionId: 'a-HIDDEN' }] }, null),
+    ).rejects.toMatchObject({ code: ErrorCode.PENALTY_ACTION_HIDDEN });
+    expect(repository.createViolation).not.toHaveBeenCalled();
+
+    const holding = makeService({
+      findViolation: jest.fn().mockResolvedValue({ ...violationRow({ levels: [levelRow(1, 'a-NOTICE'), levelRow(2, 'a-HIDDEN', '2')] }), group: { isActive: true } }),
+    });
+    await holding.service.updateViolation(
+      'v1',
+      { nameEn: 'Renamed', levels: [{ level: 1, actionId: 'a-NOTICE' }, { level: 2, actionId: 'a-HIDDEN', days: 2 }] },
+      null,
+    );
+    expect(holding.repository.updateViolation).toHaveBeenCalled();
+  });
+
+  it('edge case 10: a level naming an action id that does not exist → 400 PENALTY_ACTION_NOT_FOUND', async () => {
+    const { service, repository } = makeService();
+    await expect(
+      service.createViolation('g1', { nameEn: 'x', nameAr: 'y', levels: [{ level: 1, actionId: '00000000-0000-4000-8000-000000000000' }] }, null),
+    ).rejects.toMatchObject({ code: ErrorCode.PENALTY_ACTION_NOT_FOUND });
     expect(repository.createViolation).not.toHaveBeenCalled();
   });
 
@@ -152,17 +219,17 @@ describe('PenaltyCatalogueService', () => {
         nameEn: 'x',
         nameAr: 'y',
         levels: [
-          { level: 2, action: 'WARNING' },
-          { level: 1, action: 'NOTICE' },
+          { level: 2, actionId: 'a-WARNING' },
+          { level: 1, actionId: 'a-NOTICE' },
         ],
       },
       'u1',
     );
     expect(repository.createViolation).toHaveBeenCalledWith('g1', expect.anything(), [
-      { level: 1, action: 'NOTICE', days: null },
-      { level: 2, action: 'WARNING', days: null },
+      { level: 1, actionId: 'a-NOTICE', days: null, percent: null, amount: null },
+      { level: 2, actionId: 'a-WARNING', days: null, percent: null, amount: null },
     ]);
-    expect(v.levels[0]).toEqual({ level: 1, action: 'DEDUCT_DAYS', days: 1.5 });
+    expect(v.levels[0]).toEqual({ level: 1, action: ACTIONS['a-DEDUCT_DAYS'], days: 1.5, percent: null, amount: null });
     expect(history.record).toHaveBeenCalledWith(
       expect.objectContaining({ scope: 'catalogue', key: HrCatalogueKey.VIOLATIONS, oldValue: null, changedById: 'u1' }),
     );
@@ -190,7 +257,7 @@ describe('PenaltyCatalogueService', () => {
   it('the history write fails → the catalogue change rolls back with it', async () => {
     const { service, history, tx } = makeService();
     history.record.mockImplementation(() => Promise.reject(new Error('audit down')));
-    const levels = [{ level: 1, action: 'NOTICE' as const }];
+    const levels = [{ level: 1, actionId: 'a-NOTICE' }];
     await expect(service.createGroup({ nameEn: 'A', nameAr: 'أ' }, 'u1')).rejects.toThrow('audit down');
     await expect(service.updateGroup('g1', { isActive: false }, 'u1')).rejects.toThrow('audit down');
     await expect(

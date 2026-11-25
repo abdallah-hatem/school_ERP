@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { parseContractDocument, WORK_SYSTEMS, type CreateContractTemplateRequest } from '@school-erp/shared';
-import { violationLevelsProblem } from '@school-erp/shared';
+import { SEEDED_PENALTY_ACTIONS, violationLevelsProblem, type PenaltyEffect } from '@school-erp/shared';
 import { SAMPLE_CONTRACT_TEMPLATE } from './contract-template';
 import { FALLBACK_CATALOGUE, FALLBACK_SCHOOL } from './fallback';
 import {
@@ -17,7 +17,9 @@ import {
  *
  *   school.json     { "nameEn": "...", "nameAr": "..." }
  *   catalogue.json  { "groups": [{ nameEn, nameAr, violations: [{ nameEn, nameAr, note?, seedKey?,
- *                     oncePerDay?, levels: [{ action, days? }] }] }] }
+ *                     oncePerDay?, levels: [{ action, days?, percent?, amount? }] }] }],
+ *                     actions?: [{ code, nameEn, nameAr, effect, percentBase? }] }
+ *                   (`action` is a seeded code — NOTICE … DISMISSAL — or one of `actions`'s codes)
  *                   (`oncePerDay` defaults to true — set false on violations that repeat in a day)
  *   logo.png        (or logo.jpg / logo.svg) — optional
  *   contract-templates.json  — optional: the school's contract templates, replacing the generic
@@ -48,6 +50,7 @@ export function assertCatalogue(catalogue: SeedCatalogue, source: string): void 
   if (!Array.isArray(catalogue.groups) || catalogue.groups.length === 0) {
     throw new Error(`seed: ${source} catalogue has no groups`);
   }
+  const effects = actionEffects(catalogue);
   const keys = new Set<string>();
   for (const group of catalogue.groups) {
     if (!group.nameEn || !group.nameAr) throw new Error(`seed: ${source} group without a name`);
@@ -56,7 +59,12 @@ export function assertCatalogue(catalogue: SeedCatalogue, source: string): void 
       if (v.oncePerDay !== undefined && typeof v.oncePerDay !== 'boolean') {
         throw new Error(`seed: ${source} "${v.nameEn}" has a non-boolean oncePerDay`);
       }
-      const problem = violationLevelsProblem(levelsOf(v.levels));
+      for (const l of v.levels) {
+        if (!effects.has(l.action)) {
+          throw new Error(`seed: ${source} "${v.nameEn}" names an unknown penalty action code "${l.action}"`);
+        }
+      }
+      const problem = violationLevelsProblem(levelsOf(v.levels).map((l, i) => ({ ...l, effect: effects.get(v.levels[i].action) })));
       if (problem) throw new Error(`seed: ${source} "${v.nameEn}" has invalid levels (${problem})`);
       if (v.seedKey) {
         if (keys.has(v.seedKey)) throw new Error(`seed: ${source} repeats seedKey ${v.seedKey}`);
@@ -68,9 +76,25 @@ export function assertCatalogue(catalogue: SeedCatalogue, source: string): void 
   if (missing.length) throw new Error(`seed: ${source} catalogue lacks ${missing.join(', ')}`);
 }
 
-/** Positional levels → the numbered levels the catalogue stores. */
+/** Every action code a catalogue's levels may name → its effect: the seeded ten, then its own. */
+export function actionEffects(catalogue: Pick<SeedCatalogue, 'actions'>): Map<string, PenaltyEffect> {
+  const effects = new Map<string, PenaltyEffect>(SEEDED_PENALTY_ACTIONS.map((a) => [a.code, a.effect]));
+  for (const a of catalogue.actions ?? []) {
+    if (!a.code || !a.nameEn || !a.nameAr || !a.effect) throw new Error('seed: a catalogue action needs code, nameEn, nameAr and effect');
+    effects.set(a.code, a.effect);
+  }
+  return effects;
+}
+
+/** Positional levels → the numbered levels (by action code) and their numbers. */
 export function levelsOf(levels: readonly SeedLevel[]) {
-  return levels.map((l, i) => ({ level: i + 1, action: l.action, days: l.days ?? null }));
+  return levels.map((l, i) => ({
+    level: i + 1,
+    code: l.action,
+    days: l.days ?? null,
+    percent: l.percent ?? null,
+    amount: l.amount ?? null,
+  }));
 }
 
 /** Local client material when the folder has it, else the generic fallback. */

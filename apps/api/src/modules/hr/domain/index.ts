@@ -6,6 +6,7 @@ export { latenessDays } from '@school-erp/shared';
 export { divRoundHalfUp, mulDivRoundHalfUp } from './rounding';
 export { oncePerDayRefuses, type OncePerDayStage } from './once-per-day';
 export {
+  copyLevel,
   countPriorInWindow,
   earlierPendingPenalty,
   isEarlierPenalty,
@@ -15,8 +16,10 @@ export {
   recountLockedMonth,
   repetitionWindowStart,
   resolvePenalty,
+  type ActionSnapshot,
   type ApprovedPenalty,
   type CatalogueLevel,
+  type LevelNumbers,
   type LevelRef,
   type PenaltyPair,
   type PenaltyPosition,
@@ -55,9 +58,15 @@ export {
   calculateLine,
   deductedDays,
   lineNetWithFlags,
+  ownPenaltyAmount,
+  payslipPenaltyAmount,
+  penaltyDeductions,
   penaltyShare,
+  percentOf,
   sumAdjustments,
   sumDays,
   type LineAmounts,
   type LineInput,
+  type PenaltyDeduction,
+  type PercentBases,
 } from './payroll-line';

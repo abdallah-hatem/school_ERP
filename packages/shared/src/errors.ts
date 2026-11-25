@@ -115,6 +115,14 @@ export const ErrorCode = {
   // penalties
   VIOLATION_RETIRED: 'VIOLATION_RETIRED',
   INVALID_LEVELS: 'INVALID_LEVELS',
+  /** Penalty actions (spec 2026-11-25): a name another action has (either language, hidden ones too). */
+  PENALTY_ACTION_NAME_TAKEN: 'PENALTY_ACTION_NAME_TAKEN',
+  /** A PATCH that sends `effect` or `percentBase`: fixed once the action is added. */
+  PENALTY_ACTION_EFFECT_LOCKED: 'PENALTY_ACTION_EFFECT_LOCKED',
+  /** A level picks a hidden action it didn't already have. */
+  PENALTY_ACTION_HIDDEN: 'PENALTY_ACTION_HIDDEN',
+  /** A level names an action that doesn't exist. */
+  PENALTY_ACTION_NOT_FOUND: 'PENALTY_ACTION_NOT_FOUND',
   PENALTY_NOT_PENDING: 'PENALTY_NOT_PENDING',
   PENALTY_CANCELLED: 'PENALTY_CANCELLED',
   /**

@@ -46,6 +46,7 @@ export const LINE_SELECT = {
   dayValue: true,
   penaltyDays: true,
   penaltyAmount: true,
+  penaltyDaysAmount: true,
   latenessMinutes: true,
   latenessGraceMinutes: true,
   latenessDays: true,
@@ -98,6 +99,8 @@ export interface LineData {
   dayValue: number;
   penaltyDays: number;
   penaltyAmount: number;
+  /** The day-priced part of penaltyAmount (spec 2026-11-25). */
+  penaltyDaysAmount: number;
   latenessMinutes: number;
   /** The lateness grace in force at this calculation (§5). */
   latenessGraceMinutes: number;

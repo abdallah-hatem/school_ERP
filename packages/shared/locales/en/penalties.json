@@ -34,7 +34,10 @@
   },
   "action": {
     "deduct": "Deduct {days}",
-    "investigation": "Referral to investigation, {days} deducted"
+    "investigation": "{name}, {days} deducted",
+    "percentMonth": "Deduct {percent}% of the salary for the month",
+    "percentBasic": "Deduct {percent}% of the basic salary",
+    "amount": "Deduct EGP {amount}"
   },
   "cancelledBecause": "Reason: {reason}",
   "approve": {

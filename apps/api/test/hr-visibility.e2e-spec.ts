@@ -19,6 +19,7 @@ import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
 import { createAppAsTestUser, giveRoles } from './helpers/as-test-user';
 import { deleteEmployees } from './helpers/employees';
+import { ACTION_ID } from './helpers/penalty-actions';
 
 /**
  * P4 — what each role can see (spec roles-permissions R5, R7; edge cases 3 and 4). The test user
@@ -163,7 +164,7 @@ describe('P4 — scopes and salary in HR (e2e)', () => {
     const violationId = (
       await http(app)
         .post(`/hr/penalty-groups/${groupId}/violations`)
-        .send({ nameEn: unique('V'), nameAr: unique('م'), levels: [{ level: 1, action: 'NOTICE' }] })
+        .send({ nameEn: unique('V'), nameAr: unique('م'), levels: [{ level: 1, actionId: ACTION_ID.NOTICE }] })
         .expect(201)
     ).body.data.id as string;
     penalty.violationId = violationId;
@@ -253,7 +254,7 @@ describe('P4 — scopes and salary in HR (e2e)', () => {
       const violationId = (
         await http(app)
           .post(`/hr/penalty-groups/${groupId}/violations`)
-          .send({ nameEn: unique('V'), nameAr: unique('م'), levels: [{ level: 1, action: 'NOTICE' }] })
+          .send({ nameEn: unique('V'), nameAr: unique('م'), levels: [{ level: 1, actionId: ACTION_ID.NOTICE }] })
           .expect(201)
       ).body.data.id as string;
       await asUser(users.stageHead, async () => {

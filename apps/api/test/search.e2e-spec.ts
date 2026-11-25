@@ -5,6 +5,7 @@ import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
 import { createAppAsTestUser } from './helpers/as-test-user';
 import { deleteEmployees } from './helpers/employees';
+import { ACTION_ID } from './helpers/penalty-actions';
 
 /*
  * The database searches find Arabic letter variants, joined / split names, any word order, partial
@@ -57,7 +58,7 @@ describe('Arabic-aware database search (e2e)', () => {
     violationId = (
       await http(app)
         .post(`/hr/penalty-groups/${groupId}/violations`)
-        .send({ nameEn: 'Qv lateness', nameAr: 'التأخير الصباحي', levels: [{ level: 1, action: 'NOTICE' }] })
+        .send({ nameEn: 'Qv lateness', nameAr: 'التأخير الصباحي', levels: [{ level: 1, actionId: ACTION_ID.NOTICE }] })
         .expect(201)
     ).body.data.id as string;
 
@@ -109,7 +110,10 @@ describe('Arabic-aware database search (e2e)', () => {
               stageId,
               date: new Date('2025-10-05'),
               level: 1,
-              action: 'NOTICE',
+              actionId: ACTION_ID.NOTICE,
+              actionNameEn: 'Notice',
+              actionNameAr: 'لفت نظر',
+              effect: 'RECORD_ONLY',
             },
           })
         ).id,

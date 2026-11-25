@@ -21,8 +21,9 @@ import { http, unique } from './helpers';
 import { outboxEvents, outboxIdle } from './helpers/events';
 import { createAppAsTestUser, giveRoles } from './helpers/as-test-user';
 import { deleteEmployees } from './helpers/employees';
+import { ACTION, ACTION_ID } from './helpers/penalty-actions';
 
-const DEDUCT = (days: number): ViolationLevelInput[] => [{ level: 1, action: 'DEDUCT_DAYS', days }];
+const DEDUCT = (days: number): ViolationLevelInput[] => [{ level: 1, actionId: ACTION_ID.DEDUCT_DAYS, days }];
 
 /** Months this suite puts payroll runs in: a fresh one per test (one run per month, §6). */
 let monthSeq = 0;
@@ -229,8 +230,8 @@ describe('HR payroll and dashboard (e2e)', () => {
     const next = nextMonth();
     const emp = await employee();
     await approvedPenalty(emp, day(month, 3), DEDUCT(1)); // counts
-    await approvedPenalty(emp, day(month, 4), [{ level: 1, action: 'INVESTIGATION', days: 0.5 }]); // counts
-    await approvedPenalty(emp, day(month, 5), [{ level: 1, action: 'WARNING' }]); // recorded only
+    await approvedPenalty(emp, day(month, 4), [{ level: 1, actionId: ACTION_ID.INVESTIGATION, days: 0.5 }]); // counts
+    await approvedPenalty(emp, day(month, 5), [{ level: 1, actionId: ACTION_ID.WARNING }]); // recorded only
     const cancelled = await recordPenalty(emp, await violation(DEDUCT(2)), day(month, 6));
     await http(app).post(`/hr/penalties/${cancelled}/cancel`).send({ reason: 'error' }).expect(200);
     await approvedPenalty(emp, day(next, 1), DEDUCT(3)); // other month
@@ -484,7 +485,7 @@ describe('HR payroll and dashboard (e2e)', () => {
   it('Approved INVESTIGATION with 1 day in the month → penaltyDays 1', async () => {
     const month = nextMonth();
     const emp = await employee();
-    await approvedPenalty(emp, day(month, 9), [{ level: 1, action: 'INVESTIGATION', days: 1 }]);
+    await approvedPenalty(emp, day(month, 9), [{ level: 1, actionId: ACTION_ID.INVESTIGATION, days: 1 }]);
     const line = lineOf(await createRun(month), emp);
     expect(line.penaltyDays).toBe(1);
     expect(line.penaltyAmount).toBe(40_000);
@@ -505,7 +506,7 @@ describe('HR payroll and dashboard (e2e)', () => {
       'INVESTIGATION',
     ] as const;
     for (const [i, action] of actions.entries()) {
-      await approvedPenalty(emp, day(month, i + 1), [{ level: 1, action }]);
+      await approvedPenalty(emp, day(month, i + 1), [{ level: 1, actionId: ACTION_ID[action] }]);
     }
     const line = lineOf(await createRun(month), emp);
     expect(line.penaltyDays).toBe(0);
@@ -764,7 +765,7 @@ describe('HR payroll and dashboard (e2e)', () => {
     const emp = await employee();
     await approvedPenalty(emp, day(month, 4), DEDUCT(1));
     await approvedPenalty(emp, day(month, 2), DEDUCT(0.5));
-    await approvedPenalty(emp, day(month, 6), [{ level: 1, action: 'WARNING' }]);
+    await approvedPenalty(emp, day(month, 6), [{ level: 1, actionId: ACTION_ID.WARNING }]);
     const run = await createRun(month);
     await addAdjustment(run.id, {
       employeeId: emp,
@@ -783,10 +784,10 @@ describe('HR payroll and dashboard (e2e)', () => {
     expect(slip.school).toEqual(
       expect.objectContaining({ nameEn: expect.any(String), nameAr: expect.any(String) }),
     );
-    expect(slip.penalties.map((p) => [p.date, p.action, p.days, p.amount])).toEqual([
-      [day(month, 2), 'DEDUCT_DAYS', 0.5, 20_000],
-      [day(month, 4), 'DEDUCT_DAYS', 1, 40_000],
-      [day(month, 6), 'WARNING', null, 0],
+    expect(slip.penalties.map((p) => [p.date, p.action.id, p.days, p.amount])).toEqual([
+      [day(month, 2), ACTION_ID.DEDUCT_DAYS, 0.5, 20_000],
+      [day(month, 4), ACTION_ID.DEDUCT_DAYS, 1, 40_000],
+      [day(month, 6), ACTION_ID.WARNING, null, 0],
     ]);
     expect(slip.penalties[0]).toEqual(
       expect.objectContaining({
@@ -941,8 +942,8 @@ describe('HR payroll and dashboard (e2e)', () => {
     const month = nextMonth();
     const emp = await employee();
     const violationId = await violation([
-      { level: 1, action: 'DEDUCT_DAYS', days: 1 },
-      { level: 2, action: 'DEDUCT_DAYS', days: 2 },
+      { level: 1, actionId: ACTION_ID.DEDUCT_DAYS, days: 1 },
+      { level: 2, actionId: ACTION_ID.DEDUCT_DAYS, days: 2 },
     ]);
     const first = await recordPenalty(emp, violationId, day(month, 1));
     await approvePenalty(first);
@@ -1142,7 +1143,7 @@ describe('HR payroll and dashboard (e2e)', () => {
       month,
     });
     expect(slip.penalties).toEqual([
-      expect.objectContaining({ days: 1, amount: 40_000, action: 'DEDUCT_DAYS' }),
+      expect.objectContaining({ days: 1, amount: 40_000, action: ACTION.DEDUCT_DAYS }),
     ]);
     expect(slip.adjustments).toEqual([
       { type: 'ADDITION', amount: 50_000, reason: 'Exam bonus' },

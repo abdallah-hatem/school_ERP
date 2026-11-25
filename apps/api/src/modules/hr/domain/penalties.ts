@@ -3,7 +3,8 @@ import {
   isOpenPenaltyStatus,
   PenaltyStatus,
   type IsoDate,
-  type PenaltyAction,
+  type PenaltyEffect,
+  type PenaltySalaryBase,
   type RepetitionWindow,
 } from '@school-erp/shared';
 
@@ -33,10 +34,40 @@ export function penaltyLevel(priorApprovedCount: number, levels: readonly LevelR
   return Math.min(priorApprovedCount + 1, last);
 }
 
-/** A catalogue level with the fields a recorded penalty copies. */
-export interface CatalogueLevel extends LevelRef {
-  action: PenaltyAction;
+/**
+ * A penalty action as a level names it and a penalty keeps it (spec 2026-11-25): names, effect and
+ * — for a % — its salary base. On a penalty this is the snapshot (fixed at approval).
+ */
+export interface ActionSnapshot {
+  id: string;
+  nameEn: string;
+  nameAr: string;
+  effect: PenaltyEffect;
+  percentBase: PenaltySalaryBase | null;
+}
+
+/** A level's number: exactly the one its action's effect asks for (shared `levelValueProblem`). */
+export interface LevelNumbers {
   days: number | null;
+  percent: number | null;
+  /** Piastres. */
+  amount: number | null;
+}
+
+/** A catalogue level with the fields a recorded penalty copies: its action and its number. */
+export interface CatalogueLevel extends LevelRef, LevelNumbers {
+  action: ActionSnapshot;
+}
+
+/** The copy a penalty takes of a level: the action snapshot and the number, nothing shared. */
+export function copyLevel(entry: CatalogueLevel): CatalogueLevel {
+  return {
+    level: entry.level,
+    action: { ...entry.action },
+    days: entry.days,
+    percent: entry.percent,
+    amount: entry.amount,
+  };
 }
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
@@ -166,8 +197,8 @@ export function earlierPendingPenalty<R extends RecordedPenalty>(
 }
 
 /**
- * The level, action and days a penalty gets from its violation's catalogue levels, given the
- * number of prior approved penalties. "Doubles on repeat" stays text: days are never doubled.
+ * The level, action and number a penalty gets from its violation's catalogue levels, given the
+ * number of prior approved penalties. "Doubles on repeat" stays text: numbers are never doubled.
  */
 export function resolvePenalty(
   priorApprovedCount: number,
@@ -176,10 +207,10 @@ export function resolvePenalty(
   const level = penaltyLevel(priorApprovedCount, levels);
   const entry = levels.find((l) => l.level === level);
   if (!entry) throw new RangeError(`level ${level} is missing from the catalogue levels`);
-  return { level: entry.level, action: entry.action, days: entry.days };
+  return copyLevel(entry);
 }
 
-/** An APPROVED penalty with the level, action and days fixed on it — what a recount may change. */
+/** An APPROVED penalty with the level, action and number fixed on it — what a recount may change. */
 export interface ApprovedPenalty extends RecordedPenalty, CatalogueLevel {}
 
 /** One approved penalty a backdated approval moves up (§4 DECIDED, owner 2026-11-20). */
@@ -202,8 +233,8 @@ function comesBefore(target: PenaltyTarget, other: PenaltyPosition): boolean {
  * levels are never recomputed"). Each approved penalty of the same employee and violation that
  * comes later in the repeat order (`isEarlierPenalty`), and whose own repetition window holds
  * `target`'s date, now has one more earlier approved penalty, so it moves up ONE level — capped at
- * the violation's last level (a capped one doesn't change and isn't listed). Its action and days
- * become those of its new level in `levels` (today's catalogue: the source an approval uses — the
+ * the violation's last level (a capped one doesn't change and isn't listed). Its action and number
+ * become those of its new level in `levels` (today's catalogue — names and effect included: the source an approval uses — the
  * catalogue keeps no history). Gaps left by cancellations stay: a cancellation never recounts, and
  * this only adds the one penalty being approved.
  *
@@ -236,8 +267,8 @@ export function recountAfterApproval<R extends ApprovedPenalty>(
     if (!entry) throw new RangeError(`level ${level} is missing from the catalogue levels`);
     changes.push({
       record: r,
-      before: { level: r.level, action: r.action, days: r.days },
-      after: { level: entry.level, action: entry.action, days: entry.days },
+      before: copyLevel(r),
+      after: copyLevel(entry),
     });
   }
   return changes.sort((a, b) => (isEarlierPenalty(a.record, b.record) ? -1 : 1));
@@ -257,17 +288,19 @@ export function recountLockedMonth(
   return locked.length === 0 ? null : locked.reduce((a, b) => (a < b ? a : b));
 }
 
-/** What the user confirmed: each recounted penalty and the level, action and days it gets. */
+/** What the user confirmed: each recounted penalty and the level, action and number it gets. */
 export interface RecountAcknowledgement {
   id: string;
   level: number;
-  action: PenaltyAction;
+  actionId: string;
   days: number | null;
+  percent: number | null;
+  amount: number | null;
 }
 
 /**
  * Whether the user's confirmation (`acknowledged`: the list their screen showed) is exactly what
- * approving now does (`changes`): the same penalties, each to the same level, action and days, in
+ * approving now does (`changes`): the same penalties, each to the same level, action and number, in
  * any order (§4 DECIDED, owner 2026-11-20 — a stale screen can't recount silently). `undefined`
  * (nothing confirmed) matches only when nothing changes.
  */
@@ -284,8 +317,10 @@ export function recountAcknowledged(
     return (
       a !== undefined &&
       a.level === c.after.level &&
-      a.action === c.after.action &&
-      (a.days ?? null) === c.after.days
+      a.actionId === c.after.action.id &&
+      (a.days ?? null) === c.after.days &&
+      (a.percent ?? null) === c.after.percent &&
+      (a.amount ?? null) === c.after.amount
     );
   });
 }

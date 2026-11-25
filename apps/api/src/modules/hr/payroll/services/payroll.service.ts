@@ -31,9 +31,8 @@ import { CodedException } from '../../../../common/errors/coded.exception';
 import type { PayrollPaginationQueryDto } from '../../../../common/dto/pagination-query.dto';
 import {
   calculateLine,
-  deductedDays,
+  payslipPenaltyAmount,
   lineNetWithFlags,
-  penaltyShare,
   sumAdjustments,
 } from '../../domain';
 import {
@@ -454,14 +453,19 @@ export class PayrollService {
       this.repository.findAdjustments(id, row.employeeId),
       this.schoolSettings.getSchoolSettings(),
     ]);
-    const penaltyDays = Number(row.penaltyDays);
+    const line = { ...row, penaltyDays: Number(row.penaltyDays) };
     return {
       ...toLine(row, salaryVisible),
       month: run.month,
       penalties: penalties.map((p) => ({
         ...p,
         ...(salaryVisible
-          ? { amount: penaltyShare(deductedDays(p.action, p.days), penaltyDays, row.penaltyAmount) }
+          ? {
+              amount: payslipPenaltyAmount(
+                { effect: p.action.effect, percentBase: p.action.percentBase, days: p.days, percent: p.percent, amount: p.fixedAmount },
+                line,
+              ),
+            }
           : {}),
       })),
       adjustments: adjustments.map((a) => ({
@@ -616,7 +620,7 @@ export class PayrollService {
         {
           basicSalary: e.basicSalary,
           workSystem: e.workSystem,
-          penaltyDays: penalties.deductingDays.get(e.id) ?? [],
+          penalties: penalties.approved.get(e.id) ?? [],
           latenessDays: late?.days ?? 0,
           adjustments: adjustments.filter((a) => a.employeeId === e.id),
           pendingPenalties: penalties.pending.get(e.id) ?? 0,

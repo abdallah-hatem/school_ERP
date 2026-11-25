@@ -1,14 +1,27 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
-import type { PenaltyAction } from '@school-erp/shared';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import type { DbAdapter, DbClient } from '../../../../database/transactions';
 
+/** A level's action as levels show it: names, effect, base, and whether it is hidden. */
+export const LEVEL_ACTION_SELECT = {
+  id: true,
+  nameEn: true,
+  nameAr: true,
+  effect: true,
+  percentBase: true,
+  isActive: true,
+} satisfies Prisma.PenaltyActionSelect;
+
 export const LEVEL_SELECT = {
   level: true,
-  action: true,
   days: true,
+  percent: true,
+  amount: true,
+  action: { select: LEVEL_ACTION_SELECT },
 } satisfies Prisma.ViolationLevelSelect;
+
+export type LevelRow = Prisma.ViolationLevelGetPayload<{ select: typeof LEVEL_SELECT }>;
 
 export const VIOLATION_SELECT = {
   id: true,
@@ -46,10 +59,13 @@ export type ViolationRow = Prisma.ViolationGetPayload<{ select: typeof VIOLATION
 /** A violation with what recording a penalty needs: its levels and whether it's usable. */
 export type UsableViolationRow = ViolationRow & { group: { isActive: boolean } };
 
+/** A level as stored: its action and exactly the number the action's effect asks for. */
 export interface LevelData {
   level: number;
-  action: PenaltyAction;
+  actionId: string;
   days: number | null;
+  percent: number | null;
+  amount: number | null;
 }
 
 export interface GroupData {

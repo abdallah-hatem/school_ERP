@@ -24,6 +24,7 @@
     "hr_settings": "HR rules",
     "penalty_group": "Penalty group",
     "violation": "Violation",
+    "penalty_action": "Penalty action",
     "penalty": "Penalty",
     "lateness_month": "Monthly lateness",
     "payroll_run": "Payroll run",
@@ -111,6 +112,10 @@
       "violation": {
         "create": "Added the violation {entity}",
         "update": "Edited the violation {entity}"
+      },
+      "penalty_action": {
+        "create": "Added the penalty action {entity}",
+        "update": "Edited the penalty action {entity}"
       },
       "penalty": {
         "record": "Recorded a penalty for {entity}",
@@ -281,7 +286,8 @@
       "jobTitles": "Job title",
       "employee_grades": "Employee grade",
       "penaltyGroups": "Penalty group",
-      "violations": "Violation"
+      "violations": "Violation",
+      "penaltyActions": "Penalty action"
     },
     "lists": {
       "stages": "Stage"
@@ -337,7 +343,12 @@
     "hidden": "Hidden",
     "languages": "Languages",
     "signedCopyPages": "Signed copy pages",
-    "signedCopyFile": "Signed copy page"
+    "signedCopyFile": "Signed copy page",
+    "percent": "Percent",
+    "fixedAmount": "Fixed amount",
+    "effect": "Effect",
+    "percentBase": "Of which salary",
+    "actionName": "Penalty"
   },
   "totals": {
     "net": "Net",

@@ -37,6 +37,7 @@ const line = (employeeId: string): LineRow => ({
   dayValue: 30000,
   penaltyDays: 1 as unknown as Prisma.Decimal,
   penaltyAmount: 30000,
+  penaltyDaysAmount: 30000,
   latenessMinutes: 0,
   latenessGraceMinutes: 0,
   latenessDays: 0 as unknown as Prisma.Decimal,

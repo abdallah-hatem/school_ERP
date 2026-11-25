@@ -8,17 +8,35 @@ import {
   recountLockedMonth,
   repetitionWindowStart,
   resolvePenalty,
+  type ActionSnapshot,
   type CatalogueLevel,
   type PenaltyTarget,
   type RecordedPenalty,
 } from '.';
+import { SEEDED_PENALTY_ACTIONS, type PenaltyAction } from '@school-erp/shared';
+
+/** The seeded ten as levels name them (spec 2026-11-25): `act-<code>` ids, today's names. */
+const ACT = Object.fromEntries(
+  SEEDED_PENALTY_ACTIONS.map((a) => [
+    a.code,
+    { id: `act-${a.code}`, nameEn: a.nameEn, nameAr: a.nameAr, effect: a.effect, percentBase: null },
+  ]),
+) as Record<PenaltyAction, ActionSnapshot>;
+/** A level (or what a penalty copies of it) with a seeded action and days. */
+const L = (level: number, code: PenaltyAction, days: number | null): CatalogueLevel => ({
+  level,
+  action: ACT[code],
+  days,
+  percent: null,
+  amount: null,
+});
 
 const levels5: CatalogueLevel[] = [
-  { level: 1, action: 'NOTICE', days: null },
-  { level: 2, action: 'WARNING', days: null },
-  { level: 3, action: 'DEDUCT_DAYS', days: 1 },
-  { level: 4, action: 'DEDUCT_DAYS', days: 2 },
-  { level: 5, action: 'DEDUCT_DAYS', days: 5 },
+  L(1, 'NOTICE', null),
+  L(2, 'WARNING', null),
+  L(3, 'DEDUCT_DAYS', 1),
+  L(4, 'DEDUCT_DAYS', 2),
+  L(5, 'DEDUCT_DAYS', 5),
 ];
 
 describe('repetitionWindowStart (§4, §7)', () => {
@@ -252,11 +270,11 @@ describe('earlierPendingPenalty (§4 DECIDED 2026-11-20: approve in date order)'
 
 describe('resolvePenalty', () => {
   it('copies the level’s action and days', () => {
-    expect(resolvePenalty(0, levels5)).toEqual({ level: 1, action: 'NOTICE', days: null });
-    expect(resolvePenalty(2, levels5)).toEqual({ level: 3, action: 'DEDUCT_DAYS', days: 1 });
+    expect(resolvePenalty(0, levels5)).toEqual(L(1, 'NOTICE', null));
+    expect(resolvePenalty(2, levels5)).toEqual(L(3, 'DEDUCT_DAYS', 1));
   });
   it('"doubles on repeat": level 5 with 7 prior → level-5 days, not doubled', () => {
-    expect(resolvePenalty(7, levels5)).toEqual({ level: 5, action: 'DEDUCT_DAYS', days: 5 });
+    expect(resolvePenalty(7, levels5)).toEqual(L(5, 'DEDUCT_DAYS', 5));
   });
 });
 
@@ -265,7 +283,7 @@ describe('recountAfterApproval (§4 DECIDED 2026-11-20: a backdated penalty reco
   /** An APPROVED record of PAIR with its fixed level (the action and days of that level in levels5). */
   const fixed = (id: string, date: string, level: number, over: Partial<RecordedPenalty> = {}, time = '08:00') => {
     const entry = levels5.find((l) => l.level === level)!;
-    return { ...rec(id, date, time, over), level, action: entry.action, days: entry.days };
+    return { ...rec(id, date, time, over), ...L(level, 'NOTICE', null), action: entry.action, days: entry.days };
   };
   /** The recorded backdated penalty: recorded after the others (on 21 Nov). */
   const backdated = (date: string): PenaltyTarget => ({
@@ -282,13 +300,13 @@ describe('recountAfterApproval (§4 DECIDED 2026-11-20: a backdated penalty reco
     expect(recountAfterApproval(backdated('2026-11-18'), w, records, levels5)).toEqual([
       {
         record: expect.objectContaining({ id: 'd19' }),
-        before: { level: 1, action: 'NOTICE', days: null },
-        after: { level: 2, action: 'WARNING', days: null },
+        before: L(1, 'NOTICE', null),
+        after: L(2, 'WARNING', null),
       },
       {
         record: expect.objectContaining({ id: 'd20' }),
-        before: { level: 2, action: 'WARNING', days: null },
-        after: { level: 3, action: 'DEDUCT_DAYS', days: 1 },
+        before: L(2, 'WARNING', null),
+        after: L(3, 'DEDUCT_DAYS', 1),
       },
     ]);
     // The 18th itself gets level 1 (nothing approved before it): 18/19/20 → 1/2/3.
@@ -360,17 +378,17 @@ describe('recountAfterApproval (§4 DECIDED 2026-11-20: a backdated penalty reco
   });
 
   it('action and days come from the catalogue given (today’s), not the stored ones', () => {
-    const edited = levels5.map((l) => (l.level === 2 ? { ...l, action: 'DEDUCT_DAYS' as const, days: 0.5 } : l));
+    const edited = levels5.map((l) => (l.level === 2 ? { ...l, action: ACT.DEDUCT_DAYS, days: 0.5 } : l));
     const [change] = recountAfterApproval(backdated('2026-11-18'), w, [fixed('d19', '2026-11-19', 1)], edited);
-    expect(change?.after).toEqual({ level: 2, action: 'DEDUCT_DAYS', days: 0.5 });
+    expect(change?.after).toEqual(L(2, 'DEDUCT_DAYS', 0.5));
   });
 });
 
 describe('recountLockedMonth (§4: an approved month cannot be recounted)', () => {
   const change = (id: string, date: string) => ({
-    record: { ...rec(id, date), level: 1, action: 'NOTICE' as const, days: null },
-    before: { level: 1, action: 'NOTICE' as const, days: null },
-    after: { level: 2, action: 'WARNING' as const, days: null },
+    record: { ...rec(id, date), ...L(1, 'NOTICE', null) },
+    before: L(1, 'NOTICE', null),
+    after: L(2, 'WARNING', null),
   });
 
   it('names the earliest locked month among the changes', () => {
@@ -387,15 +405,17 @@ describe('recountLockedMonth (§4: an approved month cannot be recounted)', () =
 
 describe('recountAcknowledged (§4: the approval names what it changes)', () => {
   const change = (id: string, level: number, days: number | null = null) => ({
-    record: { ...rec(id, '2026-11-20'), level: level - 1, action: 'NOTICE' as const, days: null },
-    before: { level: level - 1, action: 'NOTICE' as const, days: null },
-    after: { level, action: days ? ('DEDUCT_DAYS' as const) : ('WARNING' as const), days },
+    record: { ...rec(id, '2026-11-20'), ...L(level - 1, 'NOTICE', null) },
+    before: L(level - 1, 'NOTICE', null),
+    after: L(level, days ? 'DEDUCT_DAYS' : 'WARNING', days),
   });
   const ack = (id: string, level: number, days: number | null = null) => ({
     id,
     level,
-    action: days ? ('DEDUCT_DAYS' as const) : ('WARNING' as const),
+    actionId: ACT[days ? 'DEDUCT_DAYS' : 'WARNING'].id,
     days,
+    percent: null,
+    amount: null,
   });
 
   it('nothing changes: no confirmation needed, an empty one matches too', () => {
@@ -415,8 +435,79 @@ describe('recountAcknowledged (§4: the approval names what it changes)', () => 
     expect(recountAcknowledged(changes, [ack('a', 2), ack('b', 3, 1), ack('c', 2)])).toBe(false);
     expect(recountAcknowledged(changes, [ack('a', 3), ack('b', 3, 1)])).toBe(false);
     expect(recountAcknowledged(changes, [ack('a', 2), ack('b', 3, 2)])).toBe(false);
-    expect(recountAcknowledged(changes, [ack('a', 2), { ...ack('b', 3, 1), action: 'INVESTIGATION' as const }])).toBe(false);
+    expect(recountAcknowledged(changes, [ack('a', 2), { ...ack('b', 3, 1), actionId: ACT.INVESTIGATION.id }])).toBe(false);
     expect(recountAcknowledged(changes, [ack('a', 2), ack('a', 2)])).toBe(false);
     expect(recountAcknowledged([], [ack('a', 2)])).toBe(false);
+  });
+});
+
+describe('penalty actions with effects (spec 2026-11-25-penalty-actions)', () => {
+  const pct: ActionSnapshot = { id: 'act-pct', nameEn: 'Salary deduction %', nameAr: 'خصم نسبة من الراتب', effect: 'DEDUCT_PERCENT', percentBase: 'MONTH_SALARY' };
+  const fixedAmount: ActionSnapshot = { id: 'act-amt', nameEn: 'Fixed deduction', nameAr: 'خصم ثابت', effect: 'DEDUCT_AMOUNT', percentBase: null };
+  /** Walk E's "Late to class": Notice, Deduct 0.5 day, Deduct 5% of the salary for the month, Deduct EGP 300. */
+  const lateLevels: CatalogueLevel[] = [
+    L(1, 'NOTICE', null),
+    L(2, 'DEDUCT_DAYS', 0.5),
+    { level: 3, action: pct, days: null, percent: 5, amount: null },
+    { level: 4, action: fixedAmount, days: null, percent: null, amount: 30_000 },
+  ];
+  const approvedAt = (id: string, date: string, level: number) => ({
+    ...rec(id, date),
+    ...lateLevels.find((l) => l.level === level)!,
+  });
+
+  it('a level copies its action snapshot and its percent or amount, never shared with the catalogue', () => {
+    const got = resolvePenalty(2, lateLevels);
+    expect(got).toEqual({ level: 3, action: pct, days: null, percent: 5, amount: null });
+    expect(got.action).not.toBe(pct);
+    expect(resolvePenalty(3, lateLevels)).toEqual({ level: 4, action: fixedAmount, days: null, percent: null, amount: 30_000 });
+  });
+
+  it('walk E: a late dated 18 Nov moves 19 (Notice → 0.5 day), 20 (0.5 day → 5%) and 21 (5% → EGP 300) up, with today’s actions and numbers', () => {
+    const records = [approvedAt('d19', '2026-11-19', 1), approvedAt('d20', '2026-11-20', 2), approvedAt('d21', '2026-11-21', 3)];
+    const changes = recountAfterApproval(unrecorded('2026-11-18'), 'CONTRACT_YEAR', records, lateLevels);
+    expect(changes.map((c) => [c.record.id, c.before.action.effect, c.after.action.effect, c.after.days, c.after.percent, c.after.amount])).toEqual([
+      ['d19', 'RECORD_ONLY', 'DEDUCT_DAYS', 0.5, null, null],
+      ['d20', 'DEDUCT_DAYS', 'DEDUCT_PERCENT', null, 5, null],
+      ['d21', 'DEDUCT_PERCENT', 'DEDUCT_AMOUNT', null, null, 30_000],
+    ]);
+  });
+
+  it('edge case 22: a recount changing a penalty from Record only to a fixed amount carries the amount (Notice → Deduct EGP 300)', () => {
+    const levels: CatalogueLevel[] = [L(1, 'NOTICE', null), { level: 2, action: fixedAmount, days: null, percent: null, amount: 30_000 }];
+    const [change] = recountAfterApproval(unrecorded('2026-11-18'), 'CONTRACT_YEAR', [{ ...rec('d19', '2026-11-19'), ...levels[0] }], levels);
+    expect(change?.before).toEqual(L(1, 'NOTICE', null));
+    expect(change?.after).toEqual({ level: 2, action: fixedAmount, days: null, percent: null, amount: 30_000 });
+  });
+
+  it('edge case 14: a level’s % changed after approval never touches the approved penalty — its stored number is what it shows and is priced from', () => {
+    const approved = approvedAt('d21', '2026-11-21', 3);
+    const repriced = lateLevels.map((l) => (l.level === 3 ? { ...l, percent: 7 } : l));
+    // Nothing earlier is approved later, so nothing recounts: the 5% stands.
+    expect(recountAfterApproval(unrecorded('2026-11-22'), 'CONTRACT_YEAR', [approved], repriced)).toEqual([]);
+    expect(approved.percent).toBe(5);
+  });
+
+  it('edge case 15: a level switched from Deduct days to Deduct % while a penalty waits → the waiting one resolves to the % now', () => {
+    const switched = lateLevels.map((l) => (l.level === 2 ? { level: 2, action: pct, days: null, percent: 10, amount: null } : l));
+    expect(resolvePenalty(1, switched)).toEqual({ level: 2, action: pct, days: null, percent: 10, amount: null });
+  });
+
+  it('edge case 23: a recount into a level whose action is now hidden takes that action (the domain never looks at hidden)', () => {
+    const hidden = { ...ACT.INVESTIGATION, isActive: false } as ActionSnapshot;
+    const levels: CatalogueLevel[] = [L(1, 'NOTICE', null), { level: 2, action: hidden, days: 2, percent: null, amount: null }];
+    const [change] = recountAfterApproval(unrecorded('2026-11-18'), 'CONTRACT_YEAR', [{ ...rec('d19', '2026-11-19'), ...levels[0] }], levels);
+    expect(change?.after.action.id).toBe(ACT.INVESTIGATION.id);
+    expect(change?.after.days).toBe(2);
+  });
+
+  it('a confirmation shown a different percent or amount is stale', () => {
+    const records = [approvedAt('d20', '2026-11-20', 2)];
+    const changes = recountAfterApproval(unrecorded('2026-11-18'), 'CONTRACT_YEAR', records, lateLevels);
+    const shown = { id: 'd20', level: 3, actionId: 'act-pct', days: null, percent: 5, amount: null };
+    expect(recountAcknowledged(changes, [shown])).toBe(true);
+    expect(recountAcknowledged(changes, [{ ...shown, percent: 10 }])).toBe(false);
+    expect(recountAcknowledged(changes, [{ ...shown, amount: 100 }])).toBe(false);
+    expect(recountAcknowledged(changes, [{ ...shown, actionId: 'act-amt' }])).toBe(false);
   });
 });

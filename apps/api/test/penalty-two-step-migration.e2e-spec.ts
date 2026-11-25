@@ -93,10 +93,10 @@ describe('penalty_two_step on existing databases (migration, e2e)', () => {
   });
 
   it('the new statuses exist: a migrated one can move on (approvable at the HR step)', async () => {
-    await db.penaltyRecord.update({ where: { id: P.pending }, data: { status: 'APPROVED' } });
-    await db.penaltyRecord.update({ where: { id: P.pending }, data: { status: 'REJECTED' } });
-    await db.penaltyRecord.update({ where: { id: P.pending }, data: { status: 'PENDING_REVIEW' } });
-    expect((await db.penaltyRecord.findUniqueOrThrow({ where: { id: P.pending } })).status).toBe('PENDING_REVIEW');
+    await db.penaltyRecord.update({ where: { id: P.pending }, data: { status: 'APPROVED' }, select: { id: true } });
+    await db.penaltyRecord.update({ where: { id: P.pending }, data: { status: 'REJECTED' }, select: { id: true } });
+    await db.penaltyRecord.update({ where: { id: P.pending }, data: { status: 'PENDING_REVIEW' }, select: { id: true } });
+    expect((await db.penaltyRecord.findUniqueOrThrow({ where: { id: P.pending }, select: { status: true } })).status).toBe('PENDING_REVIEW');
   });
 
   it('employees have no other stages yet ("also teaches in" starts empty)', async () => {

@@ -24,6 +24,7 @@
     "hr_settings": "قواعد الموارد البشرية",
     "penalty_group": "مجموعة جزاءات",
     "violation": "مخالفة",
+    "penalty_action": "إجراء جزاء",
     "penalty": "جزاء",
     "lateness_month": "تأخير الشهر",
     "payroll_run": "مسيّر رواتب",
@@ -111,6 +112,10 @@
       "violation": {
         "create": "إضافة المخالفة {entity}",
         "update": "تعديل المخالفة {entity}"
+      },
+      "penalty_action": {
+        "create": "إضافة إجراء الجزاء {entity}",
+        "update": "تعديل إجراء الجزاء {entity}"
       },
       "penalty": {
         "record": "تسجيل جزاء على {entity}",
@@ -281,7 +286,8 @@
       "jobTitles": "المسمى الوظيفي",
       "employee_grades": "الدرجة الوظيفية",
       "penaltyGroups": "مجموعة الجزاءات",
-      "violations": "المخالفة"
+      "violations": "المخالفة",
+      "penaltyActions": "إجراء جزاء"
     },
     "lists": {
       "stages": "المرحلة"
@@ -337,7 +343,12 @@
     "hidden": "مخفي",
     "languages": "اللغات",
     "signedCopyPages": "صفحات العقد الموقّع",
-    "signedCopyFile": "صفحة العقد الموقّع"
+    "signedCopyFile": "صفحة العقد الموقّع",
+    "percent": "النسبة",
+    "fixedAmount": "المبلغ الثابت",
+    "effect": "الأثر",
+    "percentBase": "من أي أجر",
+    "actionName": "الجزاء"
   },
   "totals": {
     "net": "الصافي",

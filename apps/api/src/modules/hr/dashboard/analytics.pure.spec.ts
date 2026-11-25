@@ -161,11 +161,11 @@ describe('dashboard analytics — penalties and lateness', () => {
     const a = buildAnalytics(
       base({
         penalties: [
-          { date: '2026-10-31', action: 'NOTICE', count: 2 },
-          { date: '2026-11-01', action: 'WARNING', count: 1 },
-          { date: '2026-11-01', action: 'DEDUCT_DAYS', count: 3 },
-          { date: '2026-11-20', action: 'DISMISSAL', count: 1 },
-          { date: '2026-05-31', action: 'NOTICE', count: 9 }, // before the range
+          { date: '2026-10-31', code: 'NOTICE', effect: 'RECORD_ONLY', days: null, count: 2 },
+          { date: '2026-11-01', code: 'WARNING', effect: 'RECORD_ONLY', days: null, count: 1 },
+          { date: '2026-11-01', code: 'DEDUCT_DAYS', effect: 'DEDUCT_DAYS', days: 1, count: 3 },
+          { date: '2026-11-20', code: 'DISMISSAL', effect: 'RECORD_ONLY', days: null, count: 1 },
+          { date: '2026-05-31', code: 'NOTICE', effect: 'RECORD_ONLY', days: null, count: 9 }, // before the range
         ],
       }),
     );

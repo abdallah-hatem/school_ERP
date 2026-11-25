@@ -9,7 +9,7 @@ import { join, resolve } from 'node:path';
 import type { INestApplicationContext } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ErrorCode, PayrollFlag, SEED_ADMIN_EMAIL } from '@school-erp/shared';
-import { loadSeedData } from '../prisma/seed/data/load';
+import { assertCatalogue, loadSeedData } from '../prisma/seed/data/load';
 import { ADJUSTMENTS, DEMO_MONTH, LATENESS, PENALTIES } from '../prisma/seed/data/november';
 import { EMPLOYEES } from '../prisma/seed/data/employees';
 import { HISTORY_MONTHS } from '../prisma/seed/data/history';
@@ -17,9 +17,10 @@ import { runSeed } from '../prisma/seed/run';
 import { AppModule } from '../src/app.module';
 import { SettingsService } from '../src/core/settings';
 import { DatabaseService } from '../src/database/database.service';
-import { PayrollService, PenaltyCatalogueService } from '../src/modules/hr';
+import { PayrollService, PenaltyActionsService, PenaltyCatalogueService } from '../src/modules/hr';
 import { countPriorInWindow, penaltyLevel } from '../src/modules/hr/domain';
 import { deleteEmployees } from './helpers/employees';
+import { ACTION_ID } from './helpers/penalty-actions';
 
 const REPO_ROOT = resolve(__dirname, '..', '..', '..');
 const data = loadSeedData();
@@ -121,6 +122,37 @@ describe('Seed (e2e)', () => {
     expect(new Set(second.codes).size).toBe(second.codes.length);
   }, 120_000);
 
+  it('edge case 27: seed run twice, or after the school renamed "Warning" → the ten are ensured by code, never renamed back', async () => {
+    const actions = app.get(PenaltyActionsService);
+    expect(await db.penaltyAction.count({ where: { code: { not: null } } })).toBe(10);
+    await actions.update(ACTION_ID.WARNING, { nameEn: 'Written warning', isActive: false }, null);
+    try {
+      await runSeed({ app });
+      const warning = await db.penaltyAction.findUniqueOrThrow({ where: { id: ACTION_ID.WARNING }, select: { nameEn: true, isActive: true } });
+      expect(warning).toEqual({ nameEn: 'Written warning', isActive: false });
+      expect(await db.penaltyAction.count({ where: { code: { not: null } } })).toBe(10);
+    } finally {
+      await actions.update(ACTION_ID.WARNING, { nameEn: 'Warning', isActive: true }, null);
+    }
+  }, 120_000);
+
+  it('edge case 28: a catalogue naming an unknown action code → the seed stops with a clear error', () => {
+    const catalogue = {
+      groups: [
+        {
+          nameEn: 'G',
+          nameAr: 'م',
+          violations: [{ nameEn: 'Late', nameAr: 'تأخر', levels: [{ action: 'NO_SUCH_ACTION' }] }],
+        },
+      ],
+    };
+    expect(() => assertCatalogue(catalogue, 'local')).toThrow('names an unknown penalty action code "NO_SUCH_ACTION"');
+    // A school's own action named in `actions` is known.
+    expect(() =>
+      assertCatalogue({ ...catalogue, actions: [{ code: 'NO_SUCH_ACTION', nameEn: 'Own', nameAr: 'خاص', effect: 'RECORD_ONLY' }] }, 'local'),
+    ).not.toThrow('unknown penalty action');
+  });
+
   it('Exactly one seeded employee (no. 1, a man) has the portrait photo; re-seeding keeps it', async () => {
     const withPhoto = await db.employee.findMany({
       where: { photoUrl: { not: null } },
@@ -150,7 +182,7 @@ describe('Seed (e2e)', () => {
         nameAr: 'اسم قديم',
         note: null,
         oncePerDay: !(seedViolation.oncePerDay ?? true),
-        levels: [{ level: 1, action: 'NOTICE' }],
+        levels: [{ level: 1, actionId: ACTION_ID.NOTICE }],
       },
       null,
     );
@@ -165,7 +197,8 @@ describe('Seed (e2e)', () => {
     expect(after.nameAr).toBe(seedViolation.nameAr);
     expect(after.note).toBe(seedViolation.note ?? null);
     expect(after.oncePerDay).toBe(seedViolation.oncePerDay ?? true);
-    expect(after.levels.map((l) => [l.action, l.days === null ? null : Number(l.days)])).toEqual(
+    const codes = new Map((await db.penaltyAction.findMany({ select: { id: true, code: true } })).map((a) => [a.id, a.code]));
+    expect(after.levels.map((l) => [codes.get(l.actionId), l.days === null ? null : Number(l.days)])).toEqual(
       seedViolation.levels.map((l) => [l.action, l.days ?? null]),
     );
     expect((await snapshot(db)).counts).toEqual(first.counts);
@@ -186,7 +219,7 @@ describe('Seed (e2e)', () => {
       expect(numbers.length).toBeLessThanOrEqual(5);
       expect(numbers).toEqual(numbers.map((_, i) => i + 1));
       for (const l of v.levels) {
-        if (l.action === 'DEDUCT_DAYS') expect(Number(l.days)).toBeGreaterThan(0);
+        if (l.actionId === ACTION_ID.DEDUCT_DAYS) expect(Number(l.days)).toBeGreaterThan(0);
       }
     }
   });
@@ -230,7 +263,7 @@ describe('Seed (e2e)', () => {
       const prior = countPriorInWindow(target, window, positions);
       expect(r.level).toBe(penaltyLevel(prior, r.violation.levels));
       const catalogueLevel = r.violation.levels.find((l) => l.level === r.level)!;
-      expect(r.action).toBe(catalogueLevel.action);
+      expect(r.actionId).toBe(catalogueLevel.actionId);
     }
     // The demo really repeats: someone reached level 3, someone else level 2.
     expect(Math.max(...approved.map((r) => r.level))).toBe(3);
