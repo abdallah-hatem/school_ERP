@@ -29,7 +29,14 @@ import { ACTION_ID } from './helpers/penalty-actions';
 
 /** Months this suite puts payroll runs in (one run per month, §6): 2013, one per walk. */
 let monthSeq = 0;
-const nextMonth = () => `2013-${String(++monthSeq).padStart(2, '0')}`;
+/** A fresh month per scenario, rolling into the next year after December (one run per month, §6). */
+const usedMonths: string[] = [];
+const nextMonth = () => {
+  const n = monthSeq++;
+  const month = `${2013 + Math.floor(n / 12)}-${String((n % 12) + 1).padStart(2, '0')}`;
+  usedMonths.push(month);
+  return month;
+};
 const day = (month: string, d: number) => `${month}-${String(d).padStart(2, '0')}`;
 
 describe('Penalty actions (e2e)', () => {
@@ -150,7 +157,7 @@ describe('Penalty actions (e2e)', () => {
   });
 
   afterAll(async () => {
-    const months = Array.from({ length: monthSeq }, (_, i) => `2013-${String(i + 1).padStart(2, '0')}`);
+    const months = usedMonths;
     const runIds = (await db.payrollRun.findMany({ where: { month: { in: months } }, select: { id: true } })).map((r) => r.id);
     await db.accountingPayrollRun.deleteMany({ where: { OR: [{ hrRunId: { in: runIds } }, { month: { in: months } }] } });
     await db.payrollRun.deleteMany({ where: { month: { in: months } } });

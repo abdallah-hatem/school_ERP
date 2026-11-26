@@ -348,12 +348,12 @@
     "effect": "الأثر",
     "usedOn": "مستخدم في",
     "usedOnCount": {
-      "zero": "لا درجات",
-      "one": "درجة واحدة",
-      "two": "درجتان",
-      "few": "{count} درجات",
-      "many": "{count} درجة",
-      "other": "{count} درجة"
+      "zero": "لا مستويات",
+      "one": "مستوى واحد",
+      "two": "مستويان",
+      "few": "{count} مستويات",
+      "many": "{count} مستوى",
+      "other": "{count} مستوى"
     },
     "showHidden": "عرض المخفي",
     "emptyTitle": "لا توجد إجراءات جزاءات بعد",
@@ -388,12 +388,12 @@
     "hideBody": "مستخدم في {levels} ضمن {violations}. تحتفظ به، ولا يمكن اختياره لدرجات أخرى.",
     "hideBodyUnused": "لا يمكن اختياره للدرجات حتى تظهره مرة أخرى.",
     "hideLevels": {
-      "zero": "لا درجات",
-      "one": "درجة واحدة",
-      "two": "درجتين",
-      "few": "{count} درجات",
-      "many": "{count} درجة",
-      "other": "{count} درجة"
+      "zero": "لا مستويات",
+      "one": "مستوى واحد",
+      "two": "مستويين",
+      "few": "{count} مستويات",
+      "many": "{count} مستوى",
+      "other": "{count} مستوى"
     },
     "hideViolations": {
       "zero": "لا مخالفات",

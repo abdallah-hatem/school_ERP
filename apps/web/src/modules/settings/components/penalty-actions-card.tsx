@@ -114,9 +114,11 @@ export function PenaltyActionsCard({ onChanged }: { onChanged?: () => void }) {
       header: copy('name'),
       card: 'title',
       skeleton: (
-        <span className="flex min-w-0 flex-col">
+        // The loaded cell's lines exactly: the same gap, and in Arabic the other name is the Latin
+        // one, drawn in the Latin face — a taller line (`figures`; smoke phone-ar, 2026-11-26).
+        <span className="flex min-w-0 flex-col items-start gap-0.5">
           <SkeletonText className="font-semibold" width="w-32" />
-          <SkeletonText className="text-xs" width="w-20" />
+          <SkeletonText className="text-xs" width="w-20" figures={locale === 'ar'} />
         </span>
       ),
       cell: (item) => (
@@ -136,6 +138,7 @@ export function PenaltyActionsCard({ onChanged }: { onChanged?: () => void }) {
       id: 'usedOn',
       header: copy('usedOn'),
       className: 'w-32',
+      skeleton: <SkeletonText width="w-24" figures />,
       cell: (item) => <span className="tabular">{copy('usedOnCount', { count: formatCount(item.levelsUsing) })}</span>,
     },
     {
