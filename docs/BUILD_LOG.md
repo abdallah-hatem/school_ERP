@@ -748,6 +748,17 @@ phase live in `docs/build-log/`.
 - 2026-11-26 — **#317 merged:** the record-penalty dialog's long preview test (four picker changes and a
   date pick) gets 20 s; it timed out at the 5 s default on busy CI runners (#315, #291) though every step
   passed. #315 (feature flags wait for a second school) merged after a re-run.
+- 2026-11-26 — **#319 merged: penalty actions are school data** (spec #311, approved, no cap). Settings
+  → Penalty actions: ten seeded actions (today's names), each with one effect fixed in code — record
+  only, deduct days, deduct % (salary for the month or basic), fixed EGP, investigation (± days); the
+  number on each catalogue level; a snapshot on the penalty at HR approval, so later edits never change
+  it. Payroll prices days once as before (amounts unchanged), each % on its own, fixed as is; no monthly
+  cap; what the net floor leaves is written off and shown ("Not deducted (pay too low)") and fines
+  aren't scaled for part-timers (owner). Tested: 31 edge cases, 6 walks, and **72 blind scenarios**
+  written from the docs only by a code-blind agent (owner's method) — they caught a contradiction in the
+  spec, a payslip rounding mismatch and a salary hint. Independent review: no blockers; fixed a salary
+  hint through the "flagged" filter, frozen payslips of approved months (old split kept), the write-off
+  in the payroll rules with tests, per-level hidden actions, an overflow cap, database checks.
 
 ## Next up
 
@@ -758,14 +769,7 @@ phase live in `docs/build-log/`.
 
 
 
-- **Penalty actions as school data** (owner, 2026-11-25): a Settings list of penalty actions (EN/AR
-  names, hide/show), each with an effect type fixed in code — record only, deduct days, deduct a % of
-  salary, deduct a fixed amount, investigation (± days) — and the school setting its numbers; no free
-  formulas; raise actions stay record-only until raises exist; the seed loads today's actions so nothing
-  changes. Spec written (#311: numbers on the catalogue level, snapshot at approval, % of the month's salary or
-  basic, no new cap). No mockups: a new list in the existing Settings design plus fields on the
-  existing level editor (owner, 2026-11-25: "if mockups unnecessary dont do it"). Approved
-  2026-11-26 with no cap; being built on `feature/penalty-actions`.
+
 - **On-premise school (owner, 2026-11-26):** if a school hosts it on its own server, we get SSH with
   sudo on a clean Ubuntu LTS server (≥ 4 cores, 8 GB RAM, 100 GB SSD) and set it up like our own
   (Docker, Coolify, Traefik, Postgres, backups). Remote access: **SSH open to the internet, hardened**
