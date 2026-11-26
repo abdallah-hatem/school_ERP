@@ -35,7 +35,10 @@ import { PayrollRunsController } from './payroll/controllers/payroll-runs.contro
 import { PayrollRunsRepository } from './payroll/repositories/payroll-runs.repository';
 import { PayrollService } from './payroll/services/payroll.service';
 import { PenaltiesController } from './penalties/controllers/penalties.controller';
+import { PenaltyActionsController } from './penalties/controllers/penalty-actions.controller';
 import { PenaltyCatalogueController } from './penalties/controllers/penalty-catalogue.controller';
+import { PenaltyActionsRepository } from './penalties/repositories/penalty-actions.repository';
+import { PenaltyActionsService } from './penalties/services/penalty-actions.service';
 import { PenaltyCatalogueRepository } from './penalties/repositories/penalty-catalogue.repository';
 import { PenaltyRecordsRepository } from './penalties/repositories/penalty-records.repository';
 import { PenaltyCatalogueService } from './penalties/services/penalty-catalogue.service';
@@ -84,6 +87,7 @@ import { LatenessService } from './staff-attendance/services/lateness.service';
     // staff attendance — monthly lateness (T8)
     LatenessController,
     // penalties (T7)
+    PenaltyActionsController,
     PenaltyCatalogueController,
     PenaltiesController,
     // contracts (spec 2026-11-24)
@@ -132,6 +136,8 @@ import { LatenessService } from './staff-attendance/services/lateness.service';
     LatenessRepository,
     LatenessService,
     // penalties (T7)
+    PenaltyActionsRepository,
+    PenaltyActionsService,
     PenaltyCatalogueRepository,
     PenaltyCatalogueService,
     PenaltyRecordsRepository,

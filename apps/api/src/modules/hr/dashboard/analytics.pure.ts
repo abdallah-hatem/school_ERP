@@ -10,7 +10,7 @@ import {
   type IsoDate,
   type Month,
   type NamedRef,
-  type PenaltyAction,
+  type PenaltyKindInput,
   type PenaltyKind,
   type Piastres,
 } from '@school-erp/shared';
@@ -69,7 +69,7 @@ export interface AnalyticsInputs {
   stages: { stage: NamedRef; count: number; noStage: boolean }[] | null;
   employees: EmployeeDates[] | null;
   /** Approved penalties in the range, counted per violation day and action. */
-  penalties: { date: IsoDate; action: PenaltyAction; count: number }[] | null;
+  penalties: ({ date: IsoDate; count: number } & PenaltyKindInput)[] | null;
   lateness: { month: Month; minutes: number }[] | null;
   /** `null`: amounts hidden (not every salary, §10). */
   workedOut: WorkedOutMonth[] | null;
@@ -141,7 +141,7 @@ export function buildAnalytics(input: AnalyticsInputs): HrDashboardAnalytics {
         );
         for (const p of input.penalties) {
           const bucket = counts.get(monthOf(p.date));
-          if (bucket) bucket[penaltyKindOf(p.action)] += p.count;
+          if (bucket) bucket[penaltyKindOf(p)] += p.count;
         }
         return months.map((month) => {
           const c = counts.get(month)!;

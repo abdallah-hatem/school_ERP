@@ -190,3 +190,23 @@ describe('formatAuditValue: times read 12-hour with AM/PM (ص/م), never 24-hour
     );
   });
 });
+
+describe('penalty actions in the timeline (spec 2026-11-25)', () => {
+  const penalty = (field: string, value: unknown, locale: Locale) => {
+    const { t, has } = deps(locale);
+    return formatAuditValue(field, value, t, has, locale, 'penalty');
+  };
+
+  it('S67 + edge case 26: old entries holding DEDUCT_DAYS etc. still read through the kept locale keys', () => {
+    expect(penalty('action', 'DEDUCT_DAYS', 'en')).toBe('Deduct days');
+    expect(penalty('action', 'INVESTIGATION', 'ar')).toBe('إحالة للتحقيق');
+  });
+
+  it('new entries: the action by its names as then, its effect, its percent and fixed amount', () => {
+    expect(penalty('action', { nameEn: 'Salary deduction %', nameAr: 'خصم نسبة من الراتب' }, 'ar')).toBe('خصم نسبة من الراتب');
+    expect(penalty('effect', 'DEDUCT_PERCENT', 'en')).toBe('Deduct a % of salary');
+    expect(penalty('percentBase', 'BASIC_SALARY', 'en')).toBe('Basic salary');
+    expect(penalty('percent', 2.5, 'en')).toBe('2.5%');
+    expect(penalty('fixedAmount', 30000, 'en')).toBe(`EGP${NBSP}300.00`);
+  });
+});

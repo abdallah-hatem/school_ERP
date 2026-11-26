@@ -9,7 +9,6 @@ import {
   type NamedRef,
   type PenaltyEmployeeStages,
   type PenaltyStepConflict,
-  type Days,
   type IsoDate,
   type Month,
   type Paginated,
@@ -31,7 +30,6 @@ import {
   actsOnOwnPenalty,
   countPriorInWindow,
   decisionFrom,
-  deductedDays,
   earlierPendingPenalty,
   firstStep,
   oncePerDayRefuses,
@@ -47,6 +45,7 @@ import {
   resolvePenalty,
   type CatalogueLevel,
   type PenaltyDecision,
+  type PenaltyDeduction,
   type PenaltyTarget,
   type RecountChange,
 } from '../../domain';
@@ -65,19 +64,21 @@ import type {
   PenaltyPreviewQueryDto,
 } from '../dto/penalty.dto';
 import {
+  fromSnapshot,
   PenaltyRecordsRepository,
+  toSnapshotData,
   type ApprovedCandidate,
   type RecordRow,
   type RepeatKey,
 } from '../repositories/penalty-records.repository';
-import { PenaltyCatalogueService, toLevel } from './penalty-catalogue.service';
+import { PenaltyCatalogueService, toCatalogueLevel } from './penalty-catalogue.service';
 
 const keyOf = (k: RepeatKey) => `${k.employeeId}:${k.violationId}`;
 
 /** A month's penalties as payroll counts them (see `payrollInputs`). */
 export interface MonthPenaltyInputs {
-  /** Employee → fixed days of each approved deducting penalty dated in the month. */
-  deductingDays: Map<Uuid, Days[]>;
+  /** Employee → each APPROVED penalty dated in the month, as fixed at approval (effect and number). */
+  approved: Map<Uuid, PenaltyDeduction[]>;
   /** Employee → number of penalties dated in the month still waiting at either step. */
   pending: Map<Uuid, number>;
 }
@@ -85,7 +86,7 @@ export interface MonthPenaltyInputs {
 /** An approved penalty as the payslip itemises it (before its amount is worked out). */
 export type ApprovedMonthPenalty = Omit<PayslipPenalty, 'amount'>;
 
-/** What a row shows besides its stored fields: level / action / days, and what blocks approving it. */
+/** What a row shows besides its stored fields: level / action / number, and what blocks approving it. */
 interface Shown extends CatalogueLevel {
   earlierPending: PenaltyRecord['earlierPending'];
   recount: PenaltyRecountChange[];
@@ -104,6 +105,9 @@ interface ReviewHolder {
 }
 
 const iso = (d: Date | null) => (d ? d.toISOString() : null);
+
+/** An action in an audit entry: its two names as they were then (§9, spec 2026-11-25). */
+const actionNames = (l: CatalogueLevel) => ({ nameEn: l.action.nameEn, nameAr: l.action.nameAr });
 
 /** A domain recount change → the contract's shape. */
 const toChange = (c: RecountChange<ApprovedCandidate>): PenaltyRecountChange => ({
@@ -148,6 +152,8 @@ function toRecord(row: RecordRow, shown: Shown): PenaltyRecord {
     level: shown.level,
     action: shown.action,
     days: shown.days,
+    percent: shown.percent,
+    amount: shown.amount,
     status: row.status,
     stage: row.stage,
     note: row.note,
@@ -185,8 +191,8 @@ const positionOf = (row: RecordRow): PenaltyTarget => ({
   recordedAt: row.createdAt,
 });
 
-/** What a non-pending record shows: the level, action and days stored on it. */
-const storedLevel = (row: RecordRow): CatalogueLevel => toLevel(row);
+/** What a non-pending record shows: the level, action snapshot and number stored on it. */
+const storedLevel = (row: RecordRow): CatalogueLevel => fromSnapshot(row);
 
 /** A decided record: its stored level, and nothing blocks it (it isn't waiting for approval). */
 const storedShown = (row: RecordRow): Shown => ({
@@ -201,19 +207,24 @@ const storedShown = (row: RecordRow): Shown => ({
 
 /**
  * A record as its audit entries store it (§9): the violation by its two names, not its id, and the
- * level, action and days stored on it (fixed at recording, then at approval). The employee is the
- * entry's label, so not a line of its own (it would repeat the sentence — the screen check of
- * #126). No money: a penalty is days, priced only by payroll.
+ * level, the action by its two names (as then) with its effect, and its number (fixed at recording,
+ * then at approval). The employee is the entry's label, so not a line of its own (it would repeat the
+ * sentence — the screen check of #126). No priced money: a penalty holds days, a percent or the
+ * catalogue's fixed amount (`fixedAmount`, not a salary field — never hidden, spec 2026-11-25).
  */
 function penaltyAuditSnapshot(row: RecordRow) {
-  const { level, action, days } = storedLevel(row);
+  const { level, action, days, percent, amount } = storedLevel(row);
   return {
     violationId: { nameEn: row.violation.nameEn, nameAr: row.violation.nameAr },
     date: toIsoDate(row.date),
     stage: { nameEn: row.stage.nameEn, nameAr: row.stage.nameAr },
     level,
-    action,
+    action: { nameEn: action.nameEn, nameAr: action.nameAr },
+    effect: action.effect,
+    percentBase: action.percentBase,
     days,
+    percent,
+    fixedAmount: amount,
     status: row.status,
     note: row.note,
     reviewSkip: row.reviewSkip,
@@ -333,7 +344,7 @@ export class PenaltyRecordsService {
     const window = await this.window();
     const pair = await this.pairRecords(query, query.date, window);
     const priorCount = countPriorInWindow({ ...query, date: query.date }, window, pair);
-    const { level, action, days } = resolvePenalty(priorCount, levels);
+    const { level, action, days, percent, amount } = resolvePenalty(priorCount, levels);
     // §4 backdated: say before saving what approving it would change, or that it can't be.
     const recount = await this.assertRecountOpen(
       recountAfterApproval({ ...query, date: query.date }, window, pair, levels),
@@ -343,6 +354,8 @@ export class PenaltyRecordsService {
       level,
       action,
       days,
+      percent,
+      amount,
       // School-wide (§4), a number only: it names no penalty.
       priorCount,
       ...shownRecount(recount, sees),
@@ -376,7 +389,7 @@ export class PenaltyRecordsService {
         createdById,
         status: placed.status,
         reviewSkip: placed.skip,
-        ...resolvePenalty(priorCount, levels),
+        ...toSnapshotData(resolvePenalty(priorCount, levels)),
       },
       (sameDay) => oncePerDayRefuses(oncePerDay, sameDay, 'record'),
     );
@@ -494,7 +507,7 @@ export class PenaltyRecordsService {
     const date = toIsoDate(current.date);
     await this.monthLock.assertMonthOpen(monthOf(date));
 
-    const levels = current.violation.levels.map(toLevel);
+    const levels = current.violation.levels.map(toCatalogueLevel);
     const window = await this.window();
     const oncePerDay = current.violation.oncePerDay;
     let recounted: RecountChange<ApprovedCandidate>[] = [];
@@ -530,7 +543,7 @@ export class PenaltyRecordsService {
           throw CodedException.withData(HttpStatus.CONFLICT, code, { count: changes.length }, data);
         }
         recounted = changes;
-        return changes.map((c) => ({ id: c.record.id, fromLevel: c.before.level, ...c.after }));
+        return changes.map((c) => ({ id: c.record.id, fromLevel: c.before.level, ...toSnapshotData(c.after) }));
       },
       from,
       note,
@@ -586,24 +599,30 @@ export class PenaltyRecordsService {
   }
 
   /**
-   * What payroll needs from a month's penalties (§4, §6): per employee, the FIXED days of each
-   * APPROVED deducting penalty (day deduction, or investigation with days) dated in the month, and
-   * how many penalties dated in it still wait at either step. Rejected and cancelled never count.
+   * What payroll needs from a month's penalties (§4, §6, spec 2026-11-25): per employee, each
+   * APPROVED penalty dated in the month with its FIXED effect and number (payroll prices days, a %
+   * and fixed amounts; record-only ones cost 0), and how many penalties dated in it still wait at
+   * either step. Rejected and cancelled never count.
    */
-  async payrollInputs(month: Month): Promise<MonthPenaltyInputs> {
-    const rows = await this.repository.findForPayroll(month);
-    const deductingDays = new Map<Uuid, Days[]>();
+  async payrollInputs(month: Month, employeeIds?: readonly Uuid[]): Promise<MonthPenaltyInputs> {
+    const rows = await this.repository.findForPayroll(month, employeeIds);
+    const approved = new Map<Uuid, PenaltyDeduction[]>();
     const pending = new Map<Uuid, number>();
     for (const row of rows) {
       if (isOpenPenaltyStatus(row.status)) {
         pending.set(row.employeeId, (pending.get(row.employeeId) ?? 0) + 1);
         continue;
       }
-      const days = deductedDays(row.action, row.days === null ? null : Number(row.days));
-      if (days > 0)
-        deductingDays.set(row.employeeId, [...(deductingDays.get(row.employeeId) ?? []), days]);
+      const deduction: PenaltyDeduction = {
+        effect: row.effect,
+        percentBase: row.percentBase,
+        days: row.days === null ? null : Number(row.days),
+        percent: row.percent === null ? null : Number(row.percent),
+        amount: row.amount,
+      };
+      approved.set(row.employeeId, [...(approved.get(row.employeeId) ?? []), deduction]);
     }
-    return { deductingDays, pending };
+    return { approved, pending };
   }
 
   /**
@@ -627,14 +646,19 @@ export class PenaltyRecordsService {
   /** One employee's APPROVED penalties dated in a month, by date, as fixed at approval. */
   async approvedInMonth(month: Month, employeeId: Uuid): Promise<ApprovedMonthPenalty[]> {
     const rows = await this.repository.findApprovedForPayslip(month, employeeId);
-    return rows.map((r) => ({
-      date: toIsoDate(r.date),
-      violationNameEn: r.violation.nameEn,
-      violationNameAr: r.violation.nameAr,
-      level: r.level,
-      action: r.action,
-      days: r.days === null ? null : Number(r.days),
-    }));
+    return rows.map((r) => {
+      const fixed = fromSnapshot(r);
+      return {
+        date: toIsoDate(r.date),
+        violationNameEn: r.violation.nameEn,
+        violationNameAr: r.violation.nameAr,
+        level: fixed.level,
+        action: fixed.action,
+        days: fixed.days,
+        percent: fixed.percent,
+        fixedAmount: fixed.amount,
+      };
+    });
   }
 
   /**
@@ -937,8 +961,11 @@ export class PenaltyRecordsService {
         // Which of the employee's penalties moved (the entry's label is only their name).
         { field: 'penaltyDate', before: null, after: change.record.date },
         { field: 'level', before: change.before.level, after: change.after.level },
-        { field: 'action', before: change.before.action, after: change.after.action },
+        { field: 'action', before: actionNames(change.before), after: actionNames(change.after) },
+        { field: 'effect', before: change.before.action.effect, after: change.after.action.effect },
         { field: 'days', before: change.before.days, after: change.after.days },
+        { field: 'percent', before: change.before.percent, after: change.after.percent },
+        { field: 'fixedAmount', before: change.before.amount, after: change.after.amount },
         { field: 'recountedAfter', before: null, after: approvedDate },
       ],
     });
@@ -987,7 +1014,7 @@ export class PenaltyRecordsService {
     const viewScope = await this.access.scope('hr.penalties.view');
     for (const row of pending) {
       const pair = byKey.get(keyOf(row)) ?? [];
-      const levels = row.violation.levels.map(toLevel);
+      const levels = row.violation.levels.map(toCatalogueLevel);
       // L1: the level counts every stage (§4); what names a penalty shows only those the viewer sees.
       const sees: SeesPenalty = (other) =>
         penaltyInScope(viewScope, { ...other, employee: { managerId: row.employee.managerId } });

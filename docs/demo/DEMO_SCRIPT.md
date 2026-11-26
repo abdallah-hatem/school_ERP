@@ -121,6 +121,12 @@ then to HR.
   English). ✔ Only matching violations show, their groups open, the match is marked; a word nothing
   has → "No violations match" with **Clear filters**. Violations that can repeat in a day carry a
   "Can repeat in a day" badge; their Edit dialog has the **Once per day** switch off.
+- Same screen, the **Penalty actions** card above the groups: ✔ today's ten (Notice … Dismissal) with
+  their effect and how many levels use each. **Add action** → names, pick **Deduct a % of salary**
+  (✔ it asks which salary: the salary for the month or the basic salary). Edit a violation and pick it
+  for a level: ✔ the number field becomes a percent with "of the salary for the month"; save 10 and
+  the level reads "Deduct 10% of the salary for the month". Check by hand later on the payslip: 10% of
+  the line's salary for the month, to the piastre.
 
 ## 4. Lateness
 - Open the month. Type minutes for one employee (e.g. 90) — the days update while typing from the

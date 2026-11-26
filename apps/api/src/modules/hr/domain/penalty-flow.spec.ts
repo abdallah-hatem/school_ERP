@@ -181,11 +181,11 @@ describe('the stage the penalty is recorded in (penaltyStage)', () => {
 // ── Levels and the HR step's rules, with the new statuses ──────────────────────────────
 
 const levels5: CatalogueLevel[] = [
-  { level: 1, action: 'NOTICE', days: null },
-  { level: 2, action: 'WARNING', days: null },
-  { level: 3, action: 'DEDUCT_DAYS', days: 1 },
-  { level: 4, action: 'DEDUCT_DAYS', days: 2 },
-  { level: 5, action: 'DEDUCT_DAYS', days: 5 },
+  { level: 1, action: { id: 'act-NOTICE', nameEn: 'NOTICE', nameAr: 'NOTICE', effect: 'RECORD_ONLY', percentBase: null }, days: null, percent: null, amount: null },
+  { level: 2, action: { id: 'act-WARNING', nameEn: 'WARNING', nameAr: 'WARNING', effect: 'RECORD_ONLY', percentBase: null }, days: null, percent: null, amount: null },
+  { level: 3, action: { id: 'act-DEDUCT_DAYS', nameEn: 'DEDUCT_DAYS', nameAr: 'DEDUCT_DAYS', effect: 'DEDUCT_DAYS', percentBase: null }, days: 1, percent: null, amount: null },
+  { level: 4, action: { id: 'act-DEDUCT_DAYS', nameEn: 'DEDUCT_DAYS', nameAr: 'DEDUCT_DAYS', effect: 'DEDUCT_DAYS', percentBase: null }, days: 2, percent: null, amount: null },
+  { level: 5, action: { id: 'act-DEDUCT_DAYS', nameEn: 'DEDUCT_DAYS', nameAr: 'DEDUCT_DAYS', effect: 'DEDUCT_DAYS', percentBase: null }, days: 5, percent: null, amount: null },
 ];
 const PAIR = { employeeId: 'teacher', violationId: 'late' };
 const rec = (id: string, date: string, status: PenaltyStatus, time = '08:00'): RecordedPenalty => ({

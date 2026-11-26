@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { extname, join } from 'node:path';
 import type { INestApplicationContext } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { SEED_ADMIN_EMAIL, type Month } from '@school-erp/shared';
+import { SEED_ADMIN_EMAIL, SEEDED_PENALTY_ACTIONS, type Month, type PenaltyAction } from '@school-erp/shared';
 import { normalizeEmail } from '../../src/common/utils/password.util';
 import { SettingsService } from '../../src/core/settings';
 import { StagesService } from '../../src/core/school-structure';
@@ -18,6 +18,7 @@ import {
   LatenessService,
   MonthLockService,
   PayrollService,
+  PenaltyActionsService,
   PenaltyCatalogueService,
   PenaltyRecordsService,
 } from '../../src/modules/hr';
@@ -187,10 +188,12 @@ async function seedAll(app: INestApplicationContext): Promise<SeedSummary> {
   log(`employees ready (${EMPLOYEES.length}, ${created} new)`);
   await seedPortrait(employees, db, employeeIds);
 
+  const actionIds = await seedPenaltyActions(get(PenaltyActionsService), data.catalogue, admin.id);
   const violationIds = await seedCatalogue(
     get(PenaltyCatalogueService),
     db,
     data.catalogue,
+    actionIds,
     admin.id,
   );
   const violationCount = data.catalogue.groups.reduce((n, g) => n + g.violations.length, 0);
@@ -302,15 +305,45 @@ async function ensureList(
   return ids;
 }
 
-/** Stored levels in the shape `levelsOf` produces, for comparing with the seed data. */
-const storedLevels = (levels: { level: number; action: string; days: unknown }[]) =>
+/** Stored levels in the shape the seed writes them, for comparing with the seed data. */
+const storedLevels = (levels: { level: number; actionId: string; days: unknown; percent: unknown; amount: number | null }[]) =>
   [...levels]
     .sort((a, b) => a.level - b.level)
     .map((l) => ({
       level: l.level,
-      action: l.action,
+      actionId: l.actionId,
       days: l.days === null ? null : Number(l.days),
+      percent: l.percent === null ? null : Number(l.percent),
+      amount: l.amount,
     }));
+
+/**
+ * The penalty actions (spec 2026-11-25), ensured by code — the seeded ten (the migration made them;
+ * a database without one gets it back), then the catalogue's own `actions`. An existing one is
+ * never touched: a renamed or hidden action stays as the school made it. Returns code → id.
+ */
+async function seedPenaltyActions(
+  actions: PenaltyActionsService,
+  data: SeedCatalogue,
+  adminId: string,
+): Promise<Map<string, string>> {
+  const wanted = [
+    ...SEEDED_PENALTY_ACTIONS.map((a) => ({ ...a, percentBase: null })),
+    ...(data.actions ?? []).map((a) => ({ ...a, percentBase: a.percentBase ?? null })),
+  ];
+  const existing = await actions.byCodes(wanted.map((a) => a.code));
+  const ids = new Map<string, string>([...existing].map(([code, row]) => [code, row.id]));
+  for (const a of wanted) {
+    if (ids.has(a.code)) continue;
+    const created = await actions.create(
+      { nameEn: a.nameEn, nameAr: a.nameAr, effect: a.effect, percentBase: a.percentBase },
+      adminId,
+      a.code as PenaltyAction,
+    );
+    ids.set(a.code, created.id);
+  }
+  return ids;
+}
 
 /**
  * Groups by English name, violations by group + English name; returns seedKey → id. A missing
@@ -322,6 +355,7 @@ async function seedCatalogue(
   catalogue: PenaltyCatalogueService,
   db: DatabaseService,
   data: SeedCatalogue,
+  actionIds: Map<string, string>,
   adminId: string,
 ): Promise<Map<string, string>> {
   const bySeedKey = new Map<string, string>();
@@ -347,7 +381,7 @@ async function seedCatalogue(
         nameAr: v.nameAr,
         note: v.note ?? null,
         oncePerDay: v.oncePerDay ?? true,
-        levels: levelsOf(v.levels),
+        levels: levelsOf(v.levels).map(({ code, ...l }) => ({ ...l, actionId: actionIds.get(code)! })),
       };
       const existing = await db.violation.findFirst({
         where: { groupId, nameEn: v.nameEn },

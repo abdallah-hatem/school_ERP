@@ -1,9 +1,7 @@
 import {
   ErrorCode,
   isOpenPenaltyStatus,
-  PenaltyAction,
   PenaltyStatus,
-  type Days,
   type PermissionKey,
   type EmployeeSummary,
   type PenaltyGroup,
@@ -11,7 +9,8 @@ import {
   type PenaltyRecountChange,
 } from '@school-erp/shared';
 import type { SelectOption, SelectOptionGroup } from '@/shared/components/form/fields';
-import { formatDate, formatDateTime, formatDayCount, formatMonth } from '@/shared/lib/format';
+import { formatDate, formatDateTime, formatMonth } from '@/shared/lib/format';
+import { describeAction } from '@/shared/lib/penalty-action-text';
 import { nameIn, type Locale, type Translate } from '@/shared/lib/i18n';
 
 /*
@@ -19,19 +18,8 @@ import { nameIn, type Locale, type Translate } from '@/shared/lib/i18n';
  * which server errors have their own translated message.
  */
 
-/**
- * `DEDUCT_DAYS` + 0.5 → "Deduct 0.5 day" / "خصم 0.5 يوم", + 2 → "خصم يومين" (the noun agrees with
- * the number and follows خصم, `formatDayCount` oblique); an investigation with days says both; others by name.
- */
-export function describeAction(t: Translate, locale: Locale, action: PenaltyAction, days: Days | null): string {
-  if (days != null && days > 0) {
-    // The count follows خصم, so the Arabic dual is oblique: "خصم يومين".
-    const value = formatDayCount(days, locale, { case: 'oblique' });
-    if (action === PenaltyAction.DEDUCT_DAYS) return t('penalties.action.deduct', { days: value });
-    if (action === PenaltyAction.INVESTIGATION) return t('penalties.action.investigation', { days: value });
-  }
-  return t(`common.enums.penaltyAction.${action}`);
-}
+// How an action reads lives in shared (the payslip, Settings and the audit timeline use it too).
+export { deductsPay, describeAction, type ActionNumbers } from '@/shared/lib/penalty-action-text';
 
 /**
  * The violation picker's sections, as the API answered (`GET_PENALTY_GROUPS`: what can be recorded
@@ -122,8 +110,8 @@ export function approveBlockedReason(
  * when it doesn't change.
  */
 export function recountItem(change: PenaltyRecountChange, t: Translate, locale: Locale): string {
-  const from = describeAction(t, locale, change.before.action, change.before.days);
-  const to = describeAction(t, locale, change.after.action, change.after.days);
+  const from = describeAction(t, locale, change.before.action, change.before);
+  const to = describeAction(t, locale, change.after.action, change.after);
   return t('penalties.recount.item', {
     date: formatDate(change.date, locale),
     from: change.before.level,

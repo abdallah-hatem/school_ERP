@@ -5,8 +5,9 @@ import {
   OPEN_PENALTY_STATUSES,
   PenaltyStatus,
   type IsoDate,
-  type PenaltyAction,
+  type PenaltyEffect,
   type PenaltyReviewSkip,
+  type PenaltySalaryBase,
   type PenaltyStatusFilter,
   type PenaltyStep,
 } from '@school-erp/shared';
@@ -14,10 +15,77 @@ import { BaseRepository } from '../../../../common/repositories/base.repository'
 import { fromIsoDate, monthDateRange, toIsoDate } from '../../../../common/utils/dates.util';
 import { DatabaseService } from '../../../../database/database.service';
 import type { DbAdapter, DbClient } from '../../../../database/transactions';
-import { LEVEL_SELECT, type LevelData } from './penalty-catalogue.repository';
+import type { CatalogueLevel } from '../../domain';
+import { LEVEL_SELECT } from './penalty-catalogue.repository';
 import { codeContains, searchWhere } from '../../../../common/repositories/search';
 
 const USER_REF = { select: { id: true, name: true } } as const;
+
+/** A penalty's action snapshot and number (spec 2026-11-25), as stored on it. */
+const SNAPSHOT_SELECT = {
+  actionId: true,
+  actionNameEn: true,
+  actionNameAr: true,
+  effect: true,
+  percentBase: true,
+  days: true,
+  percent: true,
+  amount: true,
+} as const;
+
+/** The snapshot columns, as read. */
+export interface SnapshotColumns {
+  level: number;
+  actionId: string;
+  actionNameEn: string;
+  actionNameAr: string;
+  effect: PenaltyEffect;
+  percentBase: PenaltySalaryBase | null;
+  days: Prisma.Decimal | number | null;
+  percent: Prisma.Decimal | number | null;
+  amount: number | null;
+}
+
+/** The columns a level's copy is written to (recording, approval, recount). */
+export interface SnapshotData {
+  level: number;
+  actionId: string;
+  actionNameEn: string;
+  actionNameAr: string;
+  effect: PenaltyEffect;
+  percentBase: PenaltySalaryBase | null;
+  days: number | null;
+  percent: number | null;
+  amount: number | null;
+}
+
+/** A level's copy (domain) → the penalty's snapshot columns. */
+export function toSnapshotData(l: CatalogueLevel): SnapshotData {
+  return {
+    level: l.level,
+    actionId: l.action.id,
+    actionNameEn: l.action.nameEn,
+    actionNameAr: l.action.nameAr,
+    effect: l.action.effect,
+    percentBase: l.action.percentBase,
+    days: l.days,
+    percent: l.percent,
+    amount: l.amount,
+  };
+}
+
+const num = (v: Prisma.Decimal | number | null): number | null => (v === null ? null : Number(v));
+
+/** A penalty's stored snapshot columns → the level, action and number it holds (domain). */
+export function fromSnapshot(r: SnapshotColumns): CatalogueLevel {
+  return {
+    level: r.level,
+    action: { id: r.actionId, nameEn: r.actionNameEn, nameAr: r.actionNameAr, effect: r.effect, percentBase: r.percentBase },
+    days: num(r.days),
+    percent: num(r.percent),
+    amount: r.amount,
+  };
+}
 
 export const RECORD_SELECT = {
   id: true,
@@ -28,8 +96,7 @@ export const RECORD_SELECT = {
   stageId: true,
   stage: { select: { id: true, nameEn: true, nameAr: true } },
   level: true,
-  action: true,
-  days: true,
+  ...SNAPSHOT_SELECT,
   note: true,
   cancelReason: true,
   createdAt: true,
@@ -73,7 +140,7 @@ export const RECORD_SELECT = {
 
 export type RecordRow = Prisma.PenaltyRecordGetPayload<{ select: typeof RECORD_SELECT }>;
 
-export interface RecordCreateData extends LevelData {
+export interface RecordCreateData extends SnapshotData {
   employeeId: string;
   violationId: string;
   /** Where the violation happened (owner 2026-11-21). */
@@ -112,7 +179,7 @@ export interface RepeatKey {
  * stored on it (fixed on an approved one — what a backdated approval recounts). Same shape as the
  * domain's `ApprovedPenalty`.
  */
-export interface ApprovedCandidate extends RepeatKey, LevelData {
+export interface ApprovedCandidate extends RepeatKey, CatalogueLevel {
   id: string;
   date: IsoDate;
   recordedAt: Date;
@@ -130,8 +197,7 @@ const CANDIDATE_SELECT = {
   status: true,
   stageId: true,
   level: true,
-  action: true,
-  days: true,
+  ...SNAPSHOT_SELECT,
 } as const;
 
 const toCandidate = (
@@ -144,9 +210,7 @@ const toCandidate = (
   recordedAt: r.createdAt,
   status: r.status,
   stageId: r.stageId,
-  level: r.level,
-  action: r.action,
-  days: r.days === null ? null : Number(r.days),
+  ...fromSnapshot(r),
 });
 
 /**
@@ -178,7 +242,7 @@ export type ApproveOutcome =
 export type EarlierPendingCheck = (pairRecords: ApprovedCandidate[]) => ApprovedCandidate | null;
 
 /** One approved record a backdated approval moves up: its level when read, and its new values. */
-export interface RecountUpdate extends LevelData {
+export interface RecountUpdate extends SnapshotData {
   id: string;
   /** The level it had when the recount was worked out (the write checks it is unchanged). */
   fromLevel: number;
@@ -399,7 +463,7 @@ export class PenaltyRecordsRepository extends BaseRepository<
     key: RepeatKey,
     window: { from: IsoDate; upTo: IsoDate },
     approvedById: string | null,
-    resolve: (approved: ApprovedCandidate[]) => LevelData,
+    resolve: (approved: ApprovedCandidate[]) => CatalogueLevel,
     refuse: SameDayRefusal,
     earlier: EarlierPendingCheck,
     recount: RecountPlan = () => Promise.resolve([]),
@@ -431,9 +495,8 @@ export class PenaltyRecordsRepository extends BaseRepository<
       const { count } = await tx.penaltyRecord.updateMany({
         where: { id, status: { in: [...from] } },
         data: {
-          level: fixed.level,
-          action: fixed.action,
-          days: fixed.days,
+          // The snapshot is fixed here, names included (spec 2026-11-25).
+          ...toSnapshotData(fixed),
           status: PenaltyStatus.APPROVED,
           approvedById,
           approvedAt: now,
@@ -444,7 +507,18 @@ export class PenaltyRecordsRepository extends BaseRepository<
       for (const u of updates) {
         const moved = await tx.penaltyRecord.updateMany({
           where: { id: u.id, status: PenaltyStatus.APPROVED, level: u.fromLevel },
-          data: { level: u.level, action: u.action, days: u.days, recountedAt: now },
+          data: {
+            level: u.level,
+            actionId: u.actionId,
+            actionNameEn: u.actionNameEn,
+            actionNameAr: u.actionNameAr,
+            effect: u.effect,
+            percentBase: u.percentBase,
+            days: u.days,
+            percent: u.percent,
+            amount: u.amount,
+            recountedAt: now,
+          },
         });
         if (moved.count !== 1) throw new RecountConflictError(u.id);
       }
@@ -458,7 +532,15 @@ export class PenaltyRecordsRepository extends BaseRepository<
    */
   async recountedInMonthSince(month: string, since: Date, scope: PenaltyScopeWhere = {}): Promise<boolean> {
     const found = await this.db.penaltyRecord.findFirst({
-      where: { AND: [{ date: monthDateRange(month), recountedAt: { gt: since } }, scope] },
+      // Owner Q6 (2026-11-26): any penalty dated in the month approved, cancelled or recounted since
+      // the run's last calculation makes the draft stale, not only a recount.
+      where: {
+        AND: [
+          { date: monthDateRange(month) },
+          { OR: [{ recountedAt: { gt: since } }, { approvedAt: { gt: since } }, { cancelledAt: { gt: since } }] },
+          scope,
+        ],
+      },
       select: { id: true },
     });
     return found !== null;
@@ -467,20 +549,26 @@ export class PenaltyRecordsRepository extends BaseRepository<
   /** Waiting (either step) and APPROVED records dated in a month: what payroll counts and flags (§6). */
   findForPayroll(
     month: string,
+    /** Only these employees' (a page of a run's lines); absent: everyone's. */
+    employeeIds?: readonly string[],
   ): Promise<
     {
       employeeId: string;
       status: PenaltyStatus;
-      action: PenaltyAction;
+      effect: PenaltyEffect;
+      percentBase: PenaltySalaryBase | null;
       days: Prisma.Decimal | null;
+      percent: Prisma.Decimal | null;
+      amount: number | null;
     }[]
   > {
     return this.db.penaltyRecord.findMany({
       where: {
         date: monthDateRange(month),
         status: { in: [...OPEN_PENALTY_STATUSES, PenaltyStatus.APPROVED] },
+        ...(employeeIds ? { employeeId: { in: [...employeeIds] } } : {}),
       },
-      select: { employeeId: true, status: true, action: true, days: true },
+      select: { employeeId: true, status: true, effect: true, percentBase: true, days: true, percent: true, amount: true },
     });
   }
 
@@ -499,8 +587,7 @@ export class PenaltyRecordsRepository extends BaseRepository<
       select: {
         date: true,
         level: true,
-        action: true,
-        days: true,
+        ...SNAPSHOT_SELECT,
         violation: { select: { nameEn: true, nameAr: true } },
       },
       orderBy: [{ date: 'asc' }, { createdAt: 'asc' }],

@@ -13,15 +13,16 @@ import { http, unique } from './helpers';
 import { createAppAsTestUser } from './helpers/as-test-user';
 import { historyMark, historyRows, waitForCount } from './helpers/history';
 import { deleteEmployees } from './helpers/employees';
+import { ACTION, ACTION_ID } from './helpers/penalty-actions';
 
 const LEVELS_5: ViolationLevelInput[] = [
-  { level: 1, action: 'NOTICE' },
-  { level: 2, action: 'WARNING' },
-  { level: 3, action: 'DEDUCT_DAYS', days: 1 },
-  { level: 4, action: 'DEDUCT_DAYS', days: 2 },
-  { level: 5, action: 'DEDUCT_DAYS', days: 5 },
+  { level: 1, actionId: ACTION_ID.NOTICE },
+  { level: 2, actionId: ACTION_ID.WARNING },
+  { level: 3, actionId: ACTION_ID.DEDUCT_DAYS, days: 1 },
+  { level: 4, actionId: ACTION_ID.DEDUCT_DAYS, days: 2 },
+  { level: 5, actionId: ACTION_ID.DEDUCT_DAYS, days: 5 },
 ];
-const DEDUCT_1: ViolationLevelInput[] = [{ level: 1, action: 'DEDUCT_DAYS', days: 1 }];
+const DEDUCT_1: ViolationLevelInput[] = [{ level: 1, actionId: ACTION_ID.DEDUCT_DAYS, days: 1 }];
 
 /** Months this suite puts payroll runs in (far from other suites' data). */
 const LOCKED_MONTH = '2024-03';
@@ -147,31 +148,31 @@ describe('HR penalty catalogue and records (e2e)', () => {
 
   it('DEDUCT_DAYS level without days, or days ≤ 0 → 400; NOTICE with days → 400', async () => {
     for (const levels of [
-      [{ level: 1, action: 'DEDUCT_DAYS' }],
-      [{ level: 1, action: 'DEDUCT_DAYS', days: null }],
-      [{ level: 1, action: 'DEDUCT_DAYS', days: 0 }],
-      [{ level: 1, action: 'NOTICE', days: 1 }],
+      [{ level: 1, actionId: ACTION_ID.DEDUCT_DAYS }],
+      [{ level: 1, actionId: ACTION_ID.DEDUCT_DAYS, days: null }],
+      [{ level: 1, actionId: ACTION_ID.DEDUCT_DAYS, days: 0 }],
+      [{ level: 1, actionId: ACTION_ID.NOTICE, days: 1 }],
     ] as ViolationLevelInput[][]) {
       const res = await newViolation(levels).expect(400);
       expect(res.body.error).toBe(ErrorCode.INVALID_LEVELS);
     }
-    await newViolation([{ level: 1, action: 'DEDUCT_DAYS', days: -1 }]).expect(400);
+    await newViolation([{ level: 1, actionId: ACTION_ID.DEDUCT_DAYS, days: -1 }]).expect(400);
     // INVESTIGATION may carry days, or not.
     await newViolation([
-      { level: 1, action: 'INVESTIGATION' },
-      { level: 2, action: 'INVESTIGATION', days: 2 },
+      { level: 1, actionId: ACTION_ID.INVESTIGATION },
+      { level: 2, actionId: ACTION_ID.INVESTIGATION, days: 2 },
     ]).expect(201);
   });
 
   it('Levels with a gap (1, 3) or more than 5 → 400', async () => {
     const gap = await newViolation([
-      { level: 1, action: 'NOTICE' },
-      { level: 3, action: 'WARNING' },
+      { level: 1, actionId: ACTION_ID.NOTICE },
+      { level: 3, actionId: ACTION_ID.WARNING },
     ]).expect(400);
     expect(gap.body.error).toBe(ErrorCode.INVALID_LEVELS);
     const six = await newViolation([
       ...LEVELS_5,
-      { level: 6, action: 'DISMISSAL' },
+      { level: 6, actionId: ACTION_ID.DISMISSAL },
     ]).expect(400);
     expect(six.body.error).toBe(ErrorCode.INVALID_LEVELS);
     const none = await newViolation([]).expect(400);
@@ -180,21 +181,21 @@ describe('HR penalty catalogue and records (e2e)', () => {
     const id = await violation();
     const patch = await http(app)
       .patch(`/hr/violations/${id}`)
-      .send({ levels: [{ level: 2, action: 'NOTICE' }] })
+      .send({ levels: [{ level: 2, actionId: ACTION_ID.NOTICE }] })
       .expect(400);
     expect(patch.body.error).toBe(ErrorCode.INVALID_LEVELS);
   });
 
   it('Level days 0.3 → 400; 0.25 and 5 → accepted; 30.25 → 400', async () => {
-    await newViolation([{ level: 1, action: 'DEDUCT_DAYS', days: 0.3 }]).expect(400);
-    await newViolation([{ level: 1, action: 'DEDUCT_DAYS', days: 30.25 }]).expect(400);
+    await newViolation([{ level: 1, actionId: ACTION_ID.DEDUCT_DAYS, days: 0.3 }]).expect(400);
+    await newViolation([{ level: 1, actionId: ACTION_ID.DEDUCT_DAYS, days: 30.25 }]).expect(400);
     const ok = await newViolation([
-      { level: 1, action: 'DEDUCT_DAYS', days: 0.25 },
-      { level: 2, action: 'DEDUCT_DAYS', days: 5 },
+      { level: 1, actionId: ACTION_ID.DEDUCT_DAYS, days: 0.25 },
+      { level: 2, actionId: ACTION_ID.DEDUCT_DAYS, days: 5 },
     ]).expect(201);
     expect(ok.body.data.levels).toEqual([
-      { level: 1, action: 'DEDUCT_DAYS', days: 0.25 },
-      { level: 2, action: 'DEDUCT_DAYS', days: 5 },
+      { level: 1, action: { ...ACTION.DEDUCT_DAYS, isActive: true }, days: 0.25, percent: null, amount: null },
+      { level: 2, action: { ...ACTION.DEDUCT_DAYS, isActive: true }, days: 5, percent: null, amount: null },
     ]);
   });
 
@@ -233,7 +234,7 @@ describe('HR penalty catalogue and records (e2e)', () => {
     const v = await violation();
     await http(app)
       .patch(`/hr/violations/${v}`)
-      .send({ levels: [{ level: 1, action: 'WARNING' }] })
+      .send({ levels: [{ level: 1, actionId: ACTION_ID.WARNING }] })
       .expect(200);
 
     const idOf = (value: unknown) => (value as { id?: string } | null)?.id;
@@ -251,7 +252,7 @@ describe('HR penalty catalogue and records (e2e)', () => {
       (r) => idOf(r.oldValue) === v,
     );
     expect(edit?.action).toBe('hr.violation.update');
-    expect(edit?.newValue).toMatchObject({ levels: [{ level: 1, action: 'WARNING', days: null }] });
+    expect(edit?.newValue).toMatchObject({ levels: [{ level: 1, action: { ...ACTION.WARNING, isActive: true }, days: null }] });
   });
 
   // ── Recording ─────────────────────────────────────────────────────────────
@@ -323,7 +324,7 @@ describe('HR penalty catalogue and records (e2e)', () => {
     const emp = await employee();
     const v = await violation();
     const ok = await preview(emp, v, '2025-10-01').expect(200);
-    expect(ok.body.data).toEqual({ level: 1, action: 'NOTICE', days: null, priorCount: 0, recount: [], recountElsewhere: 0, startsAs: 'WAITING_HR', reviewSkip: 'RECORDER_IS_HEAD' });
+    expect(ok.body.data).toEqual({ level: 1, action: ACTION.NOTICE, days: null, percent: null, amount: null, priorCount: 0, recount: [], recountElsewhere: 0, startsAs: 'WAITING_HR', reviewSkip: 'RECORDER_IS_HEAD' });
     expect(await db.penaltyRecord.count({ where: { employeeId: emp } })).toBe(0);
 
     await preview(emp, v, tomorrow()).expect(400);
@@ -351,9 +352,9 @@ describe('HR penalty catalogue and records (e2e)', () => {
     await cancel(cancelled.id, 'entered by mistake').expect(200);
 
     const res = await preview(emp, v, '2025-09-10').expect(200);
-    expect(res.body.data).toEqual({ level: 2, action: 'WARNING', days: null, priorCount: 1, recount: [], recountElsewhere: 0, startsAs: 'WAITING_HR', reviewSkip: 'RECORDER_IS_HEAD' });
+    expect(res.body.data).toEqual({ level: 2, action: ACTION.WARNING, days: null, percent: null, amount: null, priorCount: 1, recount: [], recountElsewhere: 0, startsAs: 'WAITING_HR', reviewSkip: 'RECORDER_IS_HEAD' });
     const rec = await recordOk(emp, v, '2025-09-10');
-    expect(rec).toMatchObject({ level: 2, action: 'WARNING', status: 'WAITING_HR' });
+    expect(rec).toMatchObject({ level: 2, action: ACTION.WARNING, status: 'WAITING_HR' });
   });
 
   it('Another employee’s or another violation’s approved record doesn’t count', async () => {
@@ -385,7 +386,14 @@ describe('HR penalty catalogue and records (e2e)', () => {
     expect(recount.map((c) => [c.date, c.before.level, c.after.level])).toEqual([['2025-05-31', 1, 2]]);
     await http(app)
       .post(`/hr/penalties/${june.id}/approve`)
-      .send({ acknowledgedRecount: recount.map((c) => ({ id: c.id, ...c.after })) })
+      .send({ acknowledgedRecount: recount.map((c) => ({
+        id: c.id,
+        level: c.after.level,
+        actionId: c.after.action.id,
+        days: c.after.days,
+        percent: c.after.percent,
+        amount: c.after.amount,
+      })) })
       .expect(200);
     expect((await preview(emp, v, '2025-05-31').expect(200)).body.data.priorCount).toBe(2);
   });
@@ -560,7 +568,7 @@ describe('HR penalty catalogue and records (e2e)', () => {
     const v = await violation(LEVELS_5, 'doubles on repeat');
     for (let d = 1; d <= 7; d++) await approvedOn(emp, v, `2025-07-0${d}`);
     const res = await preview(emp, v, '2025-07-10').expect(200);
-    expect(res.body.data).toEqual({ level: 5, action: 'DEDUCT_DAYS', days: 5, priorCount: 7, recount: [], recountElsewhere: 0, startsAs: 'WAITING_HR', reviewSkip: 'RECORDER_IS_HEAD' });
+    expect(res.body.data).toEqual({ level: 5, action: ACTION.DEDUCT_DAYS, days: 5, percent: null, amount: null, priorCount: 7, recount: [], recountElsewhere: 0, startsAs: 'WAITING_HR', reviewSkip: 'RECORDER_IS_HEAD' });
     expect(await approvedOn(emp, v, '2025-07-10')).toMatchObject({ level: 5, days: 5 });
   });
 
@@ -573,15 +581,15 @@ describe('HR penalty catalogue and records (e2e)', () => {
     expect(approved).toMatchObject({
       status: 'APPROVED',
       level: 1,
-      action: 'DEDUCT_DAYS',
+      action: ACTION.DEDUCT_DAYS,
       days: 1,
       approvedBy: { id: userId },
     });
     await http(app)
       .patch(`/hr/violations/${v}`)
-      .send({ levels: [{ level: 1, action: 'WARNING' }] })
+      .send({ levels: [{ level: 1, actionId: ACTION_ID.WARNING }] })
       .expect(200);
-    expect(await getRecord(approved.id)).toMatchObject({ level: 1, action: 'DEDUCT_DAYS', days: 1 });
+    expect(await getRecord(approved.id)).toMatchObject({ level: 1, action: ACTION.DEDUCT_DAYS, days: 1 });
   });
 
   it('Editing catalogue days changes a PENDING record’s shown days, not an APPROVED one’s', async () => {
@@ -593,7 +601,7 @@ describe('HR penalty catalogue and records (e2e)', () => {
 
     await http(app)
       .patch(`/hr/violations/${v}`)
-      .send({ levels: [{ level: 1, action: 'DEDUCT_DAYS', days: 2.5 }] })
+      .send({ levels: [{ level: 1, actionId: ACTION_ID.DEDUCT_DAYS, days: 2.5 }] })
       .expect(200);
     expect((await getRecord(pending.id)).days).toBe(2.5);
     expect((await getRecord(approved.id)).days).toBe(1);
@@ -760,7 +768,7 @@ describe('HR penalty catalogue and records (e2e)', () => {
     expect(first).toMatchObject({
       status: 'WAITING_HR',
       level: 1,
-      action: 'NOTICE',
+      action: ACTION.NOTICE,
       createdBy: { id: userId },
       approvedBy: null,
       violation: { id: v, nameEn: 'Late to class' },
@@ -774,7 +782,7 @@ describe('HR penalty catalogue and records (e2e)', () => {
     ] as const) {
       expect((await preview(emp, v, date).expect(200)).body.data).toMatchObject({ level });
       const rec = await recordOk(emp, v, date);
-      expect(await approveOk(rec.id)).toMatchObject({ level, action, days });
+      expect(await approveOk(rec.id)).toMatchObject({ level, action: ACTION[action], days });
     }
 
     const pendingRec = await recordOk(emp, v, '2025-10-26');

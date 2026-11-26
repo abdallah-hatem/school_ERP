@@ -30,6 +30,8 @@ export const AuditEntityType = {
   HR_SETTINGS: 'hr_settings',
   PENALTY_GROUP: 'penalty_group',
   VIOLATION: 'violation',
+  /** A penalty action (spec 2026-11-25). Label: its two names. */
+  PENALTY_ACTION: 'penalty_action',
   PENALTY: 'penalty',
   LATENESS_MONTH: 'lateness_month',
   PAYROLL_RUN: 'payroll_run',
@@ -214,6 +216,17 @@ export const AUDIT_ACTIONS = {
     entityType: E.VIOLATION,
     kind: 'update',
   },
+  // Penalty actions (spec 2026-11-25): add, rename, reorder, hide, show.
+  'hr.penalty_action.create': {
+    module: 'hr',
+    entityType: E.PENALTY_ACTION,
+    kind: 'create',
+  },
+  'hr.penalty_action.update': {
+    module: 'hr',
+    entityType: E.PENALTY_ACTION,
+    kind: 'update',
+  },
   // hr — penalties
   'hr.penalty.record': { module: 'hr', entityType: E.PENALTY, kind: 'create' },
   // §4 two steps (owner 2026-11-21): the stage head's approval (PENDING_REVIEW → WAITING_HR) …
@@ -355,6 +368,8 @@ export const SETTINGS_HISTORY_ACTIONS = {
   'hr.penalty_group.update': 'catalogue',
   'hr.violation.create': 'catalogue',
   'hr.violation.update': 'catalogue',
+  'hr.penalty_action.create': 'catalogue',
+  'hr.penalty_action.update': 'catalogue',
   'core.notification_settings.update': 'notifications',
 } as const satisfies Partial<Record<AuditAction, SettingsChangeScope>>;
 export type SettingsHistoryAction = keyof typeof SETTINGS_HISTORY_ACTIONS;

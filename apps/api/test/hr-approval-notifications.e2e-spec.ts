@@ -13,6 +13,7 @@ import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
 import { createAppAsTestUser, giveRoles } from './helpers/as-test-user';
 import { deleteEmployees } from './helpers/employees';
+import { ACTION_ID } from './helpers/penalty-actions';
 
 /*
  * HR's approval notifications (§11, plan docs/plans/2026-11-18-notifications-plan.md → N2 edge
@@ -212,7 +213,7 @@ describe('HR approval notifications — N2 (e2e)', () => {
             nameEn: unique('Late'),
             nameAr: unique('تأخير'),
             oncePerDay,
-            levels: [{ level: 1, action: 'NOTICE' }],
+            levels: [{ level: 1, actionId: ACTION_ID.NOTICE }],
           })
           .expect(201)
       ).body.data.id as string;

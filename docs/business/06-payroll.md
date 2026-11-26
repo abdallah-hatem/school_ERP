@@ -69,8 +69,11 @@ lines each role sees: §2 Roles (enforced, P4).
    full-time 100%, part-time 4 days 80%, 3 days 60%, 2 days 40%. (DECIDED: the client's part-time
    rule; the percentages are settings.)
 2. **Day value** = salary for the month ÷ **30**. (GUESS: the divisor is a setting.)
-3. **Penalty deductions** = total days from approved day-deduction penalties (and investigations
-   with days) dated in the month × day value.
+3. **Penalty deductions** = for the approved deducting penalties dated in the month:
+   `round(total days × salary for the month ÷ divisor)` (day deductions and investigations with
+   days, priced once) + each % penalty's `round(base × percent ÷ 100)` (base: the line's salary for
+   the month or basic salary) + each fixed amount. (GUESS, spec 2026-11-25) A fixed amount is a fine
+   and is **not** scaled for part-timers (**DECIDED**, owner 2026-11-26, Q8).
 4. **Lateness deductions** = days from the month's lateness minutes (§5) × day value.
 5. **Adjustments** = sum of the month's one-off additions (e.g. overtime, exam bonus) minus one-off
    deductions, each with a required reason.
@@ -85,8 +88,21 @@ lines each role sees: §2 Roles (enforced, P4).
   department, basic salary and work system at calculation. Editing an employee later never changes an approved run.
   It also keeps the employee's **social insurance** (status and insured salary), retaken at
   approval: accounting works the month's taxes out from it (§10), not from today's record.
+- **GUESS** (spec 2026-11-25) — A % uses the **salary on the month's payroll line** at its last
+  calculation (approval recalculates first): the salary when the month is approved, like day
+  deductions. A penalty stores the percent, never money.
 - **GUESS** — Net never goes below 0. If deductions exceed the salary, net is 0 and the line is
-  flagged for review.
+  flagged for review ("Deductions exceed this month's pay — net set to 0") — only when the net
+  would go **below** 0 after everything, adjustments included; a net of exactly 0 isn't flagged
+  (GUESS, Q3). **DECIDED** (owner, 2026-11-26): no monthly cap on penalty deductions (§4); what
+  the floor leaves undeducted is **written off** for that month, never carried forward, and the
+  payslip shows "Not deducted (pay too low): X" (**DECIDED**, owner 2026-11-26, Q4).
+- **GUESS** (Q6, 2026-11-26) — A draft whose month has a penalty approved, cancelled or moved up a
+  level after its last calculation says "Penalties changed since the last calculation".
+- **GUESS** (Q15, 2026-11-26) — A month Accounting returns to HR is re-priced at its next calculation
+  (from the line's salary then), like any draft: it has reopened.
+- **GUESS** (Q9, 2026-11-26) — A line seen without salary access lists its deducting penalties by
+  kind ("2 penalties: 0.5 day, 5%"), no money, and without the net-floored flag.
 - **GUESS** — No pro-rata for employees who join or leave mid-month in the demo (OPEN for later).
 - **DECIDED** — A line is flagged **needs review** when it has a flag (net floored at 0) or the
   employee has pending penalties in the month.
@@ -94,14 +110,24 @@ lines each role sees: §2 Roles (enforced, P4).
 ## Outputs
 
 - **DECIDED** — **Payslip** per employee for an approved run, printable, in Arabic or English: salary,
-  each penalty with its level, action and days, lateness, adjustments, net. Penalties that cost
+  each penalty with its level and action ("Deduct 0.5 day", "Deduct 10% of the salary for the
+  month", "Deduct EGP 200", or the action's name), lateness, adjustments, net. Penalties that cost
   nothing (notice, warning, raise-related…) are listed with amount 0 so the employee sees them.
   Lateness shows the grace minutes taken off (§5): "130 minutes − 30 minutes grace = 100 minutes =
   0.75 day". Each line keeps the grace of its calculation; a line calculated before 2026-11-18
   shows the minutes alone until it is recalculated.
-- **DECIDED** — A penalty's amount on the payslip is its share of the line's penalty deduction
-  (its days ÷ the line's penalty days × the line's penalty amount). The shares can differ from the
-  line total by a piastre; the line total is what is paid.
+- **DECIDED** — A day penalty's amount on the payslip is its share of the line's day-priced
+  deduction, by its days; a % or fixed penalty shows its own amount. **GUESS** (Q14, 2026-11-26) —
+  the day shares are split by the largest remainder, so they always add up to the line exactly — on
+  runs calculated from 2026-11-26. **An approved payslip never changes**: runs last calculated before
+  keep the half-up shares they always showed (review 2026-11-26).
+- **GUESS** (review 2026-11-26) — A line's penalty deduction is stored up to EGP 21,474,836.47 (the
+  column's limit); a salary is at most EGP 1,000,000, so such a line is net 0 and flagged long before.
+- **GUESS** (review 2026-11-26) — Without salary access, "flagged" (the filter and the count)
+  means pending penalties only: the net-floored flag would give the pay away.
+- **GUESS** (Q12, Q13, 2026-11-26) — A deducting penalty's payslip label adds the action's own name
+  when it isn't the effect's default ("Deduct EGP 200 (Late uniform fine)"); a % of the basic salary
+  names the base ("Deduct 10% of the basic salary (12,345.67)").
 - **GUESS** — An adjustment for an employee who is no longer in the run (deactivated before the last
   recalculate) stays recorded but doesn't count, and is shown as "not applied".
 - **DECIDED** — **Dashboard:** active headcount (by stage), the current month's payroll run (status
@@ -109,7 +135,7 @@ lines each role sees: §2 Roles (enforced, P4).
 - **DECIDED** (owner, 2026-11-21) — **Dashboard charts** (System admin only to start with, §2): the
   net of each approved month; headcount by stage with joiners (hire date) and leavers (the day they
   were deactivated) per month; approved penalties by violation month, stacked by kind (notice &
-  warning, day deductions, other), with the minutes late per month; and the newest month accounting
+  warning, pay deductions, other), with the minutes late per month; and the newest month accounting
   has worked out (§10) split into net, social insurance, income tax with the martyrs' fund, and
   penalty and lateness deductions, each as a share of their sum, with that share for the six newest
   such months. Over the last 6 or 12 months (phones open on 6). Under two approved months the trend

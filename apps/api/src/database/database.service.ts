@@ -19,6 +19,7 @@ export const SEARCH_OMIT = {
   employeeGrade: SEARCH_COLUMNS,
   employee: SEARCH_COLUMNS,
   violation: SEARCH_COLUMNS,
+  penaltyAction: SEARCH_COLUMNS,
   contractTemplate: SEARCH_COLUMNS,
   payrollLine: SEARCH_COLUMNS,
   accountingPayrollLine: SEARCH_COLUMNS,

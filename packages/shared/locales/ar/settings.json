@@ -320,8 +320,96 @@
       "COUNT": "للمخالفة من 1 إلى 5 مستويات.",
       "NUMBERING": "يجب ترقيم المستويات من 1 إلى 5 دون فجوات.",
       "DAYS_REQUIRED": "أدخل عدد الأيام المخصومة.",
-      "DAYS_NOT_ALLOWED": "هذا الجزاء لا يخصم أيامًا.",
-      "DAYS_INVALID": "استخدم أرباع الأيام أكبر من 0 وحتى 30، مثل 0.25 أو 1 أو 1.5."
+      "DAYS_INVALID": "استخدم أرباع الأيام أكبر من 0 وحتى 30، مثل 0.25 أو 1 أو 1.5.",
+      "PERCENT_REQUIRED": "أدخل النسبة.",
+      "PERCENT_INVALID": "أدخل نسبة أكبر من 0 وحتى 100، بخانتين عشريتين على الأكثر.",
+      "AMOUNT_REQUIRED": "أدخل المبلغ.",
+      "AMOUNT_INVALID": "أدخل مبلغًا أكبر من 0 وحتى 1,000,000 جنيه.",
+      "VALUE_NOT_ALLOWED": "هذا الإجراء لا يأخذ رقمًا.",
+      "ACTION_REQUIRED": "اختر إجراءً."
+    },
+    "levelPercent": "نسبة المستوى {level}",
+    "levelAmount": "مبلغ المستوى {level}",
+    "noNumber": "بدون رقم",
+    "optional": "اختياري",
+    "hiddenMarker": "(مخفي)",
+    "manageActions": "إدارة الإجراءات",
+    "percentOfMonth": "من أجر الشهر",
+    "percentOfBasic": "من الأجر الأساسي",
+    "numberLabel": "رقم المستوى {level}"
+  },
+  "penaltyActions": {
+    "title": "إجراءات الجزاءات",
+    "description": "ما يمكن أن يفعله مستوى في لائحة الجزاءات. لكل إجراء أثر واحد، وتُحدد الأرقام في كل مستوى.",
+    "add": "إضافة إجراء",
+    "addTitle": "إضافة إجراء جزاء",
+    "renameTitle": "إعادة تسمية {name}",
+    "name": "الاسم",
+    "effect": "الأثر",
+    "usedOn": "مستخدم في",
+    "usedOnCount": {
+      "zero": "لا مستويات",
+      "one": "مستوى واحد",
+      "two": "مستويان",
+      "few": "{count} مستويات",
+      "many": "{count} مستوى",
+      "other": "{count} مستوى"
+    },
+    "showHidden": "عرض المخفي",
+    "emptyTitle": "لا توجد إجراءات جزاءات بعد",
+    "emptyBody": "أضف الإجراءات التي يمكن أن يأخذها مستوى في اللائحة، مثل إنذار أو خصم أيام.",
+    "emptyHiddenBody": "كل الإجراءات مخفية. فعّل عرض المخفي لرؤيتها.",
+    "placeholderEn": "Written warning",
+    "placeholderAr": "إنذار كتابي",
+    "effectLabel": "الأثر",
+    "effectHelp": {
+      "RECORD_ONLY": "تسجيل فقط — يُحفظ في ملف الموظف دون أثر على الأجر",
+      "DEDUCT_DAYS": "خصم أيام من الأجر — يحدد كل مستوى عدد الأيام",
+      "DEDUCT_PERCENT": "خصم نسبة من الأجر — يحدد كل مستوى النسبة",
+      "DEDUCT_AMOUNT": "خصم مبلغ ثابت — يحدد كل مستوى المبلغ بالجنيه",
+      "INVESTIGATION": "إحالة للتحقيق — يمكن أن يضيف كل مستوى أيام خصم"
+    },
+    "effectName": {
+      "RECORD_ONLY": "تسجيل فقط",
+      "DEDUCT_DAYS": "خصم أيام",
+      "DEDUCT_PERCENT_MONTH_SALARY": "خصم نسبة من أجر الشهر",
+      "DEDUCT_PERCENT_BASIC_SALARY": "خصم نسبة من الأجر الأساسي",
+      "DEDUCT_AMOUNT": "خصم مبلغ ثابت",
+      "INVESTIGATION": "إحالة للتحقيق"
+    },
+    "baseLabel": "من أي أجر",
+    "base": {
+      "MONTH_SALARY": "أجر الشهر (بعد نسبة الدوام الجزئي)",
+      "BASIC_SALARY": "الأجر الأساسي"
+    },
+    "effectLocked": "لا يمكن تغيير الأثر لاحقًا.",
+    "effectReadOnly": "الأثر: {effect}. لا يمكن تغييره؛ أضف إجراءً جديدًا وأخفِ هذا الإجراء بدلًا من ذلك.",
+    "hideTitle": "إخفاء {name}؟",
+    "hideBody": "مستخدم في {levels} ضمن {violations}. تحتفظ به، ولا يمكن اختياره لمستويات أخرى.",
+    "hideBodyUnused": "لا يمكن اختياره للمستويات حتى تظهره مرة أخرى.",
+    "hideLevels": {
+      "zero": "لا مستويات",
+      "one": "مستوى واحد",
+      "two": "مستويين",
+      "few": "{count} مستويات",
+      "many": "{count} مستوى",
+      "other": "{count} مستوى"
+    },
+    "hideViolations": {
+      "zero": "لا مخالفات",
+      "one": "مخالفة واحدة",
+      "two": "مخالفتين",
+      "few": "{count} مخالفات",
+      "many": "{count} مخالفة",
+      "other": "{count} مخالفة"
+    },
+    "hideRetired": {
+      "zero": "",
+      "one": "ومخالفة موقوفة تحمله أيضًا.",
+      "two": "ومخالفتان موقوفتان تحملانه أيضًا.",
+      "few": "و{count} مخالفات موقوفة تحمله أيضًا.",
+      "many": "و{count} مخالفة موقوفة تحمله أيضًا.",
+      "other": "و{count} مخالفة موقوفة تحمله أيضًا."
     }
   },
   "accounting": {

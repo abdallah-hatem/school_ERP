@@ -41,6 +41,8 @@ export const SETTINGS_SECTION_PARTS = {
   hrRules: ['lateness', 'payroll', 'penalties', 'employees', 'calendar'],
   // The address and signatory a printed contract reads (contract templates spec).
   school: ['contracts'],
+  // The Penalty actions card above the groups (spec 2026-11-25): the level editor's "Manage actions".
+  catalogue: ['actions'],
 } as const satisfies Partial<Record<SettingsSectionId, readonly string[]>>;
 export type SettingsPartOf<S extends SettingsSectionId> = S extends keyof typeof SETTINGS_SECTION_PARTS
   ? (typeof SETTINGS_SECTION_PARTS)[S][number]

@@ -3,13 +3,17 @@ import '@/test/dom-polyfills';
 import type { ListItem, PenaltyGroup } from '@school-erp/shared';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const api = vi.hoisted(() => ({
   GET_LIST_ITEMS: vi.fn(),
   CREATE_LIST_ITEM: vi.fn(),
   UPDATE_LIST_ITEM: vi.fn(),
   GET_PENALTY_GROUPS: vi.fn(),
+  GET_PENALTY_ACTIONS: vi.fn(),
+  GET_PENALTY_ACTION_CHOICES: vi.fn(),
+  CREATE_PENALTY_ACTION: vi.fn(),
+  UPDATE_PENALTY_ACTION: vi.fn(),
   CREATE_PENALTY_GROUP: vi.fn(),
   UPDATE_PENALTY_GROUP: vi.fn(),
   CREATE_VIOLATION: vi.fn(),
@@ -28,6 +32,7 @@ vi.mock('next/navigation', () => ({
 import { CatalogueSection } from '../components/catalogue-section';
 import { ListManager } from '../components/list-manager';
 import { deferred, ok, renderSettings } from './helpers';
+import { ACTION, lvl, SEEDED_ITEMS } from '@/test/penalty-actions';
 
 const catalogue: PenaltyGroup[] = [
   {
@@ -45,8 +50,8 @@ const catalogue: PenaltyGroup[] = [
         isActive: true,
         oncePerDay: true,
         levels: [
-          { level: 1, action: 'WARNING', days: null },
-          { level: 2, action: 'DEDUCT_DAYS', days: 0.5 },
+          lvl(1, 'WARNING', null),
+          lvl(2, 'DEDUCT_DAYS', 0.5),
         ],
       },
     ],
@@ -65,6 +70,13 @@ async function openGroup(user: ReturnType<typeof userEvent.setup>, name: string)
   await user.click(header);
 }
 
+
+// The Penalty actions card and the level editor's picker (spec 2026-11-25): the seeded ten.
+beforeEach(() => {
+  api.GET_PENALTY_ACTIONS.mockImplementation(() => ok(SEEDED_ITEMS, { total: SEEDED_ITEMS.length, page: 1, limit: 20 }));
+  api.GET_PENALTY_ACTION_CHOICES.mockImplementation(() => ok(SEEDED_ITEMS));
+});
+
 describe('Penalty catalogue editor', () => {
   it('every group starts folded; clicking a header opens it', async () => {
     const user = userEvent.setup();
@@ -81,7 +93,9 @@ describe('Penalty catalogue editor', () => {
   it('level days are checked live with the shared rules; save is disabled until they are valid', async () => {
     const user = userEvent.setup();
     api.GET_PENALTY_GROUPS.mockImplementation(() => ok(catalogue));
-    api.UPDATE_VIOLATION.mockImplementation((_id: string, body: object) => ok({ ...catalogue[0]!.violations[0]!, ...body }));
+    api.UPDATE_VIOLATION.mockImplementation((_id: string, body: object) =>
+      ok({ ...catalogue[0]!.violations[0]!, ...body, levels: [lvl(1, 'WARNING', null), lvl(2, 'DEDUCT_DAYS', 1.25)] }),
+    );
     renderSettings(<CatalogueSection />);
 
     await openGroup(user, 'General table A');
@@ -118,12 +132,12 @@ describe('Penalty catalogue editor', () => {
       note: null,
       oncePerDay: true,
       levels: [
-        { level: 1, action: 'WARNING', days: null },
-        { level: 2, action: 'DEDUCT_DAYS', days: 1.25 },
+        { level: 1, actionId: ACTION.WARNING.id, days: null, percent: null, amount: null },
+        { level: 2, actionId: ACTION.DEDUCT_DAYS.id, days: 1.25, percent: null, amount: null },
       ],
     });
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    expect(screen.getByText('2. Deduct days · 1.25 days')).toBeTruthy();
+    expect(screen.getByText('2. Deduct 1.25 days')).toBeTruthy();
   });
 
   it('levels: at most 5, at least 1, renumbered after a removal', async () => {

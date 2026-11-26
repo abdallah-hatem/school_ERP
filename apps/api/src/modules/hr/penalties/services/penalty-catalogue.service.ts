@@ -3,6 +3,7 @@ import {
   ErrorCode,
   HrCatalogueKey,
   matchesSearch,
+  storedLevelDays,
   violationLevelsProblem,
   type PenaltyGroup,
   type Uuid,
@@ -13,6 +14,7 @@ import { CodedException } from '../../../../common/errors/coded.exception';
 import { SettingsHistory } from '../../../../core/settings';
 import { AfterCommit } from '../../../../database/transactions';
 import type { CatalogueLevel } from '../../domain';
+import { PenaltyActionsService, toActionSnapshot } from './penalty-actions.service';
 import type {
   CreatePenaltyGroupDto,
   CreateViolationDto,
@@ -24,18 +26,34 @@ import {
   PenaltyCatalogueRepository,
   type GroupRow,
   type LevelData,
+  type LevelRow,
   type ViolationRow,
 } from '../repositories/penalty-catalogue.repository';
 
 type GroupSnapshot = Omit<PenaltyGroup, 'violations'>;
 type ViolationSnapshot = Violation & { groupId: Uuid };
 
-/** A stored level (Prisma Decimal days) → the contract's numbers. */
-export function toLevel(row: { level: number; action: string; days: unknown }): ViolationLevel {
+const num = (v: unknown): number | null => (v === null || v === undefined ? null : Number(v));
+
+/** A stored level (Prisma Decimal days / percent) → the contract's level, with today's action. */
+export function toLevel(row: LevelRow): ViolationLevel {
   return {
     level: row.level,
-    action: row.action as ViolationLevel['action'],
-    days: row.days === null || row.days === undefined ? null : Number(row.days),
+    action: { ...toActionSnapshot(row.action), isActive: row.action.isActive },
+    days: num(row.days),
+    percent: num(row.percent),
+    amount: row.amount,
+  };
+}
+
+/** A stored level → what the domain resolves and a penalty copies (the action as a snapshot). */
+export function toCatalogueLevel(row: LevelRow): CatalogueLevel {
+  return {
+    level: row.level,
+    action: toActionSnapshot(row.action),
+    days: num(row.days),
+    percent: num(row.percent),
+    amount: row.amount,
   };
 }
 
@@ -62,11 +80,24 @@ function toGroup(row: GroupRow): GroupSnapshot {
   };
 }
 
-/** Levels as stored: sorted, and `days` null when absent. */
+/** Whether `items` is `from` with some entries taken out, the rest in the same order. */
+function isSubsequence(items: readonly string[], from: readonly string[]): boolean {
+  let i = 0;
+  for (const f of from) if (i < items.length && items[i] === f) i++;
+  return i === items.length;
+}
+
+/** Levels as stored: sorted, and each number null when absent. */
 function toLevelData(levels: readonly ViolationLevelDto[]): LevelData[] {
   return [...levels]
     .sort((a, b) => a.level - b.level)
-    .map((l) => ({ level: l.level, action: l.action, days: l.days ?? null }));
+    .map((l) => ({
+      level: l.level,
+      actionId: l.actionId,
+      days: l.days ?? null,
+      percent: l.percent ?? null,
+      amount: l.amount ?? null,
+    }));
 }
 
 /** A violation that new penalties may use (§4, §7): exists, isn't retired, its group isn't. */
@@ -89,6 +120,7 @@ export class PenaltyCatalogueService {
     private readonly repository: PenaltyCatalogueRepository,
     private readonly history: SettingsHistory,
     private readonly afterCommit: AfterCommit,
+    private readonly actions: PenaltyActionsService,
   ) {}
 
   /**
@@ -166,7 +198,7 @@ export class PenaltyCatalogueService {
   ): Promise<ViolationSnapshot> {
     return this.afterCommit.inTransaction(async () => {
       if (!(await this.repository.findGroup(groupId))) throw new NotFoundException();
-      const levels = this.checkedLevels(dto.levels);
+      const levels = await this.checkedLevels(dto.levels, []);
       const violation = toViolation(
         await this.repository.createViolation(
           groupId,
@@ -193,7 +225,7 @@ export class PenaltyCatalogueService {
     return this.afterCommit.inTransaction(async () => {
       const before = await this.repository.findViolation(id);
       if (!before) throw new NotFoundException();
-      const levels = dto.levels ? this.checkedLevels(dto.levels) : undefined;
+      const levels = dto.levels ? await this.checkedLevels(dto.levels, before.levels) : undefined;
       const { levels: _levels, ...fields } = dto;
       const after = toViolation(await this.repository.updateViolation(id, fields, levels));
       const { group: _group, ...beforeRow } = before;
@@ -217,14 +249,37 @@ export class PenaltyCatalogueService {
     if (!row.isActive || !row.group.isActive) {
       throw new CodedException(HttpStatus.BAD_REQUEST, ErrorCode.VIOLATION_RETIRED);
     }
-    return { id: row.id, levels: row.levels.map(toLevel), oncePerDay: row.oncePerDay };
+    return { id: row.id, levels: row.levels.map(toCatalogueLevel), oncePerDay: row.oncePerDay };
   }
 
-  private checkedLevels(levels: readonly ViolationLevelDto[]): LevelData[] {
-    if (violationLevelsProblem(levels)) {
-      throw new CodedException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_LEVELS);
+  /**
+   * The levels as they will be stored, or a 400 (spec 2026-11-25): each names an action that exists
+   * (`PENALTY_ACTION_NOT_FOUND`); a hidden action only on the level that already had it (or when levels
+   * were only removed, renumbering the rest) — it can't be picked anew (`PENALTY_ACTION_HIDDEN`);
+   * then the shared rules on the count, numbering and each level's number for its action's effect
+   * (`INVALID_LEVELS`, `params.problem`).
+   */
+  private async checkedLevels(levels: readonly ViolationLevelDto[], before: readonly LevelRow[]): Promise<LevelData[]> {
+    const actions = await this.actions.byIds(levels.map((l) => l.actionId));
+    const hadAt = new Map(before.map((l) => [l.level, l.action.id]));
+    // Removing levels renumbers the rest (level 2 becomes 1): a list that is the old one with some
+    // levels taken out, in order, picks nothing new.
+    const sorted = [...levels].sort((a, b) => a.level - b.level).map((l) => l.actionId);
+    const oldOrder = [...before].sort((a, b) => a.level - b.level).map((l) => l.action.id);
+    const onlyRemoved = isSubsequence(sorted, oldOrder);
+    for (const l of levels) {
+      const action = actions.get(l.actionId);
+      if (!action) throw new CodedException(HttpStatus.BAD_REQUEST, ErrorCode.PENALTY_ACTION_NOT_FOUND);
+      // Per level (review 2026-11-26): a level keeps a hidden action it had; another level of the
+      // same violation can't newly pick it.
+      if (!action.isActive && hadAt.get(l.level) !== action.id && !onlyRemoved) {
+        throw new CodedException(HttpStatus.BAD_REQUEST, ErrorCode.PENALTY_ACTION_HIDDEN);
+      }
     }
-    return toLevelData(levels);
+    const problem = violationLevelsProblem(levels.map((l) => ({ ...l, effect: actions.get(l.actionId)!.effect })));
+    if (problem) throw CodedException.withParams(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_LEVELS, { problem });
+    // An investigation's 0 days are stored as none (owner Q11).
+    return toLevelData(levels.map((l) => ({ ...l, days: storedLevelDays(actions.get(l.actionId)!.effect, l.days) })));
   }
 
   private recordChange(

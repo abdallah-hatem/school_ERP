@@ -37,6 +37,7 @@ const line = (employeeId: string): LineRow => ({
   dayValue: 30000,
   penaltyDays: 1 as unknown as Prisma.Decimal,
   penaltyAmount: 30000,
+  penaltyDaysAmount: 30000,
   latenessMinutes: 0,
   latenessGraceMinutes: 0,
   latenessDays: 0 as unknown as Prisma.Decimal,
@@ -118,14 +119,17 @@ function makeService(scopes: Parameters<typeof fakeAccess>[0], salaryIds: string
   const penalties = {
     pendingCountInMonth: jest.fn().mockResolvedValue(0),
     recountedInMonthSince: jest.fn().mockResolvedValue(false),
+    payrollInputs: jest.fn().mockResolvedValue({ approved: new Map(), pending: new Map() }),
     approvedInMonth: jest.fn().mockResolvedValue([
       {
         date: '2026-10-05',
         violationNameEn: 'Late',
         violationNameAr: 'تأخير',
         level: 1,
-        action: 'DEDUCT_DAYS',
+        action: { id: 'a-days', nameEn: 'Deduct days', nameAr: 'خصم أيام', effect: 'DEDUCT_DAYS', percentBase: null },
         days: 1,
+        percent: null,
+        fixedAmount: null,
       },
     ]),
   };
@@ -207,6 +211,8 @@ describe('payroll — salary (R7)', () => {
     expect('net' in slip).toBe(false);
     expect('amount' in slip.penalties[0]).toBe(false);
     expect('amount' in slip.adjustments[0]).toBe(false);
+    // Owner Q4: the written-off amount is money too.
+    expect('notDeducted' in slip).toBe(false);
   });
 
   it('a payslip with the key itemises the penalty amount', async () => {
@@ -214,6 +220,8 @@ describe('payroll — salary (R7)', () => {
     const slip = await service.payslip('r1', 'l-e1');
     expect(slip.penalties[0].amount).toBe(30000);
     expect(slip.adjustments[0].amount).toBe(5000);
+    // Not floored: nothing written off.
+    expect(slip.notDeducted).toBe(0);
   });
 
   it('the profile Payroll tab: net only with the salary key', async () => {
@@ -234,9 +242,10 @@ describe('payroll — scopes (R5)', () => {
   it('a scoped payroll viewer gets only their employees’ lines, adjustments and totals', async () => {
     const { service, repository } = makeService({ 'hr.payroll.view': PRIMARY });
     await service.get('r1');
-    expect(repository.findLinesPage).toHaveBeenCalledWith('r1', { search: undefined, departmentId: undefined, flagged: undefined }, { OR: [{ stageId: { in: ['primary'] } }, { otherStages: { some: { stageId: { in: ['primary'] } } } }] }, undefined, undefined);
+    expect(repository.findLinesPage).toHaveBeenCalledWith('r1', { search: undefined, departmentId: undefined, flagged: undefined }, { OR: [{ stageId: { in: ['primary'] } }, { otherStages: { some: { stageId: { in: ['primary'] } } } }] }, undefined, undefined, undefined);
     expect(repository.findAdjustments).toHaveBeenCalledWith('r1', undefined, { OR: [{ stageId: { in: ['primary'] } }, { otherStages: { some: { stageId: { in: ['primary'] } } } }] });
-    expect(repository.totalsFor).toHaveBeenCalledWith(['r1'], { OR: [{ stageId: { in: ['primary'] } }, { otherStages: { some: { stageId: { in: ['primary'] } } } }] });
+    // The last argument: the salary scope "flagged" may count NET_FLOORED in — undefined, every line's pay.
+    expect(repository.totalsFor).toHaveBeenCalledWith(['r1'], { OR: [{ stageId: { in: ['primary'] } }, { otherStages: { some: { stageId: { in: ['primary'] } } } }] }, undefined);
   });
 
   it('a scoped viewer’s totals hide money unless their salary scope covers it', async () => {

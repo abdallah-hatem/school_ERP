@@ -7,6 +7,7 @@ import {
   LANGUAGES,
   SchoolSettingKey,
   WEEKDAYS,
+  formatPercent,
   isMonth,
   settingsHref,
   type AuditAction,
@@ -169,6 +170,11 @@ function enumOf(field: string, entityType: AuditEntityType | undefined): string 
       return 'degree';
     case 'action':
       return 'penaltyAction';
+    // Penalty actions (spec 2026-11-25): an action's effect and a %'s salary base.
+    case 'effect':
+      return 'penaltyEffect';
+    case 'percentBase':
+      return 'penaltySalaryBase';
     case 'type':
       return 'adjustmentType';
     // Contracts (spec 2026-11-24): who didn't renew, where a notice or request fell, why it ended.
@@ -236,6 +242,11 @@ export function formatAuditValue(
       return has('ui.units.currency') ? formatMoneyText(value, locale, t('ui.units.currency')) : formatMoney(value);
     }
     if (field === HrSettingKey.LATENESS_EXTRA_HOUR_DAYS || field === 'days') return formatDayCount(value, locale);
+    // A penalty level's percent and fixed amount (catalogue data, never hidden as salary).
+    if (field === 'percent') return `${formatPercent(value)}%`;
+    if (field === 'fixedAmount') {
+      return has('ui.units.currency') ? formatMoneyText(value, locale, t('ui.units.currency')) : formatMoney(value);
+    }
     if (field === AccountingSettingKey.PAYROLL_MARTYR_PERCENT || field === AccountingSettingKey.PAYROLL_INSURANCE_PERCENT) {
       return `${value}%`;
     }
@@ -484,6 +495,8 @@ export function recordHref(entry: Pick<AuditEntry, 'entityType' | 'entityId'>, l
     case 'penalty_group':
     case 'violation':
       return settingsHref(locale, 'catalogue');
+    case 'penalty_action':
+      return settingsHref(locale, 'catalogue', 'actions');
     case 'accounting_settings':
       return settingsHref(locale, 'accounting');
     case 'notification_settings':

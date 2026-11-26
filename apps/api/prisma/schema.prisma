@@ -486,17 +486,26 @@ enum Degree {
   DOCTORATE
 }
 
-enum PenaltyAction {
-  NOTICE
-  WARNING
+/// What a penalty action does to pay (spec 2026-11-25-penalty-actions): one per action, fixed in
+/// code. The number (days, percent, amount) is on the catalogue level.
+enum PenaltyEffect {
+  RECORD_ONLY
   DEDUCT_DAYS
+  DEDUCT_PERCENT
+  DEDUCT_AMOUNT
   INVESTIGATION
-  RAISE_HALF_LOSS
-  RAISE_LOSS
-  RAISE_DEFER_3M
-  PAY_CUT
-  DEMOTION
-  DISMISSAL
+}
+
+/// How a payslip splits a line's day-priced deduction between its day penalties.
+enum PayslipShareMethod {
+  HALF_UP
+  LARGEST_REMAINDER
+}
+
+/// Which salary a DEDUCT_PERCENT action is a share of (§6).
+enum PenaltySalaryBase {
+  MONTH_SALARY
+  BASIC_SALARY
 }
 
 /// §4 two steps (owner 2026-11-21). WAITING_HR was PENDING (renamed: pending ones need no new review).
@@ -753,6 +762,44 @@ model EmployeeStage {
 }
 
 /// A table of the penalty regulations (§4), e.g. general table A.
+/// The school's penalty actions (spec 2026-11-25): what a catalogue level can do. Never deleted —
+/// hidden (`isActive: false`). `effect` and `percentBase` are fixed once added. `code` is the seeded
+/// ten's system key (NOTICE … DISMISSAL), null for the school's own; used only by the seed, the
+/// migration and the dashboard's chart kinds, never for a rule.
+///
+/// WARNING: three rules exist only in SQL (migration 20261126100000_penalty_actions), Prisma can't
+/// declare them: the folded unique indexes `penalty_actions_name_en_fold_key` /
+/// `penalty_actions_name_ar_fold_key` (on search_fold(name): case, Arabic variants, spaces), and the check
+/// `penalty_actions_percent_base_check` (percent_base set exactly for DEDUCT_PERCENT). Never drop
+/// them; recreate them in any migration that rebuilds this table or those columns.
+model PenaltyAction {
+  id          String             @id @default(uuid()) @db.Uuid
+  code        String?            @unique
+  nameEn      String             @map("name_en")
+  nameAr      String             @map("name_ar")
+  effect      PenaltyEffect
+  percentBase PenaltySalaryBase? @map("percent_base")
+  sortOrder   Int                @default(0) @map("sort_order")
+  isActive    Boolean            @default(true) @map("is_active")
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
+
+  levels    ViolationLevel[]
+  penalties PenaltyRecord[]
+
+  /// Search text the database keeps up to date (search_fold of the searched columns):
+  /// read-only, never written by the app (docs/ARCHITECTURE.md -> Search).
+  searchText    String? @default(dbgenerated()) @map("search_text")
+  /// The same with every space removed (عبد الرحمن finds عبدالرحمن).
+  searchCompact String? @default(dbgenerated()) @map("search_compact")
+
+  @@index([isActive])
+  @@index([sortOrder])
+  @@index([searchText(ops: raw("gin_trgm_ops"))], type: Gin, map: "penalty_actions_search_text_idx")
+  @@index([searchCompact(ops: raw("gin_trgm_ops"))], type: Gin, map: "penalty_actions_search_compact_idx")
+  @@map("penalty_actions")
+}
+
 model PenaltyGroup {
   id        String   @id @default(uuid()) @db.Uuid
   nameEn    String   @map("name_en")
@@ -802,24 +849,37 @@ model Violation {
   @@map("violations")
 }
 
-/// Level 1–5 of a violation: the action for the n-th occurrence.
+/// Level 1–5 of a violation: the action for the n-th occurrence and its number — exactly the one
+/// the action's effect asks for (shared `levelValueProblem`).
+///
+/// WARNING: the database enforces it too, in SQL only (migration 20261126100000_penalty_actions):
+/// the check `violation_levels_one_number_check` and the trigger
+/// `violation_levels_number_fits_action`; on penalty_records the check
+/// `penalty_records_number_fits_effect_check`. Keep them in any migration that rebuilds these.
 model ViolationLevel {
-  id          String        @id @default(uuid()) @db.Uuid
-  violationId String        @map("violation_id") @db.Uuid
+  id          String   @id @default(uuid()) @db.Uuid
+  violationId String   @map("violation_id") @db.Uuid
   level       Int
-  action      PenaltyAction
+  actionId    String   @map("action_id") @db.Uuid
   /// Required (> 0) for DEDUCT_DAYS, optional for INVESTIGATION, null otherwise.
-  days        Decimal?      @db.Decimal(5, 2)
+  days        Decimal? @db.Decimal(5, 2)
+  /// DEDUCT_PERCENT: 0.01–100.
+  percent     Decimal? @db.Decimal(5, 2)
+  /// DEDUCT_AMOUNT: piastres.
+  amount      Int?
 
-  violation Violation @relation(fields: [violationId], references: [id], onDelete: Cascade)
+  violation Violation     @relation(fields: [violationId], references: [id], onDelete: Cascade)
+  action    PenaltyAction @relation(fields: [actionId], references: [id], onDelete: Restrict)
 
   @@unique([violationId, level])
   @@index([violationId])
+  @@index([actionId])
   @@map("violation_levels")
 }
 
-/// A recorded penalty. Level, action and days are computed at creation, shown from the catalogue
-/// while PENDING, and fixed at approval. Never deleted.
+/// A recorded penalty. Level, action and number are computed at creation, shown from the catalogue
+/// while waiting, and fixed at approval with a snapshot of the action (names, effect, base) — so
+/// renaming or re-pricing an action never changes a past penalty. Never deleted. No money.
 model PenaltyRecord {
   id              String             @id @default(uuid()) @db.Uuid
   employeeId      String             @map("employee_id") @db.Uuid
@@ -830,8 +890,16 @@ model PenaltyRecord {
   /// Where the violation happened (owner 2026-11-21): who reviews it, who sees it (own_stage).
   stageId         String             @map("stage_id") @db.Uuid
   level           Int
-  action          PenaltyAction
+  actionId        String             @map("action_id") @db.Uuid
+  /// The action's snapshot (spec 2026-11-25): written at recording, fixed at the HR approval.
+  actionNameEn    String             @map("action_name_en")
+  actionNameAr    String             @map("action_name_ar")
+  effect          PenaltyEffect
+  percentBase     PenaltySalaryBase? @map("percent_base")
   days            Decimal?           @db.Decimal(5, 2)
+  percent         Decimal?           @db.Decimal(5, 2)
+  /// A DEDUCT_AMOUNT level's amount, piastres (catalogue data, not a priced deduction).
+  amount          Int?
   note            String?
   cancelReason    String?            @map("cancel_reason")
   createdById     String?            @map("created_by_id") @db.Uuid
@@ -857,14 +925,15 @@ model PenaltyRecord {
   createdAt       DateTime           @default(now()) @map("created_at")
   updatedAt       DateTime           @updatedAt @map("updated_at")
 
-  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Restrict)
-  violation   Violation @relation(fields: [violationId], references: [id], onDelete: Restrict)
-  createdBy   User?     @relation("PenaltyCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  approvedBy  User?     @relation("PenaltyApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
-  cancelledBy User?     @relation("PenaltyCancelledBy", fields: [cancelledById], references: [id], onDelete: SetNull)
-  reviewedBy  User?     @relation("PenaltyReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
-  rejectedBy  User?     @relation("PenaltyRejectedBy", fields: [rejectedById], references: [id], onDelete: SetNull)
-  stage       Stage     @relation(fields: [stageId], references: [id], onDelete: Restrict)
+  employee    Employee      @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  violation   Violation     @relation(fields: [violationId], references: [id], onDelete: Restrict)
+  action      PenaltyAction @relation(fields: [actionId], references: [id], onDelete: Restrict)
+  createdBy   User?         @relation("PenaltyCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  approvedBy  User?         @relation("PenaltyApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  cancelledBy User?         @relation("PenaltyCancelledBy", fields: [cancelledById], references: [id], onDelete: SetNull)
+  reviewedBy  User?         @relation("PenaltyReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  rejectedBy  User?         @relation("PenaltyRejectedBy", fields: [rejectedById], references: [id], onDelete: SetNull)
+  stage       Stage         @relation(fields: [stageId], references: [id], onDelete: Restrict)
 
   @@index([employeeId])
   @@index([violationId])
@@ -876,6 +945,7 @@ model PenaltyRecord {
   @@index([reviewedById])
   @@index([rejectedById])
   @@index([stageId])
+  @@index([actionId])
   /// Repeat-level count: approved records of one violation for one employee in a date window.
   @@index([employeeId, violationId, status, date])
   @@map("penalty_records")
@@ -1129,21 +1199,25 @@ model LatenessEntry {
 
 /// One run per month (§6). DRAFT until approved; an approved run is never edited.
 model PayrollRun {
-  id            String        @id @default(uuid()) @db.Uuid
+  id                 String             @id @default(uuid()) @db.Uuid
   /// 'YYYY-MM'
-  month         String        @unique @db.Char(7)
-  status        PayrollStatus @default(DRAFT)
-  calculatedAt  DateTime      @default(now()) @map("calculated_at")
-  createdById   String?       @map("created_by_id") @db.Uuid
-  approvedById  String?       @map("approved_by_id") @db.Uuid
-  approvedAt    DateTime?     @map("approved_at")
+  month              String             @unique @db.Char(7)
+  status             PayrollStatus      @default(DRAFT)
+  calculatedAt       DateTime           @default(now()) @map("calculated_at")
+  /// How the payslip splits the day-priced part between day penalties: LARGEST_REMAINDER for runs
+  /// calculated from 2026-11-26 (owner Q14), HALF_UP for runs last calculated before — an approved
+  /// payslip never changes (review 2026-11-26).
+  payslipShareMethod PayslipShareMethod @default(LARGEST_REMAINDER) @map("payslip_share_method")
+  createdById        String?            @map("created_by_id") @db.Uuid
+  approvedById       String?            @map("approved_by_id") @db.Uuid
+  approvedAt         DateTime?          @map("approved_at")
   /// Accounting marked the salaries transferred (finalized, §10): the run is final.
-  transferredAt DateTime?     @map("transferred_at")
+  transferredAt      DateTime?          @map("transferred_at")
   /// The last time Accounting sent the run back to HR (a draft again), and why. Cleared on approval.
-  returnedAt    DateTime?     @map("returned_at")
-  returnReason  String?       @map("return_reason")
-  createdAt     DateTime      @default(now()) @map("created_at")
-  updatedAt     DateTime      @updatedAt @map("updated_at")
+  returnedAt         DateTime?          @map("returned_at")
+  returnReason       String?            @map("return_reason")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
 
   createdBy   User?               @relation("PayrollRunCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   approvedBy  User?               @relation("PayrollRunApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
@@ -1176,7 +1250,10 @@ model PayrollLine {
   /// Rounded for display; deductions use monthSalary ÷ divisor unrounded.
   dayValue             Int             @map("day_value")
   penaltyDays          Decimal         @default(0) @map("penalty_days") @db.Decimal(5, 2)
+  /// The whole penalty deduction: days part + % part + fixed part (spec 2026-11-25).
   penaltyAmount        Int             @default(0) @map("penalty_amount")
+  /// The day-priced part of penaltyAmount (DEDUCT_DAYS and INVESTIGATION days, priced once).
+  penaltyDaysAmount    Int             @default(0) @map("penalty_days_amount")
   latenessMinutes      Int             @default(0) @map("lateness_minutes")
   /// The lateness grace taken off the minutes at this calculation (§5). Null on lines calculated
   /// before it was kept (the payslip then shows the minutes without it).

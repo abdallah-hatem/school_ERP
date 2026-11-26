@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { PenaltyAction } from './enums';
+import { PenaltyAction, PenaltyEffect } from './enums';
 import type { Month, NamedRef, Piastres } from './types/common';
 
 /*
@@ -33,21 +33,35 @@ export function parseAnalyticsRange(value: unknown): AnalyticsRange | undefined 
   return parsed.success ? parsed.data.months : undefined;
 }
 
-/** How the penalty chart stacks a month's approved penalties. */
+/** How the penalty chart stacks a month's approved penalties (spec 2026-11-25). */
 export const PenaltyKind = {
-  /** Notice and warning: cost nothing. */
+  /** Notice and warning (the seeded `NOTICE` / `WARNING` actions): cost nothing. */
   NOTICE: 'notice',
-  /** Day deductions. */
+  /** Pay deductions: days, a %, a fixed amount, or an investigation with days. */
   DEDUCT: 'deduct',
-  /** Everything else (investigation, raise-related, pay cut, demotion, dismissal). */
+  /** Everything else (record-only actions, an investigation without days). */
   OTHER: 'other',
 } as const;
 export type PenaltyKind = (typeof PenaltyKind)[keyof typeof PenaltyKind];
 export const PENALTY_KINDS: readonly PenaltyKind[] = [PenaltyKind.NOTICE, PenaltyKind.DEDUCT, PenaltyKind.OTHER];
 
-export function penaltyKindOf(action: PenaltyAction): PenaltyKind {
-  if (action === PenaltyAction.NOTICE || action === PenaltyAction.WARNING) return PenaltyKind.NOTICE;
-  if (action === PenaltyAction.DEDUCT_DAYS) return PenaltyKind.DEDUCT;
+/** An approved penalty as the chart sorts it: its action's seeded code, its effect, its days. */
+export interface PenaltyKindInput {
+  code: PenaltyAction | null;
+  effect: PenaltyEffect;
+  days: number | null;
+}
+
+export function penaltyKindOf(p: PenaltyKindInput): PenaltyKind {
+  if (
+    p.effect === PenaltyEffect.DEDUCT_DAYS ||
+    p.effect === PenaltyEffect.DEDUCT_PERCENT ||
+    p.effect === PenaltyEffect.DEDUCT_AMOUNT
+  ) {
+    return PenaltyKind.DEDUCT;
+  }
+  if (p.effect === PenaltyEffect.INVESTIGATION && p.days !== null && p.days > 0) return PenaltyKind.DEDUCT;
+  if (p.code === PenaltyAction.NOTICE || p.code === PenaltyAction.WARNING) return PenaltyKind.NOTICE;
   return PenaltyKind.OTHER;
 }
 

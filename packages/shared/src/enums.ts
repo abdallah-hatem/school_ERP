@@ -56,6 +56,13 @@ export const Degree = {
 export type Degree = (typeof Degree)[keyof typeof Degree];
 export const DEGREES = values(Degree);
 
+/**
+ * The seeded penalty actions' system codes (spec 2026-11-25-penalty-actions): today's ten, kept as
+ * the `code` of the ten seeded rows of `penalty_actions`. Used only by the seed, the migration and
+ * the dashboard's chart kinds — never for a rule (rules go by the action's `PenaltyEffect`). The
+ * `common.enums.penaltyAction.*` names stay in both locales: audit entries written before the move
+ * hold these codes.
+ */
 export const PenaltyAction = {
   NOTICE: 'NOTICE',
   WARNING: 'WARNING',
@@ -71,11 +78,53 @@ export const PenaltyAction = {
 export type PenaltyAction = (typeof PenaltyAction)[keyof typeof PenaltyAction];
 export const PENALTY_ACTIONS = values(PenaltyAction);
 
-/** `days` is required (> 0) for DEDUCT_DAYS, optional for INVESTIGATION, absent otherwise. */
-export const PENALTY_ACTIONS_REQUIRING_DAYS: readonly PenaltyAction[] = [PenaltyAction.DEDUCT_DAYS];
-export const PENALTY_ACTIONS_ALLOWING_DAYS: readonly PenaltyAction[] = [
-  PenaltyAction.DEDUCT_DAYS,
-  PenaltyAction.INVESTIGATION,
+/**
+ * What a penalty action does to pay (§4, spec 2026-11-25) — one per action, fixed in code (no free
+ * formulas). The number is on the catalogue level: days, a percent or an amount.
+ */
+export const PenaltyEffect = {
+  /** Kept on the employee's file; no number, no change to pay. */
+  RECORD_ONLY: 'RECORD_ONLY',
+  /** Days of pay, required on the level (quarter steps, above 0, at most 30). */
+  DEDUCT_DAYS: 'DEDUCT_DAYS',
+  /** A percent of a salary (the action's `percentBase`), required on the level (0.01–100). */
+  DEDUCT_PERCENT: 'DEDUCT_PERCENT',
+  /** A fixed amount in piastres, required on the level (above 0, at most EGP 1,000,000). */
+  DEDUCT_AMOUNT: 'DEDUCT_AMOUNT',
+  /** Referral to investigation; the level may add days deducted (priced as days). */
+  INVESTIGATION: 'INVESTIGATION',
+} as const;
+export type PenaltyEffect = (typeof PenaltyEffect)[keyof typeof PenaltyEffect];
+export const PENALTY_EFFECTS = values(PenaltyEffect);
+
+/**
+ * Which salary a % action is a share of (spec 2026-11-25, §6): the salary for the month (basic ×
+ * work-system %, what days are priced from) or the basic salary (before the part-time %).
+ */
+export const PenaltySalaryBase = {
+  MONTH_SALARY: 'MONTH_SALARY',
+  BASIC_SALARY: 'BASIC_SALARY',
+} as const;
+export type PenaltySalaryBase = (typeof PenaltySalaryBase)[keyof typeof PenaltySalaryBase];
+export const PENALTY_SALARY_BASES = values(PenaltySalaryBase);
+
+/** The ten seeded actions (spec 2026-11-25): code, effect and today's names, in today's order. */
+export const SEEDED_PENALTY_ACTIONS: readonly {
+  code: PenaltyAction;
+  effect: PenaltyEffect;
+  nameEn: string;
+  nameAr: string;
+}[] = [
+  { code: 'NOTICE', effect: 'RECORD_ONLY', nameEn: 'Notice', nameAr: 'لفت نظر' },
+  { code: 'WARNING', effect: 'RECORD_ONLY', nameEn: 'Warning', nameAr: 'إنذار' },
+  { code: 'DEDUCT_DAYS', effect: 'DEDUCT_DAYS', nameEn: 'Deduct days', nameAr: 'خصم أيام' },
+  { code: 'INVESTIGATION', effect: 'INVESTIGATION', nameEn: 'Referral to investigation', nameAr: 'إحالة للتحقيق' },
+  { code: 'RAISE_HALF_LOSS', effect: 'RECORD_ONLY', nameEn: 'Loss of half the annual raise', nameAr: 'الحرمان من نصف العلاوة السنوية' },
+  { code: 'RAISE_LOSS', effect: 'RECORD_ONLY', nameEn: 'Loss of the annual raise', nameAr: 'الحرمان من العلاوة السنوية' },
+  { code: 'RAISE_DEFER_3M', effect: 'RECORD_ONLY', nameEn: 'Annual raise deferred 3 months', nameAr: 'تأجيل العلاوة السنوية 3 أشهر' },
+  { code: 'PAY_CUT', effect: 'RECORD_ONLY', nameEn: 'Pay cut by one annual raise', nameAr: 'خفض الأجر بمقدار علاوة' },
+  { code: 'DEMOTION', effect: 'RECORD_ONLY', nameEn: 'Demotion', nameAr: 'خفض الدرجة' },
+  { code: 'DISMISSAL', effect: 'RECORD_ONLY', nameEn: 'Dismissal', nameAr: 'الفصل' },
 ];
 
 /**

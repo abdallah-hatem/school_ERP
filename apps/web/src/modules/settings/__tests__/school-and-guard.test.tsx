@@ -16,6 +16,10 @@ const api = vi.hoisted(() => ({
   UPDATE_LIST_ITEM: vi.fn(),
   GET_SETTINGS_HISTORY: vi.fn(),
   GET_PENALTY_GROUPS: vi.fn(),
+  GET_PENALTY_ACTIONS: vi.fn(),
+  GET_PENALTY_ACTION_CHOICES: vi.fn(),
+  CREATE_PENALTY_ACTION: vi.fn(),
+  UPDATE_PENALTY_ACTION: vi.fn(),
   CREATE_PENALTY_GROUP: vi.fn(),
   UPDATE_PENALTY_GROUP: vi.fn(),
   CREATE_VIOLATION: vi.fn(),
@@ -47,6 +51,7 @@ import { SettingsScreen } from '../components/settings-screen';
 import type { SessionUser } from '@school-erp/shared';
 import { sessionWith, sessionWithout, STAGE_HEAD_KEYS, TEST_SESSION } from '@/test/render';
 import { deferred, hrSettings, ok, renderSettings, school } from './helpers';
+import { SEEDED_ITEMS } from '@/test/penalty-actions';
 function renderScreen(locale: 'en' | 'ar' = 'en', session: SessionUser = TEST_SESSION) {
   return renderSettings(
     <>
@@ -65,6 +70,13 @@ function renderScreen(locale: 'en' | 'ar' = 'en', session: SessionUser = TEST_SE
 async function field(name: RegExp) {
   return (await screen.findByRole('textbox', { name })) as HTMLInputElement;
 }
+
+
+// The Penalty actions card and the level editor's picker (spec 2026-11-25): the seeded ten.
+beforeEach(() => {
+  api.GET_PENALTY_ACTIONS.mockImplementation(() => ok(SEEDED_ITEMS, { total: SEEDED_ITEMS.length, page: 1, limit: 20 }));
+  api.GET_PENALTY_ACTION_CHOICES.mockImplementation(() => ok(SEEDED_ITEMS));
+});
 
 describe('Settings screen — school section', () => {
   beforeEach(() => {

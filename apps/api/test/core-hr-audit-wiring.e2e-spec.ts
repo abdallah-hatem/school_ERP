@@ -5,6 +5,7 @@ import { http, unique } from './helpers';
 import { createAppAsTestUser } from './helpers/as-test-user';
 import { historyMark } from './helpers/history';
 import { deleteEmployees } from './helpers/employees';
+import { ACTION_ID } from './helpers/penalty-actions';
 
 /*
  * T28 — core and HR people write their audit entries in the same transaction as the change (audit
@@ -192,14 +193,14 @@ describe('core + HR people audit wiring (T28, e2e)', () => {
     const violation = (
       await http(app)
         .post(`/hr/penalty-groups/${group.id}/violations`)
-        .send({ nameEn: 'Late', nameAr: 'تأخر', levels: [{ level: 1, action: 'NOTICE' }] })
+        .send({ nameEn: 'Late', nameAr: 'تأخر', levels: [{ level: 1, actionId: ACTION_ID.NOTICE }] })
         .expect(201)
     ).body.data as { id: string };
     await http(app).patch(`/hr/violations/${violation.id}`).send({ oncePerDay: false }).expect(200);
     // Invalid levels → 400, nothing recorded.
     await http(app)
       .patch(`/hr/violations/${violation.id}`)
-      .send({ levels: [{ level: 2, action: 'NOTICE' }] })
+      .send({ levels: [{ level: 2, actionId: ACTION_ID.NOTICE }] })
       .expect(400);
 
     const list = await entries();

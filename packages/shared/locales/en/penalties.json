@@ -32,10 +32,6 @@
     "profileEmptyTitle": "No penalties yet",
     "profileEmptyBody": "Penalties recorded for this employee show up here, newest first."
   },
-  "action": {
-    "deduct": "Deduct {days}",
-    "investigation": "Referral to investigation, {days} deducted"
-  },
   "cancelledBecause": "Reason: {reason}",
   "approve": {
     "button": "Approve",

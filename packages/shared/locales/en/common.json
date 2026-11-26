@@ -109,6 +109,17 @@
       "DEMOTION": "Demotion",
       "DISMISSAL": "Dismissal"
     },
+    "penaltyEffect": {
+      "RECORD_ONLY": "Record only",
+      "DEDUCT_DAYS": "Deduct days",
+      "DEDUCT_PERCENT": "Deduct a % of salary",
+      "DEDUCT_AMOUNT": "Deduct a fixed amount",
+      "INVESTIGATION": "Referral to investigation"
+    },
+    "penaltySalaryBase": {
+      "MONTH_SALARY": "Salary for the month",
+      "BASIC_SALARY": "Basic salary"
+    },
     "penaltyStatus": {
       "APPROVED": "Approved",
       "CANCELLED": "Cancelled",
@@ -136,7 +147,7 @@
       "ROLLING_12_MONTHS": "Rolling 12 months"
     },
     "payrollFlag": {
-      "NET_FLOORED": "Net floored at 0",
+      "NET_FLOORED": "Deductions exceed this month's pay — net set to 0",
       "PENDING_PENALTIES": "Pending penalties"
     },
     "weekday": {
@@ -199,5 +210,13 @@
       "OTHER": "Other",
       "EARLY_TERMINATION": "Early termination"
     }
+  },
+  "penaltyLabel": {
+    "deduct": "Deduct {days}",
+    "investigation": "{name}, {days} deducted",
+    "percentMonth": "Deduct {percent}% of the salary for the month",
+    "percentBasic": "Deduct {percent}% of the basic salary",
+    "amount": "Deduct EGP {amount}",
+    "percentBasicWithBase": "Deduct {percent}% of the basic salary ({base})"
   }
 }

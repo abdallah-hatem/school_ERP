@@ -108,6 +108,7 @@ export type HrListKey = (typeof HrListKey)[keyof typeof HrListKey];
 export const HrCatalogueKey = {
   PENALTY_GROUPS: 'hr.penaltyGroups',
   VIOLATIONS: 'hr.violations',
+  PENALTY_ACTIONS: 'hr.penaltyActions',
 } as const;
 export type HrCatalogueKey = (typeof HrCatalogueKey)[keyof typeof HrCatalogueKey];
 

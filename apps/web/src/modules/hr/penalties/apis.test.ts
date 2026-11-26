@@ -1,4 +1,3 @@
-import { PenaltyAction } from '@school-erp/shared';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const transport = vi.hoisted(() => ({ apiFetch: vi.fn() }));
@@ -22,7 +21,7 @@ beforeEach(() => {
 describe('penalty writes', () => {
   it.each([
     ['record', () => CREATE_PENALTY({ employeeId: 'e-1', violationId: 'v-1', date: '2026-11-19' })],
-    ['approve (with a recount)', () => APPROVE_PENALTY('p-1', [{ id: 'p-2', level: 3, action: PenaltyAction.DEDUCT_DAYS, days: 1 }])],
+    ['approve (with a recount)', () => APPROVE_PENALTY('p-1', [{ id: 'p-2', level: 3, actionId: 'a-1', days: 1, percent: null, amount: null }])],
     ['cancel', () => CANCEL_PENALTY('p-1', 'Recorded twice')],
   ] as const)('%s expires the cached penalty screens', async (_name, write) => {
     await write();

@@ -144,4 +144,17 @@ describe('PayslipView on a phone', () => {
       expect(penaltyRows()).toHaveLength(PAYSLIP.penalties.length);
     },
   );
+
+  it.each(['en', 'ar'] as const)('%s: a day penalty’s card says its days once — in the action, not again beside it', (locale) => {
+    renderPayroll(<PayslipView payslip={PAYSLIP} backHref="/x" />, locale);
+    const stacked = screen.getAllByTestId('payslip-penalty-stacked');
+    PAYSLIP.penalties.forEach((p, i) => {
+      if (p.days === null) return;
+      const meta = (stacked[i] as HTMLElement).querySelector('p')!.textContent ?? '';
+      const days = locale === 'ar' ? (p.days === 1 ? 'يوم واحد' : `${p.days} يوم`) : `${p.days} day`;
+      expect(meta.split(days).length - 1).toBe(1);
+    });
+    // The printed table keeps its Days column.
+    expect(screen.getAllByRole('columnheader', { name: locale === 'ar' ? /الأيام|أيام/ : 'Days' }).length).toBeGreaterThan(0);
+  });
 });

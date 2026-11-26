@@ -18,6 +18,7 @@ import { http, unique } from './helpers';
 import { createAppAsTestUser } from './helpers/as-test-user';
 import { outboxIdle } from './helpers/events';
 import { deleteEmployees } from './helpers/employees';
+import { ACTION_ID } from './helpers/penalty-actions';
 
 /*
  * Security review (2026-11-23) in HR, against the real database. Everything is made through the API
@@ -158,8 +159,8 @@ describe('Security review — HR access (e2e)', () => {
               nameAr: unique('تأخير'),
               oncePerDay: false,
               levels: [
-                { level: 1, action: 'NOTICE' },
-                { level: 2, action: 'WARNING' },
+                { level: 1, actionId: ACTION_ID.NOTICE },
+                { level: 2, actionId: ACTION_ID.WARNING },
               ],
             })
             .expect(201)

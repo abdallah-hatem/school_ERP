@@ -8,7 +8,9 @@ import type {
   PayrollFlag,
   PayrollStatus,
   PenaltyAction,
+  PenaltyEffect,
   PenaltyReviewSkip,
+  PenaltySalaryBase,
   PenaltyStatus,
   PenaltyStatusFilter,
   PenaltyStep,
@@ -237,14 +239,68 @@ export interface EmployeeRef extends NamedRef {
   gender?: Gender;
 }
 
+// ── Penalty actions (spec 2026-11-25) ──────────────────────────────────────
+
+/**
+ * A penalty action as a level or a penalty names it: its names, its effect and, for a %, which
+ * salary it is a % of. On a fixed (approved) penalty these are its snapshot.
+ */
+export interface PenaltyActionRef extends Names {
+  id: Uuid;
+  effect: PenaltyEffect;
+  /** Required for `DEDUCT_PERCENT`, null otherwise. */
+  percentBase: PenaltySalaryBase | null;
+}
+
+/** `GET /hr/penalty-actions` — one action of the school's list (Settings → Penalty catalogue). */
+export interface PenaltyActionItem extends PenaltyActionRef {
+  /** The seeded ones' system key (`NOTICE` … `DISMISSAL`); null for the school's own. */
+  code: PenaltyAction | null;
+  sortOrder: number;
+  isActive: boolean;
+  /** How many catalogue levels use it, in how many violations — those in use (owner Q19). */
+  levelsUsing: number;
+  violationsUsing: number;
+  /** Retired violations (or in a retired group) whose levels still hold it, counted apart. */
+  retiredViolationsUsing: number;
+}
+
+/** `GET /hr/penalty-actions?includeHidden&search&page&limit` — no `page`: the whole visible list. */
+export interface ListPenaltyActionsQuery extends PaginationQuery {
+  includeHidden?: boolean;
+}
+
+/** `POST /hr/penalty-actions`. The effect and base are fixed once added. */
+export interface CreatePenaltyActionRequest extends Names {
+  effect: PenaltyEffect;
+  /** Required for `DEDUCT_PERCENT`, refused otherwise. */
+  percentBase?: PenaltySalaryBase | null;
+  sortOrder?: number;
+}
+
+/** `PATCH /hr/penalty-actions/:id` — rename, reorder, hide, show (`effect` / `percentBase` → 400). */
+export interface UpdatePenaltyActionRequest extends Partial<Names> {
+  sortOrder?: number;
+  isActive?: boolean;
+}
+
 // ── Penalty catalogue ──────────────────────────────────────────────────────
 
-export interface ViolationLevel {
+/** The number a level (or a penalty) carries, as its action's effect asks: at most one is set. */
+export interface PenaltyLevelNumbers {
+  /** Days: required for DEDUCT_DAYS, optional for INVESTIGATION, null otherwise. */
+  days: Days | null;
+  /** Percent (0.01–100, two decimals): required for DEDUCT_PERCENT, null otherwise. */
+  percent: number | null;
+  /** Piastres: required for DEDUCT_AMOUNT, null otherwise. */
+  amount: Piastres | null;
+}
+
+export interface ViolationLevel extends PenaltyLevelNumbers {
   /** 1..5 */
   level: number;
-  action: PenaltyAction;
-  /** Required (> 0) for DEDUCT_DAYS, optional for INVESTIGATION, null otherwise. */
-  days: Days | null;
+  /** Today's action (a hidden one stays on the levels that have it). */
+  action: PenaltyActionRef & { isActive: boolean };
 }
 
 export interface Violation extends Names {
@@ -289,8 +345,10 @@ export interface UpdatePenaltyGroupRequest extends Partial<Names> {
 
 export interface ViolationLevelInput {
   level: number;
-  action: PenaltyAction;
+  actionId: Uuid;
   days?: Days | null;
+  percent?: number | null;
+  amount?: Piastres | null;
 }
 
 export interface CreateViolationRequest extends Names {
@@ -335,11 +393,10 @@ export interface PenaltyEmployeeStages {
   stages: NamedRef[];
 }
 
-/** The level, action and days a penalty has (or gets). */
-export interface PenaltyLevelValues {
+/** The level, action and number a penalty has (or gets). */
+export interface PenaltyLevelValues extends PenaltyLevelNumbers {
   level: number;
-  action: PenaltyAction;
-  days: Days | null;
+  action: PenaltyActionRef;
 }
 
 /**
@@ -377,9 +434,11 @@ export interface PenaltyPreview extends PenaltyLevelValues {
   recountElsewhere: number;
 }
 
-/** One recounted penalty the user confirmed: the level, action and days it was shown to get. */
-export interface PenaltyRecountAcknowledgement extends PenaltyLevelValues {
+/** One recounted penalty the user confirmed: the level, action and number it was shown to get. */
+export interface PenaltyRecountAcknowledgement extends PenaltyLevelNumbers {
   id: Uuid;
+  level: number;
+  actionId: Uuid;
 }
 
 /**
@@ -445,8 +504,12 @@ export interface PenaltyRecord {
   violation: NamedRef;
   date: IsoDate;
   level: number;
-  action: PenaltyAction;
+  /** The snapshot when fixed (approved, rejected, cancelled); today's catalogue while waiting. */
+  action: PenaltyActionRef;
   days: Days | null;
+  percent: number | null;
+  /** A fixed amount in piastres (catalogue data, not salary). */
+  amount: Piastres | null;
   status: PenaltyStatus;
   /**
    * Where the violation happened (owner, 2026-11-21): who reviews it and who sees it — a stage head
@@ -636,6 +699,7 @@ export const PAYROLL_LINE_MONEY_FIELDS = [
   'monthSalary',
   'dayValue',
   'penaltyAmount',
+  'penaltyDaysAmount',
   'latenessAmount',
   'adjustmentAdditions',
   'adjustmentDeductions',
@@ -662,7 +726,10 @@ export interface PayrollLine extends Names, SalaryVisibility {
   /** Rounded for display only; deductions use `monthSalary ÷ divisor` unrounded. */
   dayValue?: Piastres;
   penaltyDays: Days;
+  /** The whole penalty deduction: days part + % part + fixed part (spec 2026-11-25). */
   penaltyAmount?: Piastres;
+  /** The day-priced part of `penaltyAmount` (days of day deductions and investigations). */
+  penaltyDaysAmount?: Piastres;
   latenessMinutes: number;
   /**
    * The lateness grace taken off `latenessMinutes` at calculation (§5); null on a line calculated
@@ -674,7 +741,17 @@ export interface PayrollLine extends Names, SalaryVisibility {
   adjustmentAdditions?: Piastres;
   adjustmentDeductions?: Piastres;
   net?: Piastres;
+  /**
+   * `NET_FLOORED` is left out when the line's money is (`salaryVisible` false): beside a visible
+   * fixed amount it would hint at the pay (owner Q9, 2026-11-26).
+   */
   flags: PayrollFlag[];
+  /**
+   * Only when `salaryVisible` is false, on a run's lines: the employee's approved penalties in the
+   * month that take pay, by kind (effect and number, no EGP taken) — so the line reads "2 penalties:
+   * 0.5 day, 5%" rather than "0 days" (owner Q9).
+   */
+  deductingPenalties?: { effect: PenaltyEffect; percentBase: PenaltySalaryBase | null; days: Days | null; percent: number | null; amount: Piastres | null }[];
 }
 
 /**
@@ -775,9 +852,13 @@ export interface PayslipPenalty {
   violationNameEn: string;
   violationNameAr: string;
   level: number;
-  action: PenaltyAction;
+  /** The snapshot fixed at approval. */
+  action: PenaltyActionRef;
   days: Days | null;
-  /** Absent when the payslip's `salaryVisible` is false. */
+  percent: number | null;
+  /** The level's fixed amount (DEDUCT_AMOUNT), piastres; `amount` is what was deducted. */
+  fixedAmount: Piastres | null;
+  /** What this penalty took off the line, priced. Absent when the payslip's `salaryVisible` is false. */
   amount?: Piastres;
 }
 
@@ -787,6 +868,11 @@ export interface Payslip extends PayrollLine {
   penalties: PayslipPenalty[];
   /** `amount` is absent when the payslip's `salaryVisible` is false. */
   adjustments: { type: AdjustmentType; amount?: Piastres; reason: string }[];
+  /**
+   * What the floor at 0 left undeducted this month (owner Q4, 2026-11-26: written off, never carried
+   * forward); 0 when the net wasn't floored. Absent when `salaryVisible` is false.
+   */
+  notDeducted?: Piastres;
   school: { nameEn: string; nameAr: string; logoUrl: string | null };
 }
 

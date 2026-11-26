@@ -147,6 +147,11 @@ const LIST_ACTIONS: Record<string, { type: AuditEntityType; create: AuditAction;
     create: 'hr.violation.create',
     update: 'hr.violation.update',
   },
+  [HrCatalogueKey.PENALTY_ACTIONS]: {
+    type: AuditEntityType.PENALTY_ACTION,
+    create: 'hr.penalty_action.create',
+    update: 'hr.penalty_action.update',
+  },
 };
 
 const field = (value: unknown, name: string): string | undefined => {
@@ -176,7 +181,9 @@ export function historyAuditTarget(event: SettingsChangedEvent): HistoryAuditTar
     (event.scope === 'lists' &&
       (event.key === HrListKey.DEPARTMENTS || event.key === HrListKey.JOB_TITLES || event.key === HrListKey.EMPLOYEE_GRADES)) ||
     (event.scope === 'catalogue' &&
-      (event.key === HrCatalogueKey.PENALTY_GROUPS || event.key === HrCatalogueKey.VIOLATIONS));
+      (event.key === HrCatalogueKey.PENALTY_GROUPS ||
+        event.key === HrCatalogueKey.VIOLATIONS ||
+        event.key === HrCatalogueKey.PENALTY_ACTIONS));
   if (!target || !scopeOk) return null;
   return {
     action: created ? target.create : target.update,

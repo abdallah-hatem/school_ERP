@@ -2,12 +2,14 @@ import {
   isOnWorkTimeStep,
   isValidDays,
   Language,
-  levelDaysProblem,
+  levelNumberKind,
+  levelValueProblem,
+  storedLevelDays,
   MAX_VIOLATION_LEVELS,
   MIN_VIOLATION_LEVELS,
   NOTIFICATION_RETENTION_LIMITS,
-  PENALTY_ACTIONS_ALLOWING_DAYS,
-  PenaltyAction,
+  type PenaltyEffect,
+  type ViolationLevelInput,
   RepetitionWindow,
   SETTING_LIMITS,
   TAX_BRACKETS_MAX,
@@ -142,44 +144,65 @@ export type AccountingRulesFormValues = z.infer<typeof accountingRulesSchema>;
 
 // ── Violation (catalogue) ────────────────────────────────────────────────────
 
-export const violationSchema = z
-  .object({
-    nameEn: name('violation'),
-    nameAr: name('violation'),
-    note: z.string().max(NOTE_MAX, 'settings.errors.max.note'),
-    /** §4: at most one pending/approved penalty per employee per date. */
-    oncePerDay: z.boolean(),
-    /** Level `i` is level `i + 1`; numbered on save, so the list is always 1..n. */
-    levels: z
-      .array(z.object({ action: z.enum(PenaltyAction, { error: required }), days: z.number().nullable() }))
-      .min(MIN_VIOLATION_LEVELS, 'settings.catalogue.problems.COUNT')
-      .max(MAX_VIOLATION_LEVELS, 'settings.catalogue.problems.COUNT'),
-  })
-  .superRefine((value, ctx) => {
-    // The shared rules decide — the same ones the API runs (one implementation).
-    toLevelInputs(value.levels).forEach((level, i) => {
-      const problem = levelDaysProblem(level.action, level.days);
-      if (problem) {
-        ctx.addIssue({ code: 'custom', path: ['levels', i, 'days'], message: `settings.catalogue.problems.${problem}` });
-      }
-    });
-    const whole = violationLevelsProblem(toLevelInputs(value.levels));
-    if (whole === 'COUNT' || whole === 'NUMBERING') {
-      ctx.addIssue({ code: 'custom', path: ['levels'], message: `settings.catalogue.problems.${whole}` });
-    }
-  });
-export type ViolationFormValues = z.infer<typeof violationSchema>;
+/** A level's action's effect, from the actions the editor knows (unknown → none yet). */
+export type EffectOf = (actionId: string) => PenaltyEffect | undefined;
 
 /**
- * Form rows → the contract's levels: numbered 1..n, and `days` dropped for an action that takes
- * none (the days field is disabled for those, so a value left from another action never counts).
+ * The violation editor's form (spec 2026-11-25): names, note, once-per-day and its 1–5 levels, each
+ * an action and ONE number (`value`) whose unit follows the action's effect — days, a percent, or an
+ * amount in piastres (the shared `MoneyField`); none for Record only. Validated live with the
+ * shared `levelValueProblem` / `violationLevelsProblem` — the API runs the same rules. `effectOf`
+ * is read at validation time (the actions arrive after the form opens).
  */
-export function toLevelInputs(levels: ViolationFormValues['levels']) {
-  return levels.map((l, i) => ({
-    level: i + 1,
-    action: l.action,
-    days: PENALTY_ACTIONS_ALLOWING_DAYS.includes(l.action) ? l.days : null,
-  }));
+export function violationSchema(effectOf: EffectOf) {
+  return z
+    .object({
+      nameEn: name('violation'),
+      nameAr: name('violation'),
+      note: z.string().max(NOTE_MAX, 'settings.errors.max.note'),
+      /** §4: at most one pending/approved penalty per employee per date. */
+      oncePerDay: z.boolean(),
+      /** Level `i` is level `i + 1`; numbered on save, so the list is always 1..n. */
+      levels: z
+        .array(z.object({ actionId: z.string().min(1, 'settings.catalogue.problems.ACTION_REQUIRED'), value: z.number().nullable() }))
+        .min(MIN_VIOLATION_LEVELS, 'settings.catalogue.problems.COUNT')
+        .max(MAX_VIOLATION_LEVELS, 'settings.catalogue.problems.COUNT'),
+    })
+    .superRefine((value, ctx) => {
+      // The shared rules decide — the same ones the API runs (one implementation).
+      const inputs = toLevelInputs(value.levels, effectOf);
+      inputs.forEach((level, i) => {
+        const effect = effectOf(level.actionId);
+        const problem = effect ? levelValueProblem(effect, level) : null;
+        if (problem) {
+          ctx.addIssue({ code: 'custom', path: ['levels', i, 'value'], message: `settings.catalogue.problems.${problem}` });
+        }
+      });
+      const whole = violationLevelsProblem(inputs.map((l) => ({ level: l.level })));
+      if (whole === 'COUNT' || whole === 'NUMBERING') {
+        ctx.addIssue({ code: 'custom', path: ['levels'], message: `settings.catalogue.problems.${whole}` });
+      }
+    });
+}
+export type ViolationFormValues = z.infer<ReturnType<typeof violationSchema>>;
+
+/**
+ * Form rows → the contract's levels: numbered 1..n, and the one number put where the action's
+ * effect takes it (`days`, `percent` or `amount`); none for an action that takes none (the field is
+ * disabled for those, so a value left from another action never counts).
+ */
+export function toLevelInputs(levels: ViolationFormValues['levels'], effectOf: EffectOf): ViolationLevelInput[] {
+  return levels.map((l, i) => {
+    const effect = effectOf(l.actionId);
+    const kind = effect ? levelNumberKind(effect) : null;
+    return {
+      level: i + 1,
+      actionId: l.actionId,
+      days: kind === 'days' && effect ? storedLevelDays(effect, l.value) : null,
+      percent: kind === 'percent' ? l.value : null,
+      amount: kind === 'amount' ? l.value : null,
+    };
+  });
 }
 
 // ── Notifications (§11) ──────────────────────────────────────────────────────

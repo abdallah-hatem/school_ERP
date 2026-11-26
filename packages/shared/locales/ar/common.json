@@ -109,6 +109,17 @@
       "DEMOTION": "خفض الدرجة",
       "DISMISSAL": "الفصل"
     },
+    "penaltyEffect": {
+      "RECORD_ONLY": "تسجيل فقط",
+      "DEDUCT_DAYS": "خصم أيام",
+      "DEDUCT_PERCENT": "خصم نسبة من الأجر",
+      "DEDUCT_AMOUNT": "خصم مبلغ ثابت",
+      "INVESTIGATION": "إحالة للتحقيق"
+    },
+    "penaltySalaryBase": {
+      "MONTH_SALARY": "أجر الشهر",
+      "BASIC_SALARY": "الأجر الأساسي"
+    },
     "penaltyStatus": {
       "APPROVED": "معتمد",
       "CANCELLED": "ملغى",
@@ -136,7 +147,7 @@
       "ROLLING_12_MONTHS": "آخر 12 شهرًا"
     },
     "payrollFlag": {
-      "NET_FLOORED": "الصافي عند الحد الأدنى صفر",
+      "NET_FLOORED": "الخصومات تتجاوز أجر الشهر — صافي الأجر صفر",
       "PENDING_PENALTIES": "جزاءات قيد الانتظار"
     },
     "weekday": {
@@ -199,5 +210,13 @@
       "OTHER": "سبب آخر",
       "EARLY_TERMINATION": "إنهاء مبكر"
     }
+  },
+  "penaltyLabel": {
+    "deduct": "خصم {days}",
+    "investigation": "{name} مع خصم {days}",
+    "percentMonth": "خصم ⁦{percent}%⁩ من أجر الشهر",
+    "percentBasic": "خصم ⁦{percent}%⁩ من الأجر الأساسي",
+    "amount": "خصم {amount} جنيه",
+    "percentBasicWithBase": "خصم ⁦{percent}%⁩ من الأجر الأساسي (⁦{base}⁩)"
   }
 }

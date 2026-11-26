@@ -17,6 +17,7 @@ import { formatCount, formatDate, formatDayCount, formatMonth } from '@/shared/l
 import { localName, nameIn, type Locale, type Translate } from '@/shared/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { useTranslation } from '@/shared/providers/i18n-provider';
+import { payslipActionLabel } from '@/shared/lib/penalty-action-text';
 
 /**
  * Print rules for the payslip: one A4 page, no app chrome (the shell's `no-print` parts and this
@@ -178,13 +179,8 @@ export function PayslipView({ payslip, backHref }: { payslip: Payslip; backHref:
                       <span aria-hidden="true">·</span>
                       <span>{t('payroll.payslip.level', { level: p.level })}</span>
                       <span aria-hidden="true">·</span>
-                      <span>{t(`common.enums.penaltyAction.${p.action}`)}</span>
-                      {p.days === null ? null : (
-                        <>
-                          <span aria-hidden="true">·</span>
-                          <Days value={p.days} />
-                        </>
-                      )}
+                      <span>{payslipActionLabel(t, locale, p.action, { days: p.days, percent: p.percent, amount: p.fixedAmount }, payslip.basicSalary)}</span>
+                      {/* The label already says the days ("Deduct 0.5 day"): no second days item on the card. */}
                     </p>
                   </li>
                 ))}
@@ -211,7 +207,7 @@ export function PayslipView({ payslip, backHref }: { payslip: Payslip; backHref:
                         </Td>
                         <Td wrap>{locale === 'ar' ? p.violationNameAr : p.violationNameEn}</Td>
                         <Td>{t('payroll.payslip.level', { level: p.level })}</Td>
-                        <Td wrap>{t(`common.enums.penaltyAction.${p.action}`)}</Td>
+                        <Td wrap>{payslipActionLabel(t, locale, p.action, { days: p.days, percent: p.percent, amount: p.fixedAmount }, payslip.basicSalary)}</Td>
                         <Td end>{p.days === null ? '—' : <Days value={p.days} unit={false} />}</Td>
                         <Td end>
                           <Money
@@ -234,6 +230,12 @@ export function PayslipView({ payslip, backHref }: { payslip: Payslip; backHref:
               className={(payslip.penaltyAmount ?? 0) > 0 ? 'text-destructive-ink font-bold' : 'font-bold'}
             />
           </Row>
+          {/* Owner Q4 (2026-11-26): the floor at 0 wrote this much off this month (not carried forward). */}
+          {(payslip.notDeducted ?? 0) > 0 ? (
+            <Row label={t('payroll.payslip.notDeducted')}>
+              <Money value={payslip.notDeducted} className="text-muted-foreground font-bold" />
+            </Row>
+          ) : null}
         </Section>
 
         <Section title={t('payroll.payslip.lateness')}>

@@ -17,6 +17,10 @@ const api = vi.hoisted(() => ({
   CREATE_LIST_ITEM: vi.fn(),
   UPDATE_LIST_ITEM: vi.fn(),
   GET_PENALTY_GROUPS: vi.fn(),
+  GET_PENALTY_ACTIONS: vi.fn(),
+  GET_PENALTY_ACTION_CHOICES: vi.fn(),
+  CREATE_PENALTY_ACTION: vi.fn(),
+  UPDATE_PENALTY_ACTION: vi.fn(),
   CREATE_PENALTY_GROUP: vi.fn(),
   UPDATE_PENALTY_GROUP: vi.fn(),
   CREATE_VIOLATION: vi.fn(),
@@ -36,6 +40,7 @@ import { HrRulesSection } from '../components/hr-rules-section';
 import { ListManager } from '../components/list-manager';
 import { SchoolSection } from '../components/school-section';
 import { hrSettings, ok, renderSettings, school } from './helpers';
+import { lvl, SEEDED_ITEMS } from '@/test/penalty-actions';
 
 /*
  * A view-only user (they hold a section's view key, not its edit key) sees the section read-only:
@@ -68,7 +73,7 @@ const catalogue: PenaltyGroup[] = [
         note: null,
         isActive: true,
         oncePerDay: false,
-        levels: [{ level: 1, action: 'WARNING', days: null }],
+        levels: [lvl(1, 'WARNING', null)],
       },
     ],
   },
@@ -84,6 +89,13 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+});
+
+
+// The Penalty actions card and the level editor's picker (spec 2026-11-25): the seeded ten.
+beforeEach(() => {
+  api.GET_PENALTY_ACTIONS.mockImplementation(() => ok(SEEDED_ITEMS, { total: SEEDED_ITEMS.length, page: 1, limit: 20 }));
+  api.GET_PENALTY_ACTION_CHOICES.mockImplementation(() => ok(SEEDED_ITEMS));
 });
 
 describe('Settings → School, view only vs edit', () => {

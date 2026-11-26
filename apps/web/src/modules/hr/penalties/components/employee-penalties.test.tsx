@@ -26,6 +26,7 @@ vi.mock('../../employees/apis', () => ({ GET_EMPLOYEES: vi.fn(), GET_STAGES: vi.
 import { employee } from '../../employees/test/fixtures';
 import { groups, ok, record, renderPenalties } from '../test/fixtures';
 import { EmployeePenalties } from './employee-penalties';
+import { ACTION } from '@/test/penalty-actions';
 
 function renderTab(overrides: Partial<Parameters<typeof EmployeePenalties>[0]> = {}) {
   return renderPenalties(
@@ -68,7 +69,7 @@ describe('EmployeePenalties (profile tab)', () => {
   it('records a penalty for this employee: the employee is already picked', async () => {
     const user = userEvent.setup();
     apis.GET_PENALTY_GROUPS.mockResolvedValue(ok(groups.filter((g) => g.isActive).map((g) => ({ ...g, violations: g.violations.filter((v) => v.isActive) }))));
-    apis.GET_PENALTY_PREVIEW.mockResolvedValue(ok({ level: 1, action: 'NOTICE', days: null, priorCount: 0, recount: [] }));
+    apis.GET_PENALTY_PREVIEW.mockResolvedValue(ok({ level: 1, action: ACTION.NOTICE, days: null, percent: null, amount: null, priorCount: 0, recount: [] }));
     renderTab();
     await user.click(screen.getByRole('button', { name: 'Record a penalty' }));
     const dialog = await screen.findByRole('dialog', { name: 'Record a penalty' });

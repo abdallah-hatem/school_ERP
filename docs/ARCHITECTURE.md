@@ -561,7 +561,7 @@ module through core's exported `AuditService` — never through its repository.
 - `audit.record({ action, entity: { type, id, label }, before?, after?, changes? })` writes **in the
   current transaction** and throws outside one (D2): the entry commits or rolls back with the change.
 - **`label` keeps both names** when the record has them: `label: { en: nameEn, ar: nameAr }` (stages,
-  departments, job titles, penalty groups, violations, roles, employees). It is stored as
+  departments, job titles, penalty groups, violations, penalty actions, roles, employees). It is stored as
   `entity_label` (English, or the only name) + `entity_label_ar` (Arabic, null when the same), and the
   API returns `entityLabel: { en, ar }`; the timeline shows the screen's language. A plain string (a
   user's name or email, a payroll month) reads the same in both. Entries written before
@@ -636,7 +636,7 @@ module through core's exported `AuditService` — never through its repository.
   The old `setting_changes` rows were copied by the T27 migration (same id, value, person, time).
   **History is written in the change's own transaction** — never after it, so a crash between the
   two can't lose it. School, HR and accounting settings: `SettingsService.setValues` writes the keys
-  and their entry together. Lists and catalogue (stages, departments, job titles, penalty groups,
+  and their entry together. Lists and catalogue (stages, departments, job titles, penalty groups, penalty actions,
   violations): the owning service wraps its write in `AfterCommit.inTransaction` and calls core's
   exported `SettingsHistory.record({ scope, key, oldValue, newValue, changedById })` inside it — the
   entry keeps the old history shape (the history key as the field, whole snapshots as before /

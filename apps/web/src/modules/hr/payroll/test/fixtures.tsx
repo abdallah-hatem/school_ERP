@@ -12,6 +12,7 @@ import type { ReactElement } from 'react';
 import type { Locale } from '@/shared/lib/i18n';
 import { renderWithI18n } from '@/test/render';
 import { PayrollI18n } from '../messages';
+import { ACTION } from '@/test/penalty-actions';
 
 /** Test data for the payroll screens. */
 
@@ -161,8 +162,10 @@ export const PAYSLIP: Payslip = {
       violationNameEn: 'Late to class',
       violationNameAr: 'التأخر عن الحصة',
       level: 1,
-      action: 'WARNING',
+      action: ACTION.WARNING,
       days: null,
+      percent: null,
+      fixedAmount: null,
       amount: 0,
     },
     {
@@ -170,8 +173,10 @@ export const PAYSLIP: Payslip = {
       violationNameEn: 'Absent without leave',
       violationNameAr: 'غياب بدون إذن',
       level: 2,
-      action: 'DEDUCT_DAYS',
+      action: ACTION.DEDUCT_DAYS,
       days: 1,
+      percent: null,
+      fixedAmount: null,
       amount: 46_667,
     },
     {
@@ -179,8 +184,10 @@ export const PAYSLIP: Payslip = {
       violationNameEn: 'Left early',
       violationNameAr: 'انصراف مبكر',
       level: 1,
-      action: 'DEDUCT_DAYS',
+      action: ACTION.DEDUCT_DAYS,
       days: 0.5,
+      percent: null,
+      fixedAmount: null,
       amount: 23_333,
     },
   ],

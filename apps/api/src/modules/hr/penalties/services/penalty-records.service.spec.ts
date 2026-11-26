@@ -12,9 +12,26 @@ import type { PenaltyCatalogueService } from './penalty-catalogue.service';
 import { PenaltyRecordsService } from './penalty-records.service';
 import { fakeAccess } from '../../access/hr-access.testing';
 
+/** The two seeded actions these cases use (spec 2026-11-25). */
+const A = {
+  NOTICE: { id: 'a-NOTICE', nameEn: 'Notice', nameAr: 'لفت نظر', effect: 'RECORD_ONLY', percentBase: null },
+  DEDUCT_DAYS: { id: 'a-DEDUCT_DAYS', nameEn: 'Deduct days', nameAr: 'خصم أيام', effect: 'DEDUCT_DAYS', percentBase: null },
+} as const;
+type Code = keyof typeof A;
+/** A level (domain / contract): its action and its number. */
+const lv = (level: number, code: Code, days: number | null) => ({ level, action: A[code], days, percent: null, amount: null });
+/** A penalty row's snapshot columns for an action. */
+const snap = (code: Code) => ({
+  actionId: A[code].id,
+  actionNameEn: A[code].nameEn,
+  actionNameAr: A[code].nameAr,
+  effect: A[code].effect,
+  percentBase: null,
+});
+/** The stored levels as the repository reads them (today's action, shown). */
 const LEVELS = [
-  { level: 1, action: 'NOTICE', days: null },
-  { level: 2, action: 'DEDUCT_DAYS', days: '2' },
+  { level: 1, action: { ...A.NOTICE, isActive: true }, days: null, percent: null, amount: null },
+  { level: 2, action: { ...A.DEDUCT_DAYS, isActive: true }, days: '2', percent: null, amount: null },
 ];
 
 const row = (over: Record<string, unknown> = {}) => ({
@@ -26,8 +43,10 @@ const row = (over: Record<string, unknown> = {}) => ({
   stageId: 'primary',
   stage: { id: 'primary', nameEn: 'Primary', nameAr: 'الابتدائية' },
   level: 1,
-  action: 'NOTICE',
+  ...snap('NOTICE'),
   days: null,
+  percent: null,
+  amount: null,
   note: null,
   cancelReason: null,
   createdAt: new Date('2025-11-10T08:00:00Z'),
@@ -108,7 +127,7 @@ function makeService(
   const service = new PenaltyRecordsService(
     repository as unknown as PenaltyRecordsRepository,
     {
-      getUsable: jest.fn().mockResolvedValue({ id: 'v1', levels: LEVELS.map((l) => ({ ...l, days: l.days && Number(l.days) })), oncePerDay }),
+      getUsable: jest.fn().mockResolvedValue({ id: 'v1', levels: [lv(1, 'NOTICE', null), lv(2, 'DEDUCT_DAYS', 2)], oncePerDay }),
     } as unknown as PenaltyCatalogueService,
     {
       assertActive: jest.fn(),
@@ -135,12 +154,12 @@ describe('PenaltyRecordsService', () => {
       findOne: jest.fn().mockResolvedValue(row()),
       approvedCandidates: jest.fn().mockResolvedValue([approvedAt('r0', '2025-11-03T08:00:00Z')]),
     });
-    expect(await service.get('r1')).toMatchObject({ level: 2, action: 'DEDUCT_DAYS', days: 2 });
+    expect(await service.get('r1')).toMatchObject(lv(2, 'DEDUCT_DAYS', 2));
 
     const approved = makeService({
-      findOne: jest.fn().mockResolvedValue(row({ status: 'APPROVED', level: 1, action: 'NOTICE' })),
+      findOne: jest.fn().mockResolvedValue(row({ status: 'APPROVED', level: 1, ...snap('NOTICE') })),
     });
-    expect(await approved.service.get('r1')).toMatchObject({ level: 1, action: 'NOTICE', days: null });
+    expect(await approved.service.get('r1')).toMatchObject(lv(1, 'NOTICE', null));
     expect(approved.repository.approvedCandidates).not.toHaveBeenCalled();
   });
 
@@ -159,11 +178,7 @@ describe('PenaltyRecordsService', () => {
     expect(window).toEqual({ from: '2025-06-01', upTo: '2025-11-10' });
     expect(by).toBe('u1');
     // The record was recorded at 08:00 on 2025-11-10.
-    expect(resolve([approvedAt('r0', '2025-11-10T07:00:00Z')])).toEqual({
-      level: 2,
-      action: 'DEDUCT_DAYS',
-      days: 2,
-    });
+    expect(resolve([approvedAt('r0', '2025-11-10T07:00:00Z')])).toEqual(lv(2, 'DEDUCT_DAYS', 2));
     expect(resolve([approvedAt('r2', '2025-11-10T09:00:00Z')])).toMatchObject({ level: 1 });
   });
 
@@ -366,8 +381,12 @@ describe('PenaltyRecordsService — audit entries (§9, T29)', () => {
         date: '2025-11-10',
         stage: { nameEn: 'Primary', nameAr: 'الابتدائية' },
         level: 1,
-        action: 'NOTICE',
+        action: { nameEn: 'Notice', nameAr: 'لفت نظر' },
+        effect: 'RECORD_ONLY',
+        percentBase: null,
         days: null,
+        percent: null,
+        fixedAmount: null,
         status: 'WAITING_HR',
         note: 'Came at 9',
         reviewSkip: null,
@@ -382,15 +401,15 @@ describe('PenaltyRecordsService — audit entries (§9, T29)', () => {
 
   it('approving: the status and the level fixed at approval, before → after', async () => {
     const pending = row();
-    const approved = row({ status: 'APPROVED', level: 2, action: 'DEDUCT_DAYS', days: '2' });
+    const approved = row({ status: 'APPROVED', level: 2, ...snap('DEDUCT_DAYS'), days: '2' });
     const { service, audit } = makeService({
       findOne: jest.fn().mockResolvedValueOnce(pending).mockResolvedValue(approved),
     });
     await service.approve('r1', 'u1');
     const [input] = audit.record.mock.calls[0] as [{ action: string; before: object; after: object }];
     expect(input.action).toBe('hr.penalty.approve');
-    expect(input.before).toMatchObject({ ...names, status: 'WAITING_HR', level: 1, action: 'NOTICE', days: null });
-    expect(input.after).toMatchObject({ ...names, status: 'APPROVED', level: 2, action: 'DEDUCT_DAYS', days: 2 });
+    expect(input.before).toMatchObject({ ...names, status: 'WAITING_HR', level: 1, action: { nameEn: 'Notice' }, effect: 'RECORD_ONLY', days: null });
+    expect(input.after).toMatchObject({ ...names, status: 'APPROVED', level: 2, action: { nameEn: 'Deduct days', nameAr: 'خصم أيام' }, effect: 'DEDUCT_DAYS', days: 2 });
   });
 
   it('cancelling: the status and the reason', async () => {
@@ -494,17 +513,15 @@ describe('PenaltyRecordsService — backdated penalty recount (§4, owner 2026-1
   // r1 is dated 2025-11-10, recorded 08:00; LEVELS: 1 NOTICE, 2 DEDUCT_DAYS 2.
   const laterApproved = (id: string, date: string, level = 1) => ({
     ...approvedAt(id, `${date}T08:00:00Z`),
-    level,
-    action: level === 1 ? 'NOTICE' : 'DEDUCT_DAYS',
-    days: level === 1 ? null : 2,
+    ...(level === 1 ? lv(1, 'NOTICE', null) : lv(level, 'DEDUCT_DAYS', 2)),
   });
   const change = {
     id: 'r2',
     date: '2025-11-12',
-    before: { level: 1, action: 'NOTICE', days: null },
-    after: { level: 2, action: 'DEDUCT_DAYS', days: 2 },
+    before: lv(1, 'NOTICE', null),
+    after: lv(2, 'DEDUCT_DAYS', 2),
   };
-  const ack = [{ id: 'r2', level: 2, action: 'DEDUCT_DAYS' as const, days: 2 }];
+  const ack = [{ id: 'r2', level: 2, actionId: 'a-DEDUCT_DAYS', days: 2, percent: null, amount: null }];
   /** A repository `approve` that runs the service's recount plan on `pair`, then approves. */
   const approveRunning = (pair: unknown[], updates: unknown[] = []) =>
     jest.fn(async (...args: unknown[]) => {
@@ -519,9 +536,7 @@ describe('PenaltyRecordsService — backdated penalty recount (§4, owner 2026-1
       approvedCandidates: jest.fn().mockResolvedValue([laterApproved('r2', '2025-11-12')]),
     });
     expect(await service.preview(dto)).toEqual({
-      level: 1,
-      action: 'NOTICE',
-      days: null,
+      ...lv(1, 'NOTICE', null),
       priorCount: 0,
       recount: [change],
       recountElsewhere: 0,
@@ -601,7 +616,9 @@ describe('PenaltyRecordsService — backdated penalty recount (§4, owner 2026-1
       findOne: jest.fn().mockResolvedValueOnce(row()).mockResolvedValue(approved),
     });
     await service.approve('r1', 'u1', ack);
-    expect(updates).toEqual([{ id: 'r2', fromLevel: 1, level: 2, action: 'DEDUCT_DAYS', days: 2 }]);
+    expect(updates).toEqual([
+      { id: 'r2', fromLevel: 1, level: 2, ...snap('DEDUCT_DAYS'), days: 2, percent: null, amount: null },
+    ]);
     expect(audit.record).toHaveBeenCalledTimes(2);
     expect(audit.record.mock.calls[0][0]).toMatchObject({ action: 'hr.penalty.approve' });
     expect(audit.record.mock.calls[1][0]).toEqual({
@@ -610,8 +627,11 @@ describe('PenaltyRecordsService — backdated penalty recount (§4, owner 2026-1
       changes: [
         { field: 'penaltyDate', before: null, after: '2025-11-12' },
         { field: 'level', before: 1, after: 2 },
-        { field: 'action', before: 'NOTICE', after: 'DEDUCT_DAYS' },
+        { field: 'action', before: { nameEn: 'Notice', nameAr: 'لفت نظر' }, after: { nameEn: 'Deduct days', nameAr: 'خصم أيام' } },
+        { field: 'effect', before: 'RECORD_ONLY', after: 'DEDUCT_DAYS' },
         { field: 'days', before: null, after: 2 },
+        { field: 'percent', before: null, after: null },
+        { field: 'fixedAmount', before: null, after: null },
         { field: 'recountedAfter', before: null, after: '2025-11-10' },
       ],
     });
@@ -986,14 +1006,21 @@ describe('PenaltyRecordsService — the two steps (§4, owner 2026-11-21)', () =
   it('payroll: penalties waiting at either step are “pending”; rejected never count', async () => {
     const { service } = makeService({
       findForPayroll: jest.fn().mockResolvedValue([
-        { employeeId: 'e1', status: 'PENDING_REVIEW', action: 'NOTICE', days: null },
-        { employeeId: 'e1', status: 'WAITING_HR', action: 'NOTICE', days: null },
-        { employeeId: 'e2', status: 'APPROVED', action: 'DEDUCT_DAYS', days: '1' },
+        { employeeId: 'e1', status: 'PENDING_REVIEW', effect: 'RECORD_ONLY', percentBase: null, days: null, percent: null, amount: null },
+        { employeeId: 'e1', status: 'WAITING_HR', effect: 'RECORD_ONLY', percentBase: null, days: null, percent: null, amount: null },
+        { employeeId: 'e2', status: 'APPROVED', effect: 'DEDUCT_DAYS', percentBase: null, days: '1', percent: null, amount: null },
+        { employeeId: 'e2', status: 'APPROVED', effect: 'DEDUCT_PERCENT', percentBase: 'BASIC_SALARY', days: null, percent: '2.50', amount: null },
+        { employeeId: 'e2', status: 'APPROVED', effect: 'DEDUCT_AMOUNT', percentBase: null, days: null, percent: null, amount: 30_000 },
       ]),
     });
     const inputs = await service.payrollInputs('2025-11');
     expect(inputs.pending.get('e1')).toBe(2);
-    expect(inputs.deductingDays.get('e2')).toEqual([1]);
+    // Each approved penalty with its fixed effect and number; payroll prices them (spec 2026-11-25).
+    expect(inputs.approved.get('e2')).toEqual([
+      { effect: 'DEDUCT_DAYS', percentBase: null, days: 1, percent: null, amount: null },
+      { effect: 'DEDUCT_PERCENT', percentBase: 'BASIC_SALARY', days: null, percent: 2.5, amount: null },
+      { effect: 'DEDUCT_AMOUNT', percentBase: null, days: null, percent: null, amount: 30_000 },
+    ]);
   });
 });
 

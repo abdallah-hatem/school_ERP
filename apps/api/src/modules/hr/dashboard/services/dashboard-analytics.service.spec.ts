@@ -30,7 +30,7 @@ function makeService(scopes: Partial<Record<PermissionKey, EmployeeScope | null>
     ),
     workedOutTaxes: jest.fn().mockResolvedValue(new Map([['r10', { insurance: 200, incomeTax: 90, martyrTax: 10 }]])),
     employeeDates: jest.fn().mockResolvedValue([{ hireDate: '2026-10-05', deactivatedOn: null, active: true }]),
-    approvedPenaltyCounts: jest.fn().mockResolvedValue([{ date: '2026-11-03', action: 'NOTICE', count: 2 }]),
+    approvedPenaltyCounts: jest.fn().mockResolvedValue([{ date: '2026-11-03', code: 'NOTICE', effect: 'RECORD_ONLY', days: null, count: 2 }]),
     latenessMinutes: jest.fn().mockResolvedValue([{ month: '2026-11', minutes: 45 }]),
     noStageIds: jest.fn().mockResolvedValue(new Set(['s'])),
   };

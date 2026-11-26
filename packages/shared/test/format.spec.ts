@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  formatAmountShort,
+  formatPercent,
   formatClockDateTime,
   formatClockTime,
   formatDayCount,
@@ -143,5 +145,18 @@ describe('times of day — always 12-hour with AM/PM (ص/م), on the school cloc
       expect(hour).toBeGreaterThanOrEqual(1);
       expect(hour).toBeLessThanOrEqual(12);
     }
+  });
+});
+
+describe('Penalty level numbers (spec 2026-11-25-penalty-actions)', () => {
+  it('edge case 30: a percent printed as 10.00 or 2.50 reads "10" and "2.5" (no trailing zeros, Western digits)', () => {
+    expect(formatPercent(10.0)).toBe('10');
+    expect(formatPercent(2.5)).toBe('2.5');
+    expect(formatPercent(12.75)).toBe('12.75');
+  });
+  it('amounts read short: thousands grouped, piastres only when not zero', () => {
+    expect(formatAmountShort(20_000)).toBe('200');
+    expect(formatAmountShort(125_050)).toBe('1,250.50');
+    expect(formatAmountShort(100_000_000)).toBe('1,000,000');
   });
 });

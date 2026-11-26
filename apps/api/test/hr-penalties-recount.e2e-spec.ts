@@ -13,6 +13,7 @@ import { http, unique } from './helpers';
 import { createAppAsTestUser } from './helpers/as-test-user';
 import { historyMark } from './helpers/history';
 import { deleteEmployees } from './helpers/employees';
+import { ACTION, ACTION_ID } from './helpers/penalty-actions';
 
 /*
  * §4 backdated penalty (owner 2026-11-20): approving a penalty dated before approved ones of the
@@ -22,11 +23,11 @@ import { deleteEmployees } from './helpers/employees';
  */
 
 const LEVELS: ViolationLevelInput[] = [
-  { level: 1, action: 'DEDUCT_DAYS', days: 0.5 },
-  { level: 2, action: 'DEDUCT_DAYS', days: 1 },
-  { level: 3, action: 'DEDUCT_DAYS', days: 2 },
-  { level: 4, action: 'DEDUCT_DAYS', days: 3 },
-  { level: 5, action: 'DEDUCT_DAYS', days: 5 },
+  { level: 1, actionId: ACTION_ID.DEDUCT_DAYS, days: 0.5 },
+  { level: 2, actionId: ACTION_ID.DEDUCT_DAYS, days: 1 },
+  { level: 3, actionId: ACTION_ID.DEDUCT_DAYS, days: 2 },
+  { level: 4, actionId: ACTION_ID.DEDUCT_DAYS, days: 3 },
+  { level: 5, actionId: ACTION_ID.DEDUCT_DAYS, days: 5 },
 ];
 
 /** Months only this suite uses (in the past: penalties can't be dated ahead). */
@@ -87,7 +88,15 @@ describe('HR penalties — backdated penalty recount (e2e, §4 owner 2026-11-20)
     http(app).get('/hr/penalties/preview').query({ employeeId, violationId, date });
   const getRecord = async (id: string) =>
     (await http(app).get(`/hr/penalties/${id}`).expect(200)).body.data as PenaltyRecord;
-  const ackOf = (recount: PenaltyRecountChange[]) => recount.map((c) => ({ id: c.id, ...c.after }));
+  const ackOf = (recount: PenaltyRecountChange[]) =>
+    recount.map((c) => ({
+      id: c.id,
+      level: c.after.level,
+      actionId: c.after.action.id,
+      days: c.after.days,
+      percent: c.after.percent,
+      amount: c.after.amount,
+    }));
   const approve = (id: string, acknowledgedRecount?: ReturnType<typeof ackOf>) =>
     http(app)
       .post(`/hr/penalties/${id}/approve`)
@@ -165,8 +174,8 @@ describe('HR penalties — backdated penalty recount (e2e, §4 owner 2026-11-20)
     // Confirmed → 18 L1, 19 L2, 20 L3, deductions from the catalogue's levels.
     const approved = (await approve(d18.id, ackOf(d18.recount)).expect(200)).body.data as PenaltyRecord;
     expect(approved).toMatchObject({ status: 'APPROVED', level: 1, days: 0.5, recount: [] });
-    expect(await getRecord(d19.id)).toMatchObject({ status: 'APPROVED', level: 2, action: 'DEDUCT_DAYS', days: 1 });
-    expect(await getRecord(d20.id)).toMatchObject({ status: 'APPROVED', level: 3, action: 'DEDUCT_DAYS', days: 2 });
+    expect(await getRecord(d19.id)).toMatchObject({ status: 'APPROVED', level: 2, action: ACTION.DEDUCT_DAYS, days: 1 });
+    expect(await getRecord(d20.id)).toMatchObject({ status: 'APPROVED', level: 3, action: ACTION.DEDUCT_DAYS, days: 2 });
 
     // Audit: the approval, plus one entry per recounted penalty — in the employee's History.
     const recounts = await db.auditEntry.findMany({
@@ -211,7 +220,7 @@ describe('HR penalties — backdated penalty recount (e2e, §4 owner 2026-11-20)
     expect((await getRecord(d10.id)).level).toBe(1);
 
     // Confirming changes that aren't there (another level) is stale too.
-    await approve(d5.id, fresh.map((c) => ({ id: c.id, ...c.after, level: c.after.level + 1 }))).expect(409);
+    await approve(d5.id, ackOf(fresh).map((a) => ({ ...a, level: a.level + 1 }))).expect(409);
     await approve(d5.id, ackOf(fresh)).expect(200);
     expect((await getRecord(d10.id)).level).toBe(2);
     // The cancelled one keeps the level it had.

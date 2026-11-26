@@ -32,10 +32,6 @@
     "profileEmptyTitle": "لا توجد جزاءات بعد",
     "profileEmptyBody": "تظهر هنا الجزاءات المسجلة لهذا الموظف، الأحدث أولًا."
   },
-  "action": {
-    "deduct": "خصم {days}",
-    "investigation": "إحالة للتحقيق مع خصم {days}"
-  },
   "cancelledBecause": "السبب: {reason}",
   "approve": {
     "button": "اعتماد",

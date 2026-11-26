@@ -5,6 +5,7 @@ export { EmployeesService } from './employees/services/employees.service';
 export { DepartmentsService } from './lists/services/departments.service';
 export { JobTitlesService } from './lists/services/job-titles.service';
 export { EmployeeGradesService } from './lists/services/employee-grades.service';
+export { PenaltyActionsService } from './penalties/services/penalty-actions.service';
 export { PenaltyCatalogueService } from './penalties/services/penalty-catalogue.service';
 export { PenaltyRecordsService } from './penalties/services/penalty-records.service';
 export { LatenessService } from './staff-attendance/services/lateness.service';

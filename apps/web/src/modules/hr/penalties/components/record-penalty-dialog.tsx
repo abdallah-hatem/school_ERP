@@ -322,8 +322,8 @@ function PreviewLine({ state, stage }: { state: PreviewState; stage: NamedRef | 
       line = state.message;
       break;
     case 'ready': {
-      const { level, action, days, priorCount } = state.preview;
-      line = t('penalties.preview.line', { level, action: describeAction(t, locale, action, days) });
+      const { level, action, priorCount } = state.preview;
+      line = t('penalties.preview.line', { level, action: describeAction(t, locale, action, state.preview) });
       detail =
         priorCount === 0
           ? t('penalties.preview.priorNone')

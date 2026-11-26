@@ -11,6 +11,7 @@ import { DatabaseService } from '../src/database/database.service';
 import { http, unique } from './helpers';
 import { createAppAsTestUser, giveRoles } from './helpers/as-test-user';
 import { deleteEmployees } from './helpers/employees';
+import { ACTION_ID } from './helpers/penalty-actions';
 
 /*
  * §4 two steps and §3 several stages (owner 2026-11-21) against the real database: where a new
@@ -146,8 +147,8 @@ describe('Penalties in two steps — stage review, then HR (e2e)', () => {
               nameAr: unique('تأخير'),
               oncePerDay: false,
               levels: [
-                { level: 1, action: 'NOTICE' },
-                { level: 2, action: 'WARNING' },
+                { level: 1, actionId: ACTION_ID.NOTICE },
+                { level: 2, actionId: ACTION_ID.WARNING },
               ],
             })
             .expect(201)

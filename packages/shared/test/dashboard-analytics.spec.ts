@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_ANALYTICS_RANGE,
   PENALTY_ACTIONS,
+  SEEDED_PENALTY_ACTIONS,
   dashboardAnalyticsQuerySchema,
   parseAnalyticsRange,
   penaltyKindOf,
@@ -37,12 +38,24 @@ describe('dashboard analytics query (zod)', () => {
 });
 
 describe('penalty kinds', () => {
-  it('notice and warning; day deductions; everything else is other', () => {
-    expect(penaltyKindOf('NOTICE')).toBe('notice');
-    expect(penaltyKindOf('WARNING')).toBe('notice');
-    expect(penaltyKindOf('DEDUCT_DAYS')).toBe('deduct');
+  it('notice and warning; day deductions; everything else of the seeded ten is other', () => {
+    const seeded = (code: string) => SEEDED_PENALTY_ACTIONS.find((a) => a.code === code)!;
+    const kind = (code: string, days: number | null = null) => penaltyKindOf({ code: seeded(code).code, effect: seeded(code).effect, days });
+    expect(kind('NOTICE')).toBe('notice');
+    expect(kind('WARNING')).toBe('notice');
+    expect(kind('DEDUCT_DAYS', 1)).toBe('deduct');
     const other = PENALTY_ACTIONS.filter((a) => !['NOTICE', 'WARNING', 'DEDUCT_DAYS'].includes(a));
     expect(other.length).toBeGreaterThan(0);
-    for (const a of other) expect(penaltyKindOf(a)).toBe('other');
+    for (const a of other) expect(kind(a)).toBe('other');
+  });
+
+  it('S68 (dashboard kinds) + edge case 31: a school-added Record-only action counts as "Other"; any deducting effect as "Pay deductions"', () => {
+    expect(penaltyKindOf({ code: null, effect: 'RECORD_ONLY', days: null })).toBe('other');
+    expect(penaltyKindOf({ code: null, effect: 'DEDUCT_PERCENT', days: null })).toBe('deduct');
+    expect(penaltyKindOf({ code: null, effect: 'DEDUCT_AMOUNT', days: null })).toBe('deduct');
+    expect(penaltyKindOf({ code: null, effect: 'DEDUCT_DAYS', days: 0.5 })).toBe('deduct');
+    // Investigation with days costs pay (moved from "Other", spec GUESS); without days it doesn't.
+    expect(penaltyKindOf({ code: 'INVESTIGATION', effect: 'INVESTIGATION', days: 2 })).toBe('deduct');
+    expect(penaltyKindOf({ code: 'INVESTIGATION', effect: 'INVESTIGATION', days: null })).toBe('other');
   });
 });
