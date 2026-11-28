@@ -18,7 +18,8 @@ the differences are listed in `CLAUDE.md`.
   version goes school by school and stops on the first failure) — never in the container's start
   command.
 - **Backups per school**, so one school can be restored without touching others.
-- Self-hosted schools receive the **built image, never the source**.
+- **Every school runs on our VPS** (owner, 2026-11-28), not on its own server. If a school ever
+  hosts it itself, it receives the **built image, never the source**.
 - Track which version each school runs.
 
 ## Hosting (VPS)

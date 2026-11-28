@@ -759,6 +759,12 @@ phase live in `docs/build-log/`.
   spec, a payslip rounding mismatch and a salary hint. Independent review: no blockers; fixed a salary
   hint through the "flagged" filter, frozen payslips of approved months (old split kept), the write-off
   in the payroll rules with tests, per-level hidden actions, an overflow cap, database checks.
+- 2026-11-28 — **Hosting decided: the school runs on our VPS, not on its own server** (owner). The
+  on-premise item is dropped from Next up. Kept here in case a later school insists on hosting it: we
+  would get SSH with sudo on a clean Ubuntu LTS server (≥ 4 cores, 8 GB RAM, 100 GB SSD), a VM if the
+  machine is shared or runs Windows; SSH open to the internet but hardened (key-only, no root login,
+  fail2ban, ufw with only SSH/80/443, Coolify's panel via an SSH tunnel), Tailscale if their IT refuses;
+  `erp.<their-domain>` pointed at it, outgoing internet, an off-server backup target, SMTP, a contact.
 
 ## Next up
 
@@ -766,17 +772,6 @@ phase live in `docs/build-log/`.
   #283; next B2: deactivating while the last month's payroll is a draft drops that month's pay);
   mid-year hires' first contract ends 31 May (one season for everyone, GUESS).
 
-
-
-
-
-- **On-premise school (owner, 2026-11-26):** if a school hosts it on its own server, we get SSH with
-  sudo on a clean Ubuntu LTS server (≥ 4 cores, 8 GB RAM, 100 GB SSD) and set it up like our own
-  (Docker, Coolify, Traefik, Postgres, backups). Remote access: **SSH open to the internet, hardened**
-  (key-only, no root login, fail2ban, ufw with only SSH/80/443, Coolify's panel via an SSH tunnel,
-  automatic security updates); Tailscale if their IT refuses. Also from them: `erp.<their-domain>`
-  pointed at the server, ports 80/443, outgoing internet (image pulls), an off-server backup target,
-  SMTP, a contact person. Not started — no on-premise school yet.
 - **Pentest with ARTEX** (owner, 2026-11-25): try https://github.com/BaaRai/ARTEX against the app
   later — on a throwaway or testing environment, never production. Not started.
 - **Employee documents tab** (proposed 2026-11-24): ID copy, certificates, insurance forms.
